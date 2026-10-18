@@ -60,6 +60,15 @@ try {
   ).toBeVisible();
   await capture("scada-screen-context.png", true);
   await page.keyboard.press("Escape");
+  await page
+    .getByRole("navigation", { name: "共有 Symbol 一覧" })
+    .getByRole("button", { name: "共有定義：バルブ", exact: true })
+    .click({ button: "right" });
+  await expect(
+    page.getByRole("menu", { name: "共有定義：バルブ の操作", exact: true }),
+  ).toBeVisible();
+  await capture("scada-symbol-context.png", true);
+  await page.keyboard.press("Escape");
   await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
   await page.getByLabel("グリッド表示", { exact: true }).check();
   await page

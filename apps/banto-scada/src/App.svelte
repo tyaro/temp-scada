@@ -408,22 +408,60 @@
     )
       editingSymbolId = null;
   }
+  function withDefinition(id: string, action: () => void) {
+    const generation = workspaceGeneration;
+    const run = () => {
+      if (
+        generation !== workspaceGeneration ||
+        !project.symbols.some((s) => s.id === id)
+      )
+        return;
+      if (drafts.allow(run)) action();
+    };
+    run();
+  }
   function openDefinition(id: string) {
-    if (!drafts.allow(() => openDefinition(id))) return;
-    setAuxPanelVisibility({ sidebar: true });
-    editingSymbolId = id;
-    activePanel = "project";
-    libraryId = id;
-    selectedIds = [];
+    withDefinition(id, () => {
+      setAuxPanelVisibility({ sidebar: true });
+      editingSymbolId = id;
+      activePanel = "project";
+      libraryId = id;
+      selectedIds = [];
+    });
   }
   function deleteDefinition(id: string) {
-    if (!drafts.allow(() => deleteDefinition(id))) return;
-    const definition = project.symbols.find((s) => s.id === id);
+    withDefinition(id, () => {
+      const definition = project.symbols.find((s) => s.id === id)!;
+      if (
+        symbolUsage(project, id) === 0 &&
+        window.confirm(`「${definition.name}」の Symbol 定義を削除しますか？`)
+      ) {
+        if (edit({ type: "remove-symbol", symbolId: id }))
+          void tick().then(() => {
+            const target =
+              document.querySelector<HTMLButtonElement>(
+                'nav[aria-label="共有 Symbol 一覧"] button[aria-pressed="true"]',
+              ) ??
+              document.querySelector<HTMLButtonElement>("[data-create-symbol]");
+            target?.focus({ preventScroll: true });
+          });
+      }
+    });
+  }
+  function symbolLibraryCommand(command: EditCommand) {
     if (
-      definition &&
-      window.confirm(`「${definition.name}」の Symbol 定義を削除しますか？`)
-    )
-      edit({ type: "remove-symbol", symbolId: id });
+      command.type === "duplicate-symbol" ||
+      command.type === "place-symbol"
+    ) {
+      withDefinition(command.symbolId, () => {
+        if (
+          command.type === "place-symbol" &&
+          (editingSymbolId || screenId !== command.screenId)
+        )
+          return;
+        edit(command);
+      });
+    } else edit(command);
   }
   let screen = $derived(
     activeDefinition ??
@@ -494,6 +532,7 @@
     if (form ? !drafts.beforeSubmit(form) : !drafts.allow(() => edit(command)))
       return false;
     try {
+      const oldEditingDefinition = editingSymbolId;
       const oldIds = new Set(screen.objects.map((o) => o.id));
       const oldScreens = new Set(project.screens.map((s) => s.id));
       const oldDefinitions = new Set(project.symbols.map((s) => s.id));
@@ -524,7 +563,11 @@
         openDefinition(
           project.symbols.find((s) => !oldDefinitions.has(s.id))!.id,
         );
-      } else if (command.type === "remove-symbol") selectedIds = [];
+      } else if (
+        command.type === "remove-symbol" &&
+        command.symbolId === oldEditingDefinition
+      )
+        selectedIds = [];
       if (
         command.type === "create-screen" ||
         command.type === "duplicate-screen"
@@ -1369,10 +1412,11 @@
             selectedId={libraryId}
             screenId={screen.id}
             editingDefinition={!!activeDefinition}
+            contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`}
             onchoose={(id) => (libraryId = id)}
             onedit={openDefinition}
             ondelete={deleteDefinition}
-            oncommand={edit}
+            oncommand={symbolLibraryCommand}
           />
           <hr />
           <h2>{activeDefinition ? "Symbol 設定" : "画面管理"}</h2>

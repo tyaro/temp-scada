@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ContextActions, { type ContextAction } from "./ContextActions.svelte";
   import { symbolUsage, type EditCommand } from "../editor";
   import type { Project } from "../project";
   let {
@@ -6,6 +7,7 @@
     selectedId,
     screenId,
     editingDefinition,
+    contextKey,
     onchoose,
     onedit,
     ondelete,
@@ -15,6 +17,7 @@
     selectedId: string;
     screenId: string;
     editingDefinition: boolean;
+    contextKey: string;
     onchoose: (id: string) => void;
     onedit: (id: string) => void;
     ondelete: (id: string) => void;
@@ -23,11 +26,35 @@
   const selected = $derived(
     project.symbols.find((d) => d.id === selectedId) ?? project.symbols[0],
   );
+  function actions(id: string): ContextAction[] {
+    return [
+      {
+        label: "共有定義を編集（すべての参照配置に反映）",
+        run: () => onedit(id),
+      },
+      {
+        label: "共有定義を複製",
+        disabled: project.symbols.length >= 100,
+        run: () => oncommand({ type: "duplicate-symbol", symbolId: id }),
+      },
+      {
+        label: "現在の画面へ配置",
+        disabled: editingDefinition,
+        run: () => oncommand({ type: "place-symbol", screenId, symbolId: id }),
+      },
+      {
+        label: "共有定義を削除",
+        disabled: symbolUsage(project, id) > 0,
+        run: () => ondelete(id),
+      },
+    ];
+  }
 </script>
 
 <section aria-label="Symbol ライブラリ">
   <h2>Symbol ライブラリ</h2>
   <button
+    data-create-symbol
     disabled={project.symbols.length >= 100}
     onclick={() =>
       oncommand({
@@ -38,17 +65,28 @@
       })}>Symbol 定義を作成</button
   >
   {#if selected}
-    <label
-      >Symbol 定義<select
-        aria-label="Symbol 定義"
-        value={selected.id}
-        onchange={(e) => onchoose(e.currentTarget.value)}
-      >
-        {#each project.symbols as definition (definition.id)}<option
-            value={definition.id}>{definition.name}</option
-          >{/each}
-      </select></label
-    >
+    <p>定義を選んで操作します。編集はすべての参照配置に反映されます。</p>
+    <nav aria-label="共有 Symbol 一覧">
+      {#each project.symbols as definition (definition.id)}
+        <ContextActions
+          label={`共有定義：${definition.name}`}
+          contextKey={`${contextKey}:${selected.id}:${editingDefinition}`}
+          items={actions(definition.id)}
+        >
+          <button
+            class="definition-row"
+            class:active={selected.id === definition.id}
+            aria-label={`共有定義：${definition.name}`}
+            aria-pressed={selected.id === definition.id}
+            onclick={() => onchoose(definition.id)}
+          >
+            <span>{definition.name}</span><small
+              >{symbolUsage(project, definition.id)} 配置で共有</small
+            >
+          </button>
+        </ContextActions>
+      {/each}
+    </nav>
     <p>{symbolUsage(project, selected.id)} 配置で共有</p>
     <div class="actions">
       <button onclick={() => onedit(selected.id)}>定義を編集</button>
@@ -79,22 +117,9 @@
     font-size: 15px;
     margin: 0;
   }
-  label {
-    display: grid;
-    gap: 8px;
-    font-size: 12px;
-  }
   p {
     font-size: 12px;
     color: var(--banto-text-muted);
-  }
-  select {
-    width: 100%;
-    padding: 8px;
-    color: var(--banto-text);
-    background: var(--banto-surface);
-    border: 1px solid var(--banto-border);
-    border-radius: 4px;
   }
   button {
     font: inherit;
@@ -112,14 +137,36 @@
   button:hover {
     border-color: var(--banto-primary);
   }
-  button:focus-visible,
-  select:focus-visible {
+  button:focus-visible {
     outline: none;
     box-shadow: var(--banto-focus-ring);
   }
   button:disabled {
     opacity: 0.5;
     cursor: default;
+  }
+  nav {
+    display: grid;
+    gap: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 3px;
+    margin: 0 -3px;
+  }
+  .definition-row {
+    display: grid;
+    gap: 3px;
+    margin: 0;
+    padding-right: 24px;
+    overflow-wrap: anywhere;
+  }
+  .definition-row.active {
+    border-color: var(--banto-primary);
+    color: var(--banto-primary);
+  }
+  small {
+    font-size: 11px;
+    color: var(--banto-text-muted);
   }
   .actions {
     display: grid;
