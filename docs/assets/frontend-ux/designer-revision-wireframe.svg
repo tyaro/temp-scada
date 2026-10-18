@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900"><defs><pattern id="grid" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.6" fill="#d2dce9"/></pattern></defs><g font-family="Noto Sans CJK JP, sans-serif" xml:space="preserve">
+<rect x="0" y="0" width="1440" height="900" rx="0" fill="#f1f5fa" stroke="#d6deea" />
+<rect x="0" y="0" width="1440" height="26" rx="0" fill="#eaf2ff" stroke="#d6deea" />
+<text x="16" y="18" font-size="11" fill="#2855a3" font-weight="400">UI 改訂提案・未実装の構成図  /  アプリのスクリーンショットではありません</text>
+<rect x="0" y="26" width="1440" height="42" rx="0" fill="#fff" stroke="#d6deea" />
+<rect x="14" y="34" width="82" height="26" rx="5" fill="#f2f6fd" stroke="#d6deea" />
+<text x="25" y="52" font-size="12" fill="#25324a" font-weight="400">≡ メニュー</text>
+<text x="112" y="53" font-size="18" fill="#25324a" font-weight="600">SCADA Designer</text>
+<text x="565" y="51" font-size="13" fill="#25324a" font-weight="400">Project  /  工程画面</text>
+<text x="1087" y="51" font-size="11" fill="#69788c" font-weight="400">未書き出しの変更</text>
+<rect x="1200" y="34" width="68" height="26" rx="5" fill="#fff" stroke="#d6deea" />
+<text x="1219" y="52" font-size="12" fill="#1766e8" font-weight="400">保存</text>
+<rect x="1280" y="34" width="140" height="26" rx="5" fill="#1766e8" stroke="#1766e8" />
+<text x="1308" y="52" font-size="12" fill="#fff" font-weight="400">表示確認</text>
+<rect x="0" y="68" width="1440" height="28" rx="0" fill="#fff" stroke="#d6deea" />
+<text x="20" y="87" font-size="12" fill="#25324a" font-weight="400">ファイル</text>
+<text x="106" y="87" font-size="12" fill="#25324a" font-weight="400">編集</text>
+<text x="173" y="87" font-size="12" fill="#25324a" font-weight="400">表示</text>
+<text x="240" y="87" font-size="12" fill="#25324a" font-weight="400">挿入</text>
+<text x="307" y="87" font-size="12" fill="#25324a" font-weight="400">ツール</text>
+<text x="393" y="87" font-size="12" fill="#25324a" font-weight="400">ヘルプ</text>
+<text x="842" y="87" font-size="11" fill="#69788c" font-weight="400">非表示でも「≡ メニュー → 表示」から復元</text>
+<rect x="0" y="96" width="1440" height="36" rx="0" fill="#f9fbfe" stroke="#d6deea" />
+<text x="20" y="119" font-size="12" fill="#25324a" font-weight="400">元に戻す  /  やり直す</text>
+<text x="220" y="119" font-size="12" fill="#25324a" font-weight="400">選択   パン   矩形   楕円   線   Text   整列</text>
+<text x="1000" y="119" font-size="12" fill="#25324a" font-weight="400">グリッド 10   |   スナップ OFF   |   100%</text>
+<rect x="0" y="132" width="240" height="744" rx="0" fill="#fff" stroke="#d6deea" />
+<rect x="0" y="132" width="88" height="36" rx="0" fill="#fff" stroke="#d6deea" />
+<text x="10" y="155" font-size="12" fill="#53627b" font-weight="400">プロジェクト</text>
+<rect x="88" y="132" width="72" height="36" rx="0" fill="#fff" stroke="#d6deea" />
+<text x="98" y="155" font-size="12" fill="#53627b" font-weight="400">レイヤー</text>
+<rect x="160" y="132" width="80" height="36" rx="0" fill="#eaf2ff" stroke="#d6deea" />
+<text x="170" y="155" font-size="12" fill="#1766e8" font-weight="600">部品</text>
+<text x="15" y="195" font-size="12" fill="#25324a" font-weight="600">部品を検索</text>
+<rect x="12" y="205" width="216" height="30" rx="5" fill="#f9fbfe" stroke="#d6deea" />
+<text x="22" y="225" font-size="11" fill="#8a96a8" font-weight="400">名前・別名を横断検索</text>
+<rect x="0" y="254" width="240" height="30" rx="0" fill="#f4f7fb" stroke="#d6deea" />
+<text x="14" y="274" font-size="13" fill="#25324a" font-weight="600">▾  基本図形</text>
+<rect x="12" y="294" width="104" height="46" rx="5" fill="#fff" stroke="#d6deea" />
+<text x="25" y="323" font-size="12" fill="#25324a" font-weight="400">矩形</text>
+<rect x="122" y="294" width="104" height="46" rx="5" fill="#fff" stroke="#d6deea" />
+<text x="135" y="323" font-size="12" fill="#25324a" font-weight="400">楕円</text>
+<rect x="12" y="350" width="104" height="46" rx="5" fill="#fff" stroke="#d6deea" />
+<text x="25" y="379" font-size="12" fill="#25324a" font-weight="400">線</text>
+<rect x="122" y="350" width="104" height="46" rx="5" fill="#fff" stroke="#d6deea" />
+<text x="135" y="379" font-size="12" fill="#25324a" font-weight="400">配管</text>
+<rect x="0" y="423" width="240" height="30" rx="0" fill="#f4f7fb" stroke="#d6deea" />
+<text x="14" y="443" font-size="13" fill="#25324a" font-weight="600">▾  シンボル</text>
+<rect x="12" y="463" width="104" height="46" rx="5" fill="#fff" stroke="#d6deea" />
+<text x="25" y="492" font-size="12" fill="#25324a" font-weight="400">ポンプ</text>
+<rect x="122" y="463" width="104" height="46" rx="5" fill="#fff" stroke="#d6deea" />
+<text x="135" y="492" font-size="12" fill="#25324a" font-weight="400">バルブ</text>
+<rect x="12" y="519" width="104" height="46" rx="5" fill="#fff" stroke="#d6deea" />
+<text x="25" y="548" font-size="12" fill="#25324a" font-weight="400">共有定義</text>
+<rect x="0" y="592" width="240" height="30" rx="0" fill="#f4f7fb" stroke="#d6deea" />
+<text x="14" y="612" font-size="13" fill="#25324a" font-weight="600">▾  表示・操作</text>
+<rect x="12" y="632" width="104" height="46" rx="5" fill="#fff" stroke="#d6deea" />
+<text x="25" y="661" font-size="12" fill="#25324a" font-weight="400">Text</text>
+<text x="14" y="724" font-size="11" fill="#69788c" font-weight="400">複数分類を同時に展開</text>
+<text x="14" y="746" font-size="11" fill="#69788c" font-weight="400">検索解除で展開状態を復元</text>
+<text x="14" y="804" font-size="10" fill="#69788c" font-weight="400">未対応部品を配置可能に見せない</text>
+<rect x="240" y="132" width="920" height="744" rx="0" fill="#edf2f7" stroke="#d6deea" />
+<rect x="240" y="132" width="920" height="34" rx="0" fill="#f8fafd" stroke="#d6deea" />
+<rect x="252" y="136" width="154" height="28" rx="5" fill="#fff" stroke="#d6deea" />
+<text x="266" y="155" font-size="12" fill="#25324a" font-weight="400">画面：工程画面  ×</text>
+<text x="428" y="154" font-size="17" fill="#25324a" font-weight="400">＋</text>
+<text x="253" y="185" font-size="10" fill="#8795a9" font-weight="400">0       100       200       300       400       500       600       700       800</text>
+<rect x="266" y="198" width="870" height="438" rx="5" fill="#fff" stroke="#d6deea" />
+<rect x="266" y="198" width="870" height="438" rx="5" fill="url(#grid)" stroke="#d6deea" />
+<text x="300" y="239" font-size="22" fill="#25324a" font-weight="600">工程図の編集領域</text>
+<text x="300" y="262" font-size="12" fill="#69788c" font-weight="400">外枠の明るさと Project 背景は別契約</text>
+<rect x="318" y="327" width="118" height="140" rx="5" fill="#eef5fc" stroke="#97acc7" />
+<text x="344" y="397" font-size="16" fill="#5b7291" font-weight="400">TANK</text>
+<path d="M436 397 L545 397" stroke="#7592b5" fill="none" stroke-width="6"/>
+<circle cx="578" cy="397" r="30" stroke="#4a80bd" fill="#edf5ff" stroke-width="3"/>
+<path d="M566 380 L593 397 L566 414 Z" fill="none" stroke="#4a80bd" stroke-width="3"/>
+<path d="M608 397 L750 397" stroke="#7592b5" fill="none" stroke-width="6"/>
+<rect x="750" y="327" width="118" height="140" rx="5" fill="#eef5fc" stroke="#97acc7" />
+<text x="778" y="397" font-size="16" fill="#5b7291" font-weight="400">TANK</text>
+<text x="316" y="508" font-size="12" fill="#69788c" font-weight="400">既存 Renderer を共有。図形色・選択・座標は保持</text>
+<text x="316" y="532" font-size="11" fill="#69788c" font-weight="400">白い工程図の背景属性は別のモデル工程</text>
+<rect x="828" y="475" width="282" height="137" rx="5" fill="#f6faff" stroke="#719cd9" stroke-dasharray="6 4"/>
+<text x="842" y="500" font-size="14" fill="#2855a3" font-weight="600">浮動パネルの例</text>
+<text x="842" y="523" font-size="11" fill="#25324a" font-weight="400">まずは同一画面内で切り離し</text>
+<text x="842" y="546" font-size="11" fill="#25324a" font-weight="400">移動 / サイズ変更 / 再ドッキング</text>
+<text x="842" y="586" font-size="10" fill="#69788c" font-weight="400">Esc で取消・メニューから再配置</text>
+<rect x="240" y="653" width="920" height="223" rx="0" fill="#fff" stroke="#d6deea" />
+<rect x="240" y="653" width="920" height="32" rx="0" fill="#f8fafd" stroke="#d6deea" />
+<text x="256" y="674" font-size="13" fill="#1766e8" font-weight="600">Project のタグ参照</text>
+<text x="425" y="674" font-size="12" fill="#7b899c" font-weight="400">診断（実装後）</text>
+<text x="890" y="674" font-size="11" fill="#69788c" font-weight="400">下部は管理・使用先確認</text>
+<rect x="254" y="695" width="650" height="28" rx="5" fill="#f9fbfe" stroke="#d6deea" />
+<text x="267" y="714" font-size="11" fill="#8a96a8" font-weight="400">外部名・画面名・静的テキストで検索</text>
+<text x="259" y="749" font-size="11" fill="#69788c" font-weight="400">外部名</text>
+<text x="602" y="749" font-size="11" fill="#69788c" font-weight="400">使用箇所</text>
+<text x="960" y="749" font-size="11" fill="#69788c" font-weight="400">接続状態</text>
+<path d="M254 760 L1144 760" stroke="#d6deea" fill="none" />
+<text x="259" y="785" font-size="12" fill="#25324a" font-weight="400">PLC01.Fast.Level（説明用）</text>
+<text x="602" y="785" font-size="12" fill="#25324a" font-weight="400">工程画面 / Text</text>
+<text x="960" y="785" font-size="12" fill="#69788c" font-weight="400">未接続</text>
+<text x="259" y="835" font-size="11" fill="#69788c" font-weight="400">タグ選択は右側入力欄のボタンから。ここでは使用先を確認する。</text>
+<rect x="1160" y="132" width="280" height="744" rx="0" fill="#fff" stroke="#d6deea" />
+<text x="1176" y="157" font-size="15" fill="#25324a" font-weight="600">プロパティ</text>
+<path d="M1160 168 L1440 168" stroke="#d6deea" fill="none" />
+<text x="1176" y="198" font-size="12" fill="#25324a" font-weight="600">画面 / Text / 数値読み取り</text>
+<text x="1176" y="226" font-size="12" fill="#69788c" font-weight="400">配置</text>
+<text x="1176" y="242" font-size="11" fill="#69788c" font-weight="400">X</text>
+<rect x="1176" y="251" width="112" height="28" rx="5" fill="#f9fbfe" stroke="#d6deea" />
+<text x="1188" y="270" font-size="12" fill="#25324a" font-weight="400">100</text>
+<text x="1306" y="242" font-size="11" fill="#69788c" font-weight="400">Y</text>
+<rect x="1306" y="251" width="112" height="28" rx="5" fill="#f9fbfe" stroke="#d6deea" />
+<text x="1318" y="270" font-size="12" fill="#25324a" font-weight="400">70</text>
+<text x="1176" y="300" font-size="11" fill="#69788c" font-weight="400">W</text>
+<rect x="1176" y="309" width="112" height="28" rx="5" fill="#f9fbfe" stroke="#d6deea" />
+<text x="1188" y="328" font-size="12" fill="#25324a" font-weight="400">240</text>
+<text x="1306" y="300" font-size="11" fill="#69788c" font-weight="400">H</text>
+<rect x="1306" y="309" width="112" height="28" rx="5" fill="#f9fbfe" stroke="#d6deea" />
+<text x="1318" y="328" font-size="12" fill="#25324a" font-weight="400">40</text>
+<text x="1176" y="380" font-size="12" fill="#25324a" font-weight="600">表示タグ（外部名）</text>
+<rect x="1176" y="392" width="208" height="30" rx="5" fill="#f9fbfe" stroke="#d6deea" />
+<text x="1185" y="412" font-size="11" fill="#8a96a8" font-weight="400">外部名を入力</text>
+<rect x="1390" y="392" width="32" height="30" rx="5" fill="#eaf2ff" stroke="#d6deea" />
+<text x="1401" y="412" font-size="16" fill="#1766e8" font-weight="400">…</text>
+<text x="1176" y="450" font-size="11" fill="#2855a3" font-weight="400">ボタンから検索ツリーを開く</text>
+<text x="1176" y="481" font-size="11" fill="#25324a" font-weight="400">単クリック：詳細のみ</text>
+<text x="1176" y="505" font-size="11" fill="#25324a" font-weight="400">タグ行の Enter / ダブルクリック</text>
+<text x="1176" y="529" font-size="11" fill="#25324a" font-weight="400">選択ボタン：入力欄へ返す</text>
+<text x="1176" y="562" font-size="11" fill="#2855a3" font-weight="400">Project への反映は「適用」</text>
+<rect x="1176" y="587" width="246" height="32" rx="5" fill="#1766e8" stroke="#1766e8" />
+<text x="1258" y="609" font-size="12" fill="#fff" font-weight="400">変更を適用</text>
+<text x="1176" y="676" font-size="10" fill="#69788c" font-weight="400">未適用入力はパネル移動でも保持</text>
+<text x="1176" y="703" font-size="10" fill="#69788c" font-weight="400">別 OS ウィンドウは別段階</text>
+<rect x="0" y="876" width="1440" height="24" rx="0" fill="#f8fafd" stroke="#d6deea" />
+<text x="14" y="893" font-size="10" fill="#69788c" font-weight="400">提案図 / サンプル未接続</text>
+<text x="435" y="893" font-size="10" fill="#69788c" font-weight="400">パネル配置は workspace。Project JSON・履歴には保存しない。</text>
+<text x="1180" y="893" font-size="10" fill="#69788c" font-weight="400">基盤：Banto を維持</text>
+</g></svg>
