@@ -1,0 +1,441 @@
+# docs 地図（まずここを読む）
+
+banto-industrial のドキュメント全体の入口。「どの文書が何の**正**か」「今どこまで進んでいるか」を
+1 画面で引くための地図。詳細は各文書へ辿る。
+
+状態: **地図として現行**。索引に徹し、実装状況・設計判断の本体は各文書側で管理する。
+最終更新: 2026-10-18（#623 PR-1b: 構成の `banto-safe-root` の行に辿らない I/O の部品を足した）。2026-10-18（#438: 新しい PLC ドライバの置き場所（ワイヤ層は別リポジトリ）のオーナー決定を tag-server-design.md §3.4.1 に記録）。2026-10-18（#623 PR-1a: 構成に共有 crate `banto-safe-root` を 1 行足した）。2026-10-18（#623・#661: 「設定モード ⇔ 運用モード」のオーナー決定を chronogazer-service-design.md §5 と banto-hub-t17-design.md §1 に記録。#630 の実機確認の結果を banto-hub-external-db-design.md §5.6 に記録）。2026-10-17（#628 の Nit: アーカイブの表の chronogazer-service-design.md の行の状態欄を短くし、詳細を同文書の `状態:` 行に寄せた）。2026-10-17（#630 PR-2・#616: banto-hub-sink の設定ファイルの置き場を保護された `%ProgramData%\BantoHub\sink\` だけにし、`banto-hub-elev prepare-sink-config` を足した。banto-hub-operations.md §12・banto-hub-installer-design.md §4.4・banto-hub-external-db-design.md §5.3/§5.6・external-db-test-2026-09.md・banto-hub-t17-design.md §12 を更新。DB ユーザーの `SELECT` も明記）。2026-10-17（#642: chronogazer-elev の作る経路を確かめ済みの親のハンドル基準に乗り換え、#641 のレビューの Nit 1〜5 と実機確認の Nit 6 を直した。chronogazer-service-design.md §4 の B3-3b の実装メモ・banto-hub-t17-design.md の「#642 の追補」・banto-hub-operations.md §11 の profile-id の予約名）。2026-10-17（#626 PR-B の実機確認: M1・M2・M4〜M7 は想定どおり、M3 は監査の追試で代え、M8〜M10 は B3-4 のインストーラの実機確認へ。banto-hub-t17-design.md の「#626 の作り直し」に結果を記録）。2026-10-16（#626 PR-B: banto-hub の `grant-profile-acl` を昇格の境界として作り直した - 確かめてから辿らずに開いたハンドルへ保護された DACL を書く・使用中は断る・利用者のアカウントだけ・マシンの環境のルート・足していく。`reset-password`・`revert-to-commissioning` も同じルートと profile-id の許可リスト。banto-hub-t17-design.md §12 末尾・banto-hub-operations.md §11・banto-hub-desktop-plan.md §11・banto-hub-t16-design.md §5 を更新。実機確認は 2026-10-17 に M1・M2・M4〜M7 を確認済み）。2026-10-16（#201: asyncua による実 Hub OPC UA interop smoke と Windows Service / UaExpert の記録手順を追加。自動確認は実装済み、実機確認は未実施）。2026-10-16（#392 B3-3b: ChronoGazer の昇格ヘルパー `chronogazer-elev.exe`（固定の 7 アクション）と `chronogazer-server install` の本体の lib 化。「現状ひとめ」・索引の chronogazer-service-design.md の行を更新）。2026-10-16（#392 B3-3a: 昇格ヘルパーの Win32 の部品を共有 crate `crates/banto-service-elev` へ抽出し banto-hub を乗り換えた（挙動不変）。「現状ひとめ」・索引の chronogazer-service-design.md の行を更新）。2026-10-16（#392 B3-2b の実機確認が済んだことを「現状ひとめ」・索引の chronogazer-service-design.md の行に反映）。2026-10-16（イベント 7024 の文面は終了コードを Win32 のエラー番号として読むので当てにならないことを、banto-hub-operations.md §11・chronogazer-service-design.md・apps/chronogazer/README.md に追記）。2026-10-15（#392 B3-2b: ChronoGazer の Windows サービスの本体と登録・解除（`chronogazer-server.exe run-service`・`install`・`uninstall`）。「現状ひとめ」・索引の chronogazer-service-design.md の行を更新）。2026-10-15（#392 B3-2a: ChronoGazer のサービス化の下ごしらえ（挙動不変）。「現状ひとめ」・索引の chronogazer-service-design.md の行を更新）。2026-10-15（#392 B3-1: サービス本体の共有ランナーと install/uninstall の手順を `banto-service-control` へ抽出し、Hub と sink を乗り換えた。chronogazer-service-design.md を更新）。2026-10-14（#605: SLMP の CPU 種別を接続ごとに選べるようにした。既定は R。Q シリーズ（QJ71E71-100）の 4E フレーム。アクセスルートは未露出。tag-server-design.md・banto-hub-remaining-plan.md・plan.md・banto-hub-mcp-reference.md・implementation-checklist.md を更新）。2026-10-15（#589 のレビュー: sink の運転ループとプールを閉じる処理を OS シャットダウンの予算に含めた。banto-hub-external-db-design.md §5.6・banto-hub-operations.md §11 を更新）。2026-10-15（#392 段階 B の B2-4c の後: シェルの終了・切り替え・復旧の判断を 1 つの状態機械（`lifecycle.rs`）に畳んだ（挙動は不変）。索引の chronogazer-service-design.md の行を更新）。2026-10-15（#392 段階 B の B2-4c（シェルの配線: サービスの画面・プロセスの中のエンジン・接続できない状態の 3 つの画面とトレイの 3 態）を実装した。索引の chronogazer-service-design.md の行と ChronoGazer の現状を更新）。2026-10-14（#589: banto-hub と banto-hub-sink の Windows サービスが OS のシャットダウンで最終 flush するようにした。索引の banto-hub-operations.md・external-db-test-2026-09.md・chronogazer-service-design.md・plan.md を更新）。2026-10-14（#392 段階 B の B2-4b（デスクトップ host を ProgramData へ）を実装した。索引の chronogazer-service-design.md の行と ChronoGazer の現状を更新）。2026-10-14（#392 段階 B の B2-4a（シェルの起動判定の部品。オーナー決定 O1〜O10）を実装した。索引の chronogazer-service-design.md の行と ChronoGazer の現状を更新）。2026-10-14（#392 段階 B の B2-3（`ServiceManager` 一式を共有 crate `crates/banto-service-control` へ抽出、挙動不変）を実装した。索引の chronogazer-service-design.md の行を更新）。2026-10-14（#392 段階 B の B2-2（フロントのサービス接続モード: `isTauri()` の origin の判定、サービスの画面でこの PC からの接続に自動で入る、初回セットアップの「この PC からはログインなしで使う」、REST の LAN・認証の設定の画面、`chronogazer-server` 相手の E2E `pnpm e2e:server`）を実装した。「現状ひとめ」・索引の chronogazer-service-design.md の行を更新）。2026-10-14（#392 段階 B の B2-1（この PC からの接続を通す grant `localDesktop` と、LAN・認証の設定の REST）を実装した。「現状ひとめ」・索引の chronogazer-service-design.md の行を更新）。2026-10-13（#392 段階 B の B1-5（画面の無い本番用の host `chronogazer-server` のコンソール版）を実装した。「現状ひとめ」・索引の chronogazer-service-design.md の行を更新）。2026-10-13（#392 段階 B の B1-4（`chronogazer_core::paths`・`ChronoGazerHost::{Server,Service}`・未認証の `GET /api/host`・`run\endpoint.json` の読み書き。どの host もまだ使わない）を実装した。「現状ひとめ」・索引の chronogazer-service-design.md の行を更新）。2026-10-13（#392 段階 B の B1-3（秘密の保存先の共有 crate `crates/banto-secret-store`。DPAPI の machine スコープ・保護された DACL・`banto_hub_bootstrap::KeyStore` の実装。アプリへの配線はまだ）を実装した。「現状ひとめ」・索引の chronogazer-service-design.md の行を更新）。2026-10-12（ChronoGazer が起動に失敗したときに panic せず、エラーの窓で対処（保存先を選び直す・既定に戻す、バックアップから戻す・作り直す）を選べるようにした（オーナー決定、#392 B1-2 の追補）。「現状ひとめ」・索引の chronogazer-service-design.md の行を更新）。2026-10-12（#392 段階 B の B1-2（デスクトップの起動と終了を `EngineRuntime` に乗り換え、終了の 1 回化を共有の `ExitCleanupOnce` に寄せた。挙動は不変）を実装した）。2026-10-12（#392 段階 B の B1-1（`chronogazer_core::engine` の `EngineRuntime`、`banto-serve` の乗り換え）を実装した）。2026-10-12（#392 段階 B（ChronoGazer のサービス化）の計画とオーナー決定を記録し、[chronogazer-service-design.md](chronogazer-service-design.md)を索引に追加した（決定のみ、未実装）。同日 #586: banto-hub のデスクトップシェルが OS のサインアウト・シャットダウン（`RunEvent::Exit`）でも `RunningHub::shutdown` を通るようにした。トレイの終了と後始末を共有して 1 回に限り、終了の開始後はホスト切替で新しい Hub を起動しない。「現状ひとめ」・plan.md §5・banto-hub-desktop-plan.md §8.2・banto-hub-t16-design.md §4.1 を更新）。同日（#392 A2 のオーナー決定: トレイの左クリックを両アプリで「窓を戻す」に揃え、banto-hub にも終了の二重防止 `QuitGate` を入れた。OS 終了で banto-hub が `RunningHub::shutdown` を通らない件は #586）。2026-10-11（#392 A2: ChronoGazer のウィンドウの × は終了せずに隠し、トレイに常駐して収集を続けるようにした（トレイの「終了」は確認の後に既存の終了処理を通す。2 つ目の起動は既存の窓を前に出す）。窓・終了まわりの共通部分は banto-hub と共有の `crates/banto-desktop-tray` に寄せた。「現状ひとめ」・索引の recorder-requirements.md / r1-plan.md の行、plan.md §5・apps/chronogazer/README.md を更新）。同日（#383 段階3 の P6: 実機確認を実施し、記録 real-machine-test-2026-10-p6.md を索引に足した。「現状ひとめ」の段階3 を更新）。同日（#383 段階3 の P5: Hub 経由のタグの監視・履歴・しきい値の結合を実装し、オーナー決定（Hub の `value_source` は解釈せず、シミュレーション値も Good なら記録する）を反映した。イベント種別を「接続 / 切断 / 再接続」に、イベント一覧と設定 > 収集の接続の表を名前表示に、Hub 経由の再接続は回数なしに。「現状ひとめ」・索引の recorder-requirements.md / r1-plan.md / banto-hub-client-bootstrap.md の行、plan.md §5 を更新）。同日（banto の追従先を v6.7.0 に更新し、両アプリの `Modal`・`Drawer` と重ね順（layering）の自前コピーを `@banto/ui` に置き換えた（#582。削除したファイル約 1,800 行。同じ z の層は DOM の描画順で区別されるようになったが、重なるオーバーレイを同時に出さない運用はそのまま残した）。同日（#383 段階3 の P4: ChronoGazer の `/tags` に「Hub から追加」を足し、Hub のカタログからタグを登録できるようにした（Hub 接続は暗黙に作り読み取り専用、名前の衝突は行ごとのエラー、Hub 経由のタグのスケーリングは `banto-tags` が断る）。購読は「登録済みの hub タグ ∪ 収集の需要」に替え、設定画面のタグ選択は読み取り専用の表示にした。「現状ひとめ」・索引の recorder-requirements.md / r1-plan.md / banto-hub-client-bootstrap.md の行、plan.md §5 を更新）。同日（#383 段階3 の P3: `banto-collect` に外部ソースの接続タスクを足し、ChronoGazer が Hub 経由のタグ（`protocol = hub` の接続）を PLC 直結と同じ収集エンジン・同じ日次ファイルで記録するようにした。購読は選択 ∪ 収集の需要、開始時に Hub のタグ一覧と突き合わせ、Live でない間は Bad + null、`simulation`・`derived_simulation` は記録しない。登録の導線（P4）は未。「現状ひとめ」・索引の recorder-requirements.md / r1-plan.md / banto-hub-client-bootstrap.md の行、plan.md §5 を更新）。2026-10-10（ChronoGazer が同じ DB を 2 プロセスで開けないようにした（#392 A1: 共有 crate `crates/banto-instance-lock` に banto-hub の `profile_lock` の仕組みを移し、デスクトップ・`banto-serve` が DB を開く前に排他を取る。r1-plan.md の既知の制約を更新）））。同日（#383 段階3 の P2: 共有の `banto-tags` に Hub 経由の接続の種別 `hub` を足した（migration 0019、1 つまで、タグの `address` は Hub の外部名・書き込み不可）。収集は P3 まで `hubSourceNotYetCollected` で外し、banto-hub は `hub` 接続を作らない。recorder-requirements.md §3.7.2・tag-server-design.md §7 を更新）。同日（ChronoGazer にも DB に書けなかった監査の保留を配線した（#437、banto-hub に続く。DB ファイルの隣の `audit-spool/`、監査ログ画面の警告帯、`GET /api/audit-log/spool`。apps/chronogazer/README.md を更新）。同日（#383 段階3（Hub を接続種別として `banto-collect` が収集）と #392（収集エンジンの UI 独立の段階移行）のオーナー決定を plan.md §5 に記録し、「現状ひとめ」の 3 ドライバの段落の矛盾（段階2 を未着手としていた）を直した。索引の recorder-requirements.md / r1-plan.md / banto-hub-client-bootstrap.md の行を更新）。同日（banto-hub のデスクトップシェル内の Hub が、既定の 8722 が使用中で `PORT`・`server.port` を指定していないときだけ OS 割り当てのポートで起動するようにした（#479、オーナー決定）。banto-hub-operations.md §2 を更新）。同日（banto の追従先を v6.6.0 に更新し、監査の警告行を `banto-hub-service.log` にも出すようにした（`with_log_sink`）。同日（ChronoGazer のトレンドのツールチップを系列ごとの書式にした（banto v6.5.0 の `formatTooltip`、tyaro/banto#376）: bit のペンは True / False、区間の中点は False / True。#551 で了承していた制約を解消。索引の r1-plan.md / recorder-requirements.md の行を更新）。同日（#437: banto-hub に監査の保留を配線した（DB に書けない・応答しない監査をデータディレクトリの `audit-spool/` に退避し、復旧後に 1 件だけ流し込む。状態画面と `/api/v1/status` の `audit_pending_count` 等）。banto-hub-operations.md §4・§9 を更新）。同日（banto の追従先を v6.5.0 に更新した（監査の保留 `with_spool` と `0008` のマイグレーション、#437 の前提。`LineChart` の `formatTooltip`））。同日（banto の追従先を v6.4.0 に更新した（`@banto/charts` の `LineChart` の `includeY`、#551 のレビュー指摘の前提））。同日（banto の追従先を v6.3.1 に更新した（#547））。同日（R1-D 完了: 実機 PLC（R08ENCPU、SLMP）でのオーナーの目視が全項目 OK。断線からの復旧に約 11 分かかった原因は PLC の生存確認（KeepAlive）の設定で、apps/chronogazer/README.md と banto-hub-operations.md §2 に取扱説明を足した。追従は #550・#551）。同日（R1-D の D-4 に、実機 PLC からの API での読み取りの確認を足した（残りはオーナーの目視 1 回））。同日（ChronoGazer の R1-D の D-4（完了条件の確認）: 断線 → Bad → 復旧の E2E・閲覧公開での 4 種の描画・30 分のミニソーク（`core/tests/mini_soak.rs`）を入れた。実機 PLC での目視は未（検証機の有線 LAN が切れていた）。「現状ひとめ」・索引の r1-plan.md / recorder-requirements.md の行・e2e のポート 8806 を更新）。同日（ChronoGazer の監視画面にリアルタイムトレンドを足した（R1-D の D-3b。r1-plan.md・recorder-requirements.md §3.7.2/§3.7.8 を更新））。同日（しきい値を banto-hub と banto-tags から外した（#533）。tag-server-design.md・banto-hub-operations.md・banto-hub-mcp-reference.md・plan.md・recorder-requirements.md を更新）。2026-10-08（ChronoGazer が保持期間（`retention.days`）で古いデータファイルを消すようにし、banto-tstore の flush が失敗しても行を失わないようにした（#538。recorder-requirements.md §3.4・r1-plan.md を更新）。同日（ChronoGazer のしきい値を記録計の側のタグごとの設定に移した（#532 を実装: `recorder_tag_settings`、`/api/tag-thresholds`、タグ設定画面の別保存、監視・グループ設定画面の読み先、しきい値イベントの判定値 `limit_value`）。「現状ひとめ」・索引の recorder-requirements.md / r1-plan.md の行を更新）。同日（ChronoGazer の監視画面 R1-D の D-2（バー・計器）を実装し、追従先を banto **v6.3.0**（`@banto/charts` の `Gauge` の値なし・下側しきい値。追加のみ）に上げた。「現状ひとめ」の上流の版・索引の recorder-requirements.md / r1-plan.md の行を更新）。同日（しきい値は使う側（記録計・SCADA）の設定とし、scada-design.md §11.2 のしきい値警報の記述も合わせ、Hub は持たず警報も判定しないオーナー決定を記録した（#532・#533、決定のみで実装は未着手）。plan.md §5・recorder-requirements.md §3.1・§3.2・§3.5・§3.7・r1-plan.md R1-D の Q5 を更新し、tag-server-design.md・banto-hub-operations.md に除去予定の注記を足した）。同日（ChronoGazer の監視画面 R1-D の D-1（表示グループのタブ・コマンドパレットでの切替・デジタル表示・現在値のポーリング）を実装した。「現状ひとめ」・索引の recorder-requirements.md / r1-plan.md の行を更新）。同日（ChronoGazer の表示グループ（#393 = #524 の段階 1、R1-B の残り）を実装した: データモデル・REST/Tauri の CRUD・グループ設定画面 `/groups`。「現状ひとめ」・索引の recorder-requirements.md / r1-plan.md の行を更新）。同日（文書一覧の recorder-requirements.md の行に §3.7（設定の宣言データ化と AI 対話による作成の要件、#524、未実装）を足した）。同日（トピック別の「正」に、上流 banto の旧 industrial-plan が履歴であることの導線を足した（#517）。plan.md §2・§5 にオーナー決定 2 点（旧「譲渡前に昇格」は残さない、AI 対話による機能作成（記録計）の方向を採用し要件への追補は #524）を追記。同日: 追従先を banto **v6.2.0** に上げ、`@banto/ui` を足した。両アプリのトーストとコマンドパレットの表示部を `@banto/ui` の `createToastStore()`・`ToastHost`・`CommandPalette` に寄せた（banto #220 段階 3）。「現状ひとめ」の上流の版を更新）。2026-10-07（ChronoGazer に未保存の入力があるときの画面移動の確認（`beforeNavigate`、#508）を入れた（admin-template の `unsavedChanges.ts` の写し。タグ設定・ユーザー管理・設定の各画面。ログイン画面への移動は確認しない。ウィンドウを閉じるときの確認は入れていない）。「現状ひとめ」・plan.md §5 を更新）。同日（追従先を banto **v6.0.0** に上げた（`SnapshotListError` 系の `ListBlockError` 系への改名のみ。banto-industrial の影響はテストの `isSnapshotListError` → `isListBlockError` だけ）。「現状ひとめ」の上流の版を更新）。同日（ChronoGazer のイベント一覧（`/events`）のブロック読み込みも banto の `SnapshotListResource` に寄せ、自前の `eventBlocks.ts`・`#lib/blockCache.ts` を削除した（読めなかったブロックの注記と往復の失敗の赤字はそのまま、トーストは出さない、「再読み込み」は処理中でも押せる）。「現状ひとめ」・plan.md §5 を更新）。同日（追従先を banto **v5.1.0** に上げた（`request_is_loopback_local` の追加のみ。banto-hub の応答の CSP を広げる条件を接続元と宛先の両方が loopback に絞った）。2026-10-06: 追従先を banto **v5.0.0** に上げた（Rust・npm 両方。`SnapshotListResource` の失敗の形の破壊的変更と、`banto-server` の CSP の `connect-src` を要求ごとに広げる API）。両アプリの監査ログ画面の回避策（二重の上限・文字列比較）を外して `messages`・`requestTimeoutMs`・`failures` に寄せた。banto-hub の応答の CSP は loopback の接続元にだけ Tauri IPC を足し、デスクトップ版の `/status` の CSP 違反を解消した（#505 の残り。同一ホストのリバースプロキシ配下の扱いを banto-hub-operations.md §6・tag-server-design.md §5.6 に追記）。「現状ひとめ」・plan.md §5 を更新）。2026-10-06（両アプリのデスクトップ版の窓（Tauri の WebView）に CSP を設定した（#505。組み込みサーバーの応答の CSP（#500）に Tauri の IPC を足しただけの、admin-template と同じ値）。banto-hub のデスクトップ版は navigate 後の管理画面に応答の CSP が掛かるため、`/status` の IPC が CSP 違反を出してから postMessage で動く（扱いはオーナー判断待ち）。banto-hub-operations.md §6・apps/chronogazer/README.md に追記）。2026-10-06（両アプリの監査ログ画面のブロック読み込みを banto の `SnapshotListResource`（`@banto/admin-core`、banto #248）に寄せ、画面を admin-template の形にした（自前の `auditBlocks.ts` と banto-hub の `blockCache.ts` を削除。ChronoGazer の `blockCache.ts` は `/events` が使うので残す）。「現状ひとめ」・plan.md §5・banto-hub-operations.md §9 を更新）。2026-10-05（banto-hub も SvelteKit 3（TypeScript 6）に移行し、npm `@banto/*` を v4.0.0 に上げた。**両アプリとも Rust・npm が banto v4.0.0 に揃い、移行中のずれは解消**。banto-hub にも経路 B（`#lib`・`vite.config.ts`・`AppPath` / `resolveAppPath`、アプリ内の遷移先はすべて `resolveAppPath()` 経由）と #326 を写した（banto-hub には閲覧公開が無いのでガードの許可リストは無い）。「現状ひとめ」・plan.md §5 を更新）。2026-10-05（ChronoGazer を SvelteKit 3（TypeScript 6）に移行し、追従先を banto **v4.0.0**（SvelteKit 3、破壊的変更）に上げた。Rust の `banto-*`（両アプリ共通、版数のみ）と ChronoGazer の npm `@banto/*` は v4.0.0、banto-hub の npm は v3.0.1・SvelteKit 2 のまま（**移行中の一時的なずれ**。banto-hub の移行は次の PR）。ChronoGazer に経路 B（`#lib`・`vite.config.ts`・`AppPath` / `resolveAppPath`・閲覧公開のガード）と #326 を写した。「現状ひとめ」・plan.md §5・apps/chronogazer/README.md を更新）。2026-10-05（両アプリの組み込みサーバーに banto のセキュリティヘッダー（`with_security_headers`）を掛けた（#500。banto-hub-operations.md §6・apps/chronogazer/README.md に追記）。追従先を banto **v3.0.1** に上げた（patch。経路 A に加えて ChronoGazer に経路 B の #321 を写し、保護画面を直接開いたとき届かない間も「起動中…」→「サーバーに接続できません」+「再接続」を出す。banto-hub は起動判定をしないので経路 B は不要）。banto-hub v0.2.0-alpha.29。plan.md §5・apps/chronogazer/README.md を更新）。2026-10-04（banto-hub のアカウント・監査ログ・設定のサービスと、auth（status/setup/change-password）・users・audit-log の REST の口を banto のものに置き換えた（banto に寄せる作業の I3'）。banto v2.1.0 の #277（初回セットアップの原子化）・#278（失敗ログインの名前の切り詰め、無効なログアウトを記録しない）が入る。保持設定の変更の監査は `settings_change` / `settings` に。plan.md §5・banto-hub-operations.md §1/§9 を更新）。2026-10-04（ChronoGazer の起動時の環境判定を banto（admin-template v3.0.0）の形にした（banto に寄せる作業の I2c。banto v2.1.0 の #286）。LAN/REST のビルドで `/api/auth/check` に一時的に届かないときは demo に落とさず、起動待ちで再試行して「サーバーに接続できません」+「再接続」を出す。demo になるのは `VITE_BANTO_DEMO=1` のビルドと「`/api` は無い」と確定したときだけ。plan.md §5・apps/chronogazer/README.md を更新）。2026-10-04（ChronoGazer の LAN 設定の適用（`server_apply`）を banto の「bind → 保存 → serve、失敗時は旧サーバーに戻す」に揃えた（banto に寄せる作業の I2b。banto v2.1.0 の #287/#288/#294）。**ChronoGazer でも閲覧公開を使う**ことにし（オーナー決定。同日の I2a の「画面に出さない」を変更）、grant `publicViewer` の登録・設定画面の項目・LAN の未ログインを閲覧者として入れるガードを実装。plan.md §5・apps/chronogazer/README.md を更新）。2026-10-04（ChronoGazer の users/settings/audit/backup のサービスと REST ルーターを banto のものに置き換えた（banto に寄せる作業の I2a。SLMP の I2a とは別）。banto v2.1.0 のセキュリティ修正 #277/#278/#280 が入る。#280 の旧バックアップは起動時の警告のみ、閲覧公開は画面に出さない（オーナー決定）。plan.md §5・apps/chronogazer/README.md を更新）。2026-10-04（追従先を banto **v3.0.0**（ADR-0017、破壊的変更）に上げ、banto-hub の試運転モードを「認証の迂回」から **grant 方式**（`POST /api/auth/grant/commissioning`、loopback 限定・ロックダウンで失効）に切り替えた。banto-hub v0.2.0-alpha.28。bootstrap の自己発行は status → grant → 発行 → logout の 4 手順。tag-server-design.md §5.6・banto-hub-operations.md §3/§6/§19・banto-hub-client-bootstrap.md を更新）。2026-10-02（両アプリの DB スキーマを banto の admin-template と同じ形に整理した: 自前テーブルは上流の migration の byte 等価コピー、記録テーブルを migrator ごとに分けて `sqlx::migrate!` に戻し、旧形式の DB は起動を拒否する（既存の DB は壊してよい、オーナー決定。plan.md §5、banto-hub-operations.md §1、r1a-readme-gaps.md に追記））。2026-10-02（追従先を banto **v2.1.1** に上げた（Rust・npm 両方、経路 A のみ）。banto-hub は v0.2.0-alpha.27。試運転モードへの切り替えで「別のユーザーで…」が出なくなる修正（banto #308）などを取り込む。「現状ひとめ」の上流の版を更新）。2026-10-02（banto-hub の npm `@banto/*` を v2.0.0 に上げ、管理 UI のセッションの確定を SessionController に移した。試運転は policy runner の `adopt`/`end`。banto-hub v0.2.0-alpha.26。両アプリの npm が v2.0.0 に揃い、移行が完了。移行 PR1d）。2026-10-02（ChronoGazer の npm `@banto/*` を v2.0.0 に上げ、画面のセッションを SessionController に移した。banto-hub の npm は v1.7.3 のまま。移行 PR1c）。2026-10-02（banto v2.0.0 への移行中は Rust クレートが v2.0.0・npm `@banto/*` が v1.7.3 とずれることを「現状ひとめ」に書いた。移行 PR1a）。2026-10-01（scada-design.md §22 の #22〜#27 を決定: projectRevision と contentHash の役割分離、式の Quality 導出、回転 pivot、mode は起動時に確定、session descriptor の脅威モデル、Symbol 取り込み時の SymbolId 保持）。2026-10-01（scada-design.md §22 の未決 6 件を決定: Project package `.bantoscada` の 2 表現、Stable ID は UUID v7、座標は f64 design unit、式は banto-expr を Rust 側で再利用、Editor / Runtime は同一 executable の mode、Design API は loopback のみ。AI 変更の承認は semantic risk）。2026-09-30（banto-hub-redundancy-design.md を新設: PLC / Hub / SCADA server の 3 層冗長化とリースの抽象の草案。scada-design.md §13.2 / §22 #19 から参照）。2026-09-30（scada-design.md §13.2: SCADA server の構成を決定。24/365 の処理は画面と別の core に置き、v1 は埋め込み起動、サービス host は後続）。2026-09-30（banto-tagclient の binding 同一性を StableTagId から external_name に変更（オーナー決定、scada-design.md §9.6）。banto-tagclient-design.md §3.1 / §4.4 を改訂）。2026-09-30（`scada-design.md` を文書地図へ追加。banto-scada の設計草案・決定/未決事項の正）。2026-09-28（追従先を banto **v1.7.3** に上げた。`banto-storage` の `ORDER BY` に
+一意キー（既定 `id`）を足す変更と `WindowedListResource` 回復の改善が中心で（上流の admin-template 固有の修正・依存更新は
+本リポジトリには反映されない）、banto-industrial 側の API に破壊的変更は無い（banto-hub は
+v0.2.0-alpha.25）。「現状ひとめ」の上流の版を更新）。2026-09-26（追従先を banto **v1.7.2** に上げ、開いている画面がセッションの失効で
+ログイン画面へ移るようにした（banto #241、chronogazer・banto-hub の保護レイアウトで `onSessionEnded` を購読）。
+「現状ひとめ」の上流の版・banto-hub-operations.md §1 を更新）。2026-09-25（#440・#442: 試運転モードでトークン無しに開いた `/api/tag-stream` もロックダウンの
+後 1 周期以内に閉じ、gRPC のストリーミング（`StreamValues` / `StreamEvents`）も接続中に再検証する。
+banto-hub-operations.md §3・§8 を更新）。同日: #430: 開いている WebSocket ストリームを接続中も 15 秒ごとに再検証し、
+API キーは失効・期限切れ・トリップで、セッションは削除・降格・パスワード変更/リセットで閉じる
+（セッションは banto v1.7.1 の `AuthState::revalidate`）。banto-hub-operations.md §1・§3 を更新）。
+同日: 追従先を banto **v1.7.1** に上げた。グリッドの初回クリックの修正 banto #236 を取り込む。
+2026-09-24（banto v1.7.0 に追従し、ユーザーの削除・降格・パスワード変更・
+リセットでそのアカウントのセッションを失効させた（banto #204、banto-hub v0.2.0-alpha.24。
+chronogazer・banto-hub の両方、実装済み）。「現状ひとめ」の上流の版と、banto-hub-operations.md §1・
+apps/chronogazer/README.md を更新）。同日: relay-wright を main から外し、タグ `archive/relay-wright-2026-09-24`
+に退避した（構想の練り直し、オーナー決定）。復元は
+`git checkout archive/relay-wright-2026-09-24 -- apps/relay-wright ...`。
+plan.md §4b・implementation-checklist.md §7 を更新）。同日（#424: banto-tstore の**記録時刻とデータファイルの日付の契約**
+（行の時刻はファイルの日付から ±24h 以内。検索範囲によって読み出しで取りこぼす時刻の行は
+書き込み時に拒否する）をオーナー決定（案 A）として実装。plan.md §5 の I3a・recorder-requirements.md
+§3.4）。2026-09-23（#414 段階2: chronogazer の収集開始時に**不正なタグ・グループ・接続
+だけを外して残りを動かす**オーナー決定と実装。除外は `/settings/collect` と `/tags` に出し、
+収集イベントには記録しない。外したタグは DB 上 null・現在値は `invalid`。R1-D に「4 種の
+表示すべてで null を 0 と区別する」要件。r1-plan.md R1-C / R1-D の節・recorder-requirements.md
+§3.1 / §3.2）。同日: #413: chronogazer で**接続単位シミュレーションを開けた**
+オーナー決定と実装。R1-B では banto-hub 固有として閉じていたもの。シミュレーション
+接続の値はデータファイルに記録しない約束は維持。r1-plan.md R1-B の節・
+recorder-requirements.md §3.1）。同日: #383 段階2b / R1-C の C-4: 開発用 PLC（`dev_plc` example、
+`pnpm dev:plc`）相手の「設定 → 収集開始 → データファイル生成 → イベント記録」の
+一巡を Rust の統合テストと E2E で固定し、R1-C の完了条件を満たした。以下は経緯。
+2026-09-21: #383 段階2b / R1-C: chronogazer に収集ランタイムの
+骨格（C-1、#406）、操作の口・起動時の自動開始（C-2、#407）、現在値・接続状態・
+収集イベントの読み出し口（C-3a、#408）、収集の画面（C-3b、#409: `/settings/collect`
+の状態・接続ごとの状態・操作と、`/events` のイベント一覧）が入った。一巡は
+C-4 まで未了。以下は経緯。2026-09-18: #383 段階2a: chronogazer にタグレジストリ CRUD と
+設定画面を追加、r1-plan.md の実施状況表記をアーカイブから運用中へ訂正。
+以下は経緯。#383 段階1 の実機確認と、そこで見つかった 2 件の修正。以下は経緯。2026-09-17: #332 Hub 自動接続・#383 段階1（ChronoGazer が選んだ Hub タグを購読して値を受ける）・relay-wright 凍結を反映。以下は経緯。2026-09-16: T19（UX-30〜48）・T20（文字列/構造体/レシピ/ビット .0〜.F）・T21（構成補助 MCP 管理面）完了、MCP 31 ツール実機検証、外部 DB 連携 S0〜S2b・S4・S5 完了、S3/S6/S7 残（MCP は 37 ツールに。追加分はローカル PostgreSQL で検証）に加え、v0.2.0-alpha.8: 書き込み受付の既定を「可」に変更し、再起動・収集操作での自動無効化を撤回（#340）、v0.2.0-alpha.9: 試運転中は構成 CRUD を収集中でも即時・無停止反映（#341）、v0.2.0-alpha.10: computed タグの catalog 公開・外部読み取り出力のシミュレーションゲート撤廃（#335）、v0.2.0-alpha.11: シミュレーションデバイスへの外部書き込みをシミュレータへ反映（#363）、v0.2.0-alpha.12: T15-3 テスト出力（test_output）機構を撤去（#362）、v0.2.0-alpha.13: PLC 到達不能中の plc_reconnected / plc_disconnected フラップを修正（#344）、
+v0.2.0-alpha.14: banto-hub の設定画面をカテゴリ別ルートへ分割（#359 banto-hub 分）を反映、
+chronogazer の設定画面をカテゴリ別ルートへ分割（#359 chronogazer 分）を反映、
+relay-wright の設定画面をカテゴリ別ルートへ分割（#359 relay-wright 分、issue #359 は3アプリ分完了）を反映、
+v0.2.0-alpha.15: 演算タグの式チェック API（`POST /api/tags/expression/check`）・
+エラー位置のインライン表示・ライブプレビューを追加（#342 段階A。MCP `check_expression`
+ツールを追加し 38 ツールに）を反映、
+v0.2.0-alpha.16: Drawer/Modal が未保存中は Esc・オーバーレイクリックで閉じないよう修正し、
+接続 Drawer・収集グループ Drawer に無かった未保存破棄確認を追加（誤爆クローズ防止）を反映、
+v0.2.0-alpha.17: タグの編集・連続登録を非モーダルの右ペインへ移動（#375）を反映、
+v0.2.0-alpha.18: 演算タグの式欄に「一覧から挿入」を追加し、新規作成フォームも
+非モーダルの右ペインへ移動（#342 段階C）を反映、
+v0.2.0-alpha.19: 演算タグの式欄にセグメント補完を追加（#342 段階B。組み込み関数表を
+`GET /api/tags/expression/functions` で配る。**これで #342 は A/B/C の3段階すべて完了**）、
+v0.2.0-alpha.20: 狭幅（≤900px）でタグ登録・タグモニタの左ツリーをオフキャンバスへ退避
+（#378。400px でグリッドが操作できなかった制約を解消。wire 変更なし）を反映）。
+最終検証日(コード照合): 2026-09-16
+
+> この地図は索引に徹する。実装状況・設計判断の本体は各文書側にあり、状態の**正**は
+> 常にリンク先の `状態:` 行と各表とする（CLAUDE.md H8 の状態欄同期規約）。
+
+## 現状ひとめ（2026-09-18）
+
+- **#392 段階 B（ChronoGazer のサービス化）**: **計画確定（2026-10-12 オーナー決定「おすすめで」）、実装は B3-3b（ChronoGazer の昇格ヘルパー `chronogazer-elev.exe`: 登録・解除・Operators・サービス DACL の ACE・データと secrets の ACL・自動開始。実機確認は未）まで（B3-2b の実機確認は 2026-10-16 に済み）。残りは B2-5（任意）と B3-3b の実機確認・B3-4 以降（インストーラ・Hub と同居での実機確認と soak）**。
+  headless host は新 bin `chronogazer-server`、DPAPI の KeyStore、Windows サービス + インストーラ。既存の `%APPDATA%` のデータは移行しない。
+  計画は [chronogazer-service-design.md](chronogazer-service-design.md)。実装済みは A1・A2・#588 と B1-1（起動と終了を `EngineRuntime` にまとめ `banto-serve` を乗り換え）・B1-2（デスクトップも乗り換え、終了の 1 回化を banto-hub と共有）と、起動に失敗したときのエラーの窓と対処の選択（panic しない。今の DB や記録は消さない）・B1-3（`crates/banto-secret-store`: DPAPI の machine スコープで守ったファイルを保護された DACL のディレクトリに置く `KeyStore`。アプリへの配線は B1-5・B2-4）・B1-4（`chronogazer_core::paths` のデータのルート解決と配置・`ChronoGazerHost::{Server,Service}`・未認証の `GET /api/host`・`run\endpoint.json` の読み書き）・B1-5（画面の無い本番用の host `chronogazer-server` のコンソール版: `%ProgramData%\ChronoGazer` のデータ、loopback を常に・LAN は設定次第で待ち受け、Hub のキーは DPAPI のファイル、日付ごとのログ、Ctrl-C とコンソールを閉じたときの最終 flush。サービス化は B3）・B2-1（この PC からの接続を通す grant `localDesktop`: peer と Host の両方が loopback、未初期化の間は admin・初期化後は設定 `auth.local_grant`（既定 off）。LAN の公開設定と認証の設定の REST `/api/settings/*`、LAN の listener のその場の入れ替え）・B2-2（画面の側: シェルがサービスへ navigate した窓を `isTauri()` の origin の判定で HTTP の画面にし、この PC からの接続 → 閲覧公開の順に自動で入る。最初の管理者がいない間は案内の帯、初回セットアップの「この PC からはログインなしで使う（管理者）」は既定でチェックし、選ぶと設定を admin にして再起動なしで続く。LAN・認証の設定は REST で、この PC から開いた画面だけ変更できる）・B2-3（`crates/banto-service-control` の抽出）・B2-4a（シェルの起動判定の部品: SCM × health の判定の純関数、`GET /api/host` の health probe、データのルートを保護された DACL で作る。シェルへの配線は B2-4b・B2-4c）・B2-4b（デスクトップ版のデータも `%ProgramData%\ChronoGazer`（`CHRONOGAZER_ROOT` で上書き。開発ではこれを作業用のフォルダに向ける）へ寄せ、Hub のキーは DPAPI のファイルへ。旧 `%APPDATA%` のデータは使わず、利用者ごとに 1 回だけ案内する）・B2-4c（シェルの配線: 起動のたびに SCM と health を見て、サービスの画面を開く窓・プロセスの中のエンジン・接続できない状態の窓の 1 つで始める。サービスが止まれば接続できない状態の窓へ、つなげるようになれば自動でつなぎ、プロセスの中のエンジンへは「再試行」でだけ移る。トレイは 3 態。正式な受け入れは B3-2b の実機確認で 2026-10-16 に確認済み）・B3-1（Windows サービスの本体のランナーと install/uninstall の手順を `crates/banto-service-control` に 1 つにまとめ、banto-hub と sink を乗り換えた。文言と終了コードは不変、本体の panic でも SCM に停止を報告する。ChronoGazer のサービス化は B3-2 で、その下ごしらえの B3-2a（host の種類の引数化・ACL の利用者を渡せる形・起動の順序の共有・サービスの Parameters の読み書き。挙動不変）は済み）・B3-2b（ChronoGazer の Windows サービス `ChronoGazer`: `chronogazer-server.exe install` を管理者の PowerShell から実行して登録（手動開始、インストール利用者の SID を記録）、`Start-Service`・`Stop-Service` で動かし止める。サインアウトしても止まらず、OS のシャットダウンでも最終 flush する。終了コード 0〜3、`uninstall` でデータは残す。実機確認は 2026-10-16 に全項目確認済み。UAC の昇格ヘルパとインストーラは B3-3・B3-4）・B3-3a（`crates/banto-service-elev`: ローカルグループの作成・メンバーの追加・サービス DACL への Operators の ACE・トークンのメンバーシップ・runas の起動を製品ごとの昇格ヘルパーで共有する部品にし、banto-hub の elev とシェルを乗り換えた。文言と終了コードは不変。昇格する exe とアクションは製品ごとで、ChronoGazer の `chronogazer-elev.exe` は B3-3b）。
+
+- **構成**: Rust workspace + SvelteKit/Tauri。アプリは **banto-hub**（タグサーバー）/ **chronogazer**
+  （記録計）。**relay-wright**（条件付き PLC 自動書き込み）は 2026-09-24 に main から外し、
+  タグ `archive/relay-wright-2026-09-24` に退避した（構想の練り直し、オーナー決定。§4b）。
+  共有 crate `crates/banto-safe-root`（#623 PR-1a、`banto-secret-store` から分けた。LocalSystem のサービスが利用者の書ける木を扱うときの DACL の確かめと辿らずに開くハンドル。PR-1b でルート・管理するフォルダを握ってハンドル基準で読み書きする `SafeRoot`／`ManagedDir`・`nofollow`・Redirection Guard を足した。アプリへの適用は PR-3/5）。
+  上流 `banto` は git tag / `@banto/*` を消費（`Cargo.toml`/`package.json` を正とする）。
+  **追従先は banto v6.7.0（2026-10-11、追加のみ）**: Rust クレート・npm `@banto/*` とも両アプリで **v6.7.0**（実装済み）。v6.7.0 は `@banto/ui` に `Modal`・`Drawer` と重ね順のヘルパー（`layering.ts`）を足した（`LAYER_ABOVE_SELECTOR` → `LAYER_SELECTOR`、`DrawerCloseSource` → `OverlayCloseSource` に改名）。v6.6.0 の内容は次のとおり。v6.6.0 は `AuditLogService` に `with_log_sink` / `with_shared_log_sink` を足した（監査の記録失敗・保留の警告行の出口。既定は従来の `eprintln!`）。v6.5.0 の内容は次のとおり。v6.5.0 は `banto-admin-services` の `AuditLogService` に任意の監査の保留（`with_spool`。DB に書けない・応答しない監査をファイルに退避し、復旧後に 1 回だけ流し込む。banto ADR-0019、#437）と、そのためのマイグレーション `0008_audit_log_pending_id.sql`（両アプリにコピー済み）を足し、`@banto/charts` の `LineChart` に任意の `formatTooltip` を足した。v6.4.0 は `@banto/charts` の `LineChart` に任意の `includeY` を足した（左の縦軸の範囲に常に含める値。データ点・凡例・ツールチップは増えない）。v6.3.2 は折れ線系チャートの左の余白が目盛の幅に合わせて広がる修正。いずれも後方互換。v6.3.1 は存在しない `/api/*` を SPA の HTML ではなく JSON の 404 にする修正（#547）のみ。v6.3.0（2026-10-08、追加のみ）の内容は次のとおり。
+  `@banto/charts` の `Gauge` が値なし（`value: null` →「—」）と下側しきい値（`warningLow` / `dangerLow`）を
+  受けるようになり、ChronoGazer の監視画面の計器（R1-D の D-2）が使う。v6.2.0 までの記録は以下。
+  **追従先は banto v6.2.0（2026-10-08、追加のみ）**: Rust クレート・npm `@banto/*` とも両アプリで **v6.2.0**。
+  新パッケージ `@banto/ui` を両アプリに足し（`optimizeDeps.exclude` にも）、自前のトースト（ストア・`ToastHost`）と
+  コマンドパレットの表示部を `@banto/ui` に寄せた（banto #220 段階 3。コマンドの一覧・検索・最近使った記録はアプリ側）。
+  banto-hub の層の約束（`escLayering.ts`）は Drawer/Modal 等のために残す。v6.0.0 までの記録は以下。
+  **追従先は banto v6.0.0（2026-10-07、破壊的変更だが影響はテストの改名のみ）**: Rust クレート・npm `@banto/*` とも両アプリで **v6.0.0**。
+  v5.1.0（追加のみ）までの記録は以下。
+  **追従先は banto v5.1.0（2026-10-07、追加のみ）**: 両アプリで **v5.1.0**。
+  banto-hub の応答の CSP は `request_is_loopback_local`（接続元と宛先の `Host` の両方が loopback）で Tauri IPC を足す。
+  v5.0.0 までの記録は以下。
+  **追従先は banto v5.0.0（2026-10-06、破壊的変更）**: 両アプリで **v5.0.0**。`SnapshotListResource` の `error`・`failedBlocks` が `failures`・`messages` に替わったので、
+  両アプリの監査ログ画面の回避策を外した。banto-hub の応答の CSP は `with_security_headers_using` で loopback の
+  接続元にだけ Tauri IPC を足す（#505。[banto-hub-operations.md](banto-hub-operations.md) §6）。v4.0.0 までの記録は以下。
+  **追従先は banto v4.0.0（SvelteKit 3・TypeScript 6、破壊的変更。2026-10-05）**: Rust クレート（`banto-*`）・npm
+  `@banto/*` とも両アプリで **v4.0.0**、両アプリとも SvelteKit 3 に移行済み（実装済み。ChronoGazer #506 → banto-hub
+  の順で、その間だけ banto-hub の npm が v3.0.1 のままの一時的なずれがあった）。経路 B の `#lib`・`vite.config.ts`・
+  `AppPath` / `resolveAppPath`（アプリ内の遷移先はすべて経由）と #326 を admin-template から写した。ChronoGazer は
+  閲覧公開のガードも上流の形に（[plan.md](plan.md) §5）。
+  v3.0.1 までの記録は以下。
+  **追従先は banto v3.0.1（2026-10-05、patch）**: Rust クレート・npm `@banto/*` とも **v3.0.1**（v3.0.0 は ADR-0017、
+  破壊的変更。経路 A と、コピーした `extra_auth_router`・保護レイアウトの経路 B をセットで書き換えた。
+  banto-hub v0.2.0-alpha.29。v3.0.1 は保護画面の起動待ちの修正 #321 のみで、ChronoGazer に写した）。**banto-hub の試運転モードは grant 方式**（実装済み: 試運転中も管理
+  REST/WS は bearer が必須で、loopback の接続元だけが `POST /api/auth/grant/commissioning` で合成 admin の
+  grant を受け取る。ロックダウンで失効。[tag-server-design.md](tag-server-design.md) §5.6、
+  [banto-hub-operations.md](banto-hub-operations.md) §19）。**ChronoGazer は閲覧公開（grant `publicViewer`）を
+  使う**（2026-10-04 オーナー決定・実装済み。同日の「画面に出さない」を変更。設定の「接続」で ON にすると
+  LAN の未ログインが閲覧者として監視・ヒストリカル・イベントを見られる）。**ChronoGazer のアカウント・設定・
+  監査ログ・バックアップのサービスと REST の口、LAN 設定の適用、起動時の環境判定は banto のもの**（2026-10-04、
+  実装済み。自前のコピーを削除し、適用は bind → 保存 → serve・失敗時は旧サーバーに戻す。起動時に届かないときは
+  demo に落とさず「サーバーに接続できません」+「再接続」。[plan.md](plan.md) §5）。**banto-hub の
+  アカウント・監査ログ・設定のサービスと auth・users・audit-log の REST の口も banto のもの**（2026-10-04、
+  実装済み。I3'。#431 の認証ゲートと RBAC の床、hub 固有の設定キー・各ルーターは自前のまま。
+  [plan.md](plan.md) §5）。**両アプリの監査ログ画面のブロック読み込みも banto のもの**（2026-10-06、実装済み。
+  `@banto/admin-core` の `SnapshotListResource`（banto #248）と admin-template の画面の形。応答の
+  `deletionEpoch` で剪定による失効も見る。[plan.md](plan.md) §5）。**ChronoGazer のイベント一覧（`/events`）も
+  同じリソース**（2026-10-07、実装済み。自前の `eventBlocks.ts`・`#lib/blockCache.ts` は削除。[plan.md](plan.md) §5）。
+  **ChronoGazer は未保存の入力があるとき画面移動の前に確認する**（2026-10-07、実装済み。#508。`@banto/forms` の
+  `guardUnsavedChanges`。[plan.md](plan.md) §5）。
+  v2.1.1 までの記録は以下。
+  **追従先は banto v2.1.1（2026-10-02）**: Rust クレート・npm `@banto/*` とも **v2.1.1**（v2.0.0 → v2.1.0 → v2.1.1、
+  経路 A のみ。banto-hub v0.2.0-alpha.27）。下の「banto v2.0.0 への移行は完了」はその移行（v1 → v2）の記録。
+  **banto v2.0.0 への移行は完了（2026-10-02）**: Rust クレート（PR1a）・npm `@banto/*` とも **v2.0.0**。
+  npm は **ChronoGazer**（PR1c。banto の「派生アプリの移行の手順」のうち 1・2・3・4・5・7 を
+  admin-template から写して実装済み。6 は ChronoGazer に独自の再確認・試運転が無いので該当なし）と
+  **banto-hub**（PR1d、v0.2.0-alpha.26。フロントのセッションの確定は SessionController、試運転は
+  policy runner の `adopt`/`end`。[tag-server-design.md](tag-server-design.md) §5.6、
+  [banto-hub-operations.md](banto-hub-operations.md) §1）の両方。移行の間だけずれていた版は揃ったので、
+  **揃えて上げる運用**に戻した。Rust と npm は別マニフェストで独立に追従できるが、片方だけを上げない
+  （2026-09-01、Issue #220 — npm 側だけ v1.2.0 に取り残されていたのを是正した教訓）。
+- **I 系（基盤 I0〜I6）**: 実装済み（I6 = banto-broker として抽出済み）。
+- **W 系（relay-wright）**: W5 まで実装済みだったが **2026-09-17 に凍結**（構想の練り直し、
+  オーナー決定）、**2026-09-24 に main から外してタグ `archive/relay-wright-2026-09-24` に
+  退避した**。残っていた W5 実機検証も、#332 の Hub 自動接続配線も止めたまま（plan.md §4b）。
+- **T 系（banto-hub、T0〜T21）**: T0〜T18-6 に加え、**T19（UX-30〜48 の UI/UX 群、S1〜S5）・T20（文字列
+  read/write・構造体タグ登録＋オフセットコピー・レシピ一括書き込み・ワードデバイスのビット .0〜.F）・
+  T21（構成補助 MCP＝管理面ツール）まで完了**（2026-09-06）。**残るは T18-5c/d（Windows 実機往復・
+  狭幅/倍率・72h soak = オーナー同席の実機検証）と、実機・需要待ちの #210/#211/#123/#201 のみ**。
+  T18-5a は「全タグのクライアント保持（上限 10,000 タグ）」を正式仕様化（windowed 化はバックログ降格）。
+- **MCP（機械/AI 向け外部 IF）**: `POST /mcp`（API キー認証）で **38 ツール** — データ面（値の
+  read/write・レシピ・状態参照）＋管理面（接続/グループ/タグ CRUD・式チェック・設定
+  gRPC/MQTT/retention・収集/write 制御・API キー発行/失効・lock_down・Sink グループ管理）。実機
+  R08ENCPU で 31 ツール検証済み（外部 DB 連携で追加した 6 ツール・#342 の `check_expression` は
+  ローカル/ローカル PostgreSQL で検証）（2026-09-06、実バグ0）。IF 詳細は
+  [banto-hub-mcp-reference.md](banto-hub-mcp-reference.md)（#342 の `check_expression`
+  ツール追加は本 PR の時点で同文書へ未反映 - 別途反映が要る）。
+- **Hub 自動接続（#332、2026-09-17）**: Banto アプリが試運転中の Hub に対して自分用の `read` キーを
+  自己発行し OS キーリングへ保存する共有 crate `crates/banto-hub-bootstrap` を追加し、chronogazer に
+  設定カテゴリ「Hub 接続」を新設（chronogazer はこれまで Hub に接続していなかったため新規実装）。
+  **banto-hub 側は変更ゼロ**。`admin`/`write:` はコードでホワイトリスト拒否、失効は自分が発行した
+  id だけ。**relay-wright への配線は保留**（relay-wright は 2026-09-17 のオーナー決定で凍結、
+  2026-09-24 に main から退避、plan.md §4b）。選んだタグの購読は #383 段階1 で実装済み。詳細は
+  [banto-hub-client-bootstrap.md](banto-hub-client-bootstrap.md)。
+- **ChronoGazer の3ドライバ構成（#383、2026-09-17 オーナー決定）— 段階1・2 完了、段階3 は P4（登録の導線）まで実装**:
+  ChronoGazer は単体で動く記録計として **SLMP / Modbus TCP / banto-hub 経由**の3ドライバを持つ、
+  という方針を決めた。banto-hub 側も接続ドライバが増えていく想定で前2者は機能が被るが、現場 PC
+  1 台での成立を優先して重複を許容する（plan.md §4、tag-server-design.md §7）。**段階1（Hub 経由
+  ドライバ＝選んだタグを購読して値を受け、購読状態を設定画面に出す）は実装済み** — 世代の同一性は
+  「接続先 + タグ集合」で `status()` では張り直さず、未解決タグは残りだけで購読して一覧に出し、
+  購読の失敗は接続の 6 状態を汚さない（banto-hub-client-bootstrap.md §10）。**段階2（SLMP /
+  Modbus TCP 直結）は実装済み（下記の 2a・2b）。段階3（Hub 経由タグの合流・保存・表示）は
+  2026-10-10 に方針をオーナー決定した（未実装）**: Hub を接続種別（`plc_connections.protocol = hub`）
+  として扱い、`banto-collect` に外部ソース接続タスクを足して同じ日次ファイル・イベント・品質で収集する
+  （plan.md §5、手順 P2〜P6）。**2026-10-11 に P2（レジストリの種別 `hub`、#566）と P3（収集・保存）まで実装**:
+  Hub 経由のタグは PLC 直結と同じ日次ファイル・イベント・品質で記録される（Live でない間は Bad + null、
+  Hub の `value_source` は解釈せず、シミュレーション値も Good なら記録する - P5 で替えた）。**同日 P4（登録の導線）も実装**: `/tags` の「Hub から追加」で
+  Hub のカタログからタグを登録し（Hub 接続は暗黙に作る）、購読するのは登録済みのタグ ∪ 収集の需要（設定画面の
+  タグ選択は読み取り専用の表示に替えた）。**P5（監視・履歴・しきい値の結合）も 2026-10-11 に実装**（オーナー決定: 「アプリケーションごとに責務は完全に分ける。むしろシミュレーション値でちゃんと動作できているか確認できる方が望ましい」）。**実機確認（P6）も 2026-10-11 に実施**（R08ENCPU、Hub 経由 SLMP と直結 SLMP を別ポートで比較。記録の行数・null・値が一致、ハーネスの判定は全段 PASS。[real-machine-test-2026-10-p6.md](real-machine-test-2026-10-p6.md)）。同日、収集エンジンの UI 独立（#392）も、まずトレイ常駐（A）、次に
+  headless host + Windows サービス（B）の段階移行に決めた。**A1（二重起動の防止、2026-10-10）・
+  A2（トレイ常駐、2026-10-11）は実装済み**: ウィンドウを閉じても収集は続き、トレイの「終了」か OS の
+  シャットダウン・ログオフで止まる（2026-10-12 オーナー決定: トレイは両アプリとも左クリックで窓を戻し右クリックでメニュー、banto-hub の終了にも二重防止。banto-hub のデスクトップシェルも OS のサインアウト・シャットダウンで終了処理を通るようにした（#586、2026-10-12、Windows 実機の OS 終了は未確認））。B（UI からの独立・サービス）は未実装で、収集エンジンはまだアプリの
+  プロセスの中。
+  **段階2a（= r1-plan.md R1-B、レジストリ CRUD）は実装済み（2026-09-18）**:
+  PLC接続/収集グループ/タグの3エンティティ CRUD を REST + Tauri 両経路・
+  `/tags` 設定画面で公開（editor 以上、監査記録）。**R1-B の残りの表示グループ（#393 = §3.7 の
+  段階 1）も実装済み（2026-10-08）**: app 固有のテーブル（`0101_display_groups.sql`）、REST
+  `/api/display-groups` + Tauri `display_groups_*`（読み取り viewer 以上・変更 editor 以上・監査・
+  楽観ロック）、グループ設定画面 `/groups`。検証はサーバー側の 1 関数、しきい値は持たず
+  記録計の側の設定を読み取り専用で見せる、ペンに割り当てたタグは削除できない。**しきい値は記録計の側の
+  タグごとの設定（#532、実装済み 2026-10-08）**: app 固有のテーブル（`0102_recorder_tag_settings.sql`、
+  既定は設定なし）、REST `/api/tag-thresholds` + Tauri `tag_thresholds_*`（読み取り viewer 以上・保存
+  editor 以上・監査・楽観ロック）、タグ設定画面でタグとは別に保存。収集の判定はここから作り、しきい値の
+  イベントに判定値（`limit_value`）を残す。banto-tags の列と Hub からの除去は #533（実装済み 2026-10-09）。監視画面での描画は
+  R1-D で、**D-1（表示グループのタブ・`?group=`・コマンドパレットでの切替・デジタル表示・
+  現在値のポーリング）と D-2（バー・計器。レンジは工学値レンジ → LL..HH（記録計の側のしきい値の設定、#532）→ 「レンジ未設定」）は
+  実装済み（2026-10-08）**。トレンドは D-3a（直近の履歴の読み出し口、2026-10-08）と D-3b（リアルタイム
+  トレンドの画面。初期窓 = 履歴 + 現在値で追従、時間窓は端末ごと、帯は選んだ 1 ペン、2026-10-09）を
+  実装済み。D-4（完了条件の確認、2026-10-09）で断線 → Bad → 復旧の E2E（自前の開発用 PLC を
+  起動・停止）・閲覧公開での 4 種の描画・30 分のミニソークを入れた（ソーク: 行数は目安 ±0、行の抜け 0・`null` 0・読み取りの失敗 0、working set は 10 分以降 14.8〜15.8 MiB で横ばい。現在値と履歴を並行に読んで、履歴の所要は最長 34ms）。
+  同日、実機 PLC（R08ENCPU、SLMP）から 4 種の表示グループの値が取れることを API で確かめた（読み取りだけ、約 3 分、
+  4 本とも good・履歴に値）。**オーナーの目視も実機 PLC で全項目 OK、R1-D 完了**（結果は r1-plan.md の R1-D の D-4 (6)。追従の #550・#551 と、#551 のトレンドのツールチップの制約（tyaro/banto#376）も 2026-10-10 までに済んだ）。**2026-09-23 のオーナー決定（#413）で
+  接続単位シミュレーションも設定できるようにした（実装済み）** - シミュレーション接続の値は
+  現在値・イベントには出るがデータファイルには記録しない。**段階2b（= r1-plan.md
+  R1-C、収集ランタイム統合）は C-1〜C-4 がすべて入り、完了条件を満たした（2026-09-23）**: C-1（収集サービスの
+  骨格、#406）、C-2（操作の口・起動時の自動開始、#407）、C-3a（現在値・接続状態・
+  収集イベントの**読み出し口**。viewer 以上、「走っていない / 読めなかった /
+  0 件」を別の結果として返す、#408）、C-3b（**画面**。`/settings/collect` の
+  状態表示・接続ごとの状態・操作（操作は editor 以上にだけ出す）と、`/events` の
+  イベント一覧。現在値の表示は R1-D の監視画面、#409）が入り（2026-09-21）、
+  C-4 で**一巡が通った**（2026-09-23）- 別プロセスの開発用 PLC
+  （`apps/chronogazer/core/examples/dev_plc.rs`。接続単位シミュレーション
+  （`simulation`）は値が tstore に記録されないため使わず、普通の Modbus TCP /
+  SLMP 接続として登録する）相手に「設定 → 収集開始 →
+  データファイル生成 → イベント記録」を Rust の統合テスト（Modbus/SLMP）と
+  E2E（Modbus）で固定した。**2026-09-23 のオーナー決定（#414 段階2）で、収集の開始時に
+  不正なタグ・グループ・接続だけを外して残りを動かすようにした（実装済み）** - 外したものは
+  `/settings/collect` の「除外あり（N 件）」と `/tags` の一覧に出る（収集イベントには
+  記録しない）。外したタグの値は DB 上 null、現在値は品質 `invalid`。R1-D の 4 種の表示すべてで
+  null を 0 と区別する要件を足した（r1-plan.md R1-C / R1-D の節）。収集エンジンは
+  当面 Tauri プロセス内で動かす方針（オーナー決定、recorder-requirements.md §4 追補。2026-10-10 に段階的な独立化の方針を決定、未実装）。
+  **relay-wright は凍結・main から退避済み**（構想の練り直し、2026-09-24、plan.md §4b）。**段階1 は実機（R08ENCPU + 本物の banto-hub）で確認済み**
+  （2026-09-17、banto-hub-client-bootstrap.md §11）。確認の過程で「タグが 1 つ消えると購読が二度と戻らない」など
+  **モックでは出なかった欠陥 2 件**を発見し修正した（#388）。
+- **Hardening（H1〜H10）**: H1〜H6・H8・H10 完了。H9 は 2026-08-14 に完全完了。H5 は relay-wright の
+  組み込みサーバーモード E2E を含め完了（2026-08-30、PR #193。Tauri 固有経路の E2E は WebDriver 課題と
+  して別スコープに分離）。**残るは H7 の① 実機 soak のみ**（詳細は improvement-plan.md）。
+- **v0.2.0-alpha.8（2026-09-14、#340）**: 書き込み受付（write_enabled）の既定を「可」に変更し、
+  プロセス再起動・収集の開始/停止/モード変更での自動無効化を撤回（オーナー決定 2026-09-09）。
+  トグルは運用者が手で止める非常停止スイッチに徹する。詳細は
+  [tag-server-design.md](tag-server-design.md) §6-6。**実機確認済み（2026-09-14、R08ENCPU）**:
+  起動直後 `writeEnabled: true`、収集開始後も変わらず enable 不要で書き込み → 読み戻し一致、
+  disable → 再起動 → 無効のまま復元、enable → 再起動 → 有効で復元。
+- **v0.2.0-alpha.9（2026-09-14、#341）**: 試運転中（未ロックダウン）は接続・グループ・タグの
+  CRUD を収集中でも即時・無停止で反映し、ロックダウン後のみ pending queue + 明示適用にする
+  （オーナー決定 2026-09-09 / 2026-09-14）。明示適用も収集を止めない。あわせて
+  `banto_collect::Collector::apply_config` の writer 配布不具合（唯一の接続が replaced に
+  なると新 writer が届かず履歴書き込みが列数不一致で全滅）を修正。詳細は
+  [tag-server-design.md](tag-server-design.md) §4.3・
+  [banto-hub-operations.md](banto-hub-operations.md) §19。**実機確認済み（2026-09-14、R08ENCPU、
+  試運転モード）**: 収集中のタグ削除・作成・作成（writable）がいずれも 200 で即時反映され、
+  `runId` 不変・既存タグは good のまま・pending 0 件・新タグは数秒で good/real。
+  `POST /api/collection/reapply` も 200・`runId` 不変。ロックダウン後の queue + 無停止適用は
+  admin ログインが要るためローカルでは未実施（CI の `chromium-locked-down` E2E と統合テストで担保）。
+- **v0.2.0-alpha.10（2026-09-14/15、#335）**: API キー経由の catalog（`GET /api/v1/tags`）から
+  computed タグと接続単位のシミュレーション設定済み PLC タグが常時隠れていた不具合を修正
+  （`value_source` に新ラベル `computed` を追加し、`derived_simulation` は真にシミュレーション
+  中のときだけの情報ラベルに変更）。さらに 2026-09-15 オーナー決定「外部出力を PLC への出力と
+  勘違いしていた」で、外部への**読み取り**出力（REST/WS/gRPC/MQTT）はシミュレーションで一切
+  ゲートしない契約へ改定（全 PLC シミュレーション中も catalog・値読み取り・購読・publish を
+  常に配信）。T15-3 の `test_output` opt-in は効果を失い deprecated となったが、
+  **撤去済み（2026-09-15、#362。v0.2.0-alpha.12）**: `TestOutputControl` の制御
+  プレーンごと撤去した。詳細は [tag-server-design.md](tag-server-design.md) §4.2、
+  [banto-hub-desktop-plan.md](banto-hub-desktop-plan.md) §6.3。
+- **v0.2.0-alpha.11（2026-09-15、#363）**: シミュレーションデバイス（接続単位
+  `simulation: true`・全シミュレーション運転中）のタグへの外部書き込みを拒否せず、PC 上の
+  in-process シミュレータへ反映する契約へ改定（オーナー決定 2026-09-15）。`banto-plc` の
+  シミュレータに Modbus FC5/6/15/16 と SLMP `0x1401` を実装し、ワイヤ経由で書いた番地は
+  held としてランプ波の更新対象から外れるため読み戻せる。実機向けの護り（writable /
+  write スコープ / レート制限 / 値検査 / log-before-write / write_enabled）はすべて据え置きで、
+  撤去したのは「シミュレーション中は拒否」の 1 段だけ。**wire 変更**: エラーコード
+  `simulation_write_rejected` は返らなくなった。監査 `detail` に `target: simulator|plc` を記録。
+  詳細は [tag-server-design.md](tag-server-design.md) §6.5、
+  [banto-hub-operations.md](banto-hub-operations.md) §4。 **ローカル確認済み（2026-09-15、alpha.11 ビルド）**: 実機 R08ENCPU への書き込みは
+  監査 `target: plc`、収集中に live 追加した SLMP シミュレーション接続への D0 書き込みは 200 で
+  1.5 秒後も保持（隣の D1 はランプ継続）・監査 `target: simulator`。
+- **v0.2.0-alpha.12（2026-09-15、#362）**: alpha.10（#335）で外部への読み取り出力の
+  シミュレーションゲートを撤廃して以降どの経路からも参照されなくなっていた T15-3
+  「テスト出力」（`TestOutputControl`）機構を撤去した。`apps/banto-hub/core/src/test_output.rs`
+  削除、REST `POST /api/test-output/{enable,disable}` 削除、`GET /api/v1/status`・
+  `GET /api/status` の `test_output`/`testOutput` 削除、gRPC proto の
+  `StreamValuesRequest.test_output`・`ValueBatch.simulation`/`run_id` を `reserved` 化。
+  **wire 変更（破壊的）**。MQTT/WS は #364 までに完了済みで追加変更なし。詳細は
+  [tag-server-design.md](tag-server-design.md) §4.2、
+  [banto-hub-desktop-plan.md](banto-hub-desktop-plan.md) §6.3。
+- **v0.2.0-alpha.13（2026-09-15、#344）**: PLC 到達不能の間、`plc_reconnected` と
+  `plc_disconnected` が収集周期ごとに 1 組ずつフラップし続ける不具合を修正した（実測で
+  1000ms 周期・2 接続で約 13,000 件/時）。hub の `BrokerReadClient::connect()` が broker
+  セッションの実状態を見ずに常に即 `Ok` を返していたのが原因。以後 `connect()` は broker の
+  `status_watch` を見て `Reconnecting` なら 3 秒待って復帰しなければ失敗を返し、
+  `plc_reconnected` は「切断後、最初の読み取りが成功した時点」で 1 回だけ記録する。
+  **wire 変更なし**（記録のタイミングと件数のみ変更）。詳細は
+  [tag-server-design.md](tag-server-design.md) §6 項目5、
+  [banto-hub-operations.md](banto-hub-operations.md) §10。 **ローカル確認済み（2026-09-15、alpha.13 ビルド）**: 到達不能 IP への SLMP 接続を
+  収集中に追加し 30 秒観測 → 接続イベント 0 件（修正前は `plc_disconnected` 30 + `plc_reconnected` 30）、
+  status は `reconnecting`、同居する実機接続の収集は影響なし。
+- **v0.2.0-alpha.14（2026-09-15、#359 banto-hub 分）**: 上流テンプレート v1.6.0（#358 で追従）の
+  設定画面カテゴリ別ルート分割を banto-hub に移植した。管理 UI の URL 構造が変わり、
+  `/settings` は `/settings/{appearance,account,connectivity,data,security}` の実ルートに分かれる
+  （旧 `/settings` は先頭の可視カテゴリへ 307 redirect するのでブックマークは引き続き有効）。
+  コマンドパレット `config.import` の誘導先も `/settings#config-package` から
+  `/settings/data#config-package` に変わった。挙動・API・DB は無変更。chronogazer・relay-wright への
+  展開は別 PR（issue #359 は3アプリ分の作業）。
+- **chronogazer の設定画面カテゴリ別ルート分割（2026-09-15、#359 chronogazer 分）**: banto-hub
+  （#371、上記 v0.2.0-alpha.14）と同じ構成を chronogazer にも移植した。`/settings` は
+  `/settings/{appearance,account,connectivity,data,security}` の実ルートに分かれ（旧 `/settings`
+  は先頭の可視カテゴリへ 307 redirect）、`AuthSettings`（ログイン不要モード＋自動ログイン）を
+  Account/Connectivity/Security の3カテゴリで共有する `authSettingsStore` を新設した。挙動・API・DB
+  は無変更。relay-wright への展開は別 PR。
+- **relay-wright の設定画面カテゴリ別ルート分割（2026-09-15、#359 relay-wright 分、issue #359 完了）**:
+  banto-hub・chronogazer と同じ構成を relay-wright にも移植した。`/settings` は
+  `/settings/{appearance,account,connectivity,data,security}` の実ルートに分かれ（旧 `/settings`
+  は先頭の可視カテゴリへ 307 redirect）。relay-wright 固有のタグモニタ手動書き込み（H2）とアーム
+  時限失効（H10）は、どちらも意図しない PLC 書き込みを防ぐ安全装置なので、6番目のカテゴリを増やさず
+  認証と同じ `security` に同居させた。`AuthSettings` を Account/Connectivity/Security の3カテゴリで
+  共有する `authSettingsStore` を新設した。挙動・API・DB は無変更。
+- **v0.2.0-alpha.15（2026-09-15、#342 段階A）**: 演算タグの式入力 UX 改善の第1段。
+  `POST /api/tags/expression/check`（editor 以上、常に 200 で `ok`/`resultType`/`refs`/
+  `preview`/`error` を返す）と同ロジックを共有する MCP `check_expression` ツールを追加し、
+  保存前に式を検証・試算できるようにした。フロント（`(app)/tags/+page.svelte`）は式欄
+  （`#tag-expression`）に 300ms debounce のライブチェックを配線し、`pos`（バイト = 文字
+  オフセット）でエラー位置に下線を出し、結果型・参照タグ一覧・試算値をプレビュー表示する。
+  issue #342 原文の「キャレット自動移動」は打鍵の邪魔になるため見送り、エラーメッセージを
+  クリックしたときだけ移動する挙動に変更した。段階 B（セグメント補完）・C（ツリーからの
+  挿入）は別 PR。**wire 追加のみ**（新エンドポイント・新 MCP ツール、既存 API は無変更）。
+  詳細は [tag-server-design.md](tag-server-design.md) §4.2、
+  [banto-hub-operations.md](banto-hub-operations.md)。
+- **v0.2.0-alpha.16（2026-09-15）**: オーナー報告「設定中に操作ミスで閉じてしまい最初から
+  やり直しになる」の修正。`Drawer.svelte`/`Modal.svelte` に `dirty`/`onBlockedClose` を追加し、
+  未保存の変更がある間は Esc・オーバーレイクリックで閉じないようにした（`×` 経由の確認は
+  塞がない）。あわせて調査で判明した「接続 Drawer・収集グループ Drawer には未保存確認自体が
+  無かった」不具合も修正し、タグ編集 Drawer と同じ `isFormDirty` ベースの破棄確認を追加した。
+  フロントのみ、**wire 変更なし**。詳細は
+  [banto-hub-desktop-plan.md](banto-hub-desktop-plan.md) §9.4 TAG-UX-C。
+- **v0.2.0-alpha.17（2026-09-15、#375）**: オーナー報告「編集中に左ツリーと中央グリッドを
+  見られない」の解消。タグ画面の「編集」「連続登録」をモーダルの Drawer から**非モーダルの
+  右ペイン**へ移した（オーバーレイを持たないので編集中も左ツリーとグリッドを操作できる。
+  Esc では閉じず、明示的な「閉じる」ボタンと登録成功後だけ閉じる）。狭幅（≤900px、サイドバーの
+  オフキャンバスと同じブレークポイント）は従来どおりオーバーレイの Drawer、構造体展開と CSV
+  取り込みは一過性のウィザードなのでモーダルのまま。フロントのみ、**wire 変更なし**。詳細は
+  [banto-hub-desktop-plan.md](banto-hub-desktop-plan.md) §9.4 TAG-UX-C 2026-09-15 追補その2。
+- **v0.2.0-alpha.18（2026-09-15、#342 段階C）**: 演算タグの式欄に**「一覧から挿入」**を
+  追加した。トグルが ON の間だけタグ一覧の行クリックが「完全名を式欄のキャレット位置へ挿入」
+  になり、編集対象は切り替わらない（自タグ・文字列型・循環になる参照は挿入せず理由をトースト
+  で出す。**正は段階Aのサーバチェック**）。issue 原案のツリー3階層化は採らず、#375 で非
+  モーダルになったグリッドをそのまま使う。あわせて**新規作成フォームも右ペインへ**移した
+  （狭幅は従来どおり中央モーダル）。段階B（セグメント補完）は未着手。フロントのみ、
+  **wire 変更なし**。詳細は [tag-server-design.md](tag-server-design.md) §4.2 と
+  [banto-hub-desktop-plan.md](banto-hub-desktop-plan.md) §9.4 TAG-UX-C 2026-09-15 追補その3。
+- **v0.2.0-alpha.19（2026-09-16、#342 段階B）**: 演算タグの式欄に**セグメント補完**を
+  追加した。キャレット直前の字面から接続名 → 収集グループ名 → タグ名の候補を出し、
+  接続・グループを確定すると名前 + `.` が入ってそのまま次の階層が開く。組み込み関数も
+  第1セグメントの候補に混ざる（確定すると `name(`）。開くのはドット入力・2文字以上の入力・
+  `Ctrl+Space`・`Ctrl+.`（IME 変換中は開かない）。**`Esc` はポップアップが開いている間は
+  ポップアップだけを閉じ、「一覧から挿入」トグルは ON のまま**。候補の除外は段階Cの純関数を
+  再利用し、補完では淡色ではなく非表示にする。**wire 追加**: `GET /api/tags/expression/functions`
+  （組み込み関数表を `banto-expr` 単一ソースから配る。MCP には追加しない）。
+  **これで issue #342 は段階 A（式チェック API）・B（セグメント補完）・C（一覧から挿入）の
+  3段階すべてが完了した**。詳細は [tag-server-design.md](tag-server-design.md) §4.2。
+- **v0.2.0-alpha.20（2026-09-16、#378）**: 狭幅（≤900px、サイドバーのオフキャンバスと同じ
+  ブレークポイント）で**タグ登録・タグモニタの左ツリーをオフキャンバスへ退避**するように
+  した。400px 幅では固定 280px のツリーに押されてグリッドに約 120px しか残らず行がクリック
+  できなかった（#375 の E2E で実測した既存の制約）。ツールバーの「📁 ツリー」ボタンで開き、
+  ノードを選ぶと自動で閉じる（`Esc`・バックドロップでも閉じ、フォーカスはボタンへ戻る）。
+  退避は汎用部品 `SplitPane.svelte` に実装して2画面で共有し、狭幅判定は `narrow` prop で
+  受ける（同部品のアプリ非依存規約は維持）。**広幅の DOM・CSS は不変**。フロントのみ、
+  **wire 変更なし**。詳細は [banto-hub-desktop-plan.md](banto-hub-desktop-plan.md) §9.4
+  TAG-UX-G 2026-09-16 追補。
+- **banto v1.7.1 追従（2026-09-24〜25、banto-hub v0.2.0-alpha.24）— 実装済み**: banto #204 の
+  セッション失効（v1.7.0 で導入）を chronogazer・banto-hub の両方に組み込んだ。`users.auth_epoch`（認証の世代）を
+  足し、ロール変更・パスワード変更・リセットで同じ SQL 文の中で進める。セッションは要求・コマンド
+  のたびにアカウントと照合され、削除・降格・パスワード変更/リセットで**ほかの端末のセッション
+  （Remember me を含む）は次の操作で 401**、自分のパスワード変更では変更したセッションだけ続く。
+  DB が照合に答えないときはセッションを残してその要求だけ失敗させ、画面はログイン画面へ移らず
+  再試行を出す。chronogazer は REST と Tauri の両経路（「ログイン不要モード」の合成
+  セッションはモードを OFF にすると終わる）、banto-hub は REST（管理 UI とタグ空間の
+  セッション経路。API キーは対象外、試運転モードはトークンを発行しないので対象外）。
+  **未保存の変更の確認（banto #214）の画面への適用は次の PR**。運用上の説明は
+  [banto-hub-operations.md](banto-hub-operations.md) §1「ログインセッションの失効」。
+  **開いている画面への失効の通知（banto v1.7.2 #241、2026-09-26）— 実装済み**: 両アプリの保護
+  レイアウトで `onSessionEnded` を購読し、SSE（`/api/events`）の再接続が `401` になったら
+  ルートガードを走らせ直してログイン画面へ移る（LAN のブラウザのみ。Tauri は対象外）。banto-hub は
+  v0.2.0-alpha.26（banto v2.0.0、PR1d）から `onSessionEnded` ではなく SessionController の世代の照合
+  （配線①）で同じことを行う。
+  **開いている WebSocket ストリーム（#430）— 実装済み**: 15 秒ごとに再検証し、API キーで開いたものは
+  失効・期限切れ・トリップで、セッションで開いたもの（`/api/tag-stream` を含む）は削除・降格・
+  パスワード変更/リセットで close `1008`（セッションは banto v1.7.1 の `AuthState::revalidate`、
+  tyaro/banto#239）。試運転モードでトークン無しに開いたストリームはロックダウンで `commissioning_ended`
+  （#440）。gRPC のストリーミング（`StreamValues` / `StreamEvents`）も同じ仕組みで再検証し、失効・期限切れは
+  `UNAUTHENTICATED`、トリップは `PERMISSION_DENIED` で終わる（#442）。
+- **出荷ゲート**: T5-5（実機での 72h soak 実行 + 実機最終サインオフ）のみ残（実機必須）。
+- **banto-tagclient**: **S4a完了（2026-09-01）**。読み取り専用DTO、Endpoint/Secret境界、
+  外部名（`external_name`）resolver（2026-09-30にstable IDから変更）、REST catalog/values transport、WS wire純粋解析、bounded publish gate、認証付き
+  WebSocket handshake、on_change subscribe、単一世代workerとwatchによるatomic latest snapshot配信、
+  公開Handle、worker所有権、明示shutdown、catalog起点の再接続・backoff・停止割り込み、rebinding、config_changed再解決、消費型restartによるcredential/endpoint置換を実装済み。S4b-1互換候補ではorigin/main 509bf0e（Banto v1.4.0）とのローカル統合でtokio-tungstenite 0.29系一本化を確認したが、未push・未mergeである。S4互換tag固定、実Hub/LAN統合検証、配布サイズ確認は残課題である。
+  Hubのrelease tagは未確定。
+
+## まず読む順
+
+1. **CLAUDE.md**（ルート）— AI 作業規約・役割分担・開発規約。
+2. **この地図**（docs/README.md）— 全体像と各文書の役割。
+3. 目的別に下表の該当文書へ。banto-hub の現状を最短で掴むなら
+   [banto-hub-remaining-plan.md](banto-hub-remaining-plan.md)（残作業の索引・最新の全体像）。
+
+## 文書地図
+
+### 現行（現状の正・参照先）
+
+| 文書                                                               | 何の正か / 役割                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [implementation-checklist.md](implementation-checklist.md)         | **実装・検証・PR のチェックリスト**。CLAUDE.md から `@` インポートされ毎セッション読み込まれる。実際に踏んだ事故だけを載せる表（検証順序・E2E の罠・docs 同期・設計の規律・マージ運用）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| [plan.md](plan.md)                                                 | **全体計画の親**。I/R/W/T 系マイルストーンと依存の一覧。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| [tag-server-design.md](tag-server-design.md)                       | **banto-hub 設計の一次ソース**。タグ空間モデル・外部 IF・書き込み安全。実装状況は §9（T 系）表が正。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| [scada-design.md](scada-design.md)                                 | **banto-scada 設計草案の正**。Project / Renderer / Editor、Binding（`external_name` のみ、§9.6）、安全な劣化表示、Equipment / Symbol / Faceplate、Event / Action、Alarm / Tracking / DB Table/View、Historian（ChronoGazer と共有）、Import / Export、Design API / AI の決定事項と議論中事項。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| [banto-hub-redundancy-design.md](banto-hub-redundancy-design.md)   | **冗長化（PLC / Hub / SCADA server の 3 層）の設計草案**。読み取り・評価は全台、副作用は 1 台（リース）、PLC 調停第一候補。各層の仕分け、client の切替、障害シナリオ、段階導入（R0〜R4）、オーナー判断待ち §10。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [banto-tagclient-design.md](banto-tagclient-design.md)             | **banto-tagclient の実装前設計**。読み取り専用SDKのREST/WS、binding、再接続、停止、テストゲートの正。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [banto-hub-client-bootstrap.md](banto-hub-client-bootstrap.md)     | **Banto クライアントの Hub 自動接続（#332）の正**。試運転中の `read` キー自己発行 → OS キーリング → `banto-tagclient` への供給。共有 crate `crates/banto-hub-bootstrap` の trait 境界・発行規則・6 状態・同一 PC 限定である理由。chronogazer 分のみ実装済み（Hub 経由タグの収集・保存の #383 段階3 は 2026-10-10 に方針決定、P5 まで実装（2026-10-11、§10 冒頭。P4 で購読の対象は登録済みのタグに、設定画面の選択は読み取り専用に。P5 で Hub の `value_source` を解釈しないことに）。relay-wright は凍結・2026-09-24 に main から退避済みのため保留、Hub 側は変更ゼロ）。§10 に #383 段階1 の購読（世代の同一性・未解決タグ・ポーリング口・起動時 resume）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| [banto-rtsp-design.md](banto-rtsp-design.md)                       | RTSP 映像取り込み設計（Draft、Phase 1 実装済み・実機/配布確認待ち）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [banto-hub-desktop-plan.md](banto-hub-desktop-plan.md)             | **banto-hub 運転計画（T14〜T18）・UI/UX 決定台帳**。§9.3〜9.5 が T18 タグ登録 UX の受け入れの正。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| [banto-hub-operations.md](banto-hub-operations.md)                 | **banto-hub 運用ガイド**（起動・ポート・API/MQTT/gRPC・サービス化・soak 手順）。現状の運用を引く入口。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [banto-hub-opcua-verification.md](banto-hub-opcua-verification.md) | #201 の OPC UA 外部クライアント自動検証範囲と Windows Service / UaExpert 手動記録手順。自動 smoke は実装済み、実機確認は未実施。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [banto-hub-t16-design.md](banto-hub-t16-design.md)                 | T16 詳細設計（デスクトップシェル・タスクトレイ）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| [banto-hub-t17-design.md](banto-hub-t17-design.md)                 | T17 詳細設計（SCM 管理・profile・UAC・インストーラ）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [banto-hub-installer-design.md](banto-hub-installer-design.md)     | **一体インストーラ設計（Draft・オーナー決定待ち）**。シェル・Hub・elev・サイドカーを 1 本の NSIS で配置し、サービス登録と Operators 権限まで行う。方式は既存生成ツールの複数バイナリ化（案 A）を推奨。決定項目は §7。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [banto-hub-t18-design.md](banto-hub-t18-design.md)                 | T18 詳細設計（タグ登録 UI/UX・性能検証）の実装分解索引（受け入れは desktop-plan §9.4 が正）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| [banto-hub-t19-design.md](banto-hub-t19-design.md)                 | T19（UX-30〜48 の UI/UX 群）設計・決定台帳。S1〜S5 完了。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| [banto-hub-t20-design.md](banto-hub-t20-design.md)                 | **T20 計画**（文字列 read/write・構造体タグ登録・レシピ一括書き込み・ワードデバイスのビット .0〜.F）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [banto-hub-mcp-reference.md](banto-hub-mcp-reference.md)           | **banto-hub MCP リファレンス**。データ面（読み書き・レシピ原子性）＋構成補助（管理面・T21）の全ツール I/F・スコープ・ロックダウン（MES/ゲートウェイ実装者向け）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| [banto-hub-t21-design.md](banto-hub-t21-design.md)                 | **T21（完了）** 構成補助 MCP（管理面）。接続/グループ/タグ・設定・収集/write 制御・API キー・lock_down を MCP から。安全境界の設計・決定台帳。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| [banto-hub-external-db-design.md](banto-hub-external-db-design.md) | **外部 DB 連携（#228 Source / #229 Sink）の設計**。S0〜S2b・S4・S5 完了（Source エンジン・Sink の Hub 側とサイドカー）、S3（Source UI）/S6（Sink UI）/S7（実 DB 検証）残。DB 接続を Source/Sink で共有し、Source は既存の接続→グループ→タグ 3 階層を流用（案 A）して Hub 内で動き、Sink は設定と監視を Hub に置いた別プロセスのサイドカー `apps/banto-hub-sink`。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| [external-db-test-2026-09.md](external-db-test-2026-09.md)         | 外部 DB 連携の検証手順（S3 の手動 smoke A-1〜A-14、Sink の smoke と S7 実 DB 検証 B-1〜B-15。B-14 は PRESHUTDOWN の読み戻し、B-15 は OS 再起動の最終 flush、#589）。結果は §5 に記録。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [banto-hub-remaining-plan.md](banto-hub-remaining-plan.md)         | banto-hub **残作業の優先順位・着手順の索引**（他文書を正とする）。銘柄横断で現状を掴む最短路。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| [improvement-plan.md](improvement-plan.md)                         | Hardening（H1〜H10）の設計・進捗ログ。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| [recorder-requirements.md](recorder-requirements.md)               | 記録計（chronogazer）R0 要件定義。R1〜R4 スコープの正。§3.7 は設定（PLC 接続・収集グループ・タグ・表示グループ・帳票テンプレート）の宣言データ化と AI 対話による作成の要件（2026-10-08 オーナー決定、#524。段階 1 = 表示グループ（#393）と、段階 2 の 4 種（デジタル・バー・計器 = R1-D の D-1・D-2、トレンド = D-3b、2026-10-09）を実装。D-4 の確認とミニソーク（§4）は 2026-10-09）。しきい値は記録計の側の設定とする決定（2026-10-08、#532・#533）を §3.1 ほかに反映し、#532（ChronoGazer 側）を実装（§3.7.2。#533 は未着手））。bit のタグの既定の表示は True / False（2026-10-09 オーナー決定、#551）で、トレンドのツールチップの制約は 2026-10-10 に解消（tyaro/banto#376）。Hub 経由タグの収集（#383 段階3）と収集エンジンの UI 独立（#392）の決定を §3.1・§4 に反映（2026-10-10）。§4 に #392 A2（トレイ常駐、ウィンドウを閉じても収集を止めない）の実装を反映（2026-10-11）。§3.7.2 にレジストリの Hub 経由の接続の種別 `hub`（#383 段階3 の P2、2026-10-10）と、その収集・保存（P3、2026-10-11）と「Hub から追加」の登録の導線（P4、同日）と、Hub の `value_source` を解釈しない決定・監視/履歴/しきい値の結合（P5、同日。P6 実機確認も同日実施）。 |
+
+### トピック別の「正」（重複時はここを見る）
+
+- **T18 タグ登録 UX の受け入れ**: [banto-hub-desktop-plan.md](banto-hub-desktop-plan.md) §9.3〜9.5。
+  実装分解は [banto-hub-t18-design.md](banto-hub-t18-design.md)、運用手順は [banto-hub-operations.md](banto-hub-operations.md)。
+- **pending queue（運転中編集のキュー化）**: [banto-hub-desktop-plan.md](banto-hub-desktop-plan.md) §9.3 TAG-P0-3。
+- **SLMP 構造化エラー（H9）**: [h9-slmp-structured-error-spec.md](h9-slmp-structured-error-spec.md)。
+- **タグ定義の single source of truth**: [tag-server-design.md](tag-server-design.md)。
+- **旧 industrial-plan（上流 banto 側）**: banto リポジトリの `docs/history/industrial-plan.md`（2026-07-12 時点の初期計画）は
+  **履歴であり設計根拠にしない**。本リポジトリの現行は [plan.md](plan.md)（§1〜§6 は同文書が正）。
+
+### アーカイブ（役目終了・経緯として保存。現行仕様ではない）
+
+各文書の冒頭に**アーカイブ・バナー**を付与済み。リンクは生きている（過去の rationale として参照可）。
+
+| 文書                                                               | 状態                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [ux-plan.md](ux-plan.md)                                           | UX 改善計画（T9〜T13）。T13-2/3 は desktop-plan/T18 へ移管済み。T9〜T12 の rationale として参照のみ。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [h10-3-read-scope-proposal.md](h10-3-read-scope-proposal.md)       | H10③ read スコープの比較検討（案 B 採用、PR #75 で決着済み）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| [t5-handoff.md](t5-handoff.md)                                     | T5 セッション引き継ぎメモ（内容は operations / desktop-plan に反映済み）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| [banto-hub-t14-design.md](banto-hub-t14-design.md)                 | T14（ランタイム状態管理・制御面分離）は実装完了。現行の設計判断は desktop-plan / tag-server-design へ吸収済み。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| [chronogazer-service-design.md](chronogazer-service-design.md)     | ChronoGazer のサービス化（#392 段階 B）設計・計画。**計画確定（2026-10-12 オーナー決定）、B1〜B3-3b まで実装済み・B2-5 と B3-4 以降は未実装**。どの段が実装済みか・実機確認の範囲・小さな直しの経緯は、文書冒頭の `状態:` 行と §4 の各実装メモ（この表には書かない）。決定 1〜14、H9（旧 `%APPDATA%` は移行しない）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [r1-plan.md](r1-plan.md)                                           | 記録計 R1 実施計画。**運用中**（R1-A 完了、R1-B は #383 段階2a で着手・レジストリ CRUD 実装済み・表示グループも #393 で実装済み（R1-B 完了、2026-10-08）・接続単位シミュレーションを #413 で開けた（2026-09-23 オーナー決定）、R1-C は C-1〜C-4 実装済み・完了条件達成・開始時に不正な設定だけを外す（#414 段階2、2026-09-23 オーナー決定）、R1-D は D-1（タブ切替・デジタル表示・現在値のポーリング）・D-2（バー・計器）・D-3a（履歴の読み出し口）・D-3b（リアルタイムトレンド）実装済み・D-4（断線の E2E・閲覧公開・ミニソーク・実機 PLC からの API での読み取り・オーナーの目視）済み・R1-D 完了、追従の #550・#551 と #551 のトレンドのツールチップの制約（tyaro/banto#376）も 2026-10-10 までに解消。R1-C の後続として #383 段階3・#392 を 2026-10-10 に決定（#383 段階3 は P6（実機確認）まで実装、2026-10-11。#392 は A1・A2（トレイ常駐）まで実装、2026-10-11）（null を 0 と区別する要件、2026-10-08 のオーナー決定 Q1〜Q9）。Q5 のしきい値の読み先は #532 で記録計の側の設定に替えた）。 |
+| [real-machine-test-2026-09.md](real-machine-test-2026-09.md)       | #130/#131/#123 の一回性実機検証記録。結果は tag-server-design.md §6.2 等に吸収済み。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| [real-machine-test-2026-10-p6.md](real-machine-test-2026-10-p6.md) | #383 段階3 P6 の実機確認（2026-10-11、Hub 経由 SLMP と直結 SLMP の比較。全段 PASS）の一回性記録。結果は plan.md §5 に反映済み。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| [real-machine-mcp-2026-09.md](real-machine-mcp-2026-09.md)         | T19 S5 の MCP 実機検証（2026-09-04）の一回性記録。現行 IF・実機検証索引は banto-hub-mcp-reference.md。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| [r1a-readme-gaps.md](r1a-readme-gaps.md)                           | 上流 banto の README 手順の穴（外部フィードバック用チェックリスト。本リポの仕様ではない）。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+
+## 補足: なぜ状態ヘッダが厚くなるか
+
+CLAUDE.md は「設計判断はオーナー決定として日付付きで docs に記録」「実装状況が変わる PR で `状態:` 行を更新」
+（H8）を定めており、各文書の状態ヘッダに日付付きの決定・進捗が積層する。経緯は意図的に保存する方針のため、
+現状だけを素早く引きたいときは本地図と各文書の**表**（§9 表など）を先に見るとよい。

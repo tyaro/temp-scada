@@ -1,0 +1,8 @@
+pnpm-lock.yaml
+Cargo.lock
+target
+node_modules
+dist
+docs/upstream
+test-results
+playwright-report

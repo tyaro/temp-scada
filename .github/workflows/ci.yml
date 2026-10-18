@@ -1,0 +1,22 @@
+name: SCADA
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          components: rustfmt, clippy
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm check && pnpm test && pnpm build && pnpm e2e && pnpm format:check
+      - run: cargo fmt --all --check && cargo clippy --workspace --locked --all-targets -- -D warnings && cargo test --workspace --locked
+      - run: cargo run --locked -p scada-model -- validate examples/minimal.project.json

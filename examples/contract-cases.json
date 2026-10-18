@@ -1,0 +1,83 @@
+[
+  {
+    "name": "幅は正数",
+    "path": "/screens/0/width",
+    "value": 0,
+    "valid": false
+  },
+  {
+    "name": "小数座標",
+    "path": "/screens/0/objects/0/x",
+    "value": 100.5,
+    "valid": true
+  },
+  {
+    "name": "UUID v7 必須",
+    "path": "/manifest/projectId",
+    "value": "00000000-0000-4000-8000-000000000001",
+    "valid": false
+  },
+  {
+    "name": "未知の schema",
+    "path": "/manifest/schemaVersion",
+    "value": "2.0.0",
+    "valid": false
+  },
+  {
+    "name": "重複 ID",
+    "path": "/screens/0/objects/0/id",
+    "value": "0199f000-0000-7000-8000-000000000002",
+    "valid": false
+  },
+  {
+    "name": "重複 order",
+    "path": "/screens/0/objects/0/order",
+    "value": 4,
+    "valid": false
+  },
+  {
+    "name": "不正な色",
+    "path": "/screens/0/objects/0/fill",
+    "value": "url(https://example.com)",
+    "valid": false
+  },
+  {
+    "name": "HTML はテキスト",
+    "path": "/screens/0/objects/2/shape/text",
+    "value": "<script>alert(1)</script>",
+    "valid": true
+  },
+  {
+    "name": "未知の図形",
+    "path": "/screens/0/objects/0/shape/type",
+    "value": "path",
+    "valid": false
+  },
+  {
+    "name": "負の revision",
+    "path": "/manifest/projectRevision",
+    "value": -1,
+    "valid": false
+  },
+  {
+    "name": "整数の小数表記",
+    "path": "/screens/0/objects/0/order",
+    "value": 3.0,
+    "valid": true
+  },
+  {
+    "name": "未知フィールドを拒否",
+    "path": "/screens/0/objects/0/shape",
+    "value": {
+      "type": "rectangle",
+      "futureFeature": true
+    },
+    "valid": false
+  },
+  {
+    "name": "安全な整数の範囲外",
+    "path": "/manifest/projectRevision",
+    "value": 9007199254740992,
+    "valid": false
+  }
+]
