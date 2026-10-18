@@ -154,7 +154,16 @@ test("a degenerate arrow line preview never crashes and rejected edits keep hist
   await page.getByLabel("矢印", { exact: true }).selectOption("end");
   await page.getByRole("button", { name: "変更を適用", exact: true }).click();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
-  await drag(page, svg, { x: 220, y: 40 }, { x: -180, y: 0 });
+  const lineOrigin = {
+    x: Number(await page.getByLabel("x", { exact: true }).inputValue()),
+    y: Number(await page.getByLabel("y", { exact: true }).inputValue()),
+  };
+  await drag(
+    page,
+    svg,
+    { x: lineOrigin.x + 180, y: lineOrigin.y },
+    { x: -180, y: 0 },
+  );
   await expect(page.getByTestId("project-status")).toContainText(
     "線には異なる2点が必要",
   );

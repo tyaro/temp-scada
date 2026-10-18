@@ -323,3 +323,67 @@ it("moves one polyline vertex atomically and rejects invalid or degenerate edits
     ],
   });
 });
+it("positions new placements around an explicit visible center in one edit", () => {
+  const original = fresh(),
+    screenId = original.screens[0].id;
+  const rectangle = applyCommand(
+    original,
+    { type: "add", screenId, kind: "rectangle", center: { x: 600, y: 400 } },
+    "edit",
+  );
+  expect(rectangle.screens[0].objects.at(-1)).toMatchObject({
+    x: 520,
+    y: 350,
+    width: 160,
+    height: 100,
+  });
+  expect(rectangle.manifest.projectRevision).toBe(
+    original.manifest.projectRevision + 1,
+  );
+  const pipe = applyCommand(
+    original,
+    { type: "add", screenId, kind: "pipe", center: { x: 600, y: 400 } },
+    "edit",
+  );
+  expect(pipe.screens[0].objects.at(-1)).toMatchObject({ x: 480, y: 350 });
+  const pump = applyCommand(
+    original,
+    {
+      type: "add-symbol",
+      screenId,
+      template: "pump",
+      center: { x: 600, y: 400 },
+    },
+    "edit",
+  );
+  const symbolId = pump.symbols[0].id;
+  const placed = applyCommand(
+    pump,
+    { type: "place-symbol", screenId, symbolId, center: { x: 250, y: 150 } },
+    "edit",
+  );
+  expect(placed.screens[0].objects.at(-1)).toMatchObject({
+    x: 200,
+    y: 100,
+    width: 100,
+    height: 100,
+  });
+  expect(placed.symbols).toEqual(pump.symbols);
+});
+it("rejects invalid placement centers without leaving a partially added symbol", () => {
+  const original = fresh(),
+    screenId = original.screens[0].id;
+  expect(() =>
+    applyCommand(
+      original,
+      {
+        type: "add-symbol",
+        screenId,
+        template: "pump",
+        center: { x: NaN, y: 100 },
+      },
+      "edit",
+    ),
+  ).toThrow("配置先");
+  expect(original).toEqual(fresh());
+});

@@ -13,10 +13,15 @@
   }
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
-  import Renderer from "./lib/Renderer.svelte";
+  import CanvasWorkspace from "./lib/designer/CanvasWorkspace.svelte";
   import PartPalette from "./lib/designer/PartPalette.svelte";
   import SymbolLibrary from "./lib/designer/SymbolLibrary.svelte";
-  import { parseProject, serializeProject, parsePoints } from "./lib/project";
+  import {
+    parseProject,
+    serializeProject,
+    parsePoints,
+    type Point,
+  } from "./lib/project";
   import {
     type EditCommand,
     isObjectCommand,
@@ -31,6 +36,8 @@
     type EditHistory,
   } from "./lib/history";
   let history = $state<EditHistory>(emptyHistory());
+  let workspaceGeneration = $state(0);
+  let canvasWorkspace = $state<{ visibleCenter: () => Point }>();
   let showGrid = $state(false),
     snapEnabled = $state(false),
     gridSize = $state(10);
@@ -187,6 +194,7 @@
       return;
     project = parseProject(JSON.stringify(processSample));
     history = emptyHistory();
+    workspaceGeneration++;
     screenId = project.screens[0].id;
     editingSymbolId = null;
     selectedIds = [];
@@ -208,6 +216,12 @@
       const oldDefinitions = new Set(project.symbols.map((s) => s.id));
       if (activeDefinition && isObjectCommand(command))
         command = { ...command, definitionId: activeDefinition.id };
+      if (
+        command.type === "add" ||
+        command.type === "add-symbol" ||
+        command.type === "place-symbol"
+      )
+        command = { ...command, center: canvasWorkspace?.visibleCenter() };
       const result = recordEdit(project, history, command, mode);
       if (result.project === project) return;
       project = result.project;
@@ -319,6 +333,7 @@
       const next = parseProject(await file.text());
       project = next;
       history = emptyHistory();
+      workspaceGeneration++;
       projectChanged = false;
       screenId = next.screens[0].id;
       editingSymbolId = null;
@@ -596,47 +611,42 @@
         >
       </div>
     {/if}
-    <div
-      class="canvas"
-      class:definition={!!activeDefinition}
-      style:aspect-ratio={`${screen.width}/${screen.height}`}
-    >
-      {#key screen.id}
-        <Renderer
-          {screen}
-          symbols={project.symbols}
-          editable={mode === "edit"}
-          {selectedIds}
-          {showGrid}
-          {snapEnabled}
-          {gridSize}
-          onresize={(id, geometry) =>
-            edit({
-              type: "update",
-              screenId: screen.id,
-              objectId: id,
-              patch: geometry,
-            })}
-          onvertexmove={(id, index, point) =>
-            edit({
-              type: "move-vertex",
-              screenId: screen.id,
-              objectId: id,
-              index,
-              point,
-            })}
-          onselect={selectObjects}
-          onmove={(ids, dx, dy) =>
-            edit({
-              type: "move-many",
-              screenId: screen.id,
-              objectIds: ids,
-              dx,
-              dy,
-            })}
-        />
-      {/key}
-    </div>
+    {#key workspaceGeneration}
+      <CanvasWorkspace
+        bind:this={canvasWorkspace}
+        {screen}
+        symbols={project.symbols}
+        editable={mode === "edit"}
+        {selectedIds}
+        {showGrid}
+        {snapEnabled}
+        {gridSize}
+        onresize={(id, geometry) =>
+          edit({
+            type: "update",
+            screenId: screen.id,
+            objectId: id,
+            patch: geometry,
+          })}
+        onvertexmove={(id, index, point) =>
+          edit({
+            type: "move-vertex",
+            screenId: screen.id,
+            objectId: id,
+            index,
+            point,
+          })}
+        onselect={selectObjects}
+        onmove={(ids, dx, dy) =>
+          edit({
+            type: "move-many",
+            screenId: screen.id,
+            objectIds: ids,
+            dx,
+            dy,
+          })}
+      />
+    {/key}
     <p role="status" data-testid="project-status">{message}</p>
   </section>
   {#if mode === "edit"}
@@ -1026,12 +1036,6 @@
     font-size: 12px;
     color: var(--banto-text-muted);
   }
-  .canvas {
-    aspect-ratio: 16/9;
-    border: 1px solid var(--banto-border);
-    border-radius: 8px;
-    overflow: hidden;
-  }
   section p {
     overflow-wrap: anywhere;
   }
@@ -1094,10 +1098,6 @@
     }
     main > section {
       padding: 20px;
-    }
-    .canvas.definition {
-      max-width: min(100%, max(240px, calc(100dvh - 440px)));
-      margin-inline: auto;
     }
   }
   @media (min-width: 701px) and (max-width: 1099px) {

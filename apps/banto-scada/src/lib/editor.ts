@@ -5,7 +5,7 @@ import {
   type Project,
 } from "./project";
 import builtins from "./symbol-library.json";
-import type { Point, SymbolDefinition } from "./project";
+import type { Point, SymbolDefinition, ScreenObject } from "./project";
 export type AddKind = "rectangle" | "ellipse" | "text" | "line" | "pipe";
 export interface ObjectPatch {
   x?: number;
@@ -58,8 +58,13 @@ export type ObjectCommand = (
       alignment: AlignMode;
     }
   | { type: "remove-many"; screenId: string; objectIds: string[] }
-  | { type: "add"; screenId: string; kind: AddKind }
-  | { type: "add-symbol"; screenId: string; template: "pump" | "valve" }
+  | { type: "add"; screenId: string; kind: AddKind; center?: Point }
+  | {
+      type: "add-symbol";
+      screenId: string;
+      template: "pump" | "valve";
+      center?: Point;
+    }
   | { type: "update"; screenId: string; objectId: string; patch: ObjectPatch }
   | { type: "duplicate"; screenId: string; objectId: string }
   | {
@@ -84,7 +89,12 @@ export type EditCommand =
     }
   | { type: "duplicate-symbol"; symbolId: string }
   | { type: "remove-symbol"; symbolId: string }
-  | { type: "place-symbol"; symbolId: string; screenId: string };
+  | {
+      type: "place-symbol";
+      symbolId: string;
+      screenId: string;
+      center?: Point;
+    };
 
 export function isObjectCommand(
   command: EditCommand,
@@ -191,6 +201,7 @@ export function applyCommand(
         fill: "#2dd4bf",
         shape: { type: "symbol", symbolId: definition.id },
       });
+      centerObject(target.objects.at(-1)!, command.center);
     }
     return finish(project, next);
   }
@@ -365,6 +376,7 @@ export function applyCommand(
         }));
       }
     }
+    centerObject(screen.objects.at(-1)!, command.center);
   } else {
     const index = screen.objects.findIndex((o) => o.id === command.objectId);
     if (index < 0) throw new Error("図形が見つかりません");
@@ -438,4 +450,13 @@ function finish(project: Project, next: Project): Project {
   if (serializeProject(next) === serializeProject(project)) return project;
   next.manifest.projectRevision++;
   return parseProject(JSON.stringify(next));
+}
+
+function centerObject(object: ScreenObject, center?: Point) {
+  if (!center) return;
+  if (!Number.isFinite(center.x) || !Number.isFinite(center.y))
+    throw new Error("配置先は有限の座標にしてください");
+  const bounds = getBounds(object);
+  object.x = center.x - bounds.x - bounds.width / 2;
+  object.y = center.y - bounds.y - bounds.height / 2;
 }
