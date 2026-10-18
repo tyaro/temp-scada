@@ -34,6 +34,22 @@ const localFileAuth: AuthProvider = {
   onCredentialChanged: () => () => {},
 };
 let themeMode: ThemeMode = "dark";
+let menubarVisible = true;
+const MENUBAR_KEY = "scada.designer.menubar";
+export function getMenubarVisible(): boolean {
+  return menubarVisible;
+}
+export async function setMenubarVisible(visible: boolean): Promise<void> {
+  menubarVisible = visible;
+  try {
+    await uiSettings.set(MENUBAR_KEY, String(visible));
+  } catch {
+    toastStore.push(
+      "warning",
+      "メニューバーの設定を保存できません。このタブだけに適用します。",
+    );
+  }
+}
 const THEME_KEY = "scada.theme.mode";
 export function getThemeMode(): ThemeMode {
   return themeMode;
@@ -73,6 +89,14 @@ export async function initializeBanto(): Promise<() => void> {
   applyTheme(themeMode);
   applyPreset("standard");
   applyDensity("standard");
+  try {
+    menubarVisible = (await uiSettings.get(MENUBAR_KEY)) !== "false";
+  } catch {
+    toastStore.push(
+      "warning",
+      "メニューバーの設定を読み込めません。初期表示を使います。",
+    );
+  }
   return watchSystemTheme(() => {
     if (themeMode === "system") applyTheme("system");
   });

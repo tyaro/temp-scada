@@ -5,16 +5,45 @@
     StatusBadge,
     ToastHost,
     Modal,
+    Menu,
+    MenuGroup,
+    MenuItem,
   } from "@banto/ui";
   import { notify, type NotificationKind } from "@banto/admin-core";
   import { isThemeMode } from "@banto/theme";
-  import { getThemeMode, setThemeMode, toastStore } from "./lib/banto/setup";
+  import {
+    getThemeMode,
+    setThemeMode,
+    getMenubarVisible,
+    setMenubarVisible,
+    toastStore,
+  } from "./lib/banto/setup";
+  import DesignerMenubar, {
+    type DesignerMenu,
+  } from "./lib/designer/DesignerMenubar.svelte";
+  import { settleMenuFocus } from "./lib/designer/settle-menu-focus";
   let theme = $state(getThemeMode());
+  let showMenubar = $state(getMenubarVisible());
+  let projectFileInput: HTMLInputElement;
+  let helpOpen = $state(false);
+  function toggleMenubar() {
+    showMenubar = !showMenubar;
+    void setMenubarVisible(showMenubar);
+    if (!showMenubar)
+      void tick().then(() =>
+        document
+          .querySelector<HTMLButtonElement>("[data-permanent-menu]")
+          ?.focus(),
+      );
+  }
+  function chooseTheme(value: "light" | "dark" | "system") {
+    theme = value;
+    void setThemeMode(value);
+  }
   function changeTheme(event: Event) {
     const value = (event.currentTarget as HTMLSelectElement).value;
     if (isThemeMode(value)) {
-      theme = value;
-      void setThemeMode(value);
+      chooseTheme(value);
     }
   }
   import { untrack, tick } from "svelte";
@@ -496,6 +525,137 @@
       );
     }
   }
+  function changeMode(next: "edit" | "preview") {
+    transition(() => {
+      mode = next;
+      if (next === "preview") editingSymbolId = null;
+      selectedIds = [];
+    });
+  }
+  const menuBlocked = $derived(busy || !!drafts.pending || !!replacement);
+  const editBlocked = $derived(menuBlocked || mode !== "edit");
+  const menuGroups: DesignerMenu[] = $derived([
+    {
+      label: "ファイル",
+      items: [
+        {
+          label: "Project JSON を開く",
+          disabled: menuBlocked,
+          run: () => projectFileInput.click(),
+        },
+        { label: "Project JSON を保存", disabled: menuBlocked, run: save },
+        {
+          label: "工程図サンプルを開く",
+          disabled: menuBlocked,
+          run: showProcessSample,
+        },
+      ],
+    },
+    {
+      label: "編集",
+      items: [
+        {
+          label: "元に戻す",
+          disabled: editBlocked || !history.past.length,
+          run: () => travel("undo"),
+        },
+        {
+          label: "やり直す",
+          disabled: editBlocked || !history.future.length,
+          run: () => travel("redo"),
+        },
+        {
+          label: "すべて選択",
+          disabled: editBlocked,
+          run: () =>
+            transition(() => (selectedIds = screen.objects.map((o) => o.id))),
+        },
+        {
+          label: "選択解除",
+          disabled: editBlocked || !selectedIds.length,
+          run: () => transition(() => (selectedIds = [])),
+        },
+        {
+          label: "選択図形を複製",
+          disabled: editBlocked || !selectedIds.length,
+          run: duplicateSelection,
+        },
+        {
+          label: "選択図形を削除",
+          disabled: editBlocked || !selectedIds.length,
+          run: removeSelection,
+        },
+      ],
+    },
+    {
+      label: "表示",
+      items: [
+        {
+          label: showMenubar ? "メニューバーを隠す" : "メニューバーを表示",
+          run: toggleMenubar,
+        },
+        {
+          label: "編集モード",
+          disabled: menuBlocked,
+          run: () => changeMode("edit"),
+        },
+        {
+          label: "表示プレビュー",
+          disabled: menuBlocked,
+          run: () => changeMode("preview"),
+        },
+        { label: "テーマ：ライト", run: () => chooseTheme("light") },
+        { label: "テーマ：ダーク", run: () => chooseTheme("dark") },
+        { label: "テーマ：OS に合わせる", run: () => chooseTheme("system") },
+      ],
+    },
+    {
+      label: "挿入",
+      items: [
+        ...(
+          [
+            { kind: "rectangle", label: "Rectangle を追加" },
+            { kind: "ellipse", label: "Ellipse を追加" },
+            { kind: "text", label: "Text を追加" },
+            { kind: "line", label: "線を追加" },
+            { kind: "pipe", label: "配管を追加" },
+          ] as const
+        ).map((part) => ({
+          label: part.label,
+          disabled: editBlocked,
+          run: () => add(part.kind),
+        })),
+        ...(["pump", "valve"] as const).map((template) => ({
+          label: template === "pump" ? "ポンプを追加" : "バルブを追加",
+          disabled: editBlocked || !!activeDefinition,
+          run: () => {
+            edit({ type: "add-symbol", screenId: screen.id, template });
+          },
+        })),
+      ],
+    },
+    {
+      label: "ツール",
+      items: [
+        {
+          label: showGrid ? "グリッドを隠す" : "グリッドを表示",
+          disabled: editBlocked,
+          run: () => (showGrid = !showGrid),
+        },
+        {
+          label: snapEnabled ? "スナップを無効にする" : "スナップを有効にする",
+          disabled: editBlocked,
+          run: () => (snapEnabled = !snapEnabled),
+        },
+      ],
+    },
+    {
+      label: "ヘルプ",
+      items: [
+        { label: "操作ガイド・アプリ情報", run: () => (helpOpen = true) },
+      ],
+    },
+  ]);
 </script>
 
 <svelte:window onkeydown={shortcut} onbeforeunload={beforeLeave} />
@@ -512,25 +672,41 @@
     description="BANTO / SCADA · ローカルファイル編集"
   >
     {#snippet actions()}
-      <div class="mode" role="group" aria-label="表示モード">
+      <div
+        class="mode"
+        role="group"
+        aria-label="表示モード"
+        use:settleMenuFocus
+      >
+        <Menu label="常設メニュー" placement="bottom-end">
+          {#snippet trigger(props)}
+            <button {...props} data-permanent-menu>メニュー</button>
+          {/snippet}
+          <MenuGroup label="表示">
+            {#each menuGroups[2].items as item}
+              <MenuItem
+                label={item.label}
+                disabled={item.disabled}
+                onSelect={item.run}
+              />
+            {/each}
+          </MenuGroup>
+          <MenuGroup label="ヘルプ">
+            <MenuItem
+              label="操作ガイド・アプリ情報"
+              onSelect={() => (helpOpen = true)}
+            />
+          </MenuGroup>
+        </Menu>
         <button
           class:active={mode === "edit"}
           aria-pressed={mode === "edit"}
-          onclick={() =>
-            transition(() => {
-              mode = "edit";
-              selectedIds = [];
-            })}>編集</button
+          onclick={() => changeMode("edit")}>編集</button
         >
         <button
           class:active={mode === "preview"}
           aria-pressed={mode === "preview"}
-          onclick={() =>
-            transition(() => {
-              mode = "preview";
-              editingSymbolId = null;
-              selectedIds = [];
-            })}>表示プレビュー</button
+          onclick={() => changeMode("preview")}>表示プレビュー</button
         >
         <StatusBadge variant="neutral" label="Hub 未接続" />
         <label class="theme-label"
@@ -547,6 +723,7 @@
     {/snippet}
   </PageHeader>
 </div>
+{#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
 <main class:editing={mode === "edit"}>
   <aside class="project-sidebar" aria-label="Project と部品">
     <h2>Project</h2>
@@ -704,6 +881,7 @@
     <label class="file"
       >Project JSON を開く<input
         aria-label="Project JSON を開く"
+        bind:this={projectFileInput}
         type="file"
         accept=".json,application/json"
         disabled={busy}
@@ -1074,6 +1252,30 @@
   {/if}
 </main>
 <DraftPrompt guard={drafts} />
+<Modal
+  open={helpOpen}
+  title="操作ガイド・アプリ情報"
+  onclose={() => (helpOpen = false)}
+>
+  <p>SCADA Designer 0.3.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>
+    左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
+    JSON を保存してください。
+  </p>
+  <p>
+    Ctrl / Command + S：JSON 保存、Z：元に戻す、Shift +
+    Z：やり直す、A：全選択、D：複製。入力欄では保存以外の編集ショートカットを実行しません。
+  </p>
+  <p>
+    メニューバーは左右キー、項目は上下キー、Enter / Space で実行、Esc
+    で閉じます。非表示後は上部の「メニュー」→「表示」から復元できます。
+  </p>
+  <p>
+    表示プレビューは見た目の確認用です。Hub・設備との接続、認証、正式 Runtime
+    は未実装です。
+  </p>
+  <button onclick={() => (helpOpen = false)}>閉じる</button>
+</Modal>
 <Modal
   open={replacement !== null}
   title="Project を置き換えますか"
