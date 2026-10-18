@@ -21,3 +21,4 @@ jobs:
       - run: cargo fmt --all --check && cargo clippy --workspace --locked --all-targets -- -D warnings && cargo test --workspace --locked
       - run: cargo run --locked -p scada-model -- validate examples/minimal.project.json
       - run: cargo run --locked -p scada-model -- validate examples/process.project.json
+      - run: cargo run --locked -p scada-model -- validate examples/tag-binding.project.json

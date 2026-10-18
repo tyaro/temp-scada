@@ -15,9 +15,11 @@
     type ResizeHandle,
   } from "./resize";
   import Primitive from "./Primitive.svelte";
+  import type { TagReadings } from "./tag-presentation";
   let {
     screen,
     symbols = [],
+    readings,
     editable = false,
     selectedIds = [],
     showGrid = false,
@@ -31,6 +33,7 @@
   }: {
     screen: Screen;
     symbols?: SymbolDefinition[];
+    readings?: TagReadings;
     editable?: boolean;
     selectedIds?: string[];
     showGrid?: boolean;
@@ -439,7 +442,7 @@
             >
           {/each}
         </svg>
-      {:else}<Primitive object={visual} />{/if}
+      {:else}<Primitive object={visual} {readings} />{/if}
       {#if editable}
         {@const bounds = getBounds(visual)}
         {#if visual.shape.type === "polyline"}

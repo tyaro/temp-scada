@@ -3,6 +3,7 @@ import {
   serializeProject,
   getBounds,
   type Project,
+  type TagBinding,
 } from "./project";
 import builtins from "./symbol-library.json";
 import type { Point, SymbolDefinition, ScreenObject } from "./project";
@@ -14,6 +15,7 @@ export interface ObjectPatch {
   height?: number;
   fill?: string;
   text?: string;
+  binding?: TagBinding | null;
   points?: Point[];
   strokeWidth?: number;
   arrow?: "none" | "end";
@@ -416,9 +418,16 @@ export function applyCommand(
       screen.objects = ordered;
     } else if (command.type === "remove") screen.objects.splice(index, 1);
     else {
-      const { text, points, strokeWidth, arrow, ...geometry } = command.patch;
+      const { text, binding, points, strokeWidth, arrow, ...geometry } =
+        command.patch;
       const object = screen.objects[index];
       Object.assign(object, geometry);
+      if (binding !== undefined) {
+        if (definitionId || object.shape.type !== "text")
+          throw new Error("タグは画面の Text に割り当ててください");
+        if (binding === null) delete object.shape.binding;
+        else object.shape.binding = binding;
+      }
       if (text !== undefined) {
         if (object.shape.type !== "text")
           throw new Error("Text 以外に文字列は設定できません");

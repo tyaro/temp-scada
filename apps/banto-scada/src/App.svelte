@@ -362,7 +362,13 @@
       patch.width = Number(data.get("width"));
       patch.height = Number(data.get("height"));
     }
-    if (selected.shape.type === "text") patch.text = String(data.get("text"));
+    if (selected.shape.type === "text") {
+      patch.text = String(data.get("text"));
+      if (!activeDefinition) {
+        const externalName = String(data.get("externalName") ?? "");
+        patch.binding = externalName === "" ? null : { externalName };
+      }
+    }
     if (selected.shape.type === "polyline") {
       patch.points = parsePoints(String(data.get("points")));
       patch.strokeWidth = Number(data.get("strokeWidth"));
@@ -899,15 +905,33 @@
                     ></label
                   >
                 {/if}
-                {#if selected.shape.type === "text"}<label
+                {#if selected.shape.type === "text"}<label class="full-width"
                     >テキスト<input
                       name="text"
                       aria-label="テキスト"
                       maxlength="1000"
                       value={selected.shape.text}
                     /></label
-                  >{/if}
+                  >
+                  {#if !activeDefinition}
+                    <label class="full-width"
+                      >表示タグ（外部名）<input
+                        name="externalName"
+                        aria-label="表示タグ（外部名）"
+                        maxlength="1024"
+                        placeholder="PLC01.Fast.Tank01.Level"
+                        value={selected.shape.binding?.externalName ?? ""}
+                      /></label
+                    >
+                  {/if}
+                {/if}
               </div>
+              {#if selected.shape.type === "text" && !activeDefinition}
+                <p>
+                  空欄で静的テキストに戻ります。割り当て中は数値を表示します。Hub
+                  接続は未実装のため「未接続」と表示します。テキスト欄は割り当て解除後に使います。
+                </p>
+              {/if}
               {#if selected.shape.type === "symbol"}
                 <button
                   type="button"
@@ -1003,6 +1027,9 @@
   }
   :global(*) {
     box-sizing: border-box;
+  }
+  .full-width {
+    grid-column: 1 / -1;
   }
   .save-state {
     margin: 12px 0;

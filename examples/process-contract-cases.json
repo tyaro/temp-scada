@@ -124,5 +124,17 @@
       }
     ],
     "valid": true
+  },
+  {
+    "name": "共有定義内の直接 Binding を拒否",
+    "path": "/symbols/0/objects/0/shape",
+    "value": {
+      "type": "text",
+      "text": "value",
+      "binding": {
+        "externalName": "PLC01.Fast.Value"
+      }
+    },
+    "valid": false
   }
 ]

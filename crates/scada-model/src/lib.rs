@@ -28,8 +28,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.2.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.2.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.3.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.3.0".into());
             value["symbols"] = serde_json::json!([]);
         }
         VALIDATOR.validate(&value).map_err(|e| e.to_string())?;
@@ -56,6 +56,11 @@ impl Project {
                     return Err("ID が重複しています".into());
                 }
                 let shape = &object["shape"];
+                if symbols.contains(screen["id"].as_str().unwrap())
+                    && shape.get("binding").is_some()
+                {
+                    return Err("Symbol 定義内の直接タグ割り当てには対応していません".into());
+                }
                 if shape["type"] == "symbol"
                     && !symbols.contains(shape["symbolId"].as_str().unwrap())
                 {
@@ -95,6 +100,12 @@ mod tests {
         assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
     }
     #[test]
+    fn binding_sample_round_trip() {
+        let input = include_str!("../../../examples/tag-binding.project.json");
+        let project = Project::from_json(input).unwrap();
+        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+    }
+    #[test]
     fn contract_cases() {
         let cases: Value =
             serde_json::from_str(include_str!("../../../examples/contract-cases.json")).unwrap();
@@ -114,8 +125,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.2.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.2.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.3.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.3.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

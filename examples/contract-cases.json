@@ -79,5 +79,123 @@
     "path": "/manifest/projectRevision",
     "value": 9007199254740992,
     "valid": false
+  },
+  {
+    "name": "読み取りタグの外部名",
+    "path": "/screens/0/objects/2/shape",
+    "value": {
+      "type": "text",
+      "text": "静的テキスト",
+      "binding": {
+        "externalName": "PLC01.Fast.Motor01.Current"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "Unicode とドットを含む外部名",
+    "path": "/screens/0/objects/2/shape",
+    "value": {
+      "type": "text",
+      "text": "静的テキスト",
+      "binding": {
+        "externalName": "PLC01.計測.槽1.温度"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "空の外部名",
+    "path": "/screens/0/objects/2/shape",
+    "value": {
+      "type": "text",
+      "text": "静的テキスト",
+      "binding": {
+        "externalName": ""
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "空白のみの外部名",
+    "path": "/screens/0/objects/2/shape",
+    "value": {
+      "type": "text",
+      "text": "静的テキスト",
+      "binding": {
+        "externalName": "   "
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "数値 ID のみ",
+    "path": "/screens/0/objects/2/shape",
+    "value": {
+      "type": "text",
+      "text": "静的テキスト",
+      "binding": {
+        "tagId": 12
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "未知の Binding 属性",
+    "path": "/screens/0/objects/2/shape",
+    "value": {
+      "type": "text",
+      "text": "静的テキスト",
+      "binding": {
+        "externalName": "PLC01.Fast.Value",
+        "write": true
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "null Binding",
+    "path": "/screens/0/objects/2/shape",
+    "value": {
+      "type": "text",
+      "text": "静的テキスト",
+      "binding": null
+    },
+    "valid": false
+  },
+  {
+    "name": "長すぎる外部名",
+    "path": "/screens/0/objects/2/shape",
+    "value": {
+      "type": "text",
+      "text": "静的テキスト",
+      "binding": {
+        "externalName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "Text 以外への Binding を拒否",
+    "path": "/screens/0/objects/0/shape",
+    "value": {
+      "type": "rectangle",
+      "binding": {
+        "externalName": "PLC01.Fast.Value"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "旧 0.2.0 を黙って読み込まない",
+    "path": "/manifest/schemaVersion",
+    "value": "0.2.0",
+    "valid": false
+  },
+  {
+    "name": "旧 Runtime への新形式の配布を拒否",
+    "path": "/manifest/minRuntimeVersion",
+    "value": "0.2.0",
+    "valid": false
   }
 ]

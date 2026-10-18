@@ -12,13 +12,16 @@ interface BaseObject {
   y: number;
   fill: string;
 }
+export interface TagBinding {
+  externalName: string;
+}
 export interface LayoutObject extends BaseObject {
   width: number;
   height: number;
   shape:
     | { type: "rectangle" }
     | { type: "ellipse" }
-    | { type: "text"; text: string }
+    | { type: "text"; text: string; binding?: TagBinding }
     | { type: "symbol"; symbolId: string };
 }
 export interface PolylineObject extends BaseObject {
@@ -47,10 +50,10 @@ export interface SymbolDefinition {
 export interface Project {
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.2.0";
+    schemaVersion: "0.3.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.2.0";
+    minRuntimeVersion: "0.3.0";
     name: string;
   };
   screens: Screen[];
@@ -71,8 +74,8 @@ export function parseProject(json: string): Project {
       ...old,
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.2.0",
-        minRuntimeVersion: "0.2.0",
+        schemaVersion: "0.3.0",
+        minRuntimeVersion: "0.3.0",
       },
       symbols: [],
     };
@@ -92,6 +95,12 @@ export function parseProject(json: string): Project {
     const orders = new Set<number>();
     for (const object of owner.objects) {
       const shape = object.shape;
+      if (
+        project.symbols.includes(owner) &&
+        shape.type === "text" &&
+        shape.binding
+      )
+        throw new Error("Symbol 定義内の直接タグ割り当てには対応していません");
       if (ids.has(object.id)) throw new Error("ID が重複しています");
       ids.add(object.id);
       if (!Number.isSafeInteger(object.order))

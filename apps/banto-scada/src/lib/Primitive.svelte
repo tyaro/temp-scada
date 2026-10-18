@@ -1,6 +1,18 @@
 <script lang="ts">
   import type { ScreenObject } from "./project";
-  let { object, color }: { object: ScreenObject; color?: string } = $props();
+  import { presentNumeric, type TagReadings } from "./tag-presentation";
+  let {
+    object,
+    color,
+    readings,
+  }: { object: ScreenObject; color?: string; readings?: TagReadings } =
+    $props();
+  const binding = $derived(
+    object.shape.type === "text" ? object.shape.binding : undefined,
+  );
+  const presentation = $derived(
+    presentNumeric(binding ? readings?.get(binding.externalName) : undefined),
+  );
   const shape = $derived("width" in object ? null : object.shape);
   function arrowPoints() {
     if (!shape || shape.arrow !== "end") return "";
@@ -35,7 +47,11 @@
       x="0"
       y={object.height * 0.8}
       font-size={object.height * 0.7}
-      fill={color ?? object.fill}>{object.shape.text}</text
+      fill={color ?? object.fill}
+      data-tag-name={binding?.externalName}
+      data-tag-state={binding ? presentation.state : undefined}
+      >{#if binding}<title>{binding.externalName} · {presentation.label}</title
+        >{/if}{binding ? presentation.text : object.shape.text}</text
     >{/if}
 {:else if shape}
   <polyline
