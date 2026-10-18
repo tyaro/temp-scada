@@ -7,6 +7,13 @@
     type SymbolDefinition,
   } from "./project";
   import { dragOffset, vertexPosition, nextGridCoordinate } from "./snap";
+  import {
+    resizeGeometry,
+    resizeHandles,
+    handlePoint,
+    type Geometry,
+    type ResizeHandle,
+  } from "./resize";
   import Primitive from "./Primitive.svelte";
   let {
     screen,
@@ -16,6 +23,7 @@
     showGrid = false,
     snapEnabled = false,
     gridSize = 10,
+    onresize,
     onvertexmove,
     onselect,
     onmove,
@@ -27,6 +35,7 @@
     showGrid?: boolean;
     snapEnabled?: boolean;
     gridSize?: number;
+    onresize?: (id: string, geometry: Geometry) => void;
     onvertexmove?: (id: string, index: number, point: Point) => void;
     onselect?: (
       id: string | null,
@@ -54,17 +63,66 @@
     original: Point;
     current: Point;
   } | null>(null);
+  let resizeDrag = $state<{
+    id: string;
+    handle: ResizeHandle;
+    pointer: number;
+    start: Point;
+    original: Geometry;
+    current: Geometry;
+  } | null>(null);
+  function resizeKey(
+    event: KeyboardEvent,
+    id: string,
+    geometry: Geometry,
+    handle: ResizeHandle,
+  ) {
+    if (
+      !editable ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      resizeDrag
+    )
+      return;
+    const vectors: Record<string, Point> = {
+      ArrowLeft: { x: -1, y: 0 },
+      ArrowRight: { x: 1, y: 0 },
+      ArrowUp: { x: 0, y: -1 },
+      ArrowDown: { x: 0, y: 1 },
+    };
+    const direction = vectors[event.key];
+    if (!direction) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const edge = handlePoint(geometry, handle);
+    const amount = event.shiftKey ? 10 : 1;
+    const delta = { x: direction.x * amount, y: direction.y * amount };
+    if (snapEnabled) {
+      if (direction.x)
+        delta.x = nextGridCoordinate(edge.x, direction.x, gridSize) - edge.x;
+      if (direction.y)
+        delta.y = nextGridCoordinate(edge.y, direction.y, gridSize) - edge.y;
+    }
+    onresize?.(
+      id,
+      resizeGeometry(geometry, handle, delta, snapEnabled ? gridSize : null),
+    );
+  }
   function cancelDrag() {
     drag = null;
     vertexDrag = null;
+    resizeDrag = null;
   }
   function cancelKey(event: KeyboardEvent) {
-    if (event.key === "Escape" && (drag || vertexDrag)) {
+    if (event.key === "Escape" && (drag || vertexDrag || resizeDrag)) {
       event.preventDefault();
       cancelDrag();
     }
   }
   function previewObject(object: ScreenObject): ScreenObject {
+    if ("width" in object && resizeDrag?.id === object.id)
+      return { ...object, ...resizeDrag.current };
     if ("width" in object || vertexDrag?.id !== object.id) return object;
     const vertex = vertexDrag;
     return {
@@ -127,6 +185,39 @@
   }
   function down(event: PointerEvent) {
     if (!editable || event.button !== 0 || !event.isPrimary) return;
+    if (drag || vertexDrag || resizeDrag) return;
+    const resize = (event.target as Element).closest("[data-resize-object-id]");
+    if (resize) {
+      const object = screen.objects.find(
+        (o) => o.id === resize.getAttribute("data-resize-object-id"),
+      );
+      const handle = resize.getAttribute("data-resize-handle") as ResizeHandle;
+      const start = point(event);
+      if (
+        !object ||
+        !("width" in object) ||
+        !start ||
+        !resizeHandles.includes(handle)
+      )
+        return;
+      event.preventDefault();
+      (event.currentTarget as SVGSVGElement).setPointerCapture(event.pointerId);
+      const original = {
+        x: object.x,
+        y: object.y,
+        width: object.width,
+        height: object.height,
+      };
+      resizeDrag = {
+        id: object.id,
+        handle,
+        pointer: event.pointerId,
+        start: { x: start.x, y: start.y },
+        original,
+        current: original,
+      };
+      return;
+    }
     const handle = (event.target as Element).closest("[data-vertex-object-id]");
     if (handle) {
       const object = screen.objects.find(
@@ -180,7 +271,20 @@
     const p = point(event);
     if (!p) return;
     const step = snapEnabled && !event.altKey ? gridSize : null;
-    if (vertexDrag && vertexDrag.pointer === event.pointerId) {
+    if (resizeDrag && resizeDrag.pointer === event.pointerId) {
+      resizeDrag = {
+        ...resizeDrag,
+        current:
+          Math.hypot(p.x - resizeDrag.start.x, p.y - resizeDrag.start.y) <= 0.5
+            ? resizeDrag.original
+            : resizeGeometry(
+                resizeDrag.original,
+                resizeDrag.handle,
+                { x: p.x - resizeDrag.start.x, y: p.y - resizeDrag.start.y },
+                step,
+              ),
+      };
+    } else if (vertexDrag && vertexDrag.pointer === event.pointerId) {
       const delta = {
         x: p.x - vertexDrag.start.x,
         y: p.y - vertexDrag.start.y,
@@ -205,7 +309,11 @@
   }
   function up(event: PointerEvent) {
     move(event);
-    if (vertexDrag && vertexDrag.pointer === event.pointerId) {
+    if (resizeDrag && resizeDrag.pointer === event.pointerId) {
+      const finished = resizeDrag;
+      resizeDrag = null;
+      if (editable) onresize?.(finished.id, finished.current);
+    } else if (vertexDrag && vertexDrag.pointer === event.pointerId) {
       const finished = vertexDrag;
       vertexDrag = null;
       if (
@@ -267,20 +375,20 @@
   {#each [...screen.objects].sort((a, b) => a.order - b.order) as object (object.id)}
     {@const visual = previewObject(object)}
     <g
-      transform={position(object)}
+      transform={position(visual)}
       data-object-id={object.id}
       data-selected={editable && selectedIds.includes(object.id)
         ? "true"
         : undefined}
     >
-      {#if "width" in object && object.shape.type === "symbol"}
+      {#if "width" in visual && visual.shape.type === "symbol"}
         {@const definition = symbols.find(
           (s) =>
             object.shape.type === "symbol" && s.id === object.shape.symbolId,
         )!}
         <svg
-          width={object.width}
-          height={object.height}
+          width={visual.width}
+          height={visual.height}
           viewBox={`0 0 ${definition.width} ${definition.height}`}
           preserveAspectRatio="xMidYMid meet"
           data-symbol-id={definition.id}
@@ -324,6 +432,32 @@
   {/each}
   {#if editable && selectedIds.length === 1}
     {@const object = screen.objects.find((o) => o.id === selectedIds[0])}
+    {#if object && "width" in object && !drag}
+      {@const visual = previewObject(object)}
+      {#if "width" in visual}
+        {#each resizeHandles as handle}
+          {@const p = handlePoint(visual, handle)}
+          <rect
+            x={p.x - 5}
+            y={p.y - 5}
+            width="10"
+            height="10"
+            fill="var(--banto-primary)"
+            stroke="var(--banto-text-inverse)"
+            stroke-width="1.5"
+            vector-effect="non-scaling-stroke"
+            style:cursor={`${handle}-resize`}
+            class="resize-handle"
+            role="button"
+            tabindex="0"
+            data-resize-object-id={object.id}
+            data-resize-handle={handle}
+            aria-label={`サイズ変更 ${handle}（方向キーで変更）`}
+            onkeydown={(event) => resizeKey(event, object.id, visual, handle)}
+          />
+        {/each}
+      {/if}
+    {/if}
     {#if object && object.shape.type === "polyline"}
       {@const visual = previewObject(object)}
       {#if visual.shape.type === "polyline"}
@@ -354,6 +488,7 @@
   .vertex {
     cursor: crosshair;
   }
+  .resize-handle:focus-visible,
   .vertex:focus-visible {
     outline: none;
     stroke: var(--banto-warning);

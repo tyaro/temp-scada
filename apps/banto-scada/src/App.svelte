@@ -527,6 +527,13 @@
           {showGrid}
           {snapEnabled}
           {gridSize}
+          onresize={(id, geometry) =>
+            edit({
+              type: "update",
+              screenId: screen.id,
+              objectId: id,
+              patch: geometry,
+            })}
           onvertexmove={(id, index, point) =>
             edit({
               type: "move-vertex",
