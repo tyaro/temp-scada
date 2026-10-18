@@ -10,6 +10,8 @@
   import { notify, type NotificationKind } from "@banto/admin-core";
   import {
     getThemeMode,
+    getPanelWidths,
+    setPanelWidths,
     setThemeMode,
     getMenubarVisible,
     setMenubarVisible,
@@ -71,6 +73,40 @@
   import EditToolbar, {
     type ToolbarGroup,
   } from "./lib/designer/EditToolbar.svelte";
+  import PanelResizeHandle from "./lib/designer/PanelResizeHandle.svelte";
+  import {
+    DEFAULT_PANEL_WIDTHS,
+    PANEL_WIDTH_LIMITS,
+    panelWidthMaximum,
+    type PanelWidths,
+  } from "./lib/designer/panel-widths";
+  let windowWidth = $state(window.innerWidth);
+  let panelWidths = $state(getPanelWidths());
+  const leftWidth = $derived(
+    Math.min(panelWidths.left, panelWidthMaximum("left", windowWidth)),
+  );
+  const rightWidth = $derived(
+    Math.min(panelWidths.right, panelWidthMaximum("right", windowWidth)),
+  );
+  let initialPanelWidths: PanelWidths | null = null;
+  function beginPanelResize() {
+    initialPanelWidths ??= { ...panelWidths };
+    canvasWorkspace?.preparePanelResize(true);
+  }
+  function finishPanelResize(commit: boolean) {
+    if (!commit && initialPanelWidths) panelWidths = initialPanelWidths;
+    initialPanelWidths = null;
+    canvasWorkspace?.finishPanelResize();
+    if (commit) void setPanelWidths(panelWidths);
+  }
+  function changePanelWidth(side: keyof PanelWidths, width: number) {
+    panelWidths = { ...panelWidths, [side]: width };
+  }
+  function resetPanelWidths() {
+    beginPanelResize();
+    panelWidths = { ...DEFAULT_PANEL_WIDTHS };
+    finishPanelResize(true);
+  }
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
   let showInspector = $state(true);
   let showSidebar = $state(true);
@@ -264,7 +300,8 @@
   let canvasWorkspace = $state<{
     visibleCenter: () => Point;
     revealObject: (id: string) => void;
-    preparePanelResize: () => void;
+    preparePanelResize: (continuous?: boolean) => void;
+    finishPanelResize: () => void;
     zoom: (value: number | null) => void;
     stepZoom: (direction: number) => void;
     setHand: (value: boolean) => void;
@@ -1208,6 +1245,11 @@
           run: () => setInspectorVisibility(!showInspector, true),
         },
         {
+          label: "パネルの幅を標準に戻す",
+          disabled: mode !== "edit",
+          run: resetPanelWidths,
+        },
+        {
           label: showMenubar ? "メニューバーを隠す" : "メニューバーを表示",
           run: toggleMenubar,
         },
@@ -1275,7 +1317,11 @@
   ]);
 </script>
 
-<svelte:window onkeydown={shortcut} onbeforeunload={beforeLeave} />
+<svelte:window
+  bind:innerWidth={windowWidth}
+  onkeydown={shortcut}
+  onbeforeunload={beforeLeave}
+/>
 
 <svelte:head
   ><meta
@@ -1404,12 +1450,15 @@
   {/snippet}
 </EditToolbar>
 <main
+  style:--sidebar-width={`${leftWidth}px`}
+  style:--inspector-width={`${rightWidth}px`}
   class:editing={mode === "edit"}
   class:sidebar-visible={mode !== "edit" || showSidebar}
   class:inspector-visible={showInspector && mode === "edit"}
 >
   <aside
     class="project-sidebar"
+    id="designer-project-panel"
     aria-label="Project と部品"
     hidden={mode === "edit" && !showSidebar}
     bind:this={sidebarPanel}
@@ -1746,6 +1795,32 @@
       {openDefinition}
     />
   {/if}
+  {#if mode === "edit" && windowWidth >= 1100}
+    {#if showSidebar}
+      <PanelResizeHandle
+        side="left"
+        value={leftWidth}
+        min={PANEL_WIDTH_LIMITS.left.min}
+        max={panelWidthMaximum("left", windowWidth)}
+        standard={DEFAULT_PANEL_WIDTHS.left}
+        onstart={beginPanelResize}
+        onchange={(width) => changePanelWidth("left", width)}
+        onend={finishPanelResize}
+      />
+    {/if}
+    {#if showInspector}
+      <PanelResizeHandle
+        side="right"
+        value={rightWidth}
+        min={PANEL_WIDTH_LIMITS.right.min}
+        max={panelWidthMaximum("right", windowWidth)}
+        standard={DEFAULT_PANEL_WIDTHS.right}
+        onstart={beginPanelResize}
+        onchange={(width) => changePanelWidth("right", width)}
+        onend={finishPanelResize}
+      />
+    {/if}
+  {/if}
 </main>
 <ContextActions
   floating
@@ -1986,6 +2061,7 @@
     margin: 0;
   }
   main {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     flex: 1;
@@ -2108,11 +2184,16 @@
       height: 100dvh;
       overflow: hidden;
     }
+    main.editing.sidebar-visible {
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    }
     main.editing.inspector-visible {
-      grid-template-columns: minmax(0, 1fr) 288px;
+      grid-template-columns: minmax(0, 1fr) var(--inspector-width);
     }
     main.editing.sidebar-visible.inspector-visible {
-      grid-template-columns: 240px minmax(0, 1fr) 288px;
+      grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(
+          --inspector-width
+        );
     }
     main > aside,
     main > section {

@@ -151,11 +151,20 @@
     viewport.scrollTop = state.top;
     views[screen.id] = state;
   }
-  export function preparePanelResize() {
+  export function preparePanelResize(continuous = false) {
     if (!editable || stored?.zoom == null) return;
-    const anchor = { id: screen.id, center: visibleCenter() };
+    const anchor = {
+      id: screen.id,
+      center:
+        resizeAnchor?.id === screen.id ? resizeAnchor.center : visibleCenter(),
+    };
     resizeAnchor = anchor;
     centerRooms[screen.id] = true;
+    if (!continuous) finishPanelResize();
+  }
+  export function finishPanelResize() {
+    const anchor = resizeAnchor;
+    if (!anchor) return;
     // ResizeObserver and layout restoration settle before the final center is committed.
     void tick().then(() =>
       requestAnimationFrame(() =>

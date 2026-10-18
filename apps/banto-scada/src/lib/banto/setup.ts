@@ -1,4 +1,9 @@
 import {
+  DEFAULT_PANEL_WIDTHS,
+  parsePanelWidths,
+  type PanelWidths,
+} from "../designer/panel-widths";
+import {
   createInMemoryDataProvider,
   createLocalUiSettings,
   initBanto,
@@ -49,6 +54,22 @@ export async function setPaletteView(view: PaletteView): Promise<void> {
     toastStore.push(
       "warning",
       "部品の表示形式を保存できません。このタブだけに適用します。",
+    );
+  }
+}
+const PANEL_WIDTHS_KEY = "scada.designer.panel-widths";
+let panelWidths = { ...DEFAULT_PANEL_WIDTHS };
+export function getPanelWidths(): PanelWidths {
+  return { ...panelWidths };
+}
+export async function setPanelWidths(value: PanelWidths): Promise<void> {
+  panelWidths = parsePanelWidths(JSON.stringify(value));
+  try {
+    await uiSettings.set(PANEL_WIDTHS_KEY, JSON.stringify(panelWidths));
+  } catch {
+    toastStore.push(
+      "warning",
+      "パネルの幅を保存できません。このタブだけに適用します。",
     );
   }
 }
@@ -121,6 +142,14 @@ export async function initializeBanto(): Promise<() => void> {
     toastStore.push(
       "warning",
       "部品の表示形式を読み込めません。アイコン一覧を使います。",
+    );
+  }
+  try {
+    panelWidths = parsePanelWidths(await uiSettings.get(PANEL_WIDTHS_KEY));
+  } catch {
+    toastStore.push(
+      "warning",
+      "パネルの幅を読み込めません。標準幅を使います。",
     );
   }
   return watchSystemTheme(() => {

@@ -36,6 +36,7 @@
 
 <aside
   class="inspector"
+  id="designer-inspector-panel"
   aria-label="プロパティパネル"
   bind:this={element}
   hidden={!visible}

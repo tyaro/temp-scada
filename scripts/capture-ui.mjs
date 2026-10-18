@@ -183,6 +183,21 @@ try {
     .getByRole("button", { name: "ポンプ · 10", exact: true })
     .click();
   await capture("scada-background-editor.png", false, lightPage);
+  const leftBorder = lightPage.getByRole("separator", {
+    name: "左パネルの幅",
+    exact: true,
+  });
+  const rightBorder = lightPage.getByRole("separator", {
+    name: "プロパティの幅",
+    exact: true,
+  });
+  await leftBorder.focus();
+  await lightPage.keyboard.press("Shift+ArrowRight");
+  await lightPage.keyboard.press("Shift+ArrowRight");
+  await rightBorder.focus();
+  for (let i = 0; i < 3; i++) await lightPage.keyboard.press("Shift+ArrowLeft");
+  await capture("scada-panel-widths.png", false, lightPage);
+
   await lightPage
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
