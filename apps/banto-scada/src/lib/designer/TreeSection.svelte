@@ -37,18 +37,19 @@
 
 <style>
   .tree-section {
-    margin: 4px 0 10px;
+    margin: 2px 0 6px;
   }
   summary {
     cursor: pointer;
     padding: 8px 4px;
-    border-radius: 5px;
+    min-height: 36px;
+    border-radius: 3px;
     font-size: 13px;
     font-weight: 600;
     overflow-wrap: anywhere;
   }
   summary:hover {
-    background: var(--banto-surface);
+    background: color-mix(in srgb, var(--banto-primary) 6%, transparent);
   }
   summary:focus-visible {
     outline: none;
@@ -61,15 +62,13 @@
   }
   .count {
     float: right;
-    padding: 1px 6px;
-    border-radius: 4px;
-    background: var(--banto-surface);
+    padding: 1px 4px;
     color: var(--banto-text-muted);
     font-size: 11px;
   }
   .branches {
-    margin-left: 8px;
-    padding-left: 10px;
+    margin-left: 12px;
+    padding-left: 8px;
     border-left: 1px solid var(--banto-border);
   }
 </style>

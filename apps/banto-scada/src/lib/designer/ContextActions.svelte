@@ -16,12 +16,14 @@
     items,
     children,
     floating = false,
+    flat = false,
   }: {
     label: string;
     contextKey: string;
     items: ContextAction[];
     children?: Snippet;
     floating?: boolean;
+    flat?: boolean;
   } = $props();
   let root = $state<HTMLDivElement>();
   let menuButton = $state<HTMLButtonElement>();
@@ -152,6 +154,7 @@
 
 <div
   class="context-anchor"
+  class:flat
   class:floating
   style:left={floating ? `${anchor.x}px` : undefined}
   style:top={floating ? `${anchor.y}px` : undefined}
@@ -242,6 +245,14 @@
   .context-anchor:hover .more,
   .context-anchor:focus-within .more {
     opacity: 1;
+  }
+  .flat .more {
+    border: 0;
+    background: transparent;
+    top: 4px;
+    right: 2px;
+    width: 22px;
+    min-height: 28px;
   }
   .more:focus-visible {
     outline: none;

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from "svelte";
+  import SymbolThumbnail from "./SymbolThumbnail.svelte";
   import SymbolUsages from "./SymbolUsages.svelte";
   import { symbolUsages, type SymbolUsage } from "../symbol-usages";
   import ContextActions, { type ContextAction } from "./ContextActions.svelte";
@@ -103,6 +104,7 @@
     <nav aria-label="共有 Symbol 一覧">
       {#each project.symbols as definition (definition.id)}
         <ContextActions
+          flat
           label={`共有定義：${definition.name}`}
           contextKey={`${contextKey}:${selected.id}:${editingDefinition}`}
           items={actions(definition.id)}
@@ -115,9 +117,9 @@
             aria-pressed={selected.id === definition.id}
             onclick={() => onchoose(definition.id)}
           >
-            <span>{definition.name}</span><small
-              >{symbolUsage(project, definition.id)} 配置で共有</small
-            >
+            <SymbolThumbnail {definition} compact /><span
+              >{definition.name}</span
+            ><small>{symbolUsage(project, definition.id)} 配置で共有</small>
           </button>
         </ContextActions>
       {/each}
@@ -194,22 +196,40 @@
   }
   nav {
     display: grid;
-    gap: 4px;
+    gap: 0;
     max-height: 240px;
     overflow-y: auto;
     padding: 3px;
     margin: 0 -3px;
   }
   .definition-row {
-    display: grid;
-    gap: 3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
     margin: 0;
-    padding-right: 24px;
+    padding: 7px 24px 7px 8px;
     overflow-wrap: anywhere;
   }
+  .definition-row:hover {
+    background: color-mix(in srgb, var(--banto-primary) 6%, transparent);
+  }
   .definition-row.active {
-    border-color: var(--banto-primary);
-    color: var(--banto-primary);
+    background: color-mix(in srgb, var(--banto-primary) 13%, transparent);
+  }
+  .definition-row > span {
+    flex: 1;
+    min-width: 0;
+  }
+  .definition-row small {
+    max-width: 45%;
+    font-size: 10px;
+  }
+  .definition-row:focus-visible {
+    box-shadow: inset var(--banto-focus-ring);
   }
   small {
     font-size: 11px;

@@ -1600,7 +1600,7 @@
       </div>{/if}
     <DesignerSidebar bind:active={activePanel} editable={mode === "edit"}>
       {#snippet projectPanel()}
-        <button onclick={showProcessSample} disabled={busy}
+        <button class="sample-link" onclick={showProcessSample} disabled={busy}
           >工程図サンプルを開く</button
         >
         <div class="project-root" title={project.manifest.name}>
@@ -1631,6 +1631,7 @@
               {/snippet}
               {#if mode === "edit"}
                 <ContextActions
+                  flat
                   label={`画面：${item.name}`}
                   contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`}
                   items={screenContextItems(item.id)}
@@ -1788,8 +1789,8 @@
             bind:value={layerQuery}
             oninput={() => (layersExpanded = true)}
           />
-          <p>
-            {screen.name} · {selectedIds.length} 件選択。下の配置ほど前面です。
+          <p class="layer-caption">
+            {selectedIds.length} 件選択 · 下の配置ほど前面
           </p>
           <TreeSection
             label={screen.name}
@@ -2172,7 +2173,9 @@
   .layer-entry .layer-more {
     position: absolute;
     right: 3px;
-    top: 5px;
+    top: 3px;
+    border: 0;
+    background: transparent;
     width: 22px;
     height: 28px;
     padding: 0;
@@ -2188,10 +2191,64 @@
       opacity: 1;
     }
   }
+  .screen-row,
+  .layer-entry > button:first-child {
+    margin: 0;
+    padding: 7px 26px 7px 8px;
+    min-height: 36px;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--banto-text);
+  }
+  .screen-row:hover {
+    background: color-mix(in srgb, var(--banto-primary) 6%, transparent);
+  }
+  .screen-row.active {
+    background: color-mix(in srgb, var(--banto-primary) 13%, transparent);
+    color: var(--banto-text);
+  }
+  .layer-entry > button:first-child:hover {
+    background: color-mix(in srgb, #14b8a6 8%, transparent);
+  }
+  .layer-entry > button:first-child.active {
+    background: color-mix(in srgb, #14b8a6 18%, transparent);
+  }
+  .screen-row:focus-visible,
+  .layer-entry > button:focus-visible {
+    box-shadow: inset var(--banto-focus-ring);
+  }
+  .layer-caption {
+    margin: 4px 2px 10px;
+    font-size: 11px;
+  }
+  .project-sidebar .sample-link,
+  .project-sidebar .reference-link {
+    margin: 0;
+    border: 0;
+    background: transparent;
+    padding: 7px 8px;
+    font-size: 12px;
+    color: var(--banto-text-muted);
+  }
+  .project-sidebar .sample-link:hover,
+  .project-sidebar .reference-link:enabled:hover {
+    color: var(--banto-primary);
+    background: color-mix(in srgb, var(--banto-primary) 6%, transparent);
+  }
   .sidebar-files {
     padding: 8px 14px;
     border-top: 1px solid var(--banto-border);
     flex-shrink: 0;
+  }
+  .sidebar-files .file,
+  .sidebar-files button {
+    border: 0;
+    background: transparent;
+    border-radius: 0;
+    padding: 5px 0;
+    margin: 0;
+    font-size: 12px;
   }
   .sidebar-files .hint {
     display: none;
