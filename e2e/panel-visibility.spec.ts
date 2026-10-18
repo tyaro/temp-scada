@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel } from "./helpers/designer";
+import { selectPanel, chooseTheme } from "./helpers/designer";
 import sample from "../examples/tag-binding.project.json" with { type: "json" };
 
 const sidebar = (page: Page) =>
@@ -186,7 +186,7 @@ for (const theme of ["light", "dark"])
     page,
   }) => {
     await edit(page);
-    await page.getByLabel("テーマ", { exact: true }).selectOption(theme);
+    await chooseTheme(page, theme);
     for (const [width, height] of [
       [1280, 720],
       [1440, 900],

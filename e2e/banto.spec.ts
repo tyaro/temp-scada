@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { selectPanel, chooseTheme } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 test("Banto theme persists, follows OS changes and leaves Project colors unchanged", async ({
   page,
@@ -11,7 +11,7 @@ test("Banto theme persists, follows OS changes and leaves Project colors unchang
     .locator("[data-object-id] rect")
     .first()
     .getAttribute("fill");
-  await page.getByLabel("テーマ", { exact: true }).selectOption("light");
+  await chooseTheme(page, "light");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   const bodyColor = await page
     .locator("body")
@@ -22,10 +22,12 @@ test("Banto theme persists, follows OS changes and leaves Project colors unchang
   expect(bodyColor).not.toBe("");
   expect(tokenColor).not.toBe("");
   await page.reload();
-  await expect(page.getByLabel("テーマ", { exact: true })).toHaveValue("light");
+  await expect(
+    page.getByRole("button", { name: "テーマを変更", exact: true }),
+  ).toHaveAttribute("data-theme-mode", "light");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.getByLabel("テーマ", { exact: true }).selectOption("system");
+  await chooseTheme(page, "system");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   const darkColor = await page
     .locator("body")
@@ -59,7 +61,7 @@ test("unavailable browser storage does not prevent local editing", async ({
   );
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-  await page.getByLabel("テーマ", { exact: true }).selectOption("light");
+  await chooseTheme(page, "light");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.getByRole("alert")).toContainText("このタブだけに適用");
   await page.getByRole("button", { name: "編集", exact: true }).click();

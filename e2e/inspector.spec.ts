@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel } from "./helpers/designer";
+import { selectPanel, chooseTheme } from "./helpers/designer";
 
 const inspector = (page: Page) =>
   page.getByRole("complementary", { name: "プロパティパネル", exact: true });
@@ -171,7 +171,7 @@ for (const theme of ["light", "dark"]) {
   }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "編集", exact: true }).click();
-    await page.getByLabel("テーマ", { exact: true }).selectOption(theme);
+    await chooseTheme(page, theme);
     for (const [width, height] of [
       [1280, 720],
       [1440, 900],

@@ -8,3 +8,19 @@ export async function selectPanel(
   const tab = page.getByRole("tab", { name, exact: true });
   if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
 }
+
+/** Use the compact theme icon menu, retaining the explicit OS-following option. */
+export async function chooseTheme(page: Page, value: string) {
+  const labels: Record<string, string> = {
+    light: "ライト",
+    dark: "ダーク",
+    system: "OS に合わせる",
+  };
+  const label = labels[value];
+  if (!label) throw new Error(`Unknown theme: ${value}`);
+  await page.getByRole("button", { name: "テーマを変更", exact: true }).click();
+  await page
+    .getByRole("menu", { name: "テーマ", exact: true })
+    .getByRole("menuitem", { name: label, exact: true })
+    .click();
+}

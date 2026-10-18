@@ -1,3 +1,4 @@
+import { chooseTheme } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 
 test("menubar navigates across Banto menus and returns focus on Escape", async ({
@@ -133,9 +134,7 @@ for (const theme of ["ライト", "ダーク"]) {
   }, testInfo) => {
     await page.goto("/");
     await page.getByRole("button", { name: "編集", exact: true }).click();
-    await page
-      .getByLabel("テーマ", { exact: true })
-      .selectOption(theme === "ライト" ? "light" : "dark");
+    await chooseTheme(page, theme === "ライト" ? "light" : "dark");
     for (const [width, height] of [
       [1280, 720],
       [1440, 900],

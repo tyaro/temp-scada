@@ -9,10 +9,20 @@
 </script>
 
 <script lang="ts">
+  import type { Snippet } from "svelte";
   let {
     groups,
     selectionCount,
-  }: { groups: ToolbarGroup[]; selectionCount: number } = $props();
+    modes,
+    controls,
+    status,
+  }: {
+    groups: ToolbarGroup[];
+    selectionCount: number;
+    modes: Snippet;
+    controls: Snippet;
+    status: Snippet;
+  } = $props();
   let root: HTMLDivElement;
   let active = $state("");
   const enabled = $derived(
@@ -25,7 +35,9 @@
     if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey)
       return;
     const buttons = [
-      ...root.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"),
+      ...root.querySelectorAll<HTMLButtonElement>(
+        "button[data-edit-action]:not(:disabled)",
+      ),
     ];
     const index = buttons.indexOf(event.target as HTMLButtonElement);
     if (index < 0) return;
@@ -49,11 +61,13 @@
   onkeydown={navigate}
   tabindex="-1"
 >
+  {@render modes()}
   {#each groups as group (group.label)}
     <div class="group" role="group" aria-label={group.label}>
       {#each group.items as item (item.label)}
         <button
           type="button"
+          data-edit-action
           aria-label={item.label}
           title={item.label}
           disabled={item.disabled}
@@ -68,7 +82,11 @@
       {/each}
     </div>
   {/each}
-  <span class="selection">{selectionCount} 件選択</span>
+  {@render controls()}
+  {#if groups.length}<span class="selection" title="Shift + クリックで複数選択"
+      >{selectionCount} 件選択</span
+    >{/if}
+  {@render status()}
 </div>
 
 <style>
@@ -77,7 +95,7 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 4px;
-    padding: 4px 16px;
+    padding: 4px 12px;
     background: var(--banto-surface);
     border-bottom: 1px solid var(--banto-border);
     flex-shrink: 0;

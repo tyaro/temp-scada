@@ -1,6 +1,5 @@
 <script lang="ts">
   import {
-    PageHeader,
     StatusBadge,
     ToastHost,
     Modal,
@@ -9,7 +8,6 @@
     MenuItem,
   } from "@banto/ui";
   import { notify, type NotificationKind } from "@banto/admin-core";
-  import { isThemeMode } from "@banto/theme";
   import {
     getThemeMode,
     setThemeMode,
@@ -39,12 +37,6 @@
     theme = value;
     void setThemeMode(value);
   }
-  function changeTheme(event: Event) {
-    const value = (event.currentTarget as HTMLSelectElement).value;
-    if (isThemeMode(value)) {
-      chooseTheme(value);
-    }
-  }
   import { untrack, tick } from "svelte";
   import { projectContent } from "./lib/save-state";
   import { createDraftGuard } from "./lib/designer/drafts.svelte";
@@ -57,7 +49,10 @@
   import type { Project } from "./lib/project";
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
-  import CanvasWorkspace from "./lib/designer/CanvasWorkspace.svelte";
+  import CanvasWorkspace, {
+    type CanvasView,
+  } from "./lib/designer/CanvasWorkspace.svelte";
+  import CanvasControls from "./lib/designer/CanvasControls.svelte";
   import DesignerSidebar, {
     type DesignerPanel,
   } from "./lib/designer/DesignerSidebar.svelte";
@@ -259,7 +254,16 @@
   let canvasWorkspace = $state<{
     visibleCenter: () => Point;
     preparePanelResize: () => void;
+    zoom: (value: number | null) => void;
+    stepZoom: (direction: number) => void;
+    setHand: (value: boolean) => void;
   }>();
+  let canvasView = $state<CanvasView>({
+    hand: false,
+    zoom: null,
+    scale: 1,
+    fit: 1,
+  });
   let showGrid = $state(false),
     snapEnabled = $state(false),
     gridSize = $state(10);
@@ -972,68 +976,111 @@
     content="Banto SCADA の初期 Project エディタ"
   /></svelte:head
 >
-<div class="app-header">
-  <PageHeader
-    title={project.manifest.name}
-    description="BANTO / SCADA · ローカルファイル編集"
-  >
-    {#snippet actions()}
-      <div
-        class="mode"
-        role="group"
-        aria-label="表示モード"
-        use:settleMenuFocus
-      >
-        <Menu label="常設メニュー" placement="bottom-end">
-          {#snippet trigger(props)}
-            <button {...props} data-permanent-menu>メニュー</button>
-          {/snippet}
-          <MenuGroup label="表示">
-            {#each menuGroups[2].items as item}
-              <MenuItem
-                label={item.label}
-                disabled={item.disabled}
-                onSelect={item.run}
+<header class="app-header">
+  <h1 title={project.manifest.name}>{project.manifest.name}</h1>
+  <div class="header-actions" use:settleMenuFocus>
+    <Menu label="常設メニュー" placement="bottom-end">
+      {#snippet trigger(props)}
+        <button {...props} data-permanent-menu>メニュー</button>
+      {/snippet}
+      <MenuGroup label="表示">
+        {#each menuGroups[2].items as item}
+          <MenuItem
+            label={item.label}
+            disabled={item.disabled}
+            onSelect={item.run}
+          />
+        {/each}
+      </MenuGroup>
+      <MenuGroup label="ヘルプ">
+        <MenuItem
+          label="操作ガイド・アプリ情報"
+          onSelect={() => (helpOpen = true)}
+        />
+      </MenuGroup>
+    </Menu>
+    <Menu label="テーマ" placement="bottom-end">
+      {#snippet trigger(props)}
+        <button
+          {...props}
+          class="theme-icon"
+          aria-label="テーマを変更"
+          data-theme-mode={theme}
+          title={`テーマ：${theme === "light" ? "ライト" : theme === "dark" ? "ダーク" : "OS に合わせる"}`}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            {#if theme === "light"}<circle cx="12" cy="12" r="4" /><path
+                d="M12 2V4M12 20V22M2 12H4M20 12H22M5 5L7 7M17 17L19 19M5 19L7 17M17 7L19 5"
               />
-            {/each}
-          </MenuGroup>
-          <MenuGroup label="ヘルプ">
-            <MenuItem
-              label="操作ガイド・アプリ情報"
-              onSelect={() => (helpOpen = true)}
-            />
-          </MenuGroup>
-        </Menu>
-        <button
-          class:active={mode === "edit"}
-          aria-pressed={mode === "edit"}
-          onclick={() => changeMode("edit")}>編集</button
-        >
-        <button
-          class:active={mode === "preview"}
-          aria-pressed={mode === "preview"}
-          onclick={() => changeMode("preview")}>表示プレビュー</button
-        >
-        <StatusBadge variant="neutral" label="Hub 未接続" />
-        <label class="theme-label"
-          >テーマ<select
-            aria-label="テーマ"
-            value={theme}
-            onchange={changeTheme}
-            ><option value="dark">ダーク</option><option value="light"
-              >ライト</option
-            ><option value="system">システム</option></select
-          ></label
-        >
-      </div>
-    {/snippet}
-  </PageHeader>
-</div>
+            {:else if theme === "dark"}<path
+                d="M20 15A9 9 0 0 1 9 4A9 9 0 1 0 20 15Z"
+              />
+            {:else}<path d="M3 4H21V17H3ZM8 21H16M12 17V21" />{/if}
+          </svg>
+        </button>
+      {/snippet}
+      <MenuItem label="ライト" onSelect={() => chooseTheme("light")} />
+      <MenuItem label="ダーク" onSelect={() => chooseTheme("dark")} />
+      <MenuItem label="OS に合わせる" onSelect={() => chooseTheme("system")} />
+    </Menu>
+  </div>
+</header>
 {#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
-{#if mode === "edit"}<EditToolbar
-    groups={editToolbarGroups}
-    selectionCount={selectedIds.length}
-  />{/if}
+<EditToolbar
+  groups={mode === "edit" ? editToolbarGroups : []}
+  selectionCount={selectedIds.length}
+>
+  {#snippet modes()}
+    <div class="mode-tools" role="group" aria-label="表示モード">
+      <button
+        class:active={mode === "edit"}
+        aria-pressed={mode === "edit"}
+        disabled={menuBlocked}
+        onclick={() => changeMode("edit")}
+        title="編集モード">編集</button
+      >
+      <button
+        class:active={mode === "preview"}
+        aria-pressed={mode === "preview"}
+        disabled={menuBlocked}
+        onclick={() => changeMode("preview")}
+        title="表示プレビュー">表示プレビュー</button
+      >
+    </div>
+  {/snippet}
+  {#snippet controls()}
+    {#if mode === "edit"}
+      <CanvasControls
+        view={canvasView}
+        bind:showGrid
+        bind:snapEnabled
+        bind:gridSize
+        onhand={(value) => canvasWorkspace?.setHand(value)}
+        onzoom={(value) => canvasWorkspace?.zoom(value)}
+        onstep={(value) => canvasWorkspace?.stepZoom(value)}
+      />
+    {/if}
+  {/snippet}
+  {#snippet status()}
+    <div
+      class="save-state"
+      data-testid="save-state"
+      role="group"
+      aria-label="保存状態"
+      title={lastExport ? `最終書き出し要求 ${lastExport}` : saveLabel}
+    >
+      <StatusBadge
+        variant={projectChanged ? "warning" : "neutral"}
+        label={saveLabel}
+      />
+      {#if drafts.dirty}<span>未適用の入力あり · {drafts.count} フォーム</span
+        >{/if}
+      {#if lastExport}<span class="sr-only">最終書き出し要求 {lastExport}</span
+        >{/if}
+    </div>
+    <StatusBadge variant="neutral" label="Hub 未接続" />
+  {/snippet}
+</EditToolbar>
 <main
   class:editing={mode === "edit"}
   class:sidebar-visible={mode !== "edit" || showSidebar}
@@ -1054,14 +1101,6 @@
           >×</button
         >
       </div>{/if}
-    <div class="save-state" data-testid="save-state">
-      <StatusBadge
-        variant={projectChanged ? "warning" : "neutral"}
-        label={saveLabel}
-      />
-      {#if drafts.dirty}<p>未適用の入力あり · {drafts.count} フォーム</p>{/if}
-      {#if lastExport}<p>最終書き出し要求 {lastExport}</p>{/if}
-    </div>
     <DesignerSidebar bind:active={activePanel} editable={mode === "edit"}>
       {#snippet projectPanel()}
         <button onclick={showProcessSample} disabled={busy}
@@ -1269,32 +1308,10 @@
           .projectRevision}</span
       >
     </div>
-    {#if mode === "edit"}
-      <div class="grid-tools" role="group" aria-label="グリッドとスナップ">
-        <label
-          ><input type="checkbox" bind:checked={showGrid} />グリッド表示</label
-        >
-        <label
-          ><input
-            type="checkbox"
-            bind:checked={snapEnabled}
-          />グリッドにスナップ</label
-        >
-        <label
-          >グリッド間隔<select aria-label="グリッド間隔" bind:value={gridSize}
-            >{#each [5, 10, 20, 50] as size}<option value={size}
-                >{size} unit</option
-              >{/each}</select
-          ></label
-        >
-        <span
-          >Alt を押してドラッグするとスナップを一時解除 · Esc でドラッグを取消</span
-        >
-      </div>
-    {/if}
     {#key workspaceGeneration}
       <CanvasWorkspace
         bind:this={canvasWorkspace}
+        onviewchange={(view) => (canvasView = view)}
         {screen}
         symbols={project.symbols}
         editable={mode === "edit"}
@@ -1450,18 +1467,86 @@
     display: none;
   }
   .save-state {
-    padding: 10px 14px;
-    margin: 0;
-    flex-shrink: 0;
-  }
-  .save-state p {
-    margin: 6px 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
     font-size: 11px;
+    color: var(--banto-text-muted);
+    margin-left: auto;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .app-header {
-    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 12px;
+    min-height: 40px;
     flex-shrink: 0;
     border-bottom: 1px solid var(--banto-border);
+    background: var(--banto-surface);
+  }
+  .app-header h1 {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .header-actions button {
+    width: auto;
+    margin: 0;
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  .header-actions .theme-icon {
+    width: 30px;
+    display: grid;
+    place-items: center;
+  }
+  .theme-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .mode-tools {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-right: 1px solid var(--banto-border);
+    padding-right: 6px;
+    margin-right: 2px;
+  }
+  .mode-tools button {
+    width: auto;
+    margin: 0;
+    padding: 5px 8px;
+    height: 30px;
+    font-size: 12px;
+    white-space: nowrap;
   }
   .definition-banner {
     border: 1px solid var(--banto-primary);
@@ -1474,66 +1559,26 @@
     width: auto;
     margin-bottom: 0;
   }
-  .theme-label {
-    display: grid;
-    gap: 4px;
-    font-size: 12px;
-    color: var(--banto-text-muted);
-  }
-  .theme-label select {
-    background: var(--banto-surface);
-    color: var(--banto-text);
-    border: 1px solid var(--banto-border);
-    border-radius: var(--banto-radius);
-    padding: 6px;
-  }
   button:focus-visible,
-  input:focus-visible,
-  select:focus-visible {
+  input:focus-visible {
     outline: none;
     box-shadow: var(--banto-focus-ring);
   }
   button:hover {
     border-color: var(--banto-primary);
   }
-  .mode {
-    flex-wrap: wrap;
-  }
   .actions {
     flex-wrap: wrap;
-  }
-  .grid-tools {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
-    font-size: 12px;
-    color: var(--banto-text-muted);
-  }
-  .grid-tools label {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
-  .grid-tools select {
-    background: var(--banto-surface);
-    color: var(--banto-text);
-    padding: 5px;
-    border: 1px solid var(--banto-border);
-    border-radius: var(--banto-radius);
   }
   button:disabled {
     opacity: 0.5;
     cursor: default;
   }
-  .mode,
   .actions {
     display: flex;
     gap: 10px;
     align-items: center;
   }
-  .mode button,
   .actions button {
     width: auto;
     white-space: nowrap;
@@ -1677,7 +1722,12 @@
       min-height: 0;
     }
     main > section {
-      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px;
+    }
+    main > section > :not(:global(.viewport)) {
+      flex-shrink: 0;
     }
   }
   @media (min-width: 701px) and (max-width: 1099px) {
@@ -1693,11 +1743,6 @@
     aside {
       border-right: 0;
       border-bottom: 1px solid var(--banto-border);
-    }
-    .app-header {
-      padding: 20px;
-      gap: 16px;
-      flex-wrap: wrap;
     }
   }
 </style>

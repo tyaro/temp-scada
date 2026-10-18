@@ -1,3 +1,12 @@
+<script lang="ts" module>
+  export type CanvasView = {
+    hand: boolean;
+    zoom: number | null;
+    scale: number;
+    fit: number;
+  };
+</script>
+
 <script lang="ts">
   import { tick, untrack } from "svelte";
   import Renderer from "../Renderer.svelte";
@@ -28,6 +37,7 @@
     onvertexmove,
     canDropPart,
     ondropPart,
+    onviewchange,
   }: {
     screen: Screen;
     symbols: SymbolDefinition[];
@@ -47,6 +57,7 @@
     onvertexmove: (id: string, index: number, point: Point) => void;
     canDropPart: () => boolean;
     ondropPart: (token: string, center: Point) => void;
+    onviewchange: (view: CanvasView) => void;
   } = $props();
   let viewport = $state<HTMLDivElement>();
   let dropPoint = $state<Point | null>(null);
@@ -149,6 +160,18 @@
       ),
     );
   }
+  export function setHand(value: boolean) {
+    hand = value;
+  }
+  $effect(() => {
+    const view = {
+      hand,
+      zoom: editable ? (stored?.zoom ?? null) : null,
+      scale,
+      fit,
+    };
+    untrack(() => onviewchange(view));
+  });
   const panning = $derived(editable && (hand || space || !!pan));
   $effect(() => {
     const element = viewport;
@@ -205,7 +228,7 @@
       top: viewport.scrollTop,
     };
   }
-  function zoom(value: number | null) {
+  export function zoom(value: number | null) {
     if (!viewport || !editable) return;
     resizeAnchor = null;
     if (value === null) {
@@ -222,7 +245,7 @@
       { before: centerRoom, after: !!centerRooms[screen.id] },
     );
   }
-  function stepZoom(direction: number) {
+  export function stepZoom(direction: number) {
     const next =
       direction > 0
         ? zoomLevels.find((v) => v > scale + 0.001)
@@ -318,41 +341,6 @@
     cancelPan();
   }}
 />
-{#if editable}
-  <div class="tools" role="group" aria-label="キャンバス表示">
-    <button aria-pressed={!hand} onclick={() => (hand = false)}
-      >選択ツール</button
-    >
-    <button aria-pressed={hand} onclick={() => (hand = true)}>パンツール</button
-    >
-    <button
-      aria-label="縮小"
-      disabled={scale <= 0.25}
-      onclick={() => stepZoom(-1)}>−</button
-    >
-    <label
-      >表示倍率<select
-        aria-label="表示倍率"
-        value={stored?.zoom ?? "fit"}
-        onchange={(event) =>
-          zoom(
-            event.currentTarget.value === "fit"
-              ? null
-              : Number(event.currentTarget.value),
-          )}
-      >
-        <option value="fit">全体 ({Math.round(fit * 100)}%)</option>
-        {#each zoomLevels as level}<option value={level}>{level * 100}%</option
-          >{/each}
-      </select></label
-    >
-    <button aria-label="拡大" disabled={scale >= 4} onclick={() => stepZoom(1)}
-      >＋</button
-    >
-    <button onclick={() => zoom(null)}>全体表示</button>
-    <span>Space + ドラッグ / 中ボタンでパン · Esc で取消</span>
-  </div>
-{/if}
 <!-- svelte-ignore a11y_no_noninteractive_tabindex (スクロール領域をキーボードと Space パンで操作するためのフォーカス先) -->
 <div
   bind:this={viewport}
@@ -444,40 +432,6 @@
     pointer-events: none;
     font: bold 20px sans-serif;
   }
-  .tools {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-    margin-bottom: 12px;
-    font-size: 12px;
-    color: var(--banto-text-muted);
-  }
-  .tools label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  button,
-  select {
-    font: inherit;
-    color: var(--banto-text);
-    background: var(--banto-surface);
-    border: 1px solid var(--banto-border);
-    border-radius: 4px;
-    padding: 7px 9px;
-    cursor: pointer;
-  }
-  button[aria-pressed="true"] {
-    border-color: var(--banto-primary);
-    color: var(--banto-primary);
-  }
-  button:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-  button:focus-visible,
-  select:focus-visible,
   .viewport:focus-visible {
     outline: none;
     box-shadow: var(--banto-focus-ring);
@@ -494,6 +448,14 @@
   }
   .viewport.preview {
     height: clamp(280px, calc(100dvh - 220px), 850px);
+  }
+  @media (min-width: 1100px) {
+    .viewport,
+    .viewport.preview {
+      flex: 1;
+      height: auto;
+      min-height: 280px;
+    }
   }
   .world {
     position: relative;

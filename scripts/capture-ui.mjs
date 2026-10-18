@@ -18,8 +18,18 @@ try {
   );
   if (process.env.SCADA_SCREENSHOT_THEME) {
     await page
-      .getByLabel("テーマ", { exact: true })
-      .selectOption(process.env.SCADA_SCREENSHOT_THEME);
+      .getByRole("button", { name: "テーマを変更", exact: true })
+      .click();
+    const themeLabel = {
+      light: "ライト",
+      dark: "ダーク",
+      system: "OS に合わせる",
+    }[process.env.SCADA_SCREENSHOT_THEME];
+    if (!themeLabel) throw new Error("Unknown screenshot theme");
+    await page
+      .getByRole("menu", { name: "テーマ", exact: true })
+      .getByRole("menuitem", { name: themeLabel, exact: true })
+      .click();
   }
   const button = (name) => page.getByRole("button", { name, exact: true });
   const sidebar = page.getByRole("complementary", { name: "Project と部品" });

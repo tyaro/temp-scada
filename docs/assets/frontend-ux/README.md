@@ -74,3 +74,8 @@
 - `palette-context-light.png`: 組込ポンプの配置／情報メニュー。
 - `palette-context-dark.png`: Project の共有定義ポンプの配置／定義編集／複製／情報メニュー。
 - 各テーマを指定した `scripts/capture-ui.mjs` の `scada-part-context.png`（ライト）と `scada-shared-context.png`（ダーク）を保存した。1600×1000、通常操作で撮影した実画面で、画像と DOM は加工していない。
+
+## 薄いヘッダーと統合ツールバー（2026-10-19）
+
+- `compact-shell-light.png` / `compact-shell-dark.png`: グリッド・選択／パン・倍率・モード・保存状態を上部ツールバーへ移した実画面。ヘッダーはサブタイトルなしでテーマはアイコンメニュー。
+- 各テーマを指定した `scripts/capture-ui.mjs` の `scada-editor.png`（1600×1000）を保存した。アプリの通常操作で撮影し、画像や DOM は加工していない。

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { selectPanel } from "./helpers/designer";
+import { selectPanel, chooseTheme } from "./helpers/designer";
 
 const panels = ["プロジェクト", "レイヤー", "部品"] as const;
 
@@ -183,7 +183,7 @@ for (const theme of ["light", "dark"]) {
   }, testInfo) => {
     await page.goto("/");
     await page.getByRole("button", { name: "編集", exact: true }).click();
-    await page.getByLabel("テーマ", { exact: true }).selectOption(theme);
+    await chooseTheme(page, theme);
     for (const [width, height] of [
       [1280, 720],
       [1440, 900],
