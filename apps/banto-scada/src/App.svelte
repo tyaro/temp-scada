@@ -14,6 +14,8 @@
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
   import Renderer from "./lib/Renderer.svelte";
+  import PartPalette from "./lib/designer/PartPalette.svelte";
+  import SymbolLibrary from "./lib/designer/SymbolLibrary.svelte";
   import { parseProject, serializeProject, parsePoints } from "./lib/project";
   import {
     type EditCommand,
@@ -144,9 +146,6 @@
   let screenId = $state(sample.screens[0].id);
   let editingSymbolId = $state<string | null>(null);
   let libraryId = $state("");
-  let librarySymbol = $derived(
-    project.symbols.find((s) => s.id === libraryId) ?? project.symbols[0],
-  );
   let activeDefinition = $derived(
     project.symbols.find((s) => s.id === editingSymbolId),
   );
@@ -162,12 +161,13 @@
     libraryId = id;
     selectedIds = [];
   }
-  function deleteDefinition() {
+  function deleteDefinition(id: string) {
+    const definition = project.symbols.find((s) => s.id === id);
     if (
-      librarySymbol &&
-      window.confirm(`「${librarySymbol.name}」の Symbol 定義を削除しますか？`)
+      definition &&
+      window.confirm(`「${definition.name}」の Symbol 定義を削除しますか？`)
     )
-      edit({ type: "remove-symbol", symbolId: librarySymbol.id });
+      edit({ type: "remove-symbol", symbolId: id });
   }
   let screen = $derived(
     activeDefinition ??
@@ -414,82 +414,26 @@
     </nav>
     {#if mode === "edit"}
       <hr />
-      <h2>部品を追加</h2>
-      <div class="palette">
-        <button onclick={() => add("rectangle")}>Rectangle を追加</button>
-        <button onclick={() => add("ellipse")}>Ellipse を追加</button>
-        <button onclick={() => add("text")}>Text を追加</button>
-        <button onclick={() => add("line")}>線を追加</button><button
-          onclick={() => add("pipe")}>配管を追加</button
-        >
-        {#if !activeDefinition}
-          <button
-            onclick={() =>
-              edit({
-                type: "add-symbol",
-                screenId: screen.id,
-                template: "pump",
-              })}>ポンプを追加</button
-          >
-          <button
-            onclick={() =>
-              edit({
-                type: "add-symbol",
-                screenId: screen.id,
-                template: "valve",
-              })}>バルブを追加</button
-          >
-        {/if}
-      </div>
+      <PartPalette
+        definitions={project.symbols}
+        allowSymbols={!activeDefinition}
+        onadd={add}
+        onbuiltin={(template) =>
+          edit({ type: "add-symbol", screenId: screen.id, template })}
+        onplace={(id) =>
+          edit({ type: "place-symbol", screenId: screen.id, symbolId: id })}
+      />
       <hr />
-      <h2>Symbol ライブラリ</h2>
-      <button
-        disabled={project.symbols.length >= 100}
-        onclick={() =>
-          edit({
-            type: "create-symbol",
-            name: `Symbol ${project.symbols.length + 1}`,
-            width: 100,
-            height: 100,
-          })}>Symbol 定義を作成</button
-      >
-      {#if librarySymbol}
-        <label class="library-label"
-          >Symbol 定義<select
-            aria-label="Symbol 定義"
-            value={librarySymbol.id}
-            onchange={(event) => (libraryId = event.currentTarget.value)}
-          >
-            {#each project.symbols as definition}<option value={definition.id}
-                >{definition.name}</option
-              >{/each}
-          </select></label
-        >
-        <p>{symbolUsage(project, librarySymbol.id)} 配置で共有</p>
-        <div class="library-actions">
-          <button onclick={() => openDefinition(librarySymbol.id)}
-            >定義を編集</button
-          >
-          <button
-            disabled={project.symbols.length >= 100}
-            onclick={() =>
-              edit({ type: "duplicate-symbol", symbolId: librarySymbol.id })}
-            >定義を複製</button
-          >
-          <button
-            disabled={symbolUsage(project, librarySymbol.id) > 0}
-            onclick={deleteDefinition}>定義を削除</button
-          >
-          {#if !activeDefinition}<button
-              onclick={() =>
-                edit({
-                  type: "place-symbol",
-                  screenId: screen.id,
-                  symbolId: librarySymbol.id,
-                })}>画面に配置</button
-            >{/if}
-        </div>
-      {/if}
+      <SymbolLibrary
+        {project}
+        selectedId={libraryId}
+        screenId={screen.id}
+        editingDefinition={!!activeDefinition}
+        onchoose={(id) => (libraryId = id)}
+        onedit={openDefinition}
+        ondelete={deleteDefinition}
+        oncommand={edit}
+      />
       <hr />
       <h2>{activeDefinition ? "Symbol 設定" : "画面管理"}</h2>
       {#if !activeDefinition}
@@ -908,28 +852,6 @@
     width: auto;
     margin-bottom: 0;
   }
-  .library-label {
-    display: grid;
-    gap: 8px;
-    font-size: 12px;
-  }
-  .library-label select {
-    width: 100%;
-    padding: 8px;
-    color: var(--banto-text);
-    background: var(--banto-surface);
-    border: 1px solid var(--banto-border);
-    border-radius: 4px;
-  }
-  .library-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-  .library-actions button {
-    margin: 0;
-    padding: 8px;
-  }
   .theme-label {
     display: grid;
     gap: 4px;
@@ -1112,17 +1034,6 @@
   }
   section p {
     overflow-wrap: anywhere;
-  }
-  .palette {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin: 10px 0 18px;
-  }
-  .palette button {
-    margin: 0;
-    min-width: 0;
-    padding: 10px 8px;
   }
   .project-sidebar form {
     display: grid;
