@@ -159,3 +159,92 @@ it("edits pipe geometry and rejects degenerate paths without mutating input", ()
     arrow: "none",
   });
 });
+it("duplicates only a Symbol placement and independently clones pipe vertices", () => {
+  const project = fresh(),
+    screenId = project.screens[0].id;
+  const symbol = applyCommand(
+    project,
+    { type: "add-symbol", screenId, template: "pump" },
+    "edit",
+  );
+  const original = symbol.screens[0].objects.at(-1)!;
+  const copied = applyCommand(
+    symbol,
+    { type: "duplicate", screenId, objectId: original.id },
+    "edit",
+  );
+  const clone = copied.screens[0].objects.at(-1)!;
+  expect(clone.id).not.toBe(original.id);
+  expect(clone.x).toBe(original.x + 20);
+  expect(clone.shape).toEqual(original.shape);
+  expect(copied.symbols).toEqual(symbol.symbols);
+  const pipe = applyCommand(
+    project,
+    { type: "add", screenId, kind: "pipe" },
+    "edit",
+  );
+  const pipeId = pipe.screens[0].objects.at(-1)!.id;
+  const pipes = applyCommand(
+    pipe,
+    { type: "duplicate", screenId, objectId: pipeId },
+    "edit",
+  );
+  const edited = applyCommand(
+    pipes,
+    {
+      type: "update",
+      screenId,
+      objectId: pipes.screens[0].objects.at(-1)!.id,
+      patch: {
+        points: [
+          { x: 0, y: 0 },
+          { x: 50, y: 100 },
+        ],
+      },
+    },
+    "edit",
+  );
+  expect(edited.screens[0].objects.find((o) => o.id === pipeId)!.shape).toEqual(
+    pipe.screens[0].objects.at(-1)!.shape,
+  );
+});
+it("reorders by explicit order while preserving IDs and ignoring boundary no-ops", () => {
+  const project = fresh(),
+    screenId = project.screens[0].id,
+    objectId = project.screens[0].objects[0].id;
+  const front = applyCommand(
+    project,
+    { type: "reorder", screenId, objectId, direction: "front" },
+    "edit",
+  );
+  expect(front.screens[0].objects.at(-1)!.id).toBe(objectId);
+  expect(new Set(front.screens[0].objects.map((o) => o.order)).size).toBe(3);
+  expect(
+    applyCommand(
+      front,
+      { type: "reorder", screenId, objectId, direction: "front" },
+      "edit",
+    ),
+  ).toBe(front);
+  const backward = applyCommand(
+    front,
+    { type: "reorder", screenId, objectId, direction: "backward" },
+    "edit",
+  );
+  expect(backward.screens[0].objects[1].id).toBe(objectId);
+  const back = applyCommand(
+    backward,
+    { type: "reorder", screenId, objectId, direction: "back" },
+    "edit",
+  );
+  expect(back.screens[0].objects[0].id).toBe(objectId);
+  const forward = applyCommand(
+    back,
+    { type: "reorder", screenId, objectId, direction: "forward" },
+    "edit",
+  );
+  expect(forward.screens[0].objects[1].id).toBe(objectId);
+  expect([...forward.screens[0].objects.map((o) => o.id)].sort()).toEqual(
+    project.screens[0].objects.map((o) => o.id).sort(),
+  );
+});

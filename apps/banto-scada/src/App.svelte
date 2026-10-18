@@ -16,11 +16,63 @@
   import Renderer from "./lib/Renderer.svelte";
   import { parseProject, serializeProject, parsePoints } from "./lib/project";
   import {
-    applyCommand,
     type EditCommand,
     type AddKind,
     type ObjectPatch,
   } from "./lib/editor";
+  import {
+    emptyHistory,
+    recordEdit,
+    travelHistory,
+    type EditHistory,
+  } from "./lib/history";
+  let history = $state<EditHistory>(emptyHistory());
+  function travel(direction: "undo" | "redo") {
+    try {
+      const result = travelHistory(project, history, direction, mode);
+      if (result.project === project) return;
+      project = result.project;
+      history = result.history;
+      projectChanged = true;
+      if (!screen.objects.some((o) => o.id === selectedId)) selectedId = null;
+      report(
+        "info",
+        direction === "undo" ? "元に戻しました。" : "やり直しました。",
+      );
+    } catch (e) {
+      report(
+        "error",
+        `履歴エラー: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+  }
+  function shortcut(event: KeyboardEvent) {
+    if (
+      mode !== "edit" ||
+      busy ||
+      event.isComposing ||
+      event.altKey ||
+      !(event.ctrlKey || event.metaKey)
+    )
+      return;
+    const target = event.target;
+    if (
+      target instanceof Element &&
+      target.closest("input,textarea,select,[contenteditable]")
+    )
+      return;
+    const key = event.key.toLowerCase();
+    if (key === "z") {
+      event.preventDefault();
+      travel(event.shiftKey ? "redo" : "undo");
+    } else if (key === "y" && !event.shiftKey) {
+      event.preventDefault();
+      travel("redo");
+    } else if (key === "d" && !event.shiftKey && selectedId) {
+      event.preventDefault();
+      edit({ type: "duplicate", screenId: screen.id, objectId: selectedId });
+    }
+  }
   let mode = $state<"edit" | "preview">("preview");
   let selectedId = $state<string | null>(null);
   let project = $state(parseProject(JSON.stringify(sample)));
@@ -40,6 +92,7 @@
     )
       return;
     project = parseProject(JSON.stringify(processSample));
+    history = emptyHistory();
     screenId = project.screens[0].id;
     selectedId = null;
     projectChanged = false;
@@ -55,9 +108,16 @@
   let selected = $derived(screen.objects.find((o) => o.id === selectedId));
   function edit(command: EditCommand) {
     try {
-      project = applyCommand(project, command, mode);
+      const result = recordEdit(project, history, command, mode);
+      if (result.project === project) return;
+      project = result.project;
+      history = result.history;
       projectChanged = true;
-      if (command.type === "add" || command.type === "add-symbol")
+      if (
+        command.type === "add" ||
+        command.type === "add-symbol" ||
+        command.type === "duplicate"
+      )
         selectedId = project.screens
           .find((s) => s.id === screenId)!
           .objects.at(-1)!.id;
@@ -120,6 +180,7 @@
         throw new Error("ファイルは 1 MiB 以下にしてください");
       const next = parseProject(await file.text());
       project = next;
+      history = emptyHistory();
       projectChanged = false;
       screenId = next.screens[0].id;
       selectedId = null;
@@ -146,6 +207,8 @@
     report("success", "Project JSON を保存しました。");
   }
 </script>
+
+<svelte:window onkeydown={shortcut} />
 
 <svelte:head
   ><meta
@@ -262,6 +325,19 @@
       <h2>{screen.name}</h2>
       <span>{screen.width} × {screen.height}</span>
     </div>
+    {#if mode === "edit"}
+      <div class="edit-toolbar" role="group" aria-label="編集履歴">
+        <button
+          disabled={busy || history.past.length === 0}
+          onclick={() => travel("undo")}>元に戻す</button
+        >
+        <button
+          disabled={busy || history.future.length === 0}
+          onclick={() => travel("redo")}>やり直す</button
+        >
+        <span>Ctrl / ⌘ + Z · Shift + Z でやり直す</span>
+      </div>
+    {/if}
     <div class="canvas" style:aspect-ratio={`${screen.width}/${screen.height}`}>
       <Renderer
         {screen}
@@ -358,7 +434,17 @@
                     >{/if}
                 </div>
                 <div class="actions">
-                  <button type="submit">変更を適用</button><button
+                  <button type="submit">変更を適用</button>
+                  <button
+                    type="button"
+                    onclick={() =>
+                      selected &&
+                      edit({
+                        type: "duplicate",
+                        screenId: screen.id,
+                        objectId: selected.id,
+                      })}>選択図形を複製</button
+                  ><button
                     type="button"
                     onclick={() =>
                       selected &&
@@ -368,6 +454,21 @@
                         objectId: selected.id,
                       })}>選択図形を削除</button
                   >
+                </div>
+                <div class="actions" role="group" aria-label="重なり順">
+                  {#each [{ direction: "back" as const, label: "最背面へ" }, { direction: "backward" as const, label: "1つ背面へ" }, { direction: "forward" as const, label: "1つ前面へ" }, { direction: "front" as const, label: "最前面へ" }] as layer}
+                    <button
+                      type="button"
+                      onclick={() =>
+                        selected &&
+                        edit({
+                          type: "reorder",
+                          screenId: screen.id,
+                          objectId: selected.id,
+                          direction: layer.direction,
+                        })}>{layer.label}</button
+                    >
+                  {/each}
                 </div>
               </form>
             {/key}
@@ -420,6 +521,28 @@
   }
   .mode {
     flex-wrap: wrap;
+  }
+  .actions {
+    flex-wrap: wrap;
+  }
+  .edit-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  .edit-toolbar button {
+    width: auto;
+    margin: 0;
+  }
+  .edit-toolbar span {
+    color: var(--banto-text-muted);
+    font-size: 12px;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
   .mode,
   .actions {

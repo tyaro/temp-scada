@@ -17,6 +17,13 @@ export type EditCommand =
   | { type: "add"; screenId: string; kind: AddKind }
   | { type: "add-symbol"; screenId: string; template: "pump" | "valve" }
   | { type: "update"; screenId: string; objectId: string; patch: ObjectPatch }
+  | { type: "duplicate"; screenId: string; objectId: string }
+  | {
+      type: "reorder";
+      screenId: string;
+      objectId: string;
+      direction: "front" | "back" | "forward" | "backward";
+    }
   | { type: "remove"; screenId: string; objectId: string };
 
 /** RFC 9562 UUID v7。ID は順序として使わない。 */
@@ -99,7 +106,30 @@ export function applyCommand(
   } else {
     const index = screen.objects.findIndex((o) => o.id === command.objectId);
     if (index < 0) throw new Error("図形が見つかりません");
-    if (command.type === "remove") screen.objects.splice(index, 1);
+    if (command.type === "duplicate") {
+      const copy = JSON.parse(JSON.stringify(screen.objects[index]));
+      copy.id = newId();
+      copy.x += 20;
+      copy.y += 20;
+      copy.order = Math.max(-1, ...screen.objects.map((o) => o.order)) + 1;
+      screen.objects.push(copy);
+    } else if (command.type === "reorder") {
+      const ordered = [...screen.objects].sort((a, b) => a.order - b.order);
+      const from = ordered.findIndex((o) => o.id === command.objectId);
+      const to =
+        command.direction === "front"
+          ? ordered.length - 1
+          : command.direction === "back"
+            ? 0
+            : command.direction === "forward"
+              ? Math.min(ordered.length - 1, from + 1)
+              : Math.max(0, from - 1);
+      if (from === to) return project;
+      const [object] = ordered.splice(from, 1);
+      ordered.splice(to, 0, object);
+      ordered.forEach((o, i) => (o.order = i));
+      screen.objects = ordered;
+    } else if (command.type === "remove") screen.objects.splice(index, 1);
     else {
       const { text, points, strokeWidth, arrow, ...geometry } = command.patch;
       const object = screen.objects[index];
@@ -122,6 +152,7 @@ export function applyCommand(
       }
     }
   }
+  if (serializeProject(next) === serializeProject(project)) return project;
   next.manifest.projectRevision++;
   return parseProject(JSON.stringify(next));
 }
