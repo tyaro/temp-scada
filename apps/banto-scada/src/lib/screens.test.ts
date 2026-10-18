@@ -199,3 +199,63 @@ it("does not record moves beyond screen boundaries and rejects missing targets a
     ),
   ).toThrow("画面");
 });
+
+it("saves background as a screen property, preserves existing colors and copies it through history", () => {
+  const original = fresh(),
+    screenId = original.screens[0].id;
+  const result = recordEdit(
+    original,
+    emptyHistory(),
+    {
+      type: "update-screen",
+      screenId,
+      name: original.screens[0].name,
+      width: original.screens[0].width,
+      height: original.screens[0].height,
+      background: "#ffffff",
+    },
+    "edit",
+  );
+  expect(result.project.screens[0].objects).toEqual(
+    original.screens[0].objects,
+  );
+  expect(result.project.symbols).toEqual(original.symbols);
+  expect(result.project.screens[0].background).toBe("#ffffff");
+  const copied = applyCommand(
+    result.project,
+    { type: "duplicate-screen", screenId },
+    "edit",
+  );
+  expect(copied.screens[1].background).toBe("#ffffff");
+  const undone = travelHistory(result.project, result.history, "undo", "edit");
+  expect(undone.project.screens[0].background).toBe("#0b1220");
+  expect(parseProject(serializeProject(result.project))).toEqual(
+    result.project,
+  );
+});
+
+it("new white screens and new shapes get readable initial colors without recoloring existing placements", () => {
+  const original = fresh();
+  let project = applyCommand(
+    original,
+    { type: "create-screen", name: "新画面", width: 800, height: 600 },
+    "edit",
+  );
+  const screenId = project.screens[1].id;
+  expect(project.screens[1].background).toBe("#ffffff");
+  project = applyCommand(
+    project,
+    { type: "add", screenId, kind: "text" },
+    "edit",
+  );
+  project = applyCommand(
+    project,
+    { type: "add-symbol", screenId, template: "pump" },
+    "edit",
+  );
+  expect(project.screens[1].objects.map((o) => o.fill)).toEqual([
+    "#0f172a",
+    "#0f766e",
+  ]);
+  expect(project.screens[0]).toEqual(original.screens[0]);
+});

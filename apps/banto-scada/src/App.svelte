@@ -728,7 +728,11 @@
       return {
         ...(activeDefinition
           ? { type: "update-symbol" as const, symbolId: activeDefinition.id }
-          : { type: "update-screen" as const, screenId: screen.id }),
+          : {
+              type: "update-screen" as const,
+              screenId: screen.id,
+              background: String(data.get("background")),
+            }),
         name: String(data.get("name")),
         width: Number(data.get("width")),
         height: Number(data.get("height")),
@@ -1539,6 +1543,19 @@
                   required
                 /></label
               >
+              {#if !activeDefinition}
+                <label
+                  >画面の背景色<input
+                    name="background"
+                    type="color"
+                    value={"background" in screen
+                      ? screen.background
+                      : "#ffffff"}
+                    required
+                  /></label
+                >
+                <p class="hint">アプリのテーマと図形の色は変わりません。</p>
+              {/if}
               <button type="submit"
                 >{activeDefinition
                   ? "Symbol 設定を適用"
@@ -1743,7 +1760,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.3.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.4.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

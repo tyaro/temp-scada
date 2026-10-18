@@ -1,3 +1,4 @@
+import { canvasColors } from "./canvas-colors";
 import {
   parseProject,
   serializeProject,
@@ -24,9 +25,16 @@ export interface ObjectPatch {
 export type AlignMode =
   "left" | "right" | "top" | "bottom" | "center-x" | "center-y";
 type ScreenCommand =
-  | { type: "create-screen"; name: string; width: number; height: number }
+  | {
+      type: "create-screen";
+      name: string;
+      width: number;
+      height: number;
+      background?: string;
+    }
   | {
       type: "update-screen";
+      background?: string;
       screenId: string;
       name: string;
       width: number;
@@ -200,7 +208,7 @@ export function applyCommand(
         y: 40,
         width: definition.width,
         height: definition.height,
-        fill: "#2dd4bf",
+        fill: canvasColors(target.background).newShape,
         shape: { type: "symbol", symbolId: definition.id },
       });
       centerObject(target.objects.at(-1)!, command.center);
@@ -213,6 +221,7 @@ export function applyCommand(
       name: screenName(command.name),
       width: command.width,
       height: command.height,
+      background: command.background ?? "#ffffff",
       objects: [],
     });
     return finish(project, next);
@@ -220,11 +229,14 @@ export function applyCommand(
   const definitionId = isObjectCommand(command)
     ? command.definitionId
     : undefined;
+  const targetScreen = next.screens.find((s) => s.id === command.screenId);
   const screen = definitionId
     ? next.symbols.find((s) => s.id === definitionId)
-    : next.screens.find((s) => s.id === command.screenId);
+    : targetScreen;
   if (!screen) throw new Error("画面が見つかりません");
   if (command.type === "update-screen") {
+    if (command.background !== undefined)
+      Object.assign(screen, { background: command.background });
     Object.assign(screen, {
       name: screenName(command.name),
       width: command.width,
@@ -321,7 +333,11 @@ export function applyCommand(
       order: Math.max(-1, ...screen.objects.map((o) => o.order)) + 1,
       x: 40,
       y: 40,
-      fill: "#2dd4bf",
+      fill: canvasColors(definitionId ? "#0b1220" : targetScreen!.background)[
+        command.type === "add" && command.kind === "text"
+          ? "newText"
+          : "newShape"
+      ],
     };
     if (command.type === "add-symbol") {
       if (definitionId)

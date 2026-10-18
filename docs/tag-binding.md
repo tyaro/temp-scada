@@ -6,7 +6,7 @@
 
 画面の Text に読み取り専用の数値 Binding を設定できる。Inspector の外部名を入力して適用し、空欄で解除する。静的 `text` は解除後に使う文字列として保持するが、割り当て中の欠測を静的値で置き換えない。配置・Text・Binding の変更は同じコマンドで検証し、既存の履歴と未適用入力保護を使う。
 
-Project は schema / minRuntimeVersion `0.3.0`。旧 `0.2.0` の移行を追加せず、対応していない形式として拒否する。現行形式のサンプルは [tag-binding.project.json](../examples/tag-binding.project.json)。
+Project は schema / minRuntimeVersion `0.4.0`。旧 `0.2.0` / `0.3.0` の移行を追加せず、対応していない形式として拒否する。現行形式のサンプルは [tag-binding.project.json](../examples/tag-binding.project.json)。
 
 ```json
 {

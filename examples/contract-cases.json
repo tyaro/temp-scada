@@ -197,5 +197,53 @@
     "path": "/manifest/minRuntimeVersion",
     "value": "0.2.0",
     "valid": false
+  },
+  {
+    "name": "画面の白背景を受理",
+    "path": "/screens/0/background",
+    "value": "#ffffff",
+    "valid": true
+  },
+  {
+    "name": "画面の16進色は大文字も受理",
+    "path": "/screens/0/background",
+    "value": "#ABCDEF",
+    "valid": true
+  },
+  {
+    "name": "画面の背景に任意 CSS を渡さない",
+    "path": "/screens/0/background",
+    "value": "url(https://example.com/image.png)",
+    "valid": false
+  },
+  {
+    "name": "画面の背景は6桁のRGB",
+    "path": "/screens/0/background",
+    "value": "#fff",
+    "valid": false
+  },
+  {
+    "name": "画面の背景に透過色を使わない",
+    "path": "/screens/0/background",
+    "value": "#ffffff00",
+    "valid": false
+  },
+  {
+    "name": "画面の背景のnullを拒否",
+    "path": "/screens/0/background",
+    "value": null,
+    "valid": false
+  },
+  {
+    "name": "旧0.3形式の自動移行は行わない",
+    "path": "/manifest/schemaVersion",
+    "value": "0.3.0",
+    "valid": false
+  },
+  {
+    "name": "背景対応前Runtimeへの配布を拒否",
+    "path": "/manifest/minRuntimeVersion",
+    "value": "0.3.0",
+    "valid": false
   }
 ]

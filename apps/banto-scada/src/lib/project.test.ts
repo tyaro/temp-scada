@@ -31,11 +31,13 @@ import legacy from "../../../../examples/legacy.project.json";
 import { getBounds, parsePoints } from "./project";
 it("migrates the validated legacy format without changing identity, geometry or revision", () => {
   const next = parseProject(JSON.stringify(legacy));
-  expect(next.manifest.schemaVersion).toBe("0.3.0");
-  expect(next.manifest.minRuntimeVersion).toBe("0.3.0");
+  expect(next.manifest.schemaVersion).toBe("0.4.0");
+  expect(next.manifest.minRuntimeVersion).toBe("0.4.0");
   expect(next.manifest.projectId).toBe(legacy.manifest.projectId);
   expect(next.manifest.projectRevision).toBe(legacy.manifest.projectRevision);
-  expect(next.screens).toEqual(legacy.screens);
+  expect(next.screens).toEqual(
+    legacy.screens.map((screen) => ({ ...screen, background: "#0b1220" })),
+  );
   expect(next.symbols).toEqual([]);
   expect(() =>
     parseProject(JSON.stringify({ ...legacy, futureFeature: true })),
@@ -100,4 +102,13 @@ it("supports negative local bounds and validates point text", () => {
       },
     }),
   ).toEqual({ x: -12, y: -12, width: 124, height: 24 });
+});
+
+it("requires screen background and keeps Symbol definitions transparent", () => {
+  const missing: any = structuredClone(sample);
+  delete missing.screens[0].background;
+  expect(() => parseProject(JSON.stringify(missing))).toThrow();
+  const symbolBackground: any = structuredClone(processSample);
+  symbolBackground.symbols[0].background = "#ffffff";
+  expect(() => parseProject(JSON.stringify(symbolBackground))).toThrow();
 });

@@ -14,6 +14,7 @@
     type Geometry,
     type ResizeHandle,
   } from "./resize";
+  import { canvasColors } from "./canvas-colors";
   import Primitive from "./Primitive.svelte";
   import type { TagReadings } from "./tag-presentation";
   let {
@@ -31,7 +32,7 @@
     onselect,
     onmove,
   }: {
-    screen: Screen;
+    screen: Screen | SymbolDefinition;
     symbols?: SymbolDefinition[];
     readings?: TagReadings;
     editable?: boolean;
@@ -49,6 +50,10 @@
     ) => string[];
     onmove?: (ids: string[], dx: number, dy: number) => void;
   } = $props();
+  const background = $derived(
+    "background" in screen ? screen.background : "#0b1220",
+  );
+  const colors = $derived(canvasColors(background));
   let svgElement = $state<SVGSVGElement>();
   let viewScale = $state(1);
   const handleHalfSize = $derived(5 / viewScale);
@@ -379,6 +384,7 @@
 <svelte:window onkeydown={cancelKey} />
 <svg
   bind:this={svgElement}
+  style:--canvas-accent={colors.selection}
   role="img"
   aria-label={screen.name}
   viewBox={`0 0 ${screen.width} ${screen.height}`}
@@ -391,6 +397,13 @@
   onlostpointercapture={cancelDrag}
 >
   <title>{screen.name}</title>
+  <rect
+    data-screen-background
+    width={screen.width}
+    height={screen.height}
+    fill={background}
+    pointer-events="none"
+  />
   {#if editable && showGrid}
     <defs
       ><pattern
@@ -401,7 +414,7 @@
         ><path
           d={`M ${gridSize} 0 H 0 V ${gridSize}`}
           fill="none"
-          stroke="var(--banto-text-muted)"
+          stroke={colors.grid}
           stroke-width={0.6 / viewScale}
           opacity="0.35"
         /></pattern
@@ -465,7 +478,7 @@
             width={bounds.width}
             height={bounds.height}
             fill="none"
-            stroke="var(--banto-warning)"
+            stroke="var(--canvas-accent)"
             stroke-width="2"
             vector-effect="non-scaling-stroke"
             pointer-events="none"
@@ -485,8 +498,8 @@
             y={p.y - handleHalfSize}
             width={handleHalfSize * 2}
             height={handleHalfSize * 2}
-            fill="var(--banto-primary)"
-            stroke="var(--banto-text-inverse)"
+            fill="var(--canvas-accent)"
+            stroke={background}
             stroke-width="1.5"
             vector-effect="non-scaling-stroke"
             style:cursor={`${handle}-resize`}
@@ -510,8 +523,8 @@
             cx={object.x + p.x}
             cy={object.y + p.y}
             r={6 / viewScale}
-            fill="var(--banto-primary)"
-            stroke="var(--banto-text-inverse)"
+            fill="var(--canvas-accent)"
+            stroke={background}
             stroke-width="1.5"
             vector-effect="non-scaling-stroke"
             data-vertex-object-id={object.id}
@@ -534,7 +547,7 @@
   .resize-handle:focus-visible,
   .vertex:focus-visible {
     outline: none;
-    stroke: var(--banto-warning);
+    stroke: var(--canvas-accent);
     stroke-width: 3;
   }
   .editable {
@@ -545,6 +558,5 @@
     display: block;
     width: 100%;
     height: 100%;
-    background: #0b1220;
   }
 </style>

@@ -34,6 +34,7 @@ export interface PolylineObject extends BaseObject {
 }
 export type ScreenObject = LayoutObject | PolylineObject;
 export interface Screen {
+  background: string;
   id: string;
   name: string;
   width: number;
@@ -50,10 +51,10 @@ export interface SymbolDefinition {
 export interface Project {
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.3.0";
+    schemaVersion: "0.4.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.3.0";
+    minRuntimeVersion: "0.4.0";
     name: string;
   };
   screens: Screen[];
@@ -74,9 +75,13 @@ export function parseProject(json: string): Project {
       ...old,
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.3.0",
-        minRuntimeVersion: "0.3.0",
+        schemaVersion: "0.4.0",
+        minRuntimeVersion: "0.4.0",
       },
+      screens: old.screens.map((screen) => ({
+        ...screen,
+        background: "#0b1220",
+      })),
       symbols: [],
     };
   }

@@ -65,8 +65,11 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.3.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.3.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.4.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.4.0".into());
+            for screen in value["screens"].as_array_mut().unwrap() {
+                screen["background"] = Value::String("#0b1220".into());
+            }
             value["symbols"] = serde_json::json!([]);
         }
         VALIDATOR.validate(&value).map_err(|e| e.to_string())?;
@@ -132,6 +135,23 @@ mod tests {
     use super::*;
     const SAMPLE: &str = include_str!("../../../examples/minimal.project.json");
     #[test]
+    fn background_is_required_and_does_not_belong_to_symbols() {
+        let mut missing: Value = serde_json::from_str(SAMPLE).unwrap();
+        missing["screens"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("background");
+        assert!(Project::from_json(&missing.to_string()).is_err());
+        let mut symbols: Value =
+            serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
+        symbols["symbols"][0]["background"] = Value::String("#ffffff".into());
+        assert!(Project::from_json(&symbols.to_string()).is_err());
+        let light = include_str!("../../../examples/process-light.project.json");
+        let project = Project::from_json(light).unwrap();
+        assert_eq!(project.0["screens"][0]["background"], "#ffffff");
+        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+    }
+    #[test]
     fn round_trip_preserves_project() {
         let project = Project::from_json(SAMPLE).unwrap();
         assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
@@ -162,8 +182,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.3.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.3.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.4.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.4.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]
@@ -172,7 +192,11 @@ mod tests {
             project.0["manifest"]["projectRevision"],
             old["manifest"]["projectRevision"]
         );
-        assert_eq!(project.0["screens"], old["screens"]);
+        let mut screens = old["screens"].clone();
+        for screen in screens.as_array_mut().unwrap() {
+            screen["background"] = Value::String("#0b1220".into());
+        }
+        assert_eq!(project.0["screens"], screens);
         assert_eq!(project.0["symbols"], serde_json::json!([]));
         let mut invalid = old;
         invalid["futureFeature"] = Value::Bool(true);

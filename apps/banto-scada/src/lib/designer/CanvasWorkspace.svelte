@@ -46,7 +46,7 @@
     onviewchange,
     oncontextrequest,
   }: {
-    screen: Screen;
+    screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
     editable: boolean;
     selectedIds: string[];

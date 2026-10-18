@@ -16,33 +16,38 @@ try {
   await page.goto(
     process.env.SCADA_SCREENSHOT_BASE_URL ?? "http://127.0.0.1:5173",
   );
-  if (process.env.SCADA_SCREENSHOT_THEME) {
-    await page
-      .getByRole("button", { name: "テーマを変更", exact: true })
-      .click();
-    const themeLabel = {
-      light: "ライト",
-      dark: "ダーク",
-      system: "OS に合わせる",
-    }[process.env.SCADA_SCREENSHOT_THEME];
-    if (!themeLabel) throw new Error("Unknown screenshot theme");
-    await page
-      .getByRole("menu", { name: "テーマ", exact: true })
-      .getByRole("menuitem", { name: themeLabel, exact: true })
-      .click();
+  async function chooseTheme(target) {
+    if (process.env.SCADA_SCREENSHOT_THEME) {
+      await target
+        .getByRole("button", { name: "テーマを変更", exact: true })
+        .click();
+      const themeLabel = {
+        light: "ライト",
+        dark: "ダーク",
+        system: "OS に合わせる",
+      }[process.env.SCADA_SCREENSHOT_THEME];
+      if (!themeLabel) throw new Error("Unknown screenshot theme");
+      await target
+        .getByRole("menu", { name: "テーマ", exact: true })
+        .getByRole("menuitem", { name: themeLabel, exact: true })
+        .click();
+    }
   }
+  await chooseTheme(page);
   const button = (name) => page.getByRole("button", { name, exact: true });
   const sidebar = page.getByRole("complementary", { name: "Project と部品" });
-  async function capture(name, keepMenu = false) {
-    const panel = sidebar.getByRole("tabpanel");
+  async function capture(name, keepMenu = false, target = page) {
+    const panel = target
+      .getByRole("complementary", { name: "Project と部品" })
+      .getByRole("tabpanel");
     if (!keepMenu && (await panel.count()))
       await panel.evaluate((element) => (element.scrollTop = 0));
-    await page.evaluate(() => document.fonts.ready);
+    await target.evaluate(() => document.fonts.ready);
     // 通知は通常の閉じるボタンで片付ける。画面の DOM や描画内容は変えない。
-    const dismiss = page.locator(".toast-host button.close");
+    const dismiss = target.locator(".toast-host button.close");
     while (!keepMenu && (await dismiss.count())) await dismiss.first().click();
     const path = join(output, name);
-    await page.screenshot({ path, animations: "disabled" });
+    await target.screenshot({ path, animations: "disabled" });
     console.log(path);
   }
   await button("工程図サンプルを開く").click();
@@ -159,6 +164,29 @@ try {
     page.getByRole("complementary", { name: "プロパティパネル" }),
   ).toHaveCount(0);
   await capture("scada-preview.png");
+  const lightPage = await browser.newPage({
+    viewport: { width: 1600, height: 1000 },
+    deviceScaleFactor: 1,
+  });
+  await lightPage.goto(
+    process.env.SCADA_SCREENSHOT_BASE_URL ?? "http://127.0.0.1:5173",
+  );
+  await chooseTheme(lightPage);
+  await lightPage
+    .getByLabel("Project JSON を開く", { exact: true })
+    .setInputFiles("examples/process-light.project.json");
+  await lightPage.getByRole("button", { name: "編集", exact: true }).click();
+  await lightPage.getByRole("tab", { name: "レイヤー", exact: true }).click();
+  await lightPage.getByLabel("グリッド表示", { exact: true }).check();
+  await lightPage
+    .getByRole("navigation", { name: "図形一覧" })
+    .getByRole("button", { name: "ポンプ · 10", exact: true })
+    .click();
+  await capture("scada-background-editor.png", false, lightPage);
+  await lightPage
+    .getByRole("button", { name: "表示プレビュー", exact: true })
+    .click();
+  await capture("scada-background-preview.png", false, lightPage);
 } finally {
   await browser.close();
 }
