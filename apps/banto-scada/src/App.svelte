@@ -37,6 +37,8 @@
       project = result.project;
       history = result.history;
       projectChanged = true;
+      if (!project.screens.some((s) => s.id === screenId))
+        screenId = project.screens[0].id;
       selectedIds = selectedIds.filter((id) =>
         screen.objects.some((o) => o.id === id),
       );
@@ -169,11 +171,22 @@
   function edit(command: EditCommand) {
     try {
       const oldIds = new Set(screen.objects.map((o) => o.id));
+      const oldScreens = new Set(project.screens.map((s) => s.id));
       const result = recordEdit(project, history, command, mode);
       if (result.project === project) return;
       project = result.project;
       history = result.history;
       projectChanged = true;
+      if (
+        command.type === "create-screen" ||
+        command.type === "duplicate-screen"
+      ) {
+        screenId = project.screens.find((s) => !oldScreens.has(s.id))!.id;
+        selectedIds = [];
+      } else if (command.type === "remove-screen") {
+        screenId = project.screens[0].id;
+        selectedIds = [];
+      }
       if (
         command.type === "add" ||
         command.type === "add-symbol" ||
@@ -195,6 +208,21 @@
         `編集エラー: ${e instanceof Error ? e.message : String(e)}`,
       );
     }
+  }
+  function screenProperties(event: SubmitEvent) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    edit({
+      type: "update-screen",
+      screenId: screen.id,
+      name: String(data.get("name")),
+      width: Number(data.get("width")),
+      height: Number(data.get("height")),
+    });
+  }
+  function removeScreen() {
+    if (window.confirm(`「${screen.name}」と画面内の図形を削除しますか？`))
+      edit({ type: "remove-screen", screenId: screen.id });
   }
   function add(kind: AddKind) {
     edit({ type: "add", screenId: screen.id, kind });
@@ -327,6 +355,7 @@
     <nav aria-label="画面一覧">
       {#each project.screens as item}<button
           class:active={screen.id === item.id}
+          aria-pressed={screen.id === item.id}
           onclick={() => {
             screenId = item.id;
             selectedIds = [];
@@ -334,6 +363,62 @@
         >{/each}
     </nav>
     {#if mode === "edit"}
+      <hr />
+      <h2>画面管理</h2>
+      <button
+        disabled={project.screens.length >= 100}
+        onclick={() =>
+          edit({
+            type: "create-screen",
+            name: `画面 ${project.screens.length + 1}`,
+            width: screen.width,
+            height: screen.height,
+          })}>画面を追加</button
+      >
+      <button
+        disabled={project.screens.length >= 100}
+        onclick={() => edit({ type: "duplicate-screen", screenId: screen.id })}
+        >画面を複製</button
+      >
+      <button disabled={project.screens.length === 1} onclick={removeScreen}
+        >画面を削除</button
+      >
+      {#key screen}
+        <form onsubmit={screenProperties} aria-label="画面設定">
+          <label
+            >画面名<input
+              name="name"
+              value={screen.name}
+              required
+              maxlength="200"
+            /></label
+          >
+          <label
+            >画面の幅<input
+              name="width"
+              type="number"
+              step="any"
+              min="1"
+              value={screen.width}
+              required
+            /></label
+          >
+          <label
+            >画面の高さ<input
+              name="height"
+              type="number"
+              step="any"
+              min="1"
+              value={screen.height}
+              required
+            /></label
+          >
+          <button type="submit">画面設定を適用</button>
+        </form>
+      {/key}
+      <p class="hint">
+        サイズ変更は表示領域のみを変更します。図形の位置・サイズは変わりません。
+      </p>
       <hr />
       <h2>部品を追加</h2>
       <button onclick={() => add("rectangle")}>Rectangle を追加</button>
@@ -433,32 +518,34 @@
       </div>
     {/if}
     <div class="canvas" style:aspect-ratio={`${screen.width}/${screen.height}`}>
-      <Renderer
-        {screen}
-        symbols={project.symbols}
-        editable={mode === "edit"}
-        {selectedIds}
-        {showGrid}
-        {snapEnabled}
-        {gridSize}
-        onvertexmove={(id, index, point) =>
-          edit({
-            type: "move-vertex",
-            screenId: screen.id,
-            objectId: id,
-            index,
-            point,
-          })}
-        onselect={selectObjects}
-        onmove={(ids, dx, dy) =>
-          edit({
-            type: "move-many",
-            screenId: screen.id,
-            objectIds: ids,
-            dx,
-            dy,
-          })}
-      />
+      {#key screen.id}
+        <Renderer
+          {screen}
+          symbols={project.symbols}
+          editable={mode === "edit"}
+          {selectedIds}
+          {showGrid}
+          {snapEnabled}
+          {gridSize}
+          onvertexmove={(id, index, point) =>
+            edit({
+              type: "move-vertex",
+              screenId: screen.id,
+              objectId: id,
+              index,
+              point,
+            })}
+          onselect={selectObjects}
+          onmove={(ids, dx, dy) =>
+            edit({
+              type: "move-many",
+              screenId: screen.id,
+              objectIds: ids,
+              dx,
+              dy,
+            })}
+        />
+      {/key}
     </div>
     {#if mode === "edit"}
       <div class="inspector">

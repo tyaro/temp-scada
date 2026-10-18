@@ -21,6 +21,16 @@ export interface ObjectPatch {
 export type AlignMode =
   "left" | "right" | "top" | "bottom" | "center-x" | "center-y";
 export type EditCommand =
+  | { type: "create-screen"; name: string; width: number; height: number }
+  | {
+      type: "update-screen";
+      screenId: string;
+      name: string;
+      width: number;
+      height: number;
+    }
+  | { type: "duplicate-screen"; screenId: string }
+  | { type: "remove-screen"; screenId: string }
   | {
       type: "move-vertex";
       screenId: string;
@@ -82,8 +92,40 @@ export function applyCommand(
 ): Project {
   if (mode !== "edit") throw new Error("表示プレビューでは編集できません");
   const next = parseProject(serializeProject(project));
+  if (command.type === "create-screen") {
+    next.screens.push({
+      id: newId(),
+      name: screenName(command.name),
+      width: command.width,
+      height: command.height,
+      objects: [],
+    });
+    return finish(project, next);
+  }
   const screen = next.screens.find((s) => s.id === command.screenId);
   if (!screen) throw new Error("画面が見つかりません");
+  if (command.type === "update-screen") {
+    Object.assign(screen, {
+      name: screenName(command.name),
+      width: command.width,
+      height: command.height,
+    });
+    return finish(project, next);
+  }
+  if (command.type === "duplicate-screen") {
+    const copy = JSON.parse(JSON.stringify(screen));
+    copy.id = newId();
+    copy.name = screen.name.slice(0, 196) + " コピー";
+    copy.objects.forEach((object: { id: string }) => (object.id = newId()));
+    next.screens.push(copy);
+    return finish(project, next);
+  }
+  if (command.type === "remove-screen") {
+    if (next.screens.length === 1)
+      throw new Error("最後の画面は削除できません");
+    next.screens = next.screens.filter((s) => s.id !== screen.id);
+    return finish(project, next);
+  }
   if (
     command.type === "move-many" ||
     command.type === "duplicate-many" ||
@@ -254,6 +296,14 @@ export function applyCommand(
       }
     }
   }
+  return finish(project, next);
+}
+function screenName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("画面名を入力してください");
+  return trimmed;
+}
+function finish(project: Project, next: Project): Project {
   if (serializeProject(next) === serializeProject(project)) return project;
   next.manifest.projectRevision++;
   return parseProject(JSON.stringify(next));
