@@ -22,6 +22,13 @@ export type AlignMode =
   "left" | "right" | "top" | "bottom" | "center-x" | "center-y";
 export type EditCommand =
   | {
+      type: "move-vertex";
+      screenId: string;
+      objectId: string;
+      index: number;
+      point: Point;
+    }
+  | {
       type: "move-many";
       screenId: string;
       objectIds: string[];
@@ -190,7 +197,18 @@ export function applyCommand(
   } else {
     const index = screen.objects.findIndex((o) => o.id === command.objectId);
     if (index < 0) throw new Error("図形が見つかりません");
-    if (command.type === "duplicate") {
+    if (command.type === "move-vertex") {
+      const shape = screen.objects[index].shape;
+      if (shape.type !== "polyline")
+        throw new Error("折れ線の頂点だけを移動できます");
+      if (
+        !Number.isInteger(command.index) ||
+        command.index < 0 ||
+        command.index >= shape.points.length
+      )
+        throw new Error("頂点が見つかりません");
+      shape.points[command.index] = { ...command.point };
+    } else if (command.type === "duplicate") {
       const copy = JSON.parse(JSON.stringify(screen.objects[index]));
       copy.id = newId();
       copy.x += 20;

@@ -27,6 +27,9 @@
     type EditHistory,
   } from "./lib/history";
   let history = $state<EditHistory>(emptyHistory());
+  let showGrid = $state(false),
+    snapEnabled = $state(false),
+    gridSize = $state(10);
   function travel(direction: "undo" | "redo") {
     try {
       const result = travelHistory(project, history, direction, mode);
@@ -406,12 +409,46 @@
         <span>Shift + クリックで複数選択 · {selectedIds.length} 件選択</span>
       </div>
     {/if}
+    {#if mode === "edit"}
+      <div class="grid-tools" role="group" aria-label="グリッドとスナップ">
+        <label
+          ><input type="checkbox" bind:checked={showGrid} />グリッド表示</label
+        >
+        <label
+          ><input
+            type="checkbox"
+            bind:checked={snapEnabled}
+          />グリッドにスナップ</label
+        >
+        <label
+          >グリッド間隔<select aria-label="グリッド間隔" bind:value={gridSize}
+            >{#each [5, 10, 20, 50] as size}<option value={size}
+                >{size} unit</option
+              >{/each}</select
+          ></label
+        >
+        <span
+          >Alt を押してドラッグするとスナップを一時解除 · Esc でドラッグを取消</span
+        >
+      </div>
+    {/if}
     <div class="canvas" style:aspect-ratio={`${screen.width}/${screen.height}`}>
       <Renderer
         {screen}
         symbols={project.symbols}
         editable={mode === "edit"}
         {selectedIds}
+        {showGrid}
+        {snapEnabled}
+        {gridSize}
+        onvertexmove={(id, index, point) =>
+          edit({
+            type: "move-vertex",
+            screenId: screen.id,
+            objectId: id,
+            index,
+            point,
+          })}
         onselect={selectObjects}
         onmove={(ids, dx, dy) =>
           edit({
@@ -639,6 +676,27 @@
   }
   .actions {
     flex-wrap: wrap;
+  }
+  .grid-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--banto-text-muted);
+  }
+  .grid-tools label {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .grid-tools select {
+    background: var(--banto-surface);
+    color: var(--banto-text);
+    padding: 5px;
+    border: 1px solid var(--banto-border);
+    border-radius: var(--banto-radius);
   }
   .edit-toolbar {
     display: flex;

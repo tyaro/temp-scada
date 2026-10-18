@@ -1,16 +1,22 @@
 <script lang="ts">
   import {
     getBounds,
+    type Point,
     type Screen,
     type ScreenObject,
     type SymbolDefinition,
   } from "./project";
+  import { dragOffset, vertexPosition, nextGridCoordinate } from "./snap";
   import Primitive from "./Primitive.svelte";
   let {
     screen,
     symbols = [],
     editable = false,
     selectedIds = [],
+    showGrid = false,
+    snapEnabled = false,
+    gridSize = 10,
+    onvertexmove,
     onselect,
     onmove,
   }: {
@@ -18,6 +24,10 @@
     symbols?: SymbolDefinition[];
     editable?: boolean;
     selectedIds?: string[];
+    showGrid?: boolean;
+    snapEnabled?: boolean;
+    gridSize?: number;
+    onvertexmove?: (id: string, index: number, point: Point) => void;
     onselect?: (
       id: string | null,
       additive: boolean,
@@ -32,7 +42,81 @@
     startY: number;
     dx: number;
     dy: number;
+    anchor: Point;
   } | null>(null);
+  const gridId = $props.id();
+  let vertexDrag = $state<{
+    id: string;
+    index: number;
+    pointer: number;
+    start: Point;
+    origin: Point;
+    original: Point;
+    current: Point;
+  } | null>(null);
+  function cancelDrag() {
+    drag = null;
+    vertexDrag = null;
+  }
+  function cancelKey(event: KeyboardEvent) {
+    if (event.key === "Escape" && (drag || vertexDrag)) {
+      event.preventDefault();
+      cancelDrag();
+    }
+  }
+  function previewObject(object: ScreenObject): ScreenObject {
+    if ("width" in object || vertexDrag?.id !== object.id) return object;
+    const vertex = vertexDrag;
+    return {
+      ...object,
+      shape: {
+        ...object.shape,
+        points: object.shape.points.map((p, i) =>
+          i === vertex.index ? vertex.current : p,
+        ),
+      },
+    };
+  }
+  function vertexKey(
+    event: KeyboardEvent,
+    object: ScreenObject,
+    index: number,
+  ) {
+    if (
+      !editable ||
+      object.shape.type !== "polyline" ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey
+    )
+      return;
+    const vector: Record<string, Point> = {
+      ArrowLeft: { x: -1, y: 0 },
+      ArrowRight: { x: 1, y: 0 },
+      ArrowUp: { x: 0, y: -1 },
+      ArrowDown: { x: 0, y: 1 },
+    };
+    const direction = vector[event.key];
+    if (!direction) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const original = object.shape.points[index],
+      point = { ...original };
+    if (snapEnabled) {
+      if (direction.x)
+        point.x =
+          nextGridCoordinate(object.x + point.x, direction.x, gridSize) -
+          object.x;
+      if (direction.y)
+        point.y =
+          nextGridCoordinate(object.y + point.y, direction.y, gridSize) -
+          object.y;
+    } else {
+      point.x += direction.x * (event.shiftKey ? 10 : 1);
+      point.y += direction.y * (event.shiftKey ? 10 : 1);
+    }
+    onvertexmove?.(object.id, index, point);
+  }
   function point(event: PointerEvent) {
     const svg = event.currentTarget as SVGSVGElement;
     const matrix = svg.getScreenCTM();
@@ -43,6 +127,34 @@
   }
   function down(event: PointerEvent) {
     if (!editable || event.button !== 0 || !event.isPrimary) return;
+    const handle = (event.target as Element).closest("[data-vertex-object-id]");
+    if (handle) {
+      const object = screen.objects.find(
+        (o) => o.id === handle.getAttribute("data-vertex-object-id"),
+      );
+      const index = Number(handle.getAttribute("data-vertex-index"));
+      const start = point(event);
+      if (
+        !object ||
+        object.shape.type !== "polyline" ||
+        !start ||
+        !object.shape.points[index]
+      )
+        return;
+      event.preventDefault();
+      (event.currentTarget as SVGSVGElement).setPointerCapture(event.pointerId);
+      const original = { ...object.shape.points[index] };
+      vertexDrag = {
+        id: object.id,
+        index,
+        pointer: event.pointerId,
+        start: { x: start.x, y: start.y },
+        origin: { x: object.x, y: object.y },
+        original,
+        current: original,
+      };
+      return;
+    }
     const id =
       (event.target as Element)
         .closest("[data-object-id]")
@@ -55,6 +167,7 @@
     (event.currentTarget as SVGSVGElement).setPointerCapture(event.pointerId);
     drag = {
       ids: [...ids],
+      anchor: { x: object.x, y: object.y },
       pointer: event.pointerId,
       startX: start.x,
       startY: start.y,
@@ -63,27 +176,57 @@
     };
   }
   function move(event: PointerEvent) {
-    if (!editable || !drag || drag.pointer !== event.pointerId) return;
+    if (!editable) return;
     const p = point(event);
-    if (p) drag = { ...drag, dx: p.x - drag.startX, dy: p.y - drag.startY };
+    if (!p) return;
+    const step = snapEnabled && !event.altKey ? gridSize : null;
+    if (vertexDrag && vertexDrag.pointer === event.pointerId) {
+      const delta = {
+        x: p.x - vertexDrag.start.x,
+        y: p.y - vertexDrag.start.y,
+      };
+      vertexDrag = {
+        ...vertexDrag,
+        current: vertexPosition(
+          vertexDrag.origin,
+          vertexDrag.original,
+          delta,
+          step,
+        ),
+      };
+    } else if (drag && drag.pointer === event.pointerId) {
+      const delta = dragOffset(
+        drag.anchor,
+        { x: p.x - drag.startX, y: p.y - drag.startY },
+        step,
+      );
+      drag = { ...drag, dx: delta.x, dy: delta.y };
+    }
   }
   function up(event: PointerEvent) {
-    if (!drag || drag.pointer !== event.pointerId) return;
     move(event);
-    const finished = drag;
-    drag = null;
-    if (editable && Math.hypot(finished.dx, finished.dy) > 0.5)
-      onmove?.(
-        finished.ids,
-        Math.round(finished.dx * 100) / 100,
-        Math.round(finished.dy * 100) / 100,
-      );
+    if (vertexDrag && vertexDrag.pointer === event.pointerId) {
+      const finished = vertexDrag;
+      vertexDrag = null;
+      if (
+        editable &&
+        (finished.current.x !== finished.original.x ||
+          finished.current.y !== finished.original.y)
+      )
+        onvertexmove?.(finished.id, finished.index, finished.current);
+    } else if (drag && drag.pointer === event.pointerId) {
+      const finished = drag;
+      drag = null;
+      if (editable && (finished.dx !== 0 || finished.dy !== 0))
+        onmove?.(finished.ids, finished.dx, finished.dy);
+    }
   }
   function position(object: ScreenObject) {
     return `translate(${object.x + (editable && drag?.ids.includes(object.id) ? drag.dx : 0)} ${object.y + (editable && drag?.ids.includes(object.id) ? drag.dy : 0)})`;
   }
 </script>
 
+<svelte:window onkeydown={cancelKey} />
 <svg
   role="img"
   aria-label={screen.name}
@@ -93,11 +236,36 @@
   onpointerdown={down}
   onpointermove={move}
   onpointerup={up}
-  onpointercancel={() => (drag = null)}
-  onlostpointercapture={() => (drag = null)}
+  onpointercancel={cancelDrag}
+  onlostpointercapture={cancelDrag}
 >
   <title>{screen.name}</title>
+  {#if editable && showGrid}
+    <defs
+      ><pattern
+        id={gridId}
+        width={gridSize}
+        height={gridSize}
+        patternUnits="userSpaceOnUse"
+        ><path
+          d={`M ${gridSize} 0 H 0 V ${gridSize}`}
+          fill="none"
+          stroke="var(--banto-text-muted)"
+          stroke-width="0.6"
+          opacity="0.35"
+        /></pattern
+      ></defs
+    >
+    <rect
+      data-grid="true"
+      width={screen.width}
+      height={screen.height}
+      fill={`url(#${gridId})`}
+      pointer-events="none"
+    />
+  {/if}
   {#each [...screen.objects].sort((a, b) => a.order - b.order) as object (object.id)}
+    {@const visual = previewObject(object)}
     <g
       transform={position(object)}
       data-object-id={object.id}
@@ -123,15 +291,15 @@
             >
           {/each}
         </svg>
-      {:else}<Primitive {object} />{/if}
+      {:else}<Primitive object={visual} />{/if}
       {#if editable}
-        {@const bounds = getBounds(object)}
-        {#if object.shape.type === "polyline"}
+        {@const bounds = getBounds(visual)}
+        {#if visual.shape.type === "polyline"}
           <polyline
-            points={object.shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
+            points={visual.shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
             fill="none"
             stroke="transparent"
-            stroke-width={Math.max(12, object.shape.strokeWidth + 8)}
+            stroke-width={Math.max(12, visual.shape.strokeWidth + 8)}
           />
         {:else}<rect
             width={bounds.width}
@@ -154,9 +322,43 @@
       {/if}
     </g>
   {/each}
+  {#if editable && selectedIds.length === 1}
+    {@const object = screen.objects.find((o) => o.id === selectedIds[0])}
+    {#if object && object.shape.type === "polyline"}
+      {@const visual = previewObject(object)}
+      {#if visual.shape.type === "polyline"}
+        {#each visual.shape.points as p, index}
+          <circle
+            class="vertex"
+            cx={object.x + p.x}
+            cy={object.y + p.y}
+            r="6"
+            fill="var(--banto-primary)"
+            stroke="var(--banto-text-inverse)"
+            stroke-width="1.5"
+            vector-effect="non-scaling-stroke"
+            data-vertex-object-id={object.id}
+            data-vertex-index={index}
+            role="button"
+            tabindex="0"
+            aria-label={`頂点 ${index + 1}（方向キーで移動）`}
+            onkeydown={(event) => vertexKey(event, object, index)}
+          />
+        {/each}
+      {/if}
+    {/if}
+  {/if}
 </svg>
 
 <style>
+  .vertex {
+    cursor: crosshair;
+  }
+  .vertex:focus-visible {
+    outline: none;
+    stroke: var(--banto-warning);
+    stroke-width: 3;
+  }
   .editable {
     touch-action: none;
     cursor: move;

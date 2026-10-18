@@ -7,7 +7,9 @@
     const end = shape.points.at(-1)!;
     const before = [...shape.points]
       .reverse()
-      .find((p) => p.x !== end.x || p.y !== end.y)!;
+      .find((p) => p.x !== end.x || p.y !== end.y);
+    // ドラッグ途中は未確定なので、一時的に全頂点が重なる場合も描画を保つ。
+    if (!before) return "";
     const length = Math.hypot(end.x - before.x, end.y - before.y);
     const ux = (end.x - before.x) / length,
       uy = (end.y - before.y) / length;

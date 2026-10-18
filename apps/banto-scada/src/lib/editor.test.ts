@@ -248,3 +248,78 @@ it("reorders by explicit order while preserving IDs and ignoring boundary no-ops
     project.screens[0].objects.map((o) => o.id).sort(),
   );
 });
+it("moves one polyline vertex atomically and rejects invalid or degenerate edits", () => {
+  const project = fresh(),
+    screenId = project.screens[0].id;
+  const line = applyCommand(
+    project,
+    { type: "add", screenId, kind: "line" },
+    "edit",
+  );
+  const objectId = line.screens[0].objects.at(-1)!.id;
+  const moved = applyCommand(
+    line,
+    {
+      type: "move-vertex",
+      screenId,
+      objectId,
+      index: 1,
+      point: { x: 100, y: 30 },
+    },
+    "edit",
+  );
+  expect(moved.screens[0].objects.at(-1)!.shape).toMatchObject({
+    points: [
+      { x: 0, y: 0 },
+      { x: 100, y: 30 },
+    ],
+  });
+  expect(moved.manifest.projectRevision).toBe(
+    line.manifest.projectRevision + 1,
+  );
+  for (const index of [-1, 0.5, 2])
+    expect(() =>
+      applyCommand(
+        line,
+        {
+          type: "move-vertex",
+          screenId,
+          objectId,
+          index,
+          point: { x: 100, y: 0 },
+        },
+        "edit",
+      ),
+    ).toThrow();
+  for (const point of [
+    { x: 0, y: 0 },
+    { x: Infinity, y: 0 },
+    { x: 1000001, y: 0 },
+  ])
+    expect(() =>
+      applyCommand(
+        line,
+        { type: "move-vertex", screenId, objectId, index: 1, point },
+        "edit",
+      ),
+    ).toThrow();
+  expect(() =>
+    applyCommand(
+      project,
+      {
+        type: "move-vertex",
+        screenId,
+        objectId: project.screens[0].objects[0].id,
+        index: 0,
+        point: { x: 100, y: 0 },
+      },
+      "edit",
+    ),
+  ).toThrow();
+  expect(line.screens[0].objects.at(-1)!.shape).toMatchObject({
+    points: [
+      { x: 0, y: 0 },
+      { x: 180, y: 0 },
+    ],
+  });
+});
