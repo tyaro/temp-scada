@@ -103,7 +103,7 @@ test("toolbar mode changes retain draft protection and save status remains visib
   await page
     .getByRole("button", { name: "Rectangle を追加", exact: true })
     .click();
-  await page.getByLabel("x", { exact: true }).fill("123");
+  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
   await page.getByRole("button", { name: "メニュー", exact: true }).click();
   await page
     .getByRole("menuitem", { name: "補助パネルをすべて隠す", exact: true })

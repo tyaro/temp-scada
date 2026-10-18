@@ -171,7 +171,7 @@ test("screen actions protect object drafts and keep selection when another scree
   await page
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await page.getByLabel("x", { exact: true }).fill("123");
+  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
   await selectPanel(page, "プロジェクト");
   await action(page, "画面 2", "画面を削除");
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
@@ -187,7 +187,9 @@ test("screen actions protect object drafts and keep selection when another scree
   await expect(
     page.locator('[data-object-id][data-selected="true"]'),
   ).toHaveCount(1);
-  await expect(page.getByLabel("x", { exact: true })).not.toHaveValue("123");
+  await expect(page.getByLabel("色", { exact: true })).not.toHaveValue(
+    "#aabbcc",
+  );
   const input = page.getByLabel("画面名", { exact: true });
   await input.click({ button: "right" });
   await expect(menu(page, "プロセス画面")).not.toBeVisible();

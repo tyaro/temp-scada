@@ -216,12 +216,15 @@ test("long reference lists scroll within the resized panel and keep every usage 
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(many)),
   });
-  // 読込前の開閉状態に依存せず、この Project の一覧を開く。
-  await page
-    .locator("details.references")
-    .evaluate((el: HTMLDetailsElement) => {
-      if (!el.open) el.querySelector("summary")!.click();
-    });
+  // File reads are asynchronous; wait for the new Project before opening its reset disclosure.
+  await expect(page.locator("details.references > summary")).toContainText(
+    "35 タグ / 36 配置",
+  );
+  await expect(page.locator("details.references")).not.toHaveAttribute(
+    "open",
+    "",
+  );
+  await page.locator("details.references > summary").click();
   await expect(divider(page)).toBeVisible();
   await divider(page).focus();
   await page.keyboard.press("Home");

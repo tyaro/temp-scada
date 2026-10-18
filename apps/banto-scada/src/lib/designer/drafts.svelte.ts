@@ -9,16 +9,12 @@ function controls(form: HTMLFormElement): Control[] {
         !["button", "submit", "reset", "file"].includes(element.type)),
   );
 }
-function signature(form: HTMLFormElement): string {
-  return JSON.stringify(
-    [...new FormData(form)].map(([key, value]) => [key, String(value)]),
-  );
-}
 /** 入力の保護だけを担当する。Project の適用と検証は既存 submit/command 経路へ戻す。 */
 export function createDraftGuard(
   onError: (message: string) => void,
   validate: (forms: HTMLFormElement[]) => boolean,
   reveal: (form: HTMLFormElement) => void = () => {},
+  beforeAllow: () => boolean = () => true,
 ) {
   // DOM の登録・解除は Svelte の teardown 内でも発生する。
   // レジストリの実体は通常の Set に置き、古い reactive snapshot から入力状態を復活させない。
@@ -28,42 +24,81 @@ export function createDraftGuard(
   let applying = false;
   const registry = new Map<
     HTMLFormElement,
-    { reset: () => void; restore: () => void }
+    {
+      reset: () => void;
+      restore: () => void;
+      accept: (control: Control) => void;
+    }
   >();
-  function track(form: HTMLFormElement) {
-    let baseline = signature(form);
-    let saved = controls(form).map((element) => ({
-      element,
+  function track(form: HTMLFormElement, values?: Record<string, string>) {
+    const saved = new Map<Control, { value: string; checked: boolean }>();
+    const state = (element: Control) => ({
       value: element.value,
       checked: element instanceof HTMLInputElement ? element.checked : false,
-    }));
-    function reset() {
-      baseline = signature(form);
-      saved = controls(form).map((element) => ({
-        element,
-        value: element.value,
-        checked: element instanceof HTMLInputElement ? element.checked : false,
-      }));
-      dirty.delete(form);
-      dirtyCount = dirty.size;
-    }
-    function restore() {
-      for (const { element, value, checked } of saved) {
-        element.value = value;
-        if (element instanceof HTMLInputElement) element.checked = checked;
-      }
-      reset();
-    }
+    });
+    const changed = (element: Control) => {
+      const before = saved.get(element);
+      const now = state(element);
+      return (
+        !before || now.value !== before.value || now.checked !== before.checked
+      );
+    };
     function change() {
-      const changed = signature(form) !== baseline;
-      if (changed) dirty.add(form);
+      if (controls(form).some(changed)) dirty.add(form);
       else dirty.delete(form);
       dirtyCount = dirty.size;
     }
-    registry.set(form, { reset, restore });
+    function reset() {
+      saved.clear();
+      for (const element of controls(form)) saved.set(element, state(element));
+      change();
+    }
+    function restore() {
+      for (const [element, before] of saved) {
+        element.value = before.value;
+        element.setCustomValidity("");
+        element.removeAttribute("aria-invalid");
+        if (element instanceof HTMLInputElement)
+          element.checked = before.checked;
+      }
+      reset();
+      form.dispatchEvent(new Event("reset", { bubbles: true }));
+    }
+    // A controlled form receives committed model values, without replacing dirty strings.
+    function update(next?: Record<string, string>) {
+      if (!next) return;
+      const current = controls(form);
+      for (const element of current) {
+        const before = saved.get(element);
+        const keep = before && changed(element);
+        const value = next[element.name];
+        if (value === undefined) continue;
+        if (!keep) {
+          element.value = value;
+          element.setCustomValidity("");
+          element.removeAttribute("aria-invalid");
+        }
+        saved.set(element, { value, checked: state(element).checked });
+      }
+      for (const element of saved.keys())
+        if (!current.includes(element)) saved.delete(element);
+      change();
+    }
+    if (values) update(values);
+    else reset();
+    registry.set(form, {
+      reset,
+      restore,
+      accept(control) {
+        if (control.form !== form) return;
+        saved.set(control, state(control));
+        change();
+      },
+    });
     form.addEventListener("input", change);
     form.addEventListener("change", change);
     return {
+      update,
       destroy() {
         form.removeEventListener("input", change);
         form.removeEventListener("change", change);
@@ -73,9 +108,16 @@ export function createDraftGuard(
       },
     };
   }
+  let resolving = false;
   function allow(action: () => void): boolean {
     if (applying) return true;
-    if (pending) return false;
+    if (pending || resolving) return false;
+    resolving = true;
+    try {
+      if (!beforeAllow()) return false;
+    } finally {
+      resolving = false;
+    }
     if (!dirty.size) return true;
     pending = action;
     return false;
@@ -136,6 +178,9 @@ export function createDraftGuard(
     track,
     allow,
     beforeSubmit,
+    acceptField: (control: Control) => {
+      if (control.form) registry.get(control.form)?.accept(control);
+    },
     submitted: (form: HTMLFormElement) => registry.get(form)?.reset(),
     apply,
     discard,

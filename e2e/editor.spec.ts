@@ -49,7 +49,7 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
     height: 70,
     fill: "#ff9900",
   });
-  expect(saved.manifest.projectRevision).toBe(4);
+  expect(saved.manifest.projectRevision).toBe(8);
   await page
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();

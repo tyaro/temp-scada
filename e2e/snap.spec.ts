@@ -118,7 +118,7 @@ test("pipe vertices snap in screen coordinates, support keyboard and cancel with
   const download = await downloading,
     json = await readFile((await download.path())!, "utf8"),
     saved = JSON.parse(json);
-  expect(saved.manifest.projectRevision).toBe(8);
+  expect(saved.manifest.projectRevision).toBe(9);
   expect(saved.screens[0].objects.at(-1)).toMatchObject({
     x: 13,
     y: 17,

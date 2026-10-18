@@ -55,7 +55,7 @@ test("unapplied selection input can be cancelled, applied or discarded without l
     ellipse = list.getByRole("button", { name: "ellipse · 4", exact: true });
   await selectPanel(page, "レイヤー");
   await rectangle.click();
-  await page.getByLabel("x", { exact: true }).fill("200");
+  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
   await expect(page.getByTestId("save-state")).toContainText(
     "未適用の入力あり",
   );
@@ -64,7 +64,7 @@ test("unapplied selection input can be cancelled, applied or discarded without l
   await expect(prompt).toBeVisible();
   await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
   await expect(rectangle).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("200");
+  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
   await ellipse.click();
   await prompt
     .getByRole("button", { name: "適用して続行", exact: true })
@@ -74,18 +74,20 @@ test("unapplied selection input can be cancelled, applied or discarded without l
     page
       .getByRole("img", { name: "プロセス画面", exact: true })
       .locator("[data-object-id]")
+      .first()
+      .locator("rect")
       .first(),
-  ).toHaveAttribute("transform", "translate(200 170)");
+  ).toHaveAttribute("fill", "#aabbcc");
   await rectangle.click();
-  await page.getByLabel("x", { exact: true }).fill("250");
+  await page.getByLabel("色", { exact: true }).fill("#123456");
   await ellipse.click();
   await prompt
     .getByRole("button", { name: "入力を破棄して続行", exact: true })
     .click();
   await rectangle.click();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("200");
-  await page.getByLabel("x", { exact: true }).fill("201");
-  await page.getByLabel("x", { exact: true }).fill("200");
+  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
+  await page.getByLabel("色", { exact: true }).fill("#112233");
+  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
   await ellipse.click();
   await expect(prompt).toHaveCount(0);
 });
@@ -144,7 +146,7 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await page.getByLabel("x", { exact: true }).fill("345");
+  await page.getByLabel("色", { exact: true }).fill("#112233");
   await selectPanel(page, "プロジェクト");
   await page.getByLabel("画面名", { exact: true }).fill("変更した画面");
   await button("表示プレビュー").click();
@@ -162,9 +164,9 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  const x = page.getByLabel("x", { exact: true });
-  await x.fill("456");
-  await x.press("Control+s");
+  const color = page.getByLabel("色", { exact: true });
+  await color.fill("#445566");
+  await color.press("Control+s");
   await expect(prompt).toBeVisible();
   const downloading = page.waitForEvent("download");
   await prompt
@@ -174,7 +176,7 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
     await readFile((await (await downloading).path())!, "utf8"),
   );
   expect(saved.screens[0].name).toBe("変更した画面");
-  expect(saved.screens[0].objects[0].x).toBe(456);
+  expect(saved.screens[0].objects[0].fill).toBe("#445566");
   expect(saved.manifest.projectRevision).toBe(4);
   await expect(page.getByTestId("save-state")).not.toContainText(
     "未適用の入力あり",
@@ -258,7 +260,7 @@ test("a failed export never marks the current project as written out", async ({
     "最終書き出し要求",
   );
 });
-test("resize handles resolve drafts before computing geometry from a stale placement", async ({
+test("resize handles preserve staged appearance and restart after confirmation", async ({
   page,
 }) => {
   await page.goto("/");
@@ -270,7 +272,7 @@ test("resize handles resolve drafts before computing geometry from a stale place
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await page.getByLabel("x", { exact: true }).fill("200");
+  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
   const handle = page.locator('[data-resize-handle="se"]');
   await handle.scrollIntoViewIfNeeded();
   const box = (await handle.boundingBox())!;
@@ -286,13 +288,13 @@ test("resize handles resolve drafts before computing geometry from a stale place
   await prompt
     .getByRole("button", { name: "適用して続行", exact: true })
     .click();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("200");
+  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
   await expect(page.getByLabel("width", { exact: true })).toHaveValue("260");
   await expect(page.getByTestId("save-state")).not.toContainText(
     "未適用の入力あり",
   );
   await button("元に戻す").click();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");
+  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#164e63");
   await expect(button("元に戻す")).toBeDisabled();
 });
 

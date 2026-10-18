@@ -20,23 +20,29 @@ test("shared definition edits update placements across screens and survive histo
   await button("Symbol 設定を適用").click();
   await selectPanel(page, "部品");
   await button("Rectangle を追加").click();
-  await page.getByLabel("x", { exact: true }).fill("10");
-  await page.getByLabel("y", { exact: true }).fill("20");
-  await page.getByLabel("width", { exact: true }).fill("30");
-  await page.getByLabel("height", { exact: true }).fill("25");
+  let numericChanges = 0;
+  for (const [name, value] of [
+    ["x", "10"],
+    ["y", "20"],
+    ["width", "30"],
+    ["height", "25"],
+  ]) {
+    const input = page.getByLabel(name, { exact: true });
+    if (Number(await input.inputValue()) !== Number(value)) numericChanges++;
+    await input.fill(value);
+  }
   await button("変更を適用").click();
   const symbolCanvas = page.getByRole("img", {
     name: "循環ポンプ",
     exact: true,
   });
   const childCount = await symbolCanvas.locator("[data-object-id]").count();
-  await button("元に戻す").click();
-  await button("元に戻す").click();
+  // Added shape plus each changed numeric value; equal values are not undo entries.
+  for (let i = 0; i < 1 + numericChanges; i++) await button("元に戻す").click();
   await expect(symbolCanvas.locator("[data-object-id]")).toHaveCount(
     childCount - 1,
   );
-  await button("やり直す").click();
-  await button("やり直す").click();
+  for (let i = 0; i < 1 + numericChanges; i++) await button("やり直す").click();
   await expect(symbolCanvas.locator("[data-object-id]")).toHaveCount(
     childCount,
   );

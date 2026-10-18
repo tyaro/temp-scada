@@ -129,6 +129,14 @@
     }
     event.preventDefault();
     event.stopPropagation();
+    const current = screen.objects.find((object) => object.id === id);
+    if (!current || !("width" in current)) return;
+    geometry = {
+      x: current.x,
+      y: current.y,
+      width: current.width,
+      height: current.height,
+    };
     const edge = handlePoint(geometry, handle);
     const amount = event.shiftKey ? 10 : 1;
     const delta = { x: direction.x * amount, y: direction.y * amount };
@@ -197,17 +205,24 @@
     }
     event.preventDefault();
     event.stopPropagation();
-    const original = object.shape.points[index],
+    const current = screen.objects.find((item) => item.id === object.id);
+    if (
+      !current ||
+      current.shape.type !== "polyline" ||
+      !current.shape.points[index]
+    )
+      return;
+    const original = current.shape.points[index],
       point = { ...original };
     if (snapEnabled) {
       if (direction.x)
         point.x =
-          nextGridCoordinate(object.x + point.x, direction.x, gridSize) -
-          object.x;
+          nextGridCoordinate(current.x + point.x, direction.x, gridSize) -
+          current.x;
       if (direction.y)
         point.y =
-          nextGridCoordinate(object.y + point.y, direction.y, gridSize) -
-          object.y;
+          nextGridCoordinate(current.y + point.y, direction.y, gridSize) -
+          current.y;
     } else {
       point.x += direction.x * (event.shiftKey ? 10 : 1);
       point.y += direction.y * (event.shiftKey ? 10 : 1);

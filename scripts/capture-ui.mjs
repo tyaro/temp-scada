@@ -237,6 +237,26 @@ try {
   await referencePage.keyboard.press("Shift+ArrowUp");
   await expect(referenceBorder).toHaveAttribute("aria-valuenow", "304");
   await capture("scada-panel-height.png", false, referencePage);
+  await referencePage
+    .getByRole("tab", { name: "レイヤー", exact: true })
+    .click();
+  await referencePage
+    .getByRole("navigation", { name: "図形一覧" })
+    .getByRole("button", { name: "text · 6", exact: true })
+    .click();
+  await referencePage
+    .getByLabel("表示タグ（外部名）", { exact: true })
+    .fill("PLC01.Fast.Tank01.Level.Draft");
+  const numberX = referencePage.getByLabel("x", { exact: true });
+  await numberX.fill(String(Number(await numberX.inputValue()) + 12));
+  await numberX.press("Enter");
+  await expect(referencePage.getByTestId("save-state")).toContainText(
+    "未適用の入力あり",
+  );
+  await expect(
+    referencePage.getByLabel("表示タグ（外部名）", { exact: true }),
+  ).toHaveValue("PLC01.Fast.Tank01.Level.Draft");
+  await capture("scada-numeric-properties.png", false, referencePage);
 } finally {
   await browser.close();
 }

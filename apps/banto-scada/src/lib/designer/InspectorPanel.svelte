@@ -1,4 +1,10 @@
 <script lang="ts">
+  import {
+    objectFormValues,
+    parseNumericProperty,
+    type NumericProperty,
+    type NumericTarget,
+  } from "./numeric-properties";
   import type { Project, ScreenObject } from "../project";
   import type { EditCommand } from "../editor";
   import { symbolUsage } from "../editor";
@@ -6,6 +12,8 @@
   let {
     element = $bindable<HTMLElement>(),
     visible,
+    generation,
+    commitNumber,
     onclose,
     project,
     selectedIds,
@@ -20,6 +28,13 @@
   }: {
     element?: HTMLElement;
     visible: boolean;
+    generation: number;
+    commitNumber: (
+      target: NumericTarget,
+      field: NumericProperty,
+      value: number,
+      input: HTMLInputElement,
+    ) => string | null;
     onclose: () => void;
     project: Project;
     selectedIds: string[];
@@ -32,6 +47,111 @@
     edit: (command: EditCommand) => boolean;
     openDefinition: (id: string) => void;
   } = $props();
+  let numericErrors = $state<Record<string, string>>({});
+  const targets = new WeakMap<HTMLInputElement, NumericTarget>();
+  const composing = new Set<HTMLInputElement>();
+  const blurred = new WeakSet<HTMLInputElement>();
+  function focusNumber(event: FocusEvent) {
+    const input = event.currentTarget as HTMLInputElement;
+    if (selected)
+      targets.set(input, {
+        generation,
+        screenId: screen.id,
+        objectId: selected.id,
+        definition: activeDefinition,
+      });
+  }
+  function clearNumber(event: Event) {
+    const input = event.currentTarget as HTMLInputElement;
+    input.setCustomValidity("");
+    numericErrors = { ...numericErrors, [input.name]: "" };
+  }
+  function commitInput(input: HTMLInputElement) {
+    if (composing.has(input) || !input.isConnected || drafts.pending) return;
+    const target = targets.get(input);
+    if (
+      !target ||
+      target.generation !== generation ||
+      target.screenId !== screen.id ||
+      target.objectId !== selected?.id ||
+      target.definition !== activeDefinition
+    )
+      return;
+    try {
+      const value = parseNumericProperty(input.value);
+      const error = commitNumber(
+        target,
+        input.name as NumericProperty,
+        value,
+        input,
+      );
+      if (error) throw new Error(error);
+      input.setCustomValidity("");
+      numericErrors = { ...numericErrors, [input.name]: "" };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "数値を確定できません。";
+      input.setCustomValidity(message);
+      numericErrors = { ...numericErrors, [input.name]: message };
+    }
+  }
+  export function commitFocusedNumber(): boolean {
+    if (composing.size) return false;
+    const input = document.activeElement;
+    if (
+      input instanceof HTMLInputElement &&
+      element?.contains(input) &&
+      targets.has(input)
+    )
+      commitInput(input);
+    return true;
+  }
+  function numberKey(event: KeyboardEvent) {
+    const input = event.currentTarget as HTMLInputElement;
+    if (event.isComposing || composing.has(input) || event.keyCode === 229)
+      return;
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+      commitInput(input);
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      commitInput(input);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      if (selected)
+        input.value =
+          objectFormValues(selected, activeDefinition)[input.name] ?? "";
+      clearNumber(event);
+      drafts.acceptField(input);
+    }
+  }
+  function blurNumber(event: FocusEvent) {
+    const input = event.currentTarget as HTMLInputElement;
+    if (composing.has(input)) blurred.add(input);
+    else commitInput(input);
+  }
+  function compositionStart(event: CompositionEvent) {
+    composing.add(event.currentTarget as HTMLInputElement);
+  }
+  function compositionEnd(event: CompositionEvent) {
+    const input = event.currentTarget as HTMLInputElement;
+    composing.delete(input);
+    if (blurred.has(input)) {
+      blurred.delete(input);
+      commitInput(input);
+    }
+  }
+  const numericIdentity = $derived(
+    `${generation}:${screen.id}:${selected?.id ?? ""}`,
+  );
+  $effect(() => {
+    numericIdentity;
+    numericErrors = {};
+    composing.clear();
+  });
 </script>
 
 <aside
@@ -83,66 +203,79 @@
         </div>
       </form>
     {:else if selected}
-      {#key project.manifest.projectRevision + selected.id}
-        <form use:drafts.track data-editor-form="object" onsubmit={properties}>
+      {#key `${generation}:${screen.id}:${selected.id}`}
+        <form
+          use:drafts.track={objectFormValues(selected, activeDefinition)}
+          data-editor-form="object"
+          onreset={() => (numericErrors = {})}
+          onsubmit={(event) => {
+            if (composing.size) event.preventDefault();
+            else properties(event);
+          }}
+        >
+          <p class="numeric-hint">
+            数値はEnter・フォーカス移動で確定、Escで取消。タグ・その他の設定は「変更を適用」で確定します。
+          </p>
           <div class="fields">
             {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
               <label
                 >{field}<input
                   name={field}
                   aria-label={field}
-                  type="number"
-                  step="any"
+                  type="text"
+                  inputmode="decimal"
                   required
-                  min={field === "width" || field === "height"
-                    ? 0.001
+                  aria-invalid={numericErrors[field] ? "true" : undefined}
+                  aria-describedby={numericErrors[field]
+                    ? `numeric-${field}-error`
                     : undefined}
-                  value={field === "x"
-                    ? selected.x
-                    : field === "y"
-                      ? selected.y
-                      : "width" in selected
-                        ? selected[field as "width" | "height"]
-                        : 0}
-                /></label
+                  onfocus={focusNumber}
+                  oninput={clearNumber}
+                  onkeydown={numberKey}
+                  onblur={blurNumber}
+                  oncompositionstart={compositionStart}
+                  oncompositionend={compositionEnd}
+                />{#if numericErrors[field]}<span
+                    class="field-error"
+                    id={`numeric-${field}-error`}
+                    role="alert">{numericErrors[field]}</span
+                  >{/if}</label
               >
             {/each}
-            <label
-              >色<input
-                name="fill"
-                aria-label="色"
-                type="color"
-                value={selected.fill}
-              /></label
-            >
+            <label>色<input name="fill" aria-label="色" type="color" /></label>
             {#if selected.shape.type === "polyline"}
               <label
                 >頂点（x,y を1行ずつ）<textarea
                   name="points"
                   aria-label="頂点"
                   rows="5"
-                  required
-                  value={selected.shape.points
-                    .map((p) => `${p.x},${p.y}`)
-                    .join("\n")}></textarea></label
+                  required></textarea></label
               >
               <label
                 >線幅<input
                   name="strokeWidth"
                   aria-label="線幅"
-                  type="number"
+                  type="text"
+                  inputmode="decimal"
                   required
-                  min="0.1"
-                  max="64"
-                  step="any"
-                  value={selected.shape.strokeWidth}
-                /></label
+                  aria-invalid={numericErrors.strokeWidth ? "true" : undefined}
+                  aria-describedby={numericErrors.strokeWidth
+                    ? "numeric-strokeWidth-error"
+                    : undefined}
+                  onfocus={focusNumber}
+                  oninput={clearNumber}
+                  onkeydown={numberKey}
+                  onblur={blurNumber}
+                  oncompositionstart={compositionStart}
+                  oncompositionend={compositionEnd}
+                />{#if numericErrors.strokeWidth}<span
+                    class="field-error"
+                    id="numeric-strokeWidth-error"
+                    role="alert">{numericErrors.strokeWidth}</span
+                  >{/if}</label
               >
               <label
-                >矢印<select
-                  name="arrow"
-                  aria-label="矢印"
-                  value={selected.shape.arrow}
+                >矢印<select name="arrow" aria-label="矢印"
                   ><option value="none">なし</option><option value="end"
                     >終点</option
                   ></select
@@ -154,7 +287,6 @@
                   name="text"
                   aria-label="テキスト"
                   maxlength="1000"
-                  value={selected.shape.text}
                 /></label
               >
               {#if !activeDefinition}
@@ -164,7 +296,6 @@
                     aria-label="表示タグ（外部名）"
                     maxlength="1024"
                     placeholder="PLC01.Fast.Tank01.Level"
-                    value={selected.shape.binding?.externalName ?? ""}
                   /></label
                 >
               {/if}
@@ -174,7 +305,6 @@
                 >参照する Symbol 定義<select
                   name="symbolId"
                   aria-label="参照する Symbol 定義"
-                  value={selected.shape.symbolId}
                 >
                   {#each project.symbols as definition (definition.id)}
                     <option value={definition.id}
@@ -279,6 +409,30 @@
     border: 1px solid var(--banto-border);
     padding: 6px;
     border-radius: 4px;
+  }
+  .field-error {
+    display: block;
+    color: var(--banto-danger, #b42318);
+    margin-top: 5px;
+    overflow-wrap: anywhere;
+  }
+  .fields input[aria-invalid="true"] {
+    border-color: var(--banto-danger, #b42318);
+  }
+  .numeric-hint {
+    font-size: 12px;
+  }
+  .fields input[inputmode="decimal"] {
+    min-height: 30px;
+    margin-top: 4px;
+    padding: 4px 2px;
+    border: 0;
+    border-bottom: 1px solid var(--banto-border);
+    border-radius: 0;
+    background: transparent;
+  }
+  .fields input[inputmode="decimal"][aria-invalid="true"] {
+    border-bottom-color: var(--banto-danger);
   }
   .full-width,
   .fields label:has(textarea),

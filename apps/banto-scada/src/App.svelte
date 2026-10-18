@@ -41,7 +41,7 @@
     theme = value;
     void setThemeMode(value);
   }
-  import { untrack, tick } from "svelte";
+  import { untrack, tick, flushSync } from "svelte";
   import { projectContent } from "./lib/save-state";
   import { createDraftGuard } from "./lib/designer/drafts.svelte";
   import DraftPrompt from "./lib/designer/DraftPrompt.svelte";
@@ -141,6 +141,10 @@
     referenceHeight = DEFAULT_REFERENCE_HEIGHT;
     finishReferenceResize(true);
   }
+  import type {
+    NumericProperty,
+    NumericTarget,
+  } from "./lib/designer/numeric-properties";
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
   let showInspector = $state(true);
   let showSidebar = $state(true);
@@ -325,6 +329,13 @@
     (text) => report("error", text),
     validateDrafts,
     revealDraftForm,
+    () => {
+      let ready = true;
+      flushSync(() => {
+        ready = inspectorController?.commitFocusedNumber() ?? true;
+      });
+      return ready;
+    },
   );
   function transition(action: () => void) {
     if (drafts.allow(action)) action();
@@ -453,6 +464,7 @@
   let project = $state(parseProject(JSON.stringify(sample)));
   let editorRegion = $state<HTMLElement>();
   let inspectorPanel = $state<HTMLElement>();
+  let inspectorController = $state<{ commitFocusedNumber: () => boolean }>();
   const references = $derived(bindingReferences(project));
   function openBinding(usage: BindingUsage) {
     transition(() => {
@@ -639,6 +651,47 @@
     notify(kind, text);
   }
   let selected = $derived(screen.objects.find((o) => o.id === selectedId));
+  function commitNumber(
+    target: NumericTarget,
+    field: NumericProperty,
+    value: number,
+    input: HTMLInputElement,
+  ): string | null {
+    if (
+      mode !== "edit" ||
+      busy ||
+      replacement ||
+      drafts.pending ||
+      !input.isConnected ||
+      target.generation !== workspaceGeneration ||
+      target.screenId !== screen.id ||
+      target.objectId !== selected?.id ||
+      target.definition !== !!activeDefinition
+    )
+      return "編集対象または操作状態が変わりました。入力を確認してください。";
+    try {
+      const result = recordEdit(
+        project,
+        history,
+        {
+          type: "update",
+          screenId: target.screenId,
+          objectId: target.objectId,
+          ...(target.definition ? { definitionId: target.screenId } : {}),
+          patch: { [field]: value },
+        },
+        mode,
+      );
+      // Acknowledge only this field before the model refreshes the persistent form.
+      input.value = String(value);
+      drafts.acceptField(input);
+      project = result.project;
+      history = result.history;
+      return null;
+    } catch (error) {
+      return error instanceof Error ? error.message : "数値を確定できません。";
+    }
+  }
   function edit(command: EditCommand, form?: HTMLFormElement): boolean {
     if (form ? !drafts.beforeSubmit(form) : !drafts.allow(() => edit(command)))
       return false;
@@ -1847,7 +1900,10 @@
   </section>
   {#if mode === "edit"}
     <InspectorPanel
+      bind:this={inspectorController}
       bind:element={inspectorPanel}
+      generation={workspaceGeneration}
+      {commitNumber}
       visible={showInspector}
       onclose={() => setInspectorVisibility(false, true)}
       {project}

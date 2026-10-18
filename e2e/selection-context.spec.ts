@@ -84,7 +84,7 @@ for (const source of ["canvas", "layer"])
     await list(page)
       .getByRole("button", { name: "rectangle · 3", exact: true })
       .click();
-    await page.getByLabel("x", { exact: true }).fill("123");
+    await page.getByLabel("色", { exact: true }).fill("#aabbcc");
     const target =
       source === "canvas"
         ? svg(page).locator("[data-object-id]").nth(1)
@@ -102,7 +102,7 @@ for (const source of ["canvas", "layer"])
     await expect(
       list(page).getByRole("button", { name: "rectangle · 3", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByLabel("x", { exact: true })).toHaveValue("123");
+    await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
     await target.click({ button: "right" });
     await prompt
       .getByRole("button", { name: "適用して続行", exact: true })
@@ -112,7 +112,7 @@ for (const source of ["canvas", "layer"])
       list(page).getByRole("button", { name: "ellipse · 4", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
     await page.keyboard.press("Escape");
-    expect((await save(page)).screens[0].objects[0].x).toBe(123);
+    expect((await save(page)).screens[0].objects[0].fill).toBe("#aabbcc");
   });
 
 for (const zoom of [0.25, 1, 4])

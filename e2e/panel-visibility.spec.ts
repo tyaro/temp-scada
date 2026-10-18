@@ -39,7 +39,7 @@ test("restore returns the previous panel subset, search, tab, selection and unap
   await page
     .getByRole("button", { name: "Rectangle を追加", exact: true })
     .click();
-  await page.getByLabel("x", { exact: true }).fill("123");
+  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
   await page.getByRole("searchbox", { name: "部品を検索" }).fill("rectangle");
   await page.getByRole("button", { name: "名称一覧", exact: true }).click();
   await menu(page, "タグ参照一覧を隠す");
@@ -72,10 +72,12 @@ test("restore returns the previous panel subset, search, tab, selection and unap
   await expect(
     page.getByRole("button", { name: "名称一覧", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("123");
+  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
   await page.getByRole("button", { name: "変更を適用", exact: true }).click();
   await page.getByRole("button", { name: "元に戻す", exact: true }).click();
-  await expect(page.getByLabel("x", { exact: true })).not.toHaveValue("123");
+  await expect(page.getByLabel("色", { exact: true })).not.toHaveValue(
+    "#aabbcc",
+  );
 });
 
 test("hidden invalid screen settings reveal the project tab before validation focus", async ({

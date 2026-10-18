@@ -34,7 +34,7 @@ test("hiding properties releases its width, retains drafts and restores through 
   await page
     .getByRole("button", { name: "Rectangle を追加", exact: true })
     .click();
-  await page.getByLabel("x", { exact: true }).fill("123");
+  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
   const revision = await page.locator(".toolbar").innerText();
   const width = (await viewport(page).boundingBox())!.width;
   await inspector(page)
@@ -48,8 +48,8 @@ test("hiding properties releases its width, retains drafts and restores through 
     .poll(async () => (await viewport(page).boundingBox())!.width)
     .toBeGreaterThan(width + 250);
   await expect(
-    page.locator('[data-editor-form="object"] input[name="x"]'),
-  ).toHaveValue("123");
+    page.locator('[data-editor-form="object"] input[name="fill"]'),
+  ).toHaveValue("#aabbcc");
   await expect(page.getByTestId("save-state")).toContainText("1 フォーム");
   expect(await page.locator(".toolbar").innerText()).toBe(revision);
   await page
@@ -61,13 +61,15 @@ test("hiding properties releases its width, retains drafts and restores through 
     .click();
   await showInspector(page);
   await expect(inspector(page)).toBeVisible();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("123");
+  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
   await page.getByRole("button", { name: "変更を適用", exact: true }).click();
   await expect(page.getByTestId("save-state")).not.toContainText(
     "未適用の入力あり",
   );
   await page.getByRole("button", { name: "元に戻す", exact: true }).click();
-  await expect(page.getByLabel("x", { exact: true })).not.toHaveValue("123");
+  await expect(page.getByLabel("色", { exact: true })).not.toHaveValue(
+    "#aabbcc",
+  );
 });
 
 for (const zoom of [0.25, 1, 4]) {

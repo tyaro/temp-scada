@@ -111,14 +111,14 @@ test("menu commands share draft protection, edit history and preview restriction
     .click();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
   await expect(svg.locator("[data-object-id]")).toHaveCount(4);
-  const x = page.getByLabel("x", { exact: true });
-  await x.fill("123");
+  const x = page.getByLabel("色", { exact: true });
+  await x.fill("#aabbcc");
   await bar.getByRole("menuitem", { name: "編集", exact: true }).click();
   await page.getByRole("menuitem", { name: "元に戻す", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "未適用の入力があります" });
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(x).toHaveValue("123");
+  await expect(x).toHaveValue("#aabbcc");
   await expect(svg.locator("[data-object-id]")).toHaveCount(4);
   await bar.getByRole("menuitem", { name: "編集", exact: true }).click();
   await page.getByRole("menuitem", { name: "元に戻す", exact: true }).click();
