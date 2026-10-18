@@ -3,6 +3,14 @@
 状態: **Banto 基盤の最小工程図エディタを実装。折れ線と共有 Symbol に対応。Core v1 全体は未実装**。
 決定日: 2026-10-18。ユーザー指示: industrial の開発を継続しつつ temp-scada で SCADA を先行開発し、最終的に industrial に戻す。
 
+## 機能優先とリリース前の形式変更（2026-10-18）
+
+ユーザー確認: 大枠の画面配置は UX 設計の方向で進め、細部の調整は後から行う。サイド / 下部パネルのフローティングとドッキングは後続とする。まず固定の操作領域をコンポーネントとして分離し、部品検索・配置とズーム / パン、タグ割付と値・状態表示を優先する。ドッキングライブラリや任意配置レイアウトの保存を先行させない。
+
+リリース前の Project ファイルは後方互換性を保証しない。必要な破壊的モデル変更を優先し、旧形式の読込・自動変換・migration の実装を必須条件にしない。以下に残る過去の移行対応は実装履歴であり、今後の互換性保証ではない。現行形式のバージョンを識別できること、Rust / TypeScript とサンプル・共通検証が一致すること、無効なデータで編集中の Project を壊さないことは維持する。正式リリースへ向けた互換性ポリシーは、モデルが固まった段階で別途決定する。
+
+直近は UI の責務分離と基本編集操作の改善、その後に Hub の読み取り Binding を進める。細かな装飾や可動パネルを、その前提にはしない。認証は industrial の修正完了後、MES は後続とする既存方針を維持する。
+
 ## 参照元
 
 - repository: https://github.com/tyaro/banto-industrial
@@ -25,7 +33,7 @@
 
 図形の追加・選択・ドラッグ移動・座標 / サイズ / 色 / 文字列の編集・削除に対応しました。変更は frontend の共通編集コマンドを通し、コピー上で検証した後に反映します。ID を保持し、成功した操作ごとに revision を増やします。ブラウザ E2E で、編集・ドラッグ・保存・再読込後の表示一致を検証します。表示プレビューは編集用の枠や操作を外して同じ描画部品を使います。
 
-Editor / Runtime の正式な起動時 mode や Rust 側の権限境界はまだ実装していません。PLC 書込みや式評価、アクション実行への経路もありません。ダウンロードは現在の Project の JSON 保存です。revision は編集時に増加し、内容を変えずにダウンロードするときは増加させません。contentHash、外部変更の競合判定、正式 package の migration は後続です。初期 JSON 0.1.0 から 0.2.0 への読込移行には対応しました。
+Editor / Runtime の正式な起動時 mode や Rust 側の権限境界はまだ実装していません。PLC 書込みや式評価、アクション実行への経路もありません。ダウンロードは現在の Project の JSON 保存です。revision は編集時に増加し、内容を変えずにダウンロードするときは増加させません。contentHash、外部変更の競合判定、正式 package の設計は後続です。初期 JSON 0.1.0 から 0.2.0 への読込移行には対応しました。
 
 ## 最小工程図の実装（2026-10-18）
 
@@ -138,7 +146,7 @@ Project 内の Symbol 定義を作成・編集・複製・削除し、現在の�
 1. S0 / S1 を拡張: Design Domain、正式 Project layout、型・参照整合性・revision / contentHash の規則を固める。
 2. S2 を拡張: オブジェクトの配置・選択・移動・プロパティ編集を Design Domain 経由で実装。
 3. S3: `banto-tagclient` で Hub 接続、`external_name` によるライブ値・Quality の表示。Hub 停止と再接続を検証。
-4. S4: `.bantoscada` directory / ZIP、import preview、migration、互換性確認。
+4. S4: `.bantoscada` directory / ZIP と import preview。リリース前の旧形式 migration は必須にしない。
 5. 基本 Editor、Tag Browser、Equipment / Symbol、基本 Action と mode の分離を段階的に追加。
 
 v1.1 の recorder / History / Alarm と Windows サービス化、および後続 Extension は今は作りません。Design Domain は Core v1 に含めますが、Design API の REST / OpenAPI 公開は後続です（上流 §3）。
