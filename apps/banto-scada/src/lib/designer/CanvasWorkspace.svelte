@@ -253,6 +253,44 @@
       { before: centerRoom, after: !!centerRooms[screen.id] },
     );
   }
+  export function revealObject(id: string) {
+    if (!viewport || !editable) return;
+    const target = [
+      ...viewport.querySelectorAll<SVGElement>("[data-object-id]"),
+    ].find((element) => element.dataset.objectId === id);
+    if (!target) return;
+    const bounds = target.getBoundingClientRect();
+    const box = viewport.getBoundingClientRect();
+    const left = box.left + viewport.clientLeft,
+      top = box.top + viewport.clientTop;
+    const shift = (
+      start: number,
+      end: number,
+      origin: number,
+      extent: number,
+    ) =>
+      end - start > extent
+        ? start - origin
+        : start < origin
+          ? start - origin
+          : end > origin + extent
+            ? end - origin - extent
+            : 0;
+    viewport.scrollLeft += shift(
+      bounds.left,
+      bounds.right,
+      left + 12,
+      Math.max(1, viewport.clientWidth - 24),
+    );
+    viewport.scrollTop += shift(
+      bounds.top,
+      bounds.bottom,
+      top + 12,
+      Math.max(1, viewport.clientHeight - 24),
+    );
+    remember();
+    viewport.focus({ preventScroll: true });
+  }
   export function stepZoom(direction: number) {
     const next =
       direction > 0

@@ -49,6 +49,7 @@
   import ContextActions, {
     type ContextAction,
   } from "./lib/designer/ContextActions.svelte";
+  import type { SymbolUsage } from "./lib/symbol-usages";
   import type { Project } from "./lib/project";
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
@@ -262,6 +263,7 @@
   let workspaceGeneration = $state(0);
   let canvasWorkspace = $state<{
     visibleCenter: () => Point;
+    revealObject: (id: string) => void;
     preparePanelResize: () => void;
     zoom: (value: number | null) => void;
     stepZoom: (direction: number) => void;
@@ -447,6 +449,43 @@
           });
       }
     });
+  }
+  function openSymbolUsage(usage: SymbolUsage) {
+    const generation = workspaceGeneration;
+    const run = () => {
+      if (generation !== workspaceGeneration || mode !== "edit") return;
+      if (!drafts.allow(run)) return;
+      const target = project.screens
+        .find((s) => s.id === usage.screenId)
+        ?.objects.find((o) => o.id === usage.objectId);
+      if (
+        target?.shape.type !== "symbol" ||
+        target.shape.symbolId !== usage.symbolId
+      ) {
+        report("info", "使用先が変更されたため移動を中止しました。");
+        return;
+      }
+      editingSymbolId = null;
+      screenId = usage.screenId;
+      selectedIds = [usage.objectId];
+      libraryId = usage.symbolId;
+      void tick().then(() =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            if (
+              generation !== workspaceGeneration ||
+              screenId !== usage.screenId ||
+              editingSymbolId ||
+              selectedId !== usage.objectId
+            )
+              return;
+            editorRegion?.scrollTo({ top: 0 });
+            canvasWorkspace?.revealObject(usage.objectId);
+          }),
+        ),
+      );
+    };
+    run();
   }
   function symbolLibraryCommand(command: EditCommand) {
     if (
@@ -1410,6 +1449,8 @@
           <SymbolLibrary
             {project}
             selectedId={libraryId}
+            workspaceKey={workspaceGeneration}
+            onopenusage={openSymbolUsage}
             screenId={screen.id}
             editingDefinition={!!activeDefinition}
             contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`}

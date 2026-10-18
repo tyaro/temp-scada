@@ -69,6 +69,12 @@ try {
   ).toBeVisible();
   await capture("scada-symbol-context.png", true);
   await page.keyboard.press("Escape");
+  await button("使用先を確認").click();
+  await expect(
+    page.getByRole("region", { name: "共有定義の使用先", exact: true }),
+  ).toBeVisible();
+  await capture("scada-symbol-usages.png", true);
+  await button("使用先一覧を閉じる").click();
   await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
   await page.getByLabel("グリッド表示", { exact: true }).check();
   await page

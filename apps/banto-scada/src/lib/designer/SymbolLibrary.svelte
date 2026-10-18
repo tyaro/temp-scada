@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { tick } from "svelte";
+  import SymbolUsages from "./SymbolUsages.svelte";
+  import { symbolUsages, type SymbolUsage } from "../symbol-usages";
   import ContextActions, { type ContextAction } from "./ContextActions.svelte";
   import { symbolUsage, type EditCommand } from "../editor";
   import type { Project } from "../project";
@@ -8,6 +11,8 @@
     screenId,
     editingDefinition,
     contextKey,
+    workspaceKey,
+    onopenusage,
     onchoose,
     onedit,
     ondelete,
@@ -18,6 +23,8 @@
     screenId: string;
     editingDefinition: boolean;
     contextKey: string;
+    workspaceKey: number;
+    onopenusage: (usage: SymbolUsage) => void;
     onchoose: (id: string) => void;
     onedit: (id: string) => void;
     ondelete: (id: string) => void;
@@ -26,8 +33,35 @@
   const selected = $derived(
     project.symbols.find((d) => d.id === selectedId) ?? project.symbols[0],
   );
+  let usageId = $state<string | null>(null);
+  let usageList = $state<SymbolUsages>();
+  let root: HTMLElement;
+  const usageDefinition = $derived(
+    project.symbols.find((d) => d.id === usageId),
+  );
+  $effect(() => {
+    workspaceKey;
+    usageId = null;
+  });
+  $effect(() => {
+    if (usageId && !usageDefinition) usageId = null;
+  });
+  function showUsages(id: string) {
+    usageId = id;
+    void tick().then(() => usageList?.focus());
+  }
+  function closeUsages() {
+    const id = usageId;
+    usageId = null;
+    void tick().then(() =>
+      [...root.querySelectorAll<HTMLButtonElement>("[data-symbol-row]")]
+        .find((button) => button.dataset.symbolRow === id)
+        ?.focus(),
+    );
+  }
   function actions(id: string): ContextAction[] {
     return [
+      { label: "使用先を確認", run: () => showUsages(id) },
       {
         label: "共有定義を編集（すべての参照配置に反映）",
         run: () => onedit(id),
@@ -51,7 +85,7 @@
   }
 </script>
 
-<section aria-label="Symbol ライブラリ">
+<section aria-label="Symbol ライブラリ" bind:this={root}>
   <h2>Symbol ライブラリ</h2>
   <button
     data-create-symbol
@@ -75,6 +109,7 @@
         >
           <button
             class="definition-row"
+            data-symbol-row={definition.id}
             class:active={selected.id === definition.id}
             aria-label={`共有定義：${definition.name}`}
             aria-pressed={selected.id === definition.id}
@@ -89,6 +124,7 @@
     </nav>
     <p>{symbolUsage(project, selected.id)} 配置で共有</p>
     <div class="actions">
+      <button onclick={() => showUsages(selected.id)}>使用先を確認</button>
       <button onclick={() => onedit(selected.id)}>定義を編集</button>
       <button
         disabled={project.symbols.length >= 100}
@@ -109,6 +145,17 @@
             })}>画面に配置</button
         >{/if}
     </div>
+  {/if}
+  {#if usageDefinition}
+    {#key usageDefinition.id}
+      <SymbolUsages
+        bind:this={usageList}
+        definition={usageDefinition}
+        usages={symbolUsages(project, usageDefinition.id)}
+        onopen={onopenusage}
+        onclose={closeUsages}
+      />
+    {/key}
   {/if}
 </section>
 
