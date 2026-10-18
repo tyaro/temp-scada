@@ -58,6 +58,12 @@ Stale / Bad の直前値は表示しない。文字で状態を示し、色だ�
 
 2026-10-18、タグ表示サンプルの画面を UI で複製し、下部のタグ参照一覧を展開した実画面（Chromium 1600×1000）。中央領域を下へスクロールして一覧を表示している。両画面の同じ外部名を 1 行・2 配置にまとめ、Hub 未接続を明記している。
 
+## SDK 境界の実装状況
+
+`crates/scada-runtime` に固定 SDK の current と catalog を表示 DTO へ投影する処理を追加した。世代・型・source を確認し、Good の有限数だけを渡す。実 SDK とモック Hub の通信・切断は検証済みだが、ブラウザへ値を渡す Host は未実装なので、現在の画面表示は未接続のまま。
+
+SDK は未解決名が 1 件でもあると購読全体の current を公開しないため、SCADA の局所的な欠測表示には [industrial #682](https://github.com/tyaro/banto-industrial/issues/682) の共有契約拡張を先行させる。catalog / resolution / current の同世代公開も同 Issue で扱う。Astra とのレビューに基づき、SCADA 側で再解決管理を重複実装する回避策は入れない。[Runtime SDK 境界](runtime-sdk.md) に詳細を記載する。
+
 ## 次の接続段階
 
 実接続は `banto-tagclient` を固定コミットで利用する Rust host から行う。フロントエンドで SDK の接続・購読・再解決・時刻による Stale 判定を再実装しない。式を導入するときも `banto-expr` を利用する。

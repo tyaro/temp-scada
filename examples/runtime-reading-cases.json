@@ -1,0 +1,64 @@
+[
+  {
+    "name": "Good の数値",
+    "quality": "good",
+    "value": 12.5,
+    "reading": {
+      "state": "resolved",
+      "quality": "good",
+      "numericValue": 12.5
+    },
+    "display": "12.5"
+  },
+  {
+    "name": "0 は欠測ではない",
+    "quality": "good",
+    "value": 0,
+    "reading": {
+      "state": "resolved",
+      "quality": "good",
+      "numericValue": 0
+    },
+    "display": "0"
+  },
+  {
+    "name": "Good の欠測",
+    "quality": "good",
+    "value": null,
+    "reading": {
+      "state": "invalid"
+    },
+    "display": "-- · 値が不正"
+  },
+  {
+    "name": "Stale は直前値を渡さない",
+    "quality": "stale",
+    "value": 42,
+    "reading": {
+      "state": "resolved",
+      "quality": "stale",
+      "numericValue": null
+    },
+    "display": "-- · Stale"
+  },
+  {
+    "name": "Bad は直前値を渡さない",
+    "quality": "bad",
+    "value": 42,
+    "reading": {
+      "state": "resolved",
+      "quality": "bad",
+      "numericValue": null
+    },
+    "display": "-- · Bad"
+  },
+  {
+    "name": "未知の Quality",
+    "quality": "future",
+    "value": 42,
+    "reading": {
+      "state": "invalid"
+    },
+    "display": "-- · 値が不正"
+  }
+]

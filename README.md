@@ -41,6 +41,12 @@ pnpm dev
 
 画面ではサンプルの Rectangle / Ellipse / Text を表示します。「編集」で図形を追加し、画面上のクリックまたは図形一覧で選択できます。ドラッグで移動、プロパティで座標・サイズ・色・文字列を変更して適用、選択図形を削除できます。「表示プレビュー」では同じ Project を編集用の枠なしで確認できます。Project JSON を開く、JSON を保存、画面を選択する操作ができます。読み込んだファイルが不正なら、現在表示中の Project を保持してエラーを表示します。アップロード先やネットワーク保存はありません。
 
+## Runtime の SDK 境界
+
+`crates/scada-runtime` に、固定コミットの `banto-tagclient` の現在値を表示用データへ変換する処理を追加しました。実 SDK とモック Hub の REST / WebSocket 接続で、値更新・品質変更・切断時の値消去を検証しています。ブラウザへつなぐ Host はまだなく、画面は未接続のままです。
+
+Astra とのレビューを踏まえ、部分的な参照切れと同じ世代の metadata 公開を [industrial #682](https://github.com/tyaro/banto-industrial/issues/682) に起票しました。共有 SDK 更新後に正式 Host の接続へ進みます。[Runtime SDK 境界](docs/runtime-sdk.md) に API・制約・検証範囲を記載しています。
+
 ## タグ表示の割り当て
 
 画面の Text を選択し、プロパティの「表示タグ（外部名）」へ `PLC01.Fast.Tank01.Level` などを入力して適用します。空欄にして適用すると元の静的テキストへ戻ります。割り当ての変更・複製・Undo / Redo・JSON 往復に対応します。試す場合は `examples/tag-binding.project.json` を開いてください。
@@ -177,6 +183,7 @@ E2E は開発サーバーを自動起動します。既に同じサーバーを�
 
 - `apps/banto-scada`: Svelte 5 / TypeScript / Vite の最小エディタと共通描画部品。将来 Tauri の host を追加する配置。
 - `crates/scada-model`: GUI 非依存の Project 検証・JSON 往復と検証 CLI。
+- `crates/scada-runtime`: 共有 SDK の current / metadata から読み取り表示へ投影するライブラリ。
 - `crates/scada-model/schema/project.schema.json`: Rust / ブラウザ共通の初期 JSON Schema。
 - `examples`: サンプルと、Rust / TypeScript が共に実行する契約テストのケース。
 - `docs/upstream/industrial`: industrial の設計ドキュメントを変更せず保存した参照スナップショット。

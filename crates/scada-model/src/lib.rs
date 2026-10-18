@@ -21,7 +21,44 @@ static LEGACY_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Project(Value);
 
+/// 画面 Text の読み取り参照。Hub 内部 ID や現在値は含めない。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TextBinding {
+    pub screen_id: String,
+    pub object_id: String,
+    pub external_name: String,
+}
+
 impl Project {
+    pub fn id(&self) -> &str {
+        self.0["manifest"]["projectId"].as_str().unwrap()
+    }
+
+    pub fn revision(&self) -> u64 {
+        // 共通 schema が JS safe integer に制限する。JSON の 1.0 も整数として受理する。
+        self.0["manifest"]["projectRevision"].as_f64().unwrap() as u64
+    }
+
+    pub fn text_bindings(&self) -> Vec<TextBinding> {
+        self.0["screens"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|screen| {
+                screen["objects"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .filter_map(|object| {
+                        object["shape"].get("binding").map(|binding| TextBinding {
+                            screen_id: screen["id"].as_str().unwrap().into(),
+                            object_id: object["id"].as_str().unwrap().into(),
+                            external_name: binding["externalName"].as_str().unwrap().into(),
+                        })
+                    })
+            })
+            .collect()
+    }
     pub fn from_json(input: &str) -> Result<Self, String> {
         let mut value: Value = serde_json::from_str(input).map_err(|e| e.to_string())?;
         if value["manifest"]["schemaVersion"].as_str() == Some("0.1.0") {

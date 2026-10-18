@@ -51,3 +51,12 @@ it("a reconnect must supply a new valid reading before showing a number again", 
     "0",
   ]);
 });
+
+import runtimeCases from "../../../../examples/runtime-reading-cases.json";
+it("renders the reading DTO fixtures also checked by the Rust SDK adapter", () => {
+  for (const fixture of runtimeCases)
+    expect(
+      presentNumeric(fixture.reading as NumericReading).text,
+      fixture.name,
+    ).toBe(fixture.display);
+});
