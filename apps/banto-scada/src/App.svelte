@@ -17,6 +17,8 @@
   import { parseProject, serializeProject, parsePoints } from "./lib/project";
   import {
     type EditCommand,
+    isObjectCommand,
+    symbolUsage,
     type AddKind,
     type ObjectPatch,
   } from "./lib/editor";
@@ -39,6 +41,7 @@
       projectChanged = true;
       if (!project.screens.some((s) => s.id === screenId))
         screenId = project.screens[0].id;
+      normalizeTargets();
       selectedIds = selectedIds.filter((id) =>
         screen.objects.some((o) => o.id === id),
       );
@@ -139,8 +142,37 @@
   }
   let project = $state(parseProject(JSON.stringify(sample)));
   let screenId = $state(sample.screens[0].id);
+  let editingSymbolId = $state<string | null>(null);
+  let libraryId = $state("");
+  let librarySymbol = $derived(
+    project.symbols.find((s) => s.id === libraryId) ?? project.symbols[0],
+  );
+  let activeDefinition = $derived(
+    project.symbols.find((s) => s.id === editingSymbolId),
+  );
+  function normalizeTargets() {
+    if (
+      editingSymbolId &&
+      !project.symbols.some((s) => s.id === editingSymbolId)
+    )
+      editingSymbolId = null;
+  }
+  function openDefinition(id: string) {
+    editingSymbolId = id;
+    libraryId = id;
+    selectedIds = [];
+  }
+  function deleteDefinition() {
+    if (
+      librarySymbol &&
+      window.confirm(`「${librarySymbol.name}」の Symbol 定義を削除しますか？`)
+    )
+      edit({ type: "remove-symbol", symbolId: librarySymbol.id });
+  }
   let screen = $derived(
-    project.screens.find((s) => s.id === screenId) ?? project.screens[0],
+    activeDefinition ??
+      project.screens.find((s) => s.id === screenId) ??
+      project.screens[0],
   );
   let message = $state("サンプルを表示しています。Hub には接続していません。");
   let busy = $state(false);
@@ -156,6 +188,7 @@
     project = parseProject(JSON.stringify(processSample));
     history = emptyHistory();
     screenId = project.screens[0].id;
+    editingSymbolId = null;
     selectedIds = [];
     projectChanged = false;
     report(
@@ -172,11 +205,23 @@
     try {
       const oldIds = new Set(screen.objects.map((o) => o.id));
       const oldScreens = new Set(project.screens.map((s) => s.id));
+      const oldDefinitions = new Set(project.symbols.map((s) => s.id));
+      if (activeDefinition && isObjectCommand(command))
+        command = { ...command, definitionId: activeDefinition.id };
       const result = recordEdit(project, history, command, mode);
       if (result.project === project) return;
       project = result.project;
       history = result.history;
       projectChanged = true;
+      normalizeTargets();
+      if (
+        command.type === "create-symbol" ||
+        command.type === "duplicate-symbol"
+      ) {
+        openDefinition(
+          project.symbols.find((s) => !oldDefinitions.has(s.id))!.id,
+        );
+      } else if (command.type === "remove-symbol") selectedIds = [];
       if (
         command.type === "create-screen" ||
         command.type === "duplicate-screen"
@@ -190,6 +235,7 @@
       if (
         command.type === "add" ||
         command.type === "add-symbol" ||
+        command.type === "place-symbol" ||
         command.type === "duplicate" ||
         command.type === "duplicate-many"
       )
@@ -213,8 +259,9 @@
     event.preventDefault();
     const data = new FormData(event.currentTarget as HTMLFormElement);
     edit({
-      type: "update-screen",
-      screenId: screen.id,
+      ...(activeDefinition
+        ? { type: "update-symbol" as const, symbolId: activeDefinition.id }
+        : { type: "update-screen" as const, screenId: screen.id }),
       name: String(data.get("name")),
       width: Number(data.get("width")),
       height: Number(data.get("height")),
@@ -274,6 +321,7 @@
       history = emptyHistory();
       projectChanged = false;
       screenId = next.screens[0].id;
+      editingSymbolId = null;
       selectedIds = [];
       report("success", "Project を読み込みました。");
     } catch (e) {
@@ -327,6 +375,7 @@
           aria-pressed={mode === "preview"}
           onclick={() => {
             mode = "preview";
+            editingSymbolId = null;
             selectedIds = [];
           }}>表示プレビュー</button
         >
@@ -358,35 +407,88 @@
           aria-pressed={screen.id === item.id}
           onclick={() => {
             screenId = item.id;
+            editingSymbolId = null;
             selectedIds = [];
           }}>{item.name}</button
         >{/each}
     </nav>
     {#if mode === "edit"}
       <hr />
-      <h2>画面管理</h2>
+      <h2>Symbol ライブラリ</h2>
       <button
-        disabled={project.screens.length >= 100}
+        disabled={project.symbols.length >= 100}
         onclick={() =>
           edit({
-            type: "create-screen",
-            name: `画面 ${project.screens.length + 1}`,
-            width: screen.width,
-            height: screen.height,
-          })}>画面を追加</button
+            type: "create-symbol",
+            name: `Symbol ${project.symbols.length + 1}`,
+            width: 100,
+            height: 100,
+          })}>Symbol 定義を作成</button
       >
-      <button
-        disabled={project.screens.length >= 100}
-        onclick={() => edit({ type: "duplicate-screen", screenId: screen.id })}
-        >画面を複製</button
-      >
-      <button disabled={project.screens.length === 1} onclick={removeScreen}
-        >画面を削除</button
-      >
+      {#if librarySymbol}
+        <label class="library-label"
+          >Symbol 定義<select
+            aria-label="Symbol 定義"
+            value={librarySymbol.id}
+            onchange={(event) => (libraryId = event.currentTarget.value)}
+          >
+            {#each project.symbols as definition}<option value={definition.id}
+                >{definition.name}</option
+              >{/each}
+          </select></label
+        >
+        <p>{symbolUsage(project, librarySymbol.id)} 配置で共有</p>
+        <div class="library-actions">
+          <button onclick={() => openDefinition(librarySymbol.id)}
+            >定義を編集</button
+          >
+          <button
+            disabled={project.symbols.length >= 100}
+            onclick={() =>
+              edit({ type: "duplicate-symbol", symbolId: librarySymbol.id })}
+            >定義を複製</button
+          >
+          <button
+            disabled={symbolUsage(project, librarySymbol.id) > 0}
+            onclick={deleteDefinition}>定義を削除</button
+          >
+          {#if !activeDefinition}<button
+              onclick={() =>
+                edit({
+                  type: "place-symbol",
+                  screenId: screen.id,
+                  symbolId: librarySymbol.id,
+                })}>画面に配置</button
+            >{/if}
+        </div>
+      {/if}
+      <hr />
+      <h2>{activeDefinition ? "Symbol 設定" : "画面管理"}</h2>
+      {#if !activeDefinition}
+        <button
+          disabled={project.screens.length >= 100}
+          onclick={() =>
+            edit({
+              type: "create-screen",
+              name: `画面 ${project.screens.length + 1}`,
+              width: screen.width,
+              height: screen.height,
+            })}>画面を追加</button
+        >
+        <button
+          disabled={project.screens.length >= 100}
+          onclick={() =>
+            edit({ type: "duplicate-screen", screenId: screen.id })}
+          >画面を複製</button
+        >
+        <button disabled={project.screens.length === 1} onclick={removeScreen}
+          >画面を削除</button
+        >
+      {/if}
       {#key screen}
         <form onsubmit={screenProperties} aria-label="画面設定">
           <label
-            >画面名<input
+            >{activeDefinition ? "Symbol 名" : "画面名"}<input
               name="name"
               value={screen.name}
               required
@@ -394,7 +496,7 @@
             /></label
           >
           <label
-            >画面の幅<input
+            >{activeDefinition ? "定義の幅" : "画面の幅"}<input
               name="width"
               type="number"
               step="any"
@@ -404,7 +506,7 @@
             /></label
           >
           <label
-            >画面の高さ<input
+            >{activeDefinition ? "定義の高さ" : "画面の高さ"}<input
               name="height"
               type="number"
               step="any"
@@ -413,7 +515,9 @@
               required
             /></label
           >
-          <button type="submit">画面設定を適用</button>
+          <button type="submit"
+            >{activeDefinition ? "Symbol 設定を適用" : "画面設定を適用"}</button
+          >
         </form>
       {/key}
       <p class="hint">
@@ -427,16 +531,21 @@
       <button onclick={() => add("line")}>線を追加</button><button
         onclick={() => add("pipe")}>配管を追加</button
       >
-      <button
-        onclick={() =>
-          edit({ type: "add-symbol", screenId: screen.id, template: "pump" })}
-        >ポンプを追加</button
-      >
-      <button
-        onclick={() =>
-          edit({ type: "add-symbol", screenId: screen.id, template: "valve" })}
-        >バルブを追加</button
-      >
+      {#if !activeDefinition}
+        <button
+          onclick={() =>
+            edit({ type: "add-symbol", screenId: screen.id, template: "pump" })}
+          >ポンプを追加</button
+        >
+        <button
+          onclick={() =>
+            edit({
+              type: "add-symbol",
+              screenId: screen.id,
+              template: "valve",
+            })}>バルブを追加</button
+        >
+      {/if}
       <h2>図形一覧</h2>
       <nav aria-label="図形一覧">
         {#each [...screen.objects].sort((a, b) => a.order - b.order) as object}<button
@@ -470,6 +579,22 @@
     </p>
   </aside>
   <section aria-label="画面プレビュー">
+    {#if activeDefinition}
+      <div class="definition-banner" role="note">
+        <strong
+          >Symbol 定義を編集中 · {symbolUsage(project, activeDefinition.id)} 配置で共有</strong
+        >
+        <p>
+          確定した変更は全画面の参照配置へ反映されます。配置時は配置側の単色を使います。別の形にする場合は定義を複製してください。
+        </p>
+        <button
+          onclick={() => {
+            editingSymbolId = null;
+            selectedIds = [];
+          }}>画面へ戻る</button
+        >
+      </div>
+    {/if}
     <div class="toolbar">
       <h2>{screen.name}</h2>
       <span>{screen.width} × {screen.height}</span>
@@ -679,6 +804,15 @@
                       /></label
                     >{/if}
                 </div>
+                {#if selected.shape.type === "symbol"}
+                  <button
+                    type="button"
+                    onclick={() => {
+                      if (selected?.shape.type === "symbol")
+                        openDefinition(selected.shape.symbolId);
+                    }}>参照する Symbol 定義を編集</button
+                  >
+                {/if}
                 <div class="actions">
                   <button type="submit">変更を適用</button>
                   <button
@@ -742,6 +876,39 @@
   .app-header {
     padding: 24px 32px;
     border-bottom: 1px solid var(--banto-border);
+  }
+  .definition-banner {
+    border: 1px solid var(--banto-primary);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    background: var(--banto-surface);
+  }
+  .definition-banner button {
+    width: auto;
+    margin-bottom: 0;
+  }
+  .library-label {
+    display: grid;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .library-label select {
+    width: 100%;
+    padding: 8px;
+    color: var(--banto-text);
+    background: var(--banto-surface);
+    border: 1px solid var(--banto-border);
+    border-radius: 4px;
+  }
+  .library-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .library-actions button {
+    margin: 0;
+    padding: 8px;
   }
   .theme-label {
     display: grid;

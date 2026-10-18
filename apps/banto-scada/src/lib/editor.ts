@@ -20,7 +20,7 @@ export interface ObjectPatch {
 }
 export type AlignMode =
   "left" | "right" | "top" | "bottom" | "center-x" | "center-y";
-export type EditCommand =
+type ScreenCommand =
   | { type: "create-screen"; name: string; width: number; height: number }
   | {
       type: "update-screen";
@@ -30,7 +30,8 @@ export type EditCommand =
       height: number;
     }
   | { type: "duplicate-screen"; screenId: string }
-  | { type: "remove-screen"; screenId: string }
+  | { type: "remove-screen"; screenId: string };
+export type ObjectCommand = (
   | {
       type: "move-vertex";
       screenId: string;
@@ -67,7 +68,47 @@ export type EditCommand =
       objectId: string;
       direction: "front" | "back" | "forward" | "backward";
     }
-  | { type: "remove"; screenId: string; objectId: string };
+  | { type: "remove"; screenId: string; objectId: string }
+) & { definitionId?: string };
+
+export type EditCommand =
+  | ScreenCommand
+  | ObjectCommand
+  | { type: "create-symbol"; name: string; width: number; height: number }
+  | {
+      type: "update-symbol";
+      symbolId: string;
+      name: string;
+      width: number;
+      height: number;
+    }
+  | { type: "duplicate-symbol"; symbolId: string }
+  | { type: "remove-symbol"; symbolId: string }
+  | { type: "place-symbol"; symbolId: string; screenId: string };
+
+export function isObjectCommand(
+  command: EditCommand,
+): command is ObjectCommand {
+  return [
+    "move-vertex",
+    "move-many",
+    "duplicate-many",
+    "align",
+    "remove-many",
+    "add",
+    "add-symbol",
+    "update",
+    "duplicate",
+    "reorder",
+    "remove",
+  ].includes(command.type);
+}
+export function symbolUsage(project: Project, symbolId: string): number {
+  return project.screens
+    .flatMap((s) => s.objects)
+    .filter((o) => o.shape.type === "symbol" && o.shape.symbolId === symbolId)
+    .length;
+}
 
 /** RFC 9562 UUID v7。ID は順序として使わない。 */
 export function newId(): string {
@@ -92,6 +133,67 @@ export function applyCommand(
 ): Project {
   if (mode !== "edit") throw new Error("表示プレビューでは編集できません");
   const next = parseProject(serializeProject(project));
+  if (command.type === "create-symbol") {
+    next.symbols.push({
+      id: newId(),
+      name: screenName(command.name),
+      width: command.width,
+      height: command.height,
+      objects: [
+        {
+          id: newId(),
+          order: 0,
+          x: command.width * 0.2,
+          y: command.height * 0.2,
+          width: command.width * 0.6,
+          height: command.height * 0.6,
+          fill: "#83bfcd",
+          shape: { type: "rectangle" },
+        },
+      ],
+    });
+    return finish(project, next);
+  }
+  if (
+    command.type === "update-symbol" ||
+    command.type === "duplicate-symbol" ||
+    command.type === "remove-symbol" ||
+    command.type === "place-symbol"
+  ) {
+    const definition = next.symbols.find((s) => s.id === command.symbolId);
+    if (!definition) throw new Error("Symbol 定義が見つかりません");
+    if (command.type === "update-symbol")
+      Object.assign(definition, {
+        name: screenName(command.name),
+        width: command.width,
+        height: command.height,
+      });
+    else if (command.type === "duplicate-symbol") {
+      const copy: SymbolDefinition = JSON.parse(JSON.stringify(definition));
+      copy.id = newId();
+      copy.name = definition.name.slice(0, 196) + " コピー";
+      copy.objects.forEach((o) => (o.id = newId()));
+      next.symbols.push(copy);
+    } else if (command.type === "remove-symbol") {
+      if (symbolUsage(next, definition.id))
+        throw new Error("配置で使用中の Symbol 定義は削除できません");
+      next.symbols = next.symbols.filter((s) => s.id !== definition.id);
+    } else {
+      const target = next.screens.find((s) => s.id === command.screenId);
+      if (!target) throw new Error("画面が見つかりません");
+      target.objects.push({
+        id: newId(),
+        order: Math.max(-1, ...target.objects.map((o) => o.order)) + 1,
+        x: 40,
+        y: 40,
+        width: definition.width,
+        height: definition.height,
+        fill: "#2dd4bf",
+        shape: { type: "symbol", symbolId: definition.id },
+      });
+    }
+    return finish(project, next);
+  }
   if (command.type === "create-screen") {
     next.screens.push({
       id: newId(),
@@ -102,7 +204,12 @@ export function applyCommand(
     });
     return finish(project, next);
   }
-  const screen = next.screens.find((s) => s.id === command.screenId);
+  const definitionId = isObjectCommand(command)
+    ? command.definitionId
+    : undefined;
+  const screen = definitionId
+    ? next.symbols.find((s) => s.id === definitionId)
+    : next.screens.find((s) => s.id === command.screenId);
   if (!screen) throw new Error("画面が見つかりません");
   if (command.type === "update-screen") {
     Object.assign(screen, {
@@ -193,6 +300,8 @@ export function applyCommand(
       fill: "#2dd4bf",
     };
     if (command.type === "add-symbol") {
+      if (definitionId)
+        throw new Error("Symbol 定義の入れ子には対応していません");
       const definition = builtins[
         command.template
       ] as unknown as SymbolDefinition;
@@ -235,6 +344,26 @@ export function applyCommand(
             ? { type: "text", text: "テキスト" }
             : { type: command.kind },
       });
+    }
+    if (definitionId) {
+      const added = screen.objects.at(-1)!;
+      added.x = screen.width * 0.1;
+      added.y = screen.height * 0.1;
+      if ("width" in added) {
+        added.width = Math.min(added.width, screen.width * 0.6);
+        added.height = Math.min(added.height, screen.height * 0.6);
+      } else {
+        const bounds = getBounds(added);
+        const scale = Math.min(
+          1,
+          (screen.width * 0.6) / bounds.width,
+          (screen.height * 0.6) / bounds.height,
+        );
+        added.shape.points = added.shape.points.map((p) => ({
+          x: p.x * scale,
+          y: p.y * scale,
+        }));
+      }
     }
   } else {
     const index = screen.objects.findIndex((o) => o.id === command.objectId);
@@ -304,6 +433,8 @@ function screenName(name: string): string {
   return trimmed;
 }
 function finish(project: Project, next: Project): Project {
+  if (next.symbols.some((s) => s.objects.length === 0))
+    throw new Error("Symbol 定義には図形を 1 つ以上残してください");
   if (serializeProject(next) === serializeProject(project)) return project;
   next.manifest.projectRevision++;
   return parseProject(JSON.stringify(next));

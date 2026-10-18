@@ -17,6 +17,7 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
   const added = svg.locator("[data-object-id]").last();
   await expect(added).toHaveAttribute("transform", "translate(230.5 400)");
   await expect(added.locator("rect").first()).toHaveAttribute("width", "180");
+  await added.scrollIntoViewIfNeeded();
   const box = await added.boundingBox();
   const canvas = await svg.boundingBox();
   if (!box || !canvas) throw Error("missing SVG geometry");
