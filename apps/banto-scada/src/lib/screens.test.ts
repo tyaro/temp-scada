@@ -131,3 +131,71 @@ it("restores screen collections through history with increasing revisions", () =
     fresh().manifest.projectRevision + 4,
   );
 });
+
+it("reorders complete screens without changing identities, data or selection targets, with one history operation", () => {
+  let original = fresh();
+  original = applyCommand(
+    original,
+    { type: "duplicate-screen", screenId: original.screens[0].id },
+    "edit",
+  );
+  original = applyCommand(
+    original,
+    { type: "create-screen", name: "工程 C", width: 800, height: 600 },
+    "edit",
+  );
+  const ids = original.screens.map((s) => s.id);
+  const command: EditCommand = {
+    type: "reorder-screen",
+    screenId: ids[1],
+    direction: "up",
+  };
+  let state = recordEdit(original, emptyHistory(), command, "edit");
+  expect(state.project.screens).toEqual([
+    original.screens[1],
+    original.screens[0],
+    original.screens[2],
+  ]);
+  expect(state.project.symbols).toEqual(original.symbols);
+  expect(state.project.manifest.projectRevision).toBe(
+    original.manifest.projectRevision + 1,
+  );
+  expect(state.history.past).toHaveLength(1);
+  expect(parseProject(serializeProject(state.project))).toEqual(state.project);
+  state = travelHistory(state.project, state.history, "undo", "edit");
+  expect(state.project.screens).toEqual(original.screens);
+  state = travelHistory(state.project, state.history, "redo", "edit");
+  expect(state.project.screens[0].id).toBe(ids[1]);
+  const down = applyCommand(
+    state.project,
+    { type: "reorder-screen", screenId: ids[1], direction: "down" },
+    "edit",
+  );
+  expect(down.screens).toEqual(original.screens);
+  expect(original.screens.map((s) => s.id)).toEqual(ids);
+});
+it("does not record moves beyond screen boundaries and rejects missing targets and preview changes", () => {
+  const original = fresh(),
+    screenId = original.screens[0].id;
+  for (const direction of ["up", "down"] as const) {
+    const command: EditCommand = {
+      type: "reorder-screen",
+      screenId,
+      direction,
+    };
+    expect(
+      recordEdit(original, emptyHistory(), command, "edit").history.past,
+    ).toHaveLength(0);
+    expect(applyCommand(original, command, "edit")).toBe(original);
+    expect(() => applyCommand(original, command, "preview")).toThrow(
+      "プレビュー",
+    );
+  }
+  expect(() =>
+    applyCommand(
+      original,
+      { type: "reorder-screen", screenId: "missing", direction: "up" },
+      "edit",
+    ),
+  ).toThrow("画面");
+});

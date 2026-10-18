@@ -31,6 +31,7 @@ type ScreenCommand =
       width: number;
       height: number;
     }
+  | { type: "reorder-screen"; screenId: string; direction: "up" | "down" }
   | { type: "duplicate-screen"; screenId: string }
   | { type: "remove-screen"; screenId: string };
 export type ObjectCommand = (
@@ -230,6 +231,17 @@ export function applyCommand(
       width: command.width,
       height: command.height,
     });
+    return finish(project, next);
+  }
+  if (command.type === "reorder-screen") {
+    const from = next.screens.findIndex((item) => item.id === screen.id);
+    const to =
+      command.direction === "up"
+        ? Math.max(0, from - 1)
+        : Math.min(next.screens.length - 1, from + 1);
+    if (from === to) return project;
+    const [item] = next.screens.splice(from, 1);
+    next.screens.splice(to, 0, item);
     return finish(project, next);
   }
   if (command.type === "duplicate-screen") {

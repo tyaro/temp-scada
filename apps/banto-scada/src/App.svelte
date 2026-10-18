@@ -612,6 +612,27 @@
             edit({ type: "duplicate-screen", screenId: screen.id })}
           >画面を複製</button
         >
+        <div class="actions" role="group" aria-label="画面の並び順">
+          <button
+            disabled={project.screens[0].id === screen.id}
+            onclick={() =>
+              edit({
+                type: "reorder-screen",
+                screenId: screen.id,
+                direction: "up",
+              })}>画面を上へ</button
+          >
+          <button
+            disabled={project.screens.at(-1)?.id === screen.id}
+            onclick={() =>
+              edit({
+                type: "reorder-screen",
+                screenId: screen.id,
+                direction: "down",
+              })}>画面を下へ</button
+          >
+        </div>
+        <p>画面順は JSON に保存され、読込時は先頭の画面を開きます。</p>
         <button disabled={project.screens.length === 1} onclick={removeScreen}
           >画面を削除</button
         >
