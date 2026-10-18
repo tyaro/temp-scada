@@ -1,4 +1,16 @@
 <script lang="ts">
+  import { PageHeader, SurfaceCard, StatusBadge, ToastHost } from "@banto/ui";
+  import { notify, type NotificationKind } from "@banto/admin-core";
+  import { isThemeMode } from "@banto/theme";
+  import { getThemeMode, setThemeMode, toastStore } from "./lib/banto/setup";
+  let theme = $state(getThemeMode());
+  function changeTheme(event: Event) {
+    const value = (event.currentTarget as HTMLSelectElement).value;
+    if (isThemeMode(value)) {
+      theme = value;
+      void setThemeMode(value);
+    }
+  }
   import sample from "../../../examples/minimal.project.json";
   import Renderer from "./lib/Renderer.svelte";
   import { parseProject, serializeProject } from "./lib/project";
@@ -13,6 +25,10 @@
   );
   let message = $state("サンプルを表示しています。Hub には接続していません。");
   let busy = $state(false);
+  function report(kind: NotificationKind, text: string) {
+    message = text;
+    notify(kind, text);
+  }
   let selected = $derived(screen.objects.find((o) => o.id === selectedId));
   function edit(command: EditCommand) {
     try {
@@ -22,9 +38,15 @@
           .find((s) => s.id === screenId)!
           .objects.at(-1)!.id;
       if (command.type === "remove") selectedId = null;
-      message = "変更を適用しました。JSON を保存するとファイルに残せます。";
+      report(
+        "success",
+        "変更を適用しました。JSON を保存するとファイルに残せます。",
+      );
     } catch (e) {
-      message = `編集エラー: ${e instanceof Error ? e.message : String(e)}`;
+      report(
+        "error",
+        `編集エラー: ${e instanceof Error ? e.message : String(e)}`,
+      );
     }
   }
   function add(kind: ScreenObject["shape"]["type"]) {
@@ -63,9 +85,12 @@
       project = next;
       screenId = next.screens[0].id;
       selectedId = null;
-      message = "Project を読み込みました。";
+      report("success", "Project を読み込みました。");
     } catch (e) {
-      message = `読込エラー: ${e instanceof Error ? e.message : String(e)}`;
+      report(
+        "error",
+        `読込エラー: ${e instanceof Error ? e.message : String(e)}`,
+      );
     } finally {
       busy = false;
       input.value = "";
@@ -80,7 +105,7 @@
     link.download = "project.json";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    message = "Project JSON を保存しました。";
+    report("success", "Project JSON を保存しました。");
   }
 </script>
 
@@ -90,31 +115,44 @@
     content="Banto SCADA の初期 Project エディタ"
   /></svelte:head
 >
-<header>
-  <div>
-    <span class="brand">BANTO / SCADA</span>
-    <h1>{project.manifest.name}</h1>
-  </div>
-  <div class="mode" role="group" aria-label="表示モード">
-    <button
-      class:active={mode === "edit"}
-      aria-pressed={mode === "edit"}
-      onclick={() => {
-        mode = "edit";
-        selectedId = null;
-      }}>編集</button
-    >
-    <button
-      class:active={mode === "preview"}
-      aria-pressed={mode === "preview"}
-      onclick={() => {
-        mode = "preview";
-        selectedId = null;
-      }}>表示プレビュー</button
-    >
-    <span class="badge">Hub 未接続</span>
-  </div>
-</header>
+<div class="app-header">
+  <PageHeader
+    title={project.manifest.name}
+    description="BANTO / SCADA · ローカルファイル編集"
+  >
+    {#snippet actions()}
+      <div class="mode" role="group" aria-label="表示モード">
+        <button
+          class:active={mode === "edit"}
+          aria-pressed={mode === "edit"}
+          onclick={() => {
+            mode = "edit";
+            selectedId = null;
+          }}>編集</button
+        >
+        <button
+          class:active={mode === "preview"}
+          aria-pressed={mode === "preview"}
+          onclick={() => {
+            mode = "preview";
+            selectedId = null;
+          }}>表示プレビュー</button
+        >
+        <StatusBadge variant="neutral" label="Hub 未接続" />
+        <label class="theme-label"
+          >テーマ<select
+            aria-label="テーマ"
+            value={theme}
+            onchange={changeTheme}
+            ><option value="dark">ダーク</option><option value="light"
+              >ライト</option
+            ><option value="system">システム</option></select
+          ></label
+        >
+      </div>
+    {/snippet}
+  </PageHeader>
+</div>
 <main>
   <aside>
     <h2>Project</h2>
@@ -181,82 +219,108 @@
     </div>
     {#if mode === "edit"}
       <div class="inspector">
-        <h2>プロパティ</h2>
-        {#if selected}
-          {#key project.manifest.projectRevision + selected.id}
-            <form onsubmit={properties}>
-              <div class="fields">
-                {#each ["x", "y", "width", "height"] as field}
+        <SurfaceCard title="プロパティ">
+          {#if selected}
+            {#key project.manifest.projectRevision + selected.id}
+              <form onsubmit={properties}>
+                <div class="fields">
+                  {#each ["x", "y", "width", "height"] as field}
+                    <label
+                      >{field}<input
+                        name={field}
+                        aria-label={field}
+                        type="number"
+                        step="any"
+                        required
+                        min={field === "width" || field === "height"
+                          ? 0.001
+                          : undefined}
+                        value={selected[
+                          field as "x" | "y" | "width" | "height"
+                        ]}
+                      /></label
+                    >
+                  {/each}
                   <label
-                    >{field}<input
-                      name={field}
-                      aria-label={field}
-                      type="number"
-                      step="any"
-                      required
-                      min={field === "width" || field === "height"
-                        ? 0.001
-                        : undefined}
-                      value={selected[field as "x" | "y" | "width" | "height"]}
+                    >色<input
+                      name="fill"
+                      aria-label="色"
+                      type="color"
+                      value={selected.fill}
                     /></label
                   >
-                {/each}
-                <label
-                  >色<input
-                    name="fill"
-                    aria-label="色"
-                    type="color"
-                    value={selected.fill}
-                  /></label
-                >
-                {#if selected.shape.type === "text"}<label
-                    >テキスト<input
-                      name="text"
-                      aria-label="テキスト"
-                      maxlength="1000"
-                      value={selected.shape.text}
-                    /></label
-                  >{/if}
-              </div>
-              <div class="actions">
-                <button type="submit">変更を適用</button><button
-                  type="button"
-                  onclick={() =>
-                    selected &&
-                    edit({
-                      type: "remove",
-                      screenId: screen.id,
-                      objectId: selected.id,
-                    })}>選択図形を削除</button
-                >
-              </div>
-            </form>
-          {/key}
-        {:else}<p>
-            図形をクリック、または一覧から選んでください。図形はドラッグして移動できます。
-          </p>{/if}
+                  {#if selected.shape.type === "text"}<label
+                      >テキスト<input
+                        name="text"
+                        aria-label="テキスト"
+                        maxlength="1000"
+                        value={selected.shape.text}
+                      /></label
+                    >{/if}
+                </div>
+                <div class="actions">
+                  <button type="submit">変更を適用</button><button
+                    type="button"
+                    onclick={() =>
+                      selected &&
+                      edit({
+                        type: "remove",
+                        screenId: screen.id,
+                        objectId: selected.id,
+                      })}>選択図形を削除</button
+                  >
+                </div>
+              </form>
+            {/key}
+          {:else}<p>
+              図形をクリック、または一覧から選んでください。図形はドラッグして移動できます。
+            </p>{/if}
+        </SurfaceCard>
       </div>
     {/if}
-    <p role="status">{message}</p>
+    <p role="status" data-testid="project-status">{message}</p>
   </section>
 </main>
+<ToastHost store={toastStore} />
 
 <style>
   :global(body) {
     margin: 0;
-    background: #101827;
-    color: #e2e8f0;
-    font-family: system-ui, sans-serif;
+    background: var(--banto-bg);
+    color: var(--banto-text);
+    font-family: var(--banto-font-family);
   }
   :global(*) {
     box-sizing: border-box;
   }
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .app-header {
     padding: 24px 32px;
-    border-bottom: 1px solid #334155;
+    border-bottom: 1px solid var(--banto-border);
+  }
+  .theme-label {
+    display: grid;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--banto-text-muted);
+  }
+  .theme-label select {
+    background: var(--banto-surface);
+    color: var(--banto-text);
+    border: 1px solid var(--banto-border);
+    border-radius: var(--banto-radius);
+    padding: 6px;
+  }
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible {
+    outline: none;
+    box-shadow: var(--banto-focus-ring);
+  }
+  button:hover {
+    border-color: var(--banto-primary);
+  }
+  .mode {
+    flex-wrap: wrap;
   }
   .mode,
   .actions {
@@ -271,9 +335,7 @@
   }
   .inspector {
     margin-top: 20px;
-    border: 1px solid #334155;
-    padding: 16px;
-    border-radius: 8px;
+    border-radius: var(--banto-radius);
   }
   .fields {
     display: grid;
@@ -283,37 +345,22 @@
   }
   .fields label {
     font-size: 12px;
-    color: #b5c5d8;
+    color: var(--banto-text-muted);
   }
   .fields input {
     display: block;
     width: 100%;
     height: 36px;
     margin-top: 6px;
-    background: #101827;
-    color: #e2e8f0;
-    border: 1px solid #475569;
+    background: var(--banto-bg);
+    color: var(--banto-text);
+    border: 1px solid var(--banto-border);
     padding: 6px;
     border-radius: 4px;
-  }
-  .brand {
-    color: #5eead4;
-    font-size: 12px;
-    letter-spacing: 3px;
-  }
-  h1 {
-    font-size: 22px;
-    margin: 8px 0 0;
   }
   h2 {
     font-size: 15px;
     margin: 0;
-  }
-  .badge {
-    background: #263448;
-    padding: 8px 12px;
-    border-radius: 20px;
-    font-size: 12px;
   }
   main {
     display: grid;
@@ -322,12 +369,12 @@
   }
   aside {
     padding: 24px;
-    border-right: 1px solid #334155;
+    border-right: 1px solid var(--banto-border);
   }
   p {
     font-size: 13px;
     line-height: 1.8;
-    color: #b5c5d8;
+    color: var(--banto-text-muted);
   }
   button,
   .file {
@@ -336,17 +383,17 @@
     text-align: left;
     padding: 12px;
     margin: 12px 0;
-    border: 1px solid #475569;
-    background: #1e293b;
-    color: #e2e8f0;
+    border: 1px solid var(--banto-border);
+    background: var(--banto-surface);
+    color: var(--banto-text);
     border-radius: 6px;
     font: inherit;
     font-size: 13px;
     cursor: pointer;
   }
   .active {
-    border-color: #2dd4bf;
-    color: #5eead4;
+    border-color: var(--banto-primary);
+    color: var(--banto-primary);
   }
   .file input {
     display: block;
@@ -356,7 +403,7 @@
   }
   hr {
     border: 0;
-    border-top: 1px solid #334155;
+    border-top: 1px solid var(--banto-border);
     margin: 28px 0;
   }
   .hint {
@@ -373,11 +420,11 @@
   }
   .toolbar span {
     font-size: 12px;
-    color: #94a3b8;
+    color: var(--banto-text-muted);
   }
   .canvas {
     aspect-ratio: 16/9;
-    border: 1px solid #334155;
+    border: 1px solid var(--banto-border);
     border-radius: 8px;
     overflow: hidden;
   }
@@ -390,15 +437,12 @@
     }
     aside {
       border-right: 0;
-      border-bottom: 1px solid #334155;
+      border-bottom: 1px solid var(--banto-border);
     }
-    header {
+    .app-header {
       padding: 20px;
       gap: 16px;
       flex-wrap: wrap;
-    }
-    .badge {
-      white-space: nowrap;
     }
   }
 </style>

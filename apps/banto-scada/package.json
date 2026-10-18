@@ -11,14 +11,17 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "svelte": "5.57.2",
-    "ajv": "8.20.0"
+    "@banto/admin-core": "github:tyaro/banto#v6.7.0&path:packages/admin-core",
+    "@banto/theme": "github:tyaro/banto#v6.7.0&path:packages/theme",
+    "@banto/ui": "github:tyaro/banto#v6.7.0&path:packages/ui",
+    "ajv": "8.20.0",
+    "svelte": "5.57.2"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "7.3.1",
-    "vite": "8.3.4",
-    "vitest": "5.0.5",
+    "svelte-check": "4.7.7",
     "typescript": "6.0.3",
-    "svelte-check": "4.7.7"
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
   }
 }

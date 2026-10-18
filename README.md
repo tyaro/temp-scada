@@ -1,8 +1,20 @@
 # Banto SCADA — 一時開発 workspace
 
-状態: **最小エディタ実装済み**。図形の追加・選択・移動・プロパティ編集・削除、Project JSON の保存・読込と表示プレビュー。Hub 接続・設備操作は未実装。
+状態: **Banto のフロントエンド基盤を導入し、最小エディタ実装済み**。図形の追加・選択・移動・プロパティ編集・削除、Project JSON の保存・読込と表示プレビュー。Hub 接続・設備操作は未実装。
 
 `tyaro/banto-industrial` で計画している SCADA を、同リポジトリの開発と並行して作るための一時 workspace です。最終的に `apps/banto-scada` と `crates/scada-*` を industrial に戻します。
+
+## Banto 基盤
+
+industrial と同じ **Banto v6.7.0** を git サブディレクトリ依存で利用します。`pnpm-lock.yaml` は参照先コミット `1ffe507da973ca5103ede93b5ca438cda7c28d4e` を固定しています。
+
+- `@banto/admin-core`: 起動時の `initBanto`、通知の接続、ローカル UI 設定の保存。
+- `@banto/theme`: アプリ外枠のカラートークン、ダーク / ライト / OS 連動。
+- `@banto/ui`: PageHeader、SurfaceCard、StatusBadge、ToastHost。
+
+現在は**ログインなしのローカルファイル編集**です。認証済みセッションは作らず、Project は Banto の CRUD リソースに見せかけず、既存の SCADA 編集コマンドと JSON 保存を使います。テーマ設定だけをブラウザのストレージに保存し、ストレージが利用できなくても編集を継続できます。アプリのテーマ変更は Project 内の図形色やキャンバス背景を変更しません。
+
+Banto の Rust サーバー・認証・ユーザー管理・Tauri の host はまだ接続していません。開発時はログイン不要、運用時はユーザー管理必須、再起動後はログインなしで閲覧専用の監視画面へ入る方針を [運用・ログイン方針](docs/access-policy.md) に記録しています。運用モードの切替機能は未実装です。
 
 ## 起動
 

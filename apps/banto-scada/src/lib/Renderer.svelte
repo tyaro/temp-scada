@@ -114,7 +114,7 @@
           width={object.width}
           height={object.height}
           fill="transparent"
-          stroke={selectedId === object.id ? "#fbbf24" : "none"}
+          stroke={selectedId === object.id ? "var(--banto-warning)" : "none"}
           stroke-width="2"
           vector-effect="non-scaling-stroke"
         />

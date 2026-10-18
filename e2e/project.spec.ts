@@ -21,7 +21,7 @@ test("sample renders, downloads, reloads, and invalid import preserves current s
     mimeType: "application/json",
     buffer: Buffer.from(downloaded),
   });
-  await expect(page.getByRole("status")).toContainText(
+  await expect(page.getByTestId("project-status")).toContainText(
     "Project を読み込みました",
   );
   const changed = structuredClone(sample);
@@ -44,7 +44,7 @@ test("sample renders, downloads, reloads, and invalid import preserves current s
     mimeType: "application/json",
     buffer: Buffer.from('{"screens":[]}'),
   });
-  await expect(page.getByRole("status")).toContainText("読込エラー");
+  await expect(page.getByTestId("project-status")).toContainText("読込エラー");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "読込テスト",
   );
