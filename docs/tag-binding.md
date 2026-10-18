@@ -66,6 +66,8 @@ SDK は未解決名が 1 件でもあると購読全体の current を公開し�
 
 ## 次の接続段階
 
+Tag Browser の画面とタグ選択の操作は [UI 改訂提案](designer-ui-revision.md)、Equipment / slot・動的表示・監視オブジェクトへの拡張は [統合設計](scada-integrated-design.md) を参照する。画像中の BOOL slot は将来案で、現行 Text の数値型契約を変更しない。選択したタグは Inspector の未適用入力へ返し、既存の適用コマンドで Project へ反映する。
+
 実接続は `banto-tagclient` を固定コミットで利用する Rust host から行う。フロントエンドで SDK の接続・購読・再解決・時刻による Stale 判定を再実装しない。式を導入するときも `banto-expr` を利用する。
 
 host は catalog と実行世代を照合した SDK の current 値だけを `resolved` として公開し、SDK の品質・未解決・接続状態をこの表示契約へ変換する。数値型かを確認し、未対応型は `invalid` にする。切断・config_changed・Project 置換・再接続中は旧 Map を current として再利用せず、SDK の新しい snapshot が成立してから値を渡す。単なる Map はこの成立条件を検証しない。
