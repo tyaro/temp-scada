@@ -15,11 +15,13 @@
     contextKey,
     items,
     children,
+    floating = false,
   }: {
     label: string;
     contextKey: string;
     items: ContextAction[];
-    children: Snippet;
+    children?: Snippet;
+    floating?: boolean;
   } = $props();
   let root = $state<HTMLDivElement>();
   let menuButton = $state<HTMLButtonElement>();
@@ -33,6 +35,36 @@
     const element = root;
     if (element) popup()?.matches(":popover-open") && popup()?.hidePopover();
   });
+  let anchor = $state({ x: 0, y: 0 });
+  export async function show(
+    opener: HTMLElement,
+    point?: { x: number; y: number },
+  ) {
+    const key = contextKey;
+    const rect = opener.getBoundingClientRect();
+    const menu = popup();
+    if (menu?.matches(":popover-open")) menu.hidePopover();
+    if (menu && menuButton?.getAttribute("aria-expanded") === "true") {
+      await new Promise<void>((resolve) =>
+        menu.addEventListener("toggle", () => resolve(), { once: true }),
+      );
+    }
+    anchor = point ?? { x: rect.left, y: rect.bottom };
+    await tick();
+    // Let native toggle finish before Banto's next trigger activation.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+    if (
+      key !== contextKey ||
+      !opener.isConnected ||
+      !opener.getClientRects().length
+    )
+      return;
+    origin = opener;
+    menuButton?.focus({ preventScroll: true });
+    menuButton?.click();
+  }
   function manage(element: HTMLDivElement) {
     function target(event: Event) {
       const node = event.target;
@@ -74,18 +106,42 @@
       await tick();
       // Banto restores its trigger first; return to the actual right-click/keyboard origin.
       if (
-        previous?.isConnected &&
-        previous.getClientRects().length &&
-        (document.activeElement === menuButton ||
-          document.activeElement === document.body)
-      )
-        previous.focus({ preventScroll: true });
+        document.activeElement === menuButton ||
+        document.activeElement === document.body
+      ) {
+        if (previous?.isConnected && previous.getClientRects().length)
+          previous.focus({ preventScroll: true });
+        else if (floating)
+          document
+            .querySelector<HTMLButtonElement>("[data-permanent-menu]")
+            ?.focus();
+      }
     }
+    function constrain() {
+      if (!floating) return;
+      requestAnimationFrame(() => {
+        const menu = popup();
+        if (!menu?.matches(":popover-open")) return;
+        const rect = menu.getBoundingClientRect();
+        menu.style.top = `${Math.max(4, Math.min(rect.top, document.documentElement.clientHeight - rect.height - 4))}px`;
+      });
+    }
+    function opened(event: Event) {
+      if (
+        event.target === popup() &&
+        (event as ToggleEvent).newState === "open"
+      )
+        constrain();
+    }
+    window.addEventListener("resize", constrain);
+    element.addEventListener("toggle", opened, true);
     element.addEventListener("contextmenu", open);
     element.addEventListener("keydown", keyboard);
     element.addEventListener("toggle", closed, true);
     return {
       destroy() {
+        window.removeEventListener("resize", constrain);
+        element.removeEventListener("toggle", opened, true);
         element.removeEventListener("contextmenu", open);
         element.removeEventListener("keydown", keyboard);
         element.removeEventListener("toggle", closed, true);
@@ -94,14 +150,24 @@
   }
 </script>
 
-<div class="context-anchor" bind:this={root} use:manage use:settleMenuFocus>
-  {@render children()}
+<div
+  class="context-anchor"
+  class:floating
+  style:left={floating ? `${anchor.x}px` : undefined}
+  style:top={floating ? `${anchor.y}px` : undefined}
+  bind:this={root}
+  use:manage
+  use:settleMenuFocus
+>
+  {@render children?.()}
   <Menu label={`${label} の操作`} placement="bottom-start">
     {#snippet trigger(props)}
       <button
         {...props}
         bind:this={menuButton}
         type="button"
+        tabindex={floating ? -1 : 0}
+        aria-hidden={floating ? true : undefined}
         class="more"
         aria-label={`操作：${label}`}
         title={`${label} の操作`}
@@ -138,6 +204,24 @@
   .context-anchor {
     position: relative;
     min-width: 0;
+  }
+  .floating {
+    position: fixed;
+    width: 0;
+    height: 0;
+  }
+  .floating .more {
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    right: auto;
+    opacity: 0 !important;
+    pointer-events: none;
+  }
+  .floating :global([popover]) {
+    max-height: calc(100dvh - 8px);
+    overflow-y: auto;
   }
   .more {
     position: absolute;

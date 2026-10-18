@@ -84,7 +84,7 @@ test("deep copies a definition for one placement, edits it independently and und
   const screens = page.getByRole("navigation", { name: "画面一覧" });
   const list = page.getByRole("navigation", { name: "図形一覧" });
   await selectPanel(page, "レイヤー");
-  await list.getByRole("button", { name: /ポンプ/ }).click();
+  await list.getByRole("button", { name: /^ポンプ/ }).click();
   const originalSymbol = await page
     .getByLabel("参照する Symbol 定義", { exact: true })
     .inputValue();
@@ -96,7 +96,7 @@ test("deep copies a definition for one placement, edits it independently and und
   await button("元に戻す").click();
   await expect(page.getByRole("note")).toHaveCount(0);
   await selectPanel(page, "レイヤー");
-  await list.getByRole("button", { name: /ポンプ/ }).click();
+  await list.getByRole("button", { name: /^ポンプ/ }).click();
   await expect(
     page.getByLabel("参照する Symbol 定義", { exact: true }),
   ).toHaveValue(originalSymbol);

@@ -46,11 +46,15 @@
     bindingReferences,
     type BindingUsage,
   } from "./lib/binding-references";
+  import ContextActions, {
+    type ContextAction,
+  } from "./lib/designer/ContextActions.svelte";
   import type { Project } from "./lib/project";
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
   import CanvasWorkspace, {
     type CanvasView,
+    type CanvasContext,
   } from "./lib/designer/CanvasWorkspace.svelte";
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
   import DesignerSidebar, {
@@ -111,7 +115,11 @@
       });
   }
   function setInspectorVisibility(visible: boolean, focus = false) {
-    if (showInspector === visible) return;
+    if (showInspector === visible) {
+      if (visible && focus)
+        void tick().then(() => inspectorPanel?.focus({ preventScroll: true }));
+      return;
+    }
     setAuxPanelVisibility(
       { inspector: visible },
       focus ? "inspector" : undefined,
@@ -226,6 +234,7 @@
     serializeProject,
     parsePoints,
     type Point,
+    type ScreenObject,
   } from "./lib/project";
   import {
     type EditCommand,
@@ -714,6 +723,80 @@
       selectedIds = [];
     });
   }
+  let selectionMenu = $state<{
+    show: (origin: HTMLElement, point?: Point) => Promise<void>;
+  }>();
+  let contextKind = $state<"selection" | "blank">("blank");
+  let contextRequest = $state(0);
+  let contextPoint = $state<Point | null>(null);
+  const contextScope = $derived(
+    `${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${mode}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${showInspector}:${snapEnabled}:${gridSize}:${contextKind}:${busy}:${!!drafts.pending}:${!!replacement}:${contextRequest}`,
+  );
+  function objectLabel(object: ScreenObject) {
+    return `${object.shape.type === "symbol" ? (project.symbols.find((d) => object.shape.type === "symbol" && d.id === object.shape.symbolId)?.name ?? "Symbol") : object.shape.type} · ${object.order}`;
+  }
+  const selectionContextLabel = $derived(
+    contextKind === "blank"
+      ? "キャンバス"
+      : selectedIds.length > 1
+        ? `選択図形（${selectedIds.length} 件）`
+        : selected
+          ? objectLabel(selected)
+          : "選択図形",
+  );
+  function requestSelectionContext(request: CanvasContext) {
+    if (mode !== "edit" || busy || drafts.pending || replacement) return;
+    const generation = workspaceGeneration,
+      target = screen.id;
+    const finish = () => {
+      if (
+        mode !== "edit" ||
+        workspaceGeneration !== generation ||
+        screen.id !== target ||
+        (request.objectId &&
+          !screen.objects.some((object) => object.id === request.objectId))
+      )
+        return;
+      if (request.objectId && !selectedIds.includes(request.objectId))
+        selectedIds = [request.objectId];
+      const requestId = ++contextRequest;
+      contextKind = request.objectId ? "selection" : "blank";
+      contextPoint = request.designPoint;
+      void tick().then(() => {
+        if (
+          mode === "edit" &&
+          generation === workspaceGeneration &&
+          target === screen.id &&
+          requestId === contextRequest
+        )
+          void selectionMenu?.show(request.origin, request.point);
+      });
+    };
+    if (request.objectId && !selectedIds.includes(request.objectId))
+      transition(finish);
+    else finish();
+  }
+  function layerContext(objectId: string, origin: HTMLElement) {
+    const rect = origin.getBoundingClientRect();
+    requestSelectionContext({
+      objectId,
+      origin,
+      point: { x: rect.right, y: rect.bottom },
+      designPoint: null,
+    });
+  }
+  function layerContextKey(event: KeyboardEvent, objectId: string) {
+    if (
+      !event.isComposing &&
+      !event.ctrlKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))
+    ) {
+      event.preventDefault();
+      layerContext(objectId, event.currentTarget as HTMLElement);
+    }
+  }
   const menuBlocked = $derived(busy || !!drafts.pending || !!replacement);
   const editBlocked = $derived(menuBlocked || mode !== "edit");
   const editToolbarGroups: ToolbarGroup[] = $derived([
@@ -847,6 +930,76 @@
       })),
     },
   ]);
+  const selectionContextItems: ContextAction[] = $derived.by(() => {
+    const properties: ContextAction = {
+      label: "プロパティを表示",
+      run: () => setInspectorVisibility(true, true),
+    };
+    if (contextKind === "blank")
+      return [
+        ...(contextPoint
+          ? (
+              [
+                { kind: "rectangle", label: "Rectangle を挿入" },
+                { kind: "ellipse", label: "Ellipse を挿入" },
+                { kind: "text", label: "Text を挿入" },
+                { kind: "line", label: "線を挿入" },
+                { kind: "pipe", label: "配管を挿入" },
+              ] as const
+            ).map((part) => ({
+              label: part.label,
+              disabled: editBlocked,
+              run: () =>
+                edit({
+                  type: "add",
+                  screenId: screen.id,
+                  kind: part.kind,
+                  center: contextPoint!,
+                }),
+            }))
+          : []),
+        editToolbarGroups[1].items[0],
+        properties,
+        { label: "全体表示", run: () => canvasWorkspace?.zoom(null) },
+        {
+          label: "補助パネルをすべて隠す",
+          run: () => {
+            if (showSidebar || showInspector || showReferences)
+              toggleAuxPanels();
+          },
+        },
+      ];
+    return [
+      properties,
+      ...editToolbarGroups[1].items.slice(2),
+      ...(selectedIds.length > 1
+        ? editToolbarGroups[3].items
+        : editToolbarGroups[2].items),
+      ...(selected?.shape.type === "symbol"
+        ? [
+            {
+              label: "参照する Symbol 定義を編集",
+              run: () => {
+                if (selected?.shape.type === "symbol")
+                  openDefinition(selected.shape.symbolId);
+              },
+            },
+            {
+              label: "定義を複製してこの配置に適用",
+              disabled: editBlocked || project.symbols.length >= 100,
+              run: () => {
+                if (selected)
+                  edit({
+                    type: "make-symbol-unique",
+                    screenId: screen.id,
+                    objectId: selected.id,
+                  });
+              },
+            },
+          ]
+        : []),
+    ];
+  });
   const menuGroups: DesignerMenu[] = $derived([
     {
       label: "ファイル",
@@ -1046,6 +1199,21 @@
         onclick={() => changeMode("preview")}
         title="表示プレビュー">表示プレビュー</button
       >
+      {#if mode === "edit"}<button
+          aria-label="キャンバスの操作"
+          title="キャンバスの操作（Shift+F10）"
+          aria-haspopup="menu"
+          disabled={menuBlocked}
+          onclick={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            requestSelectionContext({
+              objectId: selectedIds[0] ?? null,
+              origin: event.currentTarget,
+              point: { x: rect.left, y: rect.bottom },
+              designPoint: canvasWorkspace?.visibleCenter() ?? null,
+            });
+          }}>⋮</button
+        >{/if}
     </div>
   {/snippet}
   {#snippet controls()}
@@ -1229,18 +1397,32 @@
             {screen.name} · {selectedIds.length} 件選択。下の配置ほど前面です。
           </p>
           <nav aria-label="図形一覧">
-            {#each [...screen.objects].sort((a, b) => a.order - b.order) as object}<button
-                class:active={selectedIds.includes(object.id)}
-                aria-pressed={selectedIds.includes(object.id)}
-                onclick={(event) => selectObjects(object.id, event.shiftKey)}
-                >{object.shape.type === "symbol"
-                  ? project.symbols.find(
-                      (s) =>
-                        object.shape.type === "symbol" &&
-                        s.id === object.shape.symbolId,
-                    )?.name
-                  : object.shape.type} · {object.order}</button
-              >{/each}
+            {#each [...screen.objects].sort((a, b) => a.order - b.order) as object (object.id)}
+              <div class="layer-entry">
+                <button
+                  class:active={selectedIds.includes(object.id)}
+                  aria-pressed={selectedIds.includes(object.id)}
+                  data-layer-id={object.id}
+                  onclick={(event) => selectObjects(object.id, event.shiftKey)}
+                  oncontextmenu={(event) => {
+                    event.preventDefault();
+                    layerContext(object.id, event.currentTarget);
+                  }}
+                  onkeydown={(event) => layerContextKey(event, object.id)}
+                  >{objectLabel(object)}</button
+                >
+                <button
+                  class="layer-more"
+                  aria-label={`操作：${objectLabel(object)}`}
+                  title={`${objectLabel(object)} の操作`}
+                  aria-haspopup="menu"
+                  onclick={(event) =>
+                    layerContext(object.id, event.currentTarget)}
+                  onkeydown={(event) => layerContextKey(event, object.id)}
+                  >⋮</button
+                >
+              </div>
+            {/each}
           </nav>
         {/if}
       {/snippet}
@@ -1312,6 +1494,7 @@
       <CanvasWorkspace
         bind:this={canvasWorkspace}
         onviewchange={(view) => (canvasView = view)}
+        oncontextrequest={requestSelectionContext}
         {screen}
         symbols={project.symbols}
         editable={mode === "edit"}
@@ -1386,6 +1569,13 @@
     />
   {/if}
 </main>
+<ContextActions
+  floating
+  bind:this={selectionMenu}
+  label={selectionContextLabel}
+  contextKey={contextScope}
+  items={selectionContextItems}
+/>
 <DraftPrompt guard={drafts} />
 <Modal
   open={helpOpen}
@@ -1457,6 +1647,31 @@
     flex-direction: column;
     padding: 0;
     overflow: hidden;
+  }
+  .layer-entry {
+    position: relative;
+  }
+  .layer-entry > button:first-child {
+    padding-right: 26px;
+  }
+  .layer-entry .layer-more {
+    position: absolute;
+    right: 3px;
+    top: 5px;
+    width: 22px;
+    height: 28px;
+    padding: 0;
+    margin: 0;
+    opacity: 0;
+  }
+  .layer-entry:hover .layer-more,
+  .layer-entry:focus-within .layer-more {
+    opacity: 1;
+  }
+  @media (hover: none) {
+    .layer-entry .layer-more {
+      opacity: 1;
+    }
   }
   .sidebar-files {
     padding: 8px 14px;

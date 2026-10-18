@@ -79,3 +79,9 @@
 
 - `compact-shell-light.png` / `compact-shell-dark.png`: グリッド・選択／パン・倍率・モード・保存状態を上部ツールバーへ移した実画面。ヘッダーはサブタイトルなしでテーマはアイコンメニュー。
 - 各テーマを指定した `scripts/capture-ui.mjs` の `scada-editor.png`（1600×1000）を保存した。アプリの通常操作で撮影し、画像や DOM は加工していない。
+
+## キャンバスとレイヤーの操作メニュー（2026-10-19）
+
+- `selection-context-light.png`: キャンバス上のポンプ配置を右クリックしたメニュー。
+- `layer-context-dark.png`: レイヤー一覧の同じ配置を右クリックしたメニュー。
+- 各テーマを指定した `scripts/capture-ui.mjs` の `scada-selection-context.png`（ライト）と `scada-layer-context.png`（ダーク）、1600×1000を保存した。アプリの通常操作で撮影し、画像と DOM は加工していない。

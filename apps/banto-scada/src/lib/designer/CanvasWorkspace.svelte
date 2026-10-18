@@ -1,4 +1,10 @@
 <script lang="ts" module>
+  export type CanvasContext = {
+    objectId: string | null;
+    origin: HTMLElement;
+    point: { x: number; y: number };
+    designPoint: { x: number; y: number } | null;
+  };
   export type CanvasView = {
     hand: boolean;
     zoom: number | null;
@@ -38,6 +44,7 @@
     canDropPart,
     ondropPart,
     onviewchange,
+    oncontextrequest,
   }: {
     screen: Screen;
     symbols: SymbolDefinition[];
@@ -58,6 +65,7 @@
     canDropPart: () => boolean;
     ondropPart: (token: string, center: Point) => void;
     onviewchange: (view: CanvasView) => void;
+    oncontextrequest: (request: CanvasContext) => void;
   } = $props();
   let viewport = $state<HTMLDivElement>();
   let dropPoint = $state<Point | null>(null);
@@ -269,11 +277,58 @@
         event.target.closest("input,textarea,select,[contenteditable]"))
     )
       return;
+    if (
+      event.key === "ContextMenu" ||
+      (event.shiftKey && event.key === "F10")
+    ) {
+      event.preventDefault();
+      requestContext();
+      return;
+    }
     if (event.code === "Space") {
       event.preventDefault();
       event.stopPropagation();
       space = true;
     }
+  }
+  function requestContext(event?: MouseEvent) {
+    if (!editable || !viewport) return;
+    event?.preventDefault();
+    const rect = viewport.getBoundingClientRect();
+    const point = event
+      ? { x: event.clientX, y: event.clientY }
+      : {
+          x: rect.left + viewport.clientWidth / 2,
+          y: rect.top + viewport.clientHeight / 2,
+        };
+    const svg = viewport.querySelector<SVGSVGElement>(".sheet > svg");
+    let designPoint: Point | null = event ? null : visibleCenter();
+    if (event && svg?.getScreenCTM()) {
+      const p = new DOMPoint(point.x, point.y).matrixTransform(
+        svg.getScreenCTM()!.inverse(),
+      );
+      if (
+        Number.isFinite(p.x) &&
+        Number.isFinite(p.y) &&
+        p.x >= 0 &&
+        p.x <= screen.width &&
+        p.y >= 0 &&
+        p.y <= screen.height
+      ) {
+        designPoint = {
+          x: snapEnabled && !event.altKey ? snapCoordinate(p.x, gridSize) : p.x,
+          y: snapEnabled && !event.altKey ? snapCoordinate(p.y, gridSize) : p.y,
+        };
+        designPoint.x = Math.max(0, Math.min(screen.width, designPoint.x));
+        designPoint.y = Math.max(0, Math.min(screen.height, designPoint.y));
+      }
+    }
+    const objectId = event
+      ? ((event.target as Element)
+          .closest("[data-object-id]")
+          ?.getAttribute("data-object-id") ?? null)
+      : (selectedIds[0] ?? null);
+    oncontextrequest({ objectId, origin: viewport, point, designPoint });
   }
   function releaseSpace(event: KeyboardEvent) {
     if (event.code === "Space") space = false;
@@ -352,6 +407,7 @@
   aria-label="キャンバス操作領域"
   aria-roledescription="工程図キャンバス"
   tabindex="0"
+  oncontextmenu={requestContext}
   onkeydowncapture={key}
   onpointerdowncapture={down}
   onpointermove={move}

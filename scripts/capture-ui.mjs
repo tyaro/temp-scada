@@ -56,6 +56,24 @@ try {
     .click();
   await expect(page.locator("[data-resize-handle]")).toHaveCount(8);
   await capture("scada-editor.png");
+  await page
+    .locator('[data-object-id][data-selected="true"]')
+    .first()
+    .click({ button: "right" });
+  await expect(
+    page.getByRole("menu", { name: "ポンプ · 10 の操作", exact: true }),
+  ).toBeVisible();
+  await capture("scada-selection-context.png");
+  await page.keyboard.press("Escape");
+  await page
+    .getByRole("navigation", { name: "図形一覧" })
+    .getByRole("button", { name: "ポンプ · 10", exact: true })
+    .click({ button: "right" });
+  await expect(
+    page.getByRole("menu", { name: "ポンプ · 10 の操作", exact: true }),
+  ).toBeVisible();
+  await capture("scada-layer-context.png");
+  await page.keyboard.press("Escape");
   await page.getByRole("tab", { name: "部品", exact: true }).click();
   await page
     .getByRole("region", { name: "部品パレット" })
