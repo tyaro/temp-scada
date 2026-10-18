@@ -390,6 +390,11 @@
       border-top: 1px solid var(--banto-border);
     }
   }
+  @media (min-width: 701px) and (max-width: 1099px) {
+    :global(main:not(.sidebar-visible)) .inspector {
+      grid-column: 1;
+    }
+  }
   @media (max-width: 700px) {
     .inspector {
       border-left: 0;

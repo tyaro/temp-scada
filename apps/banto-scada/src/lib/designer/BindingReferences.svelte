@@ -8,8 +8,12 @@
   let {
     references,
     onopen,
-  }: { references: BindingReference[]; onopen: (usage: BindingUsage) => void } =
-    $props();
+    onclose,
+  }: {
+    references: BindingReference[];
+    onopen: (usage: BindingUsage) => void;
+    onclose: () => void;
+  } = $props();
   let search = $state("");
   const filtered = $derived(searchReferences(references, search));
   const usageCount = $derived(
@@ -23,6 +27,7 @@
       >Project のタグ参照 · {references.length} タグ / {usageCount} 配置</summary
     >
     <section aria-label="Project のタグ参照">
+      <button class="close" onclick={onclose}>タグ参照一覧を隠す</button>
       <p>
         Project 内の割り当てから算出した一覧です。Hub
         のタグ一覧ではありません。使用箇所から編集できます。
@@ -76,6 +81,9 @@
 {/if}
 
 <style>
+  .close {
+    float: right;
+  }
   .references {
     margin-top: 16px;
     border: 1px solid var(--banto-border);

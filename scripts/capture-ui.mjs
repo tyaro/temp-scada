@@ -24,9 +24,9 @@ try {
   const button = (name) => page.getByRole("button", { name, exact: true });
   const sidebar = page.getByRole("complementary", { name: "Project と部品" });
   async function capture(name) {
-    await sidebar
-      .getByRole("tabpanel")
-      .evaluate((element) => (element.scrollTop = 0));
+    const panel = sidebar.getByRole("tabpanel");
+    if (await panel.count())
+      await panel.evaluate((element) => (element.scrollTop = 0));
     await page.evaluate(() => document.fonts.ready);
     // 通知は通常の閉じるボタンで片付ける。画面の DOM や描画内容は変えない。
     const dismiss = page.locator(".toast-host button.close");
@@ -64,6 +64,16 @@ try {
   await page
     .getByRole("menu", { name: "常設メニュー", exact: true })
     .getByRole("menuitem", { name: "プロパティを表示", exact: true })
+    .click();
+  await button("メニュー").click();
+  await page
+    .getByRole("menuitem", { name: "補助パネルをすべて隠す", exact: true })
+    .click();
+  await expect(sidebar).toHaveCount(0);
+  await capture("scada-canvas-only.png");
+  await button("メニュー").click();
+  await page
+    .getByRole("menuitem", { name: "補助パネルを元の表示に戻す", exact: true })
     .click();
   await button("参照する Symbol 定義を編集").click();
   await page.getByRole("tab", { name: "レイヤー", exact: true }).click();

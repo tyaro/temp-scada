@@ -63,23 +63,84 @@
   } from "./lib/designer/DesignerSidebar.svelte";
   let activePanel = $state<DesignerPanel>("project");
   function revealDraftForm(form: HTMLFormElement) {
-    if (form.dataset.editorForm === "screen") activePanel = "project";
-    else setInspectorVisibility(true);
+    if (form.dataset.editorForm === "screen") {
+      setAuxPanelVisibility({ sidebar: true });
+      activePanel = "project";
+    } else setInspectorVisibility(true);
   }
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
   let showInspector = $state(true);
-  function setInspectorVisibility(visible: boolean, focus = false) {
-    if (showInspector === visible) return;
+  let showSidebar = $state(true);
+  let showReferences = $state(true);
+  type AuxVisibility = {
+    sidebar: boolean;
+    inspector: boolean;
+    references: boolean;
+  };
+  let previousPanels = $state<AuxVisibility | null>(null);
+  let sidebarPanel = $state<HTMLElement>();
+  let referencesPanel = $state<HTMLDivElement>();
+  function panelVisibility(): AuxVisibility {
+    return {
+      sidebar: showSidebar,
+      inspector: showInspector,
+      references: showReferences,
+    };
+  }
+  function setAuxPanelVisibility(
+    patch: Partial<AuxVisibility>,
+    focus?: keyof AuxVisibility,
+  ) {
     canvasWorkspace?.preparePanelResize();
-    showInspector = visible;
+    previousPanels = null;
+    if (patch.sidebar !== undefined) showSidebar = patch.sidebar;
+    if (patch.inspector !== undefined) showInspector = patch.inspector;
+    if (patch.references !== undefined) showReferences = patch.references;
     if (focus)
       void tick().then(() => {
-        if (visible) inspectorPanel?.focus({ preventScroll: true });
+        const visible = panelVisibility()[focus];
+        const panel =
+          focus === "sidebar"
+            ? sidebarPanel
+            : focus === "inspector"
+              ? inspectorPanel
+              : referencesPanel;
+        if (visible) panel?.focus({ preventScroll: true });
         else
           document
             .querySelector<HTMLButtonElement>("[data-permanent-menu]")
             ?.focus();
       });
+  }
+  function setInspectorVisibility(visible: boolean, focus = false) {
+    if (showInspector === visible) return;
+    setAuxPanelVisibility(
+      { inspector: visible },
+      focus ? "inspector" : undefined,
+    );
+  }
+  function toggleAuxPanels() {
+    const current = panelVisibility();
+    const restore = previousPanels;
+    if (restore) setAuxPanelVisibility(restore);
+    else if (Object.values(current).some(Boolean)) {
+      setAuxPanelVisibility({
+        sidebar: false,
+        inspector: false,
+        references: false,
+      });
+      previousPanels = current;
+    } else
+      setAuxPanelVisibility({
+        sidebar: true,
+        inspector: true,
+        references: true,
+      });
+    void tick().then(() =>
+      document
+        .querySelector<HTMLButtonElement>("[data-permanent-menu]")
+        ?.focus(),
+    );
   }
   import PartPalette from "./lib/designer/PartPalette.svelte";
   import type { PalettePart } from "./lib/designer/palette-drag";
@@ -333,6 +394,7 @@
   }
   function openDefinition(id: string) {
     if (!drafts.allow(() => openDefinition(id))) return;
+    setAuxPanelVisibility({ sidebar: true });
     editingSymbolId = id;
     activePanel = "project";
     libraryId = id;
@@ -704,6 +766,30 @@
       label: "表示",
       items: [
         {
+          label: showSidebar ? "左パネルを隠す" : "左パネルを表示",
+          disabled: mode !== "edit",
+          run: () =>
+            setAuxPanelVisibility({ sidebar: !showSidebar }, "sidebar"),
+        },
+        {
+          label: showReferences ? "タグ参照一覧を隠す" : "タグ参照一覧を表示",
+          disabled: mode !== "edit",
+          run: () =>
+            setAuxPanelVisibility(
+              { references: !showReferences },
+              "references",
+            ),
+        },
+        {
+          label: previousPanels
+            ? "補助パネルを元の表示に戻す"
+            : Object.values(panelVisibility()).some(Boolean)
+              ? "補助パネルをすべて隠す"
+              : "補助パネルをすべて表示",
+          disabled: mode !== "edit",
+          run: toggleAuxPanels,
+        },
+        {
           label: showInspector ? "プロパティを隠す" : "プロパティを表示",
           disabled: mode !== "edit",
           run: () => setInspectorVisibility(!showInspector, true),
@@ -844,9 +930,24 @@
 {#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
 <main
   class:editing={mode === "edit"}
+  class:sidebar-visible={mode !== "edit" || showSidebar}
   class:inspector-visible={showInspector && mode === "edit"}
 >
-  <aside class="project-sidebar" aria-label="Project と部品">
+  <aside
+    class="project-sidebar"
+    aria-label="Project と部品"
+    hidden={mode === "edit" && !showSidebar}
+    bind:this={sidebarPanel}
+    tabindex="-1"
+  >
+    {#if mode === "edit"}<div class="sidebar-heading">
+        <span>作業パネル</span><button
+          aria-label="左パネルを隠す"
+          title="左パネルを隠す"
+          onclick={() => setAuxPanelVisibility({ sidebar: false }, "sidebar")}
+          >×</button
+        >
+      </div>{/if}
     <div class="save-state" data-testid="save-state">
       <StatusBadge
         variant={projectChanged ? "warning" : "neutral"}
@@ -1144,9 +1245,22 @@
     {/key}
     <p role="status" data-testid="project-status">{message}</p>
     {#if mode === "edit"}
-      {#key workspaceGeneration}
-        <BindingReferences {references} onopen={openBinding} />
-      {/key}
+      <div
+        hidden={!showReferences}
+        bind:this={referencesPanel}
+        tabindex="-1"
+        role="region"
+        aria-label="タグ参照パネル"
+      >
+        {#key workspaceGeneration}
+          <BindingReferences
+            {references}
+            onopen={openBinding}
+            onclose={() =>
+              setAuxPanelVisibility({ references: false }, "references")}
+          />
+        {/key}
+      </div>
     {/if}
   </section>
   {#if mode === "edit"}
@@ -1186,7 +1300,8 @@
   </p>
   <p>
     メニューバーは左右キー、項目は上下キー、Enter / Space で実行、Esc
-    で閉じます。非表示後は上部の「メニュー」→「表示」から復元できます。
+    で閉じます。メニューバー・左パネル・プロパティ・タグ参照一覧は、上部の「メニュー」→「表示」から隠す／復元できます。
+    「補助パネルをすべて隠す」からは直前の表示に戻せます。個別の表示切替を行うと、一時的な一括非表示を終了します。
   </p>
   <p>
     表示プレビューは見た目の確認用です。Hub・設備との接続、認証、正式 Runtime
@@ -1358,9 +1473,30 @@
   }
   main {
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     flex: 1;
     min-height: 0;
+  }
+  main.sidebar-visible {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+  [hidden] {
+    display: none;
+  }
+  .sidebar-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    border-bottom: 1px solid var(--banto-border);
+    font-size: 12px;
+    color: var(--banto-text-muted);
+  }
+  .sidebar-heading button {
+    width: 28px;
+    margin: 0;
+    padding: 2px;
+    font-size: 18px;
   }
   aside {
     padding: 16px;
@@ -1459,6 +1595,9 @@
       overflow: hidden;
     }
     main.editing.inspector-visible {
+      grid-template-columns: minmax(0, 1fr) 288px;
+    }
+    main.editing.sidebar-visible.inspector-visible {
       grid-template-columns: 240px minmax(0, 1fr) 288px;
     }
     main > aside,
@@ -1476,7 +1615,8 @@
     }
   }
   @media (max-width: 700px) {
-    main {
+    main,
+    main.sidebar-visible {
       grid-template-columns: 1fr;
     }
     aside {

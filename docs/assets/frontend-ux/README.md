@@ -57,3 +57,9 @@
 - `inspector-hidden-light.png`: プロパティを隠して中央へ幅を戻した状態。
 
 `scripts/capture-ui.mjs` の `scada-parts.png` / `scada-wide-canvas.png` をコピーした実画面。ライトテーマ、Chromium、1600×1000 CSS px、工程図サンプルを使い、同じポンプを選択した状態で表示を切り替えて撮影した。
+
+## 補助パネルの一括非表示（2026-10-19）
+
+- `panels-hidden-light.png` / `panels-hidden-dark.png`: 実装済み工程図サンプルで左パネル・プロパティ・タグ参照一覧を一括非表示にした実画面。
+- `SCADA_SCREENSHOT_THEME=light` / `dark` を指定して `scripts/capture-ui.mjs` が出力する `scada-canvas-only.png` を保存した。1600×1000。アプリの通常操作で撮影し、画像や DOM は加工していない。
+- ドッキング・保存配置・設備のライブ接続の完成を示す画像ではない。
