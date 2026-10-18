@@ -1,4 +1,9 @@
-import { parseProject, serializeProject, type Project } from "./project";
+import {
+  parseProject,
+  serializeProject,
+  getBounds,
+  type Project,
+} from "./project";
 import builtins from "./symbol-library.json";
 import type { Point, SymbolDefinition } from "./project";
 export type AddKind = "rectangle" | "ellipse" | "text" | "line" | "pipe";
@@ -13,7 +18,28 @@ export interface ObjectPatch {
   strokeWidth?: number;
   arrow?: "none" | "end";
 }
+export type AlignMode =
+  "left" | "right" | "top" | "bottom" | "center-x" | "center-y";
 export type EditCommand =
+  | {
+      type: "move-many";
+      screenId: string;
+      objectIds: string[];
+      dx: number;
+      dy: number;
+    }
+  | {
+      type: "duplicate-many";
+      screenId: string;
+      objectIds: string[];
+    }
+  | {
+      type: "align";
+      screenId: string;
+      objectIds: string[];
+      alignment: AlignMode;
+    }
+  | { type: "remove-many"; screenId: string; objectIds: string[] }
   | { type: "add"; screenId: string; kind: AddKind }
   | { type: "add-symbol"; screenId: string; template: "pump" | "valve" }
   | { type: "update"; screenId: string; objectId: string; patch: ObjectPatch }
@@ -51,7 +77,65 @@ export function applyCommand(
   const next = parseProject(serializeProject(project));
   const screen = next.screens.find((s) => s.id === command.screenId);
   if (!screen) throw new Error("画面が見つかりません");
-  if (command.type === "add" || command.type === "add-symbol") {
+  if (
+    command.type === "move-many" ||
+    command.type === "duplicate-many" ||
+    command.type === "remove-many" ||
+    command.type === "align"
+  ) {
+    const ids = new Set(command.objectIds);
+    if (ids.size === 0 || ids.size !== command.objectIds.length)
+      throw new Error("選択する図形の ID が空または重複しています");
+    const objects = screen.objects
+      .filter((o) => ids.has(o.id))
+      .sort((a, b) => a.order - b.order);
+    if (objects.length !== ids.size)
+      throw new Error("選択した図形が見つかりません");
+    if (command.type === "move-many") {
+      if (!Number.isFinite(command.dx) || !Number.isFinite(command.dy))
+        throw new Error("移動量は有限の数値にしてください");
+      objects.forEach((o) => {
+        o.x += command.dx;
+        o.y += command.dy;
+      });
+    } else if (command.type === "remove-many")
+      screen.objects = screen.objects.filter((o) => !ids.has(o.id));
+    else if (command.type === "duplicate-many") {
+      const order = Math.max(-1, ...screen.objects.map((o) => o.order)) + 1;
+      objects.forEach((o, i) => {
+        const copy = JSON.parse(JSON.stringify(o));
+        copy.id = newId();
+        copy.x += 20;
+        copy.y += 20;
+        copy.order = order + i;
+        screen.objects.push(copy);
+      });
+    } else {
+      const bounds = objects.map((o) => {
+        const b = getBounds(o);
+        return {
+          left: o.x + b.x,
+          right: o.x + b.x + b.width,
+          top: o.y + b.y,
+          bottom: o.y + b.y + b.height,
+        };
+      });
+      const left = Math.min(...bounds.map((b) => b.left)),
+        right = Math.max(...bounds.map((b) => b.right));
+      const top = Math.min(...bounds.map((b) => b.top)),
+        bottom = Math.max(...bounds.map((b) => b.bottom));
+      objects.forEach((o, i) => {
+        const b = bounds[i];
+        if (command.alignment === "left") o.x += left - b.left;
+        else if (command.alignment === "right") o.x += right - b.right;
+        else if (command.alignment === "center-x")
+          o.x += (left + right - b.left - b.right) / 2;
+        else if (command.alignment === "top") o.y += top - b.top;
+        else if (command.alignment === "bottom") o.y += bottom - b.bottom;
+        else o.y += (top + bottom - b.top - b.bottom) / 2;
+      });
+    }
+  } else if (command.type === "add" || command.type === "add-symbol") {
     const base = {
       id: newId(),
       order: Math.max(-1, ...screen.objects.map((o) => o.order)) + 1,

@@ -34,7 +34,9 @@
       project = result.project;
       history = result.history;
       projectChanged = true;
-      if (!screen.objects.some((o) => o.id === selectedId)) selectedId = null;
+      selectedIds = selectedIds.filter((id) =>
+        screen.objects.some((o) => o.id === id),
+      );
       report(
         "info",
         direction === "undo" ? "元に戻しました。" : "やり直しました。",
@@ -68,13 +70,68 @@
     } else if (key === "y" && !event.shiftKey) {
       event.preventDefault();
       travel("redo");
-    } else if (key === "d" && !event.shiftKey && selectedId) {
+    } else if (key === "a" && !event.shiftKey) {
       event.preventDefault();
-      edit({ type: "duplicate", screenId: screen.id, objectId: selectedId });
+      selectedIds = screen.objects.map((o) => o.id);
+    } else if (key === "d" && !event.shiftKey && selectedIds.length) {
+      event.preventDefault();
+      duplicateSelection();
     }
   }
   let mode = $state<"edit" | "preview">("preview");
-  let selectedId = $state<string | null>(null);
+  let selectedIds = $state<string[]>([]);
+  let selectedId = $derived(selectedIds.length === 1 ? selectedIds[0] : null);
+  function selectObjects(
+    id: string | null,
+    additive = false,
+    preserve = false,
+  ): string[] {
+    if (!id) {
+      if (!additive) selectedIds = [];
+      return [...selectedIds];
+    }
+    selectedIds = additive
+      ? selectedIds.includes(id)
+        ? selectedIds.filter((s) => s !== id)
+        : [...selectedIds, id]
+      : preserve && selectedIds.includes(id)
+        ? selectedIds
+        : [id];
+    return [...selectedIds];
+  }
+  function duplicateSelection() {
+    if (selectedIds.length === 1)
+      edit({
+        type: "duplicate",
+        screenId: screen.id,
+        objectId: selectedIds[0],
+      });
+    else if (selectedIds.length > 1)
+      edit({
+        type: "duplicate-many",
+        screenId: screen.id,
+        objectIds: [...selectedIds],
+      });
+  }
+  function removeSelection() {
+    if (selectedIds.length)
+      edit({
+        type: "remove-many",
+        screenId: screen.id,
+        objectIds: [...selectedIds],
+      });
+  }
+  function moveSelection(event: SubmitEvent) {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget as HTMLFormElement);
+    edit({
+      type: "move-many",
+      screenId: screen.id,
+      objectIds: [...selectedIds],
+      dx: Number(data.get("dx")),
+      dy: Number(data.get("dy")),
+    });
+  }
   let project = $state(parseProject(JSON.stringify(sample)));
   let screenId = $state(sample.screens[0].id);
   let screen = $derived(
@@ -94,7 +151,7 @@
     project = parseProject(JSON.stringify(processSample));
     history = emptyHistory();
     screenId = project.screens[0].id;
-    selectedId = null;
+    selectedIds = [];
     projectChanged = false;
     report(
       "info",
@@ -108,6 +165,7 @@
   let selected = $derived(screen.objects.find((o) => o.id === selectedId));
   function edit(command: EditCommand) {
     try {
+      const oldIds = new Set(screen.objects.map((o) => o.id));
       const result = recordEdit(project, history, command, mode);
       if (result.project === project) return;
       project = result.project;
@@ -116,12 +174,14 @@
       if (
         command.type === "add" ||
         command.type === "add-symbol" ||
-        command.type === "duplicate"
+        command.type === "duplicate" ||
+        command.type === "duplicate-many"
       )
-        selectedId = project.screens
-          .find((s) => s.id === screenId)!
-          .objects.at(-1)!.id;
-      if (command.type === "remove") selectedId = null;
+        selectedIds = screen.objects
+          .filter((o) => !oldIds.has(o.id))
+          .map((o) => o.id);
+      if (command.type === "remove" || command.type === "remove-many")
+        selectedIds = [];
       report(
         "success",
         "変更を適用しました。JSON を保存するとファイルに残せます。",
@@ -183,7 +243,7 @@
       history = emptyHistory();
       projectChanged = false;
       screenId = next.screens[0].id;
-      selectedId = null;
+      selectedIds = [];
       report("success", "Project を読み込みました。");
     } catch (e) {
       report(
@@ -228,7 +288,7 @@
           aria-pressed={mode === "edit"}
           onclick={() => {
             mode = "edit";
-            selectedId = null;
+            selectedIds = [];
           }}>編集</button
         >
         <button
@@ -236,7 +296,7 @@
           aria-pressed={mode === "preview"}
           onclick={() => {
             mode = "preview";
-            selectedId = null;
+            selectedIds = [];
           }}>表示プレビュー</button
         >
         <StatusBadge variant="neutral" label="Hub 未接続" />
@@ -266,7 +326,7 @@
           class:active={screen.id === item.id}
           onclick={() => {
             screenId = item.id;
-            selectedId = null;
+            selectedIds = [];
           }}>{item.name}</button
         >{/each}
     </nav>
@@ -292,8 +352,9 @@
       <h2>図形一覧</h2>
       <nav aria-label="図形一覧">
         {#each [...screen.objects].sort((a, b) => a.order - b.order) as object}<button
-            class:active={selectedId === object.id}
-            onclick={() => (selectedId = object.id)}
+            class:active={selectedIds.includes(object.id)}
+            aria-pressed={selectedIds.includes(object.id)}
+            onclick={(event) => selectObjects(object.id, event.shiftKey)}
             >{object.shape.type === "symbol"
               ? project.symbols.find(
                   (s) =>
@@ -335,7 +396,14 @@
           disabled={busy || history.future.length === 0}
           onclick={() => travel("redo")}>やり直す</button
         >
-        <span>Ctrl / ⌘ + Z · Shift + Z でやり直す</span>
+        <button onclick={() => (selectedIds = screen.objects.map((o) => o.id))}
+          >すべて選択</button
+        >
+        <button
+          disabled={selectedIds.length === 0}
+          onclick={() => (selectedIds = [])}>選択解除</button
+        >
+        <span>Shift + クリックで複数選択 · {selectedIds.length} 件選択</span>
       </div>
     {/if}
     <div class="canvas" style:aspect-ratio={`${screen.width}/${screen.height}`}>
@@ -343,21 +411,68 @@
         {screen}
         symbols={project.symbols}
         editable={mode === "edit"}
-        {selectedId}
-        onselect={(id) => (selectedId = id)}
-        onmove={(id, x, y) =>
+        {selectedIds}
+        onselect={selectObjects}
+        onmove={(ids, dx, dy) =>
           edit({
-            type: "update",
+            type: "move-many",
             screenId: screen.id,
-            objectId: id,
-            patch: { x, y },
+            objectIds: ids,
+            dx,
+            dy,
           })}
       />
     </div>
     {#if mode === "edit"}
       <div class="inspector">
         <SurfaceCard title="プロパティ">
-          {#if selected}
+          {#if selectedIds.length > 1}
+            <p>
+              {selectedIds.length} 件選択しています。図形をドラッグするとまとめて移動します。
+            </p>
+            <form onsubmit={moveSelection}>
+              <div class="fields">
+                <label
+                  >移動量 X<input
+                    name="dx"
+                    aria-label="移動量 X"
+                    type="number"
+                    step="any"
+                    required
+                    value="0"
+                  /></label
+                ><label
+                  >移動量 Y<input
+                    name="dy"
+                    aria-label="移動量 Y"
+                    type="number"
+                    step="any"
+                    required
+                    value="0"
+                  /></label
+                >
+              </div>
+              <div class="actions">
+                <button type="submit">まとめて移動</button><button
+                  type="button"
+                  onclick={duplicateSelection}>選択図形を複製</button
+                ><button type="button" onclick={removeSelection}
+                  >選択図形を削除</button
+                >
+              </div>
+            </form>
+            <div class="actions" role="group" aria-label="整列">
+              {#each [{ alignment: "left" as const, label: "左揃え" }, { alignment: "center-x" as const, label: "左右中央揃え" }, { alignment: "right" as const, label: "右揃え" }, { alignment: "top" as const, label: "上揃え" }, { alignment: "center-y" as const, label: "上下中央揃え" }, { alignment: "bottom" as const, label: "下揃え" }] as item}<button
+                  onclick={() =>
+                    edit({
+                      type: "align",
+                      screenId: screen.id,
+                      objectIds: [...selectedIds],
+                      alignment: item.alignment,
+                    })}>{item.label}</button
+                >{/each}
+            </div>
+          {:else if selected}
             {#key project.manifest.projectRevision + selected.id}
               <form onsubmit={properties}>
                 <div class="fields">

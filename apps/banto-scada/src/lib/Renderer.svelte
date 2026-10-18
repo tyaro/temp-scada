@@ -10,24 +10,26 @@
     screen,
     symbols = [],
     editable = false,
-    selectedId = null,
+    selectedIds = [],
     onselect,
     onmove,
   }: {
     screen: Screen;
     symbols?: SymbolDefinition[];
     editable?: boolean;
-    selectedId?: string | null;
-    onselect?: (id: string | null) => void;
-    onmove?: (id: string, x: number, y: number) => void;
+    selectedIds?: string[];
+    onselect?: (
+      id: string | null,
+      additive: boolean,
+      preserve: boolean,
+    ) => string[];
+    onmove?: (ids: string[], dx: number, dy: number) => void;
   } = $props();
   let drag = $state<{
-    id: string;
+    ids: string[];
     pointer: number;
     startX: number;
     startY: number;
-    x: number;
-    y: number;
     dx: number;
     dy: number;
   } | null>(null);
@@ -45,19 +47,17 @@
       (event.target as Element)
         .closest("[data-object-id]")
         ?.getAttribute("data-object-id") ?? null;
-    onselect?.(id);
+    const ids = onselect?.(id, event.shiftKey, true) ?? (id ? [id] : []);
     const object = screen.objects.find((o) => o.id === id);
     const start = point(event);
-    if (!object || !start) return;
+    if (!object || !start || !ids.includes(object.id)) return;
     event.preventDefault();
     (event.currentTarget as SVGSVGElement).setPointerCapture(event.pointerId);
     drag = {
-      id: object.id,
+      ids: [...ids],
       pointer: event.pointerId,
       startX: start.x,
       startY: start.y,
-      x: object.x,
-      y: object.y,
       dx: 0,
       dy: 0,
     };
@@ -74,13 +74,13 @@
     drag = null;
     if (editable && Math.hypot(finished.dx, finished.dy) > 0.5)
       onmove?.(
-        finished.id,
-        Math.round((finished.x + finished.dx) * 100) / 100,
-        Math.round((finished.y + finished.dy) * 100) / 100,
+        finished.ids,
+        Math.round(finished.dx * 100) / 100,
+        Math.round(finished.dy * 100) / 100,
       );
   }
   function position(object: ScreenObject) {
-    return `translate(${object.x + (editable && drag?.id === object.id ? drag.dx : 0)} ${object.y + (editable && drag?.id === object.id ? drag.dy : 0)})`;
+    return `translate(${object.x + (editable && drag?.ids.includes(object.id) ? drag.dx : 0)} ${object.y + (editable && drag?.ids.includes(object.id) ? drag.dy : 0)})`;
   }
 </script>
 
@@ -98,7 +98,13 @@
 >
   <title>{screen.name}</title>
   {#each [...screen.objects].sort((a, b) => a.order - b.order) as object (object.id)}
-    <g transform={position(object)} data-object-id={object.id}>
+    <g
+      transform={position(object)}
+      data-object-id={object.id}
+      data-selected={editable && selectedIds.includes(object.id)
+        ? "true"
+        : undefined}
+    >
       {#if "width" in object && object.shape.type === "symbol"}
         {@const definition = symbols.find(
           (s) =>
@@ -134,7 +140,7 @@
             y={bounds.y}
             fill="transparent"
           />{/if}
-        {#if selectedId === object.id}<rect
+        {#if selectedIds.includes(object.id)}<rect
             x={bounds.x}
             y={bounds.y}
             width={bounds.width}
