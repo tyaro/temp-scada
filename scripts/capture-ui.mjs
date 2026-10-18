@@ -49,9 +49,12 @@ try {
   await page.getByRole("tab", { name: "部品", exact: true }).click();
   await page
     .getByRole("region", { name: "部品パレット" })
-    .getByRole("button", { name: /^基本図形/ })
+    .getByRole("button", { name: "アイコン一覧", exact: true })
     .click();
   await capture("scada-parts.png");
+  await page.getByRole("button", { name: "名称一覧", exact: true }).click();
+  await capture("scada-parts-names.png");
+  await page.getByRole("button", { name: "アイコン一覧", exact: true }).click();
   await button("参照する Symbol 定義を編集").click();
   await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
   await page

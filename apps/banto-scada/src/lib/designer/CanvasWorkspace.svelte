@@ -3,6 +3,8 @@
   import Renderer from "../Renderer.svelte";
   import type { Screen, SymbolDefinition, Point } from "../project";
   import type { Geometry } from "../resize";
+  import { snapCoordinate } from "../snap";
+  import { PALETTE_MIME } from "./palette-drag";
   import {
     fitZoom,
     viewLayout,
@@ -23,6 +25,8 @@
     onmove,
     onresize,
     onvertexmove,
+    canDropPart,
+    ondropPart,
   }: {
     screen: Screen;
     symbols: SymbolDefinition[];
@@ -40,8 +44,67 @@
     onmove: (ids: string[], dx: number, dy: number) => void;
     onresize: (id: string, geometry: Geometry) => void;
     onvertexmove: (id: string, index: number, point: Point) => void;
+    canDropPart: () => boolean;
+    ondropPart: (token: string, center: Point) => void;
   } = $props();
   let viewport = $state<HTMLDivElement>();
+  let dropPoint = $state<Point | null>(null);
+  function palettePoint(event: DragEvent): Point | null {
+    const svg = viewport?.querySelector<SVGSVGElement>(".sheet > svg");
+    const matrix = svg?.getScreenCTM();
+    if (!matrix) return null;
+    try {
+      const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(
+        matrix.inverse(),
+      );
+      if (
+        !Number.isFinite(point.x) ||
+        !Number.isFinite(point.y) ||
+        point.x < 0 ||
+        point.y < 0 ||
+        point.x > screen.width ||
+        point.y > screen.height
+      )
+        return null;
+      return snapEnabled && !event.altKey
+        ? {
+            x: Math.min(
+              screen.width,
+              Math.max(0, snapCoordinate(point.x, gridSize)),
+            ),
+            y: Math.min(
+              screen.height,
+              Math.max(0, snapCoordinate(point.y, gridSize)),
+            ),
+          }
+        : { x: point.x, y: point.y };
+    } catch {
+      return null;
+    }
+  }
+  function dragOver(event: DragEvent) {
+    if (
+      !editable ||
+      !canDropPart() ||
+      !event.dataTransfer?.types.includes(PALETTE_MIME)
+    )
+      return;
+    event.preventDefault();
+    dropPoint = palettePoint(event);
+    event.dataTransfer.dropEffect = dropPoint ? "copy" : "none";
+  }
+  function dropPart(event: DragEvent) {
+    dropPoint = null;
+    if (
+      !editable ||
+      !canDropPart() ||
+      !event.dataTransfer?.types.includes(PALETTE_MIME)
+    )
+      return;
+    event.preventDefault();
+    const center = palettePoint(event);
+    if (center) ondropPart(event.dataTransfer.getData(PALETTE_MIME), center);
+  }
   let size = $state({ width: 800, height: 500 });
   let views = $state<Record<string, ViewState>>({});
   let hand = $state(false),
@@ -80,6 +143,7 @@
     const state = untrack(() => views[id]);
     pan = null;
     space = false;
+    dropPoint = null;
     if (!element) return;
     void tick().then(() => {
       if (screen.id !== id || editable !== editing || viewport !== element)
@@ -206,6 +270,7 @@
 </script>
 
 <svelte:window
+  ondragend={() => (dropPoint = null)}
   onkeyup={releaseSpace}
   onblur={() => {
     space = false;
@@ -253,6 +318,7 @@
   class="viewport"
   class:panning
   class:preview={!editable}
+  class:drop-ready={!!dropPoint}
   role="region"
   aria-label="キャンバス操作領域"
   aria-roledescription="工程図キャンバス"
@@ -266,6 +332,15 @@
     if (pan) cancelPan();
   }}
   onscroll={remember}
+  ondragover={dragOver}
+  ondrop={dropPart}
+  ondragleave={(event) => {
+    if (
+      !(event.relatedTarget instanceof Node) ||
+      !viewport?.contains(event.relatedTarget)
+    )
+      dropPoint = null;
+  }}
 >
   <div
     class="world"
@@ -296,11 +371,38 @@
           {onvertexmove}
         />
       {/key}
+      {#if dropPoint && editable}
+        <div
+          class="drop-marker"
+          aria-hidden="true"
+          style:left={`${dropPoint.x * scale}px`}
+          style:top={`${dropPoint.y * scale}px`}
+        >
+          ＋
+        </div>
+      {/if}
     </div>
   </div>
 </div>
 
 <style>
+  .viewport.drop-ready {
+    border-color: var(--banto-primary);
+  }
+  .drop-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--banto-primary);
+    color: var(--banto-primary);
+    background: var(--banto-surface);
+    border-radius: 50%;
+    pointer-events: none;
+    font: bold 20px sans-serif;
+  }
   .tools {
     display: flex;
     flex-wrap: wrap;

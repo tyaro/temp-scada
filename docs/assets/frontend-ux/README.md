@@ -43,3 +43,10 @@
 - `sidebar-layers-dark.png`: レイヤータブ。工程図サンプルの配置一覧と、選択したポンプのプロパティ。
 
 `scripts/capture-ui.mjs` を `SCADA_SCREENSHOT_THEME=light` / `dark` で実行し、1600×1000 CSS px の Chromium で撮影した画像。生成画像や合成画像ではなく、実設備・Hub への接続もありません。可動パネルや永続レイヤーの実装完了を示すものではありません。
+
+## コンパクトな部品一覧（2026-10-19・同日後続）
+
+- `palette-icons-light.png`: アイコン一覧。分類内へ小さなアイコンを並べ、検索欄と表示形式切替を1行へ集約。
+- `palette-names-dark.png`: 名称一覧。小さなアイコンと名前を1行で表示。
+
+`scripts/capture-ui.mjs` の `scada-parts.png` / `scada-parts-names.png` をコピーした実画面。Chromium、1600×1000 CSS px、工程図サンプルを使い、アプリのテーマと表示形式だけを操作して撮影した。

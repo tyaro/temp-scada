@@ -35,6 +35,23 @@ const localFileAuth: AuthProvider = {
 };
 let themeMode: ThemeMode = "dark";
 let menubarVisible = true;
+export type PaletteView = "icons" | "names";
+let paletteView: PaletteView = "icons";
+const PALETTE_VIEW_KEY = "scada.designer.palette-view";
+export function getPaletteView(): PaletteView {
+  return paletteView;
+}
+export async function setPaletteView(view: PaletteView): Promise<void> {
+  paletteView = view;
+  try {
+    await uiSettings.set(PALETTE_VIEW_KEY, view);
+  } catch {
+    toastStore.push(
+      "warning",
+      "部品の表示形式を保存できません。このタブだけに適用します。",
+    );
+  }
+}
 const MENUBAR_KEY = "scada.designer.menubar";
 export function getMenubarVisible(): boolean {
   return menubarVisible;
@@ -95,6 +112,15 @@ export async function initializeBanto(): Promise<() => void> {
     toastStore.push(
       "warning",
       "メニューバーの設定を読み込めません。初期表示を使います。",
+    );
+  }
+  try {
+    const stored = await uiSettings.get(PALETTE_VIEW_KEY);
+    if (stored === "icons" || stored === "names") paletteView = stored;
+  } catch {
+    toastStore.push(
+      "warning",
+      "部品の表示形式を読み込めません。アイコン一覧を使います。",
     );
   }
   return watchSystemTheme(() => {

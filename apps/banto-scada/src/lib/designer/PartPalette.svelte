@@ -3,20 +3,44 @@
   import type { SymbolDefinition } from "../project";
   import builtins from "../symbol-library.json";
   import SymbolThumbnail from "./SymbolThumbnail.svelte";
+  import { PALETTE_MIME, type PalettePart } from "./palette-drag";
+  import {
+    getPaletteView,
+    setPaletteView,
+    type PaletteView,
+  } from "../banto/setup";
   let {
     definitions,
     allowSymbols = true,
     onadd,
     onbuiltin,
     onplace,
+    onstartdrag,
+    onenddrag,
   }: {
     definitions: SymbolDefinition[];
     allowSymbols?: boolean;
     onadd: (kind: AddKind) => void;
     onbuiltin: (template: "pump" | "valve") => void;
     onplace: (id: string) => void;
+    onstartdrag: (part: PalettePart) => string | null;
+    onenddrag: () => void;
   } = $props();
   let search = $state("");
+  let view = $state(getPaletteView());
+  function changeView(next: PaletteView) {
+    view = next;
+    void setPaletteView(next);
+  }
+  function startDrag(event: DragEvent, part: PalettePart) {
+    const token = onstartdrag(part);
+    if (!event.dataTransfer || !token) {
+      event.preventDefault();
+      return;
+    }
+    event.dataTransfer.effectAllowed = "copy";
+    event.dataTransfer.setData(PALETTE_MIME, token);
+  }
   type Category = "basic" | "symbols" | "objects";
   let expanded = $state<Record<Category, boolean>>({
     basic: true,
@@ -87,16 +111,34 @@
   );
 </script>
 
-<section aria-label="部品パレット">
-  <h2>部品を追加</h2>
-  <label class="search"
-    >部品を検索<input
-      type="search"
-      bind:value={search}
-      placeholder="名前・種類で検索"
-    /></label
-  >
-  <p class="results" role="status">
+<section aria-label="部品パレット" class:names={view === "names"}>
+  <h2 class="sr-only">部品を追加</h2>
+  <div class="search-tools">
+    <label class="search"
+      ><span class="sr-only">部品を検索</span><input
+        type="search"
+        bind:value={search}
+        placeholder="部品を検索"
+      /></label
+    >
+    <div class="view-toggle" role="group" aria-label="部品の表示形式">
+      <button
+        aria-label="アイコン一覧"
+        title="アイコン一覧"
+        aria-pressed={view === "icons"}
+        onclick={() => changeView("icons")}
+        ><span aria-hidden="true">▦</span></button
+      >
+      <button
+        aria-label="名称一覧"
+        title="名称一覧"
+        aria-pressed={view === "names"}
+        onclick={() => changeView("names")}
+        ><span aria-hidden="true">☰</span></button
+      >
+    </div>
+  </div>
+  <p class="results sr-only" role="status">
     {count} 件{!allowSymbols ? " · 定義内は基本図形のみ" : ""}
   </p>
   {#each categories as category}
@@ -128,13 +170,25 @@
           {#if category.id === "symbols"}
             <div class="cards">
               {#each builtinResults as part}
-                <button onclick={() => onbuiltin(part.template)}>
+                <button
+                  class="part"
+                  aria-label={part.label}
+                  title={part.label}
+                  draggable="true"
+                  ondragstart={(event) =>
+                    startDrag(event, {
+                      type: "builtin",
+                      template: part.template,
+                    })}
+                  ondragend={onenddrag}
+                  onclick={() => onbuiltin(part.template)}
+                >
                   <SymbolThumbnail
                     definition={builtins[
                       part.template
                     ] as unknown as SymbolDefinition}
                   />
-                  <span>{part.label}</span>
+                  <span class:sr-only={view === "icons"}>{part.label}</span>
                 </button>
               {/each}
             </div>
@@ -143,13 +197,21 @@
               <div class="cards">
                 {#each definitionResults as definition (definition.id)}
                   <button
+                    class="part"
                     aria-label={`${definition.name} を配置`}
                     title={definition.name}
+                    draggable="true"
+                    ondragstart={(event) =>
+                      startDrag(event, {
+                        type: "symbol",
+                        symbolId: definition.id,
+                      })}
+                    ondragend={onenddrag}
                     onclick={() => onplace(definition.id)}
                   >
                     <SymbolThumbnail {definition} /><span
-                      >{definition.name}</span
-                    ><small>配置を追加</small>
+                      class:sr-only={view === "icons"}>{definition.name}</span
+                    ><small class="sr-only">配置を追加</small>
                   </button>
                 {/each}
               </div>
@@ -157,7 +219,16 @@
           {:else}
             <div class="cards">
               {#each category.id === "basic" ? primitiveResults : objectResults as part}
-                <button onclick={() => onadd(part.kind)}>
+                <button
+                  class="part"
+                  aria-label={part.label}
+                  title={part.label}
+                  draggable="true"
+                  ondragstart={(event) =>
+                    startDrag(event, { type: "basic", kind: part.kind })}
+                  ondragend={onenddrag}
+                  onclick={() => onadd(part.kind)}
+                >
                   <svg aria-hidden="true" viewBox="0 0 60 40">
                     {#if part.kind === "rectangle"}<rect
                         x="10"
@@ -182,7 +253,7 @@
                     {:else if part.kind === "line"}<path d="M8 32L52 8" />
                     {:else}<path d="M8 8H30V32H52" stroke-width="5" />{/if}
                   </svg>
-                  <span>{part.label}</span>
+                  <span class:sr-only={view === "icons"}>{part.label}</span>
                 </button>
               {/each}
             </div>
@@ -200,6 +271,46 @@
 </section>
 
 <style>
+  .search-tools {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .search-tools .search {
+    flex: 1;
+    min-width: 0;
+  }
+  .view-toggle {
+    display: flex;
+    gap: 2px;
+  }
+  .view-toggle button {
+    width: 28px;
+    min-height: 30px;
+    height: 30px;
+    padding: 2px;
+    font-size: 18px;
+  }
+  .view-toggle button[aria-pressed="true"] {
+    color: var(--banto-primary);
+    border-color: var(--banto-primary);
+  }
+  .names .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .names .part {
+    height: auto;
+    min-height: 36px;
+    padding: 6px;
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+  }
+  .names .cards :global(svg) {
+    width: 32px;
+    height: 28px;
+    flex-shrink: 0;
+  }
   h2 {
     font-size: 15px;
     margin: 0;
@@ -241,7 +352,7 @@
   .search {
     display: grid;
     gap: 6px;
-    margin-top: 12px;
+    margin-top: 0;
     font-size: 12px;
     color: var(--banto-text-muted);
   }
@@ -263,8 +374,35 @@
   }
   .cards {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 4px;
+  }
+  .part {
+    min-height: 44px;
+    height: 44px;
+    padding: 4px;
+    border-color: transparent;
+    border-radius: 3px;
+    background: transparent;
+    cursor: grab;
+  }
+  .part:hover {
+    background: var(--banto-surface-hover);
+  }
+  .cards :global(svg) {
+    width: 100%;
+    height: 34px;
+  }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
   }
   button {
     min-width: 0;

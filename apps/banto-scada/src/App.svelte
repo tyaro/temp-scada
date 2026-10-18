@@ -67,6 +67,85 @@
     if (form.dataset.editorForm === "screen") activePanel = "project";
   }
   import PartPalette from "./lib/designer/PartPalette.svelte";
+  import type { PalettePart } from "./lib/designer/palette-drag";
+  let paletteDrag: {
+    token: string;
+    part: PalettePart;
+    generation: number;
+    target: string;
+  } | null = null;
+  function startPaletteDrag(part: PalettePart): string | null {
+    if (
+      mode !== "edit" ||
+      busy ||
+      drafts.pending ||
+      replacement ||
+      (activeDefinition && part.type !== "basic")
+    )
+      return null;
+    const token = crypto.randomUUID();
+    paletteDrag = {
+      token,
+      part,
+      generation: workspaceGeneration,
+      target: screen.id,
+    };
+    return token;
+  }
+  function canDropPart(): boolean {
+    return (
+      mode === "edit" &&
+      !busy &&
+      !drafts.pending &&
+      !replacement &&
+      !!paletteDrag &&
+      paletteDrag.generation === workspaceGeneration &&
+      paletteDrag.target === screen.id
+    );
+  }
+  $effect(() => {
+    mode;
+    screen.id;
+    workspaceGeneration;
+    paletteDrag = null;
+  });
+  function dropPalettePart(token: string, center: Point) {
+    const drag = paletteDrag;
+    if (!drag || drag.token !== token || !canDropPart()) return;
+    paletteDrag = null;
+    // Capture the target and point before the draft prompt; never retarget a deferred drop.
+    transition(() => {
+      if (
+        mode !== "edit" ||
+        drag.generation !== workspaceGeneration ||
+        drag.target !== screen.id
+      ) {
+        report(
+          "error",
+          "配置先が変わったため、部品をもう一度ドラッグしてください。",
+        );
+        return;
+      }
+      const part = drag.part;
+      if (activeDefinition && part.type !== "basic") return;
+      if (part.type === "basic")
+        edit({ type: "add", screenId: screen.id, kind: part.kind, center });
+      else if (part.type === "builtin")
+        edit({
+          type: "add-symbol",
+          screenId: screen.id,
+          template: part.template,
+          center,
+        });
+      else
+        edit({
+          type: "place-symbol",
+          screenId: screen.id,
+          symbolId: part.symbolId,
+          center,
+        });
+    });
+  }
   import SymbolLibrary from "./lib/designer/SymbolLibrary.svelte";
   import {
     parseProject,
@@ -328,7 +407,10 @@
         command.type === "add-symbol" ||
         command.type === "place-symbol"
       )
-        command = { ...command, center: canvasWorkspace?.visibleCenter() };
+        command = {
+          ...command,
+          center: command.center ?? canvasWorkspace?.visibleCenter(),
+        };
       const result = recordEdit(project, history, command, mode);
       if (result.project === project) {
         if (form) drafts.submitted(form);
@@ -895,6 +977,8 @@
             definitions={project.symbols}
             allowSymbols={!activeDefinition}
             onadd={add}
+            onstartdrag={startPaletteDrag}
+            onenddrag={() => (paletteDrag = null)}
             onbuiltin={(template) =>
               edit({ type: "add-symbol", screenId: screen.id, template })}
             onplace={(id) =>
@@ -1002,6 +1086,8 @@
         {showGrid}
         {snapEnabled}
         {gridSize}
+        {canDropPart}
+        ondropPart={dropPalettePart}
         onresize={(id, geometry) =>
           edit({
             type: "update",
