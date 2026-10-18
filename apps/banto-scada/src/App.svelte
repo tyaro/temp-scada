@@ -17,10 +17,15 @@
       void setThemeMode(value);
     }
   }
-  import { untrack } from "svelte";
+  import { untrack, tick } from "svelte";
   import { projectContent } from "./lib/save-state";
   import { createDraftGuard } from "./lib/designer/drafts.svelte";
   import DraftPrompt from "./lib/designer/DraftPrompt.svelte";
+  import BindingReferences from "./lib/designer/BindingReferences.svelte";
+  import {
+    bindingReferences,
+    type BindingUsage,
+  } from "./lib/binding-references";
   import type { Project } from "./lib/project";
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
@@ -162,6 +167,22 @@
     submitForm(event);
   }
   let project = $state(parseProject(JSON.stringify(sample)));
+  let editorRegion = $state<HTMLElement>();
+  let inspectorPanel = $state<HTMLElement>();
+  const references = $derived(bindingReferences(project));
+  function openBinding(usage: BindingUsage) {
+    transition(() => {
+      editingSymbolId = null;
+      screenId = usage.screenId;
+      selectedIds = [usage.objectId];
+      void tick().then(() => {
+        editorRegion?.scrollTo({ top: 0 });
+        inspectorPanel
+          ?.querySelector<HTMLInputElement>('input[name="externalName"]')
+          ?.focus();
+      });
+    });
+  }
   let screenId = $state(sample.screens[0].id);
   let editingSymbolId = $state<string | null>(null);
   let libraryId = $state("");
@@ -671,7 +692,7 @@
       Runtime の権限分離は未実装です。
     </p>
   </aside>
-  <section aria-label="画面プレビュー">
+  <section aria-label="画面プレビュー" bind:this={editorRegion}>
     {#if activeDefinition}
       <div class="definition-banner" role="note">
         <strong
@@ -780,9 +801,18 @@
       />
     {/key}
     <p role="status" data-testid="project-status">{message}</p>
+    {#if mode === "edit"}
+      {#key workspaceGeneration}
+        <BindingReferences {references} onopen={openBinding} />
+      {/key}
+    {/if}
   </section>
   {#if mode === "edit"}
-    <aside class="inspector" aria-label="プロパティパネル">
+    <aside
+      class="inspector"
+      aria-label="プロパティパネル"
+      bind:this={inspectorPanel}
+    >
       <SurfaceCard title="プロパティ">
         {#if selectedIds.length > 1}
           <p>
