@@ -9,10 +9,16 @@
     references,
     onopen,
     onclose,
+    expanded = $bindable(false),
+    sized = false,
+    onbeforetoggle,
   }: {
     references: BindingReference[];
     onopen: (usage: BindingUsage) => void;
     onclose: () => void;
+    expanded?: boolean;
+    sized?: boolean;
+    onbeforetoggle?: () => void;
   } = $props();
   let search = $state("");
   const filtered = $derived(searchReferences(references, search));
@@ -22,8 +28,8 @@
 </script>
 
 {#if references.length}
-  <details class="references">
-    <summary
+  <details class="references" class:sized bind:open={expanded}>
+    <summary onclick={onbeforetoggle}
       >Project のタグ参照 · {references.length} タグ / {usageCount} 配置</summary
     >
     <section aria-label="Project のタグ参照">
@@ -89,6 +95,15 @@
     border: 1px solid var(--banto-border);
     border-radius: 6px;
     background: var(--banto-surface);
+  }
+  .references.sized {
+    margin-top: 0;
+    height: 100%;
+    overflow: auto;
+  }
+  .sized .scroll {
+    max-height: none;
+    overflow: visible;
   }
   summary {
     padding: 12px;

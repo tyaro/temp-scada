@@ -11,6 +11,8 @@
   import {
     getThemeMode,
     getPanelWidths,
+    getReferenceHeight,
+    setReferenceHeight,
     setPanelWidths,
     setThemeMode,
     getMenubarVisible,
@@ -73,6 +75,11 @@
   import EditToolbar, {
     type ToolbarGroup,
   } from "./lib/designer/EditToolbar.svelte";
+  import {
+    DEFAULT_REFERENCE_HEIGHT,
+    MIN_REFERENCE_HEIGHT,
+    referenceHeightMaximum,
+  } from "./lib/designer/panel-height";
   import PanelResizeHandle from "./lib/designer/PanelResizeHandle.svelte";
   import {
     DEFAULT_PANEL_WIDTHS,
@@ -106,6 +113,33 @@
     beginPanelResize();
     panelWidths = { ...DEFAULT_PANEL_WIDTHS };
     finishPanelResize(true);
+  }
+  let canvasStackHeight = $state(0);
+  let referenceHeight = $state(getReferenceHeight());
+  let referencesExpanded = $state(false);
+  const canSizeReferences = $derived(
+    windowWidth >= 1100 && canvasStackHeight >= 500,
+  );
+  const referenceMaximum = $derived(referenceHeightMaximum(canvasStackHeight));
+  const displayedReferenceHeight = $derived(
+    Math.min(referenceHeight, referenceMaximum),
+  );
+  let initialReferenceHeight: number | null = null;
+  function beginReferenceResize() {
+    initialReferenceHeight ??= referenceHeight;
+    canvasWorkspace?.preparePanelResize(true);
+  }
+  function finishReferenceResize(commit: boolean) {
+    if (!commit && initialReferenceHeight !== null)
+      referenceHeight = initialReferenceHeight;
+    initialReferenceHeight = null;
+    canvasWorkspace?.finishPanelResize();
+    if (commit) void setReferenceHeight(referenceHeight);
+  }
+  function resetReferenceHeight() {
+    beginReferenceResize();
+    referenceHeight = DEFAULT_REFERENCE_HEIGHT;
+    finishReferenceResize(true);
   }
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
   let showInspector = $state(true);
@@ -569,6 +603,7 @@
     baselineSource = source;
     lastExport = null;
     history = emptyHistory();
+    referencesExpanded = false;
     workspaceGeneration++;
     screenId = project.screens[0].id;
     editingSymbolId = null;
@@ -1250,6 +1285,11 @@
           run: resetPanelWidths,
         },
         {
+          label: "タグ参照パネルの高さを標準に戻す",
+          disabled: mode !== "edit",
+          run: resetReferenceHeight,
+        },
+        {
           label: showMenubar ? "メニューバーを隠す" : "メニューバーを表示",
           run: toggleMenubar,
         },
@@ -1717,66 +1757,93 @@
           .projectRevision}</span
       >
     </div>
-    {#key workspaceGeneration}
-      <CanvasWorkspace
-        bind:this={canvasWorkspace}
-        onviewchange={(view) => (canvasView = view)}
-        oncontextrequest={requestSelectionContext}
-        {screen}
-        symbols={project.symbols}
-        editable={mode === "edit"}
-        {selectedIds}
-        {showGrid}
-        {snapEnabled}
-        {gridSize}
-        {canDropPart}
-        ondropPart={dropPalettePart}
-        onresize={(id, geometry) =>
-          edit({
-            type: "update",
-            screenId: screen.id,
-            objectId: id,
-            patch: geometry,
-          })}
-        onvertexmove={(id, index, point) =>
-          edit({
-            type: "move-vertex",
-            screenId: screen.id,
-            objectId: id,
-            index,
-            point,
-          })}
-        onbeforeedit={() => drafts.allow(() => {})}
-        onselect={selectObjects}
-        onmove={(ids, dx, dy) =>
-          edit({
-            type: "move-many",
-            screenId: screen.id,
-            objectIds: ids,
-            dx,
-            dy,
-          })}
-      />
-    {/key}
-    <p role="status" data-testid="project-status">{message}</p>
-    {#if mode === "edit"}
-      <div
-        hidden={!showReferences}
-        bind:this={referencesPanel}
-        tabindex="-1"
-        role="region"
-        aria-label="タグ参照パネル"
-      >
-        {#key workspaceGeneration}
-          <BindingReferences
-            {references}
-            onopen={openBinding}
-            onclose={() =>
-              setAuxPanelVisibility({ references: false }, "references")}
-          />
-        {/key}
-      </div>
-    {/if}
+    <div class="canvas-stack" bind:clientHeight={canvasStackHeight}>
+      {#key workspaceGeneration}
+        <CanvasWorkspace
+          bind:this={canvasWorkspace}
+          onviewchange={(view) => (canvasView = view)}
+          oncontextrequest={requestSelectionContext}
+          {screen}
+          symbols={project.symbols}
+          editable={mode === "edit"}
+          {selectedIds}
+          {showGrid}
+          {snapEnabled}
+          {gridSize}
+          {canDropPart}
+          ondropPart={dropPalettePart}
+          onresize={(id, geometry) =>
+            edit({
+              type: "update",
+              screenId: screen.id,
+              objectId: id,
+              patch: geometry,
+            })}
+          onvertexmove={(id, index, point) =>
+            edit({
+              type: "move-vertex",
+              screenId: screen.id,
+              objectId: id,
+              index,
+              point,
+            })}
+          onbeforeedit={() => drafts.allow(() => {})}
+          onselect={selectObjects}
+          onmove={(ids, dx, dy) =>
+            edit({
+              type: "move-many",
+              screenId: screen.id,
+              objectIds: ids,
+              dx,
+              dy,
+            })}
+        />
+      {/key}
+      <p role="status" data-testid="project-status">{message}</p>
+      {#if mode === "edit"}
+        <div
+          hidden={!showReferences}
+          id="designer-references-panel"
+          class="references-panel"
+          style:height={canSizeReferences &&
+          referencesExpanded &&
+          references.length
+            ? `${displayedReferenceHeight}px`
+            : undefined}
+          bind:this={referencesPanel}
+          tabindex="-1"
+          role="region"
+          aria-label="タグ参照パネル"
+        >
+          {#if showReferences && references.length && referencesExpanded && canSizeReferences}
+            <PanelResizeHandle
+              side="bottom"
+              value={displayedReferenceHeight}
+              min={MIN_REFERENCE_HEIGHT}
+              max={referenceMaximum}
+              standard={DEFAULT_REFERENCE_HEIGHT}
+              onstart={beginReferenceResize}
+              onchange={(height) => (referenceHeight = height)}
+              onend={finishReferenceResize}
+              canCommit={() =>
+                window.innerWidth >= 1100 &&
+                (referencesPanel?.parentElement?.clientHeight ?? 0) >= 500}
+            />
+          {/if}
+          {#key workspaceGeneration}
+            <BindingReferences
+              bind:expanded={referencesExpanded}
+              sized={canSizeReferences && referencesExpanded}
+              onbeforetoggle={() => canvasWorkspace?.preparePanelResize()}
+              {references}
+              onopen={openBinding}
+              onclose={() =>
+                setAuxPanelVisibility({ references: false }, "references")}
+            />
+          {/key}
+        </div>
+      {/if}
+    </div>
   </section>
   {#if mode === "edit"}
     <InspectorPanel
@@ -1806,6 +1873,7 @@
         onstart={beginPanelResize}
         onchange={(width) => changePanelWidth("left", width)}
         onend={finishPanelResize}
+        canCommit={() => window.innerWidth >= 1100}
       />
     {/if}
     {#if showInspector}
@@ -1818,6 +1886,7 @@
         onstart={beginPanelResize}
         onchange={(width) => changePanelWidth("right", width)}
         onend={finishPanelResize}
+        canCommit={() => window.innerWidth >= 1100}
       />
     {/if}
   {/if}
@@ -2172,6 +2241,9 @@
     background: var(--banto-bg);
     color: var(--banto-text);
   }
+  .references-panel {
+    position: relative;
+  }
   .toolbar {
     align-items: center;
     gap: 12px;
@@ -2205,8 +2277,15 @@
       flex-direction: column;
       padding: 12px 16px;
     }
-    main > section > :not(:global(.viewport)) {
+    main > section > :not(.canvas-stack),
+    .canvas-stack > :not(:global(.viewport)) {
       flex-shrink: 0;
+    }
+    .canvas-stack {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
     }
   }
   @media (min-width: 701px) and (max-width: 1099px) {

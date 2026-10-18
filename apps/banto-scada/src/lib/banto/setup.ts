@@ -1,4 +1,8 @@
 import {
+  DEFAULT_REFERENCE_HEIGHT,
+  parseReferenceHeight,
+} from "../designer/panel-height";
+import {
   DEFAULT_PANEL_WIDTHS,
   parsePanelWidths,
   type PanelWidths,
@@ -70,6 +74,22 @@ export async function setPanelWidths(value: PanelWidths): Promise<void> {
     toastStore.push(
       "warning",
       "パネルの幅を保存できません。このタブだけに適用します。",
+    );
+  }
+}
+const REFERENCE_HEIGHT_KEY = "scada.designer.reference-height";
+let referenceHeight = DEFAULT_REFERENCE_HEIGHT;
+export function getReferenceHeight(): number {
+  return referenceHeight;
+}
+export async function setReferenceHeight(value: number): Promise<void> {
+  referenceHeight = parseReferenceHeight(String(value));
+  try {
+    await uiSettings.set(REFERENCE_HEIGHT_KEY, String(referenceHeight));
+  } catch {
+    toastStore.push(
+      "warning",
+      "タグ参照パネルの高さを保存できません。このタブだけに適用します。",
     );
   }
 }
@@ -150,6 +170,16 @@ export async function initializeBanto(): Promise<() => void> {
     toastStore.push(
       "warning",
       "パネルの幅を読み込めません。標準幅を使います。",
+    );
+  }
+  try {
+    referenceHeight = parseReferenceHeight(
+      await uiSettings.get(REFERENCE_HEIGHT_KEY),
+    );
+  } catch {
+    toastStore.push(
+      "warning",
+      "タグ参照パネルの高さを読み込めません。標準の高さを使います。",
     );
   }
   return watchSystemTheme(() => {

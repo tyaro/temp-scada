@@ -1,5 +1,5 @@
 import { chromium, expect } from "@playwright/test";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 
 // 起動済みのローカル開発サーバーを使い、実画面を撮影する。
@@ -202,6 +202,41 @@ try {
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
   await capture("scada-background-preview.png", false, lightPage);
+  const referencePage = await browser.newPage({
+    viewport: { width: 1600, height: 1100 },
+    deviceScaleFactor: 1,
+  });
+  await referencePage.goto(
+    process.env.SCADA_SCREENSHOT_BASE_URL ?? "http://127.0.0.1:5173",
+  );
+  await chooseTheme(referencePage);
+  // 本リポジトリの工程図に未接続の表示タグを割り当てた撮影用データ。実測値は作らない。
+  const referenceProject = JSON.parse(
+    await readFile("examples/process-light.project.json", "utf8"),
+  );
+  referenceProject.screens[0].objects.find(
+    (object) => object.order === 6,
+  ).shape.binding = { externalName: "PLC01.Fast.Tank01.Level" };
+  await referencePage
+    .getByLabel("Project JSON を開く", { exact: true })
+    .setInputFiles({
+      name: "process-reference.project.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(referenceProject)),
+    });
+  await referencePage
+    .getByRole("button", { name: "編集", exact: true })
+    .click();
+  await referencePage.locator("details.references > summary").click();
+  const referenceBorder = referencePage.getByRole("separator", {
+    name: "タグ参照パネルの高さ",
+    exact: true,
+  });
+  await referenceBorder.focus();
+  await referencePage.keyboard.press("Shift+ArrowUp");
+  await referencePage.keyboard.press("Shift+ArrowUp");
+  await expect(referenceBorder).toHaveAttribute("aria-valuenow", "304");
+  await capture("scada-panel-height.png", false, referencePage);
 } finally {
   await browser.close();
 }

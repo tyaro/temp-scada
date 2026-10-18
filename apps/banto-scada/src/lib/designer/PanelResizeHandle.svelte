@@ -9,8 +9,9 @@
     onstart,
     onchange,
     onend,
+    canCommit = () => true,
   }: {
-    side: "left" | "right";
+    side: "left" | "right" | "bottom";
     value: number;
     min: number;
     max: number;
@@ -18,15 +19,26 @@
     onstart: () => void;
     onchange: (width: number) => void;
     onend: (commit: boolean) => void;
+    canCommit?: () => boolean;
   } = $props();
   let element: HTMLDivElement;
   let drag = $state<{ pointer: number; x: number; width: number } | null>(null);
-  const label = $derived(side === "left" ? "左パネルの幅" : "プロパティの幅");
+  const label = $derived(
+    side === "bottom"
+      ? "タグ参照パネルの高さ"
+      : side === "left"
+        ? "左パネルの幅"
+        : "プロパティの幅",
+  );
+  const coordinate = (event: PointerEvent) =>
+    side === "bottom" ? event.clientY : event.clientX;
   const clamp = (width: number) =>
     Math.max(min, Math.min(max, Math.round(width)));
   function stop(commit: boolean) {
     const previous = drag;
     if (!previous) return;
+    // The native resize can precede Svelte layout teardown and pointer release.
+    commit = commit && canCommit();
     drag = null;
     if (!commit) onchange(clamp(previous.width));
     if (element?.hasPointerCapture(previous.pointer))
@@ -37,14 +49,16 @@
     if (event.button !== 0 || drag) return;
     event.preventDefault();
     element.focus({ preventScroll: true });
-    drag = { pointer: event.pointerId, x: event.clientX, width: value };
+    drag = { pointer: event.pointerId, x: coordinate(event), width: value };
     element.setPointerCapture(event.pointerId);
     onstart();
   }
   function move(event: PointerEvent) {
     if (drag?.pointer !== event.pointerId) return;
     onchange(
-      clamp(drag.width + (event.clientX - drag.x) * (side === "left" ? 1 : -1)),
+      clamp(
+        drag.width + (coordinate(event) - drag.x) * (side === "left" ? 1 : -1),
+      ),
     );
   }
   function key(event: KeyboardEvent) {
@@ -64,10 +78,15 @@
       return;
     const step = event.shiftKey ? 32 : 8;
     let next: number;
-    if (event.key === "ArrowLeft" || event.key === "ArrowRight")
+    if (
+      event.key === (side === "bottom" ? "ArrowUp" : "ArrowLeft") ||
+      event.key === (side === "bottom" ? "ArrowDown" : "ArrowRight")
+    )
       next =
         value +
-        (event.key === "ArrowRight" ? step : -step) *
+        (event.key === "ArrowRight" || event.key === "ArrowDown"
+          ? step
+          : -step) *
           (side === "left" ? 1 : -1);
     else if (event.key === "Home") next = min;
     else if (event.key === "End") next = max;
@@ -90,21 +109,24 @@
 <div
   class="resize-handle"
   class:dragging={!!drag}
+  class:bottom={side === "bottom"}
   bind:this={element}
   style:left={side === "left" ? `${value - 4}px` : undefined}
   style:right={side === "right" ? `${value - 4}px` : undefined}
   role="separator"
   tabindex="0"
   aria-label={label}
-  aria-orientation="vertical"
-  aria-controls={side === "left"
-    ? "designer-project-panel"
-    : "designer-inspector-panel"}
+  aria-orientation={side === "bottom" ? "horizontal" : "vertical"}
+  aria-controls={side === "bottom"
+    ? "designer-references-panel"
+    : side === "left"
+      ? "designer-project-panel"
+      : "designer-inspector-panel"}
   aria-valuemin={min}
   aria-valuemax={max}
   aria-valuenow={value}
   aria-valuetext={`${value}px`}
-  title={`${label}：ドラッグ・左右キーで調整、Shiftで大きく移動、Enter・ダブルクリックで標準幅、Escでドラッグ取消`}
+  title={`${label}：ドラッグ・${side === "bottom" ? "上下" : "左右"}キーで調整、Shiftで大きく移動、Enter・ダブルクリックで標準${side === "bottom" ? "高さ" : "幅"}、Escでドラッグ取消`}
   onpointerdown={down}
   onpointermove={move}
   onpointerup={(event) => {
@@ -141,6 +163,21 @@
   .resize-handle:focus-visible::after,
   .dragging::after {
     background: var(--banto-primary);
+  }
+  .resize-handle.bottom {
+    left: 0;
+    right: 0;
+    top: -4px;
+    bottom: auto;
+    width: 100%;
+    height: 8px;
+    cursor: row-resize;
+  }
+  .bottom::after {
+    left: 0;
+    top: 3px;
+    height: 2px;
+    width: 100%;
   }
   .resize-handle:focus-visible {
     outline: none;
