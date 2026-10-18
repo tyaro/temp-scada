@@ -301,7 +301,8 @@
       normalizeTargets();
       if (
         command.type === "create-symbol" ||
-        command.type === "duplicate-symbol"
+        command.type === "duplicate-symbol" ||
+        command.type === "make-symbol-unique"
       ) {
         openDefinition(
           project.symbols.find((s) => !oldDefinitions.has(s.id))!.id,
@@ -390,6 +391,8 @@
         patch.binding = externalName === "" ? null : { externalName };
       }
     }
+    if (selected.shape.type === "symbol")
+      patch.symbolId = String(data.get("symbolId"));
     if (selected.shape.type === "polyline") {
       patch.points = parsePoints(String(data.get("points")));
       patch.strokeWidth = Number(data.get("strokeWidth"));
@@ -976,6 +979,24 @@
                     >
                   {/if}
                 {/if}
+                {#if selected.shape.type === "symbol"}
+                  <label class="full-width"
+                    >参照する Symbol 定義<select
+                      name="symbolId"
+                      aria-label="参照する Symbol 定義"
+                      value={selected.shape.symbolId}
+                    >
+                      {#each project.symbols as definition (definition.id)}
+                        <option value={definition.id}
+                          >{definition.name} · {symbolUsage(
+                            project,
+                            definition.id,
+                          )} 配置</option
+                        >
+                      {/each}
+                    </select></label
+                  >
+                {/if}
               </div>
               {#if selected.shape.type === "text" && !activeDefinition}
                 <p>
@@ -984,6 +1005,20 @@
                 </p>
               {/if}
               {#if selected.shape.type === "symbol"}
+                <p>
+                  参照先を変えても位置・サイズ・色は維持します。共有定義の形状を編集すると、同じ定義を使うすべての配置に反映されます。
+                </p>
+                <button
+                  type="button"
+                  disabled={project.symbols.length >= 100}
+                  onclick={() =>
+                    selected &&
+                    edit({
+                      type: "make-symbol-unique",
+                      screenId: screen.id,
+                      objectId: selected.id,
+                    })}>定義を複製してこの配置に適用</button
+                >
                 <button
                   type="button"
                   onclick={() => {

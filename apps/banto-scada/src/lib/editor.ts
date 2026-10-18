@@ -16,6 +16,7 @@ export interface ObjectPatch {
   fill?: string;
   text?: string;
   binding?: TagBinding | null;
+  symbolId?: string;
   points?: Point[];
   strokeWidth?: number;
   arrow?: "none" | "end";
@@ -69,6 +70,7 @@ export type ObjectCommand = (
       center?: Point;
     }
   | { type: "update"; screenId: string; objectId: string; patch: ObjectPatch }
+  | { type: "make-symbol-unique"; screenId: string; objectId: string }
   | { type: "duplicate"; screenId: string; objectId: string }
   | {
       type: "reorder";
@@ -112,6 +114,7 @@ export function isObjectCommand(
     "add-symbol",
     "update",
     "duplicate",
+    "make-symbol-unique",
     "reorder",
     "remove",
   ].includes(command.type);
@@ -182,11 +185,7 @@ export function applyCommand(
         height: command.height,
       });
     else if (command.type === "duplicate-symbol") {
-      const copy: SymbolDefinition = JSON.parse(JSON.stringify(definition));
-      copy.id = newId();
-      copy.name = definition.name.slice(0, 196) + " コピー";
-      copy.objects.forEach((o) => (o.id = newId()));
-      next.symbols.push(copy);
+      next.symbols.push(copySymbol(definition));
     } else if (command.type === "remove-symbol") {
       if (symbolUsage(next, definition.id))
         throw new Error("配置で使用中の Symbol 定義は削除できません");
@@ -394,7 +393,17 @@ export function applyCommand(
   } else {
     const index = screen.objects.findIndex((o) => o.id === command.objectId);
     if (index < 0) throw new Error("図形が見つかりません");
-    if (command.type === "move-vertex") {
+    if (command.type === "make-symbol-unique") {
+      const object = screen.objects[index];
+      if (definitionId || object.shape.type !== "symbol")
+        throw new Error("画面上の Symbol 配置だけを独立コピーできます");
+      const id = object.shape.symbolId;
+      const definition = next.symbols.find((item) => item.id === id);
+      if (!definition) throw new Error("Symbol 定義が見つかりません");
+      const copy = copySymbol(definition);
+      next.symbols.push(copy);
+      object.shape.symbolId = copy.id;
+    } else if (command.type === "move-vertex") {
       const shape = screen.objects[index].shape;
       if (shape.type !== "polyline")
         throw new Error("折れ線の頂点だけを移動できます");
@@ -430,10 +439,24 @@ export function applyCommand(
       screen.objects = ordered;
     } else if (command.type === "remove") screen.objects.splice(index, 1);
     else {
-      const { text, binding, points, strokeWidth, arrow, ...geometry } =
-        command.patch;
+      const {
+        text,
+        binding,
+        symbolId,
+        points,
+        strokeWidth,
+        arrow,
+        ...geometry
+      } = command.patch;
       const object = screen.objects[index];
       Object.assign(object, geometry);
+      if (symbolId !== undefined) {
+        if (definitionId || object.shape.type !== "symbol")
+          throw new Error("参照先は画面上の Symbol 配置にだけ設定できます");
+        if (!next.symbols.some((item) => item.id === symbolId))
+          throw new Error("Symbol 定義が見つかりません");
+        object.shape.symbolId = symbolId;
+      }
       if (binding !== undefined) {
         if (definitionId || object.shape.type !== "text")
           throw new Error("タグは画面の Text に割り当ててください");
@@ -459,6 +482,13 @@ export function applyCommand(
     }
   }
   return finish(project, next);
+}
+function copySymbol(definition: SymbolDefinition): SymbolDefinition {
+  const copy: SymbolDefinition = JSON.parse(JSON.stringify(definition));
+  copy.id = newId();
+  copy.name = definition.name.slice(0, 196) + " コピー";
+  copy.objects.forEach((object) => (object.id = newId()));
+  return copy;
 }
 function screenName(name: string): string {
   const trimmed = name.trim();
