@@ -18,6 +18,7 @@
     showGrid,
     snapEnabled,
     gridSize,
+    onbeforeedit,
     onselect,
     onmove,
     onresize,
@@ -30,6 +31,7 @@
     showGrid: boolean;
     snapEnabled: boolean;
     gridSize: number;
+    onbeforeedit?: () => boolean;
     onselect: (
       id: string | null,
       additive: boolean,
@@ -287,6 +289,7 @@
           {showGrid}
           {snapEnabled}
           {gridSize}
+          {onbeforeedit}
           {onselect}
           {onmove}
           {onresize}

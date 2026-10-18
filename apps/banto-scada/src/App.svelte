@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { PageHeader, SurfaceCard, StatusBadge, ToastHost } from "@banto/ui";
+  import {
+    PageHeader,
+    SurfaceCard,
+    StatusBadge,
+    ToastHost,
+    Modal,
+  } from "@banto/ui";
   import { notify, type NotificationKind } from "@banto/admin-core";
   import { isThemeMode } from "@banto/theme";
   import { getThemeMode, setThemeMode, toastStore } from "./lib/banto/setup";
@@ -11,6 +17,11 @@
       void setThemeMode(value);
     }
   }
+  import { untrack } from "svelte";
+  import { projectContent } from "./lib/save-state";
+  import { createDraftGuard } from "./lib/designer/drafts.svelte";
+  import DraftPrompt from "./lib/designer/DraftPrompt.svelte";
+  import type { Project } from "./lib/project";
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
   import CanvasWorkspace from "./lib/designer/CanvasWorkspace.svelte";
@@ -24,6 +35,7 @@
   } from "./lib/project";
   import {
     type EditCommand,
+    applyCommand,
     isObjectCommand,
     symbolUsage,
     type AddKind,
@@ -35,6 +47,13 @@
     travelHistory,
     type EditHistory,
   } from "./lib/history";
+  const drafts = createDraftGuard(
+    (text) => report("error", text),
+    validateDrafts,
+  );
+  function transition(action: () => void) {
+    if (drafts.allow(action)) action();
+  }
   let history = $state<EditHistory>(emptyHistory());
   let workspaceGeneration = $state(0);
   let canvasWorkspace = $state<{ visibleCenter: () => Point }>();
@@ -42,12 +61,12 @@
     snapEnabled = $state(false),
     gridSize = $state(10);
   function travel(direction: "undo" | "redo") {
+    if (!drafts.allow(() => travel(direction))) return;
     try {
       const result = travelHistory(project, history, direction, mode);
       if (result.project === project) return;
       project = result.project;
       history = result.history;
-      projectChanged = true;
       if (!project.screens.some((s) => s.id === screenId))
         screenId = project.screens[0].id;
       normalizeTargets();
@@ -66,21 +85,21 @@
     }
   }
   function shortcut(event: KeyboardEvent) {
-    if (
-      mode !== "edit" ||
-      busy ||
-      event.isComposing ||
-      event.altKey ||
-      !(event.ctrlKey || event.metaKey)
-    )
+    if (event.isComposing || event.altKey || !(event.ctrlKey || event.metaKey))
       return;
+    const key = event.key.toLowerCase();
+    if (key === "s" && !event.shiftKey) {
+      event.preventDefault();
+      if (!busy) save();
+      return;
+    }
+    if (busy || mode !== "edit" || drafts.pending || replacement) return;
     const target = event.target;
     if (
       target instanceof Element &&
       target.closest("input,textarea,select,[contenteditable]")
     )
       return;
-    const key = event.key.toLowerCase();
     if (key === "z") {
       event.preventDefault();
       travel(event.shiftKey ? "redo" : "undo");
@@ -89,7 +108,7 @@
       travel("redo");
     } else if (key === "a" && !event.shiftKey) {
       event.preventDefault();
-      selectedIds = screen.objects.map((o) => o.id);
+      transition(() => (selectedIds = screen.objects.map((o) => o.id)));
     } else if (key === "d" && !event.shiftKey && selectedIds.length) {
       event.preventDefault();
       duplicateSelection();
@@ -103,6 +122,7 @@
     additive = false,
     preserve = false,
   ): string[] {
+    if (!drafts.allow(() => selectObjects(id, additive, preserve))) return [];
     if (!id) {
       if (!additive) selectedIds = [];
       return [...selectedIds];
@@ -139,15 +159,7 @@
       });
   }
   function moveSelection(event: SubmitEvent) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget as HTMLFormElement);
-    edit({
-      type: "move-many",
-      screenId: screen.id,
-      objectIds: [...selectedIds],
-      dx: Number(data.get("dx")),
-      dy: Number(data.get("dy")),
-    });
+    submitForm(event);
   }
   let project = $state(parseProject(JSON.stringify(sample)));
   let screenId = $state(sample.screens[0].id);
@@ -164,11 +176,13 @@
       editingSymbolId = null;
   }
   function openDefinition(id: string) {
+    if (!drafts.allow(() => openDefinition(id))) return;
     editingSymbolId = id;
     libraryId = id;
     selectedIds = [];
   }
   function deleteDefinition(id: string) {
+    if (!drafts.allow(() => deleteDefinition(id))) return;
     const definition = project.symbols.find((s) => s.id === id);
     if (
       definition &&
@@ -183,33 +197,67 @@
   );
   let message = $state("サンプルを表示しています。Hub には接続していません。");
   let busy = $state(false);
-  let projectChanged = $state(false);
-  function showProcessSample() {
-    if (
-      projectChanged &&
-      !window.confirm(
-        "現在の編集内容を工程図サンプルで置き換えます。必要な JSON は保存しましたか？",
-      )
-    )
-      return;
-    project = parseProject(JSON.stringify(processSample));
+  let baseline = $state(untrack(() => projectContent(project)));
+  let baselineSource = $state<"sample" | "file" | "download">("sample");
+  let lastExport = $state<string | null>(null);
+  let projectChanged = $derived(projectContent(project) !== baseline);
+  let replacement = $state<{
+    project: Project;
+    source: "sample" | "file";
+  } | null>(null);
+  const saveLabel = $derived(
+    projectChanged
+      ? "未書き出しの変更あり"
+      : baselineSource === "download"
+        ? "書き出し要求後の変更なし"
+        : baselineSource === "file"
+          ? "読込後の変更なし"
+          : "サンプルからの変更なし",
+  );
+  function adopt(next: Project, source: "sample" | "file") {
+    project = next;
+    baseline = projectContent(next);
+    baselineSource = source;
+    lastExport = null;
     history = emptyHistory();
     workspaceGeneration++;
     screenId = project.screens[0].id;
     editingSymbolId = null;
     selectedIds = [];
-    projectChanged = false;
     report(
       "info",
-      "工程図サンプルを開きました。設備や計測値には接続していません。",
+      source === "sample"
+        ? "工程図サンプルを開きました。設備や計測値には接続していません。"
+        : "Project を読み込みました。",
     );
+  }
+  function requestReplacement(next: Project, source: "sample" | "file") {
+    if (!drafts.allow(() => requestReplacement(next, source))) return;
+    if (projectChanged) replacement = { project: next, source };
+    else adopt(next, source);
+  }
+  function replaceNow() {
+    const next = replacement;
+    replacement = null;
+    if (next) adopt(next.project, next.source);
+  }
+  function showProcessSample() {
+    requestReplacement(parseProject(JSON.stringify(processSample)), "sample");
+  }
+  function beforeLeave(event: BeforeUnloadEvent) {
+    if (projectChanged || drafts.dirty) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
   }
   function report(kind: NotificationKind, text: string) {
     message = text;
     notify(kind, text);
   }
   let selected = $derived(screen.objects.find((o) => o.id === selectedId));
-  function edit(command: EditCommand) {
+  function edit(command: EditCommand, form?: HTMLFormElement): boolean {
+    if (form ? !drafts.beforeSubmit(form) : !drafts.allow(() => edit(command)))
+      return false;
     try {
       const oldIds = new Set(screen.objects.map((o) => o.id));
       const oldScreens = new Set(project.screens.map((s) => s.id));
@@ -223,10 +271,12 @@
       )
         command = { ...command, center: canvasWorkspace?.visibleCenter() };
       const result = recordEdit(project, history, command, mode);
-      if (result.project === project) return;
+      if (result.project === project) {
+        if (form) drafts.submitted(form);
+        return true;
+      }
       project = result.project;
       history = result.history;
-      projectChanged = true;
       normalizeTargets();
       if (
         command.type === "create-symbol" ||
@@ -258,68 +308,106 @@
           .map((o) => o.id);
       if (command.type === "remove" || command.type === "remove-many")
         selectedIds = [];
+      if (form) drafts.submitted(form);
       report(
         "success",
         "変更を適用しました。JSON を保存するとファイルに残せます。",
       );
+      return true;
     } catch (e) {
       report(
         "error",
         `編集エラー: ${e instanceof Error ? e.message : String(e)}`,
       );
+      return false;
     }
   }
   function screenProperties(event: SubmitEvent) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget as HTMLFormElement);
-    edit({
-      ...(activeDefinition
-        ? { type: "update-symbol" as const, symbolId: activeDefinition.id }
-        : { type: "update-screen" as const, screenId: screen.id }),
-      name: String(data.get("name")),
-      width: Number(data.get("width")),
-      height: Number(data.get("height")),
-    });
+    submitForm(event);
   }
   function removeScreen() {
+    if (!drafts.allow(removeScreen)) return;
     if (window.confirm(`「${screen.name}」と画面内の図形を削除しますか？`))
       edit({ type: "remove-screen", screenId: screen.id });
   }
   function add(kind: AddKind) {
     edit({ type: "add", screenId: screen.id, kind });
   }
-  function properties(event: SubmitEvent) {
-    event.preventDefault();
-    if (!selected) return;
-    const data = new FormData(event.currentTarget as HTMLFormElement);
-    try {
-      const patch: ObjectPatch = {
-        x: Number(data.get("x")),
-        y: Number(data.get("y")),
-        fill: String(data.get("fill")),
+  function formCommand(form: HTMLFormElement): EditCommand {
+    const data = new FormData(form);
+    if (form.dataset.editorForm === "screen")
+      return {
+        ...(activeDefinition
+          ? { type: "update-symbol" as const, symbolId: activeDefinition.id }
+          : { type: "update-screen" as const, screenId: screen.id }),
+        name: String(data.get("name")),
+        width: Number(data.get("width")),
+        height: Number(data.get("height")),
       };
-      if ("width" in selected) {
-        patch.width = Number(data.get("width"));
-        patch.height = Number(data.get("height"));
-      }
-      if (selected.shape.type === "text") patch.text = String(data.get("text"));
-      if (selected.shape.type === "polyline") {
-        patch.points = parsePoints(String(data.get("points")));
-        patch.strokeWidth = Number(data.get("strokeWidth"));
-        patch.arrow = data.get("arrow") === "end" ? "end" : "none";
-      }
-      edit({
-        type: "update",
+    if (form.dataset.editorForm === "move")
+      return {
+        type: "move-many",
         screenId: screen.id,
-        objectId: selected.id,
-        patch,
-      });
+        objectIds: [...selectedIds],
+        dx: Number(data.get("dx")),
+        dy: Number(data.get("dy")),
+      };
+    if (!selected) throw new Error("選択した図形が見つかりません");
+    const patch: ObjectPatch = {
+      x: Number(data.get("x")),
+      y: Number(data.get("y")),
+      fill: String(data.get("fill")),
+    };
+    if ("width" in selected) {
+      patch.width = Number(data.get("width"));
+      patch.height = Number(data.get("height"));
+    }
+    if (selected.shape.type === "text") patch.text = String(data.get("text"));
+    if (selected.shape.type === "polyline") {
+      patch.points = parsePoints(String(data.get("points")));
+      patch.strokeWidth = Number(data.get("strokeWidth"));
+      patch.arrow = data.get("arrow") === "end" ? "end" : "none";
+    }
+    return {
+      type: "update",
+      screenId: screen.id,
+      objectId: selected.id,
+      patch,
+    };
+  }
+  function validateDrafts(forms: HTMLFormElement[]): boolean {
+    try {
+      let candidate = project;
+      for (const form of forms) {
+        if (!form.isConnected) continue;
+        let command = formCommand(form);
+        if (activeDefinition && isObjectCommand(command))
+          command = { ...command, definitionId: activeDefinition.id };
+        candidate = applyCommand(candidate, command, mode);
+      }
+      return true;
+    } catch (e) {
+      report(
+        "error",
+        `編集エラー: ${e instanceof Error ? e.message : String(e)}`,
+      );
+      return false;
+    }
+  }
+  function submitForm(event: SubmitEvent) {
+    event.preventDefault();
+    const form = event.currentTarget as HTMLFormElement;
+    try {
+      edit(formCommand(form), form);
     } catch (e) {
       report(
         "error",
         `編集エラー: ${e instanceof Error ? e.message : String(e)}`,
       );
     }
+  }
+  function properties(event: SubmitEvent) {
+    submitForm(event);
   }
 
   async function load(event: Event) {
@@ -331,14 +419,7 @@
       if (file.size > 1024 * 1024)
         throw new Error("ファイルは 1 MiB 以下にしてください");
       const next = parseProject(await file.text());
-      project = next;
-      history = emptyHistory();
-      workspaceGeneration++;
-      projectChanged = false;
-      screenId = next.screens[0].id;
-      editingSymbolId = null;
-      selectedIds = [];
-      report("success", "Project を読み込みました。");
+      requestReplacement(next, "file");
     } catch (e) {
       report(
         "error",
@@ -350,19 +431,44 @@
     }
   }
   function save() {
-    const url = URL.createObjectURL(
-      new Blob([serializeProject(project)], { type: "application/json" }),
-    );
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "project.json";
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    report("success", "Project JSON を保存しました。");
+    if (replacement) {
+      writeJson();
+      return;
+    }
+    if (!drafts.allow(save)) return;
+    writeJson();
+  }
+  function writeJson() {
+    try {
+      const json = serializeProject(project);
+      const url = URL.createObjectURL(
+        new Blob([json], { type: "application/json" }),
+      );
+      try {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "project.json";
+        link.click();
+      } finally {
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      baseline = projectContent(project);
+      baselineSource = "download";
+      lastExport = new Date().toLocaleTimeString("ja-JP");
+      report(
+        "success",
+        "Project JSON のダウンロードを開始しました。保存先でファイルを確認してください。",
+      );
+    } catch (e) {
+      report(
+        "error",
+        `書き出しエラー: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
 </script>
 
-<svelte:window onkeydown={shortcut} />
+<svelte:window onkeydown={shortcut} onbeforeunload={beforeLeave} />
 
 <svelte:head
   ><meta
@@ -380,19 +486,21 @@
         <button
           class:active={mode === "edit"}
           aria-pressed={mode === "edit"}
-          onclick={() => {
-            mode = "edit";
-            selectedIds = [];
-          }}>編集</button
+          onclick={() =>
+            transition(() => {
+              mode = "edit";
+              selectedIds = [];
+            })}>編集</button
         >
         <button
           class:active={mode === "preview"}
           aria-pressed={mode === "preview"}
-          onclick={() => {
-            mode = "preview";
-            editingSymbolId = null;
-            selectedIds = [];
-          }}>表示プレビュー</button
+          onclick={() =>
+            transition(() => {
+              mode = "preview";
+              editingSymbolId = null;
+              selectedIds = [];
+            })}>表示プレビュー</button
         >
         <StatusBadge variant="neutral" label="Hub 未接続" />
         <label class="theme-label"
@@ -412,6 +520,14 @@
 <main class:editing={mode === "edit"}>
   <aside class="project-sidebar" aria-label="Project と部品">
     <h2>Project</h2>
+    <div class="save-state" data-testid="save-state">
+      <StatusBadge
+        variant={projectChanged ? "warning" : "neutral"}
+        label={saveLabel}
+      />
+      {#if drafts.dirty}<p>未適用の入力あり · {drafts.count} フォーム</p>{/if}
+      {#if lastExport}<p>最終書き出し要求 {lastExport}</p>{/if}
+    </div>
     <button onclick={showProcessSample} disabled={busy}
       >工程図サンプルを開く</button
     >
@@ -420,11 +536,12 @@
       {#each project.screens as item}<button
           class:active={screen.id === item.id}
           aria-pressed={screen.id === item.id}
-          onclick={() => {
-            screenId = item.id;
-            editingSymbolId = null;
-            selectedIds = [];
-          }}>{item.name}</button
+          onclick={() =>
+            transition(() => {
+              screenId = item.id;
+              editingSymbolId = null;
+              selectedIds = [];
+            })}>{item.name}</button
         >{/each}
     </nav>
     {#if mode === "edit"}
@@ -473,7 +590,12 @@
         >
       {/if}
       {#key screen}
-        <form onsubmit={screenProperties} aria-label="画面設定">
+        <form
+          use:drafts.track
+          data-editor-form="screen"
+          onsubmit={screenProperties}
+          aria-label="画面設定"
+        >
           <label
             >{activeDefinition ? "Symbol 名" : "画面名"}<input
               name="name"
@@ -553,10 +675,11 @@
           確定した変更は全画面の参照配置へ反映されます。配置時は配置側の単色を使います。別の形にする場合は定義を複製してください。
         </p>
         <button
-          onclick={() => {
-            editingSymbolId = null;
-            selectedIds = [];
-          }}>画面へ戻る</button
+          onclick={() =>
+            transition(() => {
+              editingSymbolId = null;
+              selectedIds = [];
+            })}>画面へ戻る</button
         >
       </div>
     {/if}
@@ -578,12 +701,14 @@
           disabled={busy || history.future.length === 0}
           onclick={() => travel("redo")}>やり直す</button
         >
-        <button onclick={() => (selectedIds = screen.objects.map((o) => o.id))}
+        <button
+          onclick={() =>
+            transition(() => (selectedIds = screen.objects.map((o) => o.id)))}
           >すべて選択</button
         >
         <button
           disabled={selectedIds.length === 0}
-          onclick={() => (selectedIds = [])}>選択解除</button
+          onclick={() => transition(() => (selectedIds = []))}>選択解除</button
         >
         <span>Shift + クリックで複数選択 · {selectedIds.length} 件選択</span>
       </div>
@@ -636,6 +761,7 @@
             index,
             point,
           })}
+        onbeforeedit={() => drafts.allow(() => {})}
         onselect={selectObjects}
         onmove={(ids, dx, dy) =>
           edit({
@@ -656,7 +782,11 @@
           <p>
             {selectedIds.length} 件選択しています。図形をドラッグするとまとめて移動します。
           </p>
-          <form onsubmit={moveSelection}>
+          <form
+            use:drafts.track
+            data-editor-form="move"
+            onsubmit={moveSelection}
+          >
             <div class="fields">
               <label
                 >移動量 X<input
@@ -700,7 +830,11 @@
           </div>
         {:else if selected}
           {#key project.manifest.projectRevision + selected.id}
-            <form onsubmit={properties}>
+            <form
+              use:drafts.track
+              data-editor-form="object"
+              onsubmit={properties}
+            >
               <div class="fields">
                 {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
                   <label
@@ -829,6 +963,30 @@
     </aside>
   {/if}
 </main>
+<DraftPrompt guard={drafts} />
+<Modal
+  open={replacement !== null}
+  title="Project を置き換えますか"
+  onclose={() => (replacement = null)}
+>
+  <p>
+    {#if projectChanged}
+      現在の Project に未書き出しの変更があります。
+    {:else}
+      現在の内容の書き出しを要求しました。
+    {/if}
+    「{replacement?.project.manifest
+      .name}」を開く前に、書き出したファイルを確認してください。
+  </p>
+  <p>
+    書き出しても自動では置き換えません。ファイルを確認してから「破棄して開く」を選んでください。
+  </p>
+  <div class="actions">
+    <button onclick={writeJson}>JSON を書き出す</button><button
+      onclick={replaceNow}>破棄して開く</button
+    ><button onclick={() => (replacement = null)}>キャンセル</button>
+  </div>
+</Modal>
 <ToastHost store={toastStore} />
 
 <style>
@@ -845,6 +1003,13 @@
   }
   :global(*) {
     box-sizing: border-box;
+  }
+  .save-state {
+    margin: 12px 0;
+  }
+  .save-state p {
+    margin: 6px 0;
+    font-size: 11px;
   }
   .app-header {
     padding: 16px 24px;

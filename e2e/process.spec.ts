@@ -58,8 +58,11 @@ test("edits pipes and reusable symbols, then reproduces the saved process screen
   ).toBeCloseTo(200, 0);
   await page.getByRole("button", { name: "ポンプを追加" }).click();
   await page.getByRole("button", { name: "ポンプを追加" }).click();
-  page.once("dialog", (dialog) => dialog.dismiss());
   await page.getByRole("button", { name: "工程図サンプルを開く" }).click();
+  await page
+    .getByRole("dialog", { name: "Project を置き換えますか" })
+    .getByRole("button", { name: "キャンセル", exact: true })
+    .click();
   await expect(svg.locator("[data-object-id]")).toHaveCount(18);
   const downloading = page.waitForEvent("download");
   await page.getByRole("button", { name: "Project JSON を保存" }).click();

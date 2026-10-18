@@ -23,6 +23,7 @@
     showGrid = false,
     snapEnabled = false,
     gridSize = 10,
+    onbeforeedit,
     onresize,
     onvertexmove,
     onselect,
@@ -35,6 +36,7 @@
     showGrid?: boolean;
     snapEnabled?: boolean;
     gridSize?: number;
+    onbeforeedit?: () => boolean;
     onresize?: (id: string, geometry: Geometry) => void;
     onvertexmove?: (id: string, index: number, point: Point) => void;
     onselect?: (
@@ -112,6 +114,11 @@
     };
     const direction = vectors[event.key];
     if (!direction) return;
+    if (onbeforeedit && !onbeforeedit()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     const edge = handlePoint(geometry, handle);
@@ -175,6 +182,11 @@
     };
     const direction = vector[event.key];
     if (!direction) return;
+    if (onbeforeedit && !onbeforeedit()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
     const original = object.shape.points[index],
@@ -207,6 +219,10 @@
     if (drag || vertexDrag || resizeDrag) return;
     const resize = (event.target as Element).closest("[data-resize-object-id]");
     if (resize) {
+      if (onbeforeedit && !onbeforeedit()) {
+        event.preventDefault();
+        return;
+      }
       const object = screen.objects.find(
         (o) => o.id === resize.getAttribute("data-resize-object-id"),
       );
@@ -239,6 +255,10 @@
     }
     const handle = (event.target as Element).closest("[data-vertex-object-id]");
     if (handle) {
+      if (onbeforeedit && !onbeforeedit()) {
+        event.preventDefault();
+        return;
+      }
       const object = screen.objects.find(
         (o) => o.id === handle.getAttribute("data-vertex-object-id"),
       );
