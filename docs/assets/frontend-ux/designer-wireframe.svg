@@ -1,0 +1,238 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc"><title id="title">Banto SCADA Designer の提案ワイヤーフレーム</title><desc id="desc">未実装のUX構成案。上部にコマンド、左にProjectとSymbol、中央に工程図、右にInspector、下部に必要時だけ開くタグドック。実データや設備へ接続していない。</desc><defs><pattern id="dots" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.75" fill="#d4dce5"/></pattern></defs><style>text{font-family:'Noto Sans CJK JP','Noto Sans',sans-serif;font-size:13px;fill:#29394b}.small{font-size:11px;fill:#607186}.title{font-size:16px;font-weight:700}.label{font-size:12px;font-weight:700}.muted{fill:#6a7b8e}.accent{fill:#2563eb}.warning{fill:#8a5700}</style>
+<rect x="0" y="0" width="1600" height="1000" rx="0" fill="#f5f7fa" stroke="#c5cfdb"/>
+<rect x="0" y="0" width="1600" height="40" rx="0" fill="#eef2f7" stroke="#d3dbe5"/>
+<text x="16" y="26" class="title">Banto SCADA Designer</text>
+<text x="252" y="26" class="">水処理設備  •  未保存</text>
+<text x="1125" y="25" class="label">提案ワイヤーフレーム / 未実装</text>
+<text x="1450" y="25" class="small">ローカル編集</text>
+<rect x="0" y="40" width="1600" height="40" rx="0" fill="#fafbfd" stroke="#d3dbe5"/>
+<rect x="10" y="46" width="60" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="20" y="65" class="">保存</text>
+<rect x="78" y="46" width="70" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="88" y="65" class="">元に戻す</text>
+<rect x="156" y="46" width="70" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="166" y="65" class="">やり直す</text>
+<path d="M239 48L239 73" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<rect x="252" y="46" width="60" height="28" rx="4" fill="#eaf2ff" stroke="#80acff"/>
+<text x="262" y="65" class="accent">選択</text>
+<rect x="320" y="46" width="64" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="330" y="65" class="">パン</text>
+<rect x="392" y="46" width="64" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="402" y="65" class="">矩形</text>
+<rect x="464" y="46" width="52" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="474" y="65" class="">線</text>
+<rect x="524" y="46" width="60" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="534" y="65" class="">文字</text>
+<rect x="600" y="46" width="70" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="610" y="65" class="">整列</text>
+<rect x="686" y="46" width="92" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="696" y="65" class="">グリッド</text>
+<rect x="786" y="46" width="92" height="28" rx="4" fill="#eaf2ff" stroke="#80acff"/>
+<text x="796" y="65" class="accent">スナップ</text>
+<rect x="896" y="46" width="104" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="906" y="65" class="">100% ▾</text>
+<rect x="1014" y="46" width="100" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="1024" y="65" class="">全体表示</text>
+<rect x="1330" y="46" width="120" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="1340" y="65" class="">表示確認</text>
+<text x="1465" y="65" class="small">Hub 未接続</text>
+<rect x="0" y="80" width="264" height="896" rx="0" fill="#f8fafc" stroke="#d3dbe5"/>
+<rect x="0" y="80" width="264" height="36" rx="0" fill="#eef2f7" stroke="#d3dbe5"/>
+<text x="16" y="103" class="label">Project</text>
+<text x="140" y="103" class="muted">オブジェクト</text>
+<text x="16" y="141" class="label">▾ 水処理設備</text>
+<text x="30" y="169" class="">▾ 画面</text>
+<rect x="42" y="180" width="208" height="28" rx="3" fill="#deebff" stroke="#deebff"/>
+<text x="53" y="199" class="accent">ポンプ設備</text>
+<text x="53" y="226" class="">概要画面</text>
+<text x="30" y="258" class="">▸ Symbol 定義</text>
+<text x="30" y="289" class="muted">▸ 接続・タグ（後続）</text>
+<text x="16" y="328" class="small">画面の追加・名称変更はここから</text>
+<path d="M0 350L264 350" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="16" y="377" class="label">Symbol / 部品</text>
+<text x="14" y="392" class="small">検索</text>
+<rect x="14" y="401" width="236" height="28" rx="4" fill="#fff" stroke="#d2dae5"/>
+<text x="22" y="420" class="">ポンプ、バルブ…</text>
+<text x="16" y="457" class="small">基本図形  /  Project の定義</text>
+<rect x="14" y="472" width="114" height="80" rx="5" fill="#fff" stroke="#d0d9e5"/>
+<text x="62" y="503" class="title">◉</text>
+<text x="34" y="533" class="">ポンプ</text>
+<rect x="136" y="472" width="114" height="80" rx="5" fill="#fff" stroke="#d0d9e5"/>
+<text x="184" y="503" class="title">⋈</text>
+<text x="156" y="533" class="">バルブ</text>
+<rect x="14" y="561" width="114" height="80" rx="5" fill="#fff" stroke="#d0d9e5"/>
+<text x="62" y="592" class="title">▯</text>
+<text x="34" y="622" class="">タンク</text>
+<rect x="136" y="561" width="114" height="80" rx="5" fill="#fff" stroke="#d0d9e5"/>
+<text x="184" y="592" class="title">┗</text>
+<text x="156" y="622" class="">配管</text>
+<rect x="14" y="650" width="114" height="80" rx="5" fill="#fff" stroke="#d0d9e5"/>
+<text x="62" y="681" class="title">A</text>
+<text x="34" y="711" class="">テキスト</text>
+<rect x="136" y="650" width="114" height="80" rx="5" fill="#fff" stroke="#d0d9e5"/>
+<text x="184" y="681" class="title">□</text>
+<text x="156" y="711" class="">矩形</text>
+<text x="16" y="770" class="small">クリック → キャンバスで配置</text>
+<text x="16" y="796" class="small">Esc で選択ツールへ戻る</text>
+<path d="M0 823L264 823" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="16" y="850" class="small">共有定義の変更は全配置へ反映</text>
+<text x="16" y="874" class="small">別の形にする場合は定義を複製</text>
+<text x="16" y="935" class="small">左ペイン 264px / 幅変更可</text>
+<rect x="264" y="80" width="1032" height="36" rx="0" fill="#e9eef5" stroke="#d3dbe5"/>
+<rect x="275" y="85" width="180" height="31" rx="4" fill="#fff" stroke="#cbd5e1"/>
+<text x="289" y="106" class="label">ポンプ設備  •  ×</text>
+<text x="470" y="106" class="">＋</text>
+<text x="1080" y="104" class="small">画面 / Symbol を区別</text>
+<rect x="264" y="116" width="1032" height="24" rx="0" fill="#f2f5f8" stroke="#d3dbe5"/>
+<text x="270" y="133" class="small">du</text>
+<path d="M300 132L300 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="294" y="130" class="small">0</text>
+<path d="M390 132L390 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="384" y="130" class="small">100</text>
+<path d="M480 132L480 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="474" y="130" class="small">200</text>
+<path d="M570 132L570 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="564" y="130" class="small">300</text>
+<path d="M660 132L660 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="654" y="130" class="small">400</text>
+<path d="M750 132L750 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="744" y="130" class="small">500</text>
+<path d="M840 132L840 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="834" y="130" class="small">600</text>
+<path d="M930 132L930 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="924" y="130" class="small">700</text>
+<path d="M1020 132L1020 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="1014" y="130" class="small">800</text>
+<path d="M1110 132L1110 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="1104" y="130" class="small">900</text>
+<path d="M1200 132L1200 140" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="1194" y="130" class="small">1000</text>
+<rect x="264" y="140" width="1032" height="616" rx="0" fill="#fff" stroke="#d3dbe5"/>
+<rect x="284" y="158" width="992" height="578" rx="0" fill="url(#dots)" stroke="#dde4ee"/>
+<text x="310" y="190" class="title">ポンプ設備 / 構成イメージ</text>
+<rect x="985" y="171" width="268" height="27" rx="4" fill="#fff4d6" stroke="#e5c67b"/>
+<text x="997" y="189" class="small">表示例・実設備未接続（後続機能含む）</text>
+<path d="M438 382H563V313H912V382H1033 M563 382V465H912V382" fill="none" stroke="#91a7b6" stroke-width="9" stroke-linejoin="round"/>
+<text x="345" y="252" class="label">T-101 / 原水槽</text>
+<rect x="350" y="270" width="90" height="180" rx="8" fill="#f7fafc" stroke="#436779"/>
+<rect x="358" y="360" width="74" height="82" rx="2" fill="#d4e9f2" stroke="#d4e9f2"/>
+<text x="348" y="478" class="small">液位  — %</text>
+<text x="1025" y="252" class="label">T-102 / 処理槽</text>
+<rect x="1030" y="270" width="90" height="180" rx="8" fill="#f7fafc" stroke="#436779"/>
+<rect x="1038" y="360" width="74" height="82" rx="2" fill="#d4e9f2" stroke="#d4e9f2"/>
+<text x="1028" y="478" class="small">液位  — %</text>
+<circle cx="675" cy="313" r="26" fill="#e9f5f9" stroke="#436779" stroke-width="3"/><path d="M666 299L691 313L666 327Z M656 337L650 347H700L694 337" fill="none" stroke="#436779" stroke-width="3"/>
+<rect x="636" y="275" width="78" height="80" rx="0" fill="none" stroke="#2563eb"/>
+<rect x="633" y="272" width="6" height="6" rx="0" fill="#fff" stroke="#2563eb"/>
+<rect x="672" y="272" width="6" height="6" rx="0" fill="#fff" stroke="#2563eb"/>
+<rect x="711" y="272" width="6" height="6" rx="0" fill="#fff" stroke="#2563eb"/>
+<rect x="633" y="312" width="6" height="6" rx="0" fill="#fff" stroke="#2563eb"/>
+<rect x="711" y="312" width="6" height="6" rx="0" fill="#fff" stroke="#2563eb"/>
+<rect x="633" y="352" width="6" height="6" rx="0" fill="#fff" stroke="#2563eb"/>
+<rect x="672" y="352" width="6" height="6" rx="0" fill="#fff" stroke="#2563eb"/>
+<rect x="711" y="352" width="6" height="6" rx="0" fill="#fff" stroke="#2563eb"/>
+<circle cx="675" cy="465" r="26" fill="#e9f5f9" stroke="#436779" stroke-width="3"/><path d="M666 451L691 465L666 479Z M656 489L650 499H700L694 489" fill="none" stroke="#436779" stroke-width="3"/>
+<path d="M812 297L848 329V297L812 329Z M830 313V283M819 283H841" fill="#fff" stroke="#436779" stroke-width="3"/>
+<path d="M812 449L848 481V449L812 481Z M830 465V435M819 435H841" fill="#fff" stroke="#436779" stroke-width="3"/>
+<text x="638" y="257" class="label">P-101</text>
+<text x="635" y="521" class="label">P-102</text>
+<text x="804" y="270" class="small">V-201</text>
+<text x="804" y="421" class="small">V-202</text>
+<rect x="726" y="267" width="79" height="24" rx="3" fill="#fff" stroke="#cbd5e1"/>
+<text x="736" y="284" class="">— MPa</text>
+<rect x="726" y="492" width="79" height="24" rx="3" fill="#fff" stroke="#cbd5e1"/>
+<text x="736" y="509" class="">— MPa</text>
+<text x="320" y="585" class="small">設備状態・計測値は接続と Quality を含めて表示する</text>
+<rect x="320" y="607" width="390" height="80" rx="5" fill="#f7f9fc" stroke="#d4dce7"/>
+<text x="334" y="631" class="label">選択: P-101 / ポンプ配置</text>
+<text x="334" y="656" class="small">表示確認から実機への書き込みは行わない</text>
+<text x="334" y="677" class="small">将来の操作は Action / 権限 / 接続状態を別途設計</text>
+<text x="745" y="639" class="small">キャンバスの色はアプリテーマから独立</text>
+<text x="745" y="665" class="small">ズーム・パンは編集状態として保持</text>
+<text x="745" y="692" class="small">画面は design unit / SVG viewBox</text>
+<rect x="264" y="756" width="1032" height="220" rx="0" fill="#fff" stroke="#d3dbe5"/>
+<rect x="264" y="756" width="1032" height="35" rx="0" fill="#eef2f7" stroke="#d3dbe5"/>
+<text x="280" y="779" class="label">タグブラウザー（後続）</text>
+<text x="475" y="779" class="muted">診断</text>
+<text x="1035" y="779" class="small">必要時に開く / 初期は閉じる</text>
+<text x="1268" y="779" class="">×</text>
+<rect x="278" y="800" width="1004" height="27" rx="0" fill="#f5f7fa" stroke="#e0e5ec"/>
+<text x="289" y="818" class="label">external_name</text>
+<text x="565" y="818" class="label">型</text>
+<text x="660" y="818" class="label">値</text>
+<text x="782" y="818" class="label">Quality</text>
+<text x="925" y="818" class="label">接続先</text>
+<text x="1080" y="818" class="label">説明</text>
+<path d="M279 863L1282 863" fill="none" stroke="#e7ecf2" stroke-width="1"/>
+<text x="289" y="851" class="">HubA.Pump01.Running</text>
+<text x="565" y="851" class="">bit</text>
+<text x="660" y="851" class="">—</text>
+<text x="782" y="851" class="">未取得</text>
+<text x="925" y="851" class="">Hub A / 未接続</text>
+<text x="1080" y="851" class="">運転状態</text>
+<path d="M279 899L1282 899" fill="none" stroke="#e7ecf2" stroke-width="1"/>
+<text x="289" y="887" class="">HubA.Pump01.Fault</text>
+<text x="565" y="887" class="">bit</text>
+<text x="660" y="887" class="">—</text>
+<text x="782" y="887" class="">未取得</text>
+<text x="925" y="887" class="">Hub A / 未接続</text>
+<text x="1080" y="887" class="">故障状態</text>
+<path d="M279 935L1282 935" fill="none" stroke="#e7ecf2" stroke-width="1"/>
+<text x="289" y="923" class="">HubA.Tank01.Level</text>
+<text x="565" y="923" class="">f32</text>
+<text x="660" y="923" class="">—</text>
+<text x="782" y="923" class="">未取得</text>
+<text x="925" y="923" class="">Hub A / 未接続</text>
+<text x="1080" y="923" class="">原水槽の液位</text>
+<text x="286" y="964" class="small">PLC アドレスの設定・管理は Hub 側。SCADA は公開タグを参照。</text>
+<rect x="1296" y="80" width="304" height="896" rx="0" fill="#f8fafc" stroke="#d3dbe5"/>
+<rect x="1296" y="80" width="304" height="36" rx="0" fill="#eef2f7" stroke="#d3dbe5"/>
+<text x="1312" y="103" class="label">プロパティ</text>
+<text x="1312" y="144" class="title">ポンプ / Symbol 配置</text>
+<text x="1312" y="165" class="small">1 件選択</text>
+<rect x="1310" y="181" width="67" height="28" rx="4" fill="#eaf2ff" stroke="#80acff"/>
+<text x="1320" y="200" class="accent">外観</text>
+<rect x="1384" y="181" width="92" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="1394" y="200" class="">タグ・動作</text>
+<text x="1487" y="200" class="small">後続</text>
+<text x="1312" y="242" class="label">位置・サイズ</text>
+<text x="1312" y="261" class="small">X</text>
+<rect x="1312" y="270" width="126" height="28" rx="4" fill="#fff" stroke="#d2dae5"/>
+<text x="1320" y="289" class="">420</text>
+<text x="1452" y="261" class="small">Y</text>
+<rect x="1452" y="270" width="126" height="28" rx="4" fill="#fff" stroke="#d2dae5"/>
+<text x="1460" y="289" class="">120</text>
+<text x="1312" y="321" class="small">幅</text>
+<rect x="1312" y="330" width="126" height="28" rx="4" fill="#fff" stroke="#d2dae5"/>
+<text x="1320" y="349" class="">80</text>
+<text x="1452" y="321" class="small">高さ</text>
+<rect x="1452" y="330" width="126" height="28" rx="4" fill="#fff" stroke="#d2dae5"/>
+<text x="1460" y="349" class="">60</text>
+<path d="M1310 376L1584 376" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="1312" y="406" class="label">外観</text>
+<text x="1312" y="428" class="small">配置色</text>
+<rect x="1312" y="437" width="266" height="28" rx="4" fill="#fff" stroke="#d2dae5"/>
+<text x="1320" y="456" class="">#83BFCD</text>
+<text x="1312" y="490" class="small">定義内の図形色とは別に管理</text>
+<path d="M1310 511L1584 511" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="1312" y="540" class="label">共有 Symbol</text>
+<text x="1312" y="562" class="small">参照先</text>
+<rect x="1312" y="571" width="266" height="28" rx="4" fill="#fff" stroke="#d2dae5"/>
+<text x="1320" y="590" class="">循環ポンプ</text>
+<rect x="1312" y="616" width="126" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="1322" y="635" class="">定義を開く</text>
+<rect x="1452" y="616" width="126" height="28" rx="4" fill="#fff" stroke="#c9d3df"/>
+<text x="1462" y="635" class="">定義を複製</text>
+<text x="1312" y="675" class="small">定義変更は全画面の参照配置に反映</text>
+<text x="1312" y="699" class="small">定義編集には専用タブと共有数を表示</text>
+<path d="M1310 723L1584 723" fill="none" stroke="#cfd8e3" stroke-width="1"/>
+<text x="1312" y="752" class="label">タグ割付 / 後続</text>
+<text x="1312" y="779" class="small">接続済みの型に適合するタグを選択</text>
+<text x="1312" y="804" class="small">値が無効なら状態を推測しない</text>
+<text x="1312" y="945" class="small">右ペイン 304px / 幅変更可</text>
+<rect x="0" y="976" width="1600" height="24" rx="0" fill="#eaf0f7" stroke="#d3dbe5"/>
+<text x="12" y="993" class="small">編集モード  |  1 件選択  |  未保存</text>
+<text x="590" y="993" class="small">X: 420  Y: 120   /   960 × 540 du   /   100%</text>
+<text x="1190" y="993" class="small">タグドック: 展開例 220px</text>
+<text x="1450" y="993" class="small">Hub 未接続</text>
+</svg>
