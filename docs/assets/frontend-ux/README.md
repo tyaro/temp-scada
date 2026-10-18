@@ -68,3 +68,9 @@
 
 - `edit-toolbar-light.png` / `edit-toolbar-dark.png`: 共通操作をツールバーへ移した実装画面。補助パネルを隠しても操作可能な状態。
 - 各テーマを指定した `scripts/capture-ui.mjs` の `scada-editor.png`（ライト・パネル表示）と `scada-canvas-only.png`（ダーク・パネル非表示）、いずれも1600×1000を保存した。通常操作で撮影し、画像と DOM は加工していない。
+
+## 部品パレットの操作メニュー（2026-10-19）
+
+- `palette-context-light.png`: 組込ポンプの配置／情報メニュー。
+- `palette-context-dark.png`: Project の共有定義ポンプの配置／定義編集／複製／情報メニュー。
+- 各テーマを指定した `scripts/capture-ui.mjs` の `scada-part-context.png`（ライト）と `scada-shared-context.png`（ダーク）を保存した。1600×1000、通常操作で撮影した実画面で、画像と DOM は加工していない。

@@ -1208,6 +1208,10 @@
       {#snippet partsPanel()}
         {#if mode === "edit"}
           <PartPalette
+            contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}`}
+            onedit={openDefinition}
+            onduplicate={(id) =>
+              edit({ type: "duplicate-symbol", symbolId: id })}
             definitions={project.symbols}
             allowSymbols={!activeDefinition}
             onadd={add}

@@ -52,6 +52,18 @@ try {
     .getByRole("button", { name: "アイコン一覧", exact: true })
     .click();
   await capture("scada-parts.png");
+  await button("ポンプを追加").click({ button: "right" });
+  await expect(
+    page.getByRole("menu", { name: "ポンプ（組込） の操作", exact: true }),
+  ).toBeVisible();
+  await capture("scada-part-context.png");
+  await page.keyboard.press("Escape");
+  await button("ポンプ を配置").click({ button: "right" });
+  await expect(
+    page.getByRole("menu", { name: "ポンプ（共有定義） の操作", exact: true }),
+  ).toBeVisible();
+  await capture("scada-shared-context.png");
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "名称一覧", exact: true }).click();
   await capture("scada-parts-names.png");
   await page.getByRole("button", { name: "アイコン一覧", exact: true }).click();
