@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/minimal.project.json" with { type: "json" };
@@ -17,6 +18,7 @@ test("content dirty state follows undo/redo and export requests, not revision or
   await button("編集").click();
   await page.getByLabel("表示倍率", { exact: true }).selectOption("2");
   await expect(state).toContainText("サンプルからの変更なし");
+  await selectPanel(page, "部品");
   await button("Rectangle を追加").click();
   await expect(state).toContainText("未書き出しの変更あり");
   expect(await leaving()).toBe(false);
@@ -51,6 +53,7 @@ test("unapplied selection input can be cancelled, applied or discarded without l
       exact: true,
     }),
     ellipse = list.getByRole("button", { name: "ellipse · 4", exact: true });
+  await selectPanel(page, "レイヤー");
   await rectangle.click();
   await page.getByLabel("x", { exact: true }).fill("200");
   await expect(page.getByTestId("save-state")).toContainText(
@@ -93,6 +96,7 @@ test("invalid native and model input stops the pending operation and remains edi
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "レイヤー");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
@@ -106,6 +110,7 @@ test("invalid native and model input stops the pending operation and remains edi
   await expect(page.getByLabel("width", { exact: true })).toHaveValue("0");
   await expect(button("元に戻す")).toBeDisabled();
   await page.getByLabel("width", { exact: true }).fill("260");
+  await selectPanel(page, "部品");
   await button("配管を追加").click();
   await page.getByLabel("頂点", { exact: true }).fill("0,0\n0,0");
   await button("表示プレビュー").click();
@@ -134,11 +139,13 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "レイヤー");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
   await page.getByLabel("x", { exact: true }).fill("345");
+  await selectPanel(page, "プロジェクト");
   await page.getByLabel("画面名", { exact: true }).fill("変更した画面");
   await button("表示プレビュー").click();
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
@@ -150,6 +157,7 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
     page.getByRole("img", { name: "変更した画面", exact: true }),
   ).toBeVisible();
   await button("編集").click();
+  await selectPanel(page, "レイヤー");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
@@ -179,6 +187,7 @@ test("replacement validates first, preserves changes on cancel and exports befor
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "部品");
   await button("Rectangle を追加").click();
   const input = page.getByLabel("Project JSON を開く", { exact: true }),
     svg = page.getByRole("img", { name: "プロセス画面", exact: true });
@@ -231,6 +240,7 @@ test("a failed export never marks the current project as written out", async ({
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "部品");
   await button("Rectangle を追加").click();
   await page.evaluate(() => {
     HTMLAnchorElement.prototype.click = function () {
@@ -255,6 +265,7 @@ test("resize handles resolve drafts before computing geometry from a stale place
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "レイヤー");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
@@ -292,7 +303,9 @@ test("invalid model input preserves every dirty form before applying any command
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "部品");
   await button("配管を追加").click();
+  await selectPanel(page, "プロジェクト");
   await page.getByLabel("画面名", { exact: true }).fill("未適用の画面");
   await page.getByLabel("頂点", { exact: true }).fill("0,0\n0,0");
   await button("表示プレビュー").click();

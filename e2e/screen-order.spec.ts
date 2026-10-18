@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -11,6 +12,7 @@ test("screen order is explicit, protected by draft handling and preserved by und
   await button("編集").click();
   await expect(button("画面を上へ")).toBeDisabled();
   await expect(button("画面を下へ")).toBeDisabled();
+  await selectPanel(page, "プロジェクト");
   await button("画面を追加").click();
   await button("画面を追加").click();
   await expect(screens.getByRole("button")).toHaveText([

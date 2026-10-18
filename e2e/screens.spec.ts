@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("screen CRUD, history fallback and multiple-screen file round-trip", async ({
@@ -12,6 +13,7 @@ test("screen CRUD, history fallback and multiple-screen file round-trip", async 
     page.getByRole("button", { name, exact: true });
   const screens = page.getByRole("navigation", { name: "画面一覧" });
   await expect(button("画面を削除")).toBeDisabled();
+  await selectPanel(page, "プロジェクト");
   await button("画面を追加").click();
   await expect(
     page
@@ -31,8 +33,10 @@ test("screen CRUD, history fallback and multiple-screen file round-trip", async 
   await expect(
     page.getByRole("img", { name: "洗浄工程", exact: true }),
   ).toHaveAttribute("viewBox", "0 0 1200 700");
+  await selectPanel(page, "部品");
   await button("ポンプを追加").click();
   await button("配管を追加").click();
+  await selectPanel(page, "プロジェクト");
   await button("画面を複製").click();
   await expect(
     page
@@ -67,6 +71,7 @@ test("screen CRUD, history fallback and multiple-screen file round-trip", async 
   await expect(button("元に戻す")).toBeDisabled();
   await button("表示プレビュー").click();
   for (const name of ["洗浄工程", "洗浄工程 コピー"]) {
+    await selectPanel(page, "プロジェクト");
     await screens.getByRole("button", { name, exact: true }).click();
     await expect(
       page.getByRole("img", { name, exact: true }).locator("[data-object-id]"),

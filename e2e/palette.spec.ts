@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("searches basic/builtin/shared parts without changing the project and places shared definitions", async ({
@@ -7,6 +8,7 @@ test("searches basic/builtin/shared parts without changing the project and place
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "部品");
   const palette = page.getByRole("region", { name: "部品パレット" });
   const search = palette.getByRole("searchbox", { name: "部品を検索" });
   await search.fill("ＰＵＭＰ");
@@ -42,7 +44,9 @@ test("search is keyboard-safe and symbol definitions expose only primitive parts
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "プロジェクト");
   await button("Symbol 定義を作成").click();
+  await selectPanel(page, "部品");
   const palette = page.getByRole("region", { name: "部品パレット" });
   await expect(palette).toContainText("定義内は基本図形のみ");
   await expect(button("ポンプを追加")).toHaveCount(0);

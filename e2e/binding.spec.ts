@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/tag-binding.project.json" with { type: "json" };
@@ -9,6 +10,7 @@ test("assigns a read-only tag, shows disconnected in editor and preview, and pre
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "レイヤー");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "text · 5", exact: true })
@@ -53,6 +55,7 @@ test("assigns a read-only tag, shows disconnected in editor and preview, and pre
     page.getByLabel("表示タグ（外部名）", { exact: true }),
   ).toHaveCount(0);
   await button("編集").click();
+  await selectPanel(page, "レイヤー");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "text · 5", exact: true })
@@ -72,6 +75,7 @@ test("invalid assignment retains the input and selection, and invalid imported b
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "レイヤー");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "text · 5", exact: true })

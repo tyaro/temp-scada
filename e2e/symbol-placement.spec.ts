@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/process.project.json" with { type: "json" };
@@ -8,6 +9,7 @@ test("replaces a symbol reference only after apply, preserving placement and res
   await page.goto("/");
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
+  await selectPanel(page, "プロジェクト");
   await button("工程図サンプルを開く").click();
   await button("編集").click();
   const object = sample.screens[0].objects.find(
@@ -75,10 +77,13 @@ test("deep copies a definition for one placement, edits it independently and und
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "部品");
   await button("ポンプを追加").click();
+  await selectPanel(page, "プロジェクト");
   await button("画面を複製").click();
   const screens = page.getByRole("navigation", { name: "画面一覧" });
   const list = page.getByRole("navigation", { name: "図形一覧" });
+  await selectPanel(page, "レイヤー");
   await list.getByRole("button", { name: /ポンプ/ }).click();
   const originalSymbol = await page
     .getByLabel("参照する Symbol 定義", { exact: true })
@@ -90,6 +95,7 @@ test("deep copies a definition for one placement, edits it independently and und
   );
   await button("元に戻す").click();
   await expect(page.getByRole("note")).toHaveCount(0);
+  await selectPanel(page, "レイヤー");
   await list.getByRole("button", { name: /ポンプ/ }).click();
   await expect(
     page.getByLabel("参照する Symbol 定義", { exact: true }),
@@ -104,11 +110,13 @@ test("deep copies a definition for one placement, edits it independently and und
     .getByRole("img", { name: "ポンプ コピー", exact: true })
     .locator("[data-object-id]")
     .count();
+  await selectPanel(page, "部品");
   await button("Rectangle を追加").click();
   await button("画面へ戻る").click();
   await expect(
     page.locator(`[data-symbol-id="${uniqueSymbol}"] > g`),
   ).toHaveCount(originalCount + 1);
+  await selectPanel(page, "プロジェクト");
   await screens
     .getByRole("button", { name: "プロセス画面", exact: true })
     .click();
@@ -127,6 +135,7 @@ test("deep copies a definition for one placement, edits it independently and und
     mimeType: "application/json",
     buffer: Buffer.from(json),
   });
+  await selectPanel(page, "プロジェクト");
   await screens
     .getByRole("button", { name: "プロセス画面 コピー", exact: true })
     .click();

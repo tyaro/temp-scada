@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/tag-binding.project.json" with { type: "json" };
@@ -53,6 +54,7 @@ test("groups references across screens, searches without editing, navigates with
   await expect(panel.locator("tbody tr")).toHaveCount(1);
   await panel.getByLabel("タグ参照を検索").fill("not-present");
   await expect(panel).toContainText("一致するタグ参照がありません");
+  await selectPanel(page, "部品");
   await panel
     .getByRole("button", { name: "検索をクリア", exact: true })
     .click();

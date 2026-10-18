@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 async function drag(
@@ -37,6 +38,7 @@ test("grid and drag snapping preserve relative positions with an Alt bypass", as
     page.getByRole("button", { name: "元に戻す", exact: true }),
   ).toBeDisabled();
   const list = page.getByRole("navigation", { name: "図形一覧" });
+  await selectPanel(page, "レイヤー");
   await list
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
@@ -82,6 +84,7 @@ test("pipe vertices snap in screen coordinates, support keyboard and cancel with
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
   await page.getByRole("button", { name: "配管を追加", exact: true }).click();
   await page.getByLabel("x", { exact: true }).fill("13");
   await page.getByLabel("y", { exact: true }).fill("17");
@@ -134,6 +137,7 @@ test("pipe vertices snap in screen coordinates, support keyboard and cancel with
     mimeType: "application/json",
     buffer: Buffer.from(json),
   });
+  await selectPanel(page, "レイヤー");
   await page.getByRole("button", { name: "polyline · 6", exact: true }).click();
   await expect(page.getByLabel("頂点", { exact: true })).toHaveValue(
     "0,0\n147,33\n120,100\n240,100",
@@ -150,6 +154,7 @@ test("a degenerate arrow line preview never crashes and rejected edits keep hist
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
   await page.getByRole("button", { name: "線を追加", exact: true }).click();
   await page.getByLabel("矢印", { exact: true }).selectOption("end");
   await page.getByRole("button", { name: "変更を適用", exact: true }).click();

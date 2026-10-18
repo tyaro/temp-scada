@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("shared definition edits update placements across screens and survive history and JSON", async ({
@@ -7,7 +8,9 @@ test("shared definition edits update placements across screens and survive histo
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "部品");
   await button("ポンプを追加").click();
+  await selectPanel(page, "プロジェクト");
   await button("画面を複製").click();
   await button("定義を編集").click();
   await expect(page.getByRole("note")).toContainText("2 配置で共有");
@@ -15,6 +18,7 @@ test("shared definition edits update placements across screens and survive histo
   await expect(button("定義を削除")).toBeDisabled();
   await page.getByLabel("Symbol 名", { exact: true }).fill("循環ポンプ");
   await button("Symbol 設定を適用").click();
+  await selectPanel(page, "部品");
   await button("Rectangle を追加").click();
   await page.getByLabel("x", { exact: true }).fill("10");
   await page.getByLabel("y", { exact: true }).fill("20");
@@ -39,6 +43,7 @@ test("shared definition edits update placements across screens and survive histo
   await button("画面へ戻る").click();
   const screens = page.getByRole("navigation", { name: "画面一覧" });
   for (const name of ["プロセス画面", "プロセス画面 コピー"]) {
+    await selectPanel(page, "プロジェクト");
     await screens.getByRole("button", { name, exact: true }).click();
     await expect(
       page
@@ -57,6 +62,7 @@ test("shared definition edits update placements across screens and survive histo
     mimeType: "application/json",
     buffer: Buffer.from(json),
   });
+  await selectPanel(page, "プロジェクト");
   await button("定義を編集").click();
   await expect(
     page
@@ -71,6 +77,7 @@ test("custom definition creation, duplication, placement, guarded deletion and u
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "プロジェクト");
   await button("Symbol 定義を作成").click();
   await expect(
     page.getByRole("img", { name: "Symbol 1", exact: true }),
@@ -79,7 +86,9 @@ test("custom definition creation, duplication, placement, guarded deletion and u
   await expect(page.getByRole("note")).toHaveCount(0);
   await button("やり直す").click();
   await button("定義を編集").click();
+  await selectPanel(page, "部品");
   await button("Ellipse を追加").click();
+  await selectPanel(page, "プロジェクト");
   await button("定義を複製").click();
   await expect(
     page

@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import legacy from "../examples/legacy.project.json" with { type: "json" };
@@ -7,6 +8,7 @@ test("edits pipes and reusable symbols, then reproduces the saved process screen
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
+  await selectPanel(page, "プロジェクト");
   await page.getByRole("button", { name: "工程図サンプルを開く" }).click();
   const svg = page.getByRole("img", {
     name: "循環設備（静的サンプル）",
@@ -19,6 +21,7 @@ test("edits pipes and reusable symbols, then reproduces the saved process screen
     fullPage: true,
   });
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
   await page.getByRole("button", { name: "配管を追加" }).click();
   await page.getByLabel("x", { exact: true }).fill("400");
   await page.getByLabel("y", { exact: true }).fill("180");
@@ -58,6 +61,7 @@ test("edits pipes and reusable symbols, then reproduces the saved process screen
   ).toBeCloseTo(200, 0);
   await page.getByRole("button", { name: "ポンプを追加" }).click();
   await page.getByRole("button", { name: "ポンプを追加" }).click();
+  await selectPanel(page, "プロジェクト");
   await page.getByRole("button", { name: "工程図サンプルを開く" }).click();
   await page
     .getByRole("dialog", { name: "Project を置き換えますか" })

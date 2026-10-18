@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("Shift selection moves, aligns, duplicates and deletes atomically with history and JSON round-trip", async ({
@@ -7,6 +8,7 @@ test("Shift selection moves, aligns, duplicates and deletes atomically with hist
   await page.getByRole("button", { name: "編集", exact: true }).click();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
   const list = page.getByRole("navigation", { name: "図形一覧" });
+  await selectPanel(page, "レイヤー");
   await list
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();

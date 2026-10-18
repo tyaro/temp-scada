@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 async function resize(
@@ -32,6 +33,7 @@ test("resize handles update geometry atomically with snap, cancel, history and J
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
+  await selectPanel(page, "レイヤー");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
@@ -90,6 +92,7 @@ test("symbols resize their viewport without changing shared definitions or other
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await button("編集").click();
+  await selectPanel(page, "部品");
   await button("ポンプを追加").click();
   await button("選択図形を複製").click();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });

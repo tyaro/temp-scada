@@ -18,6 +18,7 @@ function signature(form: HTMLFormElement): string {
 export function createDraftGuard(
   onError: (message: string) => void,
   validate: (forms: HTMLFormElement[]) => boolean,
+  reveal: (form: HTMLFormElement) => void = () => {},
 ) {
   // DOM の登録・解除は Svelte の teardown 内でも発生する。
   // レジストリの実体は通常の Set に置き、古い reactive snapshot から入力状態を復活させない。
@@ -99,6 +100,8 @@ export function createDraftGuard(
     );
     if (invalid) {
       onError("入力に不正な値があります。修正してから操作してください。");
+      reveal(invalid);
+      await tick();
       invalid.reportValidity();
       return;
     }
@@ -109,6 +112,7 @@ export function createDraftGuard(
         if (!form.isConnected) continue;
         form.requestSubmit();
         if (dirty.has(form)) {
+          reveal(form);
           await tick();
           controls(form)[0]?.focus();
           return;

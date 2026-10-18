@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 test("Banto theme persists, follows OS changes and leaves Project colors unchanged", async ({
   page,
@@ -37,6 +38,7 @@ test("Banto theme persists, follows OS changes and leaves Project colors unchang
     original!,
   );
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
   await page.getByRole("button", { name: "Rectangle を追加" }).click();
   await expect(page.locator(".toast-host")).toContainText("変更を適用しました");
   await expect(
@@ -61,6 +63,7 @@ test("unavailable browser storage does not prevent local editing", async ({
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   await expect(page.getByRole("alert")).toContainText("このタブだけに適用");
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
   await page.getByRole("button", { name: "Ellipse を追加" }).click();
   await expect(
     page.getByRole("img", { name: "プロセス画面" }).locator("[data-object-id]"),

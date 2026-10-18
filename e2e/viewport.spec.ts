@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect, type Locator, type Page } from "@playwright/test";
 async function designDrag(
   page: Page,
@@ -50,6 +51,7 @@ for (const percentage of [25, 100, 400])
     await expect
       .poll(() => svg.evaluate((el) => (el as SVGSVGElement).getScreenCTM()!.a))
       .toBeCloseTo(percentage / 100, 3);
+    await selectPanel(page, "レイヤー");
     await page
       .getByRole("navigation", { name: "図形一覧" })
       .getByRole("button", { name: "rectangle · 3", exact: true })
@@ -62,6 +64,7 @@ for (const percentage of [25, 100, 400])
     await expect(page.getByLabel("width", { exact: true })).toHaveValue("300");
     await expect(page.getByLabel("height", { exact: true })).toHaveValue("200");
     await button("元に戻す").click();
+    await selectPanel(page, "部品");
     await button("配管を追加").click();
     const pipeOrigin = {
       x: Number(await page.getByLabel("x", { exact: true }).inputValue()),
@@ -88,6 +91,7 @@ test("pan is temporary navigation, supports Space/middle button and Escape, and 
   const viewport = page.getByRole("region", {
     name: "キャンバス操作領域",
   });
+  await selectPanel(page, "レイヤー");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
@@ -152,6 +156,7 @@ test("view settings survive target and preview switches, reset on import, and ne
     el.scrollTop = 80;
   });
   await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(200);
+  await selectPanel(page, "プロジェクト");
   await button("画面を追加").click();
   await page.getByLabel("表示倍率", { exact: true }).selectOption("0.5");
   await page
@@ -214,6 +219,7 @@ test("adding parts while zoomed centers them in the visible viewport in a single
       ).matrixTransform((el as SVGSVGElement).getScreenCTM()!.inverse());
       return { x: point.x, y: point.y };
     });
+  await selectPanel(page, "部品");
   await button("Rectangle を追加").click();
   expect(
     Number(await page.getByLabel("x", { exact: true }).inputValue()),

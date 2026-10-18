@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("duplicate placements, undo/redo and stacking order survive file round-trip", async ({
@@ -9,6 +10,7 @@ test("duplicate placements, undo/redo and stacking order survive file round-trip
   await expect(
     page.getByRole("button", { name: "元に戻す", exact: true }),
   ).toBeDisabled();
+  await selectPanel(page, "部品");
   await page.getByRole("button", { name: "ポンプを追加" }).click();
   await page.getByRole("button", { name: "選択図形を複製" }).click();
   await expect(svg.locator("[data-symbol-id]")).toHaveCount(2);
@@ -69,6 +71,7 @@ test("keyboard history ignores inputs, clears redo on a new edit and is inactive
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
   await page.getByRole("button", { name: "Rectangle を追加" }).click();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
   const x = page.getByLabel("x", { exact: true });

@@ -17,6 +17,18 @@
     onplace: (id: string) => void;
   } = $props();
   let search = $state("");
+  type Category = "basic" | "symbols" | "objects";
+  let expanded = $state<Record<Category, boolean>>({
+    basic: true,
+    symbols: true,
+    objects: true,
+  });
+  const searching = $derived(search.trim().length > 0);
+  const categories = [
+    { id: "basic", label: "基本図形" },
+    { id: "symbols", label: "シンボル" },
+    { id: "objects", label: "オブジェクト（監視部品）" },
+  ] as const;
   const basics: { kind: AddKind; label: string; keywords: string }[] = [
     {
       kind: "rectangle",
@@ -57,6 +69,19 @@
   const definitionResults = $derived(
     allowSymbols ? definitions.filter((d) => matches(d.name)) : [],
   );
+  const primitiveResults = $derived(
+    basicResults.filter((part) => part.kind !== "text"),
+  );
+  const objectResults = $derived(
+    basicResults.filter((part) => part.kind === "text"),
+  );
+  function categoryCount(category: Category): number {
+    return category === "basic"
+      ? primitiveResults.length
+      : category === "symbols"
+        ? builtinResults.length + definitionResults.length
+        : objectResults.length;
+  }
   const count = $derived(
     basicResults.length + builtinResults.length + definitionResults.length,
   );
@@ -74,61 +99,98 @@
   <p class="results" role="status">
     {count} 件{!allowSymbols ? " · 定義内は基本図形のみ" : ""}
   </p>
-  <div class="cards">
-    {#each basicResults as part}
-      <button onclick={() => onadd(part.kind)}>
-        <svg aria-hidden="true" viewBox="0 0 60 40">
-          {#if part.kind === "rectangle"}<rect
-              x="10"
-              y="6"
-              width="40"
-              height="28"
-              rx="2"
-            />
-          {:else if part.kind === "ellipse"}<ellipse
-              cx="30"
-              cy="20"
-              rx="22"
-              ry="14"
-            />
-          {:else if part.kind === "text"}<text
-              x="21"
-              y="31"
-              stroke="none"
-              fill="currentColor"
-              font-size="30">A</text
-            >
-          {:else if part.kind === "line"}<path d="M8 32L52 8" />
-          {:else}<path d="M8 8H30V32H52" stroke-width="5" />{/if}
-        </svg>
-        <span>{part.label}</span>
-      </button>
-    {/each}
-    {#each builtinResults as part}
-      <button onclick={() => onbuiltin(part.template)}>
-        <SymbolThumbnail
-          definition={builtins[part.template] as unknown as SymbolDefinition}
-        />
-        <span>{part.label}</span>
-      </button>
-    {/each}
-  </div>
-  {#if definitionResults.length}
-    <h3>Project の共有定義</h3>
-    <div class="cards">
-      {#each definitionResults as definition (definition.id)}
-        <button
-          aria-label={`${definition.name} を配置`}
-          title={definition.name}
-          onclick={() => onplace(definition.id)}
-        >
-          <SymbolThumbnail {definition} /><span>{definition.name}</span><small
-            >配置を追加</small
+  {#each categories as category}
+    {#if (category.id !== "symbols" || allowSymbols) && (!searching || categoryCount(category.id) > 0)}
+      <section class="category" aria-label={category.label}>
+        <h3>
+          <button
+            class="category-heading"
+            aria-expanded={searching || expanded[category.id]}
+            aria-controls={`palette-${category.id}`}
+            disabled={searching}
+            title={searching
+              ? "検索中は一致する分類を展開します。検索解除で元の開閉状態に戻ります。"
+              : undefined}
+            onclick={() => (expanded[category.id] = !expanded[category.id])}
           >
-        </button>
-      {/each}
-    </div>
-  {/if}
+            <span aria-hidden="true"
+              >{searching || expanded[category.id] ? "▾" : "▸"}</span
+            >
+            <span>{category.label}</span><small
+              >{categoryCount(category.id)} 件</small
+            >
+          </button>
+        </h3>
+        <div
+          id={`palette-${category.id}`}
+          hidden={!searching && !expanded[category.id]}
+        >
+          {#if category.id === "symbols"}
+            <div class="cards">
+              {#each builtinResults as part}
+                <button onclick={() => onbuiltin(part.template)}>
+                  <SymbolThumbnail
+                    definition={builtins[
+                      part.template
+                    ] as unknown as SymbolDefinition}
+                  />
+                  <span>{part.label}</span>
+                </button>
+              {/each}
+            </div>
+            {#if definitionResults.length}
+              <h3>Project の共有定義</h3>
+              <div class="cards">
+                {#each definitionResults as definition (definition.id)}
+                  <button
+                    aria-label={`${definition.name} を配置`}
+                    title={definition.name}
+                    onclick={() => onplace(definition.id)}
+                  >
+                    <SymbolThumbnail {definition} /><span
+                      >{definition.name}</span
+                    ><small>配置を追加</small>
+                  </button>
+                {/each}
+              </div>
+            {/if}
+          {:else}
+            <div class="cards">
+              {#each category.id === "basic" ? primitiveResults : objectResults as part}
+                <button onclick={() => onadd(part.kind)}>
+                  <svg aria-hidden="true" viewBox="0 0 60 40">
+                    {#if part.kind === "rectangle"}<rect
+                        x="10"
+                        y="6"
+                        width="40"
+                        height="28"
+                        rx="2"
+                      />
+                    {:else if part.kind === "ellipse"}<ellipse
+                        cx="30"
+                        cy="20"
+                        rx="22"
+                        ry="14"
+                      />
+                    {:else if part.kind === "text"}<text
+                        x="21"
+                        y="31"
+                        stroke="none"
+                        fill="currentColor"
+                        font-size="30">A</text
+                      >
+                    {:else if part.kind === "line"}<path d="M8 32L52 8" />
+                    {:else}<path d="M8 8H30V32H52" stroke-width="5" />{/if}
+                  </svg>
+                  <span>{part.label}</span>
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      </section>
+    {/if}
+  {/each}
   {#if count === 0}<p>
       一致する部品がありません。名前や種類を変えて検索してください。
     </p>{/if}
@@ -141,6 +203,35 @@
   h2 {
     font-size: 15px;
     margin: 0;
+  }
+  .category {
+    margin-top: 12px;
+  }
+  .category-heading {
+    width: 100%;
+    min-height: 34px;
+    padding: 7px 4px;
+    border: 0;
+    border-bottom: 1px solid var(--banto-border);
+    border-radius: 0;
+    flex-direction: row;
+    justify-content: flex-start;
+    text-align: left;
+    background: transparent;
+    font-weight: 600;
+  }
+  .category-heading small {
+    margin-left: auto;
+    white-space: nowrap;
+  }
+  .category-heading:disabled {
+    cursor: default;
+  }
+  .category h3 {
+    margin: 0 0 8px;
+  }
+  [hidden] {
+    display: none;
   }
   h3 {
     font-size: 12px;

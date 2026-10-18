@@ -1,3 +1,4 @@
+import { selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("edit, drag in design coordinates, save and reproduce in preview", async ({
@@ -5,6 +6,7 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
   await page.getByRole("button", { name: "Rectangle を追加" }).click();
   const svg = page.getByRole("img", { name: "プロセス画面" });
   await expect(svg.locator("[data-object-id]")).toHaveCount(4);
@@ -65,6 +67,7 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
     transform!,
   );
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "レイヤー");
   await page
     .getByRole("button", { name: "rectangle · 6", exact: true })
     .click();

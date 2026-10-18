@@ -59,6 +59,13 @@
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
   import CanvasWorkspace from "./lib/designer/CanvasWorkspace.svelte";
+  import DesignerSidebar, {
+    type DesignerPanel,
+  } from "./lib/designer/DesignerSidebar.svelte";
+  let activePanel = $state<DesignerPanel>("project");
+  function revealDraftForm(form: HTMLFormElement) {
+    if (form.dataset.editorForm === "screen") activePanel = "project";
+  }
   import PartPalette from "./lib/designer/PartPalette.svelte";
   import SymbolLibrary from "./lib/designer/SymbolLibrary.svelte";
   import {
@@ -84,6 +91,7 @@
   const drafts = createDraftGuard(
     (text) => report("error", text),
     validateDrafts,
+    revealDraftForm,
   );
   function transition(action: () => void) {
     if (drafts.allow(action)) action();
@@ -228,6 +236,7 @@
   function openDefinition(id: string) {
     if (!drafts.allow(() => openDefinition(id))) return;
     editingSymbolId = id;
+    activePanel = "project";
     libraryId = id;
     selectedIds = [];
   }
@@ -435,9 +444,11 @@
     };
   }
   function validateDrafts(forms: HTMLFormElement[]): boolean {
+    let validatingForm: HTMLFormElement | undefined;
     try {
       let candidate = project;
       for (const form of forms) {
+        validatingForm = form;
         if (!form.isConnected) continue;
         let command = formCommand(form);
         if (activeDefinition && isObjectCommand(command))
@@ -446,6 +457,7 @@
       }
       return true;
     } catch (e) {
+      if (validatingForm) revealDraftForm(validatingForm);
       report(
         "error",
         `編集エラー: ${e instanceof Error ? e.message : String(e)}`,
@@ -726,7 +738,6 @@
 {#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
 <main class:editing={mode === "edit"}>
   <aside class="project-sidebar" aria-label="Project と部品">
-    <h2>Project</h2>
     <div class="save-state" data-testid="save-state">
       <StatusBadge
         variant={projectChanged ? "warning" : "neutral"}
@@ -735,164 +746,180 @@
       {#if drafts.dirty}<p>未適用の入力あり · {drafts.count} フォーム</p>{/if}
       {#if lastExport}<p>最終書き出し要求 {lastExport}</p>{/if}
     </div>
-    <button onclick={showProcessSample} disabled={busy}
-      >工程図サンプルを開く</button
-    >
-    <p>画面を選んで表示します。</p>
-    <nav aria-label="画面一覧">
-      {#each project.screens as item}<button
-          class:active={screen.id === item.id}
-          aria-pressed={screen.id === item.id}
-          onclick={() =>
-            transition(() => {
-              screenId = item.id;
-              editingSymbolId = null;
-              selectedIds = [];
-            })}>{item.name}</button
-        >{/each}
-    </nav>
-    {#if mode === "edit"}
-      <hr />
-      <PartPalette
-        definitions={project.symbols}
-        allowSymbols={!activeDefinition}
-        onadd={add}
-        onbuiltin={(template) =>
-          edit({ type: "add-symbol", screenId: screen.id, template })}
-        onplace={(id) =>
-          edit({ type: "place-symbol", screenId: screen.id, symbolId: id })}
-      />
-      <hr />
-      <SymbolLibrary
-        {project}
-        selectedId={libraryId}
-        screenId={screen.id}
-        editingDefinition={!!activeDefinition}
-        onchoose={(id) => (libraryId = id)}
-        onedit={openDefinition}
-        ondelete={deleteDefinition}
-        oncommand={edit}
-      />
-      <hr />
-      <h2>{activeDefinition ? "Symbol 設定" : "画面管理"}</h2>
-      {#if !activeDefinition}
-        <button
-          disabled={project.screens.length >= 100}
-          onclick={() =>
-            edit({
-              type: "create-screen",
-              name: `画面 ${project.screens.length + 1}`,
-              width: screen.width,
-              height: screen.height,
-            })}>画面を追加</button
+    <DesignerSidebar bind:active={activePanel} editable={mode === "edit"}>
+      {#snippet projectPanel()}
+        <button onclick={showProcessSample} disabled={busy}
+          >工程図サンプルを開く</button
         >
-        <button
-          disabled={project.screens.length >= 100}
-          onclick={() =>
-            edit({ type: "duplicate-screen", screenId: screen.id })}
-          >画面を複製</button
-        >
-        <div class="actions" role="group" aria-label="画面の並び順">
-          <button
-            disabled={project.screens[0].id === screen.id}
-            onclick={() =>
-              edit({
-                type: "reorder-screen",
-                screenId: screen.id,
-                direction: "up",
-              })}>画面を上へ</button
-          >
-          <button
-            disabled={project.screens.at(-1)?.id === screen.id}
-            onclick={() =>
-              edit({
-                type: "reorder-screen",
-                screenId: screen.id,
-                direction: "down",
-              })}>画面を下へ</button
-          >
-        </div>
-        <p>画面順は JSON に保存され、読込時は先頭の画面を開きます。</p>
-        <button disabled={project.screens.length === 1} onclick={removeScreen}
-          >画面を削除</button
-        >
-      {/if}
-      {#key screen}
-        <form
-          use:drafts.track
-          data-editor-form="screen"
-          onsubmit={screenProperties}
-          aria-label="画面設定"
-        >
-          <label
-            >{activeDefinition ? "Symbol 名" : "画面名"}<input
-              name="name"
-              value={screen.name}
-              required
-              maxlength="200"
-            /></label
-          >
-          <label
-            >{activeDefinition ? "定義の幅" : "画面の幅"}<input
-              name="width"
-              type="number"
-              step="any"
-              min="1"
-              value={screen.width}
-              required
-            /></label
-          >
-          <label
-            >{activeDefinition ? "定義の高さ" : "画面の高さ"}<input
-              name="height"
-              type="number"
-              step="any"
-              min="1"
-              value={screen.height}
-              required
-            /></label
-          >
-          <button type="submit"
-            >{activeDefinition ? "Symbol 設定を適用" : "画面設定を適用"}</button
-          >
-        </form>
-      {/key}
+        <p>画面を選んで表示します。</p>
+        <nav aria-label="画面一覧">
+          {#each project.screens as item}<button
+              class:active={screen.id === item.id}
+              aria-pressed={screen.id === item.id}
+              onclick={() =>
+                transition(() => {
+                  screenId = item.id;
+                  editingSymbolId = null;
+                  selectedIds = [];
+                })}>{item.name}</button
+            >{/each}
+        </nav>
+        {#if mode === "edit"}
+          <SymbolLibrary
+            {project}
+            selectedId={libraryId}
+            screenId={screen.id}
+            editingDefinition={!!activeDefinition}
+            onchoose={(id) => (libraryId = id)}
+            onedit={openDefinition}
+            ondelete={deleteDefinition}
+            oncommand={edit}
+          />
+          <hr />
+          <h2>{activeDefinition ? "Symbol 設定" : "画面管理"}</h2>
+          {#if !activeDefinition}
+            <button
+              disabled={project.screens.length >= 100}
+              onclick={() =>
+                edit({
+                  type: "create-screen",
+                  name: `画面 ${project.screens.length + 1}`,
+                  width: screen.width,
+                  height: screen.height,
+                })}>画面を追加</button
+            >
+            <button
+              disabled={project.screens.length >= 100}
+              onclick={() =>
+                edit({ type: "duplicate-screen", screenId: screen.id })}
+              >画面を複製</button
+            >
+            <div class="actions" role="group" aria-label="画面の並び順">
+              <button
+                disabled={project.screens[0].id === screen.id}
+                onclick={() =>
+                  edit({
+                    type: "reorder-screen",
+                    screenId: screen.id,
+                    direction: "up",
+                  })}>画面を上へ</button
+              >
+              <button
+                disabled={project.screens.at(-1)?.id === screen.id}
+                onclick={() =>
+                  edit({
+                    type: "reorder-screen",
+                    screenId: screen.id,
+                    direction: "down",
+                  })}>画面を下へ</button
+              >
+            </div>
+            <p>画面順は JSON に保存され、読込時は先頭の画面を開きます。</p>
+            <button
+              disabled={project.screens.length === 1}
+              onclick={removeScreen}>画面を削除</button
+            >
+          {/if}
+          {#key screen}
+            <form
+              use:drafts.track
+              data-editor-form="screen"
+              onsubmit={screenProperties}
+              aria-label="画面設定"
+            >
+              <label
+                >{activeDefinition ? "Symbol 名" : "画面名"}<input
+                  name="name"
+                  value={screen.name}
+                  required
+                  maxlength="200"
+                /></label
+              >
+              <label
+                >{activeDefinition ? "定義の幅" : "画面の幅"}<input
+                  name="width"
+                  type="number"
+                  step="any"
+                  min="1"
+                  value={screen.width}
+                  required
+                /></label
+              >
+              <label
+                >{activeDefinition ? "定義の高さ" : "画面の高さ"}<input
+                  name="height"
+                  type="number"
+                  step="any"
+                  min="1"
+                  value={screen.height}
+                  required
+                /></label
+              >
+              <button type="submit"
+                >{activeDefinition
+                  ? "Symbol 設定を適用"
+                  : "画面設定を適用"}</button
+              >
+            </form>
+          {/key}
+          <p class="hint">
+            サイズ変更は表示領域のみを変更します。図形の位置・サイズは変わりません。
+          </p>
+        {/if}
+      {/snippet}
+      {#snippet layersPanel()}
+        {#if mode === "edit"}
+          <h2>レイヤー（配置一覧）</h2>
+          <p>
+            {screen.name} · {selectedIds.length} 件選択。下の配置ほど前面です。
+          </p>
+          <nav aria-label="図形一覧">
+            {#each [...screen.objects].sort((a, b) => a.order - b.order) as object}<button
+                class:active={selectedIds.includes(object.id)}
+                aria-pressed={selectedIds.includes(object.id)}
+                onclick={(event) => selectObjects(object.id, event.shiftKey)}
+                >{object.shape.type === "symbol"
+                  ? project.symbols.find(
+                      (s) =>
+                        object.shape.type === "symbol" &&
+                        s.id === object.shape.symbolId,
+                    )?.name
+                  : object.shape.type} · {object.order}</button
+              >{/each}
+          </nav>
+        {/if}
+      {/snippet}
+      {#snippet partsPanel()}
+        {#if mode === "edit"}
+          <PartPalette
+            definitions={project.symbols}
+            allowSymbols={!activeDefinition}
+            onadd={add}
+            onbuiltin={(template) =>
+              edit({ type: "add-symbol", screenId: screen.id, template })}
+            onplace={(id) =>
+              edit({ type: "place-symbol", screenId: screen.id, symbolId: id })}
+          />
+        {/if}
+      {/snippet}
+    </DesignerSidebar>
+    <div class="sidebar-files">
+      <label class="file"
+        >Project JSON を開く<input
+          aria-label="Project JSON を開く"
+          bind:this={projectFileInput}
+          type="file"
+          accept=".json,application/json"
+          disabled={busy}
+          onchange={load}
+        /></label
+      ><button onclick={save} disabled={busy}>Project JSON を保存</button>
       <p class="hint">
-        サイズ変更は表示領域のみを変更します。図形の位置・サイズは変わりません。
+        編集した Project は JSON
+        を保存してください。表示プレビューは見た目の確認用です。設備接続や正式な
+        Runtime の権限分離は未実装です。
       </p>
-      <hr />
-      <h2>図形一覧</h2>
-      <nav aria-label="図形一覧">
-        {#each [...screen.objects].sort((a, b) => a.order - b.order) as object}<button
-            class:active={selectedIds.includes(object.id)}
-            aria-pressed={selectedIds.includes(object.id)}
-            onclick={(event) => selectObjects(object.id, event.shiftKey)}
-            >{object.shape.type === "symbol"
-              ? project.symbols.find(
-                  (s) =>
-                    object.shape.type === "symbol" &&
-                    s.id === object.shape.symbolId,
-                )?.name
-              : object.shape.type} · {object.order}</button
-          >{/each}
-      </nav>
-    {/if}
-    <hr />
-    <label class="file"
-      >Project JSON を開く<input
-        aria-label="Project JSON を開く"
-        bind:this={projectFileInput}
-        type="file"
-        accept=".json,application/json"
-        disabled={busy}
-        onchange={load}
-      /></label
-    ><button onclick={save} disabled={busy}>Project JSON を保存</button>
-    <p class="hint">
-      編集した Project は JSON
-      を保存してください。表示プレビューは見た目の確認用です。設備接続や正式な
-      Runtime の権限分離は未実装です。
-    </p>
+    </div>
   </aside>
   <section aria-label="画面プレビュー" bind:this={editorRegion}>
     {#if activeDefinition}
@@ -1319,8 +1346,24 @@
   .full-width {
     grid-column: 1 / -1;
   }
+  .project-sidebar {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+  .sidebar-files {
+    padding: 8px 14px;
+    border-top: 1px solid var(--banto-border);
+    flex-shrink: 0;
+  }
+  .sidebar-files .hint {
+    display: none;
+  }
   .save-state {
-    margin: 12px 0;
+    padding: 10px 14px;
+    margin: 0;
+    flex-shrink: 0;
   }
   .save-state p {
     margin: 6px 0;
