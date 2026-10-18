@@ -89,7 +89,8 @@ test("pipe vertices snap in screen coordinates, support keyboard and cancel with
   await page.getByLabel("グリッドにスナップ", { exact: true }).check();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
   await expect(svg.locator("[data-vertex-index]")).toHaveCount(4);
-  await drag(page, svg, { x: 133, y: 17 }, { x: 14, y: 18 });
+  // CSS pixel rounding must not place the end exactly halfway between grid lines.
+  await drag(page, svg, { x: 133, y: 17 }, { x: 14, y: 20 });
   await expect(page.getByLabel("頂点", { exact: true })).toHaveValue(
     "0,0\n137,23\n120,100\n240,100",
   );

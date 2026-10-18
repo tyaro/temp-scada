@@ -394,8 +394,8 @@
     {/snippet}
   </PageHeader>
 </div>
-<main>
-  <aside>
+<main class:editing={mode === "edit"}>
+  <aside class="project-sidebar" aria-label="Project と部品">
     <h2>Project</h2>
     <button onclick={showProcessSample} disabled={busy}
       >工程図サンプルを開く</button
@@ -413,6 +413,34 @@
         >{/each}
     </nav>
     {#if mode === "edit"}
+      <hr />
+      <h2>部品を追加</h2>
+      <div class="palette">
+        <button onclick={() => add("rectangle")}>Rectangle を追加</button>
+        <button onclick={() => add("ellipse")}>Ellipse を追加</button>
+        <button onclick={() => add("text")}>Text を追加</button>
+        <button onclick={() => add("line")}>線を追加</button><button
+          onclick={() => add("pipe")}>配管を追加</button
+        >
+        {#if !activeDefinition}
+          <button
+            onclick={() =>
+              edit({
+                type: "add-symbol",
+                screenId: screen.id,
+                template: "pump",
+              })}>ポンプを追加</button
+          >
+          <button
+            onclick={() =>
+              edit({
+                type: "add-symbol",
+                screenId: screen.id,
+                template: "valve",
+              })}>バルブを追加</button
+          >
+        {/if}
+      </div>
       <hr />
       <h2>Symbol ライブラリ</h2>
       <button
@@ -524,28 +552,6 @@
         サイズ変更は表示領域のみを変更します。図形の位置・サイズは変わりません。
       </p>
       <hr />
-      <h2>部品を追加</h2>
-      <button onclick={() => add("rectangle")}>Rectangle を追加</button>
-      <button onclick={() => add("ellipse")}>Ellipse を追加</button>
-      <button onclick={() => add("text")}>Text を追加</button>
-      <button onclick={() => add("line")}>線を追加</button><button
-        onclick={() => add("pipe")}>配管を追加</button
-      >
-      {#if !activeDefinition}
-        <button
-          onclick={() =>
-            edit({ type: "add-symbol", screenId: screen.id, template: "pump" })}
-          >ポンプを追加</button
-        >
-        <button
-          onclick={() =>
-            edit({
-              type: "add-symbol",
-              screenId: screen.id,
-              template: "valve",
-            })}>バルブを追加</button
-        >
-      {/if}
       <h2>図形一覧</h2>
       <nav aria-label="図形一覧">
         {#each [...screen.objects].sort((a, b) => a.order - b.order) as object}<button
@@ -597,7 +603,11 @@
     {/if}
     <div class="toolbar">
       <h2>{screen.name}</h2>
-      <span>{screen.width} × {screen.height}</span>
+      <span
+        >{activeDefinition ? "SYMBOL" : "SCREEN"} · {screen.width} × {screen.height}
+        · {screen.objects.length} 図形 · rev {project.manifest
+          .projectRevision}</span
+      >
     </div>
     {#if mode === "edit"}
       <div class="edit-toolbar" role="group" aria-label="編集履歴">
@@ -642,7 +652,11 @@
         >
       </div>
     {/if}
-    <div class="canvas" style:aspect-ratio={`${screen.width}/${screen.height}`}>
+    <div
+      class="canvas"
+      class:definition={!!activeDefinition}
+      style:aspect-ratio={`${screen.width}/${screen.height}`}
+    >
       {#key screen.id}
         <Renderer
           {screen}
@@ -679,191 +693,196 @@
         />
       {/key}
     </div>
-    {#if mode === "edit"}
-      <div class="inspector">
-        <SurfaceCard title="プロパティ">
-          {#if selectedIds.length > 1}
-            <p>
-              {selectedIds.length} 件選択しています。図形をドラッグするとまとめて移動します。
-            </p>
-            <form onsubmit={moveSelection}>
-              <div class="fields">
-                <label
-                  >移動量 X<input
-                    name="dx"
-                    aria-label="移動量 X"
-                    type="number"
-                    step="any"
-                    required
-                    value="0"
-                  /></label
-                ><label
-                  >移動量 Y<input
-                    name="dy"
-                    aria-label="移動量 Y"
-                    type="number"
-                    step="any"
-                    required
-                    value="0"
-                  /></label
-                >
-              </div>
-              <div class="actions">
-                <button type="submit">まとめて移動</button><button
-                  type="button"
-                  onclick={duplicateSelection}>選択図形を複製</button
-                ><button type="button" onclick={removeSelection}
-                  >選択図形を削除</button
-                >
-              </div>
-            </form>
-            <div class="actions" role="group" aria-label="整列">
-              {#each [{ alignment: "left" as const, label: "左揃え" }, { alignment: "center-x" as const, label: "左右中央揃え" }, { alignment: "right" as const, label: "右揃え" }, { alignment: "top" as const, label: "上揃え" }, { alignment: "center-y" as const, label: "上下中央揃え" }, { alignment: "bottom" as const, label: "下揃え" }] as item}<button
-                  onclick={() =>
-                    edit({
-                      type: "align",
-                      screenId: screen.id,
-                      objectIds: [...selectedIds],
-                      alignment: item.alignment,
-                    })}>{item.label}</button
-                >{/each}
-            </div>
-          {:else if selected}
-            {#key project.manifest.projectRevision + selected.id}
-              <form onsubmit={properties}>
-                <div class="fields">
-                  {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
-                    <label
-                      >{field}<input
-                        name={field}
-                        aria-label={field}
-                        type="number"
-                        step="any"
-                        required
-                        min={field === "width" || field === "height"
-                          ? 0.001
-                          : undefined}
-                        value={field === "x"
-                          ? selected.x
-                          : field === "y"
-                            ? selected.y
-                            : "width" in selected
-                              ? selected[field as "width" | "height"]
-                              : 0}
-                      /></label
-                    >
-                  {/each}
-                  <label
-                    >色<input
-                      name="fill"
-                      aria-label="色"
-                      type="color"
-                      value={selected.fill}
-                    /></label
-                  >
-                  {#if selected.shape.type === "polyline"}
-                    <label
-                      >頂点（x,y を1行ずつ）<textarea
-                        name="points"
-                        aria-label="頂点"
-                        rows="5"
-                        required
-                        value={selected.shape.points
-                          .map((p) => `${p.x},${p.y}`)
-                          .join("\n")}></textarea></label
-                    >
-                    <label
-                      >線幅<input
-                        name="strokeWidth"
-                        aria-label="線幅"
-                        type="number"
-                        required
-                        min="0.1"
-                        max="64"
-                        step="any"
-                        value={selected.shape.strokeWidth}
-                      /></label
-                    >
-                    <label
-                      >矢印<select
-                        name="arrow"
-                        aria-label="矢印"
-                        value={selected.shape.arrow}
-                        ><option value="none">なし</option><option value="end"
-                          >終点</option
-                        ></select
-                      ></label
-                    >
-                  {/if}
-                  {#if selected.shape.type === "text"}<label
-                      >テキスト<input
-                        name="text"
-                        aria-label="テキスト"
-                        maxlength="1000"
-                        value={selected.shape.text}
-                      /></label
-                    >{/if}
-                </div>
-                {#if selected.shape.type === "symbol"}
-                  <button
-                    type="button"
-                    onclick={() => {
-                      if (selected?.shape.type === "symbol")
-                        openDefinition(selected.shape.symbolId);
-                    }}>参照する Symbol 定義を編集</button
-                  >
-                {/if}
-                <div class="actions">
-                  <button type="submit">変更を適用</button>
-                  <button
-                    type="button"
-                    onclick={() =>
-                      selected &&
-                      edit({
-                        type: "duplicate",
-                        screenId: screen.id,
-                        objectId: selected.id,
-                      })}>選択図形を複製</button
-                  ><button
-                    type="button"
-                    onclick={() =>
-                      selected &&
-                      edit({
-                        type: "remove",
-                        screenId: screen.id,
-                        objectId: selected.id,
-                      })}>選択図形を削除</button
-                  >
-                </div>
-                <div class="actions" role="group" aria-label="重なり順">
-                  {#each [{ direction: "back" as const, label: "最背面へ" }, { direction: "backward" as const, label: "1つ背面へ" }, { direction: "forward" as const, label: "1つ前面へ" }, { direction: "front" as const, label: "最前面へ" }] as layer}
-                    <button
-                      type="button"
-                      onclick={() =>
-                        selected &&
-                        edit({
-                          type: "reorder",
-                          screenId: screen.id,
-                          objectId: selected.id,
-                          direction: layer.direction,
-                        })}>{layer.label}</button
-                    >
-                  {/each}
-                </div>
-              </form>
-            {/key}
-          {:else}<p>
-              図形をクリック、または一覧から選んでください。図形はドラッグして移動できます。
-            </p>{/if}
-        </SurfaceCard>
-      </div>
-    {/if}
     <p role="status" data-testid="project-status">{message}</p>
   </section>
+  {#if mode === "edit"}
+    <aside class="inspector" aria-label="プロパティパネル">
+      <SurfaceCard title="プロパティ">
+        {#if selectedIds.length > 1}
+          <p>
+            {selectedIds.length} 件選択しています。図形をドラッグするとまとめて移動します。
+          </p>
+          <form onsubmit={moveSelection}>
+            <div class="fields">
+              <label
+                >移動量 X<input
+                  name="dx"
+                  aria-label="移動量 X"
+                  type="number"
+                  step="any"
+                  required
+                  value="0"
+                /></label
+              ><label
+                >移動量 Y<input
+                  name="dy"
+                  aria-label="移動量 Y"
+                  type="number"
+                  step="any"
+                  required
+                  value="0"
+                /></label
+              >
+            </div>
+            <div class="actions">
+              <button type="submit">まとめて移動</button><button
+                type="button"
+                onclick={duplicateSelection}>選択図形を複製</button
+              ><button type="button" onclick={removeSelection}
+                >選択図形を削除</button
+              >
+            </div>
+          </form>
+          <div class="actions" role="group" aria-label="整列">
+            {#each [{ alignment: "left" as const, label: "左揃え" }, { alignment: "center-x" as const, label: "左右中央揃え" }, { alignment: "right" as const, label: "右揃え" }, { alignment: "top" as const, label: "上揃え" }, { alignment: "center-y" as const, label: "上下中央揃え" }, { alignment: "bottom" as const, label: "下揃え" }] as item}<button
+                onclick={() =>
+                  edit({
+                    type: "align",
+                    screenId: screen.id,
+                    objectIds: [...selectedIds],
+                    alignment: item.alignment,
+                  })}>{item.label}</button
+              >{/each}
+          </div>
+        {:else if selected}
+          {#key project.manifest.projectRevision + selected.id}
+            <form onsubmit={properties}>
+              <div class="fields">
+                {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
+                  <label
+                    >{field}<input
+                      name={field}
+                      aria-label={field}
+                      type="number"
+                      step="any"
+                      required
+                      min={field === "width" || field === "height"
+                        ? 0.001
+                        : undefined}
+                      value={field === "x"
+                        ? selected.x
+                        : field === "y"
+                          ? selected.y
+                          : "width" in selected
+                            ? selected[field as "width" | "height"]
+                            : 0}
+                    /></label
+                  >
+                {/each}
+                <label
+                  >色<input
+                    name="fill"
+                    aria-label="色"
+                    type="color"
+                    value={selected.fill}
+                  /></label
+                >
+                {#if selected.shape.type === "polyline"}
+                  <label
+                    >頂点（x,y を1行ずつ）<textarea
+                      name="points"
+                      aria-label="頂点"
+                      rows="5"
+                      required
+                      value={selected.shape.points
+                        .map((p) => `${p.x},${p.y}`)
+                        .join("\n")}></textarea></label
+                  >
+                  <label
+                    >線幅<input
+                      name="strokeWidth"
+                      aria-label="線幅"
+                      type="number"
+                      required
+                      min="0.1"
+                      max="64"
+                      step="any"
+                      value={selected.shape.strokeWidth}
+                    /></label
+                  >
+                  <label
+                    >矢印<select
+                      name="arrow"
+                      aria-label="矢印"
+                      value={selected.shape.arrow}
+                      ><option value="none">なし</option><option value="end"
+                        >終点</option
+                      ></select
+                    ></label
+                  >
+                {/if}
+                {#if selected.shape.type === "text"}<label
+                    >テキスト<input
+                      name="text"
+                      aria-label="テキスト"
+                      maxlength="1000"
+                      value={selected.shape.text}
+                    /></label
+                  >{/if}
+              </div>
+              {#if selected.shape.type === "symbol"}
+                <button
+                  type="button"
+                  onclick={() => {
+                    if (selected?.shape.type === "symbol")
+                      openDefinition(selected.shape.symbolId);
+                  }}>参照する Symbol 定義を編集</button
+                >
+              {/if}
+              <div class="actions">
+                <button type="submit">変更を適用</button>
+                <button
+                  type="button"
+                  onclick={() =>
+                    selected &&
+                    edit({
+                      type: "duplicate",
+                      screenId: screen.id,
+                      objectId: selected.id,
+                    })}>選択図形を複製</button
+                ><button
+                  type="button"
+                  onclick={() =>
+                    selected &&
+                    edit({
+                      type: "remove",
+                      screenId: screen.id,
+                      objectId: selected.id,
+                    })}>選択図形を削除</button
+                >
+              </div>
+              <div class="actions" role="group" aria-label="重なり順">
+                {#each [{ direction: "back" as const, label: "最背面へ" }, { direction: "backward" as const, label: "1つ背面へ" }, { direction: "forward" as const, label: "1つ前面へ" }, { direction: "front" as const, label: "最前面へ" }] as layer}
+                  <button
+                    type="button"
+                    onclick={() =>
+                      selected &&
+                      edit({
+                        type: "reorder",
+                        screenId: screen.id,
+                        objectId: selected.id,
+                        direction: layer.direction,
+                      })}>{layer.label}</button
+                  >
+                {/each}
+              </div>
+            </form>
+          {/key}
+        {:else}<p>
+            図形をクリック、または一覧から選んでください。図形はドラッグして移動できます。
+          </p>{/if}
+      </SurfaceCard>
+    </aside>
+  {/if}
 </main>
 <ToastHost store={toastStore} />
 
 <style>
+  :global(#app) {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
   :global(body) {
     margin: 0;
     background: var(--banto-bg);
@@ -874,7 +893,8 @@
     box-sizing: border-box;
   }
   .app-header {
-    padding: 24px 32px;
+    padding: 16px 24px;
+    flex-shrink: 0;
     border-bottom: 1px solid var(--banto-border);
   }
   .definition-banner {
@@ -990,12 +1010,15 @@
     white-space: nowrap;
   }
   .inspector {
-    margin-top: 20px;
-    border-radius: var(--banto-radius);
+    margin: 0;
+    border-right: 0;
+    border-left: 1px solid var(--banto-border);
+    padding: 16px;
+    background: var(--banto-surface);
   }
   .fields {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     margin-top: 16px;
   }
@@ -1022,11 +1045,12 @@
   }
   main {
     display: grid;
-    grid-template-columns: 260px 1fr;
-    min-height: calc(100vh - 108px);
+    grid-template-columns: 240px minmax(0, 1fr);
+    flex: 1;
+    min-height: 0;
   }
   aside {
-    padding: 24px;
+    padding: 16px;
     border-right: 1px solid var(--banto-border);
   }
   p {
@@ -1039,8 +1063,8 @@
     display: block;
     width: 100%;
     text-align: left;
-    padding: 12px;
-    margin: 12px 0;
+    padding: 9px 10px;
+    margin: 8px 0;
     border: 1px solid var(--banto-border);
     background: var(--banto-surface);
     color: var(--banto-text);
@@ -1062,10 +1086,10 @@
   hr {
     border: 0;
     border-top: 1px solid var(--banto-border);
-    margin: 28px 0;
+    margin: 18px 0;
   }
   .hint {
-    margin-top: 28px;
+    margin-top: 12px;
   }
   section {
     padding: 24px;
@@ -1089,6 +1113,92 @@
   section p {
     overflow-wrap: anywhere;
   }
+  .palette {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin: 10px 0 18px;
+  }
+  .palette button {
+    margin: 0;
+    min-width: 0;
+    padding: 10px 8px;
+  }
+  .project-sidebar form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  .project-sidebar form label {
+    display: grid;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--banto-text-muted);
+    min-width: 0;
+  }
+  .project-sidebar form label:first-child,
+  .project-sidebar form button {
+    grid-column: 1 / -1;
+  }
+  .project-sidebar form input {
+    width: 100%;
+    min-width: 0;
+    padding: 7px;
+    border-radius: 4px;
+    border: 1px solid var(--banto-border);
+    background: var(--banto-bg);
+    color: var(--banto-text);
+  }
+  .inspector .actions {
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .inspector .actions button {
+    white-space: normal;
+  }
+  .inspector .fields label:has(textarea),
+  .inspector .fields label:has(input[name="text"]) {
+    grid-column: 1 / -1;
+  }
+  .toolbar {
+    align-items: center;
+    gap: 12px;
+  }
+  .toolbar span {
+    text-align: right;
+  }
+  @media (min-width: 1100px) {
+    :global(#app) {
+      height: 100dvh;
+      overflow: hidden;
+    }
+    main.editing {
+      grid-template-columns: 240px minmax(0, 1fr) 288px;
+    }
+    main > aside,
+    main > section {
+      overflow: auto;
+      min-height: 0;
+    }
+    main > section {
+      padding: 20px;
+    }
+    .canvas.definition {
+      max-width: min(100%, max(240px, calc(100dvh - 440px)));
+      margin-inline: auto;
+    }
+  }
+  @media (min-width: 701px) and (max-width: 1099px) {
+    .inspector {
+      grid-column: 2;
+      border-left: 0;
+      border-top: 1px solid var(--banto-border);
+    }
+    .project-sidebar {
+      grid-row: span 2;
+    }
+  }
   @media (max-width: 700px) {
     main {
       grid-template-columns: 1fr;
@@ -1096,6 +1206,10 @@
     aside {
       border-right: 0;
       border-bottom: 1px solid var(--banto-border);
+    }
+    .inspector {
+      border-left: 0;
+      border-top: 1px solid var(--banto-border);
     }
     .app-header {
       padding: 20px;

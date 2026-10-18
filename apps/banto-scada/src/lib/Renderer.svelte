@@ -44,6 +44,25 @@
     ) => string[];
     onmove?: (ids: string[], dx: number, dy: number) => void;
   } = $props();
+  let svgElement = $state<SVGSVGElement>();
+  let viewScale = $state(1);
+  const handleHalfSize = $derived(5 / viewScale);
+  $effect(() => {
+    const svg = svgElement;
+    // viewBox 変更時も、CSS のサイズが同じなら ResizeObserver だけでは検知できない。
+    screen.width;
+    screen.height;
+    if (!svg) return;
+    const update = () => {
+      const matrix = svg.getScreenCTM();
+      const scale = matrix ? Math.hypot(matrix.a, matrix.b) : 1;
+      viewScale = scale > 0 ? scale : 1;
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(svg);
+    return () => observer.disconnect();
+  });
   let drag = $state<{
     ids: string[];
     pointer: number;
@@ -336,6 +355,7 @@
 
 <svelte:window onkeydown={cancelKey} />
 <svg
+  bind:this={svgElement}
   role="img"
   aria-label={screen.name}
   viewBox={`0 0 ${screen.width} ${screen.height}`}
@@ -359,7 +379,7 @@
           d={`M ${gridSize} 0 H 0 V ${gridSize}`}
           fill="none"
           stroke="var(--banto-text-muted)"
-          stroke-width="0.6"
+          stroke-width={0.6 / viewScale}
           opacity="0.35"
         /></pattern
       ></defs
@@ -438,10 +458,10 @@
         {#each resizeHandles as handle}
           {@const p = handlePoint(visual, handle)}
           <rect
-            x={p.x - 5}
-            y={p.y - 5}
-            width="10"
-            height="10"
+            x={p.x - handleHalfSize}
+            y={p.y - handleHalfSize}
+            width={handleHalfSize * 2}
+            height={handleHalfSize * 2}
             fill="var(--banto-primary)"
             stroke="var(--banto-text-inverse)"
             stroke-width="1.5"
@@ -466,7 +486,7 @@
             class="vertex"
             cx={object.x + p.x}
             cy={object.y + p.y}
-            r="6"
+            r={6 / viewScale}
             fill="var(--banto-primary)"
             stroke="var(--banto-text-inverse)"
             stroke-width="1.5"
