@@ -1,10 +1,14 @@
 <script lang="ts">
   import type { SymbolDefinition } from "../project";
   import Primitive from "../Primitive.svelte";
-  let { definition }: { definition: SymbolDefinition } = $props();
+  let {
+    definition,
+    compact = false,
+  }: { definition: SymbolDefinition; compact?: boolean } = $props();
 </script>
 
 <svg
+  class:compact
   aria-hidden="true"
   viewBox={`0 0 ${definition.width} ${definition.height}`}
   preserveAspectRatio="xMidYMid meet"
@@ -22,5 +26,10 @@
     height: 40px;
     display: block;
     pointer-events: none;
+  }
+  svg.compact {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
   }
 </style>

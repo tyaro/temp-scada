@@ -62,11 +62,24 @@
     type CanvasContext,
   } from "./lib/designer/CanvasWorkspace.svelte";
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
+  import TreeSection from "./lib/designer/TreeSection.svelte";
+  import ObjectIcon from "./lib/designer/ObjectIcon.svelte";
+  let layerQuery = $state("");
+  let layersExpanded = $state(true);
   import DesignerSidebar, {
     type DesignerPanel,
   } from "./lib/designer/DesignerSidebar.svelte";
   let activePanel = $state<DesignerPanel>("project");
+  function expandTreeAncestors(element: Element) {
+    for (
+      let parent = element.parentElement;
+      parent;
+      parent = parent.parentElement
+    )
+      if (parent instanceof HTMLDetailsElement) parent.open = true;
+  }
   function revealDraftForm(form: HTMLFormElement) {
+    expandTreeAncestors(form);
     if (form.dataset.editorForm === "screen") {
       setAuxPanelVisibility({ sidebar: true });
       activePanel = "project";
@@ -616,6 +629,8 @@
     lastExport = null;
     history = emptyHistory();
     referencesExpanded = false;
+    layerQuery = "";
+    layersExpanded = true;
     workspaceGeneration++;
     screenId = project.screens[0].id;
     editingSymbolId = null;
@@ -797,6 +812,7 @@
           const input = document.querySelector<HTMLInputElement>(
             'form[data-editor-form="screen"] input[name="name"]',
           );
+          if (input) expandTreeAncestors(input);
           input?.focus();
           input?.select();
         });
@@ -1010,6 +1026,23 @@
   let contextPoint = $state<Point | null>(null);
   const contextScope = $derived(
     `${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${mode}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${showInspector}:${snapEnabled}:${gridSize}:${contextKind}:${busy}:${!!drafts.pending}:${!!replacement}:${contextRequest}`,
+  );
+  const visibleLayers = $derived(
+    [...screen.objects]
+      .sort((a, b) => a.order - b.order)
+      .filter((object) => {
+        const query = layerQuery.trim().toLocaleLowerCase();
+        return (
+          !query ||
+          [
+            objectLabel(object),
+            object.id,
+            ...(object.shape.type === "text"
+              ? [object.shape.text, object.shape.binding?.externalName ?? ""]
+              : []),
+          ].some((value) => value.toLocaleLowerCase().includes(query))
+        );
+      }),
   );
   function objectLabel(object: ScreenObject) {
     return `${object.shape.type === "symbol" ? (project.symbols.find((d) => object.shape.type === "symbol" && d.id === object.shape.symbolId)?.name ?? "Symbol") : object.shape.type} · ${object.order}`;
@@ -1570,180 +1603,243 @@
         <button onclick={showProcessSample} disabled={busy}
           >工程図サンプルを開く</button
         >
-        <p>画面を選んで表示します。</p>
-        <nav aria-label="画面一覧">
-          {#each project.screens as item (item.id)}
-            {#snippet row()}
-              <button
-                class="screen-row"
-                class:active={!activeDefinition && screen.id === item.id}
-                aria-pressed={!activeDefinition && screen.id === item.id}
-                onclick={() => openScreen(item.id)}>{item.name}</button
-              >
-            {/snippet}
-            {#if mode === "edit"}
-              <ContextActions
-                label={`画面：${item.name}`}
-                contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`}
-                items={screenContextItems(item.id)}
-                >{@render row()}</ContextActions
-              >
-            {:else}{@render row()}{/if}
-          {/each}
-        </nav>
+        <div class="project-root" title={project.manifest.name}>
+          <span aria-hidden="true">▦</span>
+          {project.manifest.name}
+        </div>
+        <TreeSection label="画面" count={project.screens.length}>
+          <nav aria-label="画面一覧">
+            {#each project.screens as item (item.id)}
+              {#snippet row()}
+                <button
+                  class="screen-row"
+                  class:active={!activeDefinition && screen.id === item.id}
+                  aria-pressed={!activeDefinition && screen.id === item.id}
+                  onclick={() => openScreen(item.id)}
+                  ><svg
+                    class="screen-icon"
+                    aria-hidden="true"
+                    width="17"
+                    height="17"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    ><path d="M5 3h9l5 5v13H5V3zm9 0v6h5M8 13h8M8 17h8" /></svg
+                  >{item.name}</button
+                >
+              {/snippet}
+              {#if mode === "edit"}
+                <ContextActions
+                  label={`画面：${item.name}`}
+                  contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`}
+                  items={screenContextItems(item.id)}
+                  >{@render row()}</ContextActions
+                >
+              {:else}{@render row()}{/if}
+            {/each}
+          </nav>
+        </TreeSection>
         {#if mode === "edit"}
-          <SymbolLibrary
-            {project}
-            selectedId={libraryId}
-            workspaceKey={workspaceGeneration}
-            onopenusage={openSymbolUsage}
-            screenId={screen.id}
-            editingDefinition={!!activeDefinition}
-            contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`}
-            onchoose={(id) => (libraryId = id)}
-            onedit={openDefinition}
-            ondelete={deleteDefinition}
-            oncommand={symbolLibraryCommand}
-          />
-          <hr />
-          <h2>{activeDefinition ? "Symbol 設定" : "画面管理"}</h2>
-          {#if !activeDefinition}
+          <TreeSection label="タグ参照" count={references.length}>
             <button
-              disabled={project.screens.length >= 100}
-              onclick={() =>
-                edit({
-                  type: "create-screen",
-                  name: `画面 ${project.screens.length + 1}`,
-                  width: screen.width,
-                  height: screen.height,
-                })}>画面を追加</button
+              class="reference-link"
+              disabled={!references.length}
+              onclick={() => {
+                canvasWorkspace?.preparePanelResize();
+                referencesExpanded = true;
+                setAuxPanelVisibility({ references: true }, "references");
+              }}>タグ参照一覧を開く</button
             >
-            <button
-              disabled={project.screens.length >= 100}
-              onclick={() =>
-                edit({ type: "duplicate-screen", screenId: screen.id })}
-              >画面を複製</button
-            >
-            <div class="actions" role="group" aria-label="画面の並び順">
+            <p class="hint">
+              {references.length
+                ? "Project 内の割り当てと使用先を確認します。"
+                : "表示タグの割り当てはありません。"}
+            </p>
+          </TreeSection>
+          <TreeSection label="シンボル" count={project.symbols.length}>
+            <SymbolLibrary
+              {project}
+              selectedId={libraryId}
+              workspaceKey={workspaceGeneration}
+              onopenusage={openSymbolUsage}
+              screenId={screen.id}
+              editingDefinition={!!activeDefinition}
+              contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`}
+              onchoose={(id) => (libraryId = id)}
+              onedit={openDefinition}
+              ondelete={deleteDefinition}
+              oncommand={symbolLibraryCommand}
+            />
+          </TreeSection>
+          <TreeSection label="プロジェクト設定">
+            <h2>{activeDefinition ? "Symbol 設定" : "画面管理"}</h2>
+            {#if !activeDefinition}
               <button
-                disabled={project.screens[0].id === screen.id}
+                disabled={project.screens.length >= 100}
                 onclick={() =>
                   edit({
-                    type: "reorder-screen",
-                    screenId: screen.id,
-                    direction: "up",
-                  })}>画面を上へ</button
+                    type: "create-screen",
+                    name: `画面 ${project.screens.length + 1}`,
+                    width: screen.width,
+                    height: screen.height,
+                  })}>画面を追加</button
               >
               <button
-                disabled={project.screens.at(-1)?.id === screen.id}
+                disabled={project.screens.length >= 100}
                 onclick={() =>
-                  edit({
-                    type: "reorder-screen",
-                    screenId: screen.id,
-                    direction: "down",
-                  })}>画面を下へ</button
+                  edit({ type: "duplicate-screen", screenId: screen.id })}
+                >画面を複製</button
               >
-            </div>
-            <p>画面順は JSON に保存され、読込時は先頭の画面を開きます。</p>
-            <button
-              disabled={project.screens.length === 1}
-              onclick={() => removeScreen(screen.id)}>画面を削除</button
-            >
-          {/if}
-          {#key screen}
-            <form
-              use:drafts.track
-              data-editor-form="screen"
-              onsubmit={screenProperties}
-              aria-label="画面設定"
-            >
-              <label
-                >{activeDefinition ? "Symbol 名" : "画面名"}<input
-                  name="name"
-                  value={screen.name}
-                  required
-                  maxlength="200"
-                /></label
+              <div class="actions" role="group" aria-label="画面の並び順">
+                <button
+                  disabled={project.screens[0].id === screen.id}
+                  onclick={() =>
+                    edit({
+                      type: "reorder-screen",
+                      screenId: screen.id,
+                      direction: "up",
+                    })}>画面を上へ</button
+                >
+                <button
+                  disabled={project.screens.at(-1)?.id === screen.id}
+                  onclick={() =>
+                    edit({
+                      type: "reorder-screen",
+                      screenId: screen.id,
+                      direction: "down",
+                    })}>画面を下へ</button
+                >
+              </div>
+              <p>画面順は JSON に保存され、読込時は先頭の画面を開きます。</p>
+              <button
+                disabled={project.screens.length === 1}
+                onclick={() => removeScreen(screen.id)}>画面を削除</button
               >
-              <label
-                >{activeDefinition ? "定義の幅" : "画面の幅"}<input
-                  name="width"
-                  type="number"
-                  step="any"
-                  min="1"
-                  value={screen.width}
-                  required
-                /></label
+            {/if}
+            {#key screen}
+              <form
+                use:drafts.track
+                data-editor-form="screen"
+                onsubmit={screenProperties}
+                aria-label="画面設定"
               >
-              <label
-                >{activeDefinition ? "定義の高さ" : "画面の高さ"}<input
-                  name="height"
-                  type="number"
-                  step="any"
-                  min="1"
-                  value={screen.height}
-                  required
-                /></label
-              >
-              {#if !activeDefinition}
                 <label
-                  >画面の背景色<input
-                    name="background"
-                    type="color"
-                    value={"background" in screen
-                      ? screen.background
-                      : "#ffffff"}
+                  >{activeDefinition ? "Symbol 名" : "画面名"}<input
+                    name="name"
+                    value={screen.name}
+                    required
+                    maxlength="200"
+                  /></label
+                >
+                <label
+                  >{activeDefinition ? "定義の幅" : "画面の幅"}<input
+                    name="width"
+                    type="number"
+                    step="any"
+                    min="1"
+                    value={screen.width}
                     required
                   /></label
                 >
-                <p class="hint">アプリのテーマと図形の色は変わりません。</p>
-              {/if}
-              <button type="submit"
-                >{activeDefinition
-                  ? "Symbol 設定を適用"
-                  : "画面設定を適用"}</button
-              >
-            </form>
-          {/key}
-          <p class="hint">
-            サイズ変更は表示領域のみを変更します。図形の位置・サイズは変わりません。
-          </p>
+                <label
+                  >{activeDefinition ? "定義の高さ" : "画面の高さ"}<input
+                    name="height"
+                    type="number"
+                    step="any"
+                    min="1"
+                    value={screen.height}
+                    required
+                  /></label
+                >
+                {#if !activeDefinition}
+                  <label
+                    >画面の背景色<input
+                      name="background"
+                      type="color"
+                      value={"background" in screen
+                        ? screen.background
+                        : "#ffffff"}
+                      required
+                    /></label
+                  >
+                  <p class="hint">アプリのテーマと図形の色は変わりません。</p>
+                {/if}
+                <button type="submit"
+                  >{activeDefinition
+                    ? "Symbol 設定を適用"
+                    : "画面設定を適用"}</button
+                >
+              </form>
+            {/key}
+            <p class="hint">
+              サイズ変更は表示領域のみを変更します。図形の位置・サイズは変わりません。
+            </p>
+          </TreeSection>
         {/if}
       {/snippet}
       {#snippet layersPanel()}
         {#if mode === "edit"}
-          <h2>レイヤー（配置一覧）</h2>
+          <input
+            class="layer-search"
+            type="search"
+            aria-label="レイヤーを検索"
+            placeholder="検索"
+            bind:value={layerQuery}
+            oninput={() => (layersExpanded = true)}
+          />
           <p>
             {screen.name} · {selectedIds.length} 件選択。下の配置ほど前面です。
           </p>
-          <nav aria-label="図形一覧">
-            {#each [...screen.objects].sort((a, b) => a.order - b.order) as object (object.id)}
-              <div class="layer-entry">
-                <button
-                  class:active={selectedIds.includes(object.id)}
-                  aria-pressed={selectedIds.includes(object.id)}
-                  data-layer-id={object.id}
-                  onclick={(event) => selectObjects(object.id, event.shiftKey)}
-                  oncontextmenu={(event) => {
-                    event.preventDefault();
-                    layerContext(object.id, event.currentTarget);
-                  }}
-                  onkeydown={(event) => layerContextKey(event, object.id)}
-                  >{objectLabel(object)}</button
-                >
-                <button
-                  class="layer-more"
-                  aria-label={`操作：${objectLabel(object)}`}
-                  title={`${objectLabel(object)} の操作`}
-                  aria-haspopup="menu"
-                  onclick={(event) =>
-                    layerContext(object.id, event.currentTarget)}
-                  onkeydown={(event) => layerContextKey(event, object.id)}
-                  >⋮</button
-                >
-              </div>
-            {/each}
-          </nav>
+          <TreeSection
+            label={screen.name}
+            count={screen.objects.length}
+            bind:open={layersExpanded}
+          >
+            <nav aria-label="図形一覧">
+              {#each visibleLayers as object (object.id)}
+                <div class="layer-entry">
+                  <button
+                    class:active={selectedIds.includes(object.id)}
+                    aria-pressed={selectedIds.includes(object.id)}
+                    data-layer-id={object.id}
+                    onclick={(event) =>
+                      selectObjects(object.id, event.shiftKey)}
+                    oncontextmenu={(event) => {
+                      event.preventDefault();
+                      layerContext(object.id, event.currentTarget);
+                    }}
+                    onkeydown={(event) => layerContextKey(event, object.id)}
+                    ><ObjectIcon
+                      {object}
+                      definition={object.shape.type === "symbol"
+                        ? project.symbols.find(
+                            (d) =>
+                              object.shape.type === "symbol" &&
+                              d.id === object.shape.symbolId,
+                          )
+                        : undefined}
+                    /><span>{objectLabel(object)}</span></button
+                  >
+                  <button
+                    class="layer-more"
+                    aria-label={`操作：${objectLabel(object)}`}
+                    title={`${objectLabel(object)} の操作`}
+                    aria-haspopup="menu"
+                    onclick={(event) =>
+                      layerContext(object.id, event.currentTarget)}
+                    onkeydown={(event) => layerContextKey(event, object.id)}
+                    >⋮</button
+                  >
+                </div>
+              {/each}
+            </nav>
+            {#if !visibleLayers.length}<p class="hint">
+                {layerQuery.trim()
+                  ? "一致する配置はありません。"
+                  : "配置はありません。"}
+              </p>{/if}
+          </TreeSection>
         {/if}
       {/snippet}
       {#snippet partsPanel()}
@@ -2026,6 +2122,35 @@
     padding: 0;
     overflow: hidden;
   }
+  .project-root {
+    padding: 14px 4px 8px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .project-root > span {
+    color: var(--banto-primary);
+    margin-right: 6px;
+  }
+  .layer-search {
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 8px 10px;
+    border: 1px solid var(--banto-border);
+    border-radius: 6px;
+    background: var(--banto-surface);
+    color: var(--banto-text);
+    font: inherit;
+    font-size: 12px;
+  }
+  .layer-search:focus-visible {
+    outline: none;
+    box-shadow: var(--banto-focus-ring);
+  }
+  .screen-icon {
+    color: var(--banto-text-muted);
+    margin-right: 8px;
+    vertical-align: middle;
+  }
   .screen-row {
     width: 100%;
     padding-right: 24px;
@@ -2036,6 +2161,13 @@
   }
   .layer-entry > button:first-child {
     padding-right: 26px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+    min-height: 36px;
+    width: 100%;
+    overflow-wrap: anywhere;
   }
   .layer-entry .layer-more {
     position: absolute;
@@ -2246,11 +2378,6 @@
     width: 100%;
     margin-top: 10px;
     font-size: 11px;
-  }
-  hr {
-    border: 0;
-    border-top: 1px solid var(--banto-border);
-    margin: 18px 0;
   }
   .hint {
     margin-top: 12px;
