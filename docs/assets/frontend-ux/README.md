@@ -63,3 +63,8 @@
 - `panels-hidden-light.png` / `panels-hidden-dark.png`: 実装済み工程図サンプルで左パネル・プロパティ・タグ参照一覧を一括非表示にした実画面。
 - `SCADA_SCREENSHOT_THEME=light` / `dark` を指定して `scripts/capture-ui.mjs` が出力する `scada-canvas-only.png` を保存した。1600×1000。アプリの通常操作で撮影し、画像や DOM は加工していない。
 - ドッキング・保存配置・設備のライブ接続の完成を示す画像ではない。
+
+## 共通編集ツールバー（2026-10-19）
+
+- `edit-toolbar-light.png` / `edit-toolbar-dark.png`: 共通操作をツールバーへ移した実装画面。補助パネルを隠しても操作可能な状態。
+- 各テーマを指定した `scripts/capture-ui.mjs` の `scada-editor.png`（ライト・パネル表示）と `scada-canvas-only.png`（ダーク・パネル非表示）、いずれも1600×1000を保存した。通常操作で撮影し、画像と DOM は加工していない。

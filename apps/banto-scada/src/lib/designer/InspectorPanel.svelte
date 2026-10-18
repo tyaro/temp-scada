@@ -15,8 +15,6 @@
     drafts,
     properties,
     moveSelection,
-    duplicateSelection,
-    removeSelection,
     edit,
     openDefinition,
   }: {
@@ -31,8 +29,6 @@
     drafts: ReturnType<typeof createDraftGuard>;
     properties: (event: SubmitEvent) => void;
     moveSelection: (event: SubmitEvent) => void;
-    duplicateSelection: () => void;
-    removeSelection: () => void;
     edit: (command: EditCommand) => boolean;
     openDefinition: (id: string) => void;
   } = $props();
@@ -82,25 +78,9 @@
           >
         </div>
         <div class="actions">
-          <button type="submit">まとめて移動</button><button
-            type="button"
-            onclick={duplicateSelection}>選択図形を複製</button
-          ><button type="button" onclick={removeSelection}
-            >選択図形を削除</button
-          >
+          <button type="submit">まとめて移動</button>
         </div>
       </form>
-      <div class="actions" role="group" aria-label="整列">
-        {#each [{ alignment: "left" as const, label: "左揃え" }, { alignment: "center-x" as const, label: "左右中央揃え" }, { alignment: "right" as const, label: "右揃え" }, { alignment: "top" as const, label: "上揃え" }, { alignment: "center-y" as const, label: "上下中央揃え" }, { alignment: "bottom" as const, label: "下揃え" }] as item}<button
-            onclick={() =>
-              edit({
-                type: "align",
-                screenId: screen.id,
-                objectIds: [...selectedIds],
-                alignment: item.alignment,
-              })}>{item.label}</button
-          >{/each}
-      </div>
     {:else if selected}
       {#key project.manifest.projectRevision + selected.id}
         <form use:drafts.track data-editor-form="object" onsubmit={properties}>
@@ -235,40 +215,6 @@
           {/if}
           <div class="actions">
             <button type="submit">変更を適用</button>
-            <button
-              type="button"
-              onclick={() =>
-                selected &&
-                edit({
-                  type: "duplicate",
-                  screenId: screen.id,
-                  objectId: selected.id,
-                })}>選択図形を複製</button
-            ><button
-              type="button"
-              onclick={() =>
-                selected &&
-                edit({
-                  type: "remove",
-                  screenId: screen.id,
-                  objectId: selected.id,
-                })}>選択図形を削除</button
-            >
-          </div>
-          <div class="actions" role="group" aria-label="重なり順">
-            {#each [{ direction: "back" as const, label: "最背面へ" }, { direction: "backward" as const, label: "1つ背面へ" }, { direction: "forward" as const, label: "1つ前面へ" }, { direction: "front" as const, label: "最前面へ" }] as layer}
-              <button
-                type="button"
-                onclick={() =>
-                  selected &&
-                  edit({
-                    type: "reorder",
-                    screenId: screen.id,
-                    objectId: selected.id,
-                    direction: layer.direction,
-                  })}>{layer.label}</button
-              >
-            {/each}
           </div>
         </form>
       {/key}

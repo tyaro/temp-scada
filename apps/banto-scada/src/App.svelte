@@ -68,6 +68,9 @@
       activePanel = "project";
     } else setInspectorVisibility(true);
   }
+  import EditToolbar, {
+    type ToolbarGroup,
+  } from "./lib/designer/EditToolbar.svelte";
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
   let showInspector = $state(true);
   let showSidebar = $state(true);
@@ -709,6 +712,137 @@
   }
   const menuBlocked = $derived(busy || !!drafts.pending || !!replacement);
   const editBlocked = $derived(menuBlocked || mode !== "edit");
+  const editToolbarGroups: ToolbarGroup[] = $derived([
+    {
+      label: "編集履歴",
+      items: [
+        {
+          label: "元に戻す",
+          icon: "M8 5L3 10L8 15M3 10H14A6 6 0 0 1 14 22",
+          disabled: editBlocked || !history.past.length,
+          run: () => travel("undo"),
+        },
+        {
+          label: "やり直す",
+          icon: "M16 5L21 10L16 15M21 10H10A6 6 0 0 0 10 22",
+          disabled: editBlocked || !history.future.length,
+          run: () => travel("redo"),
+        },
+      ],
+    },
+    {
+      label: "選択と編集",
+      items: [
+        {
+          label: "すべて選択",
+          icon: "M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M7 7H17V17H7Z",
+          disabled: editBlocked || !screen.objects.length,
+          run: () =>
+            transition(() => (selectedIds = screen.objects.map((o) => o.id))),
+        },
+        {
+          label: "選択解除",
+          icon: "M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M8 8L16 16M16 8L8 16",
+          disabled: editBlocked || !selectedIds.length,
+          run: () => transition(() => (selectedIds = [])),
+        },
+        {
+          label: "選択図形を複製",
+          icon: "M9 9H21V21H9ZM15 5V3H3V15H5",
+          disabled: editBlocked || !selectedIds.length,
+          run: duplicateSelection,
+        },
+        {
+          label: "選択図形を削除",
+          icon: "M3 6H21M9 6V3H15V6M6 6L7 21H17L18 6M10 10V17M14 10V17",
+          disabled: editBlocked || !selectedIds.length,
+          run: removeSelection,
+        },
+      ],
+    },
+    {
+      label: "重なり順（単一選択）",
+      items: [
+        {
+          direction: "back" as const,
+          label: "最背面へ",
+          icon: "M3 3H21M7 8H17V18H7ZM12 11V22M9 19L12 22L15 19",
+        },
+        {
+          direction: "backward" as const,
+          label: "1つ背面へ",
+          icon: "M3 4H14V15H3ZM10 10H21V21H10M16 12V19M13 16L16 19L19 16",
+        },
+        {
+          direction: "forward" as const,
+          label: "1つ前面へ",
+          icon: "M3 4H14V15H3M10 10H21V21H10ZM16 19V12M13 15L16 12L19 15",
+        },
+        {
+          direction: "front" as const,
+          label: "最前面へ",
+          icon: "M3 21H21M7 6H17V16H7ZM12 13V2M9 5L12 2L15 5",
+        },
+      ].map((item) => ({
+        ...item,
+        disabled: editBlocked || selectedIds.length !== 1,
+        run: () => {
+          if (selectedIds.length === 1)
+            edit({
+              type: "reorder",
+              screenId: screen.id,
+              objectId: selectedIds[0],
+              direction: item.direction,
+            });
+        },
+      })),
+    },
+    {
+      label: "整列（複数選択）",
+      items: [
+        {
+          alignment: "left" as const,
+          label: "左揃え",
+          icon: "M3 3V21M7 5H20V10H7ZM7 14H15V19H7Z",
+        },
+        {
+          alignment: "center-x" as const,
+          label: "左右中央揃え",
+          icon: "M12 2V22M4 5H20V10H4ZM7 14H17V19H7Z",
+        },
+        {
+          alignment: "right" as const,
+          label: "右揃え",
+          icon: "M21 3V21M4 5H17V10H4ZM9 14H17V19H9Z",
+        },
+        {
+          alignment: "top" as const,
+          label: "上揃え",
+          icon: "M3 3H21M5 7H10V20H5ZM14 7H19V15H14Z",
+        },
+        {
+          alignment: "center-y" as const,
+          label: "上下中央揃え",
+          icon: "M2 12H22M5 4H10V20H5ZM14 7H19V17H14Z",
+        },
+        {
+          alignment: "bottom" as const,
+          label: "下揃え",
+          icon: "M3 21H21M5 4H10V17H5ZM14 9H19V17H14Z",
+        },
+      ].map((item) => ({
+        ...item,
+        disabled: editBlocked || selectedIds.length < 2,
+        run: () =>
+          edit({
+            type: "align",
+            screenId: screen.id,
+            objectIds: [...selectedIds],
+            alignment: item.alignment,
+          }),
+      })),
+    },
+  ]);
   const menuGroups: DesignerMenu[] = $derived([
     {
       label: "ファイル",
@@ -728,39 +862,7 @@
     },
     {
       label: "編集",
-      items: [
-        {
-          label: "元に戻す",
-          disabled: editBlocked || !history.past.length,
-          run: () => travel("undo"),
-        },
-        {
-          label: "やり直す",
-          disabled: editBlocked || !history.future.length,
-          run: () => travel("redo"),
-        },
-        {
-          label: "すべて選択",
-          disabled: editBlocked,
-          run: () =>
-            transition(() => (selectedIds = screen.objects.map((o) => o.id))),
-        },
-        {
-          label: "選択解除",
-          disabled: editBlocked || !selectedIds.length,
-          run: () => transition(() => (selectedIds = [])),
-        },
-        {
-          label: "選択図形を複製",
-          disabled: editBlocked || !selectedIds.length,
-          run: duplicateSelection,
-        },
-        {
-          label: "選択図形を削除",
-          disabled: editBlocked || !selectedIds.length,
-          run: removeSelection,
-        },
-      ],
+      items: editToolbarGroups.flatMap((group) => group.items),
     },
     {
       label: "表示",
@@ -928,6 +1030,10 @@
   </PageHeader>
 </div>
 {#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
+{#if mode === "edit"}<EditToolbar
+    groups={editToolbarGroups}
+    selectionCount={selectedIds.length}
+  />{/if}
 <main
   class:editing={mode === "edit"}
   class:sidebar-visible={mode !== "edit" || showSidebar}
@@ -1160,28 +1266,6 @@
       >
     </div>
     {#if mode === "edit"}
-      <div class="edit-toolbar" role="group" aria-label="編集履歴">
-        <button
-          disabled={busy || history.past.length === 0}
-          onclick={() => travel("undo")}>元に戻す</button
-        >
-        <button
-          disabled={busy || history.future.length === 0}
-          onclick={() => travel("redo")}>やり直す</button
-        >
-        <button
-          onclick={() =>
-            transition(() => (selectedIds = screen.objects.map((o) => o.id)))}
-          >すべて選択</button
-        >
-        <button
-          disabled={selectedIds.length === 0}
-          onclick={() => transition(() => (selectedIds = []))}>選択解除</button
-        >
-        <span>Shift + クリックで複数選択 · {selectedIds.length} 件選択</span>
-      </div>
-    {/if}
-    {#if mode === "edit"}
       <div class="grid-tools" role="group" aria-label="グリッドとスナップ">
         <label
           ><input type="checkbox" bind:checked={showGrid} />グリッド表示</label
@@ -1276,8 +1360,6 @@
       {drafts}
       {properties}
       {moveSelection}
-      {duplicateSelection}
-      {removeSelection}
       {edit}
       {openDefinition}
     />
@@ -1436,21 +1518,6 @@
     padding: 5px;
     border: 1px solid var(--banto-border);
     border-radius: var(--banto-radius);
-  }
-  .edit-toolbar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-  }
-  .edit-toolbar button {
-    width: auto;
-    margin: 0;
-  }
-  .edit-toolbar span {
-    color: var(--banto-text-muted);
-    font-size: 12px;
   }
   button:disabled {
     opacity: 0.5;
