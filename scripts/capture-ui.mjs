@@ -33,20 +33,33 @@ try {
   }
   const button = (name) => page.getByRole("button", { name, exact: true });
   const sidebar = page.getByRole("complementary", { name: "Project と部品" });
-  async function capture(name) {
+  async function capture(name, keepMenu = false) {
     const panel = sidebar.getByRole("tabpanel");
-    if (await panel.count())
+    if (!keepMenu && (await panel.count()))
       await panel.evaluate((element) => (element.scrollTop = 0));
     await page.evaluate(() => document.fonts.ready);
     // 通知は通常の閉じるボタンで片付ける。画面の DOM や描画内容は変えない。
     const dismiss = page.locator(".toast-host button.close");
-    while (await dismiss.count()) await dismiss.first().click();
+    while (!keepMenu && (await dismiss.count())) await dismiss.first().click();
     const path = join(output, name);
     await page.screenshot({ path, animations: "disabled" });
     console.log(path);
   }
   await button("工程図サンプルを開く").click();
   await button("編集").click();
+  await page.getByRole("tab", { name: "プロジェクト", exact: true }).click();
+  const screenList = page.getByRole("navigation", { name: "画面一覧" });
+  await screenList
+    .getByRole("button", { name: "循環設備（静的サンプル）", exact: true })
+    .click({ button: "right" });
+  await expect(
+    page.getByRole("menu", {
+      name: "画面：循環設備（静的サンプル） の操作",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await capture("scada-screen-context.png", true);
+  await page.keyboard.press("Escape");
   await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
   await page.getByLabel("グリッド表示", { exact: true }).check();
   await page

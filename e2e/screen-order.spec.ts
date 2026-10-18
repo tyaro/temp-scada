@@ -15,7 +15,7 @@ test("screen order is explicit, protected by draft handling and preserved by und
   await selectPanel(page, "プロジェクト");
   await button("画面を追加").click();
   await button("画面を追加").click();
-  await expect(screens.getByRole("button")).toHaveText([
+  await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "プロセス画面",
     "画面 2",
     "画面 3",
@@ -25,7 +25,7 @@ test("screen order is explicit, protected by draft handling and preserved by und
   await button("画面を上へ").click();
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
   await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(screens.getByRole("button")).toHaveText([
+  await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "プロセス画面",
     "画面 2",
     "画面 3",
@@ -34,7 +34,7 @@ test("screen order is explicit, protected by draft handling and preserved by und
   await prompt
     .getByRole("button", { name: "適用して続行", exact: true })
     .click();
-  await expect(screens.getByRole("button")).toHaveText([
+  await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "プロセス画面",
     "仕上工程",
     "画面 2",
@@ -43,7 +43,7 @@ test("screen order is explicit, protected by draft handling and preserved by und
     screens.getByRole("button", { name: "仕上工程", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await button("元に戻す").click();
-  await expect(screens.getByRole("button")).toHaveText([
+  await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "プロセス画面",
     "画面 2",
     "仕上工程",
@@ -51,13 +51,13 @@ test("screen order is explicit, protected by draft handling and preserved by und
   await button("やり直す").click();
   await button("画面を上へ").click();
   await expect(button("画面を上へ")).toBeDisabled();
-  await expect(screens.getByRole("button")).toHaveText([
+  await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "仕上工程",
     "プロセス画面",
     "画面 2",
   ]);
   await button("画面を下へ").click();
-  await expect(screens.getByRole("button")).toHaveText([
+  await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "プロセス画面",
     "仕上工程",
     "画面 2",
@@ -86,7 +86,7 @@ test("screen order is explicit, protected by draft handling and preserved by und
   await expect(button("元に戻す")).toBeDisabled();
   await button("表示プレビュー").click();
   await expect(button("画面を上へ")).toHaveCount(0);
-  await expect(screens.getByRole("button")).toHaveText([
+  await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "仕上工程",
     "プロセス画面",
     "画面 2",

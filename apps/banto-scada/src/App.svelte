@@ -531,7 +531,10 @@
       ) {
         screenId = project.screens.find((s) => !oldScreens.has(s.id))!.id;
         selectedIds = [];
-      } else if (command.type === "remove-screen") {
+      } else if (
+        command.type === "remove-screen" &&
+        command.screenId === screenId
+      ) {
         screenId = project.screens[0].id;
         selectedIds = [];
       }
@@ -564,10 +567,75 @@
   function screenProperties(event: SubmitEvent) {
     submitForm(event);
   }
-  function removeScreen() {
-    if (!drafts.allow(removeScreen)) return;
-    if (window.confirm(`「${screen.name}」と画面内の図形を削除しますか？`))
-      edit({ type: "remove-screen", screenId: screen.id });
+  function withScreen(id: string, action: () => void) {
+    const generation = workspaceGeneration;
+    const run = () => {
+      if (
+        generation !== workspaceGeneration ||
+        !project.screens.some((s) => s.id === id)
+      )
+        return;
+      if (drafts.allow(run)) action();
+    };
+    run();
+  }
+  function openScreen(id: string, rename = false) {
+    withScreen(id, () => {
+      if (screenId !== id || editingSymbolId) selectedIds = [];
+      screenId = id;
+      editingSymbolId = null;
+      if (rename)
+        void tick().then(() => {
+          if (screenId !== id || editingSymbolId || mode !== "edit") return;
+          const input = document.querySelector<HTMLInputElement>(
+            'form[data-editor-form="screen"] input[name="name"]',
+          );
+          input?.focus();
+          input?.select();
+        });
+    });
+  }
+  function removeScreen(id: string) {
+    withScreen(id, () => {
+      const target = project.screens.find((s) => s.id === id)!;
+      if (
+        project.screens.length > 1 &&
+        window.confirm(`「${target.name}」と画面内の図形を削除しますか？`)
+      )
+        edit({ type: "remove-screen", screenId: id });
+    });
+  }
+  function screenContextItems(id: string): ContextAction[] {
+    const command = (action: EditCommand) => () =>
+      withScreen(id, () => edit(action));
+    return [
+      { label: "開く", run: () => openScreen(id) },
+      { label: "名前変更", run: () => openScreen(id, true) },
+      {
+        label: "画面を複製",
+        disabled: project.screens.length >= 100,
+        run: command({ type: "duplicate-screen", screenId: id }),
+      },
+      {
+        label: "画面を上へ",
+        disabled: project.screens[0].id === id,
+        run: command({ type: "reorder-screen", screenId: id, direction: "up" }),
+      },
+      {
+        label: "画面を下へ",
+        disabled: project.screens.at(-1)?.id === id,
+        run: command({
+          type: "reorder-screen",
+          screenId: id,
+          direction: "down",
+        }),
+      },
+      {
+        label: "画面を削除",
+        disabled: project.screens.length === 1,
+        run: () => removeScreen(id),
+      },
+    ];
   }
   function add(kind: AddKind) {
     edit({ type: "add", screenId: screen.id, kind });
@@ -1276,16 +1344,24 @@
         >
         <p>画面を選んで表示します。</p>
         <nav aria-label="画面一覧">
-          {#each project.screens as item}<button
-              class:active={screen.id === item.id}
-              aria-pressed={screen.id === item.id}
-              onclick={() =>
-                transition(() => {
-                  screenId = item.id;
-                  editingSymbolId = null;
-                  selectedIds = [];
-                })}>{item.name}</button
-            >{/each}
+          {#each project.screens as item (item.id)}
+            {#snippet row()}
+              <button
+                class="screen-row"
+                class:active={!activeDefinition && screen.id === item.id}
+                aria-pressed={!activeDefinition && screen.id === item.id}
+                onclick={() => openScreen(item.id)}>{item.name}</button
+              >
+            {/snippet}
+            {#if mode === "edit"}
+              <ContextActions
+                label={`画面：${item.name}`}
+                contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`}
+                items={screenContextItems(item.id)}
+                >{@render row()}</ContextActions
+              >
+            {:else}{@render row()}{/if}
+          {/each}
         </nav>
         {#if mode === "edit"}
           <SymbolLibrary
@@ -1340,7 +1416,7 @@
             <p>画面順は JSON に保存され、読込時は先頭の画面を開きます。</p>
             <button
               disabled={project.screens.length === 1}
-              onclick={removeScreen}>画面を削除</button
+              onclick={() => removeScreen(screen.id)}>画面を削除</button
             >
           {/if}
           {#key screen}
@@ -1647,6 +1723,11 @@
     flex-direction: column;
     padding: 0;
     overflow: hidden;
+  }
+  .screen-row {
+    width: 100%;
+    padding-right: 24px;
+    overflow-wrap: anywhere;
   }
   .layer-entry {
     position: relative;
