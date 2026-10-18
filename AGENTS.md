@@ -9,3 +9,5 @@ industrial へ戻せるよう apps/banto-scada と crates/scada-* の配置を�
 クラウドのシェルでは scripts/cloud-env.sh を source してから README の検証コマンドを使います。新しい機能は対応する契約テストとブラウザ検証で確認し、Markdown / TS / Svelte / JSON は pnpm exec prettier --write <変更ファイル>、Rust は cargo fmt --all で整形してください。
 
 アプリ基盤は Banto v6.7.0 の公開パッケージを使います。独自の認証・テーマ・汎用 UI を重複実装する前に既存 API を確認してください。運用時の認証方針は docs/access-policy.md を参照。ems-apps の画面・コード・アセットは取り込みません。検証が通った機能の区切りで、日本語の Conventional Commits 形式でコミットしてセーブします。
+
+認証は industrial 側で修正中のため実装・接続を延期します（2026-10-18 ユーザー指示）。ローカル編集はログイン不要のままにし、工程図・設備シンボルの編集を優先してください。認証を再開するときは上流の最新契約を確認します。
