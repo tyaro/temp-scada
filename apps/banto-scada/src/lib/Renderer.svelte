@@ -1,13 +1,21 @@
 <script lang="ts">
-  import type { Screen, ScreenObject } from "./project";
+  import {
+    getBounds,
+    type Screen,
+    type ScreenObject,
+    type SymbolDefinition,
+  } from "./project";
+  import Primitive from "./Primitive.svelte";
   let {
     screen,
+    symbols = [],
     editable = false,
     selectedId = null,
     onselect,
     onmove,
   }: {
     screen: Screen;
+    symbols?: SymbolDefinition[];
     editable?: boolean;
     selectedId?: string | null;
     onselect?: (id: string | null) => void;
@@ -91,33 +99,52 @@
   <title>{screen.name}</title>
   {#each [...screen.objects].sort((a, b) => a.order - b.order) as object (object.id)}
     <g transform={position(object)} data-object-id={object.id}>
-      {#if object.shape.type === "rectangle"}
-        <rect width={object.width} height={object.height} fill={object.fill} />
-      {:else if object.shape.type === "ellipse"}
-        <ellipse
-          cx={object.width / 2}
-          cy={object.height / 2}
-          rx={object.width / 2}
-          ry={object.height / 2}
-          fill={object.fill}
-        />
-      {:else if object.shape.type === "text"}
-        <text
-          x="0"
-          y={object.height * 0.8}
-          font-size={object.height * 0.7}
-          fill={object.fill}>{object.shape.text}</text
-        >
-      {/if}
-      {#if editable}
-        <rect
+      {#if "width" in object && object.shape.type === "symbol"}
+        {@const definition = symbols.find(
+          (s) =>
+            object.shape.type === "symbol" && s.id === object.shape.symbolId,
+        )!}
+        <svg
           width={object.width}
           height={object.height}
-          fill="transparent"
-          stroke={selectedId === object.id ? "var(--banto-warning)" : "none"}
-          stroke-width="2"
-          vector-effect="non-scaling-stroke"
-        />
+          viewBox={`0 0 ${definition.width} ${definition.height}`}
+          preserveAspectRatio="xMidYMid meet"
+          data-symbol-id={definition.id}
+        >
+          {#each [...definition.objects].sort((a, b) => a.order - b.order) as child (child.id)}
+            <g transform={`translate(${child.x} ${child.y})`}
+              ><Primitive object={child} color={object.fill} /></g
+            >
+          {/each}
+        </svg>
+      {:else}<Primitive {object} />{/if}
+      {#if editable}
+        {@const bounds = getBounds(object)}
+        {#if object.shape.type === "polyline"}
+          <polyline
+            points={object.shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
+            fill="none"
+            stroke="transparent"
+            stroke-width={Math.max(12, object.shape.strokeWidth + 8)}
+          />
+        {:else}<rect
+            width={bounds.width}
+            height={bounds.height}
+            x={bounds.x}
+            y={bounds.y}
+            fill="transparent"
+          />{/if}
+        {#if selectedId === object.id}<rect
+            x={bounds.x}
+            y={bounds.y}
+            width={bounds.width}
+            height={bounds.height}
+            fill="none"
+            stroke="var(--banto-warning)"
+            stroke-width="2"
+            vector-effect="non-scaling-stroke"
+            pointer-events="none"
+          />{/if}
       {/if}
     </g>
   {/each}

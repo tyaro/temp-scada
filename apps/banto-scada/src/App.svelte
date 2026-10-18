@@ -12,10 +12,15 @@
     }
   }
   import sample from "../../../examples/minimal.project.json";
+  import processSample from "../../../examples/process.project.json";
   import Renderer from "./lib/Renderer.svelte";
-  import { parseProject, serializeProject } from "./lib/project";
-  import { applyCommand, type EditCommand } from "./lib/editor";
-  import type { ScreenObject } from "./lib/project";
+  import { parseProject, serializeProject, parsePoints } from "./lib/project";
+  import {
+    applyCommand,
+    type EditCommand,
+    type AddKind,
+    type ObjectPatch,
+  } from "./lib/editor";
   let mode = $state<"edit" | "preview">("preview");
   let selectedId = $state<string | null>(null);
   let project = $state(parseProject(JSON.stringify(sample)));
@@ -25,6 +30,24 @@
   );
   let message = $state("サンプルを表示しています。Hub には接続していません。");
   let busy = $state(false);
+  let projectChanged = $state(false);
+  function showProcessSample() {
+    if (
+      projectChanged &&
+      !window.confirm(
+        "現在の編集内容を工程図サンプルで置き換えます。必要な JSON は保存しましたか？",
+      )
+    )
+      return;
+    project = parseProject(JSON.stringify(processSample));
+    screenId = project.screens[0].id;
+    selectedId = null;
+    projectChanged = false;
+    report(
+      "info",
+      "工程図サンプルを開きました。設備や計測値には接続していません。",
+    );
+  }
   function report(kind: NotificationKind, text: string) {
     message = text;
     notify(kind, text);
@@ -33,7 +56,8 @@
   function edit(command: EditCommand) {
     try {
       project = applyCommand(project, command, mode);
-      if (command.type === "add")
+      projectChanged = true;
+      if (command.type === "add" || command.type === "add-symbol")
         selectedId = project.screens
           .find((s) => s.id === screenId)!
           .objects.at(-1)!.id;
@@ -49,30 +73,43 @@
       );
     }
   }
-  function add(kind: ScreenObject["shape"]["type"]) {
+  function add(kind: AddKind) {
     edit({ type: "add", screenId: screen.id, kind });
   }
   function properties(event: SubmitEvent) {
     event.preventDefault();
     if (!selected) return;
     const data = new FormData(event.currentTarget as HTMLFormElement);
-    const patch: {
-      x: number;
-      y: number;
-      width: number;
-      height: number;
-      fill: string;
-      text?: string;
-    } = {
-      x: Number(data.get("x")),
-      y: Number(data.get("y")),
-      width: Number(data.get("width")),
-      height: Number(data.get("height")),
-      fill: String(data.get("fill")),
-    };
-    if (selected.shape.type === "text") patch.text = String(data.get("text"));
-    edit({ type: "update", screenId: screen.id, objectId: selected.id, patch });
+    try {
+      const patch: ObjectPatch = {
+        x: Number(data.get("x")),
+        y: Number(data.get("y")),
+        fill: String(data.get("fill")),
+      };
+      if ("width" in selected) {
+        patch.width = Number(data.get("width"));
+        patch.height = Number(data.get("height"));
+      }
+      if (selected.shape.type === "text") patch.text = String(data.get("text"));
+      if (selected.shape.type === "polyline") {
+        patch.points = parsePoints(String(data.get("points")));
+        patch.strokeWidth = Number(data.get("strokeWidth"));
+        patch.arrow = data.get("arrow") === "end" ? "end" : "none";
+      }
+      edit({
+        type: "update",
+        screenId: screen.id,
+        objectId: selected.id,
+        patch,
+      });
+    } catch (e) {
+      report(
+        "error",
+        `編集エラー: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
+
   async function load(event: Event) {
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
@@ -83,6 +120,7 @@
         throw new Error("ファイルは 1 MiB 以下にしてください");
       const next = parseProject(await file.text());
       project = next;
+      projectChanged = false;
       screenId = next.screens[0].id;
       selectedId = null;
       report("success", "Project を読み込みました。");
@@ -156,6 +194,9 @@
 <main>
   <aside>
     <h2>Project</h2>
+    <button onclick={showProcessSample} disabled={busy}
+      >工程図サンプルを開く</button
+    >
     <p>画面を選んで表示します。</p>
     <nav aria-label="画面一覧">
       {#each project.screens as item}<button
@@ -172,12 +213,31 @@
       <button onclick={() => add("rectangle")}>Rectangle を追加</button>
       <button onclick={() => add("ellipse")}>Ellipse を追加</button>
       <button onclick={() => add("text")}>Text を追加</button>
+      <button onclick={() => add("line")}>線を追加</button><button
+        onclick={() => add("pipe")}>配管を追加</button
+      >
+      <button
+        onclick={() =>
+          edit({ type: "add-symbol", screenId: screen.id, template: "pump" })}
+        >ポンプを追加</button
+      >
+      <button
+        onclick={() =>
+          edit({ type: "add-symbol", screenId: screen.id, template: "valve" })}
+        >バルブを追加</button
+      >
       <h2>図形一覧</h2>
       <nav aria-label="図形一覧">
         {#each [...screen.objects].sort((a, b) => a.order - b.order) as object}<button
             class:active={selectedId === object.id}
             onclick={() => (selectedId = object.id)}
-            >{object.shape.type} · {object.order}</button
+            >{object.shape.type === "symbol"
+              ? project.symbols.find(
+                  (s) =>
+                    object.shape.type === "symbol" &&
+                    s.id === object.shape.symbolId,
+                )?.name
+              : object.shape.type} · {object.order}</button
           >{/each}
       </nav>
     {/if}
@@ -205,6 +265,7 @@
     <div class="canvas" style:aspect-ratio={`${screen.width}/${screen.height}`}>
       <Renderer
         {screen}
+        symbols={project.symbols}
         editable={mode === "edit"}
         {selectedId}
         onselect={(id) => (selectedId = id)}
@@ -224,7 +285,7 @@
             {#key project.manifest.projectRevision + selected.id}
               <form onsubmit={properties}>
                 <div class="fields">
-                  {#each ["x", "y", "width", "height"] as field}
+                  {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
                     <label
                       >{field}<input
                         name={field}
@@ -235,9 +296,13 @@
                         min={field === "width" || field === "height"
                           ? 0.001
                           : undefined}
-                        value={selected[
-                          field as "x" | "y" | "width" | "height"
-                        ]}
+                        value={field === "x"
+                          ? selected.x
+                          : field === "y"
+                            ? selected.y
+                            : "width" in selected
+                              ? selected[field as "width" | "height"]
+                              : 0}
                       /></label
                     >
                   {/each}
@@ -249,6 +314,40 @@
                       value={selected.fill}
                     /></label
                   >
+                  {#if selected.shape.type === "polyline"}
+                    <label
+                      >頂点（x,y を1行ずつ）<textarea
+                        name="points"
+                        aria-label="頂点"
+                        rows="5"
+                        required
+                        value={selected.shape.points
+                          .map((p) => `${p.x},${p.y}`)
+                          .join("\n")}></textarea></label
+                    >
+                    <label
+                      >線幅<input
+                        name="strokeWidth"
+                        aria-label="線幅"
+                        type="number"
+                        required
+                        min="0.1"
+                        max="64"
+                        step="any"
+                        value={selected.shape.strokeWidth}
+                      /></label
+                    >
+                    <label
+                      >矢印<select
+                        name="arrow"
+                        aria-label="矢印"
+                        value={selected.shape.arrow}
+                        ><option value="none">なし</option><option value="end"
+                          >終点</option
+                        ></select
+                      ></label
+                    >
+                  {/if}
                   {#if selected.shape.type === "text"}<label
                       >テキスト<input
                         name="text"
@@ -347,10 +446,12 @@
     font-size: 12px;
     color: var(--banto-text-muted);
   }
-  .fields input {
+  .fields input,
+  .fields textarea,
+  .fields select {
     display: block;
     width: 100%;
-    height: 36px;
+    min-height: 36px;
     margin-top: 6px;
     background: var(--banto-bg);
     color: var(--banto-text);

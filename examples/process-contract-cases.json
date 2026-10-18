@@ -1,0 +1,128 @@
+[
+  {
+    "name": "Symbol の参照切れ",
+    "path": "/screens/0/objects/10/shape/symbolId",
+    "value": "0199f900-0000-7000-8000-000000000001",
+    "valid": false
+  },
+  {
+    "name": "Symbol インスタンス色",
+    "path": "/screens/0/objects/10/fill",
+    "value": "#ffaa00",
+    "valid": true
+  },
+  {
+    "name": "Symbol と画面の ID 衝突",
+    "path": "/symbols/0/id",
+    "value": "0199f200-0000-7000-8000-000000000002",
+    "valid": false
+  },
+  {
+    "name": "異なる Symbol 内の ID 衝突",
+    "path": "/symbols/1/objects/0/id",
+    "value": "0199f100-0000-7000-8000-000000001001",
+    "valid": false
+  },
+  {
+    "name": "Symbol 内の重複 order",
+    "path": "/symbols/0/objects/1/order",
+    "value": 0,
+    "valid": false
+  },
+  {
+    "name": "Symbol の再帰参照は未対応",
+    "path": "/symbols/0/objects/0",
+    "value": {
+      "id": "0199f100-0000-7000-8000-000000001001",
+      "order": 0,
+      "x": 0,
+      "y": 0,
+      "fill": "#ffffff",
+      "width": 10,
+      "height": 10,
+      "shape": {
+        "type": "symbol",
+        "symbolId": "0199f100-0000-7000-8000-000000001000"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "折れ線は2点以上",
+    "path": "/screens/0/objects/7/shape/points",
+    "value": [
+      {
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "異なる点が必要",
+    "path": "/screens/0/objects/7/shape/points",
+    "value": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "線幅は正数",
+    "path": "/screens/0/objects/7/shape/strokeWidth",
+    "value": 0,
+    "valid": false
+  },
+  {
+    "name": "線幅の上限",
+    "path": "/screens/0/objects/7/shape/strokeWidth",
+    "value": 65,
+    "valid": false
+  },
+  {
+    "name": "矢印の未対応指定",
+    "path": "/screens/0/objects/7/shape/arrow",
+    "value": "both",
+    "valid": false
+  },
+  {
+    "name": "負の頂点座標を許可",
+    "path": "/screens/0/objects/7/shape/points",
+    "value": [
+      {
+        "x": -20,
+        "y": -10
+      },
+      {
+        "x": 80,
+        "y": -10
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "閉じた折れ線を許可",
+    "path": "/screens/0/objects/7/shape/points",
+    "value": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 100,
+        "y": 0
+      },
+      {
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "valid": true
+  }
+]

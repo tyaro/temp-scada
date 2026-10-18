@@ -76,3 +76,86 @@ it("edits text and rejects a missing target", () => {
     ),
   ).toThrow();
 });
+
+it("reuses one Symbol definition for multiple independent instances", () => {
+  const project = fresh();
+  const screenId = project.screens[0].id;
+  const first = applyCommand(
+    project,
+    { type: "add-symbol", screenId, template: "pump" },
+    "edit",
+  );
+  const second = applyCommand(
+    first,
+    { type: "add-symbol", screenId, template: "pump" },
+    "edit",
+  );
+  expect(second.symbols).toHaveLength(1);
+  const instances = second.screens[0].objects.slice(-2);
+  expect(instances[0].id).not.toBe(instances[1].id);
+  expect(instances[0].shape).toEqual(instances[1].shape);
+  const moved = applyCommand(
+    second,
+    {
+      type: "update",
+      screenId,
+      objectId: instances[1].id,
+      patch: { x: 350, width: 140 },
+    },
+    "edit",
+  );
+  expect(moved.screens[0].objects.at(-2)!.x).toBe(40);
+  expect(moved.symbols).toEqual(second.symbols);
+});
+it("edits pipe geometry and rejects degenerate paths without mutating input", () => {
+  const project = fresh();
+  const screenId = project.screens[0].id;
+  const added = applyCommand(
+    project,
+    { type: "add", screenId, kind: "pipe" },
+    "edit",
+  );
+  const objectId = added.screens[0].objects.at(-1)!.id;
+  const edited = applyCommand(
+    added,
+    {
+      type: "update",
+      screenId,
+      objectId,
+      patch: {
+        points: [
+          { x: -20, y: 0 },
+          { x: 100, y: 0 },
+        ],
+        strokeWidth: 6,
+        arrow: "end",
+      },
+    },
+    "edit",
+  );
+  expect(edited.screens[0].objects.at(-1)!.shape).toMatchObject({
+    strokeWidth: 6,
+    arrow: "end",
+  });
+  expect(() =>
+    applyCommand(
+      added,
+      {
+        type: "update",
+        screenId,
+        objectId,
+        patch: {
+          points: [
+            { x: 0, y: 0 },
+            { x: 0, y: 0 },
+          ],
+        },
+      },
+      "edit",
+    ),
+  ).toThrow();
+  expect(added.screens[0].objects.at(-1)!.shape).toMatchObject({
+    strokeWidth: 8,
+    arrow: "none",
+  });
+});

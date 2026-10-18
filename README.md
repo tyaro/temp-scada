@@ -1,6 +1,6 @@
 # Banto SCADA — 一時開発 workspace
 
-状態: **Banto のフロントエンド基盤を導入し、最小エディタ実装済み**。図形の追加・選択・移動・プロパティ編集・削除、Project JSON の保存・読込と表示プレビュー。Hub 接続・設備操作は未実装。
+状態: **Banto 基盤の最小工程図エディタを実装済み**。図形の追加・選択・移動・プロパティ編集・削除、Project JSON の保存・読込と表示プレビュー。線・配管と再利用可能なポンプ / バルブの Symbol に対応。Hub 接続・設備操作は未実装。
 
 `tyaro/banto-industrial` で計画している SCADA を、同リポジトリの開発と並行して作るための一時 workspace です。最終的に `apps/banto-scada` と `crates/scada-*` を industrial に戻します。
 
@@ -31,6 +31,16 @@ pnpm dev
 
 画面ではサンプルの Rectangle / Ellipse / Text を表示します。「編集」で図形を追加し、画面上のクリックまたは図形一覧で選択できます。ドラッグで移動、プロパティで座標・サイズ・色・文字列を変更して適用、選択図形を削除できます。「表示プレビュー」では同じ Project を編集用の枠なしで確認できます。Project JSON を開く、JSON を保存、画面を選択する操作ができます。読み込んだファイルが不正なら、現在表示中の Project を保持してエラーを表示します。アップロード先やネットワーク保存はありません。
 
+## 工程図を試す
+
+サイドバーの「工程図サンプルを開く」で、槽・配管・ポンプ・バルブの静的な配置例を表示できます。「編集」で部品を追加し、「表示プレビュー」で同じ Project の表示を確認します。現在の編集内容をサンプルで置き換える場合は確認を表示します。
+
+- 「線を追加」「配管を追加」は折れ線を配置します。全体をドラッグで移動でき、プロパティの「頂点」に `x,y` を 1 行ずつ入力して経路を変更します。座標はオブジェクトの原点からの design unit で、負数も使えます。線幅・色・終点の矢印も変更できます。
+- 「ポンプを追加」「バルブを追加」は Project 内の共有 Symbol 定義を参照する配置インスタンスを作ります。同じ部品を複数配置しても定義は増えません。インスタンスごとに位置・表示サイズ・色を変更できます。
+- サンプルは [examples/process.project.json](examples/process.project.json)。`ems-apps` のコード・画像は使用せず、このリポジトリで作った図形です。数値表示や設備状態・操作には接続していません。
+
+頂点のドラッグ編集、機器への配管の自動追従・接続判定、Symbol 定義そのものの編集、Symbol の入れ子は未対応です。現在の Symbol は単色の表示部品で、Equipment のタグ割付や動的状態は後続です。
+
 ## 検証
 
 ```sh
@@ -44,6 +54,7 @@ cargo fmt --all --check
 cargo clippy --workspace --locked --all-targets -- -D warnings
 cargo test --workspace --locked
 cargo run --locked -p scada-model -- validate examples/minimal.project.json
+cargo run --locked -p scada-model -- validate examples/process.project.json
 ```
 
 E2E は開発サーバーを自動起動します。既に同じサーバーを起動しているときは再利用します。
@@ -57,6 +68,6 @@ E2E は開発サーバーを自動起動します。既に同じサーバーを�
 - `docs/upstream/industrial`: industrial の設計ドキュメントを変更せず保存した参照スナップショット。
 - [開発・統合方針](docs/development-plan.md)
 
-これは S0 / S1 / S2 の最小部分です。JSON 形式 `0.1.0` は開発用の暫定契約で、設計上の正式な `.bantoscada` directory / ZIP パッケージではありません。バージョン不一致や未知のフィールドは拒否し、未対応情報を黙って捨てません。ID は lowercase UUID v7、座標は有限数、表示順は明示的な `order`、SVG は `xMidYMid meet` を使用します。
+これは S0 / S1 / S2 の最小部分です。JSON 形式 `0.2.0` は開発用の暫定契約で、設計上の正式な `.bantoscada` directory / ZIP パッケージではありません。旧 `0.1.0` は旧 schema で検証した後、ID・配置・revision を保持して `0.2.0` へ移行し、空の Symbol 定義を追加します。保存時は `schemaVersion` と `minRuntimeVersion` を `0.2.0` にします。旧ランタイムには新形式を読み込ませません。未知のバージョンやフィールド、Symbol の参照切れ、ID の衝突は拒否し、未対応情報を黙って捨てません。ID は lowercase UUID v7、座標は有限数、表示順は明示的な `order`、SVG は `xMidYMid meet` を使用します。
 
 変更は JSON ファイルへの保存までブラウザ内だけに保持されます。ページを再読込する前に保存してください。編集コマンドはコピー上で検証し、成功時に revision を増やします。Undo / Redo、複数選択、グループ化、正式な Runtime の起動時 mode・Rust 側の権限分離はまだありません。

@@ -24,3 +24,80 @@ describe("Project contract shared with Rust", () => {
     ).toThrow();
   });
 });
+
+import processSample from "../../../../examples/process.project.json";
+import processCases from "../../../../examples/process-contract-cases.json";
+import legacy from "../../../../examples/legacy.project.json";
+import { getBounds, parsePoints } from "./project";
+it("migrates the validated legacy format without changing identity, geometry or revision", () => {
+  const next = parseProject(JSON.stringify(legacy));
+  expect(next.manifest.schemaVersion).toBe("0.2.0");
+  expect(next.manifest.minRuntimeVersion).toBe("0.2.0");
+  expect(next.manifest.projectId).toBe(legacy.manifest.projectId);
+  expect(next.manifest.projectRevision).toBe(legacy.manifest.projectRevision);
+  expect(next.screens).toEqual(legacy.screens);
+  expect(next.symbols).toEqual([]);
+  expect(() =>
+    parseProject(JSON.stringify({ ...legacy, futureFeature: true })),
+  ).toThrow();
+});
+it("round-trips the process Project and shared Symbol definitions", () => {
+  const project = parseProject(JSON.stringify(processSample));
+  expect(parseProject(serializeProject(project))).toEqual(project);
+});
+for (const test of processCases)
+  it(test.name, () => {
+    const value = structuredClone(processSample);
+    const parts = test.path.slice(1).split("/");
+    let target: any = value;
+    for (const key of parts.slice(0, -1)) target = target[key];
+    target[parts.at(-1)!] = test.value;
+    if (test.valid)
+      expect(() => parseProject(JSON.stringify(value))).not.toThrow();
+    else expect(() => parseProject(JSON.stringify(value))).toThrow();
+  });
+it("supports negative local bounds and validates point text", () => {
+  expect(parsePoints("-20,-10\n80,0")).toEqual([
+    { x: -20, y: -10 },
+    { x: 80, y: 0 },
+  ]);
+  expect(() => parsePoints("1,2,3")).toThrow();
+  expect(() => parsePoints("1,")).toThrow();
+  expect(() => parsePoints("Infinity,0")).toThrow();
+  expect(
+    getBounds({
+      id: "test",
+      order: 0,
+      x: 0,
+      y: 0,
+      fill: "#ffffff",
+      shape: {
+        type: "polyline",
+        points: [
+          { x: -20, y: -10 },
+          { x: 80, y: -10 },
+        ],
+        strokeWidth: 4,
+        arrow: "none",
+      },
+    }),
+  ).toEqual({ x: -22, y: -12, width: 104, height: 4 });
+  expect(
+    getBounds({
+      id: "test",
+      order: 0,
+      x: 0,
+      y: 0,
+      fill: "#ffffff",
+      shape: {
+        type: "polyline",
+        points: [
+          { x: 0, y: 0 },
+          { x: 100, y: 0 },
+        ],
+        strokeWidth: 4,
+        arrow: "end",
+      },
+    }),
+  ).toEqual({ x: -12, y: -12, width: 124, height: 24 });
+});
