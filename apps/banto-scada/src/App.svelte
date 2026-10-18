@@ -1,7 +1,6 @@
 <script lang="ts">
   import {
     PageHeader,
-    SurfaceCard,
     StatusBadge,
     ToastHost,
     Modal,
@@ -65,6 +64,22 @@
   let activePanel = $state<DesignerPanel>("project");
   function revealDraftForm(form: HTMLFormElement) {
     if (form.dataset.editorForm === "screen") activePanel = "project";
+    else setInspectorVisibility(true);
+  }
+  import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
+  let showInspector = $state(true);
+  function setInspectorVisibility(visible: boolean, focus = false) {
+    if (showInspector === visible) return;
+    canvasWorkspace?.preparePanelResize();
+    showInspector = visible;
+    if (focus)
+      void tick().then(() => {
+        if (visible) inspectorPanel?.focus({ preventScroll: true });
+        else
+          document
+            .querySelector<HTMLButtonElement>("[data-permanent-menu]")
+            ?.focus();
+      });
   }
   import PartPalette from "./lib/designer/PartPalette.svelte";
   import type { PalettePart } from "./lib/designer/palette-drag";
@@ -177,7 +192,10 @@
   }
   let history = $state<EditHistory>(emptyHistory());
   let workspaceGeneration = $state(0);
-  let canvasWorkspace = $state<{ visibleCenter: () => Point }>();
+  let canvasWorkspace = $state<{
+    visibleCenter: () => Point;
+    preparePanelResize: () => void;
+  }>();
   let showGrid = $state(false),
     snapEnabled = $state(false),
     gridSize = $state(10);
@@ -288,6 +306,7 @@
   const references = $derived(bindingReferences(project));
   function openBinding(usage: BindingUsage) {
     transition(() => {
+      setInspectorVisibility(true);
       editingSymbolId = null;
       screenId = usage.screenId;
       selectedIds = [usage.objectId];
@@ -685,6 +704,11 @@
       label: "表示",
       items: [
         {
+          label: showInspector ? "プロパティを隠す" : "プロパティを表示",
+          disabled: mode !== "edit",
+          run: () => setInspectorVisibility(!showInspector, true),
+        },
+        {
           label: showMenubar ? "メニューバーを隠す" : "メニューバーを表示",
           run: toggleMenubar,
         },
@@ -818,7 +842,10 @@
   </PageHeader>
 </div>
 {#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
-<main class:editing={mode === "edit"}>
+<main
+  class:editing={mode === "edit"}
+  class:inspector-visible={showInspector && mode === "edit"}
+>
   <aside class="project-sidebar" aria-label="Project と部品">
     <div class="save-state" data-testid="save-state">
       <StatusBadge
@@ -1123,245 +1150,23 @@
     {/if}
   </section>
   {#if mode === "edit"}
-    <aside
-      class="inspector"
-      aria-label="プロパティパネル"
-      bind:this={inspectorPanel}
-    >
-      <SurfaceCard title="プロパティ">
-        {#if selectedIds.length > 1}
-          <p>
-            {selectedIds.length} 件選択しています。図形をドラッグするとまとめて移動します。
-          </p>
-          <form
-            use:drafts.track
-            data-editor-form="move"
-            onsubmit={moveSelection}
-          >
-            <div class="fields">
-              <label
-                >移動量 X<input
-                  name="dx"
-                  aria-label="移動量 X"
-                  type="number"
-                  step="any"
-                  required
-                  value="0"
-                /></label
-              ><label
-                >移動量 Y<input
-                  name="dy"
-                  aria-label="移動量 Y"
-                  type="number"
-                  step="any"
-                  required
-                  value="0"
-                /></label
-              >
-            </div>
-            <div class="actions">
-              <button type="submit">まとめて移動</button><button
-                type="button"
-                onclick={duplicateSelection}>選択図形を複製</button
-              ><button type="button" onclick={removeSelection}
-                >選択図形を削除</button
-              >
-            </div>
-          </form>
-          <div class="actions" role="group" aria-label="整列">
-            {#each [{ alignment: "left" as const, label: "左揃え" }, { alignment: "center-x" as const, label: "左右中央揃え" }, { alignment: "right" as const, label: "右揃え" }, { alignment: "top" as const, label: "上揃え" }, { alignment: "center-y" as const, label: "上下中央揃え" }, { alignment: "bottom" as const, label: "下揃え" }] as item}<button
-                onclick={() =>
-                  edit({
-                    type: "align",
-                    screenId: screen.id,
-                    objectIds: [...selectedIds],
-                    alignment: item.alignment,
-                  })}>{item.label}</button
-              >{/each}
-          </div>
-        {:else if selected}
-          {#key project.manifest.projectRevision + selected.id}
-            <form
-              use:drafts.track
-              data-editor-form="object"
-              onsubmit={properties}
-            >
-              <div class="fields">
-                {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
-                  <label
-                    >{field}<input
-                      name={field}
-                      aria-label={field}
-                      type="number"
-                      step="any"
-                      required
-                      min={field === "width" || field === "height"
-                        ? 0.001
-                        : undefined}
-                      value={field === "x"
-                        ? selected.x
-                        : field === "y"
-                          ? selected.y
-                          : "width" in selected
-                            ? selected[field as "width" | "height"]
-                            : 0}
-                    /></label
-                  >
-                {/each}
-                <label
-                  >色<input
-                    name="fill"
-                    aria-label="色"
-                    type="color"
-                    value={selected.fill}
-                  /></label
-                >
-                {#if selected.shape.type === "polyline"}
-                  <label
-                    >頂点（x,y を1行ずつ）<textarea
-                      name="points"
-                      aria-label="頂点"
-                      rows="5"
-                      required
-                      value={selected.shape.points
-                        .map((p) => `${p.x},${p.y}`)
-                        .join("\n")}></textarea></label
-                  >
-                  <label
-                    >線幅<input
-                      name="strokeWidth"
-                      aria-label="線幅"
-                      type="number"
-                      required
-                      min="0.1"
-                      max="64"
-                      step="any"
-                      value={selected.shape.strokeWidth}
-                    /></label
-                  >
-                  <label
-                    >矢印<select
-                      name="arrow"
-                      aria-label="矢印"
-                      value={selected.shape.arrow}
-                      ><option value="none">なし</option><option value="end"
-                        >終点</option
-                      ></select
-                    ></label
-                  >
-                {/if}
-                {#if selected.shape.type === "text"}<label class="full-width"
-                    >テキスト<input
-                      name="text"
-                      aria-label="テキスト"
-                      maxlength="1000"
-                      value={selected.shape.text}
-                    /></label
-                  >
-                  {#if !activeDefinition}
-                    <label class="full-width"
-                      >表示タグ（外部名）<input
-                        name="externalName"
-                        aria-label="表示タグ（外部名）"
-                        maxlength="1024"
-                        placeholder="PLC01.Fast.Tank01.Level"
-                        value={selected.shape.binding?.externalName ?? ""}
-                      /></label
-                    >
-                  {/if}
-                {/if}
-                {#if selected.shape.type === "symbol"}
-                  <label class="full-width"
-                    >参照する Symbol 定義<select
-                      name="symbolId"
-                      aria-label="参照する Symbol 定義"
-                      value={selected.shape.symbolId}
-                    >
-                      {#each project.symbols as definition (definition.id)}
-                        <option value={definition.id}
-                          >{definition.name} · {symbolUsage(
-                            project,
-                            definition.id,
-                          )} 配置</option
-                        >
-                      {/each}
-                    </select></label
-                  >
-                {/if}
-              </div>
-              {#if selected.shape.type === "text" && !activeDefinition}
-                <p>
-                  空欄で静的テキストに戻ります。割り当て中は数値を表示します。Hub
-                  接続は未実装のため「未接続」と表示します。テキスト欄は割り当て解除後に使います。
-                </p>
-              {/if}
-              {#if selected.shape.type === "symbol"}
-                <p>
-                  参照先を変えても位置・サイズ・色は維持します。共有定義の形状を編集すると、同じ定義を使うすべての配置に反映されます。
-                </p>
-                <button
-                  type="button"
-                  disabled={project.symbols.length >= 100}
-                  onclick={() =>
-                    selected &&
-                    edit({
-                      type: "make-symbol-unique",
-                      screenId: screen.id,
-                      objectId: selected.id,
-                    })}>定義を複製してこの配置に適用</button
-                >
-                <button
-                  type="button"
-                  onclick={() => {
-                    if (selected?.shape.type === "symbol")
-                      openDefinition(selected.shape.symbolId);
-                  }}>参照する Symbol 定義を編集</button
-                >
-              {/if}
-              <div class="actions">
-                <button type="submit">変更を適用</button>
-                <button
-                  type="button"
-                  onclick={() =>
-                    selected &&
-                    edit({
-                      type: "duplicate",
-                      screenId: screen.id,
-                      objectId: selected.id,
-                    })}>選択図形を複製</button
-                ><button
-                  type="button"
-                  onclick={() =>
-                    selected &&
-                    edit({
-                      type: "remove",
-                      screenId: screen.id,
-                      objectId: selected.id,
-                    })}>選択図形を削除</button
-                >
-              </div>
-              <div class="actions" role="group" aria-label="重なり順">
-                {#each [{ direction: "back" as const, label: "最背面へ" }, { direction: "backward" as const, label: "1つ背面へ" }, { direction: "forward" as const, label: "1つ前面へ" }, { direction: "front" as const, label: "最前面へ" }] as layer}
-                  <button
-                    type="button"
-                    onclick={() =>
-                      selected &&
-                      edit({
-                        type: "reorder",
-                        screenId: screen.id,
-                        objectId: selected.id,
-                        direction: layer.direction,
-                      })}>{layer.label}</button
-                  >
-                {/each}
-              </div>
-            </form>
-          {/key}
-        {:else}<p>
-            図形をクリック、または一覧から選んでください。図形はドラッグして移動できます。
-          </p>{/if}
-      </SurfaceCard>
-    </aside>
+    <InspectorPanel
+      bind:element={inspectorPanel}
+      visible={showInspector}
+      onclose={() => setInspectorVisibility(false, true)}
+      {project}
+      {selectedIds}
+      {selected}
+      activeDefinition={!!activeDefinition}
+      {screen}
+      {drafts}
+      {properties}
+      {moveSelection}
+      {duplicateSelection}
+      {removeSelection}
+      {edit}
+      {openDefinition}
+    />
   {/if}
 </main>
 <DraftPrompt guard={drafts} />
@@ -1428,9 +1233,6 @@
   }
   :global(*) {
     box-sizing: border-box;
-  }
-  .full-width {
-    grid-column: 1 / -1;
   }
   .project-sidebar {
     display: flex;
@@ -1550,36 +1352,6 @@
     width: auto;
     white-space: nowrap;
   }
-  .inspector {
-    margin: 0;
-    border-right: 0;
-    border-left: 1px solid var(--banto-border);
-    padding: 16px;
-    background: var(--banto-surface);
-  }
-  .fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 16px;
-  }
-  .fields label {
-    font-size: 12px;
-    color: var(--banto-text-muted);
-  }
-  .fields input,
-  .fields textarea,
-  .fields select {
-    display: block;
-    width: 100%;
-    min-height: 36px;
-    margin-top: 6px;
-    background: var(--banto-bg);
-    color: var(--banto-text);
-    border: 1px solid var(--banto-border);
-    padding: 6px;
-    border-radius: 4px;
-  }
   h2 {
     font-size: 15px;
     margin: 0;
@@ -1674,17 +1446,6 @@
     background: var(--banto-bg);
     color: var(--banto-text);
   }
-  .inspector .actions {
-    gap: 6px;
-    margin-top: 12px;
-  }
-  .inspector .actions button {
-    white-space: normal;
-  }
-  .inspector .fields label:has(textarea),
-  .inspector .fields label:has(input[name="text"]) {
-    grid-column: 1 / -1;
-  }
   .toolbar {
     align-items: center;
     gap: 12px;
@@ -1697,7 +1458,7 @@
       height: 100dvh;
       overflow: hidden;
     }
-    main.editing {
+    main.editing.inspector-visible {
       grid-template-columns: 240px minmax(0, 1fr) 288px;
     }
     main > aside,
@@ -1710,11 +1471,6 @@
     }
   }
   @media (min-width: 701px) and (max-width: 1099px) {
-    .inspector {
-      grid-column: 2;
-      border-left: 0;
-      border-top: 1px solid var(--banto-border);
-    }
     .project-sidebar {
       grid-row: span 2;
     }
@@ -1726,10 +1482,6 @@
     aside {
       border-right: 0;
       border-bottom: 1px solid var(--banto-border);
-    }
-    .inspector {
-      border-left: 0;
-      border-top: 1px solid var(--banto-border);
     }
     .app-header {
       padding: 20px;

@@ -68,3 +68,46 @@ it("rejects nonfinite or zero viewport geometry", () => {
     viewLayout({ width: 100, height: 100 }, { width: 100, height: 100 }, 0),
   ).toThrow();
 });
+
+it("preserves a sheet center across panel widths even when the sheet is smaller than the viewport", async () => {
+  const { viewFromCenter } = await import("./viewport");
+  const screen = { width: 160, height: 90 };
+  for (const zoom of [0.25, 1, 4]) {
+    for (const center of [
+      { x: 1, y: 2 },
+      { x: 159, y: 88 },
+    ]) {
+      for (const viewport of [
+        { width: 800, height: 500 },
+        { width: 1100, height: 650 },
+      ]) {
+        const layout = viewLayout(screen, viewport, zoom, true);
+        const state = viewFromCenter(screen, viewport, zoom, center, true);
+        expect((state.left + viewport.width / 2 - layout.x) / zoom).toBeCloseTo(
+          center.x,
+        );
+        expect((state.top + viewport.height / 2 - layout.y) / zoom).toBeCloseTo(
+          center.y,
+        );
+      }
+    }
+  }
+});
+
+it("retains zoom anchors when moving between fit margins and room for centered panel resizing", () => {
+  const screen = { width: 960, height: 540 },
+    viewport = { width: 800, height: 500 };
+  const anchor = { x: 400, y: 250 };
+  const before = viewLayout(screen, viewport, 1);
+  const state = zoomAt(screen, viewport, 1, 2, { x: 100, y: 20 }, anchor, {
+    before: false,
+    after: true,
+  });
+  const after = viewLayout(screen, viewport, 2, true);
+  expect(100 + anchor.x - before.x).toBeCloseTo(
+    (state.left + anchor.x - after.x) / 2,
+  );
+  expect(20 + anchor.y - before.y).toBeCloseTo(
+    (state.top + anchor.y - after.y) / 2,
+  );
+});

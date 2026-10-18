@@ -23,15 +23,26 @@ export function fitZoom(screen: Size, viewport: Size): number {
     Math.max(1, viewport.height - VIEW_PADDING * 2) / screen.height,
   );
 }
-export function viewLayout(screen: Size, viewport: Size, zoom: number) {
+export function viewLayout(
+  screen: Size,
+  viewport: Size,
+  zoom: number,
+  centerRoom = false,
+) {
   positiveSize(screen);
   positiveSize(viewport);
   if (!Number.isFinite(zoom) || zoom <= 0)
     throw new Error("倍率は正の有限数にしてください");
   const width = screen.width * zoom,
     height = screen.height * zoom;
-  const worldWidth = Math.max(viewport.width, width + VIEW_PADDING * 2),
-    worldHeight = Math.max(viewport.height, height + VIEW_PADDING * 2);
+  const worldWidth = Math.max(
+      viewport.width,
+      width + Math.max(VIEW_PADDING * 2, centerRoom ? viewport.width : 0),
+    ),
+    worldHeight = Math.max(
+      viewport.height,
+      height + Math.max(VIEW_PADDING * 2, centerRoom ? viewport.height : 0),
+    );
   return {
     width,
     height,
@@ -39,6 +50,35 @@ export function viewLayout(screen: Size, viewport: Size, zoom: number) {
     worldHeight,
     x: (worldWidth - width) / 2,
     y: (worldHeight - height) / 2,
+  };
+}
+/** Extra virtual margins let a resized panel keep any point on the sheet centered. */
+export function viewFromCenter(
+  screen: Size,
+  viewport: Size,
+  zoom: number,
+  center: Point,
+  centerRoom = false,
+): ViewState {
+  if (!Number.isFinite(center.x) || !Number.isFinite(center.y))
+    throw new Error("表示中心は有限の座標にしてください");
+  const layout = viewLayout(screen, viewport, zoom, centerRoom);
+  return {
+    zoom,
+    left: Math.max(
+      0,
+      Math.min(
+        layout.worldWidth - viewport.width,
+        center.x * zoom + layout.x - viewport.width / 2,
+      ),
+    ),
+    top: Math.max(
+      0,
+      Math.min(
+        layout.worldHeight - viewport.height,
+        center.y * zoom + layout.y - viewport.height / 2,
+      ),
+    ),
   };
 }
 /** 同じ design 座標を倍率変更前後の anchor に保つ。端ではスクロール領域へ制限する。 */
@@ -49,9 +89,10 @@ export function zoomAt(
   after: number,
   scroll: Point,
   anchor: Point,
+  centerRoom = { before: false, after: false },
 ): ViewState {
-  const old = viewLayout(screen, viewport, before),
-    next = viewLayout(screen, viewport, after);
+  const old = viewLayout(screen, viewport, before, centerRoom.before),
+    next = viewLayout(screen, viewport, after, centerRoom.after);
   const design = {
     x: (scroll.x + anchor.x - old.x) / before,
     y: (scroll.y + anchor.y - old.y) / before,

@@ -55,6 +55,16 @@ try {
   await page.getByRole("button", { name: "名称一覧", exact: true }).click();
   await capture("scada-parts-names.png");
   await page.getByRole("button", { name: "アイコン一覧", exact: true }).click();
+  await button("プロパティを隠す").click();
+  await expect(
+    page.getByRole("complementary", { name: "プロパティパネル" }),
+  ).toHaveCount(0);
+  await capture("scada-wide-canvas.png");
+  await button("メニュー").click();
+  await page
+    .getByRole("menu", { name: "常設メニュー", exact: true })
+    .getByRole("menuitem", { name: "プロパティを表示", exact: true })
+    .click();
   await button("参照する Symbol 定義を編集").click();
   await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
   await page

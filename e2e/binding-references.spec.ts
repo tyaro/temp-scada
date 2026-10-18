@@ -61,6 +61,9 @@ test("groups references across screens, searches without editing, navigates with
   await expect(page.getByTestId("save-state")).toContainText(
     "読込後の変更なし",
   );
+  await page
+    .getByRole("button", { name: "プロパティを隠す", exact: true })
+    .click();
   await level
     .getByRole("button", { name: "処理水監視 の Text 5 を編集", exact: true })
     .click();

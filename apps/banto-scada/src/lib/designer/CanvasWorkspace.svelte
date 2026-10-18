@@ -8,6 +8,7 @@
   import {
     fitZoom,
     viewLayout,
+    viewFromCenter,
     zoomAt,
     zoomLevels,
     type ViewState,
@@ -107,6 +108,8 @@
   }
   let size = $state({ width: 800, height: 500 });
   let views = $state<Record<string, ViewState>>({});
+  let centerRooms = $state<Record<string, boolean>>({});
+  let resizeAnchor: { id: string; center: Point } | null = null;
   let hand = $state(false),
     space = $state(false);
   let pan = $state<{
@@ -118,7 +121,34 @@
   const stored = $derived(views[screen.id]);
   const fit = $derived(fitZoom(screen, size));
   const scale = $derived(editable && stored?.zoom != null ? stored.zoom : fit);
-  const layout = $derived(viewLayout(screen, size, scale));
+  const centerRoom = $derived(
+    editable && stored?.zoom != null && !!centerRooms[screen.id],
+  );
+  const layout = $derived(viewLayout(screen, size, scale, centerRoom));
+  function restoreCenter(center: Point) {
+    if (!viewport) return;
+    const state = viewFromCenter(screen, size, scale, center, centerRoom);
+    viewport.scrollLeft = state.left;
+    viewport.scrollTop = state.top;
+    views[screen.id] = state;
+  }
+  export function preparePanelResize() {
+    if (!editable || stored?.zoom == null) return;
+    const anchor = { id: screen.id, center: visibleCenter() };
+    resizeAnchor = anchor;
+    centerRooms[screen.id] = true;
+    // ResizeObserver and layout restoration settle before the final center is committed.
+    void tick().then(() =>
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (resizeAnchor !== anchor || screen.id !== anchor.id || !editable)
+            return;
+          restoreCenter(anchor.center);
+          resizeAnchor = null;
+        }),
+      ),
+    );
+  }
   const panning = $derived(editable && (hand || space || !!pan));
   $effect(() => {
     const element = viewport;
@@ -140,7 +170,12 @@
     scale;
     size.width;
     size.height;
+    layout.x;
+    layout.y;
     const state = untrack(() => views[id]);
+    if (resizeAnchor && (resizeAnchor.id !== id || !editing))
+      resizeAnchor = null;
+    const anchor = resizeAnchor;
     pan = null;
     space = false;
     dropPoint = null;
@@ -148,6 +183,10 @@
     void tick().then(() => {
       if (screen.id !== id || editable !== editing || viewport !== element)
         return;
+      if (resizeAnchor && resizeAnchor === anchor) {
+        restoreCenter(resizeAnchor.center);
+        return;
+      }
       element.scrollLeft = editing && state?.zoom != null ? state.left : 0;
       element.scrollTop = editing && state?.zoom != null ? state.top : 0;
     });
@@ -159,7 +198,7 @@
     };
   }
   function remember() {
-    if (!viewport || !editable) return;
+    if (!viewport || !editable || resizeAnchor) return;
     views[screen.id] = {
       zoom: stored?.zoom ?? null,
       left: viewport.scrollLeft,
@@ -168,6 +207,7 @@
   }
   function zoom(value: number | null) {
     if (!viewport || !editable) return;
+    resizeAnchor = null;
     if (value === null) {
       views[screen.id] = { zoom: null, left: 0, top: 0 };
       return;
@@ -179,6 +219,7 @@
       Math.max(0.25, Math.min(4, value)),
       { x: viewport.scrollLeft, y: viewport.scrollTop },
       { x: size.width / 2, y: size.height / 2 },
+      { before: centerRoom, after: !!centerRooms[screen.id] },
     );
   }
   function stepZoom(direction: number) {

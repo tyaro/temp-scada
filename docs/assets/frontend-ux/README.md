@@ -50,3 +50,10 @@
 - `palette-names-dark.png`: 名称一覧。小さなアイコンと名前を1行で表示。
 
 `scripts/capture-ui.mjs` の `scada-parts.png` / `scada-parts-names.png` をコピーした実画面。Chromium、1600×1000 CSS px、工程図サンプルを使い、アプリのテーマと表示形式だけを操作して撮影した。
+
+## プロパティの表示切替（2026-10-19・同日後続）
+
+- `inspector-visible-light.png`: 独立コンポーネントへ分離したプロパティと、コンパクトな見出し。
+- `inspector-hidden-light.png`: プロパティを隠して中央へ幅を戻した状態。
+
+`scripts/capture-ui.mjs` の `scada-parts.png` / `scada-wide-canvas.png` をコピーした実画面。ライトテーマ、Chromium、1600×1000 CSS px、工程図サンプルを使い、同じポンプを選択した状態で表示を切り替えて撮影した。
