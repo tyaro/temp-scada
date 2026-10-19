@@ -387,3 +387,7 @@ Project 0.12.0で単一Textの文字サイズ・標準／太字・左／中央�
 ## フォルダーのドラッグ親変更の実装（2026-10-19）
 
 フォルダー名・アイコンから親を変更し、配下の配置・選択・座標・描画順を保持する。自己・子孫・深さ超過はhoverから拒否する。配置の所属dragと入力保護を共用し、共有定義にも対応する。[仕様](folder-drag-design.md)と[実装・検証](development-plan.md#folder-drag-progress)を参照する。兄弟順の変更や幾何グループは後続。
+
+## 画像・描画表現・画面展開・kioskの追加検討（2026-10-19）
+
+ユーザーの追加要望を[拡張検討案](scada-graphics-runtime-extension-design.md)へ整理した。背景画像／Image／画像clipboard、paint・gradient／mesh／線種／α、Equipment／Faceplate、画面取込・子ウィンドウ・kioskの実現方法と相対コストを記録する。これらの追加機能は未実装。画面取込・メッシュ・子ウィンドウの意味はユーザーへ確認中で、方式は回答後に決める。S9b・v1.1の提供段階、認証延期、正式Runtimeと表示プレビューの区別は維持する。
