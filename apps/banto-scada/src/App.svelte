@@ -9,6 +9,7 @@
     readSystemPaste,
     type PastePayload,
   } from "./lib/image-clipboard";
+  import { imageCropFromForm } from "./lib/designer/image-crop-fields";
   import { patternFromForm } from "./lib/designer/pattern-fields";
   import { normalizeGradientAngle } from "./lib/linear-gradient";
   import { initialImageFrame } from "./lib/image-frame";
@@ -1224,12 +1225,14 @@
 
   let replacementImageInput: HTMLInputElement;
   let replacementImageEpoch = 0;
+  let replacementCropEpoch = 0;
   let replacementImageIntent: {
     generation: number;
     owner: string;
     objectId: string;
     assetId: string;
     epoch: number;
+    cropEpoch: number;
   } | null = null;
   function openImageReplacement(objectId: string) {
     if (
@@ -1249,6 +1252,7 @@
       objectId,
       assetId: selected.shape.assetId,
       epoch: replacementImageEpoch,
+      cropEpoch: replacementCropEpoch,
     };
     replacementImageInput.value = "";
     replacementImageInput.click();
@@ -1270,16 +1274,13 @@
       selected.shape.type === "image" &&
       selected.shape.assetId === intent.assetId &&
       !selected.locked;
-    if (!current()) return;
+    if (!current() || intent.cropEpoch !== replacementCropEpoch) return;
     transition(() => {
       if (current())
-        void prepareImage(
-          file,
-          intent.generation,
-          intent.owner,
-          undefined,
-          intent,
-        );
+        void prepareImage(file, intent.generation, intent.owner, undefined, {
+          ...intent,
+          cropEpoch: replacementCropEpoch,
+        });
     });
   }
   let placementFileInput: HTMLInputElement;
@@ -1353,7 +1354,12 @@
       bounds: typeof canvasView.bounds;
       size: { width: number; height: number };
     },
-    replacing?: { objectId: string; assetId: string; epoch: number },
+    replacing?: {
+      objectId: string;
+      assetId: string;
+      epoch: number;
+      cropEpoch: number;
+    },
   ) {
     const request = ++imageReadRequest,
       candidate = new AssetStore();
@@ -1367,6 +1373,7 @@
       mode === "edit" &&
       (!replacing ||
         (replacing.epoch === replacementImageEpoch &&
+          replacing.cropEpoch === replacementCropEpoch &&
           selected?.id === replacing.objectId &&
           selected.shape.type === "image" &&
           selected.shape.assetId === replacing.assetId &&
@@ -1772,6 +1779,18 @@
     untrack(() => {
       replacementImageEpoch++;
       replacementImageIntent = null;
+    });
+  });
+
+  const replacementCropScope = $derived(
+    selected?.shape.type === "image"
+      ? JSON.stringify(selected.shape.crop ?? null)
+      : "",
+  );
+  $effect(() => {
+    replacementCropScope;
+    untrack(() => {
+      replacementCropEpoch++;
     });
   });
 
@@ -2207,6 +2226,29 @@
           fit: String(data.get("fit")) as "contain",
           opacity: parseNumericProperty(String(data.get("opacity"))) / 100,
         },
+      };
+    }
+    if (form.dataset.editorForm === "image-crop") {
+      if (
+        activeDefinition ||
+        selected?.shape.type !== "image" ||
+        form.dataset.objectId !== selected.id ||
+        form.dataset.targetKey !==
+          `${workspaceGeneration}:${screen.id}:${!!activeDefinition}` ||
+        form.dataset.assetId !== selected.shape.assetId
+      )
+        throw new Error(
+          "トリミングの対象が変わりました。選択し直してください。",
+        );
+      const asset = project.assets.find(
+        (a) =>
+          selected.shape.type === "image" && a.id === selected.shape.assetId,
+      )!;
+      return {
+        type: "set-image-crop",
+        screenId: screen.id,
+        objectId: selected.id,
+        crop: imageCropFromForm(data, asset) ?? null,
       };
     }
     if (form.dataset.editorForm === "shape-paint") {
@@ -4589,6 +4631,7 @@ ${object.id}`}
       {edit}
       {openDefinition}
       {openScreen}
+      images={assetImages}
       onreplaceimage={openImageReplacement}
       imageBusy={imageBusy || busy || !!replacement}
     />
@@ -4663,7 +4706,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.20.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.21.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

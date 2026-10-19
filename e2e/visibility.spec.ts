@@ -226,7 +226,7 @@ test("hidden copying, paste and JSON keep invisible locked metadata and never au
   await expect(canvas(page).locator("[data-object-id]")).toHaveCount(2);
   await expect(canvas(page).locator('[data-selected="true"]')).toHaveCount(0);
   const saved = await exported(page);
-  expect(saved.manifest.schemaVersion).toBe("0.20.0");
+  expect(saved.manifest.schemaVersion).toBe("0.21.0");
   expect(
     saved.screens[0].objects.filter(
       (o: any) => o.visible === false && o.locked,

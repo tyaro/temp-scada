@@ -66,8 +66,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.20.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.20.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.21.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.21.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -195,6 +195,33 @@ impl Project {
                     return Err("ID が重複しています".into());
                 }
                 let shape = &object["shape"];
+                if shape["type"] == "image" {
+                    if let Some(crop) = shape.get("crop") {
+                        let asset = value["assets"]
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .find(|asset| asset["id"] == shape["assetId"])
+                            .unwrap();
+                        let x = crop["x"].as_f64().unwrap();
+                        let y = crop["y"].as_f64().unwrap();
+                        let width = crop["width"].as_f64().unwrap();
+                        let height = crop["height"].as_f64().unwrap();
+                        let epsilon = 16.0 * f64::EPSILON;
+                        let source_width = asset["width"].as_f64().unwrap();
+                        let source_height = asset["height"].as_f64().unwrap();
+                        if x + width > 1.0 + epsilon
+                            || y + height > 1.0 + epsilon
+                            || width.min(1.0 - x) * source_width < 1.0 - epsilon * source_width
+                            || height.min(1.0 - y) * source_height < 1.0 - epsilon * source_height
+                        {
+                            return Err(
+                                "切出し範囲は画像の内側・元画像の1画素以上にしてください。".into(),
+                            );
+                        }
+                    }
+                }
+
                 if (shape["type"] == "rectangle" || shape["type"] == "ellipse")
                     && shape["paint"]["fill"]["paint"]["type"] == "pattern"
                 {
@@ -477,6 +504,30 @@ mod tests {
             owner["folders"] = Value::Null;
         }
         value
+    }
+
+    #[test]
+    fn image_crop_shares_the_browser_contract() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/image-crop-cases.json")).unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut value: Value =
+                serde_json::from_str(include_str!("../../../examples/minimal.project.json"))
+                    .unwrap();
+            let id = "0199fc00-0000-7000-8000-000000001100";
+            value["assets"] = serde_json::json!([{"id":id,"sha256":"1".repeat(64),"mime":"image/png","byteLength":100,"width":400,"height":200,"name":"原本.png"}]);
+            let mut object = serde_json::json!({"id":"0199fc00-0000-7000-8000-000000001101","order":0,"x":100,"y":120,"width":200,"height":150,"rotation":0,"fill":"#000000","shape":{"type":"image","assetId":id,"fit":"contain"}});
+            if let Some(crop) = case.get("crop") {
+                object["shape"]["crop"] = crop.clone();
+            }
+            value["screens"][0]["objects"] = serde_json::json!([object]);
+            assert_eq!(
+                Project::from_json(&value.to_string()).is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+        }
     }
 
     #[test]
@@ -1054,8 +1105,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.20.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.20.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.21.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.21.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

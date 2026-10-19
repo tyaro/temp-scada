@@ -298,7 +298,9 @@ Designerで登録・割付・模擬表示を行っても、設備への要求は
 
 ## 16. 現行契約との差と保存モデルの推奨案
 
-2026-10-20（日本時間）のコード照合では、[TSのProject](../apps/banto-scada/src/lib/project.ts)は0.20.0で、assets・screens・symbolsを持つ。TextのBindingはexternalNameの直接参照で、Symbol内のBindingは拒否される。[共通schema](../crates/scada-model/schema/project.schema.json)と[RustのProject](../crates/scada-model/src/lib.rs)にもEquipmentType／EquipmentInstanceはない。以下は追加設計であり、現在のファイルへ書き込める形式ではない。
+2026-10-20（日本時間）・`871920b`時点のコード照合では、[TSのProject](../apps/banto-scada/src/lib/project.ts)は0.20.0で、assets・screens・symbolsを持つ。TextのBindingはexternalNameの直接参照で、Symbol内のBindingは拒否される。[共通schema](../crates/scada-model/schema/project.schema.json)と[RustのProject](../crates/scada-model/src/lib.rs)にもEquipmentType／EquipmentInstanceはない。以下は追加設計であり、現在のファイルへ書き込める形式ではない。
+
+その後、画像トリミングでProject0.21.0へ更新した。Equipmentが未実装である点と、以下の追加設計との区別は変わらない。
 
 ### 16.1 最小の所有関係
 

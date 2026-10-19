@@ -1,6 +1,7 @@
 <script lang="ts">
   import { screenViewOptions } from "../screen-references";
   import { placementLabel } from "../placement-label";
+  import ImageCrop from "./ImageCrop.svelte";
   import ShapePaint from "./ShapePaint.svelte";
   import SelectionColor from "./SelectionColor.svelte";
   import SelectionOutline from "./SelectionOutline.svelte";
@@ -46,6 +47,7 @@
     openScreen,
     onreplaceimage,
     imageBusy,
+    images,
   }: {
     element?: HTMLElement;
     visible: boolean;
@@ -74,6 +76,7 @@
     openScreen: (id: string) => void;
     onreplaceimage: (id: string) => void;
     imageBusy: boolean;
+    images: ReadonlyMap<string, { url: string; width: number; height: number }>;
   } = $props();
   const selectedColors = $derived(
     new Set(
@@ -486,6 +489,22 @@
             onsubmit={properties}
           />
         {/if}
+        {#if selected.shape.type === "image"}
+          {@const assetId = selected.shape.assetId}
+          {@const asset = project.assets.find((a) => a.id === assetId)!}
+          {#key assetId}
+            <ImageCrop
+              {asset}
+              url={images.get(assetId)?.url}
+              crop={selected.shape.crop}
+              objectId={selected.id}
+              targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+              locked={selectionLocked}
+              {drafts}
+              onsubmit={properties}
+            />
+          {/key}
+        {/if}
         {#if selected.shape.type === "symbol"}
           <SymbolColorMode
             mode={selected.shape.colorMode}
@@ -542,6 +561,7 @@
                 type="button"
                 disabled={imageBusy}
                 onclick={() => selected && onreplaceimage(selected.id)}
+                title="差し替え後は画像全体を表示します。配置枠は維持します。"
                 >画像を差し替え…</button
               >
               <button
@@ -551,7 +571,10 @@
                     type: "reset-image-ratio",
                     screenId: screen.id,
                     objectId: selected!.id,
-                  })}>元比率へ戻す</button
+                  })}
+                >{selected.shape.crop
+                  ? "切出し範囲の比率に合わせる"
+                  : "元比率へ戻す"}</button
               >
             {/if}
             <div class="fields">

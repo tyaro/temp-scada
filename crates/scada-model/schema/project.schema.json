@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.20.0"
+          "const": "0.21.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.20.0"
+          "const": "0.21.0"
         },
         "name": {
           "type": "string",
@@ -723,6 +723,9 @@
             },
             "fit": {
               "enum": ["contain"]
+            },
+            "crop": {
+              "$ref": "#/$defs/imageCrop"
             }
           },
           "required": ["type", "assetId", "fit"],
@@ -939,6 +942,33 @@
         "shape",
         "rotation"
       ],
+      "additionalProperties": false
+    },
+    "imageCrop": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": ["x", "y", "width", "height"],
       "additionalProperties": false
     }
   }

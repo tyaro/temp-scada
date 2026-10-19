@@ -1,6 +1,7 @@
 import { projectScreenReferences } from "./screen-references";
 import { patternGeometry, type PatternKind } from "./pattern-paint";
 import { linearGradientEndpoints } from "./linear-gradient";
+import { imageCropViewBox, type ImageCrop } from "./image-crop";
 import type { ImageMetadata } from "./image-assets";
 import { rotatedBounds, rotationPivot } from "./rotation";
 import Ajv2020 from "ajv/dist/2020.js";
@@ -72,7 +73,7 @@ export interface LayoutObject extends BaseObject {
     | { type: "ellipse"; paint: ShapePaint }
     | { type: "text"; text: string; style: TextStyle; binding?: TagBinding }
     | { type: "symbol"; symbolId: string; colorMode: SymbolColorMode }
-    | { type: "image"; assetId: string; fit: "contain" }
+    | { type: "image"; assetId: string; fit: "contain"; crop?: ImageCrop }
     | { type: "screenView"; screenId: string; fit: "contain" };
 }
 export interface PolylineObject extends BaseObject {
@@ -123,10 +124,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.20.0";
+    schemaVersion: "0.21.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.20.0";
+    minRuntimeVersion: "0.21.0";
     name: string;
   };
   screens: Screen[];
@@ -150,8 +151,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.20.0",
-        minRuntimeVersion: "0.20.0",
+        schemaVersion: "0.21.0",
+        minRuntimeVersion: "0.21.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -258,6 +259,11 @@ export function parseProject(json: string): Project {
       if (object.folderId && !folders.has(object.folderId))
         throw new Error("同じ所有先の所属フォルダーが見つかりません");
       const shape = object.shape;
+      if (shape.type === "image")
+        imageCropViewBox(
+          project.assets.find((a) => a.id === shape.assetId)!,
+          shape.crop,
+        );
       if (
         (shape.type === "rectangle" || shape.type === "ellipse") &&
         shape.paint.fill.paint.type === "pattern"

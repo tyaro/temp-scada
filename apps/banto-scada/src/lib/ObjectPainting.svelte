@@ -3,6 +3,7 @@
   import type { TagReadings } from "./tag-presentation";
   import { objectTransform } from "./rotation";
   import { compositedOpacity } from "./opacity";
+  import ImagePainting from "./ImagePainting.svelte";
   import Primitive from "./Primitive.svelte";
   let {
     object,
@@ -49,13 +50,11 @@
   </svg>
 {:else if "width" in object && object.shape.type === "image"}
   {#if images?.get(object.shape.assetId)}
-    <image
-      data-image-frame
-      href={images.get(object.shape.assetId)!.url}
+    <ImagePainting
+      image={images.get(object.shape.assetId)!}
       width={object.width}
       height={object.height}
-      preserveAspectRatio="xMidYMid meet"
-      pointer-events="none"
+      crop={object.shape.crop}
     />
   {/if}
 {:else}<Primitive {object} {readings} {onsummary} />{/if}

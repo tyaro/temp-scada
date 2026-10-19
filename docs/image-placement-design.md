@@ -32,7 +32,7 @@ Imageを含むRGB一括編集は、非画像だけを部分適用せず全体を
 
 現在参照の収集を背景とImageで共通化し、Rustの検証も揃えた。画像同梱ZIPのprofile名は`banto-scada.image-project` version 1へ更新した。0.16.0と旧背景profileは自動移行しない。リリース前の互換性は保証しない方針を維持する。
 
-実装・検証記録は[開発計画](development-plan.md#image-placement-progress)を参照。OS画像clipboardは[第1段階](image-clipboard-design.md)で追加した。依存原本付きコピー／貼付も同文書の第2段階で追加した。配置画像の差し替えは下記で追加した。cover／stretch・トリミングは後続。
+実装・検証記録は[開発計画](development-plan.md#image-placement-progress)を参照。OS画像clipboardは[第1段階](image-clipboard-design.md)で追加した。依存原本付きコピー／貼付も同文書の第2段階で追加した。配置画像の差し替えは下記で追加した。[非破壊トリミング](image-crop-design.md)を0.21.0で追加した。cover／stretchは後続。
 
 <a id="image-replacement"></a>
 
@@ -47,3 +47,5 @@ Project0.20.0の保存形式を維持し、画像のプロパティへ「画像�
 Symbol定義・非Image・ロック中の配置・表示プレビューからの変更をコマンドでも拒否する。ファイルの検証・サイズ・hash・原本Store・画像同梱保存は既存の画像取込と共通化する。不正画像や読込失敗でProject・履歴を変更しない。背景の差し替えは既存の画面設定を使う。
 
 検証結果は[開発計画の差し替え記録](development-plan.md#image-replacement-progress)を参照。
+
+0.21.0では任意のcropを追加した。異なる原本への差し替えはcropを同時解除し、同じ原本のno-opはcropも維持する。枠の保持・共有原本・履歴と入力保護は維持する。

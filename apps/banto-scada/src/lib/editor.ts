@@ -1,3 +1,8 @@
+import {
+  imageCropViewBox,
+  normalizeImageCrop,
+  type ImageCrop,
+} from "./image-crop";
 import { projectScreenReferences } from "./screen-references";
 import { parseLineStyle, setLineStyle } from "./line-style";
 import { projectContent } from "./save-state";
@@ -95,6 +100,12 @@ export type ObjectCommand = (
       screenId: string;
       objectId: string;
       asset: ImageAsset;
+    }
+  | {
+      type: "set-image-crop";
+      screenId: string;
+      objectId: string;
+      crop: ImageCrop | null;
     }
   | { type: "reset-image-ratio"; screenId: string; objectId: string }
   | {
@@ -235,6 +246,7 @@ export function isObjectCommand(
     "add-screen-view",
     "reset-image-ratio",
     "replace-image",
+    "set-image-crop",
     "create-folder",
     "rename-folder",
     "move-folder",
@@ -1052,14 +1064,27 @@ export function applyCommand(
       const object = screen.objects[index];
       if (definitionId || object.shape.type !== "image")
         throw new Error("画面上の画像配置だけを差し替えられます。");
-      object.shape.assetId = registerAsset(next, command.asset);
+      const assetId = registerAsset(next, command.asset);
+      if (assetId !== object.shape.assetId) delete object.shape.crop;
+      object.shape.assetId = assetId;
+    } else if (command.type === "set-image-crop") {
+      const object = screen.objects[index];
+      if (definitionId || object.shape.type !== "image")
+        throw new Error("画面上の画像配置だけをトリミングできます。");
+      const asset = next.assets.find(
+        (a) => object.shape.type === "image" && a.id === object.shape.assetId,
+      )!;
+      const crop = normalizeImageCrop(asset, command.crop ?? undefined);
+      if (crop) object.shape.crop = crop;
+      else delete object.shape.crop;
     } else if (command.type === "reset-image-ratio") {
       const object = screen.objects[index];
       if (!("width" in object) || object.shape.type !== "image")
         throw new Error("画像配置だけを元比率に戻せます");
       const assetId = object.shape.assetId;
       const asset = next.assets.find((a) => a.id === assetId)!;
-      const height = (object.width * asset.height) / asset.width;
+      const source = imageCropViewBox(asset, object.shape.crop);
+      const height = object.width * (source.height / source.width);
       object.y += (object.height - height) / 2;
       object.height = height;
     } else if (command.type === "make-symbol-unique") {
