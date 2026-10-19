@@ -209,7 +209,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R1 文書整理     | 完了         | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理        |
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功        |
 | R3 フォーム契約 | 完了         | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功 |
-| R4 App機能分離  | 作業中       | R4a〜R4c完了。Project読込／保存を分離。d〜eは未着手                     |
+| R4 App機能分離  | 作業中       | R4a〜R4cとR4d-1の表示分離完了。R4dの状態移動・eは未着手                 |
 | R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持                                   |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                        |
 
@@ -382,3 +382,13 @@ I1〜I10を維持する構造整理。read targetはinputの接続getterとclear
 R4c完了。型チェック（エラー／警告なし）、TS全636件、本番ビルド、対象整形とProject・新規・保存入力保護・native画像・小窓・全画面・背景・clipboardの関連ブラウザ48件が成功した。古い読込より新しい要求が優先されること、原本付き書出し中の後続編集が未保存として残ること、失敗時の現在Project保持、Project置換時の小窓／全画面終了を確認した。
 
 保存形式・採用順序・Undo単位は維持し、既存のJS bundle 500kB警告は継続する。次はR4dのレイヤー分離。先に一覧markupと所有CSSを`LayerTree.svelte`へ移し、Appの状態・編集接続を維持した表示の区切りで検証する。その後に検索・展開・drag・folder dialogの状態を移し、R4d全体の完了と区別する。
+
+### R4d-1：レイヤー一覧のmarkupと所有CSS
+
+基準は`d68aad6`、開始時clean。レイヤー一覧・検索欄・drag guide・folder／object行のmarkupと所有CSSを`designer/LayerTree.svelte`へ移した。Appは検索・展開・drag・folder dialogの状態と処理、共通選択／編集・context menu接続を維持し、feature単位のgetter／既存callbackを`LayerTreeBindings`として供給する。この一時的な表示接続を汎用state busに広げない。状態移動は次の小区切りで、R4d全体の完了ではない。
+
+I1〜I10を維持。DOM構造・aria／data属性・イベントの同期処理・query／openの更新順は元のまま。drag actionも同じrootへ置き、hoverの2状態更新を1callbackへまとめただけ。共有していたscreen-row／layer-entry CSS selectorは両所有先へ分割し、既存button・p等の基礎規則も一覧へ必要な分だけ同じ相対順で移す。Appに残る画面一覧の規則は維持する。
+
+移動前後で既存の実画面撮影手順を使い、両テーマ・1920×1080／1536×864のProject／layer各画面、計8枚がpixel完全一致した。比較画像は`/tmp/scada-r4d-before`と`after`の作業用成果物で、製品の差分や新しいデザイン画像を追加するものではない。型チェックはエラー／警告なし。検索・展開・drag・folder dialogの状態はまだAppにある。
+
+R4d-1の表示分離を完了。TS全636件、本番ビルド、対象整形、レイヤーフォルダー・配置／フォルダーdrag・context・操作snapshot・sidebar・表示／ロックの関連ブラウザ78件が成功した。AstraのUX読取レビューでもDOM・イベント引数・focus復帰・getter・CSS・接続の限定範囲に修正要求なし。画面比較8枚の完全一致と合わせて保存する。次のR4d-2では状態とfolder dialog／menu接続をcontrollerへ移す。

@@ -119,7 +119,6 @@
     folderDragSource,
     layerDropError,
     layerDragError,
-    layerDropSurface,
     type LayerDrag,
   } from "./lib/designer/layer-drag";
   import FolderDialog, {
@@ -138,7 +137,9 @@
   import ScreenTabs from "./lib/designer/ScreenTabs.svelte";
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
   import TreeSection from "./lib/designer/TreeSection.svelte";
-  import ObjectIcon from "./lib/designer/ObjectIcon.svelte";
+  import LayerTree, {
+    type LayerTreeBindings,
+  } from "./lib/designer/LayerTree.svelte";
   let layerQuery = $state("");
   let layersExpanded = $state(true);
   import DesignerSidebar, {
@@ -2321,6 +2322,84 @@
     };
     if (drafts.allow(apply)) apply();
   }
+  const layerTreeBindings: LayerTreeBindings = {
+    get screen() {
+      return screen;
+    },
+    get folderScope() {
+      return folderScope;
+    },
+    get layerQuery() {
+      return layerQuery;
+    },
+    set layerQuery(value) {
+      layerQuery = value;
+    },
+    get layersExpanded() {
+      return layersExpanded;
+    },
+    set layersExpanded(value) {
+      layersExpanded = value;
+    },
+    get layerDrag() {
+      return layerDrag;
+    },
+    get layerDragGuide() {
+      return layerDragGuide;
+    },
+    get layerDropTarget() {
+      return layerDropTarget;
+    },
+    get layerDropTargetError() {
+      return layerDropTargetError;
+    },
+    get layerDragDescription() {
+      return layerDragDescription;
+    },
+    get selectedIds() {
+      return selectedIds;
+    },
+    get hiddenSelectionCount() {
+      return hiddenSelectionCount;
+    },
+    get editBlocked() {
+      return editBlocked;
+    },
+    get menuBlocked() {
+      return menuBlocked;
+    },
+    get layerTreeView() {
+      return layerTreeView;
+    },
+    get visibleLayers() {
+      return visibleLayers;
+    },
+    get layerDragClickUntil() {
+      return layerDragClickUntil;
+    },
+    get symbols() {
+      return project.symbols;
+    },
+    hoverLayerDrop(target) {
+      layerDropTarget = target;
+      layerDragGuide = layerDrag;
+    },
+    acceptsLayerDrag,
+    dropLayer,
+    endLayerDrag,
+    openFolderRequest,
+    toggleFolder,
+    showFolderMenu,
+    folderKey,
+    beginFolderDrag,
+    beginLayerDrag,
+    objectLabel,
+    layerClick,
+    layerContext,
+    layerContextKey,
+    toggleObjectVisibility,
+    toggleObjectLock,
+  };
   function objectLabel(object: ScreenObject) {
     return placementLabel(object, project.symbols);
   }
@@ -3417,299 +3496,7 @@
       {/snippet}
       {#snippet layersPanel()}
         {#if mode === "edit"}
-          <div
-            class="layer-browser"
-            use:layerDropSurface={{
-              accepts: acceptsLayerDrag,
-              active: () =>
-                !!layerDrag &&
-                !editBlocked &&
-                !layerDragError(screen, folderScope, layerDrag),
-              allowed: (destination) =>
-                !!layerDrag &&
-                !layerDropError(screen, folderScope, layerDrag, destination),
-              hover: (target) => {
-                layerDropTarget = target;
-                layerDragGuide = layerDrag;
-              },
-              drop: dropLayer,
-              end: endLayerDrag,
-            }}
-          >
-            <div class="layer-search-row">
-              <input
-                class="layer-search"
-                type="search"
-                aria-label="レイヤーを検索"
-                placeholder="検索"
-                bind:value={layerQuery}
-                oninput={() => (layersExpanded = true)}
-              />
-              <button
-                data-create-layer-folder
-                title="ルートにフォルダーを作成"
-                aria-label="ルートにフォルダーを作成"
-                disabled={editBlocked || screen.folders.length >= 256}
-                onclick={(event) =>
-                  openFolderRequest("create", undefined, event.currentTarget)}
-                ><svg
-                  width="19"
-                  height="19"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.6"
-                  aria-hidden="true"
-                  ><path d="M3 7V5h7l2 3h9v12H3V7M12 11v6M9 14h6" /></svg
-                ></button
-              >
-            </div>
-            {#if layerQuery.trim()}<p class="layer-query-status">
-                検索結果を展開中 <button onclick={() => (layerQuery = "")}
-                  >検索を解除</button
-                >
-              </p>{/if}
-            {#if layerDragGuide}
-              <div class="layer-drag-guide">
-                {#if layerDragGuide.kind === "folder"}
-                  <p class="layer-caption" title={layerDragDescription}>
-                    フォルダー「{layerDragGuide.name}」と配下を移動
-                  </p>
-                  <p class="layer-caption">
-                    配置 {layerDragGuide.count} 件・非表示 {layerDragGuide.hidden}
-                    件
-                  </p>
-                  <p
-                    class="layer-caption"
-                    role="status"
-                    title={layerDragDescription}
-                  >
-                    {layerDropTargetError ??
-                      (layerDropTarget === null
-                        ? "フォルダーへドロップ"
-                        : layerDropTarget
-                          ? `${folderPath(screen.folders, layerDropTarget)} 直下へ`
-                          : "ルートへ移動")}
-                  </p>
-                {:else}
-                  <p
-                    class="layer-caption"
-                    role="status"
-                    title={layerDragDescription}
-                  >
-                    {layerDragDescription}
-                  </p>
-                {/if}
-                <div
-                  class="layer-root-drop"
-                  class:drop-hover={layerDropTarget === "" &&
-                    !layerDropTargetError}
-                  data-layer-drop-folder=""
-                >
-                  {layerDragGuide.kind === "folder"
-                    ? "ルートへ移動（親フォルダーなし）"
-                    : "フォルダーから外す（ルートへ）"}
-                </div>
-              </div>
-            {:else}<p class="layer-caption">
-                {selectedIds.length} 件選択{#if hiddenSelectionCount}（非表示 {hiddenSelectionCount}
-                  件）{/if} · {screen.folders.length
-                  ? "所属と描画順は独立"
-                  : "下の配置ほど前面"}
-              </p>{/if}
-            <TreeSection
-              label={screen.name}
-              count={screen.objects.length}
-              bind:open={layersExpanded}
-            >
-              {#if selectedIds.some((id) => !visibleLayers.some((object) => object.id === id))}
-                <p class="hint" role="status">
-                  選択中の配置は検索条件外です。選択とプロパティは保持しています。
-                </p>
-              {/if}
-              <nav aria-label="図形一覧">
-                {#each layerTreeView.rows as row (row.kind === "folder" ? row.folder.id : row.object.id)}
-                  {#if row.kind === "folder"}
-                    <div
-                      class="layer-folder"
-                      class:drop-hover={!!layerDrag &&
-                        !layerDropTargetError &&
-                        layerDropTarget === row.folder.id}
-                      data-layer-drop-folder={row.folder.id}
-                      style:margin-left={`${row.depth * 10}px`}
-                    >
-                      <button
-                        data-layer-folder={row.folder.id}
-                        aria-expanded={row.open}
-                        title={folderPath(screen.folders, row.folder.id)}
-                        onclick={(event) => {
-                          if (
-                            event.detail &&
-                            performance.now() < layerDragClickUntil
-                          )
-                            return;
-                          toggleFolder(row.folder.id);
-                        }}
-                        oncontextmenu={(event) => {
-                          event.preventDefault();
-                          showFolderMenu(row.folder.id, event.currentTarget);
-                        }}
-                        onkeydown={(event) => folderKey(event, row.folder.id)}
-                      >
-                        <span class="folder-chevron" aria-hidden="true"
-                          >{row.open ? "⌄" : "›"}</span
-                        >
-                        <span
-                          class="folder-drag-source"
-                          role="img"
-                          aria-label={row.folder.name}
-                          draggable={!editBlocked}
-                          data-folder-drag-source={row.folder.id}
-                          ondragstart={(event) =>
-                            beginFolderDrag(event, row.folder.id)}
-                        >
-                          <svg
-                            width="19"
-                            height="19"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.6"
-                            aria-hidden="true"
-                            ><path
-                              d="M3 7V5a1 1 0 0 1 1-1h6l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7h18"
-                            /></svg
-                          >
-                          <span class="folder-name">{row.folder.name}</span
-                          ></span
-                        >
-                      </button>
-                      <button
-                        class="folder-more"
-                        data-layer-folder={row.folder.id}
-                        aria-label={`フォルダー操作：${row.folder.name}`}
-                        aria-haspopup="menu"
-                        onclick={(event) =>
-                          showFolderMenu(row.folder.id, event.currentTarget)}
-                        onkeydown={(event) => folderKey(event, row.folder.id)}
-                        >⋮</button
-                      >
-                    </div>
-                  {:else}
-                    {@const object = row.object}
-
-                    <div
-                      class="layer-entry"
-                      style:margin-left={`${row.depth * 10}px`}
-                      class:hidden-placement={object.visible === false}
-                    >
-                      <button
-                        class:active={selectedIds.includes(object.id)}
-                        aria-pressed={selectedIds.includes(object.id)}
-                        data-layer-id={object.id}
-                        draggable={!editBlocked}
-                        ondragstart={(event) =>
-                          beginLayerDrag(event, object.id)}
-                        title={`${objectLabel(object)}
-${object.shape.type} · ${object.order}
-${object.id}`}
-                        onclick={(event) => layerClick(event, object.id)}
-                        oncontextmenu={(event) => {
-                          event.preventDefault();
-                          layerContext(object.id, event.currentTarget);
-                        }}
-                        onkeydown={(event) => layerContextKey(event, object.id)}
-                        ><ObjectIcon
-                          {object}
-                          definition={object.shape.type === "symbol"
-                            ? project.symbols.find(
-                                (d) =>
-                                  object.shape.type === "symbol" &&
-                                  d.id === object.shape.symbolId,
-                              )
-                            : undefined}
-                        /><span>{objectLabel(object)}</span></button
-                      >
-                      <button
-                        class="layer-visible"
-                        aria-label={`${object.visible === false ? "再表示" : "非表示"}：${objectLabel(object)}`}
-                        aria-pressed={object.visible !== false}
-                        title={object.visible === false
-                          ? "図面に再表示"
-                          : "図面から非表示（表示プレビューにも反映）"}
-                        disabled={menuBlocked}
-                        onclick={() => toggleObjectVisibility(object.id)}
-                        ><svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="1.7"
-                          aria-hidden="true"
-                          ><path
-                            d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"
-                          /><circle
-                            cx="12"
-                            cy="12"
-                            r="3"
-                          />{#if object.visible === false}<path
-                              d="M3 3l18 18"
-                            />{/if}</svg
-                        ></button
-                      >
-                      <button
-                        class="layer-lock"
-                        class:locked={!!object.locked}
-                        aria-label={`${object.locked ? "ロック解除" : "ロック"}：${objectLabel(object)}`}
-                        aria-pressed={!!object.locked}
-                        title={object.locked
-                          ? "編集ロックを解除"
-                          : "配置の直接編集をロック（共有定義の変更は反映）"}
-                        disabled={menuBlocked}
-                        onclick={() => toggleObjectLock(object.id)}
-                        ><svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="1.7"
-                          aria-hidden="true"
-                          ><rect
-                            x="5"
-                            y="10"
-                            width="14"
-                            height="11"
-                            rx="2"
-                          /><path
-                            d={object.locked
-                              ? "M8 10V7a4 4 0 0 1 8 0v3"
-                              : "M8 10V7a4 4 0 0 1 8 0"}
-                          /><path d="M12 14v4" /></svg
-                        ></button
-                      >
-                      <button
-                        class="layer-more"
-                        aria-label={`操作：${objectLabel(object)}`}
-                        title={`${objectLabel(object)} の操作`}
-                        aria-haspopup="menu"
-                        onclick={(event) =>
-                          layerContext(object.id, event.currentTarget)}
-                        onkeydown={(event) => layerContextKey(event, object.id)}
-                        >⋮</button
-                      >
-                    </div>
-                  {/if}
-                {/each}
-              </nav>
-              {#if !layerTreeView.rows.length}<p class="hint">
-                  {layerQuery.trim()
-                    ? "一致する配置はありません。"
-                    : "配置はありません。"}
-                </p>{/if}
-            </TreeSection>
-          </div>
+          <LayerTree tree={layerTreeBindings} />
         {/if}
       {/snippet}
       {#snippet partsPanel()}
@@ -4097,146 +3884,6 @@ ${object.id}`}
 <ToastHost store={toastStore} />
 
 <style>
-  nav[aria-label="図形一覧"] {
-    overflow-x: auto;
-  }
-  .layer-search-row {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    margin-bottom: 6px;
-  }
-  .layer-search-row .layer-search {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-  }
-  .layer-search-row > button {
-    display: grid;
-    place-items: center;
-    width: 30px;
-    height: 32px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: var(--banto-primary);
-  }
-  .layer-query-status {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 4px;
-    font-size: 11px;
-    color: var(--banto-text-muted);
-  }
-  .layer-query-status button {
-    padding: 2px 4px;
-    margin: 0;
-    border: 0;
-    background: transparent;
-    color: var(--banto-primary);
-    font-size: inherit;
-  }
-  .layer-drag-guide {
-    position: sticky;
-    top: -10px;
-    z-index: 2;
-    background: var(--banto-surface);
-    padding: 2px 0 6px;
-  }
-  .layer-drag-guide .layer-caption {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .layer-root-drop {
-    padding: 9px 6px;
-    border: 1px dashed var(--banto-border);
-    color: var(--banto-text-muted);
-    font-size: 12px;
-  }
-  .layer-root-drop.drop-hover,
-  .layer-folder.drop-hover {
-    background: color-mix(
-      in srgb,
-      var(--banto-primary) 12%,
-      var(--banto-surface)
-    );
-    outline: 2px solid var(--banto-primary);
-    outline-offset: -2px;
-  }
-  .layer-folder {
-    position: relative;
-    min-width: 150px;
-  }
-  .layer-folder > button:first-child {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    min-height: 36px;
-    padding: 7px 28px 7px 0;
-    margin: 0;
-    border: 0;
-    border-radius: 3px;
-    background: transparent;
-    color: var(--banto-text);
-    text-align: left;
-    font-size: 12px;
-    font-weight: 600;
-  }
-  .layer-folder > button:first-child:hover {
-    background: color-mix(in srgb, var(--banto-primary) 6%, transparent);
-  }
-  .layer-folder svg,
-  .folder-chevron {
-    flex-shrink: 0;
-    color: var(--banto-text-muted);
-  }
-  .folder-chevron {
-    width: 12px;
-    text-align: center;
-  }
-  .folder-drag-source {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    min-width: 0;
-    flex: 1;
-    cursor: grab;
-  }
-  .folder-name {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .folder-more {
-    position: absolute;
-    right: 2px;
-    top: 3px;
-    width: 24px;
-    height: 28px;
-    padding: 0;
-    margin: 0;
-    border: 0;
-    background: transparent;
-    opacity: 0;
-  }
-  .layer-folder:hover .folder-more,
-  .layer-folder:focus-within .folder-more {
-    opacity: 1;
-  }
-  .layer-folder button:focus-visible {
-    outline: none;
-    box-shadow: inset var(--banto-focus-ring);
-  }
-  @media (hover: none) {
-    .folder-more {
-      opacity: 1;
-    }
-  }
-
   .canvas-navigation {
     display: flex;
     align-items: center;
@@ -4253,7 +3900,6 @@ ${object.id}`}
   .canvas-navigation.has-map > :global(.favorites-dock) {
     max-width: calc(100% - 160px);
   }
-
   :global(#app) {
     display: flex;
     flex-direction: column;
@@ -4283,21 +3929,6 @@ ${object.id}`}
     color: var(--banto-primary);
     margin-right: 6px;
   }
-  .layer-search {
-    width: 100%;
-    margin-bottom: 6px;
-    padding: 8px 10px;
-    border: 1px solid var(--banto-border);
-    border-radius: 6px;
-    background: var(--banto-surface);
-    color: var(--banto-text);
-    font: inherit;
-    font-size: 12px;
-  }
-  .layer-search:focus-visible {
-    outline: none;
-    box-shadow: var(--banto-focus-ring);
-  }
   .screen-icon {
     color: var(--banto-text-muted);
     margin-right: 8px;
@@ -4308,85 +3939,7 @@ ${object.id}`}
     padding-right: 24px;
     overflow-wrap: anywhere;
   }
-  .layer-entry {
-    position: relative;
-  }
-  .layer-entry > button:first-child {
-    padding-right: 78px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-align: left;
-    min-height: 36px;
-    width: 100%;
-    overflow-wrap: anywhere;
-  }
-  .layer-entry > button:first-child span {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .layer-entry.hidden-placement > button:first-child {
-    opacity: 0.6;
-  }
-  .layer-entry .layer-visible {
-    display: grid;
-    place-items: center;
-    position: absolute;
-    right: 52px;
-    top: 4px;
-    width: 24px;
-    min-height: 28px;
-    padding: 0;
-    margin: 0;
-    border: 0;
-    background: transparent;
-  }
-  .layer-entry .layer-lock {
-    display: grid;
-    place-items: center;
-    position: absolute;
-    right: 26px;
-    top: 4px;
-    width: 24px;
-    min-height: 28px;
-    padding: 0;
-    margin: 0;
-    border: 0;
-    background: transparent;
-    font-size: 12px;
-    opacity: 0;
-  }
-  .layer-entry .layer-lock.locked,
-  .layer-entry:hover .layer-lock,
-  .layer-entry:focus-within .layer-lock {
-    opacity: 1;
-  }
-  .layer-entry .layer-more {
-    position: absolute;
-    right: 3px;
-    top: 3px;
-    border: 0;
-    background: transparent;
-    width: 22px;
-    height: 28px;
-    padding: 0;
-    margin: 0;
-    opacity: 0;
-  }
-  .layer-entry:hover .layer-more,
-  .layer-entry:focus-within .layer-more {
-    opacity: 1;
-  }
-  @media (hover: none) {
-    .layer-entry .layer-lock,
-    .layer-entry .layer-more {
-      opacity: 1;
-    }
-  }
-  .screen-row,
-  .layer-entry > button:first-child {
+  .screen-row {
     margin: 0;
     padding: 7px 26px 7px 8px;
     min-height: 36px;
@@ -4395,9 +3948,6 @@ ${object.id}`}
     background: transparent;
     color: var(--banto-text);
   }
-  .layer-entry > button:first-child {
-    padding-right: 78px;
-  }
   .screen-row:hover {
     background: color-mix(in srgb, var(--banto-primary) 6%, transparent);
   }
@@ -4405,19 +3955,8 @@ ${object.id}`}
     background: color-mix(in srgb, var(--banto-primary) 13%, transparent);
     color: var(--banto-text);
   }
-  .layer-entry > button:first-child:hover {
-    background: color-mix(in srgb, #14b8a6 8%, transparent);
-  }
-  .layer-entry > button:first-child.active {
-    background: color-mix(in srgb, #14b8a6 18%, transparent);
-  }
-  .screen-row:focus-visible,
-  .layer-entry > button:focus-visible {
+  .screen-row:focus-visible {
     box-shadow: inset var(--banto-focus-ring);
-  }
-  .layer-caption {
-    margin: 4px 2px 10px;
-    font-size: 11px;
   }
   .project-sidebar .reference-link {
     margin: 0;

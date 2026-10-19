@@ -39,7 +39,7 @@
 
 ## 検証の範囲
 
-R4cのProjectファイルcontroller分離はTS全636件、型チェック（エラー／警告なし）、本番ビルド、対象整形と関連ブラウザ48件が成功。読込候補の世代・request照合、Project採用順、書出しsnapshotと保存基準を維持した。保存契約・画面配置・Undo単位は維持した。Rustモデルは機能基準`e04e44c`のworkspace30件とClippyの成功を引き継ぐ。既存のJS bundle 500kB警告は継続する。
+R4d-1のレイヤー表示・CSS分離はTS全636件、型チェック（エラー／警告なし）、本番ビルド、対象整形と関連ブラウザ78件が成功。両テーマ・2画面幅の比較画像8枚は移動前後でpixel完全一致。検索・展開・drag・folder dialogの状態はAppに残り、R4d全体は移行中。保存契約・画面配置・Undo単位は維持した。Rustモデルは機能基準`e04e44c`のworkspace30件とClippyの成功を引き継ぐ。既存のJS bundle 500kB警告は継続する。
 
 `e04e44c`の[GitHub CI](https://github.com/tyaro/temp-scada/actions/runs/39310221559)が成功し、全ブラウザ508件と型・TS単体・ビルド・整形・Rust・CLIサンプル検証を通過した。過去4件のブラウザ失敗は関連29件とこのCIでは再現しなかったが、後続の文書だけのCIでプレビューfit測定1件が再現した。テスト側のレイアウト待機を修正し、wheel関連7件と該当20回の反復が成功した。重複して走らせたローカル全体検証は、同一コードのCI成功確認後に途中停止した。[R0の記録](maintenance-refactoring-plan.md#refactoring-progress)で経緯を確認できる。
 

@@ -18,7 +18,7 @@
 | 画像原本と取込           | `lib/image-assets.ts`・`image-frame.ts`、`designer/controllers/image-import.svelte.ts`、Appの`collectAssets`                                                                      | 原本共有、仮Store、履歴からの参照、非同期取消を保つ                            |
 | クリップボード           | `designer/controllers/clipboard.svelte.ts`、`lib/clipboard.ts`・`asset-clipboard.ts`・`image-clipboard.ts`                                                                        | OS APIの成功前に切取元を消さない。snapshotと資産leaseを保つ                    |
 | 表示と操作               | `lib/ObjectPainting.svelte`・`ScreenPainting.svelte`・`ScreenBackground.svelte`・`Primitive.svelte`・`ImagePainting.svelte`、`Renderer.svelte`・`designer/CanvasWorkspace.svelte` | 読取描画を選択・ドラッグ・入力処理から分ける。追加済みの画像描画部品も確認する |
-| レイヤー                 | Appの`beginLayerDrag`・`dropLayer`・`openFolderRequest`、`designer/layer-tree.ts`・`layer-drag.ts`                                                                                | フォルダーの所属と描画順・座標を区別する                                       |
+| レイヤー                 | `designer/LayerTree.svelte`の一覧markup／CSS、Appの`beginLayerDrag`・`dropLayer`・`openFolderRequest`、`layer-tree.ts`・`layer-drag.ts`                                           | フォルダーの所属と描画順・座標を区別する                                       |
 | Runtime読取              | `lib/tag-presentation.ts`、`crates/scada-runtime`                                                                                                                                 | 現在値・QualityをProject定義と分ける。Hub／PLC機能を複製しない                 |
 | テスト                   | `lib/*.test.ts`、`examples/*-cases.json`、`e2e`、`.github/workflows/ci.yml`                                                                                                       | 単体の契約とブラウザ操作を併用し、既存の拒否ケースを保持                       |
 
@@ -97,3 +97,7 @@ native payloadの読取、snapshot／lease確保、Promise付きClipboardItemの
 `designer/controllers/project-files.svelte.ts`は読込要求・候補Store・置換確認・書出しsnapshot・busyと保存基準を所有する。Appは`adopt`でProjectと共有Storeを交換し、旧Store破棄・履歴・画面状態・世代を一括更新する。保存基準は、従来と同じProject代入直後に`adopted`を同期で呼んで確定する。
 
 file inputの接続getter／clear callbackと同期chooserをAppから供給する。保存や新規・置換コマンドはcontrollerへ直接接続し、busy／保存表示等は`$derived`で追従する。書出し後のbaselineは開始時のsnapshotで、実ファイル保存の完了を意味しない。
+
+## レイヤー表示の移行境界
+
+`designer/LayerTree.svelte`は一覧markupとCSSを所有する。Appはfeatureのgetterと既存callbackを`LayerTreeBindings`で渡し、query／openは現在のApp状態へ書き戻す。DOMのaria／data属性やdrag rootは維持する。検索・展開・drag・folder dialogとcontext menuの状態はAppに残っており、R4dの状態分離は後続の小区切りで行う。
