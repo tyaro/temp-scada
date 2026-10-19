@@ -1,6 +1,6 @@
 # 幾何グループ：初回の実装設計
 
-状態: **次工程の実装方針。未実装。** Project 0.21.0にはこの保存項目・操作はない。現行機能は[実装状況](implementation-status.md)を正とする。2026-10-20（日本時間）、[開発計画](development-plan.md)の次工程をAstraの静的レビューとともに具体化した。
+状態: **G1／G2の保存・ドメイン・再利用を実装。G3 Designerは未接続。** Project 0.22.0へ保存項目を追加した。UIまで含む提供完了ではない。現行機能は[実装状況](implementation-status.md)を正とする。2026-10-20（日本時間）、[開発計画](development-plan.md)の次工程をAstraの静的レビューとともに具体化した。
 
 ## 目的と範囲
 
@@ -109,3 +109,7 @@ clipboardは選択をグループ全体へ正規化し、所属情報を含む�
 | 履歴・保存   | 各確定がUndo1回、Undo／RedoとJSON／画像同梱ファイル往復で所属と外観を再現する                           |
 
 アプリ基盤・共有SDKの変更はこの初回範囲では不要と見込む。実装中に共有契約への要求が判明した場合は、その具体的な差分をBanto／industrialのIssueへ切り出す。認証・正式Runtime・設備遠隔操作はこの工程へ追加しない。
+
+## G1／G2の保存区切り
+
+0.22.0の保存契約とドメイン・再利用を実装した。TS671件、Rust31件、型（エラー／警告なし）、Clippy、関連ブラウザ23件が成功。native clipboard v3の所属保持・ID再採番・保存／Undoと不正読込時の保持を実ブラウザで確認した。初回の新E2EはNode24のJSON import属性不足で収集時に停止したため、readFileSyncへ修正して全23件を実行した。Astraのレビューで見つかったProxy snapshot、明示default状態のno-op、Unicode名の文字数差は修正・回帰確認した。Designer接続はG3に残す。

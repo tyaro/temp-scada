@@ -9,9 +9,9 @@
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | アプリ基盤 | Banto v6.7.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
-| Project    | `schemaVersion`／`minRuntimeVersion`は**0.21.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
+| Project    | `schemaVersion`／`minRuntimeVersion`は**0.22.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
-| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.20.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
+| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.21.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
 | IDと変更   | lowercase UUID v7、有限座標、明示order。編集失敗は原子的拒否、同値はno-op、Undo／Redoでもrevisionは巻き戻さない                         |
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
@@ -39,9 +39,9 @@
 
 ## 検証の範囲
 
-R5a〜R5fで編集コマンド型・分類とProject／Symbol／Screen／Folder／Image／Objectのhandlerを分離した。最新のR5fは型チェック（エラー／警告なし）、TS全637件、全ブラウザ509件、Rust30件・Clippy・CLIサンプル3件、本番ビルド・全体整形が成功。全ブラウザは専用サーバー・2並列の一度の実行ですべて通過した。分類漏れ・誤分類と、分類後のhandler未実装を型エラーで検出することも一時変更で確認した。未知runtimeコマンドをProject／履歴を保って拒否する契約テスト1件を追加した。各区切りの詳細は[R5の記録](maintenance-refactoring-plan.md#r5a-command-types)を参照する。最終差分のCIも成功し、R0〜R5の構造整理を完了した。[R6の性能計測と候補コピーの限定改善](editor-performance.md)を追加した。同じparserによる入力拒否を維持して重複を減らし、TS641件・関連ブラウザ30件・型・build・全体整形が成功。5,000配置の編集中央値は同環境の計測で約251→197ms、履歴付きは約311→250ms。小規模では揺れがあり、ブラウザ応答時間の保証や履歴のメモリ最適化完了を示すものではない。R6差分の全体CIはPush後に確認する。
+R5a〜R5fで編集コマンド型・分類とProject／Symbol／Screen／Folder／Image／Objectのhandlerを分離した。最新のR5fは型チェック（エラー／警告なし）、TS全637件、全ブラウザ509件、Rust30件・Clippy・CLIサンプル3件、本番ビルド・全体整形が成功。全ブラウザは専用サーバー・2並列の一度の実行ですべて通過した。分類漏れ・誤分類と、分類後のhandler未実装を型エラーで検出することも一時変更で確認した。未知runtimeコマンドをProject／履歴を保って拒否する契約テスト1件を追加した。各区切りの詳細は[R5の記録](maintenance-refactoring-plan.md#r5a-command-types)を参照する。最終差分のCIも成功し、R0〜R5の構造整理を完了した。[R6の性能計測と候補コピーの限定改善](editor-performance.md)を追加した。同じparserによる入力拒否を維持して重複を減らし、TS641件・関連ブラウザ30件・型・build・全体整形が成功。5,000配置の編集中央値は同環境の計測で約251→197ms、履歴付きは約311→250ms。小規模では揺れがあり、ブラウザ応答時間の保証や履歴のメモリ最適化完了を示すものではない。R6と次工程設計`9b19048`までの[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39341399005)も成功した。
 
-全体CIはR5fの`4daf011`まで[成功を確認済み](https://github.com/tyaro/temp-scada/actions/runs/39338577347)。全ブラウザ509件と型・TS単体・ビルド・整形・Rust30件・Clippy・CLIサンプル検証を通過した。R4のローカル4並列での496件成功／13件失敗と、同一コードでの単独再確認13件成功、既存サーバーでの途中停止は[R4eの記録](maintenance-refactoring-plan.md#r4e-actions)に保持する。
+全体CIは`9b19048`まで[成功を確認済み](https://github.com/tyaro/temp-scada/actions/runs/39341399005)。全ブラウザ509件と型・TS単体・ビルド・整形・Rust30件・Clippy・CLIサンプル検証を通過した。R4のローカル4並列での496件成功／13件失敗と、同一コードでの単独再確認13件成功、既存サーバーでの途中停止は[R4eの記録](maintenance-refactoring-plan.md#r4e-actions)に保持する。
 
 保存契約・画面配置・Undo単位は維持した。R4dの両テーマ・2画面幅の比較画像8枚は移動前後でpixel完全一致。R4eとR5a〜R5fは画面markup／CSSに変更なし。既存のJS bundle 500kB警告は継続する。
 
@@ -54,6 +54,8 @@ R5a〜R5fで編集コマンド型・分類とProject／Symbol／Screen／Folder�
 - 再利用: [共有Symbol](symbol-color-design.md)、[埋込View](embedded-screen-design.md)、[Popup](preview-popup-design.md)、[全画面](preview-fullscreen-design.md)。
 - 操作と構想: [UX設計](frontend-ux-design.md)、[UI改訂](designer-ui-revision.md)、[機器作成の追加提案](equipment-authoring-detail-proposal.md)。
 
-## 次工程の具体化
+## 幾何グループの実装段階
 
-[幾何グループの初回設計](geometric-groups-design.md)を追加した。初回は既存配置の座標・描画順を保持する所属モデルで、一括選択・移動・90度回転等を扱う。任意拡縮・入れ子は後続。文書のみの追加で、Project 0.21.0にgroup項目やグループ操作はまだない。
+[初回設計](geometric-groups-design.md)に沿い、G1／G2の保存・ドメイン・再利用を実装した。0.22.0でScreenのgroups、所属・描画順・参照の共通検証、作成／解除／名前／一括移動・90度回転／状態／整列・描画順、複製・削除・画面複製・clipboard v3を追加した。TS／Rust共通の不正ケースと、原子性・Undo・再採番を検証する。
+
+**Designerのグループ選択・レイヤー行・メニュー・Inspectorはまだ未接続。** 幾何グループ機能の提供完了ではない。内部の部分編集はドメインで拒否し、既存v1／v2 clipboardでgroup情報を失わせない。任意拡縮・入れ子・Symbol定義内グループは後続。ローカルで型（エラー／警告なし）・TS671件・Rust31件・Clippy・関連ブラウザ23件が成功。ブラウザではgroup付きファイル往復・native v3コピー／貼付・Undoも確認した。AstraレビューのProxyコピー、実効状態no-op、Unicode名長の指摘は修正し回帰テストを追加した。全体CIはPush後に確認する。

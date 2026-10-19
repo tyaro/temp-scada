@@ -1,3 +1,4 @@
+import { reorderUnit } from "./group-handler";
 import { type Project, type Screen, type SymbolDefinition } from "../project";
 import { normalizeRotation, replaceRotatedVertex } from "../rotation";
 import { setLineStyle } from "../line-style";
@@ -56,21 +57,7 @@ export function applySingleObjectCommand(
     copy.order = Math.max(-1, ...screen.objects.map((o) => o.order)) + 1;
     screen.objects.push(copy);
   } else if (command.type === "reorder") {
-    const ordered = [...screen.objects].sort((a, b) => a.order - b.order);
-    const from = ordered.findIndex((o) => o.id === command.objectId);
-    const to =
-      command.direction === "front"
-        ? ordered.length - 1
-        : command.direction === "back"
-          ? 0
-          : command.direction === "forward"
-            ? Math.min(ordered.length - 1, from + 1)
-            : Math.max(0, from - 1);
-    if (from === to) return "unchanged";
-    const [object] = ordered.splice(from, 1);
-    ordered.splice(to, 0, object);
-    ordered.forEach((o, i) => (o.order = i));
-    screen.objects = ordered;
+    return reorderUnit(screen, command.objectId, command.direction);
   } else if (command.type === "remove") screen.objects.splice(index, 1);
   else if (command.type === "update") {
     const {

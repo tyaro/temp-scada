@@ -149,7 +149,7 @@ export function createClipboardController(host: ClipboardHost) {
           }
           const text = payload.text;
           const fragment = parseClipboard(text);
-          if (fragment.version === 2 && host.owner.definitionId)
+          if (fragment.project.assets.length && host.owner.definitionId)
             throw new Error(
               "Symbol定義には画像を貼り付けできません。画面を開いてください。",
             );
@@ -166,7 +166,7 @@ export function createClipboardController(host: ClipboardHost) {
               host.store.importFrom(candidate, asset.sha256);
             const center = pasteCenter;
             const key = JSON.stringify([
-              fragment.version === 2
+              fragment.version !== 1
                 ? JSON.stringify([fragment.origin, fragment.project])
                 : text,
               origin,

@@ -66,6 +66,28 @@ export type ScreenCommand =
   | { type: "duplicate-screen"; screenId: string }
   | { type: "remove-screen"; screenId: string };
 export type ObjectCommand = (
+  | { type: "group"; screenId: string; objectIds: string[]; name?: string }
+  | { type: "ungroup"; screenId: string; groupId: string }
+  | { type: "rename-group"; screenId: string; groupId: string; name?: string }
+  | {
+      type: "rotate-groups";
+      screenId: string;
+      objectIds: string[];
+      delta: 90 | -90;
+    }
+  | {
+      type: "set-group-state";
+      screenId: string;
+      groupId: string;
+      locked?: boolean;
+      visible?: boolean;
+    }
+  | {
+      type: "reorder-group";
+      screenId: string;
+      groupId: string;
+      direction: "front" | "back" | "forward" | "backward";
+    }
   | {
       type: "add-screen-view";
       screenId: string;
@@ -257,6 +279,12 @@ const commandScopes = {
   "set-color": "object",
   "set-visibility": "object",
   "set-lock": "object",
+  group: "object",
+  ungroup: "object",
+  "rename-group": "object",
+  "rotate-groups": "object",
+  "set-group-state": "object",
+  "reorder-group": "object",
   paste: "object",
   "move-vertex": "object",
   "move-many": "object",
@@ -328,7 +356,34 @@ export type ScreenViewPlacementCommand = Extract<
   { type: "add-screen-view" }
 >;
 export type PasteCommand = Extract<ObjectCommand, { type: "paste" }>;
-export type SelectionCommand = Extract<ObjectCommand, { objectIds: string[] }>;
+export type GroupCommand = Extract<
+  ObjectCommand,
+  {
+    type:
+      | "group"
+      | "ungroup"
+      | "rename-group"
+      | "rotate-groups"
+      | "set-group-state"
+      | "reorder-group";
+  }
+>;
+export function isGroupCommand(
+  command: ObjectCommand,
+): command is GroupCommand {
+  return [
+    "group",
+    "ungroup",
+    "rename-group",
+    "rotate-groups",
+    "set-group-state",
+    "reorder-group",
+  ].includes(command.type);
+}
+export type SelectionCommand = Exclude<
+  Extract<ObjectCommand, { objectIds: string[] }>,
+  GroupCommand
+>;
 export type ObjectCreationCommand = Extract<
   ObjectCommand,
   { type: "add" | "add-symbol" }

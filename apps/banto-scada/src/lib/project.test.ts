@@ -31,8 +31,8 @@ import legacy from "../../../../examples/legacy.project.json";
 import { getBounds, parsePoints } from "./project";
 it("migrates the validated legacy format without changing identity, geometry or revision", () => {
   const next = parseProject(JSON.stringify(legacy));
-  expect(next.manifest.schemaVersion).toBe("0.21.0");
-  expect(next.manifest.minRuntimeVersion).toBe("0.21.0");
+  expect(next.manifest.schemaVersion).toBe("0.22.0");
+  expect(next.manifest.minRuntimeVersion).toBe("0.22.0");
   expect(next.manifest.projectId).toBe(legacy.manifest.projectId);
   expect(next.manifest.projectRevision).toBe(legacy.manifest.projectRevision);
   expect(next.screens).toEqual(
@@ -40,6 +40,7 @@ it("migrates the validated legacy format without changing identity, geometry or 
       ...screen,
       background: "#0b1220",
       folders: [],
+      groups: [],
       objects: screen.objects.map((object) => ({
         ...Object.fromEntries(
           Object.entries(object).filter(

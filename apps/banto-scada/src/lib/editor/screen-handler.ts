@@ -23,6 +23,7 @@ export function applyScreenCommand(
       background: command.background ?? "#ffffff",
       objects: [],
       folders: [],
+      groups: [],
     });
     return "finish";
   }

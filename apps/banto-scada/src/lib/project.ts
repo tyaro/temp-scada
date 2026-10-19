@@ -1,3 +1,4 @@
+import { validateGroups } from "./geometric-groups";
 import { projectScreenReferences } from "./screen-references";
 import { patternGeometry, type PatternKind } from "./pattern-paint";
 import { linearGradientEndpoints } from "./linear-gradient";
@@ -102,7 +103,13 @@ export interface BackgroundImage {
   fit: "contain" | "cover" | "stretch" | "original";
   opacity: number;
 }
+export interface GeometricGroup {
+  id: string;
+  name?: string;
+  memberIds: string[];
+}
 export interface Screen {
+  groups: GeometricGroup[];
   backgroundImage?: BackgroundImage;
   folders: LayerFolder[];
   background: string;
@@ -124,10 +131,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.21.0";
+    schemaVersion: "0.22.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.21.0";
+    minRuntimeVersion: "0.22.0";
     name: string;
   };
   screens: Screen[];
@@ -151,11 +158,12 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.21.0",
-        minRuntimeVersion: "0.21.0",
+        schemaVersion: "0.22.0",
+        minRuntimeVersion: "0.22.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
+        groups: [],
         folders: [],
         objects: screen.objects.map((object) => ({
           ...object,
@@ -308,6 +316,7 @@ export function parseProject(json: string): Project {
         throw new Error("線には異なる2点が必要です");
     }
   }
+  for (const screen of project.screens) validateGroups(screen, ids);
   projectScreenReferences(project);
   return project;
 }

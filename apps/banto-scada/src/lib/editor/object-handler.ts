@@ -1,5 +1,11 @@
+import { completeGroupSelection, groupFor } from "../geometric-groups";
+import { applyGroupCommand } from "./group-handler";
 import type { Project } from "../project";
-import { isObjectCommand, type ObjectCommand } from "./commands";
+import {
+  isObjectCommand,
+  isGroupCommand,
+  type ObjectCommand,
+} from "./commands";
 import {
   isFolderStructureCommand,
   applyFolderStructureCommand,
@@ -28,6 +34,21 @@ export function applyObjectCommand(
     ? next.symbols.find((s) => s.id === definitionId)
     : targetScreen;
   if (!screen) throw new Error("画面が見つかりません");
+  if (isGroupCommand(command)) return applyGroupCommand(screen, command);
+  const requestedIds =
+    "objectIds" in command
+      ? command.objectIds
+      : "objectId" in command
+        ? [command.objectId]
+        : [];
+  completeGroupSelection(screen, requestedIds);
+  if (
+    ["set-color", "set-line-style", "set-outline-style"].includes(
+      command.type,
+    ) &&
+    requestedIds.some((id) => groupFor(screen, id))
+  )
+    throw new Error("グループ内部の書式は解除後に編集してください");
   if (command.type === "add-screen-view") {
     applyScreenViewPlacement(screen, command, definitionId);
     return "finish";

@@ -1,10 +1,10 @@
 {
   "manifest": {
     "product": "banto-scada",
-    "schemaVersion": "0.21.0",
+    "schemaVersion": "0.22.0",
     "projectId": "0199f200-0000-7000-8000-000000000001",
     "projectRevision": 1,
-    "minRuntimeVersion": "0.21.0",
+    "minRuntimeVersion": "0.22.0",
     "name": "工程図の埋込表示サンプル"
   },
   "screens": [
@@ -66,7 +66,8 @@
             "fit": "contain"
           }
         }
-      ]
+      ],
+      "groups": []
     },
     {
       "id": "0199f200-0000-7000-8000-000000000002",
@@ -385,7 +386,8 @@
         }
       ],
       "background": "#ffffff",
-      "folders": []
+      "folders": [],
+      "groups": []
     }
   ],
   "symbols": [

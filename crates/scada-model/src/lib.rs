@@ -66,11 +66,12 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.21.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.21.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.22.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.22.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
+                screen["groups"] = serde_json::json!([]);
                 for object in screen["objects"].as_array_mut().unwrap() {
                     object["rotation"] = serde_json::json!(0);
                     if object["shape"]["type"] == "text" {
@@ -286,6 +287,7 @@ impl Project {
                 }
             }
         }
+        validate_groups(&value, &mut ids)?;
         validate_screen_views(&value)?;
         Ok(Self(value))
     }
@@ -297,6 +299,47 @@ impl Project {
 }
 
 /// One level only. Count hidden objects and Symbol children, without recursive rendering.
+fn validate_groups<'a>(project: &'a Value, ids: &mut HashSet<&'a str>) -> Result<(), String> {
+    for screen in project["screens"].as_array().unwrap() {
+        let mut objects: Vec<_> = screen["objects"].as_array().unwrap().iter().collect();
+        objects.sort_by(|a, b| {
+            a["order"]
+                .as_f64()
+                .unwrap()
+                .total_cmp(&b["order"].as_f64().unwrap())
+        });
+        let positions: HashMap<_, _> = objects
+            .iter()
+            .enumerate()
+            .map(|(index, object)| (object["id"].as_str().unwrap(), index))
+            .collect();
+        let mut assigned = HashSet::new();
+        for group in screen["groups"].as_array().unwrap() {
+            if !ids.insert(group["id"].as_str().unwrap()) {
+                return Err("ID が重複しています".into());
+            }
+            let members = group["memberIds"].as_array().unwrap();
+            let start = *positions
+                .get(members[0].as_str().unwrap())
+                .ok_or("グループの配置が見つかりません")?;
+            let folder = objects[start].get("folderId");
+            for (index, member) in members.iter().enumerate() {
+                let id = member.as_str().unwrap();
+                if !assigned.insert(id) {
+                    return Err("配置は複数グループに所属できません".into());
+                }
+                if positions.get(id) != Some(&(start + index)) {
+                    return Err("グループは描画順で連続する配置を指定してください".into());
+                }
+                if objects[start + index].get("folderId") != folder {
+                    return Err("グループは同じフォルダーの配置を指定してください".into());
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 fn validate_screen_views(project: &Value) -> Result<(), String> {
     let screens = project["screens"].as_array().unwrap();
     let symbols: HashMap<_, _> = project["symbols"]
@@ -354,6 +397,29 @@ fn validate_screen_views(project: &Value) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn geometric_groups_share_browser_contract() {
+        let sample: Value =
+            serde_json::from_str(include_str!("../../../examples/minimal.project.json")).unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/geometric-group-cases.json"))
+                .unwrap();
+        for case in cases {
+            let mut value = sample.clone();
+            value["screens"][0]["groups"] = case["groups"].clone();
+            if case["foldered"] == true {
+                value["screens"][0]["folders"] = serde_json::json!([{ "id":"0199f200-0000-7000-8000-000000000001", "name":"部分", "order":0 }]);
+                value["screens"][0]["objects"][0]["folderId"] =
+                    serde_json::json!("0199f200-0000-7000-8000-000000000001");
+            }
+            assert_eq!(
+                Project::from_json(&value.to_string()).is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+        }
+    }
     #[test]
     fn screen_views_share_browser_contract() {
         let sample: Value = serde_json::from_str(include_str!(
@@ -1105,8 +1171,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.21.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.21.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.22.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.22.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]
@@ -1119,6 +1185,7 @@ mod tests {
         for screen in screens.as_array_mut().unwrap() {
             screen["background"] = Value::String("#0b1220".into());
             screen["folders"] = serde_json::json!([]);
+            screen["groups"] = serde_json::json!([]);
             for object in screen["objects"].as_array_mut().unwrap() {
                 object["rotation"] = serde_json::json!(0);
                 if object["shape"]["type"] == "text" {

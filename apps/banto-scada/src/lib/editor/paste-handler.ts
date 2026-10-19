@@ -18,6 +18,9 @@ export function applyPasteCommand(
 ): void {
   const fragment = parseClipboard(command.text);
   const objects = fragment.project.screens[0].objects;
+  const groups = fragment.project.screens[0].groups;
+  if (definitionId && groups.length)
+    throw new Error("Symbol定義内へのグループ貼り付けには対応していません");
   if (
     definitionId &&
     objects.some(
@@ -86,11 +89,20 @@ export function applyPasteCommand(
       2 +
     (command.offset ?? 0);
   const order = Math.max(-1, ...screen.objects.map((o) => o.order)) + 1;
+  const placementIds = new Map(objects.map((object) => [object.id, newId()]));
+  if ("groups" in screen)
+    screen.groups.push(
+      ...groups.map((group) => ({
+        ...group,
+        id: newId(),
+        memberIds: group.memberIds.map((id) => placementIds.get(id)!),
+      })),
+    );
   [...objects]
     .sort((a, b) => a.order - b.order)
     .forEach((object, index) => {
       const copy = JSON.parse(JSON.stringify(object)) as ScreenObject;
-      copy.id = newId();
+      copy.id = placementIds.get(object.id)!;
       copy.order = order + index;
       delete copy.folderId;
       copy.x += dx;

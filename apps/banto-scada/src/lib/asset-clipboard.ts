@@ -39,7 +39,11 @@ export async function encodeAssetClipboard(
         binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
       images.push({ sha256: asset.sha256, data: btoa(binary) });
     }
-    const text = JSON.stringify({ ...fragment, version: 2, images });
+    const text = JSON.stringify({
+      ...fragment,
+      version: fragment.project.screens[0].groups.length ? 3 : 2,
+      images,
+    });
     if (new TextEncoder().encode(text).length > IMAGE_CLIPBOARD_LIMIT)
       throw new Error("画像clipboardのデータが32MiBを超えています");
     parseClipboard(text);
@@ -54,7 +58,7 @@ export async function decodeAssetClipboard(
 ): Promise<AssetStore> {
   const candidate = new AssetStore();
   try {
-    if (fragment.version !== 2) return candidate;
+    if (fragment.version === 1) return candidate;
     for (const asset of fragment.project.assets) {
       const encoded = fragment.images!.find(
         (image) => image.sha256 === asset.sha256,

@@ -44,8 +44,16 @@ export function renewOwnerIds<T extends Screen | SymbolDefinition>(copy: T): T {
     folder.id = folders.get(folder.id)!;
     if (folder.parentId) folder.parentId = folders.get(folder.parentId)!;
   }
+  const placements = new Map(
+    copy.objects.map((object) => [object.id, newId()]),
+  );
+  if ("groups" in copy)
+    for (const group of copy.groups) {
+      group.id = newId();
+      group.memberIds = group.memberIds.map((id) => placements.get(id)!);
+    }
   for (const object of copy.objects) {
-    object.id = newId();
+    object.id = placements.get(object.id)!;
     if (object.folderId) object.folderId = folders.get(object.folderId)!;
   }
   return copy;

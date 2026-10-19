@@ -135,3 +135,14 @@ handlerは候補だけを変更する。表示／lock・等間隔の両端一致
 ## 編集性能の計測
 
 `apps/banto-scada/scripts/benchmark-editor.mjs`はViteのSSR loaderで現行ドメイン関数を読み込み、100／1,000／5,000配置の編集・履歴・Undo・保存と各処理の独立probeを計測する。ブラウザ描画や入力から表示までの遅延は測らない。実行方法・fixture・解釈・結果は[編集性能の計測](editor-performance.md)を参照する。通常のunit／E2Eに時間閾値を追加するものではない。
+
+## 幾何グループ（0.22.0、G1／G2）
+
+- `lib/geometric-groups.ts`：所属の意味検証、選択全体の検査・展開、操作単位、bounds・90度回転。UI状態・履歴を持たない。
+- `lib/editor/group-handler.ts`：作成／解除／名前／回転／状態／描画順。候補だけを変更し、共通finish・Undoは入口側。
+- `lib/editor/group-arrangement.ts`：groupを含む整列・等間隔。子の間隔を保ち単位を移動する。
+- `object-handler.ts`：部分指定と内部の書式変更を拒否。`selection-handler.ts`：複製／削除の所属処理。`model-helpers.ts`：画面複製のID対応。
+- `clipboard.ts`／`asset-clipboard.ts`／`paste-handler.ts`：明示v3、画像原本・所属・配置ID再採番。旧v1／v2でgroupを受理しない。
+- `examples/geometric-group-cases.json`をTS／Rust双方で使用。`geometric-groups.test.ts`は原子性・Undo・幾何・再利用・Proxy・名前と状態の境界。`geometric-group-contract.spec.ts`は実ブラウザの読込・v3コピー・保存／Undoと不正読込保持。
+
+Designerのグループ表示・選択・メニューは次のG3で接続する。現在の機能提供段階は[実装状況](implementation-status.md)を参照する。

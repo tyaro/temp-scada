@@ -38,8 +38,8 @@ test("assigns a read-only tag, shows disconnected in editor and preview, and pre
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );
-  expect(saved.manifest.schemaVersion).toBe("0.21.0");
-  expect(saved.manifest.minRuntimeVersion).toBe("0.21.0");
+  expect(saved.manifest.schemaVersion).toBe("0.22.0");
+  expect(saved.manifest.minRuntimeVersion).toBe("0.22.0");
   expect(
     saved.screens[0].objects
       .filter((o: any) => o.shape.binding)

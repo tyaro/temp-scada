@@ -1,3 +1,5 @@
+import { groupFor, groupsOf } from "../geometric-groups";
+import { arrangeUnits } from "./group-arrangement";
 import {
   getBounds,
   placementColor,
@@ -23,6 +25,11 @@ export function applySelectionCommand(
     .sort((a, b) => a.order - b.order);
   if (objects.length !== ids.size)
     throw new Error("選択した図形が見つかりません");
+  if (
+    (command.type === "align" || command.type === "distribute") &&
+    objects.some((object) => groupFor(screen, object.id))
+  )
+    return arrangeUnits(screen, command);
   if (command.type === "set-outline-style") {
     if (
       !command.patch ||
@@ -248,13 +255,26 @@ export function applySelectionCommand(
       o.x += command.dx;
       o.y += command.dy;
     });
-  } else if (command.type === "remove-many")
+  } else if (command.type === "remove-many") {
     screen.objects = screen.objects.filter((o) => !ids.has(o.id));
-  else if (command.type === "duplicate-many") {
+    if ("groups" in screen)
+      screen.groups = screen.groups.filter(
+        (group) => !group.memberIds.some((id) => ids.has(id)),
+      );
+  } else if (command.type === "duplicate-many") {
     const order = Math.max(-1, ...screen.objects.map((o) => o.order)) + 1;
+    const copies = new Map(objects.map((object) => [object.id, newId()]));
+    const copiedGroups = groupsOf(screen)
+      .filter((group) => group.memberIds.every((id) => ids.has(id)))
+      .map((group) => ({
+        ...group,
+        id: newId(),
+        memberIds: group.memberIds.map((id) => copies.get(id)!),
+      }));
+    if ("groups" in screen) screen.groups.push(...copiedGroups);
     objects.forEach((o, i) => {
       const copy = JSON.parse(JSON.stringify(o));
-      copy.id = newId();
+      copy.id = copies.get(o.id)!;
       copy.x += 20;
       copy.y += 20;
       copy.order = order + i;
