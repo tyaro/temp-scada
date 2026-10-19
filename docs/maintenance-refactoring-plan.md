@@ -209,7 +209,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R1 文書整理     | 完了         | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理        |
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功        |
 | R3 フォーム契約 | 完了         | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功 |
-| R4 App機能分離  | 作業中       | R4a〜R4cとR4d-1の表示分離完了。R4dの状態移動・eは未着手                 |
+| R4 App機能分離  | 作業中       | R4a〜R4d完了。表示と状態を分離し関連78件成功。R4eは未着手               |
 | R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持                                   |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                        |
 
@@ -392,3 +392,24 @@ I1〜I10を維持。DOM構造・aria／data属性・イベントの同期処理�
 移動前後で既存の実画面撮影手順を使い、両テーマ・1920×1080／1536×864のProject／layer各画面、計8枚がpixel完全一致した。比較画像は`/tmp/scada-r4d-before`と`after`の作業用成果物で、製品の差分や新しいデザイン画像を追加するものではない。型チェックはエラー／警告なし。検索・展開・drag・folder dialogの状態はまだAppにある。
 
 R4d-1の表示分離を完了。TS全636件、本番ビルド、対象整形、レイヤーフォルダー・配置／フォルダーdrag・context・操作snapshot・sidebar・表示／ロックの関連ブラウザ78件が成功した。AstraのUX読取レビューでもDOM・イベント引数・focus復帰・getter・CSS・接続の限定範囲に修正要求なし。画面比較8枚の完全一致と合わせて保存する。次のR4d-2では状態とfolder dialog／menu接続をcontrollerへ移す。
+
+### R4d-2：レイヤー検索・展開・drag・folder状態
+
+基準は`1bf30d7`、開始時clean。query／open・世代／画面別の閉フォルダー記録・検索投影・選択祖先の展開、drag token／guide／target／クリック抑止、folderRequest／menu参照／originと非同期focus復帰を`designer/controllers/layer-tree.svelte.ts`へ移した。表示部品の`LayerTreeBindings`へcontrollerを直接渡し、Appに置いた一時的なview facadeは取り除いた。
+
+| 境界         | 維持する状態と時点                                                                                                                            |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| 検索・展開   | scopeは世代＋画面ID。検索中は結果を一時展開し、検索条件外の選択は維持。祖先展開のkeyとuntrackを保つ                                           |
+| drag解除     | 元のscope・mode・activePanel・sidebar表示だけを追跡。広い編集可否getterで取消範囲を増やさないよう、表示条件のgetterを分ける                   |
+| source／drop | token・source snapshot・scope・lock／hidden判定と300msクリック抑止を維持。native dragendより前にsnapshotを保持し、draft確認後も元対象を再検証 |
+| folder操作   | requestのkind・IDs・scope・originを捕捉し、menuのrequest番号・scope・mode・blocking・対象存在をtick後に確認                                   |
+| 適用・focus  | 既存editのerror callbackへ接続し、成功後だけ祖先展開・close。close後は同一scopeで接続中・表示中のoriginへ戻し、なければ作成buttonへ戻す       |
+| 初期化       | AppのProject採用時、元のquery／open初期化位置で`resetPresentation`を呼ぶ。Project／選択／履歴と表示・lockの共通操作はApp所有                  |
+
+FolderDialogとContextActionsのroot配置はAppに残し、controllerのrequest／menu handleを接続する。元がplain letのfolderOriginはAppの`$derived`へキャッシュせず、操作時にgetterを直接読む。ownerのmode等をguardとdrag解除で混同しない。原本やProjectコピー、別のdirty／履歴台帳を持たせない。
+
+I1〜I10を維持。型チェックはエラー／警告なし、TS全636件が成功し、両テーマ・2画面幅の比較8枚も移動前とpixel完全一致した。Astraの実差分レビューではdrag取消依存・snapshot／token・origin／focus・edit error接続・初期化位置に修正要求なし。状態移動後の関連ブラウザ78件も成功した。
+
+R4d完了。状態分離後の型チェック（エラー／警告なし）、TS全636件、本番ビルド、対象整形と関連ブラウザ78件が成功した。表示分離の78件と同じ関連ケースを再確認したもので、156件の異なる機能検証として合算しない。最終状態でも移動前との画面比較8枚はpixel完全一致。検索・祖先展開・drag・folder dialog／menuのstate／effectはcontrollerへまとまり、Appは現在情報・選択・共通編集・rootでのUI接続を所有する。
+
+保存形式・Undo単位・既存の操作条件を維持した。既存のJS bundle 500kB警告は継続。次はR4eでメニュー・toolbar・contextの共通action定義を整理し、イベント受付と現在contextの供給はAppへ残す。R4eとR5は未着手。

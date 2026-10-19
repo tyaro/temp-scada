@@ -108,23 +108,7 @@
   import type { SymbolUsage } from "./lib/symbol-usages";
   import { selectionTarget } from "./lib/selection-view";
   import type { Project } from "./lib/project";
-  import {
-    layerTree,
-    folderAncestors,
-    folderPath,
-  } from "./lib/designer/layer-tree";
-  import {
-    LAYER_MIME,
-    layerDragSource,
-    folderDragSource,
-    layerDropError,
-    layerDragError,
-    type LayerDrag,
-  } from "./lib/designer/layer-drag";
-  import FolderDialog, {
-    type FolderRequest,
-    type FolderOperation,
-  } from "./lib/designer/FolderDialog.svelte";
+  import FolderDialog from "./lib/designer/FolderDialog.svelte";
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
   import shapePaintSample from "../../../examples/shape-paint.project.json";
@@ -137,11 +121,8 @@
   import ScreenTabs from "./lib/designer/ScreenTabs.svelte";
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
   import TreeSection from "./lib/designer/TreeSection.svelte";
-  import LayerTree, {
-    type LayerTreeBindings,
-  } from "./lib/designer/LayerTree.svelte";
-  let layerQuery = $state("");
-  let layersExpanded = $state(true);
+  import { createLayerTreeController } from "./lib/designer/controllers/layer-tree.svelte";
+  import LayerTree from "./lib/designer/LayerTree.svelte";
   import DesignerSidebar, {
     type DesignerPanel,
   } from "./lib/designer/DesignerSidebar.svelte";
@@ -765,7 +746,7 @@
       ) {
         event.preventDefault();
         if (!event.repeat)
-          openFolderRequest(
+          layerTreeBindings.openFolderRequest(
             "remove",
             focusedFolder.dataset.layerFolder,
             focusedFolder,
@@ -871,7 +852,7 @@
       : preserve && selectedIds.includes(id)
         ? selectedIds
         : [id];
-    if (selectedIds.includes(id)) revealLayerObject(id);
+    if (selectedIds.includes(id)) layerTreeBindings.revealLayerObject(id);
     return [...selectedIds];
   }
   function selectCanvasObjects(
@@ -920,7 +901,7 @@
             ]),
           ]
         : live;
-      for (const id of live) revealLayerObject(id);
+      for (const id of live) layerTreeBindings.revealLayerObject(id);
     };
     if (drafts.allow(apply)) apply();
   }
@@ -1150,7 +1131,7 @@
       editingSymbolId = null;
       screenId = usage.screenId;
       selectedIds = [usage.objectId];
-      revealLayerObject(usage.objectId);
+      layerTreeBindings.revealLayerObject(usage.objectId);
       void tick().then(() => {
         editorRegion?.scrollTo({ top: 0 });
         inspectorPanel
@@ -1280,7 +1261,7 @@
             )
               return;
             editorRegion?.scrollTo({ top: 0 });
-            revealLayerObject(usage.objectId);
+            layerTreeBindings.revealLayerObject(usage.objectId);
             canvasWorkspace?.revealObject(usage.objectId);
           }),
         ),
@@ -1347,8 +1328,7 @@
     projectFiles.adopted(next, source);
     history = emptyHistory();
     referencesExpanded = false;
-    layerQuery = "";
-    layersExpanded = true;
+    layerTreeBindings.resetPresentation();
     workspaceGeneration++;
     screenId = project.screens[0].id;
     editingSymbolId = null;
@@ -1617,7 +1597,11 @@
     }
     const folder = target.closest<HTMLElement>("[data-layer-folder]");
     if (folder) {
-      openFolderRequest("rename", folder.dataset.layerFolder, folder);
+      layerTreeBindings.openFolderRequest(
+        "rename",
+        folder.dataset.layerFolder,
+        folder,
+      );
       return;
     }
     const layer = target.closest<HTMLElement>("[data-layer-id]");
@@ -1959,323 +1943,45 @@
   const contextScope = $derived(
     `${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${mode}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${showInspector}:${snapEnabled}:${gridSize}:${contextKind}:${busy}:${!!drafts.pending}:${!!replacement}:${contextRequest}`,
   );
-  const folderScope = $derived(`${workspaceGeneration}:${screen.id}`);
-  let closedLayerFolders = $state<Record<string, string[]>>({});
-  const closedFolders = $derived(
-    new Set(closedLayerFolders[folderScope] ?? []),
-  );
-  const layerTreeView = $derived(
-    layerTree(screen, layerQuery, closedFolders, layerSearchText),
-  );
-  const visibleLayers = $derived(layerTreeView.matchingObjects);
-  function layerSearchText(object: ScreenObject) {
-    return [
-      objectLabel(object),
-      placementLabel({ ...object, name: undefined }, project.symbols),
-      object.shape.type,
-      object.id,
-      ...(object.shape.type === "text"
-        ? [object.shape.text, object.shape.binding?.externalName ?? ""]
-        : []),
-    ].join(" ");
-  }
-  function revealLayerObject(id: string) {
-    if (!visibleLayers.some((object) => object.id === id)) return;
-    layersExpanded = true;
-    if (screen.folders.length)
-      revealFolder(screen.objects.find((object) => object.id === id)?.folderId);
-  }
-  function toggleFolder(id: string) {
-    if (layerQuery.trim()) return;
-    const next = new Set(closedFolders);
-    if (!next.delete(id)) next.add(id);
-    closedLayerFolders = { ...closedLayerFolders, [folderScope]: [...next] };
-  }
-  function revealFolder(id?: string) {
-    const ancestors = new Set(
-      folderAncestors(screen.folders, id).map((folder) => folder.id),
-    );
-    closedLayerFolders = {
-      ...closedLayerFolders,
-      [folderScope]: [...closedFolders].filter((id) => !ancestors.has(id)),
-    };
-  }
-  let lastFolderReveal = "";
-  $effect(() => {
-    const ancestors = selectedIds.flatMap((id) =>
-      folderAncestors(
-        screen.folders,
-        screen.objects.find((object) => object.id === id)?.folderId,
-      ).map((folder) => folder.id),
-    );
-    const key = `${folderScope}:${selectedIds.join(",")}:${ancestors.join(",")}`;
-    if (key === lastFolderReveal) return;
-    lastFolderReveal = key;
-    untrack(() => {
-      if (
-        !ancestors.length ||
-        !selectedIds.some((id) =>
-          visibleLayers.some((object) => object.id === id),
-        )
-      )
-        return;
-      closedLayerFolders = {
-        ...closedLayerFolders,
-        [folderScope]: [...closedFolders].filter(
-          (id) => !ancestors.includes(id),
-        ),
+  const layerTreeBindings = createLayerTreeController({
+    get owner() {
+      return {
+        generation: workspaceGeneration,
+        mode,
+        editBlocked,
+        menuBlocked,
+        mutationBlocked,
       };
-    });
+    },
+    get dragContext() {
+      return { mode, activePanel, showSidebar };
+    },
+    get screen() {
+      return screen;
+    },
+    get symbols() {
+      return project.symbols;
+    },
+    get selectedIds() {
+      return selectedIds;
+    },
+    get hiddenSelectionCount() {
+      return hiddenSelectionCount;
+    },
+    objectLabel,
+    selectObjects,
+    transition,
+    edit: (command, onerror) => edit(command, undefined, onerror),
+    report,
+    layerContext,
+    layerContextKey,
+    toggleObjectVisibility,
+    toggleObjectLock,
   });
-  let layerDrag = $state<LayerDrag | null>(null);
-  let layerDragGuide = $state<LayerDrag | null>(null);
-  let layerDropTarget = $state<string | null>(null);
-  const layerDropTargetError = $derived(
-    layerDragGuide && layerDropTarget !== null
-      ? layerDropError(screen, folderScope, layerDragGuide, layerDropTarget)
-      : null,
-  );
-  const layerDragDescription = $derived.by(() => {
-    const drag = layerDragGuide;
-    if (!drag) return "";
-    const source =
-      drag.kind === "objects"
-        ? `${drag.ids.length} 件を移動（非表示 ${drag.hidden} 件）`
-        : `フォルダー「${drag.name}」と配下を移動（配置 ${drag.count} 件・非表示 ${drag.hidden} 件）`;
-    const destination =
-      layerDropTargetError ??
-      (layerDropTarget === null
-        ? "フォルダーへドロップ"
-        : layerDropTarget
-          ? `${folderPath(screen.folders, layerDropTarget)} 直下へ`
-          : drag.kind === "folder"
-            ? "ルートへ移動"
-            : "フォルダーから外す");
-    return `${source} · ${destination}`;
-  });
-  let layerDragClickUntil = 0;
-  function endLayerDrag() {
-    if (layerDrag) layerDragClickUntil = performance.now() + 300;
-    layerDrag = null;
-    layerDragGuide = null;
-    layerDropTarget = null;
-  }
-  $effect(() => {
-    folderScope;
-    mode;
-    activePanel;
-    showSidebar;
-    untrack(endLayerDrag);
-  });
-  function beginLayerDrag(event: DragEvent, id: string) {
-    const ids = layerDragSource(screen, id, selectedIds);
-    if (editBlocked || !ids || !event.dataTransfer) {
-      event.preventDefault();
-      if (!ids)
-        report("error", "ロックを含む配置はドラッグで所属を変更できません。");
-      return;
-    }
-    layerDrag = {
-      kind: "objects",
-      token: crypto.randomUUID(),
-      scope: folderScope,
-      ids,
-      hidden: ids.filter(
-        (id) =>
-          screen.objects.find((object) => object.id === id)?.visible === false,
-      ).length,
-    };
-    layerDragClickUntil = performance.now() + 300;
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData(LAYER_MIME, layerDrag.token);
-  }
-  function beginFolderDrag(event: DragEvent, id: string) {
-    const source = folderDragSource(screen, id);
-    if (editBlocked || !source || !event.dataTransfer) {
-      event.preventDefault();
-      return;
-    }
-    layerDrag = { ...source, token: crypto.randomUUID(), scope: folderScope };
-    layerDragClickUntil = performance.now() + 300;
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData(LAYER_MIME, layerDrag.token);
-  }
-  function acceptsLayerDrag(event: DragEvent) {
-    return !!(
-      layerDrag &&
-      !editBlocked &&
-      layerDrag.scope === folderScope &&
-      event.dataTransfer?.types.includes(LAYER_MIME) &&
-      !layerDragError(screen, folderScope, layerDrag)
-    );
-  }
-  function dropLayer(event: DragEvent, destination: string) {
-    const drag = layerDrag;
-    if (!drag || event.dataTransfer?.getData(LAYER_MIME) !== drag.token) return;
-    endLayerDrag();
-    // Snapshot survives native dragend and the draft prompt; never retarget it.
-    transition(() => {
-      const error = layerDropError(screen, folderScope, drag, destination);
-      if (mode !== "edit" || error) {
-        report("error", error ?? "編集モードでやり直してください。");
-        return;
-      }
-      if (
-        !edit(
-          drag.kind === "objects"
-            ? {
-                type: "set-folder",
-                screenId: screen.id,
-                objectIds: drag.ids,
-                folderId: destination || null,
-              }
-            : {
-                type: "move-folder",
-                screenId: screen.id,
-                folderId: drag.folderId,
-                parentId: destination || null,
-              },
-        )
-      )
-        return;
-      layersExpanded = true;
-      if (!layerQuery.trim()) revealFolder(destination || undefined);
-      void tick().then(() => {
-        if (drag.scope !== folderScope) return;
-        const visible = document.querySelector<HTMLElement>(
-          drag.kind === "objects"
-            ? `button[data-layer-id="${drag.ids[0]}"]`
-            : `button[data-layer-folder="${drag.folderId}"][aria-expanded]`,
-        );
-        if (visible?.getClientRects().length)
-          visible.scrollIntoView({ block: "nearest" });
-        else
-          report(
-            "success",
-            drag.kind === "objects"
-              ? "所属を変更しました。検索条件外の配置は検索を解除すると確認できます。"
-              : "親フォルダーを変更しました。検索条件外のフォルダーは検索を解除すると確認できます。",
-          );
-      });
-    });
-  }
-  function layerClick(event: MouseEvent, id: string) {
-    if (event.detail && performance.now() < layerDragClickUntil) return;
-    selectObjects(id, event.shiftKey);
-  }
-  let folderRequest = $state<
-    (FolderRequest & { scope: string; origin: HTMLElement | null }) | null
-  >(null);
-  let folderMenu = $state<{
-    show: (origin: HTMLElement, point?: Point) => Promise<void>;
-  }>();
-  let contextFolderId = $state("");
-  let folderOrigin: HTMLElement | null = null;
-  let folderMenuRequest = 0;
-  function openFolderRequest(
-    kind: FolderOperation,
-    folderId?: string,
-    origin?: HTMLElement,
-  ) {
-    if (editBlocked || (kind === "assign" && mutationBlocked)) return;
-    const scope = folderScope,
-      ids = [...selectedIds];
-    const source =
-      origin ??
-      (document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null);
-    transition(() => {
-      if (
-        scope !== folderScope ||
-        mode !== "edit" ||
-        (folderId &&
-          !screen.folders.some((folder) => folder.id === folderId)) ||
-        (kind === "assign" &&
-          (!ids.length ||
-            ids.some(
-              (id) => !screen.objects.some((object) => object.id === id),
-            )))
-      )
-        return;
-      folderRequest = {
-        kind,
-        folderId,
-        objectIds: kind === "assign" ? ids : [],
-        scope,
-        origin: source,
-      };
-    });
-  }
-  function closeFolderRequest() {
-    const previous = folderRequest;
-    folderRequest = null;
-    void tick().then(() => {
-      if (previous?.scope !== folderScope) return;
-      if (
-        previous.origin?.isConnected &&
-        previous.origin.getClientRects().length
-      )
-        previous.origin.focus({ preventScroll: true });
-      else
-        document
-          .querySelector<HTMLButtonElement>("[data-create-layer-folder]")
-          ?.focus({ preventScroll: true });
-    });
-  }
-  $effect(() => {
-    if (
-      folderRequest &&
-      (folderRequest.scope !== folderScope || mode !== "edit")
-    )
-      folderRequest = null;
-  });
-  function applyFolderCommand(command: EditCommand): string | null {
-    const request = folderRequest;
-    if (!request || request.scope !== folderScope || mode !== "edit")
-      return "編集対象が変わりました。閉じてやり直してください。";
-    const before = new Set(screen.folders.map((folder) => folder.id));
-    let error = "";
-    if (!edit(command, undefined, (message) => (error = message)))
-      return error || "変更できませんでした。対象と入力を確認してください。";
-    const destination =
-      command.type === "create-folder"
-        ? screen.folders.find((folder) => !before.has(folder.id))?.id
-        : command.type === "set-folder"
-          ? (command.folderId ?? undefined)
-          : request.folderId;
-    if (!layerQuery.trim()) revealFolder(destination);
-    closeFolderRequest();
-    return null;
-  }
-  function showFolderMenu(id: string, origin: HTMLElement) {
-    if (menuBlocked) return;
-    contextFolderId = id;
-    folderOrigin = origin;
-    const request = ++folderMenuRequest,
-      scope = folderScope;
-    void tick().then(() => {
-      if (
-        request === folderMenuRequest &&
-        scope === folderScope &&
-        mode === "edit" &&
-        !menuBlocked &&
-        screen.folders.some((folder) => folder.id === id)
-      )
-        void folderMenu?.show(origin);
-    });
-  }
-  function folderKey(event: KeyboardEvent, id: string) {
-    if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey)
-      return;
-    if (
-      event.key === "ContextMenu" ||
-      (event.shiftKey && event.key === "F10")
-    ) {
-      event.preventDefault();
-      showFolderMenu(id, event.currentTarget as HTMLElement);
-    }
-  }
+  const folderScope = $derived(layerTreeBindings.folderScope);
+  const layerQuery = $derived(layerTreeBindings.layerQuery);
+  const folderRequest = $derived(layerTreeBindings.folderRequest);
+  const contextFolderId = $derived(layerTreeBindings.contextFolderId);
   function toggleObjectVisibility(id: string) {
     const generation = workspaceGeneration,
       target = screen.id;
@@ -2322,84 +2028,6 @@
     };
     if (drafts.allow(apply)) apply();
   }
-  const layerTreeBindings: LayerTreeBindings = {
-    get screen() {
-      return screen;
-    },
-    get folderScope() {
-      return folderScope;
-    },
-    get layerQuery() {
-      return layerQuery;
-    },
-    set layerQuery(value) {
-      layerQuery = value;
-    },
-    get layersExpanded() {
-      return layersExpanded;
-    },
-    set layersExpanded(value) {
-      layersExpanded = value;
-    },
-    get layerDrag() {
-      return layerDrag;
-    },
-    get layerDragGuide() {
-      return layerDragGuide;
-    },
-    get layerDropTarget() {
-      return layerDropTarget;
-    },
-    get layerDropTargetError() {
-      return layerDropTargetError;
-    },
-    get layerDragDescription() {
-      return layerDragDescription;
-    },
-    get selectedIds() {
-      return selectedIds;
-    },
-    get hiddenSelectionCount() {
-      return hiddenSelectionCount;
-    },
-    get editBlocked() {
-      return editBlocked;
-    },
-    get menuBlocked() {
-      return menuBlocked;
-    },
-    get layerTreeView() {
-      return layerTreeView;
-    },
-    get visibleLayers() {
-      return visibleLayers;
-    },
-    get layerDragClickUntil() {
-      return layerDragClickUntil;
-    },
-    get symbols() {
-      return project.symbols;
-    },
-    hoverLayerDrop(target) {
-      layerDropTarget = target;
-      layerDragGuide = layerDrag;
-    },
-    acceptsLayerDrag,
-    dropLayer,
-    endLayerDrag,
-    openFolderRequest,
-    toggleFolder,
-    showFolderMenu,
-    folderKey,
-    beginFolderDrag,
-    beginLayerDrag,
-    objectLabel,
-    layerClick,
-    layerContext,
-    layerContextKey,
-    toggleObjectVisibility,
-    toggleObjectLock,
-  };
   function objectLabel(object: ScreenObject) {
     return placementLabel(object, project.symbols);
   }
@@ -2500,25 +2128,41 @@
       label: "子フォルダーを作成",
       disabled: editBlocked || screen.folders.length >= 256,
       run: () =>
-        openFolderRequest("create", contextFolderId, folderOrigin ?? undefined),
+        layerTreeBindings.openFolderRequest(
+          "create",
+          contextFolderId,
+          layerTreeBindings.folderOrigin ?? undefined,
+        ),
     },
     {
       label: "フォルダー名を変更",
       disabled: editBlocked,
       run: () =>
-        openFolderRequest("rename", contextFolderId, folderOrigin ?? undefined),
+        layerTreeBindings.openFolderRequest(
+          "rename",
+          contextFolderId,
+          layerTreeBindings.folderOrigin ?? undefined,
+        ),
     },
     {
       label: "親フォルダーを変更",
       disabled: editBlocked,
       run: () =>
-        openFolderRequest("move", contextFolderId, folderOrigin ?? undefined),
+        layerTreeBindings.openFolderRequest(
+          "move",
+          contextFolderId,
+          layerTreeBindings.folderOrigin ?? undefined,
+        ),
     },
     {
       label: "空のフォルダーを削除",
       disabled: editBlocked,
       run: () =>
-        openFolderRequest("remove", contextFolderId, folderOrigin ?? undefined),
+        layerTreeBindings.openFolderRequest(
+          "remove",
+          contextFolderId,
+          layerTreeBindings.folderOrigin ?? undefined,
+        ),
     },
   ]);
   const editToolbarGroups: ToolbarGroup[] = $derived([
@@ -2756,7 +2400,11 @@
         label: "配置の所属を変更",
         disabled: mutationBlocked || !selectedIds.length,
         run: () =>
-          openFolderRequest("assign", undefined, selectionOrigin ?? undefined),
+          layerTreeBindings.openFolderRequest(
+            "assign",
+            undefined,
+            selectionOrigin ?? undefined,
+          ),
       },
       ...(selected
         ? [
@@ -3773,7 +3421,7 @@
 />
 <ContextActions
   floating
-  bind:this={folderMenu}
+  bind:this={layerTreeBindings.folderMenu}
   label="フォルダー"
   contextKey={`${folderScope}:${contextFolderId}:${project.manifest.projectRevision}:${layerQuery}:${mode}:${activePanel}:${showSidebar}`}
   items={folderContextItems}
@@ -3784,8 +3432,8 @@
       owner={screen}
       {project}
       request={folderRequest}
-      onapply={applyFolderCommand}
-      onclose={closeFolderRequest}
+      onapply={layerTreeBindings.applyFolderCommand}
+      onclose={layerTreeBindings.closeFolderRequest}
     />
   {/key}
 {/if}

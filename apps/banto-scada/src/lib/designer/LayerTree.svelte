@@ -3,7 +3,7 @@
   import type { layerTree } from "./layer-tree";
   import type { LayerDrag } from "./layer-drag";
   import type { FolderOperation } from "./FolderDialog.svelte";
-  /** View connection during R4d. App retains state and the shared editing boundary. */
+  /** View contract. The controller owns browsing state; App owns selection and edits. */
   export interface LayerTreeBindings {
     readonly screen: Screen | SymbolDefinition;
     readonly symbols: SymbolDefinition[];
