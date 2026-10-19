@@ -33,6 +33,14 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+<a id="preview-fullscreen-progress"></a>
+
+## ブラウザ全画面での表示確認（2026-10-20・日本時間）
+
+[具体設計](preview-fullscreen-design.md)に従い、プレビュー用のFullscreen APIを接続した。ヘッダーと左パネルを一時的に隠し、終了・画面切替・小窓・確認Modalを全画面内で使える。標準終了イベントで配置を戻し、編集復帰とProject差替えで自分が開始した全画面を終了する。許可失敗・非対応・遅延応答の後始末を用意し、Project・履歴・パネル設定を変更しない。運用kiosk・OS設定・認証の完成ではない。
+
+検証: 単体6件を含むTS全599件、型チェック（エラー／警告なし）、本番ビルド、全画面5件＋小窓10件の関連ブラウザ15件が成功。全492件の再実行ではない。両テーマ・ネイティブAPI／終了イベント・小窓とModal・保存内容不変・自動終了・許可拒否／API非対応を確認した。
+
 <a id="preview-popup-progress"></a>
 
 ## プレビュー専用の画面内Popup（2026-10-20・日本時間）

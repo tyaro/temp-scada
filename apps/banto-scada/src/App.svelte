@@ -226,6 +226,7 @@
     NumericProperty,
     NumericTarget,
   } from "./lib/designer/numeric-properties";
+  import PreviewFullscreen from "./lib/designer/PreviewFullscreen.svelte";
   import PreviewPopups from "./lib/designer/PreviewPopups.svelte";
   import ScreenViewDialog from "./lib/designer/ScreenViewDialog.svelte";
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
@@ -1386,6 +1387,7 @@
   }
 
   let editorRegion = $state<HTMLElement>();
+  let previewFullscreenActive = $state(false);
   let previewPopups = $state<{ showPicker: (origin: HTMLElement) => void }>();
   let inspectorPanel = $state<HTMLElement>();
   let inspectorController = $state<{
@@ -3552,7 +3554,10 @@
     onchange={load}
   />
 {/key}
-<header class="app-header">
+<header
+  class="app-header"
+  class:fullscreen-preview={mode === "preview" && previewFullscreenActive}
+>
   <span class="studio-brand">SCADA<span>/ studio</span></span>
   <h1 title={project.manifest.name}>{project.manifest.name}</h1>
   {#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
@@ -3661,6 +3666,11 @@
     </div>
   {/snippet}
   {#snippet controls()}
+    <PreviewFullscreen
+      scope={mode === "preview" ? String(workspaceGeneration) : null}
+      onactive={(active) => (previewFullscreenActive = active)}
+      onmessage={(message) => report("error", message)}
+    />
     {#if mode === "edit"}
       <CanvasControls
         view={canvasView}
@@ -3712,7 +3722,10 @@
   style:--sidebar-width={`${leftWidth}px`}
   style:--inspector-width={`${rightWidth}px`}
   class:editing={mode === "edit"}
-  class:sidebar-visible={mode !== "edit" || showSidebar}
+  class:fullscreen-preview={mode === "preview" && previewFullscreenActive}
+  class:sidebar-visible={mode === "edit"
+    ? showSidebar
+    : !previewFullscreenActive}
   class:inspector-visible={showInspector && mode === "edit"}
 >
   <aside
@@ -5216,6 +5229,12 @@ ${object.id}`}
     border: 1px solid var(--banto-border);
     background: var(--banto-bg);
     color: var(--banto-text);
+  }
+  :global(#app) .app-header.fullscreen-preview {
+    display: none;
+  }
+  :global(#app) main.fullscreen-preview > .project-sidebar {
+    display: none;
   }
   .canvas-stack {
     position: relative;
