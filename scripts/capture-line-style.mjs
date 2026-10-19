@@ -45,13 +45,11 @@ try {
       lineStyle: "dashed",
     };
     const selected = lines[0];
-    await page
-      .getByLabel("Project JSON を開く", { exact: true })
-      .setInputFiles({
-        name: "line-style-demo.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(project)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "line-style-demo.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
     await page.locator(`button[data-layer-id="${selected.id}"]`).click();
     await expect(page.getByLabel("線種", { exact: true })).toHaveValue(

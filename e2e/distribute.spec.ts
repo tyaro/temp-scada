@@ -18,7 +18,7 @@ async function start(page: Page, fixture: object = sample) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await button(page, "編集").click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "distribution.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(fixture)),
@@ -62,7 +62,7 @@ test("three placements distribute by centers with fixed endpoints, ignore snap a
   await expect(button(page, "元に戻す")).toBeDisabled();
   await button(page, "やり直す").click();
   expect((await exported(page)).screens).toEqual(result.screens);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "distributed.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(result)),

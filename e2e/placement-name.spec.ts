@@ -12,7 +12,7 @@ async function start(page: Page, project: object = minimal) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await button(page, "編集").click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "project.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -127,7 +127,7 @@ test("duplicate names survive duplication and JSON; clearing restores fallback w
     layers(page).getByRole("button", { name: "TK-101 液位", exact: true }),
   ).toHaveCount(2);
   const project = await download(page);
-  expect(project.manifest.schemaVersion).toBe("0.15.0");
+  expect(project.manifest.schemaVersion).toBe("0.16.0");
   const named = project.screens[0].objects.filter(
     (o: any) => o.name === "TK-101 液位",
   );
@@ -140,7 +140,7 @@ test("duplicate names survive duplication and JSON; clearing restores fallback w
         o.shape.binding.externalName === "Exact.Tag.Name",
     ),
   ).toBe(true);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "names.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),

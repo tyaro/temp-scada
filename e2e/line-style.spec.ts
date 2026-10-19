@@ -44,7 +44,7 @@ async function start(page: Page, project = fixture()) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await button(page, "編集").click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "styles.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -87,17 +87,15 @@ for (const theme of ["light", "dark"])
       page.locator('.minimap svg [data-object-id="' + a + '"] polyline'),
     ).toHaveAttribute("stroke-dasharray", "24 12");
     const next = await saved(page);
-    expect(next.manifest.schemaVersion).toBe("0.15.0");
+    expect(next.manifest.schemaVersion).toBe("0.16.0");
     expect(
       next.screens[0].objects.find((o: any) => o.id === a).shape,
     ).toMatchObject({ lineStyle: "dashed", strokeWidth: 6, arrow: "end" });
-    await page
-      .getByLabel("Project JSON を開く", { exact: true })
-      .setInputFiles({
-        name: "saved.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(next)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "saved.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(next)),
+    });
     await button(page, "表示プレビュー").click();
     await expect(line).toHaveAttribute("stroke-dasharray", "24 12");
   });

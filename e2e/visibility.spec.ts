@@ -14,7 +14,7 @@ async function start(page: Page, project: object = sample) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await button(page, "編集").click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "project.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -226,13 +226,13 @@ test("hidden copying, paste and JSON keep invisible locked metadata and never au
   await expect(canvas(page).locator("[data-object-id]")).toHaveCount(2);
   await expect(canvas(page).locator('[data-selected="true"]')).toHaveCount(0);
   const saved = await exported(page);
-  expect(saved.manifest.schemaVersion).toBe("0.15.0");
+  expect(saved.manifest.schemaVersion).toBe("0.16.0");
   expect(
     saved.screens[0].objects.filter(
       (o: any) => o.visible === false && o.locked,
     ),
   ).toHaveLength(2);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "hidden.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(saved)),

@@ -208,7 +208,7 @@ test("zoom-out from a large drawing's tiny fit never enlarges it", async ({
   const project = structuredClone(sample.default);
   project.screens[0].width = 10000;
   project.screens[0].height = 5000;
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "large.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),

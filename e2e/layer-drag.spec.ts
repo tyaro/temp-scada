@@ -36,7 +36,7 @@ async function start(
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await button(page, "編集").click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "drag.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -305,7 +305,7 @@ test("shared definition membership and a new file generation keep the captured o
     await readFile("examples/process.project.json", "utf8"),
   );
   project.symbols[0].folders = [{ id: folderId, name: "構成図形", order: 0 }];
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "definition.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -320,7 +320,7 @@ test("shared definition membership and a new file generation keep the captured o
   expect(result.symbols[0].objects[0]).toEqual({ ...child, folderId });
   expect(result.screens).toEqual(project.screens);
   data = await begin(page, row(page, child.id));
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "generation.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(result)),

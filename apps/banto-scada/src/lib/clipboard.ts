@@ -66,6 +66,7 @@ export function copyObjects(
   );
   const fragment: Project = {
     manifest: { ...project.manifest },
+    assets: [],
     screens: [
       {
         id: target.id,

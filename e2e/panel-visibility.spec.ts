@@ -104,7 +104,7 @@ test("tag reference visibility retains search and disclosure, individual changes
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "binding.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(sample)),

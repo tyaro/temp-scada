@@ -144,3 +144,18 @@ it("rejects a decoded result arriving after its store was disposed", async () =>
   expect(store.count).toBe(0);
   expect(close).toHaveBeenCalledOnce();
 });
+it("keeps a pinned export snapshot readable across disposal and releases it after the final lease", async () => {
+  const store = new AssetStore(),
+    metadata = await store.put(blob(), "held"),
+    hash = metadata.sha256,
+    release = store.pin([hash]);
+  const other = new AssetStore();
+  other.importFrom(store, hash);
+  store.dispose();
+  expect(store.count).toBe(1);
+  expect(store.blob(hash).size).toBe(png.length);
+  release();
+  expect(store.count).toBe(0);
+  expect(other.blob(hash).size).toBe(png.length);
+  other.dispose();
+});

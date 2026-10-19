@@ -38,7 +38,7 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
   expect(y).toBeCloseTo(380, 0);
   const transform = await added.getAttribute("transform");
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const download = await downloading;
   const json = await readFile((await download.path())!, "utf8");
   const saved = JSON.parse(json);
@@ -57,7 +57,7 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
     page.getByRole("button", { name: "Rectangle を追加" }),
   ).toHaveCount(0);
   await expect(added).toHaveAttribute("transform", transform!);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "edited.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),

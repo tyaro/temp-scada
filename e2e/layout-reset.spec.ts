@@ -39,7 +39,7 @@ async function start(page: Page, bindings = false) {
   await page.reload();
   if (bindings)
     await page
-      .getByLabel("Project JSON を開く", { exact: true })
+      .getByLabel("Project を開く", { exact: true })
       .setInputFiles("examples/tag-binding.project.json");
   await button(page, "編集").click();
 }
@@ -162,7 +162,7 @@ test("restored preferences persist and the expanded reference panel keeps its se
   ).toHaveAttribute("aria-disabled", "true");
   await page.keyboard.press("Escape");
   await page
-    .getByLabel("Project JSON を開く", { exact: true })
+    .getByLabel("Project を開く", { exact: true })
     .setInputFiles("examples/tag-binding.project.json");
   await button(page, "編集").click();
   await expectDefaults(page);

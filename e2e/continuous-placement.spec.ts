@@ -203,11 +203,9 @@ test("switching target or reimporting the same Project ends placement and shared
   await selectPanel(page, "部品");
   await arm(page);
   const download = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const path = await (await download).path();
-  await page
-    .getByLabel("Project JSON を開く", { exact: true })
-    .setInputFiles(path!);
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles(path!);
   await expect(status(page)).toHaveCount(0);
 });
 

@@ -45,13 +45,11 @@ try {
         align: "left",
       };
     }
-    await page
-      .getByLabel("Project JSON を開く", { exact: true })
-      .setInputFiles({
-        name: "text-style-demo.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(project)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "text-style-demo.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
     await page.locator(`button[data-layer-id="${heading.id}"]`).click();
     await expect(page.getByLabel("文字サイズ", { exact: true })).toHaveValue(

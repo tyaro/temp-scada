@@ -1,7 +1,7 @@
 {
   "name": "banto-scada",
   "private": true,
-  "version": "0.15.0",
+  "version": "0.16.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -15,6 +15,7 @@
     "@banto/theme": "github:tyaro/banto#v6.7.0&path:packages/theme",
     "@banto/ui": "github:tyaro/banto#v6.7.0&path:packages/ui",
     "ajv": "8.20.0",
+    "fflate": "0.8.3",
     "svelte": "5.57.2"
   },
   "devDependencies": {

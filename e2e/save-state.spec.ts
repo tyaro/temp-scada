@@ -27,7 +27,7 @@ test("content dirty state follows undo/redo and export requests, not revision or
   expect(await leaving()).toBe(true);
   await button("やり直す").click();
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   await downloading;
   await expect(state).toContainText("書き出し要求後の変更なし");
   await expect(state).toContainText("最終書き出し要求");
@@ -191,7 +191,7 @@ test("replacement validates first, preserves changes on cancel and exports befor
   await button("編集").click();
   await selectPanel(page, "部品");
   await button("Rectangle を追加").click();
-  const input = page.getByLabel("Project JSON を開く", { exact: true }),
+  const input = page.getByLabel("Project を開く", { exact: true }),
     svg = page.getByRole("img", { name: "プロセス画面", exact: true });
   await input.setInputFiles({
     name: "invalid.json",
@@ -249,7 +249,7 @@ test("a failed export never marks the current project as written out", async ({
       throw new Error("download blocked");
     };
   });
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   await expect(page.getByTestId("project-status")).toContainText(
     "書き出しエラー",
   );
@@ -328,7 +328,7 @@ test("invalid model input preserves every dirty form before applying any command
   await expect(
     page.getByRole("img", { name: "プロセス画面", exact: true }),
   ).toBeVisible();
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const downloading = page.waitForEvent("download");
   await prompt
     .getByRole("button", { name: "入力を破棄して続行", exact: true })

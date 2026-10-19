@@ -57,13 +57,11 @@ try {
               : 5,
       );
     }
-    await page
-      .getByLabel("Project JSON を開く", { exact: true })
-      .setInputFiles({
-        name: "organized-equipment.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(fixture)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "organized-equipment.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(fixture)),
+    });
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
     for (const n of [2, 4, 5])
       await page

@@ -31,13 +31,11 @@ try {
     for (const [i, object] of lines.entries())
       object.name =
         ["原水供給配管", "送水配管", "戻り配管"][i] ?? `配管 ${i + 1}`;
-    await page
-      .getByLabel("Project JSON を開く", { exact: true })
-      .setInputFiles({
-        name: "named-pipes.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(project)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "named-pipes.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
     for (const [i, object] of lines.entries())
       await page

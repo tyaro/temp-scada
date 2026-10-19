@@ -173,7 +173,7 @@ test("empty usage lists are explicit and importing the same project clears the o
     "この共有定義を使用している配置はありません",
   );
   const pending = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const file = {
     name: "same.json",
     mimeType: "application/json",
@@ -181,9 +181,7 @@ test("empty usage lists are explicit and importing the same project clears the o
       await readFile((await (await pending).path())!, "utf8"),
     ),
   };
-  await page
-    .getByLabel("Project JSON を開く", { exact: true })
-    .setInputFiles(file);
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles(file);
   await expect(usages(page)).toHaveCount(0);
   await button(page, "共有定義：ポンプ").click();
   await button(page, "使用先を確認").click();

@@ -13,11 +13,11 @@ test("sample renders, downloads, reloads, and invalid import preserves current s
   await expect(svg.locator("[data-object-id]")).toHaveCount(3);
   await page.screenshot({ path: "/tmp/scada-sample.png", fullPage: true });
   const downloadPromise = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const download = await downloadPromise;
   const downloaded = await readFile((await download.path())!, "utf8");
   expect(JSON.parse(downloaded)).toEqual(sample);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "saved.json",
     mimeType: "application/json",
     buffer: Buffer.from(downloaded),
@@ -28,10 +28,11 @@ test("sample renders, downloads, reloads, and invalid import preserves current s
   const changed = structuredClone(sample);
   changed.manifest.name = "読込テスト";
   changed.screens[0].objects[2].shape = {
+    ...changed.screens[0].objects[2].shape,
     type: "text",
     text: "<script>bad()</script>",
   };
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "project.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(changed)),
@@ -39,8 +40,10 @@ test("sample renders, downloads, reloads, and invalid import preserves current s
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "読込テスト",
   );
-  await expect(svg.locator("text")).toHaveText("<script>bad()</script>");
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await expect(svg.locator("text[data-text-content]")).toHaveText(
+    "<script>bad()</script>",
+  );
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "bad.json",
     mimeType: "application/json",
     buffer: Buffer.from('{"screens":[]}'),

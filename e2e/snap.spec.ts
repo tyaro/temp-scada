@@ -114,7 +114,7 @@ test("pipe vertices snap in screen coordinates, support keyboard and cancel with
     "0,0\n147,33\n120,100\n240,100",
   );
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const download = await downloading,
     json = await readFile((await download.path())!, "utf8"),
     saved = JSON.parse(json);
@@ -132,8 +132,13 @@ test("pipe vertices snap in screen coordinates, support keyboard and cancel with
       ],
     },
   });
-  expect(Object.keys(saved).sort()).toEqual(["manifest", "screens", "symbols"]);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  expect(Object.keys(saved).sort()).toEqual([
+    "assets",
+    "manifest",
+    "screens",
+    "symbols",
+  ]);
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "vertices.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),

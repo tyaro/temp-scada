@@ -13,7 +13,7 @@ async function start(page: Page) {
   await page.setViewportSize({ width: 1600, height: 1100 });
   await page.goto("/");
   await page
-    .getByLabel("Project JSON を開く", { exact: true })
+    .getByLabel("Project を開く", { exact: true })
     .setInputFiles("examples/tag-binding.project.json");
   await button(page, "編集").click();
   await page.locator("details.references > summary").click();
@@ -73,13 +73,13 @@ test("height resize preserves drafts, search and Project while persisting only U
   );
   await page.getByLabel("画面名", { exact: true }).fill(sample.screens[0].name);
   const download = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   expect(
     JSON.parse(await readFile((await (await download).path())!, "utf8")),
   ).toEqual(sample);
   await page.reload();
   await page
-    .getByLabel("Project JSON を開く", { exact: true })
+    .getByLabel("Project を開く", { exact: true })
     .setInputFiles("examples/tag-binding.project.json");
   await button(page, "編集").click();
   await page.locator("details.references > summary").click();
@@ -203,6 +203,7 @@ test("long reference lists scroll within the resized panel and keep every usage 
     object.id = `0199f000-0000-7000-8000-${(100 + i).toString().padStart(12, "0")}`;
     object.order = i + 6;
     object.shape = {
+      ...template.shape,
       type: "text",
       text: `液位 ${i}`,
       binding: {
@@ -211,7 +212,7 @@ test("long reference lists scroll within the resized panel and keep every usage 
     } as typeof template.shape;
     many.screens[0].objects.push(object);
   }
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "many.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(many)),

@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { AssetStore } from "./lib/image-assets";
+  import { readProjectFile, writeProjectPackage } from "./lib/project-package";
+  import BackgroundImageSettings from "./lib/designer/BackgroundImageSettings.svelte";
   import {
     StatusBadge,
     ToastHost,
@@ -544,6 +547,7 @@
   import {
     type EditCommand,
     applyCommand,
+    newId,
     isObjectCommand,
     symbolUsage,
     type AddKind,
@@ -1100,6 +1104,127 @@
     submitForm(event);
   }
   let project = $state(parseProject(JSON.stringify(sample)));
+  let assetStore = $state.raw(new AssetStore());
+  const assetImages = $derived(
+    new Map(
+      project.assets.map((asset) => [
+        asset.id,
+        {
+          url: assetStore.url(asset.sha256),
+          width: asset.width,
+          height: asset.height,
+        },
+      ]),
+    ),
+  );
+  function collectAssets() {
+    const hashes = new Set(project.assets.map((asset) => asset.sha256));
+    for (const snapshot of [...history.past, ...history.future])
+      for (const asset of (JSON.parse(snapshot) as Project).assets)
+        hashes.add(asset.sha256);
+    assetStore.collect(hashes);
+  }
+  $effect(collectAssets);
+  let imageReadRequest = 0;
+  let imageBusy = $state(false);
+
+  function importBackground(file: File) {
+    const generation = workspaceGeneration,
+      owner = screen.id;
+    transition(() => {
+      if (
+        generation !== workspaceGeneration ||
+        owner !== screen.id ||
+        activeDefinition ||
+        busy ||
+        replacement ||
+        mode !== "edit"
+      )
+        return;
+      void prepareBackground(file, generation, owner);
+    });
+  }
+  async function prepareBackground(
+    file: File,
+    generation: number,
+    owner: string,
+  ) {
+    const request = ++imageReadRequest,
+      candidate = new AssetStore();
+    const current = () =>
+      request === imageReadRequest &&
+      generation === workspaceGeneration &&
+      owner === screen.id &&
+      !activeDefinition &&
+      !busy &&
+      !replacement &&
+      mode === "edit";
+    imageBusy = true;
+    try {
+      const metadata = await candidate.put(file, file.name);
+      if (!current()) {
+        candidate.dispose();
+        return;
+      }
+      const apply = () => {
+        if (!current()) {
+          candidate.dispose();
+          return;
+        }
+        try {
+          assetStore.importFrom(candidate, metadata.sha256);
+          const existing = project.assets.find(
+            (asset) => asset.sha256 === metadata.sha256,
+          );
+          const asset = existing ?? { ...metadata, id: newId() };
+          const previous = project.screens.find(
+            (item) => item.id === owner,
+          )?.backgroundImage;
+          edit({
+            type: "set-background-image",
+            screenId: owner,
+            asset,
+            image: {
+              assetId: asset.id,
+              fit: previous?.fit ?? "contain",
+              opacity: previous?.opacity ?? 1,
+            },
+          });
+        } catch (error) {
+          report(
+            "error",
+            `画像取込エラー: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        } finally {
+          candidate.dispose();
+          collectAssets();
+        }
+      };
+      drafts.allow(apply) && apply();
+    } catch (error) {
+      candidate.dispose();
+      if (current())
+        report(
+          "error",
+          `画像取込エラー: ${error instanceof Error ? error.message : String(error)}`,
+        );
+    } finally {
+      if (request === imageReadRequest) imageBusy = false;
+    }
+  }
+  function removeBackground() {
+    const owner = screen.id,
+      generation = workspaceGeneration;
+    transition(() => {
+      if (
+        generation === workspaceGeneration &&
+        owner === screen.id &&
+        !activeDefinition
+      )
+        edit({ type: "set-background-image", screenId: owner, image: null });
+    });
+  }
+
   let editorRegion = $state<HTMLElement>();
   let inspectorPanel = $state<HTMLElement>();
   let inspectorController = $state<{
@@ -1272,6 +1397,9 @@
       project.screens.find((s) => s.id === screenId) ??
       project.screens[0],
   );
+  const backgroundScreen = $derived(
+    project.screens.find((item) => item.id === screen.id),
+  );
   let message = $state("サンプルを表示しています。Hub には接続していません。");
   let busy = $state(false);
   let baseline = $state(untrack(() => projectContent(project)));
@@ -1281,19 +1409,42 @@
   let replacement = $state<{
     project: Project;
     source: "sample" | "file" | "new";
+    store: AssetStore;
   } | null>(null);
-  const saveLabel = $derived(
-    projectChanged
-      ? "未書き出しの変更あり"
-      : baselineSource === "download"
-        ? "書き出し要求後の変更なし"
-        : baselineSource === "file"
-          ? "読込後の変更なし"
-          : baselineSource === "new"
-            ? "新しいProject・未書き出し"
-            : "サンプルからの変更なし",
+  const imageScope = $derived(
+    `${workspaceGeneration}:${screen.id}:${mode}:${!!activeDefinition}:${busy}:${!!replacement}`,
   );
-  function adopt(next: Project, source: "sample" | "file" | "new") {
+  $effect(() => {
+    imageScope;
+    untrack(() => {
+      imageReadRequest++;
+      imageBusy = false;
+    });
+  });
+
+  let exporting = $state(false);
+  let exportingName = $state("");
+  const saveLabel = $derived(
+    exporting
+      ? `書出し中（${exportingName}）`
+      : projectChanged
+        ? "未書き出しの変更あり"
+        : baselineSource === "download"
+          ? "書き出し要求後の変更なし"
+          : baselineSource === "file"
+            ? "読込後の変更なし"
+            : baselineSource === "new"
+              ? "新しいProject・未書き出し"
+              : "サンプルからの変更なし",
+  );
+  function adopt(
+    next: Project,
+    source: "sample" | "file" | "new",
+    store = new AssetStore(),
+  ) {
+    const previousStore = assetStore;
+    assetStore = store;
+    previousStore.dispose();
     project = next;
     baseline = projectContent(next);
     baselineSource = source;
@@ -1320,17 +1471,27 @@
     next: Project,
     source: "sample" | "file" | "new",
     generation = workspaceGeneration,
+    store = new AssetStore(),
   ) {
-    if (generation !== workspaceGeneration) return;
-    if (!drafts.allow(() => requestReplacement(next, source, generation)))
+    if (generation !== workspaceGeneration) {
+      store.dispose();
       return;
-    if (projectChanged) replacement = { project: next, source };
-    else adopt(next, source);
+    }
+    if (
+      !drafts.allow(() => requestReplacement(next, source, generation, store))
+    )
+      return;
+    if (projectChanged) replacement = { project: next, source, store };
+    else adopt(next, source, store);
   }
   function replaceNow() {
     const next = replacement;
     replacement = null;
-    if (next) adopt(next.project, next.source);
+    if (next) adopt(next.project, next.source, next.store);
+  }
+  function cancelReplacement() {
+    replacement?.store.dispose();
+    replacement = null;
   }
   function newProject() {
     if (busy || drafts.pending || replacement) return;
@@ -1541,7 +1702,7 @@
       if (form) acknowledgeForm(form);
       report(
         "success",
-        "変更を適用しました。JSON を保存するとファイルに残せます。",
+        "変更を適用しました。Project を保存するとファイルに残せます。",
       );
       return true;
     } catch (e) {
@@ -1715,6 +1876,23 @@
   }
   function formCommand(form: HTMLFormElement): EditCommand {
     const data = new FormData(form);
+    if (form.dataset.editorForm === "background-image") {
+      if (
+        activeDefinition ||
+        form.dataset.targetKey !== `${workspaceGeneration}:${screen.id}` ||
+        !backgroundScreen?.backgroundImage
+      )
+        throw new Error("背景画像の編集対象が変わりました。");
+      return {
+        type: "set-background-image",
+        screenId: screen.id,
+        image: {
+          ...backgroundScreen.backgroundImage,
+          fit: String(data.get("fit")) as "contain",
+          opacity: parseNumericProperty(String(data.get("opacity"))) / 100,
+        },
+      };
+    }
     if (form.dataset.editorForm === "shape-paint") {
       if (
         !selected ||
@@ -2000,12 +2178,12 @@
       input.isConnected;
     busy = true;
     try {
-      if (file.size > 1024 * 1024)
-        throw new Error("ファイルは 1 MiB 以下にしてください");
-      const text = await file.text();
-      if (!current()) return;
-      const next = parseProject(text);
-      requestReplacement(next, "file", generation);
+      const next = await readProjectFile(file);
+      if (!current()) {
+        next.store.dispose();
+        return;
+      }
+      requestReplacement(next.project, "file", generation, next.store);
     } catch (e) {
       if (!current()) return;
       report(
@@ -2019,38 +2197,55 @@
   }
   function save() {
     if (replacement) {
-      writeJson();
+      writeProject();
       return;
     }
     if (!drafts.allow(save)) return;
-    writeJson();
+    writeProject();
   }
-  function writeJson() {
+  async function writeProject() {
+    if (exporting) {
+      report("info", `${exportingName}の書出し中です。完了をお待ちください。`);
+      return;
+    }
+    const snapshot = project,
+      generation = workspaceGeneration,
+      store = assetStore;
+    exportingName = snapshot.manifest.name;
+    exporting = true;
     try {
-      const json = serializeProject(project);
-      const url = URL.createObjectURL(
-        new Blob([json], { type: "application/json" }),
-      );
+      const packaged = snapshot.assets.length > 0;
+      const blob = packaged
+        ? await writeProjectPackage(snapshot, store)
+        : new Blob([serializeProject(snapshot)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
       try {
         const link = document.createElement("a");
         link.href = url;
-        link.download = "project.json";
+        link.download = packaged ? "project.bantoscada" : "project.json";
         link.click();
       } finally {
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
-      baseline = projectContent(project);
-      baselineSource = "download";
-      lastExport = new Date().toLocaleTimeString("ja-JP");
+      if (generation === workspaceGeneration) {
+        baseline = projectContent(snapshot);
+        baselineSource = "download";
+        lastExport = new Date().toLocaleTimeString("ja-JP");
+      }
       report(
         "success",
-        "Project JSON のダウンロードを開始しました。保存先でファイルを確認してください。",
+        packaged
+          ? `${snapshot.manifest.name}：画像同梱packageのダウンロードを開始しました。保存先でファイルを確認してください。`
+          : `${snapshot.manifest.name}：Project JSON のダウンロードを開始しました。保存先でファイルを確認してください。`,
       );
     } catch (e) {
       report(
         "error",
-        `書き出しエラー: ${e instanceof Error ? e.message : String(e)}`,
+        `${snapshot.manifest.name}の書き出しエラー: ${e instanceof Error ? e.message : String(e)}`,
       );
+    } finally {
+      exporting = false;
+      exportingName = "";
     }
   }
   function changeMode(next: "edit" | "preview") {
@@ -2874,11 +3069,11 @@
       items: [
         { label: "新しいProject", disabled: menuBlocked, run: newProject },
         {
-          label: "Project JSON を開く",
+          label: "Project を開く",
           disabled: menuBlocked,
           run: openProjectFile,
         },
-        { label: "Project JSON を保存", disabled: menuBlocked, run: save },
+        { label: "Project を保存", disabled: menuBlocked, run: save },
         {
           label: "プロジェクト名を変更",
           disabled: editBlocked,
@@ -3068,10 +3263,10 @@
 {#key workspaceGeneration}
   <input
     hidden
-    aria-label="Project JSON を開く"
+    aria-label="Project を開く"
     bind:this={projectFileInput}
     type="file"
-    accept=".json,application/json"
+    accept=".json,.bantoscada,.zip,application/json,application/zip"
     disabled={busy}
     onchange={load}
   />
@@ -3450,6 +3645,23 @@
                 >
               </form>
             {/key}
+            {#if !activeDefinition}
+              {#key `${workspaceGeneration}:${screen.id}`}
+                <BackgroundImageSettings
+                  image={backgroundScreen?.backgroundImage}
+                  asset={project.assets.find(
+                    (asset) =>
+                      asset.id === backgroundScreen?.backgroundImage?.assetId,
+                  )}
+                  targetKey={`${workspaceGeneration}:${screen.id}`}
+                  {drafts}
+                  busy={imageBusy || busy || !!replacement || !!drafts.pending}
+                  onimport={importBackground}
+                  onremove={removeBackground}
+                  onsubmit={properties}
+                />
+              {/key}
+            {/if}
             <p class="hint">
               サイズ変更は表示領域のみを変更します。図形の位置・サイズは変わりません。
             </p>
@@ -3816,6 +4028,7 @@ ${object.id}`}
           oncontextrequest={requestSelectionContext}
           {screen}
           symbols={project.symbols}
+          images={assetImages}
           editable={mode === "edit"}
           {selectedIds}
           {showGrid}
@@ -3889,6 +4102,7 @@ ${object.id}`}
               <Minimap
                 {screen}
                 symbols={project.symbols}
+                images={assetImages}
                 view={canvasView}
                 oncenter={(point) => canvasWorkspace?.centerOn(point)}
                 onfit={() => canvasWorkspace?.zoom(null)}
@@ -4031,7 +4245,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.15.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.16.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。
@@ -4060,7 +4274,7 @@ ${object.id}`}
     レイヤーの目のアイコンは図面の静的な表示設定です。表示プレビュー・共有定義・ミニマップにも反映します。非表示の配置はレイヤーから選択・再表示できます。キャンバスから見えない配置の移動・削除・切り取りは防ぎ、プロパティやレイヤーで対象を確認した明示操作は許可します。
   </p>
   <p>
-    Ctrl / Command + N：新しいProject、O：JSONを開く、S／Shift +
+    Ctrl / Command + N：新しいProject、O：Projectを開く、S／Shift +
     S：JSON書き出し（ダウンロード）。ブラウザによってN／Oが予約されている場合は「ファイル」メニューを使ってください。保存先の選択・既存ファイルへの上書きには未対応です。
   </p>
   <p>
@@ -4085,7 +4299,7 @@ ${object.id}`}
 <Modal
   open={replacement !== null}
   title="Project を置き換えますか"
-  onclose={() => (replacement = null)}
+  onclose={cancelReplacement}
 >
   <p>
     {#if projectChanged}
@@ -4100,9 +4314,13 @@ ${object.id}`}
     書き出しても自動では置き換えません。ファイルを確認してから「破棄して開く」を選んでください。
   </p>
   <div class="actions">
-    <button onclick={writeJson}>JSON を書き出す</button><button
-      onclick={replaceNow}>破棄して開く</button
-    ><button onclick={() => (replacement = null)}>キャンセル</button>
+    <button onclick={writeProject}
+      >{project.assets.length
+        ? "画像同梱で書き出す"
+        : "JSON を書き出す"}</button
+    ><button onclick={replaceNow}>破棄して開く</button><button
+      onclick={cancelReplacement}>キャンセル</button
+    >
   </div>
 </Modal>
 <ToastHost store={toastStore} />

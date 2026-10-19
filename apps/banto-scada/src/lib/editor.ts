@@ -9,6 +9,8 @@ import {
   type Project,
   type TagBinding,
   type ShapePaint,
+  type ImageAsset,
+  type BackgroundImage,
   type TextStyle,
   type LineStyle,
 } from "./project";
@@ -46,6 +48,12 @@ export interface OutlineStylePatch {
 export type AlignMode =
   "left" | "right" | "top" | "bottom" | "center-x" | "center-y";
 type ScreenCommand =
+  | {
+      type: "set-background-image";
+      screenId: string;
+      image: BackgroundImage | null;
+      asset?: ImageAsset;
+    }
   | {
       type: "create-screen";
       name: string;
@@ -509,6 +517,35 @@ export function applyCommand(
           copy.shape.symbolId = references.get(copy.shape.symbolId)!;
         screen.objects.push(copy);
       });
+    return finish(project, next);
+  }
+  if (command.type === "set-background-image") {
+    if (command.image === null) {
+      if (command.asset)
+        throw new Error("背景解除と資産登録は同時に指定できません");
+      delete targetScreen!.backgroundImage;
+    } else {
+      const image = structuredClone(command.image);
+      if (command.asset) {
+        if (command.asset.id !== image.assetId)
+          throw new Error("背景画像と登録資産のIDが一致しません");
+        const existing = next.assets.find(
+          (a) => a.sha256 === command.asset!.sha256,
+        );
+        if (existing) {
+          if (
+            ["mime", "byteLength", "width", "height"].some(
+              (key) =>
+                existing[key as keyof ImageAsset] !==
+                command.asset![key as keyof ImageAsset],
+            )
+          )
+            throw new Error("画像hashと資産宣言が一致しません");
+          image.assetId = existing.id;
+        } else next.assets.push(structuredClone(command.asset));
+      }
+      targetScreen!.backgroundImage = image;
+    }
     return finish(project, next);
   }
   if (command.type === "update-screen") {
@@ -1097,6 +1134,13 @@ function screenName(name: string): string {
   return trimmed;
 }
 function finish(project: Project, next: Project): Project {
+  const usedAssets = new Set(
+    next.screens.flatMap((s) =>
+      s.backgroundImage ? [s.backgroundImage.assetId] : [],
+    ),
+  );
+  next.assets = next.assets.filter((asset) => usedAssets.has(asset.id));
+
   if (next.symbols.some((s) => s.objects.length === 0))
     throw new Error("Symbol 定義には図形を 1 つ以上残してください");
   if (serializeProject(next) === serializeProject(project)) return project;

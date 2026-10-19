@@ -64,7 +64,7 @@ test("screen order is explicit, protected by draft handling and preserved by und
   ]);
   await button("画面を上へ").click();
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
   const saved = JSON.parse(json);
   expect(saved.screens.map((s: any) => s.name)).toEqual([
@@ -75,7 +75,7 @@ test("screen order is explicit, protected by draft handling and preserved by und
   await screens
     .getByRole("button", { name: "プロセス画面", exact: true })
     .click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "ordered.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),

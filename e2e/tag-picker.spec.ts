@@ -145,7 +145,7 @@ test("double click chooses; dialog shortcuts and same-ID project reload cannot m
   await button(page, "入力を破棄して続行").click();
   await button(page, "タグを選択").click();
   await tag(page, /原水タンク 液位/).click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "same-ids.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(sample)),

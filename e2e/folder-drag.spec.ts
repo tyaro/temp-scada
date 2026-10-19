@@ -36,7 +36,7 @@ async function start(page: Page, project = fixture()) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await button(page, "編集").click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "folder.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -258,7 +258,7 @@ test("shared-definition folder parenting stays isolated and a file reload invali
   expect(next.symbols[0].objects).toEqual(definition.objects);
   expect(next.symbols[0].folders.find((f: any) => f.id === b).parentId).toBe(c);
   data = await begin(page, b);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "reload.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(next)),
@@ -289,13 +289,11 @@ test("Undo changing a captured parent stops autoscroll without another dragover"
   await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
   const box = (await panel.boundingBox())!,
     before = await panel.evaluate((el) => el.scrollTop);
-  await page
-    .locator(".layer-browser")
-    .dispatchEvent("dragover", {
-      dataTransfer: data,
-      clientX: box.x + 30,
-      clientY: box.y + 8,
-    });
+  await page.locator(".layer-browser").dispatchEvent("dragover", {
+    dataTransfer: data,
+    clientX: box.x + 30,
+    clientY: box.y + 8,
+  });
   await expect
     .poll(() => panel.evaluate((el) => el.scrollTop))
     .toBeLessThan(before - 50);

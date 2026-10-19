@@ -31,13 +31,11 @@ try {
     );
     selected.opacity = 0.45;
     selected.name = "原水ポンプ（不透明度45%）";
-    await page
-      .getByLabel("Project JSON を開く", { exact: true })
-      .setInputFiles({
-        name: "opacity-demo.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(project)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "opacity-demo.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
     await page.locator(`button[data-layer-id="${selected.id}"]`).click();
     await expect(page.getByLabel("不透明度（%）", { exact: true })).toHaveValue(

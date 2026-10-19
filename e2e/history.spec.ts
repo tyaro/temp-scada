@@ -40,13 +40,13 @@ test("duplicate placements, undo/redo and stacking order survive file round-trip
     copyId!,
   );
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const downloaded = await downloading;
   const json = await readFile((await downloaded.path())!, "utf8"),
     saved = JSON.parse(json);
   expect(saved.symbols).toHaveLength(1);
   expect(saved.manifest.projectRevision).toBe(8);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "history.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),

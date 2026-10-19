@@ -12,7 +12,7 @@ async function start(page: Page, project: any = sample) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await button(page, "編集").click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "text.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -279,13 +279,11 @@ test("text symbol thumbnails recover from a failed hidden measurement when the p
       return original.apply(this, args);
     };
   });
-  await page
-    .getByLabel("Project JSON を開く", { exact: true })
-    .setInputFiles({
-      name: "thumbnail.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(project)),
-    });
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    name: "thumbnail.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
   await button(page, "編集").click();
   await selectPanel(page, "部品");
   const category = page.locator('button[aria-controls="palette-symbols"]');

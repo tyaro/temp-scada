@@ -69,7 +69,7 @@ test("edits pipes and reusable symbols, then reproduces the saved process screen
     .click();
   await expect(svg.locator("[data-object-id]")).toHaveCount(18);
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const downloaded = await downloading;
   const json = await readFile((await downloaded.path())!, "utf8");
   const saved = JSON.parse(json);
@@ -81,7 +81,7 @@ test("edits pipes and reusable symbols, then reproduces the saved process screen
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
   const before = await svg.innerHTML();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "process.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),
@@ -93,16 +93,16 @@ test("loads legacy geometry and saves the migrated version without losing identi
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "old.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(legacy)),
   });
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const download = await downloading;
   const saved = JSON.parse(await readFile((await download.path())!, "utf8"));
-  expect(saved.manifest.schemaVersion).toBe("0.15.0");
+  expect(saved.manifest.schemaVersion).toBe("0.16.0");
   expect(saved.manifest.projectId).toBe(legacy.manifest.projectId);
   expect(saved.manifest.projectRevision).toBe(legacy.manifest.projectRevision);
   expect(saved.screens).toEqual(

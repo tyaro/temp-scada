@@ -15,7 +15,7 @@ async function edit(page: Page) {
   await selectPanel(page, "部品");
 }
 async function load(page: Page, project = processProject) {
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "process.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -23,7 +23,7 @@ async function load(page: Page, project = processProject) {
 }
 async function save(page: Page) {
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   return JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );

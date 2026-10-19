@@ -34,18 +34,18 @@ test("assigns a read-only tag, shows disconnected in editor and preview, and pre
   await button("選択図形を複製").click();
   await expect(tag).toHaveCount(2);
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );
-  expect(saved.manifest.schemaVersion).toBe("0.15.0");
-  expect(saved.manifest.minRuntimeVersion).toBe("0.15.0");
+  expect(saved.manifest.schemaVersion).toBe("0.16.0");
+  expect(saved.manifest.minRuntimeVersion).toBe("0.16.0");
   expect(
     saved.screens[0].objects
       .filter((o: any) => o.shape.binding)
       .map((o: any) => o.shape.binding),
   ).toEqual([{ externalName: name }, { externalName: name }]);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "bound.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(saved)),
@@ -94,7 +94,7 @@ test("invalid assignment retains the input and selection, and invalid imported b
   await expect(button("元に戻す")).toBeDisabled();
   const invalid = structuredClone(sample);
   (invalid.screens[0].objects[2].shape as any).binding = { tagId: 12 };
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "bad-binding.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(invalid)),
@@ -115,7 +115,7 @@ test("the standalone binding sample loads without a Hub and keeps static shapes 
   page,
 }) => {
   await page.goto("/");
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "sample.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(sample)),

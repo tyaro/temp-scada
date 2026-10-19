@@ -36,7 +36,7 @@ test("new blank project is an editable clean baseline, exports current schema an
   await button(page, "元に戻す").click();
   await expect(state(page)).toContainText("新しいProject・未書き出し");
   const first = await exported(page);
-  expect(first.manifest.schemaVersion).toBe("0.15.0");
+  expect(first.manifest.schemaVersion).toBe("0.16.0");
   expect(first.screens).toHaveLength(1);
   expect(first.screens[0]).toMatchObject({
     name: "画面1",
@@ -52,7 +52,7 @@ test("new blank project is an editable clean baseline, exports current schema an
   const second = await exported(page);
   expect(second.manifest.projectId).not.toBe(first.manifest.projectId);
   expect(second.screens[0].id).not.toBe(first.screens[0].id);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "new.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(first)),
@@ -192,18 +192,18 @@ test("a newer completed file read wins over an older delayed read", async ({
 }) => {
   await page.goto("/");
   await page.evaluate(() => {
-    const original = File.prototype.text;
+    const original = File.prototype.arrayBuffer;
     (window as any).releaseFile = null;
-    File.prototype.text = function () {
+    File.prototype.arrayBuffer = function () {
       if (this.name === "slow.json")
-        return new Promise<string>((resolve) => {
+        return new Promise<ArrayBuffer>((resolve) => {
           (window as any).releaseFile = async () =>
             resolve(await original.call(this));
         });
       return original.call(this);
     };
   });
-  const input = page.getByLabel("Project JSON を開く", { exact: true });
+  const input = page.getByLabel("Project を開く", { exact: true });
   const old = structuredClone(sample),
     latest = structuredClone(sample);
   old.manifest.name = "古い非同期読み込み";

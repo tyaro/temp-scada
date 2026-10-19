@@ -69,7 +69,7 @@ test("dragging panel borders preserves drafts and saves widths separately from P
   await page.getByLabel("画面名", { exact: true }).fill("プロセス画面");
   await page.getByLabel("色", { exact: true }).fill("#164e63");
   const pending = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const saved = JSON.parse(
     await readFile((await (await pending).path())!, "utf8"),
   );

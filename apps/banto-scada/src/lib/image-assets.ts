@@ -207,13 +207,14 @@ export class AssetStore {
       this.#pins.set(hash, (this.#pins.get(hash) ?? 0) + 1);
     let released = false;
     return () => {
-      if (released || this.#disposed) return;
+      if (released) return;
       released = true;
       for (const hash of unique) {
         const count = this.#pins.get(hash)! - 1;
         if (count) this.#pins.set(hash, count);
         else this.#pins.delete(hash);
       }
+      if (this.#disposed) this.collect(new Set());
     };
   }
   /** Caller supplies the union of current Project and every Undo/Redo snapshot. */
@@ -225,13 +226,23 @@ export class AssetStore {
         this.#entries.delete(hash);
       }
   }
+  importFrom(source: AssetStore, hash: string): ImageMetadata {
+    if (this.#disposed) throw new Error("画像の取込先は閉じられています。");
+    const entry = source.#entry(hash),
+      existing = this.#entries.get(hash);
+    if (existing) return { ...existing.metadata };
+    if (this.#size + entry.blob.size > STORE_LIMIT)
+      throw new Error(
+        "履歴を含む画像容量が256MiBを超えます。保存後にProjectを開き直してください。",
+      );
+    this.#entries.set(hash, { blob: entry.blob, metadata: entry.metadata });
+    this.#size += entry.blob.size;
+    return { ...entry.metadata };
+  }
   dispose() {
     this.#disposed = true;
-    for (const entry of this.#entries.values())
-      if (entry.url) URL.revokeObjectURL(entry.url);
-    this.#entries.clear();
-    this.#pins.clear();
-    this.#size = 0;
+    // An in-flight export holds its snapshot until its final lease is released.
+    this.collect(new Set());
   }
   #entry(hash: string) {
     const entry = this.#entries.get(hash);

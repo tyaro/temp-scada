@@ -15,7 +15,7 @@ async function start(page: Page) {
 }
 async function save(page: Page) {
   const pending = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   return JSON.parse(await readFile((await (await pending).path())!, "utf8"));
 }
 
@@ -47,12 +47,12 @@ test("screen background is staged, undoable and persistent while themes, objects
   const original = JSON.parse(
     await readFile("examples/process.project.json", "utf8"),
   );
-  expect(project.manifest.schemaVersion).toBe("0.15.0");
-  expect(project.manifest.minRuntimeVersion).toBe("0.15.0");
+  expect(project.manifest.schemaVersion).toBe("0.16.0");
+  expect(project.manifest.minRuntimeVersion).toBe("0.16.0");
   expect(project.screens[0].background).toBe("#ffffff");
   expect(project.screens[0].objects).toEqual(original.screens[0].objects);
   expect(project.symbols).toEqual(original.symbols);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "background.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -116,13 +116,11 @@ test("invalid backgrounds and the previous schema leave the current project inta
   delete missing.screens[0].background;
   invalid.push(missing);
   for (const value of invalid) {
-    await page
-      .getByLabel("Project JSON を開く", { exact: true })
-      .setInputFiles({
-        name: "invalid.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(value)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "invalid.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(value)),
+    });
     await expect(page.getByTestId("project-status")).toContainText(
       "読込エラー",
     );
@@ -140,7 +138,7 @@ test("the light process example renders on either app theme and copies its backg
 }) => {
   await page.goto("/");
   await page
-    .getByLabel("Project JSON を開く", { exact: true })
+    .getByLabel("Project を開く", { exact: true })
     .setInputFiles("examples/process-light.project.json");
   await expect(paper(page)).toHaveAttribute("fill", "#ffffff");
   for (const theme of ["light", "dark"] as const) {

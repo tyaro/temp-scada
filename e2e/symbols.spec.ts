@@ -58,12 +58,12 @@ test("shared definition edits update placements across screens and survive histo
     ).toHaveCount(childCount);
   }
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
   const saved = JSON.parse(json);
   expect(saved.symbols).toHaveLength(1);
   expect(saved.symbols[0].name).toBe("循環ポンプ");
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "symbols.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),

@@ -173,7 +173,7 @@ test("view settings survive target and preview switches, reset on import, and ne
   await expect(page.getByLabel("表示倍率", { exact: true })).toHaveValue("2");
   await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(200);
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const download = await downloading;
   const path = (await download.path())!;
   const { readFile } = await import("node:fs/promises");
@@ -189,7 +189,7 @@ test("view settings survive target and preview switches, reset on import, and ne
     "objects",
     "width",
   ]);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "view.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),

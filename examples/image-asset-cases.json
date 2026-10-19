@@ -1,0 +1,58 @@
+[
+  { "name": "valid background declaration", "valid": true },
+  { "name": "cover fit", "imagePatch": { "fit": "cover" }, "valid": true },
+  {
+    "name": "original fit",
+    "imagePatch": { "fit": "original" },
+    "valid": true
+  },
+  {
+    "name": "zero background alpha",
+    "imagePatch": { "opacity": 0 },
+    "valid": true
+  },
+  { "name": "unknown fit", "imagePatch": { "fit": "tile" }, "valid": false },
+  {
+    "name": "alpha string",
+    "imagePatch": { "opacity": "0.5" },
+    "valid": false
+  },
+  {
+    "name": "alpha overflow",
+    "imagePatch": { "opacity": 1.1 },
+    "valid": false
+  },
+  { "name": "image missing asset", "removeAssets": true, "valid": false },
+  { "name": "unused asset", "omitImage": true, "valid": false },
+  { "name": "duplicate hash", "duplicateHash": true, "valid": false },
+  { "name": "global identifier collision", "projectId": true, "valid": false },
+  {
+    "name": "unsupported MIME",
+    "assetPatch": { "mime": "image/svg+xml" },
+    "valid": false
+  },
+  { "name": "invalid hash", "assetPatch": { "sha256": "abc" }, "valid": false },
+  { "name": "empty bytes", "assetPatch": { "byteLength": 0 }, "valid": false },
+  {
+    "name": "byte limit",
+    "assetPatch": { "byteLength": 8388609 },
+    "valid": false
+  },
+  {
+    "name": "pixel limit",
+    "assetPatch": { "width": 8192, "height": 8192 },
+    "valid": false
+  },
+  { "name": "side limit", "assetPatch": { "width": 8193 }, "valid": false },
+  {
+    "name": "fractional pixel",
+    "assetPatch": { "width": 1.5 },
+    "valid": false
+  },
+  {
+    "name": "unknown asset field",
+    "assetPatch": { "url": "blob:local" },
+    "valid": false
+  },
+  { "name": "old format", "oldVersion": true, "valid": false }
+]

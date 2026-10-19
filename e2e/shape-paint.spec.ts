@@ -23,7 +23,7 @@ async function start(page: Page, project: object = minimal) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "paint.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -194,7 +194,7 @@ test("shared paint preserves monochrome overrides and warns about viewport clipp
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "sample.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),

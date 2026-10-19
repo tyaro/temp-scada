@@ -24,7 +24,7 @@ try {
       .click();
     await button("編集").click();
     await page
-      .getByLabel("Project JSON を開く", { exact: true })
+      .getByLabel("Project を開く", { exact: true })
       .setInputFiles("examples/process-light.project.json");
     await expect(
       page

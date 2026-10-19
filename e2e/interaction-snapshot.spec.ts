@@ -39,13 +39,11 @@ async function start(page: Page) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await button(page, "編集").click();
-  await page
-    .getByLabel("Project JSON を開く", { exact: true })
-    .setInputFiles({
-      name: "interaction.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(fixture())),
-    });
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    name: "interaction.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(fixture())),
+  });
   await selectPanel(page, "レイヤー");
   await row(page, rectangleId).click();
   await page.getByLabel("x", { exact: true }).fill("120");

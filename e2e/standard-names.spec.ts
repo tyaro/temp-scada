@@ -49,7 +49,7 @@ test("Project name applies metadata only, preserves drafts, trims no-ops and rou
   expect(result.manifest.name).toBe("原水供給設備");
   expect(result.manifest.projectId).toBe(sample.manifest.projectId);
   expect(result.screens).toEqual(sample.screens);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "renamed.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(result)),

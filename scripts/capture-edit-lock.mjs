@@ -39,13 +39,11 @@ try {
       if (labels[object.order]) object.name = labels[object.order];
     fixture.screens[0].objects.find((object) => object.order === 10).locked =
       true;
-    await page
-      .getByLabel("Project JSON を開く", { exact: true })
-      .setInputFiles({
-        name: "named-equipment.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(fixture)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "named-equipment.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(fixture)),
+    });
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
     await page
       .getByRole("navigation", { name: "図形一覧" })

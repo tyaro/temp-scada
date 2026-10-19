@@ -156,12 +156,12 @@ test("dragging shared symbols from the name list preserves definition identity t
     .evaluateAll((els) => els.map((el) => el.getAttribute("data-symbol-id")));
   expect(ids[1]).toBe(ids[0]);
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
   const saved = JSON.parse(json);
   expect(saved.symbols).toHaveLength(1);
   expect(saved.manifest.projectRevision).toBe(3);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "dropped.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),

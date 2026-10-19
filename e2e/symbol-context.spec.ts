@@ -22,7 +22,7 @@ async function action(page: Page, target: string, name: string) {
 }
 async function save(page: Page) {
   const pending = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   return JSON.parse(await readFile((await (await pending).path())!, "utf8"));
 }
 
@@ -211,9 +211,7 @@ test("definition menus honor the count limit and close when the same project is 
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
   };
-  await page
-    .getByLabel("Project JSON を開く", { exact: true })
-    .setInputFiles(file);
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles(file);
   await expect(list(page).locator("button[aria-pressed]")).toHaveCount(100);
   await row(page, "ポンプ").click({ button: "right" });
   const popup = menu(page, "ポンプ");
@@ -223,9 +221,7 @@ test("definition menus honor the count limit and close when the same project is 
   await expect(
     popup.getByRole("menuitem", { name: "共有定義を削除", exact: true }),
   ).toHaveAttribute("aria-disabled", "true");
-  await page
-    .getByLabel("Project JSON を開く", { exact: true })
-    .setInputFiles(file);
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles(file);
   await expect(popup).not.toBeVisible();
   await expect(list(page).locator("button[aria-pressed]")).toHaveCount(100);
   await expect(button(page, "元に戻す")).toBeDisabled();

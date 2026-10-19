@@ -199,7 +199,7 @@ for (const theme of ["light", "dark"]) {
         ).toBeInViewport();
         await expect(
           page.getByRole("button", {
-            name: "Project JSON を保存",
+            name: "Project を保存",
             exact: true,
           }),
         ).toHaveCount(0);

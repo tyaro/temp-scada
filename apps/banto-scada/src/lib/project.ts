@@ -1,3 +1,4 @@
+import type { ImageMetadata } from "./image-assets";
 import { rotatedBounds, rotationPivot } from "./rotation";
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-model/schema/project.schema.json";
@@ -66,7 +67,16 @@ export interface LayerFolder {
 }
 export const MAX_LAYER_FOLDERS = schema.$defs.layerFolders.maxItems;
 export const MAX_FOLDER_DEPTH = 16;
+export interface ImageAsset extends ImageMetadata {
+  id: string;
+}
+export interface BackgroundImage {
+  assetId: string;
+  fit: "contain" | "cover" | "stretch" | "original";
+  opacity: number;
+}
 export interface Screen {
+  backgroundImage?: BackgroundImage;
   folders: LayerFolder[];
   background: string;
   id: string;
@@ -84,12 +94,13 @@ export interface SymbolDefinition {
   objects: ScreenObject[];
 }
 export interface Project {
+  assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.15.0";
+    schemaVersion: "0.16.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.15.0";
+    minRuntimeVersion: "0.16.0";
     name: string;
   };
   screens: Screen[];
@@ -108,10 +119,11 @@ export function parseProject(json: string): Project {
     const old = value as unknown as Project;
     value = {
       ...old,
+      assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.15.0",
-        minRuntimeVersion: "0.15.0",
+        schemaVersion: "0.16.0",
+        minRuntimeVersion: "0.16.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -150,6 +162,30 @@ export function parseProject(json: string): Project {
   const project = value;
   const ids = new Set([project.manifest.projectId]);
   const symbolIds = new Set(project.symbols.map((s) => s.id));
+  const hashes = new Set<string>(),
+    usedAssets = new Set(
+      project.screens.flatMap((s) =>
+        s.backgroundImage ? [s.backgroundImage.assetId] : [],
+      ),
+    );
+  let totalBytes = 0;
+  for (const asset of project.assets) {
+    if (ids.has(asset.id)) throw new Error("ID が重複しています");
+    ids.add(asset.id);
+    if (hashes.has(asset.sha256))
+      throw new Error("同じ画像hashの資産宣言が重複しています");
+    hashes.add(asset.sha256);
+    if (asset.width * asset.height > 16_000_000)
+      throw new Error("画像は1600万画素以下にしてください");
+    totalBytes += asset.byteLength;
+    if (!usedAssets.has(asset.id))
+      throw new Error("未使用の画像資産宣言があります");
+  }
+  if (totalBytes > 64 * 1024 * 1024)
+    throw new Error("Projectの画像容量が64MiBを超えています");
+  if ([...usedAssets].some((id) => !project.assets.some((a) => a.id === id)))
+    throw new Error("背景画像の資産が見つかりません");
+
   for (const owner of [...project.screens, ...project.symbols]) {
     if (ids.has(owner.id)) throw new Error("ID が重複しています");
     ids.add(owner.id);

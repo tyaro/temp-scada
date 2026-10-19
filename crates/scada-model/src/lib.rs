@@ -66,8 +66,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.15.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.15.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.16.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.16.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -85,10 +85,47 @@ impl Project {
                 }
             }
             value["symbols"] = serde_json::json!([]);
+            value["assets"] = serde_json::json!([]);
         }
         VALIDATOR.validate(&value).map_err(|e| e.to_string())?;
         let mut ids = HashSet::new();
         ids.insert(value["manifest"]["projectId"].as_str().unwrap());
+        let used_assets: HashSet<_> = value["screens"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|screen| {
+                screen
+                    .get("backgroundImage")
+                    .map(|image| image["assetId"].as_str().unwrap())
+            })
+            .collect();
+        let mut asset_ids = HashSet::new();
+        let mut hashes = HashSet::new();
+        let mut total_bytes = 0u64;
+        for asset in value["assets"].as_array().unwrap() {
+            let id = asset["id"].as_str().unwrap();
+            if !ids.insert(id) {
+                return Err("ID が重複しています".into());
+            }
+            asset_ids.insert(id);
+            if !hashes.insert(asset["sha256"].as_str().unwrap()) {
+                return Err("同じ画像hashの資産宣言が重複しています".into());
+            }
+            if asset["width"].as_f64().unwrap() * asset["height"].as_f64().unwrap() > 16_000_000.0 {
+                return Err("画像は1600万画素以下にしてください".into());
+            }
+            total_bytes += asset["byteLength"].as_f64().unwrap() as u64;
+            if !used_assets.contains(id) {
+                return Err("未使用の画像資産宣言があります".into());
+            }
+        }
+        if total_bytes > 64 * 1024 * 1024 {
+            return Err("Projectの画像容量が64MiBを超えています".into());
+        }
+        if !used_assets.is_subset(&asset_ids) {
+            return Err("背景画像の資産が見つかりません".into());
+        }
         let symbols: HashSet<_> = value["symbols"]
             .as_array()
             .unwrap()
@@ -434,6 +471,58 @@ mod tests {
         assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
     }
     #[test]
+    fn image_assets_share_the_browser_contract() {
+        let base: Value =
+            serde_json::from_str(include_str!("../../../examples/minimal.project.json")).unwrap();
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/image-asset-cases.json")).unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut value = base.clone();
+            let asset = serde_json::json!({"id":"0199fc00-0000-7000-8000-000000001100","sha256":"0".repeat(64),"mime":"image/png","byteLength":100,"width":100,"height":60,"name":"設備背景.png"});
+            value["assets"] = serde_json::json!([asset]);
+            value["screens"][0]["backgroundImage"] = serde_json::json!({"assetId":"0199fc00-0000-7000-8000-000000001100","fit":"contain","opacity":1});
+            for (field, target) in [("assetPatch", "asset"), ("imagePatch", "image")] {
+                if let Some(patch) = case[field].as_object() {
+                    for (key, entry) in patch {
+                        if target == "asset" {
+                            value["assets"][0][key] = entry.clone();
+                        } else {
+                            value["screens"][0]["backgroundImage"][key] = entry.clone();
+                        }
+                    }
+                }
+            }
+            if case["removeAssets"] == true {
+                value["assets"] = serde_json::json!([]);
+            }
+            if case["omitImage"] == true {
+                value["screens"][0]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("backgroundImage");
+            }
+            if case["duplicateHash"] == true {
+                let mut duplicate = value["assets"][0].clone();
+                duplicate["id"] = serde_json::json!("0199fc00-0000-7000-8000-000000001101");
+                value["assets"].as_array_mut().unwrap().push(duplicate);
+            }
+            if case["projectId"] == true {
+                let id = value["manifest"]["projectId"].clone();
+                value["assets"][0]["id"] = id.clone();
+                value["screens"][0]["backgroundImage"]["assetId"] = id;
+            }
+            if case["oldVersion"] == true {
+                value["manifest"]["schemaVersion"] = serde_json::json!("0.15.0");
+                value["manifest"]["minRuntimeVersion"] = serde_json::json!("0.15.0");
+            }
+            assert_eq!(
+                Project::from_json(&value.to_string()).is_ok(),
+                case["valid"] == true,
+                "{case}"
+            );
+        }
+    }
+    #[test]
     fn color_alpha_shares_the_browser_contract() {
         let base: Value =
             serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
@@ -753,8 +842,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.15.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.15.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.16.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.16.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

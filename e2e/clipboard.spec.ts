@@ -173,7 +173,7 @@ test("symbol clipboard reuses live definition and imports its snapshot after rel
     ).size,
   ).toBe(1);
   const fragment = copied.project;
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "clipboard-project.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(fragment)),

@@ -50,7 +50,7 @@ test("replaces a symbol reference only after apply, preserving placement and res
   await button("やり直す").click();
   await expect(selector).toHaveValue(target.id);
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
   const saved = JSON.parse(json);
   expect(saved.symbols).toEqual(sample.symbols);
@@ -60,7 +60,7 @@ test("replaces a symbol reference only after apply, preserving placement and res
       shape: { type: "symbol", colorMode: "monochrome", symbolId: target.id },
     },
   );
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "replaced.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),
@@ -131,13 +131,13 @@ test("deep copies a definition for one placement, edits it independently and und
       .locator(`[data-symbol-id="${originalSymbol}"] > g`),
   ).toHaveCount(originalCount);
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
   const saved = JSON.parse(json);
   expect(saved.symbols).toHaveLength(2);
   expect(saved.screens[0].objects.at(-1).shape.symbolId).toBe(originalSymbol);
   expect(saved.screens[1].objects.at(-1).shape.symbolId).toBe(uniqueSymbol);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "unique.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),

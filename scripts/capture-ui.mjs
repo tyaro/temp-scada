@@ -180,7 +180,7 @@ try {
   );
   await chooseTheme(lightPage);
   await lightPage
-    .getByLabel("Project JSON を開く", { exact: true })
+    .getByLabel("Project を開く", { exact: true })
     .setInputFiles("examples/process-light.project.json");
   await lightPage.getByRole("button", { name: "編集", exact: true }).click();
   await lightPage.getByRole("tab", { name: "レイヤー", exact: true }).click();
@@ -225,7 +225,7 @@ try {
     (object) => object.order === 6,
   ).shape.binding = { externalName: "PLC01.Fast.Tank01.Level" };
   await referencePage
-    .getByLabel("Project JSON を開く", { exact: true })
+    .getByLabel("Project を開く", { exact: true })
     .setInputFiles({
       name: "process-reference.project.json",
       mimeType: "application/json",

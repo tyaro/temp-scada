@@ -24,7 +24,7 @@ async function start(page: Page, hidden = false) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await button(page, "編集").click();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "folders.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
@@ -332,7 +332,7 @@ test("importing a new generation closes an uncommitted folder dialog", async ({
   await create
     .getByLabel("フォルダー名", { exact: true })
     .fill("古い世代の入力");
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "replacement.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(sample)),
@@ -351,7 +351,7 @@ test("shared definition folders organize internal objects without changing paren
   );
   project.symbols[0].folders = [{ id: leafId, name: "構成図形", order: 0 }];
   for (const object of project.symbols[0].objects) object.folderId = leafId;
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "symbol-folders.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),

@@ -143,9 +143,7 @@ test("screen menus close after project replacement and respect the screen limit"
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
   };
-  await page
-    .getByLabel("Project JSON を開く", { exact: true })
-    .setInputFiles(file);
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles(file);
   await row(page, "工程 1").click({ button: "right" });
   await expect(
     menu(page, "工程 1").getByRole("menuitem", {
@@ -154,9 +152,7 @@ test("screen menus close after project replacement and respect the screen limit"
     }),
   ).toHaveAttribute("aria-disabled", "true");
   // Same IDs and revision must still invalidate the old menu session.
-  await page
-    .getByLabel("Project JSON を開く", { exact: true })
-    .setInputFiles(file);
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles(file);
   await expect(menu(page, "工程 1")).not.toBeVisible();
   await expect(screens(page).locator("button[aria-pressed]")).toHaveCount(100);
   await expect(button(page, "元に戻す")).toBeDisabled();

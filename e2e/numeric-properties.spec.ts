@@ -22,7 +22,7 @@ async function start(page: Page, object = "rectangle · 3") {
 }
 async function saved(page: Page) {
   const download = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   return JSON.parse(await readFile((await (await download).path())!, "utf8"));
 }
 test("Enter and blur commit only one numeric field once, keep focus and support undo/redo", async ({
@@ -145,7 +145,7 @@ test("blur applies to the original target before selecting another object; same-
   const json = await saved(page);
   json.screens[0].objects[0].x = 111;
   page.on("dialog", (dialog) => dialog.accept());
-  await field(page, "Project JSON を開く").setInputFiles({
+  await field(page, "Project を開く").setInputFiles({
     name: "next.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(json)),

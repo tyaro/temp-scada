@@ -32,13 +32,11 @@ try {
     selected.colorAlpha = 0.35;
     selected.name = "液面（塗り35%・枠線80%）";
     selected.shape.paint.stroke = { color: "#2563eb", width: 4, alpha: 0.8 };
-    await page
-      .getByLabel("Project JSON を開く", { exact: true })
-      .setInputFiles({
-        name: "color-alpha-demo.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(project)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "color-alpha-demo.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
     await page.locator(`button[data-layer-id="${selected.id}"]`).click();
     await expect(

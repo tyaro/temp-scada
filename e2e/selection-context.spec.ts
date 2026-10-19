@@ -33,7 +33,7 @@ async function at(page: Page, x: number, y: number, alt = false) {
 }
 async function save(page: Page) {
   const pending = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   return JSON.parse(await readFile((await (await pending).path())!, "utf8"));
 }
 

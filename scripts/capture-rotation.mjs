@@ -31,13 +31,11 @@ try {
     );
     pump.rotation = 90;
     pump.name = "P-01 ポンプ（90°）";
-    await page
-      .getByLabel("Project JSON を開く", { exact: true })
-      .setInputFiles({
-        name: "rotation-demo.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(project)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "rotation-demo.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
     await page.locator(`button[data-layer-id="${pump.id}"]`).click();
     await expect(page.getByLabel("回転角度", { exact: true })).toHaveValue(

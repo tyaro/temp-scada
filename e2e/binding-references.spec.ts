@@ -29,7 +29,7 @@ test("groups references across screens, searches without editing, navigates with
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   const fixture = project();
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "references.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(fixture)),
@@ -98,7 +98,7 @@ test("groups references across screens, searches without editing, navigates with
   await button("やり直す").click();
   await expect(summary).toHaveText("Project のタグ参照 · 3 タグ / 3 配置");
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );
@@ -113,7 +113,7 @@ test("the reference panel fits a small screen and resets search after importing 
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  const input = page.getByLabel("Project JSON を開く", { exact: true });
+  const input = page.getByLabel("Project を開く", { exact: true });
   const file = {
     name: "references.json",
     mimeType: "application/json",

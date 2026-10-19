@@ -6,12 +6,17 @@
   let {
     screen,
     symbols,
+    images,
     view,
     oncenter,
     onfit,
   }: {
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
+    images?: ReadonlyMap<
+      string,
+      { url: string; width: number; height: number }
+    >;
     view: CanvasView;
     oncenter: (point: Point) => void;
     onfit: () => void;
@@ -124,7 +129,7 @@
     onlostpointercapture={() => finish(true)}
   >
     <div class="thumbnail" aria-hidden="true">
-      <Renderer {screen} {symbols} />
+      <Renderer {screen} {symbols} {images} />
     </div>
     <svg
       class="outline"

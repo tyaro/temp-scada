@@ -63,7 +63,7 @@ test("resize handles update geometry atomically with snap, cancel, history and J
   await page.keyboard.press("ArrowRight");
   await expect(page.getByLabel("width", { exact: true })).toHaveValue("280");
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
   const saved = JSON.parse(json);
   expect(saved.screens[0].objects[0]).toMatchObject({
@@ -73,7 +73,7 @@ test("resize handles update geometry atomically with snap, cancel, history and J
     height: 160,
   });
   expect(saved.manifest.projectRevision).toBe(7);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "resize.json",
     mimeType: "application/json",
     buffer: Buffer.from(json),
@@ -106,7 +106,7 @@ test("symbols resize their viewport without changing shared definitions or other
     .poll(async () => Number(await instances.last().getAttribute("height")))
     .toBeCloseTo(120, 8);
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );

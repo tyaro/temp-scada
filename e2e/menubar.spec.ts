@@ -183,15 +183,17 @@ test("file operations use menus with the menubar and sidebar hidden, preserving 
     name: "Project と部品",
     exact: true,
   });
-  await expect(sidebar.locator('input[type="file"]')).toHaveCount(0);
   await expect(
-    sidebar.getByRole("button", { name: "Project JSON を保存", exact: true }),
+    sidebar.getByLabel("Project を開く", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    sidebar.getByRole("button", { name: "Project を保存", exact: true }),
   ).toHaveCount(0);
   await expect(
     sidebar.getByRole("button", { name: "工程図サンプルを開く", exact: true }),
   ).toHaveCount(0);
   const chooser = page.waitForEvent("filechooser");
-  await fileCommand(page, "Project JSON を開く");
+  await fileCommand(page, "Project を開く");
   await (await chooser).setFiles("examples/minimal.project.json");
   await page.getByLabel("画面名", { exact: true }).fill("未適用の画面名");
   await page
@@ -205,7 +207,7 @@ test("file operations use menus with the menubar and sidebar hidden, preserving 
     .getByRole("button", { name: "左パネルを隠す", exact: true })
     .click();
   const secondChooser = page.waitForEvent("filechooser");
-  await fileCommand(page, "Project JSON を開く");
+  await fileCommand(page, "Project を開く");
   await (await secondChooser).setFiles("examples/process-light.project.json");
   const prompt = page.getByRole("dialog", {
     name: "未適用の入力があります",
@@ -219,7 +221,7 @@ test("file operations use menus with the menubar and sidebar hidden, preserving 
     page.getByRole("img", { name: "プロセス画面", exact: true }),
   ).toBeVisible();
   const pending = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   await prompt
     .getByRole("button", { name: "入力を破棄して続行", exact: true })
     .click();

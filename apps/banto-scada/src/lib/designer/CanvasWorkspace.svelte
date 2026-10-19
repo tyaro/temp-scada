@@ -36,6 +36,7 @@
   let {
     screen,
     symbols,
+    images,
     editable,
     selectedIds,
     showGrid,
@@ -60,6 +61,10 @@
   }: {
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
+    images?: ReadonlyMap<
+      string,
+      { url: string; width: number; height: number }
+    >;
     editable: boolean;
     selectedIds: string[];
     showGrid: boolean;
@@ -914,6 +919,7 @@
             bind:this={renderer}
             {screen}
             {symbols}
+            {images}
             {editable}
             {selectedIds}
             {showGrid}

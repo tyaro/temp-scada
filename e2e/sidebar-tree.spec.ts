@@ -93,7 +93,7 @@ test("project tag reference branch opens the existing usages panel and preserves
 }) => {
   await start(page);
   await page
-    .getByLabel("Project JSON を開く", { exact: true })
+    .getByLabel("Project を開く", { exact: true })
     .setInputFiles("examples/tag-binding.project.json");
   await expect(
     section(page, "タグ参照").getByRole("button", {

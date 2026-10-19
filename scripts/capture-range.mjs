@@ -23,7 +23,7 @@ try {
       .click();
     await page.getByRole("button", { name: "編集", exact: true }).click();
     await page
-      .getByLabel("Project JSON を開く", { exact: true })
+      .getByLabel("Project を開く", { exact: true })
       .setInputFiles("examples/process-light.project.json");
     const svg = page.getByRole("img", {
       name: "循環設備（ライト）",

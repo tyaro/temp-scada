@@ -15,7 +15,7 @@ async function start(page: Page) {
 }
 async function saved(page: Page) {
   const downloading = page.waitForEvent("download");
-  await fileCommand(page, "Project JSON を保存");
+  await fileCommand(page, "Project を保存");
   return JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );
@@ -140,7 +140,7 @@ test("shared favorites are scoped to the live Project, follow names across impor
   const project = await saved(page);
   const other = structuredClone(project);
   other.manifest.projectId = "019b0000-0000-7000-8000-000000000099";
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "other.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(other)),
@@ -151,7 +151,7 @@ test("shared favorites are scoped to the live Project, follow names across impor
       exact: true,
     }),
   ).toHaveCount(0);
-  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "original.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
