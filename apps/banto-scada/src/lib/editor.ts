@@ -1,4 +1,3 @@
-import { imageCropViewBox, normalizeImageCrop } from "./image-crop";
 import { parseLineStyle, setLineStyle } from "./line-style";
 import { projectContent } from "./save-state";
 import { normalizeRotation, replaceRotatedVertex } from "./rotation";
@@ -25,6 +24,11 @@ import {
   applyFolderStructureCommand,
   applyFolderAssignment,
 } from "./editor/folder-handler";
+import {
+  applyImagePlacement,
+  applyImageEdit,
+  isImageEditCommand,
+} from "./editor/image-handler";
 import { applyProjectCommand } from "./editor/project-handler";
 import { applyScreenCommand } from "./editor/screen-handler";
 import { applySymbolCommand } from "./editor/symbol-handler";
@@ -90,16 +94,7 @@ export function applyCommand(
     return finish(project, next);
   }
   if (command.type === "add-image") {
-    if (definitionId) throw new Error("Symbol定義には画像を配置できません");
-    const assetId = registerAsset(next, command.asset);
-    screen.objects.push({
-      id: newId(),
-      order: Math.max(-1, ...screen.objects.map((o) => o.order)) + 1,
-      rotation: 0,
-      fill: "#000000",
-      ...command.frame,
-      shape: { type: "image", assetId, fit: "contain" },
-    });
+    applyImagePlacement(next, screen, command, definitionId);
     return finish(project, next);
   }
   if (isFolderStructureCommand(command)) {
@@ -623,33 +618,8 @@ export function applyCommand(
   } else {
     const index = screen.objects.findIndex((o) => o.id === command.objectId);
     if (index < 0) throw new Error("図形が見つかりません");
-    if (command.type === "replace-image") {
-      const object = screen.objects[index];
-      if (definitionId || object.shape.type !== "image")
-        throw new Error("画面上の画像配置だけを差し替えられます。");
-      const assetId = registerAsset(next, command.asset);
-      if (assetId !== object.shape.assetId) delete object.shape.crop;
-      object.shape.assetId = assetId;
-    } else if (command.type === "set-image-crop") {
-      const object = screen.objects[index];
-      if (definitionId || object.shape.type !== "image")
-        throw new Error("画面上の画像配置だけをトリミングできます。");
-      const asset = next.assets.find(
-        (a) => object.shape.type === "image" && a.id === object.shape.assetId,
-      )!;
-      const crop = normalizeImageCrop(asset, command.crop ?? undefined);
-      if (crop) object.shape.crop = crop;
-      else delete object.shape.crop;
-    } else if (command.type === "reset-image-ratio") {
-      const object = screen.objects[index];
-      if (!("width" in object) || object.shape.type !== "image")
-        throw new Error("画像配置だけを元比率に戻せます");
-      const assetId = object.shape.assetId;
-      const asset = next.assets.find((a) => a.id === assetId)!;
-      const source = imageCropViewBox(asset, object.shape.crop);
-      const height = object.width * (source.height / source.width);
-      object.y += (object.height - height) / 2;
-      object.height = height;
+    if (isImageEditCommand(command)) {
+      applyImageEdit(next, screen.objects[index], command, definitionId);
     } else if (command.type === "make-symbol-unique") {
       const object = screen.objects[index];
       if (definitionId || object.shape.type !== "symbol")

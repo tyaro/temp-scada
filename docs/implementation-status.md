@@ -39,11 +39,11 @@
 
 ## 検証の範囲
 
-R5a〜R5dで編集コマンド型・分類、Project／Symbol／Screen／Folder handlerを分離した。最新のR5dは型チェック（エラー／警告なし）、TS全636件、関連ブラウザ39件、本番ビルド・全体整形が成功。分類漏れ・誤分類と、分類後のhandler未実装を型エラーで検出することも一時変更で確認した。各区切りと検証対象は[R5の記録](maintenance-refactoring-plan.md#r5a-command-types)を参照する。Image／Objectと入口全体の網羅性は後続で、R5全体の完了ではない。
+R5a〜R5eで編集コマンド型・分類、Project／Symbol／Screen／Folder／Image handlerを分離した。最新のR5eは型チェック（エラー／警告なし）、TS全636件、関連ブラウザ24件、本番ビルド・全体整形が成功。分類漏れ・誤分類と、分類後のhandler未実装を型エラーで検出することも一時変更で確認した。各区切りと検証対象は[R5の記録](maintenance-refactoring-plan.md#r5a-command-types)を参照する。Objectと入口全体の網羅性は後続で、R5全体の完了ではない。
 
 全体CIはR5cの`f02ca65`まで[成功を確認済み](https://github.com/tyaro/temp-scada/actions/runs/39332935722)。全ブラウザ509件と型・TS単体・ビルド・整形・Rust30件・Clippy・CLIサンプル検証を通過した。R5d以後の差分はPush後のCI結果と区別する。R4のローカル4並列での496件成功／13件失敗と、同一コードでの単独再確認13件成功、既存サーバーでの途中停止は[R4eの記録](maintenance-refactoring-plan.md#r4e-actions)に保持する。
 
-保存契約・画面配置・Undo単位は維持した。R4dの両テーマ・2画面幅の比較画像8枚は移動前後でpixel完全一致。R4eとR5a〜R5dは画面markup／CSSに変更なし。既存のJS bundle 500kB警告は継続する。
+保存契約・画面配置・Undo単位は維持した。R4dの両テーマ・2画面幅の比較画像8枚は移動前後でpixel完全一致。R4eとR5a〜R5eは画面markup／CSSに変更なし。既存のJS bundle 500kB警告は継続する。
 
 過去のプレビューfit測定の失敗と、テスト側のレイアウト待機修正は[R0の記録](maintenance-refactoring-plan.md#refactoring-progress)を参照する。
 

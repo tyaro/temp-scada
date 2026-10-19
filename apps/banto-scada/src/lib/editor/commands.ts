@@ -304,3 +304,12 @@ export type FolderAssignmentCommand = Extract<
   ObjectCommand,
   { type: "set-folder" }
 >;
+
+export type ImagePlacementCommand = Extract<
+  ObjectCommand,
+  { type: "add-image" }
+>;
+export type ImageEditCommand = Extract<
+  ObjectCommand,
+  { type: "replace-image" | "set-image-crop" | "reset-image-ratio" }
+>;

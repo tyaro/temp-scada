@@ -210,7 +210,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功        |
 | R3 フォーム契約 | 完了         | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功 |
 | R4 App機能分離  | 完了         | R4a〜R4e実装・全体CI成功（`faf7c75`）。全ブラウザ509件を確認            |
-| R5 編集コマンド | 作業中       | R5a〜R5d完了。Folderも分離。Image／Objectと入口網羅性は後続             |
+| R5 編集コマンド | 作業中       | R5a〜R5e完了。Imageも分離。Objectと入口網羅性は後続                     |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                        |
 
 各小区切りの記録は、次の項目だけを残せば再開できる。
@@ -484,3 +484,13 @@ R5a〜R5cの3コミットは全体CI成功を確認した。最新の[`f02ca65`�
 基準は`f02ca65`、開始時clean。作成・名前変更・親変更・空フォルダー削除を`folder-handler.ts`の構造操作へ、配置の所属変更を別関数へ移した。型・既存の引数を維持し、候補の所有先だけを変更する。`applyCommand`の構造操作の位置は配置lock判定前、所属変更はlock・複数IDの空／重複／不存在照合後のまま。整理操作と配置編集を同じguardにまとめない。
 
 名前解析、親／所属の同一所有先確認、子／配置を持つフォルダーの削除拒否、rootへ戻す際の属性削除を維持する。共通finishでの検証・no-op・revision更新とUndo単位は変更しない。構造操作の最後は未処理型をneverで検出する。型チェックはエラー／警告なし。TS全636件・関連ブラウザ39件（layer-folders-ui・layer-drag・folder-drag・edit-lock）・本番ビルドも成功。既存のJS bundle 500kB警告は継続する。次は画像処理の分離。
+
+<a id="r5e-image-handler"></a>
+
+### R5e：画像配置と既存画像編集の分離
+
+基準は`c817fd0`、開始時clean。`image-handler.ts`へadd-imageとreplace-image／set-image-crop／reset-image-ratioを移した。配置はlock判定前、既存編集はlockと対象lookup後から別関数を呼び、候補だけを変更する。
+
+定義内拒否、同一hashの資産再利用とcrop保持、別assetへの差替え時だけのcrop解除、crop正規化、crop後の原本比率を使う幅・中心位置保持を維持した。registerAssetとfinishの資産整理・検証・no-op・revision更新は共通のまま。編集handlerの最後はneverで未処理型を検出する。
+
+型チェック（エラー／警告なし）・TS全636件成功。Astraの静的レビューで具体的な回帰懸念・修正要求なし。関連ブラウザ24件（image-placement・image-replacement・image-crop・image-assets）と本番ビルドも成功。既存のJS bundle 500kB警告は継続する。Object処理と入口全体の網羅性は後続で、R5全体の完了ではない。
