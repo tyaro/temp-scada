@@ -1344,6 +1344,17 @@
     }
   }
   function acknowledgeForm(form: HTMLFormElement) {
+    if (form.dataset.editorForm === "selection-outline") {
+      for (const name of ["outlineMode", "outlineColor", "outlineWidth"]) {
+        const input = form.elements.namedItem(name);
+        if (
+          input instanceof HTMLInputElement ||
+          input instanceof HTMLSelectElement
+        )
+          input.value = "";
+      }
+    }
+
     if (form.dataset.editorForm === "selection-line") {
       const width = form.elements.namedItem("strokeWidth"),
         arrow = form.elements.namedItem("arrow");
@@ -1687,7 +1698,7 @@
       };
     }
     if (
-      ["selection-color", "selection-line"].includes(
+      ["selection-color", "selection-line", "selection-outline"].includes(
         form.dataset.editorForm ?? "",
       )
     ) {
@@ -1707,6 +1718,23 @@
         throw new Error(
           "スタイルの適用対象が変更されています。選択し直してください。",
         );
+      if (form.dataset.editorForm === "selection-outline") {
+        const rawMode = String(data.get("outlineMode") ?? ""),
+          color = String(data.get("outlineColor") ?? ""),
+          width = String(data.get("outlineWidth") ?? "");
+        if (rawMode !== "" && rawMode !== "none" && rawMode !== "enabled")
+          throw new Error("枠線の有無を選択してください。");
+        return {
+          type: "set-outline-style",
+          screenId: screen.id,
+          objectIds: ids as string[],
+          patch: {
+            ...(rawMode === "" ? {} : { mode: rawMode }),
+            ...(color === "" ? {} : { color }),
+            ...(width === "" ? {} : { width: parseNumericProperty(width) }),
+          },
+        };
+      }
       if (form.dataset.editorForm === "selection-line") {
         const width = String(data.get("strokeWidth") ?? ""),
           arrow = String(data.get("arrow") ?? "");

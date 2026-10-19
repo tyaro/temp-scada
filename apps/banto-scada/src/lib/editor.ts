@@ -27,6 +27,11 @@ export interface ObjectPatch {
   strokeWidth?: number;
   arrow?: "none" | "end";
 }
+export interface OutlineStylePatch {
+  mode?: "none" | "enabled";
+  color?: string;
+  width?: number;
+}
 export type AlignMode =
   "left" | "right" | "top" | "bottom" | "center-x" | "center-y";
 type ScreenCommand =
@@ -74,6 +79,12 @@ export type ObjectCommand = (
       screenId: string;
       objectIds: string[];
       axis: "x" | "y";
+    }
+  | {
+      type: "set-outline-style";
+      screenId: string;
+      objectIds: string[];
+      patch: OutlineStylePatch;
     }
   | {
       type: "set-line-style";
@@ -181,6 +192,7 @@ export function isObjectCommand(
     "distribute",
     "set-color",
     "set-line-style",
+    "set-outline-style",
     "set-visibility",
     "set-lock",
     "paste",
@@ -520,6 +532,7 @@ export function applyCommand(
     command.type === "distribute" ||
     command.type === "set-color" ||
     command.type === "set-line-style" ||
+    command.type === "set-outline-style" ||
     command.type === "move-many" ||
     command.type === "duplicate-many" ||
     command.type === "remove-many" ||
@@ -533,7 +546,83 @@ export function applyCommand(
       .sort((a, b) => a.order - b.order);
     if (objects.length !== ids.size)
       throw new Error("選択した図形が見つかりません");
-    if (command.type === "set-line-style") {
+    if (command.type === "set-outline-style") {
+      if (
+        !command.patch ||
+        typeof command.patch !== "object" ||
+        Array.isArray(command.patch) ||
+        Object.keys(command.patch).some(
+          (key) => !["mode", "color", "width"].includes(key),
+        )
+      )
+        throw new Error("枠線のスタイル指定が不正です");
+      const { mode, color, width } = command.patch;
+      if (mode === undefined && color === undefined && width === undefined)
+        throw new Error("枠線の変更する項目を指定してください");
+      if (mode !== undefined && mode !== "none" && mode !== "enabled")
+        throw new Error("枠線はなし・ありを指定してください");
+      if (
+        color !== undefined &&
+        (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color.trim()))
+      )
+        throw new Error("枠線の色は#と6桁の16進数で指定してください");
+      if (
+        width !== undefined &&
+        (typeof width !== "number" ||
+          !Number.isFinite(width) ||
+          width <= 0 ||
+          width > 64)
+      )
+        throw new Error(
+          "枠線の幅は0より大きく64以下の有限の数値で指定してください",
+        );
+      if (mode === "none" && (color !== undefined || width !== undefined))
+        throw new Error(
+          "枠線なしと色・幅は同時に指定できません。色・幅の指定を解除してください",
+        );
+      if (
+        objects.some(
+          (object) =>
+            object.shape.type !== "rectangle" &&
+            object.shape.type !== "ellipse",
+        )
+      )
+        throw new Error(
+          "矩形・楕円だけを選択してください。対応する図形だけを暗黙に変更しません",
+        );
+      if (
+        mode !== "none" &&
+        objects.some(
+          (object) =>
+            (object.shape.type === "rectangle" ||
+              object.shape.type === "ellipse") &&
+            !object.shape.paint.stroke,
+        ) &&
+        (mode !== "enabled" || color === undefined || width === undefined)
+      )
+        throw new Error(
+          "枠線なしの配置を含むため、枠線ありと色・幅の両方を明示してください",
+        );
+      const normalized = color?.trim().toLowerCase();
+      for (const object of objects) {
+        if (
+          object.shape.type !== "rectangle" &&
+          object.shape.type !== "ellipse"
+        )
+          continue;
+        if (mode === "none") object.shape.paint.stroke = null;
+        else if (!object.shape.paint.stroke)
+          object.shape.paint.stroke = { color: normalized!, width: width! };
+        else {
+          if (
+            normalized !== undefined &&
+            object.shape.paint.stroke.color.toLowerCase() !== normalized
+          )
+            object.shape.paint.stroke.color = normalized;
+          if (width !== undefined) object.shape.paint.stroke.width = width;
+        }
+      }
+    } else if (command.type === "set-line-style") {
       if (
         !command.patch ||
         typeof command.patch !== "object" ||

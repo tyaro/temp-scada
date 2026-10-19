@@ -2,6 +2,7 @@
   import { placementLabel } from "../placement-label";
   import ShapePaint from "./ShapePaint.svelte";
   import SelectionColor from "./SelectionColor.svelte";
+  import SelectionOutline from "./SelectionOutline.svelte";
   import SelectionLine from "./SelectionLine.svelte";
   import SymbolColorMode from "./SymbolColorMode.svelte";
   import TagPicker from "./TagPicker.svelte";
@@ -384,6 +385,18 @@
           {definitionColorCount}
           {paintDisabledCount}
           count={selectedIds.length}
+          hiddenCount={hiddenSelectionCount}
+          locked={selectionLocked}
+          definition={activeDefinition}
+          targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+          objectIds={selectedIds}
+          {drafts}
+          onsubmit={properties}
+        />
+        <SelectionOutline
+          objects={screen.objects.filter((object) =>
+            selectedIds.includes(object.id),
+          )}
           hiddenCount={hiddenSelectionCount}
           locked={selectionLocked}
           definition={activeDefinition}
