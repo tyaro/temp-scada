@@ -58,6 +58,7 @@
     void setThemeMode(value);
   }
   import { untrack, tick, flushSync } from "svelte";
+  import { selectionNudge } from "./lib/keyboard-move";
   import { copyObjects, parseClipboard } from "./lib/clipboard";
   import { projectContent } from "./lib/save-state";
   import { createDraftGuard } from "./lib/designer/drafts.svelte";
@@ -811,6 +812,39 @@
   function nativeClipboard(event: ClipboardEvent) {
     if (clipboardScope(event.target))
       clipboardAction(event.type as "copy" | "cut" | "paste", event);
+  }
+  function nudgeSelection(direction: Point, large: boolean) {
+    const ids = [...selectedIds],
+      target = screen.id,
+      generation = workspaceGeneration;
+    transition(() => {
+      if (
+        busy ||
+        replacement ||
+        mode !== "edit" ||
+        positionPlacement ||
+        canvasView.hand ||
+        target !== screen.id ||
+        generation !== workspaceGeneration ||
+        ids.join() !== selectedIds.join()
+      )
+        return;
+      const objects = screen.objects.filter((o) => ids.includes(o.id));
+      if (!objects.length || objects.length !== ids.length) return;
+      const delta = selectionNudge(
+        objects,
+        direction,
+        snapEnabled ? gridSize : null,
+        large,
+      );
+      edit({
+        type: "move-many",
+        screenId: target,
+        objectIds: ids,
+        dx: delta.x,
+        dy: delta.y,
+      });
+    });
   }
   function moveSelection(event: SubmitEvent) {
     submitForm(event);
@@ -2382,6 +2416,7 @@
           onbeforeedit={() => drafts.allow(() => {})}
           onselect={selectObjects}
           onrangeselect={selectRange}
+          onnudge={nudgeSelection}
           onmove={(ids, dx, dy) =>
             edit({
               type: "move-many",
@@ -2545,6 +2580,11 @@
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。
+  </p>
+  <p>
+    キャンバス本体にフォーカスがあるときは、方向キーで選択した配置を1 design
+    unit、Shift併用で10
+    unit動かします。スナップONでは次のグリッド線へ進み、Shift併用は10段階です。長押しは各キー入力が1回のUndoになります。未選択時はスクロールし、サイズ・頂点ハンドルでは専用のキー操作を使います。
   </p>
   <p>
     選択ツールで空白をドラッグすると、枠に完全に入る図形をまとめて選択します。Shiftで追加、Escで取消できます。パン・連続配置・表示プレビューでは範囲選択しません。

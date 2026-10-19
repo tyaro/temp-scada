@@ -44,6 +44,7 @@
     onbeforeedit,
     onselect,
     onrangeselect,
+    onnudge,
     onmove,
     onresize,
     onvertexmove,
@@ -71,6 +72,7 @@
       preserve: boolean,
     ) => string[];
     onrangeselect: (ids: string[], additive: boolean) => void;
+    onnudge: (direction: Point, large: boolean) => void;
     onmove: (ids: string[], dx: number, dy: number) => void;
     onresize: (id: string, geometry: Geometry) => void;
     onvertexmove: (id: string, index: number, point: Point) => void;
@@ -531,6 +533,24 @@
     ) {
       event.preventDefault();
       event.stopPropagation();
+      return;
+    }
+    const direction = {
+      ArrowLeft: { x: -1, y: 0 },
+      ArrowRight: { x: 1, y: 0 },
+      ArrowUp: { x: 0, y: -1 },
+      ArrowDown: { x: 0, y: 1 },
+    }[event.key];
+    if (
+      direction &&
+      event.target === viewport &&
+      selectedIds.length &&
+      !panning
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      renderer?.cancelInteraction();
+      onnudge(direction, event.shiftKey);
       return;
     }
     if (
