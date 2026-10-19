@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="ja">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>SCADA Studio · 機器登録の操作試作</title>
+  <style>
+    :root {
+      font:
+        13px "Segoe UI",
+        "Noto Sans",
+        sans-serif;
+      color: #203b54;
+      background: #eaf2f7;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+    }
+    button,
+    input,
+    select {
+      font: inherit;
+      color: inherit;
+    }
+    button {
+      cursor: pointer;
+      border: 1px solid #c6d8e4;
+      background: #ffffffb8;
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+    button:hover {
+      background: #e5f4fc;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    button.primary {
+      background: #166e9a;
+      color: white;
+      border-color: #166e9a;
+    }
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 2px solid #167dad;
+      outline-offset: 2px;
+    }
+    header {
+      height: 66px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 0 24px;
+      background: #f8fcffcf;
+      border-bottom: 1px solid #cedee9;
+    }
+    h1 {
+      font-size: 17px;
+      margin: 0;
+    }
+    small,
+    .muted {
+      color: #627c90;
+    }
+    header .badge {
+      font-size: 11px;
+      border: 1px solid #c7d9e4;
+      border-radius: 20px;
+      padding: 5px 10px;
+    }
+    .spacer {
+      flex: 1;
+    }
+    .shell {
+      display: grid;
+      grid-template-columns: 248px minmax(380px, 1fr) 348px;
+      min-height: calc(100vh - 102px);
+    }
+    aside {
+      padding: 20px 16px;
+      background: #f6fbffb8;
+    }
+    aside.left {
+      border-right: 1px solid #cbdce7;
+    }
+    aside.right {
+      border-left: 1px solid #cbdce7;
+    }
+    h2 {
+      font-size: 14px;
+      margin: 0 0 16px;
+    }
+    h3 {
+      font-size: 12px;
+      margin: 22px 0 10px;
+      color: #647f92;
+      letter-spacing: 0.07em;
+    }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+    .equipment {
+      width: 100%;
+      text-align: left;
+      padding: 12px;
+      margin-top: 10px;
+      display: grid;
+      gap: 4px;
+    }
+    .equipment.active {
+      border-color: #2785b2;
+      background: #e4f3fc;
+      box-shadow: inset 3px 0 #2785b2;
+    }
+    .equipment strong {
+      font-size: 13px;
+    }
+    .equipment small {
+      font-size: 11px;
+    }
+    .panel-note {
+      line-height: 1.8;
+      color: #637c8e;
+      font-size: 12px;
+      margin: 16px 0;
+    }
+    .workspace {
+      padding: 22px;
+      min-width: 0;
+    }
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .tabs button[aria-pressed="true"] {
+      background: #206e98;
+      color: #fff;
+    }
+    .sheet {
+      position: relative;
+      min-height: 470px;
+      height: calc(100vh - 415px);
+      overflow: hidden;
+      border: 1px solid #ccdce7;
+      border-radius: 8px;
+      background-color: #fbfdfe;
+      background-image: radial-gradient(#dce7ee 1px, transparent 1px);
+      background-size: 20px 20px;
+      box-shadow: 0 10px 40px #54778c0c;
+    }
+    .sheet-label {
+      position: absolute;
+      left: 22px;
+      top: 20px;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: #7b95a6;
+      pointer-events: none;
+    }
+    .placement {
+      position: absolute;
+      width: 164px;
+      min-height: 150px;
+      display: grid;
+      justify-items: center;
+      gap: 5px;
+      padding: 12px;
+      border: 1px solid transparent;
+      background: #ffffffa0;
+      touch-action: none;
+      user-select: none;
+      cursor: grab;
+    }
+    .placement.selected {
+      border: 1px solid #2688b4;
+      background: #eaf6ffbb;
+      border-radius: 5px;
+      box-shadow: 0 0 0 3px #2896c415;
+    }
+    .placement svg {
+      width: 66px;
+      height: 66px;
+    }
+    .placement b {
+      font-size: 12px;
+    }
+    .placement .reading {
+      font-size: 19px;
+      font-variant-numeric: tabular-nums;
+    }
+    .state {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: #edf1f4;
+      color: #667c8a;
+    }
+    .state.good {
+      background: #d8eee7;
+      color: #2d7060;
+    }
+    .tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .tools button {
+      font-size: 12px;
+    }
+    .info {
+      padding: 12px 0;
+      line-height: 1.8;
+      color: #667f91;
+      font-size: 12px;
+    }
+    label.field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 13px;
+    }
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #cadce7;
+      border-radius: 5px;
+      background: #fff;
+    }
+    label.feature {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin: 12px 0;
+    }
+    input[type="checkbox"] {
+      accent-color: #177ca7;
+    }
+    .signal {
+      border-left: 2px solid #a8cfe2;
+      padding-left: 10px;
+      margin: 10px 0 15px;
+    }
+    .signal button {
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      text-align: left;
+      font-size: 11px;
+    }
+    .impact {
+      background: #e8f2f8;
+      padding: 12px;
+      border-radius: 5px;
+      font-size: 12px;
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    footer {
+      height: 36px;
+      border-top: 1px solid #ccdde8;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 0 20px;
+      background: #f8fcff;
+      font-size: 11px;
+    }
+    #status {
+      color: #225e7c;
+    }
+    dialog {
+      border: 1px solid #bfd3e0;
+      border-radius: 12px;
+      max-width: 620px;
+      width: calc(100vw - 40px);
+      padding: 24px;
+      color: #203b54;
+      box-shadow: 0 24px 100px #294e6840;
+    }
+    dialog::backdrop {
+      background: #253e5359;
+    }
+    dialog .candidate {
+      display: block;
+      width: 100%;
+      text-align: left;
+      margin-top: 8px;
+      padding: 12px;
+    }
+    dialog .candidate span {
+      display: block;
+      font-size: 11px;
+      margin-top: 5px;
+      color: #647c8d;
+    }
+    .warning {
+      color: #9a681a;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    #dirty {
+      color: #9b6b21;
+      font-size: 11px;
+    }
+    #uses {
+      line-height: 1.8;
+      font-size: 12px;
+    }
+    .simulation {
+      margin-top: 22px;
+      padding: 14px;
+      border: 1px solid #cbdde8;
+      border-radius: 8px;
+    }
+    .simulation label {
+      display: block;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    .simulation select {
+      margin-top: 5px;
+    }
+    .empty {
+      padding: 90px 25px;
+      text-align: center;
+      color: #7891a3;
+    }
+    .legend {
+      font-size: 11px;
+      color: #7891a3;
+      margin-top: 8px;
+    }
+    @media (max-width: 1150px) {
+      .shell {
+        grid-template-columns: 205px minmax(330px, 1fr) 300px;
+      }
+      .workspace {
+        padding: 14px;
+      }
+      aside {
+        padding: 16px 12px;
+      }
+      header {
+        padding: 0 16px;
+        gap: 12px;
+      }
+    }
+    @media (max-width: 850px) {
+      .shell {
+        grid-template-columns: 190px minmax(330px, 1fr);
+      }
+      aside.right {
+        grid-column: 1/-1;
+      }
+      .sheet {
+        height: 480px;
+      }
+      header small {
+        display: none;
+      }
+      footer {
+        height: auto;
+        min-height: 36px;
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+  <header>
+    <h1>◈ SCADA Studio</h1>
+    <span class="badge">機器登録 · 操作試作</span
+    ><small>機器を一度設定して、複数の画面で使う</small
+    ><span class="spacer"></span><button id="undo">↶ 元に戻す</button
+    ><button id="export">試作データを書き出す</button>
+  </header>
+  <main class="shell">
+    <aside class="left">
+      <div class="row">
+        <h2>機器台帳</h2>
+        <span class="spacer"></span><button id="add">＋ 登録</button>
+      </div>
+      <div id="equipment-list"></div>
+      <p class="panel-note">
+        機器を選び、「この画面に表示を追加」で配置します。同じ機器の信号割付は、全画面で共有します。
+      </p>
+      <div class="simulation">
+        <h2>模擬データ</h2>
+        <small>設備には接続しません</small
+        ><label
+          >接続状態<select id="connection">
+            <option value="online">オンライン（模擬）</option>
+            <option value="offline">catalog未確認</option>
+          </select></label
+        ><label
+          >値・品質<select id="quality">
+            <option value="running">運転 / 12.4 A</option>
+            <option value="stopped">停止 / 0.0 A</option>
+            <option value="stale">Stale · 通信不明</option>
+          </select></label
+        >
+      </div>
+    </aside>
+    <section class="workspace">
+      <div class="row">
+        <h2>画面への配置</h2>
+        <span class="spacer"></span><small>位置は画面ごとに保持</small>
+      </div>
+      <nav class="tabs" aria-label="画面">
+        <button data-page="overview">全体フロー</button
+        ><button data-page="detail">送風系詳細</button>
+      </nav>
+      <div class="sheet" id="sheet" aria-label="配置キャンバス"></div>
+      <div class="tools">
+        <button id="place" class="primary">この画面に表示を追加</button
+        ><button id="copy">同じ機器の表示を複製</button
+        ><button id="clone">別機器として複製</button
+        ><button id="remove">配置を削除</button>
+      </div>
+      <div class="info" id="placement-info"></div>
+      <div id="placement-options"></div>
+      <div class="legend">
+        配置をドラッグ、または選択して矢印キーで移動。Escでドラッグ取消。
+      </div>
+    </section>
+    <aside class="right">
+      <div class="row">
+        <h2 id="editor-title">機器設定</h2>
+        <span class="spacer"></span><span id="dirty"></span>
+      </div>
+      <form id="editor">
+        <label class="field"
+          >機器番号<input
+            id="code"
+            type="text"
+            required
+            maxlength="60" /></label
+        ><label class="field"
+          >名称<input id="name" type="text" required maxlength="100"
+        /></label>
+        <h3>使用する機能</h3>
+        <div id="features"></div>
+        <p class="muted">遠隔操作なし · クリック動作なし</p>
+        <h3>変更の影響</h3>
+        <div id="impact" class="impact"></div>
+        <div class="actions">
+          <button type="submit" class="primary" id="apply">適用</button
+          ><button type="button" id="cancel">入力を戻す</button>
+        </div>
+      </form>
+      <h3>この機器の使用先</h3>
+      <div id="uses"></div>
+    </aside>
+  </main>
+  <footer>
+    <span>独立試作 / 模擬catalog / 試作専用形式</span
+    ><span id="status" role="status" aria-live="polite"
+      >FAN-101を選択しています</span
+    >
+  </footer>
+  <dialog id="picker" aria-labelledby="picker-title">
+    <h2 id="picker-title">タグを選択</h2>
+    <label class="field"
+      >外部名・説明で検索<input id="tag-search" type="text"
+    /></label>
+    <div id="candidates"></div>
+    <p class="warning">
+      型・単位が不適合なタグは選べません。選択結果は「適用」まで機器へ反映されません。
+    </p>
+    <button id="close-picker">閉じる</button>
+  </dialog>
+  <dialog id="guard" aria-labelledby="guard-title">
+    <h2 id="guard-title">未適用の入力があります</h2>
+    <p>移動すると現在の機器設定の入力を破棄します。</p>
+    <div class="actions">
+      <button id="stay">編集を続ける</button
+      ><button id="discard">破棄して移動</button>
+    </div>
+  </dialog>
+  <script>
+    (() => {
+      "use strict";
+      const $ = (s) => document.querySelector(s),
+        clone = (v) => structuredClone(v),
+        esc = (v) =>
+          String(v).replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+      const slots = {
+        running: { label: "運転表示", type: "bool" },
+        current: { label: "電流表示", type: "number", unit: "A" },
+      };
+      const catalog = [
+        {
+          name: "PLC01.FAN101.Run",
+          description: "誘引送風機1号 運転",
+          type: "bool",
+        },
+        {
+          name: "PLC01.FAN101.Current",
+          description: "誘引送風機1号 電流",
+          type: "number",
+          unit: "A",
+        },
+        {
+          name: "PLC01.FAN102.Run",
+          description: "押込送風機2号 運転",
+          type: "bool",
+        },
+        {
+          name: "PLC01.FAN102.Current",
+          description: "押込送風機2号 電流",
+          type: "number",
+          unit: "A",
+        },
+        {
+          name: "PLC01.Duct.Pressure",
+          description: "ダクト圧力（電流には割付不可）",
+          type: "number",
+          unit: "kPa",
+        },
+        {
+          name: "PLC01.Unknown.Value",
+          description: "単位未確認の数値",
+          type: "number",
+        },
+      ];
+      let model = {
+          format: "equipment-authoring-study-v1",
+          equipment: [
+            {
+              id: "fan-101",
+              code: "FAN-101",
+              name: "誘引送風機1号",
+              features: ["running"],
+              bindings: { running: null },
+            },
+          ],
+          placements: [],
+        },
+        history = [],
+        selected = "fan-101",
+        page = "overview",
+        placementId = null,
+        draft = null,
+        isNew = false,
+        pending = null,
+        pickerSlot = null,
+        drag = null;
+      let serial = 0;
+      const uid = () => `study-${++serial}`;
+      const current = () => model.equipment.find((e) => e.id === selected);
+      const placements = (id) =>
+        model.placements.filter((p) => p.equipmentId === id);
+      const dirty = () =>
+        JSON.stringify(draft) !== JSON.stringify(current() || null);
+      function status(t) {
+        $("#status").textContent = t;
+      }
+      function commit(fn) {
+        history.push(clone(model));
+        fn();
+        render();
+      }
+      function navigate(fn) {
+        if (!dirty()) {
+          fn();
+          return;
+        }
+        pending = fn;
+        $("#guard").showModal();
+      }
+      function load(e, newMode = false) {
+        selected = e?.id || null;
+        draft = e ? clone(e) : null;
+        isNew = newMode;
+        render();
+      }
+      function state(e, slot) {
+        if (!e.features.includes(slot)) return "未採用";
+        const binding = e.bindings[slot];
+        if (!binding) return "未割付";
+        if ($("#connection").value === "offline") return "未確認";
+        const tag = catalog.find((t) => t.name === binding);
+        if (!tag) return "タグ欠損";
+        if (
+          tag.type !== slots[slot].type ||
+          (tag.unit && slots[slot].unit && tag.unit !== slots[slot].unit)
+        )
+          return "割付不適合";
+        if ($("#quality").value === "stale") return "通信不明";
+        if (slot === "running")
+          return $("#quality").value === "running" ? "運転" : "停止";
+        return (
+          ($("#quality").value === "running" ? "12.4" : "0.0") +
+          (tag.unit ? " A" : "（単位未確認）")
+        );
+      }
+      function fan(color) {
+        return `<svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="33" fill="#edf4f8" stroke="#9db4c5" stroke-width="2"/><g fill="${color}"><path d="M39 37C15 35 18 13 33 17c10 3 12 13 6 20Z"/><path d="M43 38c12-21 30-7 20 4-7 7-16 6-20-4Z"/><path d="M41 43c12 22-9 30-15 16-4-9 0-17 15-16Z"/></g><circle cx="40" cy="40" r="6" fill="#597e96"/></svg>`;
+      }
+      function render() {
+        $("#undo").disabled = !history.length;
+        $("#equipment-list").innerHTML = model.equipment
+          .map(
+            (e) =>
+              `<button class="equipment ${e.id === selected ? "active" : ""}" data-equipment="${e.id}"><strong>${esc(e.code)}</strong><span>${esc(e.name)}</span><small>送風機 · ${e.features.filter((s) => !e.bindings[s]).length}件未割付 · ${placements(e.id).length}配置</small></button>`,
+          )
+          .join("");
+        document
+          .querySelectorAll("[data-page]")
+          .forEach((b) =>
+            b.setAttribute("aria-pressed", b.dataset.page === page),
+          );
+        const visible = model.placements.filter((p) => p.page === page);
+        $("#sheet").innerHTML =
+          '<div class="sheet-label">' +
+          (page === "overview" ? "01 / OVERVIEW" : "02 / FAN DETAIL") +
+          "</div>" +
+          (visible.length
+            ? visible
+                .map((p) => {
+                  const e = model.equipment.find((e) => e.id === p.equipmentId),
+                    s = state(e, "running");
+                  return `<div class="placement ${p.id === placementId ? "selected" : ""}" tabindex="0" role="button" aria-label="${esc(e.code)}の配置" data-placement="${p.id}" style="left:${p.x}px;top:${p.y}px">${fan(s === "運転" ? "#5c9d91" : "#a0b2bd")}<b>${esc(e.code)} · ${esc(e.name)}</b><span class="state ${s === "運転" ? "good" : ""}">${e.features.includes("running") ? s : "静的表示 · 運転監視なし"}</span>${p.view === "meter" ? `<span class="reading">${esc(state(e, "current"))}</span>` : ""}</div>`;
+                })
+                .join("")
+            : '<div class="empty">登録機器の表示を、この画面に追加してください。</div>');
+        const p = model.placements.find((p) => p.id === placementId);
+        $("#copy").disabled = !p;
+        $("#remove").disabled = !p;
+        $("#place").disabled = !current();
+        $("#clone").disabled = !current();
+        $("#placement-info").textContent = p
+          ? `選択配置 → ${model.equipment.find((e) => e.id === p.equipmentId).code}を参照 / 信号割付は機器台帳で共有`
+          : "同じ機器を別の画面に置いても、信号を割り付け直す必要はありません。";
+        $("#placement-options").innerHTML = p
+          ? '<label>選択配置の表示形式 <select id="view"><option value="symbol">記号と名称</option><option value="meter">記号と電流</option></select></label>'
+          : "";
+        if (p) $("#view").value = p.view;
+        $("#editor").hidden = !draft;
+        if (!draft) return;
+        $("#editor-title").textContent = isNew
+          ? "新しい機器を登録"
+          : `${draft.code} の機器設定`;
+        $("#code").value = draft.code;
+        $("#name").value = draft.name;
+        $("#features").innerHTML = Object.entries(slots)
+          .map(
+            ([s, d]) =>
+              `<label class="feature"><input type="checkbox" data-feature="${s}" ${draft.features.includes(s) ? "checked" : ""}>${d.label}</label>${draft.features.includes(s) ? `<div class="signal"><button type="button" data-slot="${s}">${esc(draft.bindings[s] || "タグを選択（未割付）")}</button><div class="muted">${d.type} / read${d.unit ? " / " + d.unit : ""}</div>${draft.bindings[s] ? `<button type="button" data-clear="${s}">割付を解除</button>` : ""}</div>` : ""}`,
+          )
+          .join("");
+        updateImpact();
+        $("#uses").innerHTML =
+          placements(selected)
+            .map(
+              (p) =>
+                `<div>${p.page === "overview" ? "全体フロー" : "送風系詳細"} · ${p.view === "meter" ? "記号と電流" : "記号と名称"}</div>`,
+            )
+            .join("") || "まだ配置されていません";
+        $("#apply").textContent = isNew ? "登録" : "適用";
+      }
+      function updateImpact() {
+        $("#dirty").textContent = dirty() ? "未適用" : "";
+        const n = placements(selected).length;
+        const old = current();
+        const removed = old
+          ? old.features.filter((s) => !draft.features.includes(s))
+          : [];
+        $("#impact").textContent =
+          `${n}件の配置が同じ機器情報を参照します。信号を追加しても配置の表示形式・位置は変更しません。${removed.length ? "解除する機能・割付：" + removed.map((s) => slots[s].label).join("、") + "。" : ""}${isNew ? "新しい機器として登録します。実タグの割付は引き継ぎません。" : ""}`;
+      }
+      $("#equipment-list").onclick = (e) => {
+        const b = e.target.closest("[data-equipment]");
+        if (b)
+          navigate(() => {
+            placementId = null;
+            load(model.equipment.find((e) => e.id === b.dataset.equipment));
+          });
+      };
+      $("#code").oninput = (e) => {
+        draft.code = e.target.value;
+        updateImpact();
+      };
+      $("#name").oninput = (e) => {
+        draft.name = e.target.value;
+        updateImpact();
+      };
+      $("#features").onchange = (e) => {
+        const s = e.target.dataset.feature;
+        if (!s) return;
+        if (e.target.checked) {
+          draft.features.push(s);
+          draft.bindings[s] = null;
+        } else {
+          draft.features = draft.features.filter((x) => x !== s);
+          delete draft.bindings[s];
+        }
+        render();
+      };
+      $("#features").onclick = (e) => {
+        const clear = e.target.closest("[data-clear]");
+        if (clear) {
+          draft.bindings[clear.dataset.clear] = null;
+          render();
+          return;
+        }
+        const b = e.target.closest("[data-slot]");
+        if (!b) return;
+        pickerSlot = b.dataset.slot;
+        $("#picker-title").textContent =
+          `${draft.code} · ${slots[pickerSlot].label}のタグ`;
+        $("#tag-search").value = "";
+        renderCandidates();
+        $("#picker").showModal();
+      };
+      function renderCandidates() {
+        const q = $("#tag-search").value.toLowerCase(),
+          d = slots[pickerSlot];
+        $("#candidates").innerHTML =
+          catalog
+            .filter((t) =>
+              (t.name + " " + t.description).toLowerCase().includes(q),
+            )
+            .map((t) => {
+              const reason =
+                t.type !== d.type
+                  ? "型不一致"
+                  : d.unit && t.unit && d.unit !== t.unit
+                    ? "単位不一致"
+                    : $("#connection").value === "offline"
+                      ? "catalog未確認のため選択不可"
+                      : "";
+              return `<button class="candidate" data-tag="${t.name}" ${reason ? "disabled" : ""}>${esc(t.name)}<span>${esc(t.description)} · ${t.type}${t.unit ? " / " + t.unit : ""}${reason ? " · " + reason : !t.unit && d.unit ? " · 単位未確認" : ""}</span></button>`;
+            })
+            .join("") || "<p>該当するタグはありません</p>";
+      }
+      $("#tag-search").oninput = renderCandidates;
+      $("#candidates").onclick = (e) => {
+        const b = e.target.closest("[data-tag]");
+        if (b && !b.disabled) {
+          draft.bindings[pickerSlot] = b.dataset.tag;
+          $("#picker").close();
+          pickerSlot = null;
+          render();
+        }
+      };
+      $("#close-picker").onclick = () => $("#picker").close();
+      $("#picker").onclose = () => {
+        pickerSlot = null;
+      };
+      $("#editor").onsubmit = (e) => {
+        e.preventDefault();
+        draft.code = draft.code.trim();
+        draft.name = draft.name.trim();
+        if (!draft.code || !draft.name) {
+          status("機器番号と名称を入力してください");
+          return;
+        }
+        if (
+          model.equipment.some(
+            (x) =>
+              x.id !== draft.id &&
+              x.code.toLowerCase() === draft.code.toLowerCase(),
+          )
+        ) {
+          status("機器番号が重複しています");
+          return;
+        }
+        const saved = clone(draft);
+        if (!dirty()) {
+          status("変更はありません");
+          return;
+        }
+        history.push(clone(model));
+        if (isNew) model.equipment.push(saved);
+        else
+          model.equipment[model.equipment.findIndex((x) => x.id === selected)] =
+            saved;
+        isNew = false;
+        load(saved);
+        status(
+          `${saved.code}を適用しました。${placements(saved.id).length}件の配置で共有しています`,
+        );
+      };
+      $("#cancel").onclick = () => load(current() || model.equipment[0]);
+      $("#add").onclick = () =>
+        navigate(() => {
+          placementId = null;
+          load(
+            { id: uid(), code: "", name: "", features: [], bindings: {} },
+            true,
+          );
+        });
+      $("#clone").onclick = () =>
+        navigate(() => {
+          const source = current();
+          if (!source) return;
+          let n = 102;
+          while (model.equipment.some((e) => e.code === `FAN-${n}`)) n++;
+          placementId = null;
+          load(
+            {
+              id: uid(),
+              code: `FAN-${n}`,
+              name: source.name + "（別機器）",
+              features: [...source.features],
+              bindings: Object.fromEntries(
+                source.features.map((s) => [s, null]),
+              ),
+            },
+            true,
+          );
+          status("別機器の下書きです。信号はすべて未割付から始めます");
+        });
+      document.querySelectorAll("[data-page]").forEach(
+        (b) =>
+          (b.onclick = () =>
+            navigate(() => {
+              page = b.dataset.page;
+              placementId = null;
+              load(current() || model.equipment[0]);
+            })),
+      );
+      $("#place").onclick = () =>
+        navigate(() => {
+          if (!current()) return;
+          commit(() => {
+            const count = model.placements.filter(
+              (p) => p.page === page,
+            ).length;
+            const maxX = Math.max(0, $("#sheet").clientWidth - 166),
+              maxY = Math.max(0, $("#sheet").clientHeight - 190);
+            const p = {
+              id: uid(),
+              equipmentId: selected,
+              page,
+              x: Math.min(maxX, 60 + (count % 3) * 190),
+              y: Math.min(maxY, 100 + Math.floor(count / 3) * 190),
+              view: "symbol",
+            };
+            model.placements.push(p);
+            placementId = p.id;
+          });
+          status("登録済み機器の表示を追加しました");
+        });
+      $("#copy").onclick = () =>
+        navigate(() => {
+          const p = model.placements.find((p) => p.id === placementId);
+          if (!p) return;
+          commit(() => {
+            const c = {
+              ...clone(p),
+              id: uid(),
+              x: Math.min(p.x + 35, Math.max(0, $("#sheet").clientWidth - 166)),
+              y: Math.min(
+                p.y + 35,
+                Math.max(0, $("#sheet").clientHeight - 190),
+              ),
+            };
+            model.placements.push(c);
+            placementId = c.id;
+          });
+          status(
+            "同じ機器の表示を複製しました。機器登録と割付は共有しています",
+          );
+        });
+      $("#remove").onclick = () =>
+        navigate(() => {
+          commit(() => {
+            model.placements = model.placements.filter(
+              (p) => p.id !== placementId,
+            );
+            placementId = null;
+          });
+          status("配置を削除しました。機器台帳は保持しています");
+        });
+      $("#placement-options").onchange = (e) => {
+        if (e.target.id !== "view") return;
+        const value = e.target.value;
+        navigate(() =>
+          commit(() => {
+            model.placements.find((p) => p.id === placementId).view = value;
+          }),
+        );
+        render();
+      };
+      $("#stay").onclick = () => {
+        $("#guard").close();
+        pending = null;
+      };
+      $("#guard").oncancel = () => {
+        pending = null;
+      };
+      $("#discard").onclick = () => {
+        const fn = pending;
+        pending = null;
+        $("#guard").close();
+        draft = current() ? clone(current()) : null;
+        isNew = false;
+        fn?.();
+      };
+      $("#undo").onclick = () =>
+        navigate(() => {
+          if (!history.length) return;
+          model = history.pop();
+          placementId = null;
+          load(current() || model.equipment[0]);
+          status("定義の変更を1件戻しました。模擬データの現在状態は維持します");
+        });
+      $("#connection").onchange = render;
+      $("#quality").onchange = render;
+      $("#sheet").onpointerdown = (e) => {
+        const el = e.target.closest("[data-placement]");
+        if (!el || e.button !== 0 || dirty()) {
+          if (el && dirty())
+            navigate(() => {
+              const p = model.placements.find(
+                (p) => p.id === el.dataset.placement,
+              );
+              placementId = p.id;
+              load(model.equipment.find((x) => x.id === p.equipmentId));
+            });
+          return;
+        }
+        const p = model.placements.find((p) => p.id === el.dataset.placement);
+        placementId = p.id;
+        load(model.equipment.find((x) => x.id === p.equipmentId));
+        const target = $(`[data-placement="${p.id}"]`);
+        target.focus();
+        target.setPointerCapture(e.pointerId);
+        drag = {
+          id: p.id,
+          pointer: e.pointerId,
+          startX: e.clientX,
+          startY: e.clientY,
+          x: p.x,
+          y: p.y,
+        };
+      };
+      $("#sheet").onpointermove = (e) => {
+        if (!drag || e.pointerId !== drag.pointer) return;
+        const p = model.placements.find((p) => p.id === drag.id),
+          x = Math.max(
+            0,
+            Math.min(
+              $("#sheet").clientWidth - 166,
+              drag.x + e.clientX - drag.startX,
+            ),
+          ),
+          y = Math.max(
+            0,
+            Math.min(
+              $("#sheet").clientHeight - 190,
+              drag.y + e.clientY - drag.startY,
+            ),
+          );
+        const el = $(`[data-placement="${p.id}"]`);
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        drag.next = { x, y };
+      };
+      $("#sheet").onpointerup = (e) => {
+        if (!drag || drag.pointer !== e.pointerId) return;
+        const d = drag;
+        drag = null;
+        if (d.next && (d.next.x !== d.x || d.next.y !== d.y))
+          commit(() =>
+            Object.assign(
+              model.placements.find((p) => p.id === d.id),
+              d.next,
+            ),
+          );
+      };
+      $("#sheet").onpointercancel = () => {
+        drag = null;
+        render();
+      };
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && drag) {
+          drag = null;
+          render();
+          e.preventDefault();
+          return;
+        }
+        const el = e.target.closest("[data-placement]");
+        if (el && ["Enter", " "].includes(e.key)) {
+          e.preventDefault();
+          const id = el.dataset.placement;
+          navigate(() => {
+            const p = model.placements.find((p) => p.id === id);
+            placementId = id;
+            load(model.equipment.find((x) => x.id === p.equipmentId));
+            $(`[data-placement="${id}"]`).focus();
+          });
+          return;
+        }
+        if (
+          !el ||
+          !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(
+            e.key,
+          ) ||
+          dirty()
+        )
+          return;
+        e.preventDefault();
+        const id = el.dataset.placement,
+          p = model.placements.find((p) => p.id === id),
+          step = e.shiftKey ? 10 : 1;
+        commit(() => {
+          p.x = Math.max(
+            0,
+            Math.min(
+              $("#sheet").clientWidth - 166,
+              p.x +
+                (e.key === "ArrowRight"
+                  ? step
+                  : e.key === "ArrowLeft"
+                    ? -step
+                    : 0),
+            ),
+          );
+          p.y = Math.max(
+            0,
+            Math.min(
+              $("#sheet").clientHeight - 190,
+              p.y +
+                (e.key === "ArrowDown"
+                  ? step
+                  : e.key === "ArrowUp"
+                    ? -step
+                    : 0),
+            ),
+          );
+        });
+        $(`[data-placement="${id}"]`).focus();
+      });
+      $("#export").onclick = () =>
+        navigate(() => {
+          const blob = new Blob([JSON.stringify(model, null, 2)], {
+              type: "application/json",
+            }),
+            url = URL.createObjectURL(blob),
+            a = document.createElement("a");
+          a.href = url;
+          a.download = "equipment-authoring-study.json";
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          status("適用済みの試作データを書き出しました");
+        });
+      window.equipmentStudy = {
+        getState: () =>
+          clone({ model, selected, page, placementId, draft, isNew }),
+        catalog: clone(catalog),
+      };
+      load(current());
+    })();
+  </script>
+</html>
