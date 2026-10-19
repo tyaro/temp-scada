@@ -22,3 +22,13 @@ jobs:
       - run: cargo run --locked -p scada-model -- validate examples/minimal.project.json
       - run: cargo run --locked -p scada-model -- validate examples/process.project.json
       - run: cargo run --locked -p scada-model -- validate examples/tag-binding.project.json
+      - name: Save failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scada-failure-diagnostics-${{ github.run_attempt }}
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

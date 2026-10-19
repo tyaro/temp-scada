@@ -1,30 +1,34 @@
+import { pngFixture } from "./helpers/images";
+import {
+  openProject,
+  downloadProject,
+  downloadBytes,
+} from "./helpers/project-files";
 import { test, expect, type Page } from "@playwright/test";
-import { readFile } from "node:fs/promises";
-import { chooseTheme, fileCommand, selectPanel } from "./helpers/designer";
+import {
+  mainCanvas,
+  chooseTheme,
+  fileCommand,
+  selectPanel,
+} from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const images = (page: Page) =>
-  page.locator(".sheet > svg image[data-image-frame]");
+  mainCanvas(page).locator("image[data-image-frame]");
 async function start(page: Page) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await fileCommand(page, "新しいProject");
 }
 async function png(page: Page) {
-  return Buffer.from(
-    await page.evaluate(() => {
-      const c = document.createElement("canvas");
-      c.width = 240;
-      c.height = 120;
-      const ctx = c.getContext("2d")!;
-      ctx.fillStyle = "#e75840";
-      ctx.fillRect(0, 0, 120, 120);
-      ctx.fillStyle = "#1e9f85";
-      ctx.fillRect(120, 0, 120, 120);
-      return c.toDataURL("image/png").split(",")[1];
-    }),
-    "base64",
-  );
+  return pngFixture(page, {
+    width: 240,
+    height: 120,
+    rectangles: [
+      { x: 0, y: 0, width: 120, height: 120, color: "#e75840" },
+      { x: 120, y: 0, width: 120, height: 120, color: "#1e9f85" },
+    ],
+  });
 }
 async function place(page: Page, bytes: Buffer) {
   const chooser = page.waitForEvent("filechooser");
@@ -42,11 +46,9 @@ async function number(page: Page, name: string, value: string) {
   await expect(input).toHaveValue(value);
 }
 async function archive(page: Page) {
-  const wait = page.waitForEvent("download");
-  await page.keyboard.press("Control+s");
-  const file = await wait;
+  const file = await downloadProject(page);
   expect(file.suggestedFilename()).toBe("project.bantoscada");
-  return readFile((await file.path())!);
+  return downloadBytes(file);
 }
 async function saved(page: Page) {
   const bytes = await archive(page);
@@ -141,7 +143,7 @@ for (const theme of ["light", "dark"])
       other = await context.newPage();
     await other.goto("/");
     await button(other, "編集").click();
-    await other.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    await openProject(other, {
       name: "image.bantoscada",
       mimeType: "application/zip",
       buffer: data,
@@ -186,7 +188,7 @@ test("background and duplicated images share one original through remove and Und
     buffer: bytes,
   });
   await expect(
-    page.locator(".sheet > svg > image[data-background-image]"),
+    mainCanvas(page).locator(":scope > image[data-background-image]"),
   ).toBeAttached();
   await selectPanel(page, "レイヤー");
   await button(page, "image · 0").click();

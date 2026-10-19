@@ -1,11 +1,13 @@
+import { pngFixture } from "./helpers/images";
+import { openProject, downloadProject } from "./helpers/project-files";
 import sample from "../examples/minimal.project.json" with { type: "json" };
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { chooseTheme, selectPanel } from "./helpers/designer";
+import { mainCanvas, chooseTheme, selectPanel } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const image = (page: Page) =>
-  page.locator(".sheet > svg > image[data-background-image]");
+  mainCanvas(page).locator(":scope > image[data-background-image]");
 async function start(page: Page) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
@@ -13,18 +15,11 @@ async function start(page: Page) {
   await selectPanel(page, "プロジェクト");
 }
 async function png(page: Page, color = "rgba(0,128,255,0.5)") {
-  return Buffer.from(
-    await page.evaluate((color) => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 64;
-      canvas.height = 32;
-      const c = canvas.getContext("2d")!;
-      c.fillStyle = color;
-      c.fillRect(0, 0, 64, 32);
-      return canvas.toDataURL("image/png").split(",")[1];
-    }, color),
-    "base64",
-  );
+  return pngFixture(page, {
+    width: 64,
+    height: 32,
+    rectangles: [{ x: 0, y: 0, width: 64, height: 32, color }],
+  });
 }
 async function upload(page: Page, bytes: Buffer) {
   const chooser = page.waitForEvent("filechooser");
@@ -38,9 +33,7 @@ async function upload(page: Page, bytes: Buffer) {
   ).toBeEnabled();
 }
 async function download(page: Page) {
-  const wait = page.waitForEvent("download");
-  await page.keyboard.press("Control+s");
-  return await wait;
+  return downloadProject(page);
 }
 for (const theme of ["light", "dark"])
   test(`background image fits behind objects, edits explicitly, restores through Undo and exports portable originals in ${theme}`, async ({
@@ -57,7 +50,7 @@ for (const theme of ["light", "dark"])
     );
     await expect(image(page)).toHaveAttribute("pointer-events", "none");
     expect(
-      await page.locator(".sheet > svg").evaluate((svg) => {
+      await mainCanvas(page).evaluate((svg) => {
         const nodes = [...svg.children];
         return (
           nodes.findIndex((n) => n.hasAttribute("data-screen-background")) <
@@ -95,7 +88,7 @@ for (const theme of ["light", "dark"])
       }),
       other = await context.newPage();
     await start(other);
-    await other.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    await openProject(other, {
       name: "other.bantoscada",
       mimeType: "application/zip",
       buffer: archive,

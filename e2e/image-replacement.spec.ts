@@ -1,26 +1,26 @@
+import { pngFixture } from "./helpers/images";
+import {
+  openProject,
+  downloadProject,
+  downloadBytes,
+} from "./helpers/project-files";
 import { test, expect, type Page } from "@playwright/test";
-import { readFile } from "node:fs/promises";
-import { chooseTheme, fileCommand, selectPanel } from "./helpers/designer";
+import {
+  mainCanvas,
+  chooseTheme,
+  fileCommand,
+  selectPanel,
+} from "./helpers/designer";
 const button = (p: Page, name: string) =>
   p.getByRole("button", { name, exact: true });
 const picture = (p: Page, id: string) =>
-  p.locator(`.sheet > svg > [data-object-id="${id}"] [data-image-frame]`);
+  mainCanvas(p).locator(`:scope > [data-object-id="${id}"] [data-image-frame]`);
 async function png(p: Page, color = "#e75840", width = 240, height = 120) {
-  return Buffer.from(
-    await p.evaluate(
-      ({ color, width, height }) => {
-        const c = document.createElement("canvas");
-        c.width = width;
-        c.height = height;
-        const ctx = c.getContext("2d")!;
-        ctx.fillStyle = color;
-        ctx.fillRect(0, 0, width, height);
-        return c.toDataURL("image/png").split(",")[1];
-      },
-      { color, width, height },
-    ),
-    "base64",
-  );
+  return pngFixture(p, {
+    width,
+    height,
+    rectangles: [{ x: 0, y: 0, width, height, color }],
+  });
 }
 async function start(p: Page) {
   await p.setViewportSize({ width: 1920, height: 1080 });
@@ -34,8 +34,8 @@ async function start(p: Page) {
     await chooser
   ).setFiles({ name: "original.png", mimeType: "image/png", buffer: original });
   await expect(p.locator(".sheet [data-image-frame]")).toHaveCount(1);
-  const id = (await p
-    .locator(".sheet > svg > [data-object-id]")
+  const id = (await mainCanvas(p)
+    .locator(":scope > [data-object-id]")
     .first()
     .getAttribute("data-object-id"))!;
   return { id, original, next };
@@ -48,10 +48,8 @@ async function replace(p: Page, bytes: Buffer, name = "replacement.png") {
   ).setFiles({ name, mimeType: "image/png", buffer: bytes });
 }
 async function saved(p: Page) {
-  const wait = p.waitForEvent("download");
-  await p.keyboard.press("Control+s");
-  const download = await wait,
-    bytes = await readFile((await download.path())!);
+  const download = await downloadProject(p),
+    bytes = await downloadBytes(download);
   if (download.suggestedFilename().endsWith(".json"))
     return { project: JSON.parse(bytes.toString()), archive: bytes };
   const result = await p.evaluate(
@@ -161,14 +159,11 @@ for (const theme of ["light", "dark"])
     await expect(picture(p, id)).toHaveAttribute("href", oldHref!);
     await button(p, "やり直す").click();
     await expect(picture(p, id)).not.toHaveAttribute("href", oldHref!);
-    await p.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    await openProject(p, {
       name: "replacement.bantoscada",
       mimeType: "application/zip",
       buffer: snapshot.archive,
     });
-    await expect(p.getByTestId("project-status")).toHaveText(
-      "Project を読み込みました。",
-    );
     expect((await saved(p)).project.screens).toEqual(after.screens);
   });
 test("same bytes keep declaration and history; invalid images and locked placements cannot replace", async ({

@@ -45,3 +45,6 @@ export async function fileCommand(page: Page, name: string) {
       .click();
   }
 }
+
+/** Main canvas root; minimap and Popup projections have separate roots. */
+export const mainCanvas = (page: Page) => page.locator(".sheet > svg");

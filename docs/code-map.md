@@ -31,7 +31,7 @@
 | 変更内容                     | 実装・契約                                                                    | 追加で読む設計                                                                                                       | 主な検証                                                                     |
 | ---------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 塗り・線・α・一括属性        | Primitive、ShapePaint、Selection系、editor、project                           | [塗り](shape-paint-design.md)・[線種](line-style-design.md)・[α](color-alpha-design.md)                              | shape-paint・gradient・pattern・selection・numeric関連                       |
-| 画像配置・差替え・背景・取込 | image-assets／frame／crop、Project、描画、取込controller                      | [画像保存](image-assets-design.md)・[配置と差替え](image-placement-design.md)                                        | image-assets・placement・replacement・background、開始時に追加済みのcrop関連 |
+| 画像配置・差替え・背景・取込 | image-assets／frame／crop、Project、描画、Appの画像取込                       | [画像保存](image-assets-design.md)・[配置と差替え](image-placement-design.md)                                        | image-assets・placement・replacement・background、開始時に追加済みのcrop関連 |
 | コピー／切取／貼付           | clipboard、image-clipboard、editor、資産lease                                 | [画像clipboard](image-clipboard-design.md)                                                                           | clipboard・image-paste・asset-clipboard                                      |
 | 画面・Symbol・フォルダー     | editor、screen-references、layer-tree／drag、使用先集計                       | [埋込](embedded-screen-design.md)・[配置ドラッグ](layer-drag-design.md)・[フォルダードラッグ](folder-drag-design.md) | screens・symbols・screen-view・layer／folder関連                             |
 | 選択・viewport・数値         | Renderer、CanvasWorkspace、geometry、drafts、numeric-properties               | [選択表示](selection-view-design.md)・[回転](object-rotation-design.md)・[UX](frontend-ux-design.md)                 | numeric・range・rotation・resize・viewport・wheel・placement                 |
@@ -62,3 +62,11 @@ R3ではフォームごとにadapterへ移し、成功済みと残る経路を�
 - 差し替えは配置ID／元asset／選択世代に加え、decode開始時のcrop世代を確認する。既存draft適用とdecode中の変更を区別する。
 - `ImagePainting`がcropとcontainの共通描画を担い、`ObjectPainting`経由で編集・ミニマップ・埋込・小窓へ使われる。
 - native clipboard取得と、Promise付きClipboardItemのwrite開始はユーザー操作イベントの境界を保つ。controller化で最初のawaitより後へ送らない。
+
+## ブラウザ検証の共通準備
+
+`e2e/helpers/designer.ts`はメニュー・テーマ・左タブと主キャンバスroot、`images.ts`はブラウザでのPNG fixture生成、`project-files.ts`は成功読込とdownload／bytesの取得を所有する。まず画像配置・差し替え・背景の3specで使う。他のspecの一斉置換はしない。
+
+成功読込helperはファイル入力のクリア／再生成とenabled、成功表示、未処理確認なしを待つ。前回の成功メッセージだけで次の読込完了と判定しない。不正ファイル・未適用入力・遅延応答など、失敗や確認自体を検証するケースは明示手順を残す。packageのブラウザ内importはネイティブdecodeと原本復元の確認に使い、一般的なZIP／schemaの網羅検証は既存の単体側で行う。
+
+`playwright.config.ts`で失敗trace・screenshot、CIではHTML reportを出す。workflowは失敗時にtest-results／playwright-reportを7日保持する。待機時間・retry・拒否条件を緩める変更ではない。
