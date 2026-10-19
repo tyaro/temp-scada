@@ -390,4 +390,4 @@ Project 0.12.0で単一Textの文字サイズ・標準／太字・左／中央�
 
 ## 画像・描画表現・画面展開・kioskの追加検討（2026-10-19）
 
-ユーザーの追加要望を[拡張検討案](scada-graphics-runtime-extension-design.md)へ整理した。背景画像／Image／画像clipboard、paint・gradient／mesh／線種／α、Equipment／Faceplate、画面取込・子ウィンドウ・kioskの実現方法と相対コストを記録する。これらの追加機能は未実装。画面取込・メッシュ・子ウィンドウの意味はユーザーへ確認中で、方式は回答後に決める。S9b・v1.1の提供段階、認証延期、正式Runtimeと表示プレビューの区別は維持する。
+ユーザーの追加要望を[拡張検討案](scada-graphics-runtime-extension-design.md)へ整理した。背景画像／Image／画像clipboard、paint・gradient／mesh／線種／α、Equipment／Faceplate、画面取込・子ウィンドウ・kioskの実現方法と相対コストを記録する。これらの追加機能は未実装。2026-10-20のユーザー回答を反映し、画面取込は別画面の埋込View、メッシュは繰返しパターン、子ウィンドウは監視画面内Popupとする。自由メッシュグラデーション・他製品変換・OS別窓は今回の対象外。S9b・v1.1の提供段階、認証延期、正式Runtimeと表示プレビューの区別は維持する。

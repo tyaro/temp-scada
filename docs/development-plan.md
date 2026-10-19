@@ -27,6 +27,12 @@
 
 最新の実画面は[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+## 追加要望の用語確認を反映（2026-10-20・日本時間）
+
+ユーザー回答により、画面取込は「別画面を現在の画面内へ埋込表示」、メッシュは「斜線・網掛け・点の繰返しパターン」、子ウィンドウは「監視画面内の小窓」と確定した。[拡張設計](scada-graphics-runtime-extension-design.md)・基準設計書・READMEを同期した。以下の前日記録の確認待ちは、この回答で解消している。
+
+埋込Viewは同一Projectの画面参照・viewport・循環／使用先検証、Popupは通常の非モーダル詳細と確認Modalの区別を設計へ追加した。初期の読み取り表示を提案し、設備context／正式Runtimeの完成とは区別する。自由メッシュグラデーション・他製品converter・OS別窓を今回の対象から外し、線種・α→画像資産／背景・Image→gradient／pattern・画像貼付→埋込View／画面内Popupの順を具体化した。アプリ・schemaは変更していない。
+
 <a id="graphics-runtime-extension-review"></a>
 
 ## 画像・描画表現・運用画面の追加検討（2026-10-19・同日後続）
