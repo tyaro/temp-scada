@@ -16,6 +16,7 @@ import builtins from "./symbol-library.json";
 import type { Point, SymbolDefinition, ScreenObject, Screen } from "./project";
 export type AddKind = "rectangle" | "ellipse" | "text" | "line" | "pipe";
 export interface ObjectPatch {
+  opacity?: number;
   rotation?: number;
   fontSize?: number;
   textStyle?: TextStyle;
@@ -973,6 +974,7 @@ export function applyCommand(
         colorMode,
         paint,
         rotation,
+        opacity,
         fontSize,
         textStyle,
         points,
@@ -983,6 +985,12 @@ export function applyCommand(
       } = command.patch;
       const object = screen.objects[index];
       Object.assign(object, geometry);
+      if (opacity !== undefined) {
+        if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1)
+          throw new Error("不透明度は0〜100%で入力してください。");
+        // Preserve explicit default values, and avoid creating history for omitted defaults.
+        if ((object.opacity ?? 1) !== opacity) object.opacity = opacity;
+      }
       if (rotation !== undefined) object.rotation = normalizeRotation(rotation);
       if (name !== undefined) {
         if (name !== null && typeof name !== "string")

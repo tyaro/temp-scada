@@ -17,7 +17,7 @@
   {#each [...definition.objects]
     .filter((object) => object.visible !== false)
     .sort((a, b) => a.order - b.order) as object (object.id)}
-    <g transform={objectTransform(object)}
+    <g transform={objectTransform(object)} opacity={object.opacity}
       ><Primitive {object} color="var(--banto-text-muted)" /></g
     >
   {/each}

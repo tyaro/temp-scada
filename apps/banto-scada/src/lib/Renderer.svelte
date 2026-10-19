@@ -593,6 +593,7 @@
       <g
         transform={rotationTransform(visual)}
         data-object-rotation={visual.rotation}
+        opacity={visual.opacity}
       >
         {#if "width" in visual && visual.shape.type === "symbol"}
           {@const definition = symbols.find(
@@ -610,7 +611,7 @@
             {#each [...definition.objects]
               .filter((object) => object.visible !== false)
               .sort((a, b) => a.order - b.order) as child (child.id)}
-              <g transform={objectTransform(child)}
+              <g transform={objectTransform(child)} opacity={child.opacity}
                 ><Primitive
                   object={child}
                   color={visual.shape.colorMode === "definition"

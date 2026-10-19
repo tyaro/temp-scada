@@ -488,14 +488,23 @@
               {#if activeDefinition}共有定義内の名前は同じ定義を使う全配置で共用します。{/if}
             </p>
             <p class="numeric-hint">
-              数値はEnter・フォーカス移動で確定 · Escで取消
+              数値はEnter・フォーカス移動で確定 ·
+              Escで取消。不透明度は0〜100%、0%でもレイヤーから選択できます。
             </p>
             <div class="fields">
-              {#each "width" in selected ? ["x", "y", "width", "height", "rotation"] : ["x", "y", "rotation"] as field}
+              {#each "width" in selected ? ["x", "y", "width", "height", "rotation", "opacity"] : ["x", "y", "rotation", "opacity"] as field}
                 <label
-                  >{field === "rotation" ? "回転（°）" : field}<input
+                  >{field === "rotation"
+                    ? "回転（°）"
+                    : field === "opacity"
+                      ? "不透明度（%）"
+                      : field}<input
                     name={field}
-                    aria-label={field === "rotation" ? "回転角度" : field}
+                    aria-label={field === "rotation"
+                      ? "回転角度"
+                      : field === "opacity"
+                        ? "不透明度（%）"
+                        : field}
                     type="text"
                     inputmode="decimal"
                     required

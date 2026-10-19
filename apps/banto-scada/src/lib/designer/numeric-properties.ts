@@ -1,6 +1,13 @@
 import type { ScreenObject } from "../project";
 export type NumericProperty =
-  "x" | "y" | "width" | "height" | "strokeWidth" | "rotation" | "fontSize";
+  | "opacity"
+  | "x"
+  | "y"
+  | "width"
+  | "height"
+  | "strokeWidth"
+  | "rotation"
+  | "fontSize";
 export interface NumericTarget {
   generation: number;
   screenId: string;
@@ -22,6 +29,7 @@ export function objectFormValues(
   definition: boolean,
 ): Record<string, string> {
   const values: Record<string, string> = {
+    opacity: String(Number(((object.opacity ?? 1) * 100).toPrecision(15))),
     name: object.name ?? "",
     x: String(object.x),
     y: String(object.y),
