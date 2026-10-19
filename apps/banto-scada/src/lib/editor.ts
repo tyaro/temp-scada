@@ -46,6 +46,12 @@ type ScreenCommand =
   | { type: "duplicate-screen"; screenId: string }
   | { type: "remove-screen"; screenId: string };
 export type ObjectCommand = (
+  | {
+      type: "distribute";
+      screenId: string;
+      objectIds: string[];
+      axis: "x" | "y";
+    }
   | { type: "set-color"; screenId: string; objectIds: string[]; fill: string }
   | {
       type: "set-visibility";
@@ -132,6 +138,7 @@ export function isObjectCommand(
   command: EditCommand,
 ): command is ObjectCommand {
   return [
+    "distribute",
     "set-color",
     "set-visibility",
     "set-lock",
@@ -415,6 +422,7 @@ export function applyCommand(
     return finish(project, next);
   }
   if (
+    command.type === "distribute" ||
     command.type === "set-color" ||
     command.type === "move-many" ||
     command.type === "duplicate-many" ||
@@ -429,7 +437,37 @@ export function applyCommand(
       .sort((a, b) => a.order - b.order);
     if (objects.length !== ids.size)
       throw new Error("選択した図形が見つかりません");
-    if (command.type === "set-color") {
+    if (command.type === "distribute") {
+      if (objects.length < 3)
+        throw new Error("等間隔に配置する図形を3件以上選択してください");
+      if (command.axis !== "x" && command.axis !== "y")
+        throw new Error("等間隔配置の方向が不正です");
+      const axis = command.axis;
+      const placements = objects.map((object) => {
+        const bounds = getBounds(object);
+        const offset =
+          bounds[axis] + (axis === "x" ? bounds.width : bounds.height) / 2;
+        return { object, offset, center: object[axis] + offset };
+      });
+      if (placements.some((item) => !Number.isFinite(item.center)))
+        throw new Error("配置の中心は有限の座標にしてください");
+      placements.sort(
+        (a, b) => a.center - b.center || a.object.order - b.object.order,
+      );
+      const start = placements[0].center,
+        end = placements.at(-1)!.center;
+      if (start === end) return project;
+      // Endpoints stay untouched. Weighted interpolation also avoids end-start overflow.
+      for (let i = 1; i < placements.length - 1; i++) {
+        const fraction = i / (placements.length - 1);
+        const target = start * (1 - fraction) + end * fraction;
+        const { object, offset, center } = placements[i];
+        const tolerance =
+          Number.EPSILON * Math.max(1, Math.abs(center), Math.abs(target)) * 4;
+        if (Math.abs(target - center) > tolerance)
+          object[axis] = target - offset;
+      }
+    } else if (command.type === "set-color") {
       const fill = command.fill.trim().toLowerCase();
       if (!/^#[0-9a-f]{6}$/.test(fill))
         throw new Error("色は#と6桁の16進数で指定してください");

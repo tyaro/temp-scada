@@ -345,3 +345,5 @@ Project 0.7.0で配置と定義内部の`visible`を追加した。図面・表�
 Project名の編集・F2の名前欄への移動・F1の操作ガイドを既存の編集基盤へ接続した。schemaは0.7.0を維持する。[実装状況](development-plan.md#standard-names-progress)を参照。
 
 複数選択の色編集を実装した。混在色と適用する色の未指定を区別し、既存の入力保護・共通コマンド・Undoを使う。共通スタイル全体の完了を示すものではない。[実画面と検証](development-plan.md#selection-color-progress)を参照。
+
+3件以上の中心を水平方向／垂直方向に等間隔で配置する操作を追加した。両端中心を固定し、隙間の均等化とは区別する。[実装範囲と検証](development-plan.md#distribute-progress)を参照。

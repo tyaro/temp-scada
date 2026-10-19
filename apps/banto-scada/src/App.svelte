@@ -1977,47 +1977,71 @@
     {
       label: "整列（複数選択）",
       items: [
-        {
-          alignment: "left" as const,
-          label: "左揃え",
-          icon: "M3 3V21M7 5H20V10H7ZM7 14H15V19H7Z",
-        },
-        {
-          alignment: "center-x" as const,
-          label: "左右中央揃え",
-          icon: "M12 2V22M4 5H20V10H4ZM7 14H17V19H7Z",
-        },
-        {
-          alignment: "right" as const,
-          label: "右揃え",
-          icon: "M21 3V21M4 5H17V10H4ZM9 14H17V19H9Z",
-        },
-        {
-          alignment: "top" as const,
-          label: "上揃え",
-          icon: "M3 3H21M5 7H10V20H5ZM14 7H19V15H14Z",
-        },
-        {
-          alignment: "center-y" as const,
-          label: "上下中央揃え",
-          icon: "M2 12H22M5 4H10V20H5ZM14 7H19V17H14Z",
-        },
-        {
-          alignment: "bottom" as const,
-          label: "下揃え",
-          icon: "M3 21H21M5 4H10V17H5ZM14 9H19V17H14Z",
-        },
-      ].map((item) => ({
-        ...item,
-        disabled: mutationBlocked || selectedIds.length < 2,
-        run: () =>
-          edit({
-            type: "align",
-            screenId: screen.id,
-            objectIds: [...selectedIds],
-            alignment: item.alignment,
-          }),
-      })),
+        ...[
+          {
+            alignment: "left" as const,
+            label: "左揃え",
+            icon: "M3 3V21M7 5H20V10H7ZM7 14H15V19H7Z",
+          },
+          {
+            alignment: "center-x" as const,
+            label: "左右中央揃え",
+            icon: "M12 2V22M4 5H20V10H4ZM7 14H17V19H7Z",
+          },
+          {
+            alignment: "right" as const,
+            label: "右揃え",
+            icon: "M21 3V21M4 5H17V10H4ZM9 14H17V19H9Z",
+          },
+          {
+            alignment: "top" as const,
+            label: "上揃え",
+            icon: "M3 3H21M5 7H10V20H5ZM14 7H19V15H14Z",
+          },
+          {
+            alignment: "center-y" as const,
+            label: "上下中央揃え",
+            icon: "M2 12H22M5 4H10V20H5ZM14 7H19V17H14Z",
+          },
+          {
+            alignment: "bottom" as const,
+            label: "下揃え",
+            icon: "M3 21H21M5 4H10V17H5ZM14 9H19V17H14Z",
+          },
+        ].map((item) => ({
+          ...item,
+          disabled: mutationBlocked || selectedIds.length < 2,
+          run: () =>
+            edit({
+              type: "align",
+              screenId: screen.id,
+              objectIds: [...selectedIds],
+              alignment: item.alignment,
+            }),
+        })),
+        ...[
+          {
+            axis: "x" as const,
+            label: "中心を水平方向に等間隔",
+            icon: "M3 3V21M21 3V21M4 9H6V15H4ZM11 6H13V18H11ZM18 9H20V15H18Z",
+          },
+          {
+            axis: "y" as const,
+            label: "中心を垂直方向に等間隔",
+            icon: "M3 3H21M3 21H21M9 4H15V6H9ZM6 11H18V13H6ZM9 18H15V20H9Z",
+          },
+        ].map((item) => ({
+          ...item,
+          disabled: mutationBlocked || selectedIds.length < 3,
+          run: () =>
+            edit({
+              type: "distribute",
+              screenId: screen.id,
+              objectIds: [...selectedIds],
+              axis: item.axis,
+            }),
+        })),
+      ],
     },
   ]);
   const selectionContextItems: ContextAction[] = $derived.by(() => {
@@ -3094,6 +3118,9 @@ ${object.id}`}
   </p>
   <p>
     キャンバスはホイールで縦スクロール、Shift＋ホイールで横スクロールします。編集キャンバス上のCtrl＋ホイールはポインタ位置を基準に拡大縮小します。Ctrl＋＋／－／0のキー操作はブラウザのページ倍率です。
+  </p>
+  <p>
+    「中心を水平方向／垂直方向に等間隔」は3件以上で使えます。両端の中心を固定し、中間の配置だけを動かします。図形間の隙間を揃える操作ではありません。スナップで丸めず、小数座標も保存します。サイズが違う配置では重なりが残る場合があります。
   </p>
   <p>
     レイヤーの錠アイコンで配置の編集をロックします。ロック中はキャンバスの選択・移動やプロパティ変更を防ぎ、レイヤーで選択してコピー・解除できます。ロックは権限ではなく、参照する共有定義の変更・Undo／Redo・画面全体の管理は引き続き反映されます。コピー・貼り付けはロック状態を保持します。
