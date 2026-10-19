@@ -28,6 +28,7 @@
     type ResizeHandle,
   } from "./resize";
   import { canvasColors } from "./canvas-colors";
+  import { compositedOpacity } from "./opacity";
   import Primitive from "./Primitive.svelte";
   import type { TagReadings } from "./tag-presentation";
   let {
@@ -593,7 +594,7 @@
       <g
         transform={rotationTransform(visual)}
         data-object-rotation={visual.rotation}
-        opacity={visual.opacity}
+        opacity={compositedOpacity(visual)}
       >
         {#if "width" in visual && visual.shape.type === "symbol"}
           {@const definition = symbols.find(
@@ -611,7 +612,9 @@
             {#each [...definition.objects]
               .filter((object) => object.visible !== false)
               .sort((a, b) => a.order - b.order) as child (child.id)}
-              <g transform={objectTransform(child)} opacity={child.opacity}
+              <g
+                transform={objectTransform(child)}
+                opacity={compositedOpacity(child)}
                 ><Primitive
                   object={child}
                   color={visual.shape.colorMode === "definition"

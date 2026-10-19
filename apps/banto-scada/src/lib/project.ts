@@ -8,6 +8,7 @@ export interface Point {
 }
 interface BaseObject {
   opacity?: number;
+  colorAlpha?: number;
   rotation: number;
   folderId?: string;
   name?: string;
@@ -25,7 +26,12 @@ export interface TagBinding {
 export type LineStyle = "solid" | "dashed" | "dotted";
 export interface ShapePaint {
   fillEnabled: boolean;
-  stroke: { color: string; width: number; lineStyle?: LineStyle } | null;
+  stroke: {
+    color: string;
+    width: number;
+    lineStyle?: LineStyle;
+    alpha?: number;
+  } | null;
 }
 export interface TextStyle {
   fontSize: number;
@@ -80,10 +86,10 @@ export interface SymbolDefinition {
 export interface Project {
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.14.0";
+    schemaVersion: "0.15.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.14.0";
+    minRuntimeVersion: "0.15.0";
     name: string;
   };
   screens: Screen[];
@@ -104,8 +110,8 @@ export function parseProject(json: string): Project {
       ...old,
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.14.0",
-        minRuntimeVersion: "0.14.0",
+        schemaVersion: "0.15.0",
+        minRuntimeVersion: "0.15.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,

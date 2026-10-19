@@ -17,6 +17,7 @@ import type { Point, SymbolDefinition, ScreenObject, Screen } from "./project";
 export type AddKind = "rectangle" | "ellipse" | "text" | "line" | "pipe";
 export interface ObjectPatch {
   opacity?: number;
+  colorAlpha?: number;
   rotation?: number;
   fontSize?: number;
   textStyle?: TextStyle;
@@ -975,6 +976,7 @@ export function applyCommand(
         paint,
         rotation,
         opacity,
+        colorAlpha,
         fontSize,
         textStyle,
         points,
@@ -985,6 +987,12 @@ export function applyCommand(
       } = command.patch;
       const object = screen.objects[index];
       Object.assign(object, geometry);
+      if (colorAlpha !== undefined) {
+        if (!Number.isFinite(colorAlpha) || colorAlpha < 0 || colorAlpha > 1)
+          throw new Error("色の不透明度は0〜100%で入力してください。");
+        if ((object.colorAlpha ?? 1) !== colorAlpha)
+          object.colorAlpha = colorAlpha;
+      }
       if (opacity !== undefined) {
         if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1)
           throw new Error("不透明度は0〜100%で入力してください。");

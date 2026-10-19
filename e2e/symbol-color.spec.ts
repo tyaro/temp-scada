@@ -27,7 +27,7 @@ const svgSymbol = (root: Locator, id: string) =>
   );
 async function paints(svg: Locator) {
   return svg
-    .locator("rect,ellipse,text,polyline,polygon")
+    .locator("rect,ellipse,text[data-text-content],polyline,polygon")
     .evaluateAll((nodes) =>
       nodes.map((node) =>
         node.getAttribute(

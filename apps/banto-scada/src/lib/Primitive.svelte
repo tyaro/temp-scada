@@ -45,6 +45,8 @@
       stroke={object.shape.paint.stroke
         ? (color ?? object.shape.paint.stroke.color)
         : "none"}
+      fill-opacity={object.colorAlpha}
+      stroke-opacity={object.shape.paint.stroke?.alpha}
       stroke-width={object.shape.paint.stroke?.width}
       stroke-dasharray={lineDash(
         object.shape.paint.stroke?.lineStyle,
@@ -61,6 +63,8 @@
       stroke={object.shape.paint.stroke
         ? (color ?? object.shape.paint.stroke.color)
         : "none"}
+      fill-opacity={object.colorAlpha}
+      stroke-opacity={object.shape.paint.stroke?.alpha}
       stroke-width={object.shape.paint.stroke?.width}
       stroke-dasharray={lineDash(
         object.shape.paint.stroke?.lineStyle,

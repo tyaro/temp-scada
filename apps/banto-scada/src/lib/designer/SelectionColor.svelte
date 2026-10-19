@@ -137,7 +137,7 @@
           name="convertDefinitionSymbols"
           bind:this={convertInput}
           bind:checked={convert}
-        />共有定義の色を使うSymbol {definitionColorCount} 件を配置単色へ切り替える</label
+        />共有定義の色を使うSymbol {definitionColorCount} 件を配置単色へ切り替える（保存された単色の不透明度も適用）</label
       >{/if}
     <button
       type="submit"

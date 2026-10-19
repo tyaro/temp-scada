@@ -25,6 +25,9 @@
     strokeColor: paint.stroke?.color ?? "#334155",
     strokeSize: String(paint.stroke?.width ?? 2),
     strokeStyle: paint.stroke?.lineStyle ?? "solid",
+    strokeAlpha: String(
+      Number(((paint.stroke?.alpha ?? 1) * 100).toPrecision(15)),
+    ),
   });
   function sync() {
     const select = form?.elements.namedItem("strokeEnabled");
@@ -114,6 +117,20 @@
             >破線</option
           ><option value="dotted">点線</option></select
         ></label
+      >
+    </div>
+    <div class="options" hidden={!strokeShown}>
+      <label
+        >枠線の不透明度（%）<input
+          name="strokeAlpha"
+          aria-label="枠線の不透明度（%）"
+          type="number"
+          min="0"
+          max="100"
+          step="any"
+          required
+          disabled={!strokeShown}
+        /></label
       >
     </div>
     <p>

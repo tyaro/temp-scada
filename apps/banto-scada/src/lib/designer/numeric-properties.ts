@@ -1,5 +1,6 @@
 import type { ScreenObject } from "../project";
 export type NumericProperty =
+  | "colorAlpha"
   | "opacity"
   | "x"
   | "y"
@@ -30,6 +31,9 @@ export function objectFormValues(
 ): Record<string, string> {
   const values: Record<string, string> = {
     opacity: String(Number(((object.opacity ?? 1) * 100).toPrecision(15))),
+    colorAlpha: String(
+      Number(((object.colorAlpha ?? 1) * 100).toPrecision(15)),
+    ),
     name: object.name ?? "",
     x: String(object.x),
     y: String(object.y),

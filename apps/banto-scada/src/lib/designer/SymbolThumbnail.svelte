@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { SymbolDefinition } from "../project";
   import { objectTransform } from "../rotation";
+  import { compositedOpacity } from "../opacity";
   import Primitive from "../Primitive.svelte";
   let {
     definition,
@@ -17,7 +18,7 @@
   {#each [...definition.objects]
     .filter((object) => object.visible !== false)
     .sort((a, b) => a.order - b.order) as object (object.id)}
-    <g transform={objectTransform(object)} opacity={object.opacity}
+    <g transform={objectTransform(object)} opacity={compositedOpacity(object)}
       ><Primitive {object} color="var(--banto-text-muted)" /></g
     >
   {/each}

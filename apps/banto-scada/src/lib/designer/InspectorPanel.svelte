@@ -544,15 +544,47 @@
                       !selected.shape.paint.fillEnabled)}
                 /></label
               >
+              <label>
+                {selected.shape.type === "symbol"
+                  ? "単色"
+                  : selected.shape.type === "text"
+                    ? "文字"
+                    : selected.shape.type === "polyline"
+                      ? "線"
+                      : "塗り"}の不透明度（%）
+                <input
+                  name="colorAlpha"
+                  aria-label="色の不透明度（%）"
+                  type="text"
+                  inputmode="decimal"
+                  required
+                  disabled={(selected.shape.type === "symbol" &&
+                    selected.shape.colorMode === "definition") ||
+                    ((selected.shape.type === "rectangle" ||
+                      selected.shape.type === "ellipse") &&
+                      !selected.shape.paint.fillEnabled)}
+                  aria-invalid={numericErrors.colorAlpha ? "true" : undefined}
+                  onfocus={focusNumber}
+                  oninput={clearNumber}
+                  onkeydown={numberKey}
+                  onblur={blurNumber}
+                  oncompositionstart={compositionStart}
+                  oncompositionend={compositionEnd}
+                />
+                {#if numericErrors.colorAlpha}<span
+                    class="field-error"
+                    role="alert">{numericErrors.colorAlpha}</span
+                  >{/if}
+              </label>
               {#if selected.shape.type === "symbol" && selected.shape.colorMode === "definition"}<p
                   class="numeric-hint"
                 >
-                  現在の描画にはこの単色を使用していません。各図形の色は共有定義で編集します。保存値は保持し、色の使い方を「配置の単色」に適用した後に編集できます。
+                  現在の描画にはこの単色を使用していません。各図形の色は共有定義で編集します。色と不透明度の保存値は保持し、色の使い方を「配置の単色」に適用した後に編集できます。
                 </p>{/if}
               {#if (selected.shape.type === "rectangle" || selected.shape.type === "ellipse") && !selected.shape.paint.fillEnabled}<p
                   class="numeric-hint"
                 >
-                  塗りは無効です。保存色は保持し、塗りを「あり」に適用した後に編集できます。
+                  塗りは無効です。色と不透明度の保存値は保持し、塗りを「あり」に適用した後に編集できます。
                 </p>{/if}
               {#if selected.shape.type === "polyline"}
                 <label
