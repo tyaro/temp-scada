@@ -308,3 +308,11 @@ A から C への UX 作業は B の完成を必須にしない。位置と大�
 ![Studio 外観の実画面・ダーク](assets/frontend-ux/studio-shell-dark.png)
 
 実装範囲・小画面と検証は[開発計画](development-plan.md)を参照。
+
+## お気に入り部品ドックの進捗
+
+2026-10-19 同日後続。部品パネルの☆／★と下部ドックを実装し、既存の入力保護付きクリック・ドラッグ配置を共用した。基本図形・組込シンボル・共有定義に対応し、共有定義はProject別に登録する。ドックのための領域を下端に予約し、図面を覆う浮動化や連続配置とは分ける。詳細と検証は[開発計画](development-plan.md)を参照。
+
+![お気に入り部品ドック・ライト](assets/frontend-ux/favorites-dock-light.png)
+
+![お気に入り部品ドック・ダーク](assets/frontend-ux/favorites-dock-dark.png)

@@ -237,6 +237,47 @@
         ?.focus(),
     );
   }
+  import FavoritesDock from "./lib/designer/FavoritesDock.svelte";
+  import {
+    availableFavorites,
+    favoriteKey,
+    FAVORITES_LIMIT,
+    DEFAULT_FAVORITES,
+  } from "./lib/designer/favorites";
+  import { getFavorites, setFavorites } from "./lib/banto/setup";
+  let favoriteKeys = $state(getFavorites());
+  function isFavorite(part: PalettePart) {
+    return favoriteKeys.includes(favoriteKey(part, project.manifest.projectId));
+  }
+  function toggleFavorite(part: PalettePart) {
+    const key = favoriteKey(part, project.manifest.projectId);
+    if (favoriteKeys.includes(key))
+      favoriteKeys = favoriteKeys.filter((item) => item !== key);
+    else {
+      if (favoriteKeys.length >= FAVORITES_LIMIT) {
+        report(
+          "warning",
+          "お気に入りは64件までです。使わない部品を外してから登録してください。",
+        );
+        return;
+      }
+      favoriteKeys = [...favoriteKeys, key];
+    }
+    void setFavorites(favoriteKeys);
+  }
+  function resetFavorites() {
+    favoriteKeys = [...DEFAULT_FAVORITES];
+    void setFavorites(favoriteKeys);
+  }
+  function placeFavorite(part: PalettePart) {
+    const center = canvasWorkspace?.visibleCenter();
+    const token = center && startPaletteDrag(part);
+    if (token && center) dropPalettePart(token, center);
+  }
+  function browseParts() {
+    setAuxPanelVisibility({ sidebar: true }, "sidebar");
+    activePanel = "parts";
+  }
   import PartPalette from "./lib/designer/PartPalette.svelte";
   import type { PalettePart } from "./lib/designer/palette-drag";
   let paletteDrag: {
@@ -293,7 +334,7 @@
       ) {
         report(
           "error",
-          "配置先が変わったため、部品をもう一度ドラッグしてください。",
+          "配置先が変わったため、部品をもう一度配置してください。",
         );
         return;
       }
@@ -499,6 +540,14 @@
   let libraryId = $state("");
   let activeDefinition = $derived(
     project.symbols.find((s) => s.id === editingSymbolId),
+  );
+  const favoriteItems = $derived(
+    availableFavorites(
+      favoriteKeys,
+      project.manifest.projectId,
+      project.symbols,
+      !activeDefinition,
+    ),
   );
   function normalizeTargets() {
     if (
@@ -1367,6 +1416,10 @@
           run: () => setInspectorVisibility(!showInspector, true),
         },
         {
+          label: "お気に入りを標準に戻す",
+          run: resetFavorites,
+        },
+        {
           label: "パネルの幅を標準に戻す",
           disabled: mode !== "edit",
           run: resetPanelWidths,
@@ -1861,6 +1914,8 @@
       {#snippet partsPanel()}
         {#if mode === "edit"}
           <PartPalette
+            {isFavorite}
+            ontoggleFavorite={toggleFavorite}
             contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}`}
             onedit={openDefinition}
             onduplicate={(id) =>
@@ -1964,6 +2019,17 @@
             })}
         />
       {/key}
+      {#if mode === "edit" && (showSidebar || showInspector || showReferences)}
+        <FavoritesDock
+          items={favoriteItems}
+          contextKey={`${contextScope}:${favoriteKeys.join(",")}`}
+          onplace={placeFavorite}
+          onremove={toggleFavorite}
+          onbrowse={browseParts}
+          onstartdrag={startPaletteDrag}
+          onenddrag={() => (paletteDrag = null)}
+        />
+      {/if}
       <p role="status" data-testid="project-status">{message}</p>
       {#if mode === "edit"}
         <div

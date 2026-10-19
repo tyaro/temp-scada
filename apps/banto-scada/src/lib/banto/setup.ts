@@ -1,3 +1,4 @@
+import { DEFAULT_FAVORITES, parseFavorites } from "../designer/favorites";
 import {
   DEFAULT_REFERENCE_HEIGHT,
   parseReferenceHeight,
@@ -93,6 +94,22 @@ export async function setReferenceHeight(value: number): Promise<void> {
     );
   }
 }
+const FAVORITES_KEY = "scada.designer.favorites";
+let favorites = [...DEFAULT_FAVORITES];
+export function getFavorites(): string[] {
+  return [...favorites];
+}
+export async function setFavorites(value: string[]): Promise<void> {
+  favorites = parseFavorites(JSON.stringify(value));
+  try {
+    await uiSettings.set(FAVORITES_KEY, JSON.stringify(favorites));
+  } catch {
+    toastStore.push(
+      "warning",
+      "お気に入りを保存できません。このタブだけに適用します。",
+    );
+  }
+}
 const MENUBAR_KEY = "scada.designer.menubar";
 export function getMenubarVisible(): boolean {
   return menubarVisible;
@@ -180,6 +197,14 @@ export async function initializeBanto(): Promise<() => void> {
     toastStore.push(
       "warning",
       "タグ参照パネルの高さを読み込めません。標準の高さを使います。",
+    );
+  }
+  try {
+    favorites = parseFavorites(await uiSettings.get(FAVORITES_KEY));
+  } catch {
+    toastStore.push(
+      "warning",
+      "お気に入りを読み込めません。初期配置を使います。",
     );
   }
   return watchSystemTheme(() => {

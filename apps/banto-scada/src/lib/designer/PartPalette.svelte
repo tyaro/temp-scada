@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FavoriteButton from "./FavoriteButton.svelte";
   import { Modal } from "@banto/ui";
   import ContextActions from "./ContextActions.svelte";
   import type { AddKind } from "../editor";
@@ -22,6 +23,8 @@
     contextKey,
     onedit,
     onduplicate,
+    isFavorite,
+    ontoggleFavorite,
   }: {
     definitions: SymbolDefinition[];
     allowSymbols?: boolean;
@@ -33,6 +36,8 @@
     contextKey: string;
     onedit: (id: string) => void;
     onduplicate: (id: string) => void;
+    isFavorite: (part: PalettePart) => boolean;
+    ontoggleFavorite: (part: PalettePart) => void;
   } = $props();
   let search = $state("");
   let info = $state<{
@@ -292,6 +297,18 @@
                     />
                     <span class:sr-only={view === "icons"}>{part.label}</span>
                   </button>
+                  <FavoriteButton
+                    active={isFavorite({
+                      type: "builtin",
+                      template: part.template,
+                    })}
+                    label={part.template === "pump" ? "ポンプ" : "バルブ"}
+                    ontoggle={() =>
+                      ontoggleFavorite({
+                        type: "builtin",
+                        template: part.template,
+                      })}
+                  />
                 </ContextActions>
               {/each}
             </div>
@@ -346,6 +363,18 @@
                         class:sr-only={view === "icons"}>{definition.name}</span
                       ><small class="sr-only">配置を追加</small>
                     </button>
+                    <FavoriteButton
+                      active={isFavorite({
+                        type: "symbol",
+                        symbolId: definition.id,
+                      })}
+                      label={`共有定義：${definition.name}`}
+                      ontoggle={() =>
+                        ontoggleFavorite({
+                          type: "symbol",
+                          symbolId: definition.id,
+                        })}
+                    />
                   </ContextActions>
                 {/each}
               </div>
@@ -405,6 +434,12 @@
                     </svg>
                     <span class:sr-only={view === "icons"}>{part.label}</span>
                   </button>
+                  <FavoriteButton
+                    active={isFavorite({ type: "basic", kind: part.kind })}
+                    label={part.label.replace(/を追加$/, "").trim()}
+                    ontoggle={() =>
+                      ontoggleFavorite({ type: "basic", kind: part.kind })}
+                  />
                 </ContextActions>
               {/each}
             </div>
