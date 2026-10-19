@@ -2,7 +2,7 @@
 
 このクラウドタスクは既に隔離されています。既存の `/workspace/temp-scada` を使い、ユーザーが求めない限り Git worktree を作成しないでください。
 
-最初に README.md と docs/development-plan.md を読み、現在の実装と上流設計の構想を区別してください。docs/upstream/industrial は出典付きの参照スナップショットです。ここを編集せず、差分は docs/development-plan.md に記録します。
+最初に README.md、docs/implementation-status.md、docs/development-plan.md を読み、現在の実装と上流設計の構想を区別してください。日付付き記録は docs/implementation-history.md に分離しています。docs/upstream/industrial は出典付きの参照スナップショットです。ここを編集せず、差分は docs/development-plan.md に記録します。
 
 保守性・AIコーディング向けの構造整理には [リファクタリング実行計画](docs/maintenance-refactoring-plan.md) を使います。開始時の実装状況を確認し、R0から順に、責務・不変条件・関連テスト・完了条件を各区切りで記録してください。文書の作成はリファクタ完了を意味しません。
 
