@@ -1,13 +1,47 @@
 import type { LayerFolder, ScreenObject } from "../project";
+import { folderAncestors, folderDestinations } from "./layer-tree";
 
 export const LAYER_MIME = "application/x-banto-scada-layer-membership";
 type Owner = { objects: ScreenObject[]; folders: LayerFolder[] };
-export type LayerDrag = {
-  token: string;
-  scope: string;
-  ids: string[];
-  hidden: number;
-};
+type DragSession = { token: string; scope: string; hidden: number };
+export type LayerDrag = DragSession &
+  (
+    | { kind: "objects"; ids: string[] }
+    | {
+        kind: "folder";
+        folderId: string;
+        parentId: string;
+        name: string;
+        count: number;
+      }
+  );
+export function folderDragSource(
+  owner: Owner,
+  id: string,
+): Omit<Extract<LayerDrag, { kind: "folder" }>, "token" | "scope"> | null {
+  const folder = owner.folders.find((folder) => folder.id === id);
+  if (!folder) return null;
+  const subtree = new Set(
+    owner.folders
+      .filter((item) =>
+        folderAncestors(owner.folders, item.id).some(
+          (ancestor) => ancestor.id === id,
+        ),
+      )
+      .map((item) => item.id),
+  );
+  const objects = owner.objects.filter(
+    (object) => object.folderId && subtree.has(object.folderId),
+  );
+  return {
+    kind: "folder",
+    folderId: id,
+    parentId: folder.parentId ?? "",
+    name: folder.name,
+    count: objects.length,
+    hidden: objects.filter((object) => object.visible === false).length,
+  };
+}
 
 // IDs are captured at drag start. The DataTransfer carries only a session token.
 export function layerDragSource(
@@ -28,18 +62,41 @@ export function layerDragSource(
   return ids;
 }
 
+/** Cheap source validation also runs on each autoscroll frame. */
+export function layerDragError(
+  owner: Owner,
+  scope: string,
+  drag: LayerDrag,
+): string | null {
+  if (drag.scope !== scope)
+    return "編集対象が変わりました。もう一度ドラッグしてください。";
+  if (drag.kind === "objects")
+    return layerDragSource(owner, drag.ids[0], drag.ids)
+      ? null
+      : "配置が見つからないか、ロックされています。";
+  const folder = owner.folders.find((folder) => folder.id === drag.folderId);
+  if (!folder) return "移動するフォルダーが見つかりません。";
+  return (folder.parentId ?? "") === drag.parentId
+    ? null
+    : "移動元の親が変わりました。もう一度ドラッグしてください。";
+}
 export function layerDropError(
   owner: Owner,
   scope: string,
   drag: LayerDrag,
   destination: string,
 ): string | null {
-  if (drag.scope !== scope)
-    return "編集対象が変わりました。もう一度ドラッグしてください。";
-  if (!layerDragSource(owner, drag.ids[0], drag.ids))
-    return "配置が見つからないか、ロックされています。";
+  const sourceError = layerDragError(owner, scope, drag);
+  if (sourceError) return sourceError;
   if (destination && !owner.folders.some((folder) => folder.id === destination))
     return "移動先のフォルダーが見つかりません。";
+  if (drag.kind === "folder" && destination) {
+    const target = folderDestinations(owner.folders, drag.folderId).find(
+      (item) => item.id === destination,
+    );
+    if (!target) return "自分自身または配下のフォルダーへは移動できません。";
+    if (target.disabled) return "フォルダーの階層は16段までです。";
+  }
   return null;
 }
 
@@ -47,6 +104,7 @@ type DropOptions = {
   active: () => boolean;
   accepts: (event: DragEvent) => boolean;
   hover: (destination: string | null) => void;
+  allowed: (destination: string) => boolean;
   drop: (event: DragEvent, destination: string) => void;
   end: () => void;
 };
@@ -82,7 +140,7 @@ export function layerDropSurface(node: HTMLElement, options: DropOptions) {
     const destination =
       target && node.contains(target) ? target.dataset.layerDropFolder! : null;
     options.hover(destination);
-    if (destination !== null) {
+    if (destination !== null && options.allowed(destination)) {
       event.preventDefault();
       if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     } else if (event.dataTransfer) event.dataTransfer.dropEffect = "none";
@@ -111,7 +169,12 @@ export function layerDropSurface(node: HTMLElement, options: DropOptions) {
       event.target instanceof Element
         ? event.target.closest<HTMLElement>("[data-layer-drop-folder]")
         : null;
-    if (target && node.contains(target) && options.accepts(event)) {
+    if (
+      target &&
+      node.contains(target) &&
+      options.accepts(event) &&
+      options.allowed(target.dataset.layerDropFolder!)
+    ) {
       event.preventDefault();
       options.drop(event, target.dataset.layerDropFolder!);
     }

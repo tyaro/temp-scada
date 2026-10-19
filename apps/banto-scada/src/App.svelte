@@ -87,7 +87,9 @@
   import {
     LAYER_MIME,
     layerDragSource,
+    folderDragSource,
     layerDropError,
+    layerDragError,
     layerDropSurface,
     type LayerDrag,
   } from "./lib/designer/layer-drag";
@@ -2099,6 +2101,29 @@
   let layerDrag = $state<LayerDrag | null>(null);
   let layerDragGuide = $state<LayerDrag | null>(null);
   let layerDropTarget = $state<string | null>(null);
+  const layerDropTargetError = $derived(
+    layerDragGuide && layerDropTarget !== null
+      ? layerDropError(screen, folderScope, layerDragGuide, layerDropTarget)
+      : null,
+  );
+  const layerDragDescription = $derived.by(() => {
+    const drag = layerDragGuide;
+    if (!drag) return "";
+    const source =
+      drag.kind === "objects"
+        ? `${drag.ids.length} 件を移動（非表示 ${drag.hidden} 件）`
+        : `フォルダー「${drag.name}」と配下を移動（配置 ${drag.count} 件・非表示 ${drag.hidden} 件）`;
+    const destination =
+      layerDropTargetError ??
+      (layerDropTarget === null
+        ? "フォルダーへドロップ"
+        : layerDropTarget
+          ? `${folderPath(screen.folders, layerDropTarget)} 直下へ`
+          : drag.kind === "folder"
+            ? "ルートへ移動"
+            : "フォルダーから外す");
+    return `${source} · ${destination}`;
+  });
   let layerDragClickUntil = 0;
   function endLayerDrag() {
     if (layerDrag) layerDragClickUntil = performance.now() + 300;
@@ -2122,6 +2147,7 @@
       return;
     }
     layerDrag = {
+      kind: "objects",
       token: crypto.randomUUID(),
       scope: folderScope,
       ids,
@@ -2134,13 +2160,24 @@
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(LAYER_MIME, layerDrag.token);
   }
+  function beginFolderDrag(event: DragEvent, id: string) {
+    const source = folderDragSource(screen, id);
+    if (editBlocked || !source || !event.dataTransfer) {
+      event.preventDefault();
+      return;
+    }
+    layerDrag = { ...source, token: crypto.randomUUID(), scope: folderScope };
+    layerDragClickUntil = performance.now() + 300;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(LAYER_MIME, layerDrag.token);
+  }
   function acceptsLayerDrag(event: DragEvent) {
     return !!(
       layerDrag &&
       !editBlocked &&
       layerDrag.scope === folderScope &&
       event.dataTransfer?.types.includes(LAYER_MIME) &&
-      !layerDropError(screen, folderScope, layerDrag, "")
+      !layerDragError(screen, folderScope, layerDrag)
     );
   }
   function dropLayer(event: DragEvent, destination: string) {
@@ -2155,12 +2192,21 @@
         return;
       }
       if (
-        !edit({
-          type: "set-folder",
-          screenId: screen.id,
-          objectIds: drag.ids,
-          folderId: destination || null,
-        })
+        !edit(
+          drag.kind === "objects"
+            ? {
+                type: "set-folder",
+                screenId: screen.id,
+                objectIds: drag.ids,
+                folderId: destination || null,
+              }
+            : {
+                type: "move-folder",
+                screenId: screen.id,
+                folderId: drag.folderId,
+                parentId: destination || null,
+              },
+        )
       )
         return;
       layersExpanded = true;
@@ -2168,14 +2214,18 @@
       void tick().then(() => {
         if (drag.scope !== folderScope) return;
         const visible = document.querySelector<HTMLElement>(
-          `button[data-layer-id="${drag.ids[0]}"]`,
+          drag.kind === "objects"
+            ? `button[data-layer-id="${drag.ids[0]}"]`
+            : `button[data-layer-folder="${drag.folderId}"][aria-expanded]`,
         );
         if (visible?.getClientRects().length)
           visible.scrollIntoView({ block: "nearest" });
         else
           report(
             "success",
-            "所属を変更しました。検索条件外の配置は検索を解除すると確認できます。",
+            drag.kind === "objects"
+              ? "所属を変更しました。検索条件外の配置は検索を解除すると確認できます。"
+              : "親フォルダーを変更しました。検索条件外のフォルダーは検索を解除すると確認できます。",
           );
       });
     });
@@ -3372,7 +3422,13 @@
             class="layer-browser"
             use:layerDropSurface={{
               accepts: acceptsLayerDrag,
-              active: () => !!layerDrag,
+              active: () =>
+                !!layerDrag &&
+                !editBlocked &&
+                !layerDragError(screen, folderScope, layerDrag),
+              allowed: (destination) =>
+                !!layerDrag &&
+                !layerDropError(screen, folderScope, layerDrag, destination),
               hover: (target) => {
                 layerDropTarget = target;
                 layerDragGuide = layerDrag;
@@ -3416,26 +3472,44 @@
               </p>{/if}
             {#if layerDragGuide}
               <div class="layer-drag-guide">
-                <p
-                  class="layer-caption"
-                  role="status"
-                  title={layerDropTarget
-                    ? `${folderPath(screen.folders, layerDropTarget)} 直下へ`
-                    : "フォルダーから外す領域またはフォルダーへドロップ"}
-                >
-                  {layerDragGuide.ids.length} 件を移動（非表示 {layerDragGuide.hidden}
-                  件） · {layerDropTarget === null
-                    ? "フォルダーへドロップ"
-                    : layerDropTarget
-                      ? `${folderPath(screen.folders, layerDropTarget)} 直下へ`
-                      : "フォルダーから外す"}
-                </p>
+                {#if layerDragGuide.kind === "folder"}
+                  <p class="layer-caption" title={layerDragDescription}>
+                    フォルダー「{layerDragGuide.name}」と配下を移動
+                  </p>
+                  <p class="layer-caption">
+                    配置 {layerDragGuide.count} 件・非表示 {layerDragGuide.hidden}
+                    件
+                  </p>
+                  <p
+                    class="layer-caption"
+                    role="status"
+                    title={layerDragDescription}
+                  >
+                    {layerDropTargetError ??
+                      (layerDropTarget === null
+                        ? "フォルダーへドロップ"
+                        : layerDropTarget
+                          ? `${folderPath(screen.folders, layerDropTarget)} 直下へ`
+                          : "ルートへ移動")}
+                  </p>
+                {:else}
+                  <p
+                    class="layer-caption"
+                    role="status"
+                    title={layerDragDescription}
+                  >
+                    {layerDragDescription}
+                  </p>
+                {/if}
                 <div
                   class="layer-root-drop"
-                  class:drop-hover={layerDropTarget === ""}
+                  class:drop-hover={layerDropTarget === "" &&
+                    !layerDropTargetError}
                   data-layer-drop-folder=""
                 >
-                  フォルダーから外す（ルートへ）
+                  {layerDragGuide.kind === "folder"
+                    ? "ルートへ移動（親フォルダーなし）"
+                    : "フォルダーから外す（ルートへ）"}
                 </div>
               </div>
             {:else}<p class="layer-caption">
@@ -3460,6 +3534,7 @@
                     <div
                       class="layer-folder"
                       class:drop-hover={!!layerDrag &&
+                        !layerDropTargetError &&
                         layerDropTarget === row.folder.id}
                       data-layer-drop-folder={row.folder.id}
                       style:margin-left={`${row.depth * 10}px`}
@@ -3468,7 +3543,14 @@
                         data-layer-folder={row.folder.id}
                         aria-expanded={row.open}
                         title={folderPath(screen.folders, row.folder.id)}
-                        onclick={() => toggleFolder(row.folder.id)}
+                        onclick={(event) => {
+                          if (
+                            event.detail &&
+                            performance.now() < layerDragClickUntil
+                          )
+                            return;
+                          toggleFolder(row.folder.id);
+                        }}
                         oncontextmenu={(event) => {
                           event.preventDefault();
                           showFolderMenu(row.folder.id, event.currentTarget);
@@ -3478,19 +3560,30 @@
                         <span class="folder-chevron" aria-hidden="true"
                           >{row.open ? "⌄" : "›"}</span
                         >
-                        <svg
-                          width="19"
-                          height="19"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="1.6"
-                          aria-hidden="true"
-                          ><path
-                            d="M3 7V5a1 1 0 0 1 1-1h6l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7h18"
-                          /></svg
+                        <span
+                          class="folder-drag-source"
+                          role="img"
+                          aria-label={row.folder.name}
+                          draggable={!editBlocked}
+                          data-folder-drag-source={row.folder.id}
+                          ondragstart={(event) =>
+                            beginFolderDrag(event, row.folder.id)}
                         >
-                        <span class="folder-name">{row.folder.name}</span>
+                          <svg
+                            width="19"
+                            height="19"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.6"
+                            aria-hidden="true"
+                            ><path
+                              d="M3 7V5a1 1 0 0 1 1-1h6l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7h18"
+                            /></svg
+                          >
+                          <span class="folder-name">{row.folder.name}</span
+                          ></span
+                        >
                       </button>
                       <button
                         class="folder-more"
@@ -4074,6 +4167,14 @@ ${object.id}`}
   .folder-chevron {
     width: 12px;
     text-align: center;
+  }
+  .folder-drag-source {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    flex: 1;
+    cursor: grab;
   }
   .folder-name {
     min-width: 0;

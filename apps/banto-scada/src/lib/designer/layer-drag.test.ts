@@ -34,6 +34,7 @@ it("rejects missing, duplicate and locked selection atomically", () => {
 it("revalidates generation, owner, destination and lock changes after a deferred drop", () => {
   const owner = fixture().screens[0];
   const drag: LayerDrag = {
+    kind: "objects",
     token: "session",
     scope: "1:screen",
     ids: [owner.objects[0].id],
@@ -79,4 +80,61 @@ it("uses one existing membership command and history step, preserving geometry a
   expect(
     recordEdit(changed.project, changed.history, command, "edit").project,
   ).toBe(changed.project);
+});
+
+import { folderDragSource } from "./layer-drag";
+it("captures a folder subtree without including unrelated selection, and keeps locks and visibility", () => {
+  const owner = fixture().screens[0],
+    id = owner.folders[0].id;
+  owner.folders.push({ id: "child", parentId: id, name: "child", order: 1 });
+  owner.objects[0].folderId = "child";
+  owner.objects[0].locked = true;
+  owner.objects[1].folderId = id;
+  owner.objects[1].visible = false;
+  const source = folderDragSource(owner, id)!;
+  expect(source).toEqual({
+    kind: "folder",
+    folderId: id,
+    parentId: "",
+    name: "移動先",
+    count: 2,
+    hidden: 1,
+  });
+  expect(folderDragSource(owner, "missing")).toBeNull();
+  const drag: LayerDrag = { ...source, token: "session", scope: "owner" };
+  expect(layerDropError(owner, "owner", drag, "")).toBeNull();
+  expect(layerDropError(owner, "owner", drag, id)).toContain("自身");
+  expect(layerDropError(owner, "owner", drag, "child")).toContain("配下");
+  expect(layerDropError(owner, "owner", drag, "missing")).toContain("移動先");
+  owner.folders[0].parentId = "elsewhere";
+  expect(layerDropError(owner, "owner", drag, "")).toContain("移動元の親");
+  owner.folders = [];
+  expect(layerDropError(owner, "owner", drag, "")).toContain("見つかりません");
+});
+it("includes the whole subtree height in hover validation and revalidates it after a deferred drop", () => {
+  const owner = fixture().screens[0],
+    id = owner.folders[0].id;
+  owner.folders.push({ id: "child", parentId: id, name: "child", order: 1 });
+  for (let i = 1; i <= 15; i++)
+    owner.folders.push({
+      id: `depth${i}`,
+      name: `depth${i}`,
+      order: i + 1,
+      ...(i > 1 ? { parentId: `depth${i - 1}` } : {}),
+    });
+  const drag: LayerDrag = {
+    ...folderDragSource(owner, id)!,
+    token: "session",
+    scope: "owner",
+  };
+  expect(layerDropError(owner, "owner", drag, "depth14")).toBeNull();
+  expect(layerDropError(owner, "owner", drag, "depth15")).toContain("16段");
+  owner.folders.push({
+    id: "grandchild",
+    name: "grandchild",
+    parentId: "child",
+    order: 20,
+  });
+  expect(layerDropError(owner, "owner", drag, "depth14")).toContain("16段");
+  expect(layerDropError(owner, "other", drag, "")).toContain("編集対象");
 });
