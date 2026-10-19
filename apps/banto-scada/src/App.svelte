@@ -50,6 +50,7 @@
     void setThemeMode(value);
   }
   import { untrack, tick, flushSync } from "svelte";
+  import { copyObjects, parseClipboard } from "./lib/clipboard";
   import { projectContent } from "./lib/save-state";
   import { createDraftGuard } from "./lib/designer/drafts.svelte";
   import DraftPrompt from "./lib/designer/DraftPrompt.svelte";
@@ -569,6 +570,26 @@
       stopPlacement(true);
       return;
     }
+    if (
+      event.key === "Delete" &&
+      !event.repeat &&
+      !event.isComposing &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !event.shiftKey &&
+      mode === "edit" &&
+      !busy &&
+      !clipboardBusy &&
+      !drafts.pending &&
+      !replacement &&
+      !positionPlacement &&
+      clipboardScope(event.target)
+    ) {
+      event.preventDefault();
+      removeSelection();
+      return;
+    }
     if (event.isComposing || event.altKey || !(event.ctrlKey || event.metaKey))
       return;
     const key = event.key.toLowerCase();
@@ -658,6 +679,130 @@
         screenId: screen.id,
         objectIds: [...selectedIds],
       });
+  }
+  const clipboardSession = crypto.randomUUID();
+  let clipboardBusy = $state(false);
+  let lastPaste: { key: string; count: number } | undefined;
+  function clipboardScope(target: EventTarget | null) {
+    return (
+      target instanceof Element &&
+      !target.closest(
+        'input,textarea,select,[contenteditable],[role="menu"],[role="dialog"]',
+      ) &&
+      !!target.closest(
+        '[aria-label="キャンバス操作領域"],nav[aria-label="図形一覧"]',
+      )
+    );
+  }
+  function clipboardAction(
+    kind: "copy" | "cut" | "paste",
+    event?: ClipboardEvent,
+  ) {
+    if (
+      busy ||
+      clipboardBusy ||
+      mode !== "edit" ||
+      drafts.pending ||
+      replacement
+    )
+      return;
+    const target = screen.id,
+      generation = workspaceGeneration;
+    const ids = [...selectedIds];
+    if (kind !== "paste" && !ids.length) return;
+    event?.preventDefault();
+    let native = event?.clipboardData;
+    const input = kind === "paste" ? native?.getData("text/plain") : undefined;
+    const validTarget = () =>
+      mode === "edit" &&
+      screen.id === target &&
+      workspaceGeneration === generation &&
+      !busy &&
+      !replacement;
+    const run = async () => {
+      if (!validTarget() || clipboardBusy) return;
+      clipboardBusy = true;
+      try {
+        const revision = project.manifest.projectRevision;
+        const origin = `${clipboardSession}:${generation}`;
+        const command: EditCommand = {
+          type: "remove-many",
+          screenId: target,
+          objectIds: ids,
+          ...(activeDefinition ? { definitionId: activeDefinition.id } : {}),
+        };
+        if (kind === "paste") {
+          const text = input ?? (await navigator.clipboard.readText());
+          if (
+            !validTarget() ||
+            revision !== project.manifest.projectRevision ||
+            drafts.dirty ||
+            drafts.pending
+          )
+            return;
+          parseClipboard(text);
+          const center = canvasWorkspace?.visibleCenter() ?? {
+            x: screen.width / 2,
+            y: screen.height / 2,
+          };
+          const key = JSON.stringify([
+            text,
+            origin,
+            target,
+            canvasView.scale,
+            center,
+          ]);
+          const count = lastPaste?.key === key ? lastPaste.count + 1 : 0;
+          if (
+            edit({
+              type: "paste",
+              screenId: target,
+              text,
+              origin,
+              center,
+              offset: count * 20,
+            })
+          ) {
+            lastPaste = { key, count };
+            stopPlacement();
+          }
+        } else {
+          if (kind === "cut") applyCommand(project, command, mode);
+          const text = copyObjects(project, target, ids, origin);
+          if (native) native.setData("text/plain", text);
+          else await navigator.clipboard.writeText(text);
+          if (kind === "cut") {
+            if (
+              !validTarget() ||
+              revision !== project.manifest.projectRevision ||
+              drafts.dirty ||
+              drafts.pending ||
+              ids.join() !== selectedIds.join()
+            ) {
+              report(
+                "info",
+                "コピーしました。編集中の状態が変わったため切り取りは中止しました。",
+              );
+              return;
+            }
+            if (edit(command)) stopPlacement();
+          } else report("info", "選択した図形をコピーしました。");
+        }
+      } catch (error) {
+        report(
+          "error",
+          `クリップボード操作に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      } finally {
+        clipboardBusy = false;
+      }
+    };
+    if (drafts.allow(() => void run())) void run();
+    else native = null;
+  }
+  function nativeClipboard(event: ClipboardEvent) {
+    if (clipboardScope(event.target))
+      clipboardAction(event.type as "copy" | "cut" | "paste", event);
   }
   function moveSelection(event: SubmitEvent) {
     submitForm(event);
@@ -988,7 +1133,8 @@
         command.type === "add-symbol" ||
         command.type === "place-symbol" ||
         command.type === "duplicate" ||
-        command.type === "duplicate-many"
+        command.type === "duplicate-many" ||
+        command.type === "paste"
       )
         selectedIds = screen.objects
           .filter((o) => !oldIds.has(o.id))
@@ -1493,6 +1639,7 @@
                 }),
             }))
           : []),
+        clipboardItems[2],
         editToolbarGroups[1].items[0],
         properties,
         { label: "全体表示", run: () => canvasWorkspace?.zoom(null) },
@@ -1506,6 +1653,7 @@
       ];
     return [
       properties,
+      ...clipboardItems,
       ...editToolbarGroups[1].items.slice(2),
       ...(selectedIds.length > 1
         ? editToolbarGroups[3].items
@@ -1535,6 +1683,23 @@
         : []),
     ];
   });
+  const clipboardItems: ContextAction[] = $derived([
+    {
+      label: "切り取り",
+      disabled: editBlocked || clipboardBusy || !selectedIds.length,
+      run: () => clipboardAction("cut"),
+    },
+    {
+      label: "コピー",
+      disabled: editBlocked || clipboardBusy || !selectedIds.length,
+      run: () => clipboardAction("copy"),
+    },
+    {
+      label: "貼り付け",
+      disabled: editBlocked || clipboardBusy,
+      run: () => clipboardAction("paste"),
+    },
+  ]);
   const menuGroups: DesignerMenu[] = $derived([
     {
       label: "ファイル",
@@ -1554,7 +1719,10 @@
     },
     {
       label: "編集",
-      items: editToolbarGroups.flatMap((group) => group.items),
+      items: [
+        ...clipboardItems,
+        ...editToolbarGroups.flatMap((group) => group.items),
+      ],
     },
     {
       label: "表示",
@@ -1677,6 +1845,9 @@
 
 <svelte:window
   bind:innerWidth={windowWidth}
+  oncopy={nativeClipboard}
+  oncut={nativeClipboard}
+  onpaste={nativeClipboard}
   onkeydown={shortcut}
   onbeforeunload={beforeLeave}
 />
@@ -2369,7 +2540,7 @@
   </p>
   <p>
     Ctrl / Command + S：JSON 保存、Z：元に戻す、Shift +
-    Z：やり直す、A：全選択、D：複製。入力欄では保存以外の編集ショートカットを実行しません。
+    Z：やり直す、A：全選択、D：複製。キャンバス・レイヤーの配置一覧ではC：コピー、X：切り取り、V：貼り付け、Delete：削除も使えます。入力欄では文字編集を優先します。コピー操作はOSクリップボードを使い、ブラウザから許可を求められる場合があります。
   </p>
   <p>
     メニューバーは左右キー、項目は上下キー、Enter / Space で実行、Esc
