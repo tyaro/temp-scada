@@ -1,0 +1,27 @@
+[
+  {
+    "name": "ロック有効",
+    "value": true,
+    "valid": true
+  },
+  {
+    "name": "明示的な非ロック",
+    "value": false,
+    "valid": true
+  },
+  {
+    "name": "文字列を拒否",
+    "value": "true",
+    "valid": false
+  },
+  {
+    "name": "数値を拒否",
+    "value": 1,
+    "valid": false
+  },
+  {
+    "name": "nullを拒否",
+    "value": null,
+    "valid": false
+  }
+]

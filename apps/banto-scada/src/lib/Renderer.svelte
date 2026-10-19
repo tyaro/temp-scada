@@ -130,7 +130,7 @@
     event.preventDefault();
     event.stopPropagation();
     const current = screen.objects.find((object) => object.id === id);
-    if (!current || !("width" in current)) return;
+    if (!current || current.locked || !("width" in current)) return;
     geometry = {
       x: current.x,
       y: current.y,
@@ -191,6 +191,7 @@
   ) {
     if (
       !editable ||
+      object.locked ||
       object.shape.type !== "polyline" ||
       event.ctrlKey ||
       event.metaKey ||
@@ -215,6 +216,7 @@
     const current = screen.objects.find((item) => item.id === object.id);
     if (
       !current ||
+      current.locked ||
       current.shape.type !== "polyline" ||
       !current.shape.points[index]
     )
@@ -260,6 +262,7 @@
       const start = point(event);
       if (
         !object ||
+        object.locked ||
         !("width" in object) ||
         !start ||
         !resizeHandles.includes(handle)
@@ -296,6 +299,7 @@
       const start = point(event);
       if (
         !object ||
+        object.locked ||
         object.shape.type !== "polyline" ||
         !start ||
         !object.shape.points[index]
@@ -322,7 +326,14 @@
     const ids = onselect?.(id, event.shiftKey, true) ?? (id ? [id] : []);
     const object = screen.objects.find((o) => o.id === id);
     const start = point(event);
-    if (!object || !start || !ids.includes(object.id)) return;
+    if (
+      !object ||
+      object.locked ||
+      !start ||
+      !ids.includes(object.id) ||
+      screen.objects.some((item) => item.locked && ids.includes(item.id))
+    )
+      return;
     event.preventDefault();
     (event.currentTarget as SVGSVGElement).setPointerCapture(event.pointerId);
     drag = {
@@ -454,6 +465,7 @@
     {@const visual = previewObject(object)}
     <g
       transform={position(visual)}
+      pointer-events={editable && object.locked ? "none" : undefined}
       data-object-id={object.id}
       data-selected={editable && selectedIds.includes(object.id)
         ? "true"
@@ -510,7 +522,7 @@
   {/each}
   {#if editable && selectedIds.length === 1}
     {@const object = screen.objects.find((o) => o.id === selectedIds[0])}
-    {#if object && "width" in object && !drag}
+    {#if object && !object.locked && "width" in object && !drag}
       {@const visual = previewObject(object)}
       {#if "width" in visual}
         {#each resizeHandles as handle}
@@ -536,7 +548,7 @@
         {/each}
       {/if}
     {/if}
-    {#if object && object.shape.type === "polyline"}
+    {#if object && !object.locked && object.shape.type === "polyline"}
       {@const visual = previewObject(object)}
       {#if visual.shape.type === "polyline"}
         {#each visual.shape.points as p, index}

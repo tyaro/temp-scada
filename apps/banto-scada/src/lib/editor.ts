@@ -46,6 +46,7 @@ type ScreenCommand =
   | { type: "duplicate-screen"; screenId: string }
   | { type: "remove-screen"; screenId: string };
 export type ObjectCommand = (
+  | { type: "set-lock"; screenId: string; objectId: string; locked: boolean }
   | {
       type: "paste";
       screenId: string;
@@ -123,6 +124,7 @@ export function isObjectCommand(
   command: EditCommand,
 ): command is ObjectCommand {
   return [
+    "set-lock",
     "paste",
     "move-vertex",
     "move-many",
@@ -245,6 +247,32 @@ export function applyCommand(
     ? next.symbols.find((s) => s.id === definitionId)
     : targetScreen;
   if (!screen) throw new Error("画面が見つかりません");
+  if (command.type === "set-lock") {
+    const object = screen.objects.find(
+      (object) => object.id === command.objectId,
+    );
+    if (!object) throw new Error("配置が見つかりません");
+    if (typeof command.locked !== "boolean")
+      throw new Error("ロック状態はbooleanで指定してください");
+    if (!!object.locked === command.locked) return project;
+    if (command.locked) object.locked = true;
+    else delete object.locked;
+    return finish(project, next);
+  }
+  if (isObjectCommand(command)) {
+    const ids =
+      "objectIds" in command
+        ? command.objectIds
+        : "objectId" in command
+          ? [command.objectId]
+          : [];
+    if (
+      screen.objects.some((object) => object.locked && ids.includes(object.id))
+    )
+      throw new Error(
+        "ロック中の配置を含むため変更できません。レイヤーでロックを解除してください。",
+      );
+  }
   if (command.type === "paste") {
     const fragment = parseClipboard(command.text);
     const objects = fragment.project.screens[0].objects;

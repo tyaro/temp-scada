@@ -18,6 +18,7 @@ export function objectsInRange(
   return [...objects]
     .sort((a, b) => a.order - b.order)
     .filter((object) => {
+      if (object.locked) return false;
       const bounds = getBounds(object);
       const x = object.x + bounds.x,
         y = object.y + bounds.y;

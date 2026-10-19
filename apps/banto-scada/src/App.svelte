@@ -661,7 +661,12 @@
       travel("redo");
     } else if (key === "a" && !event.shiftKey) {
       event.preventDefault();
-      transition(() => (selectedIds = screen.objects.map((o) => o.id)));
+      transition(
+        () =>
+          (selectedIds = screen.objects
+            .filter((o) => !o.locked)
+            .map((o) => o.id)),
+      );
     } else if (key === "d" && !event.shiftKey && selectedIds.length) {
       event.preventDefault();
       duplicateSelection();
@@ -689,6 +694,18 @@
         : [id];
     return [...selectedIds];
   }
+  function selectCanvasObjects(
+    id: string | null,
+    additive = false,
+    preserve = false,
+  ) {
+    if (
+      id &&
+      screen.objects.some((object) => object.id === id && object.locked)
+    )
+      return [...selectedIds];
+    return selectObjects(id, additive, preserve);
+  }
   function selectRange(ids: string[], additive: boolean) {
     const target = screen.id,
       generation = workspaceGeneration;
@@ -700,9 +717,20 @@
       )
         return;
       const live = ids.filter((id) =>
-        screen.objects.some((object) => object.id === id),
+        screen.objects.some((object) => object.id === id && !object.locked),
       );
-      selectedIds = additive ? [...new Set([...selectedIds, ...live])] : live;
+      selectedIds = additive
+        ? [
+            ...new Set([
+              ...selectedIds.filter((id) =>
+                screen.objects.some(
+                  (object) => object.id === id && !object.locked,
+                ),
+              ),
+              ...live,
+            ]),
+          ]
+        : live;
     };
     if (drafts.allow(apply)) apply();
   }
@@ -1148,6 +1176,7 @@
       busy ||
       replacement ||
       drafts.pending ||
+      selected?.locked ||
       !input.isConnected ||
       target.generation !== workspaceGeneration ||
       target.screenId !== screen.id ||
@@ -1247,7 +1276,7 @@
         command.type === "paste"
       )
         selectedIds = screen.objects
-          .filter((o) => !oldIds.has(o.id))
+          .filter((o) => !oldIds.has(o.id) && !o.locked)
           .map((o) => o.id);
       if (command.type === "remove" || command.type === "remove-many")
         selectedIds = [];
@@ -1536,6 +1565,29 @@
         );
       }),
   );
+  function toggleObjectLock(id: string) {
+    const generation = workspaceGeneration,
+      target = screen.id;
+    const apply = () => {
+      if (
+        generation !== workspaceGeneration ||
+        target !== screen.id ||
+        mode !== "edit" ||
+        busy ||
+        replacement
+      )
+        return;
+      const object = screen.objects.find((object) => object.id === id);
+      if (object)
+        edit({
+          type: "set-lock",
+          screenId: screen.id,
+          objectId: id,
+          locked: !object.locked,
+        });
+    };
+    if (drafts.allow(apply)) apply();
+  }
   function objectLabel(object: ScreenObject) {
     return placementLabel(object, project.symbols);
   }
@@ -1603,6 +1655,12 @@
   }
   const menuBlocked = $derived(busy || !!drafts.pending || !!replacement);
   const editBlocked = $derived(menuBlocked || mode !== "edit");
+  const selectionLocked = $derived(
+    screen.objects.some(
+      (object) => object.locked && selectedIds.includes(object.id),
+    ),
+  );
+  const mutationBlocked = $derived(editBlocked || selectionLocked);
   const editToolbarGroups: ToolbarGroup[] = $derived([
     {
       label: "編集履歴",
@@ -1627,26 +1685,32 @@
         {
           label: "すべて選択",
           icon: "M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M7 7H17V17H7Z",
-          disabled: editBlocked || !screen.objects.length,
+          disabled:
+            editBlocked || !screen.objects.some((object) => !object.locked),
           run: () =>
-            transition(() => (selectedIds = screen.objects.map((o) => o.id))),
+            transition(
+              () =>
+                (selectedIds = screen.objects
+                  .filter((o) => !o.locked)
+                  .map((o) => o.id)),
+            ),
         },
         {
           label: "選択解除",
           icon: "M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M8 8L16 16M16 8L8 16",
-          disabled: editBlocked || !selectedIds.length,
+          disabled: mutationBlocked || !selectedIds.length,
           run: () => transition(() => (selectedIds = [])),
         },
         {
           label: "選択図形を複製",
           icon: "M9 9H21V21H9ZM15 5V3H3V15H5",
-          disabled: editBlocked || !selectedIds.length,
+          disabled: mutationBlocked || !selectedIds.length,
           run: duplicateSelection,
         },
         {
           label: "選択図形を削除",
           icon: "M3 6H21M9 6V3H15V6M6 6L7 21H17L18 6M10 10V17M14 10V17",
-          disabled: editBlocked || !selectedIds.length,
+          disabled: mutationBlocked || !selectedIds.length,
           run: removeSelection,
         },
       ],
@@ -1676,7 +1740,7 @@
         },
       ].map((item) => ({
         ...item,
-        disabled: editBlocked || selectedIds.length !== 1,
+        disabled: mutationBlocked || selectedIds.length !== 1,
         run: () => {
           if (selectedIds.length === 1)
             edit({
@@ -1723,7 +1787,7 @@
         },
       ].map((item) => ({
         ...item,
-        disabled: editBlocked || selectedIds.length < 2,
+        disabled: mutationBlocked || selectedIds.length < 2,
         run: () =>
           edit({
             type: "align",
@@ -1776,6 +1840,15 @@
       ];
     return [
       properties,
+      ...(selected
+        ? [
+            {
+              label: selected.locked ? "ロックを解除" : "配置をロック",
+              disabled: editBlocked,
+              run: () => selected && toggleObjectLock(selected.id),
+            },
+          ]
+        : []),
       ...clipboardItems,
       ...editToolbarGroups[1].items.slice(2),
       ...(selectedIds.length > 1
@@ -1792,7 +1865,7 @@
             },
             {
               label: "定義を複製してこの配置に適用",
-              disabled: editBlocked || project.symbols.length >= 100,
+              disabled: mutationBlocked || project.symbols.length >= 100,
               run: () => {
                 if (selected)
                   edit({
@@ -1809,7 +1882,7 @@
   const clipboardItems: ContextAction[] = $derived([
     {
       label: "切り取り",
-      disabled: editBlocked || clipboardBusy || !selectedIds.length,
+      disabled: mutationBlocked || clipboardBusy || !selectedIds.length,
       run: () => clipboardAction("cut"),
     },
     {
@@ -2399,6 +2472,31 @@ ${object.id}`}
                     /><span>{objectLabel(object)}</span></button
                   >
                   <button
+                    class="layer-lock"
+                    class:locked={!!object.locked}
+                    aria-label={`${object.locked ? "ロック解除" : "ロック"}：${objectLabel(object)}`}
+                    aria-pressed={!!object.locked}
+                    title={object.locked
+                      ? "編集ロックを解除"
+                      : "配置の直接編集をロック（共有定義の変更は反映）"}
+                    disabled={menuBlocked}
+                    onclick={() => toggleObjectLock(object.id)}
+                    ><svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      aria-hidden="true"
+                      ><rect x="5" y="10" width="14" height="11" rx="2" /><path
+                        d={object.locked
+                          ? "M8 10V7a4 4 0 0 1 8 0v3"
+                          : "M8 10V7a4 4 0 0 1 8 0"}
+                      /><path d="M12 14v4" /></svg
+                    ></button
+                  >
+                  <button
                     class="layer-more"
                     aria-label={`操作：${objectLabel(object)}`}
                     title={`${objectLabel(object)} の操作`}
@@ -2506,7 +2604,7 @@ ${object.id}`}
               point,
             })}
           onbeforeedit={() => drafts.allow(() => {})}
-          onselect={selectObjects}
+          onselect={selectCanvasObjects}
           onrangeselect={selectRange}
           onnudge={nudgeSelection}
           onmove={(ids, dx, dy) =>
@@ -2617,6 +2715,8 @@ ${object.id}`}
       {project}
       {selectedIds}
       {selected}
+      {selectionLocked}
+      ontogglelock={toggleObjectLock}
       activeDefinition={!!activeDefinition}
       {screen}
       {drafts}
@@ -2668,7 +2768,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.5.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.6.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。
@@ -2683,6 +2783,9 @@ ${object.id}`}
   </p>
   <p>
     キャンバスはホイールで縦スクロール、Shift＋ホイールで横スクロールします。編集キャンバス上のCtrl＋ホイールはポインタ位置を基準に拡大縮小します。Ctrl＋＋／－／0のキー操作はブラウザのページ倍率です。
+  </p>
+  <p>
+    レイヤーの錠アイコンで配置の編集をロックします。ロック中はキャンバスの選択・移動やプロパティ変更を防ぎ、レイヤーで選択してコピー・解除できます。ロックは権限ではなく、参照する共有定義の変更・Undo／Redo・画面全体の管理は引き続き反映されます。コピー・貼り付けはロック状態を保持します。
   </p>
   <p>
     Ctrl / Command + N：新しいProject、O：JSONを開く、S／Shift +
@@ -2804,7 +2907,7 @@ ${object.id}`}
     position: relative;
   }
   .layer-entry > button:first-child {
-    padding-right: 26px;
+    padding-right: 52px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -2818,6 +2921,26 @@ ${object.id}`}
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .layer-entry .layer-lock {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    right: 26px;
+    top: 4px;
+    width: 24px;
+    min-height: 28px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    font-size: 12px;
+    opacity: 0;
+  }
+  .layer-entry .layer-lock.locked,
+  .layer-entry:hover .layer-lock,
+  .layer-entry:focus-within .layer-lock {
+    opacity: 1;
   }
   .layer-entry .layer-more {
     position: absolute;
@@ -2836,6 +2959,7 @@ ${object.id}`}
     opacity: 1;
   }
   @media (hover: none) {
+    .layer-entry .layer-lock,
     .layer-entry .layer-more {
       opacity: 1;
     }

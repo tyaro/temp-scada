@@ -26,6 +26,8 @@
     project,
     selectedIds,
     selected,
+    selectionLocked,
+    ontogglelock,
     activeDefinition,
     screen,
     drafts,
@@ -47,6 +49,8 @@
     project: Project;
     selectedIds: string[];
     selected: ScreenObject | undefined;
+    selectionLocked: boolean;
+    ontogglelock: (id: string) => void;
     activeDefinition: boolean;
     screen: { id: string; name: string };
     drafts: ReturnType<typeof createDraftGuard>;
@@ -68,7 +72,7 @@
     label: string;
   } | null>(null);
   const pickerKey = $derived(
-    `${generation}:${screen.id}:${selected?.id ?? ""}:${visible}:${activeDefinition}`,
+    `${generation}:${screen.id}:${selected?.id ?? ""}:${!!selected?.locked}:${visible}:${activeDefinition}`,
   );
   $effect(() => {
     if (pickerOpen && pickerRequest?.key !== pickerKey) pickerOpen = false;
@@ -77,6 +81,7 @@
     if (
       !tagInput ||
       !selected ||
+      selected.locked ||
       selected.shape.type !== "text" ||
       activeDefinition ||
       !visible ||
@@ -96,6 +101,7 @@
     const request = pickerRequest;
     if (
       selected?.shape.type !== "text" ||
+      selected.locked ||
       activeDefinition ||
       !visible ||
       drafts.pending ||
@@ -256,35 +262,55 @@
       >
     </div>{/if}
   <div class="panel-content">
+    {#if selectionLocked}
+      <p class="lock-status" role="status">
+        ロック中の配置を含むため、プロパティは閲覧専用です。共有定義の変更は反映されます。
+      </p>
+      {#if selected?.locked}<button
+          type="button"
+          onclick={() => ontogglelock(selected.id)}>ロックを解除</button
+        >{/if}
+      {#if selected?.locked && selected.shape.type === "symbol"}
+        <button
+          type="button"
+          onclick={() => {
+            if (selected?.shape.type === "symbol")
+              openDefinition(selected.shape.symbolId);
+          }}>共有定義を確認・編集</button
+        >
+      {/if}
+    {/if}
     {#if selectedIds.length > 1}
       <p>
         {selectedIds.length} 件選択しています。図形をドラッグするとまとめて移動します。
       </p>
       <form use:drafts.track data-editor-form="move" onsubmit={moveSelection}>
-        <div class="fields">
-          <label
-            >移動量 X<input
-              name="dx"
-              aria-label="移動量 X"
-              type="number"
-              step="any"
-              required
-              value="0"
-            /></label
-          ><label
-            >移動量 Y<input
-              name="dy"
-              aria-label="移動量 Y"
-              type="number"
-              step="any"
-              required
-              value="0"
-            /></label
-          >
-        </div>
-        <div class="actions">
-          <button type="submit">まとめて移動</button>
-        </div>
+        <fieldset disabled={selectionLocked}>
+          <div class="fields">
+            <label
+              >移動量 X<input
+                name="dx"
+                aria-label="移動量 X"
+                type="number"
+                step="any"
+                required
+                value="0"
+              /></label
+            ><label
+              >移動量 Y<input
+                name="dy"
+                aria-label="移動量 Y"
+                type="number"
+                step="any"
+                required
+                value="0"
+              /></label
+            >
+          </div>
+          <div class="actions">
+            <button type="submit">まとめて移動</button>
+          </div>
+        </fieldset>
       </form>
     {:else if selected}
       {#key `${generation}:${screen.id}:${selected.id}`}
@@ -297,173 +323,181 @@
             else properties(event);
           }}
         >
-          <label class="placement-name"
-            >配置名<input
-              name="name"
-              aria-label="配置名"
-              oncompositionstart={compositionStart}
-              oncompositionend={compositionEnd}
-              onkeydown={(event) => {
-                if (
-                  event.key === "Enter" &&
-                  (event.isComposing || composing.has(event.currentTarget))
-                )
-                  event.preventDefault();
-              }}
-              maxlength="200"
-              placeholder="未設定なら種類・表示順で表示"
-            /></label
-          >
-          <p class="numeric-hint">
-            配置名は「変更を適用」で確定します。
-            {#if activeDefinition}共有定義内の名前は同じ定義を使う全配置で共用します。{/if}
-          </p>
-          <p class="numeric-hint">
-            数値はEnter・フォーカス移動で確定 · Escで取消
-          </p>
-          <div class="fields">
-            {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
-              <label
-                >{field}<input
-                  name={field}
-                  aria-label={field}
-                  type="text"
-                  inputmode="decimal"
-                  required
-                  aria-invalid={numericErrors[field] ? "true" : undefined}
-                  aria-describedby={numericErrors[field]
-                    ? `numeric-${field}-error`
-                    : undefined}
-                  onfocus={focusNumber}
-                  oninput={clearNumber}
-                  onkeydown={numberKey}
-                  onblur={blurNumber}
-                  oncompositionstart={compositionStart}
-                  oncompositionend={compositionEnd}
-                />{#if numericErrors[field]}<span
-                    class="field-error"
-                    id={`numeric-${field}-error`}
-                    role="alert">{numericErrors[field]}</span
-                  >{/if}</label
+          <fieldset disabled={selectionLocked}>
+            <label class="placement-name"
+              >配置名<input
+                name="name"
+                aria-label="配置名"
+                oncompositionstart={compositionStart}
+                oncompositionend={compositionEnd}
+                onkeydown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    (event.isComposing || composing.has(event.currentTarget))
+                  )
+                    event.preventDefault();
+                }}
+                maxlength="200"
+                placeholder="未設定なら種類・表示順で表示"
+              /></label
+            >
+            <p class="numeric-hint">
+              配置名は「変更を適用」で確定します。
+              {#if activeDefinition}共有定義内の名前は同じ定義を使う全配置で共用します。{/if}
+            </p>
+            <p class="numeric-hint">
+              数値はEnter・フォーカス移動で確定 · Escで取消
+            </p>
+            <div class="fields">
+              {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
+                <label
+                  >{field}<input
+                    name={field}
+                    aria-label={field}
+                    type="text"
+                    inputmode="decimal"
+                    required
+                    aria-invalid={numericErrors[field] ? "true" : undefined}
+                    aria-describedby={numericErrors[field]
+                      ? `numeric-${field}-error`
+                      : undefined}
+                    onfocus={focusNumber}
+                    oninput={clearNumber}
+                    onkeydown={numberKey}
+                    onblur={blurNumber}
+                    oncompositionstart={compositionStart}
+                    oncompositionend={compositionEnd}
+                  />{#if numericErrors[field]}<span
+                      class="field-error"
+                      id={`numeric-${field}-error`}
+                      role="alert">{numericErrors[field]}</span
+                    >{/if}</label
+                >
+              {/each}
+              <label>色<input name="fill" aria-label="色" type="color" /></label
               >
-            {/each}
-            <label>色<input name="fill" aria-label="色" type="color" /></label>
-            {#if selected.shape.type === "polyline"}
-              <label
-                >頂点（x,y を1行ずつ）<textarea
-                  name="points"
-                  aria-label="頂点"
-                  rows="5"
-                  required></textarea></label
-              >
-              <label
-                >線幅<input
-                  name="strokeWidth"
-                  aria-label="線幅"
-                  type="text"
-                  inputmode="decimal"
-                  required
-                  aria-invalid={numericErrors.strokeWidth ? "true" : undefined}
-                  aria-describedby={numericErrors.strokeWidth
-                    ? "numeric-strokeWidth-error"
-                    : undefined}
-                  onfocus={focusNumber}
-                  oninput={clearNumber}
-                  onkeydown={numberKey}
-                  onblur={blurNumber}
-                  oncompositionstart={compositionStart}
-                  oncompositionend={compositionEnd}
-                />{#if numericErrors.strokeWidth}<span
-                    class="field-error"
-                    id="numeric-strokeWidth-error"
-                    role="alert">{numericErrors.strokeWidth}</span
-                  >{/if}</label
-              >
-              <label
-                >矢印<select name="arrow" aria-label="矢印"
-                  ><option value="none">なし</option><option value="end"
-                    >終点</option
-                  ></select
-                ></label
-              >
-            {/if}
-            {#if selected.shape.type === "text"}<label class="full-width"
-                >テキスト<input
-                  name="text"
-                  aria-label="テキスト"
-                  maxlength="1000"
-                /></label
-              >
-              {#if !activeDefinition}
-                <div class="full-width tag-binding">
-                  <label
-                    >表示タグ（外部名）<input
-                      bind:this={tagInput}
-                      name="externalName"
-                      aria-label="表示タグ（外部名）"
-                      maxlength="1024"
-                      placeholder="PLC01.Fast.Tank01.Level"
-                    /></label
-                  >
-                  <button
-                    type="button"
-                    aria-label="タグを選択"
-                    title="サンプル候補からタグを選択"
-                    onclick={openTagPicker}>…</button
-                  >
-                </div>
-                <p class="full-width tag-note">
-                  Hub未接続のため、手入力した外部名の存在・型は未確認です。
-                </p>
+              {#if selected.shape.type === "polyline"}
+                <label
+                  >頂点（x,y を1行ずつ）<textarea
+                    name="points"
+                    aria-label="頂点"
+                    rows="5"
+                    required></textarea></label
+                >
+                <label
+                  >線幅<input
+                    name="strokeWidth"
+                    aria-label="線幅"
+                    type="text"
+                    inputmode="decimal"
+                    required
+                    aria-invalid={numericErrors.strokeWidth
+                      ? "true"
+                      : undefined}
+                    aria-describedby={numericErrors.strokeWidth
+                      ? "numeric-strokeWidth-error"
+                      : undefined}
+                    onfocus={focusNumber}
+                    oninput={clearNumber}
+                    onkeydown={numberKey}
+                    onblur={blurNumber}
+                    oncompositionstart={compositionStart}
+                    oncompositionend={compositionEnd}
+                  />{#if numericErrors.strokeWidth}<span
+                      class="field-error"
+                      id="numeric-strokeWidth-error"
+                      role="alert">{numericErrors.strokeWidth}</span
+                    >{/if}</label
+                >
+                <label
+                  >矢印<select name="arrow" aria-label="矢印"
+                    ><option value="none">なし</option><option value="end"
+                      >終点</option
+                    ></select
+                  ></label
+                >
               {/if}
+              {#if selected.shape.type === "text"}<label class="full-width"
+                  >テキスト<input
+                    name="text"
+                    aria-label="テキスト"
+                    maxlength="1000"
+                  /></label
+                >
+                {#if !activeDefinition}
+                  <div class="full-width tag-binding">
+                    <label
+                      >表示タグ（外部名）<input
+                        bind:this={tagInput}
+                        name="externalName"
+                        aria-label="表示タグ（外部名）"
+                        maxlength="1024"
+                        placeholder="PLC01.Fast.Tank01.Level"
+                      /></label
+                    >
+                    <button
+                      type="button"
+                      aria-label="タグを選択"
+                      title="サンプル候補からタグを選択"
+                      onclick={openTagPicker}>…</button
+                    >
+                  </div>
+                  <p class="full-width tag-note">
+                    Hub未接続のため、手入力した外部名の存在・型は未確認です。
+                  </p>
+                {/if}
+              {/if}
+              {#if selected.shape.type === "symbol"}
+                <label class="full-width"
+                  >参照する Symbol 定義<select
+                    name="symbolId"
+                    aria-label="参照する Symbol 定義"
+                  >
+                    {#each project.symbols as definition (definition.id)}
+                      <option value={definition.id}
+                        >{definition.name} · {symbolUsage(
+                          project,
+                          definition.id,
+                        )} 配置</option
+                      >
+                    {/each}
+                  </select></label
+                >
+              {/if}
+            </div>
+            {#if selected.shape.type === "text" && !activeDefinition}
+              <p>
+                空欄で静的テキストに戻ります。割り当て中は数値を表示します。Hub
+                接続は未実装のため「未接続」と表示します。テキスト欄は割り当て解除後に使います。
+              </p>
             {/if}
             {#if selected.shape.type === "symbol"}
-              <label class="full-width"
-                >参照する Symbol 定義<select
-                  name="symbolId"
-                  aria-label="参照する Symbol 定義"
-                >
-                  {#each project.symbols as definition (definition.id)}
-                    <option value={definition.id}
-                      >{definition.name} · {symbolUsage(project, definition.id)} 配置</option
-                    >
-                  {/each}
-                </select></label
+              <p>
+                参照先を変えても位置・サイズ・色は維持します。共有定義の形状を編集すると、同じ定義を使うすべての配置に反映されます。
+              </p>
+              <button
+                type="button"
+                disabled={project.symbols.length >= 100}
+                onclick={() =>
+                  selected &&
+                  edit({
+                    type: "make-symbol-unique",
+                    screenId: screen.id,
+                    objectId: selected.id,
+                  })}>定義を複製してこの配置に適用</button
+              >
+              <button
+                type="button"
+                onclick={() => {
+                  if (selected?.shape.type === "symbol")
+                    openDefinition(selected.shape.symbolId);
+                }}>参照する Symbol 定義を編集</button
               >
             {/if}
-          </div>
-          {#if selected.shape.type === "text" && !activeDefinition}
-            <p>
-              空欄で静的テキストに戻ります。割り当て中は数値を表示します。Hub
-              接続は未実装のため「未接続」と表示します。テキスト欄は割り当て解除後に使います。
-            </p>
-          {/if}
-          {#if selected.shape.type === "symbol"}
-            <p>
-              参照先を変えても位置・サイズ・色は維持します。共有定義の形状を編集すると、同じ定義を使うすべての配置に反映されます。
-            </p>
-            <button
-              type="button"
-              disabled={project.symbols.length >= 100}
-              onclick={() =>
-                selected &&
-                edit({
-                  type: "make-symbol-unique",
-                  screenId: screen.id,
-                  objectId: selected.id,
-                })}>定義を複製してこの配置に適用</button
-            >
-            <button
-              type="button"
-              onclick={() => {
-                if (selected?.shape.type === "symbol")
-                  openDefinition(selected.shape.symbolId);
-              }}>参照する Symbol 定義を編集</button
-            >
-          {/if}
-          <div class="actions">
-            <button type="submit">変更を適用</button>
-          </div>
+            <div class="actions">
+              <button type="submit">変更を適用</button>
+            </div>
+          </fieldset>
         </form>
       {/key}
     {:else}<p>
@@ -481,6 +515,19 @@
 />
 
 <style>
+  fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+  }
+  fieldset:disabled {
+    opacity: 0.65;
+  }
+  .lock-status {
+    font-size: 12px;
+  }
+
   .tag-binding {
     display: flex;
     align-items: flex-end;
