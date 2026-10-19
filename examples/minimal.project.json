@@ -1,10 +1,10 @@
 {
   "manifest": {
     "product": "banto-scada",
-    "schemaVersion": "0.10.0",
+    "schemaVersion": "0.11.0",
     "projectId": "0199f000-0000-7000-8000-000000000001",
     "projectRevision": 1,
-    "minRuntimeVersion": "0.10.0",
+    "minRuntimeVersion": "0.11.0",
     "name": "SCADA 初期サンプル"
   },
   "screens": [
@@ -28,7 +28,8 @@
               "fillEnabled": true,
               "stroke": null
             }
-          }
+          },
+          "rotation": 0
         },
         {
           "id": "0199f000-0000-7000-8000-000000000004",
@@ -44,7 +45,8 @@
               "fillEnabled": true,
               "stroke": null
             }
-          }
+          },
+          "rotation": 0
         },
         {
           "id": "0199f000-0000-7000-8000-000000000005",
@@ -57,7 +59,8 @@
           "shape": {
             "type": "text",
             "text": "BANTO / SCADA — Sample"
-          }
+          },
+          "rotation": 0
         }
       ],
       "background": "#0b1220",

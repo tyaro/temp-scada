@@ -4,6 +4,7 @@ import Primitive from "./Primitive.svelte";
 import type { LayoutObject } from "./project";
 import type { NumericReading } from "./tag-presentation";
 const object: LayoutObject = {
+  rotation: 0,
   id: "test",
   order: 1,
   x: 0,

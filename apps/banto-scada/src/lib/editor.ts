@@ -1,3 +1,4 @@
+import { normalizeRotation, replaceRotatedVertex } from "./rotation";
 import { parseClipboard } from "./clipboard";
 import { canvasColors } from "./canvas-colors";
 import {
@@ -12,6 +13,7 @@ import builtins from "./symbol-library.json";
 import type { Point, SymbolDefinition, ScreenObject, Screen } from "./project";
 export type AddKind = "rectangle" | "ellipse" | "text" | "line" | "pipe";
 export interface ObjectPatch {
+  rotation?: number;
   paint?: ShapePaint;
   name?: string | null;
   x?: number;
@@ -256,6 +258,7 @@ export function applyCommand(
         {
           id: newId(),
           order: 0,
+          rotation: 0,
           x: command.width * 0.2,
           y: command.height * 0.2,
           width: command.width * 0.6,
@@ -297,6 +300,7 @@ export function applyCommand(
       target.objects.push({
         id: newId(),
         order: Math.max(-1, ...target.objects.map((o) => o.order)) + 1,
+        rotation: 0,
         x: 40,
         y: 40,
         width: definition.width,
@@ -791,6 +795,7 @@ export function applyCommand(
     const base = {
       id: newId(),
       order: Math.max(-1, ...screen.objects.map((o) => o.order)) + 1,
+      rotation: 0,
       x: 40,
       y: 40,
       fill: canvasColors(definitionId ? "#0b1220" : targetScreen!.background)[
@@ -896,7 +901,17 @@ export function applyCommand(
         command.index >= shape.points.length
       )
         throw new Error("頂点が見つかりません");
-      shape.points[command.index] = { ...command.point };
+      const object = screen.objects[index];
+      if (object.shape.type !== "polyline")
+        throw new Error("折れ線だけを編集できます");
+      const geometry = replaceRotatedVertex(
+        object as typeof object & { shape: typeof shape },
+        command.index,
+        command.point,
+      );
+      object.x = geometry.x;
+      object.y = geometry.y;
+      shape.points = geometry.points;
     } else if (command.type === "duplicate") {
       const copy = JSON.parse(JSON.stringify(screen.objects[index]));
       copy.id = newId();
@@ -929,6 +944,7 @@ export function applyCommand(
         symbolId,
         colorMode,
         paint,
+        rotation,
         points,
         strokeWidth,
         arrow,
@@ -936,6 +952,7 @@ export function applyCommand(
       } = command.patch;
       const object = screen.objects[index];
       Object.assign(object, geometry);
+      if (rotation !== undefined) object.rotation = normalizeRotation(rotation);
       if (name !== undefined) {
         if (name !== null && typeof name !== "string")
           throw new Error("配置名は文字列にしてください");

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { SymbolDefinition } from "../project";
+  import { objectTransform } from "../rotation";
   import Primitive from "../Primitive.svelte";
   let {
     definition,
@@ -16,7 +17,7 @@
   {#each [...definition.objects]
     .filter((object) => object.visible !== false)
     .sort((a, b) => a.order - b.order) as object (object.id)}
-    <g transform={`translate(${object.x} ${object.y})`}
+    <g transform={objectTransform(object)}
       ><Primitive {object} color="var(--banto-text-muted)" /></g
     >
   {/each}

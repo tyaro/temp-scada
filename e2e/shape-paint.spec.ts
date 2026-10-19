@@ -12,7 +12,11 @@ const form = (page: Page) =>
 const apply = (page: Page) =>
   form(page).getByRole("button", { name: "塗りと枠線を適用", exact: true });
 const shape = (page: Page, id = rect.id) =>
-  page.locator(`.sheet > svg [data-object-id="${id}"] > rect`).first();
+  page
+    .locator(
+      `.sheet > svg [data-object-id="${id}"] > [data-object-rotation] > rect`,
+    )
+    .first();
 const prompt = (page: Page) =>
   page.getByRole("dialog", { name: "未適用の入力があります", exact: true });
 async function start(page: Page, project: object = minimal) {
@@ -56,7 +60,11 @@ for (const theme of ["light", "dark"] as const)
     await expect(outline).toHaveAttribute("x", "-3");
     await expect(outline).toHaveAttribute("width", String(rect.width + 6));
     await expect(
-      page.locator(`.minimap [data-object-id="${rect.id}"] > rect`).first(),
+      page
+        .locator(
+          `.minimap [data-object-id="${rect.id}"] > [data-object-rotation] > rect`,
+        )
+        .first(),
     ).toHaveAttribute("stroke", "#2563eb");
     await page.getByRole("button", { name: "元に戻す", exact: true }).click();
     await expect(shape(page)).toHaveAttribute("fill", rect.fill);
@@ -197,7 +205,9 @@ test("shared paint preserves monochrome overrides and warns about viewport clipp
   );
   for (const [i, placement] of placements.entries()) {
     const painted = page
-      .locator(`.sheet > svg [data-object-id="${placement.id}"] > svg ellipse`)
+      .locator(
+        `.sheet > svg [data-object-id="${placement.id}"] > [data-object-rotation] > svg ellipse`,
+      )
       .first();
     await expect(painted).toHaveAttribute(
       "stroke",

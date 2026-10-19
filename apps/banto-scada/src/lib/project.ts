@@ -1,3 +1,4 @@
+import { rotatedBounds, rotationPivot } from "./rotation";
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-model/schema/project.schema.json";
 import legacySchema from "../../../../crates/scada-model/schema/legacy.project.schema.json";
@@ -6,6 +7,7 @@ export interface Point {
   y: number;
 }
 interface BaseObject {
+  rotation: number;
   folderId?: string;
   name?: string;
   locked?: boolean;
@@ -70,10 +72,10 @@ export interface SymbolDefinition {
 export interface Project {
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.10.0";
+    schemaVersion: "0.11.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.10.0";
+    minRuntimeVersion: "0.11.0";
     name: string;
   };
   screens: Screen[];
@@ -94,14 +96,15 @@ export function parseProject(json: string): Project {
       ...old,
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.10.0",
-        minRuntimeVersion: "0.10.0",
+        schemaVersion: "0.11.0",
+        minRuntimeVersion: "0.11.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
         folders: [],
         objects: screen.objects.map((object) => ({
           ...object,
+          rotation: 0,
           shape:
             object.shape.type === "rectangle" || object.shape.type === "ellipse"
               ? { ...object.shape, paint: { fillEnabled: true, stroke: null } }
@@ -199,7 +202,7 @@ export function getLayoutBounds(object: ScreenObject) {
   };
 }
 /** Painted outline, used by selection, alignment, range and placement anchors. */
-export function getBounds(object: ScreenObject) {
+export function getLocalBounds(object: ScreenObject) {
   const bounds = getLayoutBounds(object);
   const pad =
     object.shape.type === "rectangle" || object.shape.type === "ellipse"
@@ -211,6 +214,13 @@ export function getBounds(object: ScreenObject) {
     width: bounds.width + 2 * pad,
     height: bounds.height + 2 * pad,
   };
+}
+export function getBounds(object: ScreenObject) {
+  return rotatedBounds(
+    getLocalBounds(object),
+    rotationPivot(object),
+    object.rotation,
+  );
 }
 export function strokeOverflowIds(
   owner: Pick<Screen, "width" | "height" | "objects">,

@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.10.0"
+          "const": "0.11.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.10.0"
+          "const": "0.11.0"
         },
         "name": {
           "type": "string",
@@ -237,9 +237,24 @@
         },
         "folderId": {
           "$ref": "#/$defs/id"
+        },
+        "rotation": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360
         }
       },
-      "required": ["id", "order", "x", "y", "fill", "width", "height", "shape"],
+      "required": [
+        "id",
+        "order",
+        "x",
+        "y",
+        "fill",
+        "width",
+        "height",
+        "shape",
+        "rotation"
+      ],
       "additionalProperties": false
     },
     "polyline": {
@@ -314,9 +329,14 @@
         },
         "folderId": {
           "$ref": "#/$defs/id"
+        },
+        "rotation": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360
         }
       },
-      "required": ["id", "order", "x", "y", "fill", "shape"],
+      "required": ["id", "order", "x", "y", "fill", "shape", "rotation"],
       "additionalProperties": false
     },
     "symbolInstance": {
@@ -375,9 +395,24 @@
         },
         "folderId": {
           "$ref": "#/$defs/id"
+        },
+        "rotation": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360
         }
       },
-      "required": ["id", "order", "x", "y", "fill", "width", "height", "shape"],
+      "required": [
+        "id",
+        "order",
+        "x",
+        "y",
+        "fill",
+        "width",
+        "height",
+        "shape",
+        "rotation"
+      ],
       "additionalProperties": false
     },
     "tagBinding": {

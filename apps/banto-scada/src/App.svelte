@@ -61,6 +61,7 @@
   import { untrack, tick, flushSync } from "svelte";
   import { selectionNudge } from "./lib/keyboard-move";
   import { copyObjects, parseClipboard } from "./lib/clipboard";
+  import { normalizeRotation } from "./lib/rotation";
   import { parseNumericProperty } from "./lib/designer/numeric-properties";
   import { placementLabel } from "./lib/placement-label";
   import { createProject } from "./lib/new-project";
@@ -1350,6 +1351,22 @@
     notify(kind, text);
   }
   let selected = $derived(screen.objects.find((o) => o.id === selectedId));
+  function rotateSelection(delta: number) {
+    if (mutationBlocked || !selectedId) return;
+    const id = selectedId,
+      scope = folderScope;
+    transition(() => {
+      if (scope !== folderScope || mode !== "edit") return;
+      const object = screen.objects.find((object) => object.id === id);
+      if (!object || object.locked) return;
+      edit({
+        type: "update",
+        screenId: screen.id,
+        objectId: id,
+        patch: { rotation: normalizeRotation(object.rotation + delta) },
+      });
+    });
+  }
   function commitNumber(
     target: NumericTarget,
     field: NumericProperty,
@@ -1370,6 +1387,7 @@
     )
       return "編集対象または操作状態が変わりました。入力を確認してください。";
     try {
+      if (field === "rotation") value = normalizeRotation(value);
       const result = recordEdit(
         project,
         history,
@@ -1837,6 +1855,7 @@
       name: String(data.get("name") ?? ""),
       x: Number(data.get("x")),
       y: Number(data.get("y")),
+      rotation: parseNumericProperty(String(data.get("rotation") ?? "")),
       ...(data.has("fill") ? { fill: String(data.get("fill")) } : {}),
     };
     if ("width" in selected) {
@@ -2435,6 +2454,7 @@
   ]);
   const editToolbarGroups: ToolbarGroup[] = $derived([
     {
+      id: "history",
       label: "編集履歴",
       items: [
         {
@@ -2452,6 +2472,7 @@
       ],
     },
     {
+      id: "selection",
       label: "選択と編集",
       items: [
         {
@@ -2491,6 +2512,25 @@
       ],
     },
     {
+      id: "rotation",
+      label: "回転（単一選択）",
+      items: [
+        {
+          label: "左へ90°回転",
+          icon: "M3 10A9 9 0 1 1 5 18M3 3V10H10",
+          disabled: mutationBlocked || selectedIds.length !== 1,
+          run: () => rotateSelection(-90),
+        },
+        {
+          label: "右へ90°回転",
+          icon: "M21 10A9 9 0 1 0 19 18M21 3V10H14",
+          disabled: mutationBlocked || selectedIds.length !== 1,
+          run: () => rotateSelection(90),
+        },
+      ],
+    },
+    {
+      id: "order",
       label: "重なり順（単一選択）",
       items: [
         {
@@ -2528,6 +2568,7 @@
       })),
     },
     {
+      id: "align",
       label: "整列（複数選択）",
       items: [
         ...[
@@ -2597,6 +2638,9 @@
       ],
     },
   ]);
+  function editGroupItems(id: string) {
+    return editToolbarGroups.find((group) => group.id === id)!.items;
+  }
   const selectionContextItems: ContextAction[] = $derived.by(() => {
     const properties: ContextAction = {
       label: "プロパティを表示",
@@ -2626,7 +2670,7 @@
             }))
           : []),
         clipboardItems[2],
-        editToolbarGroups[1].items[0],
+        editGroupItems("selection")[0],
         properties,
         { label: "全体表示", run: () => canvasWorkspace?.zoom(null) },
         {
@@ -2676,10 +2720,10 @@
           ]
         : []),
       ...clipboardItems,
-      ...editToolbarGroups[1].items.slice(2),
+      ...editGroupItems("selection").slice(2),
       ...(selectedIds.length > 1
-        ? editToolbarGroups[3].items
-        : editToolbarGroups[2].items),
+        ? editGroupItems("align")
+        : [...editGroupItems("rotation"), ...editGroupItems("order")]),
       ...(selected?.shape.type === "symbol"
         ? [
             {
@@ -3842,7 +3886,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.10.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.11.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

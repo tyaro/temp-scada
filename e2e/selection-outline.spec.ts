@@ -28,7 +28,7 @@ const canvas = (page: Page) => page.locator(".sheet > svg");
 const shape = (page: Page, id = ids[0]) =>
   canvas(page)
     .locator(
-      `[data-object-id="${id}"] > rect, [data-object-id="${id}"] > ellipse`,
+      `[data-object-id="${id}"] > [data-object-rotation] > rect, [data-object-id="${id}"] > [data-object-rotation] > ellipse`,
     )
     .first();
 const prompt = (page: Page) =>

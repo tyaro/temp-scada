@@ -1,0 +1,14 @@
+[
+  { "angle": 0, "valid": true },
+  { "angle": 90, "valid": true },
+  { "angle": 270, "valid": true },
+  { "angle": 359.999999, "valid": true },
+  { "angle": -0.00001, "valid": false },
+  { "angle": -90, "valid": false },
+  { "angle": 360, "valid": false },
+  { "angle": 361, "valid": false },
+  { "angle": null, "valid": false },
+  { "angle": "90", "valid": false },
+  { "angle": true, "valid": false },
+  { "missing": true, "valid": false }
+]

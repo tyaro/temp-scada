@@ -4,6 +4,7 @@ import { handlePoint, resizeGeometry, type ResizeHandle } from "./resize";
 import {
   moveRotatedVertex,
   normalizeRotation,
+  rotatedResizeCursor,
   objectToWorld,
   resizeRotated,
   rotatedBounds,
@@ -266,4 +267,10 @@ it("zero-angle vertex pointers match existing dead zone, delta rounding and both
         vertexPosition(original, original.shape.points[0], delta, step),
       );
     }
+});
+
+it("resize cursors follow the rotated handle direction", () => {
+  expect(rotatedResizeCursor("e", 90)).toBe("s-resize");
+  expect(rotatedResizeCursor("nw", 33)).toBe("n-resize");
+  expect(rotatedResizeCursor("se", 0)).toBe("se-resize");
 });

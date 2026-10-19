@@ -31,8 +31,8 @@ import legacy from "../../../../examples/legacy.project.json";
 import { getBounds, parsePoints } from "./project";
 it("migrates the validated legacy format without changing identity, geometry or revision", () => {
   const next = parseProject(JSON.stringify(legacy));
-  expect(next.manifest.schemaVersion).toBe("0.10.0");
-  expect(next.manifest.minRuntimeVersion).toBe("0.10.0");
+  expect(next.manifest.schemaVersion).toBe("0.11.0");
+  expect(next.manifest.minRuntimeVersion).toBe("0.11.0");
   expect(next.manifest.projectId).toBe(legacy.manifest.projectId);
   expect(next.manifest.projectRevision).toBe(legacy.manifest.projectRevision);
   expect(next.screens).toEqual(
@@ -42,6 +42,7 @@ it("migrates the validated legacy format without changing identity, geometry or 
       folders: [],
       objects: screen.objects.map((object) => ({
         ...object,
+        rotation: 0,
         shape:
           object.shape.type === "rectangle" || object.shape.type === "ellipse"
             ? { ...object.shape, paint: { fillEnabled: true, stroke: null } }
@@ -79,6 +80,7 @@ it("supports negative local bounds and validates point text", () => {
   expect(() => parsePoints("Infinity,0")).toThrow();
   expect(
     getBounds({
+      rotation: 0,
       id: "test",
       order: 0,
       x: 0,
@@ -97,6 +99,7 @@ it("supports negative local bounds and validates point text", () => {
   ).toEqual({ x: -22, y: -12, width: 104, height: 4 });
   expect(
     getBounds({
+      rotation: 0,
       id: "test",
       order: 0,
       x: 0,

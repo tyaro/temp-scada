@@ -120,6 +120,7 @@ test("pipe vertices snap in screen coordinates, support keyboard and cancel with
     saved = JSON.parse(json);
   expect(saved.manifest.projectRevision).toBe(9);
   expect(saved.screens[0].objects.at(-1)).toMatchObject({
+    rotation: 0,
     x: 13,
     y: 17,
     shape: {

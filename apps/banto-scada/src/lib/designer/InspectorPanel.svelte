@@ -475,11 +475,11 @@
               数値はEnter・フォーカス移動で確定 · Escで取消
             </p>
             <div class="fields">
-              {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
+              {#each "width" in selected ? ["x", "y", "width", "height", "rotation"] : ["x", "y", "rotation"] as field}
                 <label
-                  >{field}<input
+                  >{field === "rotation" ? "回転（°）" : field}<input
                     name={field}
-                    aria-label={field}
+                    aria-label={field === "rotation" ? "回転角度" : field}
                     type="text"
                     inputmode="decimal"
                     required

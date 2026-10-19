@@ -1,11 +1,23 @@
 <script lang="ts">
   import {
     getBounds,
+    getLocalBounds,
     type Point,
     type Screen,
     type ScreenObject,
     type SymbolDefinition,
   } from "./project";
+  import {
+    objectToWorld,
+    worldToObject,
+    rotateVector,
+    rotationTransform,
+    objectTransform,
+    moveRotatedVertex,
+    replaceRotatedVertex,
+    resizeRotated,
+    rotatedResizeCursor,
+  } from "./rotation";
   import { dragOffset, vertexPosition, nextGridCoordinate } from "./snap";
   import {
     resizeGeometry,
@@ -97,13 +109,13 @@
     handle: ResizeHandle;
     pointer: number;
     start: Point;
-    original: Geometry;
+    original: Geometry & { rotation: number };
     current: Geometry;
   } | null>(null);
   function resizeKey(
     event: KeyboardEvent,
     id: string,
-    geometry: Geometry,
+    geometry: Geometry & { rotation: number },
     handle: ResizeHandle,
   ) {
     if (
@@ -139,10 +151,47 @@
       return;
     geometry = {
       x: current.x,
+      rotation: current.rotation,
       y: current.y,
       width: current.width,
       height: current.height,
     };
+    if (current.rotation) {
+      const p = handlePoint(geometry, handle);
+      const edge = objectToWorld(current, {
+        x: p.x - current.x,
+        y: p.y - current.y,
+      });
+      let delta = {
+        x: direction.x * (event.shiftKey ? 10 : 1),
+        y: direction.y * (event.shiftKey ? 10 : 1),
+      };
+      if (snapEnabled) {
+        if (handle.length === 1) {
+          const normal = rotateVector(
+            handle === "e" || handle === "w" ? { x: 1, y: 0 } : { x: 0, y: 1 },
+            current.rotation,
+          );
+          const projected = delta.x * normal.x + delta.y * normal.y;
+          if (Math.abs(projected) < 1e-12) return;
+          const axis = Math.abs(normal.x) >= Math.abs(normal.y) ? "x" : "y";
+          const travel = projected * normal[axis];
+          const distance =
+            (nextGridCoordinate(edge[axis], travel, gridSize) - edge[axis]) /
+            normal[axis];
+          delta = { x: normal.x * distance, y: normal.y * distance };
+        } else {
+          if (direction.x)
+            delta.x =
+              nextGridCoordinate(edge.x, direction.x, gridSize) - edge.x;
+          if (direction.y)
+            delta.y =
+              nextGridCoordinate(edge.y, direction.y, gridSize) - edge.y;
+        }
+      }
+      onresize?.(id, resizeRotated(current, handle, delta, null));
+      return;
+    }
     const edge = handlePoint(geometry, handle);
     const amount = event.shiftKey ? 10 : 1;
     const delta = { x: direction.x * amount, y: direction.y * amount };
@@ -182,17 +231,19 @@
     if ("width" in object && resizeDrag?.id === object.id)
       return { ...object, ...resizeDrag.current };
     if ("width" in object || vertexDrag?.id !== object.id) return object;
-    const vertex = vertexDrag;
+    const geometry = replaceRotatedVertex(
+      object,
+      vertexDrag.index,
+      vertexDrag.current,
+    );
     return {
       ...object,
-      shape: {
-        ...object.shape,
-        points: object.shape.points.map((p, i) =>
-          i === vertex.index ? vertex.current : p,
-        ),
-      },
+      x: geometry.x,
+      y: geometry.y,
+      shape: { ...object.shape, points: geometry.points },
     };
   }
+
   function vertexKey(
     event: KeyboardEvent,
     object: ScreenObject,
@@ -232,6 +283,21 @@
       !current.shape.points[index]
     )
       return;
+    if (current.rotation) {
+      const start = objectToWorld(current, current.shape.points[index]);
+      const amount = event.shiftKey ? 10 : 1;
+      const target = { ...start };
+      if (direction.x)
+        target.x = snapEnabled
+          ? nextGridCoordinate(start.x, direction.x, gridSize)
+          : start.x + direction.x * amount;
+      if (direction.y)
+        target.y = snapEnabled
+          ? nextGridCoordinate(start.y, direction.y, gridSize)
+          : start.y + direction.y * amount;
+      onvertexmove?.(object.id, index, worldToObject(current, target));
+      return;
+    }
     const original = current.shape.points[index],
       point = { ...original };
     if (snapEnabled) {
@@ -285,6 +351,7 @@
       const original = {
         x: object.x,
         y: object.y,
+        rotation: object.rotation,
         width: object.width,
         height: object.height,
       };
@@ -374,7 +441,7 @@
         current:
           Math.hypot(p.x - resizeDrag.start.x, p.y - resizeDrag.start.y) <= 0.5
             ? resizeDrag.original
-            : resizeGeometry(
+            : resizeRotated(
                 resizeDrag.original,
                 resizeDrag.handle,
                 { x: p.x - resizeDrag.start.x, y: p.y - resizeDrag.start.y },
@@ -388,12 +455,18 @@
       };
       vertexDrag = {
         ...vertexDrag,
-        current: vertexPosition(
-          vertexDrag.origin,
-          vertexDrag.original,
-          delta,
-          step,
-        ),
+        current: (() => {
+          const object = screen.objects.find(
+            (object) => object.id === vertexDrag!.id,
+          )!;
+          if (object.shape.type !== "polyline") return vertexDrag!.original;
+          return moveRotatedVertex(
+            object as typeof object & { shape: typeof object.shape },
+            vertexDrag!.index,
+            delta,
+            step,
+          ).points[vertexDrag!.index];
+        })(),
       };
     } else if (drag && drag.pointer === event.pointerId) {
       const delta = dragOffset(
@@ -490,47 +563,56 @@
         ? "true"
         : undefined}
     >
-      {#if "width" in visual && visual.shape.type === "symbol"}
-        {@const definition = symbols.find(
-          (s) =>
-            object.shape.type === "symbol" && s.id === object.shape.symbolId,
-        )!}
-        <svg
-          width={visual.width}
-          height={visual.height}
-          viewBox={`0 0 ${definition.width} ${definition.height}`}
-          preserveAspectRatio="xMidYMid meet"
-          data-symbol-id={definition.id}
-          data-symbol-color-mode={visual.shape.colorMode}
-        >
-          {#each [...definition.objects]
-            .filter((object) => object.visible !== false)
-            .sort((a, b) => a.order - b.order) as child (child.id)}
-            <g transform={`translate(${child.x} ${child.y})`}
-              ><Primitive
-                object={child}
-                color={visual.shape.colorMode === "definition"
-                  ? undefined
-                  : object.fill}
-              /></g
-            >
-          {/each}
-        </svg>
-      {:else}<Primitive object={visual} {readings} />{/if}
+      <g
+        transform={rotationTransform(visual)}
+        data-object-rotation={visual.rotation}
+      >
+        {#if "width" in visual && visual.shape.type === "symbol"}
+          {@const definition = symbols.find(
+            (s) =>
+              object.shape.type === "symbol" && s.id === object.shape.symbolId,
+          )!}
+          <svg
+            width={visual.width}
+            height={visual.height}
+            viewBox={`0 0 ${definition.width} ${definition.height}`}
+            preserveAspectRatio="xMidYMid meet"
+            data-symbol-id={definition.id}
+            data-symbol-color-mode={visual.shape.colorMode}
+          >
+            {#each [...definition.objects]
+              .filter((object) => object.visible !== false)
+              .sort((a, b) => a.order - b.order) as child (child.id)}
+              <g transform={objectTransform(child)}
+                ><Primitive
+                  object={child}
+                  color={visual.shape.colorMode === "definition"
+                    ? undefined
+                    : object.fill}
+                /></g
+              >
+            {/each}
+          </svg>
+        {:else}<Primitive object={visual} {readings} />{/if}
+      </g>
       {#if editable}
         {@const bounds = getBounds(visual)}
         {#if visual.shape.type === "polyline"}
           <polyline
+            transform={rotationTransform(visual)}
             points={visual.shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
             fill="none"
             stroke="transparent"
             stroke-width={Math.max(12, visual.shape.strokeWidth + 8)}
           />
-        {:else}<rect
-            width={bounds.width}
-            height={bounds.height}
-            x={bounds.x}
-            y={bounds.y}
+        {:else}
+          {@const hit = getLocalBounds(visual)}
+          <rect
+            transform={rotationTransform(visual)}
+            width={hit.width}
+            height={hit.height}
+            x={hit.x}
+            y={hit.y}
             fill="transparent"
           />{/if}
         {#if selectedIds.includes(object.id)}<rect
@@ -553,7 +635,11 @@
       {@const visual = previewObject(object)}
       {#if "width" in visual}
         {#each resizeHandles as handle}
-          {@const p = handlePoint(visual, handle)}
+          {@const local = handlePoint(visual, handle)}
+          {@const p = objectToWorld(visual, {
+            x: local.x - visual.x,
+            y: local.y - visual.y,
+          })}
           <rect
             x={p.x - handleHalfSize}
             y={p.y - handleHalfSize}
@@ -563,7 +649,7 @@
             stroke={background}
             stroke-width="1.5"
             vector-effect="non-scaling-stroke"
-            style:cursor={`${handle}-resize`}
+            style:cursor={rotatedResizeCursor(handle, visual.rotation)}
             class="resize-handle"
             role="button"
             tabindex="0"
@@ -579,10 +665,14 @@
       {@const visual = previewObject(object)}
       {#if visual.shape.type === "polyline"}
         {#each visual.shape.points as p, index}
+          {@const world = objectToWorld(
+            visual as typeof visual & { shape: typeof visual.shape },
+            p,
+          )}
           <circle
             class="vertex"
-            cx={object.x + p.x}
-            cy={object.y + p.y}
+            cx={world.x}
+            cy={world.y}
             r={6 / viewScale}
             fill="var(--canvas-accent)"
             stroke={background}

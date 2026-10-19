@@ -22,7 +22,9 @@ const colors = (page: Page) =>
 const confirm = (page: Page) =>
   colors(page).getByRole("checkbox", { name: /共有定義の色を使うSymbol/ });
 const svgSymbol = (root: Locator, id: string) =>
-  root.locator(`[data-object-id="${id}"] > svg[data-symbol-id]`);
+  root.locator(
+    `[data-object-id="${id}"] > [data-object-rotation] > svg[data-symbol-id]`,
+  );
 async function paints(svg: Locator) {
   return svg
     .locator("rect,ellipse,text,polyline,polygon")

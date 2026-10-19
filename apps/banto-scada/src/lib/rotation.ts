@@ -201,3 +201,24 @@ export function moveRotatedVertex(
   const target = vertexPosition({ x: 0, y: 0 }, start, delta, step);
   return replaceRotatedVertex(original, index, worldToObject(original, target));
 }
+
+export function rotationTransform(object: Layout | Line): string | undefined {
+  const angle = normalizeRotation(object.rotation ?? 0);
+  if (!angle) return undefined;
+  const pivot = rotationPivot(object);
+  return `rotate(${angle} ${pivot.x} ${pivot.y})`;
+}
+export function objectTransform(object: Layout | Line): string {
+  const rotation = rotationTransform(object);
+  return `translate(${object.x} ${object.y})${rotation ? ` ${rotation}` : ""}`;
+}
+
+/** Standard resize cursor nearest to the actual rotated handle direction. */
+export function rotatedResizeCursor(
+  handle: ResizeHandle,
+  angle: number,
+): string {
+  const directions = ["e", "se", "s", "sw", "w", "nw", "n", "ne"] as const;
+  const index = directions.indexOf(handle);
+  return `${directions[Math.round(normalizeRotation(index * 45 + angle) / 45) % 8]}-resize`;
+}

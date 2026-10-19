@@ -32,6 +32,7 @@ it("nudges all selected objects from one top/left anchor and retains relative po
 });
 it("accounts for pipe strokes and arrows, negative coordinates and floating grid boundaries", () => {
   const pipe: ScreenObject = {
+    rotation: 0,
     id: objects()[0].id,
     order: 0,
     x: -3,

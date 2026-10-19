@@ -66,12 +66,13 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.10.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.10.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.11.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.11.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
                 for object in screen["objects"].as_array_mut().unwrap() {
+                    object["rotation"] = serde_json::json!(0);
                     if object["shape"]["type"] == "rectangle"
                         || object["shape"]["type"] == "ellipse"
                     {
@@ -430,6 +431,35 @@ mod tests {
         assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
     }
     #[test]
+    fn rotation_shares_the_browser_contract() {
+        let base: Value =
+            serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/rotation-cases.json")).unwrap();
+        for owners in ["screens", "symbols"] {
+            for index in 0..base[owners][0]["objects"].as_array().unwrap().len() {
+                for case in cases.as_array().unwrap() {
+                    let mut value = base.clone();
+                    let object = value[owners][0]["objects"][index].as_object_mut().unwrap();
+                    if case["missing"] == true {
+                        object.remove("rotation");
+                    } else {
+                        object.insert("rotation".into(), case["angle"].clone());
+                    }
+                    assert_eq!(
+                        Project::from_json(&value.to_string()).is_ok(),
+                        case["valid"] == true,
+                        "{owners} {index} {case}"
+                    );
+                }
+            }
+        }
+        let mut old = base;
+        old["manifest"]["schemaVersion"] = serde_json::json!("0.10.0");
+        old["manifest"]["minRuntimeVersion"] = serde_json::json!("0.10.0");
+        assert!(Project::from_json(&old.to_string()).is_err());
+    }
+    #[test]
     fn shape_paint_shares_the_browser_contract() {
         let sample =
             Project::from_json(include_str!("../../../examples/shape-paint.project.json")).unwrap();
@@ -565,8 +595,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.10.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.10.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.11.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.11.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]
@@ -580,6 +610,7 @@ mod tests {
             screen["background"] = Value::String("#0b1220".into());
             screen["folders"] = serde_json::json!([]);
             for object in screen["objects"].as_array_mut().unwrap() {
+                object["rotation"] = serde_json::json!(0);
                 if object["shape"]["type"] == "rectangle" || object["shape"]["type"] == "ellipse" {
                     object["shape"]["paint"] =
                         serde_json::json!({"fillEnabled":true,"stroke":null});

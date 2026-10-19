@@ -5,7 +5,11 @@
     disabled?: boolean;
     run: () => void;
   };
-  export type ToolbarGroup = { label: string; items: ToolbarAction[] };
+  export type ToolbarGroup = {
+    id: string;
+    label: string;
+    items: ToolbarAction[];
+  };
 </script>
 
 <script lang="ts">

@@ -20,6 +20,7 @@ it("selects full bounds in either drag direction, including edges, in stacking o
 });
 it("uses object-local negative pipe points with stroke and arrow bounds", () => {
   const pipe: ScreenObject = {
+    rotation: 0,
     id: "pipe",
     order: 0,
     x: 100,

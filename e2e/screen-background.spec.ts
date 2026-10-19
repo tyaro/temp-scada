@@ -47,8 +47,8 @@ test("screen background is staged, undoable and persistent while themes, objects
   const original = JSON.parse(
     await readFile("examples/process.project.json", "utf8"),
   );
-  expect(project.manifest.schemaVersion).toBe("0.10.0");
-  expect(project.manifest.minRuntimeVersion).toBe("0.10.0");
+  expect(project.manifest.schemaVersion).toBe("0.11.0");
+  expect(project.manifest.minRuntimeVersion).toBe("0.11.0");
   expect(project.screens[0].background).toBe("#ffffff");
   expect(project.screens[0].objects).toEqual(original.screens[0].objects);
   expect(project.symbols).toEqual(original.symbols);

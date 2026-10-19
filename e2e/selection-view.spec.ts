@@ -85,8 +85,11 @@ async function assertFit(
     const m = (
       element.querySelector(".sheet > svg") as SVGSVGElement
     ).getScreenCTM()!;
+    const box = (element.querySelector(".sheet > svg") as SVGSVGElement).viewBox
+      .baseVal;
     return {
       actual: m.a,
+      shortestViewBoxSide: Math.min(box.width, box.height),
       expected: Math.max(
         0.25,
         Math.min(
@@ -97,7 +100,11 @@ async function assertFit(
       ),
     };
   }, bounds);
-  expect(values.actual).toBeCloseTo(values.expected, 4);
+  // Chromium quantizes styled SVG dimensions to 1/64 CSS px. A fixed number
+  // of zoom decimals is too strict for small Symbol viewports.
+  expect(
+    Math.abs(values.actual - values.expected) * values.shortestViewBoxSide,
+  ).toBeLessThan(1 / 64 + 1e-6);
 }
 for (const theme of ["light", "dark"] as const)
   test(`selected outlines fit the actual viewport once without Project changes in ${theme}`, async ({

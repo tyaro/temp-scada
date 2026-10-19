@@ -1,5 +1,6 @@
 import type { ScreenObject } from "../project";
-export type NumericProperty = "x" | "y" | "width" | "height" | "strokeWidth";
+export type NumericProperty =
+  "x" | "y" | "width" | "height" | "strokeWidth" | "rotation";
 export interface NumericTarget {
   generation: number;
   screenId: string;
@@ -24,6 +25,7 @@ export function objectFormValues(
     name: object.name ?? "",
     x: String(object.x),
     y: String(object.y),
+    rotation: String(object.rotation),
     fill: object.fill,
   };
   if ("width" in object) {
