@@ -431,3 +431,7 @@ Project 0.18.0で矩形／楕円のpaintを判別型へ再編し、塗りの色�
 ### 繰返しパターンの実装追記（2026-10-20）
 
 Project 0.19.0で矩形／楕円の塗りへ斜線・交差線・点を追加した。前景と背景のα、local座標、Symbol両配色を共用し、明示適用と未適用見本・Undo／JSON／clipboardへ接続する。交点へ前景αを重ねない。[仕様・実画面](pattern-paint-design.md)・[実装記録](development-plan.md#pattern-paint-progress)を参照。画像タイルや自由原点は後続。
+
+## 幾何グループの初回実装へ向けた具体化
+
+[初回設計](geometric-groups-design.md)で、既存配置のworld座標・描画順を保持する所属モデルを使い、一括選択・移動・左右90度回転・複製等を段階実装する方針を整理した。レイヤー整理用フォルダー・共有Symbol・Equipmentと区別する。任意拡縮・入れ子・グループ合成opacityは後続。次工程の設計であり、保存契約やDesignerの実装完了を示さない。

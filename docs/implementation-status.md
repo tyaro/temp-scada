@@ -53,3 +53,7 @@ R5a〜R5fで編集コマンド型・分類とProject／Symbol／Screen／Folder�
 - 描画: [塗りと線](shape-paint-design.md)、[線形gradient](linear-gradient-design.md)、[pattern](pattern-paint-design.md)、[α](color-alpha-design.md)。
 - 再利用: [共有Symbol](symbol-color-design.md)、[埋込View](embedded-screen-design.md)、[Popup](preview-popup-design.md)、[全画面](preview-fullscreen-design.md)。
 - 操作と構想: [UX設計](frontend-ux-design.md)、[UI改訂](designer-ui-revision.md)、[機器作成の追加提案](equipment-authoring-detail-proposal.md)。
+
+## 次工程の具体化
+
+[幾何グループの初回設計](geometric-groups-design.md)を追加した。初回は既存配置の座標・描画順を保持する所属モデルで、一括選択・移動・90度回転等を扱う。任意拡縮・入れ子は後続。文書のみの追加で、Project 0.21.0にgroup項目やグループ操作はまだない。
