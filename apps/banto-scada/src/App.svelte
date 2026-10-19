@@ -620,6 +620,23 @@
         : [id];
     return [...selectedIds];
   }
+  function selectRange(ids: string[], additive: boolean) {
+    const target = screen.id,
+      generation = workspaceGeneration;
+    const apply = () => {
+      if (
+        mode !== "edit" ||
+        screen.id !== target ||
+        workspaceGeneration !== generation
+      )
+        return;
+      const live = ids.filter((id) =>
+        screen.objects.some((object) => object.id === id),
+      );
+      selectedIds = additive ? [...new Set([...selectedIds, ...live])] : live;
+    };
+    if (drafts.allow(apply)) apply();
+  }
   function duplicateSelection() {
     if (selectedIds.length === 1)
       edit({
@@ -2179,6 +2196,7 @@
             })}
           onbeforeedit={() => drafts.allow(() => {})}
           onselect={selectObjects}
+          onrangeselect={selectRange}
           onmove={(ids, dx, dy) =>
             edit({
               type: "move-many",
@@ -2342,6 +2360,9 @@
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。
+  </p>
+  <p>
+    選択ツールで空白をドラッグすると、枠に完全に入る図形をまとめて選択します。Shiftで追加、Escで取消できます。パン・連続配置・表示プレビューでは範囲選択しません。
   </p>
   <p>
     Ctrl / Command + S：JSON 保存、Z：元に戻す、Shift +

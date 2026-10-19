@@ -52,7 +52,7 @@
   <button
     type="button"
     aria-label="選択ツール"
-    title="選択ツール"
+    title="選択ツール：空白ドラッグで範囲選択（Shiftで追加・Escで取消）"
     aria-pressed={!view.hand && !placing}
     onclick={() => onhand(false)}
     ><svg aria-hidden="true" viewBox="0 0 24 24"

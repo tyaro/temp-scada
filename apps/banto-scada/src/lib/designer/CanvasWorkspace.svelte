@@ -15,10 +15,11 @@
 </script>
 
 <script lang="ts">
-  import { tick, untrack } from "svelte";
+  import { tick, untrack, flushSync } from "svelte";
   import Renderer from "../Renderer.svelte";
   import type { Screen, SymbolDefinition, Point } from "../project";
   import type { Geometry } from "../resize";
+  import { objectsInRange, selectionBox } from "../range-selection";
   import { snapCoordinate } from "../snap";
   import { PALETTE_MIME } from "./palette-drag";
   import {
@@ -39,6 +40,7 @@
     gridSize,
     onbeforeedit,
     onselect,
+    onrangeselect,
     onmove,
     onresize,
     onvertexmove,
@@ -64,6 +66,7 @@
       additive: boolean,
       preserve: boolean,
     ) => string[];
+    onrangeselect: (ids: string[], additive: boolean) => void;
     onmove: (ids: string[], dx: number, dy: number) => void;
     onresize: (id: string, geometry: Geometry) => void;
     onvertexmove: (id: string, index: number, point: Point) => void;
@@ -95,42 +98,81 @@
   $effect(() => {
     if (!placing || !editable) untrack(cancelPlacementPointer);
   });
-  function palettePoint(event: {
-    clientX: number;
-    clientY: number;
-    altKey: boolean;
-  }): Point | null {
-    const svg = viewport?.querySelector<SVGSVGElement>(".sheet > svg");
-    const matrix = svg?.getScreenCTM();
+  let range = $state<{
+    pointer: number;
+    start: Point;
+    current: Point;
+    client: Point;
+    additive: boolean;
+    active: boolean;
+  } | null>(null);
+  const rangeBox = $derived(
+    range?.active ? selectionBox(range.start, range.current) : null,
+  );
+  function cancelRange() {
+    const previous = range;
+    range = null;
+    if (previous && viewport?.hasPointerCapture(previous.pointer))
+      viewport.releasePointerCapture(previous.pointer);
+  }
+  $effect(() => {
+    // A range belongs to one model snapshot and interaction mode.
+    screen;
+    editable;
+    placing;
+    hand;
+    space;
+    untrack(cancelRange);
+  });
+  function canvasPoint(
+    event: { clientX: number; clientY: number },
+    clamp = false,
+  ): Point | null {
+    const matrix = viewport
+      ?.querySelector<SVGSVGElement>(".sheet > svg")
+      ?.getScreenCTM();
     if (!matrix) return null;
     try {
       const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(
         matrix.inverse(),
       );
+      if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+      if (clamp)
+        return {
+          x: Math.max(0, Math.min(screen.width, point.x)),
+          y: Math.max(0, Math.min(screen.height, point.y)),
+        };
       if (
-        !Number.isFinite(point.x) ||
-        !Number.isFinite(point.y) ||
         point.x < 0 ||
         point.y < 0 ||
         point.x > screen.width ||
         point.y > screen.height
       )
         return null;
-      return snapEnabled && !event.altKey
-        ? {
-            x: Math.min(
-              screen.width,
-              Math.max(0, snapCoordinate(point.x, gridSize)),
-            ),
-            y: Math.min(
-              screen.height,
-              Math.max(0, snapCoordinate(point.y, gridSize)),
-            ),
-          }
-        : { x: point.x, y: point.y };
+      return { x: point.x, y: point.y };
     } catch {
       return null;
     }
+  }
+  function palettePoint(event: {
+    clientX: number;
+    clientY: number;
+    altKey: boolean;
+  }): Point | null {
+    const point = canvasPoint(event);
+    if (!point) return null;
+    return snapEnabled && !event.altKey
+      ? {
+          x: Math.min(
+            screen.width,
+            Math.max(0, snapCoordinate(point.x, gridSize)),
+          ),
+          y: Math.min(
+            screen.height,
+            Math.max(0, snapCoordinate(point.y, gridSize)),
+          ),
+        }
+      : point;
   }
   function dragOver(event: DragEvent) {
     if (
@@ -259,6 +301,7 @@
     space = false;
     dropPoint = null;
     untrack(cancelPlacementPointer);
+    untrack(cancelRange);
     if (!element) return;
     void tick().then(() => {
       if (screen.id !== id || editable !== editing || viewport !== element)
@@ -274,6 +317,7 @@
   export function centerOn(center: Point) {
     if (!editable || !viewport || stored?.zoom == null) return;
     cancelPlacementPointer();
+    cancelRange();
     resizeAnchor = null;
     restoreCenter(center);
   }
@@ -354,6 +398,22 @@
     zoom(next ?? (direction > 0 ? 4 : 0.25));
   }
   function key(event: KeyboardEvent) {
+    if (range && event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      cancelRange();
+      return;
+    }
+    if (
+      range &&
+      (event.code === "Space" ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.key.startsWith("Arrow") ||
+        event.key === "Delete" ||
+        event.key === "Backspace")
+    )
+      cancelRange();
     if (event.key === "Escape" && pan) {
       event.preventDefault();
       event.stopPropagation();
@@ -431,6 +491,10 @@
   function requestContext(event?: MouseEvent) {
     if (!editable || !viewport) return;
     event?.preventDefault();
+    if (range) {
+      cancelRange();
+      return;
+    }
     if (placing) {
       cancelPlacementPointer();
       oncancelplacement();
@@ -490,6 +554,32 @@
       viewport.setPointerCapture(event.pointerId);
       return;
     }
+    if (!hand && !space && !placing && event.button === 0) {
+      const target = event.target as Element;
+      const start = canvasPoint(event);
+      if (
+        start &&
+        target.closest(".sheet") &&
+        !target.closest(
+          "[data-object-id],[data-resize-object-id],[data-vertex-object-id]",
+        )
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        // Settle numeric blur commits before this gesture captures its model snapshot.
+        flushSync(() => viewport?.focus({ preventScroll: true }));
+        range = {
+          pointer: event.pointerId,
+          start,
+          current: start,
+          client: { x: event.clientX, y: event.clientY },
+          additive: event.shiftKey,
+          active: false,
+        };
+        viewport.setPointerCapture(event.pointerId);
+        return;
+      }
+    }
     if (!hand && !space && event.button !== 1) {
       if (!(event.target as Element).closest('[tabindex="0"]'))
         viewport.focus({ preventScroll: true });
@@ -499,6 +589,7 @@
     event.stopPropagation();
     viewport.focus({ preventScroll: true });
     viewport.setPointerCapture(event.pointerId);
+    cancelRange();
     pan = {
       pointer: event.pointerId,
       id: screen.id,
@@ -507,6 +598,23 @@
     };
   }
   function move(event: PointerEvent) {
+    if (range?.pointer === event.pointerId) {
+      event.preventDefault();
+      event.stopPropagation();
+      const point = canvasPoint(event, true);
+      if (point)
+        range = {
+          ...range,
+          current: point,
+          active:
+            range.active ||
+            Math.hypot(
+              event.clientX - range.client.x,
+              event.clientY - range.client.y,
+            ) >= 5,
+        };
+      return;
+    }
     if (placing && !hand && !space && !pan)
       placementPoint = palettePoint(event);
     if (
@@ -523,6 +631,22 @@
     remember();
   }
   function up(event: PointerEvent) {
+    if (range?.pointer === event.pointerId) {
+      move(event);
+      const finished = range!;
+      cancelRange();
+      event.preventDefault();
+      event.stopPropagation();
+      if (editable && !placing) {
+        if (finished.active)
+          onrangeselect(
+            objectsInRange(screen.objects, finished.start, finished.current),
+            finished.additive,
+          );
+        else onselect(null, finished.additive, true);
+      }
+      return;
+    }
     if (placementDown?.pointer === event.pointerId) {
       const previous = placementDown;
       placementDown = null;
@@ -570,6 +694,7 @@
   onblur={() => {
     space = false;
     cancelPan();
+    cancelRange();
     cancelPlacementPointer();
   }}
 />
@@ -578,6 +703,7 @@
   bind:this={viewport}
   class="viewport"
   class:panning
+  class:selecting={!!range}
   class:placing={placing && !panning}
   class:preview={!editable}
   class:drop-ready={!!dropPoint}
@@ -592,16 +718,19 @@
   onpointerup={up}
   onpointercancel={() => {
     cancelPan();
+    cancelRange();
     cancelPlacementPointer();
   }}
   onpointerleave={() => {
     if (!pan) placementPoint = null;
   }}
   onlostpointercapture={() => {
+    if (range) cancelRange();
     if (pan) cancelPan();
     if (placementDown) cancelPlacementPointer();
   }}
   onscroll={() => {
+    cancelRange();
     cancelPlacementPointer();
     remember();
   }}
@@ -644,6 +773,17 @@
           {onvertexmove}
         />
       {/key}
+      {#if rangeBox && editable}
+        <div
+          class="selection-range"
+          data-testid="selection-range"
+          aria-hidden="true"
+          style:left={`${rangeBox.x * scale}px`}
+          style:top={`${rangeBox.y * scale}px`}
+          style:width={`${rangeBox.width * scale}px`}
+          style:height={`${rangeBox.height * scale}px`}
+        ></div>
+      {/if}
       {#if marker && editable}
         <div
           class="drop-marker"
@@ -659,6 +799,19 @@
 </div>
 
 <style>
+  .selecting,
+  .selecting :global(svg),
+  .selecting :global(svg *) {
+    cursor: crosshair !important;
+  }
+  .selection-range {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid var(--banto-primary);
+    background: color-mix(in srgb, var(--banto-primary) 12%, transparent);
+    pointer-events: none;
+  }
+
   .viewport.drop-ready {
     border-color: var(--banto-primary);
   }
