@@ -33,6 +33,10 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+## 画面内Popupの計算基礎（2026-10-20・日本時間）
+
+[具体設計](preview-popup-design.md)へAstraレビューを反映した。プレビュー専用・一時的な非モーダル小窓として、4件・同じ画面の前面化・小窓全体の描画予算・枠内へのclampと縮小を計算する基礎を追加した。単体4件で件数とコストの境界、既存表示の保持、原子的拒否、入力不変を確認する。UI・起動・移動とサイズ操作・Escとフォーカスは次に接続する。Project0.20.0の保存契約は変更しない。
+
 <a id="screen-view-progress"></a>
 
 ## 別画面の埋込表示（2026-10-20・日本時間）
