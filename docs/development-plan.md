@@ -27,6 +27,16 @@
 
 最新の実画面は[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+<a id="rotation-foundation-progress"></a>
+
+## 配置回転の計算基盤（2026-10-19・同日後続）
+
+Astraの提案に従い、次の工程を[配置の回転](object-rotation-design.md)とした。現時点では**座標計算の基盤だけで、回転の保存・UI・Rendererへの接続は未実装**。Projectは0.10.0を維持する。
+
+有限角の正規化・正確な直角変換・local／所有先座標変換・描画外接範囲、反対辺を固定する回転後リサイズ、未操作頂点を固定する暗黙pivot補正を独立した関数にした。角は画面上の点、辺は法線への射影と主成分軸でスナップする。既存リサイズの丸めは既定で維持し、新しい計算では吸着後の二重丸めを避ける。Astraレビューにより、微小な負角が360へ丸まる境界を修正し、頂点pointerの不動域・delta丸め・両軸吸着を既存関数と比較した。方向キーはpointerの前処理とは分離する。
+
+検証: 新規19件を含むTypeScript416件・型チェックが成功。既存のサイズ変更ブラウザ2件と本番ビルドも成功し、現在のアプリ操作を維持している。次に保存モデル・描画経路・数値UI・既存操作への接続を行い、そこで回転機能の完了を判定する。
+
 <a id="layer-drag-progress"></a>
 
 ## レイヤー配置のドラッグによる所属変更（2026-10-19・同日後続）

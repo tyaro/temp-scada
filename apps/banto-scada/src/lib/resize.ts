@@ -23,6 +23,7 @@ export function resizeGeometry(
   handle: ResizeHandle,
   delta: Point,
   step: number | null,
+  roundUnsnapped = true,
 ): Geometry {
   if (
     ![
@@ -39,7 +40,11 @@ export function resizeGeometry(
     throw new Error("サイズ変更には有限の座標と正のサイズが必要です");
   if (delta.x === 0 && delta.y === 0) return { ...original };
   const coordinate = (value: number) =>
-    step === null ? Math.round(value * 100) / 100 : snapCoordinate(value, step);
+    step === null
+      ? roundUnsnapped
+        ? Math.round(value * 100) / 100
+        : value
+      : snapCoordinate(value, step);
   let left = original.x,
     top = original.y,
     right = left + original.width,
