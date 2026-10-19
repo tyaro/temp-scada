@@ -563,6 +563,24 @@
   }
   function shortcut(event: KeyboardEvent) {
     if (
+      inspectorController?.isTagPickerOpen() ||
+      (event.target instanceof Element &&
+        event.target.closest('[role="dialog"][aria-label="タグを選択"]'))
+    ) {
+      const key = event.key.toLowerCase();
+      const localInput =
+        event.target instanceof Element &&
+        event.target.closest(
+          '[role="dialog"] input:not([type="checkbox"]),[role="dialog"] textarea,[role="dialog"] [contenteditable]',
+        );
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        (key === "s" || (!localInput && ["z", "y"].includes(key)))
+      )
+        event.preventDefault();
+      return;
+    }
+    if (
       event.key === "Escape" &&
       !event.isComposing &&
       positionPlacement &&
@@ -852,7 +870,10 @@
   let project = $state(parseProject(JSON.stringify(sample)));
   let editorRegion = $state<HTMLElement>();
   let inspectorPanel = $state<HTMLElement>();
-  let inspectorController = $state<{ commitFocusedNumber: () => boolean }>();
+  let inspectorController = $state<{
+    commitFocusedNumber: () => boolean;
+    isTagPickerOpen: () => boolean;
+  }>();
   const references = $derived(bindingReferences(project));
   function openBinding(usage: BindingUsage) {
     transition(() => {

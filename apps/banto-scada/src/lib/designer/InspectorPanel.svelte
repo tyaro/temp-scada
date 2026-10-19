@@ -1,4 +1,11 @@
 <script lang="ts">
+  import TagPicker from "./TagPicker.svelte";
+  import {
+    sampleCatalog,
+    numericTag,
+    type CatalogTag,
+    type TagCatalog,
+  } from "./tag-catalog";
   import {
     objectFormValues,
     parseNumericProperty,
@@ -40,13 +47,80 @@
     selectedIds: string[];
     selected: ScreenObject | undefined;
     activeDefinition: boolean;
-    screen: { id: string };
+    screen: { id: string; name: string };
     drafts: ReturnType<typeof createDraftGuard>;
     properties: (event: SubmitEvent) => void;
     moveSelection: (event: SubmitEvent) => void;
     edit: (command: EditCommand) => boolean;
     openDefinition: (id: string) => void;
   } = $props();
+  let tagInput = $state<HTMLInputElement>();
+  let pickerOpen = $state(false);
+  export function isTagPickerOpen() {
+    return pickerOpen;
+  }
+  let pickerRequest = $state.raw<{
+    key: string;
+    input: HTMLInputElement;
+    catalog: TagCatalog;
+    revision: string;
+    label: string;
+  } | null>(null);
+  const pickerKey = $derived(
+    `${generation}:${screen.id}:${selected?.id ?? ""}:${visible}:${activeDefinition}`,
+  );
+  $effect(() => {
+    if (pickerOpen && pickerRequest?.key !== pickerKey) pickerOpen = false;
+  });
+  function openTagPicker() {
+    if (
+      !tagInput ||
+      !selected ||
+      selected.shape.type !== "text" ||
+      activeDefinition ||
+      !visible ||
+      drafts.pending
+    )
+      return;
+    pickerRequest = {
+      key: pickerKey,
+      input: tagInput,
+      catalog: sampleCatalog,
+      revision: sampleCatalog.revision,
+      label: `${screen.name} ／ Text · ${selected.order} ／ 表示タグ`,
+    };
+    pickerOpen = true;
+  }
+  function chooseTag(tag: CatalogTag, revision: string) {
+    const request = pickerRequest;
+    if (
+      selected?.shape.type !== "text" ||
+      activeDefinition ||
+      !visible ||
+      drafts.pending ||
+      !pickerOpen ||
+      !request ||
+      request.key !== pickerKey ||
+      request.input !== tagInput ||
+      !request.input.isConnected ||
+      request.catalog !== sampleCatalog ||
+      request.revision !== revision ||
+      sampleCatalog.revision !== revision ||
+      !numericTag(tag) ||
+      !sampleCatalog.tags.some(
+        (candidate) =>
+          candidate.id === tag.id &&
+          candidate.externalName === tag.externalName &&
+          numericTag(candidate),
+      )
+    ) {
+      pickerOpen = false;
+      return;
+    }
+    request.input.value = tag.externalName;
+    request.input.dispatchEvent(new Event("input", { bubbles: true }));
+    pickerOpen = false;
+  }
   let numericErrors = $state<Record<string, string>>({});
   const targets = new WeakMap<HTMLInputElement, NumericTarget>();
   const composing = new Set<HTMLInputElement>();
@@ -299,14 +373,26 @@
                 /></label
               >
               {#if !activeDefinition}
-                <label class="full-width"
-                  >表示タグ（外部名）<input
-                    name="externalName"
-                    aria-label="表示タグ（外部名）"
-                    maxlength="1024"
-                    placeholder="PLC01.Fast.Tank01.Level"
-                  /></label
-                >
+                <div class="full-width tag-binding">
+                  <label
+                    >表示タグ（外部名）<input
+                      bind:this={tagInput}
+                      name="externalName"
+                      aria-label="表示タグ（外部名）"
+                      maxlength="1024"
+                      placeholder="PLC01.Fast.Tank01.Level"
+                    /></label
+                  >
+                  <button
+                    type="button"
+                    aria-label="タグを選択"
+                    title="サンプル候補からタグを選択"
+                    onclick={openTagPicker}>…</button
+                  >
+                </div>
+                <p class="full-width tag-note">
+                  Hub未接続のため、手入力した外部名の存在・型は未確認です。
+                </p>
               {/if}
             {/if}
             {#if selected.shape.type === "symbol"}
@@ -364,7 +450,34 @@
   </div>
 </aside>
 
+<TagPicker
+  open={pickerOpen}
+  catalog={sampleCatalog}
+  targetLabel={pickerRequest?.label ?? ""}
+  onclose={() => (pickerOpen = false)}
+  onchoose={chooseTag}
+/>
+
 <style>
+  .tag-binding {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .tag-binding label {
+    flex: 1;
+    min-width: 0;
+  }
+  .tag-binding button {
+    flex: 0 0 32px;
+    height: 34px;
+    padding: 0;
+  }
+  .tag-note {
+    font-size: 11px;
+    color: var(--banto-text-muted);
+    margin: 0;
+  }
   .inspector {
     min-height: 0;
     overflow: auto;

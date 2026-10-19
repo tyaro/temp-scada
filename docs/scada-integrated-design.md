@@ -40,7 +40,7 @@
 | 工程図・画面管理 | 図形・折れ線・単色 Symbol、複数選択、整列、Undo / Redo、画面順、定義編集、検索、ズーム・パン | 3タブ shell、可動パネル、グループ・ロック・範囲選択、共通スタイルなど |
 | テーマ           | アプリの light / dark / system と設定保存あり                                                | 各パネル・一覧・選択状態まで一貫した両テーマの画面設計                |
 | 保存             | schema `0.4.0` の JSON、未書き出し表示、未適用入力保護                                       | 正式 package、差分、復旧、配布・実行中バージョンの管理                |
-| Binding          | 画面 Text の外部名による数値参照と使用箇所一覧。ブラウザは未接続                             | catalog 選択、型付き slot、Equipment、動的表示                        |
+| Binding          | 画面 Text の数値参照・使用箇所一覧、サンプルmetadataのタグ選択。Hubは未接続                  | 実catalog 接続、型付き slot、Equipment、動的表示                      |
 | Runtime          | SDK の読み取り投影とモック Hub の接続検証。製品 Host・正式 Runtime mode は未実装             | 実接続、起動時の権限境界、基本 UI Action、運用                        |
 | 拡張オブジェクト | Alarm / Event / Trend / Camera / HTTP / Program の部品・実行機能は未実装                     | 本書のオブジェクトと設定画面を段階的に追加                            |
 
@@ -321,3 +321,7 @@ MES・レシピ・生産実績・Tracking は従来どおり後続。設備テ�
 ### 2026-10-19・方向キー移動の実装追記
 
 キャンバス本体の方向キーで選択配置を1 design unit、Shiftで10 unit動かす。スナップONは選択boundsの左／上端を次の線へ進め、Shiftは10段階。複数配置・共有定義でも同じdeltaと既存move-many／draft guardを使う。入力・専用ハンドル・レイヤー・パン／連続配置のキー操作は維持する。長押しは各keydownが1履歴で、グループ化は後続。[開発計画](development-plan.md)に条件と検証を記録する。
+
+### 2026-10-19・タグ選択fixture UXの実装追記
+
+数値Textの外部名入力から、明示した静的サンプルのmetadataを検索・ツリー選択するBanto Modalを追加した。数値型だけを確定可能とし、候補確認→未適用入力→適用→保存を分離する。検索Enter・IME・型不適合・非表示候補で誤確定しない。世代・対象・入力要素を返却前に再確認し、取消は元の入力へ戻る。実Hubのcatalog・値・接続状態を実装したものではない。[実装範囲・実画面・検証](development-plan.md#tag-picker-progress)を参照する。
