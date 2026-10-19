@@ -5,6 +5,7 @@ import {
   type SymbolDefinition,
   type ScreenObject,
   type Screen,
+  type ImageAsset,
 } from "../project";
 
 export function symbolUsage(project: Project, symbolId: string): number {
@@ -61,4 +62,20 @@ export function centerObject(object: ScreenObject, center?: Point) {
   const bounds = getBounds(object);
   object.x = center.x - bounds.x - bounds.width / 2;
   object.y = center.y - bounds.y - bounds.height / 2;
+}
+
+export function registerAsset(project: Project, asset: ImageAsset): string {
+  const existing = project.assets.find((a) => a.sha256 === asset.sha256);
+  if (existing) {
+    if (
+      ["mime", "byteLength", "width", "height"].some(
+        (key) =>
+          existing[key as keyof ImageAsset] !== asset[key as keyof ImageAsset],
+      )
+    )
+      throw new Error("画像hashと資産宣言が一致しません");
+    return existing.id;
+  }
+  project.assets.push(structuredClone(asset));
+  return asset.id;
 }

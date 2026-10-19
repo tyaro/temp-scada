@@ -1,5 +1,4 @@
 import { imageCropViewBox, normalizeImageCrop } from "./image-crop";
-import { projectScreenReferences } from "./screen-references";
 import { parseLineStyle, setLineStyle } from "./line-style";
 import { projectContent } from "./save-state";
 import { normalizeRotation, replaceRotatedVertex } from "./rotation";
@@ -12,23 +11,24 @@ import {
   serializeProject,
   getBounds,
   type Project,
-  type ImageAsset,
 } from "./project";
 import builtins from "./symbol-library.json";
-import type { SymbolDefinition, ScreenObject, Screen } from "./project";
+import type { SymbolDefinition, ScreenObject } from "./project";
 import {
   isObjectCommand,
   isSymbolCommand,
+  isScreenCommand,
   type EditCommand,
 } from "./editor/commands";
 import { applyProjectCommand } from "./editor/project-handler";
+import { applyScreenCommand } from "./editor/screen-handler";
 import { applySymbolCommand } from "./editor/symbol-handler";
 import {
   centerObject,
   copySymbol,
   newId,
   renewOwnerIds,
-  screenName,
+  registerAsset,
 } from "./editor/model-helpers";
 export { newId, symbolUsage } from "./editor/model-helpers";
 export { isObjectCommand } from "./editor/commands";
@@ -57,17 +57,9 @@ export function applyCommand(
     applySymbolCommand(next, command);
     return finish(project, next);
   }
-  if (command.type === "create-screen") {
-    next.screens.push({
-      id: newId(),
-      name: screenName(command.name),
-      width: command.width,
-      height: command.height,
-      background: command.background ?? "#ffffff",
-      objects: [],
-      folders: [],
-    });
-    return finish(project, next);
+  if (isScreenCommand(command)) {
+    const result = applyScreenCommand(next, command);
+    return result === "unchanged" ? project : finish(project, next);
   }
   const definitionId = isObjectCommand(command)
     ? command.definitionId
@@ -274,66 +266,6 @@ export function applyCommand(
           copy.shape.assetId = assetReferences.get(copy.shape.assetId)!;
         screen.objects.push(copy);
       });
-    return finish(project, next);
-  }
-  if (command.type === "set-background-image") {
-    if (command.image === null) {
-      if (command.asset)
-        throw new Error("背景解除と資産登録は同時に指定できません");
-      delete targetScreen!.backgroundImage;
-    } else {
-      const image = structuredClone(command.image);
-      if (command.asset) {
-        if (command.asset.id !== image.assetId)
-          throw new Error("背景画像と登録資産のIDが一致しません");
-        image.assetId = registerAsset(next, command.asset);
-      }
-      targetScreen!.backgroundImage = image;
-    }
-    return finish(project, next);
-  }
-  if (command.type === "update-screen") {
-    if (command.background !== undefined)
-      Object.assign(screen, { background: command.background });
-    Object.assign(screen, {
-      name: screenName(command.name),
-      width: command.width,
-      height: command.height,
-    });
-    return finish(project, next);
-  }
-  if (command.type === "reorder-screen") {
-    const from = next.screens.findIndex((item) => item.id === screen.id);
-    const to =
-      command.direction === "up"
-        ? Math.max(0, from - 1)
-        : Math.min(next.screens.length - 1, from + 1);
-    if (from === to) return project;
-    const [item] = next.screens.splice(from, 1);
-    next.screens.splice(to, 0, item);
-    return finish(project, next);
-  }
-  if (command.type === "duplicate-screen") {
-    const copy = renewOwnerIds(JSON.parse(JSON.stringify(screen)) as Screen);
-    copy.name = screen.name.slice(0, 196) + " コピー";
-    next.screens.push(copy);
-    return finish(project, next);
-  }
-  if (command.type === "remove-screen") {
-    if (next.screens.length === 1)
-      throw new Error("最後の画面は削除できません");
-    const uses = projectScreenReferences(next).byTarget.get(screen.id) ?? [];
-    if (uses.length) {
-      const names = uses.slice(0, 5).map((ref) => {
-        const owner = next.screens.find((s) => s.id === ref.screenId)!;
-        const object = owner.objects.find((o) => o.id === ref.objectId)!;
-        return `${owner.name}／${object.name ?? "埋込画面"}`;
-      });
-      throw new Error(
-        `この画面は埋込表示で使用中です：${names.join("、")}${uses.length > 5 ? " ほか" : ""}。先に参照配置を削除または変更してください。`,
-      );
-    }
-    next.screens = next.screens.filter((s) => s.id !== screen.id);
     return finish(project, next);
   }
   if (
@@ -949,20 +881,4 @@ function finish(project: Project, next: Project): Project {
   if (projectContent(next) === projectContent(project)) return project;
   next.manifest.projectRevision++;
   return parseProject(JSON.stringify(next));
-}
-
-function registerAsset(project: Project, asset: ImageAsset): string {
-  const existing = project.assets.find((a) => a.sha256 === asset.sha256);
-  if (existing) {
-    if (
-      ["mime", "byteLength", "width", "height"].some(
-        (key) =>
-          existing[key as keyof ImageAsset] !== asset[key as keyof ImageAsset],
-      )
-    )
-      throw new Error("画像hashと資産宣言が一致しません");
-    return existing.id;
-  }
-  project.assets.push(structuredClone(asset));
-  return asset.id;
 }

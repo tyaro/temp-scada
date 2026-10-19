@@ -210,7 +210,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功        |
 | R3 フォーム契約 | 完了         | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功 |
 | R4 App機能分離  | 完了         | R4a〜R4e実装・全体CI成功（`faf7c75`）。全ブラウザ509件を確認            |
-| R5 編集コマンド | 作業中       | R5a・R5b完了。Project／Symbol handler分離済み。残りhandlerは後続        |
+| R5 編集コマンド | 作業中       | R5a〜R5c完了。Project／Symbol／Screenを分離。残りhandlerは後続          |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                        |
 
 各小区切りの記録は、次の項目だけを残せば再開できる。
@@ -457,3 +457,20 @@ R4eの`faf7c75`は[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39
 Project／Symbolの型を名前付きにし、分類表のscope照合をその型に対応させた。handlerの最後は`never`を要求し、未知のコマンドを成功扱いしない。型チェックとTS全636件成功。Astraの静的レビューで具体的な回帰懸念・修正要求なし。分類済みの新しいProject／Symbol型だけを追加してhandlerを省いた場合、各handlerの`never`で型検査が失敗することも一時変更で確認し、元へ戻した。
 
 関連ブラウザ25件（editor・history・symbols・symbol-context・symbol-usages・symbol-placement・standard-names・screens）と本番ビルドも成功。残りのcommand分岐と共通`finish`は基準と同一で、保存形式・Undo単位を維持する。既存のJS bundle 500kB警告は継続する。次はR5cでScreen handlerを分離し、並べ替えのno-opを共通検証と混同しない。
+
+<a id="r5c-screen-handler"></a>
+
+### R5c：Screen handlerと並べ替えno-op
+
+基準は`d2e628a`、開始時clean。画面の作成・更新・複製・並べ替え・削除・背景画像設定の6コマンドを`editor/screen-handler.ts`へ移した。`applyCommand`がmode確認・候補コピー・共通`finish`を持ち、handlerは候補だけを変更する。並べ替え端のno-opだけは`unchanged`を返し、元Project直返し・Undoなしの従来経路を維持する。
+
+create以外の画面lookupと不存在拒否、最後の画面と埋込参照先の削除保護、名前解析、複製時のID／親・所属参照の付替え、背景画像のclone・資産ID照合・hash重複処理を維持する。既存の`registerAsset`を`model-helpers.ts`へ移し、背景と配置・pasteで共有する。資産整理・全体検証・同値判定・revision更新は`finish`へ残す。
+
+型チェック（エラー／警告なし）とTS全636件成功。Astraの静的レビューで具体的な回帰懸念・修正要求なし。分類済みの新しいScreen型だけを追加してhandlerを省いた一時変更で、handlerの`never`による型エラーを確認し、元へ戻した。関連ブラウザ32件（screens・screen-context・screen-view・screen-background・background-image・image-assets・history）と本番ビルドも成功。既存のJS bundle 500kB警告は継続する。Folder／Image／Objectの分離と入口全体の網羅性は後続で、R5全体の完了ではない。
+
+次のFolder／Image／Object分離では、種類別の移動と共通guardの順序変更を混ぜない。
+
+- create／rename／move／remove-folderは既存の配置lock判定より前、set-folderは複数IDの照合後に処理する。整理フォルダーだからと同じ入口へまとめて順序を変えない。
+- set-visibility／set-lockのboolean確認とno-op直返しは既存のlock拒否より前に置く。lock解除を共通lock判定で拒否しない。
+- add-imageの定義内拒否と資産登録、replace／crop／ratioの対象照合とlock判定を従来順に保つ。共通のregisterAssetとfinishの資産整理を二重に実行しない。
+- 複数選択のID空／重複／不存在と型別patch拒否を維持し、対応型だけを抜き出して部分適用しない。

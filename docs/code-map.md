@@ -12,7 +12,7 @@
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | 編集セッションと画面接続 | `apps/banto-scada/src/App.svelte`のproject・history・workspaceGeneration・screenId・editingSymbolId・selectedIds・mode                                                            | Projectと履歴の所有者を一つにする。UIの選択・倍率をProjectへ入れない           |
 | 入力保護                 | `lib/designer/drafts.svelte.ts`の`createDraftGuard`、Appの`transition`・`validateDrafts`・`commitNumber`                                                                          | 未確定文字列、IME、適用／破棄／取消、数値の個別確定を保つ                      |
-| 編集と履歴               | `lib/editor.ts`の`applyCommand`・`finish`、`lib/editor/commands.ts`の型・分類、Project／Symbol handler、`lib/history.ts`                                                          | コピー上で実行・検証し、失敗時に元Projectを保持                                |
+| 編集と履歴               | `lib/editor.ts`の`applyCommand`・`finish`、`lib/editor/commands.ts`の型・分類、Project／Symbol／Screen handler、`lib/history.ts`                                                  | コピー上で実行・検証し、失敗時に元Projectを保持                                |
 | 保存モデル               | `lib/project.ts`、`crates/scada-model/schema/project.schema.json`、`crates/scada-model/src/lib.rs`                                                                                | TS／Rust／schema／examplesの契約を合わせる                                     |
 | 保存・読込               | Appの`adopt`、`designer/controllers/project-files.svelte.ts`、`lib/project-package.ts`・`save-state.ts`                                                                           | ファイル選択・置換確認・実際のデータ処理を識別する                             |
 | 画像原本と取込           | `lib/image-assets.ts`・`image-frame.ts`、`designer/controllers/image-import.svelte.ts`、Appの`collectAssets`                                                                      | 原本共有、仮Store、履歴からの参照、非同期取消を保つ                            |
@@ -109,7 +109,7 @@ FolderDialogとfolder ContextActionsはAppのrootに置いたまま、controller
 
 `designer/controllers/designer-actions.ts`は状態を持たないaction builder。Appの`$derived`から呼び、toolbar・編集メニュー・右クリックでは同じ編集／clipboard項目を共有する。disabledとラベルは生成時のgetterで追従し、run callback内の選択ID・screen・context座標・originは実行時に読む。生成時の値を閉じ込めない。
 
-Appはキー／クリックイベントの受付、現在情報と既存callbackの供給、Project・履歴・draft・共通editを所有する。ファイル・画像・clipboardの操作は同期で各controllerへ渡し、ブラウザのuser activationを維持する。新しいaction registry・非同期wrapper・編集コマンドの分類は追加しない。コマンド分類とhandler分割は後続のR5で行う。
+Appはキー／クリックイベントの受付、現在情報と既存callbackの供給、Project・履歴・draft・共通editを所有する。ファイル・画像・clipboardの操作は同期で各controllerへ渡し、ブラウザのuser activationを維持する。新しいaction registry・非同期wrapper・編集コマンドの分類は追加しない。コマンド分類とhandler分割は次節のR5の境界で進める。
 
 ## 編集コマンドの現行境界
 
@@ -117,4 +117,4 @@ Appはキー／クリックイベントの受付、現在情報と既存callback
 
 既存の`lib/editor.ts`は公開入口として型・関数を再exportし、`applyCommand`が候補Projectの作成から採用までを引き続き所有する。Project／Symbol処理は`editor/project-handler.ts`と`symbol-handler.ts`へ分離し、候補だけを変更する。`model-helpers.ts`は既存のID発行・複製参照の付替え・配置中心の計算を共有し、`newId`／`symbolUsage`の既存公開入口も維持する。履歴・DOM・通知は型やhandlerへ入れない。
 
-`applyCommand`がmode確認→候補コピー→handler→`finish`の順序を所有する。`finish`の資産整理・検証・同値判定・revision更新は共通のまま。Project／Symbol handlerは未処理型を`unhandledCommand(never)`で検出する。Screen・Folder・Image・Object handlerと入口全体の網羅性は後続工程。
+`applyCommand`がmode確認→候補コピー→handler→`finish`の順序を所有する。`finish`の資産整理・検証・同値判定・revision更新は共通のまま。Project／Symbol handlerは未処理型を`unhandledCommand(never)`で検出する。Screenの6コマンドも`editor/screen-handler.ts`へ分離し、型guardと`never`を持つ。並べ替え端では`unchanged`を返して元Projectを直返しし、それ以外は共通`finish`へ戻す。背景のclone・ID照合・hash重複処理は維持し、`registerAsset`はmodel-helpersで共有する。Folder・Image・Object handlerと入口全体の網羅性は後続工程。

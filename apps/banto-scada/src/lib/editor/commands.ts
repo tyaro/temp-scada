@@ -289,3 +289,9 @@ export function isSymbolCommand(
 ): command is SymbolCommand {
   return commandScopes[command.type] === "symbol";
 }
+
+export function isScreenCommand(
+  command: EditCommand,
+): command is ScreenCommand {
+  return commandScopes[command.type] === "screen";
+}
