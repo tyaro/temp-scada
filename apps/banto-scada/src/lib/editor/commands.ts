@@ -313,3 +313,27 @@ export type ImageEditCommand = Extract<
   ObjectCommand,
   { type: "replace-image" | "set-image-crop" | "reset-image-ratio" }
 >;
+
+export function isProjectCommand(
+  command: EditCommand,
+): command is ProjectCommand {
+  return commandScopes[command.type] === "project";
+}
+export type ObjectStateCommand = Extract<
+  ObjectCommand,
+  { type: "set-visibility" | "set-lock" }
+>;
+export type ScreenViewPlacementCommand = Extract<
+  ObjectCommand,
+  { type: "add-screen-view" }
+>;
+export type PasteCommand = Extract<ObjectCommand, { type: "paste" }>;
+export type SelectionCommand = Extract<ObjectCommand, { objectIds: string[] }>;
+export type ObjectCreationCommand = Extract<
+  ObjectCommand,
+  { type: "add" | "add-symbol" }
+>;
+export type SingleObjectCommand = Exclude<
+  Extract<ObjectCommand, { objectId: string }>,
+  ObjectStateCommand
+>;

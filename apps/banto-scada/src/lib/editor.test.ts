@@ -1,7 +1,8 @@
 import { expect, it } from "vitest";
 import sample from "../../../../examples/minimal.project.json";
 import { parseProject } from "./project";
-import { applyCommand } from "./editor";
+import { applyCommand, type EditCommand } from "./editor";
+import { emptyHistory, recordEdit } from "./history";
 const fresh = () => parseProject(JSON.stringify(sample));
 it("adds UUID v7 objects, changes geometry and removes without changing the input", () => {
   const original = fresh();
@@ -400,4 +401,21 @@ it("rejects invalid placement centers without leaving a partially added symbol",
     ),
   ).toThrow("配置先");
   expect(original).toEqual(fresh());
+});
+
+it("rejects unsupported runtime commands without updating a valid placement or history", () => {
+  const original = fresh();
+  const command = {
+    type: "unsupported-command",
+    screenId: original.screens[0].id,
+    objectId: original.screens[0].objects[0].id,
+    patch: { x: 123 },
+  } as unknown as EditCommand;
+  const history = emptyHistory();
+  expect(() => applyCommand(original, command, "edit")).toThrow("未対応");
+  expect(() => recordEdit(original, history, command, "edit")).toThrow(
+    "未対応",
+  );
+  expect(original).toEqual(fresh());
+  expect(history).toEqual(emptyHistory());
 });

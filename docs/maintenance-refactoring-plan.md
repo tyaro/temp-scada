@@ -210,7 +210,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功        |
 | R3 フォーム契約 | 完了         | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功 |
 | R4 App機能分離  | 完了         | R4a〜R4e実装・全体CI成功（`faf7c75`）。全ブラウザ509件を確認            |
-| R5 編集コマンド | 作業中       | R5a〜R5e完了。Imageも分離。Objectと入口網羅性は後続                     |
+| R5 編集コマンド | CI確認待ち   | R5a〜R5f実装・ローカル全体検証完了。最終CI確認待ち                      |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                        |
 
 各小区切りの記録は、次の項目だけを残せば再開できる。
@@ -494,3 +494,25 @@ R5a〜R5cの3コミットは全体CI成功を確認した。最新の[`f02ca65`�
 定義内拒否、同一hashの資産再利用とcrop保持、別assetへの差替え時だけのcrop解除、crop正規化、crop後の原本比率を使う幅・中心位置保持を維持した。registerAssetとfinishの資産整理・検証・no-op・revision更新は共通のまま。編集handlerの最後はneverで未処理型を検出する。
 
 型チェック（エラー／警告なし）・TS全636件成功。Astraの静的レビューで具体的な回帰懸念・修正要求なし。関連ブラウザ24件（image-placement・image-replacement・image-crop・image-assets）と本番ビルドも成功。既存のJS bundle 500kB警告は継続する。Object処理と入口全体の網羅性は後続で、R5全体の完了ではない。
+
+<a id="r5f-object-handlers"></a>
+
+### R5f：図形操作の振分けと全入口の網羅性
+
+基準は`d3bebde`、開始時clean。R5d・R5eの全体CIも成功し、最新の[基準CI](https://github.com/tyaro/temp-scada/actions/runs/39335549230)で全ブラウザ509件とCI所定のチェックを通過した。`editor.ts`はmode確認・候補コピー・Project／Symbol／Screen／Objectの振分けと共通finishへ整理した。Objectの所有先解決・操作順序・lock確認は`object-handler.ts`、表示／lock・paste・複数選択・配置作成・単体編集を各handlerへ分けた。handlerには候補だけを渡し、pasteの元Project識別にはIDだけを供給する。既存の公開型・`newId`／`symbolUsage`／`isObjectCommand`のimport先は維持する。
+
+| 不変条件             | 維持した経路                                                                                        |
+| -------------------- | --------------------------------------------------------------------------------------------------- |
+| コピー・mode・finish | 入口が候補を一度作り、handler後に資産整理→検証→内容比較→revision更新を行う                          |
+| lock解除・表示変更   | boolean／対象確認とno-opを通常lock拒否より前に行う                                                  |
+| Folder／Image        | 先行区切りの呼出位置とlock／対象lookup順序を維持                                                    |
+| 複数選択             | 全ID照合後に型別拒否を行い、部分適用しない                                                          |
+| paste                | 同じorigin＋元Project IDの定義再利用、資産対応付け、ID発行と配置順を維持                            |
+| 早期no-op            | 表示・lock・等間隔の両端一致・配置／画面順端はunchangedで元Projectを返す                            |
+| 処理漏れ             | 全41分類と入口・handlerのneverで検出。分類済みの新しいObject型でhandlerを省いた場合も型エラーを確認 |
+
+初回の機械移動では等間隔の両端一致の直返しを既存単体が検出し、selection handlerもfinish／unchangedを返す形へ修正した。その後の型チェックはエラー／警告なし、TS全637件成功。追加した1件は、既存配置のID／patchを持つ未知runtimeコマンドを更新として扱わず、Projectと履歴を保ったまま拒否する契約を確認する。
+
+Astraの静的レビューで具体的な回帰懸念・修正要求なし。既存の共通finishは基準と同一。本番ビルド・Rust30件・Clippy・Rust整形・CLIサンプル3件も成功。専用サーバー・2並列で全ブラウザ509件も一度の実行ですべて成功した。全体整形も確認し、R5a〜R5fの実装とローカル全体検証を完了する。保存形式・画面配置・Undo単位は維持した。最終差分のCIはPush後に確認し、それまではR5全体の状態をCI確認待ちとする。
+
+検証ログには既存のPreviewPopupsの`binding_property_non_reactive`と`ResizeObserver loop completed with undelivered notifications`の出力も確認した。R5以前のR4eのログでも同じ出力を確認しており、本工程で解決したとは扱わない。UI側の別調査対象として残し、型チェックのエラー／警告なしと開発時コンソールの無出力を混同しない。

@@ -115,6 +115,19 @@ Appはキー／クリックイベントの受付、現在情報と既存callback
 
 `lib/editor/commands.ts`はEditCommand／ObjectPatch等の型と全コマンドの分類を所有する。分類表は全41種類のキーと型ごとの所属を照合し、追加漏れ・誤分類を型エラーにする。`isObjectCommand`は従来と同じ29種類を返す。フォルダー・画像等を含む定義編集の範囲であり、UIの選択図形だけを意味しない。
 
-既存の`lib/editor.ts`は公開入口として型・関数を再exportし、`applyCommand`が候補Projectの作成から採用までを引き続き所有する。Project／Symbol処理は`editor/project-handler.ts`と`symbol-handler.ts`へ分離し、候補だけを変更する。`model-helpers.ts`は既存のID発行・複製参照の付替え・配置中心の計算を共有し、`newId`／`symbolUsage`の既存公開入口も維持する。履歴・DOM・通知は型やhandlerへ入れない。
+既存の`lib/editor.ts`は公開入口として型・関数を再exportし、`applyCommand`がmode確認→候補コピー→handler→`finish`の順序を所有する。`finish`の資産整理・検証・同値判定・revision更新は共通のまま。未知コマンドは`unhandledCommand(never)`で拒否し、型を追加して分類・handlerを省くと型検査が失敗する。
 
-`applyCommand`がmode確認→候補コピー→handler→`finish`の順序を所有する。`finish`の資産整理・検証・同値判定・revision更新は共通のまま。Project／Symbol handlerは未処理型を`unhandledCommand(never)`で検出する。Screenの6コマンドも`editor/screen-handler.ts`へ分離し、型guardと`never`を持つ。並べ替え端では`unchanged`を返して元Projectを直返しし、それ以外は共通`finish`へ戻す。背景のclone・ID照合・hash重複処理は維持し、`registerAsset`はmodel-helpersで共有する。Folderは`editor/folder-handler.ts`へ分離し、構造操作はlock判定前、所属変更はlockと複数ID照合後の同じ位置から呼ぶ。Imageは`editor/image-handler.ts`へ分離し、配置追加は従来の位置、差替え・crop・比率復帰はlock／対象lookup後に呼ぶ。Object handlerと入口全体の網羅性は後続工程。
+| モジュール（`lib/editor/`）                                    | 責務と守る順序                                                                                                    |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `project-handler.ts`／`symbol-handler.ts`／`screen-handler.ts` | Project名、共有定義、画面の候補変更。mode・コピー・finishは入口へ残す。画面並べ替え端のno-opだけは元Projectへ戻る |
+| `object-handler.ts`                                            | 所有先解決、操作の振分けとlock判定の順序。履歴・DOM・通知・元Projectを所有しない                                  |
+| `folder-handler.ts`                                            | 構造操作はlock前、所属変更はlockと複数ID照合後。整理と配置編集のguardを混同しない                                 |
+| `image-handler.ts`                                             | 配置追加は従来位置、差替え・crop・比率復帰はlock／対象lookup後。資産登録とcropの条件を維持                        |
+| `object-state-handler.ts`                                      | 表示・lockのboolean確認とno-op。通常のlock拒否より前に実行し、解除を拒まない                                      |
+| `paste-handler.ts`                                             | 原本宣言／Symbol参照の対応付けと新ID。元ProjectそのものではなくIDだけを受け、同じoriginの参照を再利用             |
+| `selection-handler.ts`                                         | 複数IDの空／重複／不存在を照合した全選択へ適用。型に合う配置だけを抽出して部分適用しない。等間隔の両端一致はno-op |
+| `placement-handler.ts`                                         | 埋込Viewと図形・組込Symbolの配置。定義内拒否、基準色、寸法・中心計算とID発行順を維持                              |
+| `single-object-handler.ts`                                     | 対象lookup後の画像委譲・独立Symbol・頂点・複製・重なり順・単体patch。重なり順端のno-opを維持                      |
+| `model-helpers.ts`                                             | 既存のID発行・使用数・複製時のID／所属参照付替え・配置中心・資産登録。`newId`／`symbolUsage`の公開入口も維持      |
+
+handlerは候補だけを変更する。表示／lock・等間隔の両端一致・配置／画面順の早期no-opは`unchanged`を返し、入口が元Projectを直返しする。それ以外は共通finishで検証してから内容を比較する。Project形式とUndo単位を変更せず、historyからhandlerへ逆依存を追加しない。
