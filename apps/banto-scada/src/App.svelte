@@ -10,6 +10,10 @@
     type PastePayload,
   } from "./lib/image-clipboard";
   import { imageCropFromForm } from "./lib/designer/image-crop-fields";
+  import {
+    selectionOutlineCommand,
+    acknowledgeSelectionOutline,
+  } from "./lib/designer/forms/selection-outline";
   import { shapePaintCommand } from "./lib/designer/forms/shape-paint";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
@@ -1858,21 +1862,8 @@
     }
   }
   function acknowledgeForm(form: HTMLFormElement) {
-    if (form.dataset.editorForm === "selection-outline") {
-      for (const name of [
-        "outlineMode",
-        "outlineColor",
-        "outlineWidth",
-        "outlineStyle",
-      ]) {
-        const input = form.elements.namedItem(name);
-        if (
-          input instanceof HTMLInputElement ||
-          input instanceof HTMLSelectElement
-        )
-          input.value = "";
-      }
-    }
+    if (form.dataset.editorForm === "selection-outline")
+      acknowledgeSelectionOutline(form);
 
     if (form.dataset.editorForm === "selection-line") {
       const width = form.elements.namedItem("strokeWidth"),
@@ -2285,8 +2276,22 @@
         patch: { colorMode },
       };
     }
+    if (form.dataset.editorForm === "selection-outline")
+      return selectionOutlineCommand(
+        {
+          data,
+          targetKey: form.dataset.targetKey,
+          objectIds: form.dataset.objectIds,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selectedIds,
+        },
+      );
     if (
-      ["selection-color", "selection-line", "selection-outline"].includes(
+      ["selection-color", "selection-line"].includes(
         form.dataset.editorForm ?? "",
       )
     ) {
@@ -2306,25 +2311,6 @@
         throw new Error(
           "スタイルの適用対象が変更されています。選択し直してください。",
         );
-      if (form.dataset.editorForm === "selection-outline") {
-        const rawMode = String(data.get("outlineMode") ?? ""),
-          color = String(data.get("outlineColor") ?? ""),
-          width = String(data.get("outlineWidth") ?? "");
-        const style = String(data.get("outlineStyle") ?? "");
-        if (rawMode !== "" && rawMode !== "none" && rawMode !== "enabled")
-          throw new Error("枠線の有無を選択してください。");
-        return {
-          type: "set-outline-style",
-          screenId: screen.id,
-          objectIds: ids as string[],
-          patch: {
-            ...(rawMode === "" ? {} : { mode: rawMode }),
-            ...(color === "" ? {} : { color }),
-            ...(width === "" ? {} : { width: parseNumericProperty(width) }),
-            ...(style === "" ? {} : { lineStyle: parseLineStyle(style) }),
-          },
-        };
-      }
       if (form.dataset.editorForm === "selection-line") {
         const width = String(data.get("strokeWidth") ?? ""),
           arrow = String(data.get("arrow") ?? "");

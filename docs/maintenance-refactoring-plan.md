@@ -208,7 +208,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R0 基準確認     | 基準確認済み | `e04e44c`、0.21.0、開始時clean。下記参照                         |
 | R1 文書整理     | 完了         | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理 |
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功 |
-| R3 フォーム契約 | 作業中       | ShapePaintの解析・対象照合を移行。残るフォームはApp              |
+| R3 フォーム契約 | 作業中       | ShapePaintとSelectionOutlineを移行。残るフォームはApp            |
 | R4 App機能分離  | 未着手       | a〜eごとの責務・移動先                                           |
 | R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持                            |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                 |
@@ -272,3 +272,11 @@ I1〜I4・I6・I9を保持し、同値paintと任意の既定stroke属性を実�
 文書だけのCIで再現したwheel-navigation 1件は、プレビューでInspectorが隠れてviewport幅が増えた後、AppのResizeObserverが新寸法を反映する前のfitを基準としていた。プロダクトのズーム処理は変更せず、テスト側の`settleCanvasLayout`でviewportのResizeObserver通知と後続描画フレームを待ってから基準を採る。
 
 wheel関連7件と問題ケース20回の反復が成功。20回を別の機能ケース数として数えない。Ctrl-wheelが消費されないことと、確定済みfitが厳密に不変であることの期待値は維持した。fixed sleep、retry、許容誤差、アプリのテスト専用APIは追加していない。次は予定していたR3のSelectionOutlineへ戻る。
+
+### R3b：SelectionOutlineの解析・適用後の確定
+
+`e93c0e3`を基準に、枠線一括フォームの解析と固有のpatch欄resetを`forms/selection-outline.ts`へ移した。世代・所有先・定義／画面・選択IDsの照合は`selection-target.ts`へ分離し、移行済みフォームだけが使う。Appはフォームkindと型付きの対象情報を渡し、固有の入力名を解釈しない。
+
+I1〜I4・I6・I9を維持。空欄の未指定、空patch全体の拒否、全対象への明示作成と同値再適用、不正／矛盾patch・古い選択の原子的拒否を確認した。TS全636件、型チェック（エラー／警告なし）、ビルド、対象整形と関連ブラウザ35件が成功。数値・タグ・保存・別フォームの候補事前検証、ロック・非表示・共有定義・IMEも既存の期待値で成功した。
+
+固有欄のreset後に共通DraftGuardへ確定する順序、全dirtyフォームの検証とフォームごとのUndoは変更しない。SelectionLine／SelectionColor、Symbol配色、背景・crop、通常Object／Screen／Project等は未移行。次のフォーム移動前に、R3の登録境界をAstraへ読取相談中。

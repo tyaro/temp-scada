@@ -41,17 +41,18 @@
 
 ## フォームの現行境界
 
-フォームの移行中。塗りと枠線は`designer/forms/shape-paint.ts`が入力と対象を解釈し、残るフォームはAppの`formCommand`が解釈する。`validateDrafts`は共通のまま候補Projectへ順に適用して全体検証する。確定は`submitForm`→`edit`、成功時は`acknowledgeForm`→DraftGuardへ戻す。通常数値は`commitNumber`と`acceptField`を通す。別のdirty台帳やProject所有者を作らない。
+フォームの移行中。塗りと枠線は`designer/forms/shape-paint.ts`、枠線一括は`selection-outline.ts`が入力と対象を解釈し、残るフォームはAppの`formCommand`が解釈する。`validateDrafts`は共通のまま候補Projectへ順に適用して全体検証する。確定は`submitForm`→`edit`、成功時は`acknowledgeForm`→DraftGuardへ戻す。通常数値は`commitNumber`と`acceptField`を通す。別のdirty台帳やProject所有者を作らない。
 
-| フォーム      | 現在の入力・描画                                      | 解析・確定の所在                                                     |
-| ------------- | ----------------------------------------------------- | -------------------------------------------------------------------- |
-| 塗りと枠線    | `designer/ShapePaint.svelte`、`pattern-fields.ts`     | `forms/shape-paint.ts`へ入力解析・世代／所有先／配置の照合を移行済み |
-| 一括編集      | `SelectionOutline`／`SelectionLine`／`SelectionColor` | Appの`formCommand`・`acknowledgeForm`                                |
-| Symbol配色    | `SymbolColorMode.svelte`                              | Appの`formCommand`                                                   |
-| 背景画像      | Appの画面設定フォーム                                 | Appの`formCommand`                                                   |
-| 画像crop      | `designer/ImageCrop.svelte`・`image-crop-fields.ts`   | 数値解析はhelper、対象照合とコマンドはApp                            |
-| 通常配置      | `InspectorPanel.svelte`・`numeric-properties.ts`      | Appの`formCommand`と`commitNumber`                                   |
-| 画面・Project | Appの左ペイン                                         | Appの`formCommand`                                                   |
+| フォーム      | 現在の入力・描画                                    | 解析・確定の所在                                                               |
+| ------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 塗りと枠線    | `designer/ShapePaint.svelte`、`pattern-fields.ts`   | `forms/shape-paint.ts`へ入力解析・世代／所有先／配置の照合を移行済み           |
+| 枠線一括      | `SelectionOutline.svelte`                           | `forms/selection-outline.ts`の解析・固有reset、`selection-target.ts`の対象照合 |
+| 線・色の一括  | `SelectionLine`／`SelectionColor`                   | Appの`formCommand`・`acknowledgeForm`                                          |
+| Symbol配色    | `SymbolColorMode.svelte`                            | Appの`formCommand`                                                             |
+| 背景画像      | Appの画面設定フォーム                               | Appの`formCommand`                                                             |
+| 画像crop      | `designer/ImageCrop.svelte`・`image-crop-fields.ts` | 数値解析はhelper、対象照合とコマンドはApp                                      |
+| 通常配置      | `InspectorPanel.svelte`・`numeric-properties.ts`    | Appの`formCommand`と`commitNumber`                                             |
+| 画面・Project | Appの左ペイン                                       | Appの`formCommand`                                                             |
 
 R3ではフォームごとにadapterへ移し、成功済みと残る経路を計画の進捗へ記録する。上表は移行先の完成を示さない。
 
@@ -74,3 +75,5 @@ R3ではフォームごとにadapterへ移し、成功済みと残る経路を�
 ShapePaintの成功後の確定は固有のfield resetを持たないため、既存の共通acknowledgeForm／DraftGuardを維持する。形状やフォームの全体事前検証、数値確定順、フォームごとの履歴は変更しない。
 
 プレビュー等の切替でfitを測る場合は`settleCanvasLayout`でviewportのResizeObserver通知と後続描画フレームを待つ。切替クリックの完了だけでは、補助ペインの伸縮後のfitが確定したとは限らない。
+
+SelectionOutlineの空欄はpatchへ入れず、変更項目が全くない要求は既存モデルで拒否する。有効な同値の再適用はno-op。成功時はadapter内で一回限りのpatch欄を空にしてから、既存の共通draft確定へ戻す。選択の世代・IDsの検証は移行済みフォームだけがselection-targetを使い、未移行フォームは元の経路を維持する。
