@@ -41,7 +41,7 @@
     void setMinimapVisible(showMinimap);
   }
   let showMenubar = $state(getMenubarVisible());
-  let projectFileInput: HTMLInputElement;
+  let projectFileInput = $state<HTMLInputElement>();
   let helpOpen = $state(false);
   function toggleMenubar() {
     showMenubar = !showMenubar;
@@ -60,6 +60,7 @@
   import { untrack, tick, flushSync } from "svelte";
   import { selectionNudge } from "./lib/keyboard-move";
   import { copyObjects, parseClipboard } from "./lib/clipboard";
+  import { createProject } from "./lib/new-project";
   import { projectContent } from "./lib/save-state";
   import { createDraftGuard } from "./lib/designer/drafts.svelte";
   import DraftPrompt from "./lib/designer/DraftPrompt.svelte";
@@ -575,7 +576,9 @@
         );
       if (
         (event.ctrlKey || event.metaKey) &&
-        (key === "s" || (!localInput && ["z", "y"].includes(key)))
+        (key === "s" ||
+          (!event.shiftKey && ["n", "o"].includes(key)) ||
+          (!localInput && ["z", "y"].includes(key)))
       )
         event.preventDefault();
       return;
@@ -620,9 +623,26 @@
     if (event.isComposing || event.altKey || !(event.ctrlKey || event.metaKey))
       return;
     const key = event.key.toLowerCase();
-    if (key === "s" && !event.shiftKey) {
+    if (["n", "o"].includes(key) && !event.shiftKey) {
       event.preventDefault();
-      if (!busy) save();
+      if (
+        event.repeat ||
+        busy ||
+        drafts.pending ||
+        replacement ||
+        helpOpen ||
+        document.querySelector(
+          '[role="dialog"]:not([data-layer-inactive="true"])',
+        )
+      )
+        return;
+      if (key === "n") newProject();
+      else openProjectFile();
+      return;
+    }
+    if (key === "s") {
+      event.preventDefault();
+      if (!busy && !event.repeat) save();
       return;
     }
     if (busy || mode !== "edit" || drafts.pending || replacement) return;
@@ -1037,12 +1057,12 @@
   let message = $state("サンプルを表示しています。Hub には接続していません。");
   let busy = $state(false);
   let baseline = $state(untrack(() => projectContent(project)));
-  let baselineSource = $state<"sample" | "file" | "download">("sample");
+  let baselineSource = $state<"sample" | "file" | "download" | "new">("sample");
   let lastExport = $state<string | null>(null);
   let projectChanged = $derived(projectContent(project) !== baseline);
   let replacement = $state<{
     project: Project;
-    source: "sample" | "file";
+    source: "sample" | "file" | "new";
   } | null>(null);
   const saveLabel = $derived(
     projectChanged
@@ -1051,9 +1071,11 @@
         ? "書き出し要求後の変更なし"
         : baselineSource === "file"
           ? "読込後の変更なし"
-          : "サンプルからの変更なし",
+          : baselineSource === "new"
+            ? "新しいProject・未書き出し"
+            : "サンプルからの変更なし",
   );
-  function adopt(next: Project, source: "sample" | "file") {
+  function adopt(next: Project, source: "sample" | "file" | "new") {
     project = next;
     baseline = projectContent(next);
     baselineSource = source;
@@ -1066,15 +1088,24 @@
     screenId = project.screens[0].id;
     editingSymbolId = null;
     selectedIds = [];
+    if (source === "new") mode = "edit";
     report(
       "info",
       source === "sample"
         ? "工程図サンプルを開きました。設備や計測値には接続していません。"
-        : "Project を読み込みました。",
+        : source === "new"
+          ? "新しいProjectを作成しました。JSONを書き出して保存してください。"
+          : "Project を読み込みました。",
     );
   }
-  function requestReplacement(next: Project, source: "sample" | "file") {
-    if (!drafts.allow(() => requestReplacement(next, source))) return;
+  function requestReplacement(
+    next: Project,
+    source: "sample" | "file" | "new",
+    generation = workspaceGeneration,
+  ) {
+    if (generation !== workspaceGeneration) return;
+    if (!drafts.allow(() => requestReplacement(next, source, generation)))
+      return;
     if (projectChanged) replacement = { project: next, source };
     else adopt(next, source);
   }
@@ -1082,6 +1113,14 @@
     const next = replacement;
     replacement = null;
     if (next) adopt(next.project, next.source);
+  }
+  function newProject() {
+    if (busy || drafts.pending || replacement) return;
+    requestReplacement(createProject(), "new");
+  }
+  function openProjectFile() {
+    if (busy || drafts.pending || replacement) return;
+    projectFileInput?.click();
   }
   function showProcessSample() {
     requestReplacement(parseProject(JSON.stringify(processSample)), "sample");
@@ -1387,24 +1426,34 @@
     submitForm(event);
   }
 
+  let fileReadRequest = 0;
   async function load(event: Event) {
     const input = event.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
-    if (!file) return;
+    if (!file || !input.isConnected) return;
+    const generation = workspaceGeneration;
+    const request = ++fileReadRequest;
+    const current = () =>
+      request === fileReadRequest &&
+      generation === workspaceGeneration &&
+      input.isConnected;
     busy = true;
     try {
       if (file.size > 1024 * 1024)
         throw new Error("ファイルは 1 MiB 以下にしてください");
-      const next = parseProject(await file.text());
-      requestReplacement(next, "file");
+      const text = await file.text();
+      if (!current()) return;
+      const next = parseProject(text);
+      requestReplacement(next, "file", generation);
     } catch (e) {
+      if (!current()) return;
       report(
         "error",
         `読込エラー: ${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
-      busy = false;
-      input.value = "";
+      if (request === fileReadRequest) busy = false;
+      if (input.isConnected) input.value = "";
     }
   }
   function save() {
@@ -1767,10 +1816,11 @@
     {
       label: "ファイル",
       items: [
+        { label: "新しいProject", disabled: menuBlocked, run: newProject },
         {
           label: "Project JSON を開く",
           disabled: menuBlocked,
-          run: () => projectFileInput.click(),
+          run: openProjectFile,
         },
         { label: "Project JSON を保存", disabled: menuBlocked, run: save },
         {
@@ -1926,15 +1976,17 @@
     content="Banto SCADA の初期 Project エディタ"
   /></svelte:head
 >
-<input
-  hidden
-  aria-label="Project JSON を開く"
-  bind:this={projectFileInput}
-  type="file"
-  accept=".json,application/json"
-  disabled={busy}
-  onchange={load}
-/>
+{#key workspaceGeneration}
+  <input
+    hidden
+    aria-label="Project JSON を開く"
+    bind:this={projectFileInput}
+    type="file"
+    accept=".json,application/json"
+    disabled={busy}
+    onchange={load}
+  />
+{/key}
 <header class="app-header">
   <span class="studio-brand">SCADA<span>/ studio</span></span>
   <h1 title={project.manifest.name}>{project.manifest.name}</h1>
@@ -2614,7 +2666,11 @@
     キャンバスはホイールで縦スクロール、Shift＋ホイールで横スクロールします。編集キャンバス上のCtrl＋ホイールはポインタ位置を基準に拡大縮小します。Ctrl＋＋／－／0のキー操作はブラウザのページ倍率です。
   </p>
   <p>
-    Ctrl / Command + S：JSON 保存、Z：元に戻す、Shift +
+    Ctrl / Command + N：新しいProject、O：JSONを開く、S／Shift +
+    S：JSON書き出し（ダウンロード）。ブラウザによってN／Oが予約されている場合は「ファイル」メニューを使ってください。保存先の選択・既存ファイルへの上書きには未対応です。
+  </p>
+  <p>
+    Ctrl / Command + Z：元に戻す、Shift +
     Z：やり直す、A：全選択、D：複製。キャンバス・レイヤーの配置一覧ではC：コピー、X：切り取り、V：貼り付け、Delete：削除も使えます。入力欄では文字編集を優先します。コピー操作はOSクリップボードを使い、ブラウザから許可を求められる場合があります。
   </p>
   <p>

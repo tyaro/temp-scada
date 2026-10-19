@@ -155,7 +155,11 @@
         event.target.closest(
           'input:not([type="checkbox"]),textarea,[contenteditable]',
         );
-      if (key === "s" || (!input && ["z", "y"].includes(key)))
+      if (
+        key === "s" ||
+        (!event.shiftKey && ["n", "o"].includes(key)) ||
+        (!input && ["z", "y"].includes(key))
+      )
         event.preventDefault();
       event.stopPropagation();
     }
