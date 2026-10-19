@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.18.0"
+          "const": "0.19.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.18.0"
+          "const": "0.19.0"
         },
         "name": {
           "type": "string",
@@ -811,6 +811,55 @@
             }
           },
           "required": ["type", "angle", "start", "end"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "pattern"
+            },
+            "kind": {
+              "enum": ["hatch", "crosshatch", "dots"]
+            },
+            "spacing": {
+              "type": "number",
+              "minimum": 2,
+              "maximum": 1024
+            },
+            "size": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 64
+            },
+            "angle": {
+              "type": "number",
+              "minimum": 0,
+              "exclusiveMaximum": 360
+            },
+            "foreground": {
+              "$ref": "#/$defs/paintColor"
+            },
+            "background": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/paintColor"
+                }
+              ]
+            }
+          },
+          "required": [
+            "type",
+            "kind",
+            "spacing",
+            "size",
+            "angle",
+            "foreground",
+            "background"
+          ],
           "additionalProperties": false
         }
       ]

@@ -794,11 +794,11 @@ export function applyCommand(
             (object.shape.type === "rectangle" ||
               object.shape.type === "ellipse") &&
             object.shape.paint.fill.enabled &&
-            object.shape.paint.fill.paint.type === "linearGradient",
+            object.shape.paint.fill.paint.type !== "solid",
         )
       )
         throw new Error(
-          "グラデーションを含む選択には共通色を適用できません。単独の塗り設定で編集してください。",
+          "グラデーションや模様を含む選択には共通色を適用できません。単独の塗り設定で編集してください。",
         );
       if (objects.some((object) => object.shape.type === "image"))
         throw new Error(

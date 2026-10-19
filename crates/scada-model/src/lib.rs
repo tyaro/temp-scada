@@ -66,8 +66,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.18.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.18.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.19.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.19.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -195,6 +195,17 @@ impl Project {
                     return Err("ID が重複しています".into());
                 }
                 let shape = &object["shape"];
+                if (shape["type"] == "rectangle" || shape["type"] == "ellipse")
+                    && shape["paint"]["fill"]["paint"]["type"] == "pattern"
+                {
+                    let pattern = &shape["paint"]["fill"]["paint"];
+                    if pattern["size"].as_f64().unwrap()
+                        > pattern["spacing"].as_f64().unwrap() / 2.0
+                    {
+                        return Err("模様の太さは間隔の半分以下にしてください。".into());
+                    }
+                }
+
                 if (shape["type"] == "rectangle" || shape["type"] == "ellipse")
                     && shape["paint"]["fill"]["paint"]["type"] == "linearGradient"
                 {
@@ -694,6 +705,10 @@ mod tests {
     }
     #[test]
     fn shape_paint_shares_the_browser_contract() {
+        let pattern =
+            Project::from_json(include_str!("../../../examples/pattern-paint.project.json"))
+                .unwrap();
+        assert_eq!(Project::from_json(&pattern.to_json()).unwrap(), pattern);
         let gradient = Project::from_json(include_str!(
             "../../../examples/gradient-paint.project.json"
         ))
@@ -920,8 +935,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.18.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.18.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.19.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.19.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

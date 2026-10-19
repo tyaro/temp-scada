@@ -1,6 +1,6 @@
 # 画像・描画表現・Faceplate・画面展開・kioskの拡張検討
 
-初版2026-10-19、用語確認反映2026-10-20（日本時間）。ユーザーからの追加要望を[統合設計](scada-integrated-design.md)へ取り込むための**検討案**。Astraが現行コード・上流設計と照合した。追加機能を実装済み、提供版を確定済みとする文書ではない。現在の実装はProject 0.18.0・ローカルDesignerで、画像資産と背景用の最小packageを段階実装し、正式Runtime／Host・Equipment／Actionは未実装。
+初版2026-10-19、用語確認反映2026-10-20（日本時間）。ユーザーからの追加要望を[統合設計](scada-integrated-design.md)へ取り込むための**検討案**。Astraが現行コード・上流設計と照合した。追加機能を実装済み、提供版を確定済みとする文書ではない。現在の実装はProject 0.19.0・ローカルDesignerで、画像資産と背景用の最小packageを段階実装し、正式Runtime／Host・Equipment／Actionは未実装。
 
 Banto基盤を維持し、認証はindustrial側の修正後まで延期する。リリース前のProject互換性を維持するためにモデル変更を避けず、変更時はRust／TypeScript／schema／生成経路・サンプル・検証を揃える。ems-appsの画面・コード・画像は取り込まない。
 
@@ -35,7 +35,7 @@ Banto基盤を維持し、認証はindustrial側の修正後まで延期する�
 
 ## 実装状況の追記（2026-10-20）
 
-[実線・破線・点線](line-style-design.md)をProject 0.13.0で実装した。単独／一括編集と共通描画へ接続し、矢印・連続したhit領域を保持する。続けて[配置全体の不透明度](opacity-design.md)をProject 0.14.0で実装した。[色ごとのα](color-alpha-design.md)もProject 0.15.0で追加した。[画像保存基盤と背景画像](image-assets-design.md)をProject 0.16.0で接続した。[Image配置](image-placement-design.md)もProject 0.17.0で追加した。[OS画像貼付と原本同梱clipboard](image-clipboard-design.md)も追加した。[paint再編と2色線形gradient](linear-gradient-design.md)もProject 0.18.0で追加した。放射gradient／pattern・画面展開は引き続き後続で、描画基盤全体の完成とはしない。
+[実線・破線・点線](line-style-design.md)をProject 0.13.0で実装した。単独／一括編集と共通描画へ接続し、矢印・連続したhit領域を保持する。続けて[配置全体の不透明度](opacity-design.md)をProject 0.14.0で実装した。[色ごとのα](color-alpha-design.md)もProject 0.15.0で追加した。[画像保存基盤と背景画像](image-assets-design.md)をProject 0.16.0で接続した。[Image配置](image-placement-design.md)もProject 0.17.0で追加した。[OS画像貼付と原本同梱clipboard](image-clipboard-design.md)も追加した。[paint再編と2色線形gradient](linear-gradient-design.md)もProject 0.18.0で追加した。[繰返しpattern](pattern-paint-design.md)もProject 0.19.0で追加した。放射gradient・画面展開は引き続き後続で、描画基盤全体の完成とはしない。
 
 ## 2. Paint・線種・αを先行する
 
@@ -47,7 +47,7 @@ Banto基盤を維持し、認証はindustrial側の修正後まで延期する�
 - 「塗りなし」「色α=0」「配置opacity=0」「visible=false」は別の状態。透明な図形も編集用hit領域やレイヤーから選べるようにする。
 - Editorの暗い／明るい外枠を切り替えても、保存色・α・背景画像を変更しない。透明確認用の市松はInspector内の見本に使い、工程図の背景へ勝手に追加しない。
 
-線形gradientの角度・stop、放射gradientの中心・半径は配置のlocal座標基準にする。回転・リサイズと一緒に変換し、画面上の倍率に依存しない。最初は2色を数値指定し、多点stopやキャンバス上の制御ハンドルを後続へ分ける。ハッチは原点・間隔・回転の単位を保存し、ズーム時に模様がずれないようにする。[繰返しパターンの具体設計](pattern-paint-design.md)で3プリセット・α合成・draft・受入条件を具体化した（未実装）。
+線形gradientの角度・stop、放射gradientの中心・半径は配置のlocal座標基準にする。回転・リサイズと一緒に変換し、画面上の倍率に依存しない。最初は2色を数値指定し、多点stopやキャンバス上の制御ハンドルを後続へ分ける。ハッチは原点・間隔・回転の単位を保存し、ズーム時に模様がずれないようにする。[繰返しパターンの具体設計](pattern-paint-design.md)で3プリセット・α合成・draft・受入条件を具体化し、0.19.0で実装した。
 
 線種は共通プリセットから始める。間隔を線幅の倍率として定義し、点線のround capが潰れない間隔を確認する。矢印の先端は実線の形を保ち、最後の頂点と同じ向きを使う。破線の隙間で配置が選べなくならないよう、編集のhit領域は既存の連続した線を維持する。
 

@@ -81,10 +81,19 @@
               ...(object.shape.paint.fill.enabled
                 ? object.shape.paint.fill.paint.type === "solid"
                   ? [object.shape.paint.fill.paint.color.toLowerCase()]
-                  : [
-                      object.shape.paint.fill.paint.start.color.toLowerCase(),
-                      object.shape.paint.fill.paint.end.color.toLowerCase(),
-                    ]
+                  : object.shape.paint.fill.paint.type === "pattern"
+                    ? [
+                        object.shape.paint.fill.paint.foreground.color.toLowerCase(),
+                        ...(object.shape.paint.fill.paint.background
+                          ? [
+                              object.shape.paint.fill.paint.background.color.toLowerCase(),
+                            ]
+                          : []),
+                      ]
+                    : [
+                        object.shape.paint.fill.paint.start.color.toLowerCase(),
+                        object.shape.paint.fill.paint.end.color.toLowerCase(),
+                      ]
                 : []),
               ...(object.shape.paint.stroke
                 ? [object.shape.paint.stroke.color.toLowerCase()]
@@ -113,7 +122,7 @@
         (object.shape.type === "rectangle" ||
           object.shape.type === "ellipse") &&
         object.shape.paint.fill.enabled &&
-        object.shape.paint.fill.paint.type === "linearGradient",
+        object.shape.paint.fill.paint.type !== "solid",
     ).length,
   );
   const definitionColorCount = $derived(

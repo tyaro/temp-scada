@@ -373,5 +373,11 @@
     "path": "/manifest/schemaVersion",
     "value": "0.17.0",
     "valid": false
+  },
+  {
+    "name": "旧0.18.0は自動移行しない",
+    "path": "/manifest/schemaVersion",
+    "value": "0.18.0",
+    "valid": false
   }
 ]

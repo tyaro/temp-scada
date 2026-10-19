@@ -1,3 +1,4 @@
+import { patternGeometry, type PatternKind } from "./pattern-paint";
 import { linearGradientEndpoints } from "./linear-gradient";
 import type { ImageMetadata } from "./image-assets";
 import { rotatedBounds, rotationPivot } from "./rotation";
@@ -37,6 +38,15 @@ export type FillPaint =
       angle: number;
       start: PaintColor;
       end: PaintColor;
+    }
+  | {
+      type: "pattern";
+      kind: PatternKind;
+      spacing: number;
+      size: number;
+      angle: number;
+      foreground: PaintColor;
+      background: PaintColor | null;
     };
 export interface ShapePaint {
   fill: { enabled: boolean; paint: FillPaint };
@@ -111,10 +121,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.18.0";
+    schemaVersion: "0.19.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.18.0";
+    minRuntimeVersion: "0.19.0";
     name: string;
   };
   screens: Screen[];
@@ -138,8 +148,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.18.0",
-        minRuntimeVersion: "0.18.0",
+        schemaVersion: "0.19.0",
+        minRuntimeVersion: "0.19.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -246,6 +256,14 @@ export function parseProject(json: string): Project {
       if (object.folderId && !folders.has(object.folderId))
         throw new Error("同じ所有先の所属フォルダーが見つかりません");
       const shape = object.shape;
+      if (
+        (shape.type === "rectangle" || shape.type === "ellipse") &&
+        shape.paint.fill.paint.type === "pattern"
+      ) {
+        const pattern = shape.paint.fill.paint;
+        patternGeometry(pattern.kind, pattern.spacing, pattern.size);
+      }
+
       if (
         (shape.type === "rectangle" || shape.type === "ellipse") &&
         "width" in object &&
@@ -380,10 +398,17 @@ export function referencedAssets(project: Project): Set<string> {
 }
 
 /** The fill paint is the sole color source for rectangle/ellipse. Other objects keep their own monochrome color. */
+export function paintBaseColor(paint: FillPaint): PaintColor {
+  return paint.type === "solid"
+    ? paint
+    : paint.type === "linearGradient"
+      ? paint.start
+      : paint.foreground;
+}
 export function placementColor(object: ScreenObject): string {
   if (object.shape.type === "rectangle" || object.shape.type === "ellipse") {
     const paint = object.shape.paint.fill.paint;
-    return paint.type === "solid" ? paint.color : paint.start.color;
+    return paintBaseColor(paint).color;
   }
   return object.fill!;
 }

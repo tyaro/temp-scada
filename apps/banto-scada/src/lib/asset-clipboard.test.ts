@@ -13,6 +13,7 @@ import {
   decodeAssetClipboard,
   validateAssetClipboardSnapshot,
 } from "./asset-clipboard";
+import type { FillPaint } from "./project";
 import { emptyHistory, recordEdit, travelHistory } from "./history";
 const png = Uint8Array.from(
   atob(
@@ -27,7 +28,7 @@ beforeEach(() =>
   ),
 );
 afterEach(() => vi.unstubAllGlobals());
-async function fixture() {
+async function fixture(paint?: FillPaint) {
   const store = new AssetStore(),
     metadata = await store.put(new Blob([png]), "原本.png"),
     asset = { ...metadata, id: newId() };
@@ -55,7 +56,7 @@ async function fixture() {
   );
   const shape = project.screens[0].objects.at(-1)!.shape;
   if (shape.type !== "rectangle") throw new Error("fixture");
-  shape.paint.fill.paint = {
+  shape.paint.fill.paint = paint ?? {
     type: "linearGradient",
     angle: 45,
     start: { color: "#ff8800", alpha: 0.25 },
@@ -265,4 +266,41 @@ it("remaps incoming asset IDs that collide with destination object IDs", async (
   expect(result.assets[0].id).not.toBe(target.screens[0].objects[0].id);
   expect(result.screens[0].objects).toHaveLength(4);
   store.dispose();
+});
+
+it("retains pattern paint alongside portable image originals through clipboard v2", async () => {
+  const pattern: FillPaint = {
+    type: "pattern",
+    kind: "dots",
+    spacing: 12,
+    size: 3,
+    angle: 0,
+    foreground: { color: "#22aa66", alpha: 0.5 },
+    background: null,
+  };
+  const { snapshot, store, project } = await fixture(pattern);
+  const text = await (await encodeAssetClipboard(snapshot, store)).text();
+  const fragment = parseClipboard(text),
+    candidate = await decodeAssetClipboard(fragment),
+    target = createProject();
+  try {
+    const next = applyCommand(
+      target,
+      {
+        type: "paste",
+        screenId: target.screens[0].id,
+        text,
+        origin: "foreign",
+        center: { x: 300, y: 300 },
+      },
+      "edit",
+    );
+    expect(next.screens[0].objects.at(-1)?.shape).toEqual(
+      project.screens[0].objects.at(-1)?.shape,
+    );
+    expect(fragment.images).toHaveLength(1);
+  } finally {
+    candidate.dispose();
+    store.dispose();
+  }
 });

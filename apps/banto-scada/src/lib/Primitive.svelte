@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { patternGeometry } from "./pattern-paint";
   import { linearGradientEndpoints } from "./linear-gradient";
   import { lineDash, lineCap } from "./line-style";
   import TextPrimitive from "./TextPrimitive.svelte";
@@ -24,6 +25,10 @@
   const gradient = $derived(
     fill?.paint.type === "linearGradient" ? fill.paint : null,
   );
+  const pattern = $derived(fill?.paint.type === "pattern" ? fill.paint : null);
+  const patternPath = $derived(
+    pattern ? patternGeometry(pattern.kind, pattern.spacing, pattern.size) : "",
+  );
   const endpoints = $derived(
     gradient && "width" in object
       ? linearGradientEndpoints(object.width, object.height, gradient.angle)
@@ -32,7 +37,7 @@
   const fillColor = $derived(
     !fill?.enabled
       ? "none"
-      : gradient
+      : gradient || pattern
         ? `url(#${gradientId})`
         : fill?.paint.type === "solid"
           ? (color ?? fill.paint.color)
@@ -82,6 +87,31 @@
         stop-opacity={gradient.end.alpha}
       />
     </linearGradient></defs
+  >
+{/if}
+{#if pattern}
+  <defs
+    ><pattern
+      id={gradientId}
+      patternUnits="userSpaceOnUse"
+      patternContentUnits="userSpaceOnUse"
+      width={pattern.spacing}
+      height={pattern.spacing}
+      patternTransform={`rotate(${pattern.angle})`}
+    >
+      {#if pattern.background}<rect
+          width={pattern.spacing}
+          height={pattern.spacing}
+          fill={color ?? pattern.background.color}
+          fill-opacity={pattern.background.alpha}
+        />{/if}
+      <path
+        d={patternPath}
+        fill={color ?? pattern.foreground.color}
+        fill-opacity={pattern.foreground.alpha}
+        fill-rule="nonzero"
+      />
+    </pattern></defs
   >
 {/if}
 {#if "width" in object}

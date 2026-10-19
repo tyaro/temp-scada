@@ -1,6 +1,6 @@
 # 矩形・楕円の2色線形グラデーション
 
-2026-10-20（日本時間）。Astraの読取専用レビューを反映した次工程。[描画拡張の計画](scada-graphics-runtime-extension-design.md#2-paint線種αを先行する)に従う。**Project 0.18.0で保存契約・UI・共通描画へ接続済み**。[実装記録](development-plan.md#linear-gradient-progress)を参照。放射・pattern・多点stopは後続。
+2026-10-20（日本時間）。Astraの読取専用レビューを反映した次工程。[描画拡張の計画](scada-graphics-runtime-extension-design.md#2-paint線種αを先行する)に従う。**Project 0.18.0で保存契約・UI・共通描画へ接続済み**。[実装記録](development-plan.md#linear-gradient-progress)を参照。[patternも0.19.0で追加](pattern-paint-design.md)。放射・多点stopは後続。
 
 ## 塗りを1つの正へ整理する
 

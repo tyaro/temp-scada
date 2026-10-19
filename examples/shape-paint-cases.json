@@ -970,5 +970,651 @@
       "height": 1.7e308
     },
     "valid": false
+  },
+  {
+    "name": "pattern hatch enabled=True",
+    "kind": "rectangle",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "hatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "pattern hatch enabled=False",
+    "kind": "rectangle",
+    "paint": {
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "pattern",
+          "kind": "hatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "pattern crosshatch enabled=True",
+    "kind": "rectangle",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "pattern crosshatch enabled=False",
+    "kind": "rectangle",
+    "paint": {
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "pattern dots enabled=True",
+    "kind": "ellipse",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "dots",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "pattern dots enabled=False",
+    "kind": "ellipse",
+    "paint": {
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "pattern",
+          "kind": "dots",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "definition pattern with background alpha",
+    "definition": true,
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": {
+            "color": "#ffffff",
+            "alpha": 0.25
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "pattern unknown kind",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "stripes",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern small spacing",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 1.9,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern large spacing",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 1024.1,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern string spacing",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": "12",
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern zero size",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 0,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern ratio limit",
+    "paint": {
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 6.1,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern large size",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 1024,
+          "size": 64.1,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern negative angle",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": -1,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern full angle",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 360,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern string angle",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": "45",
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern short color",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#fff",
+            "alpha": 1
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern missing alpha",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#ffffff"
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern large alpha",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#ffffff",
+            "alpha": 1.1
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern invalid background",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": false
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern background extra",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": {
+            "color": "#ffffff",
+            "alpha": 1,
+            "extra": true
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern unknown tile origin",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null,
+          "origin": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern missing kind",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern missing spacing",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern missing size",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern missing angle",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          },
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern missing foreground",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "background": null
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "pattern missing background",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "pattern",
+          "kind": "crosshatch",
+          "spacing": 12,
+          "size": 2,
+          "angle": 45,
+          "foreground": {
+            "color": "#22aa66",
+            "alpha": 0.5
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
   }
 ]

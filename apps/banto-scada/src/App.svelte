@@ -9,6 +9,7 @@
     readSystemPaste,
     type PastePayload,
   } from "./lib/image-clipboard";
+  import { patternFromForm } from "./lib/designer/pattern-fields";
   import { normalizeGradientAngle } from "./lib/linear-gradient";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
@@ -2122,6 +2123,7 @@
                         100,
                     },
                   };
+                if (kind === "pattern") return patternFromForm(data);
                 throw new Error("塗りの種類を選択してください。");
               })(),
             },
@@ -4458,7 +4460,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.18.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.19.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。
