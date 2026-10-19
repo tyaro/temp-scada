@@ -48,3 +48,20 @@ export async function fileCommand(page: Page, name: string) {
 
 /** Main canvas root; minimap and Popup projections have separate roots. */
 export const mainCanvas = (page: Page) => page.locator(".sheet > svg");
+
+/** Mode changes resize the viewport before the app's ResizeObserver publishes fit. */
+export async function settleCanvasLayout(page: Page) {
+  await page
+    .getByRole("region", { name: "キャンバス操作領域", exact: true })
+    .evaluate(
+      (element) =>
+        new Promise<void>((resolve) => {
+          const observer = new ResizeObserver(() => {
+            observer.disconnect();
+            // Finish resize callbacks, Svelte updates and the following render frames.
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+          });
+          observer.observe(element);
+        }),
+    );
+}

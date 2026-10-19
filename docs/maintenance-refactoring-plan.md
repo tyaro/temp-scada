@@ -266,3 +266,9 @@ Playwrightの失敗trace・screenshotとCI用HTML report、workflowでの失敗�
 I1〜I4・I6・I9を保持し、同値paintと任意の既定stroke属性を実体化しないこと、古い対象の拒否、不正フォームの原子的拒否を3件で確認した。TS全633件、型チェック（エラー／警告なし）、本番ビルド、対象整形、ShapePaint／gradient／pattern／数値／Inspectorの関連ブラウザ38件が成功。Appのmarkup・CSS、保存形式、Undo単位、他フォームの入力解析は変更していない。R3全体の完了ではない。
 
 後続の文書だけの`3bffc53`のCI（run39311557328）でwheel-navigationのプレビューfit測定1件が再現した（507件成功）。プレビューの補助ペイン縮小に伴うResizeObserver前の寸法を採っている可能性を確認中。次のadapter移動より前に、レイアウト確定待ちを独立した区切りで確認する。
+
+### CIタイミング修正：プレビューfitの基準採取
+
+文書だけのCIで再現したwheel-navigation 1件は、プレビューでInspectorが隠れてviewport幅が増えた後、AppのResizeObserverが新寸法を反映する前のfitを基準としていた。プロダクトのズーム処理は変更せず、テスト側の`settleCanvasLayout`でviewportのResizeObserver通知と後続描画フレームを待ってから基準を採る。
+
+wheel関連7件と問題ケース20回の反復が成功。20回を別の機能ケース数として数えない。Ctrl-wheelが消費されないことと、確定済みfitが厳密に不変であることの期待値は維持した。fixed sleep、retry、許容誤差、アプリのテスト専用APIは追加していない。次は予定していたR3のSelectionOutlineへ戻る。

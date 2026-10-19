@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel } from "./helpers/designer";
+import { selectPanel, settleCanvasLayout } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const area = (page: Page) =>
@@ -182,6 +182,8 @@ test("Shift wheel normalizes line/page deltas and preview retains its fit view",
   });
   expect(await area(page).evaluate((el) => el.scrollLeft)).toBeLessThan(before);
   await button(page, "表示プレビュー").click();
+  // Preview hides the Inspector: sample its final fit after viewport resizing.
+  await settleCanvasLayout(page);
   const fitted = await scale(page);
   const consumed = await area(page).evaluate(
     (el) =>
