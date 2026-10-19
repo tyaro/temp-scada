@@ -33,6 +33,14 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+<a id="pattern-foundation-progress"></a>
+
+## 繰返しパターンのタイル計算（2026-10-20・日本時間）
+
+[Astraレビューを反映した設計](pattern-paint-design.md)に従い、斜線・交差線・点のタイル形状を先行実装した。交差線を1回のfillとして描くことで、交点だけ半透明色が濃くなることを防ぐ。間隔・太さ・種類の制限と小数座標を単体3件で検証し、Chromium3件で交点のα・タイル境界・点の繰返しを実ピクセルで確認した。
+
+Project・UIは0.18.0のまま。patternの保存契約・単独フォーム・Symbolと共通描画への接続は次工程。
+
 <a id="linear-gradient-progress"></a>
 
 ## 2色線形グラデーション（2026-10-20・日本時間）
