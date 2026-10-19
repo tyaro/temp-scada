@@ -390,7 +390,7 @@ Project 0.12.0で単一Textの文字サイズ・標準／太字・左／中央�
 
 ## 画像・描画表現・画面展開・kioskの追加検討（2026-10-19）
 
-ユーザーの追加要望を[拡張検討案](scada-graphics-runtime-extension-design.md)へ整理した。背景画像／Image／画像clipboard、paint・gradient／mesh／線種／α、Equipment／Faceplate、画面取込・子ウィンドウ・kioskの実現方法と相対コストを記録する。線種・配置全体の不透明度・色ごとのαを実装し、背景画像・資産保存も段階実装し、Image配置等は後続。2026-10-20のユーザー回答を反映し、画面取込は別画面の埋込View、メッシュは繰返しパターン、子ウィンドウは監視画面内Popupとする。自由メッシュグラデーション・他製品変換・OS別窓は今回の対象外。S9b・v1.1の提供段階、認証延期、正式Runtimeと表示プレビューの区別は維持する。
+ユーザーの追加要望を[拡張検討案](scada-graphics-runtime-extension-design.md)へ整理した。背景画像／Image／画像clipboard、paint・gradient／mesh／線種／α、Equipment／Faceplate、画面取込・子ウィンドウ・kioskの実現方法と相対コストを記録する。線種・配置全体の不透明度・色ごとのαを実装し、背景画像・資産保存も段階実装し、Image配置も0.17.0で追加し、画像clipboard等は後続。2026-10-20のユーザー回答を反映し、画面取込は別画面の埋込View、メッシュは繰返しパターン、子ウィンドウは監視画面内Popupとする。自由メッシュグラデーション・他製品変換・OS別窓は今回の対象外。S9b・v1.1の提供段階、認証延期、正式Runtimeと表示プレビューの区別は維持する。
 
 ## 実線・破線・点線の実装（2026-10-20）
 
@@ -407,3 +407,7 @@ Project 0.15.0で単色のcolorAlphaと枠線alphaを追加した。配置opacit
 ## 背景画像と最小package profile（2026-10-20）
 
 Project 0.16.0で資産宣言と背景参照を保存し、取込／差替え／解除・fit／opacity・Undoと共通描画へ接続した。画像原本はProject外の不変Storeで共有する。画像ありは原本を同梱する最小 `.bantoscada` profileで保存・再読込し、資産なしは従来JSONを使う。[仕様](image-assets-design.md)・[実装記録](development-plan.md#background-image-progress)を参照。正式package全体・directory・Design Domain・更新競合・配布管理・Image配置／clipboardは後続。
+
+## 画面上のImage配置（2026-10-20）
+
+Project 0.17.0で画面直置きのPNG／JPEGを追加した。背景と原本を共有し、画像枠の移動・サイズ・回転・不透明度・複製・ロック／非表示・Undoと最小画像同梱packageに接続する。containを既定とし、元比率復帰では中心を保持する。Symbol内画像・画像clipboard・差替え・トリミングは後続。[保存契約と操作](image-placement-design.md)・[実装記録](development-plan.md#image-placement-progress)を参照。

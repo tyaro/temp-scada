@@ -399,6 +399,9 @@
         <SelectionColor
           current={commonColor}
           {definitionColorCount}
+          imageCount={screen.objects.filter(
+            (o) => selectedIds.includes(o.id) && o.shape.type === "image",
+          ).length}
           {paintDisabledCount}
           count={selectedIds.length}
           hiddenCount={hiddenSelectionCount}
@@ -491,6 +494,23 @@
               数値はEnter・フォーカス移動で確定 ·
               Escで取消。不透明度は0〜100%、0%でもレイヤーから選択できます。
             </p>
+            {#if selected.shape.type === "image"}
+              {@const assetId = selected.shape.assetId}
+              {@const asset = project.assets.find((a) => a.id === assetId)!}
+              <p class="numeric-hint">
+                原本：{asset.name} · {asset.width} × {asset.height} px<br
+                />画像は枠内で元比率を保ちます。余白も選択範囲に含みます。
+              </p>
+              <button
+                type="button"
+                onclick={() =>
+                  edit({
+                    type: "reset-image-ratio",
+                    screenId: screen.id,
+                    objectId: selected!.id,
+                  })}>元比率へ戻す</button
+              >
+            {/if}
             <div class="fields">
               {#each "width" in selected ? ["x", "y", "width", "height", "rotation", "opacity"] : ["x", "y", "rotation", "opacity"] as field}
                 <label
@@ -498,7 +518,11 @@
                     ? "回転（°）"
                     : field === "opacity"
                       ? "不透明度（%）"
-                      : field}<input
+                      : selected.shape.type === "image" && field === "width"
+                        ? "画像枠の幅"
+                        : selected.shape.type === "image" && field === "height"
+                          ? "画像枠の高さ"
+                          : field}<input
                     name={field}
                     aria-label={field === "rotation"
                       ? "回転角度"
@@ -525,57 +549,59 @@
                     >{/if}</label
                 >
               {/each}
-              <label
-                >{selected.shape.type === "symbol" &&
-                selected.shape.colorMode === "definition"
-                  ? "単色の保存値"
-                  : (selected.shape.type === "rectangle" ||
+              {#if selected.shape.type !== "image"}
+                <label
+                  >{selected.shape.type === "symbol" &&
+                  selected.shape.colorMode === "definition"
+                    ? "単色の保存値"
+                    : (selected.shape.type === "rectangle" ||
+                          selected.shape.type === "ellipse") &&
+                        !selected.shape.paint.fillEnabled
+                      ? "塗りの保存値"
+                      : "色"}<input
+                    name="fill"
+                    aria-label="色"
+                    type="color"
+                    disabled={(selected.shape.type === "symbol" &&
+                      selected.shape.colorMode === "definition") ||
+                      ((selected.shape.type === "rectangle" ||
                         selected.shape.type === "ellipse") &&
-                      !selected.shape.paint.fillEnabled
-                    ? "塗りの保存値"
-                    : "色"}<input
-                  name="fill"
-                  aria-label="色"
-                  type="color"
-                  disabled={(selected.shape.type === "symbol" &&
-                    selected.shape.colorMode === "definition") ||
-                    ((selected.shape.type === "rectangle" ||
-                      selected.shape.type === "ellipse") &&
-                      !selected.shape.paint.fillEnabled)}
-                /></label
-              >
-              <label>
-                {selected.shape.type === "symbol"
-                  ? "単色"
-                  : selected.shape.type === "text"
-                    ? "文字"
-                    : selected.shape.type === "polyline"
-                      ? "線"
-                      : "塗り"}の不透明度（%）
-                <input
-                  name="colorAlpha"
-                  aria-label="色の不透明度（%）"
-                  type="text"
-                  inputmode="decimal"
-                  required
-                  disabled={(selected.shape.type === "symbol" &&
-                    selected.shape.colorMode === "definition") ||
-                    ((selected.shape.type === "rectangle" ||
-                      selected.shape.type === "ellipse") &&
-                      !selected.shape.paint.fillEnabled)}
-                  aria-invalid={numericErrors.colorAlpha ? "true" : undefined}
-                  onfocus={focusNumber}
-                  oninput={clearNumber}
-                  onkeydown={numberKey}
-                  onblur={blurNumber}
-                  oncompositionstart={compositionStart}
-                  oncompositionend={compositionEnd}
-                />
-                {#if numericErrors.colorAlpha}<span
-                    class="field-error"
-                    role="alert">{numericErrors.colorAlpha}</span
-                  >{/if}
-              </label>
+                        !selected.shape.paint.fillEnabled)}
+                  /></label
+                >
+                <label>
+                  {selected.shape.type === "symbol"
+                    ? "単色"
+                    : selected.shape.type === "text"
+                      ? "文字"
+                      : selected.shape.type === "polyline"
+                        ? "線"
+                        : "塗り"}の不透明度（%）
+                  <input
+                    name="colorAlpha"
+                    aria-label="色の不透明度（%）"
+                    type="text"
+                    inputmode="decimal"
+                    required
+                    disabled={(selected.shape.type === "symbol" &&
+                      selected.shape.colorMode === "definition") ||
+                      ((selected.shape.type === "rectangle" ||
+                        selected.shape.type === "ellipse") &&
+                        !selected.shape.paint.fillEnabled)}
+                    aria-invalid={numericErrors.colorAlpha ? "true" : undefined}
+                    onfocus={focusNumber}
+                    oninput={clearNumber}
+                    onkeydown={numberKey}
+                    onblur={blurNumber}
+                    oncompositionstart={compositionStart}
+                    oncompositionend={compositionEnd}
+                  />
+                  {#if numericErrors.colorAlpha}<span
+                      class="field-error"
+                      role="alert">{numericErrors.colorAlpha}</span
+                    >{/if}
+                </label>
+              {/if}
               {#if selected.shape.type === "symbol" && selected.shape.colorMode === "definition"}<p
                   class="numeric-hint"
                 >

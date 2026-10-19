@@ -30,6 +30,13 @@
         rx="9"
         ry="7"
       />
+    {:else if object.shape.type === "image"}<rect
+        x="3"
+        y="4"
+        width="18"
+        height="16"
+        rx="1"
+      /><circle cx="8" cy="9" r="2" /><path d="M3 18l6-6 4 4 3-5 5 7" />
     {:else if object.shape.type === "text"}<path
         d="M4 5h16M12 5v15M8 20h8M4 5v3M20 5v3"
       />

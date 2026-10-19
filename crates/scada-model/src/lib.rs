@@ -66,8 +66,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.16.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.16.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.17.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.17.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -94,10 +94,19 @@ impl Project {
             .as_array()
             .unwrap()
             .iter()
-            .filter_map(|screen| {
+            .flat_map(|screen| {
                 screen
                     .get("backgroundImage")
+                    .into_iter()
                     .map(|image| image["assetId"].as_str().unwrap())
+                    .chain(
+                        screen["objects"]
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .filter(|object| object["shape"]["type"] == "image")
+                            .map(|object| object["shape"]["assetId"].as_str().unwrap()),
+                    )
             })
             .collect();
         let mut asset_ids = HashSet::new();
@@ -124,7 +133,7 @@ impl Project {
             return Err("Projectの画像容量が64MiBを超えています".into());
         }
         if !used_assets.is_subset(&asset_ids) {
-            return Err("背景画像の資産が見つかりません".into());
+            return Err("画像の資産が見つかりません".into());
         }
         let symbols: HashSet<_> = value["symbols"]
             .as_array()
@@ -310,6 +319,32 @@ mod tests {
             owner["folders"] = Value::Null;
         }
         value
+    }
+
+    #[test]
+    fn image_placements_share_assets_and_reject_missing_references_and_symbol_children() {
+        let mut value: Value =
+            serde_json::from_str(include_str!("../../../examples/minimal.project.json")).unwrap();
+        let id = "0199fc00-0000-7000-8000-000000001100";
+        value["assets"] = serde_json::json!([{"id":id,"sha256":"0".repeat(64),"mime":"image/png","byteLength":100,"width":400,"height":200,"name":"設備.png"}]);
+        let object = serde_json::json!({"id":"0199fc00-0000-7000-8000-000000001101","order":0,"x":100,"y":120,"width":200,"height":150,"rotation":37,"opacity":0.4,"fill":"#000000","shape":{"type":"image","assetId":id,"fit":"contain"}});
+        value["screens"][0]["objects"] = serde_json::json!([object]);
+        assert!(Project::from_json(&value.to_string()).is_ok());
+        value["screens"][0]["backgroundImage"] =
+            serde_json::json!({"assetId":id,"fit":"contain","opacity":0.5});
+        assert!(Project::from_json(&value.to_string()).is_ok());
+        let mut missing = value.clone();
+        missing["assets"] = serde_json::json!([]);
+        assert!(Project::from_json(&missing.to_string())
+            .unwrap_err()
+            .contains("資産"));
+        let mut alpha = value.clone();
+        alpha["screens"][0]["objects"][0]["colorAlpha"] = serde_json::json!(0.5);
+        assert!(Project::from_json(&alpha.to_string()).is_err());
+        let mut child = object.clone();
+        child["id"] = serde_json::json!("0199fc00-0000-7000-8000-000000001103");
+        value["symbols"] = serde_json::json!([{"id":"0199fc00-0000-7000-8000-000000001102","name":"共有","width":200,"height":150,"folders":[],"objects":[child]}]);
+        assert!(Project::from_json(&value.to_string()).is_err());
     }
 
     #[test]
@@ -842,8 +877,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.16.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.16.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.17.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.17.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

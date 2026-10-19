@@ -31,6 +31,10 @@ export function parseClipboard(text: string): ObjectClipboard {
   )
     throw new Error("SCADAの図形コピーの形式またはバージョンが不正です");
   const project = parseProject(JSON.stringify(data.project));
+  if (project.assets.length)
+    throw new Error(
+      "画像を含むコピーの貼り付けは未対応です。画像同梱Projectを使ってください。",
+    );
   if (project.screens.length !== 1 || !project.screens[0].objects.length)
     throw new Error("コピー対象の図形がありません");
   return {
@@ -57,6 +61,10 @@ export function copyObjects(
     .map((object) => ({ ...object }));
   if (objects.length !== wanted.size)
     throw new Error("コピー対象が見つかりません");
+  if (objects.some((object) => object.shape.type === "image"))
+    throw new Error(
+      "画像を含むコピー・切り取りは未対応です。複製または画像同梱Projectを使ってください。",
+    );
   // Clipboard placements deliberately start at the destination root.
   for (const object of objects) delete object.folderId;
   const dependencies = new Set(

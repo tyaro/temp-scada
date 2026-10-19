@@ -8,7 +8,7 @@ import {
 export const PACKAGE_LIMIT = 80 * 1024 * 1024;
 export const JSON_LIMIT = 1024 * 1024;
 const TOTAL_LIMIT = 67 * 1024 * 1024;
-const PROFILE = "banto-scada.background-project";
+const PROFILE = "banto-scada.image-project";
 const encoder = new TextEncoder(),
   decoder = new TextDecoder("utf-8", { fatal: true });
 export function assetPath(asset: ImageAsset) {

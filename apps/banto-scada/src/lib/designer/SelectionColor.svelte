@@ -3,6 +3,7 @@
   let {
     current,
     count,
+    imageCount = 0,
     definitionColorCount = 0,
     paintDisabledCount = 0,
     hiddenCount,
@@ -15,6 +16,7 @@
   }: {
     current: string | null;
     count: number;
+    imageCount?: number;
     definitionColorCount?: number;
     paintDisabledCount?: number;
     hiddenCount: number;
@@ -89,7 +91,10 @@
   {#if paintDisabledCount}<p class="hint" role="status">
       塗りと枠線が無効の配置を{paintDisabledCount}件含みます。有効にしてから適用してください。
     </p>{/if}
-  <fieldset disabled={locked || paintDisabledCount > 0}>
+  {#if imageCount}<p class="hint" role="status">
+      画像を含む選択には色を適用できません。画像以外だけを選択してください。
+    </p>{/if}
+  <fieldset disabled={locked || paintDisabledCount > 0 || imageCount > 0}>
     <label
       >適用する色<input
         bind:this={input}

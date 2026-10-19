@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
   import { readProjectFile, writeProjectPackage } from "./lib/project-package";
   import BackgroundImageSettings from "./lib/designer/BackgroundImageSettings.svelte";
@@ -1128,6 +1129,53 @@
   let imageReadRequest = 0;
   let imageBusy = $state(false);
 
+  let placementFileInput: HTMLInputElement;
+  let placementIntent: {
+    generation: number;
+    owner: string;
+    bounds: typeof canvasView.bounds;
+    size: { width: number; height: number };
+  } | null = null;
+  function openImageFile() {
+    if (mode !== "edit" || activeDefinition || busy || imageBusy || replacement)
+      return;
+    placementIntent = {
+      generation: workspaceGeneration,
+      owner: screen.id,
+      bounds: { ...canvasView.bounds },
+      size: { width: screen.width, height: screen.height },
+    };
+    placementFileInput.value = "";
+    placementFileInput.click();
+  }
+  function placeImageFile(event: Event) {
+    const file = (event.currentTarget as HTMLInputElement).files?.[0],
+      intent = placementIntent;
+    placementIntent = null;
+    if (
+      !file ||
+      !intent ||
+      intent.generation !== workspaceGeneration ||
+      intent.owner !== screen.id ||
+      activeDefinition ||
+      mode !== "edit" ||
+      busy ||
+      replacement
+    )
+      return;
+    transition(() => {
+      if (
+        intent.generation !== workspaceGeneration ||
+        intent.owner !== screen.id ||
+        activeDefinition ||
+        mode !== "edit" ||
+        busy ||
+        replacement
+      )
+        return;
+      void prepareBackground(file, intent.generation, intent.owner, intent);
+    });
+  }
   function importBackground(file: File) {
     const generation = workspaceGeneration,
       owner = screen.id;
@@ -1148,6 +1196,10 @@
     file: File,
     generation: number,
     owner: string,
+    placement?: {
+      bounds: typeof canvasView.bounds;
+      size: { width: number; height: number };
+    },
   ) {
     const request = ++imageReadRequest,
       candidate = new AssetStore();
@@ -1177,6 +1229,21 @@
             (asset) => asset.sha256 === metadata.sha256,
           );
           const asset = existing ?? { ...metadata, id: newId() };
+          if (placement) {
+            const frame = initialImageFrame(
+              metadata,
+              placement.size,
+              placement.bounds,
+            );
+            if (edit({ type: "add-image", screenId: owner, asset, frame })) {
+              const placedId = selectedIds[0];
+              void tick().then(() => {
+                if (current() && placedId && selectedIds.includes(placedId))
+                  canvasWorkspace?.revealObject(placedId);
+              });
+            }
+            return;
+          }
           const previous = project.screens.find(
             (item) => item.id === owner,
           )?.backgroundImage;
@@ -1417,6 +1484,7 @@
   $effect(() => {
     imageScope;
     untrack(() => {
+      placementIntent = null;
       imageReadRequest++;
       imageBusy = false;
     });
@@ -1686,6 +1754,7 @@
         command.type === "add" ||
         command.type === "add-symbol" ||
         command.type === "place-symbol" ||
+        command.type === "add-image" ||
         command.type === "duplicate" ||
         command.type === "duplicate-many" ||
         command.type === "paste"
@@ -3075,6 +3144,11 @@
         },
         { label: "Project を保存", disabled: menuBlocked, run: save },
         {
+          label: "画像を配置",
+          disabled: editBlocked || !!activeDefinition || imageBusy,
+          run: openImageFile,
+        },
+        {
           label: "プロジェクト名を変更",
           disabled: editBlocked,
           run: focusProjectName,
@@ -3260,6 +3334,14 @@
     content="Banto SCADA の初期 Project エディタ"
   /></svelte:head
 >
+<input
+  hidden
+  aria-label="配置する画像を選択"
+  bind:this={placementFileInput}
+  type="file"
+  accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+  onchange={placeImageFile}
+/>
 {#key workspaceGeneration}
   <input
     hidden
@@ -4245,7 +4327,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.16.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.17.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

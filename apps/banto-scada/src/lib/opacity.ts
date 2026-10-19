@@ -3,6 +3,7 @@ import type { ScreenObject } from "./project";
 export function compositedOpacity(object: ScreenObject): number | undefined {
   const shape = object.shape;
   const colorAlpha =
+    shape.type === "image" ||
     shape.type === "rectangle" ||
     shape.type === "ellipse" ||
     (shape.type === "symbol" && shape.colorMode === "definition")

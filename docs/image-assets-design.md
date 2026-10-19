@@ -4,7 +4,7 @@
 
 ## 最初の区切り
 
-不変AssetStore、持ち運べる最小profileのpackage入出力、背景画像1枚の取込／差替え／解除を順に実装した。背景画像を通常選択・clipboardへ混ぜない。Image配置・OS画像clipboard・画像ライブラリは後続。
+不変AssetStore、持ち運べる最小profileのpackage入出力、背景画像1枚の取込／差替え／解除を順に実装した。背景画像を通常選択・clipboardへ混ぜない。Image配置は0.17.0で追加し、OS画像clipboard・画像ライブラリは後続。
 
 ProjectへはUUID v7のasset ID、原バイト列SHA-256、MIME、バイト数、表示寸法、名称だけを保存する。画面のbackgroundImageがasset IDを参照し、contain／中央を既定にする。背景色の上・全配置の下に表示し、fitと不透明度を画面設定から編集する。画面寸法を画像に合わせて勝手に変更しない。
 
@@ -50,7 +50,7 @@ Image配置の追加時は、依存バイトを含む専用clipboardと容量制
 
 `image-assets.ts`でPNG／JPEGのヘッダー・寸法・実decode、原本SHA-256、不変Blobの共有、宣言との一致、URLキャッシュ、保持対象と非同期処理のpin／解放を実装した。PNGのアニメーション・チャンク切れ・終端異常を拒否し、JPEGの方向による寸法交換を許容する。取込先Storeの破棄後は遅延完了を登録しない。
 
-この基礎の次工程として、以下の背景画像とpackage接続を追加した。Image配置・OS clipboardは後続。
+この基礎の次工程として、以下の背景画像とpackage接続を追加した。Image配置は後述の0.17.0で接続した。OS clipboardは後続。
 
 ## 背景画像とpackage接続（Project 0.16.0）
 
@@ -58,10 +58,16 @@ Image配置の追加時は、依存バイトを含む専用clipboardと容量制
 
 背景の取込／差替え／解除を1回のUndoとし、同じ原本は既存資産を再利用する。差替えではfit・不透明度を保持し、初回はcontain／中央・100%。最後の参照解除では宣言を外すが、StoreはUndo／Redoが必要とする原本を保持する。履歴から外れ、非同期書出しのpinもなくなってから回収する。
 
-最小profileは `banto-scada.background-project` version 1。`manifest.json`はprofile／version／Project manifest、`project.json`はscreens／symbols／assets、`assets/<sha256>.png|jpg`は原本、`checksums.json`は自身を除く全内容のSHA-256を持つ。MIMEは内容で確認し、原本と宣言の寸法・長さ・hashを照合する。ZIP adapterはブラウザ側で、Rust CLIは資産・参照のJSON検証まで。
+0.16.0当時の最小profileは `banto-scada.background-project` version 1（現行0.17.0では後述のimage-projectへ変更）。`manifest.json`はprofile／version／Project manifest、`project.json`はscreens／symbols／assets、`assets/<sha256>.png|jpg`は原本、`checksums.json`は自身を除く全内容のSHA-256を持つ。MIMEは内容で確認し、原本と宣言の寸法・長さ・hashを照合する。ZIP adapterはブラウザ側で、Rust CLIは資産・参照のJSON検証まで。
 
 ZIP依存はMITの`fflate@0.8.3`を固定し、必要時に遅延読込する。ZIP64・分割・コメント・暗号化・未対応圧縮・不正パス・重複entryを拒否する。中央とローカルヘッダーの名前／方式／位置を照合し、1KiBずつ入力して実展開量をentry別・総量で制限する。上限は画像8MiB、JSON各1MiB、展開総量67MiB、入力80MiB。
 
 画面設定からPNG／JPEGを選び、表示方法・百分率を明示適用する。Editor／表示プレビュー／ミニマップへ同じ背景を渡す。通常選択・範囲選択・全選択には背景を含めず、元の背景色と図形を保持する。画像付きJSON単体を拒否し、通常保存と置換確認内の書出しは画像同梱へ自動切替する。
 
 非同期処理は対象世代・画面・依頼番号を再確認する。書出しは開始時snapshotと原本のleaseを保持し、後続編集を保存済みにしない。Project差替えで旧Storeを閉じても、進行中の書出しが必要な原本だけはlease解放まで残す。書出し中は対象名と状態を表示する。Project・画面・モードや読込／置換状態を一度離れた時点で画像取込依頼を失効させ、元の状態へ戻っても復活させない。
+
+## Image配置への拡張（Project 0.17.0）
+
+画面直置きのImageと背景が同じ資産IDを共有する。現在参照の収集・保存・未使用宣言の除去をImageへ広げ、最後の参照を外すまで宣言を残す。原本の保持・Undo／Redo・非同期書出しのleaseは共用する。
+
+現行ZIP profileは`banto-scada.image-project` version 1。ファイル構成・checksum・容量制限は上記と同じで、背景と配置画像の両方を同梱する。旧0.16.0・背景専用profileの自動移行は行わない。画像JSONだけの読込や画像を含む図形clipboardは理由付きで拒否する。[Imageの仕様](image-placement-design.md)を参照。

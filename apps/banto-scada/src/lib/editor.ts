@@ -3,6 +3,7 @@ import { normalizeRotation, replaceRotatedVertex } from "./rotation";
 import { parseClipboard } from "./clipboard";
 import { canvasColors } from "./canvas-colors";
 import {
+  referencedAssets,
   parseProject,
   serializeProject,
   getBounds,
@@ -73,6 +74,13 @@ type ScreenCommand =
   | { type: "duplicate-screen"; screenId: string }
   | { type: "remove-screen"; screenId: string };
 export type ObjectCommand = (
+  | {
+      type: "add-image";
+      screenId: string;
+      asset: ImageAsset;
+      frame: { x: number; y: number; width: number; height: number };
+    }
+  | { type: "reset-image-ratio"; screenId: string; objectId: string }
   | {
       type: "create-folder";
       screenId: string;
@@ -207,6 +215,8 @@ export function isObjectCommand(
   command: EditCommand,
 ): command is ObjectCommand {
   return [
+    "add-image",
+    "reset-image-ratio",
     "create-folder",
     "rename-folder",
     "move-folder",
@@ -357,6 +367,19 @@ export function applyCommand(
     ? next.symbols.find((s) => s.id === definitionId)
     : targetScreen;
   if (!screen) throw new Error("画面が見つかりません");
+  if (command.type === "add-image") {
+    if (definitionId) throw new Error("Symbol定義には画像を配置できません");
+    const assetId = registerAsset(next, command.asset);
+    screen.objects.push({
+      id: newId(),
+      order: Math.max(-1, ...screen.objects.map((o) => o.order)) + 1,
+      rotation: 0,
+      fill: "#000000",
+      ...command.frame,
+      shape: { type: "image", assetId, fit: "contain" },
+    });
+    return finish(project, next);
+  }
   if (command.type === "create-folder") {
     if (
       command.parentId !== null &&
@@ -529,20 +552,7 @@ export function applyCommand(
       if (command.asset) {
         if (command.asset.id !== image.assetId)
           throw new Error("背景画像と登録資産のIDが一致しません");
-        const existing = next.assets.find(
-          (a) => a.sha256 === command.asset!.sha256,
-        );
-        if (existing) {
-          if (
-            ["mime", "byteLength", "width", "height"].some(
-              (key) =>
-                existing[key as keyof ImageAsset] !==
-                command.asset![key as keyof ImageAsset],
-            )
-          )
-            throw new Error("画像hashと資産宣言が一致しません");
-          image.assetId = existing.id;
-        } else next.assets.push(structuredClone(command.asset));
+        image.assetId = registerAsset(next, command.asset);
       }
       targetScreen!.backgroundImage = image;
     }
@@ -762,6 +772,10 @@ export function applyCommand(
           object[axis] = target - offset;
       }
     } else if (command.type === "set-color") {
+      if (objects.some((object) => object.shape.type === "image"))
+        throw new Error(
+          "画像を含む選択には色を適用できません。画像以外だけを選択してください。",
+        );
       const fill = command.fill.trim().toLowerCase();
       if (!/^#[0-9a-f]{6}$/.test(fill))
         throw new Error("色は#と6桁の16進数で指定してください");
@@ -948,7 +962,16 @@ export function applyCommand(
   } else {
     const index = screen.objects.findIndex((o) => o.id === command.objectId);
     if (index < 0) throw new Error("図形が見つかりません");
-    if (command.type === "make-symbol-unique") {
+    if (command.type === "reset-image-ratio") {
+      const object = screen.objects[index];
+      if (!("width" in object) || object.shape.type !== "image")
+        throw new Error("画像配置だけを元比率に戻せます");
+      const assetId = object.shape.assetId;
+      const asset = next.assets.find((a) => a.id === assetId)!;
+      const height = (object.width * asset.height) / asset.width;
+      object.y += (object.height - height) / 2;
+      object.height = height;
+    } else if (command.type === "make-symbol-unique") {
       const object = screen.objects[index];
       if (definitionId || object.shape.type !== "symbol")
         throw new Error("画面上の Symbol 配置だけを独立コピーできます");
@@ -1023,6 +1046,13 @@ export function applyCommand(
         ...geometry
       } = command.patch;
       const object = screen.objects[index];
+      if (
+        object.shape.type === "image" &&
+        (geometry.fill !== undefined || colorAlpha !== undefined)
+      )
+        throw new Error(
+          "画像の色や色の不透明度は変更できません。配置全体の不透明度を使ってください。",
+        );
       Object.assign(object, geometry);
       if (colorAlpha !== undefined) {
         if (!Number.isFinite(colorAlpha) || colorAlpha < 0 || colorAlpha > 1)
@@ -1134,11 +1164,7 @@ function screenName(name: string): string {
   return trimmed;
 }
 function finish(project: Project, next: Project): Project {
-  const usedAssets = new Set(
-    next.screens.flatMap((s) =>
-      s.backgroundImage ? [s.backgroundImage.assetId] : [],
-    ),
-  );
+  const usedAssets = referencedAssets(next);
   next.assets = next.assets.filter((asset) => usedAssets.has(asset.id));
 
   if (next.symbols.some((s) => s.objects.length === 0))
@@ -1155,4 +1181,20 @@ function centerObject(object: ScreenObject, center?: Point) {
   const bounds = getBounds(object);
   object.x = center.x - bounds.x - bounds.width / 2;
   object.y = center.y - bounds.y - bounds.height / 2;
+}
+
+function registerAsset(project: Project, asset: ImageAsset): string {
+  const existing = project.assets.find((a) => a.sha256 === asset.sha256);
+  if (existing) {
+    if (
+      ["mime", "byteLength", "width", "height"].some(
+        (key) =>
+          existing[key as keyof ImageAsset] !== asset[key as keyof ImageAsset],
+      )
+    )
+      throw new Error("画像hashと資産宣言が一致しません");
+    return existing.id;
+  }
+  project.assets.push(structuredClone(asset));
+  return asset.id;
 }

@@ -47,7 +47,8 @@ export interface LayoutObject extends BaseObject {
     | { type: "rectangle"; paint: ShapePaint }
     | { type: "ellipse"; paint: ShapePaint }
     | { type: "text"; text: string; style: TextStyle; binding?: TagBinding }
-    | { type: "symbol"; symbolId: string; colorMode: SymbolColorMode };
+    | { type: "symbol"; symbolId: string; colorMode: SymbolColorMode }
+    | { type: "image"; assetId: string; fit: "contain" };
 }
 export interface PolylineObject extends BaseObject {
   shape: {
@@ -97,10 +98,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.16.0";
+    schemaVersion: "0.17.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.16.0";
+    minRuntimeVersion: "0.17.0";
     name: string;
   };
   screens: Screen[];
@@ -122,8 +123,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.16.0",
-        minRuntimeVersion: "0.16.0",
+        schemaVersion: "0.17.0",
+        minRuntimeVersion: "0.17.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -163,11 +164,7 @@ export function parseProject(json: string): Project {
   const ids = new Set([project.manifest.projectId]);
   const symbolIds = new Set(project.symbols.map((s) => s.id));
   const hashes = new Set<string>(),
-    usedAssets = new Set(
-      project.screens.flatMap((s) =>
-        s.backgroundImage ? [s.backgroundImage.assetId] : [],
-      ),
-    );
+    usedAssets = referencedAssets(project);
   let totalBytes = 0;
   for (const asset of project.assets) {
     if (ids.has(asset.id)) throw new Error("ID が重複しています");
@@ -184,7 +181,7 @@ export function parseProject(json: string): Project {
   if (totalBytes > 64 * 1024 * 1024)
     throw new Error("Projectの画像容量が64MiBを超えています");
   if ([...usedAssets].some((id) => !project.assets.some((a) => a.id === id)))
-    throw new Error("背景画像の資産が見つかりません");
+    throw new Error("画像の資産が見つかりません");
 
   for (const owner of [...project.screens, ...project.symbols]) {
     if (ids.has(owner.id)) throw new Error("ID が重複しています");
@@ -323,4 +320,16 @@ export function parsePoints(text: string): Point[] {
         throw new Error("頂点は1行に x,y の形式で入力してください");
       return { x: Number(parts[0]), y: Number(parts[1]) };
     });
+}
+
+/** All current image references. History retains its own project declarations. */
+export function referencedAssets(project: Project): Set<string> {
+  return new Set(
+    project.screens.flatMap((screen) => [
+      ...(screen.backgroundImage ? [screen.backgroundImage.assetId] : []),
+      ...screen.objects.flatMap((object) =>
+        object.shape.type === "image" ? [object.shape.assetId] : [],
+      ),
+    ]),
+  );
 }

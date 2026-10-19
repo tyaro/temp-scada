@@ -655,6 +655,17 @@
               >
             {/each}
           </svg>
+        {:else if "width" in visual && visual.shape.type === "image"}
+          {#if images?.get(visual.shape.assetId)}
+            <image
+              data-image-frame
+              href={images.get(visual.shape.assetId)!.url}
+              width={visual.width}
+              height={visual.height}
+              preserveAspectRatio="xMidYMid meet"
+              pointer-events="none"
+            />
+          {/if}
         {:else}<Primitive
             object={visual}
             {readings}
