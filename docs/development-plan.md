@@ -27,6 +27,14 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+<a id="image-assets-foundation-progress"></a>
+
+## 不変画像Storeの基礎（2026-10-20・日本時間）
+
+Astraレビューを[画像保存基盤の設計](image-assets-design.md)へ具体化し、ProjectとUndoのJSONへ原本を複製しないAssetStoreを先行実装した。原バイトのhash共有・Blob／URLキャッシュ・内容と実decode・寸法／容量・APNG拒否・宣言一致を検証し、現在／履歴の保持集合と非同期I/Oのpinから安全に回収できるAPIを用意した。破棄済みStoreへ遅れて登録しない。
+
+TypeScript442件と型チェック（エラー・警告なし）が成功。新規5件で不正内容・decode失敗・宣言不一致・方向による寸法交換・原本共有・metadataの防御コピー・pinとURL解放・処理中disposeを確認した。ブラウザ1件では実PNG／JPEGを生成してdecode・原本往復・PNGのα128・共有URLと回収を確認した。本番ビルドも成功し、既存のJSサイズ警告は継続。Project／履歴の保持集合・package入出力・背景画像UIへの接続は次工程。この時点で背景画像・Image配置の完成とはしない。
+
 <a id="color-alpha-progress"></a>
 
 ## 単色と枠線のα（2026-10-20・日本時間）
