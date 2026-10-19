@@ -15,6 +15,8 @@
     setReferenceHeight,
     setPanelWidths,
     setThemeMode,
+    getRulersVisible,
+    setRulersVisible,
     getMinimapVisible,
     setMinimapVisible,
     getMenubarVisible,
@@ -26,6 +28,12 @@
   } from "./lib/designer/DesignerMenubar.svelte";
   import { settleMenuFocus } from "./lib/designer/settle-menu-focus";
   let theme = $state(getThemeMode());
+  let showRulers = $state(getRulersVisible());
+  function toggleRulers() {
+    canvasWorkspace?.preparePanelResize();
+    showRulers = !showRulers;
+    void setRulersVisible(showRulers);
+  }
   let showMinimap = $state(getMinimapVisible());
   function toggleMinimap() {
     canvasWorkspace?.preparePanelResize();
@@ -1728,6 +1736,11 @@
       label: "表示",
       items: [
         {
+          label: showRulers ? "ルーラーを隠す" : "ルーラーを表示",
+          disabled: mode !== "edit",
+          run: toggleRulers,
+        },
+        {
           label: showSidebar ? "左パネルを隠す" : "左パネルを表示",
           disabled: mode !== "edit",
           run: () =>
@@ -2323,7 +2336,7 @@
         >
       </div>
     {/if}
-    <div class="toolbar">
+    <div class="toolbar" class:ruler-offset={mode === "edit" && showRulers}>
       <h2>{screen.name}</h2>
       <span
         >{activeDefinition ? "SYMBOL" : "SCREEN"} · {screen.width} × {screen.height}
@@ -2342,6 +2355,7 @@
           editable={mode === "edit"}
           {selectedIds}
           {showGrid}
+          {showRulers}
           {snapEnabled}
           {gridSize}
           placing={positionPlacement}
@@ -3014,7 +3028,7 @@
       padding: 12px 16px;
     }
     main > section > :not(.canvas-stack),
-    .canvas-stack > :not(:global(.viewport)) {
+    .canvas-stack > :not(:global(.canvas-workspace)) {
       flex-shrink: 0;
     }
     .canvas-stack {

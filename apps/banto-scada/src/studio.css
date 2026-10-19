@@ -102,6 +102,10 @@ html[data-theme="dark"] #app {
   pointer-events: none;
   align-items: baseline;
 }
+#app main > section > .toolbar.ruler-offset {
+  top: 34px;
+  left: 38px;
+}
 #app main > section > .toolbar h2 {
   font-size: 13px;
 }

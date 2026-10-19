@@ -126,6 +126,22 @@ export async function setMinimapVisible(visible: boolean) {
     );
   }
 }
+const RULERS_KEY = "scada.designer.rulers";
+let rulersVisible = true;
+export function getRulersVisible() {
+  return rulersVisible;
+}
+export async function setRulersVisible(visible: boolean) {
+  rulersVisible = visible;
+  try {
+    await uiSettings.set(RULERS_KEY, String(visible));
+  } catch {
+    toastStore.push(
+      "warning",
+      "ルーラーの設定を保存できません。このタブだけに適用します。",
+    );
+  }
+}
 const MENUBAR_KEY = "scada.designer.menubar";
 export function getMenubarVisible(): boolean {
   return menubarVisible;
@@ -229,6 +245,14 @@ export async function initializeBanto(): Promise<() => void> {
     toastStore.push(
       "warning",
       "ミニマップの設定を読み込めません。初期表示を使います。",
+    );
+  }
+  try {
+    rulersVisible = (await uiSettings.get(RULERS_KEY)) !== "false";
+  } catch {
+    toastStore.push(
+      "warning",
+      "ルーラーの設定を読み込めません。初期表示を使います。",
     );
   }
   return watchSystemTheme(() => {

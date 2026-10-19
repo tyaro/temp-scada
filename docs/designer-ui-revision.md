@@ -334,3 +334,7 @@ A から C への UX 作業は B の完成を必須にしない。位置と大�
 ![ミニマップの実画面・ライト](assets/frontend-ux/minimap-fit-light.png)
 
 対応済み／一部対応／未実装と直近の検証結果は[開発計画の進捗一覧](development-plan.md#implementation-status)、詳細と各テーマの画像は[ミニマップの実装記録](development-plan.md#minimap-progress)を参照する。過去の各進捗節にある「後続」は、その節の実装時点の記録として扱う。
+
+### 2026-10-19・ルーラーの実装追記
+
+編集領域の上・左の22px帯にdesign unitの目盛りを追加した。倍率・スクロール・画面／定義に追従し、表示設定をBantoへ保存する。Project・履歴・選択・未適用入力から分離し、手動倍率の表示中心を保持する。プレビューでは隠す。ガイド作成は未実装。[実画面・検証記録](development-plan.md#rulers-progress)を参照する。

@@ -18,6 +18,7 @@
   import { tick, untrack, flushSync } from "svelte";
   import { wheelPixels, wheelZoom } from "../wheel-navigation";
   import Renderer from "../Renderer.svelte";
+  import Ruler from "./Ruler.svelte";
   import type { Screen, SymbolDefinition, Point } from "../project";
   import type { Geometry } from "../resize";
   import { objectsInRange, selectionBox } from "../range-selection";
@@ -37,6 +38,7 @@
     editable,
     selectedIds,
     showGrid,
+    showRulers,
     snapEnabled,
     gridSize,
     onbeforeedit,
@@ -59,6 +61,7 @@
     editable: boolean;
     selectedIds: string[];
     showGrid: boolean;
+    showRulers: boolean;
     snapEnabled: boolean;
     gridSize: number;
     onbeforeedit?: () => boolean;
@@ -754,103 +757,130 @@
     cancelPlacementPointer();
   }}
 />
-<!-- svelte-ignore a11y_no_noninteractive_tabindex (スクロール領域をキーボードと Space パンで操作するためのフォーカス先) -->
 <div
-  bind:this={viewport}
-  class="viewport"
-  class:panning
-  class:selecting={!!range}
-  class:placing={placing && !panning}
+  class="canvas-workspace"
+  class:rulers={editable && showRulers}
   class:preview={!editable}
-  class:drop-ready={!!dropPoint}
-  role="region"
-  aria-label="キャンバス操作領域"
-  aria-roledescription="工程図キャンバス"
-  tabindex="0"
-  oncontextmenu={requestContext}
-  onkeydowncapture={key}
-  onpointerdowncapture={down}
-  onpointermove={move}
-  onpointerup={up}
-  onpointercancel={() => {
-    cancelPan();
-    cancelRange();
-    cancelPlacementPointer();
-  }}
-  onpointerleave={() => {
-    if (!pan) placementPoint = null;
-  }}
-  onlostpointercapture={() => {
-    if (range) cancelRange();
-    if (pan) cancelPan();
-    if (placementDown) cancelPlacementPointer();
-  }}
-  onscroll={() => {
-    cancelRange();
-    cancelPlacementPointer();
-    remember();
-  }}
-  ondragover={dragOver}
-  ondrop={dropPart}
-  ondragleave={(event) => {
-    if (
-      !(event.relatedTarget instanceof Node) ||
-      !viewport?.contains(event.relatedTarget)
-    )
-      dropPoint = null;
-  }}
 >
+  {#if editable && showRulers}
+    <div class="ruler-corner" aria-hidden="true" title="design unit">du</div>
+    <div class="ruler-top">
+      <Ruler
+        axis="x"
+        length={size.width + (viewport?.clientLeft ?? 0)}
+        origin={layout.x - (stored?.left ?? 0) + (viewport?.clientLeft ?? 0)}
+        {scale}
+        extent={screen.width}
+      />
+    </div>
+    <div class="ruler-left">
+      <Ruler
+        axis="y"
+        length={size.height + (viewport?.clientTop ?? 0)}
+        origin={layout.y - (stored?.top ?? 0) + (viewport?.clientTop ?? 0)}
+        {scale}
+        extent={screen.height}
+      />
+    </div>
+  {/if}
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex (スクロール領域をキーボードと Space パンで操作するためのフォーカス先) -->
   <div
-    class="world"
-    style:width={`${layout.worldWidth}px`}
-    style:height={`${layout.worldHeight}px`}
+    bind:this={viewport}
+    class="viewport"
+    class:panning
+    class:selecting={!!range}
+    class:placing={placing && !panning}
+    class:preview={!editable}
+    class:drop-ready={!!dropPoint}
+    role="region"
+    aria-label="キャンバス操作領域"
+    aria-roledescription="工程図キャンバス"
+    tabindex="0"
+    oncontextmenu={requestContext}
+    onkeydowncapture={key}
+    onpointerdowncapture={down}
+    onpointermove={move}
+    onpointerup={up}
+    onpointercancel={() => {
+      cancelPan();
+      cancelRange();
+      cancelPlacementPointer();
+    }}
+    onpointerleave={() => {
+      if (!pan) placementPoint = null;
+    }}
+    onlostpointercapture={() => {
+      if (range) cancelRange();
+      if (pan) cancelPan();
+      if (placementDown) cancelPlacementPointer();
+    }}
+    onscroll={() => {
+      cancelRange();
+      cancelPlacementPointer();
+      remember();
+    }}
+    ondragover={dragOver}
+    ondrop={dropPart}
+    ondragleave={(event) => {
+      if (
+        !(event.relatedTarget instanceof Node) ||
+        !viewport?.contains(event.relatedTarget)
+      )
+        dropPoint = null;
+    }}
   >
     <div
-      class="sheet"
-      data-testid="canvas-sheet"
-      style:left={`${layout.x}px`}
-      style:top={`${layout.y}px`}
-      style:width={`${layout.width}px`}
-      style:height={`${layout.height}px`}
+      class="world"
+      style:width={`${layout.worldWidth}px`}
+      style:height={`${layout.worldHeight}px`}
     >
-      {#key screen.id}
-        <Renderer
-          bind:this={renderer}
-          {screen}
-          {symbols}
-          {editable}
-          {selectedIds}
-          {showGrid}
-          {snapEnabled}
-          {gridSize}
-          {onbeforeedit}
-          {onselect}
-          {onmove}
-          {onresize}
-          {onvertexmove}
-        />
-      {/key}
-      {#if rangeBox && editable}
-        <div
-          class="selection-range"
-          data-testid="selection-range"
-          aria-hidden="true"
-          style:left={`${rangeBox.x * scale}px`}
-          style:top={`${rangeBox.y * scale}px`}
-          style:width={`${rangeBox.width * scale}px`}
-          style:height={`${rangeBox.height * scale}px`}
-        ></div>
-      {/if}
-      {#if marker && editable}
-        <div
-          class="drop-marker"
-          aria-hidden="true"
-          style:left={`${marker.x * scale}px`}
-          style:top={`${marker.y * scale}px`}
-        >
-          ＋
-        </div>
-      {/if}
+      <div
+        class="sheet"
+        data-testid="canvas-sheet"
+        style:left={`${layout.x}px`}
+        style:top={`${layout.y}px`}
+        style:width={`${layout.width}px`}
+        style:height={`${layout.height}px`}
+      >
+        {#key screen.id}
+          <Renderer
+            bind:this={renderer}
+            {screen}
+            {symbols}
+            {editable}
+            {selectedIds}
+            {showGrid}
+            {snapEnabled}
+            {gridSize}
+            {onbeforeedit}
+            {onselect}
+            {onmove}
+            {onresize}
+            {onvertexmove}
+          />
+        {/key}
+        {#if rangeBox && editable}
+          <div
+            class="selection-range"
+            data-testid="selection-range"
+            aria-hidden="true"
+            style:left={`${rangeBox.x * scale}px`}
+            style:top={`${rangeBox.y * scale}px`}
+            style:width={`${rangeBox.width * scale}px`}
+            style:height={`${rangeBox.height * scale}px`}
+          ></div>
+        {/if}
+        {#if marker && editable}
+          <div
+            class="drop-marker"
+            aria-hidden="true"
+            style:left={`${marker.x * scale}px`}
+            style:top={`${marker.y * scale}px`}
+          >
+            ＋
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 </div>
@@ -890,9 +920,46 @@
     outline: none;
     box-shadow: var(--banto-focus-ring);
   }
-  .viewport {
+  .canvas-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     width: 100%;
+    min-width: 0;
     height: clamp(280px, calc(100dvh - 340px), 740px);
+  }
+  .canvas-workspace.rulers {
+    grid-template-columns: 22px minmax(0, 1fr);
+    grid-template-rows: 22px minmax(0, 1fr);
+  }
+  .ruler-corner {
+    grid-area: 1 / 1;
+    font:
+      9px ui-monospace,
+      monospace;
+    color: var(--banto-text-muted);
+    display: grid;
+    place-items: center;
+  }
+  .ruler-top {
+    grid-area: 1 / 2;
+    min-width: 0;
+    overflow: hidden;
+  }
+  .ruler-left {
+    grid-area: 2 / 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .rulers .viewport {
+    grid-area: 2 / 2;
+  }
+  .viewport {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
     overflow: auto;
     overscroll-behavior: contain;
     border: 1px solid var(--banto-border);
@@ -900,12 +967,12 @@
     background: var(--banto-bg);
     position: relative;
   }
-  .viewport.preview {
+  .canvas-workspace.preview {
     height: clamp(280px, calc(100dvh - 220px), 850px);
   }
   @media (min-width: 1100px) {
-    .viewport,
-    .viewport.preview {
+    .canvas-workspace,
+    .canvas-workspace.preview {
       flex: 1;
       height: auto;
       min-height: 280px;
