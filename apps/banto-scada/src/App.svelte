@@ -65,6 +65,7 @@
   import { parseNumericProperty } from "./lib/designer/numeric-properties";
   import { placementLabel } from "./lib/placement-label";
   import { createProject } from "./lib/new-project";
+  import { parseLineStyle } from "./lib/line-style";
   import { projectContent } from "./lib/save-state";
   import { createDraftGuard } from "./lib/designer/drafts.svelte";
   import DraftPrompt from "./lib/designer/DraftPrompt.svelte";
@@ -1414,7 +1415,12 @@
   }
   function acknowledgeForm(form: HTMLFormElement) {
     if (form.dataset.editorForm === "selection-outline") {
-      for (const name of ["outlineMode", "outlineColor", "outlineWidth"]) {
+      for (const name of [
+        "outlineMode",
+        "outlineColor",
+        "outlineWidth",
+        "outlineStyle",
+      ]) {
         const input = form.elements.namedItem(name);
         if (
           input instanceof HTMLInputElement ||
@@ -1429,6 +1435,8 @@
         arrow = form.elements.namedItem("arrow");
       if (width instanceof HTMLInputElement) width.value = "";
       if (arrow instanceof HTMLSelectElement) arrow.value = "";
+      const style = form.elements.namedItem("lineStyle");
+      if (style instanceof HTMLSelectElement) style.value = "";
     }
     if (form.dataset.editorForm === "selection-color") {
       const input = form.elements.namedItem("fill");
@@ -1739,6 +1747,10 @@
                 ? {
                     color: String(data.get("strokeColor")),
                     width: Number(width),
+                    ...(parseLineStyle(data.get("strokeStyle")) === "solid" &&
+                    selected.shape.paint.stroke?.lineStyle !== "solid"
+                      ? {}
+                      : { lineStyle: parseLineStyle(data.get("strokeStyle")) }),
                   }
                 : null,
           },
@@ -1791,6 +1803,7 @@
         const rawMode = String(data.get("outlineMode") ?? ""),
           color = String(data.get("outlineColor") ?? ""),
           width = String(data.get("outlineWidth") ?? "");
+        const style = String(data.get("outlineStyle") ?? "");
         if (rawMode !== "" && rawMode !== "none" && rawMode !== "enabled")
           throw new Error("枠線の有無を選択してください。");
         return {
@@ -1801,12 +1814,14 @@
             ...(rawMode === "" ? {} : { mode: rawMode }),
             ...(color === "" ? {} : { color }),
             ...(width === "" ? {} : { width: parseNumericProperty(width) }),
+            ...(style === "" ? {} : { lineStyle: parseLineStyle(style) }),
           },
         };
       }
       if (form.dataset.editorForm === "selection-line") {
         const width = String(data.get("strokeWidth") ?? ""),
           arrow = String(data.get("arrow") ?? "");
+        const style = String(data.get("lineStyle") ?? "");
         if (arrow !== "" && arrow !== "none" && arrow !== "end")
           throw new Error("矢印の指定が不正です。");
         return {
@@ -1818,6 +1833,7 @@
               ? {}
               : { strokeWidth: parseNumericProperty(width) }),
             ...(arrow === "" ? {} : { arrow }),
+            ...(style === "" ? {} : { lineStyle: parseLineStyle(style) }),
           },
         };
       }
@@ -1886,6 +1902,7 @@
     if (selected.shape.type === "symbol")
       patch.symbolId = String(data.get("symbolId"));
     if (selected.shape.type === "polyline") {
+      patch.lineStyle = parseLineStyle(data.get("lineStyle"));
       patch.points = parsePoints(String(data.get("points")));
       patch.strokeWidth = Number(data.get("strokeWidth"));
       patch.arrow = data.get("arrow") === "end" ? "end" : "none";
@@ -3991,7 +4008,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.12.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.13.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

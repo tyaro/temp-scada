@@ -1,0 +1,11 @@
+[
+  { "name": "default solid", "missing": true, "valid": true },
+  { "name": "solid", "value": "solid", "valid": true },
+  { "name": "dashed", "value": "dashed", "valid": true },
+  { "name": "dotted", "value": "dotted", "valid": true },
+  { "name": "unknown", "value": "double", "valid": false },
+  { "name": "empty", "value": "", "valid": false },
+  { "name": "null", "value": null, "valid": false },
+  { "name": "numeric", "value": 0, "valid": false },
+  { "name": "array", "value": [], "valid": false }
+]

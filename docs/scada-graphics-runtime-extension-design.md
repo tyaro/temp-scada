@@ -1,6 +1,6 @@
 # 画像・描画表現・Faceplate・画面展開・kioskの拡張検討
 
-初版2026-10-19、用語確認反映2026-10-20（日本時間）。ユーザーからの追加要望を[統合設計](scada-integrated-design.md)へ取り込むための**検討案**。Astraが現行コード・上流設計と照合した。追加機能を実装済み、提供版を確定済みとする文書ではない。現在の実装はProject 0.12.0・ローカルDesignerで、正式Runtime／Host・画像資産・Equipment／Actionは未実装。
+初版2026-10-19、用語確認反映2026-10-20（日本時間）。ユーザーからの追加要望を[統合設計](scada-integrated-design.md)へ取り込むための**検討案**。Astraが現行コード・上流設計と照合した。追加機能を実装済み、提供版を確定済みとする文書ではない。現在の実装はProject 0.13.0・ローカルDesignerで、正式Runtime／Host・画像資産・Equipment／Actionは未実装。
 
 Banto基盤を維持し、認証はindustrial側の修正後まで延期する。リリース前のProject互換性を維持するためにモデル変更を避けず、変更時はRust／TypeScript／schema／生成経路・サンプル・検証を揃える。ems-appsの画面・コード・画像は取り込まない。
 
@@ -32,6 +32,10 @@ Banto基盤を維持し、認証はindustrial側の修正後まで延期する�
 | 画面取込           | 同一Projectの別画面を参照し、現在画面の枠内へ表示                        | M〜L         | 循環参照・viewport・参照先変更の影響・入力境界を設計          |
 | 子ウィンドウ       | 監視画面内の非モーダル詳細小窓。確認にはBanto Modalを共用                | M〜L         | 前面化・フォーカス・閉じる・対象contextを管理。OS別窓は対象外 |
 | kiosk              | 開発用の全画面表示確認と、本番のRuntime起動・端末運用を分離              | S／L         | Fullscreen APIだけで本番kioskとはしない                       |
+
+## 実装状況の追記（2026-10-20）
+
+[実線・破線・点線](line-style-design.md)をProject 0.13.0で実装した。単独／一括編集と共通描画へ接続し、矢印・連続したhit領域を保持する。以下のpaint再編・α・gradient／pattern・画像・画面展開は引き続き後続で、線種だけで描画基盤全体の完成とはしない。
 
 ## 2. Paint・線種・αを先行する
 

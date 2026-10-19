@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { lineStyleLabels } from "../line-style";
   import type { ScreenObject } from "../project";
   import { parseNumericProperty } from "./numeric-properties";
   import type { createDraftGuard } from "./drafts.svelte";
@@ -31,12 +32,17 @@
   );
   const widths = $derived(new Set(lines.map((shape) => shape.strokeWidth)));
   const arrows = $derived(new Set(lines.map((shape) => shape.arrow)));
+  const styles = $derived(
+    new Set(lines.map((shape) => shape.lineStyle ?? "solid")),
+  );
+  let style = $state("");
+  let styleInput = $state<HTMLSelectElement>();
   let width = $state(""),
     arrow = $state("");
   let widthInput = $state<HTMLInputElement>(),
     arrowInput = $state<HTMLSelectElement>();
   let composing = false;
-  const specified = $derived(width !== "" || arrow !== "");
+  const specified = $derived(width !== "" || arrow !== "" || style !== "");
   const validWidth = $derived.by(() => {
     if (!width) return true;
     try {
@@ -64,8 +70,10 @@
           : "選択した線・配管を変更します。"}位置・頂点・色は保持します。
       </p>
       <p class="current">
-        現在の線幅：{widths.size === 1 ? [...widths][0] : "混在"} · 矢印：{arrows.size !==
+        線種：{styles.size === 1 ? lineStyleLabels[[...styles][0]] : "混在"} · 現在の線幅：{widths.size ===
         1
+          ? [...widths][0]
+          : "混在"} · 矢印：{arrows.size !== 1
           ? "混在"
           : [...arrows][0] === "end"
             ? "終端"
@@ -80,6 +88,7 @@
         onreset={() => {
           width = "";
           arrow = "";
+          style = "";
         }}
         onsubmit={(event) => {
           if (composing) event.preventDefault();
@@ -87,6 +96,7 @@
             onsubmit(event);
             width = widthInput?.value ?? "";
             arrow = arrowInput?.value ?? "";
+            style = styleInput?.value ?? "";
           }
         }}
       >
@@ -124,6 +134,19 @@
               ><option value="">変更なし</option><option value="none"
                 >なし</option
               ><option value="end">終端（最後の頂点）</option></select
+            ></label
+          >
+          <label
+            >適用する線種<select
+              name="lineStyle"
+              aria-label="適用する線種"
+              bind:this={styleInput}
+              bind:value={style}
+              ><option value="">変更なし</option><option value="solid"
+                >実線</option
+              ><option value="dashed">破線</option><option value="dotted"
+                >点線</option
+              ></select
             ></label
           >
           <p class="hint">

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { lineDash, lineCap } from "./line-style";
   import TextPrimitive from "./TextPrimitive.svelte";
   import type { ScreenObject } from "./project";
   import { presentNumeric, type TagReadings } from "./tag-presentation";
@@ -45,6 +46,11 @@
         ? (color ?? object.shape.paint.stroke.color)
         : "none"}
       stroke-width={object.shape.paint.stroke?.width}
+      stroke-dasharray={lineDash(
+        object.shape.paint.stroke?.lineStyle,
+        object.shape.paint.stroke?.width ?? 1,
+      )}
+      stroke-linecap={lineCap(object.shape.paint.stroke?.lineStyle)}
     />
   {:else if object.shape.type === "ellipse"}<ellipse
       cx={object.width / 2}
@@ -56,6 +62,11 @@
         ? (color ?? object.shape.paint.stroke.color)
         : "none"}
       stroke-width={object.shape.paint.stroke?.width}
+      stroke-dasharray={lineDash(
+        object.shape.paint.stroke?.lineStyle,
+        object.shape.paint.stroke?.width ?? 1,
+      )}
+      stroke-linecap={lineCap(object.shape.paint.stroke?.lineStyle)}
     />
   {:else if object.shape.type === "text"}<TextPrimitive
       text={binding ? presentation.text : object.shape.text}
@@ -75,7 +86,8 @@
     stroke={color ?? object.fill}
     stroke-width={shape.strokeWidth}
     stroke-linejoin="round"
-    stroke-linecap="round"
+    stroke-linecap={lineCap(shape.lineStyle)}
+    stroke-dasharray={lineDash(shape.lineStyle, shape.strokeWidth)}
     fill="none"
   />
   {#if shape.arrow === "end"}<polygon

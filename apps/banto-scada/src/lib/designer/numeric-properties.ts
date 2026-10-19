@@ -47,6 +47,7 @@ export function objectFormValues(
       .join("\n");
     values.strokeWidth = String(object.shape.strokeWidth);
     values.arrow = object.shape.arrow;
+    values.lineStyle = object.shape.lineStyle ?? "solid";
   }
   return values;
 }

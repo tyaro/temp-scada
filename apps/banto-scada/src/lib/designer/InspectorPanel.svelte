@@ -579,6 +579,13 @@
                     >{/if}</label
                 >
                 <label
+                  >線種<select name="lineStyle" aria-label="線種"
+                    ><option value="solid">実線</option><option value="dashed"
+                      >破線</option
+                    ><option value="dotted">点線</option></select
+                  ></label
+                >
+                <label
                   >矢印<select name="arrow" aria-label="矢印"
                     ><option value="none">なし</option><option value="end"
                       >終点</option

@@ -1,3 +1,4 @@
+import { parseLineStyle, setLineStyle } from "./line-style";
 import { normalizeRotation, replaceRotatedVertex } from "./rotation";
 import { parseClipboard } from "./clipboard";
 import { canvasColors } from "./canvas-colors";
@@ -9,6 +10,7 @@ import {
   type TagBinding,
   type ShapePaint,
   type TextStyle,
+  type LineStyle,
 } from "./project";
 import builtins from "./symbol-library.json";
 import type { Point, SymbolDefinition, ScreenObject, Screen } from "./project";
@@ -31,8 +33,10 @@ export interface ObjectPatch {
   points?: Point[];
   strokeWidth?: number;
   arrow?: "none" | "end";
+  lineStyle?: LineStyle;
 }
 export interface OutlineStylePatch {
+  lineStyle?: LineStyle;
   mode?: "none" | "enabled";
   color?: string;
   width?: number;
@@ -95,7 +99,11 @@ export type ObjectCommand = (
       type: "set-line-style";
       screenId: string;
       objectIds: string[];
-      patch: { strokeWidth?: number; arrow?: "none" | "end" };
+      patch: {
+        strokeWidth?: number;
+        arrow?: "none" | "end";
+        lineStyle?: LineStyle;
+      };
     }
   | {
       type: "set-color";
@@ -559,12 +567,18 @@ export function applyCommand(
         typeof command.patch !== "object" ||
         Array.isArray(command.patch) ||
         Object.keys(command.patch).some(
-          (key) => !["mode", "color", "width"].includes(key),
+          (key) => !["mode", "color", "width", "lineStyle"].includes(key),
         )
       )
         throw new Error("枠線のスタイル指定が不正です");
-      const { mode, color, width } = command.patch;
-      if (mode === undefined && color === undefined && width === undefined)
+      const { mode, color, width, lineStyle } = command.patch;
+      if (lineStyle !== undefined) parseLineStyle(lineStyle);
+      if (
+        mode === undefined &&
+        color === undefined &&
+        width === undefined &&
+        lineStyle === undefined
+      )
         throw new Error("枠線の変更する項目を指定してください");
       if (mode !== undefined && mode !== "none" && mode !== "enabled")
         throw new Error("枠線はなし・ありを指定してください");
@@ -583,9 +597,12 @@ export function applyCommand(
         throw new Error(
           "枠線の幅は0より大きく64以下の有限の数値で指定してください",
         );
-      if (mode === "none" && (color !== undefined || width !== undefined))
+      if (
+        mode === "none" &&
+        (color !== undefined || width !== undefined || lineStyle !== undefined)
+      )
         throw new Error(
-          "枠線なしと色・幅は同時に指定できません。色・幅の指定を解除してください",
+          "枠線なしと色・幅・線種は同時に指定できません。スタイルの指定を解除してください",
         );
       if (
         objects.some(
@@ -628,6 +645,8 @@ export function applyCommand(
             object.shape.paint.stroke.color = normalized;
           if (width !== undefined) object.shape.paint.stroke.width = width;
         }
+        if (object.shape.paint.stroke && lineStyle !== undefined)
+          setLineStyle(object.shape.paint.stroke, lineStyle);
       }
     } else if (command.type === "set-line-style") {
       if (
@@ -635,11 +654,12 @@ export function applyCommand(
         typeof command.patch !== "object" ||
         Array.isArray(command.patch) ||
         Object.keys(command.patch).some(
-          (key) => !["strokeWidth", "arrow"].includes(key),
+          (key) => !["strokeWidth", "arrow", "lineStyle"].includes(key),
         )
       )
         throw new Error("線・配管のスタイル指定が不正です");
-      const { strokeWidth, arrow } = command.patch;
+      const { strokeWidth, arrow, lineStyle } = command.patch;
+      if (lineStyle !== undefined) parseLineStyle(lineStyle);
       if (
         strokeWidth !== undefined &&
         (typeof strokeWidth !== "number" ||
@@ -660,6 +680,7 @@ export function applyCommand(
         if (object.shape.type === "polyline") {
           if (strokeWidth !== undefined) object.shape.strokeWidth = strokeWidth;
           if (arrow !== undefined) object.shape.arrow = arrow;
+          if (lineStyle !== undefined) setLineStyle(object.shape, lineStyle);
         }
     } else if (command.type === "set-folder") {
       if (
@@ -956,6 +977,7 @@ export function applyCommand(
         textStyle,
         points,
         strokeWidth,
+        lineStyle,
         arrow,
         ...geometry
       } = command.patch;
@@ -1014,10 +1036,12 @@ export function applyCommand(
       if (
         points !== undefined ||
         strokeWidth !== undefined ||
+        lineStyle !== undefined ||
         arrow !== undefined
       ) {
         if (object.shape.type !== "polyline")
           throw new Error("折れ線以外に頂点や線幅は設定できません");
+        if (lineStyle !== undefined) setLineStyle(object.shape, lineStyle);
         if (points !== undefined) object.shape.points = points;
         if (strokeWidth !== undefined) object.shape.strokeWidth = strokeWidth;
         if (arrow !== undefined) object.shape.arrow = arrow;

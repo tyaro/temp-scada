@@ -24,6 +24,7 @@
     strokeEnabled: String(!!paint.stroke),
     strokeColor: paint.stroke?.color ?? "#334155",
     strokeSize: String(paint.stroke?.width ?? 2),
+    strokeStyle: paint.stroke?.lineStyle ?? "solid",
   });
   function sync() {
     const select = form?.elements.namedItem("strokeEnabled");
@@ -101,6 +102,18 @@
           disabled={!strokeShown}
           required
         /></label
+      >
+    </div>
+    <div class="options" hidden={!strokeShown}>
+      <label
+        >枠線の線種<select
+          name="strokeStyle"
+          aria-label="枠線の線種"
+          disabled={!strokeShown}
+          ><option value="solid">実線</option><option value="dashed"
+            >破線</option
+          ><option value="dotted">点線</option></select
+        ></label
       >
     </div>
     <p>

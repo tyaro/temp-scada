@@ -21,9 +21,10 @@ interface BaseObject {
 export interface TagBinding {
   externalName: string;
 }
+export type LineStyle = "solid" | "dashed" | "dotted";
 export interface ShapePaint {
   fillEnabled: boolean;
-  stroke: { color: string; width: number } | null;
+  stroke: { color: string; width: number; lineStyle?: LineStyle } | null;
 }
 export interface TextStyle {
   fontSize: number;
@@ -45,6 +46,7 @@ export interface PolylineObject extends BaseObject {
     type: "polyline";
     points: Point[];
     strokeWidth: number;
+    lineStyle?: LineStyle;
     arrow: "none" | "end";
   };
 }
@@ -77,10 +79,10 @@ export interface SymbolDefinition {
 export interface Project {
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.12.0";
+    schemaVersion: "0.13.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.12.0";
+    minRuntimeVersion: "0.13.0";
     name: string;
   };
   screens: Screen[];
@@ -101,8 +103,8 @@ export function parseProject(json: string): Project {
       ...old,
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.12.0",
-        minRuntimeVersion: "0.12.0",
+        schemaVersion: "0.13.0",
+        minRuntimeVersion: "0.13.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,

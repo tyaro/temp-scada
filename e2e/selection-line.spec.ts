@@ -113,7 +113,7 @@ test("width-only and arrow-only edits preserve unspecified fields and same value
   await start(page, project);
   await selectLines(page);
   await expect(
-    page.getByText("現在の線幅：4 · 矢印：混在", { exact: true }),
+    page.getByText("線種：実線 · 現在の線幅：4 · 矢印：混在", { exact: true }),
   ).toBeVisible();
   await width(page).fill("4");
   await apply(page).click();

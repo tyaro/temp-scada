@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { lineStyleLabels } from "../line-style";
   import { tick } from "svelte";
   import type { ScreenObject } from "../project";
   import { parseNumericProperty } from "./numeric-properties";
@@ -40,6 +41,11 @@
     new Set(outlines.map((outline) => outline.color.toLowerCase())),
   );
   const widths = $derived(new Set(outlines.map((outline) => outline.width)));
+  const styles = $derived(
+    new Set(outlines.map((outline) => outline.lineStyle ?? "solid")),
+  );
+  let style = $state("");
+  let styleInput = $state<HTMLSelectElement>();
   let mode = $state(""),
     code = $state(""),
     width = $state("");
@@ -47,12 +53,14 @@
     colorInput = $state<HTMLInputElement>(),
     widthInput = $state<HTMLInputElement>();
   let composing = false;
-  const specified = $derived(mode !== "" || code !== "" || width !== "");
+  const specified = $derived(
+    mode !== "" || code !== "" || width !== "" || style !== "",
+  );
   const contradiction = $derived(
-    mode === "none" && (code !== "" || width !== ""),
+    mode === "none" && (code !== "" || width !== "" || style !== ""),
   );
   const needEnabled = $derived(
-    mode === "" && absent > 0 && (code !== "" || width !== ""),
+    mode === "" && absent > 0 && (code !== "" || width !== "" || style !== ""),
   );
   const needBoth = $derived(
     mode === "enabled" && absent > 0 && (code === "" || width === ""),
@@ -73,11 +81,13 @@
     mode = modeInput?.value ?? "";
     code = colorInput?.value ?? "";
     width = widthInput?.value ?? "";
+    style = styleInput?.value ?? "";
   }
   async function reset() {
     mode = "";
     code = "";
     width = "";
+    style = "";
     await tick();
     modeInput?.form?.dispatchEvent(new Event("input", { bubbles: true }));
   }
@@ -106,7 +116,11 @@
           : "塗り・位置・本体寸法は保持します。"}
       </p>
       <p class="current">
-        枠線あり {outlines.length} 件・なし {absent} 件<br />
+        線種：{!outlines.length
+          ? "なし"
+          : styles.size === 1
+            ? lineStyleLabels[[...styles][0]]
+            : "混在"}<br />枠線あり {outlines.length} 件・なし {absent} 件<br />
         現在の色：{!outlines.length
           ? "なし"
           : colors.size === 1
@@ -172,8 +186,21 @@
               onkeydown={compositionKey}
             /></label
           >
+          <label
+            >適用する枠線の線種<select
+              name="outlineStyle"
+              aria-label="適用する枠線の線種"
+              bind:this={styleInput}
+              bind:value={style}
+              ><option value="">変更なし</option><option value="solid"
+                >実線</option
+              ><option value="dashed">破線</option><option value="dotted"
+                >点線</option
+              ></select
+            ></label
+          >
           {#if contradiction}<p class="hint" role="status">
-              枠線なしと色・幅は同時に指定できません。色・幅の指定を空欄に戻してください。
+              枠線なしと色・幅・線種は同時に指定できません。スタイルの指定を空欄に戻してください。
             </p>{/if}
           {#if needEnabled || needBoth}<p class="hint" role="status">
               枠線なしの配置を含みます。新設するには「あり」と色・幅の両方を指定してください。指定値は既存の枠線にも適用します。
