@@ -15,7 +15,7 @@
 | 編集と履歴               | `lib/editor.ts`の`applyCommand`・`finish`、`lib/history.ts`                                                                                                                       | コピー上で実行・検証し、失敗時に元Projectを保持                                |
 | 保存モデル               | `lib/project.ts`、`crates/scada-model/schema/project.schema.json`、`crates/scada-model/src/lib.rs`                                                                                | TS／Rust／schema／examplesの契約を合わせる                                     |
 | 保存・読込               | Appの`adopt`・`load`・`writeProject`、`lib/project-package.ts`・`save-state.ts`                                                                                                   | ファイル選択・置換確認・実際のデータ処理を識別する                             |
-| 画像原本と取込           | `lib/image-assets.ts`・`image-frame.ts`、Appの`prepareImage`・`collectAssets`・差替え処理                                                                                         | 原本共有、仮Store、履歴からの参照、非同期取消を保つ                            |
+| 画像原本と取込           | `lib/image-assets.ts`・`image-frame.ts`、`designer/controllers/image-import.svelte.ts`、Appの`collectAssets`                                                                      | 原本共有、仮Store、履歴からの参照、非同期取消を保つ                            |
 | クリップボード           | Appの`clipboardAction`、`lib/clipboard.ts`・`asset-clipboard.ts`・`image-clipboard.ts`                                                                                            | OS APIの成功前に切取元を消さない。snapshotと資産leaseを保つ                    |
 | 表示と操作               | `lib/ObjectPainting.svelte`・`ScreenPainting.svelte`・`ScreenBackground.svelte`・`Primitive.svelte`・`ImagePainting.svelte`、`Renderer.svelte`・`designer/CanvasWorkspace.svelte` | 読取描画を選択・ドラッグ・入力処理から分ける。追加済みの画像描画部品も確認する |
 | レイヤー                 | Appの`beginLayerDrag`・`dropLayer`・`openFolderRequest`、`designer/layer-tree.ts`・`layer-drag.ts`                                                                                | フォルダーの所属と描画順・座標を区別する                                       |
@@ -31,7 +31,7 @@
 | 変更内容                     | 実装・契約                                                                    | 追加で読む設計                                                                                                       | 主な検証                                                                     |
 | ---------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 塗り・線・α・一括属性        | Primitive、ShapePaint、Selection系、editor、project                           | [塗り](shape-paint-design.md)・[線種](line-style-design.md)・[α](color-alpha-design.md)                              | shape-paint・gradient・pattern・selection・numeric関連                       |
-| 画像配置・差替え・背景・取込 | image-assets／frame／crop、Project、描画、Appの画像取込                       | [画像保存](image-assets-design.md)・[配置と差替え](image-placement-design.md)                                        | image-assets・placement・replacement・background、開始時に追加済みのcrop関連 |
+| 画像配置・差替え・背景・取込 | image-assets／frame／crop、Project、描画、image-import controllerとAppの接続  | [画像保存](image-assets-design.md)・[配置と差替え](image-placement-design.md)                                        | image-assets・placement・replacement・background、開始時に追加済みのcrop関連 |
 | コピー／切取／貼付           | clipboard、image-clipboard、editor、資産lease                                 | [画像clipboard](image-clipboard-design.md)                                                                           | clipboard・image-paste・asset-clipboard                                      |
 | 画面・Symbol・フォルダー     | editor、screen-references、layer-tree／drag、使用先集計                       | [埋込](embedded-screen-design.md)・[配置ドラッグ](layer-drag-design.md)・[フォルダードラッグ](folder-drag-design.md) | screens・symbols・screen-view・layer／folder関連                             |
 | 選択・viewport・数値         | Renderer、CanvasWorkspace、geometry、drafts、numeric-properties               | [選択表示](selection-view-design.md)・[回転](object-rotation-design.md)・[UX](frontend-ux-design.md)                 | numeric・range・rotation・resize・viewport・wheel・placement                 |
@@ -60,7 +60,8 @@
 ## 画像と非同期の現行境界
 
 - `AssetStore`は不変原本・hash・URL・leaseを所有する。Appの`collectAssets`は現在ProjectとUndo／Redoから必要なhashを集計する。
-- `prepareImage`は仮Storeで検証し、対象が現在でも有効な場合だけ共有Storeへ取込む。配置・背景・差し替えの要求条件を別に保持する。
+- `designer/controllers/image-import.svelte.ts`の`prepareImage`は仮Storeで検証し、対象が現在でも有効な場合だけ最新の共有Storeへ取込む。配置・背景・差し替えの要求条件とchooser intent、read／選択／cropのepoch、busy、scope effectを所有する。Appから必要な現在情報のgetterと操作callbackだけを受け、Project・履歴のコピーを持たない。
+- file inputのDOMと同期clickはApp。controllerはintentを記録してchooser callbackを呼ぶ。画像pasteも同じprepareへ接続する。背景fit／opacity・同一hash assetは適用時点、配置viewportはchooser開始時点のコピーを使う。
 - 差し替えは配置ID／元asset／選択世代に加え、decode開始時のcrop世代を確認する。既存draft適用とdecode中の変更を区別する。
 - `ImagePainting`がcropとcontainの共通描画を担い、`ObjectPainting`経由で編集・ミニマップ・埋込・小窓へ使われる。
 - native clipboard取得と、Promise付きClipboardItemのwrite開始はユーザー操作イベントの境界を保つ。controller化で最初のawaitより後へ送らない。

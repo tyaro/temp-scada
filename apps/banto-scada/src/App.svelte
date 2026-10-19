@@ -9,6 +9,7 @@
     readSystemPaste,
     type PastePayload,
   } from "./lib/image-clipboard";
+  import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
   import { imageCropCommand } from "./lib/designer/forms/image-crop";
   import {
     selectionOutlineCommand,
@@ -1067,7 +1068,12 @@
               throw new Error(
                 "Symbol定義には画像を貼り付けできません。画面を開いてください。",
               );
-            await prepareImage(payload.file, generation, target, pasteIntent);
+            await imageImport.prepare(
+              payload.file,
+              generation,
+              target,
+              pasteIntent,
+            );
             return;
           }
           const text = payload.text;
@@ -1240,254 +1246,54 @@
     assetStore.collect(hashes);
   }
   $effect(collectAssets);
-  let imageReadRequest = 0;
-  let imageBusy = $state(false);
-
   let replacementImageInput: HTMLInputElement;
-  let replacementImageEpoch = 0;
-  let replacementCropEpoch = 0;
-  let replacementImageIntent: {
-    generation: number;
-    owner: string;
-    objectId: string;
-    assetId: string;
-    epoch: number;
-    cropEpoch: number;
-  } | null = null;
-  function openImageReplacement(objectId: string) {
-    if (
-      mode !== "edit" ||
-      activeDefinition ||
-      busy ||
-      imageBusy ||
-      replacement ||
-      selected?.id !== objectId ||
-      selected.shape.type !== "image" ||
-      selected.locked
-    )
-      return;
-    replacementImageIntent = {
-      generation: workspaceGeneration,
-      owner: screen.id,
-      objectId,
-      assetId: selected.shape.assetId,
-      epoch: replacementImageEpoch,
-      cropEpoch: replacementCropEpoch,
-    };
-    replacementImageInput.value = "";
-    replacementImageInput.click();
-  }
-  function replaceImageFile(event: Event) {
-    const file = (event.currentTarget as HTMLInputElement).files?.[0],
-      intent = replacementImageIntent;
-    replacementImageIntent = null;
-    if (!file || !intent) return;
-    const current = () =>
-      intent.generation === workspaceGeneration &&
-      intent.owner === screen.id &&
-      intent.epoch === replacementImageEpoch &&
-      mode === "edit" &&
-      !activeDefinition &&
-      !busy &&
-      !replacement &&
-      selected?.id === intent.objectId &&
-      selected.shape.type === "image" &&
-      selected.shape.assetId === intent.assetId &&
-      !selected.locked;
-    if (!current() || intent.cropEpoch !== replacementCropEpoch) return;
-    transition(() => {
-      if (current())
-        void prepareImage(file, intent.generation, intent.owner, undefined, {
-          ...intent,
-          cropEpoch: replacementCropEpoch,
-        });
-    });
-  }
   let placementFileInput: HTMLInputElement;
-  let placementIntent: {
-    generation: number;
-    owner: string;
-    bounds: typeof canvasView.bounds;
-    size: { width: number; height: number };
-  } | null = null;
-  function openImageFile() {
-    if (mode !== "edit" || activeDefinition || busy || imageBusy || replacement)
-      return;
-    placementIntent = {
-      generation: workspaceGeneration,
-      owner: screen.id,
-      bounds: { ...canvasView.bounds },
-      size: { width: screen.width, height: screen.height },
-    };
-    placementFileInput.value = "";
-    placementFileInput.click();
-  }
-  function placeImageFile(event: Event) {
-    const file = (event.currentTarget as HTMLInputElement).files?.[0],
-      intent = placementIntent;
-    placementIntent = null;
-    if (
-      !file ||
-      !intent ||
-      intent.generation !== workspaceGeneration ||
-      intent.owner !== screen.id ||
-      activeDefinition ||
-      mode !== "edit" ||
-      busy ||
-      replacement
-    )
-      return;
-    transition(() => {
-      if (
-        intent.generation !== workspaceGeneration ||
-        intent.owner !== screen.id ||
-        activeDefinition ||
-        mode !== "edit" ||
-        busy ||
-        replacement
-      )
-        return;
-      void prepareImage(file, intent.generation, intent.owner, intent);
-    });
-  }
-  function importBackground(file: File) {
-    const generation = workspaceGeneration,
-      owner = screen.id;
-    transition(() => {
-      if (
-        generation !== workspaceGeneration ||
-        owner !== screen.id ||
-        activeDefinition ||
-        busy ||
-        replacement ||
-        mode !== "edit"
-      )
-        return;
-      void prepareImage(file, generation, owner);
-    });
-  }
-  async function prepareImage(
-    file: File,
-    generation: number,
-    owner: string,
-    placement?: {
-      bounds: typeof canvasView.bounds;
-      size: { width: number; height: number };
-    },
-    replacing?: {
-      objectId: string;
-      assetId: string;
-      epoch: number;
-      cropEpoch: number;
-    },
-  ) {
-    const request = ++imageReadRequest,
-      candidate = new AssetStore();
-    const current = () =>
-      request === imageReadRequest &&
-      generation === workspaceGeneration &&
-      owner === screen.id &&
-      !activeDefinition &&
-      !busy &&
-      !replacement &&
-      mode === "edit" &&
-      (!replacing ||
-        (replacing.epoch === replacementImageEpoch &&
-          replacing.cropEpoch === replacementCropEpoch &&
-          selected?.id === replacing.objectId &&
-          selected.shape.type === "image" &&
-          selected.shape.assetId === replacing.assetId &&
-          !selected.locked));
-    imageBusy = true;
-    try {
-      const metadata = await candidate.put(file, file.name);
-      if (!current()) {
-        candidate.dispose();
-        return;
-      }
-      const apply = () => {
-        if (!current()) {
-          candidate.dispose();
-          return;
-        }
-        try {
-          assetStore.importFrom(candidate, metadata.sha256);
-          const existing = project.assets.find(
-            (asset) => asset.sha256 === metadata.sha256,
-          );
-          const asset = existing ?? { ...metadata, id: newId() };
-          if (replacing) {
-            edit({
-              type: "replace-image",
-              screenId: owner,
-              objectId: replacing.objectId,
-              asset,
-            });
-            return;
-          }
-          if (placement) {
-            const frame = initialImageFrame(
-              metadata,
-              placement.size,
-              placement.bounds,
-            );
-            if (edit({ type: "add-image", screenId: owner, asset, frame })) {
-              stopPlacement();
-              const placedId = selectedIds[0];
-              void tick().then(() => {
-                if (current() && placedId && selectedIds.includes(placedId))
-                  canvasWorkspace?.revealObject(placedId);
-              });
-            }
-            return;
-          }
-          const previous = project.screens.find(
-            (item) => item.id === owner,
-          )?.backgroundImage;
-          edit({
-            type: "set-background-image",
-            screenId: owner,
-            asset,
-            image: {
-              assetId: asset.id,
-              fit: previous?.fit ?? "contain",
-              opacity: previous?.opacity ?? 1,
-            },
-          });
-        } catch (error) {
-          report(
-            "error",
-            `画像取込エラー: ${error instanceof Error ? error.message : String(error)}`,
-          );
-        } finally {
-          candidate.dispose();
-          collectAssets();
-        }
+  const imageImport = createImageImportController({
+    get owner() {
+      return {
+        generation: workspaceGeneration,
+        screenId: screen.id,
+        mode,
+        definition: !!activeDefinition,
+        busy,
+        replacing: !!replacement,
       };
-      drafts.allow(apply) && apply();
-    } catch (error) {
-      candidate.dispose();
-      if (current())
-        report(
-          "error",
-          `画像取込エラー: ${error instanceof Error ? error.message : String(error)}`,
-        );
-    } finally {
-      if (request === imageReadRequest) imageBusy = false;
-    }
-  }
-  function removeBackground() {
-    const owner = screen.id,
-      generation = workspaceGeneration;
-    transition(() => {
-      if (
-        generation === workspaceGeneration &&
-        owner === screen.id &&
-        !activeDefinition
-      )
-        edit({ type: "set-background-image", screenId: owner, image: null });
-    });
-  }
+    },
+    get selected() {
+      return selected;
+    },
+    get selectedIds() {
+      return selectedIds;
+    },
+    get viewport() {
+      return {
+        bounds: canvasView.bounds,
+        size: { width: screen.width, height: screen.height },
+      };
+    },
+    get store() {
+      return assetStore;
+    },
+    assetByHash: (hash) =>
+      project.assets.find((asset) => asset.sha256 === hash),
+    background: (owner) =>
+      project.screens.find((item) => item.id === owner)?.backgroundImage,
+    chooseReplacement() {
+      replacementImageInput.value = "";
+      replacementImageInput.click();
+    },
+    choosePlacement() {
+      placementFileInput.value = "";
+      placementFileInput.click();
+    },
+    transition,
+    allow: (run) => drafts.allow(run),
+    edit,
+    stopPlacement,
+    collectAssets,
+    revealObject: (id) => canvasWorkspace?.revealObject(id),
+    report,
+  });
 
   let editorRegion = $state<HTMLElement>();
   let previewFullscreenActive = $state(false);
@@ -1686,17 +1492,6 @@
       clipboardEpoch++;
     });
   });
-  const imageScope = $derived(
-    `${workspaceGeneration}:${screen.id}:${mode}:${!!activeDefinition}:${busy}:${!!replacement}`,
-  );
-  $effect(() => {
-    imageScope;
-    untrack(() => {
-      placementIntent = null;
-      imageReadRequest++;
-      imageBusy = false;
-    });
-  });
 
   let exporting = $state(false);
   let exportingName = $state("");
@@ -1791,28 +1586,6 @@
     notify(kind, text);
   }
   let selected = $derived(screen.objects.find((o) => o.id === selectedId));
-  const replacementImageScope = $derived(
-    `${workspaceGeneration}:${screen.id}:${mode}:${!!activeDefinition}:${selectedIds.join(",")}:${selected?.shape.type}:${selected?.shape.type === "image" ? selected.shape.assetId : ""}:${!!selected?.locked}:${selected?.visible}`,
-  );
-  $effect(() => {
-    replacementImageScope;
-    untrack(() => {
-      replacementImageEpoch++;
-      replacementImageIntent = null;
-    });
-  });
-
-  const replacementCropScope = $derived(
-    selected?.shape.type === "image"
-      ? JSON.stringify(selected.shape.crop ?? null)
-      : "",
-  );
-  $effect(() => {
-    replacementCropScope;
-    untrack(() => {
-      replacementCropEpoch++;
-    });
-  });
 
   function rotateSelection(delta: number) {
     if (mutationBlocked || !selectedId) return;
@@ -3275,8 +3048,8 @@
         { label: "Project を保存", disabled: menuBlocked, run: save },
         {
           label: "画像を配置",
-          disabled: editBlocked || !!activeDefinition || imageBusy,
-          run: openImageFile,
+          disabled: editBlocked || !!activeDefinition || imageImport.busy,
+          run: imageImport.openPlacement,
         },
         {
           label: "プロジェクト名を変更",
@@ -3475,8 +3248,8 @@
   bind:this={replacementImageInput}
   type="file"
   accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-  onchange={replaceImageFile}
-  oncancel={() => (replacementImageIntent = null)}
+  onchange={(event) => imageImport.replaceFile(event.currentTarget.files?.[0])}
+  oncancel={imageImport.cancelReplacementChoice}
 />
 <input
   hidden
@@ -3484,7 +3257,7 @@
   bind:this={placementFileInput}
   type="file"
   accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-  onchange={placeImageFile}
+  onchange={(event) => imageImport.placeFile(event.currentTarget.files?.[0])}
 />
 {#key workspaceGeneration}
   <input
@@ -3897,9 +3670,12 @@
                   )}
                   targetKey={`${workspaceGeneration}:${screen.id}`}
                   {drafts}
-                  busy={imageBusy || busy || !!replacement || !!drafts.pending}
-                  onimport={importBackground}
-                  onremove={removeBackground}
+                  busy={imageImport.busy ||
+                    busy ||
+                    !!replacement ||
+                    !!drafts.pending}
+                  onimport={imageImport.importBackground}
+                  onremove={imageImport.removeBackground}
                   onsubmit={properties}
                 />
               {/key}
@@ -4437,8 +4213,8 @@ ${object.id}`}
       {openDefinition}
       {openScreen}
       images={assetImages}
-      onreplaceimage={openImageReplacement}
-      imageBusy={imageBusy || busy || !!replacement}
+      onreplaceimage={imageImport.openReplacement}
+      imageBusy={imageImport.busy || busy || !!replacement}
     />
   {/if}
   {#if mode === "edit" && windowWidth >= 1100}

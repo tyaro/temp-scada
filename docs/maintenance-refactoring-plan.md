@@ -209,7 +209,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R1 文書整理     | 完了         | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理        |
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功        |
 | R3 フォーム契約 | 完了         | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功 |
-| R4 App機能分離  | 未着手       | a〜eごとの責務・移動先                                                  |
+| R4 App機能分離  | 作業中       | R4a完了。画像controller・取消表・関連50件。b〜eは未着手                 |
 | R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持                                   |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                        |
 
@@ -314,3 +314,26 @@ I1〜I4・I6・I9を維持。入力のNumber／厳密数値parserの使い分け
 TS全636件、型チェック（エラー／警告なし）、本番ビルド、全体整形と通常数値・Inspector・文字書式・Project／画面／共有定義・保存・タグ・範囲選択の関連ブラウザ56件が成功した。
 
 R3完了。既存フォームの項目解析と固有確定は各adapterへ閉じ、Appにはkind・現在対象の供給と共通の適用経路を残した。新しいcallback登録やdirty台帳は作らず、markup・CSS・保存JSON・Undo単位を維持した。途中の`f07c808`も[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39314185119)が成功している。今回の最終差分の全体CIとは区別する。次はR4aで画像取込の取消条件を一覧にしてからcontrollerへ移し、Projectと履歴の所有はAppへ残す。
+
+### R4a：画像取込の要求・取消・仮Store
+
+基準は`484f794`、開始時clean。画像配置・差し替え・背景・画像pasteで共通だった`prepareImage`、chooser intent、busy、要求番号、3つのscope effectを`designer/controllers/image-import.svelte.ts`へ移す。背景削除も同じ機能にまとめた。Appにはfile inputのDOM、Project／履歴／workspaceGeneration／共有AssetStoreの所有と参照回収、現在状態のgetter、共通edit／transition／draft・通知・reveal接続を残す。
+
+取消条件を移動前コードと照合した。3つのepochは統合せず、同じprimitive文字列の`$derived`とeffectの`untrack`を保つ。
+
+| 要求／境界           | 維持する条件と時点                                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 共通owner            | Project世代・画面・edit／preview・定義有無・busy・Project置換の変化でread要求を無効化し、配置chooser intentとbusyを解除    |
+| 配置chooser          | 開いた時のowner・世代とviewport／画面寸法をコピー。change時にintentを消費し、transition後もowner・mode・busy・置換を再照合 |
+| 差し替えchooser      | 選択IDs・shape型・元asset・lock・visibleとownerのscopeでepoch更新しintent解除。change前にcrop epochも照合                  |
+| 差し替えdecode       | 未適用cropを承認して適用した後のcrop epochを再取得。decode中のcrop変更と戻しも無効化。配置geometryだけの変更は取り消さない |
+| decode完了／適用直前 | 最新read番号とownerを再確認。差し替え時は選択配置・元asset・lockと専用epochも照合                                          |
+| 成功時               | 最新共有Storeへimportし、同一hash assetと背景fit／opacityは適用時点で読む。edit後に仮Storeをdisposeして参照回収            |
+| 未適用入力の確認     | 保留callbackが仮Storeを保持する。外側finallyで一律disposeしない。古いreadのfinallyで新しいbusyを解除しない                 |
+| 配置後の表示         | edit成功時だけ配置ツールを止め、tick後にcurrentと選択IDsを確認してreveal                                                   |
+
+I1〜I4・I6〜I10を維持する構造整理。Astraの読取レビューでgetterの読取時点、同期chooser、3つのscope、保留candidateの寿命、crop再取得とrevealを確認した。effect宣言の集約だけで同値を保証せず、関連ブラウザでProject切替・離れて戻る・連続要求・crop適用前後を確認する。取消条件の強化、原本管理改善、schema変更は混ぜない。
+
+R4a完了。型チェック（エラー／警告なし）、TS全636件、本番ビルド、対象整形と既存の画像6spec48件が成功した。native画像原本の1件と、decode待ち中の座標変更を維持して差し替えと別Undoで戻せる追加1件も成功し、計50件。新規1件はgetterによってgeometryまで取消依存へ広げていないことを確認する。期待値・timeout・retryは緩めていない。Astraの実差分レビューでも修正要求なし。
+
+共有Project・履歴・原本Storeの所有と保存契約は維持した。画面配置・画像の見え方は変更しない。既存のJS bundle 500kB警告は継続。次はR4bでclipboardの同期取得／write開始とsnapshot・lease・取消条件を一覧にしてから移す。

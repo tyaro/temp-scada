@@ -39,11 +39,11 @@
 
 ## 検証の範囲
 
-R3のフォーム解析・固有確定の分離はTS全636件、型チェック（エラー／警告なし）、本番ビルド、全体整形と関連ブラウザ56件が成功。保存契約・markup・Undo単位は維持した。Rustモデルは機能基準`e04e44c`のworkspace30件とClippyの成功を引き継ぐ。既存のJS bundle 500kB警告は継続する。
+R4aの画像取込controller分離はTS全636件、型チェック（エラー／警告なし）、本番ビルド、対象整形と関連ブラウザ50件が成功。decode待ち中の座標変更を維持し、差し替えと別Undoで戻せることも追加検証した。保存契約・画面配置・Undo単位は維持した。Rustモデルは機能基準`e04e44c`のworkspace30件とClippyの成功を引き継ぐ。既存のJS bundle 500kB警告は継続する。
 
 `e04e44c`の[GitHub CI](https://github.com/tyaro/temp-scada/actions/runs/39310221559)が成功し、全ブラウザ508件と型・TS単体・ビルド・整形・Rust・CLIサンプル検証を通過した。過去4件のブラウザ失敗は関連29件とこのCIでは再現しなかったが、後続の文書だけのCIでプレビューfit測定1件が再現した。テスト側のレイアウト待機を修正し、wheel関連7件と該当20回の反復が成功した。重複して走らせたローカル全体検証は、同一コードのCI成功確認後に途中停止した。[R0の記録](maintenance-refactoring-plan.md#refactoring-progress)で経緯を確認できる。
 
-途中の`f07c808`も[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39314185119)が成功した。最終の通常フォーム分離は上記のローカル検証済みで、以後の責務整理はR4aから進める。
+途中の`f07c808`も[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39314185119)が成功した。R3とR4aは完了し、以後の責務整理はR4bから進める。新規ブラウザ1件を加えた全体CIと、上記のローカル関連検証は区別する。
 
 ## 仕様・実画面への入口
 

@@ -244,3 +244,37 @@ for (const change of ["selection", "mode", "project"])
       await expect(p.locator(".sheet [data-image-frame]")).toHaveCount(0);
     }
   });
+
+test("geometry committed during replacement decode survives and does not cancel the image request", async ({
+  page: p,
+}) => {
+  const { id, next } = await start(p);
+  const before = (await saved(p)).project.screens[0].objects[0];
+  const oldHref = await picture(p, id).getAttribute("href");
+  await delayDecode(p);
+  await replace(p, next);
+  await expect
+    .poll(() => p.evaluate(() => typeof (window as any).resumeImage))
+    .toBe("function");
+  const x = p.locator('form[data-editor-form="object"] input[name="x"]');
+  await x.fill(String(before.x + 37));
+  await x.press("Enter");
+  await expect(x).toHaveValue(String(before.x + 37));
+  await resume(p);
+  await expect(picture(p, id)).not.toHaveAttribute("href", oldHref!);
+  const after = (await saved(p)).project.screens[0].objects[0];
+  expect(after.shape.assetId).not.toBe(before.shape.assetId);
+  expect(after).toEqual({
+    ...before,
+    x: before.x + 37,
+    shape: { ...before.shape, assetId: after.shape.assetId },
+  });
+  await button(p, "元に戻す").click();
+  await expect(picture(p, id)).toHaveAttribute("href", oldHref!);
+  expect((await saved(p)).project.screens[0].objects[0]).toEqual({
+    ...before,
+    x: before.x + 37,
+  });
+  await button(p, "元に戻す").click();
+  expect((await saved(p)).project.screens[0].objects[0]).toEqual(before);
+});
