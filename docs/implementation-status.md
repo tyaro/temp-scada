@@ -45,7 +45,7 @@ R4dの両テーマ・2画面幅の比較画像8枚は移動前後でpixel完全�
 
 `e04e44c`の[GitHub CI](https://github.com/tyaro/temp-scada/actions/runs/39310221559)が成功し、全ブラウザ508件と型・TS単体・ビルド・整形・Rust・CLIサンプル検証を通過した。過去4件のブラウザ失敗は関連29件とこのCIでは再現しなかったが、後続の文書だけのCIでプレビューfit測定1件が再現した。テスト側のレイアウト待機を修正し、wheel関連7件と該当20回の反復が成功した。重複して走らせたローカル全体検証は、同一コードのCI成功確認後に途中停止した。[R0の記録](maintenance-refactoring-plan.md#refactoring-progress)で経緯を確認できる。
 
-R4dの`7166eab`も[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39321917198)が成功した。R3・R4a〜R4eの実装とローカル検証を完了し、次はR5aの編集コマンド型・分類へ進む。R4eの`faf7c75`も[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39326680686)が成功し、全ブラウザ509件とCI所定のチェックを通過した。R4を完了とし、R5aの型・分類分離も完了し、型・TS636件・関連ブラウザ24件・本番ビルドが成功。分類表の削除・誤分類・新規コマンド追加に対する型エラーを確認した。次はR5bのProject／Symbol handler分離。後続差分の検証結果とは区別する。
+R4dの`7166eab`も[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39321917198)が成功した。R3・R4a〜R4eの実装とローカル検証を完了し、次はR5aの編集コマンド型・分類へ進む。R4eの`faf7c75`も[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39326680686)が成功し、全ブラウザ509件とCI所定のチェックを通過した。R4を完了とし、R5aの型・分類分離も完了し、型・TS636件・関連ブラウザ24件・本番ビルドが成功。分類表の削除・誤分類・新規コマンド追加に対する型エラーを確認した。R5bのProject／Symbol handlerも分離し、型・TS636件・関連ブラウザ25件・本番ビルドが成功。handler未実装を`never`で検出することも確認した。次はR5cのScreen handler分離。後続差分の検証結果とは区別する。
 
 ## 仕様・実画面への入口
 

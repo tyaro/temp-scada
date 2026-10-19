@@ -210,7 +210,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功        |
 | R3 フォーム契約 | 完了         | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功 |
 | R4 App機能分離  | 完了         | R4a〜R4e実装・全体CI成功（`faf7c75`）。全ブラウザ509件を確認            |
-| R5 編集コマンド | 作業中       | R5aの型・分類は完了。handler分離は後続。保存／履歴保持                  |
+| R5 編集コマンド | 作業中       | R5a・R5b完了。Project／Symbol handler分離済み。残りhandlerは後続        |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                        |
 
 各小区切りの記録は、次の項目だけを残せば再開できる。
@@ -445,3 +445,15 @@ R4eの`faf7c75`は[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39
 編集処理本体（`symbolUsage`以降）は移動前と同一。Projectコピー・mode拒否・検証・同値判定・revision更新、保存形式とUndo単位を維持する。handler分割と未処理commandの`never`確認は後続で、この区切りをR5全体の完了としない。
 
 分類表の1件削除、ObjectCommandの誤分類、新規コマンド型だけの追加を一時的に作り、各々`pnpm check`が該当の分類エラーで失敗することを確認した。確認後は元へ戻し、型チェックはエラー／警告なし、TS全636件成功。関連ブラウザ24件（editor・history・multi-edit・edit-lock・visibility・symbols・screens）と本番ビルドも成功。保存形式・Undo単位は維持した。既存のJS bundle 500kB警告は継続する。次はR5bでProject／Symbolのhandlerを分離する。
+
+<a id="r5b-project-symbol-handlers"></a>
+
+### R5b：Project／Symbol handlerと共有モデル操作
+
+基準は`98b9c77`、開始時clean。Project名の更新と共有Symbolの作成・更新・複製・削除・配置の6コマンドを`editor/project-handler.ts`／`symbol-handler.ts`へ移した。handlerは候補を変更し、`applyCommand`がmode確認・コピー・共通`finish`を所有する。Screen／Folder／Image／Objectの処理は入口に残り、R5全体の完了とは区別する。
+
+共有する既存のID発行・使用数・複製時のID／所属参照付替え・名前解析・配置中心計算は`model-helpers.ts`へ移した。公開入口の`newId`／`symbolUsage`は`editor.ts`から再exportする。handlerから入口をimportせず、循環依存を作らない。複製・配置コマンドの変更順序、使用中定義の削除拒否、例外文言、同値のrevision維持を保つ。
+
+Project／Symbolの型を名前付きにし、分類表のscope照合をその型に対応させた。handlerの最後は`never`を要求し、未知のコマンドを成功扱いしない。型チェックとTS全636件成功。Astraの静的レビューで具体的な回帰懸念・修正要求なし。分類済みの新しいProject／Symbol型だけを追加してhandlerを省いた場合、各handlerの`never`で型検査が失敗することも一時変更で確認し、元へ戻した。
+
+関連ブラウザ25件（editor・history・symbols・symbol-context・symbol-usages・symbol-placement・standard-names・screens）と本番ビルドも成功。残りのcommand分岐と共通`finish`は基準と同一で、保存形式・Undo単位を維持する。既存のJS bundle 500kB警告は継続する。次はR5cでScreen handlerを分離し、並べ替えのno-opを共通検証と混同しない。

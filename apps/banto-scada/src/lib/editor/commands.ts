@@ -200,10 +200,8 @@ export type ObjectCommand = (
   | { type: "remove"; screenId: string; objectId: string }
 ) & { definitionId?: string };
 
-export type EditCommand =
-  | { type: "update-project"; name: string }
-  | ScreenCommand
-  | ObjectCommand
+export type ProjectCommand = { type: "update-project"; name: string };
+export type SymbolCommand =
   | { type: "create-symbol"; name: string; width: number; height: number }
   | {
       type: "update-symbol";
@@ -221,14 +219,19 @@ export type EditCommand =
       center?: Point;
     };
 
+export type EditCommand =
+  ProjectCommand | ScreenCommand | ObjectCommand | SymbolCommand;
+
 type CommandScopeMap = {
   [K in EditCommand["type"]]: K extends ObjectCommand["type"]
     ? "object"
     : K extends ScreenCommand["type"]
       ? "screen"
-      : K extends "update-project"
+      : K extends ProjectCommand["type"]
         ? "project"
-        : "symbol";
+        : K extends SymbolCommand["type"]
+          ? "symbol"
+          : never;
 };
 
 const commandScopes = {
@@ -279,4 +282,10 @@ export function isObjectCommand(
   command: EditCommand,
 ): command is ObjectCommand {
   return commandScopes[command.type] === "object";
+}
+
+export function isSymbolCommand(
+  command: EditCommand,
+): command is SymbolCommand {
+  return commandScopes[command.type] === "symbol";
 }

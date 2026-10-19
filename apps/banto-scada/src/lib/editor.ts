@@ -15,8 +15,22 @@ import {
   type ImageAsset,
 } from "./project";
 import builtins from "./symbol-library.json";
-import type { Point, SymbolDefinition, ScreenObject, Screen } from "./project";
-import { isObjectCommand, type EditCommand } from "./editor/commands";
+import type { SymbolDefinition, ScreenObject, Screen } from "./project";
+import {
+  isObjectCommand,
+  isSymbolCommand,
+  type EditCommand,
+} from "./editor/commands";
+import { applyProjectCommand } from "./editor/project-handler";
+import { applySymbolCommand } from "./editor/symbol-handler";
+import {
+  centerObject,
+  copySymbol,
+  newId,
+  renewOwnerIds,
+  screenName,
+} from "./editor/model-helpers";
+export { newId, symbolUsage } from "./editor/model-helpers";
 export { isObjectCommand } from "./editor/commands";
 export type {
   AddKind,
@@ -27,28 +41,6 @@ export type {
   EditCommand,
 } from "./editor/commands";
 
-export function symbolUsage(project: Project, symbolId: string): number {
-  return project.screens
-    .flatMap((s) => s.objects)
-    .filter((o) => o.shape.type === "symbol" && o.shape.symbolId === symbolId)
-    .length;
-}
-
-/** RFC 9562 UUID v7。ID は順序として使わない。 */
-export function newId(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  let time = Date.now();
-  for (let i = 5; i >= 0; i--) {
-    bytes[i] = time % 256;
-    time = Math.floor(time / 256);
-  }
-  bytes[6] = (bytes[6] & 15) | 112;
-  bytes[8] = (bytes[8] & 63) | 128;
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join(
-    "",
-  );
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
 /** 変更はコピー上で検証し、失敗時は元の Project を保持する。 */
 export function applyCommand(
   project: Project,
@@ -58,82 +50,11 @@ export function applyCommand(
   if (mode !== "edit") throw new Error("表示プレビューでは編集できません");
   const next = parseProject(serializeProject(project));
   if (command.type === "update-project") {
-    const name = command.name.trim();
-    if (!name) throw new Error("プロジェクト名を入力してください");
-    next.manifest.name = name;
+    applyProjectCommand(next, command);
     return finish(project, next);
   }
-  if (command.type === "create-symbol") {
-    next.symbols.push({
-      id: newId(),
-      name: screenName(command.name),
-      width: command.width,
-      height: command.height,
-      objects: [
-        {
-          id: newId(),
-          order: 0,
-          rotation: 0,
-          x: command.width * 0.2,
-          y: command.height * 0.2,
-          width: command.width * 0.6,
-          height: command.height * 0.6,
-          shape: {
-            type: "rectangle",
-            paint: {
-              fill: {
-                enabled: true,
-                paint: { type: "solid", color: "#83bfcd", alpha: 1 },
-              },
-              stroke: null,
-            },
-          },
-        },
-      ],
-      folders: [],
-    });
-    return finish(project, next);
-  }
-  if (
-    command.type === "update-symbol" ||
-    command.type === "duplicate-symbol" ||
-    command.type === "remove-symbol" ||
-    command.type === "place-symbol"
-  ) {
-    const definition = next.symbols.find((s) => s.id === command.symbolId);
-    if (!definition) throw new Error("Symbol 定義が見つかりません");
-    if (command.type === "update-symbol")
-      Object.assign(definition, {
-        name: screenName(command.name),
-        width: command.width,
-        height: command.height,
-      });
-    else if (command.type === "duplicate-symbol") {
-      next.symbols.push(copySymbol(definition));
-    } else if (command.type === "remove-symbol") {
-      if (symbolUsage(next, definition.id))
-        throw new Error("配置で使用中の Symbol 定義は削除できません");
-      next.symbols = next.symbols.filter((s) => s.id !== definition.id);
-    } else {
-      const target = next.screens.find((s) => s.id === command.screenId);
-      if (!target) throw new Error("画面が見つかりません");
-      target.objects.push({
-        id: newId(),
-        order: Math.max(-1, ...target.objects.map((o) => o.order)) + 1,
-        rotation: 0,
-        x: 40,
-        y: 40,
-        width: definition.width,
-        height: definition.height,
-        fill: canvasColors(target.background).newShape,
-        shape: {
-          type: "symbol",
-          colorMode: "monochrome",
-          symbolId: definition.id,
-        },
-      });
-      centerObject(target.objects.at(-1)!, command.center);
-    }
+  if (isSymbolCommand(command)) {
+    applySymbolCommand(next, command);
     return finish(project, next);
   }
   if (command.type === "create-screen") {
@@ -1012,34 +933,9 @@ export function applyCommand(
   }
   return finish(project, next);
 }
-function copySymbol(definition: SymbolDefinition): SymbolDefinition {
-  const copy = renewOwnerIds(
-    JSON.parse(JSON.stringify(definition)) as SymbolDefinition,
-  );
-  copy.name = definition.name.slice(0, 196) + " コピー";
-  return copy;
-}
-function renewOwnerIds<T extends Screen | SymbolDefinition>(copy: T): T {
-  copy.id = newId();
-  const folders = new Map(copy.folders.map((folder) => [folder.id, newId()]));
-  for (const folder of copy.folders) {
-    folder.id = folders.get(folder.id)!;
-    if (folder.parentId) folder.parentId = folders.get(folder.parentId)!;
-  }
-  for (const object of copy.objects) {
-    object.id = newId();
-    if (object.folderId) object.folderId = folders.get(object.folderId)!;
-  }
-  return copy;
-}
 function folderName(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) throw new Error("フォルダー名を入力してください");
-  return trimmed;
-}
-function screenName(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) throw new Error("画面名を入力してください");
   return trimmed;
 }
 function finish(project: Project, next: Project): Project {
@@ -1053,15 +949,6 @@ function finish(project: Project, next: Project): Project {
   if (projectContent(next) === projectContent(project)) return project;
   next.manifest.projectRevision++;
   return parseProject(JSON.stringify(next));
-}
-
-function centerObject(object: ScreenObject, center?: Point) {
-  if (!center) return;
-  if (!Number.isFinite(center.x) || !Number.isFinite(center.y))
-    throw new Error("配置先は有限の座標にしてください");
-  const bounds = getBounds(object);
-  object.x = center.x - bounds.x - bounds.width / 2;
-  object.y = center.y - bounds.y - bounds.height / 2;
 }
 
 function registerAsset(project: Project, asset: ImageAsset): string {
