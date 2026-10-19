@@ -1,12 +1,18 @@
 <script lang="ts">
+  import TextPrimitive from "./TextPrimitive.svelte";
   import type { ScreenObject } from "./project";
   import { presentNumeric, type TagReadings } from "./tag-presentation";
   let {
     object,
     color,
     readings,
-  }: { object: ScreenObject; color?: string; readings?: TagReadings } =
-    $props();
+    onsummary,
+  }: {
+    object: ScreenObject;
+    color?: string;
+    readings?: TagReadings;
+    onsummary?: (description: string) => void;
+  } = $props();
   const binding = $derived(
     object.shape.type === "text" ? object.shape.binding : undefined,
   );
@@ -51,16 +57,18 @@
         : "none"}
       stroke-width={object.shape.paint.stroke?.width}
     />
-  {:else if object.shape.type === "text"}<text
-      x="0"
-      y={object.height * 0.8}
-      font-size={object.height * 0.7}
-      fill={color ?? object.fill}
-      data-tag-name={binding?.externalName}
-      data-tag-state={binding ? presentation.state : undefined}
-      >{#if binding}<title>{binding.externalName} · {presentation.label}</title
-        >{/if}{binding ? presentation.text : object.shape.text}</text
-    >{/if}
+  {:else if object.shape.type === "text"}<TextPrimitive
+      text={binding ? presentation.text : object.shape.text}
+      width={object.width}
+      height={object.height}
+      style={object.shape.style}
+      color={color ?? object.fill}
+      numeric={!!binding}
+      tagName={binding?.externalName}
+      tagState={binding ? presentation.state : undefined}
+      tagLabel={binding ? presentation.label : undefined}
+      {onsummary}
+    />{/if}
 {:else if shape}
   <polyline
     points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}

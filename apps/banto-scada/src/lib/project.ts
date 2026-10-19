@@ -25,6 +25,11 @@ export interface ShapePaint {
   fillEnabled: boolean;
   stroke: { color: string; width: number } | null;
 }
+export interface TextStyle {
+  fontSize: number;
+  fontWeight: "normal" | "bold";
+  align: "left" | "center" | "right";
+}
 export type SymbolColorMode = "monochrome" | "definition";
 export interface LayoutObject extends BaseObject {
   width: number;
@@ -32,7 +37,7 @@ export interface LayoutObject extends BaseObject {
   shape:
     | { type: "rectangle"; paint: ShapePaint }
     | { type: "ellipse"; paint: ShapePaint }
-    | { type: "text"; text: string; binding?: TagBinding }
+    | { type: "text"; text: string; style: TextStyle; binding?: TagBinding }
     | { type: "symbol"; symbolId: string; colorMode: SymbolColorMode };
 }
 export interface PolylineObject extends BaseObject {
@@ -72,10 +77,10 @@ export interface SymbolDefinition {
 export interface Project {
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.11.0";
+    schemaVersion: "0.12.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.11.0";
+    minRuntimeVersion: "0.12.0";
     name: string;
   };
   screens: Screen[];
@@ -96,8 +101,8 @@ export function parseProject(json: string): Project {
       ...old,
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.11.0",
-        minRuntimeVersion: "0.11.0",
+        schemaVersion: "0.12.0",
+        minRuntimeVersion: "0.12.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -108,7 +113,19 @@ export function parseProject(json: string): Project {
           shape:
             object.shape.type === "rectangle" || object.shape.type === "ellipse"
               ? { ...object.shape, paint: { fillEnabled: true, stroke: null } }
-              : object.shape,
+              : object.shape.type === "text"
+                ? {
+                    ...object.shape,
+                    style: {
+                      fontSize: Math.min(
+                        512,
+                        (object as LayoutObject).height * 0.7,
+                      ),
+                      fontWeight: "normal",
+                      align: "left",
+                    },
+                  }
+                : object.shape,
         })),
         background: "#0b1220",
       })),

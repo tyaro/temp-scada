@@ -1,6 +1,6 @@
 import type { ScreenObject } from "../project";
 export type NumericProperty =
-  "x" | "y" | "width" | "height" | "strokeWidth" | "rotation";
+  "x" | "y" | "width" | "height" | "strokeWidth" | "rotation" | "fontSize";
 export interface NumericTarget {
   generation: number;
   screenId: string;
@@ -34,6 +34,9 @@ export function objectFormValues(
   }
   if (object.shape.type === "text") {
     values.text = object.shape.text;
+    values.fontSize = String(object.shape.style.fontSize);
+    values.fontWeight = object.shape.style.fontWeight;
+    values.textAlign = object.shape.style.align;
     if (!definition)
       values.externalName = object.shape.binding?.externalName ?? "";
   }

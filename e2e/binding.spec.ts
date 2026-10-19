@@ -21,7 +21,7 @@ test("assigns a read-only tag, shows disconnected in editor and preview, and pre
   await button("変更を適用").click();
   const tag = page
     .getByRole("region", { name: "キャンバス操作領域", exact: true })
-    .locator("text[data-tag-name]");
+    .locator("svg[data-tag-name]");
   await expect(tag).toHaveAttribute("data-tag-name", name);
   await expect(tag).toHaveAttribute("data-tag-state", "disconnected");
   await expect(tag).toContainText("-- · 未接続");
@@ -38,8 +38,8 @@ test("assigns a read-only tag, shows disconnected in editor and preview, and pre
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );
-  expect(saved.manifest.schemaVersion).toBe("0.11.0");
-  expect(saved.manifest.minRuntimeVersion).toBe("0.11.0");
+  expect(saved.manifest.schemaVersion).toBe("0.12.0");
+  expect(saved.manifest.minRuntimeVersion).toBe("0.12.0");
   expect(
     saved.screens[0].objects
       .filter((o: any) => o.shape.binding)
@@ -107,7 +107,7 @@ test("invalid assignment retains the input and selection, and invalid imported b
   await expect(
     page
       .getByRole("region", { name: "キャンバス操作領域", exact: true })
-      .locator("text[data-tag-name]"),
+      .locator("svg[data-tag-name]"),
   ).toHaveAttribute("data-tag-name", "PLC01.計測.槽1.温度");
 });
 
@@ -128,7 +128,7 @@ test("the standalone binding sample loads without a Hub and keeps static shapes 
   await expect(
     page
       .getByRole("region", { name: "キャンバス操作領域", exact: true })
-      .locator("text[data-tag-name]"),
+      .locator("svg[data-tag-name]"),
   ).toContainText("-- · 未接続");
   await expect(
     page.getByRole("button", { name: "Hub 接続", exact: true }),

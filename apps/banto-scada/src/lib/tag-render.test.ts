@@ -14,6 +14,7 @@ const object: LayoutObject = {
   fill: "#ffffff",
   shape: {
     type: "text",
+    style: { fontSize: 21, fontWeight: "normal", align: "left" },
     text: "STATIC FALLBACK",
     binding: { externalName: "PLC01.Fast.Value" },
   },
@@ -24,7 +25,7 @@ it("renders current and degraded readings through the same SVG primitive without
     [
       { state: "resolved", quality: "good", numericValue: 0 },
       "good",
-      ">0</text>",
+      "0</title>",
     ],
     [
       { state: "resolved", quality: "stale", numericValue: 123.45 },
@@ -53,6 +54,8 @@ it("renders current and degraded readings through the same SVG primitive without
       },
     });
     expect(body).toContain(`data-tag-state="${state}"`);
+    expect(body).toContain('data-text-layout="pending"');
+    expect(body).not.toContain("data-text-content");
     expect(body.replaceAll(/<!--.*?-->/g, "")).toContain(text);
     expect(body).not.toContain("STATIC FALLBACK");
     expect(body).not.toContain("123.45");
@@ -63,6 +66,11 @@ it("escapes the external name as text and preserves unbound static rendering", (
     ...object,
     shape: {
       type: "text" as const,
+      style: {
+        fontSize: 21,
+        fontWeight: "normal" as const,
+        align: "left" as const,
+      },
       text: "static",
       binding: { externalName: '<script>alert("tag")</script>' },
     },
@@ -72,7 +80,15 @@ it("escapes the external name as text and preserves unbound static rendering", (
   expect(body).toContain("&lt;script>");
   const unbound = {
     ...object,
-    shape: { type: "text" as const, text: "STATIC FALLBACK" },
+    shape: {
+      type: "text" as const,
+      style: {
+        fontSize: 21,
+        fontWeight: "normal" as const,
+        align: "left" as const,
+      },
+      text: "STATIC FALLBACK",
+    },
   };
   const staticSvg = render(Primitive, { props: { object: unbound } }).body;
   expect(staticSvg).toContain("STATIC FALLBACK");

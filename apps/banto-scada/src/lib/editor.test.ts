@@ -67,7 +67,11 @@ it("edits text and rejects a missing target", () => {
       { type: "update", screenId, objectId: text.id, patch: { text: "槽 A" } },
       "edit",
     ).screens[0].objects[2].shape,
-  ).toEqual({ type: "text", text: "槽 A" });
+  ).toEqual({
+    type: "text",
+    text: "槽 A",
+    style: { fontSize: 28, fontWeight: "normal", align: "left" },
+  });
   expect(() =>
     applyCommand(
       original,

@@ -1,7 +1,7 @@
 {
   "manifest": {
-    "schemaVersion": "0.11.0",
-    "minRuntimeVersion": "0.11.0",
+    "schemaVersion": "0.12.0",
+    "minRuntimeVersion": "0.12.0",
     "projectId": "0199ff20-0000-7000-8000-000000000001",
     "name": "共有Symbolの配色サンプル",
     "projectRevision": 1,
@@ -37,7 +37,12 @@
           "fill": "#172846",
           "shape": {
             "type": "text",
-            "text": "共有Symbolの配色"
+            "text": "共有Symbolの配色",
+            "style": {
+              "fontSize": 25.2,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "name": "画面タイトル",
           "rotation": 0
@@ -52,7 +57,12 @@
           "fill": "#5a7290",
           "shape": {
             "type": "text",
-            "text": "同じポンプを、配置の単色と共有定義の色で表示しています。"
+            "text": "同じポンプを、配置の単色と共有定義の色で表示しています。",
+            "style": {
+              "fontSize": 16.799999999999997,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "name": "画面の説明",
           "rotation": 0
@@ -84,7 +94,12 @@
           "fill": "#172846",
           "shape": {
             "type": "text",
-            "text": "P-101 / 配置の単色"
+            "text": "P-101 / 配置の単色",
+            "style": {
+              "fontSize": 18.2,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "folderId": "0199ff20-0000-7000-8000-000000000111",
           "name": "表示方式ラベル 1",
@@ -117,7 +132,12 @@
           "fill": "#172846",
           "shape": {
             "type": "text",
-            "text": "P-102 / 共有定義の色"
+            "text": "P-102 / 共有定義の色",
+            "style": {
+              "fontSize": 18.2,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "folderId": "0199ff20-0000-7000-8000-000000000111",
           "name": "表示方式ラベル 2",
@@ -150,7 +170,12 @@
           "fill": "#172846",
           "shape": {
             "type": "text",
-            "text": "P-103 / 共有定義の色"
+            "text": "P-103 / 共有定義の色",
+            "style": {
+              "fontSize": 18.2,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "folderId": "0199ff20-0000-7000-8000-000000000111",
           "name": "表示方式ラベル 3",
@@ -391,7 +416,12 @@
           "fill": "#172846",
           "shape": {
             "type": "text",
-            "text": "PUMP · A"
+            "text": "PUMP · A",
+            "style": {
+              "fontSize": 16.799999999999997,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "name": "機器ラベル",
           "rotation": 0

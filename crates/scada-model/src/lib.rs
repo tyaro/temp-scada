@@ -66,13 +66,16 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.11.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.11.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.12.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.12.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
                 for object in screen["objects"].as_array_mut().unwrap() {
                     object["rotation"] = serde_json::json!(0);
+                    if object["shape"]["type"] == "text" {
+                        object["shape"]["style"] = serde_json::json!({"fontSize":(object["height"].as_f64().unwrap() * 0.7).min(512.0),"fontWeight":"normal","align":"left"});
+                    }
                     if object["shape"]["type"] == "rectangle"
                         || object["shape"]["type"] == "ellipse"
                     {
@@ -591,12 +594,55 @@ mod tests {
         }
     }
     #[test]
+    fn text_styles_share_the_browser_contract() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/text-style-cases.json")).unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut value: Value = serde_json::from_str(SAMPLE).unwrap();
+            let object = value["screens"][0]["objects"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|o| o["shape"]["type"] == "text")
+                .unwrap();
+            if case.get("missing").is_some() {
+                object["shape"].as_object_mut().unwrap().remove("style");
+            } else {
+                object["shape"]["style"] = case["value"].clone();
+            }
+            assert_eq!(
+                Project::from_json(&value.to_string()).is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+        }
+        let lines: Value =
+            serde_json::from_str(include_str!("../../../examples/text-line-cases.json")).unwrap();
+        for case in lines.as_array().unwrap() {
+            let mut value: Value = serde_json::from_str(SAMPLE).unwrap();
+            let object = value["screens"][0]["objects"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|o| o["shape"]["type"] == "text")
+                .unwrap();
+            object["shape"]["text"] = case["text"].clone();
+            assert_eq!(
+                Project::from_json(&value.to_string()).is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{:?}",
+                case["text"]
+            );
+        }
+    }
+    #[test]
     fn migrates_legacy_without_losing_geometry_or_identity() {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.11.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.11.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.12.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.12.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]
@@ -611,6 +657,9 @@ mod tests {
             screen["folders"] = serde_json::json!([]);
             for object in screen["objects"].as_array_mut().unwrap() {
                 object["rotation"] = serde_json::json!(0);
+                if object["shape"]["type"] == "text" {
+                    object["shape"]["style"] = serde_json::json!({"fontSize":(object["height"].as_f64().unwrap() * 0.7).min(512.0),"fontWeight":"normal","align":"left"});
+                }
                 if object["shape"]["type"] == "rectangle" || object["shape"]["type"] == "ellipse" {
                     object["shape"]["paint"] =
                         serde_json::json!({"fillEnabled":true,"stroke":null});
@@ -619,6 +668,23 @@ mod tests {
         }
         assert_eq!(project.0["screens"], screens);
         assert_eq!(project.0["symbols"], serde_json::json!([]));
+        let mut large_text = old.clone();
+        let text = large_text["screens"][0]["objects"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|o| o["shape"]["type"] == "text")
+            .unwrap();
+        text["height"] = serde_json::json!(1000);
+        let migrated = Project::from_json(&large_text.to_string()).unwrap();
+        let text = migrated.0["screens"][0]["objects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|o| o["shape"]["type"] == "text")
+            .unwrap();
+        assert_eq!(text["height"], 1000);
+        assert_eq!(text["shape"]["style"]["fontSize"], 512.0);
         let mut invalid = old;
         invalid["futureFeature"] = Value::Bool(true);
         assert!(Project::from_json(&invalid.to_string()).is_err());

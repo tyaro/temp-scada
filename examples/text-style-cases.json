@@ -1,0 +1,63 @@
+[
+  {
+    "name": "normal left",
+    "value": { "fontSize": 24, "fontWeight": "normal", "align": "left" },
+    "valid": true
+  },
+  {
+    "name": "bold center decimal",
+    "value": { "fontSize": 12.5, "fontWeight": "bold", "align": "center" },
+    "valid": true
+  },
+  {
+    "name": "right maximum",
+    "value": { "fontSize": 512, "fontWeight": "normal", "align": "right" },
+    "valid": true
+  },
+  { "name": "missing", "missing": true, "valid": false },
+  {
+    "name": "zero",
+    "value": { "fontSize": 0, "fontWeight": "normal", "align": "left" },
+    "valid": false
+  },
+  {
+    "name": "negative",
+    "value": { "fontSize": -1, "fontWeight": "normal", "align": "left" },
+    "valid": false
+  },
+  {
+    "name": "too large",
+    "value": { "fontSize": 512.1, "fontWeight": "normal", "align": "left" },
+    "valid": false
+  },
+  {
+    "name": "string size",
+    "value": { "fontSize": "24", "fontWeight": "normal", "align": "left" },
+    "valid": false
+  },
+  {
+    "name": "unknown weight",
+    "value": { "fontSize": 24, "fontWeight": "heavy", "align": "left" },
+    "valid": false
+  },
+  {
+    "name": "unknown align",
+    "value": { "fontSize": 24, "fontWeight": "normal", "align": "justify" },
+    "valid": false
+  },
+  {
+    "name": "missing size",
+    "value": { "fontWeight": "normal", "align": "left" },
+    "valid": false
+  },
+  {
+    "name": "unknown property",
+    "value": {
+      "fontSize": 24,
+      "fontWeight": "normal",
+      "align": "left",
+      "fontFamily": "system"
+    },
+    "valid": false
+  }
+]

@@ -1,10 +1,10 @@
 {
   "manifest": {
     "product": "banto-scada",
-    "schemaVersion": "0.11.0",
+    "schemaVersion": "0.12.0",
     "projectId": "0199f200-0000-7000-8000-000000000001",
     "projectRevision": 1,
-    "minRuntimeVersion": "0.11.0",
+    "minRuntimeVersion": "0.12.0",
     "name": "循環設備・明るい工程図サンプル"
   },
   "screens": [
@@ -24,7 +24,12 @@
           "height": 35,
           "shape": {
             "type": "text",
-            "text": "循環設備 / 工程図サンプル"
+            "text": "循環設備 / 工程図サンプル",
+            "style": {
+              "fontSize": 24.5,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "rotation": 0
         },
@@ -38,7 +43,12 @@
           "height": 22,
           "shape": {
             "type": "text",
-            "text": "静的な配置例です。計測値・運転状態・設備操作には接続していません。"
+            "text": "静的な配置例です。計測値・運転状態・設備操作には接続していません。",
+            "style": {
+              "fontSize": 15.399999999999999,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "rotation": 0
         },
@@ -103,7 +113,12 @@
           "height": 30,
           "shape": {
             "type": "text",
-            "text": "TANK / TK-01"
+            "text": "TANK / TK-01",
+            "style": {
+              "fontSize": 21.0,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "rotation": 0
         },
@@ -117,7 +132,12 @@
           "height": 25,
           "shape": {
             "type": "text",
-            "text": "液位：サンプル"
+            "text": "液位：サンプル",
+            "style": {
+              "fontSize": 17.5,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "rotation": 0
         },
@@ -238,7 +258,12 @@
           "height": 24,
           "shape": {
             "type": "text",
-            "text": "P-01 / ポンプ"
+            "text": "P-01 / ポンプ",
+            "style": {
+              "fontSize": 16.799999999999997,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "rotation": 0
         },
@@ -252,7 +277,12 @@
           "height": 24,
           "shape": {
             "type": "text",
-            "text": "V-01 / バルブ"
+            "text": "V-01 / バルブ",
+            "style": {
+              "fontSize": 16.799999999999997,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "rotation": 0
         },
@@ -266,7 +296,12 @@
           "height": 24,
           "shape": {
             "type": "text",
-            "text": "循環ライン"
+            "text": "循環ライン",
+            "style": {
+              "fontSize": 16.799999999999997,
+              "fontWeight": "normal",
+              "align": "left"
+            }
           },
           "rotation": 0
         }

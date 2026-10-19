@@ -1,0 +1,42 @@
+[
+  {
+    "text": "",
+    "valid": true
+  },
+  {
+    "text": "設備 A 👨‍👩‍👧‍👦",
+    "valid": true
+  },
+  {
+    "text": "a\nb",
+    "valid": false
+  },
+  {
+    "text": "a\rb",
+    "valid": false
+  },
+  {
+    "text": "a b",
+    "valid": false
+  },
+  {
+    "text": "a b",
+    "valid": false
+  },
+  {
+    "text": "a\n",
+    "valid": false
+  },
+  {
+    "text": "a\r",
+    "valid": false
+  },
+  {
+    "text": "a ",
+    "valid": false
+  },
+  {
+    "text": "a ",
+    "valid": false
+  }
+]

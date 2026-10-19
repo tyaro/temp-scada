@@ -1864,6 +1864,18 @@
     }
     if (selected.shape.type === "text") {
       patch.text = String(data.get("text"));
+      const fontWeight = String(data.get("fontWeight")),
+        align = String(data.get("textAlign"));
+      if (
+        !["normal", "bold"].includes(fontWeight) ||
+        !["left", "center", "right"].includes(align)
+      )
+        throw new Error("文字書式を選択してください。");
+      patch.textStyle = {
+        fontSize: parseNumericProperty(String(data.get("fontSize") ?? "")),
+        fontWeight: fontWeight as "normal" | "bold",
+        align: align as "left" | "center" | "right",
+      };
       if (!activeDefinition) {
         const externalName = String(data.get("externalName") ?? "");
         patch.binding = externalName === "" ? null : { externalName };
@@ -3886,7 +3898,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.11.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.12.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

@@ -8,12 +8,15 @@ import {
   type Project,
   type TagBinding,
   type ShapePaint,
+  type TextStyle,
 } from "./project";
 import builtins from "./symbol-library.json";
 import type { Point, SymbolDefinition, ScreenObject, Screen } from "./project";
 export type AddKind = "rectangle" | "ellipse" | "text" | "line" | "pipe";
 export interface ObjectPatch {
   rotation?: number;
+  fontSize?: number;
+  textStyle?: TextStyle;
   paint?: ShapePaint;
   name?: string | null;
   x?: number;
@@ -850,7 +853,11 @@ export function applyCommand(
         height: command.kind === "text" ? 40 : 100,
         shape:
           command.kind === "text"
-            ? { type: "text", text: "テキスト" }
+            ? {
+                type: "text",
+                text: "テキスト",
+                style: { fontSize: 22.4, fontWeight: "normal", align: "left" },
+              }
             : {
                 type: command.kind,
                 paint: { fillEnabled: true, stroke: null },
@@ -945,6 +952,8 @@ export function applyCommand(
         colorMode,
         paint,
         rotation,
+        fontSize,
+        textStyle,
         points,
         strokeWidth,
         arrow,
@@ -988,9 +997,18 @@ export function applyCommand(
         if (binding === null) delete object.shape.binding;
         else object.shape.binding = binding;
       }
+      if (textStyle !== undefined || fontSize !== undefined) {
+        if (object.shape.type !== "text")
+          throw new Error("文字書式はTextにだけ設定できます");
+        if (textStyle !== undefined)
+          object.shape.style = structuredClone(textStyle);
+        if (fontSize !== undefined) object.shape.style.fontSize = fontSize;
+      }
       if (text !== undefined) {
         if (object.shape.type !== "text")
           throw new Error("Text 以外に文字列は設定できません");
+        if (/[\r\n\u2028\u2029]/u.test(text))
+          throw new Error("1行の文字列を入力してください。");
         object.shape.text = text;
       }
       if (

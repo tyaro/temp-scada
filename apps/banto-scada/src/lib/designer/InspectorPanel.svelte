@@ -110,6 +110,22 @@
   const commonColor = $derived(
     selectedColors.size === 1 ? [...selectedColors][0] : null,
   );
+  let textError = $state("");
+  $effect(() => {
+    selected?.id;
+    textError = "";
+  });
+  function pasteText(event: ClipboardEvent) {
+    if (
+      /[\r\n\u2028\u2029]/u.test(
+        event.clipboardData?.getData("text/plain") ?? "",
+      )
+    ) {
+      event.preventDefault();
+      textError =
+        "1行の文字列を入力してください。改行を含む貼り付けはできません。";
+    }
+  }
   let tagInput = $state<HTMLInputElement>();
   let pickerOpen = $state(false);
   export function isTagPickerOpen() {
@@ -570,12 +586,57 @@
                   ></label
                 >
               {/if}
-              {#if selected.shape.type === "text"}<label class="full-width"
+              {#if selected.shape.type === "text"}
+                <label
+                  >文字サイズ<input
+                    name="fontSize"
+                    aria-label="文字サイズ"
+                    type="text"
+                    inputmode="decimal"
+                    required
+                    aria-invalid={numericErrors.fontSize ? "true" : undefined}
+                    aria-describedby={numericErrors.fontSize
+                      ? "numeric-fontSize-error"
+                      : undefined}
+                    onfocus={focusNumber}
+                    oninput={clearNumber}
+                    onkeydown={numberKey}
+                    onblur={blurNumber}
+                    oncompositionstart={compositionStart}
+                    oncompositionend={compositionEnd}
+                  />{#if numericErrors.fontSize}<span
+                      class="field-error"
+                      id="numeric-fontSize-error"
+                      role="alert">{numericErrors.fontSize}</span
+                    >{/if}</label
+                >
+                <label
+                  >文字の太さ<select name="fontWeight" aria-label="文字の太さ"
+                    ><option value="normal">標準</option><option value="bold"
+                      >太字</option
+                    ></select
+                  ></label
+                >
+                <label
+                  >文字揃え<select name="textAlign" aria-label="文字揃え"
+                    ><option value="left">左</option><option value="center"
+                      >中央</option
+                    ><option value="right">右</option></select
+                  ></label
+                >
+                <p class="full-width numeric-hint">
+                  1行・上下中央。文字サイズは枠のサイズ変更に追従しません。太さ・揃え・テキストは「変更を適用」で確定します。
+                </p>
+                <label class="full-width"
                   >テキスト<input
                     name="text"
                     aria-label="テキスト"
+                    onpaste={pasteText}
+                    oninput={() => (textError = "")}
                     maxlength="1000"
-                  /></label
+                  />{#if textError}<span class="field-error" role="alert"
+                      >{textError}</span
+                    >{/if}</label
                 >
                 {#if !activeDefinition}
                   <div class="full-width tag-binding">

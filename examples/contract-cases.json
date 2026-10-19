@@ -92,6 +92,11 @@
       "text": "静的テキスト",
       "binding": {
         "externalName": "PLC01.Fast.Motor01.Current"
+      },
+      "style": {
+        "fontSize": 28,
+        "fontWeight": "normal",
+        "align": "left"
       }
     },
     "valid": true
@@ -104,6 +109,11 @@
       "text": "静的テキスト",
       "binding": {
         "externalName": "PLC01.計測.槽1.温度"
+      },
+      "style": {
+        "fontSize": 28,
+        "fontWeight": "normal",
+        "align": "left"
       }
     },
     "valid": true
@@ -116,6 +126,11 @@
       "text": "静的テキスト",
       "binding": {
         "externalName": ""
+      },
+      "style": {
+        "fontSize": 28,
+        "fontWeight": "normal",
+        "align": "left"
       }
     },
     "valid": false
@@ -128,6 +143,11 @@
       "text": "静的テキスト",
       "binding": {
         "externalName": "   "
+      },
+      "style": {
+        "fontSize": 28,
+        "fontWeight": "normal",
+        "align": "left"
       }
     },
     "valid": false
@@ -140,6 +160,11 @@
       "text": "静的テキスト",
       "binding": {
         "tagId": 12
+      },
+      "style": {
+        "fontSize": 28,
+        "fontWeight": "normal",
+        "align": "left"
       }
     },
     "valid": false
@@ -153,6 +178,11 @@
       "binding": {
         "externalName": "PLC01.Fast.Value",
         "write": true
+      },
+      "style": {
+        "fontSize": 28,
+        "fontWeight": "normal",
+        "align": "left"
       }
     },
     "valid": false
@@ -163,7 +193,12 @@
     "value": {
       "type": "text",
       "text": "静的テキスト",
-      "binding": null
+      "binding": null,
+      "style": {
+        "fontSize": 28,
+        "fontWeight": "normal",
+        "align": "left"
+      }
     },
     "valid": false
   },
@@ -175,6 +210,11 @@
       "text": "静的テキスト",
       "binding": {
         "externalName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "style": {
+        "fontSize": 28,
+        "fontWeight": "normal",
+        "align": "left"
       }
     },
     "valid": false

@@ -86,6 +86,7 @@
     observer.observe(svg);
     return () => observer.disconnect();
   });
+  let textDescriptions = $state<Record<string, string>>({});
   let interactionOwner = $state.raw<Screen | SymbolDefinition | null>(null);
   let drag = $state<{
     ids: string[];
@@ -586,6 +587,9 @@
         ? "true"
         : undefined}
     >
+      {#if visual.shape.type === "text" && textDescriptions[object.id]}<title
+          >{textDescriptions[object.id]}</title
+        >{/if}
       <g
         transform={rotationTransform(visual)}
         data-object-rotation={visual.rotation}
@@ -616,7 +620,13 @@
               >
             {/each}
           </svg>
-        {:else}<Primitive object={visual} {readings} />{/if}
+        {:else}<Primitive
+            object={visual}
+            {readings}
+            onsummary={(value) => {
+              textDescriptions[object.id] = value;
+            }}
+          />{/if}
       </g>
       {#if editable}
         {@const bounds = getBounds(visual)}

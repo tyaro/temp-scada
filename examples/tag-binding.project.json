@@ -1,10 +1,10 @@
 {
   "manifest": {
     "product": "banto-scada",
-    "schemaVersion": "0.11.0",
+    "schemaVersion": "0.12.0",
     "projectId": "0199f000-0000-7000-8000-000000000001",
     "projectRevision": 1,
-    "minRuntimeVersion": "0.11.0",
+    "minRuntimeVersion": "0.12.0",
     "name": "読み取りタグ表示の設定例"
   },
   "screens": [
@@ -61,6 +61,11 @@
             "text": "タグ割り当て解除後の静的テキスト",
             "binding": {
               "externalName": "PLC01.Fast.Tank01.Level"
+            },
+            "style": {
+              "fontSize": 28.0,
+              "fontWeight": "normal",
+              "align": "left"
             }
           },
           "rotation": 0
