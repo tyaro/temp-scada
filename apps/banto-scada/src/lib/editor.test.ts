@@ -1,9 +1,56 @@
 import { expect, it } from "vitest";
 import sample from "../../../../examples/minimal.project.json";
-import { parseProject } from "./project";
+import { parseProject, type Project } from "./project";
 import { applyCommand, type EditCommand } from "./editor";
 import { emptyHistory, recordEdit } from "./history";
 const fresh = () => parseProject(JSON.stringify(sample));
+const invalidInputs: [string, (project: Project) => void][] = [
+  [
+    "unknown property",
+    (project) => {
+      Object.assign(project.screens[0].objects[0], { unexpected: true });
+    },
+  ],
+  [
+    "non-finite coordinate",
+    (project) => {
+      project.screens[0].objects[0].x = NaN;
+    },
+  ],
+  [
+    "duplicate ID",
+    (project) => {
+      project.screens[0].objects[1].id = project.screens[0].objects[0].id;
+    },
+  ],
+  [
+    "missing Symbol reference",
+    (project) => {
+      project.screens[0].objects[0].shape = {
+        type: "symbol",
+        symbolId: "0199f100-0000-7000-8000-000000000001",
+        colorMode: "definition",
+      };
+    },
+  ],
+];
+it.each(invalidInputs)(
+  "validates copied input before a handler can remove an invalid object: %s",
+  (_name, corrupt) => {
+    const original = fresh();
+    corrupt(original);
+    const before = structuredClone(original);
+    const history = emptyHistory();
+    const command = {
+      type: "remove" as const,
+      screenId: original.screens[0].id,
+      objectId: original.screens[0].objects[0].id,
+    };
+    expect(() => recordEdit(original, history, command, "edit")).toThrow();
+    expect(original).toEqual(before);
+    expect(history).toEqual(emptyHistory());
+  },
+);
 it("adds UUID v7 objects, changes geometry and removes without changing the input", () => {
   const original = fresh();
   const screenId = original.screens[0].id;

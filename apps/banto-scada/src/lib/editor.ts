@@ -35,7 +35,9 @@ export function applyCommand(
   mode: "edit" | "preview",
 ): Project {
   if (mode !== "edit") throw new Error("表示プレビューでは編集できません");
-  const next = parseProject(serializeProject(project));
+  // Parsing validates the copied input before any handler can change it. There is
+  // no need to pretty-print and validate the same input once more for this copy.
+  const next = parseProject(JSON.stringify(project));
   if (isProjectCommand(command)) {
     applyProjectCommand(next, command);
     return finish(project, next);

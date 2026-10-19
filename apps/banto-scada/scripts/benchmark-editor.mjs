@@ -112,6 +112,9 @@ try {
       cloneWithValidation: measure(() =>
         parseProject(serializeProject(project)),
       ),
+      candidateCloneWithValidation: measure(() =>
+        parseProject(JSON.stringify(project)),
+      ),
       compareCanonicalPair: measure(
         () => projectContent(copy) === projectContent(project),
       ),

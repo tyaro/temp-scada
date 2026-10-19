@@ -1,0 +1,226 @@
+{
+  "node": "v24.19.0",
+  "platform": "linux/x64",
+  "fixture": "Up to 1000 objects per screen, equal rectangle/ellipse/text mix, no assets or symbols",
+  "results": [
+    {
+      "objects": 100,
+      "screens": 1,
+      "jsonBytes": 54425,
+      "timing": {
+        "edit": {
+          "samples": 9,
+          "medianMs": 6.177,
+          "maxMs": 7.922
+        },
+        "editWithHistory": {
+          "samples": 9,
+          "medianMs": 6.21,
+          "maxMs": 7.509
+        },
+        "undo": {
+          "samples": 9,
+          "medianMs": 4.913,
+          "maxMs": 6.422
+        },
+        "saveJson": {
+          "samples": 9,
+          "medianMs": 1.336,
+          "maxMs": 1.893
+        },
+        "parseAndValidate": {
+          "samples": 9,
+          "medianMs": 1.033,
+          "maxMs": 3.898
+        },
+        "serializeAndValidate": {
+          "samples": 9,
+          "medianMs": 1.211,
+          "maxMs": 4.945
+        },
+        "cloneWithValidation": {
+          "samples": 9,
+          "medianMs": 2.489,
+          "maxMs": 4.377
+        },
+        "candidateCloneWithValidation": {
+          "samples": 9,
+          "medianMs": 1.384,
+          "maxMs": 2.038
+        },
+        "compareCanonicalPair": {
+          "samples": 9,
+          "medianMs": 3.309,
+          "maxMs": 4.262
+        },
+        "collectAssetReferences": {
+          "samples": 9,
+          "medianMs": 0.017,
+          "maxMs": 0.066
+        },
+        "historySnapshot": {
+          "samples": 9,
+          "medianMs": 1.203,
+          "maxMs": 1.411
+        }
+      },
+      "consecutiveMoveCommits": {
+        "count": 50,
+        "medianMs": 4.876,
+        "maxMs": 14.973
+      },
+      "retainedHistory": {
+        "snapshots": 50,
+        "serializedUtf8Bytes": 2721291,
+        "heapDeltaBytes": 5543224,
+        "rssDeltaBytes": 7000064
+      }
+    },
+    {
+      "objects": 1000,
+      "screens": 1,
+      "jsonBytes": 540425,
+      "timing": {
+        "edit": {
+          "samples": 9,
+          "medianMs": 39.626,
+          "maxMs": 42.571
+        },
+        "editWithHistory": {
+          "samples": 9,
+          "medianMs": 53.813,
+          "maxMs": 58.252
+        },
+        "undo": {
+          "samples": 9,
+          "medianMs": 32.573,
+          "maxMs": 40.561
+        },
+        "saveJson": {
+          "samples": 9,
+          "medianMs": 10.685,
+          "maxMs": 13.288
+        },
+        "parseAndValidate": {
+          "samples": 9,
+          "medianMs": 7.219,
+          "maxMs": 12.262
+        },
+        "serializeAndValidate": {
+          "samples": 9,
+          "medianMs": 10.1,
+          "maxMs": 12.803
+        },
+        "cloneWithValidation": {
+          "samples": 9,
+          "medianMs": 18.064,
+          "maxMs": 19.399
+        },
+        "candidateCloneWithValidation": {
+          "samples": 9,
+          "medianMs": 7.418,
+          "maxMs": 7.88
+        },
+        "compareCanonicalPair": {
+          "samples": 9,
+          "medianMs": 14.812,
+          "maxMs": 17.093
+        },
+        "collectAssetReferences": {
+          "samples": 9,
+          "medianMs": 0.149,
+          "maxMs": 0.196
+        },
+        "historySnapshot": {
+          "samples": 9,
+          "medianMs": 11.768,
+          "maxMs": 12.86
+        }
+      },
+      "consecutiveMoveCommits": {
+        "count": 50,
+        "medianMs": 50.773,
+        "maxMs": 89.983
+      },
+      "retainedHistory": {
+        "snapshots": 50,
+        "serializedUtf8Bytes": 27021291,
+        "heapDeltaBytes": 48910232,
+        "rssDeltaBytes": 86175744
+      }
+    },
+    {
+      "objects": 5000,
+      "screens": 5,
+      "jsonBytes": 2700863,
+      "timing": {
+        "edit": {
+          "samples": 9,
+          "medianMs": 197.084,
+          "maxMs": 305.905
+        },
+        "editWithHistory": {
+          "samples": 9,
+          "medianMs": 249.991,
+          "maxMs": 356
+        },
+        "undo": {
+          "samples": 9,
+          "medianMs": 173.843,
+          "maxMs": 278.004
+        },
+        "saveJson": {
+          "samples": 9,
+          "medianMs": 51.874,
+          "maxMs": 105.649
+        },
+        "parseAndValidate": {
+          "samples": 9,
+          "medianMs": 31.283,
+          "maxMs": 34.727
+        },
+        "serializeAndValidate": {
+          "samples": 9,
+          "medianMs": 50.83,
+          "maxMs": 57.832
+        },
+        "cloneWithValidation": {
+          "samples": 9,
+          "medianMs": 95.754,
+          "maxMs": 153.643
+        },
+        "candidateCloneWithValidation": {
+          "samples": 9,
+          "medianMs": 43.435,
+          "maxMs": 58.864
+        },
+        "compareCanonicalPair": {
+          "samples": 9,
+          "medianMs": 60.692,
+          "maxMs": 80.924
+        },
+        "collectAssetReferences": {
+          "samples": 9,
+          "medianMs": 0.212,
+          "maxMs": 0.808
+        },
+        "historySnapshot": {
+          "samples": 9,
+          "medianMs": 55.073,
+          "maxMs": 68.215
+        }
+      },
+      "consecutiveMoveCommits": {
+        "count": 50,
+        "medianMs": 262.125,
+        "maxMs": 407.56
+      },
+      "retainedHistory": {
+        "snapshots": 50,
+        "serializedUtf8Bytes": 135043191,
+        "heapDeltaBytes": 215782984,
+        "rssDeltaBytes": 259768320
+      }
+    }
+  ]
+}
