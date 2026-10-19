@@ -146,6 +146,8 @@ OS／ブラウザの独立した別窓は今回の対象外。将来追加する
 
 各段階でRust／TypeScriptの保存契約、Undo／Redo・複製・clipboard・取込、Editor／表示プレビュー／ミニマップ／共有定義、両テーマ・回転・透明背景を検証する。非同期取消とProject差替え、参照欠損、元の値と見た目の違いを受入条件へ含める。自由メッシュグラデーション・他製品converter・OS別窓は今回の対象外とし、将来別に要望された場合の調査項目として残す。
 
+[埋込Viewの具体設計](embedded-screen-design.md)で、同一Project・1段・非対話描画・全体参照検証と、clipboardを分ける初期範囲を整理した。計算基礎のみ追加し、アプリへの接続は未実装。
+
 ## 7. Banto／industrialとの境界
 
 Bantoのテーマ・Menu・Modal／Drawer・入力保護を継続利用する。SCADAのpaint・資産・Equipment・View StackはSCADA側の責務とする。正式Runtime・本番kioskのcapabilityはHostとの契約で扱い、Editor UIを隠すだけで運用モードを作らない。

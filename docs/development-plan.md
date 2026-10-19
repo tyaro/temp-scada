@@ -33,6 +33,14 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+<a id="screen-reference-foundation-progress"></a>
+
+## 埋込Viewの参照計算基礎（2026-10-20・日本時間）
+
+[Astraレビューを反映した具体設計](embedded-screen-design.md)に従い、同一Project・1段・読取専用の最小範囲を整理した。使用先の索引、自己／欠損／重複参照、全体の入れ子・循環、View数と展開後配置数の計算基礎を追加した。画像・Symbol・読取値を共有し、使用中画面の削除を保護する設計とした。
+
+現行clipboardは1画面断片の契約なので、初期のView copy／cutは混在全体を明示拒否し、同一編集中Project・別Projectへの持ち運びを別段階とする。Project全体の保存は対応する予定。単体5件と型チェック（エラー・警告なし）が成功。共有参照の使用先索引、全体の追加順に依存しない深さ拒否、32件と20,000展開配置の境界、空画面・入力不変を確認した。現在は0.19.0のままで、保存・UI・表示への接続は未実装。
+
 <a id="pattern-paint-progress"></a>
 
 ## 繰返しパターンの編集・保存（2026-10-20・日本時間）
