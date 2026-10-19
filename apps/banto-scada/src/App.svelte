@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { createDesignerActions } from "./lib/designer/controllers/designer-actions";
   import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
   import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
   import { imageCropCommand } from "./lib/designer/forms/image-crop";
@@ -56,9 +57,7 @@
     resetDesignerLayoutPreferences,
     toastStore,
   } from "./lib/banto/setup";
-  import DesignerMenubar, {
-    type DesignerMenu,
-  } from "./lib/designer/DesignerMenubar.svelte";
+  import DesignerMenubar from "./lib/designer/DesignerMenubar.svelte";
   import { settleMenuFocus } from "./lib/designer/settle-menu-focus";
   let theme = $state(getThemeMode());
   let showRulers = $state(getRulersVisible());
@@ -142,9 +141,7 @@
       activePanel = "project";
     } else setInspectorVisibility(true);
   }
-  import EditToolbar, {
-    type ToolbarGroup,
-  } from "./lib/designer/EditToolbar.svelte";
+  import EditToolbar from "./lib/designer/EditToolbar.svelte";
   import {
     DEFAULT_REFERENCE_HEIGHT,
     MIN_REFERENCE_HEIGHT,
@@ -2123,564 +2120,179 @@
     ),
   );
   const mutationBlocked = $derived(editBlocked || selectionLocked);
-  const folderContextItems: ContextAction[] = $derived([
-    {
-      label: "子フォルダーを作成",
-      disabled: editBlocked || screen.folders.length >= 256,
-      run: () =>
-        layerTreeBindings.openFolderRequest(
-          "create",
-          contextFolderId,
-          layerTreeBindings.folderOrigin ?? undefined,
-        ),
-    },
-    {
-      label: "フォルダー名を変更",
-      disabled: editBlocked,
-      run: () =>
-        layerTreeBindings.openFolderRequest(
-          "rename",
-          contextFolderId,
-          layerTreeBindings.folderOrigin ?? undefined,
-        ),
-    },
-    {
-      label: "親フォルダーを変更",
-      disabled: editBlocked,
-      run: () =>
-        layerTreeBindings.openFolderRequest(
-          "move",
-          contextFolderId,
-          layerTreeBindings.folderOrigin ?? undefined,
-        ),
-    },
-    {
-      label: "空のフォルダーを削除",
-      disabled: editBlocked,
-      run: () =>
-        layerTreeBindings.openFolderRequest(
-          "remove",
-          contextFolderId,
-          layerTreeBindings.folderOrigin ?? undefined,
-        ),
-    },
-  ]);
-  const editToolbarGroups: ToolbarGroup[] = $derived([
-    {
-      id: "history",
-      label: "編集履歴",
-      items: [
-        {
-          label: "元に戻す",
-          icon: "M8 5L3 10L8 15M3 10H14A6 6 0 0 1 14 22",
-          disabled: editBlocked || !history.past.length,
-          run: () => travel("undo"),
-        },
-        {
-          label: "やり直す",
-          icon: "M16 5L21 10L16 15M21 10H10A6 6 0 0 0 10 22",
-          disabled: editBlocked || !history.future.length,
-          run: () => travel("redo"),
-        },
-      ],
-    },
-    {
-      id: "selection",
-      label: "選択と編集",
-      items: [
-        {
-          label: "すべて選択",
-          icon: "M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M7 7H17V17H7Z",
-          disabled:
-            editBlocked ||
-            !screen.objects.some(
-              (object) => !object.locked && object.visible !== false,
-            ),
-          run: () =>
-            transition(
-              () =>
-                (selectedIds = screen.objects
-                  .filter((o) => !o.locked && o.visible !== false)
-                  .map((o) => o.id)),
-            ),
-        },
-        {
-          label: "選択解除",
-          icon: "M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M8 8L16 16M16 8L8 16",
-          disabled: mutationBlocked || !selectedIds.length,
-          run: () => transition(() => (selectedIds = [])),
-        },
-        {
-          label: "選択図形を複製",
-          icon: "M9 9H21V21H9ZM15 5V3H3V15H5",
-          disabled: mutationBlocked || !selectedIds.length,
-          run: duplicateSelection,
-        },
-        {
-          label: "選択図形を削除",
-          icon: "M3 6H21M9 6V3H15V6M6 6L7 21H17L18 6M10 10V17M14 10V17",
-          disabled: mutationBlocked || !selectedIds.length,
-          run: removeSelection,
-        },
-      ],
-    },
-    {
-      id: "rotation",
-      label: "回転（単一選択）",
-      items: [
-        {
-          label: "左へ90°回転",
-          icon: "M3 10A9 9 0 1 1 5 18M3 3V10H10",
-          disabled: mutationBlocked || selectedIds.length !== 1,
-          run: () => rotateSelection(-90),
-        },
-        {
-          label: "右へ90°回転",
-          icon: "M21 10A9 9 0 1 0 19 18M21 3V10H14",
-          disabled: mutationBlocked || selectedIds.length !== 1,
-          run: () => rotateSelection(90),
-        },
-      ],
-    },
-    {
-      id: "order",
-      label: "重なり順（単一選択）",
-      items: [
-        {
-          direction: "back" as const,
-          label: "最背面へ",
-          icon: "M3 3H21M7 8H17V18H7ZM12 11V22M9 19L12 22L15 19",
-        },
-        {
-          direction: "backward" as const,
-          label: "1つ背面へ",
-          icon: "M3 4H14V15H3ZM10 10H21V21H10M16 12V19M13 16L16 19L19 16",
-        },
-        {
-          direction: "forward" as const,
-          label: "1つ前面へ",
-          icon: "M3 4H14V15H3M10 10H21V21H10ZM16 19V12M13 15L16 12L19 15",
-        },
-        {
-          direction: "front" as const,
-          label: "最前面へ",
-          icon: "M3 21H21M7 6H17V16H7ZM12 13V2M9 5L12 2L15 5",
-        },
-      ].map((item) => ({
-        ...item,
-        disabled: mutationBlocked || selectedIds.length !== 1,
-        run: () => {
-          if (selectedIds.length === 1)
-            edit({
-              type: "reorder",
-              screenId: screen.id,
-              objectId: selectedIds[0],
-              direction: item.direction,
-            });
-        },
-      })),
-    },
-    {
-      id: "align",
-      label: "整列（複数選択）",
-      items: [
-        ...[
-          {
-            alignment: "left" as const,
-            label: "左揃え",
-            icon: "M3 3V21M7 5H20V10H7ZM7 14H15V19H7Z",
-          },
-          {
-            alignment: "center-x" as const,
-            label: "左右中央揃え",
-            icon: "M12 2V22M4 5H20V10H4ZM7 14H17V19H7Z",
-          },
-          {
-            alignment: "right" as const,
-            label: "右揃え",
-            icon: "M21 3V21M4 5H17V10H4ZM9 14H17V19H9Z",
-          },
-          {
-            alignment: "top" as const,
-            label: "上揃え",
-            icon: "M3 3H21M5 7H10V20H5ZM14 7H19V15H14Z",
-          },
-          {
-            alignment: "center-y" as const,
-            label: "上下中央揃え",
-            icon: "M2 12H22M5 4H10V20H5ZM14 7H19V17H14Z",
-          },
-          {
-            alignment: "bottom" as const,
-            label: "下揃え",
-            icon: "M3 21H21M5 4H10V17H5ZM14 9H19V17H14Z",
-          },
-        ].map((item) => ({
-          ...item,
-          disabled: mutationBlocked || selectedIds.length < 2,
-          run: () =>
-            edit({
-              type: "align",
-              screenId: screen.id,
-              objectIds: [...selectedIds],
-              alignment: item.alignment,
-            }),
-        })),
-        ...[
-          {
-            axis: "x" as const,
-            label: "中心を水平方向に等間隔",
-            icon: "M3 3V21M21 3V21M4 9H6V15H4ZM11 6H13V18H11ZM18 9H20V15H18Z",
-          },
-          {
-            axis: "y" as const,
-            label: "中心を垂直方向に等間隔",
-            icon: "M3 3H21M3 21H21M9 4H15V6H9ZM6 11H18V13H6ZM9 18H15V20H9Z",
-          },
-        ].map((item) => ({
-          ...item,
-          disabled: mutationBlocked || selectedIds.length < 3,
-          run: () =>
-            edit({
-              type: "distribute",
-              screenId: screen.id,
-              objectIds: [...selectedIds],
-              axis: item.axis,
-            }),
-        })),
-      ],
-    },
-  ]);
-  function editGroupItems(id: string) {
-    return editToolbarGroups.find((group) => group.id === id)!.items;
-  }
-  const selectionContextItems: ContextAction[] = $derived.by(() => {
-    const properties: ContextAction = {
-      label: "プロパティを表示",
-      run: () => setInspectorVisibility(true, true),
-    };
-    if (contextKind === "blank")
-      return [
-        ...(contextPoint
-          ? (
-              [
-                { kind: "rectangle", label: "Rectangle を挿入" },
-                { kind: "ellipse", label: "Ellipse を挿入" },
-                { kind: "text", label: "Text を挿入" },
-                { kind: "line", label: "線を挿入" },
-                { kind: "pipe", label: "配管を挿入" },
-              ] as const
-            ).map((part) => ({
-              label: part.label,
-              disabled: editBlocked,
-              run: () =>
-                edit({
-                  type: "add",
-                  screenId: screen.id,
-                  kind: part.kind,
-                  center: contextPoint!,
-                }),
-            }))
-          : []),
-        clipboardItems[2],
-        editGroupItems("selection")[0],
-        properties,
-        { label: "全体表示", run: () => canvasWorkspace?.zoom(null) },
-        {
-          label: "補助パネルをすべて隠す",
-          run: () => {
-            if (showSidebar || showInspector || showReferences)
-              toggleAuxPanels();
-          },
-        },
-      ];
-    return [
-      properties,
-      {
-        label: "配置の所属を変更",
-        disabled: mutationBlocked || !selectedIds.length,
-        run: () =>
-          layerTreeBindings.openFolderRequest(
-            "assign",
-            undefined,
-            selectionOrigin ?? undefined,
-          ),
+  const designerActions = createDesignerActions({
+    editing: {
+      get editBlocked() {
+        return editBlocked;
       },
-      ...(selected
-        ? [
-            {
-              label: "配置名を変更",
-              disabled: mutationBlocked,
-              run: () => selected && renamePlacement(selected.id),
-            },
-          ]
-        : []),
-      ...(selected
-        ? [
-            {
-              label:
-                selected.visible === false
-                  ? "配置を再表示"
-                  : "配置を非表示（表示プレビューにも反映）",
-              disabled: editBlocked,
-              run: () => selected && toggleObjectVisibility(selected.id),
-            },
-          ]
-        : []),
-      ...(selected
-        ? [
-            {
-              label: selected.locked ? "ロックを解除" : "配置をロック",
-              disabled: editBlocked,
-              run: () => selected && toggleObjectLock(selected.id),
-            },
-          ]
-        : []),
-      ...clipboardItems,
-      ...editGroupItems("selection").slice(2),
-      ...(selectedIds.length > 1
-        ? editGroupItems("align")
-        : [...editGroupItems("rotation"), ...editGroupItems("order")]),
-      ...(selected?.shape.type === "symbol"
-        ? [
-            {
-              label: "参照する Symbol 定義を編集",
-              run: () => {
-                if (selected?.shape.type === "symbol")
-                  openDefinition(selected.shape.symbolId);
-              },
-            },
-            {
-              label: "定義を複製してこの配置に適用",
-              disabled: mutationBlocked || project.symbols.length >= 100,
-              run: () => {
-                if (selected)
-                  edit({
-                    type: "make-symbol-unique",
-                    screenId: screen.id,
-                    objectId: selected.id,
-                  });
-              },
-            },
-          ]
-        : []),
-    ];
+      get mutationBlocked() {
+        return mutationBlocked;
+      },
+      get undoCount() {
+        return history.past.length;
+      },
+      get redoCount() {
+        return history.future.length;
+      },
+      get objects() {
+        return screen.objects;
+      },
+      get screenId() {
+        return screen.id;
+      },
+      get selectedIds() {
+        return selectedIds;
+      },
+      set selectedIds(value) {
+        selectedIds = value;
+      },
+      travel,
+      transition,
+      edit,
+      duplicateSelection,
+      removeSelection,
+      rotateSelection,
+    },
+    selection: {
+      get selected() {
+        return selected;
+      },
+      get contextKind() {
+        return contextKind;
+      },
+      get contextPoint() {
+        return contextPoint;
+      },
+      get origin() {
+        return selectionOrigin;
+      },
+      get definition() {
+        return !!activeDefinition;
+      },
+      get symbolCount() {
+        return project.symbols.length;
+      },
+      renamePlacement,
+      toggleObjectVisibility,
+      toggleObjectLock,
+      openDefinition,
+    },
+    folders: {
+      get count() {
+        return screen.folders.length;
+      },
+      get contextId() {
+        return contextFolderId;
+      },
+      get origin() {
+        return layerTreeBindings.folderOrigin;
+      },
+      open: layerTreeBindings.openFolderRequest,
+    },
+    clipboard: {
+      get busy() {
+        return clipboard.busy;
+      },
+      action: clipboard.action,
+    },
+    files: {
+      get imageBusy() {
+        return imageImport.busy;
+      },
+      newProject: projectFiles.newProject,
+      openProjectFile: projectFiles.openProjectFile,
+      save: projectFiles.save,
+      openPlacement: imageImport.openPlacement,
+      focusProjectName,
+      openProcessSample: showProcessSample,
+      openSymbolSample: () =>
+        projectFiles.requestReplacement(
+          parseProject(JSON.stringify(symbolColorSample)),
+          "sample",
+        ),
+      openPaintSample: () =>
+        projectFiles.requestReplacement(
+          parseProject(JSON.stringify(shapePaintSample)),
+          "sample",
+        ),
+      openScreenViewDialog,
+      add,
+    },
+    view: {
+      get mode() {
+        return mode;
+      },
+      get menuBlocked() {
+        return menuBlocked;
+      },
+      get selectionViewReason() {
+        return selectionViewReason;
+      },
+      get showRulers() {
+        return showRulers;
+      },
+      get showSidebar() {
+        return showSidebar;
+      },
+      get showReferences() {
+        return showReferences;
+      },
+      get showInspector() {
+        return showInspector;
+      },
+      get showMinimap() {
+        return showMinimap;
+      },
+      get showMenubar() {
+        return showMenubar;
+      },
+      get previousPanels() {
+        return !!previousPanels;
+      },
+      get showGrid() {
+        return showGrid;
+      },
+      set showGrid(value) {
+        showGrid = value;
+      },
+      get snapEnabled() {
+        return snapEnabled;
+      },
+      set snapEnabled(value) {
+        snapEnabled = value;
+      },
+      get helpOpen() {
+        return helpOpen;
+      },
+      set helpOpen(value) {
+        helpOpen = value;
+      },
+      panelVisibility,
+      setAuxPanelVisibility,
+      setInspectorVisibility,
+      toggleAuxPanels,
+      zoomAll: () => canvasWorkspace?.zoom(null),
+      showSelection,
+      toggleRulers,
+      toggleMinimap,
+      resetFavorites,
+      resetPanelWidths,
+      restorePanelLayout,
+      resetReferenceHeight,
+      toggleMenubar,
+      changeMode,
+      chooseTheme,
+    },
   });
-  const clipboardItems: ContextAction[] = $derived([
-    {
-      label: "切り取り",
-      disabled: mutationBlocked || clipboard.busy || !selectedIds.length,
-      run: () => clipboard.action("cut"),
-    },
-    {
-      label: "コピー",
-      disabled: editBlocked || clipboard.busy || !selectedIds.length,
-      run: () => clipboard.action("copy"),
-    },
-    {
-      label: "貼り付け",
-      disabled: editBlocked || clipboard.busy,
-      run: () => clipboard.action("paste"),
-    },
-  ]);
-  const menuGroups: DesignerMenu[] = $derived([
-    {
-      label: "ファイル",
-      items: [
-        {
-          label: "新しいProject",
-          disabled: menuBlocked,
-          run: projectFiles.newProject,
-        },
-        {
-          label: "Project を開く",
-          disabled: menuBlocked,
-          run: projectFiles.openProjectFile,
-        },
-        {
-          label: "Project を保存",
-          disabled: menuBlocked,
-          run: projectFiles.save,
-        },
-        {
-          label: "画像を配置",
-          disabled: editBlocked || !!activeDefinition || imageImport.busy,
-          run: imageImport.openPlacement,
-        },
-        {
-          label: "プロジェクト名を変更",
-          disabled: editBlocked,
-          run: focusProjectName,
-        },
-        {
-          label: "工程図サンプルを開く",
-          disabled: menuBlocked,
-          run: showProcessSample,
-        },
-        {
-          label: "Symbol配色サンプルを開く",
-          disabled: menuBlocked,
-          run: () =>
-            projectFiles.requestReplacement(
-              parseProject(JSON.stringify(symbolColorSample)),
-              "sample",
-            ),
-        },
-        {
-          label: "塗りと枠線サンプルを開く",
-          disabled: menuBlocked,
-          run: () =>
-            projectFiles.requestReplacement(
-              parseProject(JSON.stringify(shapePaintSample)),
-              "sample",
-            ),
-        },
-      ],
-    },
-    {
-      label: "編集",
-      items: [
-        ...clipboardItems,
-        ...editToolbarGroups.flatMap((group) => group.items),
-      ],
-    },
-    {
-      label: "表示",
-      items: [
-        {
-          label: "選択範囲を表示",
-          disabled: !!selectionViewReason,
-          run: showSelection,
-        },
-        {
-          label: showRulers ? "ルーラーを隠す" : "ルーラーを表示",
-          disabled: mode !== "edit",
-          run: toggleRulers,
-        },
-        {
-          label: showSidebar ? "左パネルを隠す" : "左パネルを表示",
-          disabled: mode !== "edit",
-          run: () =>
-            setAuxPanelVisibility({ sidebar: !showSidebar }, "sidebar"),
-        },
-        {
-          label: showReferences ? "タグ参照一覧を隠す" : "タグ参照一覧を表示",
-          disabled: mode !== "edit",
-          run: () =>
-            setAuxPanelVisibility(
-              { references: !showReferences },
-              "references",
-            ),
-        },
-        {
-          label: previousPanels
-            ? "補助パネルを元の表示に戻す"
-            : Object.values(panelVisibility()).some(Boolean)
-              ? "補助パネルをすべて隠す"
-              : "補助パネルをすべて表示",
-          disabled: mode !== "edit",
-          run: toggleAuxPanels,
-        },
-        {
-          label: showInspector ? "プロパティを隠す" : "プロパティを表示",
-          disabled: mode !== "edit",
-          run: () => setInspectorVisibility(!showInspector, true),
-        },
-        {
-          label: showMinimap ? "ミニマップを隠す" : "ミニマップを表示",
-          disabled: mode !== "edit",
-          run: toggleMinimap,
-        },
-        {
-          label: "お気に入りを標準に戻す",
-          run: resetFavorites,
-        },
-        {
-          label: "パネルの幅を標準に戻す",
-          disabled: mode !== "edit",
-          run: resetPanelWidths,
-        },
-        {
-          label: "標準レイアウトに戻す",
-          disabled: editBlocked,
-          run: restorePanelLayout,
-        },
-        {
-          label: "タグ参照パネルの高さを標準に戻す",
-          disabled: mode !== "edit",
-          run: resetReferenceHeight,
-        },
-        {
-          label: showMenubar ? "メニューバーを隠す" : "メニューバーを表示",
-          run: toggleMenubar,
-        },
-        {
-          label: "編集モード",
-          disabled: menuBlocked,
-          run: () => changeMode("edit"),
-        },
-        {
-          label: "表示プレビュー",
-          disabled: menuBlocked,
-          run: () => changeMode("preview"),
-        },
-        { label: "テーマ：ライト", run: () => chooseTheme("light") },
-        { label: "テーマ：ダーク", run: () => chooseTheme("dark") },
-        { label: "テーマ：OS に合わせる", run: () => chooseTheme("system") },
-      ],
-    },
-    {
-      label: "挿入",
-      items: [
-        {
-          label: "画面を埋め込む",
-          disabled: editBlocked || !!activeDefinition,
-          run: openScreenViewDialog,
-        },
-        ...(
-          [
-            { kind: "rectangle", label: "Rectangle を追加" },
-            { kind: "ellipse", label: "Ellipse を追加" },
-            { kind: "text", label: "Text を追加" },
-            { kind: "line", label: "線を追加" },
-            { kind: "pipe", label: "配管を追加" },
-          ] as const
-        ).map((part) => ({
-          label: part.label,
-          disabled: editBlocked,
-          run: () => add(part.kind),
-        })),
-        ...(["pump", "valve"] as const).map((template) => ({
-          label: template === "pump" ? "ポンプを追加" : "バルブを追加",
-          disabled: editBlocked || !!activeDefinition,
-          run: () => {
-            edit({ type: "add-symbol", screenId: screen.id, template });
-          },
-        })),
-      ],
-    },
-    {
-      label: "ツール",
-      items: [
-        {
-          label: showGrid ? "グリッドを隠す" : "グリッドを表示",
-          disabled: editBlocked,
-          run: () => (showGrid = !showGrid),
-        },
-        {
-          label: snapEnabled ? "スナップを無効にする" : "スナップを有効にする",
-          disabled: editBlocked,
-          run: () => (snapEnabled = !snapEnabled),
-        },
-      ],
-    },
-    {
-      label: "ヘルプ",
-      items: [
-        { label: "操作ガイド・アプリ情報", run: () => (helpOpen = true) },
-      ],
-    },
-  ]);
+  const folderContextItems = $derived(designerActions.folderContext());
+  const editToolbarGroups = $derived(designerActions.editGroups());
+  const clipboardItems = $derived(designerActions.clipboardItems());
+  const selectionContextItems = $derived(
+    designerActions.selectionContext(editToolbarGroups, clipboardItems),
+  );
+  const menuGroups = $derived(
+    designerActions.menus(editToolbarGroups, clipboardItems),
+  );
 </script>
 
 <svelte:window

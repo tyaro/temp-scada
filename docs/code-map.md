@@ -19,6 +19,7 @@
 | クリップボード           | `designer/controllers/clipboard.svelte.ts`、`lib/clipboard.ts`・`asset-clipboard.ts`・`image-clipboard.ts`                                                                        | OS APIの成功前に切取元を消さない。snapshotと資産leaseを保つ                    |
 | 表示と操作               | `lib/ObjectPainting.svelte`・`ScreenPainting.svelte`・`ScreenBackground.svelte`・`Primitive.svelte`・`ImagePainting.svelte`、`Renderer.svelte`・`designer/CanvasWorkspace.svelte` | 読取描画を選択・ドラッグ・入力処理から分ける。追加済みの画像描画部品も確認する |
 | レイヤー                 | `designer/LayerTree.svelte`の一覧markup／CSS、`designer/controllers/layer-tree.svelte.ts`の検索・展開・drag・folder操作、`layer-tree.ts`・`layer-drag.ts`                         | フォルダーの所属と描画順・座標を区別する                                       |
+| 共通操作定義             | `designer/controllers/designer-actions.ts`のfolder／toolbar／clipboard／selection context／menu builder、Appの`designerActions`接続                                               | 実行時の現在値・共通項目の参照・同期chooser呼出しを保つ                        |
 | Runtime読取              | `lib/tag-presentation.ts`、`crates/scada-runtime`                                                                                                                                 | 現在値・QualityをProject定義と分ける。Hub／PLC機能を複製しない                 |
 | テスト                   | `lib/*.test.ts`、`examples/*-cases.json`、`e2e`、`.github/workflows/ci.yml`                                                                                                       | 単体の契約とブラウザ操作を併用し、既存の拒否ケースを保持                       |
 
@@ -100,6 +101,12 @@ file inputの接続getter／clear callbackと同期chooserをAppから供給す�
 
 ## レイヤーの現行境界
 
-`designer/LayerTree.svelte`は一覧markupとCSS、`designer/controllers/layer-tree.svelte.ts`は検索・展開・drag・folder操作の状態とeffectを所有する。表示部品へcontrollerの`LayerTreeBindings`を直接渡す。Project・選択・履歴、表示／lockとcontext actionの共通操作はAppへ残す。
+`designer/LayerTree.svelte`は一覧markupとCSS、`designer/controllers/layer-tree.svelte.ts`は検索・展開・drag・folder操作の状態とeffectを所有する。表示部品へcontrollerの`LayerTreeBindings`を直接渡す。Project・選択・履歴、表示／lockの実処理はAppへ残し、context actionの定義は共通action builderへ渡す。
 
 FolderDialogとfolder ContextActionsはAppのrootに置いたまま、controllerのrequest・menu handleを接続する。元がplain letのoriginはgetterを操作時に直接読む。AppのProject採用は元の位置で`resetPresentation`を呼ぶ。drag解除はscope・mode・activePanel・sidebar表示を追跡し、編集可否flagの変化だけで取消条件を広げない。
+
+## 共通操作の現行境界
+
+`designer/controllers/designer-actions.ts`は状態を持たないaction builder。Appの`$derived`から呼び、toolbar・編集メニュー・右クリックでは同じ編集／clipboard項目を共有する。disabledとラベルは生成時のgetterで追従し、run callback内の選択ID・screen・context座標・originは実行時に読む。生成時の値を閉じ込めない。
+
+Appはキー／クリックイベントの受付、現在情報と既存callbackの供給、Project・履歴・draft・共通editを所有する。ファイル・画像・clipboardの操作は同期で各controllerへ渡し、ブラウザのuser activationを維持する。新しいaction registry・非同期wrapper・編集コマンドの分類は追加しない。コマンド分類とhandler分割は後続のR5で行う。
