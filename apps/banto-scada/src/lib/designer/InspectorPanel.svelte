@@ -171,6 +171,17 @@
       onclick={onclose}>×</button
     >
   </div>
+  {#if selected}<div class="inspector-subject">
+      <strong
+        >{selected.shape.type === "symbol"
+          ? (project.symbols.find(
+              (d) =>
+                selected.shape.type === "symbol" &&
+                d.id === selected.shape.symbolId,
+            )?.name ?? "Symbol")
+          : selected.shape.type}</strong
+      ><small>配置 {selected.order}</small>
+    </div>{/if}
   <div class="panel-content">
     {#if selectedIds.length > 1}
       <p>
@@ -213,9 +224,7 @@
             else properties(event);
           }}
         >
-          <p class="numeric-hint">
-            数値はEnter・フォーカス移動で確定、Escで取消。タグ・その他の設定は「変更を適用」で確定します。
-          </p>
+          <p class="numeric-hint">Enter・フォーカス移動で確定 · Escで取消</p>
           <div class="fields">
             {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
               <label
@@ -418,6 +427,18 @@
   }
   .fields input[aria-invalid="true"] {
     border-color: var(--banto-danger, #b42318);
+  }
+  .inspector-subject {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 4px 14px 0;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+  }
+  .inspector-subject small {
+    color: var(--banto-text-muted);
+    font-size: 10px;
   }
   .numeric-hint {
     font-size: 12px;

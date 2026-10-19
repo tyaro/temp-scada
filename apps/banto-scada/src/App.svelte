@@ -61,6 +61,7 @@
     type CanvasView,
     type CanvasContext,
   } from "./lib/designer/CanvasWorkspace.svelte";
+  import ScreenTabs from "./lib/designer/ScreenTabs.svelte";
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
   import TreeSection from "./lib/designer/TreeSection.svelte";
   import ObjectIcon from "./lib/designer/ObjectIcon.svelte";
@@ -1456,11 +1457,18 @@
   /></svelte:head
 >
 <header class="app-header">
+  <span class="studio-brand">SCADA<span>/ studio</span></span>
   <h1 title={project.manifest.name}>{project.manifest.name}</h1>
+  {#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
   <div class="header-actions" use:settleMenuFocus>
     <Menu label="常設メニュー" placement="bottom-end">
       {#snippet trigger(props)}
-        <button {...props} data-permanent-menu>メニュー</button>
+        <button
+          {...props}
+          data-permanent-menu
+          aria-label="メニュー"
+          title="メニュー">☰</button
+        >
       {/snippet}
       <MenuGroup label="表示">
         {#each menuGroups[2].items as item}
@@ -1504,7 +1512,6 @@
     </Menu>
   </div>
 </header>
-{#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
 <EditToolbar
   groups={mode === "edit" ? editToolbarGroups : []}
   selectionCount={selectedIds.length}
@@ -1575,6 +1582,14 @@
     <StatusBadge variant="neutral" label="Hub 未接続" />
   {/snippet}
 </EditToolbar>
+<ScreenTabs
+  screens={project.screens}
+  activeId={activeDefinition ? null : screen.id}
+  editable={mode === "edit"}
+  contextKey={contextScope}
+  onopen={openScreen}
+  actions={screenContextItems}
+/>
 <main
   style:--sidebar-width={`${leftWidth}px`}
   style:--inspector-width={`${rightWidth}px`}

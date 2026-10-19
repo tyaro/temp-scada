@@ -44,7 +44,7 @@ test("menubar navigates across Banto menus and returns focus on Escape", async (
   await page.keyboard.press("Escape");
 });
 
-test("hidden menubar releases height, persists and restores through the permanent menu without losing drafts", async ({
+test("hidden menubar releases header space, persists and restores through the permanent menu without losing drafts", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -54,6 +54,8 @@ test("hidden menubar releases height, persists and restores through the permanen
   await name.fill("未適用の画面名");
   const bar = page.getByRole("menubar");
   const before = (await page.locator("main").boundingBox())!;
+  const titleWidth = (await page.locator(".app-header h1").boundingBox())!
+    .width;
   await bar.getByRole("menuitem", { name: "表示", exact: true }).click();
   await page
     .getByRole("menuitem", { name: "メニューバーを隠す", exact: true })
@@ -62,7 +64,12 @@ test("hidden menubar releases height, persists and restores through the permanen
   await expect(
     page.getByRole("button", { name: "メニュー", exact: true }),
   ).toBeFocused();
-  expect((await page.locator("main").boundingBox())!.y).toBeLessThan(before.y);
+  expect((await page.locator("main").boundingBox())!.y).toBeLessThanOrEqual(
+    before.y,
+  );
+  expect(
+    (await page.locator(".app-header h1").boundingBox())!.width,
+  ).toBeGreaterThan(titleWidth);
   await expect(name).toHaveValue("未適用の画面名");
   await expect(page.getByTestId("save-state")).toContainText(
     "未適用の入力あり",

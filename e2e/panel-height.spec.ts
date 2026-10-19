@@ -143,7 +143,7 @@ for (const theme of ["light", "dark"] as const)
     await drag(page, -24);
     await menu(page, "タグ参照パネルの高さを標準に戻す");
     await expect(divider(page)).toHaveAttribute("aria-valuenow", "240");
-    await page.setViewportSize({ width: 1600, height: 650 });
+    await page.setViewportSize({ width: 1600, height: 550 });
     await expect(divider(page)).toHaveCount(0);
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(divider(page)).toHaveCount(0);

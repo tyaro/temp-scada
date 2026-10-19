@@ -99,8 +99,12 @@ test("symbols resize their viewport without changing shared definitions or other
   await resize(page, svg, "se", 40, 20);
   const instances = svg.locator("[data-symbol-id]");
   await expect(instances.first()).toHaveAttribute("width", "100");
-  await expect(instances.last()).toHaveAttribute("width", "140");
-  await expect(instances.last()).toHaveAttribute("height", "120");
+  await expect
+    .poll(async () => Number(await instances.last().getAttribute("width")))
+    .toBeCloseTo(140, 8);
+  await expect
+    .poll(async () => Number(await instances.last().getAttribute("height")))
+    .toBeCloseTo(120, 8);
   const downloading = page.waitForEvent("download");
   await button("Project JSON を保存").click();
   const saved = JSON.parse(

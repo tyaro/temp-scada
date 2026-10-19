@@ -1,0 +1,216 @@
+/* Designer chrome follows Banto's resolved theme; Project colors stay in SVG. */
+#app {
+  --studio-chrome: #f0faff;
+  --studio-panel: #f5fcfe;
+  --studio-dots: #cfe5ef;
+  --studio-selection: #ccf3e9;
+  --banto-bg: #f4fbff;
+  --banto-surface: #f9fdff;
+  --banto-surface-hover: #e6f5f7;
+  --banto-border: #c6e1e9;
+  --banto-text: #172846;
+  --banto-text-muted: #5a7290;
+  --banto-primary: #008f76;
+  --banto-focus-ring: 0 0 0 2px #008f7680;
+  background: var(--banto-bg);
+  color: var(--banto-text);
+}
+html[data-theme="dark"] #app {
+  --studio-chrome: #11252e;
+  --studio-panel: #142b34;
+  --studio-dots: #24434f;
+  --studio-selection: #17483f;
+  --banto-bg: #0e2029;
+  --banto-surface: #172f39;
+  --banto-surface-hover: #1e3b45;
+  --banto-border: #2c4d59;
+  --banto-text: #e2eff6;
+  --banto-text-muted: #a0b9c8;
+  --banto-primary: #59dcc0;
+  --banto-focus-ring: 0 0 0 2px #59dcc080;
+}
+#app .app-header {
+  min-height: 32px;
+  padding: 2px 14px;
+  gap: 14px;
+  background: var(--studio-chrome);
+}
+#app .studio-brand {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+#app .studio-brand span {
+  font-weight: 400;
+  margin-left: 3px;
+}
+#app .app-header h1 {
+  font-size: 12px;
+  font-weight: 500;
+  border-left: 1px solid var(--banto-border);
+  padding-left: 14px;
+}
+#app .app-header [role="menubar"] {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  flex-wrap: nowrap;
+}
+#app .header-actions {
+  gap: 4px;
+}
+#app .header-actions button {
+  border: 0;
+  background: transparent;
+  min-height: 26px;
+  padding: 2px 5px;
+}
+#app [role="toolbar"] {
+  padding: 2px 12px;
+  gap: 3px;
+  background: var(--studio-chrome);
+}
+#app [data-edit-action] {
+  width: 28px;
+  height: 28px;
+  padding: 5px;
+}
+#app .mode-tools button {
+  height: 28px;
+  padding: 3px 6px;
+  border-color: transparent;
+  background: transparent;
+}
+#app .mode-tools button.active {
+  background: var(--studio-selection);
+  color: var(--banto-primary);
+}
+#app main {
+  background: var(--banto-bg);
+}
+#app main > section {
+  position: relative;
+  padding: 0;
+}
+#app main > section > .toolbar {
+  position: absolute;
+  z-index: 1;
+  left: 16px;
+  right: 16px;
+  top: 12px;
+  margin: 0;
+  pointer-events: none;
+  align-items: baseline;
+}
+#app main > section > .toolbar h2 {
+  font-size: 13px;
+}
+#app main > section > .toolbar span {
+  font-size: 10px;
+}
+#app .canvas-stack > [role="status"] {
+  padding: 3px 14px;
+  margin: 0;
+  font-size: 11px;
+  min-height: 24px;
+}
+#app .viewport {
+  border: 0;
+  border-radius: 0;
+  background-color: var(--banto-bg);
+  background-image: radial-gradient(
+    var(--studio-dots) 0.8px,
+    transparent 0.8px
+  );
+  background-size: 16px 16px;
+}
+#app .sheet {
+  box-shadow: none;
+  outline-color: color-mix(in srgb, var(--banto-border) 60%, transparent);
+}
+#app .project-sidebar,
+#app .inspector {
+  background: var(--studio-panel);
+}
+#app .sidebar-heading,
+#app .panel-header {
+  padding: 4px 10px;
+  background: var(--studio-panel);
+  border-bottom-color: transparent;
+  min-height: 30px;
+}
+#app .sidebar-heading button,
+#app .panel-header button {
+  border: 0;
+  background: transparent;
+  font-size: 17px;
+}
+#app .sidebar-panels [role="tablist"] button {
+  font-size: 11px;
+  padding: 8px 2px;
+}
+#app .sidebar-panels [aria-selected="true"] {
+  background: var(--studio-selection);
+  color: var(--banto-primary);
+}
+#app .panel-content {
+  padding: 8px 14px;
+}
+#app .inspector p {
+  font-size: 11px;
+  line-height: 1.6;
+}
+#app .inspector .fields {
+  gap: 10px;
+}
+#app .inspector .fields label {
+  font-size: 11px;
+}
+#app .inspector input,
+#app .inspector textarea,
+#app .inspector select {
+  font-size: 12px;
+}
+#app .inspector button {
+  font-size: 12px;
+  padding: 7px 8px;
+}
+#app .inspector .fields input[inputmode="decimal"] {
+  border-bottom-color: color-mix(
+    in srgb,
+    var(--banto-text-muted) 55%,
+    transparent
+  );
+}
+#app .inspector .fields input[aria-invalid="true"] {
+  border-color: var(--banto-danger, #b42318);
+}
+#app .definition-banner {
+  margin: 8px 12px 0;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+#app .definition-banner + .toolbar {
+  position: static;
+  margin: 6px 16px;
+}
+@media (max-width: 1099px) {
+  #app main > section > .toolbar {
+    position: static;
+    padding: 10px 12px 0;
+  }
+  #app .app-header {
+    flex-wrap: wrap;
+  }
+  #app .app-header h1 {
+    flex-basis: 25%;
+  }
+  #app .app-header [role="menubar"] {
+    order: 4;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  #app .header-actions {
+    margin-left: auto;
+  }
+}

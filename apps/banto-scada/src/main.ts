@@ -1,5 +1,6 @@
 import { mount } from "svelte";
 import "@banto/theme/css";
+import "./studio.css";
 import App from "./App.svelte";
 import { initializeBanto } from "./lib/banto/setup";
 

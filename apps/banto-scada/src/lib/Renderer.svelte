@@ -426,11 +426,11 @@
         width={gridSize}
         height={gridSize}
         patternUnits="userSpaceOnUse"
-        ><path
-          d={`M ${gridSize} 0 H 0 V ${gridSize}`}
-          fill="none"
-          stroke={colors.grid}
-          stroke-width={0.6 / viewScale}
+        ><circle
+          cx={gridSize / 2}
+          cy={gridSize / 2}
+          r={0.65 / viewScale}
+          fill={colors.grid}
           opacity="0.35"
         /></pattern
       ></defs

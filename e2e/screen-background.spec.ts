@@ -28,8 +28,8 @@ test("screen background is staged, undoable and persistent while themes, objects
   for (const theme of ["dark", "light"] as const) {
     await chooseTheme(page, theme);
     await expect(paper(page)).toHaveAttribute("fill", "#ffffff");
-    await expect(page.locator("pattern path")).toHaveAttribute(
-      "stroke",
+    await expect(page.locator("pattern circle")).toHaveAttribute(
+      "fill",
       "#475569",
     );
   }
