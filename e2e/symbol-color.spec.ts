@@ -313,7 +313,18 @@ test("native same/cross-project clipboard and screen duplication preserve mode a
     fill: placements[1].fill,
     shape: { colorMode: "definition" },
   });
-  expect(result.symbols[0].objects).toEqual(sample.symbols[0].objects);
+  const savedDefinition = result.symbols[0];
+  expect(savedDefinition.id).not.toBe(sample.symbols[0].id);
+  const paintedObjects = (definition: any) =>
+    definition.objects.map(({ id: _id, folderId, ...object }: any) => ({
+      ...object,
+      folderOrder: definition.folders.find(
+        (folder: any) => folder.id === folderId,
+      )?.order,
+    }));
+  expect(paintedObjects(savedDefinition)).toEqual(
+    paintedObjects(sample.symbols[0]),
+  );
 });
 test("file menu opens the color sample through existing draft protection", async ({
   page,

@@ -33,6 +33,10 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+## 埋込Viewに向けた共通描画の分離（2026-10-20・日本時間）
+
+[具体設計](embedded-screen-design.md#共通描画の分離)に従い、背景とSymbol／Image／Primitiveの表示を非対話コンポーネントへ分離した。編集操作はRendererに維持した。TS全567件・型チェック・ビルドと関連ブラウザ25件で確認した。保存・View表示・UIは次の工程で接続し、現行0.19.0の提供範囲を増やすものではない。
+
 <a id="screen-reference-foundation-progress"></a>
 
 ## 埋込Viewの参照計算基礎（2026-10-20・日本時間）

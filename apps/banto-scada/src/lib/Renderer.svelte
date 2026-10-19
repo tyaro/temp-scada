@@ -13,7 +13,6 @@
     worldToObject,
     rotateVector,
     rotationTransform,
-    objectTransform,
     moveRotatedVertex,
     replaceRotatedVertex,
     resizeRotated,
@@ -29,7 +28,8 @@
   } from "./resize";
   import { canvasColors } from "./canvas-colors";
   import { compositedOpacity } from "./opacity";
-  import Primitive from "./Primitive.svelte";
+  import ScreenBackground from "./ScreenBackground.svelte";
+  import ObjectPainting from "./ObjectPainting.svelte";
   import type { TagReadings } from "./tag-presentation";
   let {
     screen,
@@ -550,39 +550,7 @@
   onlostpointercapture={cancelDrag}
 >
   <title>{screen.name}</title>
-  <rect
-    data-screen-background
-    width={screen.width}
-    height={screen.height}
-    fill={background}
-    pointer-events="none"
-  />
-  {#if "backgroundImage" in screen && screen.backgroundImage && images?.get(screen.backgroundImage.assetId)}
-    <image
-      data-background-image
-      href={images.get(screen.backgroundImage.assetId)!.url}
-      x={screen.backgroundImage.fit === "original"
-        ? (screen.width - images.get(screen.backgroundImage.assetId)!.width) / 2
-        : 0}
-      y={screen.backgroundImage.fit === "original"
-        ? (screen.height - images.get(screen.backgroundImage.assetId)!.height) /
-          2
-        : 0}
-      width={screen.backgroundImage.fit === "original"
-        ? images.get(screen.backgroundImage.assetId)!.width
-        : screen.width}
-      height={screen.backgroundImage.fit === "original"
-        ? images.get(screen.backgroundImage.assetId)!.height
-        : screen.height}
-      preserveAspectRatio={screen.backgroundImage.fit === "stretch"
-        ? "none"
-        : screen.backgroundImage.fit === "cover"
-          ? "xMidYMid slice"
-          : "xMidYMid meet"}
-      opacity={screen.backgroundImage.opacity}
-      pointer-events="none"
-    />
-  {/if}
+  <ScreenBackground {screen} {images} />
   {#if editable && showGrid}
     <defs
       ><pattern
@@ -627,52 +595,15 @@
         data-object-rotation={visual.rotation}
         opacity={compositedOpacity(visual)}
       >
-        {#if "width" in visual && visual.shape.type === "symbol"}
-          {@const definition = symbols.find(
-            (s) =>
-              object.shape.type === "symbol" && s.id === object.shape.symbolId,
-          )!}
-          <svg
-            width={visual.width}
-            height={visual.height}
-            viewBox={`0 0 ${definition.width} ${definition.height}`}
-            preserveAspectRatio="xMidYMid meet"
-            data-symbol-id={definition.id}
-            data-symbol-color-mode={visual.shape.colorMode}
-          >
-            {#each [...definition.objects]
-              .filter((object) => object.visible !== false)
-              .sort((a, b) => a.order - b.order) as child (child.id)}
-              <g
-                transform={objectTransform(child)}
-                opacity={compositedOpacity(child)}
-                ><Primitive
-                  object={child}
-                  color={visual.shape.colorMode === "definition"
-                    ? undefined
-                    : object.fill}
-                /></g
-              >
-            {/each}
-          </svg>
-        {:else if "width" in visual && visual.shape.type === "image"}
-          {#if images?.get(visual.shape.assetId)}
-            <image
-              data-image-frame
-              href={images.get(visual.shape.assetId)!.url}
-              width={visual.width}
-              height={visual.height}
-              preserveAspectRatio="xMidYMid meet"
-              pointer-events="none"
-            />
-          {/if}
-        {:else}<Primitive
-            object={visual}
-            {readings}
-            onsummary={(value) => {
-              textDescriptions[object.id] = value;
-            }}
-          />{/if}
+        <ObjectPainting
+          object={visual}
+          {symbols}
+          {images}
+          {readings}
+          onsummary={(value) => {
+            textDescriptions[object.id] = value;
+          }}
+        />
       </g>
       {#if editable}
         {@const bounds = getBounds(visual)}
