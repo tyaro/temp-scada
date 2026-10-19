@@ -1266,6 +1266,10 @@
     }
   }
   function acknowledgeForm(form: HTMLFormElement) {
+    if (form.dataset.editorForm === "selection-color") {
+      const input = form.elements.namedItem("fill");
+      if (input instanceof HTMLInputElement) input.value = "";
+    }
     if (form.dataset.editorForm === "project") {
       const input = form.elements.namedItem("name");
       if (input instanceof HTMLInputElement)
@@ -1518,6 +1522,28 @@
   }
   function formCommand(form: HTMLFormElement): EditCommand {
     const data = new FormData(form);
+    if (form.dataset.editorForm === "selection-color") {
+      if (
+        form.dataset.targetKey !==
+        `${workspaceGeneration}:${screen.id}:${!!activeDefinition}`
+      )
+        throw new Error("色の適用先が変更されています。選択し直してください。");
+      const ids: unknown = JSON.parse(form.dataset.objectIds ?? "[]");
+      if (
+        !Array.isArray(ids) ||
+        ids.length !== selectedIds.length ||
+        ids.some((id) => typeof id !== "string" || !selectedIds.includes(id))
+      )
+        throw new Error(
+          "色の適用対象が変更されています。選択し直してください。",
+        );
+      return {
+        type: "set-color",
+        screenId: screen.id,
+        objectIds: ids as string[],
+        fill: String(data.get("fill")),
+      };
+    }
     if (form.dataset.editorForm === "project")
       return { type: "update-project", name: String(data.get("name")) };
     if (form.dataset.editorForm === "screen")

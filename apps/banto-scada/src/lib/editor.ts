@@ -46,6 +46,7 @@ type ScreenCommand =
   | { type: "duplicate-screen"; screenId: string }
   | { type: "remove-screen"; screenId: string };
 export type ObjectCommand = (
+  | { type: "set-color"; screenId: string; objectIds: string[]; fill: string }
   | {
       type: "set-visibility";
       screenId: string;
@@ -131,6 +132,7 @@ export function isObjectCommand(
   command: EditCommand,
 ): command is ObjectCommand {
   return [
+    "set-color",
     "set-visibility",
     "set-lock",
     "paste",
@@ -413,6 +415,7 @@ export function applyCommand(
     return finish(project, next);
   }
   if (
+    command.type === "set-color" ||
     command.type === "move-many" ||
     command.type === "duplicate-many" ||
     command.type === "remove-many" ||
@@ -426,7 +429,14 @@ export function applyCommand(
       .sort((a, b) => a.order - b.order);
     if (objects.length !== ids.size)
       throw new Error("選択した図形が見つかりません");
-    if (command.type === "move-many") {
+    if (command.type === "set-color") {
+      const fill = command.fill.trim().toLowerCase();
+      if (!/^#[0-9a-f]{6}$/.test(fill))
+        throw new Error("色は#と6桁の16進数で指定してください");
+      objects.forEach((object) => {
+        if (object.fill.toLowerCase() !== fill) object.fill = fill;
+      });
+    } else if (command.type === "move-many") {
       if (!Number.isFinite(command.dx) || !Number.isFinite(command.dy))
         throw new Error("移動量は有限の数値にしてください");
       objects.forEach((o) => {

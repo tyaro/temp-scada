@@ -1,5 +1,6 @@
 <script lang="ts">
   import { placementLabel } from "../placement-label";
+  import SelectionColor from "./SelectionColor.svelte";
   import TagPicker from "./TagPicker.svelte";
   import {
     sampleCatalog,
@@ -56,13 +57,23 @@
     ontogglevisibility: (id: string) => void;
     ontogglelock: (id: string) => void;
     activeDefinition: boolean;
-    screen: { id: string; name: string };
+    screen: { id: string; name: string; objects: ScreenObject[] };
     drafts: ReturnType<typeof createDraftGuard>;
     properties: (event: SubmitEvent) => void;
     moveSelection: (event: SubmitEvent) => void;
     edit: (command: EditCommand) => boolean;
     openDefinition: (id: string) => void;
   } = $props();
+  const selectedColors = $derived(
+    new Set(
+      screen.objects
+        .filter((object) => selectedIds.includes(object.id))
+        .map((object) => object.fill.toLowerCase()),
+    ),
+  );
+  const commonColor = $derived(
+    selectedColors.size === 1 ? [...selectedColors][0] : null,
+  );
   let tagInput = $state<HTMLInputElement>();
   let pickerOpen = $state(false);
   export function isTagPickerOpen() {
@@ -332,6 +343,19 @@
           </div>
         </fieldset>
       </form>
+      {#key `${generation}:${screen.id}:${activeDefinition}:${[...selectedIds].sort().join(",")}`}
+        <SelectionColor
+          current={commonColor}
+          count={selectedIds.length}
+          hiddenCount={hiddenSelectionCount}
+          locked={selectionLocked}
+          definition={activeDefinition}
+          targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+          objectIds={selectedIds}
+          {drafts}
+          onsubmit={properties}
+        />
+      {/key}
     {:else if selected}
       {#key `${generation}:${screen.id}:${selected.id}`}
         <form
