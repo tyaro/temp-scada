@@ -33,6 +33,16 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+<a id="preview-popup-progress"></a>
+
+## プレビュー専用の画面内Popup（2026-10-20・日本時間）
+
+[具体設計](preview-popup-design.md)に従い、表示プレビューの一時小窓をUIへ接続した。検索付きの選択、4件と合計20,000展開配置の制限、同じ画面の前面化、タイトルと右下のマウス／キーボード操作・Esc取消と終了、枠内への再配置に対応した。背景の監視表示を継続し、画面切替・編集復帰・Project世代差替えで小窓と選択Modalを破棄する。
+
+Project・Action・Undoへ保存しない。背景・画像・Symbol・埋込Viewと数値Textの専用描画を共有し、Rendererを再帰配置しない。BantoのlayeringでModal／Menu優先と条件付きフォーカス復帰を扱う。非モーダル小窓がF1・ファイルキーを抑止しないよう既存判定も修正した。設備操作・Faceplate・正式Runtime・位置の永続化は後続。
+
+検証: TS全593件・型チェック（エラー／警告なし）・ビルドと、Popup10件を含む関連ブラウザ30件が成功。全487件の再実行ではない。Astraレビューを反映し、小領域の端数、ModalとのEsc優先、capture中の取消・前面化・Project差替え、F1／ファイルキー・フォーカス復帰・保存内容不変を確認した。[両テーマの実画面](preview-popup-design.md#検証と実画面)を掲載した。
+
 ## 画面内Popupの計算基礎（2026-10-20・日本時間）
 
 [具体設計](preview-popup-design.md)へAstraレビューを反映した。プレビュー専用・一時的な非モーダル小窓として、4件・同じ画面の前面化・小窓全体の描画予算・枠内へのclampと縮小を計算する基礎を追加した。単体4件で件数とコストの境界、既存表示の保持、原子的拒否、入力不変を確認する。UI・起動・移動とサイズ操作・Escとフォーカスは次に接続する。Project0.20.0の保存契約は変更しない。
@@ -1245,7 +1255,7 @@ schema 0.3.0 は変更しない。未存在の定義・Symbol 以外の配置・
 
 ## 次の実装順
 
-[Image配置の最小設計](image-placement-design.md)へAstraレビューを反映し、背景との原本共有・画像枠・contain・比率復帰・画像混在clipboardの明示拒否を0.17.0で実装した（[記録](#image-placement-progress)）。OS画像貼付も追加した（[記録](#image-paste-progress)）。図形と画像の同時clipboardも追加した（[記録](#asset-clipboard-progress)）。[線形グラデーション](linear-gradient-design.md)のpaint再編と共通描画も0.18.0で追加した（[記録](#linear-gradient-progress)）。[繰返しpattern](pattern-paint-design.md)も0.19.0で追加した（[記録](#pattern-paint-progress)）。[埋込View](embedded-screen-design.md)は0.20.0で同一Project・1段の読取表示を接続した。画像差替え・トリミング、Viewのclipboard・画面内Popupは後続。
+[Image配置の最小設計](image-placement-design.md)へAstraレビューを反映し、背景との原本共有・画像枠・contain・比率復帰・画像混在clipboardの明示拒否を0.17.0で実装した（[記録](#image-placement-progress)）。OS画像貼付も追加した（[記録](#image-paste-progress)）。図形と画像の同時clipboardも追加した（[記録](#asset-clipboard-progress)）。[線形グラデーション](linear-gradient-design.md)のpaint再編と共通描画も0.18.0で追加した（[記録](#linear-gradient-progress)）。[繰返しpattern](pattern-paint-design.md)も0.19.0で追加した（[記録](#pattern-paint-progress)）。[埋込View](embedded-screen-design.md)は0.20.0で同一Project・1段の読取表示を接続した。[プレビュー専用Popup](preview-popup-design.md)も接続した。画像差替え・トリミング、Viewのclipboard・設備のFaceplate・正式RuntimeのPopupは後続。
 
 [レイヤーフォルダーの設計](layer-folders-design.md)に、整理用フォルダーを幾何グループから分離した保存契約・操作・受入条件を具体化した。保存契約・検証・編集コマンドは0.8.0で実装した（[記録](#layer-folder-model-progress)）。階層UI・検索・所属変更も後続で実装した（[記録](#layer-folder-ui-progress)）。幾何グループの完了は意味しない。
 

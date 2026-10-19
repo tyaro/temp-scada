@@ -1,6 +1,6 @@
 # プレビュー専用の画面内Popup
 
-2026-10-20（日本時間）。[拡張設計](scada-graphics-runtime-extension-design.md#子ウィンドウ監視画面内popupとview-stack)とAstraの読取専用レビューに従う。**位置と前後関係・件数と描画予算の計算基礎のみ実装。小窓のUIは未接続**。
+2026-10-20（日本時間）。[拡張設計](scada-graphics-runtime-extension-design.md#子ウィンドウ監視画面内popupとview-stack)とAstraの読取専用レビューに従う。**プレビュー専用の読取小窓をUIへ接続済み**。Project0.20.0の保存契約を変更せず、正式RuntimeのPopup／Action完成と区別する。
 
 ## 初期の境界
 
@@ -32,4 +32,24 @@ Popup自体はProjectの参照辺ではなく、保存上の埋込深さを増�
 
 `preview-popups.ts`に一時窓の配列（背面から前面）・同一画面の前面化・4件と合計コストの拒否・位置と寸法のclamp・縮小・終了を実装した。入力を変更しない。単体4件で上限・同一画面の再開・原子的拒否・微小領域・不正数値・前後関係維持を確認する。
 
-UIを接続した後は、キーボードだけの移動・サイズ変更・終了、ModalとのEsc競合、背面窓を閉じた時のフォーカス維持、狭いviewport、ドラッグ中の切替、背景・clip・共有数値、Project／履歴不変を両テーマのブラウザで確認する。
+UIの受入では、キーボードだけの移動・サイズ変更・終了、ModalとのEsc競合、背面窓を閉じた時のフォーカス維持、狭いviewport、ドラッグ中の切替、背景・clip・共有数値、Project／履歴不変を両テーマのブラウザで確認する。
+
+## UIの接続
+
+プレビューのツールバーから検索付きの画面選択Modalを開く。同じ画面を開き直す場合は既存窓を前面化する。選択不可の画面には4件上限／合計描画予算の理由を表示する。Sceneの非対話描画`ScreenPainting.svelte`を利用し、埋込View入りの画面も1段の契約を保って表示する。
+
+`PreviewWindow.svelte`はタイトルの移動・端のサイズ変更・閉じる操作だけを持つ。前面化ではDOM順を固定し、z-indexだけを変えてポインタ捕捉を維持する。WindowはBantoの`hasVisibleLayerAbove`と`restoreFocus`を使い、Modal／MenuへEscを譲る。領域の寸法はResizeObserverの小数を含むcontentRectを使い、clientHeightの整数丸めによる枠外へのはみ出しを避ける。
+
+同じキー操作でModalと小窓を両方閉じない。非モーダル小窓があるだけでF1・Ctrl／Command＋N／Oを抑止しないよう既存のアプリ判定を修正した。入力中の既存Modalの抑止は維持する。Astraの読取専用レビューを反映した。
+
+## 検証と実画面
+
+TypeScript全593件、型チェック（エラー・警告なし）、本番ビルドが成功した。Popup10件を含むメニュー・新規Project・埋込Viewのブラウザ30件が成功した。全487件の再実行ではない。両テーマの移動／サイズ／Esc終了、4件と重複起動、非表示Symbolの展開予算、端数寸法を含む小領域、取消・capture中の前面化・Modal表示・Project差替え、保存内容の不変、背景ショートカットと条件付きフォーカス復帰を確認した。
+
+初回に見つかったclientHeightの丸めと、非モーダル窓をModalとして扱ったF1・ファイルキー抑止を修正し、該当ケースを追加した。JS575.46kB（gzip173.52kB）、既存500kB超の警告は継続。最大配置数に対する描画速度の保証は行わない。
+
+![画面内の読取小窓・ライト](assets/frontend-ux/preview-popups-light.png)
+
+![画面内の読取小窓・ダーク](assets/frontend-ux/preview-popups-dark.png)
+
+独自の埋込画面サンプルを、`scripts/capture-preview-popups.mjs`で1920×1080撮影した。小窓は保存されず、背景と小窓の図面は静的サンプルで実設備へ接続していない。

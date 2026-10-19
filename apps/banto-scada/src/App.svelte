@@ -226,6 +226,7 @@
     NumericProperty,
     NumericTarget,
   } from "./lib/designer/numeric-properties";
+  import PreviewPopups from "./lib/designer/PreviewPopups.svelte";
   import ScreenViewDialog from "./lib/designer/ScreenViewDialog.svelte";
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
   let showInspector = $state(DEFAULT_PANEL_LAYOUT.panels.inspector);
@@ -670,7 +671,7 @@
         event.keyCode !== 229 &&
         !helpOpen &&
         !document.querySelector(
-          '[role="dialog"]:not([data-layer-inactive="true"]),[popover]:popover-open',
+          '[role="dialog"]:not([aria-modal="false"]):not([data-layer-inactive="true"]),[popover]:popover-open',
         ) &&
         clipboardScope(event.target)
       ) {
@@ -695,7 +696,7 @@
         helpOpen ||
         inspectorController?.isTagPickerOpen() ||
         document.querySelector(
-          '[role="dialog"]:not([data-layer-inactive="true"])',
+          '[role="dialog"]:not([aria-modal="false"]):not([data-layer-inactive="true"])',
         )
       )
         return;
@@ -804,7 +805,7 @@
         replacement ||
         helpOpen ||
         document.querySelector(
-          '[role="dialog"]:not([data-layer-inactive="true"])',
+          '[role="dialog"]:not([aria-modal="false"]):not([data-layer-inactive="true"])',
         )
       )
         return;
@@ -1385,6 +1386,7 @@
   }
 
   let editorRegion = $state<HTMLElement>();
+  let previewPopups = $state<{ showPicker: (origin: HTMLElement) => void }>();
   let inspectorPanel = $state<HTMLElement>();
   let inspectorController = $state<{
     focusName: () => void;
@@ -3636,6 +3638,11 @@
         onclick={() => changeMode("preview")}
         title="表示プレビュー">表示プレビュー</button
       >
+      {#if mode === "preview"}<button
+          disabled={menuBlocked}
+          onclick={(event) => previewPopups?.showPicker(event.currentTarget)}
+          >画面を小窓で表示確認</button
+        >{/if}
       {#if mode === "edit"}<button
           aria-label="キャンバスの操作"
           title="キャンバスの操作（Shift+F10）"
@@ -4350,6 +4357,16 @@ ${object.id}`}
             })}
         />
       {/key}
+      {#if mode === "preview"}
+        {#key `${workspaceGeneration}:${screen.id}:${mode}`}
+          <PreviewPopups
+            bind:this={previewPopups}
+            {project}
+            images={assetImages}
+            onmessage={(message) => report("error", message)}
+          />
+        {/key}
+      {/if}
       {#if mode === "edit" && positionPlacement}
         <div class="placement-bar" role="status" aria-label="連続配置の状態">
           <span
@@ -5199,6 +5216,9 @@ ${object.id}`}
     border: 1px solid var(--banto-border);
     background: var(--banto-bg);
     color: var(--banto-text);
+  }
+  .canvas-stack {
+    position: relative;
   }
   .references-panel {
     position: relative;
