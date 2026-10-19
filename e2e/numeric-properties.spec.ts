@@ -1,5 +1,5 @@
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel } from "./helpers/designer";
 import { readFile } from "node:fs/promises";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
@@ -22,7 +22,7 @@ async function start(page: Page, object = "rectangle · 3") {
 }
 async function saved(page: Page) {
   const download = page.waitForEvent("download");
-  await button(page, "Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   return JSON.parse(await readFile((await (await download).path())!, "utf8"));
 }
 test("Enter and blur commit only one numeric field once, keep focus and support undo/redo", async ({

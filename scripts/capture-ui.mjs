@@ -50,7 +50,14 @@ try {
     await target.screenshot({ path, animations: "disabled" });
     console.log(path);
   }
-  await button("工程図サンプルを開く").click();
+  await page
+    .getByRole("menubar")
+    .getByRole("menuitem", { name: "ファイル", exact: true })
+    .click();
+  await page
+    .getByRole("menu", { name: "ファイル", exact: true })
+    .getByRole("menuitem", { name: "工程図サンプルを開く", exact: true })
+    .click();
   await button("編集").click();
   await page.getByRole("tab", { name: "プロジェクト", exact: true }).click();
   const screenList = page.getByRole("navigation", { name: "画面一覧" });

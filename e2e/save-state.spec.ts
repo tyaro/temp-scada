@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/minimal.project.json" with { type: "json" };
@@ -27,7 +27,7 @@ test("content dirty state follows undo/redo and export requests, not revision or
   expect(await leaving()).toBe(true);
   await button("やり直す").click();
   const downloading = page.waitForEvent("download");
-  await button("Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   await downloading;
   await expect(state).toContainText("書き出し要求後の変更なし");
   await expect(state).toContainText("最終書き出し要求");
@@ -249,7 +249,7 @@ test("a failed export never marks the current project as written out", async ({
       throw new Error("download blocked");
     };
   });
-  await button("Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   await expect(page.getByTestId("project-status")).toContainText(
     "書き出しエラー",
   );
@@ -328,7 +328,7 @@ test("invalid model input preserves every dirty form before applying any command
   await expect(
     page.getByRole("img", { name: "プロセス画面", exact: true }),
   ).toBeVisible();
-  await button("Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const downloading = page.waitForEvent("download");
   await prompt
     .getByRole("button", { name: "入力を破棄して続行", exact: true })

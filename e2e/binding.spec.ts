@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/tag-binding.project.json" with { type: "json" };
@@ -34,7 +34,7 @@ test("assigns a read-only tag, shows disconnected in editor and preview, and pre
   await button("選択図形を複製").click();
   await expect(tag).toHaveCount(2);
   const downloading = page.waitForEvent("download");
-  await button("Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );

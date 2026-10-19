@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("Shift selection moves, aligns, duplicates and deletes atomically with history and JSON round-trip", async ({
@@ -74,7 +74,7 @@ test("Shift selection moves, aligns, duplicates and deletes atomically with hist
     expect(p.y).toBeCloseTo(beforeNumericMove[i].y + 5, 4);
   });
   const downloading = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Project JSON を保存" }).click();
+  await fileCommand(page, "Project JSON を保存");
   const download = await downloading;
   const json = await readFile((await download.path())!, "utf8");
   const saved = JSON.parse(json);

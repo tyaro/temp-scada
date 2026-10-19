@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/process.project.json" with { type: "json" };
@@ -10,7 +10,7 @@ test("replaces a symbol reference only after apply, preserving placement and res
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   await selectPanel(page, "プロジェクト");
-  await button("工程図サンプルを開く").click();
+  await fileCommand(page, "工程図サンプルを開く");
   await button("編集").click();
   const object = sample.screens[0].objects.find(
     (o) => o.shape.type === "symbol",
@@ -50,7 +50,7 @@ test("replaces a symbol reference only after apply, preserving placement and res
   await button("やり直す").click();
   await expect(selector).toHaveValue(target.id);
   const downloading = page.waitForEvent("download");
-  await button("Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
   const saved = JSON.parse(json);
   expect(saved.symbols).toEqual(sample.symbols);
@@ -128,7 +128,7 @@ test("deep copies a definition for one placement, edits it independently and und
       .locator(`[data-symbol-id="${originalSymbol}"] > g`),
   ).toHaveCount(originalCount);
   const downloading = page.waitForEvent("download");
-  await button("Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
   const saved = JSON.parse(json);
   expect(saved.symbols).toHaveLength(2);

@@ -24,3 +24,24 @@ export async function chooseTheme(page: Page, value: string) {
     .getByRole("menuitem", { name: label, exact: true })
     .click();
 }
+
+/** File operations remain available with the menubar or sidebar hidden. */
+export async function fileCommand(page: Page, name: string) {
+  const bar = page.getByRole("menubar", {
+    name: "Designer メニューバー",
+    exact: true,
+  });
+  if (await bar.isVisible()) {
+    await bar.getByRole("menuitem", { name: "ファイル", exact: true }).click();
+    await page
+      .getByRole("menu", { name: "ファイル", exact: true })
+      .getByRole("menuitem", { name, exact: true })
+      .click();
+  } else {
+    await page.getByRole("button", { name: "メニュー", exact: true }).click();
+    await page
+      .getByRole("menu", { name: "常設メニュー", exact: true })
+      .getByRole("menuitem", { name, exact: true })
+      .click();
+  }
+}

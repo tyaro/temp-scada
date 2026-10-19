@@ -1,6 +1,6 @@
+import { fileCommand, chooseTheme, selectPanel } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { chooseTheme, selectPanel } from "./helpers/designer";
 
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
@@ -33,7 +33,7 @@ async function at(page: Page, x: number, y: number, alt = false) {
 }
 async function save(page: Page) {
   const pending = page.waitForEvent("download");
-  await button(page, "Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   return JSON.parse(await readFile((await (await pending).path())!, "utf8"));
 }
 
@@ -243,7 +243,7 @@ test("symbol context operations share the existing independent-copy and definiti
   page,
 }) => {
   await page.goto("/");
-  await button(page, "工程図サンプルを開く").click();
+  await fileCommand(page, "工程図サンプルを開く");
   await button(page, "編集").click();
   await selectPanel(page, "レイヤー");
   await list(page)

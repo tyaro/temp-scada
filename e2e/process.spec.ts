@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import legacy from "../examples/legacy.project.json" with { type: "json" };
@@ -9,7 +9,7 @@ test("edits pipes and reusable symbols, then reproduces the saved process screen
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await selectPanel(page, "プロジェクト");
-  await page.getByRole("button", { name: "工程図サンプルを開く" }).click();
+  await fileCommand(page, "工程図サンプルを開く");
   const svg = page.getByRole("img", {
     name: "循環設備（静的サンプル）",
     exact: true,
@@ -62,14 +62,14 @@ test("edits pipes and reusable symbols, then reproduces the saved process screen
   await page.getByRole("button", { name: "ポンプを追加" }).click();
   await page.getByRole("button", { name: "ポンプを追加" }).click();
   await selectPanel(page, "プロジェクト");
-  await page.getByRole("button", { name: "工程図サンプルを開く" }).click();
+  await fileCommand(page, "工程図サンプルを開く");
   await page
     .getByRole("dialog", { name: "Project を置き換えますか" })
     .getByRole("button", { name: "キャンセル", exact: true })
     .click();
   await expect(svg.locator("[data-object-id]")).toHaveCount(18);
   const downloading = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Project JSON を保存" }).click();
+  await fileCommand(page, "Project JSON を保存");
   const downloaded = await downloading;
   const json = await readFile((await downloaded.path())!, "utf8");
   const saved = JSON.parse(json);
@@ -99,7 +99,7 @@ test("loads legacy geometry and saves the migrated version without losing identi
     buffer: Buffer.from(JSON.stringify(legacy)),
   });
   const downloading = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Project JSON を保存" }).click();
+  await fileCommand(page, "Project JSON を保存");
   const download = await downloading;
   const saved = JSON.parse(await readFile((await download.path())!, "utf8"));
   expect(saved.manifest.schemaVersion).toBe("0.4.0");

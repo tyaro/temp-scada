@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("edit, drag in design coordinates, save and reproduce in preview", async ({
@@ -38,7 +38,7 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
   expect(y).toBeCloseTo(380, 0);
   const transform = await added.getAttribute("transform");
   const downloading = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Project JSON を保存" }).click();
+  await fileCommand(page, "Project JSON を保存");
   const download = await downloading;
   const json = await readFile((await download.path())!, "utf8");
   const saved = JSON.parse(json);

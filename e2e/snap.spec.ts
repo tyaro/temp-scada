@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect, type Locator, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 async function drag(
@@ -114,7 +114,7 @@ test("pipe vertices snap in screen coordinates, support keyboard and cancel with
     "0,0\n147,33\n120,100\n240,100",
   );
   const downloading = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Project JSON を保存" }).click();
+  await fileCommand(page, "Project JSON を保存");
   const download = await downloading,
     json = await readFile((await download.path())!, "utf8"),
     saved = JSON.parse(json);

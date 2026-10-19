@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("shared definition edits update placements across screens and survive history and JSON", async ({
@@ -58,7 +58,7 @@ test("shared definition edits update placements across screens and survive histo
     ).toHaveCount(childCount);
   }
   const downloading = page.waitForEvent("download");
-  await button("Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
   const saved = JSON.parse(json);
   expect(saved.symbols).toHaveLength(1);

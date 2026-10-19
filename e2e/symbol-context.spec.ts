@@ -1,6 +1,6 @@
+import { fileCommand, chooseTheme, selectPanel } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { chooseTheme, selectPanel } from "./helpers/designer";
 
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
@@ -12,7 +12,7 @@ const menu = (page: Page, name: string) =>
   page.getByRole("menu", { name: `共有定義：${name} の操作`, exact: true });
 async function start(page: Page) {
   await page.goto("/");
-  await button(page, "工程図サンプルを開く").click();
+  await fileCommand(page, "工程図サンプルを開く");
   await button(page, "編集").click();
   await selectPanel(page, "プロジェクト");
 }
@@ -22,7 +22,7 @@ async function action(page: Page, target: string, name: string) {
 }
 async function save(page: Page) {
   const pending = page.waitForEvent("download");
-  await button(page, "Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   return JSON.parse(await readFile((await (await pending).path())!, "utf8"));
 }
 

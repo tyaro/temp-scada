@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 test("desktop workspace keeps properties beside the canvas and scrolls tools independently", async ({
   page,
@@ -6,9 +6,7 @@ test("desktop workspace keeps properties beside the canvas and scrolls tools ind
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/");
   await selectPanel(page, "プロジェクト");
-  await page
-    .getByRole("button", { name: "工程図サンプルを開く", exact: true })
-    .click();
+  await fileCommand(page, "工程図サンプルを開く");
   await page.getByRole("button", { name: "編集", exact: true }).click();
   const sidebar = page.getByRole("complementary", { name: "Project と部品" });
   await selectPanel(page, "レイヤー");

@@ -1,6 +1,6 @@
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { selectPanel } from "./helpers/designer";
 
 const canvas = (page: Page) =>
   page.getByRole("region", { name: "キャンバス操作領域", exact: true });
@@ -156,9 +156,7 @@ test("dragging shared symbols from the name list preserves definition identity t
     .evaluateAll((els) => els.map((el) => el.getAttribute("data-symbol-id")));
   expect(ids[1]).toBe(ids[0]);
   const downloading = page.waitForEvent("download");
-  await page
-    .getByRole("button", { name: "Project JSON を保存", exact: true })
-    .click();
+  await fileCommand(page, "Project JSON を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
   const saved = JSON.parse(json);
   expect(saved.symbols).toHaveLength(1);

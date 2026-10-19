@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("duplicate placements, undo/redo and stacking order survive file round-trip", async ({
@@ -40,7 +40,7 @@ test("duplicate placements, undo/redo and stacking order survive file round-trip
     copyId!,
   );
   const downloading = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Project JSON を保存" }).click();
+  await fileCommand(page, "Project JSON を保存");
   const downloaded = await downloading;
   const json = await readFile((await downloaded.path())!, "utf8"),
     saved = JSON.parse(json);

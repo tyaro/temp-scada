@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("searches basic/builtin/shared parts without changing the project and places shared definitions", async ({
@@ -24,7 +24,7 @@ test("searches basic/builtin/shared parts without changing the project and place
   await expect(svg.locator("[data-symbol-id]")).toHaveCount(2);
   await expect(palette.locator("svg")).toHaveCount(2);
   const downloading = page.waitForEvent("download");
-  await button("Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );

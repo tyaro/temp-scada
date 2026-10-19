@@ -1,5 +1,5 @@
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const canvas = (page: Page) =>
@@ -196,7 +196,7 @@ test("switching target or reimporting the same Project ends placement and shared
   await selectPanel(page, "部品");
   await arm(page);
   const download = page.waitForEvent("download");
-  await button(page, "Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const path = await (await download).path();
   await page
     .getByLabel("Project JSON を開く", { exact: true })

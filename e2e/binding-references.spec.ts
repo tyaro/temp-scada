@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/tag-binding.project.json" with { type: "json" };
@@ -98,7 +98,7 @@ test("groups references across screens, searches without editing, navigates with
   await button("やり直す").click();
   await expect(summary).toHaveText("Project のタグ参照 · 3 タグ / 3 配置");
   const downloading = page.waitForEvent("download");
-  await button("Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );

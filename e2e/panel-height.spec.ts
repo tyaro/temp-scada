@@ -1,6 +1,6 @@
+import { fileCommand, chooseTheme } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { chooseTheme } from "./helpers/designer";
 import sample from "../examples/tag-binding.project.json" with { type: "json" };
 const storageKey = "banto.ui.scada.designer.reference-height";
 const divider = (page: Page) =>
@@ -73,7 +73,7 @@ test("height resize preserves drafts, search and Project while persisting only U
   );
   await page.getByLabel("画面名", { exact: true }).fill(sample.screens[0].name);
   const download = page.waitForEvent("download");
-  await button(page, "Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   expect(
     JSON.parse(await readFile((await (await download).path())!, "utf8")),
   ).toEqual(sample);

@@ -1,6 +1,6 @@
+import { fileCommand, selectPanel, chooseTheme } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { selectPanel, chooseTheme } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const divider = (page: Page, side: "left" | "right") =>
@@ -69,7 +69,7 @@ test("dragging panel borders preserves drafts and saves widths separately from P
   await page.getByLabel("画面名", { exact: true }).fill("プロセス画面");
   await page.getByLabel("色", { exact: true }).fill("#164e63");
   const pending = page.waitForEvent("download");
-  await button(page, "Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const saved = JSON.parse(
     await readFile((await (await pending).path())!, "utf8"),
   );

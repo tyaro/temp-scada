@@ -1,6 +1,6 @@
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { selectPanel } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const usages = (page: Page) =>
@@ -9,7 +9,7 @@ const canvas = (page: Page) =>
   page.getByRole("region", { name: "キャンバス操作領域", exact: true });
 async function start(page: Page, duplicate = false) {
   await page.goto("/");
-  await button(page, "工程図サンプルを開く").click();
+  await fileCommand(page, "工程図サンプルを開く");
   await button(page, "編集").click();
   await selectPanel(page, "プロジェクト");
   if (duplicate) {
@@ -173,7 +173,7 @@ test("empty usage lists are explicit and importing the same project clears the o
     "この共有定義を使用している配置はありません",
   );
   const pending = page.waitForEvent("download");
-  await button(page, "Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const file = {
     name: "same.json",
     mimeType: "application/json",

@@ -1,3 +1,4 @@
+import { fileCommand } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/minimal.project.json" with { type: "json" };
@@ -12,7 +13,7 @@ test("sample renders, downloads, reloads, and invalid import preserves current s
   await expect(svg.locator("[data-object-id]")).toHaveCount(3);
   await page.screenshot({ path: "/tmp/scada-sample.png", fullPage: true });
   const downloadPromise = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Project JSON を保存" }).click();
+  await fileCommand(page, "Project JSON を保存");
   const download = await downloadPromise;
   const downloaded = await readFile((await download.path())!, "utf8");
   expect(JSON.parse(downloaded)).toEqual(sample);

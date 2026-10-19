@@ -1,4 +1,4 @@
-import { selectPanel } from "./helpers/designer";
+import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect, type Locator, type Page } from "@playwright/test";
 async function designDrag(
   page: Page,
@@ -173,7 +173,7 @@ test("view settings survive target and preview switches, reset on import, and ne
   await expect(page.getByLabel("表示倍率", { exact: true })).toHaveValue("2");
   await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(200);
   const downloading = page.waitForEvent("download");
-  await button("Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   const download = await downloading;
   const path = (await download.path())!;
   const { readFile } = await import("node:fs/promises");

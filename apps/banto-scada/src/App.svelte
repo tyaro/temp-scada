@@ -1670,6 +1670,15 @@
     content="Banto SCADA の初期 Project エディタ"
   /></svelte:head
 >
+<input
+  hidden
+  aria-label="Project JSON を開く"
+  bind:this={projectFileInput}
+  type="file"
+  accept=".json,application/json"
+  disabled={busy}
+  onchange={load}
+/>
 <header class="app-header">
   <span class="studio-brand">SCADA<span>/ studio</span></span>
   <h1 title={project.manifest.name}>{project.manifest.name}</h1>
@@ -1684,6 +1693,15 @@
           title="メニュー">☰</button
         >
       {/snippet}
+      <MenuGroup label="ファイル">
+        {#each menuGroups[0].items as item}
+          <MenuItem
+            label={item.label}
+            disabled={item.disabled}
+            onSelect={item.run}
+          />
+        {/each}
+      </MenuGroup>
       <MenuGroup label="表示">
         {#each menuGroups[2].items as item}
           <MenuItem
@@ -1834,9 +1852,6 @@
       </div>{/if}
     <DesignerSidebar bind:active={activePanel} editable={mode === "edit"}>
       {#snippet projectPanel()}
-        <button class="sample-link" onclick={showProcessSample} disabled={busy}
-          >工程図サンプルを開く</button
-        >
         <div class="project-root" title={project.manifest.name}>
           <span aria-hidden="true">▦</span>
           {project.manifest.name}
@@ -2101,23 +2116,6 @@
         {/if}
       {/snippet}
     </DesignerSidebar>
-    <div class="sidebar-files">
-      <label class="file"
-        >Project JSON を開く<input
-          aria-label="Project JSON を開く"
-          bind:this={projectFileInput}
-          type="file"
-          accept=".json,application/json"
-          disabled={busy}
-          onchange={load}
-        /></label
-      ><button onclick={save} disabled={busy}>Project JSON を保存</button>
-      <p class="hint">
-        編集した Project は JSON
-        を保存してください。表示プレビューは見た目の確認用です。設備接続や正式な
-        Runtime の権限分離は未実装です。
-      </p>
-    </div>
   </aside>
   <section aria-label="画面プレビュー" bind:this={editorRegion}>
     {#if activeDefinition}
@@ -2522,7 +2520,6 @@
     margin: 4px 2px 10px;
     font-size: 11px;
   }
-  .project-sidebar .sample-link,
   .project-sidebar .reference-link {
     margin: 0;
     border: 0;
@@ -2531,7 +2528,6 @@
     font-size: 12px;
     color: var(--banto-text-muted);
   }
-  .project-sidebar .sample-link:hover,
   .project-sidebar .reference-link:enabled:hover {
     color: var(--banto-primary);
     background: color-mix(in srgb, var(--banto-primary) 6%, transparent);
@@ -2564,23 +2560,6 @@
   .placement-bar kbd {
     margin-left: 4px;
     color: var(--banto-text-muted);
-  }
-  .sidebar-files {
-    padding: 8px 14px;
-    border-top: 1px solid var(--banto-border);
-    flex-shrink: 0;
-  }
-  .sidebar-files .file,
-  .sidebar-files button {
-    border: 0;
-    background: transparent;
-    border-radius: 0;
-    padding: 5px 0;
-    margin: 0;
-    font-size: 12px;
-  }
-  .sidebar-files .hint {
-    display: none;
   }
   .save-state {
     display: flex;
@@ -2740,8 +2719,7 @@
     line-height: 1.8;
     color: var(--banto-text-muted);
   }
-  button,
-  .file {
+  button {
     display: block;
     width: 100%;
     text-align: left;
@@ -2758,12 +2736,6 @@
   .active {
     border-color: var(--banto-primary);
     color: var(--banto-primary);
-  }
-  .file input {
-    display: block;
-    width: 100%;
-    margin-top: 10px;
-    font-size: 11px;
   }
   .hint {
     margin-top: 12px;

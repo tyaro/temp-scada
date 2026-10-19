@@ -1,6 +1,6 @@
+import { fileCommand, chooseTheme, selectPanel } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { chooseTheme, selectPanel } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const dock = (page: Page) =>
@@ -15,7 +15,7 @@ async function start(page: Page) {
 }
 async function saved(page: Page) {
   const downloading = page.waitForEvent("download");
-  await button(page, "Project JSON を保存").click();
+  await fileCommand(page, "Project JSON を保存");
   return JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );

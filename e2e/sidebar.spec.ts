@@ -202,7 +202,7 @@ for (const theme of ["light", "dark"]) {
             name: "Project JSON を保存",
             exact: true,
           }),
-        ).toBeInViewport();
+        ).toHaveCount(0);
         expect(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth,
