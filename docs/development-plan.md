@@ -27,6 +27,18 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+<a id="image-paste-progress"></a>
+
+## OS画像の貼り付け（2026-10-20・日本時間）
+
+[画像clipboardの段階設計](image-clipboard-design.md)へAstraレビューを反映し、第1段階の画面直置きを実装した。native pasteの文字列とFileを同期確保し、SCADA断片を優先、次に単一PNG／JPEGを既存の画像取込へ渡す。壊れたSCADA断片は付随画像へ切り替えず拒否する。入力欄・メニュー・Modal・previewでは横取りせず、共有定義では画像だけを理由付き拒否する。メニューpasteは明示操作でのみ`read()`を呼び、権限拒否時はCtrl／Command＋Vかファイル配置を案内する。
+
+所有先・可視範囲・画面寸法を貼付開始時に固定し、clipboard待ちにもscopeのepochを追加した。画面／モードを離れて戻っても古い貼付・切取を再開しない。原本検査・共有・Undo・保存と未適用入力の保護は既存経路を共用する。Projectモデルは0.17.0を維持する。
+
+検証: TypeScript479件、型チェック（エラー・警告なし）・ビルドが成功。新規単体5件で優先順位・形式／容量拒否・メニュー読取・代替形式・権限拒否を確認した。ブラウザのOS貼付9件と既存画像配置6件が成功し、既存clipboard8件も再検証して成功した（関連計23ケースを複数実行で確認、全446ケースの再実行ではない）。受渡しPNGのバイト一致とα128、原本共有、Undo／Redo、JPEG、壊れた画像、入力欄・preview・Symbol、draft取消／続行、遅延decode・遅延menu readを確認した。
+
+初期JS532.33kB（gzip 161.06kB）、遅延ZIP chunk16.40kB（gzip 7.67kB）。既存の500kB超警告は継続。図形と画像原本を一緒に運ぶclipboardは第2段階として未実装。
+
 <a id="image-placement-progress"></a>
 
 ## 画面上のImage配置（2026-10-20・日本時間）
@@ -1123,7 +1135,7 @@ schema 0.3.0 は変更しない。未存在の定義・Symbol 以外の配置・
 
 ## 次の実装順
 
-[Image配置の最小設計](image-placement-design.md)へAstraレビューを反映し、背景との原本共有・画像枠・contain・比率復帰・画像混在clipboardの明示拒否を0.17.0で実装した（[記録](#image-placement-progress)）。画像clipboard・差替え・トリミングは後続。
+[Image配置の最小設計](image-placement-design.md)へAstraレビューを反映し、背景との原本共有・画像枠・contain・比率復帰・画像混在clipboardの明示拒否を0.17.0で実装した（[記録](#image-placement-progress)）。OS画像貼付も追加した（[記録](#image-paste-progress)）。図形と画像の同時clipboard・差替え・トリミングは後続。
 
 [レイヤーフォルダーの設計](layer-folders-design.md)に、整理用フォルダーを幾何グループから分離した保存契約・操作・受入条件を具体化した。保存契約・検証・編集コマンドは0.8.0で実装した（[記録](#layer-folder-model-progress)）。階層UI・検索・所属変更も後続で実装した（[記録](#layer-folder-ui-progress)）。幾何グループの完了は意味しない。
 

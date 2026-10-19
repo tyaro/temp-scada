@@ -1,4 +1,9 @@
 <script lang="ts">
+  import {
+    selectPastePayload,
+    readSystemPaste,
+    type PastePayload,
+  } from "./lib/image-clipboard";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
   import { readProjectFile, writeProjectPackage } from "./lib/project-package";
@@ -922,6 +927,7 @@
   }
   const clipboardSession = crypto.randomUUID();
   let clipboardBusy = $state(false);
+  let clipboardEpoch = 0;
   let lastPaste: { key: string; count: number } | undefined;
   function hiddenCanvasMutation(target: EventTarget | null) {
     if (
@@ -963,14 +969,37 @@
     )
       return;
     const target = screen.id,
-      generation = workspaceGeneration;
+      generation = workspaceGeneration,
+      epoch = clipboardEpoch;
+    const pasteIntent = {
+      bounds: { ...canvasView.bounds },
+      size: { width: screen.width, height: screen.height },
+    };
+    const pasteCenter = canvasWorkspace?.visibleCenter() ?? {
+      x: screen.width / 2,
+      y: screen.height / 2,
+    };
     const ids = [...selectedIds];
     if (kind !== "paste" && !ids.length) return;
     event?.preventDefault();
     if (kind === "cut" && event && hiddenCanvasMutation(event.target)) return;
     let native = event?.clipboardData;
-    const input = kind === "paste" ? native?.getData("text/plain") : undefined;
+    let input: PastePayload | undefined;
+    try {
+      if (kind === "paste" && native)
+        input = selectPastePayload(
+          native.getData("text/plain"),
+          Array.from(native.files),
+        );
+    } catch (error) {
+      report(
+        "error",
+        `クリップボード操作に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return;
+    }
     const validTarget = () =>
+      epoch === clipboardEpoch &&
       mode === "edit" &&
       screen.id === target &&
       workspaceGeneration === generation &&
@@ -989,7 +1018,7 @@
           ...(activeDefinition ? { definitionId: activeDefinition.id } : {}),
         };
         if (kind === "paste") {
-          const text = input ?? (await navigator.clipboard.readText());
+          const payload = input ?? (await readSystemPaste(navigator.clipboard));
           if (
             !validTarget() ||
             revision !== project.manifest.projectRevision ||
@@ -997,11 +1026,17 @@
             drafts.pending
           )
             return;
+          if (payload.kind === "image") {
+            if (activeDefinition)
+              throw new Error(
+                "Symbol定義には画像を貼り付けできません。画面を開いてください。",
+              );
+            await prepareImage(payload.file, generation, target, pasteIntent);
+            return;
+          }
+          const text = payload.text;
           parseClipboard(text);
-          const center = canvasWorkspace?.visibleCenter() ?? {
-            x: screen.width / 2,
-            y: screen.height / 2,
-          };
+          const center = pasteCenter;
           const key = JSON.stringify([
             text,
             origin,
@@ -1173,7 +1208,7 @@
         replacement
       )
         return;
-      void prepareBackground(file, intent.generation, intent.owner, intent);
+      void prepareImage(file, intent.generation, intent.owner, intent);
     });
   }
   function importBackground(file: File) {
@@ -1189,10 +1224,10 @@
         mode !== "edit"
       )
         return;
-      void prepareBackground(file, generation, owner);
+      void prepareImage(file, generation, owner);
     });
   }
-  async function prepareBackground(
+  async function prepareImage(
     file: File,
     generation: number,
     owner: string,
@@ -1236,6 +1271,7 @@
               placement.bounds,
             );
             if (edit({ type: "add-image", screenId: owner, asset, frame })) {
+              stopPlacement();
               const placedId = selectedIds[0];
               void tick().then(() => {
                 if (current() && placedId && selectedIds.includes(placedId))
@@ -1478,6 +1514,15 @@
     source: "sample" | "file" | "new";
     store: AssetStore;
   } | null>(null);
+  const clipboardOwnerScope = $derived(
+    `${workspaceGeneration}:${screen.id}:${mode}:${activeDefinition?.id ?? ""}:${busy}:${!!replacement}`,
+  );
+  $effect(() => {
+    clipboardOwnerScope;
+    untrack(() => {
+      clipboardEpoch++;
+    });
+  });
   const imageScope = $derived(
     `${workspaceGeneration}:${screen.id}:${mode}:${!!activeDefinition}:${busy}:${!!replacement}`,
   );

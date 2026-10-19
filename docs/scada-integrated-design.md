@@ -411,3 +411,7 @@ Project 0.16.0で資産宣言と背景参照を保存し、取込／差替え／
 ## 画面上のImage配置（2026-10-20）
 
 Project 0.17.0で画面直置きのPNG／JPEGを追加した。背景と原本を共有し、画像枠の移動・サイズ・回転・不透明度・複製・ロック／非表示・Undoと最小画像同梱packageに接続する。containを既定とし、元比率復帰では中心を保持する。Symbol内画像・画像clipboard・差替え・トリミングは後続。[保存契約と操作](image-placement-design.md)・[実装記録](development-plan.md#image-placement-progress)を参照。
+
+## OS画像の貼り付け（2026-10-20）
+
+[画像clipboardの段階設計](image-clipboard-design.md)の第1段階として、画面への単一PNG／JPEG貼付を既存Image配置へ接続した。SCADA断片を優先し、入力欄を奪わず、遅延処理のscopeとdraftを保護する。ブラウザで受け取れた原本を保持する。原本を含む図形clipboardは次段階。[実装記録](development-plan.md#image-paste-progress)を参照。

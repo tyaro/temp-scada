@@ -32,4 +32,4 @@ Imageを含むRGB一括編集は、非画像だけを部分適用せず全体を
 
 現在参照の収集を背景とImageで共通化し、Rustの検証も揃えた。画像同梱ZIPのprofile名は`banto-scada.image-project` version 1へ更新した。0.16.0と旧背景profileは自動移行しない。リリース前の互換性は保証しない方針を維持する。
 
-実装・検証記録は[開発計画](development-plan.md#image-placement-progress)を参照。OS画像clipboard・依存原本付きコピー／貼付・画像差替え・cover／stretch・トリミングは未実装。
+実装・検証記録は[開発計画](development-plan.md#image-placement-progress)を参照。OS画像clipboardは[第1段階](image-clipboard-design.md)で追加した。依存原本付きコピー／貼付・画像差替え・cover／stretch・トリミングは後続。
