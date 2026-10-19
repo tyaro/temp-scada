@@ -41,7 +41,7 @@
 
 機能基準`e04e44c`はTS全630件、Rust workspace30件、型チェック（エラー／警告なし）、本番ビルド、Clippyが成功。画像crop・配置・差し替え・背景・小窓の関連ブラウザ42件が成功。整形検査も成功。既存のJS bundle 500kB警告は継続する。
 
-全ブラウザ508件は追加確認中。過去`871920b`のCIにメニュー・回転・左ツリー・ホイールの4件の失敗があったが、現行の関連29件では再現していない。全体のCI成功と、上記の局所検証を同一視しない。[R0の記録](maintenance-refactoring-plan.md#refactoring-progress)で追う。
+`e04e44c`の[GitHub CI](https://github.com/tyaro/temp-scada/actions/runs/39310221559)が成功し、全ブラウザ508件と型・TS単体・ビルド・整形・Rust・CLIサンプル検証を通過した。過去4件のブラウザ失敗は、現行の関連29件とこのCIでは再現していない。重複して走らせたローカル全体検証は、同一コードのCI成功確認後に途中停止した。[R0の記録](maintenance-refactoring-plan.md#refactoring-progress)で経緯を確認できる。
 
 ## 仕様・実画面への入口
 
