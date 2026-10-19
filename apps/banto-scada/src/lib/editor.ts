@@ -471,11 +471,12 @@ export function applyCommand(
       objects.some(
         (o) =>
           o.shape.type === "symbol" ||
+          o.shape.type === "image" ||
           (o.shape.type === "text" && o.shape.binding),
       )
     )
       throw new Error(
-        "Symbol定義にはSymbol配置やタグ付きTextを貼り付けできません",
+        "Symbol定義には画像・Symbol配置・タグ付きTextを貼り付けできません",
       );
     if (
       !Number.isFinite(command.center.x) ||
@@ -483,6 +484,12 @@ export function applyCommand(
       !Number.isFinite(command.offset ?? 0)
     )
       throw new Error("貼り付け先は有限の座標にしてください");
+    const assetReferences = new Map<string, string>();
+    for (const asset of fragment.project.assets) {
+      const existing = next.assets.find((a) => a.sha256 === asset.sha256);
+      const incoming = { ...asset, id: existing?.id ?? newId() };
+      assetReferences.set(asset.id, registerAsset(next, incoming));
+    }
     const references = new Map<string, string>();
     for (const object of objects)
       if (
@@ -538,6 +545,8 @@ export function applyCommand(
         copy.y += dy;
         if (copy.shape.type === "symbol")
           copy.shape.symbolId = references.get(copy.shape.symbolId)!;
+        if (copy.shape.type === "image")
+          copy.shape.assetId = assetReferences.get(copy.shape.assetId)!;
         screen.objects.push(copy);
       });
     return finish(project, next);

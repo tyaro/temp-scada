@@ -70,4 +70,4 @@ ZIP依存はMITの`fflate@0.8.3`を固定し、必要時に遅延読込する。
 
 画面直置きのImageと背景が同じ資産IDを共有する。現在参照の収集・保存・未使用宣言の除去をImageへ広げ、最後の参照を外すまで宣言を残す。原本の保持・Undo／Redo・非同期書出しのleaseは共用する。
 
-現行ZIP profileは`banto-scada.image-project` version 1。ファイル構成・checksum・容量制限は上記と同じで、背景と配置画像の両方を同梱する。旧0.16.0・背景専用profileの自動移行は行わない。画像JSONだけの読込や画像を含む図形clipboardは理由付きで拒否する。[Imageの仕様](image-placement-design.md)を参照。
+現行ZIP profileは`banto-scada.image-project` version 1。ファイル構成・checksum・容量制限は上記と同じで、背景と配置画像の両方を同梱する。旧0.16.0・背景専用profileの自動移行は行わない。画像JSONだけの読込は理由付きで拒否する。画像を含む図形clipboardは後続で[原本同梱のversion 2](image-clipboard-design.md)を追加した。[Imageの仕様](image-placement-design.md)を参照。

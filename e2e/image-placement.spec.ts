@@ -214,24 +214,11 @@ test("background and duplicated images share one original through remove and Und
   project = await saved(page);
   expect(project.assets).toHaveLength(1);
 });
-test("image copy and cut preserve clipboard and placements; image mixed colors are disabled", async ({
+test("image mixed colors are disabled without partially coloring other objects", async ({
   page,
 }) => {
   await start(page);
-  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await place(page, await png(page));
-  await page.evaluate(() => navigator.clipboard.writeText("keep-existing"));
-  await selectPanel(page, "レイヤー");
-  await button(page, "image · 0").click();
-  await page.keyboard.press("Control+c");
-  await expect(page.getByTestId("project-status")).toContainText(
-    "画像を含むコピー",
-  );
-  await page.keyboard.press("Control+x");
-  await expect(images(page)).toHaveCount(1);
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
-    "keep-existing",
-  );
   await selectPanel(page, "部品");
   await button(page, "Rectangle を追加").click();
   await selectPanel(page, "レイヤー");

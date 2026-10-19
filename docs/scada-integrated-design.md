@@ -415,3 +415,7 @@ Project 0.17.0で画面直置きのPNG／JPEGを追加した。背景と原本�
 ## OS画像の貼り付け（2026-10-20）
 
 [画像clipboardの段階設計](image-clipboard-design.md)の第1段階として、画面への単一PNG／JPEG貼付を既存Image配置へ接続した。SCADA断片を優先し、入力欄を奪わず、遅延処理のscopeとdraftを保護する。ブラウザで受け取れた原本を保持する。原本を含む図形clipboardは次段階。[実装記録](development-plan.md#image-paste-progress)を参照。
+
+## 原本を含む図形clipboard（2026-10-20）
+
+[画像clipboardの第2段階](image-clipboard-design.md)で、選択した図形・Symbol・画像原本を別Projectへ運べるようにした。原本をhashごとに1回だけ含め、検証後に一括貼付し、書込み成功後だけcutを確定する。Project 0.17.0を維持し、clipboard v2の容量・ブラウザ制約を明示する。[実装記録](development-plan.md#asset-clipboard-progress)を参照。

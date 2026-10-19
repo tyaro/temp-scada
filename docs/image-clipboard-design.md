@@ -16,16 +16,24 @@ native pasteでは、イベント中に文字列とFileを同期的に確保す�
 
 保持する「原本」はOS clipboardから渡されたバイト列。OSやコピー元によってJPEGがPNGへ変換される場合、コピー元ファイルとのバイト同一性は保証しない。受け取ったPNGの透過と画像バイトは、再圧縮せず保存する。
 
-## 第2段階：図形と画像原本の同時コピー（未実装）
+## 第2段階：図形と画像原本の同時コピー（実装済み）
 
 画像を含まない図形は現行のversion 1・text/plain・4MiB上限を維持する。画像を含む場合は別versionの専用payloadを用意し、選択した配置・依存Symbol・必要assetのmetadataと原本を運ぶ。背景や未選択画像を含めず、同じhashの原本は1回だけ持つ。
 
-暫定案はtext/plain JSON＋base64。原本合計16MiB、encoded payload32MiB、画像単体8MiBとし、文字数／UTF-8量・base64形式と展開量をdecode前に検査する。全原本のhash・metadata・decode・参照を一時Storeで照合してから、混在選択全体をUndo1回で貼り付ける。容量不足・欠損・Symbol定義への画像混入は全体を拒否する。受け入れ先の同じhashは共有し、別の資産ID衝突は新IDへ対応付ける。
+version 2はtext/plain JSON＋base64。原本合計16MiB、encoded payload32MiB、図形・宣言4MiB、画像単体8MiBとし、文字数／UTF-8量・base64形式と展開量をdecode前に検査する。全原本のhash・metadata・decode・参照を一時Storeで照合してから、混在選択全体をUndo1回で貼り付ける。容量不足・欠損・Symbol定義への画像混入は全体を拒否する。受け入れ先の同じhashは共有し、別の資産ID衝突は新IDへ対応付ける。
 
-copyイベントへ`Blob.arrayBuffer()`をawaitした後で`setData()`しない。画像を含むコピーはAsync Clipboardへユーザー操作中にPromise付きClipboardItemを渡す等の対応経路を採る。対応外・書込拒否は明示する。切取は書込成功後に世代・revision・選択を再確認し、変わっていればコピーだけ成功として削除しない。
+copyイベントへ`Blob.arrayBuffer()`をawaitした後で`setData()`しない。画像を含むコピーはAsync Clipboardへユーザー操作中にPromise付きClipboardItemを渡す。対応外・書込拒否は明示する。切取は書込成功後に世代・revision・選択を再確認し、変わっていればコピーだけ成功として削除しない。
 
 ## 受入
 
 OS貼付は両テーマの実Ctrl＋V、透過、受渡しバイトの保存、原本共有、Undo／Redo、SCADA文字列と画像の同時提供、壊れたSCADA、複数・不正画像、JPEG、メニューの権限拒否、入力欄／共有定義／preview、draft取消／続行、画面やモードの往復と遅延処理を確認する。
 
 第2段階では別Project／別ブラウザ、共有asset・ID衝突、混在図形の原子的Undo、容量不足、書込失敗時の切取保持、処理中の変更／取消、同じセッションのライブSymbol共有も確認する。実装状況は[開発計画](development-plan.md#image-paste-progress)へ記録する。
+
+## 保存・履歴との境界
+
+copy開始時に図形snapshotと原本のleaseを取り、途中でProjectやStoreを差し替えても必要原本を残す。完了後にleaseを解放する。pasteの非同期decodeとhash検査は一時Storeだけで行い、全原本が揃ってから現在Storeへ共有し、配置・依存Symbol・資産ID対応を1回の編集で確定する。取込途中に容量不足が起きた場合はProject／履歴を変更せず、一時参照を回収する。
+
+画像のasset IDは貼付先で新規発行するか同hashの既存資産へ対応付ける。元ProjectのIDが貼付先の図形IDと衝突しても、そのまま挿入しない。同一セッションのライブSymbolを共有する従来規則は維持する。clipboard以外のProject JSON・Undoにbase64を保存しない。繰返し貼付の識別にも原本base64を残さず、検証済みのProject metadataを使う。
+
+対応ブラウザのAsync Clipboard書込みが必須。書込が使えない・拒否された場合、参照だけのコピーへ切り替えずエラーを案内する。v1の画像を含まないcopyは従来の同期イベント／readText・writeTextも維持する。Projectモデルと画像同梱packageは0.17.0のまま。

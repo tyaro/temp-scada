@@ -1,11 +1,11 @@
-import { CLIPBOARD_LIMIT } from "./clipboard";
+import { IMAGE_CLIPBOARD_LIMIT } from "./clipboard";
 import { IMAGE_LIMIT } from "./image-assets";
 export type PastePayload =
   { kind: "text"; text: string } | { kind: "image"; file: File };
 function objectText(text: string): boolean {
   // Our envelope starts with format. Preserve its priority even if truncated or oversized.
   if (/^\s*\{\s*"format"\s*:\s*"banto-scada\.objects"/.test(text)) return true;
-  if (text.length > CLIPBOARD_LIMIT) return false;
+  if (text.length > IMAGE_CLIPBOARD_LIMIT) return false;
   try {
     return JSON.parse(text)?.format === "banto-scada.objects";
   } catch {
@@ -50,8 +50,8 @@ export async function readSystemPaste(
   let text = "";
   if (texts[0]) {
     const blob = await texts[0].getType("text/plain");
-    if (blob.size > CLIPBOARD_LIMIT)
-      throw new Error("クリップボードのデータが4MiBを超えています");
+    if (blob.size > IMAGE_CLIPBOARD_LIMIT)
+      throw new Error("クリップボードのデータが32MiBを超えています");
     text = await blob.text();
   }
   if (objectText(text)) return { kind: "text", text };

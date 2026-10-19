@@ -1,6 +1,7 @@
 import { chromium, expect } from "@playwright/test";
 import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
+const clipboardRoundtrip = process.argv.includes("--clipboard");
 const output = resolve(process.argv[2] ?? "test-results/image-placement");
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
@@ -10,6 +11,9 @@ try {
   for (const theme of ["light", "dark"]) {
     const page = await browser.newPage({
       viewport: { width: 1920, height: 1080 },
+      permissions: clipboardRoundtrip
+        ? ["clipboard-read", "clipboard-write"]
+        : [],
     });
     await page.goto("http://127.0.0.1:5173");
     await page
@@ -117,6 +121,51 @@ try {
     await page.getByLabel("配置名", { exact: true }).fill("設備エリア参考図");
     await page.getByRole("button", { name: "変更を適用", exact: true }).click();
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
+    if (clipboardRoundtrip) {
+      const viewport = page.getByRole("region", {
+        name: "キャンバス操作領域",
+        exact: true,
+      });
+      await viewport.focus();
+      await page.keyboard.press("Control+a");
+      await page.keyboard.press("Control+c");
+      await expect(page.getByTestId("project-status")).toContainText(
+        "コピーしました",
+      );
+      const fragment = JSON.parse(
+        await page.evaluate(() => navigator.clipboard.readText()),
+      );
+      expect(fragment.version).toBe(2);
+      expect(fragment.images).toHaveLength(1);
+      const blank = await page.evaluate(async () => {
+        const path = "/src/lib/new-project.ts";
+        const { createProject } = await import(path);
+        const p = createProject();
+        p.manifest.name = "画像を含む図形 / 別Projectへ貼付";
+        p.screens[0].name = "貼り付け先";
+        p.screens[0].width = 1280;
+        p.screens[0].height = 720;
+        return p;
+      });
+      await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+        name: "target.json",
+        mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify(blank)),
+      });
+      await page
+        .getByRole("button", { name: "破棄して開く", exact: true })
+        .click();
+      await viewport.focus();
+      await page.keyboard.press("Control+v");
+      await expect(page.locator(".sheet > svg [data-object-id]")).toHaveCount(
+        fragment.project.screens[0].objects.length,
+      );
+      await expect(image).toHaveCount(1);
+      await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
+      await page
+        .getByRole("button", { name: "設備エリア参考図", exact: true })
+        .click();
+    }
     const close = page.locator(".toast-host button.close");
     while (await close.count()) await close.first().click();
     await page.evaluate(() => document.fonts.ready);
@@ -154,7 +203,13 @@ try {
         },
       )
       .toEqual([37, 99, 235, 255]);
-    await writeFile(join(output, `image-placement-${theme}.png`), capture);
+    await writeFile(
+      join(
+        output,
+        `${clipboardRoundtrip ? "asset-clipboard" : "image-placement"}-${theme}.png`,
+      ),
+      capture,
+    );
     await page.close();
   }
 } finally {

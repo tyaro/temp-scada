@@ -1,5 +1,10 @@
 <script lang="ts">
   import {
+    encodeAssetClipboard,
+    decodeAssetClipboard,
+    validateAssetClipboardSnapshot,
+  } from "./lib/asset-clipboard";
+  import {
     selectPastePayload,
     readSystemPaste,
     type PastePayload,
@@ -69,7 +74,11 @@
   }
   import { untrack, tick, flushSync } from "svelte";
   import { selectionNudge } from "./lib/keyboard-move";
-  import { copyObjects, parseClipboard } from "./lib/clipboard";
+  import {
+    copyObjects,
+    copyObjectSnapshot,
+    parseClipboard,
+  } from "./lib/clipboard";
   import { normalizeRotation } from "./lib/rotation";
   import { parseNumericProperty } from "./lib/designer/numeric-properties";
   import { placementLabel } from "./lib/placement-label";
@@ -1035,34 +1044,77 @@
             return;
           }
           const text = payload.text;
-          parseClipboard(text);
-          const center = pasteCenter;
-          const key = JSON.stringify([
-            text,
-            origin,
-            target,
-            canvasView.scale,
-            center,
-          ]);
-          const count = lastPaste?.key === key ? lastPaste.count + 1 : 0;
-          if (
-            edit({
-              type: "paste",
-              screenId: target,
-              text,
+          const fragment = parseClipboard(text);
+          if (fragment.version === 2 && activeDefinition)
+            throw new Error(
+              "Symbol定義には画像を貼り付けできません。画面を開いてください。",
+            );
+          const candidate = await decodeAssetClipboard(fragment);
+          try {
+            if (
+              !validTarget() ||
+              revision !== project.manifest.projectRevision ||
+              drafts.dirty ||
+              drafts.pending
+            )
+              return;
+            for (const asset of fragment.project.assets)
+              assetStore.importFrom(candidate, asset.sha256);
+            const center = pasteCenter;
+            const key = JSON.stringify([
+              fragment.version === 2
+                ? JSON.stringify([fragment.origin, fragment.project])
+                : text,
               origin,
+              target,
+              canvasView.scale,
               center,
-              offset: count * 20,
-            })
-          ) {
-            lastPaste = { key, count };
-            stopPlacement();
+            ]);
+            const count = lastPaste?.key === key ? lastPaste.count + 1 : 0;
+            if (
+              edit({
+                type: "paste",
+                screenId: target,
+                text,
+                origin,
+                center,
+                offset: count * 20,
+              })
+            ) {
+              lastPaste = { key, count };
+              stopPlacement();
+            }
+          } finally {
+            candidate.dispose();
+            collectAssets();
           }
         } else {
           if (kind === "cut") applyCommand(project, command, mode);
-          const text = copyObjects(project, target, ids, origin);
-          if (native) native.setData("text/plain", text);
-          else await navigator.clipboard.writeText(text);
+          const hasImages = screen.objects.some(
+            (object) =>
+              ids.includes(object.id) && object.shape.type === "image",
+          );
+          if (hasImages) {
+            if (
+              typeof ClipboardItem === "undefined" ||
+              typeof navigator.clipboard?.write !== "function"
+            )
+              throw new Error(
+                "このブラウザは画像を含む図形コピーに対応していません。画像同梱Projectを使ってください。",
+              );
+            const snapshot = copyObjectSnapshot(project, target, ids, origin);
+            validateAssetClipboardSnapshot(snapshot);
+            // Initiate the write in the user's gesture. Never await before writing event clipboardData.
+            const content = encodeAssetClipboard(snapshot, assetStore);
+            void content.catch(() => {});
+            await navigator.clipboard.write([
+              new ClipboardItem({ "text/plain": content }),
+            ]);
+          } else {
+            const text = copyObjects(project, target, ids, origin);
+            if (native) native.setData("text/plain", text);
+            else await navigator.clipboard.writeText(text);
+          }
           if (kind === "cut") {
             if (
               !validTarget() ||
