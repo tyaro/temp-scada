@@ -14,6 +14,10 @@
     selectionOutlineCommand,
     acknowledgeSelectionOutline,
   } from "./lib/designer/forms/selection-outline";
+  import {
+    selectionLineCommand,
+    acknowledgeSelectionLine,
+  } from "./lib/designer/forms/selection-line";
   import { shapePaintCommand } from "./lib/designer/forms/shape-paint";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
@@ -1865,14 +1869,8 @@
     if (form.dataset.editorForm === "selection-outline")
       acknowledgeSelectionOutline(form);
 
-    if (form.dataset.editorForm === "selection-line") {
-      const width = form.elements.namedItem("strokeWidth"),
-        arrow = form.elements.namedItem("arrow");
-      if (width instanceof HTMLInputElement) width.value = "";
-      if (arrow instanceof HTMLSelectElement) arrow.value = "";
-      const style = form.elements.namedItem("lineStyle");
-      if (style instanceof HTMLSelectElement) style.value = "";
-    }
+    if (form.dataset.editorForm === "selection-line")
+      acknowledgeSelectionLine(form);
     if (form.dataset.editorForm === "selection-color") {
       const input = form.elements.namedItem("fill");
       if (input instanceof HTMLInputElement) input.value = "";
@@ -2290,11 +2288,21 @@
           selectedIds,
         },
       );
-    if (
-      ["selection-color", "selection-line"].includes(
-        form.dataset.editorForm ?? "",
-      )
-    ) {
+    if (form.dataset.editorForm === "selection-line")
+      return selectionLineCommand(
+        {
+          data,
+          targetKey: form.dataset.targetKey,
+          objectIds: form.dataset.objectIds,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selectedIds,
+        },
+      );
+    if (form.dataset.editorForm === "selection-color") {
       if (
         form.dataset.targetKey !==
         `${workspaceGeneration}:${screen.id}:${!!activeDefinition}`
@@ -2311,25 +2319,6 @@
         throw new Error(
           "スタイルの適用対象が変更されています。選択し直してください。",
         );
-      if (form.dataset.editorForm === "selection-line") {
-        const width = String(data.get("strokeWidth") ?? ""),
-          arrow = String(data.get("arrow") ?? "");
-        const style = String(data.get("lineStyle") ?? "");
-        if (arrow !== "" && arrow !== "none" && arrow !== "end")
-          throw new Error("矢印の指定が不正です。");
-        return {
-          type: "set-line-style",
-          screenId: screen.id,
-          objectIds: ids as string[],
-          patch: {
-            ...(width === ""
-              ? {}
-              : { strokeWidth: parseNumericProperty(width) }),
-            ...(arrow === "" ? {} : { arrow }),
-            ...(style === "" ? {} : { lineStyle: parseLineStyle(style) }),
-          },
-        };
-      }
       return {
         type: "set-color",
         screenId: screen.id,

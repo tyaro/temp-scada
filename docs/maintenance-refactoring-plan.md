@@ -94,13 +94,13 @@
 
 - `lib/designer/forms/`へフォームごとの入力解析とコマンド作成を置く。数値解析は`numeric-properties.ts`、patternは既存の`pattern-fields.ts`を使う。
 - フォームのname、種類の列挙値、未指定の意味はそのフォームのadapterに閉じる。親Appが子の入力名を列挙してresetしない。
-- adapterの責務は「型付き対象情報の確認・入力からEditCommandを作成・適用成功後の入力確定・不正欄への誘導」。処理を登録する場所は既存DraftGuardの登録経路へ接続し、別のdirty台帳を作らない。
+- adapterの責務は「型付き対象情報の確認・入力からEditCommandを作成・適用成功後の固有入力確定」。Appがkindでfactoryへ委譲する。既存DraftGuardのdirty登録と適用／破棄／取消を維持し、新しいcallback登録機構や別のdirty台帳を作らない。エラー通知・不正欄への誘導も既存経路を維持する。
 - 対象情報はProject世代、画面／定義ID、必要な配置IDで明示する。変更前の対象を保持し、適用時に現在対象と照合する。
 - 入力解析はProjectを変更しない。全dirtyフォームのコマンドを候補Projectへ順に適用して検証し、成功した後だけ現行のsubmit経路で確定する。
 - `commitNumber`・IME・`beforeAllow`・`acceptField`の呼出順を維持する。dirtyのDOM保存方式を全廃する作業は今回に含めない。
-- Appにはフォームの登録を受ける接続処理を残し、個々の`input[name=...]`解析を移す。
+- Appにはkindの振分け、現在対象の型付き情報の供給、全体の候補検証、submit順序、共通`drafts.submitted`を残す。個々の`input[name=...]`解析と固有resetをadapterへ移す。動的callback登録が必要になれば別工程として検討する。
 
-**完了条件**：移したフォームの項目追加が、そのフォーム／adapter／テストで完結する。無変更適用、未指定の一括編集、無効値、取消、対象切替、数値確定と別欄の保留を保持する。各フォームの移動ごとに§7の該当E2Eを通す。
+**完了条件**：移した既存フォームの項目追加が、そのフォーム／adapter／テストで完結し、Appの解析・reset変更を要しない。新しいkindの委譲追加はAppに残してよい。無変更適用、未指定の一括編集、無効値、取消、対象切替、数値確定と別欄の保留を保持する。各フォームの移動ごとに§7の該当E2Eを通す。
 
 ### R4：Appの機能単位を抽出
 
@@ -208,7 +208,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R0 基準確認     | 基準確認済み | `e04e44c`、0.21.0、開始時clean。下記参照                         |
 | R1 文書整理     | 完了         | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理 |
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功 |
-| R3 フォーム契約 | 作業中       | ShapePaintとSelectionOutlineを移行。残るフォームはApp            |
+| R3 フォーム契約 | 作業中       | ShapePaint・SelectionOutline・SelectionLineを移行。残りはApp     |
 | R4 App機能分離  | 未着手       | a〜eごとの責務・移動先                                           |
 | R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持                            |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                 |
@@ -279,4 +279,12 @@ wheel関連7件と問題ケース20回の反復が成功。20回を別の機能�
 
 I1〜I4・I6・I9を維持。空欄の未指定、空patch全体の拒否、全対象への明示作成と同値再適用、不正／矛盾patch・古い選択の原子的拒否を確認した。TS全636件、型チェック（エラー／警告なし）、ビルド、対象整形と関連ブラウザ35件が成功。数値・タグ・保存・別フォームの候補事前検証、ロック・非表示・共有定義・IMEも既存の期待値で成功した。
 
-固有欄のreset後に共通DraftGuardへ確定する順序、全dirtyフォームの検証とフォームごとのUndoは変更しない。SelectionLine／SelectionColor、Symbol配色、背景・crop、通常Object／Screen／Project等は未移行。次のフォーム移動前に、R3の登録境界をAstraへ読取相談中。
+固有欄のreset後に共通DraftGuardへ確定する順序、全dirtyフォームの検証とフォームごとのUndoは変更しない。SelectionLine／SelectionColor、Symbol配色、背景・crop、通常Object／Screen／Project等は未移行。Astraの読取レビューにより、後続も同じfactory委譲を採用する。callback登録の追加はteardown・古いclosure・数値確定順の変更範囲を広げるため今回に含めない。R3本文とcode-mapをこの境界へ合わせた。
+
+### R3c：SelectionLineの解析・適用後の確定
+
+`f07c808`を基準に、線種一括フォームの入力解析と固有resetを`forms/selection-line.ts`へ移した。対象照合は既存の`selection-target.ts`を再利用する。Appはkindで委譲し、現在の世代・所有先・定義／画面・選択IDsを供給する。
+
+I1〜I4・I6・I9を維持。空欄は変更なし、矢印の列挙値と数値・線種の解析、固有欄resetから共通draft確定への順序は移動前と同じ。全体事前検証、数値確定、共有定義への適用、Undo単位、保存形式、markup・CSSは変更しない。SelectionColor以降は未移行。
+
+TS全636件、型チェック（エラー／警告なし）、本番ビルド、対象整形と線種・数値・タグ・保存の関連ブラウザ25件が成功。既存のJS bundle 500kB警告は継続する。次はSelectionColorの解析と成功後resetを同じ境界へ移す。
