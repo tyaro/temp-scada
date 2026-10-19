@@ -70,7 +70,11 @@
     "path": "/screens/0/objects/0/shape",
     "value": {
       "type": "rectangle",
-      "futureFeature": true
+      "futureFeature": true,
+      "paint": {
+        "fillEnabled": true,
+        "stroke": null
+      }
     },
     "valid": false
   },
@@ -182,6 +186,10 @@
       "type": "rectangle",
       "binding": {
         "externalName": "PLC01.Fast.Value"
+      },
+      "paint": {
+        "fillEnabled": true,
+        "stroke": null
       }
     },
     "valid": false
@@ -293,5 +301,17 @@
     "path": "/manifest/minRuntimeVersion",
     "value": "0.8.0",
     "valid": false
+  },
+  {
+    "name": "schema 0.9 is unsupported",
+    "valid": false,
+    "path": "/manifest/schemaVersion",
+    "value": "0.9.0"
+  },
+  {
+    "name": "runtime 0.9 is unsupported",
+    "valid": false,
+    "path": "/manifest/minRuntimeVersion",
+    "value": "0.9.0"
   }
 ]

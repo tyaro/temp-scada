@@ -4,6 +4,7 @@
     current,
     count,
     definitionColorCount = 0,
+    paintDisabledCount = 0,
     hiddenCount,
     locked,
     definition,
@@ -15,6 +16,7 @@
     current: string | null;
     count: number;
     definitionColorCount?: number;
+    paintDisabledCount?: number;
     hiddenCount: number;
     locked: boolean;
     definition: boolean;
@@ -84,7 +86,10 @@
       ? "共有定義内の図形・文字・線を変更します。配置の単色指定は維持します。"
       : "図形・文字・線・Symbol配置の単色を変更します。共有定義は変わりません。"}
   </p>
-  <fieldset disabled={locked}>
+  {#if paintDisabledCount}<p class="hint" role="status">
+      塗りと枠線が無効の配置を{paintDisabledCount}件含みます。有効にしてから適用してください。
+    </p>{/if}
+  <fieldset disabled={locked || paintDisabledCount > 0}>
     <label
       >適用する色<input
         bind:this={input}

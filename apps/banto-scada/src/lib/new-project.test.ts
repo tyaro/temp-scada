@@ -15,7 +15,7 @@ it("creates independent blank projects that round-trip the current contract", ()
   ];
   expect(new Set(ids).size).toBe(4);
   for (const id of ids) expect(id).toMatch(/^[0-9a-f-]{14}7[0-9a-f-]{21}$/);
-  expect(first.manifest.schemaVersion).toBe("0.9.0");
+  expect(first.manifest.schemaVersion).toBe("0.10.0");
   expect(first.manifest.projectRevision).toBe(1);
   expect(first.screens).toHaveLength(1);
   expect(first.screens[0]).toMatchObject({

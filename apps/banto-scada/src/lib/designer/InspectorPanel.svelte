@@ -1,5 +1,6 @@
 <script lang="ts">
   import { placementLabel } from "../placement-label";
+  import ShapePaint from "./ShapePaint.svelte";
   import SelectionColor from "./SelectionColor.svelte";
   import SelectionLine from "./SelectionLine.svelte";
   import SymbolColorMode from "./SymbolColorMode.svelte";
@@ -70,8 +71,32 @@
     new Set(
       screen.objects
         .filter((object) => selectedIds.includes(object.id))
-        .map((object) => object.fill.toLowerCase()),
+        .flatMap((object) => {
+          if (
+            object.shape.type === "rectangle" ||
+            object.shape.type === "ellipse"
+          )
+            return [
+              ...(object.shape.paint.fillEnabled
+                ? [object.fill.toLowerCase()]
+                : []),
+              ...(object.shape.paint.stroke
+                ? [object.shape.paint.stroke.color.toLowerCase()]
+                : []),
+            ];
+          return [object.fill.toLowerCase()];
+        }),
     ),
+  );
+  const paintDisabledCount = $derived(
+    screen.objects.filter(
+      (object) =>
+        selectedIds.includes(object.id) &&
+        (object.shape.type === "rectangle" ||
+          object.shape.type === "ellipse") &&
+        !object.shape.paint.fillEnabled &&
+        !object.shape.paint.stroke,
+    ).length,
   );
   const definitionColorCount = $derived(
     screen.objects.filter(
@@ -357,6 +382,7 @@
         <SelectionColor
           current={commonColor}
           {definitionColorCount}
+          {paintDisabledCount}
           count={selectedIds.length}
           hiddenCount={hiddenSelectionCount}
           locked={selectionLocked}
@@ -381,6 +407,16 @@
       {/key}
     {:else if selected}
       {#key `${generation}:${screen.id}:${selected.id}`}
+        {#if selected.shape.type === "rectangle" || selected.shape.type === "ellipse"}
+          <ShapePaint
+            paint={selected.shape.paint}
+            objectId={selected.id}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            locked={selectionLocked}
+            {drafts}
+            onsubmit={properties}
+          />
+        {/if}
         {#if selected.shape.type === "symbol"}
           <SymbolColorMode
             mode={selected.shape.colorMode}
@@ -455,18 +491,30 @@
                 >{selected.shape.type === "symbol" &&
                 selected.shape.colorMode === "definition"
                   ? "単色の保存値"
-                  : "色"}<input
+                  : (selected.shape.type === "rectangle" ||
+                        selected.shape.type === "ellipse") &&
+                      !selected.shape.paint.fillEnabled
+                    ? "塗りの保存値"
+                    : "色"}<input
                   name="fill"
                   aria-label="色"
                   type="color"
-                  disabled={selected.shape.type === "symbol" &&
-                    selected.shape.colorMode === "definition"}
+                  disabled={(selected.shape.type === "symbol" &&
+                    selected.shape.colorMode === "definition") ||
+                    ((selected.shape.type === "rectangle" ||
+                      selected.shape.type === "ellipse") &&
+                      !selected.shape.paint.fillEnabled)}
                 /></label
               >
               {#if selected.shape.type === "symbol" && selected.shape.colorMode === "definition"}<p
                   class="numeric-hint"
                 >
                   現在の描画にはこの単色を使用していません。各図形の色は共有定義で編集します。保存値は保持し、色の使い方を「配置の単色」に適用した後に編集できます。
+                </p>{/if}
+              {#if (selected.shape.type === "rectangle" || selected.shape.type === "ellipse") && !selected.shape.paint.fillEnabled}<p
+                  class="numeric-hint"
+                >
+                  塗りは無効です。保存色は保持し、塗りを「あり」に適用した後に編集できます。
                 </p>{/if}
               {#if selected.shape.type === "polyline"}
                 <label

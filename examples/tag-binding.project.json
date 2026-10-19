@@ -1,10 +1,10 @@
 {
   "manifest": {
     "product": "banto-scada",
-    "schemaVersion": "0.9.0",
+    "schemaVersion": "0.10.0",
     "projectId": "0199f000-0000-7000-8000-000000000001",
     "projectRevision": 1,
-    "minRuntimeVersion": "0.9.0",
+    "minRuntimeVersion": "0.10.0",
     "name": "読み取りタグ表示の設定例"
   },
   "screens": [
@@ -23,7 +23,11 @@
           "height": 180,
           "fill": "#164e63",
           "shape": {
-            "type": "rectangle"
+            "type": "rectangle",
+            "paint": {
+              "fillEnabled": true,
+              "stroke": null
+            }
           }
         },
         {
@@ -35,7 +39,11 @@
           "height": 140,
           "fill": "#0d9488",
           "shape": {
-            "type": "ellipse"
+            "type": "ellipse",
+            "paint": {
+              "fillEnabled": true,
+              "stroke": null
+            }
           }
         },
         {

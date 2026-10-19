@@ -14,7 +14,11 @@ for (const test of cases)
           object.shape.type ===
           (test.primitive === "ellipse" ? "rectangle" : test.primitive),
       );
-      if (test.primitive === "ellipse") object.shape = { type: "ellipse" };
+      if (test.primitive === "ellipse")
+        object.shape = {
+          type: "ellipse",
+          paint: { fillEnabled: true, stroke: null },
+        };
       if (test.definition) {
         const child = structuredClone(object);
         child.id = project.symbols[0].objects[0].id;

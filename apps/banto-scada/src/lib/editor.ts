@@ -6,11 +6,13 @@ import {
   getBounds,
   type Project,
   type TagBinding,
+  type ShapePaint,
 } from "./project";
 import builtins from "./symbol-library.json";
 import type { Point, SymbolDefinition, ScreenObject, Screen } from "./project";
 export type AddKind = "rectangle" | "ellipse" | "text" | "line" | "pipe";
 export interface ObjectPatch {
+  paint?: ShapePaint;
   name?: string | null;
   x?: number;
   y?: number;
@@ -247,7 +249,10 @@ export function applyCommand(
           width: command.width * 0.6,
           height: command.height * 0.6,
           fill: "#83bfcd",
-          shape: { type: "rectangle" },
+          shape: {
+            type: "rectangle",
+            paint: { fillEnabled: true, stroke: null },
+          },
         },
       ],
       folders: [],
@@ -618,8 +623,34 @@ export function applyCommand(
         throw new Error(
           "共有定義の色を使うSymbolを含むため、配置単色への切替を明示してください",
         );
+      if (
+        objects.some(
+          (object) =>
+            (object.shape.type === "rectangle" ||
+              object.shape.type === "ellipse") &&
+            !object.shape.paint.fillEnabled &&
+            !object.shape.paint.stroke,
+        )
+      )
+        throw new Error(
+          "塗りと枠線が無効の配置を含みます。有効にしてから適用してください",
+        );
       objects.forEach((object) => {
-        if (object.fill.toLowerCase() !== fill) object.fill = fill;
+        if (
+          object.shape.type === "rectangle" ||
+          object.shape.type === "ellipse"
+        ) {
+          if (
+            object.shape.paint.fillEnabled &&
+            object.fill.toLowerCase() !== fill
+          )
+            object.fill = fill;
+          if (
+            object.shape.paint.stroke &&
+            object.shape.paint.stroke.color.toLowerCase() !== fill
+          )
+            object.shape.paint.stroke.color = fill;
+        } else if (object.fill.toLowerCase() !== fill) object.fill = fill;
         if (command.convertDefinitionSymbols && object.shape.type === "symbol")
           object.shape.colorMode = "monochrome";
       });
@@ -726,7 +757,10 @@ export function applyCommand(
         shape:
           command.kind === "text"
             ? { type: "text", text: "テキスト" }
-            : { type: command.kind },
+            : {
+                type: command.kind,
+                paint: { fillEnabled: true, stroke: null },
+              },
       });
     }
     if (definitionId) {
@@ -805,6 +839,7 @@ export function applyCommand(
         binding,
         symbolId,
         colorMode,
+        paint,
         points,
         strokeWidth,
         arrow,
@@ -818,6 +853,14 @@ export function applyCommand(
         const normalized = name?.trim() ?? "";
         if (normalized) object.name = normalized;
         else delete object.name;
+      }
+      if (paint !== undefined) {
+        if (
+          object.shape.type !== "rectangle" &&
+          object.shape.type !== "ellipse"
+        )
+          throw new Error("塗りと枠線は矩形と楕円にだけ設定できます");
+        object.shape.paint = structuredClone(paint);
       }
       if (colorMode !== undefined) {
         if (object.shape.type !== "symbol" || definitionId)

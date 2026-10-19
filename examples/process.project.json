@@ -1,10 +1,10 @@
 {
   "manifest": {
     "product": "banto-scada",
-    "schemaVersion": "0.9.0",
+    "schemaVersion": "0.10.0",
     "projectId": "0199f200-0000-7000-8000-000000000001",
     "projectRevision": 1,
-    "minRuntimeVersion": "0.9.0",
+    "minRuntimeVersion": "0.10.0",
     "name": "循環設備の工程図サンプル"
   },
   "screens": [
@@ -49,7 +49,11 @@
           "width": 220,
           "height": 220,
           "shape": {
-            "type": "rectangle"
+            "type": "rectangle",
+            "paint": {
+              "fillEnabled": true,
+              "stroke": null
+            }
           }
         },
         {
@@ -61,7 +65,11 @@
           "width": 210,
           "height": 210,
           "shape": {
-            "type": "rectangle"
+            "type": "rectangle",
+            "paint": {
+              "fillEnabled": true,
+              "stroke": null
+            }
           }
         },
         {
@@ -73,7 +81,11 @@
           "width": 210,
           "height": 130,
           "shape": {
-            "type": "rectangle"
+            "type": "rectangle",
+            "paint": {
+              "fillEnabled": true,
+              "stroke": null
+            }
           }
         },
         {

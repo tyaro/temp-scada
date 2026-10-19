@@ -1,0 +1,277 @@
+[
+  {
+    "name": "rectangle True None",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": null
+    },
+    "valid": true,
+    "kind": "rectangle"
+  },
+  {
+    "name": "rectangle False None",
+    "paint": {
+      "fillEnabled": false,
+      "stroke": null
+    },
+    "valid": true,
+    "kind": "rectangle"
+  },
+  {
+    "name": "rectangle False {'color': '#123456', 'width': 0.1}",
+    "paint": {
+      "fillEnabled": false,
+      "stroke": {
+        "color": "#123456",
+        "width": 0.1
+      }
+    },
+    "valid": true,
+    "kind": "rectangle"
+  },
+  {
+    "name": "rectangle True {'color': '#ABCDEF', 'width': 64}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "color": "#ABCDEF",
+        "width": 64
+      }
+    },
+    "valid": true,
+    "kind": "rectangle"
+  },
+  {
+    "name": "ellipse True None",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": null
+    },
+    "valid": true,
+    "kind": "ellipse"
+  },
+  {
+    "name": "ellipse False None",
+    "paint": {
+      "fillEnabled": false,
+      "stroke": null
+    },
+    "valid": true,
+    "kind": "ellipse"
+  },
+  {
+    "name": "ellipse False {'color': '#123456', 'width': 0.1}",
+    "paint": {
+      "fillEnabled": false,
+      "stroke": {
+        "color": "#123456",
+        "width": 0.1
+      }
+    },
+    "valid": true,
+    "kind": "ellipse"
+  },
+  {
+    "name": "ellipse True {'color': '#ABCDEF', 'width': 64}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "color": "#ABCDEF",
+        "width": 64
+      }
+    },
+    "valid": true,
+    "kind": "ellipse"
+  },
+  {
+    "name": "definition paint",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "color": "#123456",
+        "width": 2
+      }
+    },
+    "valid": true,
+    "definition": true
+  },
+  {
+    "name": "invalid paint null",
+    "paint": null,
+    "valid": false
+  },
+  {
+    "name": "invalid paint true",
+    "paint": true,
+    "valid": false
+  },
+  {
+    "name": "invalid paint []",
+    "paint": [],
+    "valid": false
+  },
+  {
+    "name": "invalid paint {}",
+    "paint": {},
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true}",
+    "paint": {
+      "fillEnabled": true
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"stroke\": null}",
+    "paint": {
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": \"true\", \"stroke\": null}",
+    "paint": {
+      "fillEnabled": "true",
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true, \"stroke\": false}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": false
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#fff\", \"width\": 1}}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "color": "#fff",
+        "width": 1
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\", \"width\": 0}}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "color": "#ffffff",
+        "width": 0
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\", \"width\": -1}}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "color": "#ffffff",
+        "width": -1
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\", \"width\": 64.1}}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "color": "#ffffff",
+        "width": 64.1
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\", \"width\": \"2\"}}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "color": "#ffffff",
+        "width": "2"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\"}}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "color": "#ffffff"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"width\": 2}}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "width": 2
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\", \"width\": 2, \"extra\": true}}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": {
+        "color": "#ffffff",
+        "width": 2,
+        "extra": true
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "invalid paint {\"fillEnabled\": true, \"stroke\": null, \"extra\": true}",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": null,
+      "extra": true
+    },
+    "valid": false
+  },
+  {
+    "name": "missing paint",
+    "paint": null,
+    "valid": false,
+    "omit": true
+  },
+  {
+    "name": "forbidden on text",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": null
+    },
+    "valid": false,
+    "kind": "text"
+  },
+  {
+    "name": "forbidden on polyline",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": null
+    },
+    "valid": false,
+    "kind": "polyline"
+  },
+  {
+    "name": "forbidden on symbol",
+    "paint": {
+      "fillEnabled": true,
+      "stroke": null
+    },
+    "valid": false,
+    "kind": "symbol"
+  }
+]

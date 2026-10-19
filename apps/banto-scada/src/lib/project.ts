@@ -19,13 +19,17 @@ interface BaseObject {
 export interface TagBinding {
   externalName: string;
 }
+export interface ShapePaint {
+  fillEnabled: boolean;
+  stroke: { color: string; width: number } | null;
+}
 export type SymbolColorMode = "monochrome" | "definition";
 export interface LayoutObject extends BaseObject {
   width: number;
   height: number;
   shape:
-    | { type: "rectangle" }
-    | { type: "ellipse" }
+    | { type: "rectangle"; paint: ShapePaint }
+    | { type: "ellipse"; paint: ShapePaint }
     | { type: "text"; text: string; binding?: TagBinding }
     | { type: "symbol"; symbolId: string; colorMode: SymbolColorMode };
 }
@@ -66,10 +70,10 @@ export interface SymbolDefinition {
 export interface Project {
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.9.0";
+    schemaVersion: "0.10.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.9.0";
+    minRuntimeVersion: "0.10.0";
     name: string;
   };
   screens: Screen[];
@@ -90,12 +94,19 @@ export function parseProject(json: string): Project {
       ...old,
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.9.0",
-        minRuntimeVersion: "0.9.0",
+        schemaVersion: "0.10.0",
+        minRuntimeVersion: "0.10.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
         folders: [],
+        objects: screen.objects.map((object) => ({
+          ...object,
+          shape:
+            object.shape.type === "rectangle" || object.shape.type === "ellipse"
+              ? { ...object.shape, paint: { fillEnabled: true, stroke: null } }
+              : object.shape,
+        })),
         background: "#0b1220",
       })),
       symbols: [],
@@ -171,7 +182,7 @@ export function serializeProject(project: Project): string {
   parseProject(json);
   return json;
 }
-export function getBounds(object: ScreenObject) {
+export function getLayoutBounds(object: ScreenObject) {
   if ("width" in object)
     return { x: 0, y: 0, width: object.width, height: object.height };
   const xs = object.shape.points.map((p) => p.x),
@@ -186,6 +197,42 @@ export function getBounds(object: ScreenObject) {
     width: Math.max(...xs) - Math.min(...xs) + 2 * pad,
     height: Math.max(...ys) - Math.min(...ys) + 2 * pad,
   };
+}
+/** Painted outline, used by selection, alignment, range and placement anchors. */
+export function getBounds(object: ScreenObject) {
+  const bounds = getLayoutBounds(object);
+  const pad =
+    object.shape.type === "rectangle" || object.shape.type === "ellipse"
+      ? (object.shape.paint.stroke?.width ?? 0) / 2
+      : 0;
+  return {
+    x: bounds.x - pad,
+    y: bounds.y - pad,
+    width: bounds.width + 2 * pad,
+    height: bounds.height + 2 * pad,
+  };
+}
+export function strokeOverflowIds(
+  owner: Pick<Screen, "width" | "height" | "objects">,
+): string[] {
+  return owner.objects
+    .filter((object) => {
+      if (
+        object.visible === false ||
+        (object.shape.type !== "rectangle" &&
+          object.shape.type !== "ellipse") ||
+        !object.shape.paint.stroke
+      )
+        return false;
+      const bounds = getBounds(object);
+      return (
+        object.x + bounds.x < 0 ||
+        object.y + bounds.y < 0 ||
+        object.x + bounds.x + bounds.width > owner.width ||
+        object.y + bounds.y + bounds.height > owner.height
+      );
+    })
+    .map((object) => object.id);
 }
 export function parsePoints(text: string): Point[] {
   return text

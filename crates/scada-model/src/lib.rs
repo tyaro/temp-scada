@@ -66,11 +66,19 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.9.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.9.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.10.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.10.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
+                for object in screen["objects"].as_array_mut().unwrap() {
+                    if object["shape"]["type"] == "rectangle"
+                        || object["shape"]["type"] == "ellipse"
+                    {
+                        object["shape"]["paint"] =
+                            serde_json::json!({"fillEnabled":true,"stroke":null});
+                    }
+                }
             }
             value["symbols"] = serde_json::json!([]);
         }
@@ -422,6 +430,58 @@ mod tests {
         assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
     }
     #[test]
+    fn shape_paint_shares_the_browser_contract() {
+        let sample =
+            Project::from_json(include_str!("../../../examples/shape-paint.project.json")).unwrap();
+        assert_eq!(Project::from_json(&sample.to_json()).unwrap(), sample);
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/shape-paint-cases.json")).unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut value: Value =
+                serde_json::from_str(include_str!("../../../examples/process.project.json"))
+                    .unwrap();
+            let kind = case["kind"].as_str().unwrap_or("rectangle");
+            let index = value["screens"][0]["objects"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .position(|o| {
+                    o["shape"]["type"] == if kind == "ellipse" { "rectangle" } else { kind }
+                })
+                .unwrap();
+            if kind == "ellipse" {
+                value["screens"][0]["objects"][index]["shape"]["type"] =
+                    Value::String("ellipse".into());
+            }
+            if case["definition"] == true {
+                let mut child = value["screens"][0]["objects"][index].clone();
+                child["id"] = value["symbols"][0]["objects"][0]["id"].clone();
+                child["order"] = value["symbols"][0]["objects"][0]["order"].clone();
+                value["symbols"][0]["objects"][0] = child;
+            }
+            let object = if case["definition"] == true {
+                &mut value["symbols"][0]["objects"][0]
+            } else {
+                &mut value["screens"][0]["objects"][index]
+            };
+            if case["omit"] == true {
+                object["shape"].as_object_mut().unwrap().remove("paint");
+            } else {
+                object["shape"]["paint"] = case["paint"].clone();
+            }
+            let result = Project::from_json(&value.to_string());
+            assert_eq!(
+                result.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+            if let Ok(project) = result {
+                assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+            }
+        }
+    }
+    #[test]
     fn symbol_color_modes_share_the_browser_contract() {
         let sample =
             Project::from_json(include_str!("../../../examples/symbol-color.project.json"))
@@ -447,8 +507,7 @@ mod tests {
                 })
                 .unwrap();
             if kind == "ellipse" {
-                value["screens"][0]["objects"][index]["shape"] =
-                    serde_json::json!({"type":"ellipse"});
+                value["screens"][0]["objects"][index]["shape"] = serde_json::json!({"type":"ellipse","paint":{"fillEnabled":true,"stroke":null}});
             }
             if case["definition"] == true {
                 let mut child = value["screens"][0]["objects"][index].clone();
@@ -506,8 +565,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.9.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.9.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.10.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.10.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]
@@ -520,6 +579,12 @@ mod tests {
         for screen in screens.as_array_mut().unwrap() {
             screen["background"] = Value::String("#0b1220".into());
             screen["folders"] = serde_json::json!([]);
+            for object in screen["objects"].as_array_mut().unwrap() {
+                if object["shape"]["type"] == "rectangle" || object["shape"]["type"] == "ellipse" {
+                    object["shape"]["paint"] =
+                        serde_json::json!({"fillEnabled":true,"stroke":null});
+                }
+            }
         }
         assert_eq!(project.0["screens"], screens);
         assert_eq!(project.0["symbols"], serde_json::json!([]));

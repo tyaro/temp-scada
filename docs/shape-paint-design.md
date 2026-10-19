@@ -1,6 +1,6 @@
 # 矩形・楕円の塗りと枠線
 
-状態: **Astraレビューに基づく次の実装仕様。未実装**。現行Projectは0.9.0。モデル追加時は0.10.0へ更新し、Rust／TypeScript／Schema／現行サンプル・新規生成を同期する。認証・設備操作・状態別表示を追加しない。
+状態: **Project 0.10.0で実装・全体回帰確認済み**。Astraレビューに従い、Rust／TypeScript／Schema／現行サンプル・新規生成を同期した。[実装・検証・実画面](development-plan.md#shape-paint-progress)を参照する。認証・設備操作・状態別表示を追加しない。
 
 ## 保存契約
 

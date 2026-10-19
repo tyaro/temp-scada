@@ -34,14 +34,22 @@
   {#if object.shape.type === "rectangle"}<rect
       width={object.width}
       height={object.height}
-      fill={color ?? object.fill}
+      fill={object.shape.paint.fillEnabled ? (color ?? object.fill) : "none"}
+      stroke={object.shape.paint.stroke
+        ? (color ?? object.shape.paint.stroke.color)
+        : "none"}
+      stroke-width={object.shape.paint.stroke?.width}
     />
   {:else if object.shape.type === "ellipse"}<ellipse
       cx={object.width / 2}
       cy={object.height / 2}
       rx={object.width / 2}
       ry={object.height / 2}
-      fill={color ?? object.fill}
+      fill={object.shape.paint.fillEnabled ? (color ?? object.fill) : "none"}
+      stroke={object.shape.paint.stroke
+        ? (color ?? object.shape.paint.stroke.color)
+        : "none"}
+      stroke-width={object.shape.paint.stroke?.width}
     />
   {:else if object.shape.type === "text"}<text
       x="0"

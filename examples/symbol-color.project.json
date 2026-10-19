@@ -1,7 +1,7 @@
 {
   "manifest": {
-    "schemaVersion": "0.9.0",
-    "minRuntimeVersion": "0.9.0",
+    "schemaVersion": "0.10.0",
+    "minRuntimeVersion": "0.10.0",
     "projectId": "0199ff20-0000-7000-8000-000000000001",
     "name": "共有Symbolの配色サンプル",
     "projectRevision": 1,
@@ -179,7 +179,11 @@
           "height": 80,
           "fill": "#2dd4bf",
           "shape": {
-            "type": "ellipse"
+            "type": "ellipse",
+            "paint": {
+              "fillEnabled": true,
+              "stroke": null
+            }
           },
           "folderId": "0199ff20-0000-7000-8000-000000000030",
           "name": "ポンプ本体"
@@ -193,7 +197,11 @@
           "height": 30,
           "fill": "#0f766e",
           "shape": {
-            "type": "ellipse"
+            "type": "ellipse",
+            "paint": {
+              "fillEnabled": true,
+              "stroke": null
+            }
           },
           "folderId": "0199ff20-0000-7000-8000-000000000030",
           "name": "回転部"
@@ -207,7 +215,11 @@
           "height": 45,
           "fill": "#94a3b8",
           "shape": {
-            "type": "rectangle"
+            "type": "rectangle",
+            "paint": {
+              "fillEnabled": true,
+              "stroke": null
+            }
           },
           "folderId": "0199ff20-0000-7000-8000-000000000031",
           "name": "モーター"
@@ -377,7 +389,11 @@
           "height": 12,
           "fill": "#ef4444",
           "shape": {
-            "type": "ellipse"
+            "type": "ellipse",
+            "paint": {
+              "fillEnabled": true,
+              "stroke": null
+            }
           },
           "visible": false,
           "name": "非表示のランプ"

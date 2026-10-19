@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.9.0"
+          "const": "0.10.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.9.0"
+          "const": "0.10.0"
         },
         "name": {
           "type": "string",
@@ -186,9 +186,12 @@
               "properties": {
                 "type": {
                   "const": "rectangle"
+                },
+                "paint": {
+                  "$ref": "#/$defs/shapePaint"
                 }
               },
-              "required": ["type"],
+              "required": ["type", "paint"],
               "additionalProperties": false
             },
             {
@@ -196,9 +199,12 @@
               "properties": {
                 "type": {
                   "const": "ellipse"
+                },
+                "paint": {
+                  "$ref": "#/$defs/shapePaint"
                 }
               },
-              "required": ["type"],
+              "required": ["type", "paint"],
               "additionalProperties": false
             },
             {
@@ -433,6 +439,38 @@
       "items": {
         "$ref": "#/$defs/layerFolder"
       }
+    },
+    "shapePaint": {
+      "type": "object",
+      "properties": {
+        "fillEnabled": {
+          "type": "boolean"
+        },
+        "stroke": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "color": {
+                  "$ref": "#/$defs/color"
+                },
+                "width": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 64
+                }
+              },
+              "required": ["color", "width"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["fillEnabled", "stroke"],
+      "additionalProperties": false
     }
   }
 }

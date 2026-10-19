@@ -88,6 +88,7 @@
   } from "./lib/designer/FolderDialog.svelte";
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
+  import shapePaintSample from "../../../examples/shape-paint.project.json";
   import symbolColorSample from "../../../examples/symbol-color.project.json";
   import CanvasWorkspace, {
     type CanvasView,
@@ -522,6 +523,7 @@
   import SymbolLibrary from "./lib/designer/SymbolLibrary.svelte";
   import {
     parseProject,
+    strokeOverflowIds,
     serializeProject,
     parsePoints,
     type Point,
@@ -1074,6 +1076,9 @@
   let activeDefinition = $derived(
     project.symbols.find((s) => s.id === editingSymbolId),
   );
+  const symbolStrokeOverflow = $derived(
+    activeDefinition ? strokeOverflowIds(activeDefinition).length : 0,
+  );
   const favoriteItems = $derived(
     availableFavorites(
       favoriteKeys,
@@ -1617,6 +1622,49 @@
   }
   function formCommand(form: HTMLFormElement): EditCommand {
     const data = new FormData(form);
+    if (form.dataset.editorForm === "shape-paint") {
+      if (
+        !selected ||
+        form.dataset.targetKey !==
+          `${workspaceGeneration}:${screen.id}:${!!activeDefinition}` ||
+        selected?.id !== form.dataset.objectId ||
+        (selected.shape.type !== "rectangle" &&
+          selected.shape.type !== "ellipse")
+      )
+        throw new Error(
+          "塗りと枠線の適用先が変更されています。選択し直してください。",
+        );
+      const fill = data.get("fillEnabled"),
+        stroke = data.get("strokeEnabled");
+      if (
+        !["true", "false"].includes(String(fill)) ||
+        !["true", "false"].includes(String(stroke))
+      )
+        throw new Error("塗りと枠線の有無を選択してください。");
+      const width =
+        stroke === "true"
+          ? parseNumericProperty(String(data.get("strokeSize") ?? ""))
+          : 0;
+      if (stroke === "true" && (width <= 0 || width > 64))
+        throw new Error("枠線の幅は0より大きく64以下にしてください。");
+      return {
+        type: "update",
+        screenId: screen.id,
+        objectId: selected.id,
+        patch: {
+          paint: {
+            fillEnabled: fill === "true",
+            stroke:
+              stroke === "true"
+                ? {
+                    color: String(data.get("strokeColor")),
+                    width: Number(width),
+                  }
+                : null,
+          },
+        },
+      };
+    }
     if (form.dataset.editorForm === "symbol-color-mode") {
       if (
         form.dataset.targetKey !==
@@ -2529,6 +2577,15 @@
               "sample",
             ),
         },
+        {
+          label: "塗りと枠線サンプルを開く",
+          disabled: menuBlocked,
+          run: () =>
+            requestReplacement(
+              parseProject(JSON.stringify(shapePaintSample)),
+              "sample",
+            ),
+        },
       ],
     },
     {
@@ -3316,6 +3373,10 @@ ${object.id}`}
         <p>
           確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。別の形にする場合は定義を複製してください。
         </p>
+        {#if symbolStrokeOverflow > 0}<p role="status">
+            枠線が表示領域外へ出ている図形が{symbolStrokeOverflow}件あります。配置では領域外が切れます。図形の位置・寸法または定義の表示領域を変更してください。
+          </p>{/if}
+
         <button
           onclick={() =>
             transition(() => {
@@ -3556,7 +3617,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.9.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.10.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。
