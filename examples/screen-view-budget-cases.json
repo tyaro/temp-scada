@@ -1,0 +1,37 @@
+[
+  {
+    "name": "exact expanded budget",
+    "children": 100,
+    "instances": 198,
+    "views": 1,
+    "valid": true
+  },
+  {
+    "name": "expanded budget exceeded",
+    "children": 100,
+    "instances": 199,
+    "views": 1,
+    "valid": false
+  },
+  {
+    "name": "plain screen unrestricted",
+    "children": 100,
+    "instances": 200,
+    "views": 0,
+    "valid": true
+  },
+  {
+    "name": "32 empty views",
+    "children": 1,
+    "instances": 0,
+    "views": 32,
+    "valid": true
+  },
+  {
+    "name": "33 empty views",
+    "children": 1,
+    "instances": 0,
+    "views": 33,
+    "valid": false
+  }
+]

@@ -36,6 +36,7 @@
   let {
     screen,
     symbols,
+    screens = [],
     images,
     editable,
     selectedIds,
@@ -61,6 +62,7 @@
   }: {
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
+    screens?: Screen[];
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -919,6 +921,7 @@
             bind:this={renderer}
             {screen}
             {symbols}
+            {screens}
             {images}
             {editable}
             {selectedIds}

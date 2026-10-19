@@ -94,7 +94,7 @@
       塗りと枠線が無効の配置を{paintDisabledCount}件含みます。有効にしてから適用してください。
     </p>{/if}
   {#if imageCount}<p class="hint" role="status">
-      画像を含む選択には色を適用できません。画像以外だけを選択してください。
+      画像・埋込画面を含む選択には色を適用できません。対象を除いて選択してください。
     </p>{/if}
   {#if gradientCount}<p class="hint" role="status">
       グラデーションや模様を含む選択には共通色を適用できません。単独の塗り設定で編集してください。

@@ -1,3 +1,4 @@
+import type { Project } from "./project";
 /** Initial embedded-screen contract: one level, all references (including hidden ones). */
 export const MAX_SCREEN_VIEWS = 32;
 export const MAX_EXPANDED_PLACEMENTS = 20_000;
@@ -70,4 +71,72 @@ export function screenReferences(
     expandedCosts.set(id, count);
   }
   return { bySource, byTarget, expandedCosts };
+}
+
+/** Adapter counts hidden placements and Symbol children too; never expands the graph recursively. */
+export function projectScreenReferences(project: Project) {
+  const symbolCosts = new Map(
+    project.symbols.map((s) => [s.id, s.objects.length]),
+  );
+  return screenReferences(
+    project.screens.map((screen) => ({
+      id: screen.id,
+      baseCost: screen.objects.reduce(
+        (sum, object) =>
+          sum +
+          (object.shape.type === "screenView"
+            ? 0
+            : object.shape.type === "symbol"
+              ? 1 + (symbolCosts.get(object.shape.symbolId) ?? 0)
+              : 1),
+        0,
+      ),
+    })),
+    project.screens.flatMap((screen) =>
+      screen.objects.flatMap((object) =>
+        object.shape.type === "screenView"
+          ? [
+              {
+                screenId: screen.id,
+                objectId: object.id,
+                targetScreenId: object.shape.screenId,
+              },
+            ]
+          : [],
+      ),
+    ),
+  );
+}
+
+/** Candidate checks reuse the current graph rather than cloning the Project per option. */
+export function screenViewOptions(
+  project: Project,
+  ownerId: string,
+  replacingId?: string,
+) {
+  const graph = projectScreenReferences(project);
+  const owner = project.screens.find((s) => s.id === ownerId);
+  if (!owner) return [];
+  const outgoing = graph.bySource.get(ownerId) ?? [];
+  const replacing = outgoing.find((r) => r.objectId === replacingId);
+  const without =
+    (graph.expandedCosts.get(ownerId) ?? 0) -
+    (replacing ? 1 + graph.expandedCosts.get(replacing.targetScreenId)! : 0);
+  return project.screens.map((source) => ({
+    id: source.id,
+    name: source.name,
+    reason:
+      source.id === ownerId
+        ? "自分自身は埋め込めません"
+        : graph.byTarget.has(ownerId)
+          ? "この画面は別画面から参照中です"
+          : graph.bySource.has(source.id)
+            ? "埋込Viewを持つ画面です"
+            : outgoing.length - (replacing ? 1 : 0) >= MAX_SCREEN_VIEWS
+              ? "画面内の埋込Viewは32件までです"
+              : without + 1 + graph.expandedCosts.get(source.id)! >
+                  MAX_EXPANDED_PLACEMENTS
+                ? "展開後の配置数が20,000件を超えます"
+                : null,
+  }));
 }

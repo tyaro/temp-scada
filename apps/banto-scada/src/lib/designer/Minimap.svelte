@@ -6,6 +6,7 @@
   let {
     screen,
     symbols,
+    screens = [],
     images,
     view,
     oncenter,
@@ -13,6 +14,7 @@
   }: {
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
+    screens?: Screen[];
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -129,7 +131,7 @@
     onlostpointercapture={() => finish(true)}
   >
     <div class="thumbnail" aria-hidden="true">
-      <Renderer {screen} {symbols} {images} />
+      <Renderer {screen} {symbols} {images} {screens} />
     </div>
     <svg
       class="outline"

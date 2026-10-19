@@ -28,12 +28,14 @@
   } from "./resize";
   import { canvasColors } from "./canvas-colors";
   import { compositedOpacity } from "./opacity";
+  import ScreenView from "./ScreenView.svelte";
   import ScreenBackground from "./ScreenBackground.svelte";
   import ObjectPainting from "./ObjectPainting.svelte";
   import type { TagReadings } from "./tag-presentation";
   let {
     screen,
     symbols = [],
+    screens = [],
     images,
     readings,
     editable = false,
@@ -49,6 +51,7 @@
   }: {
     screen: Screen | SymbolDefinition;
     symbols?: SymbolDefinition[];
+    screens?: Screen[];
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -595,15 +598,31 @@
         data-object-rotation={visual.rotation}
         opacity={compositedOpacity(visual)}
       >
-        <ObjectPainting
-          object={visual}
-          {symbols}
-          {images}
-          {readings}
-          onsummary={(value) => {
-            textDescriptions[object.id] = value;
-          }}
-        />
+        {#if "width" in visual && visual.shape.type === "screenView"}
+          {@const source = screens.find(
+            (s) =>
+              visual.shape.type === "screenView" &&
+              s.id === visual.shape.screenId,
+          )}
+          {#if source}<ScreenView
+              {source}
+              width={visual.width}
+              height={visual.height}
+              {symbols}
+              {images}
+              {readings}
+            />{/if}
+        {:else}
+          <ObjectPainting
+            object={visual}
+            {symbols}
+            {images}
+            {readings}
+            onsummary={(value) => {
+              textDescriptions[object.id] = value;
+            }}
+          />
+        {/if}
       </g>
       {#if editable}
         {@const bounds = getBounds(visual)}

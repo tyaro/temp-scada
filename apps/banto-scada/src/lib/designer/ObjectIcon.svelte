@@ -30,6 +30,13 @@
         rx="9"
         ry="7"
       />
+    {:else if object.shape.type === "screenView"}<rect
+        x="2"
+        y="3"
+        width="20"
+        height="15"
+        rx="1"
+      /><path d="M8 22h8M12 18v4M5 7h8v7H5zM16 7h3M16 11h3" />
     {:else if object.shape.type === "image"}<rect
         x="3"
         y="4"

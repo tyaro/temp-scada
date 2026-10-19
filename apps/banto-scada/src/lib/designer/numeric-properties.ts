@@ -39,7 +39,9 @@ export function objectFormValues(
     x: String(object.x),
     y: String(object.y),
     rotation: String(object.rotation),
-    fill: placementColor(object),
+    ...(object.shape.type === "screenView"
+      ? {}
+      : { fill: placementColor(object) }),
   };
   if ("width" in object) {
     values.width = String(object.width);
@@ -54,6 +56,8 @@ export function objectFormValues(
       values.externalName = object.shape.binding?.externalName ?? "";
   }
   if (object.shape.type === "symbol") values.symbolId = object.shape.symbolId;
+  if (object.shape.type === "screenView")
+    values.sourceScreenId = object.shape.screenId;
   if (object.shape.type === "polyline") {
     values.points = object.shape.points
       .map((point) => `${point.x},${point.y}`)

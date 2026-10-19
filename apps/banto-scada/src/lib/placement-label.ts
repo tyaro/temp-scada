@@ -13,6 +13,8 @@ export function placementLabel(
             object.shape.type === "symbol" &&
             definition.id === object.shape.symbolId,
         )?.name ?? "Symbol")
-      : object.shape.type;
+      : object.shape.type === "screenView"
+        ? "埋込画面"
+        : object.shape.type;
   return `${kind} · ${object.order}`;
 }

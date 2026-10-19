@@ -133,6 +133,10 @@ export function copyObjectSnapshot(
     .map((object) => ({ ...object }));
   if (objects.length !== wanted.size)
     throw new Error("コピー対象が見つかりません");
+  if (objects.some((object) => object.shape.type === "screenView"))
+    throw new Error(
+      "埋込画面を含むコピー・切り取りは未対応です。配置の複製またはProject全体の保存を使ってください。",
+    );
   // Clipboard placements deliberately start at the destination root.
   for (const object of objects) delete object.folderId;
   const dependencies = new Set(

@@ -1,3 +1,4 @@
+import { projectScreenReferences } from "./screen-references";
 import { parseLineStyle, setLineStyle } from "./line-style";
 import { projectContent } from "./save-state";
 import { normalizeRotation, replaceRotatedVertex } from "./rotation";
@@ -36,6 +37,7 @@ export interface ObjectPatch {
   text?: string;
   binding?: TagBinding | null;
   symbolId?: string;
+  sourceScreenId?: string;
   colorMode?: "monochrome" | "definition";
   points?: Point[];
   strokeWidth?: number;
@@ -76,6 +78,12 @@ type ScreenCommand =
   | { type: "duplicate-screen"; screenId: string }
   | { type: "remove-screen"; screenId: string };
 export type ObjectCommand = (
+  | {
+      type: "add-screen-view";
+      screenId: string;
+      sourceScreenId: string;
+      frame: { x: number; y: number; width: number; height: number };
+    }
   | {
       type: "add-image";
       screenId: string;
@@ -218,6 +226,7 @@ export function isObjectCommand(
 ): command is ObjectCommand {
   return [
     "add-image",
+    "add-screen-view",
     "reset-image-ratio",
     "create-folder",
     "rename-folder",
@@ -374,6 +383,21 @@ export function applyCommand(
     ? next.symbols.find((s) => s.id === definitionId)
     : targetScreen;
   if (!screen) throw new Error("画面が見つかりません");
+  if (command.type === "add-screen-view") {
+    if (definitionId) throw new Error("Symbol定義には画面を埋め込めません。");
+    screen.objects.push({
+      id: newId(),
+      order: Math.max(-1, ...screen.objects.map((o) => o.order)) + 1,
+      rotation: 0,
+      ...command.frame,
+      shape: {
+        type: "screenView",
+        screenId: command.sourceScreenId,
+        fit: "contain",
+      },
+    });
+    return finish(project, next);
+  }
   if (command.type === "add-image") {
     if (definitionId) throw new Error("Symbol定義には画像を配置できません");
     const assetId = registerAsset(next, command.asset);
@@ -604,6 +628,17 @@ export function applyCommand(
   if (command.type === "remove-screen") {
     if (next.screens.length === 1)
       throw new Error("最後の画面は削除できません");
+    const uses = projectScreenReferences(next).byTarget.get(screen.id) ?? [];
+    if (uses.length) {
+      const names = uses.slice(0, 5).map((ref) => {
+        const owner = next.screens.find((s) => s.id === ref.screenId)!;
+        const object = owner.objects.find((o) => o.id === ref.objectId)!;
+        return `${owner.name}／${object.name ?? "埋込画面"}`;
+      });
+      throw new Error(
+        `この画面は埋込表示で使用中です：${names.join("、")}${uses.length > 5 ? " ほか" : ""}。先に参照配置を削除または変更してください。`,
+      );
+    }
     next.screens = next.screens.filter((s) => s.id !== screen.id);
     return finish(project, next);
   }
@@ -800,9 +835,14 @@ export function applyCommand(
         throw new Error(
           "グラデーションや模様を含む選択には共通色を適用できません。単独の塗り設定で編集してください。",
         );
-      if (objects.some((object) => object.shape.type === "image"))
+      if (
+        objects.some(
+          (object) =>
+            object.shape.type === "image" || object.shape.type === "screenView",
+        )
+      )
         throw new Error(
-          "画像を含む選択には色を適用できません。画像以外だけを選択してください。",
+          "画像や埋込画面を含む選択には色を適用できません。対象を除いて選択してください。",
         );
       const fill = command.fill.trim().toLowerCase();
       if (!/^#[0-9a-f]{6}$/.test(fill))
@@ -1071,6 +1111,7 @@ export function applyCommand(
         text,
         binding,
         symbolId,
+        sourceScreenId,
         colorMode,
         paint,
         rotation,
@@ -1087,6 +1128,7 @@ export function applyCommand(
       const object = screen.objects[index];
       if (
         (object.shape.type === "image" ||
+          object.shape.type === "screenView" ||
           object.shape.type === "rectangle" ||
           object.shape.type === "ellipse") &&
         (geometry.fill !== undefined || colorAlpha !== undefined)
@@ -1129,6 +1171,11 @@ export function applyCommand(
         if (colorMode !== "monochrome" && colorMode !== "definition")
           throw new Error("Symbolの色の使い方が不正です");
         object.shape.colorMode = colorMode;
+      }
+      if (sourceScreenId !== undefined) {
+        if (definitionId || object.shape.type !== "screenView")
+          throw new Error("参照画面は埋込配置にだけ設定できます。");
+        object.shape.screenId = sourceScreenId;
       }
       if (symbolId !== undefined) {
         if (definitionId || object.shape.type !== "symbol")

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { screenViewOptions } from "../screen-references";
   import { placementLabel } from "../placement-label";
   import ShapePaint from "./ShapePaint.svelte";
   import SelectionColor from "./SelectionColor.svelte";
@@ -42,6 +43,7 @@
     moveSelection,
     edit,
     openDefinition,
+    openScreen,
   }: {
     element?: HTMLElement;
     visible: boolean;
@@ -67,6 +69,7 @@
     moveSelection: (event: SubmitEvent) => void;
     edit: (command: EditCommand) => boolean;
     openDefinition: (id: string) => void;
+    openScreen: (id: string) => void;
   } = $props();
   const selectedColors = $derived(
     new Set(
@@ -99,7 +102,8 @@
                 ? [object.shape.paint.stroke.color.toLowerCase()]
                 : []),
             ];
-          return object.shape.type === "image"
+          return object.shape.type === "image" ||
+            object.shape.type === "screenView"
             ? []
             : [object.fill!.toLowerCase()];
         }),
@@ -427,7 +431,9 @@
           {definitionColorCount}
           {gradientCount}
           imageCount={screen.objects.filter(
-            (o) => selectedIds.includes(o.id) && o.shape.type === "image",
+            (o) =>
+              selectedIds.includes(o.id) &&
+              (o.shape.type === "image" || o.shape.type === "screenView"),
           ).length}
           {paintDisabledCount}
           count={selectedIds.length}
@@ -576,7 +582,7 @@
                     >{/if}</label
                 >
               {/each}
-              {#if selected.shape.type !== "image" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
+              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
                 <label
                   >{selected.shape.type === "symbol" &&
                   selected.shape.colorMode === "definition"
@@ -752,6 +758,22 @@
                   </p>
                 {/if}
               {/if}
+              {#if selected.shape.type === "screenView"}
+                <label class="full-width"
+                  >参照する画面<select
+                    name="sourceScreenId"
+                    aria-label="参照する画面"
+                  >
+                    {#each screenViewOptions(project, screen.id, selected.id) as source (source.id)}
+                      <option value={source.id} disabled={!!source.reason}
+                        >{source.name}{source.reason
+                          ? `（${source.reason}）`
+                          : ""}</option
+                      >
+                    {/each}
+                  </select></label
+                >
+              {/if}
               {#if selected.shape.type === "symbol"}
                 <label class="full-width"
                   >参照する Symbol 定義<select
@@ -775,6 +797,18 @@
                 空欄で静的テキストに戻ります。割り当て中は数値を表示します。Hub
                 接続は未実装のため「未接続」と表示します。テキスト欄は割り当て解除後に使います。
               </p>
+            {/if}
+            {#if selected.shape.type === "screenView"}
+              <p>
+                参照先の背景と配置を読み取り表示します。元画面の変更はすべての使用先へ反映されます。
+              </p>
+              <button
+                type="button"
+                onclick={() => {
+                  if (selected?.shape.type === "screenView")
+                    openScreen(selected.shape.screenId);
+                }}>参照する画面を開く</button
+              >
             {/if}
             {#if selected.shape.type === "symbol"}
               <p>

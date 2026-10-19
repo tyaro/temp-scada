@@ -226,6 +226,7 @@
     NumericProperty,
     NumericTarget,
   } from "./lib/designer/numeric-properties";
+  import ScreenViewDialog from "./lib/designer/ScreenViewDialog.svelte";
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
   let showInspector = $state(DEFAULT_PANEL_LAYOUT.panels.inspector);
   let showSidebar = $state(DEFAULT_PANEL_LAYOUT.panels.sidebar);
@@ -704,6 +705,7 @@
       return;
     }
     if (
+      screenViewRequest !== null ||
       folderRequest !== null ||
       inspectorController?.isTagPickerOpen() ||
       (event.target instanceof Element &&
@@ -1854,6 +1856,7 @@
         command.type === "add-symbol" ||
         command.type === "place-symbol" ||
         command.type === "add-image" ||
+        command.type === "add-screen-view" ||
         command.type === "duplicate" ||
         command.type === "duplicate-many" ||
         command.type === "paste"
@@ -1967,6 +1970,60 @@
     };
     run();
   }
+  let screenViewRequest = $state<{
+    generation: number;
+    ownerId: string;
+  } | null>(null);
+  function openScreenViewDialog() {
+    if (mode !== "edit" || activeDefinition || busy || replacement) return;
+    const ownerId = screen.id,
+      generation = workspaceGeneration;
+    withScreen(ownerId, () => {
+      if (
+        generation !== workspaceGeneration ||
+        mode !== "edit" ||
+        activeDefinition
+      )
+        return;
+      stopPlacement();
+      screenViewRequest = { generation, ownerId };
+    });
+  }
+  function addScreenView(sourceId: string) {
+    const request = screenViewRequest;
+    if (
+      !request ||
+      request.generation !== workspaceGeneration ||
+      request.ownerId !== screen.id ||
+      activeDefinition ||
+      mode !== "edit"
+    ) {
+      screenViewRequest = null;
+      return;
+    }
+    const source = project.screens.find((s) => s.id === sourceId);
+    if (!source) return;
+    const frame = initialImageFrame(source, screen, canvasView.bounds);
+    if (
+      edit({
+        type: "add-screen-view",
+        screenId: screen.id,
+        sourceScreenId: sourceId,
+        frame,
+      })
+    )
+      screenViewRequest = null;
+  }
+  $effect(() => {
+    if (
+      screenViewRequest &&
+      (screenViewRequest.generation !== workspaceGeneration ||
+        screenViewRequest.ownerId !== screen.id ||
+        activeDefinition ||
+        mode !== "edit")
+    )
+      screenViewRequest = null;
+  });
   function openScreen(id: string, rename = false) {
     const generation = workspaceGeneration;
     const run = () => {
@@ -2304,6 +2361,8 @@
     }
     if (selected.shape.type === "symbol")
       patch.symbolId = String(data.get("symbolId"));
+    if (selected.shape.type === "screenView")
+      patch.sourceScreenId = String(data.get("sourceScreenId"));
     if (selected.shape.type === "polyline") {
       patch.lineStyle = parseLineStyle(data.get("lineStyle"));
       patch.points = parsePoints(String(data.get("points")));
@@ -3406,6 +3465,11 @@
     {
       label: "挿入",
       items: [
+        {
+          label: "画面を埋め込む",
+          disabled: editBlocked || !!activeDefinition,
+          run: openScreenViewDialog,
+        },
         ...(
           [
             { kind: "rectangle", label: "Rectangle を追加" },
@@ -4243,6 +4307,7 @@ ${object.id}`}
           oncontextrequest={requestSelectionContext}
           {screen}
           symbols={project.symbols}
+          screens={project.screens}
           images={assetImages}
           editable={mode === "edit"}
           {selectedIds}
@@ -4317,6 +4382,7 @@ ${object.id}`}
               <Minimap
                 {screen}
                 symbols={project.symbols}
+                screens={project.screens}
                 images={assetImages}
                 view={canvasView}
                 oncenter={(point) => canvasWorkspace?.centerOn(point)}
@@ -4396,6 +4462,7 @@ ${object.id}`}
       {moveSelection}
       {edit}
       {openDefinition}
+      {openScreen}
     />
   {/if}
   {#if mode === "edit" && windowWidth >= 1100}
@@ -4454,13 +4521,21 @@ ${object.id}`}
     />
   {/key}
 {/if}
+{#if screenViewRequest}
+  <ScreenViewDialog
+    {project}
+    ownerId={screenViewRequest.ownerId}
+    onapply={addScreenView}
+    onclose={() => (screenViewRequest = null)}
+  />
+{/if}
 <DraftPrompt guard={drafts} />
 <Modal
   open={helpOpen}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.19.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.20.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

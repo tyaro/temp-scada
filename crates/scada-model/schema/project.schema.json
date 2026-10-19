@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.19.0"
+          "const": "0.20.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.19.0"
+          "const": "0.20.0"
         },
         "name": {
           "type": "string",
@@ -76,6 +76,9 @@
                 },
                 {
                   "$ref": "#/$defs/imageInstance"
+                },
+                {
+                  "$ref": "#/$defs/screenViewInstance"
                 }
               ]
             }
@@ -863,6 +866,80 @@
           "additionalProperties": false
         }
       ]
+    },
+    "screenViewInstance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "shape": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "screenView"
+            },
+            "screenId": {
+              "$ref": "#/$defs/id"
+            },
+            "fit": {
+              "const": "contain"
+            }
+          },
+          "required": ["type", "screenId", "fit"],
+          "additionalProperties": false
+        },
+        "name": {
+          "$ref": "#/$defs/placementName"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "folderId": {
+          "$ref": "#/$defs/id"
+        },
+        "rotation": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360
+        },
+        "opacity": {
+          "$ref": "#/$defs/opacity"
+        }
+      },
+      "required": [
+        "id",
+        "order",
+        "x",
+        "y",
+        "width",
+        "height",
+        "shape",
+        "rotation"
+      ],
+      "additionalProperties": false
     }
   }
 }

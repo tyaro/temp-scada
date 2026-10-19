@@ -1,3 +1,4 @@
+import { projectScreenReferences } from "./screen-references";
 import { patternGeometry, type PatternKind } from "./pattern-paint";
 import { linearGradientEndpoints } from "./linear-gradient";
 import type { ImageMetadata } from "./image-assets";
@@ -71,7 +72,8 @@ export interface LayoutObject extends BaseObject {
     | { type: "ellipse"; paint: ShapePaint }
     | { type: "text"; text: string; style: TextStyle; binding?: TagBinding }
     | { type: "symbol"; symbolId: string; colorMode: SymbolColorMode }
-    | { type: "image"; assetId: string; fit: "contain" };
+    | { type: "image"; assetId: string; fit: "contain" }
+    | { type: "screenView"; screenId: string; fit: "contain" };
 }
 export interface PolylineObject extends BaseObject {
   shape: {
@@ -121,10 +123,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.19.0";
+    schemaVersion: "0.20.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.19.0";
+    minRuntimeVersion: "0.20.0";
     name: string;
   };
   screens: Screen[];
@@ -148,8 +150,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.19.0",
-        minRuntimeVersion: "0.19.0",
+        schemaVersion: "0.20.0",
+        minRuntimeVersion: "0.20.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -300,6 +302,7 @@ export function parseProject(json: string): Project {
         throw new Error("線には異なる2点が必要です");
     }
   }
+  projectScreenReferences(project);
   return project;
 }
 export function serializeProject(project: Project): string {

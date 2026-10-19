@@ -66,8 +66,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.19.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.19.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.20.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.20.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -259,6 +259,7 @@ impl Project {
                 }
             }
         }
+        validate_screen_views(&value)?;
         Ok(Self(value))
     }
 
@@ -268,9 +269,127 @@ impl Project {
     }
 }
 
+/// One level only. Count hidden objects and Symbol children, without recursive rendering.
+fn validate_screen_views(project: &Value) -> Result<(), String> {
+    let screens = project["screens"].as_array().unwrap();
+    let symbols: HashMap<_, _> = project["symbols"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| {
+            (
+                s["id"].as_str().unwrap(),
+                s["objects"].as_array().unwrap().len(),
+            )
+        })
+        .collect();
+    let mut costs = HashMap::new();
+    let mut refs: HashMap<&str, Vec<&str>> = HashMap::new();
+    for screen in screens {
+        let id = screen["id"].as_str().unwrap();
+        let mut cost = 0usize;
+        for object in screen["objects"].as_array().unwrap() {
+            let shape = &object["shape"];
+            if shape["type"] == "screenView" {
+                let target = shape["screenId"].as_str().unwrap();
+                if target == id {
+                    return Err("自分自身の画面は埋め込めません。".into());
+                }
+                refs.entry(id).or_default().push(target);
+            } else {
+                cost += 1;
+                if shape["type"] == "symbol" {
+                    cost += symbols[shape["symbolId"].as_str().unwrap()];
+                }
+            }
+        }
+        costs.insert(id, cost);
+    }
+    for (id, targets) in &refs {
+        if targets.len() > 32 {
+            return Err("画面内の埋込Viewは32件以下にしてください。".into());
+        }
+        let mut cost = costs[id];
+        for target in targets {
+            let target_cost = costs.get(target).ok_or("参照する画面が見つかりません。")?;
+            if refs.contains_key(target) {
+                return Err("埋込Viewを持つ画面は埋め込めません（入れ子・循環参照）。".into());
+            }
+            cost += 1 + target_cost;
+        }
+        if cost > 20_000 {
+            return Err("埋込後の描画配置数は20,000件以下にしてください。".into());
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn screen_views_share_browser_contract() {
+        let sample: Value = serde_json::from_str(include_str!(
+            "../../../examples/embedded-screen.project.json"
+        ))
+        .unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/screen-view-cases.json")).unwrap();
+        let original = Project::from_json(&sample.to_string()).unwrap();
+        assert_eq!(Project::from_json(&original.to_json()).unwrap(), original);
+        for case in cases {
+            let mut value = sample.clone();
+            let path = case["path"].as_str().unwrap();
+            let (parent, key) = path.rsplit_once('/').unwrap();
+            let target = value.pointer_mut(parent).unwrap();
+            if target.is_array() {
+                target[key.parse::<usize>().unwrap()] = case["value"].clone();
+            } else {
+                target[key] = case["value"].clone();
+            }
+            assert_eq!(
+                Project::from_json(&value.to_string()).is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+        }
+    }
+    #[test]
+    fn screen_view_budgets_share_browser_contract() {
+        let cases: Vec<Value> = serde_json::from_str(include_str!(
+            "../../../examples/screen-view-budget-cases.json"
+        ))
+        .unwrap();
+        for case in cases {
+            let mut value: Value = serde_json::from_str(include_str!(
+                "../../../examples/embedded-screen.project.json"
+            ))
+            .unwrap();
+            let count = |key: &str| case[key].as_u64().unwrap() as usize;
+            let symbol_id = value["symbols"][0]["id"].clone();
+            value["symbols"][0]["folders"] = serde_json::json!([]);
+            value["symbols"][0]["objects"]=Value::Array((0..count("children")).map(|i|serde_json::json!({"id":format!("0199ff03-0000-7000-8000-{i:012}"),"order":i,"x":0,"y":0,"width":5,"height":5,"rotation":0,"visible":false,"shape":{"type":"rectangle","paint":{"fill":{"enabled":true,"paint":{"type":"solid","color":"#000000","alpha":1}},"stroke":null}}})).collect());
+            value["screens"][1]["folders"] = serde_json::json!([]);
+            value["screens"][1]["objects"]=Value::Array((0..count("instances")).map(|i|serde_json::json!({"id":format!("0199ff04-0000-7000-8000-{i:012}"),"order":i,"x":0,"y":0,"width":5,"height":5,"rotation":0,"fill":"#000000","visible":false,"shape":{"type":"symbol","symbolId":symbol_id,"colorMode":"definition"}})).collect());
+            let template = value["screens"][0]["objects"][1].clone();
+            let mut objects = vec![value["screens"][0]["objects"][0].clone()];
+            for i in 0..count("views") {
+                let mut object = template.clone();
+                object["id"] = Value::String(format!("0199ff05-0000-7000-8000-{i:012}"));
+                object["order"] = serde_json::json!(i + 1);
+                object["visible"] = Value::Bool(false);
+                objects.push(object);
+            }
+            value["screens"][0]["objects"] = Value::Array(objects);
+            assert_eq!(
+                Project::from_json(&value.to_string()).is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+        }
+    }
     fn folder_fixture(case: &Value, definition: bool) -> Value {
         let mut value: Value =
             serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
@@ -935,8 +1054,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.19.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.19.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.20.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.20.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]
