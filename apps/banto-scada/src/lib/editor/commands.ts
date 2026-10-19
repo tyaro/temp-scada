@@ -295,3 +295,12 @@ export function isScreenCommand(
 ): command is ScreenCommand {
   return commandScopes[command.type] === "screen";
 }
+
+export type FolderStructureCommand = Extract<
+  ObjectCommand,
+  { type: "create-folder" | "rename-folder" | "move-folder" | "remove-folder" }
+>;
+export type FolderAssignmentCommand = Extract<
+  ObjectCommand,
+  { type: "set-folder" }
+>;

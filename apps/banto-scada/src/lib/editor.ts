@@ -20,6 +20,11 @@ import {
   isScreenCommand,
   type EditCommand,
 } from "./editor/commands";
+import {
+  isFolderStructureCommand,
+  applyFolderStructureCommand,
+  applyFolderAssignment,
+} from "./editor/folder-handler";
 import { applyProjectCommand } from "./editor/project-handler";
 import { applyScreenCommand } from "./editor/screen-handler";
 import { applySymbolCommand } from "./editor/symbol-handler";
@@ -97,49 +102,8 @@ export function applyCommand(
     });
     return finish(project, next);
   }
-  if (command.type === "create-folder") {
-    if (
-      command.parentId !== null &&
-      !screen.folders.some((folder) => folder.id === command.parentId)
-    )
-      throw new Error("同じ所有先の親フォルダーが見つかりません");
-    screen.folders.push({
-      id: newId(),
-      name: folderName(command.name),
-      order: Math.max(-1, ...screen.folders.map((folder) => folder.order)) + 1,
-      ...(command.parentId === null ? {} : { parentId: command.parentId }),
-    });
-    return finish(project, next);
-  }
-  if (
-    command.type === "rename-folder" ||
-    command.type === "move-folder" ||
-    command.type === "remove-folder"
-  ) {
-    const folder = screen.folders.find(
-      (folder) => folder.id === command.folderId,
-    );
-    if (!folder) throw new Error("フォルダーが見つかりません");
-    if (command.type === "rename-folder")
-      folder.name = folderName(command.name);
-    else if (command.type === "move-folder") {
-      if (
-        command.parentId !== null &&
-        !screen.folders.some((item) => item.id === command.parentId)
-      )
-        throw new Error("同じ所有先の親フォルダーが見つかりません");
-      if (command.parentId === null) delete folder.parentId;
-      else folder.parentId = command.parentId;
-    } else {
-      if (
-        screen.folders.some((child) => child.parentId === folder.id) ||
-        screen.objects.some((object) => object.folderId === folder.id)
-      )
-        throw new Error(
-          "子フォルダーまたは配置があるため削除できません。空のフォルダーだけ削除できます。",
-        );
-      screen.folders = screen.folders.filter((item) => item.id !== folder.id);
-    }
+  if (isFolderStructureCommand(command)) {
+    applyFolderStructureCommand(screen, command);
     return finish(project, next);
   }
   if (command.type === "set-visibility") {
@@ -409,15 +373,7 @@ export function applyCommand(
           if (lineStyle !== undefined) setLineStyle(object.shape, lineStyle);
         }
     } else if (command.type === "set-folder") {
-      if (
-        command.folderId !== null &&
-        !screen.folders.some((folder) => folder.id === command.folderId)
-      )
-        throw new Error("同じ所有先の所属フォルダーが見つかりません");
-      for (const object of objects) {
-        if (command.folderId === null) delete object.folderId;
-        else object.folderId = command.folderId;
-      }
+      applyFolderAssignment(screen, objects, command);
     } else if (command.type === "distribute") {
       if (objects.length < 3)
         throw new Error("等間隔に配置する図形を3件以上選択してください");
@@ -864,11 +820,6 @@ export function applyCommand(
     }
   }
   return finish(project, next);
-}
-function folderName(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) throw new Error("フォルダー名を入力してください");
-  return trimmed;
 }
 function finish(project: Project, next: Project): Project {
   const usedAssets = referencedAssets(next);

@@ -210,7 +210,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功        |
 | R3 フォーム契約 | 完了         | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功 |
 | R4 App機能分離  | 完了         | R4a〜R4e実装・全体CI成功（`faf7c75`）。全ブラウザ509件を確認            |
-| R5 編集コマンド | 作業中       | R5a〜R5c完了。Project／Symbol／Screenを分離。残りhandlerは後続          |
+| R5 編集コマンド | 作業中       | R5a〜R5d完了。Folderも分離。Image／Objectと入口網羅性は後続             |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                        |
 
 各小区切りの記録は、次の項目だけを残せば再開できる。
@@ -474,3 +474,13 @@ create以外の画面lookupと不存在拒否、最後の画面と埋込参照�
 - set-visibility／set-lockのboolean確認とno-op直返しは既存のlock拒否より前に置く。lock解除を共通lock判定で拒否しない。
 - add-imageの定義内拒否と資産登録、replace／crop／ratioの対象照合とlock判定を従来順に保つ。共通のregisterAssetとfinishの資産整理を二重に実行しない。
 - 複数選択のID空／重複／不存在と型別patch拒否を維持し、対応型だけを抜き出して部分適用しない。
+
+R5a〜R5cの3コミットは全体CI成功を確認した。最新の[`f02ca65`のCI](https://github.com/tyaro/temp-scada/actions/runs/39332935722)で全ブラウザ509件とCI所定のチェックが成功。以後の差分とは区別する。
+
+<a id="r5d-folder-handler"></a>
+
+### R5d：フォルダー構造と所属変更の分離
+
+基準は`f02ca65`、開始時clean。作成・名前変更・親変更・空フォルダー削除を`folder-handler.ts`の構造操作へ、配置の所属変更を別関数へ移した。型・既存の引数を維持し、候補の所有先だけを変更する。`applyCommand`の構造操作の位置は配置lock判定前、所属変更はlock・複数IDの空／重複／不存在照合後のまま。整理操作と配置編集を同じguardにまとめない。
+
+名前解析、親／所属の同一所有先確認、子／配置を持つフォルダーの削除拒否、rootへ戻す際の属性削除を維持する。共通finishでの検証・no-op・revision更新とUndo単位は変更しない。構造操作の最後は未処理型をneverで検出する。型チェックはエラー／警告なし。TS全636件・関連ブラウザ39件（layer-folders-ui・layer-drag・folder-drag・edit-lock）・本番ビルドも成功。既存のJS bundle 500kB警告は継続する。次は画像処理の分離。
