@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { tick, untrack, flushSync } from "svelte";
+  import { selectionTarget, selectionView } from "../selection-view";
   import { wheelPixels, wheelZoom } from "../wheel-navigation";
   import Renderer from "../Renderer.svelte";
   import Ruler from "./Ruler.svelte";
@@ -86,7 +87,10 @@
     oncancelplacement: () => void;
   } = $props();
   let viewport = $state<HTMLDivElement>();
-  let renderer = $state<{ cancelInteraction(): void }>();
+  let renderer = $state<{
+    cancelInteraction(): void;
+    isInteracting(): boolean;
+  }>();
   let dropPoint = $state<Point | null>(null);
   let placementPoint = $state<Point | null>(null);
   let placementDown: {
@@ -341,6 +345,49 @@
       left: viewport.scrollLeft,
       top: viewport.scrollTop,
     };
+  }
+  export function showSelection() {
+    if (
+      !viewport ||
+      !editable ||
+      placing ||
+      pan ||
+      range ||
+      placementDown ||
+      space ||
+      renderer?.isInteracting()
+    )
+      return false;
+    const target = selectionTarget(screen, selectedIds);
+    if (!target.bounds) return false;
+    let measured = {
+      width: viewport.clientWidth,
+      height: viewport.clientHeight,
+    };
+    let state = selectionView(screen, measured, target.bounds);
+    resizeAnchor = null;
+    dropPoint = null;
+    flushSync(() => {
+      size = measured;
+      centerRooms[screen.id] = true;
+      views[screen.id] = state;
+    });
+    // Center-room margins can introduce scrollbars. Settle once using their real client area.
+    if (
+      viewport.clientWidth !== measured.width ||
+      viewport.clientHeight !== measured.height
+    ) {
+      measured = { width: viewport.clientWidth, height: viewport.clientHeight };
+      state = selectionView(screen, measured, target.bounds);
+      flushSync(() => {
+        size = measured;
+        views[screen.id] = state;
+      });
+    }
+    viewport.scrollLeft = state.left;
+    viewport.scrollTop = state.top;
+    remember();
+    return true;
   }
   export function zoom(value: number | null) {
     if (!viewport || !editable) return;

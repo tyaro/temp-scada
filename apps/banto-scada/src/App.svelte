@@ -76,6 +76,7 @@
     type ContextAction,
   } from "./lib/designer/ContextActions.svelte";
   import type { SymbolUsage } from "./lib/symbol-usages";
+  import { selectionTarget } from "./lib/selection-view";
   import type { Project } from "./lib/project";
   import {
     layerTree,
@@ -566,6 +567,7 @@
     revealObject: (id: string) => void;
     preparePanelResize: (continuous?: boolean) => void;
     finishPanelResize: () => void;
+    showSelection: () => boolean;
     zoom: (value: number | null) => void;
     stepZoom: (direction: number) => void;
     setHand: (value: boolean) => void;
@@ -604,7 +606,47 @@
       );
     }
   }
+  function showSelection() {
+    if (selectionViewReason) return;
+    try {
+      if (!canvasWorkspace?.showSelection()) return;
+      const { clippedCount, outsideCount } = selectionViewTarget;
+      if (clippedCount || outsideCount)
+        report(
+          "info",
+          `画面外の部分は表示していません。完全に画面外の配置 ${outsideCount} 件。選択は保持しています。`,
+        );
+    } catch (error) {
+      report(
+        "error",
+        error instanceof Error ? error.message : "選択範囲を表示できません。",
+      );
+    }
+  }
   function shortcut(event: KeyboardEvent) {
+    if (
+      event.key.toLowerCase() === "f" &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !event.shiftKey
+    ) {
+      if (
+        !event.repeat &&
+        !event.isComposing &&
+        event.keyCode !== 229 &&
+        !helpOpen &&
+        !document.querySelector(
+          '[role="dialog"]:not([data-layer-inactive="true"]),[popover]:popover-open',
+        ) &&
+        clipboardScope(event.target)
+      ) {
+        event.preventDefault();
+        showSelection();
+      }
+      return;
+    }
+
     if (event.key === "F1" || event.key === "F2") {
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
         return;
@@ -2253,6 +2295,16 @@
   }
   const menuBlocked = $derived(busy || !!drafts.pending || !!replacement);
   const editBlocked = $derived(menuBlocked || mode !== "edit");
+  const selectionViewTarget = $derived(selectionTarget(screen, selectedIds));
+  const selectionViewReason = $derived(
+    mode !== "edit"
+      ? "編集モードで使用できます"
+      : menuBlocked || clipboardBusy
+        ? "確認中の操作を完了してください"
+        : positionPlacement
+          ? "連続配置を終了してください"
+          : selectionViewTarget.reason,
+  );
 
   const selectionLocked = $derived(
     screen.objects.some(
@@ -2627,6 +2679,11 @@
       label: "表示",
       items: [
         {
+          label: "選択範囲を表示",
+          disabled: !!selectionViewReason,
+          run: showSelection,
+        },
+        {
           label: showRulers ? "ルーラーを隠す" : "ルーラーを表示",
           disabled: mode !== "edit",
           run: toggleRulers,
@@ -2885,6 +2942,8 @@
     {#if mode === "edit"}
       <CanvasControls
         view={canvasView}
+        selectionReason={selectionViewReason}
+        onselection={showSelection}
         bind:showGrid
         bind:snapEnabled
         bind:gridSize

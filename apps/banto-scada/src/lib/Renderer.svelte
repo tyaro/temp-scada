@@ -162,6 +162,9 @@
     vertexDrag = null;
     resizeDrag = null;
   }
+  export function isInteracting() {
+    return !!(drag || vertexDrag || resizeDrag);
+  }
   export function cancelInteraction() {
     const pointers = [drag?.pointer, vertexDrag?.pointer, resizeDrag?.pointer];
     cancelDrag();

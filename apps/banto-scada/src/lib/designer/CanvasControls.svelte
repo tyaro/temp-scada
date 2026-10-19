@@ -11,6 +11,8 @@
     onstep,
     placing,
     onplacing,
+    selectionReason,
+    onselection,
   }: {
     view: CanvasView;
     showGrid?: boolean;
@@ -21,7 +23,10 @@
     onstep: (direction: number) => void;
     placing: boolean;
     onplacing: () => void;
+    selectionReason: string;
+    onselection: () => void;
   } = $props();
+  const selectionHelpId = $props.id();
 </script>
 
 <div class="group" role="group" aria-label="グリッドとスナップ">
@@ -126,6 +131,26 @@
     ><svg aria-hidden="true" viewBox="0 0 24 24"
       ><path d="M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M8 8H16V16H8Z" /></svg
     ></button
+  >
+  <button
+    type="button"
+    aria-label="選択範囲を表示"
+    aria-describedby={selectionHelpId}
+    title={selectionReason || "選択範囲を表示（F）"}
+    disabled={!!selectionReason}
+    onpointerdown={(event) => {
+      if (event.button === 0) event.preventDefault();
+    }}
+    onclick={onselection}
+    ><svg aria-hidden="true" viewBox="0 0 24 24"
+      ><path
+        d="M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M8 9H16V15H8ZM6 12H8M16 12H18M12 6V9M12 15V18"
+      /></svg
+    ></button
+  >
+  <span id={selectionHelpId} hidden
+    >{selectionReason ||
+      "選択した図形の表示可能部分に倍率と中心を合わせます"}</span
   >
 </div>
 
