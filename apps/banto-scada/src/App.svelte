@@ -83,6 +83,13 @@
     folderAncestors,
     folderPath,
   } from "./lib/designer/layer-tree";
+  import {
+    LAYER_MIME,
+    layerDragSource,
+    layerDropError,
+    layerDropSurface,
+    type LayerDrag,
+  } from "./lib/designer/layer-drag";
   import FolderDialog, {
     type FolderRequest,
     type FolderOperation,
@@ -2058,6 +2065,94 @@
       };
     });
   });
+  let layerDrag = $state<LayerDrag | null>(null);
+  let layerDragGuide = $state<LayerDrag | null>(null);
+  let layerDropTarget = $state<string | null>(null);
+  let layerDragClickUntil = 0;
+  function endLayerDrag() {
+    if (layerDrag) layerDragClickUntil = performance.now() + 300;
+    layerDrag = null;
+    layerDragGuide = null;
+    layerDropTarget = null;
+  }
+  $effect(() => {
+    folderScope;
+    mode;
+    activePanel;
+    showSidebar;
+    untrack(endLayerDrag);
+  });
+  function beginLayerDrag(event: DragEvent, id: string) {
+    const ids = layerDragSource(screen, id, selectedIds);
+    if (editBlocked || !ids || !event.dataTransfer) {
+      event.preventDefault();
+      if (!ids)
+        report("error", "ロックを含む配置はドラッグで所属を変更できません。");
+      return;
+    }
+    layerDrag = {
+      token: crypto.randomUUID(),
+      scope: folderScope,
+      ids,
+      hidden: ids.filter(
+        (id) =>
+          screen.objects.find((object) => object.id === id)?.visible === false,
+      ).length,
+    };
+    layerDragClickUntil = performance.now() + 300;
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData(LAYER_MIME, layerDrag.token);
+  }
+  function acceptsLayerDrag(event: DragEvent) {
+    return !!(
+      layerDrag &&
+      !editBlocked &&
+      layerDrag.scope === folderScope &&
+      event.dataTransfer?.types.includes(LAYER_MIME) &&
+      !layerDropError(screen, folderScope, layerDrag, "")
+    );
+  }
+  function dropLayer(event: DragEvent, destination: string) {
+    const drag = layerDrag;
+    if (!drag || event.dataTransfer?.getData(LAYER_MIME) !== drag.token) return;
+    endLayerDrag();
+    // Snapshot survives native dragend and the draft prompt; never retarget it.
+    transition(() => {
+      const error = layerDropError(screen, folderScope, drag, destination);
+      if (mode !== "edit" || error) {
+        report("error", error ?? "編集モードでやり直してください。");
+        return;
+      }
+      if (
+        !edit({
+          type: "set-folder",
+          screenId: screen.id,
+          objectIds: drag.ids,
+          folderId: destination || null,
+        })
+      )
+        return;
+      layersExpanded = true;
+      if (!layerQuery.trim()) revealFolder(destination || undefined);
+      void tick().then(() => {
+        if (drag.scope !== folderScope) return;
+        const visible = document.querySelector<HTMLElement>(
+          `button[data-layer-id="${drag.ids[0]}"]`,
+        );
+        if (visible?.getClientRects().length)
+          visible.scrollIntoView({ block: "nearest" });
+        else
+          report(
+            "success",
+            "所属を変更しました。検索条件外の配置は検索を解除すると確認できます。",
+          );
+      });
+    });
+  }
+  function layerClick(event: MouseEvent, id: string) {
+    if (event.detail && performance.now() < layerDragClickUntil) return;
+    selectObjects(id, event.shiftKey);
+  }
   let folderRequest = $state<
     (FolderRequest & { scope: string; origin: HTMLElement | null }) | null
   >(null);
@@ -3217,213 +3312,256 @@
       {/snippet}
       {#snippet layersPanel()}
         {#if mode === "edit"}
-          <div class="layer-search-row">
-            <input
-              class="layer-search"
-              type="search"
-              aria-label="レイヤーを検索"
-              placeholder="検索"
-              bind:value={layerQuery}
-              oninput={() => (layersExpanded = true)}
-            />
-            <button
-              data-create-layer-folder
-              title="ルートにフォルダーを作成"
-              aria-label="ルートにフォルダーを作成"
-              disabled={editBlocked || screen.folders.length >= 256}
-              onclick={(event) =>
-                openFolderRequest("create", undefined, event.currentTarget)}
-              ><svg
-                width="19"
-                height="19"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-                aria-hidden="true"
-                ><path d="M3 7V5h7l2 3h9v12H3V7M12 11v6M9 14h6" /></svg
-              ></button
-            >
-          </div>
-          {#if layerQuery.trim()}<p class="layer-query-status">
-              検索結果を展開中 <button onclick={() => (layerQuery = "")}
-                >検索を解除</button
-              >
-            </p>{/if}
-          <p class="layer-caption">
-            {selectedIds.length} 件選択{#if hiddenSelectionCount}（非表示 {hiddenSelectionCount}
-              件）{/if} · {screen.folders.length
-              ? "所属と描画順は独立"
-              : "下の配置ほど前面"}
-          </p>
-          <TreeSection
-            label={screen.name}
-            count={screen.objects.length}
-            bind:open={layersExpanded}
+          <div
+            class="layer-browser"
+            use:layerDropSurface={{
+              accepts: acceptsLayerDrag,
+              active: () => !!layerDrag,
+              hover: (target) => {
+                layerDropTarget = target;
+                layerDragGuide = layerDrag;
+              },
+              drop: dropLayer,
+              end: endLayerDrag,
+            }}
           >
-            {#if selectedIds.some((id) => !visibleLayers.some((object) => object.id === id))}
-              <p class="hint" role="status">
-                選択中の配置は検索条件外です。選択とプロパティは保持しています。
-              </p>
-            {/if}
-            <nav aria-label="図形一覧">
-              {#each layerTreeView.rows as row (row.kind === "folder" ? row.folder.id : row.object.id)}
-                {#if row.kind === "folder"}
-                  <div
-                    class="layer-folder"
-                    style:margin-left={`${row.depth * 10}px`}
-                  >
-                    <button
-                      data-layer-folder={row.folder.id}
-                      aria-expanded={row.open}
-                      title={folderPath(screen.folders, row.folder.id)}
-                      onclick={() => toggleFolder(row.folder.id)}
-                      oncontextmenu={(event) => {
-                        event.preventDefault();
-                        showFolderMenu(row.folder.id, event.currentTarget);
-                      }}
-                      onkeydown={(event) => folderKey(event, row.folder.id)}
+            <div class="layer-search-row">
+              <input
+                class="layer-search"
+                type="search"
+                aria-label="レイヤーを検索"
+                placeholder="検索"
+                bind:value={layerQuery}
+                oninput={() => (layersExpanded = true)}
+              />
+              <button
+                data-create-layer-folder
+                title="ルートにフォルダーを作成"
+                aria-label="ルートにフォルダーを作成"
+                disabled={editBlocked || screen.folders.length >= 256}
+                onclick={(event) =>
+                  openFolderRequest("create", undefined, event.currentTarget)}
+                ><svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  aria-hidden="true"
+                  ><path d="M3 7V5h7l2 3h9v12H3V7M12 11v6M9 14h6" /></svg
+                ></button
+              >
+            </div>
+            {#if layerQuery.trim()}<p class="layer-query-status">
+                検索結果を展開中 <button onclick={() => (layerQuery = "")}
+                  >検索を解除</button
+                >
+              </p>{/if}
+            {#if layerDragGuide}
+              <div class="layer-drag-guide">
+                <p
+                  class="layer-caption"
+                  role="status"
+                  title={layerDropTarget
+                    ? `${folderPath(screen.folders, layerDropTarget)} 直下へ`
+                    : "フォルダーから外す領域またはフォルダーへドロップ"}
+                >
+                  {layerDragGuide.ids.length} 件を移動（非表示 {layerDragGuide.hidden}
+                  件） · {layerDropTarget === null
+                    ? "フォルダーへドロップ"
+                    : layerDropTarget
+                      ? `${folderPath(screen.folders, layerDropTarget)} 直下へ`
+                      : "フォルダーから外す"}
+                </p>
+                <div
+                  class="layer-root-drop"
+                  class:drop-hover={layerDropTarget === ""}
+                  data-layer-drop-folder=""
+                >
+                  フォルダーから外す（ルートへ）
+                </div>
+              </div>
+            {:else}<p class="layer-caption">
+                {selectedIds.length} 件選択{#if hiddenSelectionCount}（非表示 {hiddenSelectionCount}
+                  件）{/if} · {screen.folders.length
+                  ? "所属と描画順は独立"
+                  : "下の配置ほど前面"}
+              </p>{/if}
+            <TreeSection
+              label={screen.name}
+              count={screen.objects.length}
+              bind:open={layersExpanded}
+            >
+              {#if selectedIds.some((id) => !visibleLayers.some((object) => object.id === id))}
+                <p class="hint" role="status">
+                  選択中の配置は検索条件外です。選択とプロパティは保持しています。
+                </p>
+              {/if}
+              <nav aria-label="図形一覧">
+                {#each layerTreeView.rows as row (row.kind === "folder" ? row.folder.id : row.object.id)}
+                  {#if row.kind === "folder"}
+                    <div
+                      class="layer-folder"
+                      class:drop-hover={!!layerDrag &&
+                        layerDropTarget === row.folder.id}
+                      data-layer-drop-folder={row.folder.id}
+                      style:margin-left={`${row.depth * 10}px`}
                     >
-                      <span class="folder-chevron" aria-hidden="true"
-                        >{row.open ? "⌄" : "›"}</span
+                      <button
+                        data-layer-folder={row.folder.id}
+                        aria-expanded={row.open}
+                        title={folderPath(screen.folders, row.folder.id)}
+                        onclick={() => toggleFolder(row.folder.id)}
+                        oncontextmenu={(event) => {
+                          event.preventDefault();
+                          showFolderMenu(row.folder.id, event.currentTarget);
+                        }}
+                        onkeydown={(event) => folderKey(event, row.folder.id)}
                       >
-                      <svg
-                        width="19"
-                        height="19"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.6"
-                        aria-hidden="true"
-                        ><path
-                          d="M3 7V5a1 1 0 0 1 1-1h6l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7h18"
-                        /></svg
+                        <span class="folder-chevron" aria-hidden="true"
+                          >{row.open ? "⌄" : "›"}</span
+                        >
+                        <svg
+                          width="19"
+                          height="19"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                          aria-hidden="true"
+                          ><path
+                            d="M3 7V5a1 1 0 0 1 1-1h6l2 3h8a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7h18"
+                          /></svg
+                        >
+                        <span class="folder-name">{row.folder.name}</span>
+                      </button>
+                      <button
+                        class="folder-more"
+                        data-layer-folder={row.folder.id}
+                        aria-label={`フォルダー操作：${row.folder.name}`}
+                        aria-haspopup="menu"
+                        onclick={(event) =>
+                          showFolderMenu(row.folder.id, event.currentTarget)}
+                        onkeydown={(event) => folderKey(event, row.folder.id)}
+                        >⋮</button
                       >
-                      <span class="folder-name">{row.folder.name}</span>
-                    </button>
-                    <button
-                      class="folder-more"
-                      data-layer-folder={row.folder.id}
-                      aria-label={`フォルダー操作：${row.folder.name}`}
-                      aria-haspopup="menu"
-                      onclick={(event) =>
-                        showFolderMenu(row.folder.id, event.currentTarget)}
-                      onkeydown={(event) => folderKey(event, row.folder.id)}
-                      >⋮</button
-                    >
-                  </div>
-                {:else}
-                  {@const object = row.object}
+                    </div>
+                  {:else}
+                    {@const object = row.object}
 
-                  <div
-                    class="layer-entry"
-                    style:margin-left={`${row.depth * 10}px`}
-                    class:hidden-placement={object.visible === false}
-                  >
-                    <button
-                      class:active={selectedIds.includes(object.id)}
-                      aria-pressed={selectedIds.includes(object.id)}
-                      data-layer-id={object.id}
-                      title={`${objectLabel(object)}
+                    <div
+                      class="layer-entry"
+                      style:margin-left={`${row.depth * 10}px`}
+                      class:hidden-placement={object.visible === false}
+                    >
+                      <button
+                        class:active={selectedIds.includes(object.id)}
+                        aria-pressed={selectedIds.includes(object.id)}
+                        data-layer-id={object.id}
+                        draggable={!editBlocked}
+                        ondragstart={(event) =>
+                          beginLayerDrag(event, object.id)}
+                        title={`${objectLabel(object)}
 ${object.shape.type} · ${object.order}
 ${object.id}`}
-                      onclick={(event) =>
-                        selectObjects(object.id, event.shiftKey)}
-                      oncontextmenu={(event) => {
-                        event.preventDefault();
-                        layerContext(object.id, event.currentTarget);
-                      }}
-                      onkeydown={(event) => layerContextKey(event, object.id)}
-                      ><ObjectIcon
-                        {object}
-                        definition={object.shape.type === "symbol"
-                          ? project.symbols.find(
-                              (d) =>
-                                object.shape.type === "symbol" &&
-                                d.id === object.shape.symbolId,
-                            )
-                          : undefined}
-                      /><span>{objectLabel(object)}</span></button
-                    >
-                    <button
-                      class="layer-visible"
-                      aria-label={`${object.visible === false ? "再表示" : "非表示"}：${objectLabel(object)}`}
-                      aria-pressed={object.visible !== false}
-                      title={object.visible === false
-                        ? "図面に再表示"
-                        : "図面から非表示（表示プレビューにも反映）"}
-                      disabled={menuBlocked}
-                      onclick={() => toggleObjectVisibility(object.id)}
-                      ><svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.7"
-                        aria-hidden="true"
-                        ><path
-                          d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"
-                        /><circle
-                          cx="12"
-                          cy="12"
-                          r="3"
-                        />{#if object.visible === false}<path
-                            d="M3 3l18 18"
-                          />{/if}</svg
-                      ></button
-                    >
-                    <button
-                      class="layer-lock"
-                      class:locked={!!object.locked}
-                      aria-label={`${object.locked ? "ロック解除" : "ロック"}：${objectLabel(object)}`}
-                      aria-pressed={!!object.locked}
-                      title={object.locked
-                        ? "編集ロックを解除"
-                        : "配置の直接編集をロック（共有定義の変更は反映）"}
-                      disabled={menuBlocked}
-                      onclick={() => toggleObjectLock(object.id)}
-                      ><svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.7"
-                        aria-hidden="true"
-                        ><rect
-                          x="5"
-                          y="10"
-                          width="14"
-                          height="11"
-                          rx="2"
-                        /><path
-                          d={object.locked
-                            ? "M8 10V7a4 4 0 0 1 8 0v3"
-                            : "M8 10V7a4 4 0 0 1 8 0"}
-                        /><path d="M12 14v4" /></svg
-                      ></button
-                    >
-                    <button
-                      class="layer-more"
-                      aria-label={`操作：${objectLabel(object)}`}
-                      title={`${objectLabel(object)} の操作`}
-                      aria-haspopup="menu"
-                      onclick={(event) =>
-                        layerContext(object.id, event.currentTarget)}
-                      onkeydown={(event) => layerContextKey(event, object.id)}
-                      >⋮</button
-                    >
-                  </div>
-                {/if}
-              {/each}
-            </nav>
-            {#if !layerTreeView.rows.length}<p class="hint">
-                {layerQuery.trim()
-                  ? "一致する配置はありません。"
-                  : "配置はありません。"}
-              </p>{/if}
-          </TreeSection>
+                        onclick={(event) => layerClick(event, object.id)}
+                        oncontextmenu={(event) => {
+                          event.preventDefault();
+                          layerContext(object.id, event.currentTarget);
+                        }}
+                        onkeydown={(event) => layerContextKey(event, object.id)}
+                        ><ObjectIcon
+                          {object}
+                          definition={object.shape.type === "symbol"
+                            ? project.symbols.find(
+                                (d) =>
+                                  object.shape.type === "symbol" &&
+                                  d.id === object.shape.symbolId,
+                              )
+                            : undefined}
+                        /><span>{objectLabel(object)}</span></button
+                      >
+                      <button
+                        class="layer-visible"
+                        aria-label={`${object.visible === false ? "再表示" : "非表示"}：${objectLabel(object)}`}
+                        aria-pressed={object.visible !== false}
+                        title={object.visible === false
+                          ? "図面に再表示"
+                          : "図面から非表示（表示プレビューにも反映）"}
+                        disabled={menuBlocked}
+                        onclick={() => toggleObjectVisibility(object.id)}
+                        ><svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.7"
+                          aria-hidden="true"
+                          ><path
+                            d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"
+                          /><circle
+                            cx="12"
+                            cy="12"
+                            r="3"
+                          />{#if object.visible === false}<path
+                              d="M3 3l18 18"
+                            />{/if}</svg
+                        ></button
+                      >
+                      <button
+                        class="layer-lock"
+                        class:locked={!!object.locked}
+                        aria-label={`${object.locked ? "ロック解除" : "ロック"}：${objectLabel(object)}`}
+                        aria-pressed={!!object.locked}
+                        title={object.locked
+                          ? "編集ロックを解除"
+                          : "配置の直接編集をロック（共有定義の変更は反映）"}
+                        disabled={menuBlocked}
+                        onclick={() => toggleObjectLock(object.id)}
+                        ><svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.7"
+                          aria-hidden="true"
+                          ><rect
+                            x="5"
+                            y="10"
+                            width="14"
+                            height="11"
+                            rx="2"
+                          /><path
+                            d={object.locked
+                              ? "M8 10V7a4 4 0 0 1 8 0v3"
+                              : "M8 10V7a4 4 0 0 1 8 0"}
+                          /><path d="M12 14v4" /></svg
+                        ></button
+                      >
+                      <button
+                        class="layer-more"
+                        aria-label={`操作：${objectLabel(object)}`}
+                        title={`${objectLabel(object)} の操作`}
+                        aria-haspopup="menu"
+                        onclick={(event) =>
+                          layerContext(object.id, event.currentTarget)}
+                        onkeydown={(event) => layerContextKey(event, object.id)}
+                        >⋮</button
+                      >
+                    </div>
+                  {/if}
+                {/each}
+              </nav>
+              {#if !layerTreeView.rows.length}<p class="hint">
+                  {layerQuery.trim()
+                    ? "一致する配置はありません。"
+                    : "配置はありません。"}
+                </p>{/if}
+            </TreeSection>
+          </div>
         {/if}
       {/snippet}
       {#snippet partsPanel()}
@@ -3820,6 +3958,34 @@ ${object.id}`}
     background: transparent;
     color: var(--banto-primary);
     font-size: inherit;
+  }
+  .layer-drag-guide {
+    position: sticky;
+    top: -10px;
+    z-index: 2;
+    background: var(--banto-surface);
+    padding: 2px 0 6px;
+  }
+  .layer-drag-guide .layer-caption {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .layer-root-drop {
+    padding: 9px 6px;
+    border: 1px dashed var(--banto-border);
+    color: var(--banto-text-muted);
+    font-size: 12px;
+  }
+  .layer-root-drop.drop-hover,
+  .layer-folder.drop-hover {
+    background: color-mix(
+      in srgb,
+      var(--banto-primary) 12%,
+      var(--banto-surface)
+    );
+    outline: 2px solid var(--banto-primary);
+    outline-offset: -2px;
   }
   .layer-folder {
     position: relative;
