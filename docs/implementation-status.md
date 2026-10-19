@@ -30,7 +30,7 @@
 | 画面再利用     | 同一Project・1段の読取埋込View、共有参照、参照先編集、使用中画面の削除保護、複製                                                 | Viewのclipboard、機器context付き共通画面、独立テンプレート                             |
 | 表示確認       | 同一Projectの読取Popup最大4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                               | Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                           |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                  | 大規模図面の性能計測と必要な最適化                                                     |
-| 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                     | 各フォーム境界の整理、実catalog選択                                                    |
+| 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                     | 実catalog選択、draftのDOM分離                                                          |
 | タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                 | 実Hub／catalog、型付きslot、Host、正式RuntimeとAction境界                              |
 | server・監視   | 提供段階と共有層の設計                                                                                                           | Core v1のS9b、その上のv1.1 Alarm／Event・Action／History・Trend、Camera、HTTP／Program |
 | 認証・MES      | ログイン不要のローカル編集                                                                                                       | industrialの修正後に認証再確認。ユーザー管理・運用移行・MESは未実装                    |
@@ -39,9 +39,11 @@
 
 ## 検証の範囲
 
-直近のSymbol配色・背景／crop解析分離はTS全636件、型チェック（エラー／警告なし）、本番ビルド、対象整形と関連ブラウザ54件が成功。保存契約・markup・Undo単位は維持した。Rustモデルは機能基準`e04e44c`のworkspace30件とClippyの成功を引き継ぐ。既存のJS bundle 500kB警告は継続する。
+R3のフォーム解析・固有確定の分離はTS全636件、型チェック（エラー／警告なし）、本番ビルド、全体整形と関連ブラウザ56件が成功。保存契約・markup・Undo単位は維持した。Rustモデルは機能基準`e04e44c`のworkspace30件とClippyの成功を引き継ぐ。既存のJS bundle 500kB警告は継続する。
 
 `e04e44c`の[GitHub CI](https://github.com/tyaro/temp-scada/actions/runs/39310221559)が成功し、全ブラウザ508件と型・TS単体・ビルド・整形・Rust・CLIサンプル検証を通過した。過去4件のブラウザ失敗は関連29件とこのCIでは再現しなかったが、後続の文書だけのCIでプレビューfit測定1件が再現した。テスト側のレイアウト待機を修正し、wheel関連7件と該当20回の反復が成功した。重複して走らせたローカル全体検証は、同一コードのCI成功確認後に途中停止した。[R0の記録](maintenance-refactoring-plan.md#refactoring-progress)で経緯を確認できる。
+
+途中の`f07c808`も[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39314185119)が成功した。最終の通常フォーム分離は上記のローカル検証済みで、以後の責務整理はR4aから進める。
 
 ## 仕様・実画面への入口
 

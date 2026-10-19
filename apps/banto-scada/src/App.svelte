@@ -24,6 +24,16 @@
   } from "./lib/designer/forms/selection-color";
   import { symbolColorModeCommand } from "./lib/designer/forms/symbol-color-mode";
   import { backgroundImageCommand } from "./lib/designer/forms/background-image";
+  import {
+    objectFormCommand,
+    acknowledgeObjectForm,
+  } from "./lib/designer/forms/object-form";
+  import { screenFormCommand } from "./lib/designer/forms/screen-form";
+  import {
+    projectFormCommand,
+    acknowledgeProjectForm,
+  } from "./lib/designer/forms/project-form";
+  import { moveFormCommand } from "./lib/designer/forms/move-form";
   import { shapePaintCommand } from "./lib/designer/forms/shape-paint";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
@@ -99,7 +109,6 @@
   import { parseNumericProperty } from "./lib/designer/numeric-properties";
   import { placementLabel } from "./lib/placement-label";
   import { createProject } from "./lib/new-project";
-  import { parseLineStyle } from "./lib/line-style";
   import { projectContent } from "./lib/save-state";
   import { createDraftGuard } from "./lib/designer/drafts.svelte";
   import DraftPrompt from "./lib/designer/DraftPrompt.svelte";
@@ -574,7 +583,6 @@
     parseProject,
     strokeOverflowIds,
     serializeProject,
-    parsePoints,
     type Point,
     type ScreenObject,
   } from "./lib/project";
@@ -585,7 +593,6 @@
     isObjectCommand,
     symbolUsage,
     type AddKind,
-    type ObjectPatch,
   } from "./lib/editor";
   import {
     emptyHistory,
@@ -1879,15 +1886,10 @@
       acknowledgeSelectionLine(form);
     if (form.dataset.editorForm === "selection-color")
       acknowledgeSelectionColor(form);
-    if (form.dataset.editorForm === "project") {
-      const input = form.elements.namedItem("name");
-      if (input instanceof HTMLInputElement)
-        input.value = project.manifest.name;
-    }
-    if (form.dataset.editorForm === "object") {
-      const input = form.elements.namedItem("name");
-      if (input instanceof HTMLInputElement) input.value = selected?.name ?? "";
-    }
+    if (form.dataset.editorForm === "project")
+      acknowledgeProjectForm(form, project.manifest.name);
+    if (form.dataset.editorForm === "object")
+      acknowledgeObjectForm(form, selected?.name ?? "");
     drafts.submitted(form);
   }
   function edit(
@@ -2297,84 +2299,21 @@
           selectedIds,
         },
       );
-    if (form.dataset.editorForm === "project")
-      return { type: "update-project", name: String(data.get("name")) };
+    if (form.dataset.editorForm === "project") return projectFormCommand(data);
     if (form.dataset.editorForm === "screen")
-      return {
-        ...(activeDefinition
-          ? { type: "update-symbol" as const, symbolId: activeDefinition.id }
-          : {
-              type: "update-screen" as const,
-              screenId: screen.id,
-              background: String(data.get("background")),
-            }),
-        name: String(data.get("name")),
-        width: Number(data.get("width")),
-        height: Number(data.get("height")),
-      };
-    if (form.dataset.editorForm === "move")
-      return {
-        type: "move-many",
+      return screenFormCommand(data, {
         screenId: screen.id,
-        objectIds: [...selectedIds],
-        dx: Number(data.get("dx")),
-        dy: Number(data.get("dy")),
-      };
-    if (!selected) throw new Error("選択した図形が見つかりません");
-    const patch: ObjectPatch = {
-      name: String(data.get("name") ?? ""),
-      x: Number(data.get("x")),
-      y: Number(data.get("y")),
-      rotation: parseNumericProperty(String(data.get("rotation") ?? "")),
-      opacity: parseNumericProperty(String(data.get("opacity") ?? "")) / 100,
-      ...(data.has("colorAlpha")
-        ? {
-            colorAlpha:
-              parseNumericProperty(String(data.get("colorAlpha"))) / 100,
-          }
-        : {}),
-      ...(data.has("fill") ? { fill: String(data.get("fill")) } : {}),
-    };
-    if ("width" in selected) {
-      patch.width = Number(data.get("width"));
-      patch.height = Number(data.get("height"));
-    }
-    if (selected.shape.type === "text") {
-      patch.text = String(data.get("text"));
-      const fontWeight = String(data.get("fontWeight")),
-        align = String(data.get("textAlign"));
-      if (
-        !["normal", "bold"].includes(fontWeight) ||
-        !["left", "center", "right"].includes(align)
-      )
-        throw new Error("文字書式を選択してください。");
-      patch.textStyle = {
-        fontSize: parseNumericProperty(String(data.get("fontSize") ?? "")),
-        fontWeight: fontWeight as "normal" | "bold",
-        align: align as "left" | "center" | "right",
-      };
-      if (!activeDefinition) {
-        const externalName = String(data.get("externalName") ?? "");
-        patch.binding = externalName === "" ? null : { externalName };
-      }
-    }
-    if (selected.shape.type === "symbol")
-      patch.symbolId = String(data.get("symbolId"));
-    if (selected.shape.type === "screenView")
-      patch.sourceScreenId = String(data.get("sourceScreenId"));
-    if (selected.shape.type === "polyline") {
-      patch.lineStyle = parseLineStyle(data.get("lineStyle"));
-      patch.points = parsePoints(String(data.get("points")));
-      patch.strokeWidth = Number(data.get("strokeWidth"));
-      patch.arrow = data.get("arrow") === "end" ? "end" : "none";
-    }
-    return {
-      type: "update",
+        definitionId: activeDefinition?.id,
+      });
+    if (form.dataset.editorForm === "move")
+      return moveFormCommand(data, { screenId: screen.id, selectedIds });
+    return objectFormCommand(data, {
       screenId: screen.id,
-      objectId: selected.id,
-      patch,
-    };
+      definition: !!activeDefinition,
+      selected,
+    });
   }
+
   function validateDrafts(forms: HTMLFormElement[]): boolean {
     let validatingForm: HTMLFormElement | undefined;
     try {

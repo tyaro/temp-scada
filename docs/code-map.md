@@ -41,7 +41,7 @@
 
 ## フォームの現行境界
 
-フォームの移行中。塗りと枠線は`designer/forms/shape-paint.ts`、枠線一括は`selection-outline.ts`、線種一括は`selection-line.ts`、色一括は`selection-color.ts`、Symbol配色は`symbol-color-mode.ts`、背景画像は`background-image.ts`、cropは`image-crop.ts`が入力と対象を解釈し、残るフォームはAppの`formCommand`が解釈する。`validateDrafts`は共通のまま候補Projectへ順に適用して全体検証する。確定は`submitForm`→`edit`、成功時は`acknowledgeForm`→DraftGuardへ戻す。通常数値は`commitNumber`と`acceptField`を通す。別のdirty台帳やProject所有者を作らない。
+フォームの入力名・未指定の意味・EditCommand生成は`designer/forms/`内の各adapterが解釈する。Appの`formCommand`はkindの振分けと現在対象の供給を担当する。`validateDrafts`は共通のまま候補Projectへ順に適用して全体検証する。確定は`submitForm`→`edit`、成功時は各adapterの固有確定→DraftGuardへ戻す。通常数値は既存の`commitNumber`と`acceptField`を通し、別のdirty台帳やProject所有者を作らない。
 
 | フォーム      | 現在の入力・描画                                    | 解析・確定の所在                                                               |
 | ------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -52,10 +52,10 @@
 | Symbol配色    | `SymbolColorMode.svelte`                            | `forms/symbol-color-mode.ts`の解析・対象照合                                   |
 | 背景画像      | Appの画面設定フォーム                               | `forms/background-image.ts`の解析・対象照合                                    |
 | 画像crop      | `designer/ImageCrop.svelte`・`image-crop-fields.ts` | `forms/image-crop.ts`の対象照合・コマンドと既存の数値解析helper                |
-| 通常配置      | `InspectorPanel.svelte`・`numeric-properties.ts`    | Appの`formCommand`と`commitNumber`                                             |
-| 画面・Project | Appの左ペイン                                       | Appの`formCommand`                                                             |
+| 通常配置      | `InspectorPanel.svelte`・`numeric-properties.ts`    | `forms/object-form.ts`の解析・名前確定と既存Appの`commitNumber`                |
+| 画面・Project | Appの左ペイン                                       | `forms/screen-form.ts`／`project-form.ts`の解析・Project名確定                 |
 
-R3ではフォームごとにadapterへ移し、成功済みと残る経路を計画の進捗へ記録する。上表は移行先の完成を示さない。
+複数選択の移動欄は`forms/move-form.ts`で解析する。フォームのmarkup・dirty追跡と通常数値の個別確定は既存の所有先に残す。関連検証と未移行の責務は計画の進捗へ記録する。
 
 ## 画像と非同期の現行境界
 
@@ -82,3 +82,5 @@ SelectionOutlineの空欄はpatchへ入れず、変更項目が全くない要�
 フォーム境界はfactory委譲を採用する。Appがkindと現在対象のDTOを供給し、候補全体の検証・submit順序・共通draft確定を所有する。adapterは入力名・未指定の意味・対象照合・コマンド生成・成功後の固有resetを所有する。DraftGuardに新しいcallback登録機構は追加しない。
 
 SelectionColorは単色化の明示checkboxと色入力だけを解析する。共有Symbol定義色からの変換を自動化せず、成功後に色と変換checkboxをresetして共通draft確定へ戻す。
+
+通常Object／Screen／Project・移動も既存の入力変換を移動したもので、新しい対象guardや数値規則を追加していない。通常数値の個別確定と全フォーム適用の別経路を維持し、Project／配置名の成功後確定は採用済みモデルの名前をadapterへ渡す。
