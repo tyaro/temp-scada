@@ -56,7 +56,9 @@
           onclick={() => onopen(usage)}
         >
           <span>{usage.screenName}</span><small
-            >{usage.name ?? `配置 ${usage.order}`} · X {usage.x} / Y {usage.y}</small
+            >{usage.name ?? `配置 ${usage.order}`}{usage.visible === false
+              ? "（非表示）"
+              : ""} · X {usage.x} / Y {usage.y}</small
           >
         </button>
       {/each}

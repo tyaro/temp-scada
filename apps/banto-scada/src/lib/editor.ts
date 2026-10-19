@@ -46,6 +46,12 @@ type ScreenCommand =
   | { type: "duplicate-screen"; screenId: string }
   | { type: "remove-screen"; screenId: string };
 export type ObjectCommand = (
+  | {
+      type: "set-visibility";
+      screenId: string;
+      objectId: string;
+      visible: boolean;
+    }
   | { type: "set-lock"; screenId: string; objectId: string; locked: boolean }
   | {
       type: "paste";
@@ -124,6 +130,7 @@ export function isObjectCommand(
   command: EditCommand,
 ): command is ObjectCommand {
   return [
+    "set-visibility",
     "set-lock",
     "paste",
     "move-vertex",
@@ -247,6 +254,18 @@ export function applyCommand(
     ? next.symbols.find((s) => s.id === definitionId)
     : targetScreen;
   if (!screen) throw new Error("画面が見つかりません");
+  if (command.type === "set-visibility") {
+    const object = screen.objects.find(
+      (object) => object.id === command.objectId,
+    );
+    if (!object) throw new Error("配置が見つかりません");
+    if (typeof command.visible !== "boolean")
+      throw new Error("表示状態はbooleanで指定してください");
+    if ((object.visible !== false) === command.visible) return project;
+    if (command.visible) delete object.visible;
+    else object.visible = false;
+    return finish(project, next);
+  }
   if (command.type === "set-lock") {
     const object = screen.objects.find(
       (object) => object.id === command.objectId,

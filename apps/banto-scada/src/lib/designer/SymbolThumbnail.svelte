@@ -13,7 +13,9 @@
   viewBox={`0 0 ${definition.width} ${definition.height}`}
   preserveAspectRatio="xMidYMid meet"
 >
-  {#each [...definition.objects].sort((a, b) => a.order - b.order) as object (object.id)}
+  {#each [...definition.objects]
+    .filter((object) => object.visible !== false)
+    .sort((a, b) => a.order - b.order) as object (object.id)}
     <g transform={`translate(${object.x} ${object.y})`}
       ><Primitive {object} color="var(--banto-text-muted)" /></g
     >

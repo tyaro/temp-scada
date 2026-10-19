@@ -1,6 +1,7 @@
 import type { Project } from "./project";
 export interface BindingUsage {
   name?: string;
+  visible?: boolean;
   screenId: string;
   screenName: string;
   objectId: string;
@@ -27,6 +28,7 @@ export function bindingReferences(project: Project): BindingReference[] {
       }
       group.usages.push({
         ...(object.name ? { name: object.name } : {}),
+        ...(object.visible === false ? { visible: false } : {}),
         screenId: screen.id,
         screenName: screen.name,
         objectId: object.id,

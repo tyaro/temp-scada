@@ -13,12 +13,14 @@
   let {
     groups,
     selectionCount,
+    hiddenSelectionCount = 0,
     modes,
     controls,
     status,
   }: {
     groups: ToolbarGroup[];
     selectionCount: number;
+    hiddenSelectionCount?: number;
     modes: Snippet;
     controls: Snippet;
     status: Snippet;
@@ -84,7 +86,8 @@
   {/each}
   {@render controls()}
   {#if groups.length}<span class="selection" title="Shift + クリックで複数選択"
-      >{selectionCount} 件選択</span
+      >{selectionCount} 件選択{#if hiddenSelectionCount}（非表示 {hiddenSelectionCount}
+        件）{/if}</span
     >{/if}
   {@render status()}
 </div>

@@ -83,7 +83,7 @@ test("switching panels preserves hidden screen drafts, selection, viewport and h
   await expect(
     page
       .getByRole("navigation", { name: "図形一覧" })
-      .getByRole("button", { pressed: true }),
+      .locator('button[data-layer-id][aria-pressed="true"]'),
   ).toHaveCount(1);
 });
 

@@ -903,9 +903,26 @@
       </div>
     </div>
   </div>
+  {#if editable && screen.objects.length && !screen.objects.some((object) => object.visible !== false)}
+    <p class="empty-visibility" role="status">
+      表示中の配置がありません。レイヤーから再表示できます。
+    </p>
+  {/if}
 </div>
 
 <style>
+  .empty-visibility {
+    position: absolute;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: calc(100% - 48px);
+    color: var(--banto-text-muted);
+    background: var(--banto-surface);
+    padding: 4px 8px;
+    font-size: 12px;
+    pointer-events: none;
+  }
   .selecting,
   .selecting :global(svg),
   .selecting :global(svg *) {
@@ -941,6 +958,7 @@
     box-shadow: var(--banto-focus-ring);
   }
   .canvas-workspace {
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);

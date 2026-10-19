@@ -1,6 +1,7 @@
 import type { Project } from "./project";
 export interface SymbolUsage {
   name?: string;
+  visible?: boolean;
   symbolId: string;
   screenId: string;
   screenName: string;
@@ -23,6 +24,7 @@ export function symbolUsages(
       )
       .map((object) => ({
         ...(object.name ? { name: object.name } : {}),
+        ...(object.visible === false ? { visible: false } : {}),
         symbolId,
         screenId: screen.id,
         screenName: screen.name,

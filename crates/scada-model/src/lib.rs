@@ -65,8 +65,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.6.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.6.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.7.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.7.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
             }
@@ -217,6 +217,45 @@ mod tests {
         assert!(Project::from_json(&old.to_string()).is_err());
     }
     #[test]
+    fn static_visibility_is_boolean_and_preserves_hidden_references() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/visibility-cases.json")).unwrap();
+        for case in cases.as_array().unwrap() {
+            for path in [
+                "/screens/0/objects/2",
+                "/screens/0/objects/7",
+                "/screens/0/objects/10",
+                "/symbols/0/objects/0",
+            ] {
+                let mut value: Value =
+                    serde_json::from_str(include_str!("../../../examples/process.project.json"))
+                        .unwrap();
+                value.pointer_mut(path).unwrap()["visible"] = case["value"].clone();
+                let result = Project::from_json(&value.to_string());
+                assert_eq!(
+                    result.is_ok(),
+                    case["valid"].as_bool().unwrap(),
+                    "{}: {}",
+                    case["name"],
+                    path
+                );
+                if let Ok(project) = result {
+                    assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+                }
+            }
+        }
+        let mut value: Value =
+            serde_json::from_str(include_str!("../../../examples/tag-binding.project.json"))
+                .unwrap();
+        let before = Project::from_json(&value.to_string())
+            .unwrap()
+            .text_bindings();
+        value["screens"][0]["objects"][2]["visible"] = Value::Bool(false);
+        let hidden = Project::from_json(&value.to_string()).unwrap();
+        assert_eq!(hidden.text_bindings(), before);
+        assert_eq!(hidden.0["screens"][0]["objects"][2]["visible"], false);
+    }
+    #[test]
     fn round_trip_preserves_project() {
         let project = Project::from_json(SAMPLE).unwrap();
         assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
@@ -247,8 +286,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.6.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.6.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.7.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.7.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

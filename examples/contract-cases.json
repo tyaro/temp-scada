@@ -257,5 +257,17 @@
     "path": "/manifest/minRuntimeVersion",
     "value": "0.5.0",
     "valid": false
+  },
+  {
+    "name": "旧0.6形式の自動移行は行わない",
+    "path": "/manifest/schemaVersion",
+    "value": "0.6.0",
+    "valid": false
+  },
+  {
+    "name": "静的表示未対応Runtimeへの配布を拒否",
+    "path": "/manifest/minRuntimeVersion",
+    "value": "0.6.0",
+    "valid": false
   }
 ]

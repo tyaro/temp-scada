@@ -130,7 +130,13 @@
     event.preventDefault();
     event.stopPropagation();
     const current = screen.objects.find((object) => object.id === id);
-    if (!current || current.locked || !("width" in current)) return;
+    if (
+      !current ||
+      current.locked ||
+      current.visible === false ||
+      !("width" in current)
+    )
+      return;
     geometry = {
       x: current.x,
       y: current.y,
@@ -192,6 +198,7 @@
     if (
       !editable ||
       object.locked ||
+      object.visible === false ||
       object.shape.type !== "polyline" ||
       event.ctrlKey ||
       event.metaKey ||
@@ -217,6 +224,7 @@
     if (
       !current ||
       current.locked ||
+      current.visible === false ||
       current.shape.type !== "polyline" ||
       !current.shape.points[index]
     )
@@ -263,6 +271,7 @@
       if (
         !object ||
         object.locked ||
+        object.visible === false ||
         !("width" in object) ||
         !start ||
         !resizeHandles.includes(handle)
@@ -300,6 +309,7 @@
       if (
         !object ||
         object.locked ||
+        object.visible === false ||
         object.shape.type !== "polyline" ||
         !start ||
         !object.shape.points[index]
@@ -329,9 +339,13 @@
     if (
       !object ||
       object.locked ||
+      object.visible === false ||
       !start ||
       !ids.includes(object.id) ||
-      screen.objects.some((item) => item.locked && ids.includes(item.id))
+      screen.objects.some(
+        (item) =>
+          (item.locked || item.visible === false) && ids.includes(item.id),
+      )
     )
       return;
     event.preventDefault();
@@ -461,7 +475,9 @@
       pointer-events="none"
     />
   {/if}
-  {#each [...screen.objects].sort((a, b) => a.order - b.order) as object (object.id)}
+  {#each [...screen.objects]
+    .filter((object) => object.visible !== false)
+    .sort((a, b) => a.order - b.order) as object (object.id)}
     {@const visual = previewObject(object)}
     <g
       transform={position(visual)}
@@ -483,7 +499,9 @@
           preserveAspectRatio="xMidYMid meet"
           data-symbol-id={definition.id}
         >
-          {#each [...definition.objects].sort((a, b) => a.order - b.order) as child (child.id)}
+          {#each [...definition.objects]
+            .filter((object) => object.visible !== false)
+            .sort((a, b) => a.order - b.order) as child (child.id)}
             <g transform={`translate(${child.x} ${child.y})`}
               ><Primitive object={child} color={object.fill} /></g
             >
@@ -522,7 +540,7 @@
   {/each}
   {#if editable && selectedIds.length === 1}
     {@const object = screen.objects.find((o) => o.id === selectedIds[0])}
-    {#if object && !object.locked && "width" in object && !drag}
+    {#if object && !object.locked && object.visible !== false && "width" in object && !drag}
       {@const visual = previewObject(object)}
       {#if "width" in visual}
         {#each resizeHandles as handle}
@@ -548,7 +566,7 @@
         {/each}
       {/if}
     {/if}
-    {#if object && !object.locked && object.shape.type === "polyline"}
+    {#if object && !object.locked && object.visible !== false && object.shape.type === "polyline"}
       {@const visual = previewObject(object)}
       {#if visual.shape.type === "polyline"}
         {#each visual.shape.points as p, index}

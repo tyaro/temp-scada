@@ -618,7 +618,7 @@
       clipboardScope(event.target)
     ) {
       event.preventDefault();
-      removeSelection();
+      if (!hiddenCanvasMutation(event.target)) removeSelection();
       return;
     }
     if (event.isComposing || event.altKey || !(event.ctrlKey || event.metaKey))
@@ -664,7 +664,7 @@
       transition(
         () =>
           (selectedIds = screen.objects
-            .filter((o) => !o.locked)
+            .filter((o) => !o.locked && o.visible !== false)
             .map((o) => o.id)),
       );
     } else if (key === "d" && !event.shiftKey && selectedIds.length) {
@@ -701,7 +701,10 @@
   ) {
     if (
       id &&
-      screen.objects.some((object) => object.id === id && object.locked)
+      screen.objects.some(
+        (object) =>
+          object.id === id && (object.locked || object.visible === false),
+      )
     )
       return [...selectedIds];
     return selectObjects(id, additive, preserve);
@@ -717,14 +720,20 @@
       )
         return;
       const live = ids.filter((id) =>
-        screen.objects.some((object) => object.id === id && !object.locked),
+        screen.objects.some(
+          (object) =>
+            object.id === id && !object.locked && object.visible !== false,
+        ),
       );
       selectedIds = additive
         ? [
             ...new Set([
               ...selectedIds.filter((id) =>
                 screen.objects.some(
-                  (object) => object.id === id && !object.locked,
+                  (object) =>
+                    object.id === id &&
+                    !object.locked &&
+                    object.visible !== false,
                 ),
               ),
               ...live,
@@ -759,6 +768,22 @@
   const clipboardSession = crypto.randomUUID();
   let clipboardBusy = $state(false);
   let lastPaste: { key: string; count: number } | undefined;
+  function hiddenCanvasMutation(target: EventTarget | null) {
+    if (
+      target instanceof Element &&
+      target.closest('[aria-label="キャンバス操作領域"]') &&
+      screen.objects.some(
+        (object) => object.visible === false && selectedIds.includes(object.id),
+      )
+    ) {
+      report(
+        "info",
+        "非表示の配置を含むため、キャンバスからは変更できません。レイヤーやプロパティで対象を確認してください。",
+      );
+      return true;
+    }
+    return false;
+  }
   function clipboardScope(target: EventTarget | null) {
     return (
       target instanceof Element &&
@@ -787,6 +812,7 @@
     const ids = [...selectedIds];
     if (kind !== "paste" && !ids.length) return;
     event?.preventDefault();
+    if (kind === "cut" && event && hiddenCanvasMutation(event.target)) return;
     let native = event?.clipboardData;
     const input = kind === "paste" ? native?.getData("text/plain") : undefined;
     const validTarget = () =>
@@ -898,6 +924,13 @@
         return;
       const objects = screen.objects.filter((o) => ids.includes(o.id));
       if (!objects.length || objects.length !== ids.length) return;
+      if (objects.some((object) => object.visible === false)) {
+        report(
+          "info",
+          "非表示の配置を含むため移動できません。プロパティで対象を確認してください。",
+        );
+        return;
+      }
       const delta = selectionNudge(
         objects,
         direction,
@@ -1276,10 +1309,14 @@
         command.type === "paste"
       )
         selectedIds = screen.objects
-          .filter((o) => !oldIds.has(o.id) && !o.locked)
+          .filter((o) => !oldIds.has(o.id) && !o.locked && o.visible !== false)
           .map((o) => o.id);
       if (command.type === "remove" || command.type === "remove-many")
         selectedIds = [];
+      if (command.type === "set-visibility" && !command.visible) {
+        const hiddenId = command.objectId;
+        selectedIds = selectedIds.filter((id) => id !== hiddenId);
+      }
       if (form) acknowledgeForm(form);
       report(
         "success",
@@ -1565,6 +1602,29 @@
         );
       }),
   );
+  function toggleObjectVisibility(id: string) {
+    const generation = workspaceGeneration,
+      target = screen.id;
+    const apply = () => {
+      if (
+        generation !== workspaceGeneration ||
+        target !== screen.id ||
+        mode !== "edit" ||
+        busy ||
+        replacement
+      )
+        return;
+      const object = screen.objects.find((object) => object.id === id);
+      if (object)
+        edit({
+          type: "set-visibility",
+          screenId: screen.id,
+          objectId: id,
+          visible: object.visible === false,
+        });
+    };
+    if (drafts.allow(apply)) apply();
+  }
   function toggleObjectLock(id: string) {
     const generation = workspaceGeneration,
       target = screen.id;
@@ -1591,7 +1651,12 @@
   function objectLabel(object: ScreenObject) {
     return placementLabel(object, project.symbols);
   }
-  const selectionContextLabel = $derived(
+  const hiddenSelectionCount = $derived(
+    screen.objects.filter(
+      (object) => object.visible === false && selectedIds.includes(object.id),
+    ).length,
+  );
+  const baseSelectionContextLabel = $derived(
     contextKind === "blank"
       ? "キャンバス"
       : selectedIds.length > 1
@@ -1599,6 +1664,11 @@
         : selected
           ? objectLabel(selected)
           : "選択図形",
+  );
+  const selectionContextLabel = $derived(
+    contextKind !== "blank" && hiddenSelectionCount
+      ? `${baseSelectionContextLabel}（非表示 ${hiddenSelectionCount} 件）`
+      : baseSelectionContextLabel,
   );
   function requestSelectionContext(request: CanvasContext) {
     if (mode !== "edit" || busy || drafts.pending || replacement) return;
@@ -1655,6 +1725,7 @@
   }
   const menuBlocked = $derived(busy || !!drafts.pending || !!replacement);
   const editBlocked = $derived(menuBlocked || mode !== "edit");
+
   const selectionLocked = $derived(
     screen.objects.some(
       (object) => object.locked && selectedIds.includes(object.id),
@@ -1686,12 +1757,15 @@
           label: "すべて選択",
           icon: "M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M7 7H17V17H7Z",
           disabled:
-            editBlocked || !screen.objects.some((object) => !object.locked),
+            editBlocked ||
+            !screen.objects.some(
+              (object) => !object.locked && object.visible !== false,
+            ),
           run: () =>
             transition(
               () =>
                 (selectedIds = screen.objects
-                  .filter((o) => !o.locked)
+                  .filter((o) => !o.locked && o.visible !== false)
                   .map((o) => o.id)),
             ),
         },
@@ -1840,6 +1914,18 @@
       ];
     return [
       properties,
+      ...(selected
+        ? [
+            {
+              label:
+                selected.visible === false
+                  ? "配置を再表示"
+                  : "配置を非表示（表示プレビューにも反映）",
+              disabled: editBlocked,
+              run: () => selected && toggleObjectVisibility(selected.id),
+            },
+          ]
+        : []),
       ...(selected
         ? [
             {
@@ -2139,6 +2225,7 @@
 <EditToolbar
   groups={mode === "edit" ? editToolbarGroups : []}
   selectionCount={selectedIds.length}
+  {hiddenSelectionCount}
 >
   {#snippet modes()}
     <div class="mode-tools" role="group" aria-label="表示モード">
@@ -2431,7 +2518,8 @@
             oninput={() => (layersExpanded = true)}
           />
           <p class="layer-caption">
-            {selectedIds.length} 件選択 · 下の配置ほど前面
+            {selectedIds.length} 件選択{#if hiddenSelectionCount}（非表示 {hiddenSelectionCount}
+              件）{/if} · 下の配置ほど前面
           </p>
           <TreeSection
             label={screen.name}
@@ -2445,7 +2533,10 @@
             {/if}
             <nav aria-label="図形一覧">
               {#each visibleLayers as object (object.id)}
-                <div class="layer-entry">
+                <div
+                  class="layer-entry"
+                  class:hidden-placement={object.visible === false}
+                >
                   <button
                     class:active={selectedIds.includes(object.id)}
                     aria-pressed={selectedIds.includes(object.id)}
@@ -2470,6 +2561,34 @@ ${object.id}`}
                           )
                         : undefined}
                     /><span>{objectLabel(object)}</span></button
+                  >
+                  <button
+                    class="layer-visible"
+                    aria-label={`${object.visible === false ? "再表示" : "非表示"}：${objectLabel(object)}`}
+                    aria-pressed={object.visible !== false}
+                    title={object.visible === false
+                      ? "図面に再表示"
+                      : "図面から非表示（表示プレビューにも反映）"}
+                    disabled={menuBlocked}
+                    onclick={() => toggleObjectVisibility(object.id)}
+                    ><svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      aria-hidden="true"
+                      ><path
+                        d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"
+                      /><circle
+                        cx="12"
+                        cy="12"
+                        r="3"
+                      />{#if object.visible === false}<path
+                          d="M3 3l18 18"
+                        />{/if}</svg
+                    ></button
                   >
                   <button
                     class="layer-lock"
@@ -2716,6 +2835,8 @@ ${object.id}`}
       {selectedIds}
       {selected}
       {selectionLocked}
+      {hiddenSelectionCount}
+      ontogglevisibility={toggleObjectVisibility}
       ontogglelock={toggleObjectLock}
       activeDefinition={!!activeDefinition}
       {screen}
@@ -2768,7 +2889,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.6.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.7.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。
@@ -2786,6 +2907,9 @@ ${object.id}`}
   </p>
   <p>
     レイヤーの錠アイコンで配置の編集をロックします。ロック中はキャンバスの選択・移動やプロパティ変更を防ぎ、レイヤーで選択してコピー・解除できます。ロックは権限ではなく、参照する共有定義の変更・Undo／Redo・画面全体の管理は引き続き反映されます。コピー・貼り付けはロック状態を保持します。
+  </p>
+  <p>
+    レイヤーの目のアイコンは図面の静的な表示設定です。表示プレビュー・共有定義・ミニマップにも反映します。非表示の配置はレイヤーから選択・再表示できます。キャンバスから見えない配置の移動・削除・切り取りは防ぎ、プロパティやレイヤーで対象を確認した明示操作は許可します。
   </p>
   <p>
     Ctrl / Command + N：新しいProject、O：JSONを開く、S／Shift +
@@ -2907,7 +3031,7 @@ ${object.id}`}
     position: relative;
   }
   .layer-entry > button:first-child {
-    padding-right: 52px;
+    padding-right: 78px;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -2921,6 +3045,22 @@ ${object.id}`}
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .layer-entry.hidden-placement > button:first-child {
+    opacity: 0.6;
+  }
+  .layer-entry .layer-visible {
+    display: grid;
+    place-items: center;
+    position: absolute;
+    right: 52px;
+    top: 4px;
+    width: 24px;
+    min-height: 28px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
   }
   .layer-entry .layer-lock {
     display: grid;
@@ -2973,6 +3113,9 @@ ${object.id}`}
     border-radius: 3px;
     background: transparent;
     color: var(--banto-text);
+  }
+  .layer-entry > button:first-child {
+    padding-right: 78px;
   }
   .screen-row:hover {
     background: color-mix(in srgb, var(--banto-primary) 6%, transparent);

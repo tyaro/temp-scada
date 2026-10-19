@@ -91,7 +91,9 @@
                           title={usage.name}
                           onclick={() => onopen(usage)}
                           >{usage.screenName} / {usage.name ??
-                            `Text ${usage.order}`}</button
+                            `Text ${usage.order}`}{usage.visible === false
+                            ? "（非表示）"
+                            : ""}</button
                         >
                       {/each}
                     </div></td

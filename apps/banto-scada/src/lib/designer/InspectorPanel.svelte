@@ -27,6 +27,8 @@
     selectedIds,
     selected,
     selectionLocked,
+    hiddenSelectionCount,
+    ontogglevisibility,
     ontogglelock,
     activeDefinition,
     screen,
@@ -50,6 +52,8 @@
     selectedIds: string[];
     selected: ScreenObject | undefined;
     selectionLocked: boolean;
+    hiddenSelectionCount: number;
+    ontogglevisibility: (id: string) => void;
     ontogglelock: (id: string) => void;
     activeDefinition: boolean;
     screen: { id: string; name: string };
@@ -262,6 +266,15 @@
       >
     </div>{/if}
   <div class="panel-content">
+    {#if hiddenSelectionCount}
+      <p role="status">
+        選択中 {selectedIds.length} 件のうち {hiddenSelectionCount} 件が非表示です。表示プレビューにも反映されます。
+      </p>
+      {#if selected?.visible === false}<button
+          type="button"
+          onclick={() => ontogglevisibility(selected.id)}>配置を再表示</button
+        >{/if}
+    {/if}
     {#if selectionLocked}
       <p class="lock-status" role="status">
         ロック中の配置を含むため、プロパティは閲覧専用です。共有定義の変更は反映されます。
