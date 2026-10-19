@@ -40,8 +40,8 @@ for (const theme of ["light", "dark"])
     await start(page, project);
     await chooseTheme(page, theme);
     await row(page, object.id).click();
-    await page.getByLabel("色の不透明度（%）", { exact: true }).fill("25");
-    await page.getByLabel("色の不透明度（%）", { exact: true }).press("Enter");
+    await page.getByLabel("塗りの不透明度（%）", { exact: true }).fill("25");
+    await button(page, "塗りと枠線を適用").click();
     const group = paint(page, object.id),
       rect = group.locator(":scope > rect");
     await expect(group).toHaveAttribute("opacity", "0.6");
@@ -59,18 +59,19 @@ for (const theme of ["light", "dark"])
     const next = await saved(page),
       stored = next.screens[0].objects.find((o: any) => o.id === object.id);
     expect(stored.opacity).toBe(0.6);
-    expect(stored.colorAlpha).toBe(0.25);
+    expect(stored.shape.paint.fill.paint.alpha).toBe(0.25);
+    expect(stored.colorAlpha).toBeUndefined();
     expect(stored.shape.paint.stroke.alpha).toBe(0.4);
     await page.getByLabel("塗り", { exact: true }).selectOption("false");
     await button(page, "塗りと枠線を適用").click();
     await expect(
-      page.getByLabel("色の不透明度（%）", { exact: true }),
-    ).toBeDisabled();
+      page.getByLabel("塗りの不透明度（%）", { exact: true }),
+    ).toBeEnabled();
     await expect(rect).toHaveAttribute("fill", "none");
     expect(
       (await saved(page)).screens[0].objects.find(
         (o: any) => o.id === object.id,
-      ).colorAlpha,
+      ).shape.paint.fill.paint.alpha,
     ).toBe(0.25);
     await page.getByLabel("塗り", { exact: true }).selectOption("true");
     await button(page, "塗りと枠線を適用").click();
@@ -168,10 +169,9 @@ test("default paint submits without creating alpha fields/history and invalid nu
 }) => {
   const project = await start(page),
     object = project.screens[0].objects.find(
-      (o: any) => o.shape.type === "rectangle",
+      (o: any) => o.shape.type === "text",
     );
   await row(page, object.id).click();
-  await button(page, "塗りと枠線を適用").click();
   await button(page, "変更を適用").click();
   await expect(button(page, "元に戻す")).toBeDisabled();
   const alpha = page.getByLabel("色の不透明度（%）", { exact: true });
@@ -197,12 +197,25 @@ test("overlapping Symbol primitives retain uniform final alpha instead of multip
   definition.objects = definition.objects
     .slice(0, 2)
     .map((child: any, index: number) => ({
-      ...child,
+      ...Object.fromEntries(
+        Object.entries(child).filter(
+          ([key]) => key !== "fill" && key !== "colorAlpha",
+        ),
+      ),
       x: index * 25,
       y: 0,
       width: 75,
       height: 100,
-      shape: { type: "rectangle", paint: { fillEnabled: true, stroke: null } },
+      shape: {
+        type: "rectangle",
+        paint: {
+          fill: {
+            enabled: true,
+            paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+          },
+          stroke: null,
+        },
+      },
     }));
   object.width = 100;
   object.height = 100;

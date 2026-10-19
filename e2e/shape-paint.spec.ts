@@ -44,13 +44,16 @@ for (const theme of ["light", "dark"] as const)
     await start(page);
     await chooseTheme(page, theme);
     await stroke(page);
-    await expect(shape(page)).toHaveAttribute("fill", rect.fill);
+    await expect(shape(page)).toHaveAttribute(
+      "fill",
+      rect.shape.paint.fill.paint.color,
+    );
     await expect(shape(page)).toHaveAttribute("stroke", "none");
     await apply(page).click();
     await expect(shape(page)).toHaveAttribute("fill", "none");
     await expect(shape(page)).toHaveAttribute("stroke", "#2563eb");
     await expect(shape(page)).toHaveAttribute("stroke-width", "6");
-    await expect(page.getByLabel("色", { exact: true })).toBeDisabled();
+    await expect(page.getByLabel("色", { exact: true })).toHaveCount(0);
     await expect(page.getByLabel("width", { exact: true })).toHaveValue(
       String(rect.width),
     );
@@ -67,7 +70,10 @@ for (const theme of ["light", "dark"] as const)
         .first(),
     ).toHaveAttribute("stroke", "#2563eb");
     await page.getByRole("button", { name: "元に戻す", exact: true }).click();
-    await expect(shape(page)).toHaveAttribute("fill", rect.fill);
+    await expect(shape(page)).toHaveAttribute(
+      "fill",
+      rect.shape.paint.fill.paint.color,
+    );
     await expect(form(page).getByLabel("枠線", { exact: true })).toHaveValue(
       "false",
     );
@@ -78,9 +84,16 @@ for (const theme of ["light", "dark"] as const)
     const saved = JSON.parse(
       await readFile((await (await download).path())!, "utf8"),
     );
-    expect(saved.screens[0].objects[0].fill).toBe(rect.fill);
+    expect(saved.screens[0].objects[0].fill).toBeUndefined();
     expect(saved.screens[0].objects[0].shape.paint).toEqual({
-      fillEnabled: false,
+      fill: {
+        enabled: false,
+        paint: {
+          type: "solid" as const,
+          color: rect.shape.paint.fill.paint.color,
+          alpha: 1,
+        },
+      },
       stroke: { color: "#2563eb", width: 6 },
     });
     await page
@@ -174,6 +187,7 @@ for (const theme of ["light", "dark"] as const)
     await stroke(page, "true");
     const bounds = await form(page).boundingBox();
     expect(bounds?.width).toBeGreaterThan(120);
+    await apply(page).scrollIntoViewIfNeeded();
     await expect(apply(page)).toBeInViewport();
     await apply(page).click();
     await expect(shape(page)).toHaveAttribute("stroke-width", "6");

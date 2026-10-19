@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { linearGradientEndpoints } from "./linear-gradient";
   import { lineDash, lineCap } from "./line-style";
   import TextPrimitive from "./TextPrimitive.svelte";
   import type { ScreenObject } from "./project";
@@ -14,6 +15,32 @@
     readings?: TagReadings;
     onsummary?: (description: string) => void;
   } = $props();
+  const gradientId = $props.id();
+  const fill = $derived(
+    object.shape.type === "rectangle" || object.shape.type === "ellipse"
+      ? object.shape.paint.fill
+      : null,
+  );
+  const gradient = $derived(
+    fill?.paint.type === "linearGradient" ? fill.paint : null,
+  );
+  const endpoints = $derived(
+    gradient && "width" in object
+      ? linearGradientEndpoints(object.width, object.height, gradient.angle)
+      : null,
+  );
+  const fillColor = $derived(
+    !fill?.enabled
+      ? "none"
+      : gradient
+        ? `url(#${gradientId})`
+        : fill?.paint.type === "solid"
+          ? (color ?? fill.paint.color)
+          : "none",
+  );
+  const fillAlpha = $derived(
+    fill?.paint.type === "solid" ? fill.paint.alpha : undefined,
+  );
   const binding = $derived(
     object.shape.type === "text" ? object.shape.binding : undefined,
   );
@@ -37,15 +64,35 @@
   }
 </script>
 
+{#if gradient && endpoints}
+  <defs
+    ><linearGradient
+      id={gradientId}
+      gradientUnits="userSpaceOnUse"
+      {...endpoints}
+    >
+      <stop
+        offset="0%"
+        stop-color={color ?? gradient.start.color}
+        stop-opacity={gradient.start.alpha}
+      />
+      <stop
+        offset="100%"
+        stop-color={color ?? gradient.end.color}
+        stop-opacity={gradient.end.alpha}
+      />
+    </linearGradient></defs
+  >
+{/if}
 {#if "width" in object}
   {#if object.shape.type === "rectangle"}<rect
       width={object.width}
       height={object.height}
-      fill={object.shape.paint.fillEnabled ? (color ?? object.fill) : "none"}
+      fill={fillColor}
       stroke={object.shape.paint.stroke
         ? (color ?? object.shape.paint.stroke.color)
         : "none"}
-      fill-opacity={object.colorAlpha}
+      fill-opacity={fillAlpha}
       stroke-opacity={object.shape.paint.stroke?.alpha}
       stroke-width={object.shape.paint.stroke?.width}
       stroke-dasharray={lineDash(
@@ -59,11 +106,11 @@
       cy={object.height / 2}
       rx={object.width / 2}
       ry={object.height / 2}
-      fill={object.shape.paint.fillEnabled ? (color ?? object.fill) : "none"}
+      fill={fillColor}
       stroke={object.shape.paint.stroke
         ? (color ?? object.shape.paint.stroke.color)
         : "none"}
-      fill-opacity={object.colorAlpha}
+      fill-opacity={fillAlpha}
       stroke-opacity={object.shape.paint.stroke?.alpha}
       stroke-width={object.shape.paint.stroke?.width}
       stroke-dasharray={lineDash(
@@ -77,7 +124,7 @@
       width={object.width}
       height={object.height}
       style={object.shape.style}
-      color={color ?? object.fill}
+      color={color ?? object.fill!}
       numeric={!!binding}
       tagName={binding?.externalName}
       tagState={binding ? presentation.state : undefined}
@@ -87,7 +134,7 @@
 {:else if shape}
   <polyline
     points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
-    stroke={color ?? object.fill}
+    stroke={color ?? object.fill!}
     stroke-width={shape.strokeWidth}
     stroke-linejoin="round"
     stroke-linecap={lineCap(shape.lineStyle)}
@@ -96,6 +143,6 @@
   />
   {#if shape.arrow === "end"}<polygon
       points={arrowPoints()}
-      fill={color ?? object.fill}
+      fill={color ?? object.fill!}
     />{/if}
 {/if}

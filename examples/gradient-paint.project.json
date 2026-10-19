@@ -1,0 +1,718 @@
+{
+  "manifest": {
+    "product": "banto-scada",
+    "schemaVersion": "0.18.0",
+    "projectId": "0199f200-0000-7000-8000-000000000001",
+    "projectRevision": 1,
+    "minRuntimeVersion": "0.18.0",
+    "name": "線形グラデーション / 水処理設備"
+  },
+  "screens": [
+    {
+      "id": "0199f200-0000-7000-8000-000000000002",
+      "name": "水処理設備・塗りの表現",
+      "width": 960,
+      "height": 540,
+      "objects": [
+        {
+          "id": "0199f200-0000-7000-8000-000000000010",
+          "order": 0,
+          "x": 45,
+          "y": 25,
+          "fill": "#0f172a",
+          "width": 800,
+          "height": 35,
+          "shape": {
+            "type": "text",
+            "text": "水処理設備 — 線形グラデーション",
+            "style": {
+              "fontSize": 24.5,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000011",
+          "order": 1,
+          "x": 45,
+          "y": 70,
+          "fill": "#0f172a",
+          "width": 850,
+          "height": 22,
+          "shape": {
+            "type": "text",
+            "text": "液面・タンクの2色塗り / 工程図と共有Symbolを同時に表示",
+            "style": {
+              "fontSize": 15.399999999999999,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000012",
+          "order": 2,
+          "x": 140,
+          "y": 140,
+          "width": 220,
+          "height": 220,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "linearGradient",
+                  "angle": 0,
+                  "start": {
+                    "color": "#334155",
+                    "alpha": 1
+                  },
+                  "end": {
+                    "color": "#94a3b8",
+                    "alpha": 1
+                  }
+                }
+              }
+            }
+          },
+          "rotation": 0,
+          "name": "原水タンク外装"
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000013",
+          "order": 3,
+          "x": 145,
+          "y": 145,
+          "width": 210,
+          "height": 210,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#eff6ff",
+                  "alpha": 1
+                }
+              }
+            }
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000014",
+          "order": 4,
+          "x": 145,
+          "y": 225,
+          "width": 210,
+          "height": 130,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "linearGradient",
+                  "angle": 90,
+                  "start": {
+                    "color": "#38bdf8",
+                    "alpha": 0.45
+                  },
+                  "end": {
+                    "color": "#2563eb",
+                    "alpha": 0.95
+                  }
+                }
+              }
+            }
+          },
+          "rotation": 0,
+          "name": "原水タンク液面・線形グラデーション"
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000015",
+          "order": 5,
+          "x": 160,
+          "y": 160,
+          "fill": "#0f172a",
+          "width": 180,
+          "height": 30,
+          "shape": {
+            "type": "text",
+            "text": "TANK / TK-01",
+            "style": {
+              "fontSize": 21.0,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000016",
+          "order": 6,
+          "x": 165,
+          "y": 255,
+          "fill": "#0f172a",
+          "width": 160,
+          "height": 25,
+          "shape": {
+            "type": "text",
+            "text": "液位：サンプル",
+            "style": {
+              "fontSize": 17.5,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000017",
+          "order": 7,
+          "x": 0,
+          "y": 0,
+          "fill": "#2563eb",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 360,
+                "y": 300
+              },
+              {
+                "x": 420,
+                "y": 300
+              },
+              {
+                "x": 420,
+                "y": 355
+              },
+              {
+                "x": 500,
+                "y": 355
+              }
+            ],
+            "strokeWidth": 8,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000018",
+          "order": 8,
+          "x": 0,
+          "y": 0,
+          "fill": "#2563eb",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 600,
+                "y": 355
+              },
+              {
+                "x": 670,
+                "y": 355
+              }
+            ],
+            "strokeWidth": 8,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000019",
+          "order": 9,
+          "x": 0,
+          "y": 0,
+          "fill": "#2563eb",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 770,
+                "y": 355
+              },
+              {
+                "x": 870,
+                "y": 355
+              }
+            ],
+            "strokeWidth": 8,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000020",
+          "order": 10,
+          "x": 500,
+          "y": 310,
+          "fill": "#0f766e",
+          "width": 100,
+          "height": 100,
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199f100-0000-7000-8000-000000001000",
+            "colorMode": "definition"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000021",
+          "order": 11,
+          "x": 670,
+          "y": 300,
+          "fill": "#0f766e",
+          "width": 100,
+          "height": 100,
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199f100-0000-7000-8000-000000002000",
+            "colorMode": "definition"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000022",
+          "order": 12,
+          "x": 480,
+          "y": 420,
+          "fill": "#0f172a",
+          "width": 160,
+          "height": 24,
+          "shape": {
+            "type": "text",
+            "text": "P-01 / ポンプ",
+            "style": {
+              "fontSize": 16.799999999999997,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000023",
+          "order": 13,
+          "x": 655,
+          "y": 420,
+          "fill": "#0f172a",
+          "width": 180,
+          "height": 24,
+          "shape": {
+            "type": "text",
+            "text": "V-01 / バルブ",
+            "style": {
+              "fontSize": 16.799999999999997,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000024",
+          "order": 14,
+          "x": 780,
+          "y": 300,
+          "fill": "#0f172a",
+          "width": 130,
+          "height": 24,
+          "shape": {
+            "type": "text",
+            "text": "循環ライン",
+            "style": {
+              "fontSize": 16.799999999999997,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "rotation": 0
+        }
+      ],
+      "background": "#ffffff",
+      "folders": []
+    }
+  ],
+  "symbols": [
+    {
+      "id": "0199f100-0000-7000-8000-000000001000",
+      "name": "ポンプ",
+      "width": 100,
+      "height": 100,
+      "objects": [
+        {
+          "id": "0199f100-0000-7000-8000-000000001001",
+          "order": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 80.0,
+                "y": 45.0
+              },
+              {
+                "x": 78.978,
+                "y": 52.765
+              },
+              {
+                "x": 75.981,
+                "y": 60.0
+              },
+              {
+                "x": 71.213,
+                "y": 66.213
+              },
+              {
+                "x": 65.0,
+                "y": 70.981
+              },
+              {
+                "x": 57.765,
+                "y": 73.978
+              },
+              {
+                "x": 50.0,
+                "y": 75.0
+              },
+              {
+                "x": 42.235,
+                "y": 73.978
+              },
+              {
+                "x": 35.0,
+                "y": 70.981
+              },
+              {
+                "x": 28.787,
+                "y": 66.213
+              },
+              {
+                "x": 24.019,
+                "y": 60.0
+              },
+              {
+                "x": 21.022,
+                "y": 52.765
+              },
+              {
+                "x": 20.0,
+                "y": 45.0
+              },
+              {
+                "x": 21.022,
+                "y": 37.235
+              },
+              {
+                "x": 24.019,
+                "y": 30.0
+              },
+              {
+                "x": 28.787,
+                "y": 23.787
+              },
+              {
+                "x": 35.0,
+                "y": 19.019
+              },
+              {
+                "x": 42.235,
+                "y": 16.022
+              },
+              {
+                "x": 50.0,
+                "y": 15.0
+              },
+              {
+                "x": 57.765,
+                "y": 16.022
+              },
+              {
+                "x": 65.0,
+                "y": 19.019
+              },
+              {
+                "x": 71.213,
+                "y": 23.787
+              },
+              {
+                "x": 75.981,
+                "y": 30.0
+              },
+              {
+                "x": 78.978,
+                "y": 37.235
+              },
+              {
+                "x": 80.0,
+                "y": 45.0
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000001002",
+          "order": 1,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 34,
+                "y": 60
+              },
+              {
+                "x": 65,
+                "y": 45
+              },
+              {
+                "x": 34,
+                "y": 30
+              },
+              {
+                "x": 34,
+                "y": 60
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000001003",
+          "order": 2,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 30,
+                "y": 74
+              },
+              {
+                "x": 25,
+                "y": 88
+              },
+              {
+                "x": 75,
+                "y": 88
+              },
+              {
+                "x": 70,
+                "y": 74
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000001004",
+          "order": 3,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 0,
+                "y": 45
+              },
+              {
+                "x": 20,
+                "y": 45
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000001005",
+          "order": 4,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 80,
+                "y": 45
+              },
+              {
+                "x": 100,
+                "y": 45
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          },
+          "rotation": 0
+        }
+      ],
+      "folders": []
+    },
+    {
+      "id": "0199f100-0000-7000-8000-000000002000",
+      "name": "バルブ",
+      "width": 100,
+      "height": 100,
+      "objects": [
+        {
+          "id": "0199f100-0000-7000-8000-000000002001",
+          "order": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 10,
+                "y": 35
+              },
+              {
+                "x": 90,
+                "y": 75
+              },
+              {
+                "x": 90,
+                "y": 35
+              },
+              {
+                "x": 10,
+                "y": 75
+              },
+              {
+                "x": 10,
+                "y": 35
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000002002",
+          "order": 1,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 50,
+                "y": 55
+              },
+              {
+                "x": 50,
+                "y": 15
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000002003",
+          "order": 2,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 30,
+                "y": 15
+              },
+              {
+                "x": 70,
+                "y": 15
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000002004",
+          "order": 3,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 0,
+                "y": 55
+              },
+              {
+                "x": 10,
+                "y": 55
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000002005",
+          "order": 4,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 90,
+                "y": 55
+              },
+              {
+                "x": 100,
+                "y": 55
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          },
+          "rotation": 0
+        }
+      ],
+      "folders": []
+    }
+  ],
+  "assets": []
+}

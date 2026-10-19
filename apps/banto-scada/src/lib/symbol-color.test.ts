@@ -137,7 +137,7 @@ it("records mode conversion even when fill matches, and treats fully matching co
     type: "set-color",
     screenId: owner.id,
     objectIds: [object.id],
-    fill: object.fill,
+    fill: object.fill!,
     convertDefinitionSymbols: true,
   };
   const result = recordEdit(source, emptyHistory(), command, "edit");

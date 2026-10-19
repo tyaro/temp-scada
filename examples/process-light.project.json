@@ -1,10 +1,10 @@
 {
   "manifest": {
     "product": "banto-scada",
-    "schemaVersion": "0.17.0",
+    "schemaVersion": "0.18.0",
     "projectId": "0199f200-0000-7000-8000-000000000001",
     "projectRevision": 1,
-    "minRuntimeVersion": "0.17.0",
+    "minRuntimeVersion": "0.18.0",
     "name": "循環設備・明るい工程図サンプル"
   },
   "screens": [
@@ -57,14 +57,20 @@
           "order": 2,
           "x": 140,
           "y": 140,
-          "fill": "#475569",
           "width": 220,
           "height": 220,
           "shape": {
             "type": "rectangle",
             "paint": {
-              "fillEnabled": true,
-              "stroke": null
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#475569",
+                  "alpha": 1
+                }
+              }
             }
           },
           "rotation": 0
@@ -74,14 +80,20 @@
           "order": 3,
           "x": 145,
           "y": 145,
-          "fill": "#eff6ff",
           "width": 210,
           "height": 210,
           "shape": {
             "type": "rectangle",
             "paint": {
-              "fillEnabled": true,
-              "stroke": null
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#eff6ff",
+                  "alpha": 1
+                }
+              }
             }
           },
           "rotation": 0
@@ -91,14 +103,20 @@
           "order": 4,
           "x": 145,
           "y": 225,
-          "fill": "#93c5fd",
           "width": 210,
           "height": 130,
           "shape": {
             "type": "rectangle",
             "paint": {
-              "fillEnabled": true,
-              "stroke": null
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#93c5fd",
+                  "alpha": 1
+                }
+              }
             }
           },
           "rotation": 0

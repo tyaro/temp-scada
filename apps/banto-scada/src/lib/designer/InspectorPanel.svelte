@@ -78,14 +78,21 @@
             object.shape.type === "ellipse"
           )
             return [
-              ...(object.shape.paint.fillEnabled
-                ? [object.fill.toLowerCase()]
+              ...(object.shape.paint.fill.enabled
+                ? object.shape.paint.fill.paint.type === "solid"
+                  ? [object.shape.paint.fill.paint.color.toLowerCase()]
+                  : [
+                      object.shape.paint.fill.paint.start.color.toLowerCase(),
+                      object.shape.paint.fill.paint.end.color.toLowerCase(),
+                    ]
                 : []),
               ...(object.shape.paint.stroke
                 ? [object.shape.paint.stroke.color.toLowerCase()]
                 : []),
             ];
-          return [object.fill.toLowerCase()];
+          return object.shape.type === "image"
+            ? []
+            : [object.fill!.toLowerCase()];
         }),
     ),
   );
@@ -95,8 +102,18 @@
         selectedIds.includes(object.id) &&
         (object.shape.type === "rectangle" ||
           object.shape.type === "ellipse") &&
-        !object.shape.paint.fillEnabled &&
+        !object.shape.paint.fill.enabled &&
         !object.shape.paint.stroke,
+    ).length,
+  );
+  const gradientCount = $derived(
+    screen.objects.filter(
+      (object) =>
+        selectedIds.includes(object.id) &&
+        (object.shape.type === "rectangle" ||
+          object.shape.type === "ellipse") &&
+        object.shape.paint.fill.enabled &&
+        object.shape.paint.fill.paint.type === "linearGradient",
     ).length,
   );
   const definitionColorCount = $derived(
@@ -399,6 +416,7 @@
         <SelectionColor
           current={commonColor}
           {definitionColorCount}
+          {gradientCount}
           imageCount={screen.objects.filter(
             (o) => selectedIds.includes(o.id) && o.shape.type === "image",
           ).length}
@@ -549,24 +567,17 @@
                     >{/if}</label
                 >
               {/each}
-              {#if selected.shape.type !== "image"}
+              {#if selected.shape.type !== "image" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
                 <label
                   >{selected.shape.type === "symbol" &&
                   selected.shape.colorMode === "definition"
                     ? "単色の保存値"
-                    : (selected.shape.type === "rectangle" ||
-                          selected.shape.type === "ellipse") &&
-                        !selected.shape.paint.fillEnabled
-                      ? "塗りの保存値"
-                      : "色"}<input
+                    : "色"}<input
                     name="fill"
                     aria-label="色"
                     type="color"
-                    disabled={(selected.shape.type === "symbol" &&
-                      selected.shape.colorMode === "definition") ||
-                      ((selected.shape.type === "rectangle" ||
-                        selected.shape.type === "ellipse") &&
-                        !selected.shape.paint.fillEnabled)}
+                    disabled={selected.shape.type === "symbol" &&
+                      selected.shape.colorMode === "definition"}
                   /></label
                 >
                 <label>
@@ -583,11 +594,8 @@
                     type="text"
                     inputmode="decimal"
                     required
-                    disabled={(selected.shape.type === "symbol" &&
-                      selected.shape.colorMode === "definition") ||
-                      ((selected.shape.type === "rectangle" ||
-                        selected.shape.type === "ellipse") &&
-                        !selected.shape.paint.fillEnabled)}
+                    disabled={selected.shape.type === "symbol" &&
+                      selected.shape.colorMode === "definition"}
                     aria-invalid={numericErrors.colorAlpha ? "true" : undefined}
                     onfocus={focusNumber}
                     oninput={clearNumber}
@@ -607,10 +615,10 @@
                 >
                   現在の描画にはこの単色を使用していません。各図形の色は共有定義で編集します。色と不透明度の保存値は保持し、色の使い方を「配置の単色」に適用した後に編集できます。
                 </p>{/if}
-              {#if (selected.shape.type === "rectangle" || selected.shape.type === "ellipse") && !selected.shape.paint.fillEnabled}<p
+              {#if (selected.shape.type === "rectangle" || selected.shape.type === "ellipse") && !selected.shape.paint.fill.enabled}<p
                   class="numeric-hint"
                 >
-                  塗りは無効です。色と不透明度の保存値は保持し、塗りを「あり」に適用した後に編集できます。
+                  塗りは無効です。色と不透明度の設定は保持され、現在の描画には使われません。
                 </p>{/if}
               {#if selected.shape.type === "polyline"}
                 <label

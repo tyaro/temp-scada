@@ -2,8 +2,15 @@
   {
     "name": "rectangle True None",
     "paint": {
-      "fillEnabled": true,
-      "stroke": null
+      "stroke": null,
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": true,
     "kind": "rectangle"
@@ -11,8 +18,15 @@
   {
     "name": "rectangle False None",
     "paint": {
-      "fillEnabled": false,
-      "stroke": null
+      "stroke": null,
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": true,
     "kind": "rectangle"
@@ -20,10 +34,17 @@
   {
     "name": "rectangle False {'color': '#123456', 'width': 0.1}",
     "paint": {
-      "fillEnabled": false,
       "stroke": {
         "color": "#123456",
         "width": 0.1
+      },
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": true,
@@ -32,10 +53,17 @@
   {
     "name": "rectangle True {'color': '#ABCDEF', 'width': 64}",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "color": "#ABCDEF",
         "width": 64
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": true,
@@ -44,8 +72,15 @@
   {
     "name": "ellipse True None",
     "paint": {
-      "fillEnabled": true,
-      "stroke": null
+      "stroke": null,
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": true,
     "kind": "ellipse"
@@ -53,8 +88,15 @@
   {
     "name": "ellipse False None",
     "paint": {
-      "fillEnabled": false,
-      "stroke": null
+      "stroke": null,
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": true,
     "kind": "ellipse"
@@ -62,10 +104,17 @@
   {
     "name": "ellipse False {'color': '#123456', 'width': 0.1}",
     "paint": {
-      "fillEnabled": false,
       "stroke": {
         "color": "#123456",
         "width": 0.1
+      },
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": true,
@@ -74,10 +123,17 @@
   {
     "name": "ellipse True {'color': '#ABCDEF', 'width': 64}",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "color": "#ABCDEF",
         "width": 64
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": true,
@@ -86,10 +142,17 @@
   {
     "name": "definition paint",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "color": "#123456",
         "width": 2
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": true,
@@ -118,7 +181,14 @@
   {
     "name": "invalid paint {\"fillEnabled\": true}",
     "paint": {
-      "fillEnabled": true
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": false
   },
@@ -132,26 +202,47 @@
   {
     "name": "invalid paint {\"fillEnabled\": \"true\", \"stroke\": null}",
     "paint": {
-      "fillEnabled": "true",
-      "stroke": null
+      "stroke": null,
+      "fill": {
+        "enabled": "true",
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": false
   },
   {
     "name": "invalid paint {\"fillEnabled\": true, \"stroke\": false}",
     "paint": {
-      "fillEnabled": true,
-      "stroke": false
+      "stroke": false,
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": false
   },
   {
     "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#fff\", \"width\": 1}}",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "color": "#fff",
         "width": 1
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": false
@@ -159,10 +250,17 @@
   {
     "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\", \"width\": 0}}",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "color": "#ffffff",
         "width": 0
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": false
@@ -170,10 +268,17 @@
   {
     "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\", \"width\": -1}}",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "color": "#ffffff",
         "width": -1
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": false
@@ -181,10 +286,17 @@
   {
     "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\", \"width\": 64.1}}",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "color": "#ffffff",
         "width": 64.1
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": false
@@ -192,10 +304,17 @@
   {
     "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\", \"width\": \"2\"}}",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "color": "#ffffff",
         "width": "2"
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": false
@@ -203,9 +322,16 @@
   {
     "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\"}}",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "color": "#ffffff"
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": false
@@ -213,9 +339,16 @@
   {
     "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"width\": 2}}",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "width": 2
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": false
@@ -223,11 +356,18 @@
   {
     "name": "invalid paint {\"fillEnabled\": true, \"stroke\": {\"color\": \"#ffffff\", \"width\": 2, \"extra\": true}}",
     "paint": {
-      "fillEnabled": true,
       "stroke": {
         "color": "#ffffff",
         "width": 2,
         "extra": true
+      },
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
       }
     },
     "valid": false
@@ -235,9 +375,16 @@
   {
     "name": "invalid paint {\"fillEnabled\": true, \"stroke\": null, \"extra\": true}",
     "paint": {
-      "fillEnabled": true,
       "stroke": null,
-      "extra": true
+      "extra": true,
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": false
   },
@@ -250,8 +397,15 @@
   {
     "name": "forbidden on text",
     "paint": {
-      "fillEnabled": true,
-      "stroke": null
+      "stroke": null,
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": false,
     "kind": "text"
@@ -259,8 +413,15 @@
   {
     "name": "forbidden on polyline",
     "paint": {
-      "fillEnabled": true,
-      "stroke": null
+      "stroke": null,
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": false,
     "kind": "polyline"
@@ -268,10 +429,546 @@
   {
     "name": "forbidden on symbol",
     "paint": {
-      "fillEnabled": true,
-      "stroke": null
+      "stroke": null,
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "solid",
+          "color": "#83bfcd",
+          "alpha": 1
+        }
+      }
     },
     "valid": false,
     "kind": "symbol"
+  },
+  {
+    "name": "rectangle gradient enabled=True",
+    "kind": "rectangle",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "rectangle gradient enabled=False",
+    "kind": "rectangle",
+    "paint": {
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "ellipse gradient enabled=True",
+    "kind": "ellipse",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "ellipse gradient enabled=False",
+    "kind": "ellipse",
+    "paint": {
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": true
+  },
+  {
+    "name": "definition gradient",
+    "definition": true,
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": {
+        "color": "#123456",
+        "width": 2,
+        "alpha": 0.5
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "gradient negative angle",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": -1,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient full turn",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 360,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient string angle",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": "45",
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient missing angle",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient missing end",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient short RGB",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#fff",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient RGBA hex",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#ffffff80",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient negative alpha",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": -0.1
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient excess alpha",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 1.1
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient missing alpha",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800"
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient unknown stop field",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25,
+            "offset": 0
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient unknown paint field",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          },
+          "stops": []
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "gradient unsupported kind",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "radialGradient",
+          "angle": 45,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "valid": false
+  },
+  {
+    "name": "duplicate root fill",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 22.5,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "objectPatch": {
+      "fill": "#112233"
+    },
+    "valid": false
+  },
+  {
+    "name": "duplicate root alpha",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 22.5,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "objectPatch": {
+      "colorAlpha": 0.5
+    },
+    "valid": false
+  },
+  {
+    "name": "large finite coordinates",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 22.5,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "objectPatch": {
+      "width": 1e300,
+      "height": 1e300
+    },
+    "valid": true
+  },
+  {
+    "name": "unrepresentable gradient endpoints",
+    "paint": {
+      "fill": {
+        "enabled": true,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 22.5,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "objectPatch": {
+      "width": 1.7e308,
+      "height": 1.7e308
+    },
+    "valid": false
+  },
+  {
+    "name": "disabled gradient still validates endpoints",
+    "paint": {
+      "fill": {
+        "enabled": false,
+        "paint": {
+          "type": "linearGradient",
+          "angle": 22.5,
+          "start": {
+            "color": "#ff8800",
+            "alpha": 0.25
+          },
+          "end": {
+            "color": "#2266cc",
+            "alpha": 0.8
+          }
+        }
+      },
+      "stroke": null
+    },
+    "objectPatch": {
+      "width": 1.7e308,
+      "height": 1.7e308
+    },
+    "valid": false
   }
 ]

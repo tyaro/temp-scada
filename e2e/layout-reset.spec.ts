@@ -83,7 +83,7 @@ test("standard layout restores hidden regions without resolving drafts, changing
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
+  await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
   await selectPanel(page, "プロジェクト");
   await page.getByLabel("画面名", { exact: true }).fill("未適用の画面名");
   const tagBranch = page
@@ -100,7 +100,9 @@ test("standard layout restores hidden regions without resolving drafts, changing
   await expectDefaults(page);
   await expect(button(page, "メニュー")).toBeFocused();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
+  await expect(
+    page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
+  ).toHaveValue("#aabbcc");
   await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
     "未適用の画面名",
   );
@@ -125,8 +127,8 @@ test("standard layout restores hidden regions without resolving drafts, changing
   await expect(tagBranch).not.toHaveAttribute("open", "");
   await page.getByLabel("画面名", { exact: true }).fill(sample.screens[0].name);
   await page
-    .getByLabel("色", { exact: true })
-    .fill(sample.screens[0].objects[0].fill);
+    .getByLabel(/^(?:色|塗りの色)$/, { exact: true })
+    .fill(sample.screens[0].objects[0].shape.paint.fill.paint.color);
   const waiting = page.waitForEvent("download");
   await page.keyboard.press("Control+s");
   const file = await waiting;

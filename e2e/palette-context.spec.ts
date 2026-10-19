@@ -34,7 +34,7 @@ test("right-click only opens operations, keeps drafts and selection, and returns
 }) => {
   await edit(page);
   await button(page, "Rectangle を追加").click();
-  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
+  await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
   const before = await page.locator(".toolbar").innerText();
   const pump = button(page, "ポンプを追加");
   await pump.click({ button: "right" });
@@ -46,7 +46,9 @@ test("right-click only opens operations, keeps drafts and selection, and returns
     }),
   ).toBeFocused();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
+  await expect(
+    page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
+  ).toHaveValue("#aabbcc");
   expect(await page.locator(".toolbar").innerText()).toBe(before);
   await page.keyboard.press("Escape");
   await expect(pump).toBeFocused();
@@ -61,7 +63,9 @@ test("right-click only opens operations, keeps drafts and selection, and returns
   await info.getByRole("button", { name: "閉じる", exact: true }).click();
   await expect(pump).toBeFocused();
   expect(await page.locator(".toolbar").innerText()).toBe(before);
-  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
+  await expect(
+    page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
+  ).toHaveValue("#aabbcc");
   await pump.press("ContextMenu");
   await expect(menu(page, "ポンプ（組込）")).toBeVisible();
   await page.getByRole("searchbox", { name: "部品を検索" }).click();
@@ -123,7 +127,7 @@ test("context placement uses the existing apply/discard/cancel protection", asyn
 }) => {
   await edit(page);
   await button(page, "Rectangle を追加").click();
-  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
+  await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
   const objects = page
     .getByRole("img", { name: "プロセス画面", exact: true })
     .locator("[data-object-id]");
@@ -139,16 +143,18 @@ test("context placement uses the existing apply/discard/cancel protection", asyn
     await prompt.getByRole("button", { name: resolution, exact: true }).click();
     if (resolution === "キャンセル") {
       await expect(objects).toHaveCount(4);
-      await expect(page.getByLabel("色", { exact: true })).toHaveValue(
-        "#aabbcc",
-      );
+      await expect(
+        page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
+      ).toHaveValue("#aabbcc");
     }
   }
   await expect(objects).toHaveCount(5);
   const project = await save(page);
   expect(
     project.screens[0].objects.find(
-      (o: any) => o.shape.type === "rectangle" && o.fill === "#aabbcc",
+      (o: any) =>
+        o.shape.type === "rectangle" &&
+        o.shape.paint.fill.paint.color === "#aabbcc",
     ),
   ).toBeDefined();
   expect(project.symbols[0].name).toBe("バルブ");

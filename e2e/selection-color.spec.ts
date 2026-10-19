@@ -69,7 +69,9 @@ test("mixed colors stay unspecified until Apply, allow clearing and invalid text
   await expect(colorForm(page)).toContainText("現在の色：#aabbcc");
   const result = await exported(page);
   expect(
-    result.screens[0].objects.slice(0, 2).map((o: { fill: string }) => o.fill),
+    result.screens[0].objects
+      .slice(0, 2)
+      .map((o: any) => o.shape.paint.fill.paint.color),
   ).toEqual(["#aabbcc", "#aabbcc"]);
   expect(result.screens[0].objects[2]).toEqual(sample.screens[0].objects[2]);
   await code(page).fill("#aAbBcC");
@@ -108,7 +110,7 @@ test("color and movement drafts are prevalidated together and target changes pre
   expect(
     result.screens[0].objects
       .slice(0, 2)
-      .map((o: { fill: string; x: number }) => [o.fill, o.x]),
+      .map((o: any) => [o.shape.paint.fill.paint.color, o.x]),
   ).toEqual([
     ["#123456", 110],
     ["#123456", 580],
@@ -143,9 +145,11 @@ test("locked selections are read only while hidden unlocked targets can be expli
   const result = await exported(page);
   expect(result.screens[0].objects[0]).toMatchObject({
     visible: false,
-    fill: "#000000",
+    shape: { paint: { fill: { paint: { color: "#000000" } } } },
   });
-  expect(result.screens[0].objects[1].fill).toBe("#000000");
+  expect(result.screens[0].objects[1].shape.paint.fill.paint.color).toBe(
+    "#000000",
+  );
 });
 test("mixed Text, pipe and Symbol colors change placement tint without touching shared definitions or tag metadata", async ({
   page,
@@ -160,10 +164,26 @@ test("mixed Text, pipe and Symbol colors change placement tint without touching 
   const result = await exported(page);
   expect(result.symbols).toEqual(processSample.symbols);
   expect(result.screens[0].objects).toEqual(
-    processSample.screens[0].objects.map((o) => ({
-      ...o,
-      fill: o.fill.toLowerCase() === "#16a34a" ? o.fill : "#16a34a",
-    })),
+    processSample.screens[0].objects.map((o) =>
+      o.shape.type === "rectangle" || o.shape.type === "ellipse"
+        ? {
+            ...o,
+            shape: {
+              ...o.shape,
+              paint: {
+                ...o.shape.paint,
+                fill: {
+                  ...o.shape.paint.fill,
+                  paint: { ...o.shape.paint.fill.paint, color: "#16a34a" },
+                },
+              },
+            },
+          }
+        : {
+            ...o,
+            fill: o.fill?.toLowerCase() === "#16a34a" ? o.fill : "#16a34a",
+          },
+    ),
   );
   await page.getByRole("tab", { name: "プロジェクト", exact: true }).click();
   await button(page, "定義を編集").click();
@@ -179,7 +199,10 @@ test("mixed Text, pipe and Symbol colors change placement tint without touching 
   expect(definitionResult.screens).toEqual(result.screens);
   expect(
     definitionResult.symbols[0].objects.every(
-      (o: { fill: string }) => o.fill === "#ea580c",
+      (o: any) =>
+        (o.shape.type === "rectangle" || o.shape.type === "ellipse"
+          ? o.shape.paint.fill.paint.color
+          : o.fill) === "#ea580c",
     ),
   ).toBe(true);
 });

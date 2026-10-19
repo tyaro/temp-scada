@@ -51,7 +51,7 @@ test("dragging panel borders preserves drafts and saves widths separately from P
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
+  await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
   await selectPanel(page, "プロジェクト");
   await page.getByLabel("画面名", { exact: true }).fill("未適用の画面名");
   const saveState = await page.getByTestId("save-state").innerText();
@@ -63,11 +63,13 @@ test("dragging panel borders preserves drafts and saves widths separately from P
   await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
     "未適用の画面名",
   );
-  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
+  await expect(
+    page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
+  ).toHaveValue("#aabbcc");
   expect(await page.getByTestId("save-state").innerText()).toBe(saveState);
   await expect(button(page, "元に戻す")).toBeDisabled();
   await page.getByLabel("画面名", { exact: true }).fill("プロセス画面");
-  await page.getByLabel("色", { exact: true }).fill("#164e63");
+  await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#164e63");
   const pending = page.waitForEvent("download");
   await fileCommand(page, "Project を保存");
   const saved = JSON.parse(

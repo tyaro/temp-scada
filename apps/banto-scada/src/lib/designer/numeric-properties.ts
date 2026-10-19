@@ -1,3 +1,4 @@
+import { placementColor } from "../project";
 import type { ScreenObject } from "../project";
 export type NumericProperty =
   | "colorAlpha"
@@ -38,7 +39,7 @@ export function objectFormValues(
     x: String(object.x),
     y: String(object.y),
     rotation: String(object.rotation),
-    fill: object.fill,
+    fill: placementColor(object),
   };
   if ("width" in object) {
     values.width = String(object.width);

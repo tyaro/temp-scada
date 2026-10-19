@@ -14,8 +14,12 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
   await page.getByLabel("y", { exact: true }).fill("400");
   await page.getByLabel("width", { exact: true }).fill("180");
   await page.getByLabel("height", { exact: true }).fill("70");
-  await page.getByLabel("色", { exact: true }).fill("#ff9900");
+
   await page.getByRole("button", { name: "変更を適用" }).click();
+  await page.getByLabel("塗りの色", { exact: true }).fill("#ff9900");
+  await page
+    .getByRole("button", { name: "塗りと枠線を適用", exact: true })
+    .click();
   const added = svg.locator("[data-object-id]").last();
   await expect(added).toHaveAttribute("transform", "translate(230.5 400)");
   await expect(added.locator("rect").first()).toHaveAttribute("width", "180");
@@ -47,7 +51,7 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
     y,
     width: 180,
     height: 70,
-    fill: "#ff9900",
+    shape: { paint: { fill: { paint: { color: "#ff9900" } } } },
   });
   expect(saved.manifest.projectRevision).toBe(8);
   await page

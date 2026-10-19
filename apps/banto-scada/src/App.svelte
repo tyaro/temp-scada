@@ -9,6 +9,7 @@
     readSystemPaste,
     type PastePayload,
   } from "./lib/image-clipboard";
+  import { normalizeGradientAngle } from "./lib/linear-gradient";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
   import { readProjectFile, writeProjectPackage } from "./lib/project-package";
@@ -2090,7 +2091,40 @@
         objectId: selected.id,
         patch: {
           paint: {
-            fillEnabled: fill === "true",
+            fill: {
+              enabled: fill === "true",
+              paint: (() => {
+                const kind = String(data.get("fillType"));
+                if (kind === "solid")
+                  return {
+                    type: "solid" as const,
+                    color: String(data.get("fillColor")),
+                    alpha:
+                      parseNumericProperty(String(data.get("fillAlpha"))) / 100,
+                  };
+                if (kind === "linearGradient")
+                  return {
+                    type: "linearGradient" as const,
+                    angle: normalizeGradientAngle(
+                      parseNumericProperty(String(data.get("fillAngle"))),
+                    ),
+                    start: {
+                      color: String(data.get("fillStartColor")),
+                      alpha:
+                        parseNumericProperty(
+                          String(data.get("fillStartAlpha")),
+                        ) / 100,
+                    },
+                    end: {
+                      color: String(data.get("fillEndColor")),
+                      alpha:
+                        parseNumericProperty(String(data.get("fillEndAlpha"))) /
+                        100,
+                    },
+                  };
+                throw new Error("塗りの種類を選択してください。");
+              })(),
+            },
             stroke:
               stroke === "true"
                 ? {
@@ -4424,7 +4458,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.17.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.18.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

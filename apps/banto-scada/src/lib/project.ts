@@ -1,3 +1,4 @@
+import { linearGradientEndpoints } from "./linear-gradient";
 import type { ImageMetadata } from "./image-assets";
 import { rotatedBounds, rotationPivot } from "./rotation";
 import Ajv2020 from "ajv/dist/2020.js";
@@ -19,14 +20,26 @@ interface BaseObject {
   order: number;
   x: number;
   y: number;
-  fill: string;
+  fill?: string;
 }
 export interface TagBinding {
   externalName: string;
 }
 export type LineStyle = "solid" | "dashed" | "dotted";
+export interface PaintColor {
+  color: string;
+  alpha: number;
+}
+export type FillPaint =
+  | ({ type: "solid" } & PaintColor)
+  | {
+      type: "linearGradient";
+      angle: number;
+      start: PaintColor;
+      end: PaintColor;
+    };
 export interface ShapePaint {
-  fillEnabled: boolean;
+  fill: { enabled: boolean; paint: FillPaint };
   stroke: {
     color: string;
     width: number;
@@ -98,10 +111,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.17.0";
+    schemaVersion: "0.18.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.17.0";
+    minRuntimeVersion: "0.18.0";
     name: string;
   };
   screens: Screen[];
@@ -112,10 +125,12 @@ const validate = ajv.compile<Project>(schema);
 const legacy = ajv.compile(legacySchema);
 export function parseProject(json: string): Project {
   let value: unknown = JSON.parse(json);
+  let migratedLegacy = false;
   if (
     (value as { manifest?: { schemaVersion?: unknown } } | null)?.manifest
       ?.schemaVersion === "0.1.0"
   ) {
+    migratedLegacy = true;
     if (!legacy(value)) throw new Error("旧 Project の形式が不正です");
     const old = value as unknown as Project;
     value = {
@@ -123,8 +138,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.17.0",
-        minRuntimeVersion: "0.17.0",
+        schemaVersion: "0.18.0",
+        minRuntimeVersion: "0.18.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -134,7 +149,16 @@ export function parseProject(json: string): Project {
           rotation: 0,
           shape:
             object.shape.type === "rectangle" || object.shape.type === "ellipse"
-              ? { ...object.shape, paint: { fillEnabled: true, stroke: null } }
+              ? {
+                  ...object.shape,
+                  paint: {
+                    fill: {
+                      enabled: true,
+                      paint: { type: "solid", color: object.fill!, alpha: 1 },
+                    },
+                    stroke: null,
+                  },
+                }
               : object.shape.type === "text"
                 ? {
                     ...object.shape,
@@ -153,6 +177,15 @@ export function parseProject(json: string): Project {
       })),
       symbols: [],
     };
+  }
+  if (migratedLegacy) {
+    for (const screen of (value as Project).screens)
+      for (const object of screen.objects)
+        if (
+          object.shape.type === "rectangle" ||
+          object.shape.type === "ellipse"
+        )
+          delete object.fill;
   }
   if (!validate(value))
     throw new Error(
@@ -213,6 +246,18 @@ export function parseProject(json: string): Project {
       if (object.folderId && !folders.has(object.folderId))
         throw new Error("同じ所有先の所属フォルダーが見つかりません");
       const shape = object.shape;
+      if (
+        (shape.type === "rectangle" || shape.type === "ellipse") &&
+        "width" in object &&
+        shape.paint.fill.paint.type === "linearGradient"
+      ) {
+        linearGradientEndpoints(
+          object.width,
+          object.height,
+          shape.paint.fill.paint.angle,
+        );
+      }
+
       if (
         project.symbols.includes(owner) &&
         shape.type === "text" &&
@@ -332,4 +377,13 @@ export function referencedAssets(project: Project): Set<string> {
       ),
     ]),
   );
+}
+
+/** The fill paint is the sole color source for rectangle/ellipse. Other objects keep their own monochrome color. */
+export function placementColor(object: ScreenObject): string {
+  if (object.shape.type === "rectangle" || object.shape.type === "ellipse") {
+    const paint = object.shape.paint.fill.paint;
+    return paint.type === "solid" ? paint.color : paint.start.color;
+  }
+  return object.fill!;
 }

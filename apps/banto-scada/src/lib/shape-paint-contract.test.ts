@@ -18,6 +18,7 @@ for (const test of cases) {
       target.order = project.symbols[0].objects[0].order;
       project.symbols[0].objects[0] = target;
     }
+    if ("objectPatch" in test) Object.assign(target, test.objectPatch);
     if (test.omit) delete target.shape.paint;
     else target.shape.paint = test.paint;
     if (test.valid) {

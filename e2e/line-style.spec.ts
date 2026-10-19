@@ -87,7 +87,7 @@ for (const theme of ["light", "dark"])
       page.locator('.minimap svg [data-object-id="' + a + '"] polyline'),
     ).toHaveAttribute("stroke-dasharray", "24 12");
     const next = await saved(page);
-    expect(next.manifest.schemaVersion).toBe("0.17.0");
+    expect(next.manifest.schemaVersion).toBe("0.18.0");
     expect(
       next.screens[0].objects.find((o: any) => o.id === a).shape,
     ).toMatchObject({ lineStyle: "dashed", strokeWidth: 6, arrow: "end" });
@@ -246,7 +246,7 @@ test("dotted gaps keep continuous hit regions and changing rotation or color pre
     "stroke-dasharray",
     "0 8",
   );
-  await page.getByLabel("色", { exact: true }).fill("#ff0000");
+  await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#ff0000");
   await button(page, "変更を適用").click();
   await expect(paint(page, a, "polyline")).toHaveAttribute("stroke", "#ff0000");
   await expect(paint(page, a, "polyline")).toHaveAttribute(

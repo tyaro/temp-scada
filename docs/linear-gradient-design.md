@@ -1,10 +1,10 @@
 # 矩形・楕円の2色線形グラデーション
 
-2026-10-20（日本時間）。Astraの読取専用レビューを反映した次工程。[描画拡張の計画](scada-graphics-runtime-extension-design.md#2-paint線種αを先行する)に従う。**保存契約とUI・共通描画への接続は未実装**。現在は局所座標の計算基礎だけを検証する。
+2026-10-20（日本時間）。Astraの読取専用レビューを反映した次工程。[描画拡張の計画](scada-graphics-runtime-extension-design.md#2-paint線種αを先行する)に従う。**Project 0.18.0で保存契約・UI・共通描画へ接続済み**。[実装記録](development-plan.md#linear-gradient-progress)を参照。放射・pattern・多点stopは後続。
 
 ## 塗りを1つの正へ整理する
 
-矩形・楕円の塗りRGBとαをpaintへ集約し、既存の配置fill／colorAlphaと二重保存しない。Text・Polyline・Symbol配置色の単色契約、画像原本と配置全体のopacityは維持する。保存モデルを次のバージョンへ更新し、Rust／TypeScript／schema・生成例・既存操作を同期する。リリース前の旧形式の互換性は要求しない。
+矩形・楕円の塗りRGBとαをpaintへ集約し、既存の配置fill／colorAlphaと二重保存しない。Text・Polyline・Symbol配置色の単色契約、画像原本と配置全体のopacityは維持する。保存モデルを0.18.0へ更新し、Rust／TypeScript／schema・生成例・既存操作を同期する。リリース前の旧形式の互換性は要求しない。
 
 ```ts
 type FillPaint =
@@ -31,7 +31,7 @@ paint: {
 
 塗りの有無・種類・詳細を同じ明示適用フォームへまとめる。solidは色と不透明度、gradientは両端の色と不透明度・角度を表示する。矩形・楕円の下側の共通RGB／色α欄を外し、同じpaintを別フォームから更新しない。
 
-solid→gradientの初期値は両端とも現在の色・α、角度0°として、外観を維持する。gradient→solidは始点の色・αを使うと表示する。適用後の復元はUndo。フォーム内の切替だけなら未適用値を保持する。blurで一部を先に確定せず、Enterでフォーム適用、IMEと他フォームの事前検証を共用する。
+solid→gradientの初期値は両端とも現在の色・α、角度0°として、外観を維持する。gradient→solidへの初回切替は始点の色・αを使うと表示する。適用後の復元はUndo。フォーム内で切替済みの種類へ戻る場合は、その未適用値を保持する。blurで一部を先に確定せず、Enterでフォーム適用、IMEと他フォームの事前検証を共用する。
 
 ## Symbolと共通色
 
@@ -47,6 +47,14 @@ RGB一括色の初回範囲は、有効なgradient塗りを含む選択を全体
 
 ## 検証の区切り
 
-まず`linear-gradient.ts`で直交方向・非正方形45°・四隅の射影範囲・resize・角度正規化・有限座標を検証する。これは画面でgradientを編集できる状態の完成ではない。
+まず`linear-gradient.ts`で直交方向・非正方形45°・四隅の射影範囲・resize・角度正規化・有限座標を検証する。この計算基礎を先に保存した後、0.18.0で編集と描画を追加した。
 
-接続後はTS／Rust／schema、異なる端点α、塗りなし往復、同一Symbol複数配置とミニマップ、共通色の原子的拒否、回転＋resize、JSON／両clipboard／Undo往復、両テーマと入力保護を確認する。
+TS／Rust／schema、異なる端点α、塗りなし往復、同一Symbol複数配置とミニマップ、共通色の原子的拒否、回転＋resize、JSON／両clipboard／Undo往復、両テーマと入力保護を確認する。
+
+## 実画面
+
+独自作成の[サンプル](../examples/gradient-paint.project.json)を通常のファイル読込で開いた画面。液面のRGBとαが縦方向に変化する実描画を撮影時に検証する。
+
+![線形グラデーション・ライト](assets/frontend-ux/gradient-paint-light.png)
+
+[ダーク](assets/frontend-ux/gradient-paint-dark.png)・[撮影スクリプト](../scripts/capture-gradient-paint.mjs)。

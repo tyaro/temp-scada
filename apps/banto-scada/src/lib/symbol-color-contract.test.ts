@@ -17,7 +17,13 @@ for (const test of cases)
       if (test.primitive === "ellipse")
         object.shape = {
           type: "ellipse",
-          paint: { fillEnabled: true, stroke: null },
+          paint: {
+            fill: {
+              enabled: true,
+              paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+            },
+            stroke: null,
+          },
         };
       if (test.definition) {
         const child = structuredClone(object);

@@ -53,6 +53,14 @@ async function fixture() {
     { type: "add", screenId, kind: "rectangle" },
     "edit",
   );
+  const shape = project.screens[0].objects.at(-1)!.shape;
+  if (shape.type !== "rectangle") throw new Error("fixture");
+  shape.paint.fill.paint = {
+    type: "linearGradient",
+    angle: 45,
+    start: { color: "#ff8800", alpha: 0.25 },
+    end: { color: "#2266cc", alpha: 0.8 },
+  };
   return {
     project,
     store,
@@ -66,7 +74,7 @@ async function fixture() {
     ),
   };
 }
-it("encodes each original once and verifies exact bytes into a fresh Store, then pastes a mixed selection with one Undo", async () => {
+it("encodes each original once and verifies exact bytes into a fresh Store, then pastes mixed images and gradient paint with one Undo", async () => {
   const { snapshot, store, project } = await fixture();
   const text = await (await encodeAssetClipboard(snapshot, store)).text(),
     fragment = parseClipboard(text),
@@ -99,6 +107,9 @@ it("encodes each original once and verifies exact bytes into a fresh Store, then
     .slice(0, 2)
     .map((o) => (o.shape as any).assetId);
   expect(new Set(refs)).toEqual(new Set([result.project.assets[0].id]));
+  expect(result.project.screens[0].objects.at(-1)!.shape).toEqual(
+    project.screens[0].objects.at(-1)!.shape,
+  );
   expect(result.history.past).toHaveLength(1);
   expect(
     travelHistory(result.project, result.history, "undo", "edit").project

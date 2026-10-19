@@ -100,24 +100,18 @@ test("vertical context action validates pending color before mutation, applies i
     .getByRole("button", { name: "適用して続行", exact: true })
     .click();
   const result = await exported(page);
-  expect(result.screens[0].objects[0]).toEqual({
-    ...sample.screens[0].objects[0],
-    fill: "#123456",
-    y: 85,
-  });
-  expect(result.screens[0].objects[1]).toEqual({
-    ...sample.screens[0].objects[1],
-    fill: "#123456",
-  });
-  expect(result.screens[0].objects[2]).toEqual({
-    ...sample.screens[0].objects[2],
-    fill: "#123456",
-  });
+  const expected = structuredClone(sample);
+  for (const object of expected.screens[0].objects) {
+    if (object.shape.type === "rectangle" || object.shape.type === "ellipse")
+      object.shape.paint.fill.paint.color = "#123456";
+    else object.fill = "#123456";
+  }
+  const coloredObjects = structuredClone(expected.screens[0].objects);
+  expected.screens[0].objects[0].y = 85;
+  expect(result.screens[0].objects).toEqual(expected.screens[0].objects);
   await button(page, "元に戻す").click();
   const colored = await exported(page);
-  expect(colored.screens[0].objects).toEqual(
-    sample.screens[0].objects.map((o) => ({ ...o, fill: "#123456" })),
-  );
+  expect(colored.screens[0].objects).toEqual(coloredObjects);
   await button(page, "元に戻す").click();
   await expect(button(page, "元に戻す")).toBeDisabled();
 });

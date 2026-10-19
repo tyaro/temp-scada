@@ -118,7 +118,7 @@ test("menu commands share draft protection, edit history and preview restriction
     .click();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
   await expect(svg.locator("[data-object-id]")).toHaveCount(4);
-  const x = page.getByLabel("色", { exact: true });
+  const x = page.getByLabel(/^(?:色|塗りの色)$/, { exact: true });
   await x.fill("#aabbcc");
   await bar.getByRole("menuitem", { name: "編集", exact: true }).click();
   await page.getByRole("menuitem", { name: "元に戻す", exact: true }).click();

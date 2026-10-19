@@ -41,7 +41,11 @@ const expectedPaints = sample.symbols[0].objects
   .flatMap((object) =>
     object.shape.type === "polyline" && object.shape.arrow === "end"
       ? [object.fill, object.fill]
-      : [object.fill],
+      : [
+          object.shape.type === "rectangle" || object.shape.type === "ellipse"
+            ? object.shape.paint.fill.paint.color
+            : object.fill,
+        ],
   );
 async function start(page: Page, project: object = sample) {
   await page.setViewportSize({ width: 1920, height: 1080 });
@@ -99,7 +103,9 @@ test("mode drafts preserve fill, disabled color never corrupts other properties,
   await start(page);
   await row(page, placements[1].id).click();
   await expect(mode(page)).toHaveValue("definition");
-  await expect(page.getByLabel("色", { exact: true })).toBeDisabled();
+  await expect(
+    page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
+  ).toBeDisabled();
   await page.getByLabel("x", { exact: true }).fill("480");
   await page.getByLabel("x", { exact: true }).press("Enter");
   await mode(page).selectOption("monochrome");
@@ -115,7 +121,9 @@ test("mode drafts preserve fill, disabled color never corrupts other properties,
   expect(await paints(svgSymbol(canvas(page), placements[1].id))).toEqual(
     expectedPaints.map(() => placements[1].fill),
   );
-  await expect(page.getByLabel("色", { exact: true })).toBeEnabled();
+  await expect(
+    page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
+  ).toBeEnabled();
   let result = await exported(page);
   expect(
     result.screens[0].objects.find((o: any) => o.id === placements[1].id),
@@ -214,8 +222,8 @@ test("shared child paint changes affect definition-mode placements while monochr
   await expect(page.getByRole("note")).toContainText("共有定義の色");
   await selectPanel(page, "レイヤー");
   await row(page, sample.symbols[0].objects[0].id).click();
-  await page.getByLabel("色", { exact: true }).fill("#ff7700");
-  await button(page, "変更を適用").click();
+  await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#ff7700");
+  await button(page, "塗りと枠線を適用").click();
   await button(page, "画面へ戻る").click();
   const changed = [...expectedPaints];
   changed[0] = "#ff7700";
@@ -305,9 +313,7 @@ test("native same/cross-project clipboard and screen duplication preserve mode a
     fill: placements[1].fill,
     shape: { colorMode: "definition" },
   });
-  expect(result.symbols[0].objects.map((o: any) => o.fill)).toEqual(
-    sample.symbols[0].objects.map((o) => o.fill),
-  );
+  expect(result.symbols[0].objects).toEqual(sample.symbols[0].objects);
 });
 test("file menu opens the color sample through existing draft protection", async ({
   page,

@@ -2,7 +2,7 @@ import { expect, it } from "vitest";
 import sample from "../../../../examples/process.project.json";
 import { applyCommand, type EditCommand } from "./editor";
 import { emptyHistory, recordEdit, travelHistory } from "./history";
-import { parseProject, serializeProject } from "./project";
+import { parseProject, serializeProject, placementColor } from "./project";
 const fresh = () => parseProject(JSON.stringify(sample));
 
 it("colors mixed primitive, text, pipe and Symbol placements without changing definitions or geometry", () => {
@@ -20,10 +20,29 @@ it("colors mixed primitive, text, pipe and Symbol placements without changing de
   );
   expect(result.symbols).toEqual(original.symbols);
   expect(result.screens[0].objects).toEqual(
-    screen.objects.map((o) => ({
-      ...o,
-      fill: o.fill.toLowerCase() === "#2563eb" ? o.fill : "#2563eb",
-    })),
+    screen.objects.map((o) =>
+      o.shape.type === "rectangle" || o.shape.type === "ellipse"
+        ? {
+            ...o,
+            shape: {
+              ...o.shape,
+              paint: {
+                ...o.shape.paint,
+                fill: {
+                  ...o.shape.paint.fill,
+                  paint: { ...o.shape.paint.fill.paint, color: "#2563eb" },
+                },
+              },
+            },
+          }
+        : {
+            ...o,
+            fill:
+              placementColor(o).toLowerCase() === "#2563eb"
+                ? o.fill
+                : "#2563eb",
+          },
+    ),
   );
   expect(result.manifest.projectRevision).toBe(
     original.manifest.projectRevision + 1,
@@ -81,8 +100,8 @@ it("allows explicit hidden editing, preserves metadata, and keeps the whole colo
   expect(colored.project.screens[0].objects[0]).toMatchObject({
     visible: false,
     name: "原水設備",
-    fill: "#aabbcc",
   });
+  expect(placementColor(colored.project.screens[0].objects[0])).toBe("#aabbcc");
   expect(
     recordEdit(
       colored.project,
@@ -119,7 +138,9 @@ it("colors shared definition children only when that definition is the explicit 
   );
   expect(result.screens).toEqual(original.screens);
   expect(
-    result.symbols[0].objects.slice(0, 2).every((o) => o.fill === "#16a34a"),
+    result.symbols[0].objects
+      .slice(0, 2)
+      .every((o) => placementColor(o) === "#16a34a"),
   ).toBe(true);
   expect(result.symbols[0].objects.slice(2)).toEqual(
     definition.objects.slice(2),

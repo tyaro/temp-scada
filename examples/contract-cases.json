@@ -37,7 +37,7 @@
   },
   {
     "name": "不正な色",
-    "path": "/screens/0/objects/0/fill",
+    "path": "/screens/0/objects/0/shape/paint/fill/paint/color",
     "value": "url(https://example.com)",
     "valid": false
   },
@@ -72,8 +72,15 @@
       "type": "rectangle",
       "futureFeature": true,
       "paint": {
-        "fillEnabled": true,
-        "stroke": null
+        "stroke": null,
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        }
       }
     },
     "valid": false
@@ -228,8 +235,15 @@
         "externalName": "PLC01.Fast.Value"
       },
       "paint": {
-        "fillEnabled": true,
-        "stroke": null
+        "stroke": null,
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        }
       }
     },
     "valid": false
@@ -353,5 +367,11 @@
     "valid": false,
     "path": "/manifest/minRuntimeVersion",
     "value": "0.9.0"
+  },
+  {
+    "name": "旧0.17.0は自動移行しない",
+    "path": "/manifest/schemaVersion",
+    "value": "0.17.0",
+    "valid": false
   }
 ]

@@ -1,7 +1,7 @@
 {
   "manifest": {
-    "schemaVersion": "0.17.0",
-    "minRuntimeVersion": "0.17.0",
+    "schemaVersion": "0.18.0",
+    "minRuntimeVersion": "0.18.0",
     "projectId": "0199ff20-0000-7000-8000-000000000001",
     "name": "共有Symbolの配色サンプル",
     "projectRevision": 1,
@@ -210,12 +210,18 @@
           "y": 40,
           "width": 80,
           "height": 80,
-          "fill": "#2dd4bf",
           "shape": {
             "type": "ellipse",
             "paint": {
-              "fillEnabled": true,
-              "stroke": null
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#2dd4bf",
+                  "alpha": 1
+                }
+              }
             }
           },
           "folderId": "0199ff20-0000-7000-8000-000000000030",
@@ -229,12 +235,18 @@
           "y": 65,
           "width": 30,
           "height": 30,
-          "fill": "#0f766e",
           "shape": {
             "type": "ellipse",
             "paint": {
-              "fillEnabled": true,
-              "stroke": null
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f766e",
+                  "alpha": 1
+                }
+              }
             }
           },
           "folderId": "0199ff20-0000-7000-8000-000000000030",
@@ -248,12 +260,18 @@
           "y": 55,
           "width": 70,
           "height": 45,
-          "fill": "#94a3b8",
           "shape": {
             "type": "rectangle",
             "paint": {
-              "fillEnabled": true,
-              "stroke": null
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#94a3b8",
+                  "alpha": 1
+                }
+              }
             }
           },
           "folderId": "0199ff20-0000-7000-8000-000000000031",
@@ -433,12 +451,18 @@
           "y": 4,
           "width": 12,
           "height": 12,
-          "fill": "#ef4444",
           "shape": {
             "type": "ellipse",
             "paint": {
-              "fillEnabled": true,
-              "stroke": null
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#ef4444",
+                  "alpha": 1
+                }
+              }
             }
           },
           "visible": false,

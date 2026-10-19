@@ -66,8 +66,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.17.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.17.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.18.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.18.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -79,8 +79,8 @@ impl Project {
                     if object["shape"]["type"] == "rectangle"
                         || object["shape"]["type"] == "ellipse"
                     {
-                        object["shape"]["paint"] =
-                            serde_json::json!({"fillEnabled":true,"stroke":null});
+                        object["shape"]["paint"] = serde_json::json!({"fill":{"enabled":true,"paint":{"type":"solid","color":object["fill"].clone(),"alpha":1}},"stroke":null});
+                        object.as_object_mut().unwrap().remove("fill");
                     }
                 }
             }
@@ -195,6 +195,34 @@ impl Project {
                     return Err("ID が重複しています".into());
                 }
                 let shape = &object["shape"];
+                if (shape["type"] == "rectangle" || shape["type"] == "ellipse")
+                    && shape["paint"]["fill"]["paint"]["type"] == "linearGradient"
+                {
+                    let width = object["width"].as_f64().unwrap();
+                    let height = object["height"].as_f64().unwrap();
+                    let radians = shape["paint"]["fill"]["paint"]["angle"]
+                        .as_f64()
+                        .unwrap()
+                        .to_radians();
+                    let clean = |v: f64| if v.abs() < 1e-12 { 0.0 } else { v };
+                    let ux = clean(radians.cos());
+                    let uy = clean(radians.sin());
+                    let half = (width / 2.0) * ux.abs() + (height / 2.0) * uy.abs();
+                    let dx = half * ux;
+                    let dy = half * uy;
+                    if [
+                        width / 2.0 - dx,
+                        height / 2.0 - dy,
+                        width / 2.0 + dx,
+                        height / 2.0 + dy,
+                    ]
+                    .iter()
+                    .any(|v| !v.is_finite())
+                    {
+                        return Err("グラデーションの描画座標が有限の範囲を超えています。".into());
+                    }
+                }
+
                 if symbols.contains(screen["id"].as_str().unwrap())
                     && shape.get("binding").is_some()
                 {
@@ -591,7 +619,14 @@ mod tests {
                         }
                         assert_eq!(
                             Project::from_json(&value.to_string()).is_ok(),
-                            case["valid"] == true,
+                            case["valid"] == true
+                                && !(field == "colorAlpha"
+                                    && ["rectangle", "ellipse"].contains(
+                                        &base[owners][0]["objects"][index]["shape"]["type"]
+                                            .as_str()
+                                            .unwrap()
+                                    )
+                                    && case.get("missing").is_none()),
                             "{owners} {index} {field} {case}"
                         );
                     }
@@ -659,6 +694,11 @@ mod tests {
     }
     #[test]
     fn shape_paint_shares_the_browser_contract() {
+        let gradient = Project::from_json(include_str!(
+            "../../../examples/gradient-paint.project.json"
+        ))
+        .unwrap();
+        assert_eq!(Project::from_json(&gradient.to_json()).unwrap(), gradient);
         let sample =
             Project::from_json(include_str!("../../../examples/shape-paint.project.json")).unwrap();
         assert_eq!(Project::from_json(&sample.to_json()).unwrap(), sample);
@@ -692,6 +732,9 @@ mod tests {
             } else {
                 &mut value["screens"][0]["objects"][index]
             };
+            if let Some(patch) = case.get("objectPatch").and_then(Value::as_object) {
+                object.as_object_mut().unwrap().extend(patch.clone());
+            }
             if case["omit"] == true {
                 object["shape"].as_object_mut().unwrap().remove("paint");
             } else {
@@ -735,7 +778,7 @@ mod tests {
                 })
                 .unwrap();
             if kind == "ellipse" {
-                value["screens"][0]["objects"][index]["shape"] = serde_json::json!({"type":"ellipse","paint":{"fillEnabled":true,"stroke":null}});
+                value["screens"][0]["objects"][index]["shape"] = serde_json::json!({"type":"ellipse","paint":{"fill":{"enabled":true,"paint":{"type":"solid","color":"#83bfcd","alpha":1}},"stroke":null}});
             }
             if case["definition"] == true {
                 let mut child = value["screens"][0]["objects"][index].clone();
@@ -877,8 +920,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.17.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.17.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.18.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.18.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]
@@ -897,8 +940,8 @@ mod tests {
                     object["shape"]["style"] = serde_json::json!({"fontSize":(object["height"].as_f64().unwrap() * 0.7).min(512.0),"fontWeight":"normal","align":"left"});
                 }
                 if object["shape"]["type"] == "rectangle" || object["shape"]["type"] == "ellipse" {
-                    object["shape"]["paint"] =
-                        serde_json::json!({"fillEnabled":true,"stroke":null});
+                    object["shape"]["paint"] = serde_json::json!({"fill":{"enabled":true,"paint":{"type":"solid","color":object["fill"].clone(),"alpha":1}},"stroke":null});
+                    object.as_object_mut().unwrap().remove("fill");
                 }
             }
         }

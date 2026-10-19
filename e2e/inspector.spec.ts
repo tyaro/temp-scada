@@ -34,7 +34,7 @@ test("hiding properties releases its width, retains drafts and restores through 
   await page
     .getByRole("button", { name: "Rectangle を追加", exact: true })
     .click();
-  await page.getByLabel("色", { exact: true }).fill("#aabbcc");
+  await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
   const revision = await page.locator(".toolbar").innerText();
   const width = (await viewport(page).boundingBox())!.width;
   await inspector(page)
@@ -48,7 +48,7 @@ test("hiding properties releases its width, retains drafts and restores through 
     .poll(async () => (await viewport(page).boundingBox())!.width)
     .toBeGreaterThan(width + 250);
   await expect(
-    page.locator('[data-editor-form="object"] input[name="fill"]'),
+    page.locator('[data-editor-form="shape-paint"] input[name="fillColor"]'),
   ).toHaveValue("#aabbcc");
   await expect(page.getByTestId("save-state")).toContainText("1 フォーム");
   expect(await page.locator(".toolbar").innerText()).toBe(revision);
@@ -61,15 +61,19 @@ test("hiding properties releases its width, retains drafts and restores through 
     .click();
   await showInspector(page);
   await expect(inspector(page)).toBeVisible();
-  await expect(page.getByLabel("色", { exact: true })).toHaveValue("#aabbcc");
-  await page.getByRole("button", { name: "変更を適用", exact: true }).click();
+  await expect(
+    page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
+  ).toHaveValue("#aabbcc");
+  await page
+    .getByRole("button", { name: "塗りと枠線を適用", exact: true })
+    .click();
   await expect(page.getByTestId("save-state")).not.toContainText(
     "未適用の入力あり",
   );
   await page.getByRole("button", { name: "元に戻す", exact: true }).click();
-  await expect(page.getByLabel("色", { exact: true })).not.toHaveValue(
-    "#aabbcc",
-  );
+  await expect(
+    page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
+  ).not.toHaveValue("#aabbcc");
 });
 
 for (const zoom of [0.25, 1, 4]) {

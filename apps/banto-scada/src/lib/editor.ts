@@ -1,8 +1,10 @@
 import { parseLineStyle, setLineStyle } from "./line-style";
+import { projectContent } from "./save-state";
 import { normalizeRotation, replaceRotatedVertex } from "./rotation";
 import { parseClipboard } from "./clipboard";
 import { canvasColors } from "./canvas-colors";
 import {
+  placementColor,
   referencedAssets,
   parseProject,
   serializeProject,
@@ -294,10 +296,15 @@ export function applyCommand(
           y: command.height * 0.2,
           width: command.width * 0.6,
           height: command.height * 0.6,
-          fill: "#83bfcd",
           shape: {
             type: "rectangle",
-            paint: { fillEnabled: true, stroke: null },
+            paint: {
+              fill: {
+                enabled: true,
+                paint: { type: "solid", color: "#83bfcd", alpha: 1 },
+              },
+              stroke: null,
+            },
           },
         },
       ],
@@ -781,6 +788,18 @@ export function applyCommand(
           object[axis] = target - offset;
       }
     } else if (command.type === "set-color") {
+      if (
+        objects.some(
+          (object) =>
+            (object.shape.type === "rectangle" ||
+              object.shape.type === "ellipse") &&
+            object.shape.paint.fill.enabled &&
+            object.shape.paint.fill.paint.type === "linearGradient",
+        )
+      )
+        throw new Error(
+          "グラデーションを含む選択には共通色を適用できません。単独の塗り設定で編集してください。",
+        );
       if (objects.some((object) => object.shape.type === "image"))
         throw new Error(
           "画像を含む選択には色を適用できません。画像以外だけを選択してください。",
@@ -807,7 +826,7 @@ export function applyCommand(
           (object) =>
             (object.shape.type === "rectangle" ||
               object.shape.type === "ellipse") &&
-            !object.shape.paint.fillEnabled &&
+            !object.shape.paint.fill.enabled &&
             !object.shape.paint.stroke,
         )
       )
@@ -820,16 +839,18 @@ export function applyCommand(
           object.shape.type === "ellipse"
         ) {
           if (
-            object.shape.paint.fillEnabled &&
-            object.fill.toLowerCase() !== fill
+            object.shape.paint.fill.enabled &&
+            object.shape.paint.fill.paint.type === "solid" &&
+            object.shape.paint.fill.paint.color.toLowerCase() !== fill
           )
-            object.fill = fill;
+            object.shape.paint.fill.paint.color = fill;
           if (
             object.shape.paint.stroke &&
             object.shape.paint.stroke.color.toLowerCase() !== fill
           )
             object.shape.paint.stroke.color = fill;
-        } else if (object.fill.toLowerCase() !== fill) object.fill = fill;
+        } else if (placementColor(object).toLowerCase() !== fill)
+          object.fill = fill;
         if (command.convertDefinitionSymbols && object.shape.type === "symbol")
           object.shape.colorMode = "monochrome";
       });
@@ -943,7 +964,13 @@ export function applyCommand(
               }
             : {
                 type: command.kind,
-                paint: { fillEnabled: true, stroke: null },
+                paint: {
+                  fill: {
+                    enabled: true,
+                    paint: { type: "solid", color: base.fill, alpha: 1 },
+                  },
+                  stroke: null,
+                },
               },
       });
     }
@@ -967,7 +994,10 @@ export function applyCommand(
         }));
       }
     }
-    centerObject(screen.objects.at(-1)!, command.center);
+    const added = screen.objects.at(-1)!;
+    if (added.shape.type === "rectangle" || added.shape.type === "ellipse")
+      delete added.fill;
+    centerObject(added, command.center);
   } else {
     const index = screen.objects.findIndex((o) => o.id === command.objectId);
     if (index < 0) throw new Error("図形が見つかりません");
@@ -1056,11 +1086,13 @@ export function applyCommand(
       } = command.patch;
       const object = screen.objects[index];
       if (
-        object.shape.type === "image" &&
+        (object.shape.type === "image" ||
+          object.shape.type === "rectangle" ||
+          object.shape.type === "ellipse") &&
         (geometry.fill !== undefined || colorAlpha !== undefined)
       )
         throw new Error(
-          "画像の色や色の不透明度は変更できません。配置全体の不透明度を使ってください。",
+          "画像の色は原本、矩形・楕円の色は塗り設定で編集してください。",
         );
       Object.assign(object, geometry);
       if (colorAlpha !== undefined) {
@@ -1178,7 +1210,9 @@ function finish(project: Project, next: Project): Project {
 
   if (next.symbols.some((s) => s.objects.length === 0))
     throw new Error("Symbol 定義には図形を 1 つ以上残してください");
-  if (serializeProject(next) === serializeProject(project)) return project;
+  // Validate first; invalid values must never disappear into a no-op comparison.
+  serializeProject(next);
+  if (projectContent(next) === projectContent(project)) return project;
   next.manifest.projectRevision++;
   return parseProject(JSON.stringify(next));
 }

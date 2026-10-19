@@ -4,6 +4,7 @@
     current,
     count,
     imageCount = 0,
+    gradientCount = 0,
     definitionColorCount = 0,
     paintDisabledCount = 0,
     hiddenCount,
@@ -17,6 +18,7 @@
     current: string | null;
     count: number;
     imageCount?: number;
+    gradientCount?: number;
     definitionColorCount?: number;
     paintDisabledCount?: number;
     hiddenCount: number;
@@ -94,7 +96,15 @@
   {#if imageCount}<p class="hint" role="status">
       画像を含む選択には色を適用できません。画像以外だけを選択してください。
     </p>{/if}
-  <fieldset disabled={locked || paintDisabledCount > 0 || imageCount > 0}>
+  {#if gradientCount}<p class="hint" role="status">
+      グラデーションを含む選択には共通色を適用できません。単独の塗り設定で編集してください。
+    </p>{/if}
+  <fieldset
+    disabled={locked ||
+      paintDisabledCount > 0 ||
+      imageCount > 0 ||
+      gradientCount > 0}
+  >
     <label
       >適用する色<input
         bind:this={input}

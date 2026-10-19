@@ -36,7 +36,7 @@ test("new blank project is an editable clean baseline, exports current schema an
   await button(page, "元に戻す").click();
   await expect(state(page)).toContainText("新しいProject・未書き出し");
   const first = await exported(page);
-  expect(first.manifest.schemaVersion).toBe("0.17.0");
+  expect(first.manifest.schemaVersion).toBe("0.18.0");
   expect(first.screens).toHaveLength(1);
   expect(first.screens[0]).toMatchObject({
     name: "画面1",
@@ -71,7 +71,7 @@ test("new-project cancellation preserves drafts and selection; applying input st
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true });
   await rectangle.click();
-  const color = page.getByLabel("色", { exact: true });
+  const color = page.getByLabel(/^(?:色|塗りの色)$/, { exact: true });
   await color.fill("#aabbcc");
   await page.keyboard.press("Control+n");
   await expect(draft(page)).toBeVisible();

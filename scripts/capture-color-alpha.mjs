@@ -29,7 +29,7 @@ try {
     const selected = project.screens[0].objects.find(
       (o) => o.shape.type === "rectangle" && o.order === 4,
     );
-    selected.colorAlpha = 0.35;
+    selected.shape.paint.fill.paint.alpha = 0.35;
     selected.name = "液面（塗り35%・枠線80%）";
     selected.shape.paint.stroke = { color: "#2563eb", width: 4, alpha: 0.8 };
     await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
@@ -40,7 +40,7 @@ try {
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
     await page.locator(`button[data-layer-id="${selected.id}"]`).click();
     await expect(
-      page.getByLabel("色の不透明度（%）", { exact: true }),
+      page.getByLabel("塗りの不透明度（%）", { exact: true }),
     ).toHaveValue("35");
     const close = page.locator(".toast-host button.close");
     while (await close.count()) await close.first().click();

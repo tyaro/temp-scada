@@ -102,7 +102,7 @@ test("loads legacy geometry and saves the migrated version without losing identi
   await fileCommand(page, "Project を保存");
   const download = await downloading;
   const saved = JSON.parse(await readFile((await download.path())!, "utf8"));
-  expect(saved.manifest.schemaVersion).toBe("0.17.0");
+  expect(saved.manifest.schemaVersion).toBe("0.18.0");
   expect(saved.manifest.projectId).toBe(legacy.manifest.projectId);
   expect(saved.manifest.projectRevision).toBe(legacy.manifest.projectRevision);
   expect(saved.screens).toEqual(
@@ -111,11 +111,30 @@ test("loads legacy geometry and saves the migrated version without losing identi
       background: "#0b1220",
       folders: [],
       objects: screen.objects.map((object) => ({
-        ...object,
+        ...Object.fromEntries(
+          Object.entries(object).filter(
+            ([key]) =>
+              key !== "fill" ||
+              !["rectangle", "ellipse"].includes(object.shape.type),
+          ),
+        ),
         rotation: 0,
         shape:
           object.shape.type === "rectangle" || object.shape.type === "ellipse"
-            ? { ...object.shape, paint: { fillEnabled: true, stroke: null } }
+            ? {
+                ...object.shape,
+                paint: {
+                  fill: {
+                    enabled: true,
+                    paint: {
+                      type: "solid" as const,
+                      color: object.fill,
+                      alpha: 1,
+                    },
+                  },
+                  stroke: null,
+                },
+              }
             : object.shape.type === "text"
               ? {
                   ...object.shape,

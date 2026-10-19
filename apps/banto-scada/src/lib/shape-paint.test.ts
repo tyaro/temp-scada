@@ -24,9 +24,15 @@ function fixture() {
   });
   return { project, screen, object, command };
 }
-it("changes paint atomically with one Undo while retaining geometry, folder and stored fill", () => {
+it("changes paint atomically with one Undo while retaining geometry and folder", () => {
   const { project, screen, object, command } = fixture();
-  const paint = { fillEnabled: false, stroke: { color: "#123456", width: 6 } };
+  const paint = {
+    fill: {
+      enabled: false,
+      paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+    },
+    stroke: { color: "#123456", width: 6 },
+  };
   const result = recordEdit(project, emptyHistory(), command(paint), "edit");
   expect(
     result.project.screens[0].objects.find((o) => o.id === object.id),
@@ -49,20 +55,38 @@ it("rejects invalid paint, wrong target types, locks and preview without mutatin
   for (const paint of [
     null,
     {},
-    { fillEnabled: true, stroke: { color: "#123456", width: 0 } },
+    {
+      fill: {
+        enabled: true,
+        paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+      },
+      stroke: { color: "#123456", width: 0 },
+    },
   ])
     expect(() =>
-      applyCommand(project, command(paint as ShapePaint), "edit"),
+      applyCommand(project, command(paint as unknown as ShapePaint), "edit"),
     ).toThrow();
   const bad = {
-    ...command({ fillEnabled: true, stroke: null }),
+    ...command({
+      fill: {
+        enabled: true,
+        paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+      },
+      stroke: null,
+    }),
     objectId: screen.objects.find((o) => o.shape.type === "text")!.id,
   };
   expect(() => applyCommand(project, bad, "edit")).toThrow();
   expect(() =>
     applyCommand(
       project,
-      command({ fillEnabled: false, stroke: null }),
+      command({
+        fill: {
+          enabled: false,
+          paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+        },
+        stroke: null,
+      }),
       "preview",
     ),
   ).toThrow();
@@ -71,7 +95,13 @@ it("rejects invalid paint, wrong target types, locks and preview without mutatin
   expect(() =>
     applyCommand(
       project,
-      command({ fillEnabled: false, stroke: null }),
+      command({
+        fill: {
+          enabled: false,
+          paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+        },
+        stroke: null,
+      }),
       "edit",
     ),
   ).toThrow(/ロック/);
@@ -80,7 +110,13 @@ it("separates body dimensions and painted outline for alignment, range selection
   const { project, screen, object, command } = fixture();
   const next = applyCommand(
     project,
-    command({ fillEnabled: false, stroke: { color: "#123456", width: 10 } }),
+    command({
+      fill: {
+        enabled: false,
+        paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+      },
+      stroke: { color: "#123456", width: 10 },
+    }),
     "edit",
   );
   const outlined = next.screens[0].objects.find((o) => o.id === object.id)!;
@@ -125,7 +161,13 @@ it("common color changes only enabled channels and rejects an entirely disabled 
   const { project, screen, object, command } = fixture();
   const lineOnly = applyCommand(
     project,
-    command({ fillEnabled: false, stroke: { color: "#123456", width: 2 } }),
+    command({
+      fill: {
+        enabled: false,
+        paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+      },
+      stroke: { color: "#123456", width: 2 },
+    }),
     "edit",
   );
   const color = {
@@ -137,26 +179,46 @@ it("common color changes only enabled channels and rejects an entirely disabled 
   const next = applyCommand(lineOnly, color, "edit").screens[0].objects.find(
     (o) => o.id === object.id,
   )!;
-  expect(next.fill).toBe(object.fill);
+  expect(next).not.toHaveProperty("fill");
   expect(next.shape).toEqual({
     ...object.shape,
-    paint: { fillEnabled: false, stroke: { color: "#abcdef", width: 2 } },
+    paint: {
+      fill: {
+        enabled: false,
+        paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+      },
+      stroke: { color: "#abcdef", width: 2 },
+    },
   });
   const both = applyCommand(
     project,
-    command({ fillEnabled: true, stroke: { color: "#123456", width: 2 } }),
+    command({
+      fill: {
+        enabled: true,
+        paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+      },
+      stroke: { color: "#123456", width: 2 },
+    }),
     "edit",
   );
   const colored = applyCommand(both, color, "edit").screens[0].objects.find(
     (o) => o.id === object.id,
   )!;
-  expect(colored.fill).toBe("#abcdef");
+  expect(
+    colored.shape.type === "rectangle" && colored.shape.paint.fill.paint,
+  ).toEqual({ type: "solid", color: "#abcdef", alpha: 1 });
   expect(
     colored.shape.type === "rectangle" && colored.shape.paint.stroke?.color,
   ).toBe("#abcdef");
   const empty = applyCommand(
     project,
-    command({ fillEnabled: false, stroke: null }),
+    command({
+      fill: {
+        enabled: false,
+        paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+      },
+      stroke: null,
+    }),
     "edit",
   );
   expect(() =>
@@ -177,7 +239,13 @@ it("preserves paint across screen duplication and foreign clipboard", () => {
   const { project, screen, object, command } = fixture();
   const painted = applyCommand(
     project,
-    command({ fillEnabled: false, stroke: { color: "#123456", width: 4 } }),
+    command({
+      fill: {
+        enabled: false,
+        paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+      },
+      stroke: { color: "#123456", width: 4 },
+    }),
     "edit",
   );
   const duplicate = applyCommand(
@@ -210,7 +278,13 @@ it("aligns the painted edges without changing shape dimensions", () => {
   const { project, screen, object, command } = fixture();
   const outlined = applyCommand(
     project,
-    command({ fillEnabled: true, stroke: { color: "#123456", width: 12 } }),
+    command({
+      fill: {
+        enabled: true,
+        paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+      },
+      stroke: { color: "#123456", width: 12 },
+    }),
     "edit",
   );
   const other = screen.objects.find((o) => o.shape.type === "text")!;
@@ -237,7 +311,13 @@ it("detects stroke clipping without growing a Symbol viewport or warning for hid
   const { project, screen, object, command } = fixture();
   const next = applyCommand(
     project,
-    command({ fillEnabled: false, stroke: { color: "#123456", width: 10 } }),
+    command({
+      fill: {
+        enabled: false,
+        paint: { type: "solid" as const, color: "#83bfcd", alpha: 1 },
+      },
+      stroke: { color: "#123456", width: 10 },
+    }),
     "edit",
   );
   const painted = next.screens[0].objects.find((o) => o.id === object.id)!;
@@ -254,10 +334,13 @@ it("detects stroke clipping without growing a Symbol viewport or warning for hid
 
 it("keeps equivalent uppercase colors as a semantic no-op for enabled paint channels", () => {
   const { project, screen, object } = fixture();
-  object.fill = "#ABCDEF";
+
   if (object.shape.type !== "rectangle") throw new Error("rectangle fixture");
   object.shape.paint = {
-    fillEnabled: true,
+    fill: {
+      enabled: true,
+      paint: { type: "solid" as const, color: "#ABCDEF", alpha: 1 },
+    },
     stroke: { color: "#ABCDEF", width: 2 },
   };
   const command = {
@@ -267,6 +350,26 @@ it("keeps equivalent uppercase colors as a semantic no-op for enabled paint chan
     fill: "#abcdef",
   };
   expect(applyCommand(project, command, "edit")).toBe(project);
-  object.shape.paint.fillEnabled = false;
+  object.shape.paint.fill.enabled = false;
   expect(applyCommand(project, command, "edit")).toBe(project);
+});
+
+it("treats equivalent paint key order as no change without adding an Undo step", () => {
+  const { project, object, command } = fixture();
+  if (object.shape.type !== "rectangle") throw new Error("fixture");
+  object.shape.paint.stroke = {
+    lineStyle: "solid",
+    width: 4,
+    color: "#334155",
+  };
+  const before = serializeProject(project);
+  const paint: ShapePaint = {
+    fill: structuredClone(object.shape.paint.fill),
+    stroke: { color: "#334155", width: 4, lineStyle: "solid" },
+  };
+  expect(recordEdit(project, emptyHistory(), command(paint), "edit")).toEqual({
+    project,
+    history: emptyHistory(),
+  });
+  expect(serializeProject(project)).toBe(before);
 });

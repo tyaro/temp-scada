@@ -23,7 +23,17 @@ it("adds UUID v7 objects, changes geometry and removes without changing the inpu
       type: "update",
       screenId,
       objectId: object.id,
-      patch: { x: 12.5, width: 200, fill: "#ffffff" },
+      patch: {
+        x: 12.5,
+        width: 200,
+        paint: {
+          fill: {
+            enabled: true,
+            paint: { type: "solid", color: "#ffffff", alpha: 1 },
+          },
+          stroke: null,
+        },
+      },
     },
     "edit",
   );
@@ -31,7 +41,7 @@ it("adds UUID v7 objects, changes geometry and removes without changing the inpu
     id: object.id,
     x: 12.5,
     width: 200,
-    fill: "#ffffff",
+    shape: { paint: { fill: { paint: { color: "#ffffff" } } } },
   });
   const removed = applyCommand(
     moved,
