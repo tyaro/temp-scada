@@ -102,7 +102,7 @@
   }
   function revealDraftForm(form: HTMLFormElement) {
     expandTreeAncestors(form);
-    if (form.dataset.editorForm === "screen") {
+    if (["screen", "project"].includes(form.dataset.editorForm ?? "")) {
       setAuxPanelVisibility({ sidebar: true });
       activePanel = "project";
     } else setInspectorVisibility(true);
@@ -564,6 +564,30 @@
     }
   }
   function shortcut(event: KeyboardEvent) {
+    if (event.key === "F1" || event.key === "F2") {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
+        return;
+      event.preventDefault();
+      if (
+        event.repeat ||
+        event.isComposing ||
+        event.keyCode === 229 ||
+        busy ||
+        clipboardBusy ||
+        drafts.pending ||
+        replacement ||
+        helpOpen ||
+        inspectorController?.isTagPickerOpen() ||
+        document.querySelector(
+          '[role="dialog"]:not([data-layer-inactive="true"])',
+        )
+      )
+        return;
+      if (event.key === "F1") helpOpen = true;
+      else if (mode === "edit" && !positionPlacement)
+        renameFocused(event.target);
+      return;
+    }
     if (
       inspectorController?.isTagPickerOpen() ||
       (event.target instanceof Element &&
@@ -953,6 +977,7 @@
   let editorRegion = $state<HTMLElement>();
   let inspectorPanel = $state<HTMLElement>();
   let inspectorController = $state<{
+    focusName: () => void;
     commitFocusedNumber: () => boolean;
     isTagPickerOpen: () => boolean;
   }>();
@@ -1241,6 +1266,11 @@
     }
   }
   function acknowledgeForm(form: HTMLFormElement) {
+    if (form.dataset.editorForm === "project") {
+      const input = form.elements.namedItem("name");
+      if (input instanceof HTMLInputElement)
+        input.value = project.manifest.name;
+    }
     if (form.dataset.editorForm === "object") {
       const input = form.elements.namedItem("name");
       if (input instanceof HTMLInputElement) input.value = selected?.name ?? "";
@@ -1334,6 +1364,71 @@
   function screenProperties(event: SubmitEvent) {
     submitForm(event);
   }
+  function focusProjectName() {
+    const generation = workspaceGeneration;
+    setAuxPanelVisibility({ sidebar: true });
+    activePanel = "project";
+    void tick().then(() => {
+      if (generation !== workspaceGeneration || mode !== "edit") return;
+      const input = document.querySelector<HTMLInputElement>(
+        'form[data-editor-form="project"] input[name="name"]',
+      );
+      if (input) expandTreeAncestors(input);
+      input?.focus();
+      input?.select();
+    });
+  }
+  function renamePlacement(id: string) {
+    const generation = workspaceGeneration,
+      target = screen.id;
+    const run = () => {
+      if (
+        generation !== workspaceGeneration ||
+        screen.id !== target ||
+        mode !== "edit"
+      )
+        return;
+      const object = screen.objects.find((object) => object.id === id);
+      if (!object) return;
+      if (object.locked) {
+        report("info", "ロックを解除してから配置名を変更してください。");
+        return;
+      }
+      if (selectedId !== id && !drafts.allow(run)) return;
+      selectedIds = [id];
+      setInspectorVisibility(true);
+      void tick().then(() => {
+        if (
+          generation === workspaceGeneration &&
+          screen.id === target &&
+          selectedId === id &&
+          mode === "edit"
+        )
+          inspectorController?.focusName();
+      });
+    };
+    run();
+  }
+  function renameFocused(target: EventTarget | null) {
+    if (
+      !(target instanceof Element) ||
+      target.closest('input,textarea,select,[contenteditable],[role="menu"]')
+    )
+      return;
+    const row = target.closest<HTMLElement>(
+      "[data-screen-tab],[data-screen-id]",
+    );
+    if (row) {
+      openScreen(row.dataset.screenTab ?? row.dataset.screenId!, true);
+      return;
+    }
+    const layer = target.closest<HTMLElement>("[data-layer-id]");
+    if (layer) renamePlacement(layer.dataset.layerId!);
+    else if (target.matches('[aria-label="キャンバス操作領域"]')) {
+      if (selectedId) renamePlacement(selectedId);
+      else report("info", "名前を変更する配置を1件選択してください。");
+    }
+  }
   function withScreen(id: string, action: () => void) {
     const generation = workspaceGeneration;
     const run = () => {
@@ -1347,13 +1442,22 @@
     run();
   }
   function openScreen(id: string, rename = false) {
-    withScreen(id, () => {
+    const generation = workspaceGeneration;
+    const run = () => {
       if (screenId !== id || editingSymbolId) selectedIds = [];
       screenId = id;
       editingSymbolId = null;
-      if (rename)
+      if (rename) {
+        setAuxPanelVisibility({ sidebar: true });
+        activePanel = "project";
         void tick().then(() => {
-          if (screenId !== id || editingSymbolId || mode !== "edit") return;
+          if (
+            generation !== workspaceGeneration ||
+            screenId !== id ||
+            editingSymbolId ||
+            mode !== "edit"
+          )
+            return;
           const input = document.querySelector<HTMLInputElement>(
             'form[data-editor-form="screen"] input[name="name"]',
           );
@@ -1361,7 +1465,11 @@
           input?.focus();
           input?.select();
         });
-    });
+      }
+    };
+    // Revealing the current name must not resolve or replace its pending text.
+    if (rename && screenId === id && !editingSymbolId) run();
+    else withScreen(id, run);
   }
   function removeScreen(id: string) {
     withScreen(id, () => {
@@ -1410,6 +1518,8 @@
   }
   function formCommand(form: HTMLFormElement): EditCommand {
     const data = new FormData(form);
+    if (form.dataset.editorForm === "project")
+      return { type: "update-project", name: String(data.get("name")) };
     if (form.dataset.editorForm === "screen")
       return {
         ...(activeDefinition
@@ -1478,6 +1588,7 @@
       return true;
     } catch (e) {
       if (validatingForm) revealDraftForm(validatingForm);
+      if (validatingForm?.dataset.editorForm === "project") focusProjectName();
       report(
         "error",
         `編集エラー: ${e instanceof Error ? e.message : String(e)}`,
@@ -1485,9 +1596,20 @@
       return false;
     }
   }
+  const composingForms = new WeakSet<HTMLFormElement>();
+  function nameFormKey(event: KeyboardEvent) {
+    if (
+      event.key === "Enter" &&
+      (event.isComposing ||
+        event.keyCode === 229 ||
+        composingForms.has((event.currentTarget as HTMLInputElement).form!))
+    )
+      event.preventDefault();
+  }
   function submitForm(event: SubmitEvent) {
     event.preventDefault();
     const form = event.currentTarget as HTMLFormElement;
+    if (composingForms.has(form)) return;
     try {
       edit(formCommand(form), form);
     } catch (e) {
@@ -1917,6 +2039,15 @@
       ...(selected
         ? [
             {
+              label: "配置名を変更",
+              disabled: mutationBlocked,
+              run: () => selected && renamePlacement(selected.id),
+            },
+          ]
+        : []),
+      ...(selected
+        ? [
+            {
               label:
                 selected.visible === false
                   ? "配置を再表示"
@@ -1993,6 +2124,11 @@
           run: openProjectFile,
         },
         { label: "Project JSON を保存", disabled: menuBlocked, run: save },
+        {
+          label: "プロジェクト名を変更",
+          disabled: editBlocked,
+          run: focusProjectName,
+        },
         {
           label: "工程図サンプルを開く",
           disabled: menuBlocked,
@@ -2341,6 +2477,7 @@
               {#snippet row()}
                 <button
                   class="screen-row"
+                  data-screen-id={item.id}
                   class:active={!activeDefinition && screen.id === item.id}
                   aria-pressed={!activeDefinition && screen.id === item.id}
                   onclick={() => openScreen(item.id)}
@@ -2402,6 +2539,28 @@
             />
           </TreeSection>
           <TreeSection label="プロジェクト設定">
+            {#key `${workspaceGeneration}:${project.manifest.projectId}`}
+              <form
+                use:drafts.track={{ name: project.manifest.name }}
+                data-editor-form="project"
+                aria-label="プロジェクト情報"
+                onsubmit={submitForm}
+                oncompositionstart={(event) =>
+                  composingForms.add(event.currentTarget)}
+                oncompositionend={(event) =>
+                  composingForms.delete(event.currentTarget)}
+              >
+                <label
+                  >プロジェクト名<input
+                    onkeydown={nameFormKey}
+                    name="name"
+                    required
+                    maxlength="200"
+                  /></label
+                >
+                <button type="submit">プロジェクト名を適用</button>
+              </form>
+            {/key}
             <h2>{activeDefinition ? "Symbol 設定" : "画面管理"}</h2>
             {#if !activeDefinition}
               <button
@@ -2450,11 +2609,16 @@
               <form
                 use:drafts.track
                 data-editor-form="screen"
+                oncompositionstart={(event) =>
+                  composingForms.add(event.currentTarget)}
+                oncompositionend={(event) =>
+                  composingForms.delete(event.currentTarget)}
                 onsubmit={screenProperties}
                 aria-label="画面設定"
               >
                 <label
                   >{activeDefinition ? "Symbol 名" : "画面名"}<input
+                    onkeydown={nameFormKey}
                     name="name"
                     value={screen.name}
                     required
@@ -2914,6 +3078,9 @@ ${object.id}`}
   <p>
     Ctrl / Command + N：新しいProject、O：JSONを開く、S／Shift +
     S：JSON書き出し（ダウンロード）。ブラウザによってN／Oが予約されている場合は「ファイル」メニューを使ってください。保存先の選択・既存ファイルへの上書きには未対応です。
+  </p>
+  <p>
+    F2：フォーカス中の画面行・画面タブ、レイヤー行、またはキャンバスの単一選択から名前欄へ移動します。変更は適用するまで未確定です。F1：この操作ガイドを開きます。Project名は「ファイル」→「プロジェクト名を変更」から編集できます。
   </p>
   <p>
     Ctrl / Command + Z：元に戻す、Shift +

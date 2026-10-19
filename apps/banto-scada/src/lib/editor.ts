@@ -107,6 +107,7 @@ export type ObjectCommand = (
 ) & { definitionId?: string };
 
 export type EditCommand =
+  | { type: "update-project"; name: string }
   | ScreenCommand
   | ObjectCommand
   | { type: "create-symbol"; name: string; width: number; height: number }
@@ -177,6 +178,12 @@ export function applyCommand(
 ): Project {
   if (mode !== "edit") throw new Error("表示プレビューでは編集できません");
   const next = parseProject(serializeProject(project));
+  if (command.type === "update-project") {
+    const name = command.name.trim();
+    if (!name) throw new Error("プロジェクト名を入力してください");
+    next.manifest.name = name;
+    return finish(project, next);
+  }
   if (command.type === "create-symbol") {
     next.symbols.push({
       id: newId(),

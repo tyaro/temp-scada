@@ -68,6 +68,13 @@
   export function isTagPickerOpen() {
     return pickerOpen;
   }
+  export function focusName() {
+    const input = element?.querySelector<HTMLInputElement>(
+      'form[data-editor-form="object"] input[name="name"]',
+    );
+    input?.focus();
+    input?.select();
+  }
   let pickerRequest = $state.raw<{
     key: string;
     input: HTMLInputElement;
