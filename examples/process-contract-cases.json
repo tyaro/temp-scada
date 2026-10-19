@@ -42,7 +42,8 @@
       "height": 10,
       "shape": {
         "type": "symbol",
-        "symbolId": "0199f100-0000-7000-8000-000000001000"
+        "symbolId": "0199f100-0000-7000-8000-000000001000",
+        "colorMode": "monochrome"
       }
     },
     "valid": false

@@ -20,6 +20,7 @@ export interface ObjectPatch {
   text?: string;
   binding?: TagBinding | null;
   symbolId?: string;
+  colorMode?: "monochrome" | "definition";
   points?: Point[];
   strokeWidth?: number;
   arrow?: "none" | "end";
@@ -78,7 +79,13 @@ export type ObjectCommand = (
       objectIds: string[];
       patch: { strokeWidth?: number; arrow?: "none" | "end" };
     }
-  | { type: "set-color"; screenId: string; objectIds: string[]; fill: string }
+  | {
+      type: "set-color";
+      screenId: string;
+      objectIds: string[];
+      fill: string;
+      convertDefinitionSymbols?: boolean;
+    }
   | {
       type: "set-visibility";
       screenId: string;
@@ -278,7 +285,11 @@ export function applyCommand(
         width: definition.width,
         height: definition.height,
         fill: canvasColors(target.background).newShape,
-        shape: { type: "symbol", symbolId: definition.id },
+        shape: {
+          type: "symbol",
+          colorMode: "monochrome",
+          symbolId: definition.id,
+        },
       });
       centerObject(target.objects.at(-1)!, command.center);
     }
@@ -593,8 +604,24 @@ export function applyCommand(
       const fill = command.fill.trim().toLowerCase();
       if (!/^#[0-9a-f]{6}$/.test(fill))
         throw new Error("色は#と6桁の16進数で指定してください");
+      if (
+        command.convertDefinitionSymbols !== undefined &&
+        typeof command.convertDefinitionSymbols !== "boolean"
+      )
+        throw new Error("単色への切替指定はbooleanで指定してください");
+      const usesDefinition = objects.some(
+        (object) =>
+          object.shape.type === "symbol" &&
+          object.shape.colorMode === "definition",
+      );
+      if (usesDefinition && !command.convertDefinitionSymbols)
+        throw new Error(
+          "共有定義の色を使うSymbolを含むため、配置単色への切替を明示してください",
+        );
       objects.forEach((object) => {
         if (object.fill.toLowerCase() !== fill) object.fill = fill;
+        if (command.convertDefinitionSymbols && object.shape.type === "symbol")
+          object.shape.colorMode = "monochrome";
       });
     } else if (command.type === "move-many") {
       if (!Number.isFinite(command.dx) || !Number.isFinite(command.dy))
@@ -664,7 +691,11 @@ export function applyCommand(
         ...base,
         width: 100,
         height: 100,
-        shape: { type: "symbol", symbolId: definition.id },
+        shape: {
+          type: "symbol",
+          colorMode: "monochrome",
+          symbolId: definition.id,
+        },
       });
     } else if (command.kind === "line" || command.kind === "pipe") {
       screen.objects.push({
@@ -773,6 +804,7 @@ export function applyCommand(
         text,
         binding,
         symbolId,
+        colorMode,
         points,
         strokeWidth,
         arrow,
@@ -786,6 +818,13 @@ export function applyCommand(
         const normalized = name?.trim() ?? "";
         if (normalized) object.name = normalized;
         else delete object.name;
+      }
+      if (colorMode !== undefined) {
+        if (object.shape.type !== "symbol" || definitionId)
+          throw new Error("色の使い方は画面のSymbol配置にだけ設定できます");
+        if (colorMode !== "monochrome" && colorMode !== "definition")
+          throw new Error("Symbolの色の使い方が不正です");
+        object.shape.colorMode = colorMode;
       }
       if (symbolId !== undefined) {
         if (definitionId || object.shape.type !== "symbol")

@@ -77,7 +77,7 @@ it("creates and edits a custom definition, places it and protects used definitio
   expect(project.screens[0].objects.at(-1)).toMatchObject({
     width: 200,
     height: 300,
-    shape: { type: "symbol", symbolId: definitionId },
+    shape: { type: "symbol", colorMode: "monochrome", symbolId: definitionId },
   });
   expect(() =>
     applyCommand(

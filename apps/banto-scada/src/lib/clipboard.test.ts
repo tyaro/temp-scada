@@ -81,6 +81,7 @@ it("reuses a live symbol only within the same workspace and imports snapshot def
   expect(live.symbols).toHaveLength(1);
   expect(live.screens[0].objects.at(-1)!.shape).toEqual({
     type: "symbol",
+    colorMode: "monochrome",
     symbolId: symbol.id,
   });
   const imported = applyCommand(
@@ -112,6 +113,7 @@ it("reuses a live symbol only within the same workspace and imports snapshot def
   expect(foreign.symbols).toHaveLength(1);
   expect(foreign.screens[0].objects.at(-1)!.shape).toEqual({
     type: "symbol",
+    colorMode: "monochrome",
     symbolId: foreign.symbols[0].id,
   });
 });
@@ -138,7 +140,11 @@ it("deduplicates symbol dependencies, preserves binding and rejects nested or bo
   );
   expect(imported.symbols).toHaveLength(1);
   expect(imported.screens[0].objects.slice(3).map((o) => o.shape)).toEqual(
-    Array(2).fill({ type: "symbol", symbolId: imported.symbols[0].id }),
+    Array(2).fill({
+      type: "symbol",
+      colorMode: "monochrome",
+      symbolId: imported.symbols[0].id,
+    }),
   );
   const before = serializeProject(project);
   expect(() =>
@@ -212,6 +218,7 @@ it("rejects invalid envelopes, oversized text, broken references, empty/duplicat
   const bad = JSON.parse(text);
   bad.project.screens[0].objects[0].shape = {
     type: "symbol",
+    colorMode: "monochrome",
     symbolId: screen.id,
   };
   expect(() => parseClipboard(JSON.stringify(bad))).toThrow();

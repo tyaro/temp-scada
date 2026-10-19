@@ -19,6 +19,7 @@ interface BaseObject {
 export interface TagBinding {
   externalName: string;
 }
+export type SymbolColorMode = "monochrome" | "definition";
 export interface LayoutObject extends BaseObject {
   width: number;
   height: number;
@@ -26,7 +27,7 @@ export interface LayoutObject extends BaseObject {
     | { type: "rectangle" }
     | { type: "ellipse" }
     | { type: "text"; text: string; binding?: TagBinding }
-    | { type: "symbol"; symbolId: string };
+    | { type: "symbol"; symbolId: string; colorMode: SymbolColorMode };
 }
 export interface PolylineObject extends BaseObject {
   shape: {
@@ -65,10 +66,10 @@ export interface SymbolDefinition {
 export interface Project {
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.8.0";
+    schemaVersion: "0.9.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.8.0";
+    minRuntimeVersion: "0.9.0";
     name: string;
   };
   screens: Screen[];
@@ -89,8 +90,8 @@ export function parseProject(json: string): Project {
       ...old,
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.8.0",
-        minRuntimeVersion: "0.8.0",
+        schemaVersion: "0.9.0",
+        minRuntimeVersion: "0.9.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,

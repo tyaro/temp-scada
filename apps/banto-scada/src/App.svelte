@@ -88,6 +88,7 @@
   } from "./lib/designer/FolderDialog.svelte";
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
+  import symbolColorSample from "../../../examples/symbol-color.project.json";
   import CanvasWorkspace, {
     type CanvasView,
     type CanvasContext,
@@ -1347,6 +1348,8 @@
     if (form.dataset.editorForm === "selection-color") {
       const input = form.elements.namedItem("fill");
       if (input instanceof HTMLInputElement) input.value = "";
+      const convert = form.elements.namedItem("convertDefinitionSymbols");
+      if (convert instanceof HTMLInputElement) convert.checked = false;
     }
     if (form.dataset.editorForm === "project") {
       const input = form.elements.namedItem("name");
@@ -1614,6 +1617,27 @@
   }
   function formCommand(form: HTMLFormElement): EditCommand {
     const data = new FormData(form);
+    if (form.dataset.editorForm === "symbol-color-mode") {
+      if (
+        form.dataset.targetKey !==
+          `${workspaceGeneration}:${screen.id}:${!!activeDefinition}` ||
+        selected?.id !== form.dataset.objectId ||
+        selected?.shape.type !== "symbol" ||
+        activeDefinition
+      )
+        throw new Error(
+          "Symbolの色の適用先が変更されています。選択し直してください。",
+        );
+      const colorMode = String(data.get("colorMode"));
+      if (colorMode !== "monochrome" && colorMode !== "definition")
+        throw new Error("色の使い方を選択してください。");
+      return {
+        type: "update",
+        screenId: screen.id,
+        objectId: selected.id,
+        patch: { colorMode },
+      };
+    }
     if (
       ["selection-color", "selection-line"].includes(
         form.dataset.editorForm ?? "",
@@ -1657,6 +1681,7 @@
         screenId: screen.id,
         objectIds: ids as string[],
         fill: String(data.get("fill")),
+        convertDefinitionSymbols: data.get("convertDefinitionSymbols") === "on",
       };
     }
     if (form.dataset.editorForm === "project")
@@ -1687,7 +1712,7 @@
       name: String(data.get("name") ?? ""),
       x: Number(data.get("x")),
       y: Number(data.get("y")),
-      fill: String(data.get("fill")),
+      ...(data.has("fill") ? { fill: String(data.get("fill")) } : {}),
     };
     if ("width" in selected) {
       patch.width = Number(data.get("width"));
@@ -2495,6 +2520,15 @@
           disabled: menuBlocked,
           run: showProcessSample,
         },
+        {
+          label: "Symbol配色サンプルを開く",
+          disabled: menuBlocked,
+          run: () =>
+            requestReplacement(
+              parseProject(JSON.stringify(symbolColorSample)),
+              "sample",
+            ),
+        },
       ],
     },
     {
@@ -3280,7 +3314,7 @@ ${object.id}`}
           >Symbol 定義を編集中 · {symbolUsage(project, activeDefinition.id)} 配置で共有</strong
         >
         <p>
-          確定した変更は全画面の参照配置へ反映されます。配置時は配置側の単色を使います。別の形にする場合は定義を複製してください。
+          確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。別の形にする場合は定義を複製してください。
         </p>
         <button
           onclick={() =>
@@ -3522,7 +3556,7 @@ ${object.id}`}
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.8.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.9.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

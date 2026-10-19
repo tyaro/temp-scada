@@ -66,8 +66,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.8.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.8.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.9.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.9.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -422,6 +422,71 @@ mod tests {
         assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
     }
     #[test]
+    fn symbol_color_modes_share_the_browser_contract() {
+        let sample =
+            Project::from_json(include_str!("../../../examples/symbol-color.project.json"))
+                .unwrap();
+        assert_eq!(Project::from_json(&sample.to_json()).unwrap(), sample);
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/symbol-color-cases.json"))
+                .unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut value: Value =
+                serde_json::from_str(include_str!("../../../examples/process.project.json"))
+                    .unwrap();
+            let kind = case
+                .get("primitive")
+                .and_then(Value::as_str)
+                .unwrap_or("symbol");
+            let index = value["screens"][0]["objects"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .position(|object| {
+                    object["shape"]["type"] == if kind == "ellipse" { "rectangle" } else { kind }
+                })
+                .unwrap();
+            if kind == "ellipse" {
+                value["screens"][0]["objects"][index]["shape"] =
+                    serde_json::json!({"type":"ellipse"});
+            }
+            if case["definition"] == true {
+                let mut child = value["screens"][0]["objects"][index].clone();
+                child["id"] = value["symbols"][0]["objects"][0]["id"].clone();
+                value["symbols"][0]["objects"][0] = child;
+            }
+            let object = if case["definition"] == true {
+                &mut value["symbols"][0]["objects"][0]
+            } else {
+                &mut value["screens"][0]["objects"][index]
+            };
+            if case["omitMode"] == true {
+                object["shape"].as_object_mut().unwrap().remove("colorMode");
+            } else {
+                object["shape"]["colorMode"] = case["mode"].clone();
+            }
+            if case["omitFill"] == true {
+                object.as_object_mut().unwrap().remove("fill");
+            }
+            if let Some(fill) = case.get("fill") {
+                object["fill"] = fill.clone();
+            }
+            if case["extra"] == true {
+                object["shape"]["extra"] = Value::Bool(true);
+            }
+            let result = Project::from_json(&value.to_string());
+            assert_eq!(
+                result.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+            if let Ok(project) = result {
+                assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+            }
+        }
+    }
+    #[test]
     fn contract_cases() {
         let cases: Value =
             serde_json::from_str(include_str!("../../../examples/contract-cases.json")).unwrap();
@@ -441,8 +506,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.8.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.8.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.9.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.9.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

@@ -281,5 +281,17 @@
     "path": "/manifest/minRuntimeVersion",
     "value": "0.7.0",
     "valid": false
+  },
+  {
+    "name": "旧0.8.0のschemaは拒否",
+    "path": "/manifest/schemaVersion",
+    "value": "0.8.0",
+    "valid": false
+  },
+  {
+    "name": "旧0.8.0のminRuntimeは拒否",
+    "path": "/manifest/minRuntimeVersion",
+    "value": "0.8.0",
+    "valid": false
   }
 ]

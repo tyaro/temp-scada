@@ -1,0 +1,137 @@
+[
+  {
+    "name": "配置単色",
+    "mode": "monochrome",
+    "valid": true
+  },
+  {
+    "name": "共有定義色",
+    "mode": "definition",
+    "valid": true
+  },
+  {
+    "name": "定義色でも配置fillを保持",
+    "mode": "definition",
+    "fill": "#abcdef",
+    "valid": true
+  },
+  {
+    "name": "配色モード必須",
+    "omitMode": true,
+    "valid": false
+  },
+  {
+    "name": "未知モードを拒否",
+    "mode": "auto",
+    "valid": false
+  },
+  {
+    "name": "大文字モードを拒否",
+    "mode": "Definition",
+    "valid": false
+  },
+  {
+    "name": "空モードを拒否",
+    "mode": "",
+    "valid": false
+  },
+  {
+    "name": "数値モードを拒否",
+    "mode": 1,
+    "valid": false
+  },
+  {
+    "name": "nullモードを拒否",
+    "mode": null,
+    "valid": false
+  },
+  {
+    "name": "booleanモードを拒否",
+    "mode": true,
+    "valid": false
+  },
+  {
+    "name": "配列モードを拒否",
+    "mode": [],
+    "valid": false
+  },
+  {
+    "name": "objectモードを拒否",
+    "mode": {},
+    "valid": false
+  },
+  {
+    "name": "monochromeでもfillは必須",
+    "mode": "monochrome",
+    "omitFill": true,
+    "valid": false
+  },
+  {
+    "name": "definitionでもfillは必須",
+    "mode": "definition",
+    "omitFill": true,
+    "valid": false
+  },
+  {
+    "name": "未知のshape項目を拒否",
+    "mode": "definition",
+    "extra": true,
+    "valid": false
+  },
+  {
+    "name": "画面内rectangleへ配色モードを指定できない",
+    "mode": "definition",
+    "primitive": "rectangle",
+    "definition": false,
+    "valid": false
+  },
+  {
+    "name": "定義内rectangleへ配色モードを指定できない",
+    "mode": "definition",
+    "primitive": "rectangle",
+    "definition": true,
+    "valid": false
+  },
+  {
+    "name": "画面内ellipseへ配色モードを指定できない",
+    "mode": "definition",
+    "primitive": "ellipse",
+    "definition": false,
+    "valid": false
+  },
+  {
+    "name": "定義内ellipseへ配色モードを指定できない",
+    "mode": "definition",
+    "primitive": "ellipse",
+    "definition": true,
+    "valid": false
+  },
+  {
+    "name": "画面内textへ配色モードを指定できない",
+    "mode": "definition",
+    "primitive": "text",
+    "definition": false,
+    "valid": false
+  },
+  {
+    "name": "定義内textへ配色モードを指定できない",
+    "mode": "definition",
+    "primitive": "text",
+    "definition": true,
+    "valid": false
+  },
+  {
+    "name": "画面内polylineへ配色モードを指定できない",
+    "mode": "definition",
+    "primitive": "polyline",
+    "definition": false,
+    "valid": false
+  },
+  {
+    "name": "定義内polylineへ配色モードを指定できない",
+    "mode": "definition",
+    "primitive": "polyline",
+    "definition": true,
+    "valid": false
+  }
+]

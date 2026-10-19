@@ -1,6 +1,6 @@
 # 共有Symbolの静的な配色
 
-状態: **Astraレビューを採用した次の実装仕様。未実装**。現行Projectは0.8.0。モデル追加時は0.9.0へ更新し、Rust／TypeScript／Schema／現行サンプル・生成を同期する。[統合設計](scada-integrated-design.md)の多色Symbolの最初の工程であり、状態別表示・Binding・slotは追加しない。
+状態: **Project 0.9.0で実装済み**。Astraレビューに従い、Rust／TypeScript／Schema／現行サンプル・生成を同期した。[実装・検証・実画面](development-plan.md#symbol-color-progress)を参照する。[統合設計](scada-integrated-design.md)の多色Symbolの最初の工程であり、状態別表示・Binding・slotは追加しない。
 
 ## 保存と描画
 

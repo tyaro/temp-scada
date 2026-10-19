@@ -3,6 +3,7 @@
   let {
     current,
     count,
+    definitionColorCount = 0,
     hiddenCount,
     locked,
     definition,
@@ -13,6 +14,7 @@
   }: {
     current: string | null;
     count: number;
+    definitionColorCount?: number;
     hiddenCount: number;
     locked: boolean;
     definition: boolean;
@@ -21,6 +23,8 @@
     drafts: ReturnType<typeof createDraftGuard>;
     onsubmit: (event: SubmitEvent) => void;
   } = $props();
+  let convert = $state(false);
+  let convertInput = $state<HTMLInputElement>();
   let code = $state("");
   let input = $state<HTMLInputElement>();
   let composing = false;
@@ -46,12 +50,16 @@
   data-target-key={targetKey}
   data-object-ids={JSON.stringify(objectIds)}
   aria-label="選択した配置の色"
-  onreset={() => (code = "")}
+  onreset={() => {
+    code = "";
+    convert = false;
+  }}
   onsubmit={(event) => {
     if (composing) event.preventDefault();
     else {
       onsubmit(event);
       code = input?.value ?? "";
+      convert = convertInput?.checked ?? false;
     }
   }}
 >
@@ -59,11 +67,15 @@
   <p class="current-color">
     <span
       class="chip"
-      class:mixed={!current}
-      style:background={current ?? undefined}
+      class:mixed={!current || definitionColorCount > 0}
+      style:background={definitionColorCount
+        ? undefined
+        : (current ?? undefined)}
       aria-hidden="true"
     ></span>
-    現在の色：{current ?? "混在"}
+    現在の色：{definitionColorCount
+      ? `共有定義の色を使うSymbol ${definitionColorCount} 件を含みます`
+      : (current ?? "混在")}
   </p>
   <p class="hint">
     {count} 件に適用{hiddenCount
@@ -114,7 +126,19 @@
         {:else}#と6桁の16進数で入力してください。例：#2563eb{/if}
       </p>
     {/if}
-    <button type="submit" disabled={!code}>選択した配置に色を適用</button>
+    {#if definitionColorCount}<label class="convert"
+        ><input
+          type="checkbox"
+          name="convertDefinitionSymbols"
+          bind:this={convertInput}
+          bind:checked={convert}
+        />共有定義の色を使うSymbol {definitionColorCount} 件を配置単色へ切り替える</label
+      >{/if}
+    <button
+      type="submit"
+      disabled={!code || (definitionColorCount > 0 && !convert)}
+      >選択した配置に色を適用</button
+    >
   </fieldset>
 </form>
 
@@ -193,6 +217,19 @@
   input:focus-visible {
     outline: none;
     box-shadow: var(--banto-focus-ring);
+  }
+  .convert {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 12px 0;
+    line-height: 1.6;
+  }
+  .convert input {
+    width: auto;
+    padding: 0;
+    flex-shrink: 0;
+    margin-top: 3px;
   }
   .presets {
     display: grid;

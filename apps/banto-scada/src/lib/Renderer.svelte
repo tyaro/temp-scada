@@ -498,12 +498,18 @@
           viewBox={`0 0 ${definition.width} ${definition.height}`}
           preserveAspectRatio="xMidYMid meet"
           data-symbol-id={definition.id}
+          data-symbol-color-mode={visual.shape.colorMode}
         >
           {#each [...definition.objects]
             .filter((object) => object.visible !== false)
             .sort((a, b) => a.order - b.order) as child (child.id)}
             <g transform={`translate(${child.x} ${child.y})`}
-              ><Primitive object={child} color={object.fill} /></g
+              ><Primitive
+                object={child}
+                color={visual.shape.colorMode === "definition"
+                  ? undefined
+                  : object.fill}
+              /></g
             >
           {/each}
         </svg>

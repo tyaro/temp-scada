@@ -48,7 +48,7 @@ it("treats shared-symbol placement size as the selectable bounds, without select
     id: "symbol",
     width: 260,
     height: 180,
-    shape: { type: "symbol", symbolId: "definition" },
+    shape: { type: "symbol", colorMode: "monochrome", symbolId: "definition" },
   };
   expect(
     objectsInRange([symbol], { x: 90, y: 160 }, { x: 370, y: 360 }),

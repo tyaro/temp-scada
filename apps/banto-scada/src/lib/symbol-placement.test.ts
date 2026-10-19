@@ -30,7 +30,14 @@ it("replaces only the selected placement reference and keeps geometry, identity 
   expect(state.project.screens[0].objects).toEqual(
     project.screens[0].objects.map((item) =>
       item.id === object.id
-        ? { ...item, shape: { type: "symbol", symbolId: nextDefinition.id } }
+        ? {
+            ...item,
+            shape: {
+              type: "symbol",
+              colorMode: "monochrome",
+              symbolId: nextDefinition.id,
+            },
+          }
         : item,
     ),
   );
@@ -84,7 +91,10 @@ it("makes a deep independent definition and reassigns one placement in a single 
   ).toBe(true);
   expect(
     state.project.screens[0].objects.find((item) => item.id === object.id),
-  ).toEqual({ ...object, shape: { type: "symbol", symbolId: copy.id } });
+  ).toEqual({
+    ...object,
+    shape: { type: "symbol", colorMode: "monochrome", symbolId: copy.id },
+  });
   expect(state.project.screens[1]).toEqual(project.screens[1]);
   const changed = state.project;
   state = travelHistory(state.project, state.history, "undo", "edit");

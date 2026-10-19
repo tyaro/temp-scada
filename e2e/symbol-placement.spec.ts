@@ -55,7 +55,10 @@ test("replaces a symbol reference only after apply, preserving placement and res
   const saved = JSON.parse(json);
   expect(saved.symbols).toEqual(sample.symbols);
   expect(saved.screens[0].objects.find((o: any) => o.id === object.id)).toEqual(
-    { ...object, shape: { type: "symbol", symbolId: target.id } },
+    {
+      ...object,
+      shape: { type: "symbol", colorMode: "monochrome", symbolId: target.id },
+    },
   );
   await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
     name: "replaced.json",
