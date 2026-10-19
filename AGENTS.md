@@ -4,6 +4,8 @@
 
 最初に README.md と docs/development-plan.md を読み、現在の実装と上流設計の構想を区別してください。docs/upstream/industrial は出典付きの参照スナップショットです。ここを編集せず、差分は docs/development-plan.md に記録します。
 
+保守性・AIコーディング向けの構造整理には [リファクタリング実行計画](docs/maintenance-refactoring-plan.md) を使います。開始時の実装状況を確認し、R0から順に、責務・不変条件・関連テスト・完了条件を各区切りで記録してください。文書の作成はリファクタ完了を意味しません。
+
 industrial へ戻せるよう apps/banto-scada と crates/scada-* の配置を維持します。Hub / 共通ライブラリを複製せず、必要になったとき固定コミット依存で利用します。PLC への直接接続は作りません。
 
 クラウドのシェルでは scripts/cloud-env.sh を source してから README の検証コマンドを使います。新しい機能は対応する契約テストとブラウザ検証で確認し、Markdown / TS / Svelte / JSON は pnpm exec prettier --write <変更ファイル>、Rust は cargo fmt --all で整形してください。

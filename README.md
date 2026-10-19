@@ -4,6 +4,8 @@
 
 `tyaro/banto-industrial` で計画している SCADA を、同リポジトリの開発と並行して作るための一時 workspace です。最終的に `apps/banto-scada` と `crates/scada-*` を industrial に戻します。
 
+保守・AIコーディング向けの構造整理は [リファクタリング実行計画](docs/maintenance-refactoring-plan.md) を参照してください。現在の責務、Solの着手順、変更時に守る条件、機能別の対象ファイルとテスト、完了条件をまとめています。実施状況は同文書の進捗表で管理します。
+
 ## Banto 基盤
 
 industrial と同じ **Banto v6.7.0** を git サブディレクトリ依存で利用します。`pnpm-lock.yaml` は参照先コミット `1ffe507da973ca5103ede93b5ca438cda7c28d4e` を固定しています。
