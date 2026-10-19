@@ -16,6 +16,7 @@
 
 <script lang="ts">
   import { tick, untrack, flushSync } from "svelte";
+  import { wheelPixels, wheelZoom } from "../wheel-navigation";
   import Renderer from "../Renderer.svelte";
   import type { Screen, SymbolDefinition, Point } from "../project";
   import type { Geometry } from "../resize";
@@ -80,6 +81,7 @@
     oncancelplacement: () => void;
   } = $props();
   let viewport = $state<HTMLDivElement>();
+  let renderer = $state<{ cancelInteraction(): void }>();
   let dropPoint = $state<Point | null>(null);
   let placementPoint = $state<Point | null>(null);
   let placementDown: {
@@ -352,6 +354,60 @@
       { before: centerRoom, after: !!centerRooms[screen.id] },
     );
   }
+  function wheel(event: WheelEvent) {
+    if (!viewport || event.altKey || event.metaKey) return;
+    const zooming = editable && event.ctrlKey;
+    // Preview retains its existing fit view and the browser's Ctrl-wheel behavior.
+    if (event.ctrlKey && !zooming) return;
+    renderer?.cancelInteraction();
+    cancelRange();
+    cancelPlacementPointer();
+    if (pan) cancelPan();
+    dropPoint = null;
+    if (zooming) {
+      event.preventDefault();
+      const delta = wheelPixels(event.deltaY, event.deltaMode, size.height);
+      if (!delta) return;
+      const next = wheelZoom(scale, delta);
+      if (Math.abs(next - scale) < 0.000001) return;
+      resizeAnchor = null;
+      const box = viewport.getBoundingClientRect();
+      const state = zoomAt(
+        screen,
+        size,
+        scale,
+        next,
+        { x: viewport.scrollLeft, y: viewport.scrollTop },
+        {
+          x: event.clientX - box.left - viewport.clientLeft,
+          y: event.clientY - box.top - viewport.clientTop,
+        },
+        { before: centerRoom, after: true },
+      );
+      flushSync(() => {
+        centerRooms[screen.id] = true;
+        views[screen.id] = state;
+      });
+      viewport.scrollLeft = state.left;
+      viewport.scrollTop = state.top;
+      remember();
+    } else if (event.shiftKey) {
+      event.preventDefault();
+      viewport.scrollLeft += wheelPixels(
+        event.deltaY || event.deltaX,
+        event.deltaMode,
+        size.width,
+      );
+      remember();
+    }
+    // Plain wheel and trackpad horizontal deltas retain native scrolling.
+  }
+  $effect(() => {
+    const element = viewport;
+    if (!element) return;
+    element.addEventListener("wheel", wheel, { passive: false });
+    return () => element.removeEventListener("wheel", wheel);
+  });
   export function revealObject(id: string) {
     if (!viewport || !editable) return;
     const target = [
@@ -759,6 +815,7 @@
     >
       {#key screen.id}
         <Renderer
+          bind:this={renderer}
           {screen}
           {symbols}
           {editable}

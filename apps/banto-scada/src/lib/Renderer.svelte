@@ -156,6 +156,13 @@
     vertexDrag = null;
     resizeDrag = null;
   }
+  export function cancelInteraction() {
+    const pointers = [drag?.pointer, vertexDrag?.pointer, resizeDrag?.pointer];
+    cancelDrag();
+    for (const pointer of pointers)
+      if (pointer !== undefined && svgElement?.hasPointerCapture(pointer))
+        svgElement.releasePointerCapture(pointer);
+  }
   function cancelKey(event: KeyboardEvent) {
     if (event.key === "Escape" && (drag || vertexDrag || resizeDrag)) {
       event.preventDefault();

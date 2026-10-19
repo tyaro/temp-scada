@@ -31,6 +31,13 @@ async function point(page: Page, x: number, y: number) {
   );
 }
 async function clickAt(page: Page, x: number, y: number, alt = false) {
+  // Native scroll restoration and ResizeObserver must settle before taking fixed coordinates.
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
   const p = await point(page, x, y);
   if (alt) await page.keyboard.down("Alt");
   await page.mouse.click(p.x, p.y);

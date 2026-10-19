@@ -102,6 +102,9 @@
       )}
   >
     <option value="fit">全体 ({Math.round(view.fit * 100)}%)</option>
+    {#if view.zoom !== null && !zoomLevels.some((level) => level === view.zoom)}
+      <option value={view.zoom}>{Math.round(view.scale * 100)}%</option>
+    {/if}
     {#each zoomLevels as level}<option value={level}>{level * 100}%</option
       >{/each}
   </select>
