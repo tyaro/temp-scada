@@ -25,13 +25,11 @@ try {
       })
       .click();
     await page.getByRole("button", { name: "編集", exact: true }).click();
-    await page
-      .getByLabel("Project を開く", { exact: true })
-      .setInputFiles({
-        name: "popup.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(project)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "popup.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
     await page
       .getByRole("button", { name: "表示プレビュー", exact: true })
       .click();

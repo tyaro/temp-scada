@@ -345,13 +345,11 @@ test("Project replacement during pointer capture disposes old windows without la
   await p.mouse.move(box.x + 60, box.y + 15);
   await p.mouse.down();
   await p.mouse.move(box.x + 160, box.y + 70);
-  await p
-    .getByLabel("Project を開く", { exact: true })
-    .setInputFiles({
-      name: "during-drag.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(sample)),
-    });
+  await p.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    name: "during-drag.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(sample)),
+  });
   await p.mouse.up();
   await expect(p.locator("[data-preview-popup]")).toHaveCount(0);
   await open(p, id);

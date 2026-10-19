@@ -8,13 +8,11 @@ async function start(p: Page) {
   await p.setViewportSize({ width: 1920, height: 1080 });
   await p.goto("/");
   await button(p, "編集").click();
-  await p
-    .getByLabel("Project を開く", { exact: true })
-    .setInputFiles({
-      name: "fullscreen.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(sample)),
-    });
+  await p.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    name: "fullscreen.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(sample)),
+  });
   await button(p, "表示プレビュー").click();
 }
 const active = (p: Page) =>
@@ -79,13 +77,11 @@ test("native fullscreen exit event restores the editor shell; edit and Project r
   await button(p, "表示プレビュー").click();
   await button(p, "全画面で表示確認").click();
   await expect.poll(() => active(p)).toBe(true);
-  await p
-    .getByLabel("Project を開く", { exact: true })
-    .setInputFiles({
-      name: "new-generation.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(sample)),
-    });
+  await p.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    name: "new-generation.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(sample)),
+  });
   await expect.poll(() => active(p)).toBe(false);
   await expect(p.locator(".app-header")).toBeVisible();
 });

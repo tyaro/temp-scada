@@ -26,13 +26,11 @@ try {
       })
       .click();
     await page.getByRole("button", { name: "編集", exact: true }).click();
-    await page
-      .getByLabel("Project を開く", { exact: true })
-      .setInputFiles({
-        name: "embedded.json",
-        mimeType: "application/json",
-        buffer: Buffer.from(JSON.stringify(project)),
-      });
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "embedded.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
     await page.getByRole("tab", { name: "レイヤー", exact: true }).click();
     await page.locator(`button[data-layer-id="${selected.id}"]`).click();
     await expect(page.getByLabel("参照する画面", { exact: true })).toHaveValue(
