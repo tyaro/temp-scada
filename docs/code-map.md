@@ -131,3 +131,7 @@ Appはキー／クリックイベントの受付、現在情報と既存callback
 | `model-helpers.ts`                                             | 既存のID発行・使用数・複製時のID／所属参照付替え・配置中心・資産登録。`newId`／`symbolUsage`の公開入口も維持      |
 
 handlerは候補だけを変更する。表示／lock・等間隔の両端一致・配置／画面順の早期no-opは`unchanged`を返し、入口が元Projectを直返しする。それ以外は共通finishで検証してから内容を比較する。Project形式とUndo単位を変更せず、historyからhandlerへ逆依存を追加しない。
+
+## 編集性能の計測
+
+`apps/banto-scada/scripts/benchmark-editor.mjs`はViteのSSR loaderで現行ドメイン関数を読み込み、100／1,000／5,000配置の編集・履歴・Undo・保存と各処理の独立probeを計測する。ブラウザ描画や入力から表示までの遅延は測らない。実行方法・fixture・解釈・結果は[編集性能の計測](editor-performance.md)を参照する。通常のunit／E2Eに時間閾値を追加するものではない。
