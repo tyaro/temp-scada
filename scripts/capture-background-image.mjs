@@ -1,5 +1,5 @@
 import { chromium, expect } from "@playwright/test";
-import { readFile, mkdir } from "node:fs/promises";
+import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 const output = resolve(process.argv[2] ?? "test-results/background-image");
 await mkdir(output, { recursive: true });
@@ -93,10 +93,44 @@ try {
         requestAnimationFrame(() => requestAnimationFrame(resolve)),
       );
     });
-    await page.screenshot({
-      path: join(output, `background-image-${theme}.png`),
-      animations: "disabled",
+    // An attached SVG image and settled layout do not prove that Chromium has
+    // painted the objects above it. Check actual captured pixels before saving.
+    const probe = await page.locator(".sheet > svg").evaluate((svg) => {
+      const point = new DOMPoint(142, 200).matrixTransform(svg.getScreenCTM());
+      return { x: Math.round(point.x), y: Math.round(point.y) };
     });
+    await page.locator(".sheet > svg > image").evaluate(async (element) => {
+      const image = new Image();
+      image.src = element.getAttribute("href");
+      await image.decode();
+    });
+    let capture;
+    await expect
+      .poll(
+        async () => {
+          capture = await page.screenshot({ animations: "disabled" });
+          return page.evaluate(
+            async ({ encoded, probe }) => {
+              const image = new Image();
+              image.src = `data:image/png;base64,${encoded}`;
+              await image.decode();
+              const canvas = document.createElement("canvas");
+              canvas.width = image.width;
+              canvas.height = image.height;
+              const context = canvas.getContext("2d");
+              context.drawImage(image, 0, 0);
+              return [...context.getImageData(probe.x, probe.y, 1, 1).data];
+            },
+            { encoded: capture.toString("base64"), probe },
+          );
+        },
+        {
+          message:
+            "The tank outline must be painted above the background image",
+        },
+      )
+      .toEqual([71, 85, 105, 255]);
+    await writeFile(join(output, `background-image-${theme}.png`), capture);
     await page.close();
   }
 } finally {
