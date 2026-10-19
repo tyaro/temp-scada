@@ -41,7 +41,7 @@
 
 ## フォームの現行境界
 
-フォームの移行中。塗りと枠線は`designer/forms/shape-paint.ts`、枠線一括は`selection-outline.ts`、線種一括は`selection-line.ts`、色一括は`selection-color.ts`が入力と対象を解釈し、残るフォームはAppの`formCommand`が解釈する。`validateDrafts`は共通のまま候補Projectへ順に適用して全体検証する。確定は`submitForm`→`edit`、成功時は`acknowledgeForm`→DraftGuardへ戻す。通常数値は`commitNumber`と`acceptField`を通す。別のdirty台帳やProject所有者を作らない。
+フォームの移行中。塗りと枠線は`designer/forms/shape-paint.ts`、枠線一括は`selection-outline.ts`、線種一括は`selection-line.ts`、色一括は`selection-color.ts`、Symbol配色は`symbol-color-mode.ts`、背景画像は`background-image.ts`、cropは`image-crop.ts`が入力と対象を解釈し、残るフォームはAppの`formCommand`が解釈する。`validateDrafts`は共通のまま候補Projectへ順に適用して全体検証する。確定は`submitForm`→`edit`、成功時は`acknowledgeForm`→DraftGuardへ戻す。通常数値は`commitNumber`と`acceptField`を通す。別のdirty台帳やProject所有者を作らない。
 
 | フォーム      | 現在の入力・描画                                    | 解析・確定の所在                                                               |
 | ------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -49,9 +49,9 @@
 | 枠線一括      | `SelectionOutline.svelte`                           | `forms/selection-outline.ts`の解析・固有reset、`selection-target.ts`の対象照合 |
 | 線の一括      | `SelectionLine.svelte`                              | `forms/selection-line.ts`の解析・固有reset、`selection-target.ts`の対象照合    |
 | 色の一括      | `SelectionColor.svelte`                             | `forms/selection-color.ts`の解析・固有reset、`selection-target.ts`の対象照合   |
-| Symbol配色    | `SymbolColorMode.svelte`                            | Appの`formCommand`                                                             |
-| 背景画像      | Appの画面設定フォーム                               | Appの`formCommand`                                                             |
-| 画像crop      | `designer/ImageCrop.svelte`・`image-crop-fields.ts` | 数値解析はhelper、対象照合とコマンドはApp                                      |
+| Symbol配色    | `SymbolColorMode.svelte`                            | `forms/symbol-color-mode.ts`の解析・対象照合                                   |
+| 背景画像      | Appの画面設定フォーム                               | `forms/background-image.ts`の解析・対象照合                                    |
+| 画像crop      | `designer/ImageCrop.svelte`・`image-crop-fields.ts` | `forms/image-crop.ts`の対象照合・コマンドと既存の数値解析helper                |
 | 通常配置      | `InspectorPanel.svelte`・`numeric-properties.ts`    | Appの`formCommand`と`commitNumber`                                             |
 | 画面・Project | Appの左ペイン                                       | Appの`formCommand`                                                             |
 

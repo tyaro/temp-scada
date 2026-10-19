@@ -90,7 +90,7 @@
 
 対象: Appの`formCommand`・`acknowledgeForm`・`validateDrafts`・`submitForm`、`designer/drafts.svelte.ts`、各フォーム。
 
-**最初の一単位はShapePaintだけ。** その後にSelectionOutline、SelectionLine、SelectionColor、SymbolColorMode、背景画像、通常Object／Screen／Projectの順で移す。開始までに追加されたトリミングフォーム等も一覧へ追記する。
+**最初の一単位はShapePaintだけ。** その後にSelectionOutline、SelectionLine、SelectionColor、SymbolColorMode、背景画像、画像crop、通常Object／Screen／Project・移動の順で移す。追加済みの画像cropも対象に含める。
 
 - `lib/designer/forms/`へフォームごとの入力解析とコマンド作成を置く。数値解析は`numeric-properties.ts`、patternは既存の`pattern-fields.ts`を使う。
 - フォームのname、種類の列挙値、未指定の意味はそのフォームのadapterに閉じる。親Appが子の入力名を列挙してresetしない。
@@ -208,7 +208,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R0 基準確認     | 基準確認済み | `e04e44c`、0.21.0、開始時clean。下記参照                         |
 | R1 文書整理     | 完了         | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理 |
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功 |
-| R3 フォーム契約 | 作業中       | ShapePaint・枠線／線種／色の一括を移行。残りはApp                |
+| R3 フォーム契約 | 作業中       | paint・一括style・Symbol配色・背景／cropを移行。通常欄はApp      |
 | R4 App機能分離  | 未着手       | a〜eごとの責務・移動先                                           |
 | R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持                            |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                 |
@@ -296,3 +296,11 @@ TS全636件、型チェック（エラー／警告なし）、本番ビルド、
 I1〜I4・I6・I9を維持。定義色Symbolの単色化は既存の明示checkboxに従い、色と変換指定は成功後だけresetする。空欄・不正色の拒否、候補全体の事前検証、非表示／ロックと共有定義、Undo単位、保存形式、markup・CSSは変更しない。次はSymbolColorModeを移す。
 
 TS全636件、型チェック（エラー／警告なし）、本番ビルド、対象整形、一括色・Symbol配色・数値・タグ・保存の関連ブラウザ34件が成功した。
+
+### R3e〜g：Symbol配色・背景画像・画像cropの解析
+
+`ad65b4a`を基準に、SymbolColorMode、背景画像、画像cropの3フォームをそれぞれ`forms/symbol-color-mode.ts`、`background-image.ts`、`image-crop.ts`へ移した。Appはkindの振分けと現在対象の型付き情報の供給を残し、cropの資産探索は読取専用の資産metadata一覧を渡す。原本bytesとAssetStoreは渡さない。
+
+I1〜I4・I6・I9を維持。各フォームに既存の世代・所有先・定義／画面の拒否条件を移し、cropは配置とassetも照合する。配色モードの列挙値、背景opacityの百分率、cropの数値・正規化helper、固有resetなしの共通確定は維持する。画像の非同期要求・lease・crop epoch、候補検証・Undo単位・保存形式、markup・CSSは変更しない。通常Object／Screen／Project・移動は未移行。
+
+TS全636件、型チェック（エラー／警告なし）、本番ビルド、対象整形、Symbol配色・背景・crop・差し替え・数値・タグ・保存の関連ブラウザ54件が成功した。

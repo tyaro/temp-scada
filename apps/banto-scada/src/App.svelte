@@ -9,7 +9,7 @@
     readSystemPaste,
     type PastePayload,
   } from "./lib/image-clipboard";
-  import { imageCropFromForm } from "./lib/designer/image-crop-fields";
+  import { imageCropCommand } from "./lib/designer/forms/image-crop";
   import {
     selectionOutlineCommand,
     acknowledgeSelectionOutline,
@@ -22,6 +22,8 @@
     selectionColorCommand,
     acknowledgeSelectionColor,
   } from "./lib/designer/forms/selection-color";
+  import { symbolColorModeCommand } from "./lib/designer/forms/symbol-color-mode";
+  import { backgroundImageCommand } from "./lib/designer/forms/background-image";
   import { shapePaintCommand } from "./lib/designer/forms/shape-paint";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
@@ -2199,46 +2201,32 @@
   }
   function formCommand(form: HTMLFormElement): EditCommand {
     const data = new FormData(form);
-    if (form.dataset.editorForm === "background-image") {
-      if (
-        activeDefinition ||
-        form.dataset.targetKey !== `${workspaceGeneration}:${screen.id}` ||
-        !backgroundScreen?.backgroundImage
-      )
-        throw new Error("背景画像の編集対象が変わりました。");
-      return {
-        type: "set-background-image",
-        screenId: screen.id,
-        image: {
-          ...backgroundScreen.backgroundImage,
-          fit: String(data.get("fit")) as "contain",
-          opacity: parseNumericProperty(String(data.get("opacity"))) / 100,
+    if (form.dataset.editorForm === "background-image")
+      return backgroundImageCommand(
+        { data, targetKey: form.dataset.targetKey },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          image: backgroundScreen?.backgroundImage,
         },
-      };
-    }
-    if (form.dataset.editorForm === "image-crop") {
-      if (
-        activeDefinition ||
-        selected?.shape.type !== "image" ||
-        form.dataset.objectId !== selected.id ||
-        form.dataset.targetKey !==
-          `${workspaceGeneration}:${screen.id}:${!!activeDefinition}` ||
-        form.dataset.assetId !== selected.shape.assetId
-      )
-        throw new Error(
-          "トリミングの対象が変わりました。選択し直してください。",
-        );
-      const asset = project.assets.find(
-        (a) =>
-          selected.shape.type === "image" && a.id === selected.shape.assetId,
-      )!;
-      return {
-        type: "set-image-crop",
-        screenId: screen.id,
-        objectId: selected.id,
-        crop: imageCropFromForm(data, asset) ?? null,
-      };
-    }
+      );
+    if (form.dataset.editorForm === "image-crop")
+      return imageCropCommand(
+        {
+          data,
+          objectId: form.dataset.objectId,
+          targetKey: form.dataset.targetKey,
+          assetId: form.dataset.assetId,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selected,
+          assets: project.assets,
+        },
+      );
     if (form.dataset.editorForm === "shape-paint")
       return shapePaintCommand(
         {
@@ -2253,27 +2241,20 @@
           selected,
         },
       );
-    if (form.dataset.editorForm === "symbol-color-mode") {
-      if (
-        form.dataset.targetKey !==
-          `${workspaceGeneration}:${screen.id}:${!!activeDefinition}` ||
-        selected?.id !== form.dataset.objectId ||
-        selected?.shape.type !== "symbol" ||
-        activeDefinition
-      )
-        throw new Error(
-          "Symbolの色の適用先が変更されています。選択し直してください。",
-        );
-      const colorMode = String(data.get("colorMode"));
-      if (colorMode !== "monochrome" && colorMode !== "definition")
-        throw new Error("色の使い方を選択してください。");
-      return {
-        type: "update",
-        screenId: screen.id,
-        objectId: selected.id,
-        patch: { colorMode },
-      };
-    }
+    if (form.dataset.editorForm === "symbol-color-mode")
+      return symbolColorModeCommand(
+        {
+          data,
+          objectId: form.dataset.objectId,
+          targetKey: form.dataset.targetKey,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selected,
+        },
+      );
     if (form.dataset.editorForm === "selection-outline")
       return selectionOutlineCommand(
         {
