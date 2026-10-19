@@ -1,10 +1,11 @@
 //! SCADA の初期 Project 契約。共通 JSON Schema をブラウザと CLI で使う。
 //! Hub 接続・Tauri・式評価・正式な .bantoscada package には依存しない。
 use serde_json::Value;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
 
 pub const SCHEMA: &str = include_str!("../schema/project.schema.json");
+pub const MAX_FOLDER_DEPTH: usize = 16;
 static VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
     jsonschema::validator_for(&serde_json::from_str(SCHEMA).expect("bundled schema JSON"))
         .expect("bundled schema is valid")
@@ -65,10 +66,11 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.7.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.7.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.8.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.8.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
+                screen["folders"] = serde_json::json!([]);
             }
             value["symbols"] = serde_json::json!([]);
         }
@@ -90,8 +92,47 @@ impl Project {
             if !ids.insert(screen["id"].as_str().unwrap()) {
                 return Err("ID が重複しています".into());
             }
+            let folders: HashMap<_, _> = screen["folders"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|folder| (folder["id"].as_str().unwrap(), folder))
+                .collect();
+            let mut folder_orders = HashSet::new();
+            for folder in screen["folders"].as_array().unwrap() {
+                if !ids.insert(folder["id"].as_str().unwrap()) {
+                    return Err("ID が重複しています".into());
+                }
+                if !folder_orders.insert(folder["order"].as_f64().unwrap() as u64) {
+                    return Err("フォルダーの order が重複しています".into());
+                }
+                let mut visited = HashSet::new();
+                let mut current = Some(folder);
+                while let Some(item) = current {
+                    if !visited.insert(item["id"].as_str().unwrap()) {
+                        return Err("フォルダーの親に循環があります".into());
+                    }
+                    if visited.len() > MAX_FOLDER_DEPTH {
+                        return Err("フォルダーの階層は16段までです".into());
+                    }
+                    current = if let Some(parent) = item.get("parentId").and_then(Value::as_str) {
+                        Some(
+                            *folders
+                                .get(parent)
+                                .ok_or("同じ所有先の親フォルダーが見つかりません")?,
+                        )
+                    } else {
+                        None
+                    };
+                }
+            }
             let mut orders = HashSet::new();
             for object in screen["objects"].as_array().unwrap() {
+                if let Some(folder) = object.get("folderId").and_then(Value::as_str) {
+                    if !folders.contains_key(folder) {
+                        return Err("同じ所有先の所属フォルダーが見つかりません".into());
+                    }
+                }
                 if !ids.insert(object["id"].as_str().unwrap()) {
                     return Err("ID が重複しています".into());
                 }
@@ -133,6 +174,120 @@ impl Project {
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn folder_fixture(case: &Value, definition: bool) -> Value {
+        let mut value: Value =
+            serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
+        let (owner_kind, foreign_kind) = if definition {
+            ("symbols", "screens")
+        } else {
+            ("screens", "symbols")
+        };
+        let foreign_id = "0199fb01-0000-7000-8000-000000000001";
+        let missing_id = "0199fbff-0000-7000-8000-000000000001";
+        let owner_id = value[owner_kind][0]["id"].clone();
+        let object_id = value[owner_kind][0]["objects"][0]["id"].clone();
+        let project_id = value["manifest"]["projectId"].clone();
+        value[foreign_kind][0]["folders"] =
+            serde_json::json!([{ "id": foreign_id, "name": "別の所有先", "order": 0 }]);
+        let count = case["count"].as_u64().unwrap_or(2) as usize;
+        let mut folders: Vec<Value> = (0..count).map(|index| serde_json::json!({
+            "id": format!("0199fb00-0000-7000-8000-{:012}", index+1),
+            "name": if case["sameNames"] == true { case["nameValue"].clone() } else { Value::String(format!("設備 {}",index+1)) },
+            "order": index,
+        })).collect();
+        if !folders.is_empty() {
+            if let Some(name) = case.get("nameValue") {
+                folders[0]["name"] = name.clone();
+            }
+            if let Some(order) = case.get("order") {
+                folders[0]["order"] = order.clone();
+            }
+            match case["collision"].as_str() {
+                Some("owner") => folders[0]["id"] = owner_id,
+                Some("object") => folders[0]["id"] = object_id,
+                Some("manifest") => folders[0]["id"] = project_id,
+                Some("foreign") => folders[0]["id"] = Value::String(foreign_id.into()),
+                Some("folder") => folders[1]["id"] = folders[0]["id"].clone(),
+                None => {}
+                _ => panic!("unknown folder collision fixture"),
+            }
+            if case["duplicateOrder"] == true {
+                folders[1]["order"] = folders[0]["order"].clone();
+            }
+            if case["chain"] != false {
+                for index in 1..folders.len() {
+                    folders[index]["parentId"] = folders[index - 1]["id"].clone();
+                }
+            }
+            if case["extraField"] == true {
+                folders[0]["futureFeature"] = Value::Bool(true);
+            }
+            if let Some(parent) = case["parent"].as_str() {
+                folders[0]["parentId"] = match parent {
+                    "missing" => Value::String(missing_id.into()),
+                    "foreign" => Value::String(foreign_id.into()),
+                    "self" => folders[0]["id"].clone(),
+                    "cycle" => folders[1]["id"].clone(),
+                    "null" => Value::Null,
+                    _ => panic!("unknown parent fixture"),
+                };
+            }
+        }
+        let first_id = folders
+            .first()
+            .map(|folder| folder["id"].clone())
+            .unwrap_or(Value::Null);
+        let last_id = folders.last().map(|folder| folder["id"].clone());
+        let owner = &mut value[owner_kind][0];
+        owner["folders"] = Value::Array(folders);
+        if let Some(id) = last_id {
+            for object in owner["objects"].as_array_mut().unwrap() {
+                object["folderId"] = id.clone();
+            }
+        }
+        if let Some(membership) = case["membership"].as_str() {
+            owner["objects"][0]["folderId"] = match membership {
+                "missing" => Value::String(missing_id.into()),
+                "foreign" => Value::String(foreign_id.into()),
+                "null" => Value::Null,
+                "array" => Value::Array(vec![first_id]),
+                _ => panic!("unknown membership fixture"),
+            };
+        }
+        if case["folders"] == "missing" {
+            owner.as_object_mut().unwrap().remove("folders");
+        }
+        if case["folders"] == "null" {
+            owner["folders"] = Value::Null;
+        }
+        value
+    }
+
+    #[test]
+    fn layer_folders_share_the_browser_contract() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/layer-folder-cases.json"))
+                .unwrap();
+        let baseline =
+            Project::from_json(include_str!("../../../examples/process.project.json")).unwrap();
+        for definition in [false, true] {
+            for case in cases.as_array().unwrap() {
+                let value = folder_fixture(case, definition);
+                let result = Project::from_json(&value.to_string());
+                assert_eq!(
+                    result.is_ok(),
+                    case["valid"].as_bool().unwrap(),
+                    "definition={definition}: {}: {:?}",
+                    case["name"],
+                    result.as_ref().err()
+                );
+                if let Ok(project) = result {
+                    assert_eq!(Project::from_json(&project.to_json()).unwrap().0, project.0);
+                    assert_eq!(project.text_bindings(), baseline.text_bindings());
+                }
+            }
+        }
+    }
     const SAMPLE: &str = include_str!("../../../examples/minimal.project.json");
     #[test]
     fn background_is_required_and_does_not_belong_to_symbols() {
@@ -286,8 +441,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.7.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.7.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.8.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.8.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]
@@ -299,6 +454,7 @@ mod tests {
         let mut screens = old["screens"].clone();
         for screen in screens.as_array_mut().unwrap() {
             screen["background"] = Value::String("#0b1220".into());
+            screen["folders"] = serde_json::json!([]);
         }
         assert_eq!(project.0["screens"], screens);
         assert_eq!(project.0["symbols"], serde_json::json!([]));

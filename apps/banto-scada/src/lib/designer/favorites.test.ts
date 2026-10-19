@@ -9,6 +9,7 @@ import type { SymbolDefinition } from "../project";
 const projectA = "019b0000-0000-7000-8000-000000000001";
 const projectB = "019b0000-0000-7000-8000-000000000002";
 const definition: SymbolDefinition = {
+  folders: [],
   id: "019b0000-0000-7000-8000-000000000003",
   name: "ポンプA",
   width: 100,

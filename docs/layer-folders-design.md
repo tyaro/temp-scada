@@ -1,6 +1,6 @@
 # レイヤーフォルダーの設計
 
-状態: **Astraレビューに基づく次の実装仕様。未実装**。現行Projectは0.7.0。モデル追加時は0.8.0へ更新し、Rust／TypeScript／Schema／現行サンプルを同期する。基準は[統合設計](scada-integrated-design.md)。
+状態: **保存契約・検証・編集コマンドを実装済み。階層UIは未実装**。現行Projectは0.8.0。Rust／TypeScript／Schema／現行サンプルを同期した。基準は[統合設計](scada-integrated-design.md)。
 
 ## 目的と範囲
 

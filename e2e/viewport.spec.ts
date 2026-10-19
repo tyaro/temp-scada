@@ -182,6 +182,7 @@ test("view settings survive target and preview switches, reset on import, and ne
   expect(saved.manifest.projectRevision).toBe(2);
   expect(Object.keys(saved.screens[0]).sort()).toEqual([
     "background",
+    "folders",
     "height",
     "id",
     "name",

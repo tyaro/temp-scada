@@ -196,6 +196,7 @@ test("definition menus honor the count limit and close when the same project is 
     project.symbols.push({
       id: `0199fa00-0000-7000-8000-${String(i + 1000).padStart(12, "0")}`,
       name: `設備 ${i + 1}`,
+      folders: [],
       width: 100,
       height: 100,
       objects: [

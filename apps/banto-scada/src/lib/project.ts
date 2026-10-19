@@ -6,6 +6,7 @@ export interface Point {
   y: number;
 }
 interface BaseObject {
+  folderId?: string;
   name?: string;
   locked?: boolean;
   visible?: boolean;
@@ -36,7 +37,16 @@ export interface PolylineObject extends BaseObject {
   };
 }
 export type ScreenObject = LayoutObject | PolylineObject;
+export interface LayerFolder {
+  id: string;
+  name: string;
+  order: number;
+  parentId?: string;
+}
+export const MAX_LAYER_FOLDERS = schema.$defs.layerFolders.maxItems;
+export const MAX_FOLDER_DEPTH = 16;
 export interface Screen {
+  folders: LayerFolder[];
   background: string;
   id: string;
   name: string;
@@ -45,6 +55,7 @@ export interface Screen {
   objects: ScreenObject[];
 }
 export interface SymbolDefinition {
+  folders: LayerFolder[];
   id: string;
   name: string;
   width: number;
@@ -54,10 +65,10 @@ export interface SymbolDefinition {
 export interface Project {
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.7.0";
+    schemaVersion: "0.8.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.7.0";
+    minRuntimeVersion: "0.8.0";
     name: string;
   };
   screens: Screen[];
@@ -78,11 +89,12 @@ export function parseProject(json: string): Project {
       ...old,
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.7.0",
-        minRuntimeVersion: "0.7.0",
+        schemaVersion: "0.8.0",
+        minRuntimeVersion: "0.8.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
+        folders: [],
         background: "#0b1220",
       })),
       symbols: [],
@@ -100,8 +112,32 @@ export function parseProject(json: string): Project {
   for (const owner of [...project.screens, ...project.symbols]) {
     if (ids.has(owner.id)) throw new Error("ID が重複しています");
     ids.add(owner.id);
+    const folders = new Map(owner.folders.map((folder) => [folder.id, folder]));
+    const folderOrders = new Set<number>();
+    for (const folder of owner.folders) {
+      if (ids.has(folder.id)) throw new Error("ID が重複しています");
+      ids.add(folder.id);
+      if (folderOrders.has(folder.order))
+        throw new Error("フォルダーの order が重複しています");
+      folderOrders.add(folder.order);
+      const visited = new Set<string>();
+      let current: LayerFolder | undefined = folder;
+      while (current) {
+        if (visited.has(current.id))
+          throw new Error("フォルダーの親に循環があります");
+        visited.add(current.id);
+        if (visited.size > MAX_FOLDER_DEPTH)
+          throw new Error("フォルダーの階層は16段までです");
+        const parentId: string | undefined = current.parentId;
+        if (parentId && !folders.has(parentId))
+          throw new Error("同じ所有先の親フォルダーが見つかりません");
+        current = parentId ? folders.get(parentId) : undefined;
+      }
+    }
     const orders = new Set<number>();
     for (const object of owner.objects) {
+      if (object.folderId && !folders.has(object.folderId))
+        throw new Error("同じ所有先の所属フォルダーが見つかりません");
       const shape = object.shape;
       if (
         project.symbols.includes(owner) &&

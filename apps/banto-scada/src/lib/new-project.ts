@@ -7,10 +7,10 @@ export function createProject(): Project {
     JSON.stringify({
       manifest: {
         product: "banto-scada",
-        schemaVersion: "0.7.0",
+        schemaVersion: "0.8.0",
         projectId: newId(),
         projectRevision: 1,
-        minRuntimeVersion: "0.7.0",
+        minRuntimeVersion: "0.8.0",
         name: "新しいProject",
       },
       screens: [
@@ -21,6 +21,7 @@ export function createProject(): Project {
           height: 540,
           background: "#ffffff",
           objects: [],
+          folders: [],
         },
       ],
       symbols: [],

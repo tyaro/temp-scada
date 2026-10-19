@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.7.0"
+          "const": "0.8.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.7.0"
+          "const": "0.8.0"
         },
         "name": {
           "type": "string",
@@ -79,9 +79,20 @@
           },
           "background": {
             "$ref": "#/$defs/color"
+          },
+          "folders": {
+            "$ref": "#/$defs/layerFolders"
           }
         },
-        "required": ["id", "name", "width", "height", "objects", "background"],
+        "required": [
+          "id",
+          "name",
+          "width",
+          "height",
+          "objects",
+          "background",
+          "folders"
+        ],
         "additionalProperties": false
       }
     },
@@ -121,9 +132,12 @@
                 }
               ]
             }
+          },
+          "folders": {
+            "$ref": "#/$defs/layerFolders"
           }
         },
-        "required": ["id", "name", "width", "height", "objects"],
+        "required": ["id", "name", "width", "height", "objects", "folders"],
         "additionalProperties": false
       }
     }
@@ -214,6 +228,9 @@
         },
         "visible": {
           "type": "boolean"
+        },
+        "folderId": {
+          "$ref": "#/$defs/id"
         }
       },
       "required": ["id", "order", "x", "y", "fill", "width", "height", "shape"],
@@ -288,6 +305,9 @@
         },
         "visible": {
           "type": "boolean"
+        },
+        "folderId": {
+          "$ref": "#/$defs/id"
         }
       },
       "required": ["id", "order", "x", "y", "fill", "shape"],
@@ -343,6 +363,9 @@
         },
         "visible": {
           "type": "boolean"
+        },
+        "folderId": {
+          "$ref": "#/$defs/id"
         }
       },
       "required": ["id", "order", "x", "y", "fill", "width", "height", "shape"],
@@ -379,6 +402,34 @@
           }
         }
       ]
+    },
+    "layerFolder": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "$ref": "#/$defs/placementName"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "parentId": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": ["id", "name", "order"],
+      "additionalProperties": false
+    },
+    "layerFolders": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "$ref": "#/$defs/layerFolder"
+      }
     }
   }
 }

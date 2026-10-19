@@ -52,11 +52,13 @@ export function copyObjects(
   const wanted = new Set(ids);
   if (!target || !wanted.size || wanted.size !== ids.length)
     throw new Error("コピーする配置を選択してください");
-  const objects: ScreenObject[] = target.objects.filter((o) =>
-    wanted.has(o.id),
-  );
+  const objects: ScreenObject[] = target.objects
+    .filter((o) => wanted.has(o.id))
+    .map((object) => ({ ...object }));
   if (objects.length !== wanted.size)
     throw new Error("コピー対象が見つかりません");
+  // Clipboard placements deliberately start at the destination root.
+  for (const object of objects) delete object.folderId;
   const dependencies = new Set(
     objects.flatMap((o) =>
       o.shape.type === "symbol" ? [o.shape.symbolId] : [],
@@ -75,6 +77,7 @@ export function copyObjects(
             ? target.background
             : "#0b1220",
         objects,
+        folders: [],
       },
     ],
     symbols: project.symbols.filter((s) => dependencies.has(s.id)),

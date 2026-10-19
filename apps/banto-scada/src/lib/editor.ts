@@ -8,7 +8,7 @@ import {
   type TagBinding,
 } from "./project";
 import builtins from "./symbol-library.json";
-import type { Point, SymbolDefinition, ScreenObject } from "./project";
+import type { Point, SymbolDefinition, ScreenObject, Screen } from "./project";
 export type AddKind = "rectangle" | "ellipse" | "text" | "line" | "pipe";
 export interface ObjectPatch {
   name?: string | null;
@@ -46,6 +46,26 @@ type ScreenCommand =
   | { type: "duplicate-screen"; screenId: string }
   | { type: "remove-screen"; screenId: string };
 export type ObjectCommand = (
+  | {
+      type: "create-folder";
+      screenId: string;
+      name: string;
+      parentId: string | null;
+    }
+  | { type: "rename-folder"; screenId: string; folderId: string; name: string }
+  | {
+      type: "move-folder";
+      screenId: string;
+      folderId: string;
+      parentId: string | null;
+    }
+  | { type: "remove-folder"; screenId: string; folderId: string }
+  | {
+      type: "set-folder";
+      screenId: string;
+      objectIds: string[];
+      folderId: string | null;
+    }
   | {
       type: "distribute";
       screenId: string;
@@ -138,6 +158,11 @@ export function isObjectCommand(
   command: EditCommand,
 ): command is ObjectCommand {
   return [
+    "create-folder",
+    "rename-folder",
+    "move-folder",
+    "remove-folder",
+    "set-folder",
     "distribute",
     "set-color",
     "set-visibility",
@@ -211,6 +236,7 @@ export function applyCommand(
           shape: { type: "rectangle" },
         },
       ],
+      folders: [],
     });
     return finish(project, next);
   }
@@ -259,6 +285,7 @@ export function applyCommand(
       height: command.height,
       background: command.background ?? "#ffffff",
       objects: [],
+      folders: [],
     });
     return finish(project, next);
   }
@@ -270,6 +297,51 @@ export function applyCommand(
     ? next.symbols.find((s) => s.id === definitionId)
     : targetScreen;
   if (!screen) throw new Error("画面が見つかりません");
+  if (command.type === "create-folder") {
+    if (
+      command.parentId !== null &&
+      !screen.folders.some((folder) => folder.id === command.parentId)
+    )
+      throw new Error("同じ所有先の親フォルダーが見つかりません");
+    screen.folders.push({
+      id: newId(),
+      name: folderName(command.name),
+      order: Math.max(-1, ...screen.folders.map((folder) => folder.order)) + 1,
+      ...(command.parentId === null ? {} : { parentId: command.parentId }),
+    });
+    return finish(project, next);
+  }
+  if (
+    command.type === "rename-folder" ||
+    command.type === "move-folder" ||
+    command.type === "remove-folder"
+  ) {
+    const folder = screen.folders.find(
+      (folder) => folder.id === command.folderId,
+    );
+    if (!folder) throw new Error("フォルダーが見つかりません");
+    if (command.type === "rename-folder")
+      folder.name = folderName(command.name);
+    else if (command.type === "move-folder") {
+      if (
+        command.parentId !== null &&
+        !screen.folders.some((item) => item.id === command.parentId)
+      )
+        throw new Error("同じ所有先の親フォルダーが見つかりません");
+      if (command.parentId === null) delete folder.parentId;
+      else folder.parentId = command.parentId;
+    } else {
+      if (
+        screen.folders.some((child) => child.parentId === folder.id) ||
+        screen.objects.some((object) => object.folderId === folder.id)
+      )
+        throw new Error(
+          "子フォルダーまたは配置があるため削除できません。空のフォルダーだけ削除できます。",
+        );
+      screen.folders = screen.folders.filter((item) => item.id !== folder.id);
+    }
+    return finish(project, next);
+  }
   if (command.type === "set-visibility") {
     const object = screen.objects.find(
       (object) => object.id === command.objectId,
@@ -343,9 +415,9 @@ export function applyCommand(
             : undefined;
         if (live) references.set(source.id, live.id);
         else {
-          const copy = JSON.parse(JSON.stringify(source)) as SymbolDefinition;
-          copy.id = newId();
-          copy.objects.forEach((o) => (o.id = newId()));
+          const copy = renewOwnerIds(
+            JSON.parse(JSON.stringify(source)) as SymbolDefinition,
+          );
           next.symbols.push(copy);
           references.set(source.id, copy.id);
         }
@@ -378,6 +450,7 @@ export function applyCommand(
         const copy = JSON.parse(JSON.stringify(object)) as ScreenObject;
         copy.id = newId();
         copy.order = order + index;
+        delete copy.folderId;
         copy.x += dx;
         copy.y += dy;
         if (copy.shape.type === "symbol")
@@ -408,10 +481,8 @@ export function applyCommand(
     return finish(project, next);
   }
   if (command.type === "duplicate-screen") {
-    const copy = JSON.parse(JSON.stringify(screen));
-    copy.id = newId();
+    const copy = renewOwnerIds(JSON.parse(JSON.stringify(screen)) as Screen);
     copy.name = screen.name.slice(0, 196) + " コピー";
-    copy.objects.forEach((object: { id: string }) => (object.id = newId()));
     next.screens.push(copy);
     return finish(project, next);
   }
@@ -422,6 +493,7 @@ export function applyCommand(
     return finish(project, next);
   }
   if (
+    command.type === "set-folder" ||
     command.type === "distribute" ||
     command.type === "set-color" ||
     command.type === "move-many" ||
@@ -437,7 +509,17 @@ export function applyCommand(
       .sort((a, b) => a.order - b.order);
     if (objects.length !== ids.size)
       throw new Error("選択した図形が見つかりません");
-    if (command.type === "distribute") {
+    if (command.type === "set-folder") {
+      if (
+        command.folderId !== null &&
+        !screen.folders.some((folder) => folder.id === command.folderId)
+      )
+        throw new Error("同じ所有先の所属フォルダーが見つかりません");
+      for (const object of objects) {
+        if (command.folderId === null) delete object.folderId;
+        else object.folderId = command.folderId;
+      }
+    } else if (command.type === "distribute") {
       if (objects.length < 3)
         throw new Error("等間隔に配置する図形を3件以上選択してください");
       if (command.axis !== "x" && command.axis !== "y")
@@ -699,11 +781,29 @@ export function applyCommand(
   return finish(project, next);
 }
 function copySymbol(definition: SymbolDefinition): SymbolDefinition {
-  const copy: SymbolDefinition = JSON.parse(JSON.stringify(definition));
-  copy.id = newId();
+  const copy = renewOwnerIds(
+    JSON.parse(JSON.stringify(definition)) as SymbolDefinition,
+  );
   copy.name = definition.name.slice(0, 196) + " コピー";
-  copy.objects.forEach((object) => (object.id = newId()));
   return copy;
+}
+function renewOwnerIds<T extends Screen | SymbolDefinition>(copy: T): T {
+  copy.id = newId();
+  const folders = new Map(copy.folders.map((folder) => [folder.id, newId()]));
+  for (const folder of copy.folders) {
+    folder.id = folders.get(folder.id)!;
+    if (folder.parentId) folder.parentId = folders.get(folder.parentId)!;
+  }
+  for (const object of copy.objects) {
+    object.id = newId();
+    if (object.folderId) object.folderId = folders.get(object.folderId)!;
+  }
+  return copy;
+}
+function folderName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("フォルダー名を入力してください");
+  return trimmed;
 }
 function screenName(name: string): string {
   const trimmed = name.trim();

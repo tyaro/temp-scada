@@ -1,0 +1,185 @@
+[
+  {
+    "name": "empty folder lists are valid",
+    "count": 0,
+    "valid": true
+  },
+  {
+    "name": "nested folders accept every primitive and Symbol membership",
+    "valid": true
+  },
+  {
+    "name": "duplicate folder names do not identify folders",
+    "chain": false,
+    "sameNames": true,
+    "nameValue": "タンク",
+    "valid": true
+  },
+  {
+    "name": "256 root folders are valid",
+    "count": 256,
+    "chain": false,
+    "valid": true
+  },
+  {
+    "name": "257 root folders are rejected",
+    "count": 257,
+    "chain": false,
+    "valid": false
+  },
+  {
+    "name": "16 levels are valid",
+    "count": 16,
+    "valid": true
+  },
+  {
+    "name": "17 levels are rejected",
+    "count": 17,
+    "valid": false
+  },
+  {
+    "name": "missing folders array is rejected",
+    "folders": "missing",
+    "valid": false
+  },
+  {
+    "name": "null folders array is rejected",
+    "folders": "null",
+    "valid": false
+  },
+  {
+    "name": "a missing parent is rejected",
+    "parent": "missing",
+    "valid": false
+  },
+  {
+    "name": "a foreign parent is rejected",
+    "parent": "foreign",
+    "valid": false
+  },
+  {
+    "name": "self parent is rejected",
+    "parent": "self",
+    "valid": false
+  },
+  {
+    "name": "a cyclic parent is rejected",
+    "parent": "cycle",
+    "valid": false
+  },
+  {
+    "name": "null parent is rejected",
+    "parent": "null",
+    "valid": false
+  },
+  {
+    "name": "missing membership is rejected",
+    "membership": "missing",
+    "valid": false
+  },
+  {
+    "name": "foreign membership is rejected",
+    "membership": "foreign",
+    "valid": false
+  },
+  {
+    "name": "null membership is rejected",
+    "membership": "null",
+    "valid": false
+  },
+  {
+    "name": "multiple membership is rejected",
+    "membership": "array",
+    "valid": false
+  },
+  {
+    "name": "folder ID collision with folder is rejected",
+    "collision": "folder",
+    "chain": false,
+    "valid": false
+  },
+  {
+    "name": "folder ID collision with owner is rejected",
+    "collision": "owner",
+    "chain": false,
+    "valid": false
+  },
+  {
+    "name": "folder ID collision with object is rejected",
+    "collision": "object",
+    "chain": false,
+    "valid": false
+  },
+  {
+    "name": "folder ID collision with manifest is rejected",
+    "collision": "manifest",
+    "chain": false,
+    "valid": false
+  },
+  {
+    "name": "folder ID collision with foreign is rejected",
+    "collision": "foreign",
+    "chain": false,
+    "valid": false
+  },
+  {
+    "name": "folder orders are unique per owner",
+    "duplicateOrder": true,
+    "valid": false
+  },
+  {
+    "name": "folder orders are independent of object orders",
+    "order": 3,
+    "valid": true
+  },
+  {
+    "name": "negative folder order is rejected",
+    "order": -1,
+    "valid": false
+  },
+  {
+    "name": "fractional folder order is rejected",
+    "order": 1.5,
+    "valid": false
+  },
+  {
+    "name": "unsafe folder order is rejected",
+    "order": 9007199254740992,
+    "valid": false
+  },
+  {
+    "name": "Japanese folder names are valid",
+    "nameValue": "ポンプ設備 A",
+    "valid": true
+  },
+  {
+    "name": "empty folder name is rejected",
+    "nameValue": "",
+    "valid": false
+  },
+  {
+    "name": "untrimmed folder name is rejected",
+    "nameValue": " タンク",
+    "valid": false
+  },
+  {
+    "name": "control characters in folder name are rejected",
+    "nameValue": "タンク\u0000",
+    "valid": false
+  },
+  {
+    "name": "200 Unicode codepoints are valid",
+    "nameValue": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+    "valid": true
+  },
+  {
+    "name": "201 Unicode codepoints are rejected",
+    "nameValue": "あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
+    "valid": false
+  },
+  {
+    "name": "unknown folder fields are rejected",
+    "extraField": true,
+    "valid": false
+  }
+]

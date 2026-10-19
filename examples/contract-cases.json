@@ -269,5 +269,17 @@
     "path": "/manifest/minRuntimeVersion",
     "value": "0.6.0",
     "valid": false
+  },
+  {
+    "name": "rejects the previous 0.7 schema",
+    "path": "/manifest/schemaVersion",
+    "value": "0.7.0",
+    "valid": false
+  },
+  {
+    "name": "rejects the previous 0.7 runtime contract",
+    "path": "/manifest/minRuntimeVersion",
+    "value": "0.7.0",
+    "valid": false
   }
 ]
