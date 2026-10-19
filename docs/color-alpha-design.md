@@ -1,5 +1,7 @@
 # 単色と枠線のα
 
+文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
 > 0.18.0更新: 矩形／楕円の塗りは `paint.fill.enabled` と `paint.fill.paint`（solid／linearGradient）へ集約した。旧root `fill`／`colorAlpha` は図形では禁止する。以下は導入時の設計記録。現行契約・フォーム操作は[線形グラデーション設計](linear-gradient-design.md)を参照。Text・Polyline・Symbolの単色αと枠線αの合成規則は維持する。
 
 Project 0.15.0で実装。[配置全体の不透明度](opacity-design.md)と、paintに使う色のαを分離する。[拡張設計](scada-graphics-runtime-extension-design.md)に対する段階導入で、gradient／patternを持つ判別型paintへの再編は後続。

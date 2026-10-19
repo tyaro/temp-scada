@@ -1,6 +1,6 @@
 # 保守性・AIコーディング向けリファクタリング実行計画
 
-作成日: 2026-10-20（日本時間）。対象: temp-scada本体のコード・テスト・ドキュメント。Solが実装を担当する際の作業順、境界、検証、完了条件を定める。**この文書を作成した時点では、以下のリファクタは未着手。**
+作成日: 2026-10-20（日本時間）。対象: temp-scada本体のコード・テスト・ドキュメント。Solが実装を担当する際の作業順、境界、検証、完了条件を定める。作成時点ではリファクタは未着手。現在の進捗は[§9](#refactoring-progress)で管理する。
 
 機能仕様の基準は[統合設計](scada-integrated-design.md)、進捗の入口は[開発計画](development-plan.md)、作業規則は[AGENTS.md](../AGENTS.md)。本書は既存機能の振る舞いを保って構造を整理する計画で、Equipment・Faceplate等の新機能の実装計画ではない。
 
@@ -31,23 +31,7 @@
 
 ## 3. 現在の責務と読む場所
 
-以下のパスはリポジトリルート基準。関数名を検索キーにし、行番号への依存を避ける。
-
-| 責務                     | 現在の入口                                                                                                                                                | 守る境界                                                                       |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| 編集セッションと画面接続 | `apps/banto-scada/src/App.svelte`のproject・history・workspaceGeneration・screenId・editingSymbolId・selectedIds・mode                                    | Projectと履歴の所有者を一つにする。UIの選択・倍率をProjectへ入れない           |
-| 入力保護                 | `lib/designer/drafts.svelte.ts`の`createDraftGuard`、Appの`transition`・`validateDrafts`・`commitNumber`                                                  | 未確定文字列、IME、適用／破棄／取消、数値の個別確定を保つ                      |
-| 編集と履歴               | `lib/editor.ts`の`applyCommand`・`finish`、`lib/history.ts`                                                                                               | コピー上で実行・検証し、失敗時に元Projectを保持                                |
-| 保存モデル               | `lib/project.ts`、`crates/scada-model/schema/project.schema.json`、`crates/scada-model/src/lib.rs`                                                        | TS／Rust／schema／examplesの契約を合わせる                                     |
-| 保存・読込               | Appの`adopt`・`load`・`writeProject`、`lib/project-package.ts`・`save-state.ts`                                                                           | ファイル選択・置換確認・実際のデータ処理を識別する                             |
-| 画像原本と取込           | `lib/image-assets.ts`・`image-frame.ts`、Appの`prepareImage`・`collectAssets`・差替え処理                                                                 | 原本共有、仮Store、履歴からの参照、非同期取消を保つ                            |
-| クリップボード           | Appの`clipboardAction`、`lib/clipboard.ts`・`image-clipboard.ts`                                                                                          | OS APIの成功前に切取元を消さない。snapshotと資産leaseを保つ                    |
-| 表示と操作               | `lib/ObjectPainting.svelte`・`ScreenPainting.svelte`・`ScreenBackground.svelte`・`Primitive.svelte`、`Renderer.svelte`・`designer/CanvasWorkspace.svelte` | 読取描画を選択・ドラッグ・入力処理から分ける。追加済みの画像描画部品も確認する |
-| レイヤー                 | Appの`beginLayerDrag`・`dropLayer`・`openFolderRequest`、`designer/layer-tree.ts`・`layer-drag.ts`                                                        | フォルダーの所属と描画順・座標を区別する                                       |
-| Runtime読取              | `lib/tag-presentation.ts`、`crates/scada-runtime`                                                                                                         | 現在値・QualityをProject定義と分ける。Hub／PLC機能を複製しない                 |
-| テスト                   | `lib/*.test.ts`、`examples/*-cases.json`、`e2e`、`.github/workflows/ci.yml`                                                                               | 単体の契約とブラウザ操作を併用し、既存の拒否ケースを保持                       |
-
-`lib/`は`apps/banto-scada/src/lib/`を指す。現在の依存方向は「UI → 編集／履歴 → Project検証」。純粋計算・モデルからDOMやAppをimportしない。
+[コードと検証の対応表](code-map.md)へ集約した。App、編集・履歴、モデル・画像、入力保護、読取Runtimeの責務をここへ重複記載しない。移動時はcode-mapを更新する。
 
 ## 4. すべての工程で守る条件
 
@@ -159,18 +143,7 @@ R4bではブラウザのユーザー操作境界も維持する。native clipboa
 
 ## 6. 機能を変更するときの対応表
 
-R1でcode-mapへ移すまでは、この表を作業の入口とする。
-
-| 変更内容                     | 実装・契約                                                                    | 追加で読む設計                                                                                                       | 主な検証                                                                     |
-| ---------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 塗り・線・α・一括属性        | Primitive、ShapePaint、Selection系、editor、project                           | [塗り](shape-paint-design.md)・[線種](line-style-design.md)・[α](color-alpha-design.md)                              | shape-paint・gradient・pattern・selection・numeric関連                       |
-| 画像配置・差替え・背景・取込 | image-assets／frame／crop、Project、描画、取込controller                      | [画像保存](image-assets-design.md)・[配置と差替え](image-placement-design.md)                                        | image-assets・placement・replacement・background、開始時に追加済みのcrop関連 |
-| コピー／切取／貼付           | clipboard、image-clipboard、editor、資産lease                                 | [画像clipboard](image-clipboard-design.md)                                                                           | clipboard・image-paste・asset-clipboard                                      |
-| 画面・Symbol・フォルダー     | editor、screen-references、layer-tree／drag、使用先集計                       | [埋込](embedded-screen-design.md)・[配置ドラッグ](layer-drag-design.md)・[フォルダードラッグ](folder-drag-design.md) | screens・symbols・screen-view・layer／folder関連                             |
-| 選択・viewport・数値         | Renderer、CanvasWorkspace、geometry、drafts、numeric-properties               | [選択表示](selection-view-design.md)・[回転](object-rotation-design.md)・[UX](frontend-ux-design.md)                 | numeric・range・rotation・resize・viewport・wheel・placement                 |
-| 保存形式                     | TS Project、JSON Schema、Rust Project、生成処理、examples、package／clipboard | [保存基盤](image-assets-design.md)・[統合設計](scada-integrated-design.md)                                           | TS／Rust共有ケース、JSON／package往復、copy／paste、Undo                     |
-
-保存形式の変更は本リファクタでは行わないが、後続の機能追加では上記の同期対象を確認する。モデル変更時だけ必要な契約ケースを追加し、関数移動そのものを確認するだけのテストは作らない。
+[コード対応表の機能別入口](code-map.md#機能を変更するときの対応表)へ集約した。フォームと画像の現行境界も同文書を使う。
 
 ## 7. 検証コマンドと選び方
 
@@ -229,16 +202,16 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 
 ## 9. 進捗・引継ぎの記録
 
-| 工程            | 状態         | 完了コミット／検証                       |
-| --------------- | ------------ | ---------------------------------------- |
-| 本書作成        | 文書化済み   | コードのリファクタは未着手               |
-| R0 基準確認     | 基準確認済み | `e04e44c`、0.21.0、開始時clean。下記参照 |
-| R1 文書整理     | 作業中       | 現在状況と履歴の分離から着手             |
-| R2 テスト補助   | 未着手       | 変更helperと対象spec                     |
-| R3 フォーム契約 | 未着手       | 移行済みフォームと残るフォームを列挙     |
-| R4 App機能分離  | 未着手       | a〜eごとの責務・移動先                   |
-| R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持    |
-| R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由         |
+| 工程            | 状態         | 完了コミット／検証                                               |
+| --------------- | ------------ | ---------------------------------------------------------------- |
+| 本書作成        | 文書化済み   | コードのリファクタは未着手                                       |
+| R0 基準確認     | 基準確認済み | `e04e44c`、0.21.0、開始時clean。下記参照                         |
+| R1 文書整理     | 完了         | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理 |
+| R2 テスト補助   | 未着手       | 変更helperと対象spec                                             |
+| R3 フォーム契約 | 未着手       | 移行済みフォームと残るフォームを列挙                             |
+| R4 App機能分離  | 未着手       | a〜eごとの責務・移動先                                           |
+| R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持                            |
+| R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                 |
 
 各小区切りの記録は、次の項目だけを残せば再開できる。
 
@@ -269,3 +242,9 @@ R1aで`implementation-status.md`を現在仕様の要約とし、日付付き記
 R1bではREADMEの入口を起動・検証・状況／計画／ガイドへ整理し、詳細操作を`user-guide.md`へ移した。画像・入力保護・Symbol・viewport等の説明と、旧READMEの見出しからの移動案内を保持する。現在の保存版をREADMEへ重複記載しない。次はR1cのコード対応表と文書状態の識別を行う。
 
 追跡: 後続`3b3031e`のCI（run39309595152）はブラウザ全499件に成功し、整形5ファイルだけで失敗した。整形は`edf0f3e`で修正済み。過去4件のブラウザ失敗はこのCIでも再現していない。cropを含む現行の全508件は別に確認中。
+
+### R1c：責務対応表と設計文書の状態
+
+責務と機能別の変更・検証表を`code-map.md`へ移し、本書§3／§6には案内だけを残した。crop・原本付きclipboard・フォームの現在境界を追記した。root設計文書の先頭で採用済み設計・提案・履歴を識別し、導入時の版を現在仕様と混同しない案内を加えた。上流スナップショットとアプリコードは変更していない。
+
+R1完了。I9（保存内容不変）を維持した文書整理のみで、Markdown整形、リンク先・旧見出し・明示anchor、Git収録を確認する。次はR2の小さなテスト補助。コードの大規模移動は行わず、画像関連の準備・保存待機・主キャンバスを先に揃える。

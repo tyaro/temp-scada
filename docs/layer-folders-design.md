@@ -1,6 +1,8 @@
 # レイヤーフォルダーの設計
 
-状態: **保存契約・検証・編集コマンド・階層UI・検索・所属変更を実装済み**。現行Projectは0.8.0。Rust／TypeScript／Schema／現行サンプルを同期した。基準は[統合設計](scada-integrated-design.md)。
+文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
+状態: **保存契約・検証・編集コマンド・階層UI・検索・所属変更を実装済み**。導入時のProjectは0.8.0。Rust／TypeScript／Schema／現行サンプルを同期した。基準は[統合設計](scada-integrated-design.md)。
 
 ## 目的と範囲
 

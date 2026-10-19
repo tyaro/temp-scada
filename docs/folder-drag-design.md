@@ -1,6 +1,8 @@
 # レイヤーフォルダーのドラッグによる親変更
 
-2026-10-19。基準は[統合設計](scada-integrated-design.md)、[整理フォルダー](layer-folders-design.md)、[配置の所属ドラッグ](layer-drag-design.md)。Astraのレビューを反映する。現行Project 0.12.0と既存のmove-folderを使い、保存契約は変更しない。
+文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
+2026-10-19。基準は[統合設計](scada-integrated-design.md)、[整理フォルダー](layer-folders-design.md)、[配置の所属ドラッグ](layer-drag-design.md)。Astraのレビューを反映する。導入時のProject 0.12.0と既存のmove-folderを使い、保存契約は変更しない。
 
 ## 移動の意味
 

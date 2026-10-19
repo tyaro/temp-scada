@@ -1,5 +1,7 @@
 # 画像資産と背景画像の最小保存基盤
 
+文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
 2026-10-20。Astraの現行コード・上流設計レビューを反映した実装方針。[拡張検討](scada-graphics-runtime-extension-design.md)の§3を具体化する。Project 0.16.0でAssetStore・資産宣言・最小package・背景画像UIまで接続した。正式package全体・Design Domain・復旧・配布が完成したという意味ではない。
 
 ## 最初の区切り

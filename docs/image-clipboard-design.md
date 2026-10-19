@@ -1,5 +1,7 @@
 # 画像の貼り付けと原本を含む図形clipboard
 
+文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
 2026-10-20（日本時間）。Astraの読取専用レビューを反映。[拡張検討の画像clipboard](scada-graphics-runtime-extension-design.md#3-背景画像imageclipboard)を段階化する。Projectモデルは0.17.0を共用する。
 
 ## 第1段階：OS画像の貼り付け

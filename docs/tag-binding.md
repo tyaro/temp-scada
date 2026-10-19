@@ -1,5 +1,7 @@
 # 読み取りタグ Binding の初期契約
 
+文書の位置付け: **採用済みの読取Binding境界と実装記録。実catalog・機器slotを含む完成契約ではない。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
 2026-10-18。上流 [SCADA §8.4 / §9](upstream/industrial/scada-design.md) と [Tag Client §3](upstream/industrial/banto-tagclient-design.md) に基づく。参照スナップショットの出典は [開発計画](development-plan.md#参照元) に記載する。
 
 ## 実装範囲

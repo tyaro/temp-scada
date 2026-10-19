@@ -1,5 +1,7 @@
 # 共有Symbolの静的な配色
 
+文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
 状態: **Project 0.9.0で実装済み**。Astraレビューに従い、Rust／TypeScript／Schema／現行サンプル・生成を同期した。[実装・検証・実画面](development-plan.md#symbol-color-progress)を参照する。[統合設計](scada-integrated-design.md)の多色Symbolの最初の工程であり、状態別表示・Binding・slotは追加しない。
 
 ## 保存と描画

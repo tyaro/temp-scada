@@ -1,5 +1,7 @@
 # 機器登録・図面からの機器化・画面再利用の詳細検討
 
+文書の位置付け: **追加提案・独立試作。Equipmentの製品実装・採用済みschemaではない。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
 本書はサイドチャットでの詳細設計案。実装指示・採用済みschema・Runtime完成を示さない。[追加検討とレビュー](scada-authoring-plant-operations-proposal.md)の§3・15・16を具体化する。基準は[統合設計](scada-integrated-design.md)、概念の出典は[上流設計 §7](upstream/industrial/scada-design.md#7-equipment--symbol--faceplate--dialog)。実装済みの1段・読取専用埋込Viewの範囲や保存契約を変更しない。
 
 ## 1. 初期案の中心

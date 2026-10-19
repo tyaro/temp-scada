@@ -1,6 +1,8 @@
 # 画像・描画表現・Faceplate・画面展開・kioskの拡張検討
 
-初版2026-10-19、用語確認反映2026-10-20（日本時間）。ユーザーからの追加要望を[統合設計](scada-integrated-design.md)へ取り込むための**検討案**。Astraが現行コード・上流設計と照合した。追加機能を実装済み、提供版を確定済みとする文書ではない。現在の実装はProject 0.19.0・ローカルDesignerで、画像資産と背景用の最小packageを段階実装し、正式Runtime／Host・Equipment／Actionは未実装。
+文書の位置付け: **拡張機能の検討と段階化。導入済みの項目と後続提案を含む。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
+初版2026-10-19、用語確認反映2026-10-20（日本時間）。ユーザーからの追加要望を[統合設計](scada-integrated-design.md)へ取り込むための**検討案**。Astraが現行コード・上流設計と照合した。追加機能を実装済み、提供版を確定済みとする文書ではない。検討時点の実装はProject 0.19.0・ローカルDesignerで、画像資産と背景用の最小packageを段階実装し、正式Runtime／Host・Equipment／Actionは未実装。
 
 Banto基盤を維持し、認証はindustrial側の修正後まで延期する。リリース前のProject互換性を維持するためにモデル変更を避けず、変更時はRust／TypeScript／schema／生成経路・サンプル・検証を揃える。ems-appsの画面・コード・画像は取り込まない。
 

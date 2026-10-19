@@ -1,5 +1,7 @@
 # プレビュー専用の画面内Popup
 
+文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
 2026-10-20（日本時間）。[拡張設計](scada-graphics-runtime-extension-design.md#子ウィンドウ監視画面内popupとview-stack)とAstraの読取専用レビューに従う。**プレビュー専用の読取小窓をUIへ接続済み**。Project0.20.0の保存契約を変更せず、正式RuntimeのPopup／Action完成と区別する。
 
 ## 初期の境界

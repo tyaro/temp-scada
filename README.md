@@ -6,6 +6,7 @@
 - [操作ガイド](docs/user-guide.md): 編集、画像、画面再利用、入力保護、パネルとキー操作。
 - [開発計画](docs/development-plan.md)と[実装履歴](docs/implementation-history.md): 今後と過去を分離。
 - [統合設計](docs/scada-integrated-design.md): 機能仕様の基準。
+- [コードと検証の対応表](docs/code-map.md): 変更対象の責務・入口・関連テスト。
 - [リファクタリング計画](docs/maintenance-refactoring-plan.md): R0〜R5の責務・不変条件・検証と進捗。
 
 ## 起動

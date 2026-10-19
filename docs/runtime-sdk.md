@@ -1,5 +1,7 @@
 # Runtime の SDK 投影境界
 
+文書の位置付け: **現行SDK投影境界の仕様と検証記録。ブラウザの実Hub接続・正式Runtimeは後続。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
+
 2026-10-18。`crates/scada-runtime` は、共有 SDK の読み取り結果を SCADA の表示用データへ変換するライブラリ。Tauri・HTTP サーバー・接続設定 UI・正式な Runtime 起動 mode はまだ実装していない。ブラウザの表示プレビューは引き続き Hub 未接続のまま。
 
 ## 依存と公開 API
