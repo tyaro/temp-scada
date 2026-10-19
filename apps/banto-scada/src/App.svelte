@@ -29,7 +29,7 @@
   import { shapePaintCommand } from "./lib/designer/forms/shape-paint";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
-  import { readProjectFile, writeProjectPackage } from "./lib/project-package";
+  import { createProjectFilesController } from "./lib/designer/controllers/project-files.svelte";
   import BackgroundImageSettings from "./lib/designer/BackgroundImageSettings.svelte";
   import {
     StatusBadge,
@@ -95,8 +95,6 @@
   import { normalizeRotation } from "./lib/rotation";
   import { parseNumericProperty } from "./lib/designer/numeric-properties";
   import { placementLabel } from "./lib/placement-label";
-  import { createProject } from "./lib/new-project";
-  import { projectContent } from "./lib/save-state";
   import { createDraftGuard } from "./lib/designer/drafts.svelte";
   import DraftPrompt from "./lib/designer/DraftPrompt.svelte";
   import BindingReferences from "./lib/designer/BindingReferences.svelte";
@@ -569,7 +567,6 @@
   import {
     parseProject,
     strokeOverflowIds,
-    serializeProject,
     type Point,
     type ScreenObject,
   } from "./lib/project";
@@ -818,13 +815,13 @@
         )
       )
         return;
-      if (key === "n") newProject();
-      else openProjectFile();
+      if (key === "n") projectFiles.newProject();
+      else projectFiles.openProjectFile();
       return;
     }
     if (key === "s") {
       event.preventDefault();
-      if (!busy && !event.repeat) save();
+      if (!busy && !event.repeat) projectFiles.save();
       return;
     }
     if (busy || mode !== "edit" || drafts.pending || replacement) return;
@@ -1314,32 +1311,29 @@
     project.screens.find((item) => item.id === screen.id),
   );
   let message = $state("サンプルを表示しています。Hub には接続していません。");
-  let busy = $state(false);
-  let baseline = $state(untrack(() => projectContent(project)));
-  let baselineSource = $state<"sample" | "file" | "download" | "new">("sample");
-  let lastExport = $state<string | null>(null);
-  let projectChanged = $derived(projectContent(project) !== baseline);
-  let replacement = $state<{
-    project: Project;
-    source: "sample" | "file" | "new";
-    store: AssetStore;
-  } | null>(null);
-
-  let exporting = $state(false);
-  let exportingName = $state("");
-  const saveLabel = $derived(
-    exporting
-      ? `書出し中（${exportingName}）`
-      : projectChanged
-        ? "未書き出しの変更あり"
-        : baselineSource === "download"
-          ? "書き出し要求後の変更なし"
-          : baselineSource === "file"
-            ? "読込後の変更なし"
-            : baselineSource === "new"
-              ? "新しいProject・未書き出し"
-              : "サンプルからの変更なし",
-  );
+  const projectFiles = createProjectFilesController({
+    get project() {
+      return project;
+    },
+    get generation() {
+      return workspaceGeneration;
+    },
+    get store() {
+      return assetStore;
+    },
+    get draftPending() {
+      return !!drafts.pending;
+    },
+    chooseFile: () => projectFileInput?.click(),
+    allow: (run) => drafts.allow(run),
+    adopt,
+    report,
+  });
+  const busy = $derived(projectFiles.busy);
+  const projectChanged = $derived(projectFiles.projectChanged);
+  const replacement = $derived(projectFiles.replacement);
+  const saveLabel = $derived(projectFiles.saveLabel);
+  const lastExport = $derived(projectFiles.lastExport);
   function adopt(
     next: Project,
     source: "sample" | "file" | "new",
@@ -1349,9 +1343,7 @@
     assetStore = store;
     previousStore.dispose();
     project = next;
-    baseline = projectContent(next);
-    baselineSource = source;
-    lastExport = null;
+    projectFiles.adopted(next, source);
     history = emptyHistory();
     referencesExpanded = false;
     layerQuery = "";
@@ -1370,42 +1362,11 @@
           : "Project を読み込みました。",
     );
   }
-  function requestReplacement(
-    next: Project,
-    source: "sample" | "file" | "new",
-    generation = workspaceGeneration,
-    store = new AssetStore(),
-  ) {
-    if (generation !== workspaceGeneration) {
-      store.dispose();
-      return;
-    }
-    if (
-      !drafts.allow(() => requestReplacement(next, source, generation, store))
-    )
-      return;
-    if (projectChanged) replacement = { project: next, source, store };
-    else adopt(next, source, store);
-  }
-  function replaceNow() {
-    const next = replacement;
-    replacement = null;
-    if (next) adopt(next.project, next.source, next.store);
-  }
-  function cancelReplacement() {
-    replacement?.store.dispose();
-    replacement = null;
-  }
-  function newProject() {
-    if (busy || drafts.pending || replacement) return;
-    requestReplacement(createProject(), "new");
-  }
-  function openProjectFile() {
-    if (busy || drafts.pending || replacement) return;
-    projectFileInput?.click();
-  }
   function showProcessSample() {
-    requestReplacement(parseProject(JSON.stringify(processSample)), "sample");
+    projectFiles.requestReplacement(
+      parseProject(JSON.stringify(processSample)),
+      "sample",
+    );
   }
   function beforeLeave(event: BeforeUnloadEvent) {
     if (projectChanged || drafts.dirty) {
@@ -1969,88 +1930,16 @@
     submitForm(event);
   }
 
-  let fileReadRequest = 0;
-  async function load(event: Event) {
+  function load(event: Event) {
     const input = event.currentTarget as HTMLInputElement;
-    const file = input.files?.[0];
-    if (!file || !input.isConnected) return;
-    const generation = workspaceGeneration;
-    const request = ++fileReadRequest;
-    const current = () =>
-      request === fileReadRequest &&
-      generation === workspaceGeneration &&
-      input.isConnected;
-    busy = true;
-    try {
-      const next = await readProjectFile(file);
-      if (!current()) {
-        next.store.dispose();
-        return;
-      }
-      requestReplacement(next.project, "file", generation, next.store);
-    } catch (e) {
-      if (!current()) return;
-      report(
-        "error",
-        `読込エラー: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    } finally {
-      if (request === fileReadRequest) busy = false;
-      if (input.isConnected) input.value = "";
-    }
-  }
-  function save() {
-    if (replacement) {
-      writeProject();
-      return;
-    }
-    if (!drafts.allow(save)) return;
-    writeProject();
-  }
-  async function writeProject() {
-    if (exporting) {
-      report("info", `${exportingName}の書出し中です。完了をお待ちください。`);
-      return;
-    }
-    const snapshot = project,
-      generation = workspaceGeneration,
-      store = assetStore;
-    exportingName = snapshot.manifest.name;
-    exporting = true;
-    try {
-      const packaged = snapshot.assets.length > 0;
-      const blob = packaged
-        ? await writeProjectPackage(snapshot, store)
-        : new Blob([serializeProject(snapshot)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      try {
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = packaged ? "project.bantoscada" : "project.json";
-        link.click();
-      } finally {
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }
-      if (generation === workspaceGeneration) {
-        baseline = projectContent(snapshot);
-        baselineSource = "download";
-        lastExport = new Date().toLocaleTimeString("ja-JP");
-      }
-      report(
-        "success",
-        packaged
-          ? `${snapshot.manifest.name}：画像同梱packageのダウンロードを開始しました。保存先でファイルを確認してください。`
-          : `${snapshot.manifest.name}：Project JSON のダウンロードを開始しました。保存先でファイルを確認してください。`,
-      );
-    } catch (e) {
-      report(
-        "error",
-        `${snapshot.manifest.name}の書き出しエラー: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    } finally {
-      exporting = false;
-      exportingName = "";
-    }
+    void projectFiles.load(input.files?.[0], {
+      get connected() {
+        return input.isConnected;
+      },
+      clear() {
+        input.value = "";
+      },
+    });
   }
   function changeMode(next: "edit" | "preview") {
     transition(() => {
@@ -2871,13 +2760,21 @@
     {
       label: "ファイル",
       items: [
-        { label: "新しいProject", disabled: menuBlocked, run: newProject },
+        {
+          label: "新しいProject",
+          disabled: menuBlocked,
+          run: projectFiles.newProject,
+        },
         {
           label: "Project を開く",
           disabled: menuBlocked,
-          run: openProjectFile,
+          run: projectFiles.openProjectFile,
         },
-        { label: "Project を保存", disabled: menuBlocked, run: save },
+        {
+          label: "Project を保存",
+          disabled: menuBlocked,
+          run: projectFiles.save,
+        },
         {
           label: "画像を配置",
           disabled: editBlocked || !!activeDefinition || imageImport.busy,
@@ -2897,7 +2794,7 @@
           label: "Symbol配色サンプルを開く",
           disabled: menuBlocked,
           run: () =>
-            requestReplacement(
+            projectFiles.requestReplacement(
               parseProject(JSON.stringify(symbolColorSample)),
               "sample",
             ),
@@ -2906,7 +2803,7 @@
           label: "塗りと枠線サンプルを開く",
           disabled: menuBlocked,
           run: () =>
-            requestReplacement(
+            projectFiles.requestReplacement(
               parseProject(JSON.stringify(shapePaintSample)),
               "sample",
             ),
@@ -4173,7 +4070,7 @@ ${object.id}`}
 <Modal
   open={replacement !== null}
   title="Project を置き換えますか"
-  onclose={cancelReplacement}
+  onclose={projectFiles.cancelReplacement}
 >
   <p>
     {#if projectChanged}
@@ -4188,12 +4085,12 @@ ${object.id}`}
     書き出しても自動では置き換えません。ファイルを確認してから「破棄して開く」を選んでください。
   </p>
   <div class="actions">
-    <button onclick={writeProject}
+    <button onclick={projectFiles.write}
       >{project.assets.length
         ? "画像同梱で書き出す"
         : "JSON を書き出す"}</button
-    ><button onclick={replaceNow}>破棄して開く</button><button
-      onclick={cancelReplacement}>キャンセル</button
+    ><button onclick={projectFiles.replaceNow}>破棄して開く</button><button
+      onclick={projectFiles.cancelReplacement}>キャンセル</button
     >
   </div>
 </Modal>

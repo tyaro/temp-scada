@@ -209,7 +209,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R1 文書整理     | 完了         | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理        |
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功        |
 | R3 フォーム契約 | 完了         | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功 |
-| R4 App機能分離  | 作業中       | R4a・R4b完了。画像／clipboardを分離。c〜eは未着手                       |
+| R4 App機能分離  | 作業中       | R4a〜R4c完了。Project読込／保存を分離。d〜eは未着手                     |
 | R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持                                   |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                        |
 
@@ -359,3 +359,26 @@ I1〜I10を維持する構造整理。API対応・許可拒否の案内、予算
 R4b完了。型チェック（エラー／警告なし）、TS全636件、本番ビルド、対象整形、clipboard・原本付きclipboard・画像paste・保存入力保護の関連ブラウザ32件が成功した。失敗時の切取元保持、非同期write中の選択／編集変更、定義の最終子削除拒否、画像の遅延応答、draft確認前のpayload取得を既存の期待値で確認した。移動そのものを写すテストは追加せず、timeout・retry・拒否条件は緩めていない。
 
 保存契約・画面配置・Undo単位は維持し、既存のJS bundle 500kB警告は継続。R3最終`484f794`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39316570142)も成功した。今回のR4bローカル検証とは区別する。次はR4cでProject読込候補・置換要求・書出しsnapshot・busy／保存状態の境界を一覧にし、Project採用と編集状態の一括初期化はAppへ残す。
+
+### R4c：Projectファイル・置換候補・保存基準
+
+基準は`d5fbf0f`、開始時clean。読込request／busy、置換候補、保存baseline／source／lastExport、書出しsnapshotとexportingを`designer/controllers/project-files.svelte.ts`へ移した。AppにはProject・履歴・共有AssetStoreの所有と`adopt`、編集画面の一括初期化、file inputのDOM接続、ネイティブの離脱確認を残す。Appで使うbusy・置換候補・保存表示はcontroller getterへ`$derived`で追従する。
+
+| 境界             | 維持する条件と処理順                                                                                                              |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| chooser／新規    | busy・draft確認中・置換確認中は開始しない。chooser clickは同期。入力なし／未接続inputなら読込を開始しない                         |
+| 読込             | File・Project世代・単調増加requestを捕捉しbusyを立てる。parse／原本検証後に最新request・同一世代・input接続を再確認               |
+| 古い読込／失敗   | 古い成功候補Storeをdisposeし、古い失敗は通知しない。最新requestだけbusy解除。接続中のinputだけ元と同じfinallyでクリア             |
+| 置換候補         | 不正ファイルはdraftへ触れる前に拒否。世代不一致は候補Storeを破棄。draft確認後、未保存の内容があれば置換確認へ進む                 |
+| 採用             | AppでStore交換→旧Store破棄→Project代入→`adopted`で保存基準確定→履歴・画面状態初期化→世代更新→通知。旧baseline更新の位置を変えない |
+| 置換確定／取消   | 候補参照を外してからApp採用へ渡す。取消は候補Storeをdispose。書出しだけで自動採用しない                                           |
+| 書出し開始       | 同時exportを拒否し、開始時のProject／世代／Storeと名前を捕捉。JSON／原本付きpackageの既存writerを使用                             |
+| ダウンロード要求 | object URLを作成してlink click。1秒後revokeも既存のまま。要求成功と保存先での実ファイル確認を区別                                 |
+| 保存基準         | 成功時、同一世代なら書出しsnapshotをbaselineにする。書出し開始後の編集は未保存として残し、別Projectへ旧baselineを適用しない       |
+| 書出し失敗       | baselineを変更せず名前付きエラーを通知。finallyでexportingと表示名を解除                                                          |
+
+I1〜I10を維持する構造整理。read targetはinputの接続getterとclear callbackだけを受け取り、controllerはDOM描画や入力の再生成を所有しない。Astraの実差分レビューで、候補の寿命・busy・input接続・write snapshot・世代照合・baseline通知順に修正要求なし。候補破棄や保存形式の改善を同時には行わない。
+
+R4c完了。型チェック（エラー／警告なし）、TS全636件、本番ビルド、対象整形とProject・新規・保存入力保護・native画像・小窓・全画面・背景・clipboardの関連ブラウザ48件が成功した。古い読込より新しい要求が優先されること、原本付き書出し中の後続編集が未保存として残ること、失敗時の現在Project保持、Project置換時の小窓／全画面終了を確認した。
+
+保存形式・採用順序・Undo単位は維持し、既存のJS bundle 500kB警告は継続する。次はR4dのレイヤー分離。先に一覧markupと所有CSSを`LayerTree.svelte`へ移し、Appの状態・編集接続を維持した表示の区切りで検証する。その後に検索・展開・drag・folder dialogの状態を移し、R4d全体の完了と区別する。
