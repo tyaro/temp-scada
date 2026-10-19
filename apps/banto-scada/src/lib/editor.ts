@@ -72,6 +72,12 @@ export type ObjectCommand = (
       objectIds: string[];
       axis: "x" | "y";
     }
+  | {
+      type: "set-line-style";
+      screenId: string;
+      objectIds: string[];
+      patch: { strokeWidth?: number; arrow?: "none" | "end" };
+    }
   | { type: "set-color"; screenId: string; objectIds: string[]; fill: string }
   | {
       type: "set-visibility";
@@ -165,6 +171,7 @@ export function isObjectCommand(
     "set-folder",
     "distribute",
     "set-color",
+    "set-line-style",
     "set-visibility",
     "set-lock",
     "paste",
@@ -496,6 +503,7 @@ export function applyCommand(
     command.type === "set-folder" ||
     command.type === "distribute" ||
     command.type === "set-color" ||
+    command.type === "set-line-style" ||
     command.type === "move-many" ||
     command.type === "duplicate-many" ||
     command.type === "remove-many" ||
@@ -509,7 +517,39 @@ export function applyCommand(
       .sort((a, b) => a.order - b.order);
     if (objects.length !== ids.size)
       throw new Error("選択した図形が見つかりません");
-    if (command.type === "set-folder") {
+    if (command.type === "set-line-style") {
+      if (
+        !command.patch ||
+        typeof command.patch !== "object" ||
+        Array.isArray(command.patch) ||
+        Object.keys(command.patch).some(
+          (key) => !["strokeWidth", "arrow"].includes(key),
+        )
+      )
+        throw new Error("線・配管のスタイル指定が不正です");
+      const { strokeWidth, arrow } = command.patch;
+      if (
+        strokeWidth !== undefined &&
+        (typeof strokeWidth !== "number" ||
+          !Number.isFinite(strokeWidth) ||
+          strokeWidth <= 0 ||
+          strokeWidth > 64)
+      )
+        throw new Error(
+          "線幅は0より大きく64以下の有限の数値で指定してください",
+        );
+      if (arrow !== undefined && arrow !== "none" && arrow !== "end")
+        throw new Error("矢印はなし・終端のいずれかで指定してください");
+      if (objects.some((object) => object.shape.type !== "polyline"))
+        throw new Error(
+          "線・配管だけを選択してください。選択内の線だけを暗黙に変更しません。",
+        );
+      for (const object of objects)
+        if (object.shape.type === "polyline") {
+          if (strokeWidth !== undefined) object.shape.strokeWidth = strokeWidth;
+          if (arrow !== undefined) object.shape.arrow = arrow;
+        }
+    } else if (command.type === "set-folder") {
       if (
         command.folderId !== null &&
         !screen.folders.some((folder) => folder.id === command.folderId)

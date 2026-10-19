@@ -61,6 +61,7 @@
   import { untrack, tick, flushSync } from "svelte";
   import { selectionNudge } from "./lib/keyboard-move";
   import { copyObjects, parseClipboard } from "./lib/clipboard";
+  import { parseNumericProperty } from "./lib/designer/numeric-properties";
   import { placementLabel } from "./lib/placement-label";
   import { createProject } from "./lib/new-project";
   import { projectContent } from "./lib/save-state";
@@ -1337,6 +1338,12 @@
     }
   }
   function acknowledgeForm(form: HTMLFormElement) {
+    if (form.dataset.editorForm === "selection-line") {
+      const width = form.elements.namedItem("strokeWidth"),
+        arrow = form.elements.namedItem("arrow");
+      if (width instanceof HTMLInputElement) width.value = "";
+      if (arrow instanceof HTMLSelectElement) arrow.value = "";
+    }
     if (form.dataset.editorForm === "selection-color") {
       const input = form.elements.namedItem("fill");
       if (input instanceof HTMLInputElement) input.value = "";
@@ -1607,12 +1614,18 @@
   }
   function formCommand(form: HTMLFormElement): EditCommand {
     const data = new FormData(form);
-    if (form.dataset.editorForm === "selection-color") {
+    if (
+      ["selection-color", "selection-line"].includes(
+        form.dataset.editorForm ?? "",
+      )
+    ) {
       if (
         form.dataset.targetKey !==
         `${workspaceGeneration}:${screen.id}:${!!activeDefinition}`
       )
-        throw new Error("色の適用先が変更されています。選択し直してください。");
+        throw new Error(
+          "スタイルの適用先が変更されています。選択し直してください。",
+        );
       const ids: unknown = JSON.parse(form.dataset.objectIds ?? "[]");
       if (
         !Array.isArray(ids) ||
@@ -1620,8 +1633,25 @@
         ids.some((id) => typeof id !== "string" || !selectedIds.includes(id))
       )
         throw new Error(
-          "色の適用対象が変更されています。選択し直してください。",
+          "スタイルの適用対象が変更されています。選択し直してください。",
         );
+      if (form.dataset.editorForm === "selection-line") {
+        const width = String(data.get("strokeWidth") ?? ""),
+          arrow = String(data.get("arrow") ?? "");
+        if (arrow !== "" && arrow !== "none" && arrow !== "end")
+          throw new Error("矢印の指定が不正です。");
+        return {
+          type: "set-line-style",
+          screenId: screen.id,
+          objectIds: ids as string[],
+          patch: {
+            ...(width === ""
+              ? {}
+              : { strokeWidth: parseNumericProperty(width) }),
+            ...(arrow === "" ? {} : { arrow }),
+          },
+        };
+      }
       return {
         type: "set-color",
         screenId: screen.id,

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { placementLabel } from "../placement-label";
   import SelectionColor from "./SelectionColor.svelte";
+  import SelectionLine from "./SelectionLine.svelte";
   import TagPicker from "./TagPicker.svelte";
   import {
     sampleCatalog,
@@ -355,6 +356,18 @@
           {drafts}
           onsubmit={properties}
         />
+        <SelectionLine
+          objects={screen.objects.filter((object) =>
+            selectedIds.includes(object.id),
+          )}
+          hiddenCount={hiddenSelectionCount}
+          locked={selectionLocked}
+          definition={activeDefinition}
+          targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+          objectIds={selectedIds}
+          {drafts}
+          onsubmit={properties}
+        />
       {/key}
     {:else if selected}
       {#key `${generation}:${screen.id}:${selected.id}`}
@@ -601,6 +614,10 @@
     display: none;
   }
   .panel-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--banto-surface);
     display: flex;
     align-items: center;
     justify-content: space-between;
