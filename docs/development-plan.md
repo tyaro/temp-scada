@@ -33,6 +33,12 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+<a id="image-crop-foundation-progress"></a>
+
+## 配置画像トリミングの計算基盤（2026-10-20・日本時間）
+
+[具体設計](image-crop-design.md)へAstraレビューを反映し、EXIF適用後の原本に対する割合・1px下限・浮動小数点境界と元画素viewBoxの計算を追加した。7件の単体試験と型チェック（エラー／警告なし）が成功。原本と入力を変更せず、全範囲を省略へ正規化する。Project0.20.0・描画・UIはこの区切りでは変更せず、保存契約と編集フォームへの接続を次に進める。
+
 <a id="image-replacement-progress"></a>
 
 ## 配置画像の差し替え（2026-10-20・日本時間）
