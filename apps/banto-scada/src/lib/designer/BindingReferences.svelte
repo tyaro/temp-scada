@@ -12,6 +12,7 @@
     expanded = $bindable(false),
     sized = false,
     onbeforetoggle,
+    onaftertoggle,
   }: {
     references: BindingReference[];
     onopen: (usage: BindingUsage) => void;
@@ -19,7 +20,9 @@
     expanded?: boolean;
     sized?: boolean;
     onbeforetoggle?: () => void;
+    onaftertoggle?: () => void;
   } = $props();
+  let togglePending = false;
   let search = $state("");
   const filtered = $derived(searchReferences(references, search));
   const usageCount = $derived(
@@ -28,8 +31,24 @@
 </script>
 
 {#if references.length}
-  <details class="references" class:sized bind:open={expanded}>
-    <summary onclick={onbeforetoggle}
+  <details
+    class="references"
+    class:sized
+    bind:open={expanded}
+    ontoggle={(event) => {
+      // Native details toggles are queued separately from the summary click.
+      expanded = event.currentTarget.open;
+      if (togglePending) {
+        togglePending = false;
+        onaftertoggle?.();
+      }
+    }}
+  >
+    <summary
+      onclick={() => {
+        togglePending = true;
+        onbeforetoggle?.();
+      }}
       >Project のタグ参照 · {references.length} タグ / {usageCount} 配置</summary
     >
     <section aria-label="Project のタグ参照">

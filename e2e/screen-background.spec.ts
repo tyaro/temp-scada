@@ -3,7 +3,10 @@ import { readFile } from "node:fs/promises";
 import { chooseTheme, selectPanel } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
-const paper = (page: Page) => page.locator("[data-screen-background]");
+const paper = (page: Page) =>
+  page
+    .getByRole("region", { name: "キャンバス操作領域", exact: true })
+    .locator("[data-screen-background]");
 async function start(page: Page) {
   await page.goto("/");
   await button(page, "工程図サンプルを開く").click();

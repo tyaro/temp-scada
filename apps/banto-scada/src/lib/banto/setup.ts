@@ -110,6 +110,22 @@ export async function setFavorites(value: string[]): Promise<void> {
     );
   }
 }
+const MINIMAP_KEY = "scada.designer.minimap";
+let minimapVisible = true;
+export function getMinimapVisible() {
+  return minimapVisible;
+}
+export async function setMinimapVisible(visible: boolean) {
+  minimapVisible = visible;
+  try {
+    await uiSettings.set(MINIMAP_KEY, String(visible));
+  } catch {
+    toastStore.push(
+      "warning",
+      "ミニマップの設定を保存できません。このタブだけに適用します。",
+    );
+  }
+}
 const MENUBAR_KEY = "scada.designer.menubar";
 export function getMenubarVisible(): boolean {
   return menubarVisible;
@@ -205,6 +221,14 @@ export async function initializeBanto(): Promise<() => void> {
     toastStore.push(
       "warning",
       "お気に入りを読み込めません。初期配置を使います。",
+    );
+  }
+  try {
+    minimapVisible = (await uiSettings.get(MINIMAP_KEY)) !== "false";
+  } catch {
+    toastStore.push(
+      "warning",
+      "ミニマップの設定を読み込めません。初期表示を使います。",
     );
   }
   return watchSystemTheme(() => {

@@ -15,6 +15,8 @@
     setReferenceHeight,
     setPanelWidths,
     setThemeMode,
+    getMinimapVisible,
+    setMinimapVisible,
     getMenubarVisible,
     setMenubarVisible,
     toastStore,
@@ -24,6 +26,12 @@
   } from "./lib/designer/DesignerMenubar.svelte";
   import { settleMenuFocus } from "./lib/designer/settle-menu-focus";
   let theme = $state(getThemeMode());
+  let showMinimap = $state(getMinimapVisible());
+  function toggleMinimap() {
+    canvasWorkspace?.preparePanelResize();
+    showMinimap = !showMinimap;
+    void setMinimapVisible(showMinimap);
+  }
   let showMenubar = $state(getMenubarVisible());
   let projectFileInput: HTMLInputElement;
   let helpOpen = $state(false);
@@ -61,6 +69,7 @@
     type CanvasView,
     type CanvasContext,
   } from "./lib/designer/CanvasWorkspace.svelte";
+  import Minimap from "./lib/designer/Minimap.svelte";
   import ScreenTabs from "./lib/designer/ScreenTabs.svelte";
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
   import TreeSection from "./lib/designer/TreeSection.svelte";
@@ -499,6 +508,7 @@
   let history = $state<EditHistory>(emptyHistory());
   let workspaceGeneration = $state(0);
   let canvasWorkspace = $state<{
+    centerOn: (point: Point) => void;
     visibleCenter: () => Point;
     revealObject: (id: string) => void;
     preparePanelResize: (continuous?: boolean) => void;
@@ -512,6 +522,7 @@
     zoom: null,
     scale: 1,
     fit: 1,
+    bounds: { x: 0, y: 0, width: 1, height: 1 },
   });
   let showGrid = $state(false),
     snapEnabled = $state(false),
@@ -1561,6 +1572,11 @@
           run: () => setInspectorVisibility(!showInspector, true),
         },
         {
+          label: showMinimap ? "ミニマップを隠す" : "ミニマップを表示",
+          disabled: mode !== "edit",
+          run: toggleMinimap,
+        },
+        {
           label: "お気に入りを標準に戻す",
           run: resetFavorites,
         },
@@ -2188,19 +2204,32 @@
         </div>
       {/if}
       {#if mode === "edit" && (showSidebar || showInspector || showReferences)}
-        <FavoritesDock
-          items={favoriteItems}
-          {positionPlacement}
-          {isArmed}
-          onarm={armPart}
-          onimmediate={placeFavorite}
-          contextKey={`${contextScope}:${favoriteKeys.join(",")}`}
-          onplace={choosePart}
-          onremove={toggleFavorite}
-          onbrowse={browseParts}
-          onstartdrag={beginPartDrag}
-          onenddrag={() => (paletteDrag = null)}
-        />
+        <div class="canvas-navigation" class:has-map={showMinimap}>
+          <FavoritesDock
+            items={favoriteItems}
+            {positionPlacement}
+            {isArmed}
+            onarm={armPart}
+            onimmediate={placeFavorite}
+            contextKey={`${contextScope}:${favoriteKeys.join(",")}`}
+            onplace={choosePart}
+            onremove={toggleFavorite}
+            onbrowse={browseParts}
+            onstartdrag={beginPartDrag}
+            onenddrag={() => (paletteDrag = null)}
+          />
+          {#if showMinimap}
+            {#key `${workspaceGeneration}:${screen.id}`}
+              <Minimap
+                {screen}
+                symbols={project.symbols}
+                view={canvasView}
+                oncenter={(point) => canvasWorkspace?.centerOn(point)}
+                onfit={() => canvasWorkspace?.zoom(null)}
+              />
+            {/key}
+          {/if}
+        </div>
       {/if}
       <p role="status" data-testid="project-status">{message}</p>
       {#if mode === "edit"}
@@ -2237,7 +2266,8 @@
             <BindingReferences
               bind:expanded={referencesExpanded}
               sized={canSizeReferences && referencesExpanded}
-              onbeforetoggle={() => canvasWorkspace?.preparePanelResize()}
+              onbeforetoggle={() => canvasWorkspace?.preparePanelResize(true)}
+              onaftertoggle={() => canvasWorkspace?.finishPanelResize()}
               {references}
               onopen={openBinding}
               onclose={() =>
@@ -2356,6 +2386,23 @@
 <ToastHost store={toastStore} />
 
 <style>
+  .canvas-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    padding-right: 8px;
+  }
+  .canvas-navigation > :global(.favorites-dock) {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: calc(100% - 24px);
+  }
+  .canvas-navigation.has-map > :global(.favorites-dock) {
+    max-width: calc(100% - 160px);
+  }
+
   :global(#app) {
     display: flex;
     flex-direction: column;

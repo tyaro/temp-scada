@@ -19,7 +19,9 @@ test("assigns a read-only tag, shows disconnected in editor and preview, and pre
   const name = "PLC01.Fast.Tank01.Level";
   await input.fill(name);
   await button("変更を適用").click();
-  const tag = page.locator("text[data-tag-name]");
+  const tag = page
+    .getByRole("region", { name: "キャンバス操作領域", exact: true })
+    .locator("text[data-tag-name]");
   await expect(tag).toHaveAttribute("data-tag-name", name);
   await expect(tag).toHaveAttribute("data-tag-state", "disconnected");
   await expect(tag).toContainText("-- · 未接続");
@@ -102,10 +104,11 @@ test("invalid assignment retains the input and selection, and invalid imported b
   await expect(input).toHaveValue("   ");
   await input.fill("PLC01.計測.槽1.温度");
   await button("変更を適用").click();
-  await expect(page.locator("text[data-tag-name]")).toHaveAttribute(
-    "data-tag-name",
-    "PLC01.計測.槽1.温度",
-  );
+  await expect(
+    page
+      .getByRole("region", { name: "キャンバス操作領域", exact: true })
+      .locator("text[data-tag-name]"),
+  ).toHaveAttribute("data-tag-name", "PLC01.計測.槽1.温度");
 });
 
 test("the standalone binding sample loads without a Hub and keeps static shapes visible", async ({
@@ -122,9 +125,11 @@ test("the standalone binding sample loads without a Hub and keeps static shapes 
       .getByRole("img", { name: "タグ表示（Hub 未接続）", exact: true })
       .locator("[data-object-id]"),
   ).toHaveCount(3);
-  await expect(page.locator("text[data-tag-name]")).toContainText(
-    "-- · 未接続",
-  );
+  await expect(
+    page
+      .getByRole("region", { name: "キャンバス操作領域", exact: true })
+      .locator("text[data-tag-name]"),
+  ).toContainText("-- · 未接続");
   await expect(
     page.getByRole("button", { name: "Hub 接続", exact: true }),
   ).toHaveCount(0);

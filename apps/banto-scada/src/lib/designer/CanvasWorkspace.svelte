@@ -10,6 +10,7 @@
     zoom: number | null;
     scale: number;
     fit: number;
+    bounds: { x: number; y: number; width: number; height: number };
   };
 </script>
 
@@ -215,6 +216,12 @@
       zoom: editable ? (stored?.zoom ?? null) : null,
       scale,
       fit,
+      bounds: {
+        x: ((stored?.left ?? 0) - layout.x) / scale,
+        y: ((stored?.top ?? 0) - layout.y) / scale,
+        width: size.width / scale,
+        height: size.height / scale,
+      },
     };
     untrack(() => onviewchange(view));
   });
@@ -264,6 +271,12 @@
       element.scrollTop = editing && state?.zoom != null ? state.top : 0;
     });
   });
+  export function centerOn(center: Point) {
+    if (!editable || !viewport || stored?.zoom == null) return;
+    cancelPlacementPointer();
+    resizeAnchor = null;
+    restoreCenter(center);
+  }
   export function visibleCenter(): Point {
     return {
       x: ((viewport?.scrollLeft ?? 0) + size.width / 2 - layout.x) / scale,

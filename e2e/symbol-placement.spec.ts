@@ -114,14 +114,18 @@ test("deep copies a definition for one placement, edits it independently and und
   await button("Rectangle を追加").click();
   await button("画面へ戻る").click();
   await expect(
-    page.locator(`[data-symbol-id="${uniqueSymbol}"] > g`),
+    page
+      .getByRole("region", { name: "キャンバス操作領域", exact: true })
+      .locator(`[data-symbol-id="${uniqueSymbol}"] > g`),
   ).toHaveCount(originalCount + 1);
   await selectPanel(page, "プロジェクト");
   await screens
     .getByRole("button", { name: "プロセス画面", exact: true })
     .click();
   await expect(
-    page.locator(`[data-symbol-id="${originalSymbol}"] > g`),
+    page
+      .getByRole("region", { name: "キャンバス操作領域", exact: true })
+      .locator(`[data-symbol-id="${originalSymbol}"] > g`),
   ).toHaveCount(originalCount);
   const downloading = page.waitForEvent("download");
   await button("Project JSON を保存").click();
@@ -140,6 +144,8 @@ test("deep copies a definition for one placement, edits it independently and und
     .getByRole("button", { name: "プロセス画面 コピー", exact: true })
     .click();
   await expect(
-    page.locator(`[data-symbol-id="${uniqueSymbol}"] > g`),
+    page
+      .getByRole("region", { name: "キャンバス操作領域", exact: true })
+      .locator(`[data-symbol-id="${uniqueSymbol}"] > g`),
   ).toHaveCount(originalCount + 1);
 });
