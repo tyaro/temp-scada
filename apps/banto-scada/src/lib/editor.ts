@@ -90,6 +90,12 @@ export type ObjectCommand = (
       asset: ImageAsset;
       frame: { x: number; y: number; width: number; height: number };
     }
+  | {
+      type: "replace-image";
+      screenId: string;
+      objectId: string;
+      asset: ImageAsset;
+    }
   | { type: "reset-image-ratio"; screenId: string; objectId: string }
   | {
       type: "create-folder";
@@ -228,6 +234,7 @@ export function isObjectCommand(
     "add-image",
     "add-screen-view",
     "reset-image-ratio",
+    "replace-image",
     "create-folder",
     "rename-folder",
     "move-folder",
@@ -1041,7 +1048,12 @@ export function applyCommand(
   } else {
     const index = screen.objects.findIndex((o) => o.id === command.objectId);
     if (index < 0) throw new Error("図形が見つかりません");
-    if (command.type === "reset-image-ratio") {
+    if (command.type === "replace-image") {
+      const object = screen.objects[index];
+      if (definitionId || object.shape.type !== "image")
+        throw new Error("画面上の画像配置だけを差し替えられます。");
+      object.shape.assetId = registerAsset(next, command.asset);
+    } else if (command.type === "reset-image-ratio") {
       const object = screen.objects[index];
       if (!("width" in object) || object.shape.type !== "image")
         throw new Error("画像配置だけを元比率に戻せます");

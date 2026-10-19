@@ -1222,6 +1222,66 @@
   let imageReadRequest = 0;
   let imageBusy = $state(false);
 
+  let replacementImageInput: HTMLInputElement;
+  let replacementImageEpoch = 0;
+  let replacementImageIntent: {
+    generation: number;
+    owner: string;
+    objectId: string;
+    assetId: string;
+    epoch: number;
+  } | null = null;
+  function openImageReplacement(objectId: string) {
+    if (
+      mode !== "edit" ||
+      activeDefinition ||
+      busy ||
+      imageBusy ||
+      replacement ||
+      selected?.id !== objectId ||
+      selected.shape.type !== "image" ||
+      selected.locked
+    )
+      return;
+    replacementImageIntent = {
+      generation: workspaceGeneration,
+      owner: screen.id,
+      objectId,
+      assetId: selected.shape.assetId,
+      epoch: replacementImageEpoch,
+    };
+    replacementImageInput.value = "";
+    replacementImageInput.click();
+  }
+  function replaceImageFile(event: Event) {
+    const file = (event.currentTarget as HTMLInputElement).files?.[0],
+      intent = replacementImageIntent;
+    replacementImageIntent = null;
+    if (!file || !intent) return;
+    const current = () =>
+      intent.generation === workspaceGeneration &&
+      intent.owner === screen.id &&
+      intent.epoch === replacementImageEpoch &&
+      mode === "edit" &&
+      !activeDefinition &&
+      !busy &&
+      !replacement &&
+      selected?.id === intent.objectId &&
+      selected.shape.type === "image" &&
+      selected.shape.assetId === intent.assetId &&
+      !selected.locked;
+    if (!current()) return;
+    transition(() => {
+      if (current())
+        void prepareImage(
+          file,
+          intent.generation,
+          intent.owner,
+          undefined,
+          intent,
+        );
+    });
+  }
   let placementFileInput: HTMLInputElement;
   let placementIntent: {
     generation: number;
@@ -1293,6 +1353,7 @@
       bounds: typeof canvasView.bounds;
       size: { width: number; height: number };
     },
+    replacing?: { objectId: string; assetId: string; epoch: number },
   ) {
     const request = ++imageReadRequest,
       candidate = new AssetStore();
@@ -1303,7 +1364,13 @@
       !activeDefinition &&
       !busy &&
       !replacement &&
-      mode === "edit";
+      mode === "edit" &&
+      (!replacing ||
+        (replacing.epoch === replacementImageEpoch &&
+          selected?.id === replacing.objectId &&
+          selected.shape.type === "image" &&
+          selected.shape.assetId === replacing.assetId &&
+          !selected.locked));
     imageBusy = true;
     try {
       const metadata = await candidate.put(file, file.name);
@@ -1322,6 +1389,15 @@
             (asset) => asset.sha256 === metadata.sha256,
           );
           const asset = existing ?? { ...metadata, id: newId() };
+          if (replacing) {
+            edit({
+              type: "replace-image",
+              screenId: owner,
+              objectId: replacing.objectId,
+              asset,
+            });
+            return;
+          }
           if (placement) {
             const frame = initialImageFrame(
               metadata,
@@ -1688,6 +1764,17 @@
     notify(kind, text);
   }
   let selected = $derived(screen.objects.find((o) => o.id === selectedId));
+  const replacementImageScope = $derived(
+    `${workspaceGeneration}:${screen.id}:${mode}:${!!activeDefinition}:${selectedIds.join(",")}:${selected?.shape.type}:${selected?.shape.type === "image" ? selected.shape.assetId : ""}:${!!selected?.locked}:${selected?.visible}`,
+  );
+  $effect(() => {
+    replacementImageScope;
+    untrack(() => {
+      replacementImageEpoch++;
+      replacementImageIntent = null;
+    });
+  });
+
   function rotateSelection(delta: number) {
     if (mutationBlocked || !selectedId) return;
     const id = selectedId,
@@ -3537,6 +3624,15 @@
 >
 <input
   hidden
+  aria-label="差し替える画像を選択"
+  bind:this={replacementImageInput}
+  type="file"
+  accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+  onchange={replaceImageFile}
+  oncancel={() => (replacementImageIntent = null)}
+/>
+<input
+  hidden
   aria-label="配置する画像を選択"
   bind:this={placementFileInput}
   type="file"
@@ -4493,6 +4589,8 @@ ${object.id}`}
       {edit}
       {openDefinition}
       {openScreen}
+      onreplaceimage={openImageReplacement}
+      imageBusy={imageBusy || busy || !!replacement}
     />
   {/if}
   {#if mode === "edit" && windowWidth >= 1100}

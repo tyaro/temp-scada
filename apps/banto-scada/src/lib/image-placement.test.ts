@@ -261,3 +261,140 @@ it("initial placement shrinks to the visible intersection, never upscales and fa
     ),
   ).toEqual({ x: 460, y: 260, width: 40, height: 20 });
 });
+
+it("replaces only one placement's original, retaining its geometry and other references, with one Undo", () => {
+  let { project, screenId } = fixture();
+  const id = project.screens[0].objects[0].id;
+  project = applyCommand(
+    project,
+    {
+      type: "update",
+      screenId,
+      objectId: id,
+      patch: { name: "制御盤写真", rotation: 31, opacity: 0.45 },
+    },
+    "edit",
+  );
+  project = applyCommand(
+    project,
+    { type: "duplicate", screenId, objectId: id },
+    "edit",
+  );
+  project = applyCommand(
+    project,
+    {
+      type: "set-background-image",
+      screenId,
+      image: { assetId: asset.id, fit: "cover", opacity: 0.6 },
+    },
+    "edit",
+  );
+  const before = structuredClone(project),
+    original = before.screens[0].objects[0],
+    replacement = {
+      ...asset,
+      id: newId(),
+      sha256: "1".repeat(64),
+      name: "新しい写真.png",
+      width: 100,
+      height: 400,
+    };
+  const result = recordEdit(
+    project,
+    emptyHistory(),
+    { type: "replace-image", screenId, objectId: id, asset: replacement },
+    "edit",
+  );
+  expect(result.project.screens[0].objects[0]).toEqual({
+    ...original,
+    shape: { ...original.shape, assetId: replacement.id },
+  });
+  expect(result.project.screens[0].objects[1]).toEqual(
+    before.screens[0].objects[1],
+  );
+  expect(result.project.screens[0].backgroundImage).toEqual(
+    before.screens[0].backgroundImage,
+  );
+  expect(result.project.assets).toEqual([asset, replacement]);
+  expect(result.history.past).toHaveLength(1);
+  expect(project).toEqual(before);
+  const undo = travelHistory(result.project, result.history, "undo", "edit");
+  expect(undo.project.screens).toEqual(before.screens);
+  expect(undo.project.assets).toEqual(before.assets);
+  const redo = travelHistory(undo.project, undo.history, "redo", "edit");
+  expect(redo.project.screens).toEqual(result.project.screens);
+  expect(redo.project.assets).toEqual(result.project.assets);
+});
+it("replacement prunes an unused old declaration; same hash replacement is a no-op, independent of filename", () => {
+  const { project, screenId } = fixture(),
+    id = project.screens[0].objects[0].id;
+  expect(
+    applyCommand(
+      project,
+      {
+        type: "replace-image",
+        screenId,
+        objectId: id,
+        asset: { ...asset, id: newId(), name: "別名.png" },
+      },
+      "edit",
+    ),
+  ).toBe(project);
+  const replacement = {
+    ...asset,
+    id: newId(),
+    sha256: "2".repeat(64),
+    width: 120,
+    height: 200,
+  };
+  const next = applyCommand(
+    project,
+    { type: "replace-image", screenId, objectId: id, asset: replacement },
+    "edit",
+  );
+  expect(next.assets).toEqual([replacement]);
+  expect(referencedAssets(next)).toEqual(new Set([replacement.id]));
+  const reset = applyCommand(
+    next,
+    { type: "reset-image-ratio", screenId, objectId: id },
+    "edit",
+  );
+  expect((reset.screens[0].objects[0] as LayoutObject).height).toBeCloseTo(
+    (frame.width * 200) / 120,
+  );
+});
+it("rejects invalid, locked, non-image and preview replacement without changing input", () => {
+  const { project, screenId } = fixture(),
+    id = project.screens[0].objects[0].id,
+    before = structuredClone(project),
+    command = {
+      type: "replace-image" as const,
+      screenId,
+      objectId: id,
+      asset: { ...asset, id: newId(), sha256: "3".repeat(64) },
+    };
+  expect(() => applyCommand(project, command, "preview")).toThrow();
+  expect(() =>
+    applyCommand(
+      project,
+      { ...command, asset: { ...command.asset, width: 0 } },
+      "edit",
+    ),
+  ).toThrow();
+  const locked = applyCommand(
+    project,
+    { type: "set-lock", screenId, objectId: id, locked: true },
+    "edit",
+  );
+  expect(() => applyCommand(locked, command, "edit")).toThrow("ロック");
+  const withRectangle = applyCommand(
+    project,
+    { type: "add", screenId, kind: "rectangle" },
+    "edit",
+  );
+  const rectangle = withRectangle.screens[0].objects.at(-1)!;
+  expect(() =>
+    applyCommand(withRectangle, { ...command, objectId: rectangle.id }, "edit"),
+  ).toThrow("画像配置だけ");
+  expect(project).toEqual(before);
+});

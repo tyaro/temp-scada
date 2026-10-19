@@ -44,6 +44,8 @@
     edit,
     openDefinition,
     openScreen,
+    onreplaceimage,
+    imageBusy,
   }: {
     element?: HTMLElement;
     visible: boolean;
@@ -70,6 +72,8 @@
     edit: (command: EditCommand) => boolean;
     openDefinition: (id: string) => void;
     openScreen: (id: string) => void;
+    onreplaceimage: (id: string) => void;
+    imageBusy: boolean;
   } = $props();
   const selectedColors = $derived(
     new Set(
@@ -534,6 +538,12 @@
                 原本：{asset.name} · {asset.width} × {asset.height} px<br
                 />画像は枠内で元比率を保ちます。余白も選択範囲に含みます。
               </p>
+              <button
+                type="button"
+                disabled={imageBusy}
+                onclick={() => selected && onreplaceimage(selected.id)}
+                >画像を差し替え…</button
+              >
               <button
                 type="button"
                 onclick={() =>

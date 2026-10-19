@@ -33,6 +33,16 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+<a id="image-replacement-progress"></a>
+
+## 配置画像の差し替え（2026-10-20・日本時間）
+
+[具体設計](image-placement-design.md#image-replacement)に従い、プロパティから選択配置のPNG／JPEGを差し替える操作を接続した。配置枠・名前・回転・opacity等を保ち、別配置と背景が共有する元原本を変更しない。同じ内容の別名ファイルはno-opとし、旧資産は現在参照がなくなっても履歴で必要な間保持する。保存形式は0.20.0を維持する。
+
+未適用入力を保護し、読込中の選択・モード・画面・Project・元asset・ロックの変化で古い要求を破棄する。元の状態へ戻っても復活させない。Symbol定義・非Image・ロック・プレビューからの変更はコマンドでも拒否する。トリミング・cover／stretch・Symbol内画像は後続。
+
+検証: TS全602件、型チェック（エラー／警告なし）、本番ビルドが成功。画像差し替え7件と配置・背景の関連ブラウザ計23件を確認した（旧案内文を期待していた1件は期待値更新後に再実行して成功）。全499件の再実行ではない。共有原本・履歴・同梱保存、両テーマ、未適用入力と遅延取込の破棄を確認した。既存のビルドサイズ警告は継続している。
+
 <a id="preview-fullscreen-progress"></a>
 
 ## ブラウザ全画面での表示確認（2026-10-20・日本時間）
@@ -1263,7 +1273,7 @@ schema 0.3.0 は変更しない。未存在の定義・Symbol 以外の配置・
 
 ## 次の実装順
 
-[Image配置の最小設計](image-placement-design.md)へAstraレビューを反映し、背景との原本共有・画像枠・contain・比率復帰・画像混在clipboardの明示拒否を0.17.0で実装した（[記録](#image-placement-progress)）。OS画像貼付も追加した（[記録](#image-paste-progress)）。図形と画像の同時clipboardも追加した（[記録](#asset-clipboard-progress)）。[線形グラデーション](linear-gradient-design.md)のpaint再編と共通描画も0.18.0で追加した（[記録](#linear-gradient-progress)）。[繰返しpattern](pattern-paint-design.md)も0.19.0で追加した（[記録](#pattern-paint-progress)）。[埋込View](embedded-screen-design.md)は0.20.0で同一Project・1段の読取表示を接続した。[プレビュー専用Popup](preview-popup-design.md)も接続した。画像差替え・トリミング、Viewのclipboard・設備のFaceplate・正式RuntimeのPopupは後続。
+[Image配置の最小設計](image-placement-design.md)へAstraレビューを反映し、背景との原本共有・画像枠・contain・比率復帰・画像混在clipboardの明示拒否を0.17.0で実装した（[記録](#image-placement-progress)）。OS画像貼付も追加した（[記録](#image-paste-progress)）。図形と画像の同時clipboardも追加した（[記録](#asset-clipboard-progress)）。[線形グラデーション](linear-gradient-design.md)のpaint再編と共通描画も0.18.0で追加した（[記録](#linear-gradient-progress)）。[繰返しpattern](pattern-paint-design.md)も0.19.0で追加した（[記録](#pattern-paint-progress)）。[埋込View](embedded-screen-design.md)は0.20.0で同一Project・1段の読取表示を接続した。[プレビュー専用Popup](preview-popup-design.md)も接続した。[配置画像の差し替え](image-placement-design.md#image-replacement)も追加した。トリミング、Viewのclipboard・設備のFaceplate・正式RuntimeのPopupは後続。
 
 [レイヤーフォルダーの設計](layer-folders-design.md)に、整理用フォルダーを幾何グループから分離した保存契約・操作・受入条件を具体化した。保存契約・検証・編集コマンドは0.8.0で実装した（[記録](#layer-folder-model-progress)）。階層UI・検索・所属変更も後続で実装した（[記録](#layer-folder-ui-progress)）。幾何グループの完了は意味しない。
 
