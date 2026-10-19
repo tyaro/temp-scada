@@ -25,6 +25,10 @@
     onduplicate,
     isFavorite,
     ontoggleFavorite,
+    positionPlacement,
+    isArmed,
+    onarm,
+    onimmediate,
   }: {
     definitions: SymbolDefinition[];
     allowSymbols?: boolean;
@@ -38,6 +42,10 @@
     onduplicate: (id: string) => void;
     isFavorite: (part: PalettePart) => boolean;
     ontoggleFavorite: (part: PalettePart) => void;
+    positionPlacement: boolean;
+    isArmed: (part: PalettePart) => boolean;
+    onarm: (part: PalettePart) => void;
+    onimmediate: (part: PalettePart) => void;
   } = $props();
   let search = $state("");
   let info = $state<{
@@ -260,7 +268,16 @@
                   items={[
                     {
                       label: "現在の画面へ配置",
-                      run: () => onbuiltin(part.template),
+                      run: () =>
+                        onimmediate({
+                          type: "builtin",
+                          template: part.template,
+                        }),
+                    },
+                    {
+                      label: "クリック位置へ連続配置",
+                      run: () =>
+                        onarm({ type: "builtin", template: part.template }),
                     },
                     {
                       label: "部品情報",
@@ -280,7 +297,12 @@
                   <button
                     class="part"
                     aria-label={part.label}
-                    title={part.label}
+                    aria-pressed={positionPlacement
+                      ? isArmed({ type: "builtin", template: part.template })
+                      : undefined}
+                    title={positionPlacement
+                      ? "クリックして部品を選び、キャンバスで連続配置"
+                      : part.label}
                     draggable="true"
                     ondragstart={(event) =>
                       startDrag(event, {
@@ -322,7 +344,16 @@
                     items={[
                       {
                         label: "現在の画面へ配置",
-                        run: () => onplace(definition.id),
+                        run: () =>
+                          onimmediate({
+                            type: "symbol",
+                            symbolId: definition.id,
+                          }),
+                      },
+                      {
+                        label: "クリック位置へ連続配置",
+                        run: () =>
+                          onarm({ type: "symbol", symbolId: definition.id }),
                       },
                       {
                         label: "共有定義を編集（すべての参照配置に反映）",
@@ -349,7 +380,12 @@
                     <button
                       class="part"
                       aria-label={`${definition.name} を配置`}
-                      title={definition.name}
+                      aria-pressed={positionPlacement
+                        ? isArmed({ type: "symbol", symbolId: definition.id })
+                        : undefined}
+                      title={positionPlacement
+                        ? "クリックして部品を選び、キャンバスで連続配置"
+                        : definition.name}
                       draggable="true"
                       ondragstart={(event) =>
                         startDrag(event, {
@@ -386,7 +422,15 @@
                   label={part.label.replace(/を追加$/, "").trim()}
                   contextKey={menuKey}
                   items={[
-                    { label: "現在の画面へ配置", run: () => onadd(part.kind) },
+                    {
+                      label: "現在の画面へ配置",
+                      run: () =>
+                        onimmediate({ type: "basic", kind: part.kind }),
+                    },
+                    {
+                      label: "クリック位置へ連続配置",
+                      run: () => onarm({ type: "basic", kind: part.kind }),
+                    },
                     {
                       label: "部品情報",
                       run: () =>
@@ -401,7 +445,12 @@
                   <button
                     class="part"
                     aria-label={part.label}
-                    title={part.label}
+                    aria-pressed={positionPlacement
+                      ? isArmed({ type: "basic", kind: part.kind })
+                      : undefined}
+                    title={positionPlacement
+                      ? "クリックして部品を選び、キャンバスで連続配置"
+                      : part.label}
                     draggable="true"
                     ondragstart={(event) =>
                       startDrag(event, { type: "basic", kind: part.kind })}
@@ -584,6 +633,10 @@
     border-radius: 3px;
     background: transparent;
     cursor: grab;
+  }
+  .part[aria-pressed="true"] {
+    background: var(--studio-selection, var(--banto-surface-hover));
+    border-color: var(--banto-primary);
   }
   .part:hover {
     background: var(--banto-surface-hover);

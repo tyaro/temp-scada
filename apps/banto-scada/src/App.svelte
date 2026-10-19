@@ -269,6 +269,94 @@
     favoriteKeys = [...DEFAULT_FAVORITES];
     void setFavorites(favoriteKeys);
   }
+  let positionPlacement = $state(false);
+  let armedPart = $state<PalettePart | null>(null);
+  let placementTicket = 0;
+  function stopPlacement(focus = false) {
+    positionPlacement = false;
+    armedPart = null;
+    placementTicket++;
+    if (focus)
+      editorRegion
+        ?.querySelector<HTMLElement>('[aria-label="キャンバス操作領域"]')
+        ?.focus({ preventScroll: true });
+  }
+  function togglePlacement() {
+    if (positionPlacement) stopPlacement();
+    else {
+      positionPlacement = true;
+      canvasWorkspace?.setHand(false);
+    }
+  }
+  function armPart(part: PalettePart) {
+    if (
+      mode !== "edit" ||
+      busy ||
+      drafts.pending ||
+      replacement ||
+      (activeDefinition && part.type !== "basic")
+    )
+      return;
+    if (
+      part.type === "symbol" &&
+      !project.symbols.some((definition) => definition.id === part.symbolId)
+    )
+      return;
+    placementTicket++;
+    positionPlacement = true;
+    armedPart = part;
+    canvasWorkspace?.setHand(false);
+    const ticket = placementTicket;
+    void tick().then(() => {
+      if (!(
+        document.activeElement instanceof Element &&
+        document.activeElement.closest(
+          "input,textarea,select,[contenteditable]",
+        )
+      ))
+        focusPlacement(ticket);
+    });
+  }
+  function focusPlacement(ticket: number) {
+    if (
+      mode === "edit" &&
+      positionPlacement &&
+      ticket === placementTicket &&
+      !busy &&
+      !drafts.pending &&
+      !replacement
+    )
+      editorRegion
+        ?.querySelector<HTMLElement>('[aria-label="キャンバス操作領域"]')
+        ?.focus({ preventScroll: true });
+  }
+  function isArmed(part: PalettePart) {
+    return (
+      !!armedPart &&
+      favoriteKey(part, project.manifest.projectId) ===
+        favoriteKey(armedPart, project.manifest.projectId)
+    );
+  }
+  function choosePart(part: PalettePart) {
+    if (positionPlacement) armPart(part);
+    else placeFavorite(part);
+  }
+  function placeArmed(center: Point) {
+    if (!positionPlacement || !armedPart) return;
+    const ticket = placementTicket;
+    const token = startPaletteDrag(armedPart);
+    if (token)
+      dropPalettePart(
+        token,
+        center,
+        () => positionPlacement && ticket === placementTicket,
+        () => focusPlacement(ticket),
+      );
+  }
+  function beginPartDrag(part: PalettePart) {
+    stopPlacement();
+    return startPaletteDrag(part);
+  }
   function placeFavorite(part: PalettePart) {
     const center = canvasWorkspace?.visibleCenter();
     const token = center && startPaletteDrag(part);
@@ -321,12 +409,18 @@
     workspaceGeneration;
     paletteDrag = null;
   });
-  function dropPalettePart(token: string, center: Point) {
+  function dropPalettePart(
+    token: string,
+    center: Point,
+    valid: () => boolean = () => true,
+    onplaced?: () => void,
+  ) {
     const drag = paletteDrag;
     if (!drag || drag.token !== token || !canDropPart()) return;
     paletteDrag = null;
     // Capture the target and point before the draft prompt; never retarget a deferred drop.
     transition(() => {
+      if (!valid()) return;
       if (
         mode !== "edit" ||
         drag.generation !== workspaceGeneration ||
@@ -340,22 +434,29 @@
       }
       const part = drag.part;
       if (activeDefinition && part.type !== "basic") return;
+      let committed: boolean;
       if (part.type === "basic")
-        edit({ type: "add", screenId: screen.id, kind: part.kind, center });
+        committed = edit({
+          type: "add",
+          screenId: screen.id,
+          kind: part.kind,
+          center,
+        });
       else if (part.type === "builtin")
-        edit({
+        committed = edit({
           type: "add-symbol",
           screenId: screen.id,
           template: part.template,
           center,
         });
       else
-        edit({
+        committed = edit({
           type: "place-symbol",
           screenId: screen.id,
           symbolId: part.symbolId,
           center,
         });
+      if (committed) onplaced?.();
     });
   }
   import SymbolLibrary from "./lib/designer/SymbolLibrary.svelte";
@@ -440,6 +541,23 @@
     }
   }
   function shortcut(event: KeyboardEvent) {
+    if (
+      event.key === "Escape" &&
+      !event.isComposing &&
+      positionPlacement &&
+      !drafts.pending &&
+      !replacement &&
+      !(
+        event.target instanceof Element &&
+        event.target.closest(
+          'input,textarea,select,[contenteditable],[role="menu"],[role="dialog"]',
+        )
+      )
+    ) {
+      event.preventDefault();
+      stopPlacement(true);
+      return;
+    }
     if (event.isComposing || event.altKey || !(event.ctrlKey || event.metaKey))
       return;
     const key = event.key.toLowerCase();
@@ -549,6 +667,33 @@
       !activeDefinition,
     ),
   );
+  const armedLabel = $derived(
+    armedPart
+      ? (availableFavorites(
+          [favoriteKey(armedPart, project.manifest.projectId)],
+          project.manifest.projectId,
+          project.symbols,
+          !activeDefinition,
+        )[0]?.label ?? "部品")
+      : "",
+  );
+  const placementTargetKey = $derived(
+    `${workspaceGeneration}:${mode}:${screenId}:${editingSymbolId ?? ""}`,
+  );
+  $effect(() => {
+    placementTargetKey;
+    untrack(() => stopPlacement());
+  });
+  $effect(() => {
+    if (
+      armedPart?.type === "symbol" &&
+      !project.symbols.some(
+        (definition) =>
+          armedPart?.type === "symbol" && definition.id === armedPart.symbolId,
+      )
+    )
+      stopPlacement();
+  });
   function normalizeTargets() {
     if (
       editingSymbolId &&
@@ -1609,7 +1754,12 @@
         bind:showGrid
         bind:snapEnabled
         bind:gridSize
-        onhand={(value) => canvasWorkspace?.setHand(value)}
+        placing={positionPlacement}
+        onplacing={togglePlacement}
+        onhand={(value) => {
+          stopPlacement();
+          canvasWorkspace?.setHand(value);
+        }}
         onzoom={(value) => canvasWorkspace?.zoom(value)}
         onstep={(value) => canvasWorkspace?.stepZoom(value)}
       />
@@ -1915,6 +2065,10 @@
         {#if mode === "edit"}
           <PartPalette
             {isFavorite}
+            {positionPlacement}
+            {isArmed}
+            onarm={armPart}
+            onimmediate={placeFavorite}
             ontoggleFavorite={toggleFavorite}
             contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}`}
             onedit={openDefinition}
@@ -1922,13 +2076,11 @@
               edit({ type: "duplicate-symbol", symbolId: id })}
             definitions={project.symbols}
             allowSymbols={!activeDefinition}
-            onadd={add}
-            onstartdrag={startPaletteDrag}
+            onadd={(kind) => choosePart({ type: "basic", kind })}
+            onstartdrag={beginPartDrag}
             onenddrag={() => (paletteDrag = null)}
-            onbuiltin={(template) =>
-              edit({ type: "add-symbol", screenId: screen.id, template })}
-            onplace={(id) =>
-              edit({ type: "place-symbol", screenId: screen.id, symbolId: id })}
+            onbuiltin={(template) => choosePart({ type: "builtin", template })}
+            onplace={(id) => choosePart({ type: "symbol", symbolId: id })}
           />
         {/if}
       {/snippet}
@@ -1990,6 +2142,10 @@
           {showGrid}
           {snapEnabled}
           {gridSize}
+          placing={positionPlacement}
+          placeReady={!!armedPart}
+          onplacepoint={placeArmed}
+          oncancelplacement={() => stopPlacement(true)}
           {canDropPart}
           ondropPart={dropPalettePart}
           onresize={(id, geometry) =>
@@ -2019,14 +2175,30 @@
             })}
         />
       {/key}
+      {#if mode === "edit" && positionPlacement}
+        <div class="placement-bar" role="status" aria-label="連続配置の状態">
+          <span
+            >{armedPart
+              ? `${armedLabel}を連続配置 · キャンバスをクリック／Enterで中央へ配置`
+              : "連続配置 · 部品を選んでください"}</span
+          >
+          <button onclick={() => stopPlacement(true)}
+            >配置を終了 <kbd>Esc</kbd></button
+          >
+        </div>
+      {/if}
       {#if mode === "edit" && (showSidebar || showInspector || showReferences)}
         <FavoritesDock
           items={favoriteItems}
+          {positionPlacement}
+          {isArmed}
+          onarm={armPart}
+          onimmediate={placeFavorite}
           contextKey={`${contextScope}:${favoriteKeys.join(",")}`}
-          onplace={placeFavorite}
+          onplace={choosePart}
           onremove={toggleFavorite}
           onbrowse={browseParts}
-          onstartdrag={startPaletteDrag}
+          onstartdrag={beginPartDrag}
           onenddrag={() => (paletteDrag = null)}
         />
       {/if}
@@ -2316,6 +2488,35 @@
   .project-sidebar .reference-link:enabled:hover {
     color: var(--banto-primary);
     background: color-mix(in srgb, var(--banto-primary) 6%, transparent);
+  }
+  .placement-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding: 4px 12px;
+    color: var(--banto-text);
+    background: var(--studio-selection);
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .placement-bar span {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .placement-bar button {
+    width: auto;
+    margin: 0;
+    padding: 3px 7px;
+    font-size: 11px;
+    background: transparent;
+    border: 0;
+  }
+  .placement-bar kbd {
+    margin-left: 4px;
+    color: var(--banto-text-muted);
   }
   .sidebar-files {
     padding: 8px 14px;

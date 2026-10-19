@@ -9,6 +9,8 @@
     onhand,
     onzoom,
     onstep,
+    placing,
+    onplacing,
   }: {
     view: CanvasView;
     showGrid?: boolean;
@@ -17,6 +19,8 @@
     onhand: (hand: boolean) => void;
     onzoom: (zoom: number | null) => void;
     onstep: (direction: number) => void;
+    placing: boolean;
+    onplacing: () => void;
   } = $props();
 </script>
 
@@ -49,7 +53,7 @@
     type="button"
     aria-label="選択ツール"
     title="選択ツール"
-    aria-pressed={!view.hand}
+    aria-pressed={!view.hand && !placing}
     onclick={() => onhand(false)}
     ><svg aria-hidden="true" viewBox="0 0 24 24"
       ><path d="M5 3L19 13L12 14L9 21ZM12 14L16 20" /></svg
@@ -65,6 +69,16 @@
       ><path
         d="M8 12V5A2 2 0 0 1 12 5V11M12 5V4A2 2 0 0 1 16 4V12M16 7A2 2 0 0 1 20 7V15C20 20 17 22 13 22C10 22 8 20 6 17L3 12A2 2 0 0 1 6 10L8 12"
       /></svg
+    ></button
+  >
+  <button
+    type="button"
+    aria-label="連続配置ツール"
+    title="連続配置：部品を選び、キャンバスをクリック（Escで終了）"
+    aria-pressed={placing}
+    onclick={onplacing}
+    ><svg aria-hidden="true" viewBox="0 0 24 24"
+      ><path d="M8 3H16V11L19 15V18H5V15L8 11ZM4 21H20M11 6H13M12 5V7" /></svg
     ></button
   >
   <button

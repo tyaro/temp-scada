@@ -316,3 +316,11 @@ A から C への UX 作業は B の完成を必須にしない。位置と大�
 ![お気に入り部品ドック・ライト](assets/frontend-ux/favorites-dock-light.png)
 
 ![お気に入り部品ドック・ダーク](assets/frontend-ux/favorites-dock-dark.png)
+
+## 連続配置ツールの進捗
+
+2026-10-19 同日後続。共通ツールバーと部品／お気に入りの右クリックから、部品選択→クリック位置への連続配置を開始できるようにした。既存の即時配置・ドラッグを残し、入力保護とコマンドを共用する。Esc・終了ボタン・対象変更で終了し、Spaceは一時パン、キャンバスEnterは中心配置とする。ツール選択だけではProjectを変更しない。詳細・検証は[開発計画](development-plan.md)を参照。
+
+![連続配置ツール・ライト](assets/frontend-ux/continuous-placement-light.png)
+
+![連続配置ツール・ダーク](assets/frontend-ux/continuous-placement-dark.png)

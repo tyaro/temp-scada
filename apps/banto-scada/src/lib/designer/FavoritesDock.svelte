@@ -15,6 +15,10 @@
     onbrowse,
     onstartdrag,
     onenddrag,
+    positionPlacement,
+    isArmed,
+    onarm,
+    onimmediate,
   }: {
     items: FavoriteItem[];
     contextKey: string;
@@ -23,6 +27,10 @@
     onbrowse: () => void;
     onstartdrag: (part: PalettePart) => string | null;
     onenddrag: () => void;
+    positionPlacement: boolean;
+    isArmed: (part: PalettePart) => boolean;
+    onarm: (part: PalettePart) => void;
+    onimmediate: (part: PalettePart) => void;
   } = $props();
   let root = $state<HTMLElement>();
   async function remove(part: PalettePart) {
@@ -50,14 +58,18 @@
         label={`お気に入り：${item.label}`}
         {contextKey}
         items={[
-          { label: "現在の画面へ配置", run: () => onplace(item.part) },
+          { label: "現在の画面へ配置", run: () => onimmediate(item.part) },
+          { label: "クリック位置へ連続配置", run: () => onarm(item.part) },
           { label: "お気に入りから外す", run: () => remove(item.part) },
         ]}
       >
         <button
           class="dock-part"
           aria-label={`お気に入り：${item.label}を配置`}
-          title={`${item.label}を配置 · ドラッグして位置を指定`}
+          aria-pressed={positionPlacement ? isArmed(item.part) : undefined}
+          title={positionPlacement
+            ? `${item.label}を選び、キャンバスで連続配置`
+            : `${item.label}を配置 · ドラッグして位置を指定`}
           draggable="true"
           ondragstart={(event) => drag(event, item.part)}
           ondragend={onenddrag}
@@ -148,6 +160,10 @@
     border-radius: 5px;
     color: var(--banto-text);
     cursor: pointer;
+  }
+  .dock-part[aria-pressed="true"] {
+    background: var(--studio-selection, var(--banto-surface-hover));
+    box-shadow: inset 0 0 0 1px var(--banto-primary);
   }
   button:hover {
     background: var(--studio-selection, var(--banto-surface-hover));

@@ -45,6 +45,10 @@
     ondropPart,
     onviewchange,
     oncontextrequest,
+    placing,
+    placeReady,
+    onplacepoint,
+    oncancelplacement,
   }: {
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
@@ -66,10 +70,35 @@
     ondropPart: (token: string, center: Point) => void;
     onviewchange: (view: CanvasView) => void;
     oncontextrequest: (request: CanvasContext) => void;
+    placing: boolean;
+    placeReady: boolean;
+    onplacepoint: (center: Point) => void;
+    oncancelplacement: () => void;
   } = $props();
   let viewport = $state<HTMLDivElement>();
   let dropPoint = $state<Point | null>(null);
-  function palettePoint(event: DragEvent): Point | null {
+  let placementPoint = $state<Point | null>(null);
+  let placementDown: {
+    pointer: number;
+    x: number;
+    y: number;
+    point: Point | null;
+  } | null = null;
+  function cancelPlacementPointer() {
+    const previous = placementDown;
+    placementDown = null;
+    placementPoint = null;
+    if (previous && viewport?.hasPointerCapture(previous.pointer))
+      viewport.releasePointerCapture(previous.pointer);
+  }
+  $effect(() => {
+    if (!placing || !editable) untrack(cancelPlacementPointer);
+  });
+  function palettePoint(event: {
+    clientX: number;
+    clientY: number;
+    altKey: boolean;
+  }): Point | null {
     const svg = viewport?.querySelector<SVGSVGElement>(".sheet > svg");
     const matrix = svg?.getScreenCTM();
     if (!matrix) return null;
@@ -190,6 +219,9 @@
     untrack(() => onviewchange(view));
   });
   const panning = $derived(editable && (hand || space || !!pan));
+  const marker = $derived(
+    dropPoint ?? (placing && placeReady && !panning ? placementPoint : null),
+  );
   $effect(() => {
     const element = viewport;
     if (!element) return;
@@ -219,6 +251,7 @@
     pan = null;
     space = false;
     dropPoint = null;
+    untrack(cancelPlacementPointer);
     if (!element) return;
     void tick().then(() => {
       if (screen.id !== id || editable !== editing || viewport !== element)
@@ -324,6 +357,50 @@
         event.target.closest("input,textarea,select,[contenteditable]"))
     )
       return;
+    if (placing && event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      oncancelplacement();
+      return;
+    }
+    if (placing && event.key === "Enter" && event.target === viewport) {
+      event.preventDefault();
+      event.stopPropagation();
+      const center = visibleCenter();
+      if (
+        !placeReady ||
+        center.x < 0 ||
+        center.y < 0 ||
+        center.x > screen.width ||
+        center.y > screen.height
+      )
+        return;
+      onplacepoint(
+        snapEnabled
+          ? {
+              x: Math.max(
+                0,
+                Math.min(screen.width, snapCoordinate(center.x, gridSize)),
+              ),
+              y: Math.max(
+                0,
+                Math.min(screen.height, snapCoordinate(center.y, gridSize)),
+              ),
+            }
+          : center,
+      );
+      return;
+    }
+    if (
+      placing &&
+      (event.key.startsWith("Arrow") ||
+        event.key === "Delete" ||
+        event.key === "Backspace")
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     if (
       event.key === "ContextMenu" ||
       (event.shiftKey && event.key === "F10")
@@ -341,6 +418,11 @@
   function requestContext(event?: MouseEvent) {
     if (!editable || !viewport) return;
     event?.preventDefault();
+    if (placing) {
+      cancelPlacementPointer();
+      oncancelplacement();
+      return;
+    }
     const rect = viewport.getBoundingClientRect();
     const point = event
       ? { x: event.clientX, y: event.clientY }
@@ -383,6 +465,18 @@
   function down(event: PointerEvent) {
     if (!editable || !event.isPrimary || !viewport) return;
     if (event.button !== 0 && event.button !== 1) return;
+    if (placing && !hand && !space && event.button === 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      placementDown = {
+        pointer: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        point: palettePoint(event),
+      };
+      viewport.setPointerCapture(event.pointerId);
+      return;
+    }
     if (!hand && !space && event.button !== 1) {
       if (!(event.target as Element).closest('[tabindex="0"]'))
         viewport.focus({ preventScroll: true });
@@ -400,6 +494,8 @@
     };
   }
   function move(event: PointerEvent) {
+    if (placing && !hand && !space && !pan)
+      placementPoint = palettePoint(event);
     if (
       !pan ||
       !viewport ||
@@ -414,6 +510,26 @@
     remember();
   }
   function up(event: PointerEvent) {
+    if (placementDown?.pointer === event.pointerId) {
+      const previous = placementDown;
+      placementDown = null;
+      event.preventDefault();
+      event.stopPropagation();
+      if (viewport?.hasPointerCapture(event.pointerId))
+        viewport.releasePointerCapture(event.pointerId);
+      const point = palettePoint(event);
+      if (
+        editable &&
+        placing &&
+        !hand &&
+        !space &&
+        previous.point &&
+        point &&
+        Math.hypot(event.clientX - previous.x, event.clientY - previous.y) < 5
+      )
+        onplacepoint(point);
+      return;
+    }
     if (!pan || pan.pointer !== event.pointerId) return;
     move(event);
     pan = null;
@@ -441,6 +557,7 @@
   onblur={() => {
     space = false;
     cancelPan();
+    cancelPlacementPointer();
   }}
 />
 <!-- svelte-ignore a11y_no_noninteractive_tabindex (スクロール領域をキーボードと Space パンで操作するためのフォーカス先) -->
@@ -448,6 +565,7 @@
   bind:this={viewport}
   class="viewport"
   class:panning
+  class:placing={placing && !panning}
   class:preview={!editable}
   class:drop-ready={!!dropPoint}
   role="region"
@@ -459,11 +577,21 @@
   onpointerdowncapture={down}
   onpointermove={move}
   onpointerup={up}
-  onpointercancel={cancelPan}
+  onpointercancel={() => {
+    cancelPan();
+    cancelPlacementPointer();
+  }}
+  onpointerleave={() => {
+    if (!pan) placementPoint = null;
+  }}
   onlostpointercapture={() => {
     if (pan) cancelPan();
+    if (placementDown) cancelPlacementPointer();
   }}
-  onscroll={remember}
+  onscroll={() => {
+    cancelPlacementPointer();
+    remember();
+  }}
   ondragover={dragOver}
   ondrop={dropPart}
   ondragleave={(event) => {
@@ -503,12 +631,12 @@
           {onvertexmove}
         />
       {/key}
-      {#if dropPoint && editable}
+      {#if marker && editable}
         <div
           class="drop-marker"
           aria-hidden="true"
-          style:left={`${dropPoint.x * scale}px`}
-          style:top={`${dropPoint.y * scale}px`}
+          style:left={`${marker.x * scale}px`}
+          style:top={`${marker.y * scale}px`}
         >
           ＋
         </div>
@@ -568,6 +696,11 @@
     outline: 1px solid var(--banto-border);
     background: #0b1220;
     box-shadow: 0 2px 12px #0003;
+  }
+  .placing,
+  .placing :global(svg),
+  .placing :global(svg *) {
+    cursor: crosshair !important;
   }
   .panning {
     cursor: grab;
