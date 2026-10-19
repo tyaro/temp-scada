@@ -18,6 +18,10 @@
     selectionLineCommand,
     acknowledgeSelectionLine,
   } from "./lib/designer/forms/selection-line";
+  import {
+    selectionColorCommand,
+    acknowledgeSelectionColor,
+  } from "./lib/designer/forms/selection-color";
   import { shapePaintCommand } from "./lib/designer/forms/shape-paint";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
@@ -1871,12 +1875,8 @@
 
     if (form.dataset.editorForm === "selection-line")
       acknowledgeSelectionLine(form);
-    if (form.dataset.editorForm === "selection-color") {
-      const input = form.elements.namedItem("fill");
-      if (input instanceof HTMLInputElement) input.value = "";
-      const convert = form.elements.namedItem("convertDefinitionSymbols");
-      if (convert instanceof HTMLInputElement) convert.checked = false;
-    }
+    if (form.dataset.editorForm === "selection-color")
+      acknowledgeSelectionColor(form);
     if (form.dataset.editorForm === "project") {
       const input = form.elements.namedItem("name");
       if (input instanceof HTMLInputElement)
@@ -2302,31 +2302,20 @@
           selectedIds,
         },
       );
-    if (form.dataset.editorForm === "selection-color") {
-      if (
-        form.dataset.targetKey !==
-        `${workspaceGeneration}:${screen.id}:${!!activeDefinition}`
-      )
-        throw new Error(
-          "スタイルの適用先が変更されています。選択し直してください。",
-        );
-      const ids: unknown = JSON.parse(form.dataset.objectIds ?? "[]");
-      if (
-        !Array.isArray(ids) ||
-        ids.length !== selectedIds.length ||
-        ids.some((id) => typeof id !== "string" || !selectedIds.includes(id))
-      )
-        throw new Error(
-          "スタイルの適用対象が変更されています。選択し直してください。",
-        );
-      return {
-        type: "set-color",
-        screenId: screen.id,
-        objectIds: ids as string[],
-        fill: String(data.get("fill")),
-        convertDefinitionSymbols: data.get("convertDefinitionSymbols") === "on",
-      };
-    }
+    if (form.dataset.editorForm === "selection-color")
+      return selectionColorCommand(
+        {
+          data,
+          targetKey: form.dataset.targetKey,
+          objectIds: form.dataset.objectIds,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selectedIds,
+        },
+      );
     if (form.dataset.editorForm === "project")
       return { type: "update-project", name: String(data.get("name")) };
     if (form.dataset.editorForm === "screen")

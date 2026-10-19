@@ -41,14 +41,14 @@
 
 ## フォームの現行境界
 
-フォームの移行中。塗りと枠線は`designer/forms/shape-paint.ts`、枠線一括は`selection-outline.ts`、線種一括は`selection-line.ts`が入力と対象を解釈し、残るフォームはAppの`formCommand`が解釈する。`validateDrafts`は共通のまま候補Projectへ順に適用して全体検証する。確定は`submitForm`→`edit`、成功時は`acknowledgeForm`→DraftGuardへ戻す。通常数値は`commitNumber`と`acceptField`を通す。別のdirty台帳やProject所有者を作らない。
+フォームの移行中。塗りと枠線は`designer/forms/shape-paint.ts`、枠線一括は`selection-outline.ts`、線種一括は`selection-line.ts`、色一括は`selection-color.ts`が入力と対象を解釈し、残るフォームはAppの`formCommand`が解釈する。`validateDrafts`は共通のまま候補Projectへ順に適用して全体検証する。確定は`submitForm`→`edit`、成功時は`acknowledgeForm`→DraftGuardへ戻す。通常数値は`commitNumber`と`acceptField`を通す。別のdirty台帳やProject所有者を作らない。
 
 | フォーム      | 現在の入力・描画                                    | 解析・確定の所在                                                               |
 | ------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
 | 塗りと枠線    | `designer/ShapePaint.svelte`、`pattern-fields.ts`   | `forms/shape-paint.ts`へ入力解析・世代／所有先／配置の照合を移行済み           |
 | 枠線一括      | `SelectionOutline.svelte`                           | `forms/selection-outline.ts`の解析・固有reset、`selection-target.ts`の対象照合 |
 | 線の一括      | `SelectionLine.svelte`                              | `forms/selection-line.ts`の解析・固有reset、`selection-target.ts`の対象照合    |
-| 色の一括      | `SelectionColor.svelte`                             | Appの`formCommand`・`acknowledgeForm`                                          |
+| 色の一括      | `SelectionColor.svelte`                             | `forms/selection-color.ts`の解析・固有reset、`selection-target.ts`の対象照合   |
 | Symbol配色    | `SymbolColorMode.svelte`                            | Appの`formCommand`                                                             |
 | 背景画像      | Appの画面設定フォーム                               | Appの`formCommand`                                                             |
 | 画像crop      | `designer/ImageCrop.svelte`・`image-crop-fields.ts` | 数値解析はhelper、対象照合とコマンドはApp                                      |
@@ -80,3 +80,5 @@ ShapePaintの成功後の確定は固有のfield resetを持たないため、�
 SelectionOutlineの空欄はpatchへ入れず、変更項目が全くない要求は既存モデルで拒否する。有効な同値の再適用はno-op。成功時はadapter内で一回限りのpatch欄を空にしてから、既存の共通draft確定へ戻す。選択の世代・IDsの検証は移行済みフォームだけがselection-targetを使い、未移行フォームは元の経路を維持する。
 
 フォーム境界はfactory委譲を採用する。Appがkindと現在対象のDTOを供給し、候補全体の検証・submit順序・共通draft確定を所有する。adapterは入力名・未指定の意味・対象照合・コマンド生成・成功後の固有resetを所有する。DraftGuardに新しいcallback登録機構は追加しない。
+
+SelectionColorは単色化の明示checkboxと色入力だけを解析する。共有Symbol定義色からの変換を自動化せず、成功後に色と変換checkboxをresetして共通draft確定へ戻す。
