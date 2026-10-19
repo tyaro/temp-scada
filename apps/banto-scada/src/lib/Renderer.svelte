@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import {
     getBounds,
     getLocalBounds,
@@ -85,6 +86,7 @@
     observer.observe(svg);
     return () => observer.disconnect();
   });
+  let interactionOwner = $state.raw<Screen | SymbolDefinition | null>(null);
   let drag = $state<{
     ids: string[];
     pointer: number;
@@ -206,7 +208,15 @@
       resizeGeometry(geometry, handle, delta, snapEnabled ? gridSize : null),
     );
   }
+  $effect(() => {
+    if (
+      (drag || vertexDrag || resizeDrag) &&
+      (!editable || interactionOwner !== screen)
+    )
+      untrack(cancelInteraction);
+  });
   function cancelDrag() {
+    interactionOwner = null;
     drag = null;
     vertexDrag = null;
     resizeDrag = null;
@@ -224,7 +234,7 @@
   function cancelKey(event: KeyboardEvent) {
     if (event.key === "Escape" && (drag || vertexDrag || resizeDrag)) {
       event.preventDefault();
-      cancelDrag();
+      cancelInteraction();
     }
   }
   function previewObject(object: ScreenObject): ScreenObject {
@@ -355,6 +365,7 @@
         width: object.width,
         height: object.height,
       };
+      interactionOwner = screen;
       resizeDrag = {
         id: object.id,
         handle,
@@ -388,6 +399,7 @@
       event.preventDefault();
       (event.currentTarget as SVGSVGElement).setPointerCapture(event.pointerId);
       const original = { ...object.shape.points[index] };
+      interactionOwner = screen;
       vertexDrag = {
         id: object.id,
         index,
@@ -420,6 +432,7 @@
       return;
     event.preventDefault();
     (event.currentTarget as SVGSVGElement).setPointerCapture(event.pointerId);
+    interactionOwner = screen;
     drag = {
       ids: [...ids],
       anchor: { x: object.x, y: object.y },
@@ -431,6 +444,13 @@
     };
   }
   function move(event: PointerEvent) {
+    if (
+      (drag || vertexDrag || resizeDrag) &&
+      (!editable || interactionOwner !== screen)
+    ) {
+      cancelInteraction();
+      return;
+    }
     if (!editable) return;
     const p = point(event);
     if (!p) return;
@@ -482,10 +502,12 @@
     if (resizeDrag && resizeDrag.pointer === event.pointerId) {
       const finished = resizeDrag;
       resizeDrag = null;
+      interactionOwner = null;
       if (editable) onresize?.(finished.id, finished.current);
     } else if (vertexDrag && vertexDrag.pointer === event.pointerId) {
       const finished = vertexDrag;
       vertexDrag = null;
+      interactionOwner = null;
       if (
         editable &&
         (finished.current.x !== finished.original.x ||
@@ -495,6 +517,7 @@
     } else if (drag && drag.pointer === event.pointerId) {
       const finished = drag;
       drag = null;
+      interactionOwner = null;
       if (editable && (finished.dx !== 0 || finished.dy !== 0))
         onmove?.(finished.ids, finished.dx, finished.dy);
     }
