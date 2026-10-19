@@ -27,6 +27,16 @@
 
 最新の実画面は[線種](#line-style-progress)・[フォルダー親変更](#folder-drag-progress)・[Text書式](#text-style-progress)・[配置回転](#object-rotation-progress)・[レイヤードラッグ](#layer-drag-progress)・[選択範囲表示](#selection-view-progress)・[枠線一括編集](#selection-outline-progress)・[塗りと枠線](#shape-paint-progress)・[Symbol配色](#symbol-color-progress)・[線・配管の一括スタイル](#selection-line-progress)・[レイヤーフォルダー](#layer-folder-ui-progress)・[中心の等間隔配置](#distribute-progress)・[複数選択の色編集](#selection-color-progress)・[表示切替](#visibility-progress)・[編集ロック](#edit-lock-progress)・[配置名](#placement-name-progress)・[サンプルタグ選択](#tag-picker-progress)・[ルーラー](#rulers-progress)を参照。既存の操作範囲と画像は、下記の[範囲選択](#range-selection-progress)・[ミニマップ](#minimap-progress)・[連続配置](#continuous-placement-progress)・[お気に入り](#favorites-progress)を参照。
 
+<a id="linear-gradient-foundation-progress"></a>
+
+## 線形グラデーションの計算基礎（2026-10-20・日本時間）
+
+[2色線形グラデーションの設計](linear-gradient-design.md)へAstraレビューを反映した。矩形・楕円の塗りをenabledとsolid／linearGradientの判別型へ整理し、RGBとαの二重保存を避ける。単独Inspector・Symbol配色・共通色の拒否・入力保護の規則を具体化した。保存契約の再編とUI／共通描画への接続は次工程。
+
+`linear-gradient.ts`で局所座標の端点計算を追加した。0°左→右、90°上→下。四隅の射影範囲から端点を作り、非正方形の45°でも角度を維持する。幅・高さ・角度の有限性を検査し、不要な加算overflowを避ける。
+
+TypeScript全492件が成功（新規6件）。直交方向・非正方形45°・縦横比／角度を変えた全四隅の射影・正規化・不正値・大きな有限座標を確認した。この段階でProjectモデルと画面は0.17.0のまま。アプリでgradientを編集・表示できる完成とはしない。
+
 <a id="asset-clipboard-progress"></a>
 
 ## 原本を含む図形clipboard（2026-10-20・日本時間）
@@ -1155,7 +1165,7 @@ schema 0.3.0 は変更しない。未存在の定義・Symbol 以外の配置・
 
 ## 次の実装順
 
-[Image配置の最小設計](image-placement-design.md)へAstraレビューを反映し、背景との原本共有・画像枠・contain・比率復帰・画像混在clipboardの明示拒否を0.17.0で実装した（[記録](#image-placement-progress)）。OS画像貼付も追加した（[記録](#image-paste-progress)）。図形と画像の同時clipboard・差替え・トリミングは後続。
+[Image配置の最小設計](image-placement-design.md)へAstraレビューを反映し、背景との原本共有・画像枠・contain・比率復帰・画像混在clipboardの明示拒否を0.17.0で実装した（[記録](#image-placement-progress)）。OS画像貼付も追加した（[記録](#image-paste-progress)）。図形と画像の同時clipboardも追加した（[記録](#asset-clipboard-progress)）。次は[線形グラデーション](linear-gradient-design.md)のpaint再編と共通描画へ進み、画像差替え・トリミングは後続。
 
 [レイヤーフォルダーの設計](layer-folders-design.md)に、整理用フォルダーを幾何グループから分離した保存契約・操作・受入条件を具体化した。保存契約・検証・編集コマンドは0.8.0で実装した（[記録](#layer-folder-model-progress)）。階層UI・検索・所属変更も後続で実装した（[記録](#layer-folder-ui-progress)）。幾何グループの完了は意味しない。
 

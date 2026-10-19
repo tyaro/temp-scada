@@ -39,7 +39,7 @@ Banto基盤を維持し、認証はindustrial側の修正後まで延期する�
 
 ## 2. Paint・線種・αを先行する
 
-現行の `fill: #RRGGBB`、ShapePaint、Polylineの線幅をそのまま文字列だけで拡張せず、色とpaintの責務を整理する。
+現行の `fill: #RRGGBB`、ShapePaint、Polylineの線幅をそのまま文字列だけで拡張せず、色とpaintの責務を整理する。[2色線形グラデーションの具体設計](linear-gradient-design.md)で、塗りの判別型と保存α・一括色の規則を定め、局所座標の計算基礎を追加した。モデル・UI・描画への接続は未実装。
 
 - 色はRGBとαを明示して扱う。UIは「不透明度 0〜100%」、保存は有限な0〜1の値を候補とする。
 - 塗りは `none / solid / linearGradient / radialGradient / pattern` 等の判別型。線は色・幅・線種・capを持つ。最初から全種類を実装済み扱いにしない。
