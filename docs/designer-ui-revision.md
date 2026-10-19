@@ -324,3 +324,13 @@ A から C への UX 作業は B の完成を必須にしない。位置と大�
 ![連続配置ツール・ライト](assets/frontend-ux/continuous-placement-light.png)
 
 ![連続配置ツール・ダーク](assets/frontend-ux/continuous-placement-dark.png)
+
+## ミニマップの進捗
+
+2026-10-19 同日後続、実装照合 `c75ad3a`。お気に入りと同じ下端の帯へ、現行Rendererによる工程図全体と表示範囲の枠を追加した。手動倍率ではクリック・ドラッグ・矢印キーで表示位置を移動し、Enter／Spaceで全体表示へ戻る。ドラッグ中のEscで開始位置へ戻し、全体表示中は位置を動かさない。「表示」メニューから隠す／再表示でき、Banto UI設定へ保存する。表示プレビューと補助パネル一括非表示では隠す。
+
+図形選択・Project・Undo・文字などの未適用入力を変更せず、連続配置中も部品を配置しない。画面／共有定義とProject読込世代に追従する。縮小図は読み上げを重複させず、操作用ボタンをキーボードで利用できる。大規模図面の性能評価と浮動化は後続。固定パネル開閉の表示中心保持も調整した。
+
+![ミニマップの実画面・ライト](assets/frontend-ux/minimap-fit-light.png)
+
+対応済み／一部対応／未実装と直近の検証結果は[開発計画の進捗一覧](development-plan.md#implementation-status)、詳細と各テーマの画像は[ミニマップの実装記録](development-plan.md#minimap-progress)を参照する。過去の各進捗節にある「後続」は、その節の実装時点の記録として扱う。
