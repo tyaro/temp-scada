@@ -1,14 +1,5 @@
 <script lang="ts">
-  import {
-    encodeAssetClipboard,
-    decodeAssetClipboard,
-    validateAssetClipboardSnapshot,
-  } from "./lib/asset-clipboard";
-  import {
-    selectPastePayload,
-    readSystemPaste,
-    type PastePayload,
-  } from "./lib/image-clipboard";
+  import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
   import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
   import { imageCropCommand } from "./lib/designer/forms/image-crop";
   import {
@@ -101,11 +92,6 @@
   }
   import { untrack, tick, flushSync } from "svelte";
   import { selectionNudge } from "./lib/keyboard-move";
-  import {
-    copyObjects,
-    copyObjectSnapshot,
-    parseClipboard,
-  } from "./lib/clipboard";
   import { normalizeRotation } from "./lib/rotation";
   import { parseNumericProperty } from "./lib/designer/numeric-properties";
   import { placementLabel } from "./lib/placement-label";
@@ -713,7 +699,7 @@
         event.isComposing ||
         event.keyCode === 229 ||
         busy ||
-        clipboardBusy ||
+        clipboard.busy ||
         drafts.pending ||
         replacement ||
         helpOpen ||
@@ -806,7 +792,7 @@
       !event.shiftKey &&
       mode === "edit" &&
       !busy &&
-      !clipboardBusy &&
+      !clipboard.busy &&
       !drafts.pending &&
       !replacement &&
       !positionPlacement &&
@@ -962,10 +948,49 @@
         objectIds: [...selectedIds],
       });
   }
-  const clipboardSession = crypto.randomUUID();
-  let clipboardBusy = $state(false);
-  let clipboardEpoch = 0;
-  let lastPaste: { key: string; count: number } | undefined;
+  const clipboard = createClipboardController({
+    get owner() {
+      return {
+        generation: workspaceGeneration,
+        screenId: screen.id,
+        definitionId: activeDefinition?.id,
+        mode,
+        busy,
+        replacing: !!replacement,
+      };
+    },
+    get project() {
+      return project;
+    },
+    get objects() {
+      return screen.objects;
+    },
+    get selectedIds() {
+      return selectedIds;
+    },
+    get draft() {
+      return { pending: !!drafts.pending, dirty: drafts.dirty };
+    },
+    get viewport() {
+      return {
+        bounds: canvasView.bounds,
+        size: { width: screen.width, height: screen.height },
+        scale: canvasView.scale,
+      };
+    },
+    get store() {
+      return assetStore;
+    },
+    visibleCenter: () => canvasWorkspace?.visibleCenter(),
+    hiddenCanvasMutation,
+    allow: (run) => drafts.allow(run),
+    edit,
+    stopPlacement,
+    collectAssets,
+    prepareImage: (file, generation, owner, placement) =>
+      imageImport.prepare(file, generation, owner, placement),
+    report,
+  });
   function hiddenCanvasMutation(target: EventTarget | null) {
     if (
       target instanceof Element &&
@@ -993,193 +1018,9 @@
       )
     );
   }
-  function clipboardAction(
-    kind: "copy" | "cut" | "paste",
-    event?: ClipboardEvent,
-  ) {
-    if (
-      busy ||
-      clipboardBusy ||
-      mode !== "edit" ||
-      drafts.pending ||
-      replacement
-    )
-      return;
-    const target = screen.id,
-      generation = workspaceGeneration,
-      epoch = clipboardEpoch;
-    const pasteIntent = {
-      bounds: { ...canvasView.bounds },
-      size: { width: screen.width, height: screen.height },
-    };
-    const pasteCenter = canvasWorkspace?.visibleCenter() ?? {
-      x: screen.width / 2,
-      y: screen.height / 2,
-    };
-    const ids = [...selectedIds];
-    if (kind !== "paste" && !ids.length) return;
-    event?.preventDefault();
-    if (kind === "cut" && event && hiddenCanvasMutation(event.target)) return;
-    let native = event?.clipboardData;
-    let input: PastePayload | undefined;
-    try {
-      if (kind === "paste" && native)
-        input = selectPastePayload(
-          native.getData("text/plain"),
-          Array.from(native.files),
-        );
-    } catch (error) {
-      report(
-        "error",
-        `クリップボード操作に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return;
-    }
-    const validTarget = () =>
-      epoch === clipboardEpoch &&
-      mode === "edit" &&
-      screen.id === target &&
-      workspaceGeneration === generation &&
-      !busy &&
-      !replacement;
-    const run = async () => {
-      if (!validTarget() || clipboardBusy) return;
-      clipboardBusy = true;
-      try {
-        const revision = project.manifest.projectRevision;
-        const origin = `${clipboardSession}:${generation}`;
-        const command: EditCommand = {
-          type: "remove-many",
-          screenId: target,
-          objectIds: ids,
-          ...(activeDefinition ? { definitionId: activeDefinition.id } : {}),
-        };
-        if (kind === "paste") {
-          const payload = input ?? (await readSystemPaste(navigator.clipboard));
-          if (
-            !validTarget() ||
-            revision !== project.manifest.projectRevision ||
-            drafts.dirty ||
-            drafts.pending
-          )
-            return;
-          if (payload.kind === "image") {
-            if (activeDefinition)
-              throw new Error(
-                "Symbol定義には画像を貼り付けできません。画面を開いてください。",
-              );
-            await imageImport.prepare(
-              payload.file,
-              generation,
-              target,
-              pasteIntent,
-            );
-            return;
-          }
-          const text = payload.text;
-          const fragment = parseClipboard(text);
-          if (fragment.version === 2 && activeDefinition)
-            throw new Error(
-              "Symbol定義には画像を貼り付けできません。画面を開いてください。",
-            );
-          const candidate = await decodeAssetClipboard(fragment);
-          try {
-            if (
-              !validTarget() ||
-              revision !== project.manifest.projectRevision ||
-              drafts.dirty ||
-              drafts.pending
-            )
-              return;
-            for (const asset of fragment.project.assets)
-              assetStore.importFrom(candidate, asset.sha256);
-            const center = pasteCenter;
-            const key = JSON.stringify([
-              fragment.version === 2
-                ? JSON.stringify([fragment.origin, fragment.project])
-                : text,
-              origin,
-              target,
-              canvasView.scale,
-              center,
-            ]);
-            const count = lastPaste?.key === key ? lastPaste.count + 1 : 0;
-            if (
-              edit({
-                type: "paste",
-                screenId: target,
-                text,
-                origin,
-                center,
-                offset: count * 20,
-              })
-            ) {
-              lastPaste = { key, count };
-              stopPlacement();
-            }
-          } finally {
-            candidate.dispose();
-            collectAssets();
-          }
-        } else {
-          if (kind === "cut") applyCommand(project, command, mode);
-          const hasImages = screen.objects.some(
-            (object) =>
-              ids.includes(object.id) && object.shape.type === "image",
-          );
-          if (hasImages) {
-            if (
-              typeof ClipboardItem === "undefined" ||
-              typeof navigator.clipboard?.write !== "function"
-            )
-              throw new Error(
-                "このブラウザは画像を含む図形コピーに対応していません。画像同梱Projectを使ってください。",
-              );
-            const snapshot = copyObjectSnapshot(project, target, ids, origin);
-            validateAssetClipboardSnapshot(snapshot);
-            // Initiate the write in the user's gesture. Never await before writing event clipboardData.
-            const content = encodeAssetClipboard(snapshot, assetStore);
-            void content.catch(() => {});
-            await navigator.clipboard.write([
-              new ClipboardItem({ "text/plain": content }),
-            ]);
-          } else {
-            const text = copyObjects(project, target, ids, origin);
-            if (native) native.setData("text/plain", text);
-            else await navigator.clipboard.writeText(text);
-          }
-          if (kind === "cut") {
-            if (
-              !validTarget() ||
-              revision !== project.manifest.projectRevision ||
-              drafts.dirty ||
-              drafts.pending ||
-              ids.join() !== selectedIds.join()
-            ) {
-              report(
-                "info",
-                "コピーしました。編集中の状態が変わったため切り取りは中止しました。",
-              );
-              return;
-            }
-            if (edit(command)) stopPlacement();
-          } else report("info", "選択した図形をコピーしました。");
-        }
-      } catch (error) {
-        report(
-          "error",
-          `クリップボード操作に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      } finally {
-        clipboardBusy = false;
-      }
-    };
-    if (drafts.allow(() => void run())) void run();
-    else native = null;
-  }
   function nativeClipboard(event: ClipboardEvent) {
     if (clipboardScope(event.target))
-      clipboardAction(event.type as "copy" | "cut" | "paste", event);
+      clipboard.action(event.type as "copy" | "cut" | "paste", event);
   }
   function nudgeSelection(direction: Point, large: boolean) {
     const ids = [...selectedIds],
@@ -1483,15 +1324,6 @@
     source: "sample" | "file" | "new";
     store: AssetStore;
   } | null>(null);
-  const clipboardOwnerScope = $derived(
-    `${workspaceGeneration}:${screen.id}:${mode}:${activeDefinition?.id ?? ""}:${busy}:${!!replacement}`,
-  );
-  $effect(() => {
-    clipboardOwnerScope;
-    untrack(() => {
-      clipboardEpoch++;
-    });
-  });
 
   let exporting = $state(false);
   let exportingName = $state("");
@@ -2682,7 +2514,7 @@
   const selectionViewReason = $derived(
     mode !== "edit"
       ? "編集モードで使用できます"
-      : menuBlocked || clipboardBusy
+      : menuBlocked || clipboard.busy
         ? "確認中の操作を完了してください"
         : positionPlacement
           ? "連続配置を終了してください"
@@ -3021,18 +2853,18 @@
   const clipboardItems: ContextAction[] = $derived([
     {
       label: "切り取り",
-      disabled: mutationBlocked || clipboardBusy || !selectedIds.length,
-      run: () => clipboardAction("cut"),
+      disabled: mutationBlocked || clipboard.busy || !selectedIds.length,
+      run: () => clipboard.action("cut"),
     },
     {
       label: "コピー",
-      disabled: editBlocked || clipboardBusy || !selectedIds.length,
-      run: () => clipboardAction("copy"),
+      disabled: editBlocked || clipboard.busy || !selectedIds.length,
+      run: () => clipboard.action("copy"),
     },
     {
       label: "貼り付け",
-      disabled: editBlocked || clipboardBusy,
-      run: () => clipboardAction("paste"),
+      disabled: editBlocked || clipboard.busy,
+      run: () => clipboard.action("paste"),
     },
   ]);
   const menuGroups: DesignerMenu[] = $derived([

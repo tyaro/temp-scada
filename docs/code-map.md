@@ -16,7 +16,7 @@
 | 保存モデル               | `lib/project.ts`、`crates/scada-model/schema/project.schema.json`、`crates/scada-model/src/lib.rs`                                                                                | TS／Rust／schema／examplesの契約を合わせる                                     |
 | 保存・読込               | Appの`adopt`・`load`・`writeProject`、`lib/project-package.ts`・`save-state.ts`                                                                                                   | ファイル選択・置換確認・実際のデータ処理を識別する                             |
 | 画像原本と取込           | `lib/image-assets.ts`・`image-frame.ts`、`designer/controllers/image-import.svelte.ts`、Appの`collectAssets`                                                                      | 原本共有、仮Store、履歴からの参照、非同期取消を保つ                            |
-| クリップボード           | Appの`clipboardAction`、`lib/clipboard.ts`・`asset-clipboard.ts`・`image-clipboard.ts`                                                                                            | OS APIの成功前に切取元を消さない。snapshotと資産leaseを保つ                    |
+| クリップボード           | `designer/controllers/clipboard.svelte.ts`、`lib/clipboard.ts`・`asset-clipboard.ts`・`image-clipboard.ts`                                                                        | OS APIの成功前に切取元を消さない。snapshotと資産leaseを保つ                    |
 | 表示と操作               | `lib/ObjectPainting.svelte`・`ScreenPainting.svelte`・`ScreenBackground.svelte`・`Primitive.svelte`・`ImagePainting.svelte`、`Renderer.svelte`・`designer/CanvasWorkspace.svelte` | 読取描画を選択・ドラッグ・入力処理から分ける。追加済みの画像描画部品も確認する |
 | レイヤー                 | Appの`beginLayerDrag`・`dropLayer`・`openFolderRequest`、`designer/layer-tree.ts`・`layer-drag.ts`                                                                                | フォルダーの所属と描画順・座標を区別する                                       |
 | Runtime読取              | `lib/tag-presentation.ts`、`crates/scada-runtime`                                                                                                                                 | 現在値・QualityをProject定義と分ける。Hub／PLC機能を複製しない                 |
@@ -32,7 +32,7 @@
 | ---------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | 塗り・線・α・一括属性        | Primitive、ShapePaint、Selection系、editor、project                           | [塗り](shape-paint-design.md)・[線種](line-style-design.md)・[α](color-alpha-design.md)                              | shape-paint・gradient・pattern・selection・numeric関連                       |
 | 画像配置・差替え・背景・取込 | image-assets／frame／crop、Project、描画、image-import controllerとAppの接続  | [画像保存](image-assets-design.md)・[配置と差替え](image-placement-design.md)                                        | image-assets・placement・replacement・background、開始時に追加済みのcrop関連 |
-| コピー／切取／貼付           | clipboard、image-clipboard、editor、資産lease                                 | [画像clipboard](image-clipboard-design.md)                                                                           | clipboard・image-paste・asset-clipboard                                      |
+| コピー／切取／貼付           | clipboard controller、clipboard、image-clipboard、editor、資産lease           | [画像clipboard](image-clipboard-design.md)                                                                           | clipboard・image-paste・asset-clipboard                                      |
 | 画面・Symbol・フォルダー     | editor、screen-references、layer-tree／drag、使用先集計                       | [埋込](embedded-screen-design.md)・[配置ドラッグ](layer-drag-design.md)・[フォルダードラッグ](folder-drag-design.md) | screens・symbols・screen-view・layer／folder関連                             |
 | 選択・viewport・数値         | Renderer、CanvasWorkspace、geometry、drafts、numeric-properties               | [選択表示](selection-view-design.md)・[回転](object-rotation-design.md)・[UX](frontend-ux-design.md)                 | numeric・range・rotation・resize・viewport・wheel・placement                 |
 | 保存形式                     | TS Project、JSON Schema、Rust Project、生成処理、examples、package／clipboard | [保存基盤](image-assets-design.md)・[統合設計](scada-integrated-design.md)                                           | TS／Rust共有ケース、JSON／package往復、copy／paste、Undo                     |
@@ -85,3 +85,9 @@ SelectionOutlineの空欄はpatchへ入れず、変更項目が全くない要�
 SelectionColorは単色化の明示checkboxと色入力だけを解析する。共有Symbol定義色からの変換を自動化せず、成功後に色と変換checkboxをresetして共通draft確定へ戻す。
 
 通常Object／Screen／Project・移動も既存の入力変換を移動したもので、新しい対象guardや数値規則を追加していない。通常数値の個別確定と全フォーム適用の別経路を維持し、Project／配置名の成功後確定は採用済みモデルの名前をadapterへ渡す。
+
+## クリップボードの現行境界
+
+`designer/controllers/clipboard.svelte.ts`は要求・busy・owner epochと連続paste記録を所有する。Appはnativeイベントと操作対象の判定を行い、同期でcontrollerのactionを呼ぶ。Projectはcopy snapshot／事前検証に必要な現在値のgetterで渡し、履歴・共有AssetStoreの所有と共通edit／draftはAppへ残す。
+
+native payloadの読取、snapshot／lease確保、Promise付きClipboardItemのwrite開始を最初のawaitより前に保つ。画像pasteはimage-import controllerへ委譲し、OS成功後のcut再確認、candidate／leaseの解放は従来の順序を維持する。取消条件の対応表はリファクタリング計画R4bを参照する。

@@ -209,7 +209,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R1 文書整理     | 完了         | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理        |
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功        |
 | R3 フォーム契約 | 完了         | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功 |
-| R4 App機能分離  | 作業中       | R4a完了。画像controller・取消表・関連50件。b〜eは未着手                 |
+| R4 App機能分離  | 作業中       | R4a・R4b完了。画像／clipboardを分離。c〜eは未着手                       |
 | R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持                                   |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                        |
 
@@ -337,3 +337,25 @@ I1〜I4・I6〜I10を維持する構造整理。Astraの読取レビューでget
 R4a完了。型チェック（エラー／警告なし）、TS全636件、本番ビルド、対象整形と既存の画像6spec48件が成功した。native画像原本の1件と、decode待ち中の座標変更を維持して差し替えと別Undoで戻せる追加1件も成功し、計50件。新規1件はgetterによってgeometryまで取消依存へ広げていないことを確認する。期待値・timeout・retryは緩めていない。Astraの実差分レビューでも修正要求なし。
 
 共有Project・履歴・原本Storeの所有と保存契約は維持した。画面配置・画像の見え方は変更しない。既存のJS bundle 500kB警告は継続。次はR4bでclipboardの同期取得／write開始とsnapshot・lease・取消条件を一覧にしてから移す。
+
+### R4b：クリップボード要求・snapshot・原本lease
+
+基準は`102c0bf`、開始時clean。`clipboardAction`、session ID、busy、owner epoch／scope effect、連続pasteのoffset記録を`designer/controllers/clipboard.svelte.ts`へ移した。Appにはnativeイベント受付、入力欄・menu・dialog等の除外、非表示canvas変更判定、Project／履歴／原本Storeの所有と共通edit／draft接続を残す。controllerはcopy snapshotと事前model検証のため現在Projectの読取getterを受けるが、Projectの別コピーや履歴を所有しない。
+
+| 境界             | 維持する取得・確認・解放の順序                                                                                               |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| native paste     | event中にtext／filesからpayloadを同期取得。draft確認の後へDataTransferの読取を遅らせない                                     |
+| native copy／cut | 同期経路では`setData`をevent内で実行。draft確認が保留ならnative参照をnullにしてイベント後の再利用を避ける                    |
+| 画像copy／cut    | 同期でcopy snapshot→予算検証→encode開始・原本pin→Promise付きClipboardItemのwrite開始。最初のawaitを前へ追加しない            |
+| cut事前検証      | OSへ書く前にremove commandを候補モデルで検証。実Project／履歴は変更しない                                                    |
+| owner取消        | Project世代・画面・mode・定義ID・busy・置換の同じprimitive文字列でepoch更新。離れて戻っても旧要求を復活させない              |
+| 非同期paste      | 読取後と原本decode後にowner／revision／dirty／pendingを再確認。画像payloadはR4aのprepareへ同じviewportとawaitで接続          |
+| paste配置        | 開始時のviewportとcenterを保持し、連続pasteのkeyには元と同じ適用時scaleを使う。成功時だけoffset記録更新・配置ツール終了      |
+| cut完了          | write成功後にowner／revision／dirty／pending／選択IDsを再照合。不一致ならコピーだけとして元配置を残す                        |
+| 原本解放         | encodeは既存helperのfinallyでlease解放。paste candidateは成功・拒否ともfinallyでdispose→参照回収。OS失敗で切取元を削除しない |
+
+I1〜I10を維持する構造整理。API対応・許可拒否の案内、予算、保存形式、Undo単位を変更しない。busyはgetterで公開し、Appで値だけ分割取得しない。Astraの実差分の読取レビューでは、同期取得／write開始・native参照解除・cut再確認・candidate解放・App接続の移動漏れに修正要求なし。
+
+R4b完了。型チェック（エラー／警告なし）、TS全636件、本番ビルド、対象整形、clipboard・原本付きclipboard・画像paste・保存入力保護の関連ブラウザ32件が成功した。失敗時の切取元保持、非同期write中の選択／編集変更、定義の最終子削除拒否、画像の遅延応答、draft確認前のpayload取得を既存の期待値で確認した。移動そのものを写すテストは追加せず、timeout・retry・拒否条件は緩めていない。
+
+保存契約・画面配置・Undo単位は維持し、既存のJS bundle 500kB警告は継続。R3最終`484f794`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39316570142)も成功した。今回のR4bローカル検証とは区別する。次はR4cでProject読込候補・置換要求・書出しsnapshot・busy／保存状態の境界を一覧にし、Project採用と編集状態の一括初期化はAppへ残す。
