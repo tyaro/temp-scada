@@ -21,6 +21,7 @@
     setMinimapVisible,
     getMenubarVisible,
     setMenubarVisible,
+    resetDesignerLayoutPreferences,
     toastStore,
   } from "./lib/banto/setup";
   import DesignerMenubar, {
@@ -116,6 +117,7 @@
     referenceHeightMaximum,
   } from "./lib/designer/panel-height";
   import PanelResizeHandle from "./lib/designer/PanelResizeHandle.svelte";
+  import { DEFAULT_PANEL_LAYOUT } from "./lib/designer/panel-layout";
   import {
     DEFAULT_PANEL_WIDTHS,
     PANEL_WIDTH_LIMITS,
@@ -181,9 +183,35 @@
     NumericTarget,
   } from "./lib/designer/numeric-properties";
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
-  let showInspector = $state(true);
-  let showSidebar = $state(true);
-  let showReferences = $state(true);
+  let showInspector = $state(DEFAULT_PANEL_LAYOUT.panels.inspector);
+  let showSidebar = $state(DEFAULT_PANEL_LAYOUT.panels.sidebar);
+  let showReferences = $state(DEFAULT_PANEL_LAYOUT.panels.references);
+  let leftResizer = $state<{ cancel: () => void }>();
+  let rightResizer = $state<{ cancel: () => void }>();
+  let bottomResizer = $state<{ cancel: () => void }>();
+  function restorePanelLayout() {
+    if (mode !== "edit" || busy || drafts.pending || replacement) return;
+    leftResizer?.cancel();
+    rightResizer?.cancel();
+    bottomResizer?.cancel();
+    canvasWorkspace?.preparePanelResize();
+    panelWidths = { ...DEFAULT_PANEL_LAYOUT.widths };
+    referenceHeight = DEFAULT_PANEL_LAYOUT.referenceHeight;
+    showSidebar = DEFAULT_PANEL_LAYOUT.panels.sidebar;
+    showInspector = DEFAULT_PANEL_LAYOUT.panels.inspector;
+    showReferences = DEFAULT_PANEL_LAYOUT.panels.references;
+    showMenubar = DEFAULT_PANEL_LAYOUT.menubar;
+    showMinimap = DEFAULT_PANEL_LAYOUT.minimap;
+    showRulers = DEFAULT_PANEL_LAYOUT.rulers;
+    previousPanels = null;
+    void resetDesignerLayoutPreferences();
+    report("success", "パネルの表示とサイズを標準に戻しました。");
+    void tick().then(() =>
+      document
+        .querySelector<HTMLButtonElement>("[data-permanent-menu]")
+        ?.focus({ preventScroll: true }),
+    );
+  }
   type AuxVisibility = {
     sidebar: boolean;
     inspector: boolean;
@@ -2245,6 +2273,11 @@
           run: resetPanelWidths,
         },
         {
+          label: "標準レイアウトに戻す",
+          disabled: editBlocked,
+          run: restorePanelLayout,
+        },
+        {
           label: "タグ参照パネルの高さを標準に戻す",
           disabled: mode !== "edit",
           run: resetReferenceHeight,
@@ -3008,6 +3041,7 @@ ${object.id}`}
         >
           {#if showReferences && references.length && referencesExpanded && canSizeReferences}
             <PanelResizeHandle
+              bind:this={bottomResizer}
               side="bottom"
               value={displayedReferenceHeight}
               min={MIN_REFERENCE_HEIGHT}
@@ -3064,6 +3098,7 @@ ${object.id}`}
   {#if mode === "edit" && windowWidth >= 1100}
     {#if showSidebar}
       <PanelResizeHandle
+        bind:this={leftResizer}
         side="left"
         value={leftWidth}
         min={PANEL_WIDTH_LIMITS.left.min}
@@ -3077,6 +3112,7 @@ ${object.id}`}
     {/if}
     {#if showInspector}
       <PanelResizeHandle
+        bind:this={rightResizer}
         side="right"
         value={rightWidth}
         min={PANEL_WIDTH_LIMITS.right.min}
@@ -3143,6 +3179,7 @@ ${object.id}`}
     メニューバーは左右キー、項目は上下キー、Enter / Space で実行、Esc
     で閉じます。メニューバー・左パネル・プロパティ・タグ参照一覧は、上部の「メニュー」→「表示」から隠す／復元できます。
     「補助パネルをすべて隠す」からは直前の表示に戻せます。個別の表示切替を行うと、一時的な一括非表示を終了します。
+    「標準レイアウトに戻す」は左右幅・タグ参照高さと各パネル・メニューバー・ミニマップ・ルーラーの表示を戻します。タブ・ツリーの開閉・検索・未適用入力・選択・テーマ・お気に入りは保持し、Projectや履歴を変更しません。
   </p>
   <p>
     表示プレビューは見た目の確認用です。Hub・設備との接続、認証、正式 Runtime

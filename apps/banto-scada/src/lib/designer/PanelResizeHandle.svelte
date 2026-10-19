@@ -45,6 +45,9 @@
       element.releasePointerCapture(previous.pointer);
     onend(commit);
   }
+  export function cancel() {
+    stop(false);
+  }
   function down(event: PointerEvent) {
     if (event.button !== 0 || drag) return;
     event.preventDefault();

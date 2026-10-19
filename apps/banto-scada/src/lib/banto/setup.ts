@@ -1,13 +1,7 @@
 import { DEFAULT_FAVORITES, parseFavorites } from "../designer/favorites";
-import {
-  DEFAULT_REFERENCE_HEIGHT,
-  parseReferenceHeight,
-} from "../designer/panel-height";
-import {
-  DEFAULT_PANEL_WIDTHS,
-  parsePanelWidths,
-  type PanelWidths,
-} from "../designer/panel-widths";
+import { DEFAULT_PANEL_LAYOUT } from "../designer/panel-layout";
+import { parseReferenceHeight } from "../designer/panel-height";
+import { parsePanelWidths, type PanelWidths } from "../designer/panel-widths";
 import {
   createInMemoryDataProvider,
   createLocalUiSettings,
@@ -44,7 +38,7 @@ const localFileAuth: AuthProvider = {
   onCredentialChanged: () => () => {},
 };
 let themeMode: ThemeMode = "dark";
-let menubarVisible = true;
+let menubarVisible = DEFAULT_PANEL_LAYOUT.menubar;
 export type PaletteView = "icons" | "names";
 let paletteView: PaletteView = "icons";
 const PALETTE_VIEW_KEY = "scada.designer.palette-view";
@@ -63,7 +57,7 @@ export async function setPaletteView(view: PaletteView): Promise<void> {
   }
 }
 const PANEL_WIDTHS_KEY = "scada.designer.panel-widths";
-let panelWidths = { ...DEFAULT_PANEL_WIDTHS };
+let panelWidths = { ...DEFAULT_PANEL_LAYOUT.widths };
 export function getPanelWidths(): PanelWidths {
   return { ...panelWidths };
 }
@@ -79,7 +73,7 @@ export async function setPanelWidths(value: PanelWidths): Promise<void> {
   }
 }
 const REFERENCE_HEIGHT_KEY = "scada.designer.reference-height";
-let referenceHeight = DEFAULT_REFERENCE_HEIGHT;
+let referenceHeight = DEFAULT_PANEL_LAYOUT.referenceHeight;
 export function getReferenceHeight(): number {
   return referenceHeight;
 }
@@ -111,7 +105,7 @@ export async function setFavorites(value: string[]): Promise<void> {
   }
 }
 const MINIMAP_KEY = "scada.designer.minimap";
-let minimapVisible = true;
+let minimapVisible = DEFAULT_PANEL_LAYOUT.minimap;
 export function getMinimapVisible() {
   return minimapVisible;
 }
@@ -127,7 +121,7 @@ export async function setMinimapVisible(visible: boolean) {
   }
 }
 const RULERS_KEY = "scada.designer.rulers";
-let rulersVisible = true;
+let rulersVisible = DEFAULT_PANEL_LAYOUT.rulers;
 export function getRulersVisible() {
   return rulersVisible;
 }
@@ -143,6 +137,30 @@ export async function setRulersVisible(visible: boolean) {
   }
 }
 const MENUBAR_KEY = "scada.designer.menubar";
+export async function resetDesignerLayoutPreferences(): Promise<boolean> {
+  panelWidths = { ...DEFAULT_PANEL_LAYOUT.widths };
+  referenceHeight = DEFAULT_PANEL_LAYOUT.referenceHeight;
+  menubarVisible = DEFAULT_PANEL_LAYOUT.menubar;
+  minimapVisible = DEFAULT_PANEL_LAYOUT.minimap;
+  rulersVisible = DEFAULT_PANEL_LAYOUT.rulers;
+  const settings: [string, string][] = [
+    [PANEL_WIDTHS_KEY, JSON.stringify(panelWidths)],
+    [REFERENCE_HEIGHT_KEY, String(referenceHeight)],
+    [MENUBAR_KEY, String(menubarVisible)],
+    [MINIMAP_KEY, String(minimapVisible)],
+    [RULERS_KEY, String(rulersVisible)],
+  ];
+  const results = await Promise.allSettled(
+    settings.map(async ([key, value]) => uiSettings.set(key, value)),
+  );
+  const saved = results.every((result) => result.status === "fulfilled");
+  if (!saved)
+    toastStore.push(
+      "warning",
+      "レイアウトを保存できない項目があります。このタブの復元は維持します。",
+    );
+  return saved;
+}
 export function getMenubarVisible(): boolean {
   return menubarVisible;
 }
