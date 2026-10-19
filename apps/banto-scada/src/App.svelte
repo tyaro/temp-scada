@@ -10,8 +10,7 @@
     type PastePayload,
   } from "./lib/image-clipboard";
   import { imageCropFromForm } from "./lib/designer/image-crop-fields";
-  import { patternFromForm } from "./lib/designer/pattern-fields";
-  import { normalizeGradientAngle } from "./lib/linear-gradient";
+  import { shapePaintCommand } from "./lib/designer/forms/shape-paint";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
   import { readProjectFile, writeProjectPackage } from "./lib/project-package";
@@ -2251,98 +2250,20 @@
         crop: imageCropFromForm(data, asset) ?? null,
       };
     }
-    if (form.dataset.editorForm === "shape-paint") {
-      if (
-        !selected ||
-        form.dataset.targetKey !==
-          `${workspaceGeneration}:${screen.id}:${!!activeDefinition}` ||
-        selected?.id !== form.dataset.objectId ||
-        (selected.shape.type !== "rectangle" &&
-          selected.shape.type !== "ellipse")
-      )
-        throw new Error(
-          "塗りと枠線の適用先が変更されています。選択し直してください。",
-        );
-      const fill = data.get("fillEnabled"),
-        stroke = data.get("strokeEnabled");
-      if (
-        !["true", "false"].includes(String(fill)) ||
-        !["true", "false"].includes(String(stroke))
-      )
-        throw new Error("塗りと枠線の有無を選択してください。");
-      const width =
-        stroke === "true"
-          ? parseNumericProperty(String(data.get("strokeSize") ?? ""))
-          : 0;
-      if (stroke === "true" && (width <= 0 || width > 64))
-        throw new Error("枠線の幅は0より大きく64以下にしてください。");
-      return {
-        type: "update",
-        screenId: screen.id,
-        objectId: selected.id,
-        patch: {
-          paint: {
-            fill: {
-              enabled: fill === "true",
-              paint: (() => {
-                const kind = String(data.get("fillType"));
-                if (kind === "solid")
-                  return {
-                    type: "solid" as const,
-                    color: String(data.get("fillColor")),
-                    alpha:
-                      parseNumericProperty(String(data.get("fillAlpha"))) / 100,
-                  };
-                if (kind === "linearGradient")
-                  return {
-                    type: "linearGradient" as const,
-                    angle: normalizeGradientAngle(
-                      parseNumericProperty(String(data.get("fillAngle"))),
-                    ),
-                    start: {
-                      color: String(data.get("fillStartColor")),
-                      alpha:
-                        parseNumericProperty(
-                          String(data.get("fillStartAlpha")),
-                        ) / 100,
-                    },
-                    end: {
-                      color: String(data.get("fillEndColor")),
-                      alpha:
-                        parseNumericProperty(String(data.get("fillEndAlpha"))) /
-                        100,
-                    },
-                  };
-                if (kind === "pattern") return patternFromForm(data);
-                throw new Error("塗りの種類を選択してください。");
-              })(),
-            },
-            stroke:
-              stroke === "true"
-                ? {
-                    color: String(data.get("strokeColor")),
-                    width: Number(width),
-                    ...(parseNumericProperty(
-                      String(data.get("strokeAlpha")),
-                    ) === 100 &&
-                    selected.shape.paint.stroke?.alpha === undefined
-                      ? {}
-                      : {
-                          alpha:
-                            parseNumericProperty(
-                              String(data.get("strokeAlpha")),
-                            ) / 100,
-                        }),
-                    ...(parseLineStyle(data.get("strokeStyle")) === "solid" &&
-                    selected.shape.paint.stroke?.lineStyle !== "solid"
-                      ? {}
-                      : { lineStyle: parseLineStyle(data.get("strokeStyle")) }),
-                  }
-                : null,
-          },
+    if (form.dataset.editorForm === "shape-paint")
+      return shapePaintCommand(
+        {
+          data,
+          objectId: form.dataset.objectId,
+          targetKey: form.dataset.targetKey,
         },
-      };
-    }
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selected,
+        },
+      );
     if (form.dataset.editorForm === "symbol-color-mode") {
       if (
         form.dataset.targetKey !==

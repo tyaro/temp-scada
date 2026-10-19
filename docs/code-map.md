@@ -41,17 +41,17 @@
 
 ## フォームの現行境界
 
-現状は子フォームのname／datasetをAppの`formCommand`が解釈し、`validateDrafts`が候補Projectへ順に適用して全体検証する。確定は`submitForm`→`edit`、成功時は`acknowledgeForm`→DraftGuardへ戻す。通常数値は`commitNumber`と`acceptField`を通す。別のdirty台帳やProject所有者を作らない。
+フォームの移行中。塗りと枠線は`designer/forms/shape-paint.ts`が入力と対象を解釈し、残るフォームはAppの`formCommand`が解釈する。`validateDrafts`は共通のまま候補Projectへ順に適用して全体検証する。確定は`submitForm`→`edit`、成功時は`acknowledgeForm`→DraftGuardへ戻す。通常数値は`commitNumber`と`acceptField`を通す。別のdirty台帳やProject所有者を作らない。
 
-| フォーム      | 現在の入力・描画                                      | 解析・確定の所在                          |
-| ------------- | ----------------------------------------------------- | ----------------------------------------- |
-| 塗りと枠線    | `designer/ShapePaint.svelte`、`pattern-fields.ts`     | Appの`formCommand`。R3の最初の対象        |
-| 一括編集      | `SelectionOutline`／`SelectionLine`／`SelectionColor` | Appの`formCommand`・`acknowledgeForm`     |
-| Symbol配色    | `SymbolColorMode.svelte`                              | Appの`formCommand`                        |
-| 背景画像      | Appの画面設定フォーム                                 | Appの`formCommand`                        |
-| 画像crop      | `designer/ImageCrop.svelte`・`image-crop-fields.ts`   | 数値解析はhelper、対象照合とコマンドはApp |
-| 通常配置      | `InspectorPanel.svelte`・`numeric-properties.ts`      | Appの`formCommand`と`commitNumber`        |
-| 画面・Project | Appの左ペイン                                         | Appの`formCommand`                        |
+| フォーム      | 現在の入力・描画                                      | 解析・確定の所在                                                     |
+| ------------- | ----------------------------------------------------- | -------------------------------------------------------------------- |
+| 塗りと枠線    | `designer/ShapePaint.svelte`、`pattern-fields.ts`     | `forms/shape-paint.ts`へ入力解析・世代／所有先／配置の照合を移行済み |
+| 一括編集      | `SelectionOutline`／`SelectionLine`／`SelectionColor` | Appの`formCommand`・`acknowledgeForm`                                |
+| Symbol配色    | `SymbolColorMode.svelte`                              | Appの`formCommand`                                                   |
+| 背景画像      | Appの画面設定フォーム                                 | Appの`formCommand`                                                   |
+| 画像crop      | `designer/ImageCrop.svelte`・`image-crop-fields.ts`   | 数値解析はhelper、対象照合とコマンドはApp                            |
+| 通常配置      | `InspectorPanel.svelte`・`numeric-properties.ts`      | Appの`formCommand`と`commitNumber`                                   |
+| 画面・Project | Appの左ペイン                                         | Appの`formCommand`                                                   |
 
 R3ではフォームごとにadapterへ移し、成功済みと残る経路を計画の進捗へ記録する。上表は移行先の完成を示さない。
 
@@ -70,3 +70,5 @@ R3ではフォームごとにadapterへ移し、成功済みと残る経路を�
 成功読込helperはファイル入力のクリア／再生成とenabled、成功表示、未処理確認なしを待つ。前回の成功メッセージだけで次の読込完了と判定しない。不正ファイル・未適用入力・遅延応答など、失敗や確認自体を検証するケースは明示手順を残す。packageのブラウザ内importはネイティブdecodeと原本復元の確認に使い、一般的なZIP／schemaの網羅検証は既存の単体側で行う。
 
 `playwright.config.ts`で失敗trace・screenshot、CIではHTML reportを出す。workflowは失敗時にtest-results／playwright-reportを7日保持する。待機時間・retry・拒否条件を緩める変更ではない。
+
+ShapePaintの成功後の確定は固有のfield resetを持たないため、既存の共通acknowledgeForm／DraftGuardを維持する。形状やフォームの全体事前検証、数値確定順、フォームごとの履歴は変更しない。

@@ -208,7 +208,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R0 基準確認     | 基準確認済み | `e04e44c`、0.21.0、開始時clean。下記参照                         |
 | R1 文書整理     | 完了         | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理 |
 | R2 テスト補助   | 完了         | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功 |
-| R3 フォーム契約 | 未着手       | 移行済みフォームと残るフォームを列挙                             |
+| R3 フォーム契約 | 作業中       | ShapePaintの解析・対象照合を移行。残るフォームはApp              |
 | R4 App機能分離  | 未着手       | a〜eごとの責務・移動先                                           |
 | R5 編集コマンド | 未着手       | 分類・handlerの網羅性、保存／履歴保持                            |
 | R6 性能         | 計測後に判断 | 計測条件・時間・メモリ・採否理由                                 |
@@ -258,3 +258,11 @@ R0の全体確認: `e04e44c`の[CI run39310221559](https://github.com/tyaro/temp
 I1・I5・I7・I10に関わる元の23件と、native画像／cropの10件、TS全630件、型チェック（エラー／警告なし）、対象整形が成功。App・Project・履歴・原本処理は変更していない。失敗／取消／遅延を試す手順は明示したまま。ブラウザ内package importはネイティブdecodeと原本復元の確認に残し、一般的なpackage契約は単体で検証する。
 
 Playwrightの失敗trace・screenshotとCI用HTML report、workflowでの失敗成果物7日保持を設定した。設定を確認したもので、故意にCIを失敗させてuploadまで試験した記録ではない。timeout・retry・拒否条件は緩めていない。次はR3のShapePaintだけを対象に入力解析・対象照合をadapterへ移し、他フォームと汎用dirty台帳は維持する。
+
+### R3a：ShapePaintの入力解析と対象照合
+
+`4bd0914`を基準に、AppのShapePaint分岐を`designer/forms/shape-paint.ts`へ移した。adapterはFormDataの読取と世代・所有先・定義／画面・配置の照合からEditCommandを返し、Project・履歴・DOM・dirty台帳を変更しない。pattern／数値／角度／線種は既存helperを再利用する。固有の成功resetがないフォームなので、共通のacknowledgeFormとDraftGuardの確定を維持する。
+
+I1〜I4・I6・I9を保持し、同値paintと任意の既定stroke属性を実体化しないこと、古い対象の拒否、不正フォームの原子的拒否を3件で確認した。TS全633件、型チェック（エラー／警告なし）、本番ビルド、対象整形、ShapePaint／gradient／pattern／数値／Inspectorの関連ブラウザ38件が成功。Appのmarkup・CSS、保存形式、Undo単位、他フォームの入力解析は変更していない。R3全体の完了ではない。
+
+後続の文書だけの`3bffc53`のCI（run39311557328）でwheel-navigationのプレビューfit測定1件が再現した（507件成功）。プレビューの補助ペイン縮小に伴うResizeObserver前の寸法を採っている可能性を確認中。次のadapter移動より前に、レイアウト確定待ちを独立した区切りで確認する。
