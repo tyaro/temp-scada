@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { placementLabel } from "../placement-label";
   import TagPicker from "./TagPicker.svelte";
   import {
     sampleCatalog,
@@ -87,7 +88,7 @@
       input: tagInput,
       catalog: sampleCatalog,
       revision: sampleCatalog.revision,
-      label: `${screen.name} ／ Text · ${selected.order} ／ 表示タグ`,
+      label: `${screen.name} ／ ${selected.name ? `${selected.name}（Text · ${selected.order}）` : `Text · ${selected.order}`} ／ 表示タグ`,
     };
     pickerOpen = true;
   }
@@ -246,15 +247,13 @@
     >
   </div>
   {#if selected}<div class="inspector-subject">
-      <strong
-        >{selected.shape.type === "symbol"
-          ? (project.symbols.find(
-              (d) =>
-                selected.shape.type === "symbol" &&
-                d.id === selected.shape.symbolId,
-            )?.name ?? "Symbol")
-          : selected.shape.type}</strong
-      ><small>配置 {selected.order}</small>
+      <strong title={placementLabel(selected, project.symbols)}
+        >{placementLabel(selected, project.symbols)}</strong
+      >
+      <small
+        >{activeDefinition ? "共有定義内" : "画面内"} · {selected.shape.type} · 配置
+        {selected.order}</small
+      >
     </div>{/if}
   <div class="panel-content">
     {#if selectedIds.length > 1}
@@ -298,7 +297,30 @@
             else properties(event);
           }}
         >
-          <p class="numeric-hint">Enter・フォーカス移動で確定 · Escで取消</p>
+          <label class="placement-name"
+            >配置名<input
+              name="name"
+              aria-label="配置名"
+              oncompositionstart={compositionStart}
+              oncompositionend={compositionEnd}
+              onkeydown={(event) => {
+                if (
+                  event.key === "Enter" &&
+                  (event.isComposing || composing.has(event.currentTarget))
+                )
+                  event.preventDefault();
+              }}
+              maxlength="200"
+              placeholder="未設定なら種類・表示順で表示"
+            /></label
+          >
+          <p class="numeric-hint">
+            配置名は「変更を適用」で確定します。
+            {#if activeDefinition}共有定義内の名前は同じ定義を使う全配置で共用します。{/if}
+          </p>
+          <p class="numeric-hint">
+            数値はEnter・フォーカス移動で確定 · Escで取消
+          </p>
           <div class="fields">
             {#each "width" in selected ? ["x", "y", "width", "height"] : ["x", "y"] as field}
               <label
@@ -515,10 +537,12 @@
     gap: 12px;
     margin-top: 8px;
   }
+  .placement-name,
   .fields label {
     font-size: 12px;
     color: var(--banto-text-muted);
   }
+  .placement-name input,
   .fields input,
   .fields textarea,
   .fields select {
@@ -542,12 +566,19 @@
     border-color: var(--banto-danger, #b42318);
   }
   .inspector-subject {
-    display: flex;
+    display: grid;
     align-items: baseline;
     gap: 8px;
     padding: 4px 14px 0;
     overflow-wrap: anywhere;
     font-size: 13px;
+  }
+  .inspector-subject strong {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .inspector-subject small {
     color: var(--banto-text-muted);

@@ -1,5 +1,6 @@
 import type { Project } from "./project";
 export interface BindingUsage {
+  name?: string;
   screenId: string;
   screenName: string;
   objectId: string;
@@ -25,6 +26,7 @@ export function bindingReferences(project: Project): BindingReference[] {
         groups.set(externalName, group);
       }
       group.usages.push({
+        ...(object.name ? { name: object.name } : {}),
         screenId: screen.id,
         screenName: screen.name,
         objectId: object.id,
@@ -49,7 +51,8 @@ export function searchReferences(
       reference.usages.some(
         (usage) =>
           normalize(usage.screenName).includes(term) ||
-          normalize(usage.text).includes(term),
+          normalize(usage.text).includes(term) ||
+          normalize(usage.name ?? "").includes(term),
       ),
   );
 }

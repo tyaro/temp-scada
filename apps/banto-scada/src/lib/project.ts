@@ -6,6 +6,7 @@ export interface Point {
   y: number;
 }
 interface BaseObject {
+  name?: string;
   id: string;
   order: number;
   x: number;
@@ -51,10 +52,10 @@ export interface SymbolDefinition {
 export interface Project {
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.4.0";
+    schemaVersion: "0.5.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.4.0";
+    minRuntimeVersion: "0.5.0";
     name: string;
   };
   screens: Screen[];
@@ -75,8 +76,8 @@ export function parseProject(json: string): Project {
       ...old,
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.4.0",
-        minRuntimeVersion: "0.4.0",
+        schemaVersion: "0.5.0",
+        minRuntimeVersion: "0.5.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,

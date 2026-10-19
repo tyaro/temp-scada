@@ -21,6 +21,7 @@ export function objectFormValues(
   definition: boolean,
 ): Record<string, string> {
   const values: Record<string, string> = {
+    name: object.name ?? "",
     x: String(object.x),
     y: String(object.y),
     fill: object.fill,

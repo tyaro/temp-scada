@@ -11,6 +11,7 @@ import builtins from "./symbol-library.json";
 import type { Point, SymbolDefinition, ScreenObject } from "./project";
 export type AddKind = "rectangle" | "ellipse" | "text" | "line" | "pipe";
 export interface ObjectPatch {
+  name?: string | null;
   x?: number;
   y?: number;
   width?: number;
@@ -544,6 +545,7 @@ export function applyCommand(
     } else if (command.type === "remove") screen.objects.splice(index, 1);
     else {
       const {
+        name,
         text,
         binding,
         symbolId,
@@ -554,6 +556,13 @@ export function applyCommand(
       } = command.patch;
       const object = screen.objects[index];
       Object.assign(object, geometry);
+      if (name !== undefined) {
+        if (name !== null && typeof name !== "string")
+          throw new Error("配置名は文字列にしてください");
+        const normalized = name?.trim() ?? "";
+        if (normalized) object.name = normalized;
+        else delete object.name;
+      }
       if (symbolId !== undefined) {
         if (definitionId || object.shape.type !== "symbol")
           throw new Error("参照先は画面上の Symbol 配置にだけ設定できます");

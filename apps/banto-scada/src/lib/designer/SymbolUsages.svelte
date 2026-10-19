@@ -20,7 +20,7 @@
   const shown = $derived(
     usages.filter((usage) =>
       normalized(
-        `${usage.screenName} ${usage.screenId} ${usage.objectId} ${usage.order}`,
+        `${usage.name ?? ""} ${usage.screenName} ${usage.screenId} ${usage.objectId} ${usage.order}`,
       ).includes(normalized(query.trim())),
     ),
   );
@@ -44,19 +44,19 @@
       bind:this={search}
       type="search"
       aria-label="共有定義の使用先を検索"
-      placeholder="画面名・配置 ID で検索"
+      placeholder="配置名・画面名・配置 ID で検索"
       bind:value={query}
     />
     <p>配置を選ぶと該当画面を表示します。</p>
     <div class="usages">
       {#each shown as usage (usage.objectId)}
         <button
-          aria-label={`${usage.screenName} の Symbol ${usage.order} を表示`}
-          title={`画面 ID: ${usage.screenId}\n配置 ID: ${usage.objectId}`}
+          aria-label={`${usage.screenName} の ${usage.name ? `${usage.name}（Symbol ${usage.order}）` : `Symbol ${usage.order}`} を表示`}
+          title={`${usage.name ?? ""}\n画面 ID: ${usage.screenId}\n配置 ID: ${usage.objectId}`}
           onclick={() => onopen(usage)}
         >
           <span>{usage.screenName}</span><small
-            >配置 {usage.order} · X {usage.x} / Y {usage.y}</small
+            >{usage.name ?? `配置 ${usage.order}`} · X {usage.x} / Y {usage.y}</small
           >
         </button>
       {/each}
@@ -120,6 +120,11 @@
     overflow-y: auto;
     padding: 3px;
     margin: 0 -3px;
+  }
+  .usages small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .usages button {
     display: grid;

@@ -60,6 +60,7 @@
   import { untrack, tick, flushSync } from "svelte";
   import { selectionNudge } from "./lib/keyboard-move";
   import { copyObjects, parseClipboard } from "./lib/clipboard";
+  import { placementLabel } from "./lib/placement-label";
   import { createProject } from "./lib/new-project";
   import { projectContent } from "./lib/save-state";
   import { createDraftGuard } from "./lib/designer/drafts.svelte";
@@ -1177,6 +1178,13 @@
       return error instanceof Error ? error.message : "数値を確定できません。";
     }
   }
+  function acknowledgeForm(form: HTMLFormElement) {
+    if (form.dataset.editorForm === "object") {
+      const input = form.elements.namedItem("name");
+      if (input instanceof HTMLInputElement) input.value = selected?.name ?? "";
+    }
+    drafts.submitted(form);
+  }
   function edit(command: EditCommand, form?: HTMLFormElement): boolean {
     if (form ? !drafts.beforeSubmit(form) : !drafts.allow(() => edit(command)))
       return false;
@@ -1198,7 +1206,7 @@
         };
       const result = recordEdit(project, history, command, mode);
       if (result.project === project) {
-        if (form) drafts.submitted(form);
+        if (form) acknowledgeForm(form);
         return true;
       }
       project = result.project;
@@ -1243,7 +1251,7 @@
           .map((o) => o.id);
       if (command.type === "remove" || command.type === "remove-many")
         selectedIds = [];
-      if (form) drafts.submitted(form);
+      if (form) acknowledgeForm(form);
       report(
         "success",
         "変更を適用しました。JSON を保存するとファイルに残せます。",
@@ -1359,6 +1367,7 @@
       };
     if (!selected) throw new Error("選択した図形が見つかりません");
     const patch: ObjectPatch = {
+      name: String(data.get("name") ?? ""),
       x: Number(data.get("x")),
       y: Number(data.get("y")),
       fill: String(data.get("fill")),
@@ -1517,6 +1526,8 @@
           !query ||
           [
             objectLabel(object),
+            placementLabel({ ...object, name: undefined }, project.symbols),
+            object.shape.type,
             object.id,
             ...(object.shape.type === "text"
               ? [object.shape.text, object.shape.binding?.externalName ?? ""]
@@ -1526,7 +1537,7 @@
       }),
   );
   function objectLabel(object: ScreenObject) {
-    return `${object.shape.type === "symbol" ? (project.symbols.find((d) => object.shape.type === "symbol" && d.id === object.shape.symbolId)?.name ?? "Symbol") : object.shape.type} · ${object.order}`;
+    return placementLabel(object, project.symbols);
   }
   const selectionContextLabel = $derived(
     contextKind === "blank"
@@ -2354,6 +2365,11 @@
             count={screen.objects.length}
             bind:open={layersExpanded}
           >
+            {#if selectedIds.some((id) => !visibleLayers.some((object) => object.id === id))}
+              <p class="hint" role="status">
+                選択中の配置は検索条件外です。選択とプロパティは保持しています。
+              </p>
+            {/if}
             <nav aria-label="図形一覧">
               {#each visibleLayers as object (object.id)}
                 <div class="layer-entry">
@@ -2361,6 +2377,9 @@
                     class:active={selectedIds.includes(object.id)}
                     aria-pressed={selectedIds.includes(object.id)}
                     data-layer-id={object.id}
+                    title={`${objectLabel(object)}
+${object.shape.type} · ${object.order}
+${object.id}`}
                     onclick={(event) =>
                       selectObjects(object.id, event.shiftKey)}
                     oncontextmenu={(event) => {
@@ -2649,7 +2668,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.4.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.5.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。
@@ -2793,6 +2812,12 @@
     min-height: 36px;
     width: 100%;
     overflow-wrap: anywhere;
+  }
+  .layer-entry > button:first-child span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .layer-entry .layer-more {
     position: absolute;

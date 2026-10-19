@@ -62,7 +62,7 @@
           >タグ参照を検索<input
             type="search"
             bind:value={search}
-            placeholder="外部名・画面名・静的テキスト"
+            placeholder="外部名・配置名・画面名・静的テキスト"
           /></label
         >
         {#if search}<button onclick={() => (search = "")}>検索をクリア</button
@@ -87,9 +87,11 @@
                     ><div class="usages">
                       {#each reference.usages as usage (usage.objectId)}
                         <button
-                          aria-label={`${usage.screenName} の Text ${usage.order} を編集`}
+                          aria-label={`${usage.screenName} の ${usage.name ? `${usage.name}（Text ${usage.order}）` : `Text ${usage.order}`} を編集`}
+                          title={usage.name}
                           onclick={() => onopen(usage)}
-                          >{usage.screenName} / Text {usage.order}</button
+                          >{usage.screenName} / {usage.name ??
+                            `Text ${usage.order}`}</button
                         >
                       {/each}
                     </div></td

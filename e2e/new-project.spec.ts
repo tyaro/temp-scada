@@ -36,7 +36,7 @@ test("new blank project is an editable clean baseline, exports current schema an
   await button(page, "元に戻す").click();
   await expect(state(page)).toContainText("新しいProject・未書き出し");
   const first = await exported(page);
-  expect(first.manifest.schemaVersion).toBe("0.4.0");
+  expect(first.manifest.schemaVersion).toBe("0.5.0");
   expect(first.screens).toHaveLength(1);
   expect(first.screens[0]).toMatchObject({
     name: "画面1",
@@ -52,13 +52,11 @@ test("new blank project is an editable clean baseline, exports current schema an
   const second = await exported(page);
   expect(second.manifest.projectId).not.toBe(first.manifest.projectId);
   expect(second.screens[0].id).not.toBe(first.screens[0].id);
-  await page
-    .getByLabel("Project JSON を開く", { exact: true })
-    .setInputFiles({
-      name: "new.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(first)),
-    });
+  await page.getByLabel("Project JSON を開く", { exact: true }).setInputFiles({
+    name: "new.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(first)),
+  });
   await expect(state(page)).toContainText("読込後の変更なし");
   await expect(canvas.locator("[data-object-id]")).toHaveCount(0);
 });
