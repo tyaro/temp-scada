@@ -247,6 +247,8 @@
   } from "./lib/designer/numeric-properties";
   import PreviewFullscreen from "./lib/designer/PreviewFullscreen.svelte";
   import PreviewPopups from "./lib/designer/PreviewPopups.svelte";
+  import ArrayCopyDialog from "./lib/designer/ArrayCopyDialog.svelte";
+  import { createArrayCopyController } from "./lib/designer/controllers/array-copy.svelte";
   import ScreenViewDialog from "./lib/designer/ScreenViewDialog.svelte";
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
   let showInspector = $state(DEFAULT_PANEL_LAYOUT.panels.inspector);
@@ -724,6 +726,7 @@
     }
     if (
       screenViewRequest !== null ||
+      arrayCopy.request !== null ||
       folderRequest !== null ||
       inspectorController?.isTagPickerOpen() ||
       (event.target instanceof Element &&
@@ -1600,6 +1603,7 @@
         command.type === "add-screen-view" ||
         command.type === "duplicate" ||
         command.type === "duplicate-many" ||
+        command.type === "duplicate-array" ||
         command.type === "paste"
       )
         selectedIds = canvasSelectionIds(
@@ -1734,6 +1738,33 @@
     };
     run();
   }
+  const arrayCopy = createArrayCopyController({
+    get scope() {
+      return JSON.stringify([
+        workspaceGeneration,
+        screen.id,
+        editingSymbolId,
+        mode,
+        [...selectedIds].sort(),
+      ]);
+    },
+    get revision() {
+      return project.manifest.projectRevision;
+    },
+    get blocked() {
+      return mutationBlocked;
+    },
+    get owner() {
+      return screen;
+    },
+    get ids() {
+      return selectedIds;
+    },
+    transition,
+    edit: (command, onerror) => edit(command, undefined, onerror),
+    report: (message) => report("error", message),
+    stopPlacement,
+  });
   let screenViewRequest = $state<{
     generation: number;
     ownerId: string;
@@ -2503,6 +2534,7 @@
       transition,
       edit,
       duplicateSelection,
+      openArrayCopy: arrayCopy.open,
       removeSelection,
       rotateSelection,
     },
@@ -3461,6 +3493,19 @@
     onapply={addScreenView}
     onclose={() => (screenViewRequest = null)}
   />
+{/if}
+{#if arrayCopy.request}
+  {#key arrayCopy.request}
+    <ArrayCopyDialog
+      sourceCount={arrayCopy.request.ids.length}
+      existingCount={screen.objects.length}
+      limit={activeDefinition ? 100 : 1000}
+      stepX={arrayCopy.request.stepX}
+      stepY={arrayCopy.request.stepY}
+      onapply={arrayCopy.apply}
+      onclose={arrayCopy.close}
+    />
+  {/key}
 {/if}
 <DraftPrompt guard={drafts} />
 <Modal

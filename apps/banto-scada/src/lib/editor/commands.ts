@@ -157,6 +157,15 @@ export type ObjectCommand = (
       axis: "x" | "y";
     }
   | {
+      type: "duplicate-array";
+      screenId: string;
+      objectIds: string[];
+      columns: number;
+      rows: number;
+      stepX: number;
+      stepY: number;
+    }
+  | {
       type: "distribute-gaps";
       screenId: string;
       objectIds: string[];
@@ -361,6 +370,7 @@ const commandScopes = {
   "move-vertex": "object",
   "move-many": "object",
   "duplicate-many": "object",
+  "duplicate-array": "object",
   align: "object",
   "remove-many": "object",
   add: "object",

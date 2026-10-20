@@ -33,6 +33,7 @@ export interface DesignerActionsHost {
     transition(run: () => void): void;
     edit(command: EditCommand): boolean;
     duplicateSelection(): void;
+    openArrayCopy(): void;
     removeSelection(): void;
     rotateSelection(delta: number): void;
   };
@@ -217,6 +218,13 @@ export function createDesignerActions(host: DesignerActionsHost) {
             disabled:
               host.editing.mutationBlocked || !host.editing.selectedIds.length,
             run: host.editing.duplicateSelection,
+          },
+          {
+            label: "配列複製",
+            icon: "M3 3H9V9H3ZM15 3H21V9H15ZM3 15H9V21H3ZM15 15H21V21H15Z",
+            disabled:
+              host.editing.mutationBlocked || !host.editing.selectedIds.length,
+            run: host.editing.openArrayCopy,
           },
           {
             label: "選択図形を削除",

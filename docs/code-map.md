@@ -222,3 +222,13 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ## 隙間の均等化
 
 `editor/gap-arrangement.ts`は`selectionUnits`／`unitBounds`を共用し、回転後外形の隙間と固定端を計算する。`commands.ts`／`object-handler.ts`／`selection-handler.ts`で原子的な`distribute-gaps`をroutingし、共通`designer-actions.ts`から実行する。`gap-arrangement.test.ts`と`e2e/gap-arrangement.spec.ts`で異幅・回転・矢印・グループ・拒否・no-op・Undoを確認する。中心等間隔の既存経路は維持する。
+
+## 配列複製
+
+- `lib/array-copy.ts`: 組数・ピッチ・配置予算の入力契約。
+- `editor/duplicate-placement.ts`: 複数配置・配列で共用する配置／group／stateColorのID対応と参照保持。
+- `editor/selection-handler.ts`: `duplicate-array`の行列展開と最終の原子的検証。
+- `designer/controllers/array-copy.svelte.ts`／`ArrayCopyDialog.svelte`: draft解決、owner世代／revision、IMEと一時入力。Appは所有者と共通actionへ接続。
+- `array-copy.test.ts`／`e2e/array-copy.spec.ts`: 順序・参照・group・予算・取消／Undo・失効。既存`geometric-groups`の回帰を併用する。
+
+配列設定の実画面は`scripts/capture-array-copy.mjs`で記録し、入力値の実画素も確認する。

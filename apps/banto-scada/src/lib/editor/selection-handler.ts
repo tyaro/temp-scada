@@ -1,5 +1,7 @@
+import { duplicatePlacements } from "./duplicate-placement";
+import { validateArrayCopy } from "../array-copy";
 import { distributeGaps } from "./gap-arrangement";
-import { groupFor, groupsOf } from "../geometric-groups";
+import { groupFor } from "../geometric-groups";
 import { arrangeUnits } from "./group-arrangement";
 import {
   getBounds,
@@ -9,7 +11,6 @@ import {
 } from "../project";
 import { parseLineStyle, setLineStyle } from "../line-style";
 import type { SelectionCommand } from "./commands";
-import { newId, remapStateColor } from "./model-helpers";
 import { applyFolderAssignment } from "./folder-handler";
 import { unhandledCommand } from "./unhandled-command";
 
@@ -265,25 +266,25 @@ export function applySelectionCommand(
         (group) => !group.memberIds.some((id) => ids.has(id)),
       );
   } else if (command.type === "duplicate-many") {
-    const order = Math.max(-1, ...screen.objects.map((o) => o.order)) + 1;
-    const copies = new Map(objects.map((object) => [object.id, newId()]));
-    const copiedGroups = groupsOf(screen)
-      .filter((group) => group.memberIds.every((id) => ids.has(id)))
-      .map((group) => ({
-        ...group,
-        id: newId(),
-        memberIds: group.memberIds.map((id) => copies.get(id)!),
-      }));
-    if ("groups" in screen) screen.groups.push(...copiedGroups);
-    objects.forEach((o, i) => {
-      const copy = JSON.parse(JSON.stringify(o));
-      copy.id = copies.get(o.id)!;
-      remapStateColor(copy, copies);
-      copy.x += 20;
-      copy.y += 20;
-      copy.order = order + i;
-      screen.objects.push(copy);
-    });
+    duplicatePlacements(screen, objects, 20, 20);
+  } else if (command.type === "duplicate-array") {
+    validateArrayCopy(
+      command,
+      objects.length,
+      screen.objects.length,
+      "background" in screen ? 1000 : 100,
+    );
+    for (let row = 0; row < command.rows; row++) {
+      for (let column = 0; column < command.columns; column++) {
+        if (row === 0 && column === 0) continue;
+        duplicatePlacements(
+          screen,
+          objects,
+          column * command.stepX,
+          row * command.stepY,
+        );
+      }
+    }
   } else if (command.type === "align") {
     const bounds = objects.map((o) => {
       const b = getBounds(o);

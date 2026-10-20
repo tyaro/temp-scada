@@ -90,6 +90,7 @@ export function applyObjectCommand(
     command.type === "set-outline-style" ||
     command.type === "move-many" ||
     command.type === "duplicate-many" ||
+    command.type === "duplicate-array" ||
     command.type === "remove-many" ||
     command.type === "align"
   ) {
