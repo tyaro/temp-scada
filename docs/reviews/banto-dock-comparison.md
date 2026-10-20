@@ -126,6 +126,16 @@ IME変換中のDOM破棄は、文字列を復元するだけでは補えない�
 
 ## 7. 判断のための次の最小区切り
 
-**製品画面を置き換える前に、「Bantoのレイアウト木＋SCADAの一枚の実フォーム」でdock／undock／tab／hideを行い、同じDOMまたは外部draftの契約を証明する。** 先に`@banto/forms`の拡張とdock-svelteのlifecycle連携を共通仕様として整理し、入力保護・操作取消・検証の差を上流issue候補へまとめる。今回の比較では新しい上流issueや依存更新は行っていない。
+**製品画面を置き換える前に、「Bantoのレイアウト木＋SCADAの一枚の実フォーム」でdock／undock／tab／hideを行い、同じDOMまたは外部draftの契約を証明する。** 先に`@banto/forms`の拡張とdock-svelteのlifecycle連携を共通仕様として整理し、入力保護・操作取消・検証の差を上流issue候補へまとめる。評価後のユーザー指示により、下記の上流Issueを起票した。依存更新・アプリ移行は行っていない。
 
 この受入を満たせるならCを採用する。満たせない場合は現在のSCADAの固定／浮動を維持し、公開APIの整備を待つ。分割・タブが見えることだけをもって移行完了にはしない。
+
+## 8. 上流への引渡し（2026-10-21）
+
+- [Banto #432: formsの入力保持とpane切替前guard](https://github.com/tyaro/banto/issues/432)。既存#214の再起票ではなく、ルーターを通らない切替・draft保持の拡張。
+- [Banto #433: gestureの所有者と取消](https://github.com/tyaro/banto/issues/433)。resize／dividerのtransaction、pointer照合、keyboard／focusを共通化。
+- [Banto #434: layout復元検証とhost縮小](https://github.com/tyaro/banto/issues/434)。幾何・重複IDと、保存希望を残した到達性を改善。
+
+[再現fixtureと実行手順](banto-dock-fixture/README.md)を保存した。別のBanto checkoutを指定し、元評価と修正後を比較できる。保存したrunnerで10ケースを再実行し、元の観測JSONとの完全一致とpage errorなしを確認した。これは観測fixtureであり、上流実装時に期待値をassertする受入テストへ移す。SCADAのcontroller・単体・ブラウザ試験への固定コミットリンクも各Issueに添付した。
+
+起票前main `55971fba048d4b7d5cfa97af9d0307fc81d989a6`までの追加差分はtheme／LauncherBar関連で、dock-svelte／formsの変更がないことを確認した。上流からSCADAへ依存を作らず、Banto自身のテストへ汎用契約を抽出する。起票は採用・修正完了を示さない。

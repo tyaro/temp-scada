@@ -641,4 +641,4 @@ Project0.32.0の[静的Text明示改行](multiline-text-design.md)を保存し�
 
 ## Bantoパネル基盤との比較評価（2026-10-21）
 
-[ソース比較とブラウザ実験](reviews/banto-dock-comparison.md)を記録した。`@banto/dock-svelte`の配置木・分割・タブを土台に、汎用の入力保護を既存`@banto/forms`へ集約し、パネルの生存期間と連携させる案を推奨する。SCADAにはProject固有の検証・適用・Undoを残す。現在のDockHostへの単純置換では未適用入力が失われる経路を確認したため、共通契約の受入を先行する。これは評価提案であり、依存更新・アプリ移行・新規上流issueの作成はまだ行っていない。
+[ソース比較とブラウザ実験](reviews/banto-dock-comparison.md)を記録した。`@banto/dock-svelte`の配置木・分割・タブを土台に、汎用の入力保護を既存`@banto/forms`へ集約し、パネルの生存期間と連携させる案を推奨する。SCADAにはProject固有の検証・適用・Undoを残す。現在のDockHostへの単純置換では未適用入力が失われる経路を確認したため、共通契約の受入を先行する。評価後にBanto [#432](https://github.com/tyaro/banto/issues/432)・[#433](https://github.com/tyaro/banto/issues/433)・[#434](https://github.com/tyaro/banto/issues/434)を起票し、[再現fixture](reviews/banto-dock-fixture/README.md)と既存テストを引き渡した。依存更新・アプリ移行は未実施。
