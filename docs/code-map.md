@@ -263,3 +263,5 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 浮動Inspectorのgestureは開始時のnative window寸法も保持し、入力捕捉時に照合する。`e2e/inspector-floating.spec.ts`の通知遅延ケースはresizeイベントへの依存を切り離して確定競合を再現する。
 
 左右の浮動配置は`App.svelte`で一つのworkspaceへ接続し、表示・上位層・作図操作・固定幅と連携する。sidebarはプレビュー時だけ浮動を休止する。`setup.ts`は各slotを独立して明示保存し、`designer-actions.ts`は復帰と前面表示を提供する。`sidebar-floating.spec.ts`と`inspector-floating.spec.ts`で同じDOM・入力保持・排他・永続化を確認する。
+
+`designer/menu-viewport.ts`はDesignerの登録済みMenu自身のscrollだけをBantoのancestor-dismissから区別し、可用高を制限する。`main.ts`でmount前にcapture境界を登録し、`settle-menu-focus.ts`がopen／close／破棄の登録を担う。`menu-viewport.spec.ts`が内部／外部scroll・キー・resizeの境界を確認する。[上流課題と暫定対応](designer-menu-viewport.md)。

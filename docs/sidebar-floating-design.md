@@ -40,3 +40,7 @@ TS全1064件、型チェック（エラー／警告なし）と本番buildが成
 ![左作業パネルとプロパティ・ライト](assets/frontend-ux/sidebar-floating-light.png)
 
 ![左作業パネルとプロパティ・ダーク](assets/frontend-ux/sidebar-floating-dark.png)
+
+## 小さい画面の常設メニュー
+
+最初の全体CIで項目数増加による画面外の末尾を検出したため、[Menuの可用高さと内部スクロール境界](designer-menu-viewport.md)を追加した。失敗3件のローカル再現・修正と上流Banto #427への報告を記録している。

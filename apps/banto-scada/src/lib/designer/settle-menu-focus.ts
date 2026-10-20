@@ -1,9 +1,32 @@
+import { registerMenuViewport, unregisterMenuViewport } from "./menu-viewport";
 import { tick } from "svelte";
 
 /** Banto 6.7.0 focuses before its popup visibility style has flushed.
  * Retry after that flush; keep Banto's navigation and native light dismiss.
  */
 export function settleMenuFocus(root: HTMLElement) {
+  const originalStyles = new Map<HTMLElement, string>();
+  function beforeToggle(event: Event) {
+    const popup = event.target;
+    if (
+      !(popup instanceof HTMLElement) ||
+      !popup.matches('[popover][role="menu"]')
+    )
+      return;
+    if ((event as ToggleEvent).newState !== "open") {
+      unregisterMenuViewport(popup);
+      return;
+    }
+    const opener = popup.previousElementSibling;
+    if (
+      !(opener instanceof HTMLElement) ||
+      opener.getAttribute("aria-haspopup") !== "menu"
+    )
+      return;
+    if (!originalStyles.has(popup))
+      originalStyles.set(popup, popup.style.cssText);
+    registerMenuViewport(popup, opener);
+  }
   let trigger: HTMLElement | null = null;
   let last = false;
   function remember(event: Event) {
@@ -41,11 +64,18 @@ export function settleMenuFocus(root: HTMLElement) {
   root.addEventListener("keydown", remember, true);
   root.addEventListener("click", remember, true);
   root.addEventListener("toggle", opened, true);
+  root.addEventListener("beforetoggle", beforeToggle, true);
   return {
     destroy() {
       root.removeEventListener("keydown", remember, true);
       root.removeEventListener("click", remember, true);
       root.removeEventListener("toggle", opened, true);
+      root.removeEventListener("beforetoggle", beforeToggle, true);
+      for (const [popup, style] of originalStyles) {
+        unregisterMenuViewport(popup);
+        popup.style.cssText = style;
+      }
+      originalStyles.clear();
     },
   };
 }
