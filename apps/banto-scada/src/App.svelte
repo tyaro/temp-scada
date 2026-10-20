@@ -124,6 +124,7 @@
   import ContextActions, {
     type ContextAction,
   } from "./lib/designer/ContextActions.svelte";
+  import type { EquipmentUsage } from "./lib/equipment";
   import type { SymbolUsage } from "./lib/symbol-usages";
   import { selectionTarget } from "./lib/selection-view";
   import type { Project } from "./lib/project";
@@ -1265,7 +1266,10 @@
       }
     });
   }
-  function openSymbolUsage(usage: SymbolUsage & { equipmentId?: string }) {
+  function openSymbolUsage(
+    usage: SymbolUsage & { equipmentId?: string },
+    sourceMode: "edit" | "preview" = "edit",
+  ) {
     const generation = workspaceGeneration;
     const matchesUsage = () => {
       const target = project.screens
@@ -1279,12 +1283,13 @@
       );
     };
     const run = () => {
-      if (generation !== workspaceGeneration || mode !== "edit") return;
+      if (generation !== workspaceGeneration || mode !== sourceMode) return;
       if (!drafts.allow(run)) return;
       if (!matchesUsage()) {
         report("info", "使用先が変更されたため移動を中止しました。");
         return;
       }
+      mode = "edit";
       editingSymbolId = null;
       screenId = usage.screenId;
       const targetIds = expandGroupSelection(screen, [usage.objectId]);
@@ -1311,6 +1316,10 @@
       );
     };
     run();
+  }
+  function openPreviewEquipmentUsage(usage: EquipmentUsage) {
+    if (menuBlocked || mode !== "preview") return;
+    openSymbolUsage(usage, "preview");
   }
   function symbolLibraryCommand(command: EditCommand) {
     if (
@@ -3185,6 +3194,7 @@
             bind:this={previewPopups}
             {project}
             images={assetImages}
+            onopenusage={openPreviewEquipmentUsage}
             onmessage={(message) => report("error", message)}
           />
         {/key}

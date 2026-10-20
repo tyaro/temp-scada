@@ -1,20 +1,34 @@
 <script lang="ts">
+  import type { EquipmentUsage } from "../equipment";
   import type { EquipmentContext } from "../symbol-slots";
   import { equipmentReadDetails } from "../equipment-read-details";
   let {
     equipmentId,
     equipmentContext,
-  }: { equipmentId: string; equipmentContext: EquipmentContext } = $props();
+    usages = [],
+    onopenusage,
+  }: {
+    equipmentId: string;
+    equipmentContext: EquipmentContext;
+    usages?: readonly EquipmentUsage[];
+    onopenusage?: (usage: EquipmentUsage) => void;
+  } = $props();
   const details = $derived(equipmentReadDetails(equipmentId, equipmentContext));
   let page = $state(0);
+  let usagePage = $state(0);
   const PAGE_SIZE = 20;
   const lastPage = $derived(
     Math.max(0, Math.ceil((details?.rows.length ?? 0) / PAGE_SIZE) - 1),
   );
   const currentPage = $derived(Math.min(page, lastPage));
+  const lastUsagePage = $derived(
+    Math.max(0, Math.ceil(usages.length / PAGE_SIZE) - 1),
+  );
+  const currentUsagePage = $derived(Math.min(usagePage, lastUsagePage));
   $effect(() => {
     equipmentId;
     page = 0;
+    usagePage = 0;
   });
 </script>
 
@@ -64,6 +78,42 @@
         >
       </nav>
     {/if}
+    {#if onopenusage}
+      <div class="usages" aria-label="機器の図面使用先">
+        <h4>図面の使用先 {usages.length}件</h4>
+        {#if !usages.length}<p>
+            この機器を参照するSymbol配置はありません。
+          </p>{/if}
+        {#each usages.slice(currentUsagePage * PAGE_SIZE, (currentUsagePage + 1) * PAGE_SIZE) as usage (usage.objectId)}
+          <button
+            type="button"
+            data-equipment-usage={usage.objectId}
+            title="編集画面でこの配置を確認"
+            onclick={() => onopenusage?.(usage)}
+            >{usage.screenName} · {usage.name ?? "Symbol配置"} · #{usage.order}{usage.visible ===
+            false
+              ? "（非表示）"
+              : ""}</button
+          >
+        {/each}
+        {#if usages.length > PAGE_SIZE}
+          <nav aria-label="機器の図面使用先のページ">
+            <button
+              disabled={currentUsagePage === 0}
+              onclick={() => (usagePage = currentUsagePage - 1)}
+              >前の使用先</button
+            ><span>{currentUsagePage + 1} / {lastUsagePage + 1}</span><button
+              disabled={currentUsagePage === lastUsagePage}
+              onclick={() => (usagePage = currentUsagePage + 1)}
+              >次の使用先</button
+            >
+          </nav>
+        {/if}
+        <p class="note">
+          配置を開くと編集画面へ切り替わり、小窓は閉じます。非表示・ロックは変更しません。
+        </p>
+      </div>
+    {/if}
   {:else}<p>対象の機器が見つかりません。</p>{/if}
 </section>
 
@@ -100,6 +150,31 @@
   .origin {
     display: block;
     margin-top: 4px;
+  }
+  .usages {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+    border-top: 1px solid var(--banto-border);
+    padding-top: 10px;
+  }
+  .usages h4 {
+    margin: 0;
+  }
+  .usages > button {
+    width: 100%;
+    padding: 6px;
+    border: 1px solid var(--banto-border);
+    border-radius: 4px;
+    background: var(--banto-surface);
+    color: var(--banto-text);
+    text-align: left;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+  .usages button:focus-visible {
+    outline: none;
+    box-shadow: var(--banto-focus-ring);
   }
   nav {
     display: flex;

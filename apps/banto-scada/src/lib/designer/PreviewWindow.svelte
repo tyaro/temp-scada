@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { equipmentUsages, type EquipmentUsage } from "../equipment";
   import EquipmentReadDetails from "./EquipmentReadDetails.svelte";
   import SlotReadStatus from "./SlotReadStatus.svelte";
   import type { EquipmentContext } from "../symbol-slots";
@@ -17,6 +18,7 @@
     images,
     readings,
     equipmentContext,
+    onopenusage,
     onfront,
     onframe,
     onclose,
@@ -32,6 +34,7 @@
     >;
     readings?: TagReadings;
     equipmentContext?: EquipmentContext;
+    onopenusage?: (usage: EquipmentUsage) => void;
     onfront: () => void;
     onframe: (frame: PopupFrame) => void;
     onclose: () => void;
@@ -221,6 +224,8 @@
       <EquipmentReadDetails
         equipmentId={entry.targetId}
         equipmentContext={equipmentContext ?? project}
+        usages={equipmentUsages(project, entry.targetId)}
+        {onopenusage}
       />
     </div>
   {:else if screen}

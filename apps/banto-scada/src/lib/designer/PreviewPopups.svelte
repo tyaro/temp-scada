@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy, tick, untrack } from "svelte";
   import { Modal, restoreFocus } from "@banto/ui";
+  import type { EquipmentUsage } from "../equipment";
   import type { Project } from "../project";
   import type { TagReadings } from "../tag-presentation";
   import { projectScreenReferences } from "../screen-references";
@@ -25,6 +26,7 @@
     images,
     readings,
     onmessage,
+    onopenusage,
   }: {
     project: Project;
     equipmentContext?: EquipmentContext;
@@ -34,6 +36,7 @@
     >;
     readings?: TagReadings;
     onmessage: (message: string) => void;
+    onopenusage?: (usage: EquipmentUsage) => void;
   } = $props();
   let root = $state<HTMLElement>(),
     width = $state(0),
@@ -199,6 +202,7 @@
       {project}
       {area}
       {equipmentContext}
+      {onopenusage}
       rank={windows.findIndex((w) => popupKey(w) === popupKey(entry))}
       {images}
       {readings}
