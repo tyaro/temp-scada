@@ -606,3 +606,7 @@ Astraレビューの次候補として、Symbolが実際に使うslotと機器�
 ## 埋込Viewのclipboardの後続実装（2026-10-20）
 
 [clipboard v4](screen-view-clipboard-design.md)を追加した。参照画面の共有とsnapshot import、必要Symbol／原本の閉包、ID再発行、同一編集世代の現行再利用、失敗時と切取の原子性を既存経路へ接続する。1段の埋込制約・機器関連付けを含むコピー拒否は維持し、正式Runtimeや機器context付き共通画面とは分離する。
+
+## 標準の選択modifierの補完（2026-10-20）
+
+Windows標準操作の補完として、Ctrl／Command＋クリックをキャンバス・レイヤーの追加／解除へ接続した。範囲選択の追加にも対応し、Shift操作・グループ単位・draft保護・Undoを維持する。関連ブラウザ14件で確認した。

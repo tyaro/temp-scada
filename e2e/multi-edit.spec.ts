@@ -88,26 +88,27 @@ test("Shift selection moves, aligns, duplicates and deletes atomically with hist
   await expect(svg.locator('[data-selected="true"]')).toHaveCount(0);
   expect(await positions()).toEqual(afterNumericMove);
 });
-test("canvas Shift-click toggles selection and preview disables batch shortcuts", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await page.getByRole("button", { name: "編集", exact: true }).click();
-  const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
-  const objects = svg.locator("[data-object-id]");
-  await objects.nth(0).click();
-  await objects.nth(1).click({ modifiers: ["Shift"] });
-  await expect(svg.locator('[data-selected="true"]')).toHaveCount(2);
-  await objects.nth(1).click({ modifiers: ["Shift"] });
-  await expect(svg.locator('[data-selected="true"]')).toHaveCount(1);
-  await page.getByRole("button", { name: "すべて選択", exact: true }).focus();
-  await page.keyboard.press("Control+a");
-  await expect(svg.locator('[data-selected="true"]')).toHaveCount(3);
-  await page
-    .getByRole("button", { name: "表示プレビュー", exact: true })
-    .click();
-  await page.keyboard.press("Control+a");
-  await page.keyboard.press("Control+d");
-  await expect(objects).toHaveCount(3);
-  await expect(svg.locator('[data-selected="true"]')).toHaveCount(0);
-});
+for (const modifier of ["Shift", "Control", "Meta"] as const)
+  test(`canvas ${modifier}-click toggles selection and preview disables batch shortcuts`, async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "編集", exact: true }).click();
+    const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
+    const objects = svg.locator("[data-object-id]");
+    await objects.nth(0).click();
+    await objects.nth(1).click({ modifiers: [modifier] });
+    await expect(svg.locator('[data-selected="true"]')).toHaveCount(2);
+    await objects.nth(1).click({ modifiers: [modifier] });
+    await expect(svg.locator('[data-selected="true"]')).toHaveCount(1);
+    await page.getByRole("button", { name: "すべて選択", exact: true }).focus();
+    await page.keyboard.press("Control+a");
+    await expect(svg.locator('[data-selected="true"]')).toHaveCount(3);
+    await page
+      .getByRole("button", { name: "表示プレビュー", exact: true })
+      .click();
+    await page.keyboard.press("Control+a");
+    await page.keyboard.press("Control+d");
+    await expect(objects).toHaveCount(3);
+    await expect(svg.locator('[data-selected="true"]')).toHaveCount(0);
+  });

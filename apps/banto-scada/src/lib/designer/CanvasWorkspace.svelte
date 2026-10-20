@@ -709,7 +709,7 @@
           start,
           current: start,
           client: { x: event.clientX, y: event.clientY },
-          additive: event.shiftKey,
+          additive: event.shiftKey || event.ctrlKey || event.metaKey,
           active: false,
         };
         viewport.setPointerCapture(event.pointerId);

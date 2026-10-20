@@ -428,7 +428,9 @@
       (event.target as Element)
         .closest("[data-object-id]")
         ?.getAttribute("data-object-id") ?? null;
-    const ids = onselect?.(id, event.shiftKey, true) ?? (id ? [id] : []);
+    const ids =
+      onselect?.(id, event.shiftKey || event.ctrlKey || event.metaKey, true) ??
+      (id ? [id] : []);
     const object = screen.objects.find((o) => o.id === id);
     const start = point(event);
     if (

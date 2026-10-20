@@ -264,7 +264,7 @@ export function createLayerTreeController(host: LayerTreeHost) {
   }
   function layerClick(event: MouseEvent, id: string) {
     if (event.detail && performance.now() < layerDragClickUntil) return;
-    host.selectObjects(id, event.shiftKey);
+    host.selectObjects(id, event.shiftKey || event.ctrlKey || event.metaKey);
   }
   let folderRequest = $state<
     (FolderRequest & { scope: string; origin: HTMLElement | null }) | null

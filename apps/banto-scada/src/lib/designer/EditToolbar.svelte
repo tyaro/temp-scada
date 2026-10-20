@@ -89,7 +89,9 @@
     </div>
   {/each}
   {@render controls()}
-  {#if groups.length}<span class="selection" title="Shift + クリックで複数選択"
+  {#if groups.length}<span
+      class="selection"
+      title="Ctrl / ⌘ / Shift + クリックで選択を追加・解除"
       >{selectionCount} 件選択{#if hiddenSelectionCount}（非表示 {hiddenSelectionCount}
         件）{/if}</span
     >{/if}
