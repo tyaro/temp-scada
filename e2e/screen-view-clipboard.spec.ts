@@ -80,6 +80,7 @@ async function menu(p: Page, name: string) {
 }
 async function copy(p: Page) {
   await p.keyboard.press("Control+c");
+  await expect(p.getByTestId("project-status")).toContainText("コピーしました");
   await expect
     .poll(() =>
       p.evaluate(async () => {

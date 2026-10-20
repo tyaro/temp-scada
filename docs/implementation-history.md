@@ -1363,3 +1363,7 @@ Astraの読取専用レビューに従い、[矩形・楕円の塗りと枠線](
 ## 次の枠線スタイル工程（2026-10-19）
 
 Astraレビューを[矩形・楕円の枠線一括編集](selection-outline-design.md)へ反映した。既存の枠線の部分変更と新設を分け、混在時の明示指定・共通値の集計対象・矛盾指定の拒否を具体化し、実装した（[記録](#selection-outline-progress)）。Project 0.10.0のpaintを使い、schemaは変更していない。
+
+## 2026-10-20: 原本付きclipboard試験の非同期書込待ち
+
+`46b21f6`の[CI](https://github.com/tyaro/temp-scada/actions/runs/39401269250)でE2E第2分割が失敗した。診断artifactでは画像fit試験のコピー成功後に貼付配置が増えず、Ctrl＋C直後のCtrl＋Vが原本の非同期書込中に発生していた。画像fitと埋込clipboard試験は「コピーしました」の完了状態を確認してから貼り付け・読取へ進める。固定sleepや自動retryを追加せず、既存の切取・所有者保護を維持する。関連8ブラウザと全体整形が成功した。

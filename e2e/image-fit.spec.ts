@@ -183,6 +183,9 @@ test("fit drafts, Undo, clipboard and archive preserve modes, crop and original 
   });
   await canvas.focus();
   await page.keyboard.press("Control+c");
+  await expect(page.getByTestId("project-status")).toContainText(
+    "コピーしました",
+  );
   await page.keyboard.press("Control+v");
   await expect(page.locator(".sheet > svg > [data-object-id]")).toHaveCount(2);
   const pending = page.waitForEvent("download");
