@@ -255,3 +255,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ## Textの一括文字書式
 
 `set-text-style`はobject分類と共通guardを経て`selection-handler.ts`でpatchと全対象を検証する。`designer/SelectionTextStyle.svelte`／`forms/selection-text-style.ts`はTextだけの選択を明示し、未指定項目をpatchへ含めない。`selection-text-style.test.ts`が保存・所有者・表示元保持・原子性を、`e2e/selection-text-style.spec.ts`がIME・draft・両テーマ・描画を確認する。実画面は`scripts/capture-selection-text-style.mjs`で記録する。
+
+## 静的複数行Textの計算基盤
+
+`multiline-text-layout.ts`の`normalizeTextNewlines`／`fitTextWidth`／`fitStaticLines`は純粋な文字計測adapterを受け取り、空行と幅／高さの省略・実inkのunionを計算する。`multiline-text-layout.test.ts`で字体・grapheme・縦省略と一時cacheを検証する。既存`fitText`は変更せず、Project0.31.0・UI・描画には未接続。接続の段階は[具体設計](multiline-text-design.md)を参照する。

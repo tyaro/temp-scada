@@ -24,7 +24,7 @@ v1.1のAlarm・常時Event／Action・History／Trend・recorderとWindowsサー
 
 [複数配置の不透明度](selection-opacity-design.md)を追加し、色αの一括編集は後続として分離した。[幅／高さの明示的な統一](selection-size-design.md)も追加した。選択順を暗黙の基準にせず、ローカル枠寸法と配置中心・回転を保持する。線・グループの変形、回転後の外接寸法を揃える操作は後続とする。
 
-[Textの一括文字書式](selection-text-style-design.md)を追加した。次の注記作成は静的Textの明示改行を具体化し、自動折返し・可変行間・動的表示の複数行化とは分ける。
+[Textの一括文字書式](selection-text-style-design.md)を追加した。次の注記作成は[静的Textの明示改行](multiline-text-design.md)を具体化する。計算基盤を先行して単体検証し、保存契約・UI・描画への接続は次の区切り。自動折返し・可変行間・動的表示の複数行化とは分ける。
 
 ## 作成支援・プラント運用の追加検討（2026-10-20・日本時間）
 
