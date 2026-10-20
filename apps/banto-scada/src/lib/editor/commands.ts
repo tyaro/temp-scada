@@ -25,6 +25,7 @@ export interface ObjectPatch {
   fill?: string;
   text?: string;
   binding?: TagBinding | null;
+  slotBinding?: { slotName: string } | null;
   symbolId?: string;
   equipmentId?: string | null;
   sourceScreenId?: string;
@@ -251,6 +252,12 @@ export type EquipmentCommand =
 export type ProjectCommand =
   { type: "update-project"; name: string } | EquipmentCommand;
 export type SymbolCommand =
+  | {
+      type: "add-symbol-readout";
+      symbolId: string;
+      slotName: string;
+      slotType: "bool" | "number";
+    }
   | { type: "create-symbol"; name: string; width: number; height: number }
   | {
       type: "update-symbol";
@@ -335,6 +342,7 @@ const commandScopes = {
 
   "create-symbol": "symbol",
   "update-symbol": "symbol",
+  "add-symbol-readout": "symbol",
   "duplicate-symbol": "symbol",
   "remove-symbol": "symbol",
   "place-symbol": "symbol",

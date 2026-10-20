@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { EquipmentContext } from "../symbol-slots";
   import { onDestroy } from "svelte";
   import Renderer from "../Renderer.svelte";
   import type { Point, Screen, SymbolDefinition } from "../project";
@@ -7,6 +8,7 @@
     screen,
     symbols,
     screens = [],
+    equipmentContext,
     images,
     view,
     oncenter,
@@ -15,6 +17,7 @@
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
     screens?: Screen[];
+    equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -131,7 +134,7 @@
     onlostpointercapture={() => finish(true)}
   >
     <div class="thumbnail" aria-hidden="true">
-      <Renderer {screen} {symbols} {images} {screens} />
+      <Renderer {screen} {symbols} {images} {screens} {equipmentContext} />
     </div>
     <svg
       class="outline"

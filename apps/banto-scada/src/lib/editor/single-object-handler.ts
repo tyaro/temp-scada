@@ -64,6 +64,7 @@ export function applySingleObjectCommand(
       name,
       text,
       binding,
+      slotBinding,
       symbolId,
       equipmentId,
       sourceScreenId,
@@ -141,6 +142,12 @@ export function applySingleObjectCommand(
       if (!next.symbols.some((item) => item.id === symbolId))
         throw new Error("Symbol 定義が見つかりません");
       object.shape.symbolId = symbolId;
+    }
+    if (slotBinding !== undefined) {
+      if (object.shape.type !== "text" || !definitionId)
+        throw new Error("slot表示は共有定義内のTextだけに設定できます");
+      if (slotBinding === null) delete object.shape.slotBinding;
+      else object.shape.slotBinding = slotBinding;
     }
     if (binding !== undefined) {
       if (definitionId || object.shape.type !== "text")

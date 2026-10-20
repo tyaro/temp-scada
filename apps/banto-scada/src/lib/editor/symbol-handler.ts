@@ -48,6 +48,36 @@ export function applySymbolCommand(
   }
   const definition = next.symbols.find((s) => s.id === command.symbolId);
   if (!definition) throw new Error("Symbol 定義が見つかりません");
+  if (command.type === "add-symbol-readout") {
+    const slot = definition.readSlots?.find(
+      (item) => item.name === command.slotName,
+    );
+    if (slot && slot.type !== command.slotType)
+      throw new Error("宣言済みslotの型と一致しません");
+    if (!slot)
+      (definition.readSlots ??= []).push({
+        name: command.slotName,
+        type: command.slotType,
+        direction: "read",
+      });
+    definition.objects.push({
+      id: newId(),
+      order: Math.max(-1, ...definition.objects.map((o) => o.order)) + 1,
+      x: 0,
+      y: 0,
+      rotation: 0,
+      width: Math.min(240, definition.width),
+      height: Math.min(40, definition.height),
+      fill: canvasColors("#0b1220").newText,
+      shape: {
+        type: "text",
+        text: command.slotName,
+        style: { fontSize: 16, fontWeight: "normal", align: "left" },
+        slotBinding: { slotName: command.slotName },
+      },
+    });
+    return;
+  }
   if (command.type === "update-symbol")
     Object.assign(definition, {
       name: screenName(command.name),

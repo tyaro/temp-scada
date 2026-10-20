@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.24.0"
+          "const": "0.25.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.24.0"
+          "const": "0.25.0"
         },
         "name": {
           "type": "string",
@@ -152,6 +152,13 @@
           },
           "folders": {
             "$ref": "#/$defs/layerFolders"
+          },
+          "readSlots": {
+            "type": "array",
+            "maxItems": 64,
+            "items": {
+              "$ref": "#/$defs/equipmentSlot"
+            }
           }
         },
         "required": ["id", "name", "width", "height", "objects", "folders"],
@@ -263,10 +270,27 @@
                 },
                 "style": {
                   "$ref": "#/$defs/textStyle"
+                },
+                "slotBinding": {
+                  "type": "object",
+                  "properties": {
+                    "slotName": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
+                      "not": {
+                        "pattern": "[^A-Za-z0-9_]"
+                      }
+                    }
+                  },
+                  "required": ["slotName"],
+                  "additionalProperties": false
                 }
               },
               "required": ["type", "text", "style"],
-              "additionalProperties": false
+              "additionalProperties": false,
+              "not": {
+                "required": ["binding", "slotBinding"]
+              }
             }
           ]
         },

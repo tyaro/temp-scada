@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { slotPresentation, type SlotPresentation } from "./symbol-slots";
   import { patternGeometry } from "./pattern-paint";
   import { linearGradientEndpoints } from "./linear-gradient";
   import { lineDash, lineCap } from "./line-style";
@@ -9,11 +10,13 @@
     object,
     color,
     readings,
+    slotDisplay,
     onsummary,
   }: {
     object: ScreenObject;
     color?: string;
     readings?: TagReadings;
+    slotDisplay?: SlotPresentation;
     onsummary?: (description: string) => void;
   } = $props();
   const gradientId = $props.id();
@@ -49,8 +52,16 @@
   const binding = $derived(
     object.shape.type === "text" ? object.shape.binding : undefined,
   );
+  const slotBinding = $derived(
+    object.shape.type === "text" ? object.shape.slotBinding : undefined,
+  );
+  const bound = $derived(!!binding || !!slotBinding);
   const presentation = $derived(
-    presentNumeric(binding ? readings?.get(binding.externalName) : undefined),
+    slotBinding
+      ? (slotDisplay ?? slotPresentation("unbound"))
+      : presentNumeric(
+          binding ? readings?.get(binding.externalName) : undefined,
+        ),
   );
   const shape = $derived("width" in object ? null : object.shape);
   function arrowPoints() {
@@ -150,15 +161,15 @@
       stroke-linecap={lineCap(object.shape.paint.stroke?.lineStyle)}
     />
   {:else if object.shape.type === "text"}<TextPrimitive
-      text={binding ? presentation.text : object.shape.text}
+      text={bound ? presentation.text : object.shape.text}
       width={object.width}
       height={object.height}
       style={object.shape.style}
       color={color ?? object.fill!}
-      numeric={!!binding}
-      tagName={binding?.externalName}
-      tagState={binding ? presentation.state : undefined}
-      tagLabel={binding ? presentation.label : undefined}
+      numeric={bound}
+      tagName={slotBinding?.slotName ?? binding?.externalName}
+      tagState={bound ? presentation.state : undefined}
+      tagLabel={bound ? presentation.label : undefined}
       {onsummary}
     />{/if}
 {:else if shape}

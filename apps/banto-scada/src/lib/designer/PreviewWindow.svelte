@@ -193,6 +193,7 @@
   </header>
   <div class="content">
     <ScreenPainting
+      equipmentContext={project}
       {screen}
       screens={project.screens}
       symbols={project.symbols}

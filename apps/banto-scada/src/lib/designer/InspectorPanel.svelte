@@ -796,7 +796,19 @@
                       >{textError}</span
                     >{/if}</label
                 >
-                {#if !activeDefinition}
+                {#if activeDefinition}
+                  <label class="full-width"
+                    >読取slot<select name="slotName" aria-label="読取slot"
+                      ><option value="">静的テキスト</option
+                      >{#each ("readSlots" in screen ? screen.readSlots : []) ?? [] as slot}<option
+                          value={slot.name}>{slot.name} · {slot.type}</option
+                        >{/each}</select
+                    ></label
+                  >
+                  <p class="full-width tag-note">
+                    配置に関連付けた機器から解決します。定義編集中は機器未関連付けです。
+                  </p>
+                {:else}
                   <div class="full-width tag-binding">
                     <label
                       >表示タグ（外部名）<input
@@ -850,7 +862,7 @@
                     </select></label
                   >
                   <p class="full-width">
-                    機器との関連付けです。状態表示・実Hub接続は後続です。同じ機器の表示を複製しても割付は共有します。
+                    機器の割付状態を表示します。実値取得・動的配色・実Hub接続は後続です。同じ機器の表示を複製しても割付は共有します。
                   </p>
                 {/if}
                 <label class="full-width"

@@ -1,6 +1,8 @@
+import { validateSymbolSlots } from "./symbol-slots";
 import {
   validateEquipment,
   type EquipmentType,
+  type EquipmentSlot,
   type EquipmentInstance,
 } from "./equipment";
 import { validateGroups } from "./geometric-groups";
@@ -77,7 +79,13 @@ export interface LayoutObject extends BaseObject {
   shape:
     | { type: "rectangle"; paint: ShapePaint }
     | { type: "ellipse"; paint: ShapePaint }
-    | { type: "text"; text: string; style: TextStyle; binding?: TagBinding }
+    | {
+        type: "text";
+        text: string;
+        style: TextStyle;
+        binding?: TagBinding;
+        slotBinding?: { slotName: string };
+      }
     | {
         type: "symbol";
         symbolId: string;
@@ -130,6 +138,7 @@ export interface Screen {
   objects: ScreenObject[];
 }
 export interface SymbolDefinition {
+  readSlots?: EquipmentSlot[];
   folders: LayerFolder[];
   id: string;
   name: string;
@@ -143,10 +152,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.24.0";
+    schemaVersion: "0.25.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.24.0";
+    minRuntimeVersion: "0.25.0";
     name: string;
   };
   screens: Screen[];
@@ -170,8 +179,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.24.0",
-        minRuntimeVersion: "0.24.0",
+        schemaVersion: "0.25.0",
+        minRuntimeVersion: "0.25.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -330,6 +339,7 @@ export function parseProject(json: string): Project {
   }
   for (const screen of project.screens) validateGroups(screen, ids);
   validateEquipment(project, ids);
+  validateSymbolSlots(project);
   projectScreenReferences(project);
   return project;
 }

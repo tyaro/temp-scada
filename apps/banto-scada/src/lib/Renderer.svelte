@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { EquipmentContext } from "./symbol-slots";
   import { untrack } from "svelte";
   import {
     getBounds,
@@ -36,6 +37,7 @@
     screen,
     symbols = [],
     screens = [],
+    equipmentContext,
     images,
     readings,
     editable = false,
@@ -52,6 +54,7 @@
     screen: Screen | SymbolDefinition;
     symbols?: SymbolDefinition[];
     screens?: Screen[];
+    equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -611,6 +614,7 @@
               {symbols}
               {images}
               {readings}
+              {equipmentContext}
             />{/if}
         {:else}
           <ObjectPainting
@@ -618,6 +622,7 @@
             {symbols}
             {images}
             {readings}
+            {equipmentContext}
             onsummary={(value) => {
               textDescriptions[object.id] = value;
             }}

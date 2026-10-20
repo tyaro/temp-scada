@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+  import type { EquipmentContext } from "../symbol-slots";
   import { tick, untrack, flushSync } from "svelte";
   import { selectionTarget, selectionView } from "../selection-view";
   import { wheelPixels, wheelZoom } from "../wheel-navigation";
@@ -37,6 +38,7 @@
     screen,
     symbols,
     screens = [],
+    equipmentContext,
     images,
     editable,
     selectedIds,
@@ -63,6 +65,7 @@
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
     screens?: Screen[];
+    equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -933,6 +936,7 @@
             {onmove}
             {onresize}
             {onvertexmove}
+            {equipmentContext}
           />
         {/key}
         {#if rangeBox && editable}

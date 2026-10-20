@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { EquipmentContext } from "./symbol-slots";
   import type { Screen, SymbolDefinition } from "./project";
   import type { TagReadings } from "./tag-presentation";
   import { objectTransform } from "./rotation";
@@ -10,12 +11,14 @@
     screen,
     screens,
     symbols,
+    equipmentContext,
     images,
     readings,
   }: {
     screen: Screen;
     screens: Screen[];
     symbols: SymbolDefinition[];
+    equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -62,8 +65,15 @@
               {symbols}
               {images}
               {readings}
+              {equipmentContext}
             />{/if}
-        {:else}<ObjectPainting {object} {symbols} {images} {readings} />{/if}
+        {:else}<ObjectPainting
+            {object}
+            {symbols}
+            {images}
+            {readings}
+            {equipmentContext}
+          />{/if}
       </g>
     {/each}
   </g>

@@ -54,6 +54,7 @@ export function objectFormValues(
     values.textAlign = object.shape.style.align;
     if (!definition)
       values.externalName = object.shape.binding?.externalName ?? "";
+    else values.slotName = object.shape.slotBinding?.slotName ?? "";
   }
   if (object.shape.type === "symbol") {
     values.symbolId = object.shape.symbolId;

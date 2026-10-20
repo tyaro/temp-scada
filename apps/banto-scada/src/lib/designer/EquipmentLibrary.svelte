@@ -78,7 +78,9 @@
 </script>
 
 <section aria-label="機器台帳">
-  <p>読取機器の登録と割付。図面への配置・実Hub接続は後続です。</p>
+  <p>
+    読取機器の登録と割付。図面のSymbolへ関連付けできます。実Hub接続は後続です。
+  </p>
   <div class="actions">
     <button
       disabled={hasPreset("送風機")}

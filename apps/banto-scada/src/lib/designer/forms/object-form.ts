@@ -46,6 +46,10 @@ export function objectFormCommand(
       fontWeight: fontWeight as "normal" | "bold",
       align: align as "left" | "center" | "right",
     };
+    if (context.definition && data.has("slotName")) {
+      const slotName = String(data.get("slotName") ?? "");
+      patch.slotBinding = slotName ? { slotName } : null;
+    }
     if (!context.definition) {
       const externalName = String(data.get("externalName") ?? "");
       patch.binding = externalName === "" ? null : { externalName };

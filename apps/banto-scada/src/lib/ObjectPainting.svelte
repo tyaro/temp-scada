@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolveSymbolSlot, type EquipmentContext } from "./symbol-slots";
   import type { ScreenObject, SymbolDefinition } from "./project";
   import type { TagReadings } from "./tag-presentation";
   import { objectTransform } from "./rotation";
@@ -8,12 +9,14 @@
   let {
     object,
     symbols = [],
+    equipmentContext,
     images,
     readings,
     onsummary,
   }: {
     object: ScreenObject;
     symbols?: SymbolDefinition[];
+    equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -41,6 +44,14 @@
       <g transform={objectTransform(child)} opacity={compositedOpacity(child)}
         ><Primitive
           object={child}
+          slotDisplay={child.shape.type === "text" && child.shape.slotBinding
+            ? resolveSymbolSlot(
+                definition,
+                child.shape.slotBinding.slotName,
+                object.shape.equipmentId,
+                equipmentContext,
+              )
+            : undefined}
           color={object.shape.colorMode === "definition"
             ? undefined
             : object.fill}

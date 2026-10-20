@@ -68,8 +68,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.24.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.24.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.25.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.25.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -137,6 +137,14 @@ impl Project {
         }
         if !used_assets.is_subset(&asset_ids) {
             return Err("画像の資産が見つかりません".into());
+        }
+        for definition in value["symbols"].as_array().unwrap() {
+            let mut names = HashSet::new();
+            for slot in definition["readSlots"].as_array().into_iter().flatten() {
+                if !names.insert(slot["name"].as_str().unwrap()) {
+                    return Err("Symbolの読取slot名が重複しています".into());
+                }
+            }
         }
         let symbols: HashSet<_> = value["symbols"]
             .as_array()
@@ -269,6 +277,19 @@ impl Project {
                 {
                     return Err("Symbol 定義内の直接タグ割り当てには対応していません".into());
                 }
+                if let Some(binding) = shape.get("slotBinding") {
+                    if !symbols.contains(screen["id"].as_str().unwrap()) {
+                        return Err("slot表示は共有定義内のTextだけに設定できます".into());
+                    }
+                    if !screen["readSlots"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .any(|slot| slot["name"] == binding["slotName"])
+                    {
+                        return Err("Symbolの読取slot宣言が見つかりません".into());
+                    }
+                }
                 if shape["type"] == "symbol"
                     && !symbols.contains(shape["symbolId"].as_str().unwrap())
                 {
@@ -400,6 +421,36 @@ fn validate_screen_views(project: &Value) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn shared_symbol_read_slot_contract() {
+        let base: Value =
+            serde_json::from_str(include_str!("../../../examples/symbol-slots.project.json"))
+                .unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/symbol-slot-cases.json")).unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            let node = input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_object_mut()
+                .unwrap();
+            let key = case["key"].as_str().unwrap();
+            if case["remove"] == true {
+                node.remove(key);
+            } else {
+                node.insert(key.into(), case["value"].clone());
+            }
+            assert_eq!(
+                Project::from_json(&input.to_string()).is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+        }
+        let project = Project::from_json(&base.to_string()).unwrap();
+        assert_eq!(Project::from_json(&project.to_json()).unwrap().0, project.0);
+    }
     #[test]
     fn geometric_groups_share_browser_contract() {
         let sample: Value =
@@ -1174,8 +1225,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.24.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.24.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.25.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.25.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

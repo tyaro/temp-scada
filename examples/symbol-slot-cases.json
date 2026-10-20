@@ -1,0 +1,129 @@
+[
+  {
+    "name": "unused declaration retained",
+    "target": "/symbols/0",
+    "key": "readSlots",
+    "valid": true,
+    "value": [
+      {
+        "name": "running",
+        "type": "bool",
+        "direction": "read"
+      },
+      {
+        "name": "current",
+        "type": "number",
+        "direction": "read"
+      },
+      {
+        "name": "fault",
+        "type": "bool",
+        "direction": "read"
+      }
+    ]
+  },
+  {
+    "name": "duplicate declaration",
+    "target": "/symbols/0",
+    "key": "readSlots",
+    "valid": false,
+    "value": [
+      {
+        "name": "running",
+        "type": "bool",
+        "direction": "read"
+      },
+      {
+        "name": "current",
+        "type": "number",
+        "direction": "read"
+      },
+      {
+        "name": "running",
+        "type": "bool",
+        "direction": "read"
+      }
+    ]
+  },
+  {
+    "name": "missing declaration",
+    "target": "/symbols/0",
+    "key": "readSlots",
+    "valid": false,
+    "value": []
+  },
+  {
+    "name": "declaration omitted while referenced",
+    "target": "/symbols/0",
+    "key": "readSlots",
+    "valid": false,
+    "remove": true
+  },
+  {
+    "name": "slot names are exact",
+    "target": "/symbols/0/objects/5/shape/slotBinding",
+    "key": "slotName",
+    "valid": false,
+    "value": "Running"
+  },
+  {
+    "name": "newline rejected",
+    "target": "/symbols/0/readSlots/0",
+    "key": "name",
+    "valid": false,
+    "value": "running\n"
+  },
+  {
+    "name": "read only declaration",
+    "target": "/symbols/0/readSlots/0",
+    "key": "direction",
+    "valid": false,
+    "value": "write"
+  },
+  {
+    "name": "string declaration rejected",
+    "target": "/symbols/0/readSlots/0",
+    "key": "type",
+    "valid": false,
+    "value": "string"
+  },
+  {
+    "name": "direct tag and slot exclusive",
+    "target": "/symbols/0/objects/5/shape",
+    "key": "binding",
+    "valid": false,
+    "value": {
+      "externalName": "Demo.Run"
+    }
+  },
+  {
+    "name": "screen text cannot bind slot",
+    "target": "/screens/0/objects/1/shape",
+    "key": "slotBinding",
+    "valid": false,
+    "value": {
+      "slotName": "running"
+    }
+  },
+  {
+    "name": "unassociated symbol remains valid",
+    "target": "/screens/0/objects/0/shape",
+    "key": "equipmentId",
+    "valid": true,
+    "remove": true
+  },
+  {
+    "name": "machine slot mismatch is drawable",
+    "target": "/equipmentTypes/0/slots/0",
+    "key": "type",
+    "valid": true,
+    "value": "number"
+  },
+  {
+    "name": "machine slot absence is drawable",
+    "target": "/equipmentTypes/0/slots/0",
+    "key": "name",
+    "valid": false,
+    "value": "other"
+  }
+]

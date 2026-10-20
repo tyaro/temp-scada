@@ -2947,6 +2947,19 @@
         <p>
           確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。別の形にする場合は定義を複製してください。
         </p>
+        <div class="slot-readout-actions" aria-label="読取slot表示を追加">
+          {#each [{ name: "running", type: "bool" as const }, { name: "current", type: "number" as const }, { name: "value", type: "number" as const }] as slot}
+            <button
+              onclick={() =>
+                edit({
+                  type: "add-symbol-readout",
+                  symbolId: activeDefinition!.id,
+                  slotName: slot.name,
+                  slotType: slot.type,
+                })}>{slot.name} · {slot.type} 表示を追加</button
+            >
+          {/each}
+        </div>
         {#if symbolStrokeOverflow > 0}<p role="status">
             枠線が表示領域外へ出ている図形が{symbolStrokeOverflow}件あります。配置では領域外が切れます。図形の位置・寸法または定義の表示領域を変更してください。
           </p>{/if}
@@ -2971,6 +2984,7 @@
     <div class="canvas-stack" bind:clientHeight={canvasStackHeight}>
       {#key workspaceGeneration}
         <CanvasWorkspace
+          equipmentContext={project}
           bind:this={canvasWorkspace}
           onviewchange={(view) => (canvasView = view)}
           oncontextrequest={requestSelectionContext}
@@ -3059,6 +3073,7 @@
           {#if showMinimap}
             {#key `${workspaceGeneration}:${screen.id}`}
               <Minimap
+                equipmentContext={project}
                 {screen}
                 symbols={project.symbols}
                 screens={project.screens}
@@ -3217,7 +3232,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.24.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.25.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

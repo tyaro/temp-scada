@@ -165,6 +165,14 @@ export function copyObjectSnapshot(
     throw new Error(
       "機器の関連付けを含むコピー・切り取りは未対応です。同じ機器の表示は配置の複製または画面の複製を使ってください。",
     );
+  if (
+    objects.some(
+      (object) => object.shape.type === "text" && object.shape.slotBinding,
+    )
+  )
+    throw new Error(
+      "slot表示単体のコピー・切り取りは未対応です。共有Symbol全体のコピーまたは定義内の複製を使ってください。",
+    );
   // Clipboard placements deliberately start at the destination root.
   for (const object of objects) delete object.folderId;
   const dependencies = new Set(
