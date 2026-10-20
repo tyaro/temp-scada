@@ -186,3 +186,5 @@ TextPrimitiveの非表示計測の再試行はResizeObserver通知中にprobeへ
 Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを既存resolverで保存設定だけから導出する。`SymbolEquipmentCheck.svelte`は親フォームの現在値を読取専用で監視し、モデル反映後のtick・フォーム同一性・対象keyを保護する。`InspectorPanel`はobjectの世代key内、編集fieldset外へ置く。`symbol-equipment-check.test.ts`と`e2e/symbol-equipment-check.spec.ts`がhidden・未使用・設定状態と未適用／破棄／Undo・ロック・ページ境界を確認する。[詳細](symbol-equipment-check.md)。
 
 選択Symbolから機器台帳への移動は`App.openSelectedEquipment`のsettings分岐で読取詳細のdraft解決・機器再取得を共用する。`EquipmentLibrary.showEquipment`が一覧への切替とID選択を行い、tick後に同じ世代・対象・接続中のformだけを返す。Appが再照合してツリー展開・focusを担当する。`e2e/equipment-settings-entry.spec.ts`がpanel／種別view復帰とdraft全分岐を確認する。
+
+機器のcontext操作は`designer-actions.ts`の`selectionContext`が単一・画面Symbolだけに二つの入口を追加し、hostの`openEquipment`へ委譲する。Appの既存起動関数を共用し、メニュー側に別の対象解決・draft処理を作らない。`e2e/equipment-context.spec.ts`でcanvas／レイヤーのShift＋F10・プロパティ非表示・ロック・未関連・複数選択・未適用割付を確認する。

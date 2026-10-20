@@ -47,6 +47,7 @@ export interface DesignerActionsHost {
     toggleObjectVisibility(id: string): void;
     toggleObjectLock(id: string): void;
     openDefinition(id: string): void;
+    openEquipment(id: string, destination: "read" | "settings"): void;
   };
   folders: {
     readonly count: number;
@@ -468,6 +469,33 @@ export function createDesignerActions(host: DesignerActionsHost) {
       ];
     return [
       properties,
+      ...(!host.selection.definition &&
+      host.selection.selected?.shape.type === "symbol"
+        ? (
+            [
+              { label: "関連機器の台帳設定を開く", destination: "settings" },
+              { label: "関連機器の読取詳細を開く", destination: "read" },
+            ] as const
+          ).map((item) => ({
+            label: item.label,
+            disabled:
+              host.editing.editBlocked ||
+              !(
+                host.selection.selected?.shape.type === "symbol" &&
+                host.selection.selected.shape.equipmentId
+              ),
+            run: () => {
+              if (
+                !host.selection.definition &&
+                host.selection.selected?.shape.type === "symbol"
+              )
+                host.selection.openEquipment(
+                  host.selection.selected.id,
+                  item.destination,
+                );
+            },
+          }))
+        : []),
       {
         label: "配置の所属を変更",
         disabled:

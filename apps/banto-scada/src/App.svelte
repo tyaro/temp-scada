@@ -2489,6 +2489,7 @@
       toggleObjectVisibility,
       toggleObjectLock,
       openDefinition,
+      openEquipment: openSelectedEquipment,
     },
     folders: {
       get count() {
