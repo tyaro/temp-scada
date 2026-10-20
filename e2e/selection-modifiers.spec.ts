@@ -25,13 +25,11 @@ test("Ctrl and Command toggle whole groups from layers and canvas without editin
       name: "設備",
     },
   ];
-  await page
-    .getByLabel("Project を開く", { exact: true })
-    .setInputFiles({
-      name: "group.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(JSON.stringify(project)),
-    });
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    name: "group.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
   for (const modifier of ["Control", "Meta"] as const) {
     await row(page, 0).click({ modifiers: [modifier] });
     await expect(selected(page)).toHaveCount(2);
