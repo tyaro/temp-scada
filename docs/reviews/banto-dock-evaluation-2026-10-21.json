@@ -1,0 +1,90 @@
+{
+  "reviewDate": "2026-10-21 (JST)",
+  "scadaCommit": "e56078ebb70b14b2ca7c8db998493abb31186ac5",
+  "bantoMain": "591294bea61c7dcbd0b41102dae57c3bdf0602b8",
+  "bantoSourceArchive": "0287da4352f77e6dec69b7f5f10143e785c88a77",
+  "sourceNote": "dock-svelte sources unchanged between archive and reviewed main; changes since SCADA pinned 1ffe507 are package version only",
+  "method": "Unmodified upstream components in a standalone Chromium harness; keyed panel snippet with the actual SCADA createDraftGuard and uncontrolled inputs. Not a full SCADA migration or OS IME test. Synthetic foreign-pointerup and window-blur injections are explicitly identified by case names.",
+  "upstreamLogicTests": {
+    "files": 4,
+    "passed": 146,
+    "componentTestsExecuted": false
+  },
+  "scadaControls": {
+    "unitPassed": 8,
+    "browserPassed": 7
+  },
+  "observations": [
+    {
+      "name": "floating move retains draft and DOM",
+      "sameDOM": true,
+      "dirty": 1,
+      "pageErrors": []
+    },
+    {
+      "name": "floating to docked rebuilds draft form",
+      "sameDOM": false,
+      "text": "committed",
+      "dirty": 0,
+      "oldConnected": false,
+      "pageErrors": []
+    },
+    {
+      "name": "close and reopen rebuilds draft form",
+      "sameDOM": false,
+      "text": "committed",
+      "closedDirty": 0,
+      "dirty": 0,
+      "pageErrors": []
+    },
+    {
+      "name": "inactive keyed tab discards draft form",
+      "sameDOM": false,
+      "text": "committed",
+      "dirty": 0,
+      "pageErrors": []
+    },
+    {
+      "name": "resize Escape does not roll back",
+      "before": 320,
+      "after": 390,
+      "pageErrors": []
+    },
+    {
+      "name": "resize listener continues after window blur",
+      "beforeBlur": 340,
+      "afterBlur": 390,
+      "pageErrors": []
+    },
+    {
+      "name": "keyboard focus does not raise a floating pane",
+      "focused": true,
+      "order": ["a", "d"],
+      "pageErrors": []
+    },
+    {
+      "name": "unrelated pointerup commits titlebar drag",
+      "before": 40,
+      "after": 41,
+      "ghostAfterUnrelatedPointerUp": 0,
+      "pageErrors": []
+    },
+    {
+      "name": "host shrink leaves an existing floating pane outside the clipped host",
+      "hostRight": 413,
+      "paneLeft": 452,
+      "reachable": false,
+      "savedX": 440,
+      "pageErrors": []
+    },
+    {
+      "name": "hydrate validates shape but permits invalid geometry and duplicate panel IDs",
+      "acceptedCount": 2,
+      "ids": ["a", "a"],
+      "finiteX": false,
+      "width": -1,
+      "height": 0,
+      "pageErrors": []
+    }
+  ]
+}

@@ -18,7 +18,7 @@
 - 非モーダルとしfocus trapを作らない。通常のTab順を維持する。移動・サイズ変更中は他の作図・パン・配置・DnDと排他にする。
 - 浮動は幅1100px以上・高さ480px以上で提供し、十分な作業高さがない場合も右固定へ一時退避する。拡大後は元の浮動希望を使う。画面縮小による補正で保存配置を書き換えない。
 
-Banto v6.7.0の公開UIにはdraggable／resizable／docking workspaceはない。Modal／Drawerはfocus trapを含むため、この非モーダルなパネルの器へ流用しない。テーマのz tokenと公開layering helperを使い、Menu・確認Modalより上へ出さない。常時表示の浮動パネルをEscで閉じる層には登録せず、操作中の取消だけを扱う。
+初回調査は`@banto/ui`に限定していた。2026-10-21の再調査で、別パッケージ`@banto/dock-svelte`には固定依存版の時点から浮動・分割・タブの基盤があることを確認した。以前の「Bantoにdocking workspaceがない」という記載を訂正する。[比較評価](reviews/banto-dock-comparison.md)では、このモデルを土台とし、入力保護を既存`@banto/forms`の拡張へ集約する案を推奨する。移行は未実施。Modal／Drawerはfocus trapを含むため、この非モーダルなパネルの器へ流用しない。テーマのz tokenと公開layering helperを使い、Menu・確認Modalより上へ出さない。常時表示の浮動パネルをEscで閉じる層には登録せず、操作中の取消だけを扱う。
 
 ## 数値・draft・フォーカス
 
