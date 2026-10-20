@@ -16,13 +16,15 @@ for (const theme of ["light", "dark"] as const)
         const sessionPath = "/src/lib/read-slot-session.ts",
           rendererPath = "/src/lib/Renderer.svelte",
           paintingPath = "/src/lib/ScreenPainting.svelte",
-          projectPath = "/src/lib/project.ts";
+          projectPath = "/src/lib/project.ts",
+          statusPath = "/src/lib/designer/SlotReadStatus.svelte";
         const { mount, unmount, tick } = await import(sveltePath);
         const { createSubscriber } = await import(reactivePath);
         const { createReadSlotSession, equipmentReadContext } = await import(
           sessionPath
         );
         const { parseProject } = await import(projectPath);
+        const { default: SlotReadStatus } = await import(statusPath);
         const { default: Renderer } = await import(rendererPath),
           { default: ScreenPainting } = await import(paintingPath);
         // Dynamic bool text colors must win even when a placement forces monochrome.
@@ -109,7 +111,32 @@ for (const theme of ["light", "dark"] as const)
             return context;
           },
         };
+        const mainStatus = document.createElement("div"),
+          popupStatus = document.createElement("div");
+        target.append(mainStatus, popupStatus);
         const apps = [
+          mount(SlotReadStatus, { target: mainStatus, props }),
+          mount(SlotReadStatus, {
+            target: popupStatus,
+            props: {
+              get screens() {
+                track();
+                return project.screens;
+              },
+              get symbols() {
+                track();
+                return project.symbols;
+              },
+              get equipmentContext() {
+                track();
+                return context;
+              },
+              get screen() {
+                track();
+                return project.screens[0];
+              },
+            },
+          }),
           mount(Renderer, { target: main, props }),
           mount(ScreenPainting, {
             target: popup,
@@ -149,6 +176,17 @@ for (const theme of ["light", "dark"] as const)
           await flush();
           snapshots.push({
             name,
+            statuses: [mainStatus, popupStatus].map((root) => ({
+              summary: root.querySelector("summary")?.textContent,
+              open: root.querySelector("details")?.open,
+              rows: [
+                ...root.querySelectorAll<HTMLElement>("[data-slot-status-key]"),
+              ].map((row) => ({
+                state: row.dataset.slotState,
+                text: row.textContent,
+                simulated: row.dataset.slotSimulated,
+              })),
+            })),
             views: roots().map((root) =>
               [...root.querySelectorAll<SVGElement>("[data-tag-state]")].map(
                 (node) => ({
@@ -177,6 +215,9 @@ for (const theme of ["light", "dark"] as const)
         }
         try {
           await document.fonts.ready;
+          await flush();
+          mainStatus.querySelector("summary")!.click();
+          popupStatus.querySelector("summary")!.click();
           await flush();
           await publish("pending");
           await publish(
@@ -288,6 +329,49 @@ for (const theme of ["light", "dark"] as const)
       },
       { sample: structuredClone(sample), fixtures: structuredClone(fixtures) },
     );
+    for (const snapshot of results) {
+      expect(snapshot.statuses.map((status: any) => status.open)).toEqual([
+        true,
+        true,
+      ]);
+      expect(
+        snapshot.statuses.map((status: any) => status.rows.length),
+      ).toEqual([8, 6]);
+    }
+    const goodSummary = results.find(
+      (snapshot: any) => snapshot.name === "good",
+    )!.statuses;
+    expect(goodSummary[0].summary).toContain("表示参照 8件");
+    expect(goodSummary[0].summary).toContain("取得不能 4件");
+    const simSummary = results.find(
+      (snapshot: any) => snapshot.name === "simulation",
+    )!.statuses;
+    expect(simSummary[0].summary).toContain("SIM 4件");
+    expect(simSummary[1].summary).toContain("SIM 2件");
+    const staleSummary = results.find(
+      (snapshot: any) => snapshot.name === "stale",
+    )!.statuses;
+    expect(staleSummary[0].summary).toContain("取得不能 8件");
+    expect(staleSummary[0].summary).toContain("SIM 4件");
+    for (const name of [
+      "disconnected",
+      "invalid",
+      "reset",
+      "different-file-same-identity",
+      "replacement-reset",
+    ]) {
+      const statuses = results.find(
+        (snapshot: any) => snapshot.name === name,
+      )!.statuses;
+      expect(statuses[0].summary).toContain("取得不能 8件");
+      for (const status of statuses) {
+        expect(status.summary).toContain("SIM 0件");
+        for (const row of status.rows) {
+          expect(row.text).not.toContain("source real");
+          expect(row.text).not.toContain("source simulation");
+        }
+      }
+    }
     const byName = (name: string) =>
       results.find((item: any) => item.name === name)!.views;
     for (const name of [

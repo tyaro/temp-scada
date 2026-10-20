@@ -1,4 +1,6 @@
 <script lang="ts">
+  import SlotReadStatus from "./SlotReadStatus.svelte";
+  import type { EquipmentContext } from "../symbol-slots";
   import { onDestroy, untrack } from "svelte";
   import { hasVisibleLayerAbove } from "@banto/ui";
   import type { Project, Screen } from "../project";
@@ -13,6 +15,7 @@
     rank,
     images,
     readings,
+    equipmentContext,
     onfront,
     onframe,
     onclose,
@@ -27,6 +30,7 @@
       { url: string; width: number; height: number }
     >;
     readings?: TagReadings;
+    equipmentContext?: EquipmentContext;
     onfront: () => void;
     onframe: (frame: PopupFrame) => void;
     onclose: () => void;
@@ -191,9 +195,16 @@
       onclick={onclose}>×</button
     >
   </header>
+  <SlotReadStatus
+    {screen}
+    screens={project.screens}
+    symbols={project.symbols}
+    equipmentContext={equipmentContext ?? project}
+    compact
+  />
   <div class="content">
     <ScreenPainting
-      equipmentContext={project}
+      equipmentContext={equipmentContext ?? project}
       {screen}
       screens={project.screens}
       symbols={project.symbols}

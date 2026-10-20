@@ -106,6 +106,14 @@ html[data-theme="dark"] #app {
   top: 34px;
   left: 38px;
 }
+/* The read-status disclosure reserves space above the drawing, including its caption. */
+#app main > section:has(> .slot-read-status) > .toolbar {
+  position: static;
+  top: auto;
+  left: auto;
+  right: auto;
+  margin: 6px 12px;
+}
 #app main > section > .toolbar h2 {
   font-size: 13px;
 }

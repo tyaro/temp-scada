@@ -31,6 +31,7 @@
     selectionColorCommand,
     acknowledgeSelectionColor,
   } from "./lib/designer/forms/selection-color";
+  import SlotReadStatus from "./lib/designer/SlotReadStatus.svelte";
   import { boolColorsCommand } from "./lib/designer/forms/bool-colors";
   import { symbolColorModeCommand } from "./lib/designer/forms/symbol-color-mode";
   import { backgroundImageCommand } from "./lib/designer/forms/background-image";
@@ -3037,6 +3038,14 @@
           .projectRevision}</span
       >
     </div>
+    {#key `${workspaceGeneration}:${screen.id}`}
+      <SlotReadStatus
+        {screen}
+        screens={project.screens}
+        symbols={project.symbols}
+        equipmentContext={project}
+      />
+    {/key}
     <div class="canvas-stack" bind:clientHeight={canvasStackHeight}>
       {#key workspaceGeneration}
         <CanvasWorkspace

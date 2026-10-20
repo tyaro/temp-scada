@@ -56,7 +56,7 @@ industrial と同じ **Banto v6.7.0** を git サブディレクトリ依存で�
 
 Banto の Rust サーバー・認証・ユーザー管理・Tauri の host はまだ接続していません。開発時はログイン不要、運用時はユーザー管理必須、再起動後はログインなしで閲覧専用の監視画面へ入る方針を [運用・ログイン方針](docs/access-policy.md) に記録しています。運用モードの切替機能は未実装です。
 
-Rustの読取adapterは[型付きslot context](docs/typed-read-slots-design.md)にも対応します。0.23.0では[機器の保存と初期台帳](docs/equipment-register-design.md)も追加しました。0.24.0では[静的Symbolとの関連付け・使用先](docs/equipment-symbol-association.md)にも対応します。0.25.0では[共有Symbolの読取slotと割付状態表示](docs/symbol-read-slots.md)を追加しました。[表示DTOの受入とGood／Quality描画](docs/read-slot-presentation.md)も追加し、Rust共通fixtureとブラウザのテスト入力で検証します。[slot宣言の編集と参照保護](docs/symbol-slot-editing.md)にも対応します。[boolの型付き状態判定](docs/bool-slot-state.md)も追加しました。0.26.0で[bool Textの状態別文字色](docs/bool-text-colors.md)の編集と描画を追加しました。図形の塗り／線の動的色と通常Designerの実Hub接続は後続です。
+Rustの読取adapterは[型付きslot context](docs/typed-read-slots-design.md)にも対応します。0.23.0では[機器の保存と初期台帳](docs/equipment-register-design.md)も追加しました。0.24.0では[静的Symbolとの関連付け・使用先](docs/equipment-symbol-association.md)にも対応します。0.25.0では[共有Symbolの読取slotと割付状態表示](docs/symbol-read-slots.md)を追加しました。[表示DTOの受入とGood／Quality描画](docs/read-slot-presentation.md)も追加し、Rust共通fixtureとブラウザのテスト入力で検証します。[slot宣言の編集と参照保護](docs/symbol-slot-editing.md)にも対応します。[boolの型付き状態判定](docs/bool-slot-state.md)も追加しました。0.26.0で[bool Textの状態別文字色](docs/bool-text-colors.md)の編集と描画を追加しました。[図面外の読取状態一覧](docs/slot-status-summary.md)で件数・取得不能理由・SIMも確認できます。図形の塗り／線の動的色と通常Designerの実Hub接続は後続です。
 
 ## リリース前の開発方針
 
