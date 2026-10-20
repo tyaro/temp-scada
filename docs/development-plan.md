@@ -6,7 +6,7 @@
 
 ## 次の実装順
 
-**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み。継続指示でI2a／I2bも完了・全体CI成功確認済み。[I3の仕様](static-text-wrap-design.md)に沿って折返しを実装しローカル受入済み。I4以降は未着手。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
+**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み。継続指示でI2a／I2bも完了・全体CI成功確認済み。[I3の仕様](static-text-wrap-design.md)に沿って折返しを実装し、I3a／I3bも完了・全体CI成功確認済み。I4以降は未着手。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
 
 以下はこれまでの実装経緯とCore v1へ向けた長期工程を保持する。新しい短期順序と矛盾する場合は上記計画を優先し、最終的な機能仕様・提供段階は統合設計に従う。
 
@@ -661,4 +661,4 @@ Project0.32.0の[静的Text明示改行](multiline-text-design.md)を保存し�
 
 ## I3：静的Textの折返し（2026-10-21）
 
-[I3の実装仕様](static-text-wrap-design.md)に従い、Project0.33.0で静的本文の折返しを保存・編集・共通描画へ接続した。TS／Rust／schema／現行サンプル・拒否する旧形式を揃え、Banto／Industrial依存は不変。全TS1097件とRust・CLI・関連ブラウザの結果、同時実行時の時間上限超過と分離した再確認を同文書へ記録した。この区切りの全体CIを確認してからI4へ進む。
+[I3の実装仕様](static-text-wrap-design.md)に従い、Project0.33.0で静的本文の折返しを保存・編集・共通描画へ接続した。TS／Rust／schema／現行サンプル・拒否する旧形式を揃え、Banto／Industrial依存は不変。全TS1097件とRust・CLI・関連ブラウザの結果、同時実行時の時間上限超過と分離した再確認を同文書へ記録した。実装`858225d`の[全体CI39466367294](https://github.com/tyaro/temp-scada/actions/runs/39466367294)が成功した。I3を完了した。次工程はI4の詳細化。

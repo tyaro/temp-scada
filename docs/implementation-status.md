@@ -302,4 +302,4 @@ resize通知とpointerupの順序による位置の誤確定を修正し、実wi
 
 ## 上流変更中のI3：静的Textの折返し
 
-[仕様・サンプル・実画面](static-text-wrap-design.md)に沿い、TextStyleのwrap（未指定／none／word）と、原文を変えない計測付き折返しをProject0.33.0へ追加した。明示改行・空行・空白・書記素を保持し、動的表示は従来の一行を維持する。全TS1097件・Rust51件・Clippy・CLI4サンプル、新規ブラウザ4件と既存回帰26件の検証・時間上限超過の分離再確認を記録した。上流SDK・認証・正式Runtimeは変更していない。全体CIはPush後に確認する。
+[仕様・サンプル・実画面](static-text-wrap-design.md)に沿い、TextStyleのwrap（未指定／none／word）と、原文を変えない計測付き折返しをProject0.33.0へ追加した。明示改行・空行・空白・書記素を保持し、動的表示は従来の一行を維持する。全TS1097件・Rust51件・Clippy・CLI4サンプル、新規ブラウザ4件と既存回帰26件の検証・時間上限超過の分離再確認を記録した。上流SDK・認証・正式Runtimeは変更していない。実装`858225d`の[全体CI39466367294](https://github.com/tyaro/temp-scada/actions/runs/39466367294)が成功した。I3a／I3bを完了した。

@@ -1,6 +1,6 @@
 # 静的Textの枠幅での折返し
 
-2026-10-21。状態: **I3a／I3bを実装・ローカル受入済み。全体CIはPush後に確認**。[単体開発計画](upstream-independent-plan.md)のI3a／I3b。[明示改行](multiline-text-design.md)の計測・省略・空行保持を再利用する。I2の全体CI成功後に着手した。
+2026-10-21。状態: **I3a／I3b完了・全体CI成功確認済み**。[単体開発計画](upstream-independent-plan.md)のI3a／I3b。[明示改行](multiline-text-design.md)の計測・省略・空行保持を再利用する。I2の全体CI成功後に着手した。
 
 ## 初回の提供範囲
 
@@ -37,6 +37,8 @@ Project0.33.0へ保存契約と現行サンプルを揃え、共通`text-style-c
 objectフォームと初期値へ折返し選択を追加し、単独編集・数値確定・一括書式・動的タグへの往復で設定を保持する。コピー／貼付・保存往復・Undo／Redoと共有Symbol・ミニマップ・埋込・小窓を確認した。既存の旧形式読込は0.1.0のみで、0.32.0拒否をTS／Rustで確認した。
 
 関連単体8ファイル103件、Rust51件・Clippy、CLIでminimal／process／multiline／text-wrapの4サンプルが成功。全TS単体は初回の同時実行で1095成功・既存opacity／color-alphaの2件が5秒超過した。ブラウザ・撮影と実行を分離し、2 workersで全1097件が成功した。関連ブラウザは新規4件成功、共通描画のword追加を含む既存回帰26件は初回24成功・既存2件が時間上限超過し、同じコードで該当2件を分離再実行して成功した。timeout・retry・assertionを緩めていない。実OSのIMEとWindows実機は未検証。
+
+実装`858225d`の[全体CI39466367294](https://github.com/tyaro/temp-scada/actions/runs/39466367294)が成功した。Frontend・Rust・ブラウザ4分割・集約checkがすべて成功した。
 
 ## サンプルと実画面
 
