@@ -232,3 +232,5 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 - `array-copy.test.ts`／`e2e/array-copy.spec.ts`: 順序・参照・group・予算・取消／Undo・失効。既存`geometric-groups`の回帰を併用する。
 
 配列設定の実画面は`scripts/capture-array-copy.mjs`で記録し、入力値の実画素も確認する。
+
+`e2e/toolbar-status-layout.spec.ts`は保存／dirty表示の寸法変化を検証する。Appの`.save-state`は固定領域と常設dirty行を持ち、数値blur中に作業領域の高さを変えない。`numeric-properties`／`range-input`／`edit-toolbar`の実操作回帰を併用する。

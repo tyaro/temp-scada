@@ -2879,14 +2879,19 @@
       data-testid="save-state"
       role="group"
       aria-label="保存状態"
-      title={lastExport ? `最終書き出し要求 ${lastExport}` : saveLabel}
+      title={`${saveLabel}${drafts.dirty ? ` · 未適用の入力あり · ${drafts.count} フォーム` : ""}${lastExport ? ` · 最終書き出し要求 ${lastExport}` : ""}`}
     >
-      <StatusBadge
-        variant={projectChanged ? "warning" : "neutral"}
-        label={saveLabel}
-      />
-      {#if drafts.dirty}<span>未適用の入力あり · {drafts.count} フォーム</span
-        >{/if}
+      <div class="save-label">
+        <StatusBadge
+          variant={projectChanged ? "warning" : "neutral"}
+          label={saveLabel}
+        />
+      </div>
+      <span class="draft-state" aria-live="polite"
+        >{drafts.dirty
+          ? `未適用の入力あり · ${drafts.count} フォーム`
+          : ""}</span
+      >
       {#if lastExport}<span class="sr-only">最終書き出し要求 {lastExport}</span
         >{/if}
     </div>
@@ -3533,7 +3538,10 @@
     レイヤーのフォルダーは整理用で、座標・描画順・表示・ロックを継承しません。検索中は結果を一時展開し、解除すると開閉状態を戻します。配置の右クリック「配置の所属を変更」で移動先・ルートを選べます。新規配置と貼り付けは常にルートです。フォルダー行のF2は改名、Deleteは空削除の確認を開き、以前の配置選択を変更しません。
   </p>
   <p>
-    「中心を水平方向／垂直方向に等間隔」は3件以上で使えます。両端の中心を固定し、中間の配置だけを動かします。「隙間を水平方向／垂直方向に均等化」は回転後の外形間の隙間を揃え、両端を固定します。グループは一単位です。両端の間に収まらない場合は変更しません。どちらもスナップで丸めず、小数座標も保存します。中心等間隔では、サイズが違う配置の重なりが残る場合があります。
+    「中心を水平方向／垂直方向に等間隔」は3単位以上で使えます。両端の中心を固定し、中間の配置だけを動かします。「隙間を水平方向／垂直方向に均等化」は回転後の外形間の隙間を揃え、両端を固定します。グループは一単位です。両端の間に収まらない場合は変更しません。どちらもスナップで丸めず、小数座標も保存します。中心等間隔では、サイズが違う配置の重なりが残る場合があります。
+  </p>
+  <p>
+    「配列複製」は選択した配置を一組として、指定した行数・列数と間隔で複製します。行数・列数には元の組を含み、全体を一回のUndoで戻せます。グループは組ごとに独立します。機器・タグ・画像原本は同じ参照を使い、別の機器登録や名称の連番は行いません。
   </p>
   <p>
     レイヤーの錠アイコンで配置の編集をロックします。ロック中はキャンバスの選択・移動やプロパティ変更を防ぎ、レイヤーで選択してコピー・解除できます。ロックは権限ではなく、参照する共有定義の変更・Undo／Redo・画面全体の管理は引き続き反映されます。コピー・貼り付けはロック状態を保持します。
@@ -3710,13 +3718,38 @@
     color: var(--banto-text-muted);
   }
   .save-state {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 24px 14px;
+    flex: 0 0 220px;
+    width: 220px;
+    height: 38px;
     font-size: 11px;
     color: var(--banto-text-muted);
     margin-left: auto;
+  }
+  .save-label {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .save-label :global(.status-badge) {
+    box-sizing: border-box;
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .save-label :global(.status-badge svg) {
+    display: inline-block;
+    vertical-align: -2px;
+    margin-right: 4px;
+  }
+  .draft-state {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    line-height: 14px;
   }
   .sr-only {
     position: absolute;

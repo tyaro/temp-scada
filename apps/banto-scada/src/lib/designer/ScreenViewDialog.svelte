@@ -53,7 +53,7 @@
     {#if !visible.length}<p>一致する画面がありません。</p>{/if}
   </div>
   <p class="note">
-    入れ子・画面内の操作・Viewを含むコピーは初期範囲では使えません。配置の複製は使えます。
+    参照画面・共有定義・画像原本を含めたコピーに対応しています。機器の関連付けを含むコピー、入れ子、埋込画面内の操作は未対応です。
   </p>
   <div class="actions">
     <button onclick={onclose}>キャンセル</button><button
