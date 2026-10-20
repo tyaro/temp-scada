@@ -71,3 +71,7 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 ## Equipmentの保存と初期台帳
 
 0.23.0で[機器種別・Instance・採用read slot](equipment-register-design.md)の保存とTS／Rust検証、原子的CRUDを実装した。プロジェクトツリーの「機器」から読取種別の追加・登録・割付・削除を行い、draft保護とUndoへ接続する。未採用と採用未割付を区別し、使用中種別の削除と採用slotの破壊的変更を拒否する。ProjectからReadSlotPlanへ接続した。TS715件・Rust43件・関連ブラウザ24件・型／Clippy／buildが成功。図面との機器参照、動的Symbol、実catalog・Host、正式Runtimeは後続。
+
+## CIの並列化
+
+[実装と実測](ci-acceleration-results.md)に沿い、frontend／Rust／E2E4shardを並行実行し、従来のcheckへ集約した。アプリ・テストを変えず、同じ526件で旧CI15分54秒→4分25秒／4分31秒、連続2回とも全体成功。Equipmentの保存・初期台帳までを含む型・TS715件・Rust43件とサンプル検証もCIで成功した。従来型のブランチ保護APIは403で読取不可のため、必須チェック設定全体は未確認。保護設定は変更していない。
