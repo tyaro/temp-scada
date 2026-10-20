@@ -52,6 +52,7 @@ export function objectFormValues(
     values.fontSize = String(object.shape.style.fontSize);
     values.fontWeight = object.shape.style.fontWeight;
     values.textAlign = object.shape.style.align;
+    values.textWrap = object.shape.style.wrap ?? "none";
     if (!definition)
       values.externalName = object.shape.binding?.externalName ?? "";
     else

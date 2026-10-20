@@ -34,6 +34,7 @@
       style.fontSize,
       style.fontWeight,
       style.align,
+      style.wrap ?? "none",
     ]),
   );
   const current = $derived(layout?.key === key ? layout : null);
@@ -93,6 +94,7 @@
               throw new Error("Text is not measurable while hidden");
             return box;
           },
+          style.wrap ?? "none",
         );
         element.textContent = "";
         layout = { ...fitted, key: snapshot };
@@ -116,6 +118,7 @@
   overflow="hidden"
   data-text-layout={current?.mode ?? "pending"}
   data-text-multiline="true"
+  data-text-wrap={style.wrap ?? "none"}
   data-text-line-count={current?.totalLines}
   data-text-visible-lines={current?.visibleLines}
   role="img"

@@ -1,53 +1,96 @@
 [
   {
     "name": "normal left",
-    "value": { "fontSize": 24, "fontWeight": "normal", "align": "left" },
+    "value": {
+      "fontSize": 24,
+      "fontWeight": "normal",
+      "align": "left"
+    },
     "valid": true
   },
   {
     "name": "bold center decimal",
-    "value": { "fontSize": 12.5, "fontWeight": "bold", "align": "center" },
+    "value": {
+      "fontSize": 12.5,
+      "fontWeight": "bold",
+      "align": "center"
+    },
     "valid": true
   },
   {
     "name": "right maximum",
-    "value": { "fontSize": 512, "fontWeight": "normal", "align": "right" },
+    "value": {
+      "fontSize": 512,
+      "fontWeight": "normal",
+      "align": "right"
+    },
     "valid": true
   },
-  { "name": "missing", "missing": true, "valid": false },
+  {
+    "name": "missing",
+    "missing": true,
+    "valid": false
+  },
   {
     "name": "zero",
-    "value": { "fontSize": 0, "fontWeight": "normal", "align": "left" },
+    "value": {
+      "fontSize": 0,
+      "fontWeight": "normal",
+      "align": "left"
+    },
     "valid": false
   },
   {
     "name": "negative",
-    "value": { "fontSize": -1, "fontWeight": "normal", "align": "left" },
+    "value": {
+      "fontSize": -1,
+      "fontWeight": "normal",
+      "align": "left"
+    },
     "valid": false
   },
   {
     "name": "too large",
-    "value": { "fontSize": 512.1, "fontWeight": "normal", "align": "left" },
+    "value": {
+      "fontSize": 512.1,
+      "fontWeight": "normal",
+      "align": "left"
+    },
     "valid": false
   },
   {
     "name": "string size",
-    "value": { "fontSize": "24", "fontWeight": "normal", "align": "left" },
+    "value": {
+      "fontSize": "24",
+      "fontWeight": "normal",
+      "align": "left"
+    },
     "valid": false
   },
   {
     "name": "unknown weight",
-    "value": { "fontSize": 24, "fontWeight": "heavy", "align": "left" },
+    "value": {
+      "fontSize": 24,
+      "fontWeight": "heavy",
+      "align": "left"
+    },
     "valid": false
   },
   {
     "name": "unknown align",
-    "value": { "fontSize": 24, "fontWeight": "normal", "align": "justify" },
+    "value": {
+      "fontSize": 24,
+      "fontWeight": "normal",
+      "align": "justify"
+    },
     "valid": false
   },
   {
     "name": "missing size",
-    "value": { "fontWeight": "normal", "align": "left" },
+    "value": {
+      "fontWeight": "normal",
+      "align": "left"
+    },
     "valid": false
   },
   {
@@ -59,5 +102,55 @@
       "fontFamily": "system"
     },
     "valid": false
+  },
+  {
+    "name": "word-wrap",
+    "valid": true,
+    "value": {
+      "fontSize": 24,
+      "fontWeight": "normal",
+      "align": "left",
+      "wrap": "word"
+    }
+  },
+  {
+    "name": "explicit-no-wrap",
+    "valid": true,
+    "value": {
+      "fontSize": 24,
+      "fontWeight": "normal",
+      "align": "left",
+      "wrap": "none"
+    }
+  },
+  {
+    "name": "unknown-wrap",
+    "valid": false,
+    "value": {
+      "fontSize": 24,
+      "fontWeight": "normal",
+      "align": "left",
+      "wrap": "character"
+    }
+  },
+  {
+    "name": "null-wrap",
+    "valid": false,
+    "value": {
+      "fontSize": 24,
+      "fontWeight": "normal",
+      "align": "left",
+      "wrap": null
+    }
+  },
+  {
+    "name": "boolean-wrap",
+    "valid": false,
+    "value": {
+      "fontSize": 24,
+      "fontWeight": "normal",
+      "align": "left",
+      "wrap": true
+    }
   }
 ]

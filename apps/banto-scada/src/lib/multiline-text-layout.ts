@@ -1,5 +1,6 @@
 import type { TextMetrics } from "./text-layout";
 import { normalizeTextNewlines } from "./text-content";
+import { wrapStaticLine } from "./static-text-wrap";
 export { normalizeTextNewlines } from "./text-content";
 export interface WidthFittedText {
   text: string;
@@ -66,15 +67,16 @@ export interface StaticLinesLayout {
   totalLines: number;
   visibleLines: number;
 }
-/** Static explicit-newline text only. Existing one-line and dynamic layout stays in fitText. */
+/** Static explicit-newline/word-wrapped text. Unwrapped single-line and dynamic text stays in fitText. */
 export function fitStaticLines(
   text: string,
   width: number,
   height: number,
   fontSize: number,
   measure: (value: string) => TextMetrics,
+  wrap: "none" | "word" = "none",
 ): StaticLinesLayout {
-  const original = normalizeTextNewlines(text).split("\n"),
+  let original = normalizeTextNewlines(text).split("\n"),
     totalLines = original.length;
   const overflow = (): StaticLinesLayout => ({
     mode: "overflow",
@@ -102,6 +104,16 @@ export function fitStaticLines(
   };
   const reference = cached("Mgあ");
   if (!validBox(reference)) return overflow();
+  if (wrap === "word") {
+    try {
+      original = original.flatMap((line) =>
+        wrapStaticLine(line, width - 4, cached),
+      );
+      totalLines = original.length;
+    } catch {
+      return overflow();
+    }
+  }
   const baseline = (step - reference.height) / 2 - reference.y;
   const normal = original.map((line) => fitTextWidth(line, width - 4, cached));
   for (

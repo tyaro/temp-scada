@@ -897,8 +897,15 @@
                   ></label
                 >
                 <p class="full-width numeric-hint">
-                  静的テキストは改行できます。自動折返しはしません。Enterで改行、Ctrl／⌘＋Enterまたは「変更を適用」で確定します。文字サイズは枠変更で変わりません。タグ・機器情報の表示は1行です。
+                  静的テキストは改行・枠幅での折返しに対応します。Enterで改行、Ctrl／⌘＋Enterまたは「変更を適用」で確定します。文字サイズは枠変更で変わりません。タグ・機器情報の表示は1行です。
                 </p>
+                <label
+                  >折返し<select name="textWrap" aria-label="文字の折返し"
+                    ><option value="none">折返しなし</option><option
+                      value="word">枠幅で折返し</option
+                    ></select
+                  ></label
+                >
                 <label class="full-width"
                   >テキスト<textarea
                     name="text"

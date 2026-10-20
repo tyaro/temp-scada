@@ -233,7 +233,7 @@
       stroke-linecap={lineCap(object.shape.paint.stroke?.lineStyle)}
     />
   {:else if object.shape.type === "text"}
-    {#if !bound && !metadata && object.shape.text.includes("\n")}
+    {#if !bound && !metadata && (object.shape.text.includes("\n") || (object.shape.style.wrap === "word" && object.shape.text.length > 0))}
       <MultilineTextPrimitive
         text={object.shape.text}
         width={object.width}

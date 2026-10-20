@@ -1,10 +1,16 @@
 import { chromium, expect } from "@playwright/test";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
+const wrapMode = process.env.SCADA_CAPTURE_TEXT_WRAP === "1";
 const output = resolve(process.argv[2] ?? "test-results/multiline-text");
 await mkdir(output, { recursive: true });
 const project = JSON.parse(
-  await readFile("examples/multiline-text.project.json", "utf8"),
+  await readFile(
+    wrapMode
+      ? "examples/text-wrap.project.json"
+      : "examples/multiline-text.project.json",
+    "utf8",
+  ),
 );
 const browser = await chromium.launch({
   executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
@@ -42,6 +48,19 @@ try {
         `.sheet > svg [data-object-id="${project.screens[0].objects[6].id}"] svg[data-text-layout]`,
       ),
     ).toHaveAttribute("data-text-layout", "ellipsis");
+    if (wrapMode) {
+      const layout = page.locator(
+        `.sheet > svg [data-object-id="${id}"] [data-text-multiline]`,
+      );
+      await expect(layout).toHaveAttribute("data-text-wrap", "word");
+      await expect
+        .poll(async () =>
+          Number(await layout.getAttribute("data-text-line-count")),
+        )
+        .toBeGreaterThan(
+          project.screens[0].objects[4].shape.text.split("\n").length,
+        );
+    }
     const toasts = page.locator(".toast-host button.close");
     while (await toasts.count()) await toasts.first().click();
     await page.evaluate(() => document.fonts.ready);
@@ -79,7 +98,13 @@ try {
         );
       })
       .toBeGreaterThan(30);
-    await writeFile(resolve(output, `multiline-text-${theme}.png`), frame);
+    await writeFile(
+      resolve(
+        output,
+        `${wrapMode ? "static-text-wrap" : "multiline-text"}-${theme}.png`,
+      ),
+      frame,
+    );
     await page.close();
   }
 } finally {

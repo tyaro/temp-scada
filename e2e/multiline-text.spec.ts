@@ -237,83 +237,98 @@ test("metadata and read slots stay single-line while preserving a static multili
   );
 });
 
-test("shared Symbol, minimap, embedded View and popup use the same multiline renderer", async ({
-  page,
-}) => {
-  const project: any = structuredClone(sample);
-  const symbolId = "019a3200-0000-7000-8000-000000000100";
-  project.symbols = [
-    {
-      id: symbolId,
-      name: "運転メモ",
-      width: 320,
-      height: 230,
+for (const wrap of ["none", "word"] as const)
+  test(`shared Symbol, minimap, embedded View and popup use the same multiline renderer (${wrap})`, async ({
+    page,
+  }) => {
+    const project: any = structuredClone(sample);
+    const memo: any = structuredClone(note);
+    if (wrap === "word") {
+      memo.shape.style.wrap = "word";
+      memo.shape.text =
+        "原水ポンプ P-101\n\nConfirm the water supply pressure and pump status before starting the circulation operation. 原水供給圧力を確認してください。";
+    }
+    const symbolId = "019a3200-0000-7000-8000-000000000100";
+    project.symbols = [
+      {
+        id: symbolId,
+        name: "運転メモ",
+        width: 320,
+        height: 230,
+        folders: [],
+        objects: [
+          {
+            ...structuredClone(memo),
+            id: "019a3200-0000-7000-8000-000000000201",
+            x: 0,
+            y: 0,
+          },
+        ],
+      },
+    ];
+    project.screens[0].objects[4] = {
+      ...structuredClone(memo),
+      shape: { type: "symbol", symbolId, colorMode: "definition" },
+    };
+    const sourceId = project.screens[0].id;
+    project.screens.unshift({
+      id: "019a3200-0000-7000-8000-000000000101",
+      name: "埋込先",
+      width: 960,
+      height: 540,
+      background: "#ffffff",
       folders: [],
+      groups: [],
       objects: [
         {
-          ...structuredClone(note),
-          id: "019a3200-0000-7000-8000-000000000201",
+          id: "019a3200-0000-7000-8000-000000000102",
+          order: 0,
           x: 0,
           y: 0,
+          width: 960,
+          height: 540,
+          rotation: 0,
+          shape: { type: "screenView", screenId: sourceId, fit: "contain" },
         },
       ],
-    },
-  ];
-  project.screens[0].objects[4] = {
-    ...structuredClone(note),
-    shape: { type: "symbol", symbolId, colorMode: "definition" },
-  };
-  const sourceId = project.screens[0].id;
-  project.screens.unshift({
-    id: "019a3200-0000-7000-8000-000000000101",
-    name: "埋込先",
-    width: 960,
-    height: 540,
-    background: "#ffffff",
-    folders: [],
-    groups: [],
-    objects: [
-      {
-        id: "019a3200-0000-7000-8000-000000000102",
-        order: 0,
-        x: 0,
-        y: 0,
-        width: 960,
-        height: 540,
-        rotation: 0,
-        shape: { type: "screenView", screenId: sourceId, fit: "contain" },
-      },
-    ],
+    });
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto("/");
+    await button(page, "編集").click();
+    await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+      name: "reuse.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
+    const embedded = page.locator(
+      `.sheet > svg [data-source-object-id="${note.id}"] [data-text-multiline]`,
+    );
+    await expect(embedded).toHaveAttribute("data-text-layout", "full");
+    await expect(embedded).toHaveAttribute("data-text-wrap", wrap);
+    await expect(
+      page.locator('[aria-label="ミニマップ"] [data-text-multiline]').first(),
+    ).toBeAttached();
+    await button(page, "表示プレビュー").click();
+    await button(page, "画面を小窓で表示確認").click();
+    const dialog = page.getByRole("dialog", {
+      name: "画面を小窓で表示確認",
+      exact: true,
+    });
+    await dialog.locator(`input[value="${sourceId}"]`).check();
+    await dialog
+      .getByRole("button", { name: "小窓を表示", exact: true })
+      .click();
+    await expect(
+      page.locator(
+        `[data-preview-popup="${sourceId}"] [data-projected-object-id="${note.id}"] [data-text-multiline]`,
+      ),
+    ).toHaveAttribute("data-text-layout", "full");
+    await expect(
+      page.locator(
+        `[data-preview-popup="${sourceId}"] [data-projected-object-id="${note.id}"] [data-text-multiline]`,
+      ),
+    ).toHaveAttribute("data-text-wrap", wrap);
   });
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await page.goto("/");
-  await button(page, "編集").click();
-  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
-    name: "reuse.json",
-    mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(project)),
-  });
-  const embedded = page.locator(
-    `.sheet > svg [data-source-object-id="${note.id}"] [data-text-multiline]`,
-  );
-  await expect(embedded).toHaveAttribute("data-text-layout", "full");
-  await expect(
-    page.locator('[aria-label="ミニマップ"] [data-text-multiline]').first(),
-  ).toBeAttached();
-  await button(page, "表示プレビュー").click();
-  await button(page, "画面を小窓で表示確認").click();
-  const dialog = page.getByRole("dialog", {
-    name: "画面を小窓で表示確認",
-    exact: true,
-  });
-  await dialog.locator(`input[value="${sourceId}"]`).check();
-  await dialog.getByRole("button", { name: "小窓を表示", exact: true }).click();
-  await expect(
-    page.locator(
-      `[data-preview-popup="${sourceId}"] [data-projected-object-id="${note.id}"] [data-text-multiline]`,
-    ),
-  ).toHaveAttribute("data-text-layout", "full");
-});
 
 test("multiline clipboard and file round trips keep blank rows with one undo per paste", async ({
   page,
@@ -407,4 +422,126 @@ test("hidden multiline Symbol thumbnails recover when the category becomes visib
   expect(
     await thumbnail.locator("[data-text-content]").allTextContents(),
   ).toEqual(note.shape.text!.split("\n"));
+});
+
+function wrapFixture() {
+  const project: any = structuredClone(sample),
+    text = project.screens[0].objects[4];
+  text.width = 140;
+  text.height = 260;
+  text.shape.text =
+    "  alpha beta gamma delta epsilon zeta\n\n原水ポンプの運転状況を確認してください。 👨‍👩‍👧‍👦 e\u0301";
+  return project;
+}
+for (const theme of ["light", "dark"] as const)
+  test(`word wrap keeps original text and reflows width with independent Undo in ${theme}`, async ({
+    page,
+  }) => {
+    const project = wrapFixture();
+    await start(page, project);
+    await chooseTheme(page, theme);
+    const wrap = page.getByRole("combobox", {
+      name: "文字の折返し",
+      exact: true,
+    });
+    await expect(wrap).toHaveValue("none");
+    await wrap.selectOption("word");
+    await expect(box(page)).toHaveAttribute("data-text-wrap", "none");
+    await button(page, "変更を適用").click();
+    await expect(box(page)).toHaveAttribute("data-text-wrap", "word");
+    await expect(box(page)).toHaveAttribute("data-text-layout", "full");
+    const count = Number(await box(page).getAttribute("data-text-line-count"));
+    expect(count).toBeGreaterThan(3);
+    const original = (await saved(page)).screens[0].objects[4];
+    expect(original.shape.text).toBe(project.screens[0].objects[4].shape.text);
+    expect(original.shape.style.wrap).toBe("word");
+    const width = page.getByLabel("width", { exact: true });
+    await width.fill("300");
+    await width.press("Enter");
+    await expect
+      .poll(async () =>
+        Number(await box(page).getAttribute("data-text-line-count")),
+      )
+      .toBeLessThan(count);
+    await expect(wrap).toHaveValue("word");
+    await button(page, "元に戻す").click();
+    await expect(box(page)).toHaveAttribute(
+      "data-text-line-count",
+      String(count),
+    );
+    await button(page, "元に戻す").click();
+    await expect(wrap).toHaveValue("none");
+    expect((await saved(page)).screens).toEqual(project.screens);
+  });
+test("word wrap remains a static setting across direct-tag mode and native file/clipboard round trips", async ({
+  page,
+}) => {
+  const project = wrapFixture();
+  project.screens[0].objects[4].shape.style.wrap = "word";
+  await start(page, project);
+  const tag = page.getByLabel("表示タグ（外部名）", { exact: true });
+  await tag.fill("PLC01.Fast.Value");
+  await button(page, "変更を適用").click();
+  await expect(box(page)).not.toHaveAttribute("data-text-multiline", "true");
+  await expect(box(page)).toHaveAttribute("data-tag-state", "disconnected");
+  let current = await saved(page);
+  expect(current.screens[0].objects[4].shape.style.wrap).toBe("word");
+  await tag.fill("");
+  await button(page, "変更を適用").click();
+  await expect(box(page)).toHaveAttribute("data-text-wrap", "word");
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  const row = page.locator(`button[data-layer-id="${note.id}"]`);
+  await row.focus();
+  await page.keyboard.press("Control+c");
+  await expect(
+    page.getByRole("status").filter({ hasText: "コピーしました" }).first(),
+  ).toBeVisible();
+  await page.keyboard.press("Control+v");
+  current = await saved(page);
+  expect(current.screens[0].objects.at(-1).shape).toEqual(
+    current.screens[0].objects[4].shape,
+  );
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    name: "wrap.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(current)),
+  });
+  await selectPanel(page, "レイヤー");
+  await row.click();
+  await expect(
+    page.getByRole("combobox", { name: "文字の折返し", exact: true }),
+  ).toHaveValue("word");
+  await expect(box(page)).toHaveAttribute("data-text-wrap", "word");
+  expect((await saved(page)).screens[0].objects[4].shape.text).toBe(
+    project.screens[0].objects[4].shape.text,
+  );
+});
+test("word wrap handles a single paragraph, empty text and height overflow without rewriting its memo", async ({
+  page,
+}) => {
+  const project = wrapFixture(),
+    text = project.screens[0].objects[4];
+  text.shape.text = "alpha beta gamma delta epsilon";
+  text.shape.style.wrap = "word";
+  await start(page, project);
+  await expect(box(page)).toHaveAttribute("data-text-layout", "full");
+  expect(
+    Number(await box(page).getAttribute("data-text-line-count")),
+  ).toBeGreaterThan(1);
+  await page.getByLabel("height", { exact: true }).fill("23");
+  await page.getByLabel("height", { exact: true }).press("Enter");
+  await expect(box(page)).toHaveAttribute("data-text-layout", "ellipsis");
+  await expect(box(page)).toHaveAttribute(
+    "aria-label",
+    new RegExp(text.shape.text),
+  );
+  expect(
+    (await box(page).locator("[data-text-content]").allTextContents())
+      .join("")
+      .match(/…/g),
+  ).toHaveLength(1);
+  await page.getByLabel("テキスト", { exact: true }).fill("");
+  await button(page, "変更を適用").click();
+  await expect(box(page)).not.toHaveAttribute("data-text-multiline", "true");
+  expect((await saved(page)).screens[0].objects[4].shape.text).toBe("");
 });

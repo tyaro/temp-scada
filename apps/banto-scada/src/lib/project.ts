@@ -86,6 +86,7 @@ export interface ShapePaint {
   } | null;
 }
 export interface TextStyle {
+  wrap?: "none" | "word";
   fontSize: number;
   fontWeight: "normal" | "bold";
   align: "left" | "center" | "right";
@@ -175,10 +176,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.32.0";
+    schemaVersion: "0.33.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.32.0";
+    minRuntimeVersion: "0.33.0";
     name: string;
   };
   screens: Screen[];
@@ -202,8 +203,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.32.0",
-        minRuntimeVersion: "0.32.0",
+        schemaVersion: "0.33.0",
+        minRuntimeVersion: "0.33.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,

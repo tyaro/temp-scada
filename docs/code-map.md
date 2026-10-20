@@ -271,3 +271,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ### レイヤーの兄弟内挿入
 
 `relative-layer-order.ts`は同じ親のfolder順と単一配置／グループの描画順を純粋計算し、所属・順序・グループのsnapshotを返す。`reorder-folder-relative`はfolder handler、`reorder-relative`はselection handlerへ分類し、既存lock・group guardを通す。`designer/layer-drag.ts`が行内位置と挿入可否、layer-tree controllerがtoken・snapshot・入力確認後の再検証、`LayerTree.svelte`が挿入線と案内を担当する。単体`relative-layer-order.test.ts`／`layer-drag.test.ts`、E2E`layer-relative-order.spec.ts`と既存folder／membership／orderが入口。[仕様](layer-relative-order-design.md)。
+
+### 静的Textの折返し
+
+`static-text-wrap.ts`はLFなし段落の語／書記素境界と幅計測を使って原文を欠落させずに分割する。`fitStaticLines`の一時cacheを共用し、既存の空行・高さ省略・ink境界へ接続する。TextStyleのwrapは共通schema／TS・Rustで検証し、object-form／numeric-propertiesが既存draftと値を往復する。Primitiveは静的な非空本文だけMultilineTextPrimitiveへ渡し、wrapを再計測keyへ含める。動的表示は変更しない。`static-text-wrap*.test.ts`、共通text-style-cases、Rustの往復／旧形式拒否、`e2e/multiline-text.spec.ts`が入口。[仕様](static-text-wrap-design.md)。

@@ -39,16 +39,23 @@ export function objectFormCommand(
   if (selected.shape.type === "text") {
     patch.text = normalizeTextNewlines(String(data.get("text")));
     const fontWeight = String(data.get("fontWeight")),
-      align = String(data.get("textAlign"));
+      align = String(data.get("textAlign")),
+      wrap = data.has("textWrap")
+        ? String(data.get("textWrap"))
+        : (selected.shape.style.wrap ?? "none");
     if (
       !["normal", "bold"].includes(fontWeight) ||
-      !["left", "center", "right"].includes(align)
+      !["left", "center", "right"].includes(align) ||
+      !["none", "word"].includes(wrap)
     )
       throw new Error("文字書式を選択してください。");
     patch.textStyle = {
       fontSize: parseNumericProperty(String(data.get("fontSize") ?? "")),
       fontWeight: fontWeight as "normal" | "bold",
       align: align as "left" | "center" | "right",
+      ...(wrap === "word" || selected.shape.style.wrap === "none"
+        ? { wrap: wrap as "none" | "word" }
+        : {}),
     };
     if (context.definition && data.has("slotName")) {
       const slotName = String(data.get("slotName") ?? "");

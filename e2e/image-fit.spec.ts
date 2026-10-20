@@ -206,7 +206,7 @@ test("fit drafts, Undo, clipboard and archive preserve modes, crop and original 
     candidate.store.dispose();
     return { project, originals };
   }, Array.from(packed));
-  expect(result.project.manifest.schemaVersion).toBe("0.32.0");
+  expect(result.project.manifest.schemaVersion).toBe("0.33.0");
   expect(
     result.project.screens[0].objects.map((object: any) => object.shape),
   ).toEqual([

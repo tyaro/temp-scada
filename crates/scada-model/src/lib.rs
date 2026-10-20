@@ -123,8 +123,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.32.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.32.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.33.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.33.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -1474,12 +1474,31 @@ mod tests {
     }
 
     #[test]
+    fn text_wrap_round_trips_original_and_rejects_previous_schema() {
+        let mut value: Value = serde_json::from_str(SAMPLE).unwrap();
+        let object = value["screens"][0]["objects"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|o| o["shape"]["type"] == "text")
+            .unwrap();
+        object["shape"]["style"]["wrap"] = serde_json::json!("word");
+        object["shape"]["text"] = serde_json::json!(" alpha beta\n\n日本語 ");
+        let project = Project::from_json(&value.to_string()).unwrap();
+        assert_eq!(project.0, value);
+        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+        value["manifest"]["schemaVersion"] = serde_json::json!("0.32.0");
+        value["manifest"]["minRuntimeVersion"] = serde_json::json!("0.32.0");
+        assert!(Project::from_json(&value.to_string()).is_err());
+    }
+
+    #[test]
     fn migrates_legacy_without_losing_geometry_or_identity() {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.32.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.32.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.33.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.33.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

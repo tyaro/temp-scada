@@ -1,6 +1,6 @@
 # 静的Textの枠幅での折返し
 
-2026-10-21。状態: **I3の詳細仕様、未実装**。[単体開発計画](upstream-independent-plan.md)のI3a／I3b。[明示改行](multiline-text-design.md)の計測・省略・空行保持を再利用する。実装着手はI2の全体CI成功後。
+2026-10-21。状態: **I3a／I3bを実装・ローカル受入済み。全体CIはPush後に確認**。[単体開発計画](upstream-independent-plan.md)のI3a／I3b。[明示改行](multiline-text-design.md)の計測・省略・空行保持を再利用する。I2の全体CI成功後に着手した。
 
 ## 初回の提供範囲
 
@@ -29,3 +29,19 @@ TextStyleへ任意の`wrap: "none" | "word"`を追加する。未指定はnone�
 I3aは純粋な折返し計算、保存値の正常／不正、未知属性、原子性・no-op・Undo／Redo、clipboardと共有定義の保持を確認する。I3bは単独フォーム・共通描画・動的表示への往復を接続する。幅の変更で再折返しし、明示改行・空行・絵文字・長い語・空白・高さ不足を両テーマで確認する。原文は表示行の連結から再構成できることを単体で検証する。
 
 任意行間・縦揃え編集・縁取り・フォント配布・リッチテキスト・動的値の複数行化は対象外。実OSのIMEとWindows実機を確認できなければ、ブラウザ合成イベントの検証と区別して記録する。
+
+## 実装と検証
+
+Project0.33.0へ保存契約と現行サンプルを揃え、共通`text-style-cases.json`にword／noneと不正値を追加した。`static-text-wrap.ts`は一つのLFなし段落を語／書記素境界で分割し、各段落の行の連結が原文へ戻ることを確認する。`fitStaticLines`は同じ計測cacheで折返しと高さ不足の省略を処理する。`MultilineTextPrimitive`の再計測keyへwrapを含め、`Primitive`は静的な非空本文にだけ折返しを適用する。空本文は従来の空表示を使う。
+
+objectフォームと初期値へ折返し選択を追加し、単独編集・数値確定・一括書式・動的タグへの往復で設定を保持する。コピー／貼付・保存往復・Undo／Redoと共有Symbol・ミニマップ・埋込・小窓を確認した。既存の旧形式読込は0.1.0のみで、0.32.0拒否をTS／Rustで確認した。
+
+関連単体8ファイル103件、Rust51件・Clippy、CLIでminimal／process／multiline／text-wrapの4サンプルが成功。全TS単体は初回の同時実行で1095成功・既存opacity／color-alphaの2件が5秒超過した。ブラウザ・撮影と実行を分離し、2 workersで全1097件が成功した。関連ブラウザは新規4件成功、共通描画のword追加を含む既存回帰26件は初回24成功・既存2件が時間上限超過し、同じコードで該当2件を分離再実行して成功した。timeout・retry・assertionを緩めていない。実OSのIMEとWindows実機は未検証。
+
+## サンプルと実画面
+
+[表示確認用Project](../examples/text-wrap.project.json)をそのまま開ける。`SCADA_CAPTURE_TEXT_WRAP=1 node scripts/capture-multiline-text.mjs docs/assets/frontend-ux`で実画面を再取得する。実際の文字画素を確認した1920×1080の画像で、計測位置は現在のフォントに依存する。
+
+![静的Textの折返し・ライト](assets/frontend-ux/static-text-wrap-light.png)
+
+![静的Textの折返し・ダーク](assets/frontend-ux/static-text-wrap-dark.png)
