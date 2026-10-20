@@ -1,7 +1,7 @@
 <script module lang="ts">
   import type { Screen, SymbolDefinition, ScreenObject } from "../project";
   import type { layerTree } from "./layer-tree";
-  import type { LayerDrag } from "./layer-drag";
+  import type { LayerDrag, LayerInsertion } from "./layer-drag";
   import type { FolderOperation } from "./FolderDialog.svelte";
   /** View contract. The controller owns browsing state; App owns selection and edits. */
   export interface LayerTreeBindings {
@@ -14,6 +14,7 @@
     readonly layerDragGuide: LayerDrag | null;
     readonly layerDropTarget: string | null;
     readonly layerDropTargetError: string | null;
+    readonly layerInsertion: LayerInsertion | null;
     readonly layerDragDescription: string;
     readonly selectedIds: readonly string[];
     readonly hiddenSelectionCount: number;
@@ -23,6 +24,9 @@
     readonly visibleLayers: readonly ScreenObject[];
     readonly layerDragClickUntil: number;
     hoverLayerDrop(target: string | null): void;
+    hoverLayerInsertion(target: LayerInsertion | null): void;
+    canInsertLayer(target: LayerInsertion): boolean;
+    insertLayer(event: DragEvent, target: LayerInsertion): void;
     acceptsLayerDrag(event: DragEvent): boolean;
     dropLayer(event: DragEvent, destination: string): void;
     endLayerDrag(): void;
@@ -76,6 +80,11 @@
     hover: tree.hoverLayerDrop,
     drop: tree.dropLayer,
     end: tree.endLayerDrag,
+    insertion: {
+      hover: tree.hoverLayerInsertion,
+      allowed: tree.canInsertLayer,
+      drop: tree.insertLayer,
+    },
   }}
 >
   <div class="layer-search-row">
@@ -127,12 +136,14 @@
           role="status"
           title={tree.layerDragDescription}
         >
-          {tree.layerDropTargetError ??
-            (tree.layerDropTarget === null
-              ? "フォルダーへドロップ"
-              : tree.layerDropTarget
-                ? `${folderPath(tree.screen.folders, tree.layerDropTarget)} 直下へ`
-                : "ルートへ移動")}
+          {tree.layerInsertion
+            ? tree.layerDragDescription
+            : (tree.layerDropTargetError ??
+              (tree.layerDropTarget === null
+                ? "フォルダーへドロップ"
+                : tree.layerDropTarget
+                  ? `${folderPath(tree.screen.folders, tree.layerDropTarget)} 直下へ`
+                  : "ルートへ移動"))}
         </p>
       {:else}
         <p
@@ -175,6 +186,16 @@
         {#if row.kind === "folder"}
           <div
             class="layer-folder"
+            data-layer-order-kind="folder"
+            data-layer-order-id={row.folder.id}
+            class:insert-before={tree.layerInsertion?.kind === "folder" &&
+              tree.layerInsertion.id === row.folder.id &&
+              tree.layerInsertion.position === "before" &&
+              !tree.layerDropTargetError}
+            class:insert-after={tree.layerInsertion?.kind === "folder" &&
+              tree.layerInsertion.id === row.folder.id &&
+              tree.layerInsertion.position === "after" &&
+              !tree.layerDropTargetError}
             class:drop-hover={!!tree.layerDrag &&
               !tree.layerDropTargetError &&
               tree.layerDropTarget === row.folder.id}
@@ -255,6 +276,16 @@
 
           <div
             class="layer-entry"
+            data-layer-order-kind="object"
+            data-layer-order-id={object.id}
+            class:insert-before={tree.layerInsertion?.kind === "object" &&
+              tree.layerInsertion.id === object.id &&
+              tree.layerInsertion.position === "before" &&
+              !tree.layerDropTargetError}
+            class:insert-after={tree.layerInsertion?.kind === "object" &&
+              tree.layerInsertion.id === object.id &&
+              tree.layerInsertion.position === "after" &&
+              !tree.layerDropTargetError}
             style:margin-left={`${row.depth * 10}px`}
             class:hidden-placement={hidden}
           >
@@ -366,6 +397,35 @@ ${object.id}`}
 </div>
 
 <style>
+  .layer-drag-guide .layer-caption[role="status"] {
+    white-space: normal;
+    line-height: 1.4;
+    height: 4.2em;
+    overflow: hidden;
+    text-overflow: clip;
+  }
+  .layer-folder,
+  .layer-entry {
+    position: relative;
+  }
+  .insert-before::before,
+  .insert-after::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--banto-primary);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .insert-before::before {
+    top: 0;
+  }
+  .insert-after::after {
+    bottom: 0;
+  }
+
   nav[aria-label="図形一覧"] {
     overflow-x: auto;
   }

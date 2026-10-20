@@ -1,3 +1,5 @@
+import { layerOrderSnapshot } from "../relative-layer-order";
+import { layerInsertionError } from "./layer-drag";
 import { expect, it } from "vitest";
 import sample from "../../../../../examples/minimal.project.json";
 import { parseProject } from "../project";
@@ -137,4 +139,45 @@ it("includes the whole subtree height in hover validation and revalidates it aft
   });
   expect(layerDropError(owner, "owner", drag, "depth14")).toContain("16段");
   expect(layerDropError(owner, "other", drag, "")).toContain("編集対象");
+});
+
+it("insertion validates snapshot, query and kind without broadening membership targets", () => {
+  const owner = fixture().screens[0],
+    key = owner.objects[0].id,
+    target = {
+      kind: "object" as const,
+      id: owner.objects[1].id,
+      position: "after" as const,
+    };
+  const drag: LayerDrag = {
+    kind: "objects",
+    token: "session",
+    scope: "owner",
+    ids: [key],
+    hidden: 0,
+    orderSnapshot: layerOrderSnapshot(owner),
+  };
+  expect(layerInsertionError(owner, "owner", drag, target, false)).toBeNull();
+  expect(layerInsertionError(owner, "owner", drag, target, true)).toContain(
+    "検索",
+  );
+  expect(
+    layerInsertionError(
+      owner,
+      "owner",
+      drag,
+      { kind: "folder", id: owner.folders[0].id, position: "before" },
+      false,
+    ),
+  ).toContain("同じ種類");
+  owner.objects[0].name = "renamed";
+  owner.objects[0].x += 1;
+  expect(layerInsertionError(owner, "owner", drag, target, false)).toBeNull();
+  owner.objects[0].order += 1;
+  expect(layerInsertionError(owner, "owner", drag, target, false)).toContain(
+    "並び順",
+  );
+  expect(layerInsertionError(owner, "else", drag, target, false)).toContain(
+    "編集対象",
+  );
 });

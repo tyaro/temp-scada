@@ -1,3 +1,4 @@
+import { relativeObjectOrder } from "../relative-layer-order";
 import { setSelectionSize } from "./size-arrangement";
 import { duplicatePlacements } from "./duplicate-placement";
 import { validateArrayCopy } from "../array-copy";
@@ -28,6 +29,23 @@ export function applySelectionCommand(
     .sort((a, b) => a.order - b.order);
   if (objects.length !== ids.size)
     throw new Error("選択した図形が見つかりません");
+  if (command.type === "reorder-relative") {
+    const ids = relativeObjectOrder(
+      screen,
+      command.objectIds,
+      command.targetObjectId,
+      command.position,
+    );
+    const ordered = [...screen.objects].sort((a, b) => a.order - b.order);
+    if (ordered.every((object, index) => object.id === ids[index]))
+      return "unchanged";
+    const byId = new Map(screen.objects.map((object) => [object.id, object]));
+    screen.objects = ids.map((id, index) => ({
+      ...byId.get(id)!,
+      order: index,
+    }));
+    return "finish";
+  }
   if (command.type === "distribute-gaps")
     return distributeGaps(screen, command.objectIds, command.axis);
   if (

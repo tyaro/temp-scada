@@ -7,6 +7,7 @@ import type {
 import { newId } from "./model-helpers";
 import { unhandledCommand } from "./unhandled-command";
 import { folderNeighbour } from "../folder-order";
+import { relativeFolderOrder } from "../relative-layer-order";
 
 export function isFolderStructureCommand(
   command: ObjectCommand,
@@ -15,6 +16,7 @@ export function isFolderStructureCommand(
     command.type === "create-folder" ||
     command.type === "rename-folder" ||
     command.type === "reorder-folder" ||
+    command.type === "reorder-folder-relative" ||
     command.type === "move-folder" ||
     command.type === "remove-folder"
   );
@@ -52,6 +54,18 @@ export function applyFolderStructureCommand(
     );
     if (neighbour)
       [folder.order, neighbour.order] = [neighbour.order, folder.order];
+  } else if (command.type === "reorder-folder-relative") {
+    const ids = relativeFolderOrder(
+      screen.folders,
+      folder.id,
+      command.targetFolderId,
+      command.position,
+    );
+    const slots = [...screen.folders]
+      .sort((a, b) => a.order - b.order)
+      .map((item) => item.order);
+    const positions = new Map(ids.map((id, index) => [id, slots[index]]));
+    for (const item of screen.folders) item.order = positions.get(item.id)!;
   } else if (command.type === "move-folder") {
     if (
       command.parentId !== null &&

@@ -267,3 +267,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 左右の浮動配置は`App.svelte`で一つのworkspaceへ接続し、表示・上位層・作図操作・固定幅と連携する。sidebarはプレビュー時だけ浮動を休止する。`setup.ts`は各slotを独立して明示保存し、`designer-actions.ts`は復帰と前面表示を提供する。`sidebar-floating.spec.ts`と`inspector-floating.spec.ts`で同じDOM・入力保持・排他・永続化を確認する。
 
 `designer/menu-viewport.ts`はDesignerの登録済みMenu自身のscrollだけをBantoのancestor-dismissから区別し、可用高を制限する。`main.ts`でmount前にcapture境界を登録し、`settle-menu-focus.ts`がopen／close／破棄の登録を担う。`menu-viewport.spec.ts`が内部／外部scroll・キー・resizeの境界を確認する。[上流課題と暫定対応](designer-menu-viewport.md)。
+
+### レイヤーの兄弟内挿入
+
+`relative-layer-order.ts`は同じ親のfolder順と単一配置／グループの描画順を純粋計算し、所属・順序・グループのsnapshotを返す。`reorder-folder-relative`はfolder handler、`reorder-relative`はselection handlerへ分類し、既存lock・group guardを通す。`designer/layer-drag.ts`が行内位置と挿入可否、layer-tree controllerがtoken・snapshot・入力確認後の再検証、`LayerTree.svelte`が挿入線と案内を担当する。単体`relative-layer-order.test.ts`／`layer-drag.test.ts`、E2E`layer-relative-order.spec.ts`と既存folder／membership／orderが入口。[仕様](layer-relative-order-design.md)。

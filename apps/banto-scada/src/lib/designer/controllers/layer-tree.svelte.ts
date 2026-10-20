@@ -6,6 +6,8 @@ import {
   folderDragSource,
   layerDropError,
   layerDragError,
+  layerInsertionError,
+  type LayerInsertion,
   type LayerDrag,
 } from "../layer-drag";
 import type { FolderRequest, FolderOperation } from "../FolderDialog.svelte";
@@ -18,6 +20,7 @@ import type {
 import type { EditCommand } from "../../editor";
 import { placementLabel } from "../../placement-label";
 import { folderNeighbour, type FolderDirection } from "../../folder-order";
+import { layerOrderSnapshot } from "../../relative-layer-order";
 
 interface LayerOwner {
   generation: number;
@@ -125,15 +128,25 @@ export function createLayerTreeController(host: LayerTreeHost) {
   let layerDrag = $state<LayerDrag | null>(null);
   let layerDragGuide = $state<LayerDrag | null>(null);
   let layerDropTarget = $state<string | null>(null);
+  let layerInsertion = $state<LayerInsertion | null>(null);
+  const orderSnapshot = $derived(layerOrderSnapshot(host.screen));
   const layerDropTargetError = $derived(
-    layerDragGuide && layerDropTarget !== null
-      ? layerDropError(
+    layerDragGuide && layerInsertion
+      ? layerInsertionError(
           host.screen,
           folderScope,
           layerDragGuide,
-          layerDropTarget,
+          layerInsertion,
+          !!layerQuery.trim(),
         )
-      : null,
+      : layerDragGuide && layerDropTarget !== null
+        ? layerDropError(
+            host.screen,
+            folderScope,
+            layerDragGuide,
+            layerDropTarget,
+          )
+        : null,
   );
   const layerDragDescription = $derived.by(() => {
     const drag = layerDragGuide;
@@ -142,15 +155,18 @@ export function createLayerTreeController(host: LayerTreeHost) {
       drag.kind === "objects"
         ? `${drag.ids.length} 件を移動（非表示 ${drag.hidden} 件）`
         : `フォルダー「${drag.name}」と配下を移動（配置 ${drag.count} 件・非表示 ${drag.hidden} 件）`;
+    const insertion = layerInsertion;
     const destination =
       layerDropTargetError ??
-      (layerDropTarget === null
-        ? "フォルダーへドロップ"
-        : layerDropTarget
-          ? `${folderPath(host.screen.folders, layerDropTarget)} 直下へ`
-          : drag.kind === "folder"
-            ? "ルートへ移動"
-            : "フォルダーから外す");
+      (insertion
+        ? `${insertion.kind === "folder" ? (host.screen.folders.find((item) => item.id === insertion.id)?.name ?? "フォルダー") : host.objectLabel(host.screen.objects.find((item) => item.id === insertion.id)!)}の${insertion.position === "before" ? "前" : "後"}へ挿入${insertion.kind === "object" ? "（描画順も変更）" : "（ツリーの順序だけ変更）"}`
+        : layerDropTarget === null
+          ? "フォルダーへドロップ"
+          : layerDropTarget
+            ? `${folderPath(host.screen.folders, layerDropTarget)} 直下へ`
+            : drag.kind === "folder"
+              ? "ルートへ移動"
+              : "フォルダーから外す");
     return `${source} · ${destination}`;
   });
   let layerDragClickUntil = 0;
@@ -159,7 +175,15 @@ export function createLayerTreeController(host: LayerTreeHost) {
     layerDrag = null;
     layerDragGuide = null;
     layerDropTarget = null;
+    layerInsertion = null;
   }
+  $effect(() => {
+    const current = orderSnapshot;
+    untrack(() => {
+      if (layerDrag?.orderSnapshot && layerDrag.orderSnapshot !== current)
+        endLayerDrag();
+    });
+  });
   $effect(() => {
     folderScope;
     host.dragContext.mode;
@@ -182,6 +206,7 @@ export function createLayerTreeController(host: LayerTreeHost) {
       kind: "objects",
       token: crypto.randomUUID(),
       scope: folderScope,
+      orderSnapshot,
       ids,
       hidden: ids.filter(
         (id) =>
@@ -199,7 +224,12 @@ export function createLayerTreeController(host: LayerTreeHost) {
       event.preventDefault();
       return;
     }
-    layerDrag = { ...source, token: crypto.randomUUID(), scope: folderScope };
+    layerDrag = {
+      ...source,
+      token: crypto.randomUUID(),
+      scope: folderScope,
+      orderSnapshot,
+    };
     layerDragClickUntil = performance.now() + 300;
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData(LAYER_MIME, layerDrag.token);
@@ -266,6 +296,54 @@ export function createLayerTreeController(host: LayerTreeHost) {
   function layerClick(event: MouseEvent, id: string) {
     if (event.detail && performance.now() < layerDragClickUntil) return;
     host.selectObjects(id, event.shiftKey || event.ctrlKey || event.metaKey);
+  }
+  function canInsertLayer(target: LayerInsertion) {
+    return (
+      !!layerDrag &&
+      !layerInsertionError(
+        host.screen,
+        folderScope,
+        layerDrag,
+        target,
+        !!layerQuery.trim(),
+      )
+    );
+  }
+  function insertLayer(event: DragEvent, target: LayerInsertion) {
+    const drag = layerDrag;
+    if (!drag || event.dataTransfer?.getData(LAYER_MIME) !== drag.token) return;
+    const destination = { ...target };
+    endLayerDrag();
+    host.transition(() => {
+      const error = layerInsertionError(
+        host.screen,
+        folderScope,
+        drag,
+        destination,
+        !!layerQuery.trim(),
+      );
+      if (host.owner.mode !== "edit" || error) {
+        host.report("error", error ?? "編集モードでやり直してください。");
+        return;
+      }
+      host.edit(
+        drag.kind === "folder"
+          ? {
+              type: "reorder-folder-relative",
+              screenId: host.screen.id,
+              folderId: drag.folderId,
+              targetFolderId: destination.id,
+              position: destination.position,
+            }
+          : {
+              type: "reorder-relative",
+              screenId: host.screen.id,
+              objectIds: drag.ids,
+              targetObjectId: destination.id,
+              position: destination.position,
+            },
+      );
+    });
   }
   let folderRequest = $state<
     (FolderRequest & { scope: string; origin: HTMLElement | null }) | null
@@ -474,6 +552,9 @@ export function createLayerTreeController(host: LayerTreeHost) {
     get layerDropTargetError() {
       return layerDropTargetError;
     },
+    get layerInsertion() {
+      return layerInsertion;
+    },
     get layerDragDescription() {
       return layerDragDescription;
     },
@@ -508,6 +589,12 @@ export function createLayerTreeController(host: LayerTreeHost) {
       layerDropTarget = target;
       layerDragGuide = layerDrag;
     },
+    hoverLayerInsertion(target: LayerInsertion | null) {
+      layerInsertion = target;
+      layerDragGuide = layerDrag;
+    },
+    canInsertLayer,
+    insertLayer,
     acceptsLayerDrag,
     dropLayer,
     endLayerDrag,

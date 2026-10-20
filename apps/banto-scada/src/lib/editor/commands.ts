@@ -143,6 +143,20 @@ export type ObjectCommand = (
       folderId: string;
       parentId: string | null;
     }
+  | {
+      type: "reorder-folder-relative";
+      screenId: string;
+      folderId: string;
+      targetFolderId: string;
+      position: "before" | "after";
+    }
+  | {
+      type: "reorder-relative";
+      screenId: string;
+      objectIds: string[];
+      targetObjectId: string;
+      position: "before" | "after";
+    }
   | { type: "remove-folder"; screenId: string; folderId: string }
   | {
       type: "set-folder";
@@ -369,6 +383,8 @@ const commandScopes = {
   "create-folder": "object",
   "rename-folder": "object",
   "reorder-folder": "object",
+  "reorder-folder-relative": "object",
+  "reorder-relative": "object",
   "move-folder": "object",
   "remove-folder": "object",
   "set-folder": "object",
@@ -446,6 +462,7 @@ export type FolderStructureCommand = Extract<
       | "create-folder"
       | "rename-folder"
       | "reorder-folder"
+      | "reorder-folder-relative"
       | "move-folder"
       | "remove-folder";
   }

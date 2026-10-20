@@ -228,7 +228,7 @@ test("invalid drafts prevent membership changes; discarded drafts allow the drop
     .click();
   expect((await saved(page)).screens[0].objects[0].folderId).toBe(folderId);
 });
-test("external tokens, cancelled drags, source tab changes and object-row drops never edit", async ({
+test("external tokens, cancelled drags, source tab changes and coordinate-less object-row drops never edit", async ({
   page,
 }) => {
   await start(page);

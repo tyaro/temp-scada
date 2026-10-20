@@ -2,6 +2,7 @@ import { chromium, expect } from "@playwright/test";
 import { mkdir, readFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 const output = resolve(process.argv[2] ?? "test-results/layer-drag");
+const insertionMode = process.env.SCADA_CAPTURE_LAYER_INSERTION === "1";
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
   executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
@@ -11,7 +12,7 @@ try {
     const page = await browser.newPage({
       viewport: { width: 1920, height: 1080 },
     });
-    await page.goto("http://127.0.0.1:5173");
+    await page.goto(process.env.SCADA_CAPTURE_URL ?? "http://127.0.0.1:5173");
     await page
       .getByRole("button", { name: "テーマを変更", exact: true })
       .click();
@@ -77,21 +78,33 @@ try {
     });
     const dataTransfer = await page.evaluateHandle(() => new DataTransfer());
     await pump.dispatchEvent("dragstart", { dataTransfer });
-    const destination = page.locator(
-      `button[data-layer-folder="${id(2)}"][aria-expanded]`,
-    );
+    await pump.dispatchEvent("dragover", { dataTransfer });
+    const destination = insertionMode
+      ? page.locator(
+          `[data-layer-order-id="${owner.objects.find((object) => object.order === 11).id}"]`,
+        )
+      : page.locator(`button[data-layer-folder="${id(2)}"][aria-expanded]`);
+    await expect(page.locator(".layer-drag-guide")).toBeVisible();
+    const bounds = await destination.boundingBox();
     await destination.dispatchEvent("dragover", {
       dataTransfer,
-      clientX: 60,
-      clientY: 300,
+      clientX: bounds.x + 50,
+      clientY: insertionMode
+        ? bounds.y + bounds.height - 2
+        : bounds.y + bounds.height / 2,
     });
     await expect(page.locator(".layer-drag-guide")).toBeVisible();
-    await expect(page.locator(".layer-folder.drop-hover")).toHaveAttribute(
-      "data-layer-drop-folder",
-      id(2),
-    );
+    if (insertionMode) await expect(destination).toHaveClass(/insert-after/);
+    else
+      await expect(page.locator(".layer-folder.drop-hover")).toHaveAttribute(
+        "data-layer-drop-folder",
+        id(2),
+      );
     await page.screenshot({
-      path: join(output, `layer-drag-${theme}.png`),
+      path: join(
+        output,
+        `${insertionMode ? "layer-insertion" : "layer-drag"}-${theme}.png`,
+      ),
       animations: "disabled",
     });
     await pump.dispatchEvent("dragend", { dataTransfer });

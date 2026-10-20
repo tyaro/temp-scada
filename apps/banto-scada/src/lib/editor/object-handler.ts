@@ -86,7 +86,9 @@ export function applyObjectCommand(
     applyPasteCommand(next, screen, command, originalProjectId, definitionId);
     return "finish";
   }
+
   if (
+    command.type === "reorder-relative" ||
     command.type === "set-folder" ||
     command.type === "distribute" ||
     command.type === "distribute-gaps" ||

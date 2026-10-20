@@ -1,6 +1,12 @@
 import { expandGroupSelection } from "../geometric-groups";
 import type { LayerFolder, ScreenObject, GeometricGroup } from "../project";
 import { folderAncestors, folderDestinations } from "./layer-tree";
+import {
+  layerOrderSnapshot,
+  relativeFolderOrder,
+  relativeObjectOrder,
+  type RelativePosition,
+} from "../relative-layer-order";
 
 export const LAYER_MIME = "application/x-banto-scada-layer-membership";
 type Owner = {
@@ -8,7 +14,17 @@ type Owner = {
   folders: LayerFolder[];
   groups?: GeometricGroup[];
 };
-type DragSession = { token: string; scope: string; hidden: number };
+type DragSession = {
+  token: string;
+  scope: string;
+  hidden: number;
+  orderSnapshot?: string;
+};
+export interface LayerInsertion {
+  kind: "folder" | "object";
+  id: string;
+  position: RelativePosition;
+}
 export type LayerDrag = DragSession &
   (
     | { kind: "objects"; ids: string[] }
@@ -111,6 +127,63 @@ export function layerDropError(
   return null;
 }
 
+export function layerInsertionError(
+  owner: Owner,
+  scope: string,
+  drag: LayerDrag,
+  target: LayerInsertion,
+  filtered: boolean,
+): string | null {
+  const error = layerDragError(owner, scope, drag);
+  if (error) return error;
+  if (filtered) return "検索を解除してから並べ替えてください。";
+  if (!drag.orderSnapshot || drag.orderSnapshot !== layerOrderSnapshot(owner))
+    return "並び順または所属が変わりました。もう一度ドラッグしてください。";
+  try {
+    if (drag.kind === "folder" && target.kind === "folder")
+      relativeFolderOrder(
+        owner.folders,
+        drag.folderId,
+        target.id,
+        target.position,
+      );
+    else if (drag.kind === "objects" && target.kind === "object")
+      relativeObjectOrder(owner, drag.ids, target.id, target.position);
+    else
+      return "同じ種類の兄弟行へ挿入してください。所属変更はフォルダー中央へドロップします。";
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : "並び順を変更できません。";
+  }
+}
+
+function insertionAt(
+  node: HTMLElement,
+  event: DragEvent,
+): LayerInsertion | null {
+  const row =
+    event.target instanceof Element
+      ? event.target.closest<HTMLElement>("[data-layer-order-kind]")
+      : null;
+  if (!row || !node.contains(row)) return null;
+  const bounds = row.getBoundingClientRect();
+  // Events without a row coordinate keep the legacy folder-membership path.
+  if (
+    event.clientY < bounds.top ||
+    event.clientY > bounds.bottom ||
+    bounds.height <= 0
+  )
+    return null;
+  const fraction = (event.clientY - bounds.top) / bounds.height;
+  const kind = row.dataset.layerOrderKind as LayerInsertion["kind"];
+  if (kind === "folder" && fraction > 0.25 && fraction < 0.75) return null;
+  return {
+    kind,
+    id: row.dataset.layerOrderId!,
+    position: fraction < 0.5 ? "before" : "after",
+  };
+}
+
 type DropOptions = {
   active: () => boolean;
   accepts: (event: DragEvent) => boolean;
@@ -118,9 +191,14 @@ type DropOptions = {
   allowed: (destination: string) => boolean;
   drop: (event: DragEvent, destination: string) => void;
   end: () => void;
+  insertion?: {
+    hover: (target: LayerInsertion | null) => void;
+    allowed: (target: LayerInsertion) => boolean;
+    drop: (event: DragEvent, target: LayerInsertion) => void;
+  };
 };
 
-// Delegate only membership destinations; object rows never become insertion points.
+// Folder centers keep membership semantics; row edges offer sibling insertion.
 export function layerDropSurface(node: HTMLElement, options: DropOptions) {
   const panel = node.closest<HTMLElement>('[role="tabpanel"]')!;
   let frame = 0,
@@ -141,17 +219,23 @@ export function layerDropSurface(node: HTMLElement, options: DropOptions) {
   function over(event: DragEvent) {
     if (!options.accepts(event)) {
       options.hover(null);
+      options.insertion?.hover(null);
       stop();
       return;
     }
+    const insertion = options.insertion ? insertionAt(node, event) : null;
     const target =
       event.target instanceof Element
         ? event.target.closest<HTMLElement>("[data-layer-drop-folder]")
         : null;
     const destination =
       target && node.contains(target) ? target.dataset.layerDropFolder! : null;
-    options.hover(destination);
-    if (destination !== null && options.allowed(destination)) {
+    options.hover(insertion ? null : destination);
+    options.insertion?.hover(insertion);
+    const allowed = insertion
+      ? options.insertion!.allowed(insertion)
+      : destination !== null && options.allowed(destination);
+    if (allowed) {
       event.preventDefault();
       if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     } else if (event.dataTransfer) event.dataTransfer.dropEffect = "none";
@@ -171,11 +255,22 @@ export function layerDropSurface(node: HTMLElement, options: DropOptions) {
       !node.contains(event.relatedTarget)
     ) {
       options.hover(null);
+      options.insertion?.hover(null);
       stop();
     }
   }
   function drop(event: DragEvent) {
     stop();
+    const insertion = options.insertion ? insertionAt(node, event) : null;
+    if (insertion) {
+      if (options.accepts(event) && options.insertion!.allowed(insertion)) {
+        event.preventDefault();
+        options.insertion!.drop(event, insertion);
+      }
+      options.insertion!.hover(null);
+      options.hover(null);
+      return;
+    }
     const target =
       event.target instanceof Element
         ? event.target.closest<HTMLElement>("[data-layer-drop-folder]")
@@ -190,10 +285,12 @@ export function layerDropSurface(node: HTMLElement, options: DropOptions) {
       options.drop(event, target.dataset.layerDropFolder!);
     }
     options.hover(null);
+    options.insertion?.hover(null);
   }
   function end() {
     stop();
     options.hover(null);
+    options.insertion?.hover(null);
     options.end();
   }
   function escape(event: KeyboardEvent) {
