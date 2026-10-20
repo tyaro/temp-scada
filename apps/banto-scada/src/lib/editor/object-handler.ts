@@ -43,9 +43,12 @@ export function applyObjectCommand(
         : [];
   completeGroupSelection(screen, requestedIds);
   if (
-    ["set-color", "set-line-style", "set-outline-style"].includes(
-      command.type,
-    ) &&
+    [
+      "set-color",
+      "set-line-style",
+      "set-outline-style",
+      "set-opacity",
+    ].includes(command.type) &&
     requestedIds.some((id) => groupFor(screen, id))
   )
     throw new Error("グループ内部の書式は解除後に編集してください");
@@ -85,6 +88,7 @@ export function applyObjectCommand(
     command.type === "set-folder" ||
     command.type === "distribute" ||
     command.type === "distribute-gaps" ||
+    command.type === "set-opacity" ||
     command.type === "set-color" ||
     command.type === "set-line-style" ||
     command.type === "set-outline-style" ||

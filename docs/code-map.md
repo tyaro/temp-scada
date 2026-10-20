@@ -243,3 +243,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 - `banto/setup.ts`: Banto UI設定の専用slot。書込成功時のみ保存済みsnapshotを更新する。
 - Appの`measureWorkspace`: ResizeObserverで上部境界を追跡。`CanvasWorkspace.cancelInteractions`は配置変更と作図gestureを排他にする。既存の手動倍率・中心保持は共用する。
 - `e2e/inspector-floating.spec.ts`: DOM identity・複数draft・IME・通常blur・取消・保存復元・狭い画面・上位Menuを実操作で確認する。
+
+## 複数配置の不透明度
+
+`set-opacity`を`commands.ts`のobject分類から`object-handler.ts`の共通lock／group guardを経て`selection-handler.ts`へ送る。全対象・値検証後に既存opacityだけを更新する。`designer/SelectionOpacity.svelte`／`forms/selection-opacity.ts`は既存の選択snapshot・draft guardを使い、成功時にこの入力だけを解除する。`selection-opacity.test.ts`／`e2e/selection-opacity.spec.ts`で値・所有者・参照・拒否・Undo・IME・複数フォームを検証する。実画面は`scripts/capture-selection-opacity.mjs`で記録する。

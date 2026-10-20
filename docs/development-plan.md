@@ -22,6 +22,8 @@ Core v1へ向けた技術工程:
 
 v1.1のAlarm・常時Event／Action・History／Trend・recorderとWindowsサービス化はS9bの上に追加する。Design DomainはCore v1、Design APIのREST／OpenAPI公開は後続という区分を維持する。
 
+[複数配置の不透明度](selection-opacity-design.md)を追加し、色αの一括編集は後続として分離した。次の作図補助は幅／高さの明示的な統一を検討する。選択順を暗黙の基準にせず、ローカル枠寸法と配置中心・回転の保持を具体化する。
+
 ## 作成支援・プラント運用の追加検討（2026-10-20・日本時間）
 
 [追加検討資料](scada-authoring-plant-operations-proposal.md)に、機器台帳と図面の双方向登録、機器ごとの任意信号・遠隔操作・Faceplate、図形合成、Studio／ドックの仕上げ、Hubタグからの記録設定・ペン選択・用途グループ・自動配色、監視用メニュー・文書・試験生成、機器／シーケンス／ステップの条件、アラーム対処、通信状態と復旧・引継ぎを整理した。ユーザー要望と追加提案、既存計画への対応、未決事項、受入観点を区別している。

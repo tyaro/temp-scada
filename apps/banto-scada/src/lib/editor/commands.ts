@@ -188,6 +188,12 @@ export type ObjectCommand = (
       };
     }
   | {
+      type: "set-opacity";
+      screenId: string;
+      objectIds: string[];
+      opacity: number;
+    }
+  | {
       type: "set-color";
       screenId: string;
       objectIds: string[];
@@ -358,6 +364,7 @@ const commandScopes = {
   "set-outline-style": "object",
   "set-line-style": "object",
   "set-color": "object",
+  "set-opacity": "object",
   "set-visibility": "object",
   "set-lock": "object",
   group: "object",

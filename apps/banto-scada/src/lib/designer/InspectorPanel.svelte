@@ -1,5 +1,6 @@
 <script lang="ts">
   import InspectorPanelHeader from "./InspectorPanelHeader.svelte";
+  import SelectionOpacity from "./SelectionOpacity.svelte";
   import type { FloatingInspector } from "./controllers/floating-inspector.svelte";
   import SymbolEquipmentCheck from "./SymbolEquipmentCheck.svelte";
   import StateColor from "./StateColor.svelte";
@@ -493,6 +494,18 @@
       </form>
       {#if !containsGroups}
         {#key `${generation}:${screen.id}:${activeDefinition}:${[...selectedIds].sort().join(",")}`}
+          <SelectionOpacity
+            objects={screen.objects.filter((object) =>
+              selectedIds.includes(object.id),
+            )}
+            hiddenCount={hiddenSelectionCount}
+            locked={selectionLocked}
+            definition={activeDefinition}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            objectIds={selectedIds}
+            {drafts}
+            onsubmit={properties}
+          />
           <SelectionColor
             current={commonColor}
             {definitionColorCount}

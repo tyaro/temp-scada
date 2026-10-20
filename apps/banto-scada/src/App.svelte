@@ -30,6 +30,10 @@
     acknowledgeSelectionLine,
   } from "./lib/designer/forms/selection-line";
   import {
+    selectionOpacityCommand,
+    acknowledgeSelectionOpacity,
+  } from "./lib/designer/forms/selection-opacity";
+  import {
     selectionColorCommand,
     acknowledgeSelectionColor,
   } from "./lib/designer/forms/selection-color";
@@ -1581,6 +1585,8 @@
       acknowledgeSelectionLine(form);
     if (form.dataset.editorForm === "selection-color")
       acknowledgeSelectionColor(form);
+    if (form.dataset.editorForm === "selection-opacity")
+      acknowledgeSelectionOpacity(form);
     if (form.dataset.editorForm === "project")
       acknowledgeProjectForm(form, project.manifest.name);
     if (form.dataset.editorForm === "object")
@@ -2113,6 +2119,20 @@
       );
     if (form.dataset.editorForm === "selection-line")
       return selectionLineCommand(
+        {
+          data,
+          targetKey: form.dataset.targetKey,
+          objectIds: form.dataset.objectIds,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selectedIds,
+        },
+      );
+    if (form.dataset.editorForm === "selection-opacity")
+      return selectionOpacityCommand(
         {
           data,
           targetKey: form.dataset.targetKey,

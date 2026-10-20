@@ -34,7 +34,18 @@ export function applySelectionCommand(
     objects.some((object) => groupFor(screen, object.id))
   )
     return arrangeUnits(screen, command);
-  if (command.type === "set-outline-style") {
+  if (command.type === "set-opacity") {
+    if (
+      typeof command.opacity !== "number" ||
+      !Number.isFinite(command.opacity) ||
+      command.opacity < 0 ||
+      command.opacity > 1
+    )
+      throw new Error("不透明度は0〜100%の有限の数値で指定してください");
+    for (const object of objects)
+      if ((object.opacity ?? 1) !== command.opacity)
+        object.opacity = command.opacity;
+  } else if (command.type === "set-outline-style") {
     if (
       !command.patch ||
       typeof command.patch !== "object" ||
