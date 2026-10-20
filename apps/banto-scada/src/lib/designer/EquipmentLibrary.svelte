@@ -41,6 +41,29 @@
   }
   let view = $state<"instances" | "types">("instances");
   let selectedId = $state("");
+  let search = $state("");
+  let page = $state(0);
+  const PAGE_SIZE = 20;
+  const normalize = (text: string) =>
+    text.normalize("NFKC").toLocaleLowerCase();
+  const typeNames = $derived(
+    new Map(project.equipmentTypes?.map((type) => [type.id, type.name])),
+  );
+  const matching = $derived(
+    (project.equipment ?? []).filter((item) =>
+      normalize(
+        `${item.code} ${item.name} ${typeNames.get(item.typeId) ?? ""}`,
+      ).includes(normalize(search.trim())),
+    ),
+  );
+  const lastPage = $derived(
+    Math.max(0, Math.ceil(matching.length / PAGE_SIZE) - 1),
+  );
+  const currentPage = $derived(Math.min(page, lastPage));
+  $effect(() => {
+    search;
+    page = 0;
+  });
   let composing = false;
   function inputKey(event: KeyboardEvent) {
     if (
@@ -128,21 +151,50 @@
           })}>計器種別を追加</button
       >
     </div>
+    <input
+      type="search"
+      aria-label="機器を検索"
+      placeholder="機器を検索"
+      bind:value={search}
+    />
+    <p aria-live="polite">
+      {matching.length}件 / 全{project.equipment?.length ?? 0}件
+    </p>
     <nav aria-label="登録機器">
-      {#each project.equipment ?? [] as item (item.id)}
+      {#each matching.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE) as item (item.id)}
         <button
+          data-equipment-choice={item.id}
           class:active={selected?.id === item.id}
           aria-pressed={selected?.id === item.id}
           onclick={() => transition(() => (selectedId = item.id))}
           >{item.code} · {item.name}</button
         >
       {/each}
+      {#if !matching.length}<p>一致する機器はありません。</p>{/if}
+      {#if matching.length > PAGE_SIZE}
+        <div class="pages" role="group" aria-label="登録機器のページ">
+          <button
+            type="button"
+            disabled={currentPage === 0}
+            onclick={() => (page = currentPage - 1)}>前の機器</button
+          >
+          <span>{currentPage + 1} / {lastPage + 1}</span>
+          <button
+            type="button"
+            disabled={currentPage === lastPage}
+            onclick={() => (page = currentPage + 1)}>次の機器</button
+          >
+        </div>
+      {/if}
       <button
         disabled={!project.equipmentTypes?.length}
         onclick={() => transition(() => (selectedId = ""))}
         >機器を新規登録</button
       >
     </nav>
+    {#if selected && !matching.some((item) => item.id === selected.id)}<p>
+        編集中: {selected.code}（検索結果外）
+      </p>{/if}
     {#if project.equipmentTypes?.length}
       {#key `${generation}:${selected?.id ?? "new"}`}
         <form
@@ -305,6 +357,16 @@
   .actions {
     display: grid;
     gap: 4px;
+  }
+  .pages {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 4px;
+    align-items: center;
+  }
+  .pages button {
+    padding: 5px 2px;
+    text-align: center;
   }
   .views {
     grid-template-columns: repeat(2, minmax(0, 1fr));

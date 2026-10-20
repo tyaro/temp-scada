@@ -573,4 +573,4 @@ bool Textに続き、共有矩形／楕円の単色塗り・Polyline／矢印へ
 
 ## 任意の機器種別の編集（2026-10-20）
 
-既存EquipmentCommandに対応する[機器種別編集UI](equipment-type-editing.md)を接続した。種別名と任意のbool／number slotを一件単位で編集し、採用保護を維持する。機器割付との切替と構造draftを先に整え、新しいテンプレートや状態評価モデルは導入していない。次は大きな台帳の検索・使用先確認、実catalog／Hostの上流契約の確認を継続する。
+既存EquipmentCommandに対応する[機器種別編集UI](equipment-type-editing.md)を接続した。種別名と任意のbool／number slotを一件単位で編集し、採用保護を維持する。機器割付との切替と構造draftを先に整え、新しいテンプレートや状態評価モデルは導入していない。続けて台帳の検索と20件ページ表示を実装した。使用先確認と実catalog／Hostの上流契約の確認を継続する。

@@ -176,3 +176,5 @@ Symbolからの読取詳細の起動はInspectorの`onopenequipment`をAppの`op
 TextPrimitiveの非表示計測の再試行はResizeObserver通知中にprobeへ書き込まず、requestAnimationFrameへ集約する。破棄時に予約を取り消す。隠れた部品パネルからの計測復帰はtext-style、mode／Modal切替でのResizeObserver配送エラー不在はequipment-read-entryで検証する。
 
 機器種別の編集は`EquipmentTypes.svelte`が構造draftと採用数表示、`forms/equipment-type.ts`が入力・世代・種別の検査を持つ。`EquipmentLibrary.svelte`が機器割付との切替をdraft経路へ通す。既存`equipment-handler.ts`と最終Project検証が参照保護・原子性を維持する。`equipment-type-editing.test.ts`と`e2e/equipment-types.spec.ts`が回帰入口。[詳細](equipment-type-editing.md)。
+
+機器台帳の検索と20件ページングはEquipmentLibrary内の一時UI状態。番号・名前・種別名をNFKCと大小文字の正規化で検索し、選択とフォームを検索結果から独立させる。`e2e/equipment-search.spec.ts`の55件台帳でDOM行数・ページ境界・検索・draft保持・保存不変を確認する。
