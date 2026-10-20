@@ -1,10 +1,13 @@
 //! SDK の current snapshot を SCADA の読み取り表示へ変換する。
 //! 接続・再試行・Stale 判定・式評価を実装せず、書込み API を公開しない。
-use std::collections::{BTreeMap, HashMap};
+mod projection;
+mod slots;
+pub use slots::*;
+
+use std::collections::BTreeMap;
 
 use banto_tagclient::{
-    resolve_bindings, BindingRequest, CatalogSnapshot, CollectionMode, TagClientConnectionState,
-    TagClientState, ValueQuality, ValueSource, ValuesSnapshot,
+    BindingRequest, CatalogSnapshot, TagClientConnectionState, TagClientState, ValuesSnapshot,
 };
 use scada_model::{Project, TextBinding};
 use serde::Serialize;
@@ -135,78 +138,25 @@ fn project_snapshot(
     view.readings
         .values_mut()
         .for_each(|reading| *reading = NumericReading::Invalid);
-    if snapshot.revision != catalog.revision
-        || snapshot.run_id != catalog.run_id
-        || snapshot.collection_mode != catalog.collection_mode
-        || matches!(catalog.collection_mode, CollectionMode::Unknown(_))
-        || resolve_bindings(&plan.requests(), &catalog.tags).is_err()
-    {
+    let Ok(index) = projection::SnapshotIndex::new(&plan.requests(), snapshot, catalog) else {
         return;
-    }
+    };
     view.metadata_ready = true;
-    let tags: HashMap<_, _> = catalog
-        .tags
-        .iter()
-        .map(|tag| (tag.external_name.as_str(), tag))
-        .collect();
-    let mut values = HashMap::new();
-    for value in &snapshot.values {
-        // SDK の current snapshot に同名が複数あっても任意の 1 件を採用しない。
-        if values.insert(value.tag.as_str(), value).is_some() {
-            view.metadata_ready = false;
-            return;
-        }
-    }
     for (name, reading) in &mut view.readings {
-        let Some(tag) = tags.get(name.as_str()) else {
-            *reading = NumericReading::Unresolved;
-            continue;
-        };
-        if !tag.enabled
-            || !matches!(
-                tag.data_type.as_str(),
-                "i16" | "u16" | "i32" | "u32" | "f32" | "i64" | "u64" | "f64"
-            )
-            || matches!(tag.value_source, ValueSource::Unknown(_))
-        {
-            continue;
-        }
-        let Some(value) = values.get(name.as_str()) else {
-            continue;
-        };
-        if value.value_source != tag.value_source {
-            continue;
-        }
-        *reading = match value.q {
-            ValueQuality::Good => match value.v.filter(|v| v.is_finite()) {
-                Some(value) => NumericReading::Resolved {
-                    quality: Quality::Good,
-                    numeric_value: Some(value),
+        let (projected, provenance) = index.read(name, ReadSlotType::Number);
+        *reading = match projected {
+            ReadSlotReading::Unresolved => NumericReading::Unresolved,
+            ReadSlotReading::Resolved { quality, value } => NumericReading::Resolved {
+                quality,
+                numeric_value: match value {
+                    Some(ReadSlotValue::Number(value)) => Some(value),
+                    _ => None,
                 },
-                None => NumericReading::Invalid,
             },
-            // 欠測状態で過去値を数値として再利用できないように payload にも含めない。
-            ValueQuality::Stale => NumericReading::Resolved {
-                quality: Quality::Stale,
-                numeric_value: None,
-            },
-            ValueQuality::Bad => NumericReading::Resolved {
-                quality: Quality::Bad,
-                numeric_value: None,
-            },
-            ValueQuality::Unknown(_) => NumericReading::Invalid,
+            _ => NumericReading::Invalid,
         };
-        if matches!(reading, NumericReading::Resolved { .. }) {
-            view.provenance.insert(
-                name.clone(),
-                Provenance {
-                    catalog_revision: catalog.revision,
-                    run_id: catalog.run_id,
-                    collection_mode: catalog.collection_mode.as_str().into(),
-                    value_source: value.value_source.as_str().into(),
-                    source_timestamp_ms: value.t,
-                },
-            );
+        if let Some(provenance) = provenance {
+            view.provenance.insert(name.clone(), provenance);
         }
     }
 }
@@ -214,7 +164,9 @@ fn project_snapshot(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use banto_tagclient::{CatalogTag, StableTagId, ValueEntry};
+    use banto_tagclient::{
+        CatalogTag, CollectionMode, StableTagId, ValueEntry, ValueQuality, ValueSource,
+    };
     use serde_json::json;
     fn plan() -> BindingPlan {
         BindingPlan::new(
@@ -225,7 +177,7 @@ mod tests {
     fn name() -> &'static str {
         "PLC01.Fast.Tank01.Level"
     }
-    fn catalog() -> CatalogSnapshot {
+    pub(super) fn catalog() -> CatalogSnapshot {
         CatalogSnapshot {
             revision: 3,
             run_id: Some(7),
@@ -254,7 +206,7 @@ mod tests {
             }],
         }
     }
-    fn snapshot() -> ValuesSnapshot {
+    pub(super) fn snapshot() -> ValuesSnapshot {
         ValuesSnapshot {
             revision: 3,
             run_id: Some(7),

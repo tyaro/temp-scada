@@ -434,4 +434,8 @@ Project 0.19.0で矩形／楕円の塗りへ斜線・交差線・点を追加し
 
 ## 幾何グループの初回実装へ向けた具体化
 
-[初回設計](geometric-groups-design.md)で、既存配置のworld座標・描画順を保持する所属モデルを使い、一括選択・移動・左右90度回転・複製等を段階実装する方針を整理した。レイヤー整理用フォルダー・共有Symbol・Equipmentと区別する。任意拡縮・入れ子・グループ合成opacityは後続。0.22.0で保存・ドメイン・再利用を実装中。Designer接続と機能の提供完了は後段で確認する。
+[初回設計](geometric-groups-design.md)で、既存配置のworld座標・描画順を保持する所属モデルを使い、一括選択・移動・左右90度回転・複製等を段階実装する方針を整理した。レイヤー整理用フォルダー・共有Symbol・Equipmentと区別する。任意拡縮・入れ子・グループ合成opacityは後続。0.22.0で初回の保存・ドメイン・再利用・Designer接続と全体検証を完了した。詳細と両テーマ実画面は初回設計を参照する。
+
+## 型付き読取投影の前段
+
+[初回設計と実装](typed-read-slots-design.md)で、Equipmentの保存／台帳UIに先立ち、Rust adapterのbool／number slotと機器contextを追加した。既存数値Textと共通投影を使う。Project契約とブラウザUIは変更せず、動的Symbol・実Hub・正式Hostは後続。

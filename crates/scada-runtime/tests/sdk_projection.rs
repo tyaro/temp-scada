@@ -209,3 +209,159 @@ async fn pinned_sdk_unresolved_request_blocks_the_entire_subscription() {
     handle.shutdown().await.unwrap();
     server.await.unwrap();
 }
+
+/// boolはSDKの実際のf64搬送を通し、同じ要求を複数contextへ配る。
+#[tokio::test]
+async fn typed_read_context_uses_one_sdk_subscription_and_clears_values_after_disconnect() {
+    use scada_runtime::{
+        read_slot_view, ReadSlotInvalidReason, ReadSlotKey, ReadSlotPlan, ReadSlotReading,
+        ReadSlotRequest, ReadSlotType, ReadSlotValue,
+    };
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}", listener.local_addr().unwrap());
+    let mut metadata = catalog();
+    metadata.tags[0].data_type = "bit".into();
+    let server_catalog = metadata.clone();
+    let (updates, mut receive_updates) = mpsc::channel::<Option<Value>>(4);
+    let server = tokio::spawn(async move {
+        let (mut request, _) = listener.accept().await.unwrap();
+        reply(&mut request, serde_json::to_value(server_catalog).unwrap()).await;
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut ws = accept_async(stream).await.unwrap();
+        let subscription: Value =
+            serde_json::from_str(ws.next().await.unwrap().unwrap().to_text().unwrap()).unwrap();
+        assert_eq!(subscription["op"], "subscribe");
+        assert_eq!(subscription["tags"], json!([TAG]));
+        ws.send(Message::Text(data(1.0, "good", 100).to_string().into()))
+            .await
+            .unwrap();
+        let (mut request, _) = listener.accept().await.unwrap();
+        reply(
+            &mut request,
+            json!({"revision":3,"run_id":7,"collection_mode":"configured","t":100,
+            "values":[{"tag":TAG,"v":1.0,"q":"good","t":100,"value_source":"real"}]}),
+        )
+        .await;
+        while let Some(update) = receive_updates.recv().await {
+            match update {
+                Some(update) => ws
+                    .send(Message::Text(update.to_string().into()))
+                    .await
+                    .unwrap(),
+                None => break,
+            }
+        }
+        ws.close(None).await.unwrap();
+    });
+    let slot = |equipment: &str, name: Option<&str>, expected_type| ReadSlotRequest {
+        key: ReadSlotKey {
+            equipment_id: equipment.into(),
+            slot_name: "running".into(),
+        },
+        expected_type,
+        external_name: name.map(String::from),
+    };
+    let plan = ReadSlotPlan::new(
+        "project".into(),
+        7,
+        [
+            slot("e1", Some(TAG), ReadSlotType::Bool),
+            slot("e2", Some(TAG), ReadSlotType::Bool),
+            slot("e3", Some(TAG), ReadSlotType::Number),
+            slot("e4", None, ReadSlotType::Bool),
+        ],
+    )
+    .unwrap();
+    assert_eq!(plan.requests().len(), 1);
+    let handle = client(&url).start(plan.requests()).unwrap();
+    let initial = read_slot_view(&plan, &handle.state(), None);
+    assert_eq!(initial.slots[0].reading, ReadSlotReading::Disconnected);
+    assert_eq!(initial.slots[3].reading, ReadSlotReading::Unassigned);
+    let mut states = handle.state_watch();
+    let live = wait_state(&mut states, |s| {
+        s.connection_state() == TagClientConnectionState::Live
+    })
+    .await;
+    let result = read_slot_view(&plan, &live, Some(&metadata));
+    assert!(result.metadata_ready);
+    assert_eq!(
+        result.slots[0].reading,
+        ReadSlotReading::Resolved {
+            quality: Quality::Good,
+            value: Some(ReadSlotValue::Bool(true))
+        }
+    );
+    assert_eq!(result.slots[0].reading, result.slots[1].reading);
+    assert_eq!(
+        result.slots[2].reading,
+        ReadSlotReading::Invalid {
+            reason: ReadSlotInvalidReason::TypeMismatch
+        }
+    );
+    assert_eq!(
+        read_slot_view(&plan, &live, None).slots[0].reading,
+        ReadSlotReading::Invalid {
+            reason: ReadSlotInvalidReason::MetadataUnavailable
+        }
+    );
+    for (time, quality, expected) in [
+        (
+            101,
+            "good",
+            ReadSlotReading::Resolved {
+                quality: Quality::Good,
+                value: Some(ReadSlotValue::Bool(false)),
+            },
+        ),
+        (
+            102,
+            "stale",
+            ReadSlotReading::Resolved {
+                quality: Quality::Stale,
+                value: None,
+            },
+        ),
+        (
+            103,
+            "bad",
+            ReadSlotReading::Resolved {
+                quality: Quality::Bad,
+                value: None,
+            },
+        ),
+    ] {
+        updates.send(Some(data(0.0, quality, time))).await.unwrap();
+        let state = wait_state(&mut states, |s| {
+            s.current().is_some_and(|v| v.values[0].t == time)
+        })
+        .await;
+        let result = read_slot_view(&plan, &state, Some(&metadata));
+        assert_eq!(result.slots[0].reading, expected);
+        assert_eq!(result.slots[1].reading, expected);
+        assert_eq!(
+            result.slots[0]
+                .provenance
+                .as_ref()
+                .unwrap()
+                .source_timestamp_ms,
+            time
+        );
+    }
+    updates.send(None).await.unwrap();
+    let disconnected = wait_state(&mut states, |s| {
+        s.connection_state() != TagClientConnectionState::Live
+    })
+    .await;
+    let result = read_slot_view(&plan, &disconnected, Some(&metadata));
+    assert_eq!(result.slots[0].reading, ReadSlotReading::Disconnected);
+    assert_eq!(result.slots[3].reading, ReadSlotReading::Unassigned);
+    assert!(result.slots.iter().all(|slot| slot.provenance.is_none()));
+    handle.shutdown().await.unwrap();
+    let stopped = read_slot_view(&plan, &states.borrow().clone(), Some(&metadata));
+    assert!(stopped
+        .slots
+        .iter()
+        .filter(|slot| slot.external_name.is_some())
+        .all(|slot| slot.reading == ReadSlotReading::Disconnected && slot.provenance.is_none()));
+    server.await.unwrap();
+}

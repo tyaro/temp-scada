@@ -14,6 +14,10 @@
 
 `RuntimeView` は Project ID / revision、SDK の接続状態と安定したエラー分類、metadata の整合状態、外部名ごとの `NumericReading`、値の由来を持つ。Project JSON や編集履歴には保存しない。秘密鍵・接続先・SDK エラーの任意文字列は出力しない。
 
+## 型付き読取slot
+
+2026-10-20、[型付き読取slotの初回実装](typed-read-slots-design.md)を追加した。`ReadSlotPlan`は機器ID／slot名とbool／numberの期待型を持ち、`read_slot_view`で未割付を保持して投影する。既存数値Textとmetadata・値の検証を`projection.rs`へ共通化し、`NumericReading`のJSON契約は維持した。EquipmentのProject保存・UIとHostは未実装。表示用DTOを式評価の唯一の入力としない。
+
 ## 表示へ値を渡す条件
 
 SDK が Live 以外なら全参照を `disconnected` とし、現在値と provenance を消す。Live でも current または catalog が欠ける場合は数値表示せず `invalid` とする。
