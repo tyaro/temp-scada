@@ -51,8 +51,11 @@ export function objectFormCommand(
       patch.binding = externalName === "" ? null : { externalName };
     }
   }
-  if (selected.shape.type === "symbol")
+  if (selected.shape.type === "symbol") {
     patch.symbolId = String(data.get("symbolId"));
+    if (!context.definition && data.has("equipmentId"))
+      patch.equipmentId = String(data.get("equipmentId") ?? "") || null;
+  }
   if (selected.shape.type === "screenView")
     patch.sourceScreenId = String(data.get("sourceScreenId"));
   if (selected.shape.type === "polyline") {

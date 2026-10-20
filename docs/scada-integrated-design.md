@@ -443,3 +443,7 @@ Project 0.19.0で矩形／楕円の塗りへ斜線・交差線・点を追加し
 ## Equipmentの初期保存と台帳
 
 0.23.0で[EquipmentType／Instanceと読取slotの保存・初期台帳](equipment-register-design.md)を実装した。機器登録・未割付保存・一括適用・UndoとRuntime read planへの変換まで。図面の機器参照、動的Symbol、実Hub、Hostと正式Runtimeは後続とする。
+
+## Symbol配置への機器参照
+
+0.24.0で[登録機器の関連付けと使用先](equipment-symbol-association.md)を追加した。共有定義への個別タグ埋込みを避け、画面Symbol配置で機器IDを参照する。動的slot描画と実値表示は後続。

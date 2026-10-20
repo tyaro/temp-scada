@@ -65,6 +65,7 @@ export function applySingleObjectCommand(
       text,
       binding,
       symbolId,
+      equipmentId,
       sourceScreenId,
       colorMode,
       paint,
@@ -127,6 +128,12 @@ export function applySingleObjectCommand(
       if (definitionId || object.shape.type !== "screenView")
         throw new Error("参照画面は埋込配置にだけ設定できます。");
       object.shape.screenId = sourceScreenId;
+    }
+    if (equipmentId !== undefined) {
+      if (definitionId || object.shape.type !== "symbol")
+        throw new Error("機器は画面上のSymbol配置だけに関連付けできます");
+      if (equipmentId === null) delete object.shape.equipmentId;
+      else object.shape.equipmentId = equipmentId;
     }
     if (symbolId !== undefined) {
       if (definitionId || object.shape.type !== "symbol")

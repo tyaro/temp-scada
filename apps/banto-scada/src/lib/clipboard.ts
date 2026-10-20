@@ -54,6 +54,18 @@ export function parseClipboard(text: string): ObjectClipboard {
   )
     throw new Error("clipboardの図形・宣言は4MiB以下にしてください。");
   const project = parseProject(JSON.stringify(data.project));
+  if (
+    project.equipment?.length ||
+    project.equipmentTypes?.length ||
+    project.screens.some((screen) =>
+      screen.objects.some(
+        (object) => object.shape.type === "symbol" && object.shape.equipmentId,
+      ),
+    )
+  )
+    throw new Error(
+      "機器の関連付けを含むclipboardには対応していません。Project全体の保存を使ってください。",
+    );
   if (data.version === 1 && project.assets.length)
     throw new Error(
       "画像を含むコピーの貼り付けは未対応です。画像同梱Projectを使ってください。",
@@ -144,6 +156,14 @@ export function copyObjectSnapshot(
   if (objects.some((object) => object.shape.type === "screenView"))
     throw new Error(
       "埋込画面を含むコピー・切り取りは未対応です。配置の複製またはProject全体の保存を使ってください。",
+    );
+  if (
+    objects.some(
+      (object) => object.shape.type === "symbol" && object.shape.equipmentId,
+    )
+  )
+    throw new Error(
+      "機器の関連付けを含むコピー・切り取りは未対応です。同じ機器の表示は配置の複製または画面の複製を使ってください。",
     );
   // Clipboard placements deliberately start at the destination root.
   for (const object of objects) delete object.folderId;

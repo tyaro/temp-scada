@@ -1248,18 +1248,23 @@
       }
     });
   }
-  function openSymbolUsage(usage: SymbolUsage) {
+  function openSymbolUsage(usage: SymbolUsage & { equipmentId?: string }) {
     const generation = workspaceGeneration;
+    const matchesUsage = () => {
+      const target = project.screens
+        .find((item) => item.id === usage.screenId)
+        ?.objects.find((item) => item.id === usage.objectId);
+      return (
+        target?.shape.type === "symbol" &&
+        target.shape.symbolId === usage.symbolId &&
+        (usage.equipmentId === undefined ||
+          target.shape.equipmentId === usage.equipmentId)
+      );
+    };
     const run = () => {
       if (generation !== workspaceGeneration || mode !== "edit") return;
       if (!drafts.allow(run)) return;
-      const target = project.screens
-        .find((s) => s.id === usage.screenId)
-        ?.objects.find((o) => o.id === usage.objectId);
-      if (
-        target?.shape.type !== "symbol" ||
-        target.shape.symbolId !== usage.symbolId
-      ) {
+      if (!matchesUsage()) {
         report("info", "使用先が変更されたため移動を中止しました。");
         return;
       }
@@ -1273,6 +1278,8 @@
           requestAnimationFrame(() => {
             if (
               generation !== workspaceGeneration ||
+              mode !== "edit" ||
+              !matchesUsage() ||
               screenId !== usage.screenId ||
               editingSymbolId ||
               selectedIds.length !== targetIds.length ||
@@ -2745,6 +2752,7 @@
                 {transition}
                 oncommand={edit}
                 onsubmit={submitForm}
+                onopenusage={openSymbolUsage}
               />{/key}
           </TreeSection>
           <TreeSection label="プロジェクト設定">
@@ -3209,7 +3217,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.23.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.24.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

@@ -55,7 +55,10 @@ export function objectFormValues(
     if (!definition)
       values.externalName = object.shape.binding?.externalName ?? "";
   }
-  if (object.shape.type === "symbol") values.symbolId = object.shape.symbolId;
+  if (object.shape.type === "symbol") {
+    values.symbolId = object.shape.symbolId;
+    if (!definition) values.equipmentId = object.shape.equipmentId ?? "";
+  }
   if (object.shape.type === "screenView")
     values.sourceScreenId = object.shape.screenId;
   if (object.shape.type === "polyline") {

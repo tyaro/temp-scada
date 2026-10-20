@@ -26,6 +26,7 @@ export interface ObjectPatch {
   text?: string;
   binding?: TagBinding | null;
   symbolId?: string;
+  equipmentId?: string | null;
   sourceScreenId?: string;
   colorMode?: "monochrome" | "definition";
   points?: Point[];

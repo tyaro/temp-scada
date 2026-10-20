@@ -78,7 +78,12 @@ export interface LayoutObject extends BaseObject {
     | { type: "rectangle"; paint: ShapePaint }
     | { type: "ellipse"; paint: ShapePaint }
     | { type: "text"; text: string; style: TextStyle; binding?: TagBinding }
-    | { type: "symbol"; symbolId: string; colorMode: SymbolColorMode }
+    | {
+        type: "symbol";
+        symbolId: string;
+        equipmentId?: string;
+        colorMode: SymbolColorMode;
+      }
     | { type: "image"; assetId: string; fit: "contain"; crop?: ImageCrop }
     | { type: "screenView"; screenId: string; fit: "contain" };
 }
@@ -138,10 +143,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.23.0";
+    schemaVersion: "0.24.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.23.0";
+    minRuntimeVersion: "0.24.0";
     name: string;
   };
   screens: Screen[];
@@ -165,8 +170,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.23.0",
-        minRuntimeVersion: "0.23.0",
+        schemaVersion: "0.24.0",
+        minRuntimeVersion: "0.24.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,

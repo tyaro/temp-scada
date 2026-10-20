@@ -2,6 +2,8 @@
 
 状態: **Project 0.23.0の保存・検証・CRUDと、プロジェクトツリー内の初期台帳を実装。** 2026-10-20。機器と図面の関連付け、動的Symbol、実Hub接続、Faceplate、書込みは後続。[統合設計](scada-integrated-design.md)を基準に、[追加検討](equipment-authoring-detail-proposal.md)から読取機器の最小範囲を具体化した。
 
+本文は0.23.0の区切りを記録する。0.24.0で[Symbol配置の機器参照と使用先](equipment-symbol-association.md)を追加し、使用中機器の削除も保護した。現在の対応範囲は実装状況を参照する。
+
 ## 所有者と保存形式
 
 Projectへ省略可能な`equipmentTypes`（最大100）と`equipment`（最大1000）を追加する。未使用の既存サンプルへ空配列を勝手に補完しない。Type・InstanceのIDは他の配置・画面等と同じProject全体のUUIDv7一意性を使う。機器番号や表示名でIDを置き換えない。

@@ -36,7 +36,7 @@ test("group Project, native clipboard v3, save and history retain membership", a
   const data = JSON.parse(
     await readFile((await (await download).path())!, "utf8"),
   );
-  expect(data.manifest.schemaVersion).toBe("0.23.0");
+  expect(data.manifest.schemaVersion).toBe("0.24.0");
   expect(data.screens[0].groups).toHaveLength(2);
   const groups = data.screens[0].groups;
   expect(groups[0].id).not.toBe(groups[1].id);

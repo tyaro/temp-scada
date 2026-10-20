@@ -1,0 +1,72 @@
+[
+  {
+    "name": "valid shared reference",
+    "valid": true,
+    "target": "/screens/0/objects/10/shape",
+    "key": "equipmentId",
+    "value": "0199f700-0000-7000-8000-000000000002"
+  },
+  {
+    "name": "no association",
+    "valid": true,
+    "target": "/screens/0/objects/10/shape",
+    "key": "equipmentId",
+    "remove": true
+  },
+  {
+    "name": "missing equipment",
+    "valid": false,
+    "target": "/screens/0/objects/10/shape",
+    "key": "equipmentId",
+    "value": "0199f800-0000-7000-8000-000000000009"
+  },
+  {
+    "name": "type is not instance",
+    "valid": false,
+    "target": "/screens/0/objects/10/shape",
+    "key": "equipmentId",
+    "value": "0199f700-0000-7000-8000-000000000001"
+  },
+  {
+    "name": "null reference",
+    "valid": false,
+    "target": "/screens/0/objects/10/shape",
+    "key": "equipmentId",
+    "value": null
+  },
+  {
+    "name": "blank reference",
+    "valid": false,
+    "target": "/screens/0/objects/10/shape",
+    "key": "equipmentId",
+    "value": ""
+  },
+  {
+    "name": "invalid uuid",
+    "valid": false,
+    "target": "/screens/0/objects/10/shape",
+    "key": "equipmentId",
+    "value": "P-101"
+  },
+  {
+    "name": "primitive cannot own equipment context",
+    "valid": false,
+    "target": "/screens/0/objects/0/shape",
+    "key": "equipmentId",
+    "value": "0199f700-0000-7000-8000-000000000002"
+  },
+  {
+    "name": "definition cannot own equipment context",
+    "valid": false,
+    "target": "/symbols/0/objects/0/shape",
+    "key": "equipmentId",
+    "value": "0199f700-0000-7000-8000-000000000002"
+  },
+  {
+    "name": "two symbols share equipment",
+    "valid": true,
+    "target": "/screens/0/objects/11/shape",
+    "key": "equipmentId",
+    "value": "0199f700-0000-7000-8000-000000000002"
+  }
+]

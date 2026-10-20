@@ -1,3 +1,4 @@
+import { equipmentUsages } from "../equipment";
 import type { Project } from "../project";
 import type { EquipmentType, EquipmentInstance } from "../equipment";
 import type { EquipmentCommand } from "./commands";
@@ -76,6 +77,8 @@ export function applyEquipmentCommand(
     }
     case "remove-equipment":
       byId(command.equipmentId);
+      if (equipmentUsages(next, command.equipmentId).length)
+        throw new Error("図面で使用中の機器は削除できません");
       next.equipment = next.equipment!.filter(
         (item) => item.id !== command.equipmentId,
       );

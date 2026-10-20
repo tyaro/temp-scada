@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { equipmentUsages, type EquipmentUsage } from "../equipment";
   import { tick } from "svelte";
   import type { Project } from "../project";
   import type { EditCommand } from "../editor";
@@ -10,6 +11,7 @@
     transition,
     oncommand,
     onsubmit,
+    onopenusage,
   }: {
     project: Project;
     generation: number;
@@ -17,6 +19,7 @@
     transition: (action: () => void) => void;
     oncommand: (command: EditCommand) => unknown;
     onsubmit: (event: SubmitEvent) => void;
+    onopenusage: (usage: EquipmentUsage) => void;
   } = $props();
   function hasPreset(name: string) {
     return project.equipmentTypes?.some(
@@ -46,6 +49,9 @@
   }
   const selected = $derived(
     project.equipment?.find((item) => item.id === selectedId),
+  );
+  const usages = $derived(
+    selected ? equipmentUsages(project, selected.id) : [],
   );
   const kind = $derived(
     project.equipmentTypes?.find((type) => type.id === selected?.typeId),
@@ -187,7 +193,22 @@
           >{selected ? "機器情報と割付を適用" : "機器を登録"}</button
         >
       </form>
-      {#if selected}<button
+      {#if selected}
+        <section aria-label="機器の使用先">
+          <strong>図面の使用先 {usages.length} 件</strong>
+          {#each usages as usage (usage.objectId)}
+            <button
+              title={`配置ID: ${usage.objectId}`}
+              onclick={() => onopenusage(usage)}
+              >{usage.screenName} · {usage.name ?? "Symbol 配置"} · #{usage.order}
+              ({usage.x}, {usage.y}){usage.visible === false
+                ? "（非表示）"
+                : ""}</button
+            >
+          {/each}
+        </section>
+        <button
+          disabled={usages.length > 0}
           onclick={() =>
             oncommand({ type: "remove-equipment", equipmentId: selected!.id })}
           >この機器を削除</button

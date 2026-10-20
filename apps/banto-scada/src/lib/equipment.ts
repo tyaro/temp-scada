@@ -1,3 +1,4 @@
+import type { SymbolUsage } from "./symbol-usages";
 import type { Project } from "./project";
 export interface EquipmentSlot {
   name: string;
@@ -33,6 +34,19 @@ export function validateEquipment(project: Project, ids: Set<string>) {
       names.add(slot.name);
     }
   }
+  const equipmentIds = new Set(project.equipment?.map((item) => item.id));
+  for (const owner of [...project.screens, ...project.symbols])
+    for (const object of owner.objects) {
+      if (
+        object.shape.type !== "symbol" ||
+        object.shape.equipmentId === undefined
+      )
+        continue;
+      if (!project.screens.includes(owner as Project["screens"][number]))
+        throw new Error("共有定義に機器を関連付けできません");
+      if (!equipmentIds.has(object.shape.equipmentId))
+        throw new Error("関連付けた機器が見つかりません");
+    }
   const codes = new Set<string>();
   for (const equipment of project.equipment ?? []) {
     if (ids.has(equipment.id)) throw new Error("ID が重複しています");
@@ -50,4 +64,37 @@ export function validateEquipment(project: Project, ids: Set<string>) {
       bound.add(binding.slotName);
     }
   }
+}
+
+export interface EquipmentUsage extends SymbolUsage {
+  equipmentId: string;
+}
+/** Derived index: hidden and locked placements in every screen remain usages. */
+export function equipmentUsages(
+  project: Project,
+  equipmentId: string,
+): EquipmentUsage[] {
+  return project.screens.flatMap((screen) =>
+    [...screen.objects]
+      .sort((a, b) => a.order - b.order)
+      .flatMap((object) =>
+        object.shape.type === "symbol" &&
+        object.shape.equipmentId === equipmentId
+          ? [
+              {
+                equipmentId,
+                symbolId: object.shape.symbolId,
+                screenId: screen.id,
+                screenName: screen.name,
+                objectId: object.id,
+                order: object.order,
+                x: object.x,
+                y: object.y,
+                ...(object.name ? { name: object.name } : {}),
+                ...(object.visible === false ? { visible: false } : {}),
+              },
+            ]
+          : [],
+      ),
+  );
 }

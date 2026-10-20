@@ -836,6 +836,23 @@
                 >
               {/if}
               {#if selected.shape.type === "symbol"}
+                {#if !activeDefinition}
+                  <label class="full-width"
+                    >関連付ける機器<select
+                      name="equipmentId"
+                      aria-label="関連付ける機器"
+                    >
+                      <option value="">関連付けなし</option>
+                      {#each project.equipment ?? [] as equipment (equipment.id)}<option
+                          value={equipment.id}
+                          >{equipment.code} · {equipment.name}</option
+                        >{/each}
+                    </select></label
+                  >
+                  <p class="full-width">
+                    機器との関連付けです。状態表示・実Hub接続は後続です。同じ機器の表示を複製しても割付は共有します。
+                  </p>
+                {/if}
                 <label class="full-width"
                   >参照する Symbol 定義<select
                     name="symbolId"

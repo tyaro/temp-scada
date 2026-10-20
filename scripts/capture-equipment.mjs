@@ -1,6 +1,7 @@
 import { chromium, expect } from "@playwright/test";
 import { mkdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+const associations = process.env.SCADA_CAPTURE_ASSOCIATIONS === "1";
 const output = resolve(process.argv[2] ?? "test-results/equipment");
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
@@ -23,18 +24,25 @@ try {
       .click();
     await page.getByRole("button", { name: "編集", exact: true }).click();
     const project = JSON.parse(
-      await readFile("examples/process-light.project.json", "utf8"),
+      await readFile(
+        associations
+          ? "examples/equipment-symbol.project.json"
+          : "examples/process-light.project.json",
+        "utf8",
+      ),
     );
     const equipment = JSON.parse(
       await readFile("examples/equipment.project.json", "utf8"),
     );
-    project.equipmentTypes = equipment.equipmentTypes;
-    project.equipment = equipment.equipment;
-    project.manifest.name = "循環設備 / 機器台帳";
-    project.equipment[0].bindings = [
-      { slotName: "running", externalName: "Demo.Water.Pump01.Running" },
-      { slotName: "current", externalName: null },
-    ];
+    if (!associations) {
+      project.equipmentTypes = equipment.equipmentTypes;
+      project.equipment = equipment.equipment;
+      project.manifest.name = "循環設備 / 機器台帳";
+      project.equipment[0].bindings = [
+        { slotName: "running", externalName: "Demo.Water.Pump01.Running" },
+        { slotName: "current", externalName: null },
+      ];
+    }
     await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
       name: "equipment.json",
       mimeType: "application/json",
@@ -51,18 +59,36 @@ try {
     }
     const library = page.getByRole("region", { name: "機器台帳", exact: true });
     await library
-      .getByRole("button", { name: "FAN-101 · 誘引送風機", exact: true })
+      .getByRole("button", {
+        name: `${project.equipment[0].code} · ${project.equipment[0].name}`,
+        exact: true,
+      })
       .click();
     await expect(
       library.getByRole("form", { name: "機器情報と割付", exact: true }),
     ).toBeVisible();
+    if (associations) {
+      await library
+        .getByRole("region", { name: "機器の使用先", exact: true })
+        .getByRole("button")
+        .click();
+      await page
+        .getByRole("combobox", { name: "関連付ける機器", exact: true })
+        .scrollIntoViewIfNeeded();
+      await library
+        .getByRole("region", { name: "機器の使用先", exact: true })
+        .scrollIntoViewIfNeeded();
+    }
     for (const close of await page
       .locator(".toast-host .toast button.close")
       .all())
       await close.click();
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({
-      path: join(output, `equipment-${theme}.png`),
+      path: join(
+        output,
+        `${associations ? "equipment-association" : "equipment"}-${theme}.png`,
+      ),
       animations: "disabled",
     });
     await page.close();

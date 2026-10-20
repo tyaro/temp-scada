@@ -15,6 +15,34 @@ pub(crate) fn validate<'a>(project: &'a Value, ids: &mut HashSet<&'a str>) -> Re
             }
         }
     }
+    let equipment_ids: HashSet<_> = project["equipment"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|item| item["id"].as_str().unwrap())
+        .collect();
+    for owner in project["screens"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .chain(project["symbols"].as_array().unwrap())
+    {
+        for object in owner["objects"].as_array().unwrap() {
+            if let Some(id) = object["shape"]["equipmentId"].as_str() {
+                if !project["screens"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|screen| std::ptr::eq(screen, owner))
+                {
+                    return Err("共有定義に機器を関連付けできません".into());
+                }
+                if !equipment_ids.contains(id) {
+                    return Err("関連付けた機器が見つかりません".into());
+                }
+            }
+        }
+    }
     let mut codes = HashSet::new();
     for equipment in project["equipment"].as_array().into_iter().flatten() {
         if !ids.insert(equipment["id"].as_str().unwrap()) {
@@ -139,5 +167,42 @@ mod tests {
                 .equipment_read_bindings()
                 .is_empty()
         );
+    }
+}
+
+#[cfg(test)]
+mod reference_tests {
+    use serde_json::Value;
+    #[test]
+    fn shared_reference_contract() {
+        let cases: Value = serde_json::from_str(include_str!(
+            "../../../examples/equipment-reference-cases.json"
+        ))
+        .unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut input: Value = serde_json::from_str(include_str!(
+                "../../../examples/equipment-symbol.project.json"
+            ))
+            .unwrap();
+            let node = input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_object_mut()
+                .unwrap();
+            let key = case["key"].as_str().unwrap();
+            if case["remove"] == true {
+                node.remove(key);
+            } else {
+                node.insert(key.into(), case["value"].clone());
+            }
+            let result = crate::Project::from_json(&input.to_string());
+            assert_eq!(
+                result.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}: {:?}",
+                case["name"],
+                result.err()
+            );
+        }
     }
 }
