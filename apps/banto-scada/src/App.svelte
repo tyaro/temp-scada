@@ -1144,7 +1144,9 @@
   let previewFullscreenActive = $state(false);
   let previewPopups = $state<{
     showPicker: (origin: HTMLElement, kind?: "screen" | "equipment") => void;
+    showEquipment: (id: string, origin: HTMLElement) => void;
   }>();
+  let equipmentDetailsButton = $state<HTMLButtonElement>();
   let inspectorPanel = $state<HTMLElement>();
   let inspectorController = $state<{
     focusName: () => void;
@@ -2102,6 +2104,39 @@
       selectedIds = [];
     });
   }
+  function openSelectedEquipment(objectId: string) {
+    if (menuBlocked || mode !== "edit" || activeDefinition) return;
+    const generation = workspaceGeneration,
+      ownerId = screen.id;
+    transition(() => {
+      // Draft application may have changed the placement's equipment binding.
+      if (
+        workspaceGeneration !== generation ||
+        screen.id !== ownerId ||
+        mode !== "edit" ||
+        activeDefinition
+      )
+        return;
+      const object = screen.objects.find((item) => item.id === objectId);
+      const id =
+        object?.shape.type === "symbol" ? object.shape.equipmentId : undefined;
+      if (!id || !project.equipment?.some((item) => item.id === id)) {
+        report("error", "機器の関連付けを確認してください。");
+        return;
+      }
+      mode = "preview";
+      selectedIds = [];
+      void tick().then(() => {
+        if (
+          workspaceGeneration === generation &&
+          screen.id === ownerId &&
+          mode === "preview" &&
+          equipmentDetailsButton?.isConnected
+        )
+          previewPopups?.showEquipment(id, equipmentDetailsButton);
+      });
+    });
+  }
   let selectionMenu = $state<{
     show: (origin: HTMLElement, point?: Point) => Promise<void>;
   }>();
@@ -2657,6 +2692,7 @@
           >画面を小窓で表示確認</button
         >
         <button
+          bind:this={equipmentDetailsButton}
           disabled={menuBlocked || !project.equipment?.length}
           onclick={(event) =>
             previewPopups?.showPicker(event.currentTarget, "equipment")}
@@ -3249,6 +3285,7 @@
       {edit}
       {openDefinition}
       onselectsource={(id) => selectObjects(id)}
+      onopenequipment={openSelectedEquipment}
       {openScreen}
       images={assetImages}
       onreplaceimage={imageImport.openReplacement}

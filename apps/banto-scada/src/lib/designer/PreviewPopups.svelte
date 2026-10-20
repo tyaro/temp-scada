@@ -143,18 +143,26 @@
         });
     });
   }
-  function open() {
-    if (!candidate || candidate.reason) return;
-    const id = candidate.id;
-    const key = popupKey({ targetId: id, kind: pickerKind });
+  function openTarget(id: string, kind: PopupKind, cost: number) {
+    const key = popupKey({ targetId: id, kind });
     try {
-      windows = openPopup(windows, id, candidate.cost, area, pickerKind);
+      windows = openPopup(windows, id, cost, area, kind);
       if (opener && !origins.has(key)) origins.set(key, opener);
       picker = false;
-      focusWindow(id, pickerKind);
+      focusWindow(id, kind);
     } catch (error) {
       onmessage(error instanceof Error ? error.message : "小窓を開けません。");
     }
+  }
+  function open() {
+    if (candidate && !candidate.reason)
+      openTarget(candidate.id, pickerKind, candidate.cost);
+  }
+  export function showEquipment(id: string, origin: HTMLElement) {
+    if (!active || !project.equipment?.some((item) => item.id === id)) return;
+    for (const controller of Object.values(controllers)) controller?.cancel();
+    opener = origin;
+    openTarget(id, "equipment", 0);
   }
   function front(id: string, kind: PopupKind) {
     if (active) windows = frontPopup(windows, id, kind);

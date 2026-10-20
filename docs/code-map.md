@@ -170,3 +170,5 @@ Symbol宣言のCRUDは`editor/symbol-handler.ts`、全Text参照の導出は`sym
 状態色追従は`lib/state-color.ts`が参照・塗り条件の検証と色解決、`designer/StateColor.svelte`と`forms/state-color.ts`が編集入力を担当する。`Primitive.svelte`は動的な塗り／線と静的枠線を分離する。`model-helpers.ts`の`remapStateColor`を定義複製・複数選択複製が共用する。`state-color.test.ts`、共通`examples/state-color-cases.json`、`e2e/state-color.spec.ts`と同一mount読取試験が回帰入口。[契約](state-color-following.md)。
 
 機器の読取詳細は`equipment-read-details.ts`が全採用slotの導出、`EquipmentReadDetails.svelte`が20件ずつの表示を持つ。`symbol-slots.ts`の`resolveEquipmentSlot`をSymbolと共用する。`preview-popups.ts`の`kind + targetId`を画面／機器小窓が共用し、枠・フォーカス・前後順は既存PreviewWindow／PreviewPopupsが担当する。`equipment-read-details.test.ts`・`preview-popups.test.ts`・`e2e/equipment-read-details.spec.ts`と同一mount試験を変更時の入口にする。[詳細](equipment-read-details.md)。
+
+Symbolからの読取詳細の起動はInspectorの`onopenequipment`をAppの`openSelectedEquipment`へ渡す。draft解決後の機器再取得とmode遷移・tick後の世代照合はApp、直接起動と既存窓の再前面化はPreviewPopupsの`showEquipment`が担当する。`e2e/equipment-read-entry.spec.ts`で適用／破棄／キャンセル／関連付け解除・ロック中・履歴不変を確認する。

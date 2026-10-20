@@ -55,6 +55,7 @@
     edit,
     openDefinition,
     onselectsource,
+    onopenequipment,
     openScreen,
     onreplaceimage,
     imageBusy,
@@ -85,6 +86,7 @@
     edit: (command: EditCommand) => boolean;
     openDefinition: (id: string) => void;
     onselectsource: (id: string) => void;
+    onopenequipment: (objectId: string) => void;
     openScreen: (id: string) => void;
     onreplaceimage: (id: string) => void;
     imageBusy: boolean;
@@ -415,6 +417,20 @@
           }}>共有定義を確認・編集</button
         >
       {/if}
+    {/if}
+    {#if selectedIds.length === 1 && selected?.shape.type === "symbol" && !activeDefinition}
+      <button
+        type="button"
+        disabled={!selected.shape.equipmentId}
+        title={selected.shape.equipmentId
+          ? "表示プレビューへ切り替えて関連機器の読取詳細を開く"
+          : "先に機器を関連付けてください"}
+        onclick={() => selected && onopenequipment(selected.id)}
+        >関連機器の読取詳細を開く</button
+      >
+      {#if !selected.shape.equipmentId}<p>
+          機器を関連付けると読取詳細を開けます。
+        </p>{/if}
     {/if}
     {#if selectedIds.length > 1}
       {#if group}
@@ -897,7 +913,7 @@
                     </select></label
                   >
                   <p class="full-width">
-                    機器の割付状態を表示します。実値取得・動的配色・実Hub接続は後続です。同じ機器の表示を複製しても割付は共有します。
+                    機器の割付状態と状態色を表示します。通常Designerの実Hub接続は後続です。同じ機器の表示を複製しても割付は共有します。
                   </p>
                 {/if}
                 <label class="full-width"
