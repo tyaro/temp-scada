@@ -237,8 +237,8 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 
 ## プロパティの浮動配置
 
-- `designer/inspector-layout.ts`: Project外のversion付き配置slot、表示用clamp、固定起点の移動／サイズ計算。`inspector-layout.test.ts`で不正設定・境界を確認する。
-- `designer/controllers/floating-inspector.svelte.ts`: 同じDOMの配置、pointer／keyboard transaction、取消・上位層優先・明示保存。
+- `designer/floating-panel-layout.ts`: Project外のversion付き配置、表示用clamp、固定起点の移動／サイズ計算。`inspector-layout.ts`は既存slotのadapter。`inspector-layout.test.ts`で不正設定・境界を確認する。
+- `designer/controllers/floating-panel.svelte.ts`: 同じDOMの配置、pointer／keyboard transaction、取消・上位層優先・明示保存。workspaceは操作所有者を一つにし、二枚の前面順位を管理する。`floating-inspector.svelte.ts`は保存slot・文言・幾何のadapter。
 - `designer/InspectorPanelHeader.svelte`／`InspectorPanel.svelte`: 非モーダルな操作ハンドルと配置メニュー。フォーム本体を移設・再生成しない。
 - `banto/setup.ts`: Banto UI設定の専用slot。書込成功時のみ保存済みsnapshotを更新する。
 - Appの`measureWorkspace`: ResizeObserverで上部境界を追跡。`CanvasWorkspace.cancelInteractions`は配置変更と作図gestureを排他にする。既存の手動倍率・中心保持は共用する。

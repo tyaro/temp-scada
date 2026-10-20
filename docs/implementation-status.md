@@ -281,3 +281,5 @@ resize通知とpointerupの順序による位置の誤確定を修正し、実wi
 [設計と両テーマの実画面](multiline-text-design.md)に従い、Project0.32.0へ接続した。Enterで改行、Ctrl／Command＋Enterまたは適用で確定し、改行区切りをLFへ正規化する。空行を保ち、収容可能な先頭行と末尾の省略記号を表示する。タグ・slot・機器情報は従来の1行表示を保ち、保存した静的本文を消去しない。TS1062件、Rust50件・Clippy、型・buildとサンプル19個、既存Text9件・新規ブラウザ11件を確認した。自動折返し・任意行間・フォント選択・縁取りは後続。
 
 浮動パネル取消の修正`ebd23cb`は[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39423363080)成功を確認した。
+
+静的Textの明示改行`e0bddca`は[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39427769080)が成功した。

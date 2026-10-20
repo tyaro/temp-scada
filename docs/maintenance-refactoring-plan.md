@@ -524,3 +524,11 @@ Astraの静的レビューで具体的な回帰懸念・修正要求なし。既
 ### R6b：候補コピーの重複検証を削減
 
 R6aの実測に基づき、候補コピーだけを`parseProject(JSON.stringify(project))`へ変更した。元Projectをhandlerより先に同じparserで検証し、finish／history／保存整形は維持する。不正な入力を図形削除で隠せない4ケースを追加し、TS641件が成功。Astraの静的レビューでも拒否・原子性・legacy正規化の保証を確認した。変更後も同じ条件で100／1,000／5,000配置を計測し、生JSONと小規模の揺れを含む結果を[性能記録](editor-performance.md)へ保存した。関連ブラウザ30件・型（エラー／警告なし）・build・全体整形が成功した。UI・保存schema・Undo単位は変更せず、R6の計測と限定改善を完了とする。最終差分の全体CIはPush後に確認する。
+
+## 浮動パネル操作の共通化（左作業パネル追加の前段）
+
+Inspectorで検証した同一DOM・capture／Esc／blur／resize取消・上位層優先・明示保存を、`floating-panel.svelte.ts`へ抽出する。Inspector固有の保存slot・幾何・表示文言は薄いadapterに保つ。移動とresizeの所有者と前面順位は一つのworkspaceで管理し、後続の左パネルから同じ処理を使う。
+
+この区切りでは左パネルのUIを追加せず、Inspectorの契約を維持する。既存ブラウザ・型・buildと整形が完了条件。左作業パネルの機能追加は[別の区切り](sidebar-floating-design.md)で保存する。
+
+共通処理の抽出後、既存Inspectorブラウザ12件、配置の単体6件と所有者／slot識別の新規2件、型チェック（エラー／警告なし）・本番buildが成功した。幾何adapterの抽出後は保存／狭幅退避と通知遅延resizeのブラウザを追加確認する。左パネルのUIはまだ追加していない。
