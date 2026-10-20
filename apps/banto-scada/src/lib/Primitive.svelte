@@ -9,6 +9,7 @@
   import { linearGradientEndpoints } from "./linear-gradient";
   import { lineDash, lineCap } from "./line-style";
   import TextPrimitive from "./TextPrimitive.svelte";
+  import MultilineTextPrimitive from "./MultilineTextPrimitive.svelte";
   import type { ScreenObject } from "./project";
   import { presentNumeric, type TagReadings } from "./tag-presentation";
   let {
@@ -231,25 +232,35 @@
       )}
       stroke-linecap={lineCap(object.shape.paint.stroke?.lineStyle)}
     />
-  {:else if object.shape.type === "text"}<TextPrimitive
-      text={metadata
-        ? metadata.text
-        : bound
-          ? presentation.text
-          : object.shape.text}
-      equipmentProperty={metadata}
-      width={object.width}
-      height={object.height}
-      style={object.shape.style}
-      color={textColor}
-      numeric={bound}
-      tagName={slotBinding?.slotName ?? binding?.externalName}
-      tagState={bound ? presentation.state : undefined}
-      tagLabel={bound ? presentation.label : undefined}
-      provenance={slotBinding ? slotDisplay?.provenance : undefined}
-      tagDetail={slotBinding ? slotDisplay?.reason : undefined}
-      {onsummary}
-    />{/if}
+  {:else if object.shape.type === "text"}
+    {#if !bound && !metadata && object.shape.text.includes("\n")}
+      <MultilineTextPrimitive
+        text={object.shape.text}
+        width={object.width}
+        height={object.height}
+        style={object.shape.style}
+        color={textColor}
+        {onsummary}
+      />
+    {:else}<TextPrimitive
+        text={metadata
+          ? metadata.text
+          : bound
+            ? presentation.text
+            : object.shape.text}
+        equipmentProperty={metadata}
+        width={object.width}
+        height={object.height}
+        style={object.shape.style}
+        color={textColor}
+        numeric={bound}
+        tagName={slotBinding?.slotName ?? binding?.externalName}
+        tagState={bound ? presentation.state : undefined}
+        tagLabel={bound ? presentation.label : undefined}
+        provenance={slotBinding ? slotDisplay?.provenance : undefined}
+        tagDetail={slotBinding ? slotDisplay?.reason : undefined}
+        {onsummary}
+      />{/if}{/if}
 {:else if shape}
   <polyline
     points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}

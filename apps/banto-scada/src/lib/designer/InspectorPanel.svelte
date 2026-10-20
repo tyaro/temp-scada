@@ -176,22 +176,6 @@
   const commonColor = $derived(
     selectedColors.size === 1 ? [...selectedColors][0] : null,
   );
-  let textError = $state("");
-  $effect(() => {
-    selected?.id;
-    textError = "";
-  });
-  function pasteText(event: ClipboardEvent) {
-    if (
-      /[\r\n\u2028\u2029]/u.test(
-        event.clipboardData?.getData("text/plain") ?? "",
-      )
-    ) {
-      event.preventDefault();
-      textError =
-        "1行の文字列を入力してください。改行を含む貼り付けはできません。";
-    }
-  }
   let tagInput = $state<HTMLInputElement>();
   let pickerOpen = $state(false);
   export function isTagPickerOpen() {
@@ -270,7 +254,7 @@
   }
   let numericErrors = $state<Record<string, string>>({});
   const targets = new WeakMap<HTMLInputElement, NumericTarget>();
-  const composing = new Set<HTMLInputElement>();
+  const composing = new Set<HTMLInputElement | HTMLTextAreaElement>();
   const blurred = new WeakSet<HTMLInputElement>();
   function focusNumber(event: FocusEvent) {
     const input = event.currentTarget as HTMLInputElement;
@@ -354,13 +338,28 @@
     if (composing.has(input)) blurred.add(input);
     else commitInput(input);
   }
+  function textAreaKey(event: KeyboardEvent) {
+    if (
+      event.key !== "Enter" ||
+      !(event.ctrlKey || event.metaKey) ||
+      event.altKey
+    )
+      return;
+    event.preventDefault();
+    const textarea = event.currentTarget as HTMLTextAreaElement;
+    if (event.isComposing || event.keyCode === 229 || composing.has(textarea))
+      return;
+    textarea.form?.requestSubmit();
+  }
   function compositionStart(event: CompositionEvent) {
-    composing.add(event.currentTarget as HTMLInputElement);
+    composing.add(
+      event.currentTarget as HTMLInputElement | HTMLTextAreaElement,
+    );
   }
   function compositionEnd(event: CompositionEvent) {
-    const input = event.currentTarget as HTMLInputElement;
+    const input = event.currentTarget as HTMLInputElement | HTMLTextAreaElement;
     composing.delete(input);
-    if (blurred.has(input)) {
+    if (input instanceof HTMLInputElement && blurred.has(input)) {
       blurred.delete(input);
       commitInput(input);
     }
@@ -896,18 +895,18 @@
                   ></label
                 >
                 <p class="full-width numeric-hint">
-                  1行・上下中央。文字サイズは枠のサイズ変更に追従しません。太さ・揃え・テキストは「変更を適用」で確定します。
+                  静的テキストは改行できます。自動折返しはしません。Enterで改行、Ctrl／⌘＋Enterまたは「変更を適用」で確定します。文字サイズは枠変更で変わりません。タグ・機器情報の表示は1行です。
                 </p>
                 <label class="full-width"
-                  >テキスト<input
+                  >テキスト<textarea
                     name="text"
                     aria-label="テキスト"
-                    onpaste={pasteText}
-                    oninput={() => (textError = "")}
+                    rows="4"
+                    wrap="off"
                     maxlength="1000"
-                  />{#if textError}<span class="field-error" role="alert"
-                      >{textError}</span
-                    >{/if}</label
+                    oncompositionstart={compositionStart}
+                    oncompositionend={compositionEnd}
+                    onkeydown={textAreaKey}></textarea></label
                 >
                 {#if activeDefinition}
                   <label class="full-width"
@@ -1221,8 +1220,7 @@
     border-bottom-color: var(--banto-danger);
   }
   .full-width,
-  .fields label:has(textarea),
-  .fields label:has(input[name="text"]) {
+  .fields label:has(textarea) {
     grid-column: 1 / -1;
   }
   p {

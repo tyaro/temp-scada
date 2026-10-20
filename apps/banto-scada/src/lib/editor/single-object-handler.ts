@@ -1,3 +1,4 @@
+import { normalizeTextNewlines } from "../text-content";
 import { reorderUnit } from "./group-handler";
 import { type Project, type Screen, type SymbolDefinition } from "../project";
 import { normalizeRotation, replaceRotatedVertex } from "../rotation";
@@ -195,9 +196,9 @@ export function applySingleObjectCommand(
     if (text !== undefined) {
       if (object.shape.type !== "text")
         throw new Error("Text 以外に文字列は設定できません");
-      if (/[\r\n\u2028\u2029]/u.test(text))
-        throw new Error("1行の文字列を入力してください。");
-      object.shape.text = text;
+      if (typeof text !== "string")
+        throw new Error("文字列を入力してください。");
+      object.shape.text = normalizeTextNewlines(text);
     }
     if (
       points !== undefined ||

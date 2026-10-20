@@ -1,0 +1,189 @@
+{
+  "manifest": {
+    "product": "banto-scada",
+    "schemaVersion": "0.32.0",
+    "projectId": "0199f000-0000-7000-8000-000000000001",
+    "projectRevision": 1,
+    "minRuntimeVersion": "0.32.0",
+    "name": "明示改行Text / 運転メモ"
+  },
+  "screens": [
+    {
+      "id": "0199f000-0000-7000-8000-000000000002",
+      "name": "ポンプ設備の運転メモ",
+      "width": 960,
+      "height": 540,
+      "objects": [
+        {
+          "id": "019a3200-0000-7000-8000-000000000001",
+          "order": 1,
+          "x": 80,
+          "y": 150,
+          "width": 360,
+          "height": 280,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#eff6ff",
+                  "alpha": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "019a3200-0000-7000-8000-000000000002",
+          "order": 2,
+          "x": 510,
+          "y": 150,
+          "width": 350,
+          "height": 180,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#ecfdf5",
+                  "alpha": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "019a3200-0000-7000-8000-000000000003",
+          "order": 3,
+          "x": 510,
+          "y": 350,
+          "width": 350,
+          "height": 90,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#fffbeb",
+                  "alpha": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "019a3200-0000-7000-8000-000000000004",
+          "order": 4,
+          "x": 100,
+          "y": 55,
+          "width": 760,
+          "height": 70,
+          "rotation": 0,
+          "shape": {
+            "type": "text",
+            "text": "ポンプ設備の運転メモ\n明示した改行・空行と省略表示",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          },
+          "fill": "#1e293b"
+        },
+        {
+          "id": "019a3200-0000-7000-8000-000000000005",
+          "order": 5,
+          "x": 100,
+          "y": 175,
+          "width": 320,
+          "height": 230,
+          "rotation": 0,
+          "shape": {
+            "type": "text",
+            "text": "原水ポンプ P-101\n\n運転条件\n・液位 30%以上\n・バルブ開確認\n\n停止時は引継ぎを記録",
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "fill": "#1e293b"
+        },
+        {
+          "id": "019a3200-0000-7000-8000-000000000006",
+          "order": 6,
+          "x": 535,
+          "y": 180,
+          "width": 300,
+          "height": 115,
+          "rotation": 0,
+          "shape": {
+            "type": "text",
+            "text": "P-101 原水ポンプA\n\n運転前の確認\n設備と周辺の安全を確認",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          },
+          "fill": "#047857"
+        },
+        {
+          "id": "019a3200-0000-7000-8000-000000000007",
+          "order": 7,
+          "x": 535,
+          "y": 365,
+          "width": 300,
+          "height": 60,
+          "rotation": 0,
+          "shape": {
+            "type": "text",
+            "text": "運転確認項目\nポンプ・バルブの状態\n通信・計測値の確認\n保全記録を確認",
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "fill": "#1e293b"
+        },
+        {
+          "id": "019a3200-0000-7000-8000-000000000008",
+          "order": 8,
+          "x": 100,
+          "y": 475,
+          "width": 760,
+          "height": 30,
+          "rotation": 0,
+          "shape": {
+            "type": "text",
+            "text": "静的な運転メモの例です。実設備の運転状態・操作を示すものではありません。",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "fill": "#64748b"
+        }
+      ],
+      "background": "#ffffff",
+      "folders": [],
+      "groups": []
+    }
+  ],
+  "symbols": [],
+  "assets": []
+}

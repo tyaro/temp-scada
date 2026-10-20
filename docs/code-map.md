@@ -256,8 +256,8 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 
 `set-text-style`はobject分類と共通guardを経て`selection-handler.ts`でpatchと全対象を検証する。`designer/SelectionTextStyle.svelte`／`forms/selection-text-style.ts`はTextだけの選択を明示し、未指定項目をpatchへ含めない。`selection-text-style.test.ts`が保存・所有者・表示元保持・原子性を、`e2e/selection-text-style.spec.ts`がIME・draft・両テーマ・描画を確認する。実画面は`scripts/capture-selection-text-style.mjs`で記録する。
 
-## 静的複数行Textの計算基盤
+## 静的複数行Text
 
-`multiline-text-layout.ts`の`normalizeTextNewlines`／`fitTextWidth`／`fitStaticLines`は純粋な文字計測adapterを受け取り、空行と幅／高さの省略・実inkのunionを計算する。`multiline-text-layout.test.ts`で字体・grapheme・縦省略と一時cacheを検証する。既存`fitText`は変更せず、Project0.31.0・UI・描画には未接続。接続の段階は[具体設計](multiline-text-design.md)を参照する。
+`multiline-text-layout.ts`の`normalizeTextNewlines`／`fitTextWidth`／`fitStaticLines`は純粋な文字計測adapterを受け取り、空行と幅／高さの省略・実inkのunionを計算する。`multiline-text-layout.test.ts`で字体・grapheme・縦省略と一時cacheを検証する。`text-content.ts`がTS公開読込・編集・保存のLF正規化を担い、Rust・schema・共有ケースを揃える。`Primitive.svelte`は静的かつLFを含む配置だけ`MultilineTextPrimitive.svelte`へ渡し、従来の一行描画を保つ。`InspectorPanel.svelte`のtextareaと`object-form.ts`がIME・確定・入力保護を接続する。`multiline-text.spec.ts`が両テーマ、動的表示・再利用・保存・clipboardを確認する。Project0.32.0の契約と範囲は[具体設計](multiline-text-design.md)を参照する。
 
 浮動Inspectorのgestureは開始時のnative window寸法も保持し、入力捕捉時に照合する。`e2e/inspector-floating.spec.ts`の通知遅延ケースはresizeイベントへの依存を切り離して確定競合を再現する。

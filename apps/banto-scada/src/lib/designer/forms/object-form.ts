@@ -1,3 +1,4 @@
+import { normalizeTextNewlines } from "../../text-content";
 import { isEquipmentPropertyField } from "../../equipment-property";
 import type { EquipmentSlot } from "../../equipment";
 import type { EditCommand, ObjectPatch } from "../../editor";
@@ -36,7 +37,7 @@ export function objectFormCommand(
     patch.height = Number(data.get("height"));
   }
   if (selected.shape.type === "text") {
-    patch.text = String(data.get("text"));
+    patch.text = normalizeTextNewlines(String(data.get("text")));
     const fontWeight = String(data.get("fontWeight")),
       align = String(data.get("textAlign"));
     if (
@@ -94,7 +95,14 @@ export function objectFormCommand(
     patch,
   };
 }
-export function acknowledgeObjectForm(form: HTMLFormElement, name: string) {
+export function acknowledgeObjectForm(
+  form: HTMLFormElement,
+  name: string,
+  text?: string,
+) {
+  const textarea = form.elements.namedItem("text");
+  if (text !== undefined && textarea instanceof HTMLTextAreaElement)
+    textarea.value = text;
   const input = form.elements.namedItem("name");
   if (input instanceof HTMLInputElement) input.value = name;
 }

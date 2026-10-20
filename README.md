@@ -3,6 +3,7 @@
 `tyaro/banto-industrial`で計画するSCADAを並行開発する一時workspace。最終的に`apps/banto-scada`と`crates/scada-*`をindustrialへ戻します。現在はローカル工程図エディタと読取表示確認を提供し、正式Runtime・serverは開発中です。
 
 - [現在の実装状況](docs/implementation-status.md): 対応機能、保存契約、検証範囲、未実装。
+- [静的Textの明示改行](docs/multiline-text-design.md): 空行・省略・入力保護と実画面。
 - [操作ガイド](docs/user-guide.md): 編集、画像、画面再利用、入力保護、パネルとキー操作。
 - [開発計画](docs/development-plan.md)と[実装履歴](docs/implementation-history.md): 今後と過去を分離。
 - [共有シンボルの機器情報表示](docs/equipment-property-design.md): 機器名・コード・種別名と定義例示。

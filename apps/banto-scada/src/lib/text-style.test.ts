@@ -7,7 +7,7 @@ import { parseProject } from "./project";
 import { applyCommand } from "./editor";
 import { emptyHistory, recordEdit } from "./history";
 import { fitText } from "./text-layout";
-it("shares required text style and one-line contracts with Rust for screens and definitions", () => {
+it("shares required text style and canonical newline contracts with Rust for screens and definitions", () => {
   const project: any = structuredClone(sample),
     text = project.screens[0].objects.find((o: any) => o.shape.type === "text");
   project.symbols = [
@@ -42,8 +42,13 @@ it("shares required text style and one-line contracts with Rust for screens and 
     value.screens[0].objects.find(
       (o: any) => o.shape.type === "text",
     ).shape.text = entry.text;
-    if (entry.valid) expect(parseProject(JSON.stringify(value))).toEqual(value);
-    else expect(() => parseProject(JSON.stringify(value))).toThrow();
+    if (entry.valid) {
+      const expected = structuredClone(value);
+      expected.screens[0].objects.find(
+        (o: any) => o.shape.type === "text",
+      ).shape.text = "normalized" in entry ? entry.normalized : entry.text;
+      expect(parseProject(JSON.stringify(value))).toEqual(expected);
+    } else expect(() => parseProject(JSON.stringify(value))).toThrow();
   }
   const large: any = structuredClone(legacy);
   large.screens[0].objects.find((o: any) => o.shape.type === "text").height =

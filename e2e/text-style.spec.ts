@@ -160,21 +160,15 @@ test("invalid size, IME, staged formatting and multiline paste use existing inpu
     "25",
   );
   const text = page.getByLabel("テキスト", { exact: true });
-  await text.evaluate((el) => {
-    const data = new DataTransfer();
-    data.setData("text/plain", "first\nsecond");
-    el.dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: data,
-        bubbles: true,
-        cancelable: true,
-      }),
-    );
-  });
-  await expect(
-    page.getByRole("alert").filter({ hasText: "1行の文字列" }),
-  ).toContainText("1行の文字列");
-  await expect(text).toHaveValue(sample.screens[0].objects[2].shape.text!);
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.evaluate(() => navigator.clipboard.writeText("first\nsecond"));
+  await text.focus();
+  await text.press("Control+a");
+  await text.press("Control+v");
+  await expect(text).toHaveValue("first\nsecond");
+  await expect(textBox(page).locator("[data-text-content]")).toHaveText(
+    sample.screens[0].objects[2].shape.text!,
+  );
   await page.getByLabel("文字の太さ", { exact: true }).selectOption("bold");
   await page
     .locator(`button[data-layer-id="${sample.screens[0].objects[0].id}"]`)

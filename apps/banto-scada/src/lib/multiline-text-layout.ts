@@ -1,7 +1,6 @@
 import type { TextMetrics } from "./text-layout";
-/** Editor ingress normalizes separators without trimming deliberate blank lines or spaces. */
-export const normalizeTextNewlines = (text: string): string =>
-  text.replace(/\r\n|[\r\u2028\u2029]/gu, "\n");
+import { normalizeTextNewlines } from "./text-content";
+export { normalizeTextNewlines } from "./text-content";
 export interface WidthFittedText {
   text: string;
   box: TextMetrics;

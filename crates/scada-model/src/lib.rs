@@ -58,6 +58,35 @@ fn validate_image_crop(value: &Value, image: &Value) -> Result<(), String> {
     Ok(())
 }
 
+fn normalize_project_text(value: &mut Value) {
+    for key in ["screens", "symbols"] {
+        let Some(owners) = value.get_mut(key).and_then(Value::as_array_mut) else {
+            continue;
+        };
+        for owner in owners {
+            let Some(objects) = owner.get_mut("objects").and_then(Value::as_array_mut) else {
+                continue;
+            };
+            for object in objects {
+                let Some(shape) = object.get_mut("shape") else {
+                    continue;
+                };
+                if shape.get("type").and_then(Value::as_str) != Some("text") {
+                    continue;
+                }
+                if let Some(text) = shape.get("text").and_then(Value::as_str).filter(|text| {
+                    text.contains('\r') || text.contains('\u{2028}') || text.contains('\u{2029}')
+                }) {
+                    let normalized = text
+                        .replace("\r\n", "\n")
+                        .replace(['\r', '\u{2028}', '\u{2029}'], "\n");
+                    shape["text"] = Value::String(normalized);
+                }
+            }
+        }
+    }
+}
+
 impl Project {
     pub fn id(&self) -> &str {
         self.0["manifest"]["projectId"].as_str().unwrap()
@@ -94,8 +123,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.31.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.31.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.32.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.32.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -116,6 +145,7 @@ impl Project {
             value["symbols"] = serde_json::json!([]);
             value["assets"] = serde_json::json!([]);
         }
+        normalize_project_text(&mut value);
         VALIDATOR.validate(&value).map_err(|e| e.to_string())?;
         let mut ids = HashSet::new();
         ids.insert(value["manifest"]["projectId"].as_str().unwrap());
@@ -1377,21 +1407,79 @@ mod tests {
                 .find(|o| o["shape"]["type"] == "text")
                 .unwrap();
             object["shape"]["text"] = case["text"].clone();
+            let parsed = Project::from_json(&value.to_string());
             assert_eq!(
-                Project::from_json(&value.to_string()).is_ok(),
+                parsed.is_ok(),
                 case["valid"].as_bool().unwrap(),
                 "{:?}",
                 case["text"]
             );
+            if let Ok(project) = parsed {
+                let text = project.0["screens"][0]["objects"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|object| object["shape"]["type"] == "text")
+                    .unwrap()["shape"]["text"]
+                    .clone();
+                assert_eq!(&text, case.get("normalized").unwrap_or(&case["text"]));
+                assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+            }
         }
     }
+    #[test]
+    fn canonicalizes_text_in_both_screens_and_definitions_without_losing_display_sources() {
+        let mut value: Value = serde_json::from_str(include_str!(
+            "../../../examples/equipment-property.project.json"
+        ))
+        .unwrap();
+        for key in ["screens", "symbols"] {
+            for owner in value[key].as_array_mut().unwrap() {
+                let object = owner["objects"]
+                    .as_array_mut()
+                    .unwrap()
+                    .iter_mut()
+                    .find(|object| object["shape"]["type"] == "text")
+                    .unwrap();
+                object["shape"]["text"] = serde_json::json!("\r\n A \rB\u{2028}\u{2029}");
+            }
+        }
+        let original = value.clone();
+        let project = Project::from_json(&value.to_string()).unwrap();
+        for key in ["screens", "symbols"] {
+            let owners = project.0[key].as_array().unwrap();
+            let old_owners = original[key].as_array().unwrap();
+            for (owner, before) in owners.iter().zip(old_owners) {
+                for (object, old) in owner["objects"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .zip(before["objects"].as_array().unwrap())
+                {
+                    if old["shape"]["text"] == serde_json::json!("\r\n A \rB\u{2028}\u{2029}") {
+                        let mut expected = old.clone();
+                        expected["shape"]["text"] = serde_json::json!("\n A \nB\n\n");
+                        assert_eq!(object, &expected);
+                    } else {
+                        assert_eq!(object, old);
+                    }
+                }
+            }
+        }
+        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+        let mut old = project.0.clone();
+        old["manifest"]["schemaVersion"] = serde_json::json!("0.31.0");
+        old["manifest"]["minRuntimeVersion"] = serde_json::json!("0.31.0");
+        assert!(Project::from_json(&old.to_string()).is_err());
+    }
+
     #[test]
     fn migrates_legacy_without_losing_geometry_or_identity() {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.31.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.31.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.32.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.32.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

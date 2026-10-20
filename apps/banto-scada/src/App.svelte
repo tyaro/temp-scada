@@ -1602,7 +1602,11 @@
     if (form.dataset.editorForm === "project")
       acknowledgeProjectForm(form, project.manifest.name);
     if (form.dataset.editorForm === "object")
-      acknowledgeObjectForm(form, selected?.name ?? "");
+      acknowledgeObjectForm(
+        form,
+        selected?.name ?? "",
+        selected?.shape.type === "text" ? selected.shape.text : undefined,
+      );
     drafts.submitted(form);
   }
   function edit(
@@ -3639,7 +3643,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.31.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.32.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

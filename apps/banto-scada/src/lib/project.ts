@@ -1,3 +1,4 @@
+import { normalizeProjectText } from "./text-content";
 import { validateStateColors } from "./state-color";
 import { validateSymbolSlots } from "./symbol-slots";
 import {
@@ -174,10 +175,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.31.0";
+    schemaVersion: "0.32.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.31.0";
+    minRuntimeVersion: "0.32.0";
     name: string;
   };
   screens: Screen[];
@@ -201,8 +202,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.31.0",
-        minRuntimeVersion: "0.31.0",
+        schemaVersion: "0.32.0",
+        minRuntimeVersion: "0.32.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -251,6 +252,7 @@ export function parseProject(json: string): Project {
         )
           delete object.fill;
   }
+  normalizeProjectText(value);
   if (!validate(value))
     throw new Error(
       validate.errors
@@ -393,8 +395,12 @@ export function parseProject(json: string): Project {
 }
 export function serializeProject(project: Project): string {
   const json = JSON.stringify(project, null, 2) + "\n";
-  parseProject(json);
-  return json;
+  const canonical = parseProject(json);
+  // Ordinary canonical content keeps the existing one-stringify path. Only input
+  // separators (or harmless literal escaped matches) need the normalized output.
+  return /\\r|\u2028|\u2029/u.test(json)
+    ? JSON.stringify(canonical, null, 2) + "\n"
+    : json;
 }
 export function getLayoutBounds(object: ScreenObject) {
   if ("width" in object)

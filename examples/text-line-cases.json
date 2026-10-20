@@ -9,34 +9,47 @@
   },
   {
     "text": "a\nb",
-    "valid": false
+    "valid": true
   },
   {
     "text": "a\rb",
-    "valid": false
+    "valid": true,
+    "normalized": "a\nb"
+  },
+  {
+    "text": "a\r\nb",
+    "valid": true,
+    "normalized": "a\nb"
   },
   {
     "text": "a b",
-    "valid": false
+    "valid": true,
+    "normalized": "a\nb"
   },
   {
     "text": "a b",
-    "valid": false
+    "valid": true,
+    "normalized": "a\nb"
   },
   {
-    "text": "a\n",
-    "valid": false
+    "text": "\n a \n\n",
+    "valid": true
   },
   {
-    "text": "a\r",
-    "valid": false
+    "text": "\r\n a \r\r",
+    "valid": true,
+    "normalized": "\n a \n\n"
   },
   {
-    "text": "a ",
-    "valid": false
+    "text": "\n\n",
+    "valid": true
   },
   {
-    "text": "a ",
+    "text": "a\\nb",
+    "valid": true
+  },
+  {
+    "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     "valid": false
   }
 ]

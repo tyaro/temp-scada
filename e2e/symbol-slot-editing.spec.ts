@@ -83,7 +83,7 @@ for (const theme of ["light", "dark"] as const)
       direction: "read",
     });
     expect(saved.equipment).toEqual(sample.equipment);
-    expect(saved.manifest.schemaVersion).toBe("0.31.0");
+    expect(saved.manifest.schemaVersion).toBe("0.32.0");
     await button(page, "画面へ戻る").click();
     await expect(
       page.getByRole("dialog", { name: "未適用の入力があります", exact: true }),
