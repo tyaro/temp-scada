@@ -49,6 +49,13 @@ test("locked Symbol opens its committed equipment without changing Project or ad
 test("cancel retains a pending equipment edit; apply opens the newly committed equipment", async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    (window as any).__resizeErrors = [];
+    window.addEventListener("error", (event) => {
+      if (event.message.includes("ResizeObserver"))
+        (window as any).__resizeErrors.push(event.message);
+    });
+  });
   await start(page);
   const association = page.getByLabel("関連付ける機器", { exact: true });
   await association.selectOption(sample.equipment[1].id);
@@ -75,6 +82,13 @@ test("cancel retains a pending equipment edit; apply opens the newly committed e
   expect((await saved(page)).screens[0].objects[0].shape.equipmentId).toBe(
     sample.equipment[0].id,
   );
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  expect(await page.evaluate(() => (window as any).__resizeErrors)).toEqual([]);
 });
 test("discard opens the original equipment and an unbound Symbol explains the disabled entry", async ({
   page,

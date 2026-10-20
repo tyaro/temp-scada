@@ -69,12 +69,19 @@
     void document.fonts.ready.then(changed);
     document.fonts.addEventListener("loadingdone", changed);
     document.fonts.addEventListener("loadingerror", changed);
+    let retryFrame: number | null = null;
     const observer = new ResizeObserver(() => {
-      if (!layout && active) fontRevision += 1;
+      if (layout || !active || retryFrame !== null) return;
+      // Measuring text writes to the SVG probe. Defer it past this observer delivery.
+      retryFrame = requestAnimationFrame(() => {
+        retryFrame = null;
+        if (!layout && active) fontRevision += 1;
+      });
     });
     if (viewport) observer.observe(viewport);
     return () => {
       active = false;
+      if (retryFrame !== null) cancelAnimationFrame(retryFrame);
       document.fonts.removeEventListener("loadingdone", changed);
       document.fonts.removeEventListener("loadingerror", changed);
       observer.disconnect();
