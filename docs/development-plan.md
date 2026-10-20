@@ -6,7 +6,7 @@
 
 ## 次の実装順
 
-**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1はローカル検証済み、次はI2a。I1の全体CI確認後に着手する。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
+**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み、次はI2a。今回はI1の保存までで停止する。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
 
 以下はこれまでの実装経緯とCore v1へ向けた長期工程を保持する。新しい短期順序と矛盾する場合は上記計画を優先し、最終的な機能仕様・提供段階は統合設計に従う。
 
@@ -653,4 +653,4 @@ Project0.32.0の[静的Text明示改行](multiline-text-design.md)を保存し�
 
 ## I1：画像cropの比率固定（2026-10-21）
 
-[SCADA単体開発計画](upstream-independent-plan.md)のI0／I1a／I1bを実施した。[操作仕様と実画面](image-crop-aspect-design.md)に、自由／現在比率の固定・原本境界・数値連動・不正入力・IME・保存とUndoを記録した。Project・SDK・Banto共通基盤は変更していない。次はI1の全体CIを確認してからI2aの兄弟内並び順の仕様・ドメインへ進む。
+[SCADA単体開発計画](upstream-independent-plan.md)のI0／I1a／I1bを実施した。[操作仕様と実画面](image-crop-aspect-design.md)に、自由／現在比率の固定・原本境界・数値連動・不正入力・IME・保存とUndoを記録した。Project・SDK・Banto共通基盤は変更していない。実装コミット`316a12c`の[全体CI39457887476](https://github.com/tyaro/temp-scada/actions/runs/39457887476)が成功し、I1を完了した。次はI2aの兄弟内並び順の仕様・ドメイン。今回の区切りでは着手していない。

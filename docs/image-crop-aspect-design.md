@@ -1,6 +1,6 @@
 # 原本プレビューのトリミング比率固定
 
-2026-10-21。状態: **I1a／I1bを実装しローカル受入済み。全体CIはPush後に確認**。[単体開発計画](upstream-independent-plan.md)のI1a／I1b。[既存のcrop操作](image-crop-pointer-design.md)を拡張し、画像・背景で同じ計算を使う。
+2026-10-21。状態: **I1a／I1bを実装しローカル受入・全体CI成功確認済み**。[単体開発計画](upstream-independent-plan.md)のI1a／I1b。[既存のcrop操作](image-crop-pointer-design.md)を拡張し、画像・背景で同じ計算を使う。
 
 ## 操作
 
@@ -27,7 +27,7 @@ Project0.32.0・cropの保存属性・原本bytes・画像Store・参照SDKは�
 
 `image-crop-gesture.ts`に原本画素の比率取得・比率固定の辺／隅／新規指定・数値連動の純粋計算を追加した。1画素境界で既存validatorが許す丸め誤差も受け入れる。`image-crop-fields.ts`が軸ごとの入力を同じ計算へ渡し、`ImageCrop.svelte`が非永続の固定状態、入力の連動、不正値のnative validity、IME、resetを担当する。既存draft guard・保存command・描画は共用する。
 
-型チェックはエラー／警告なし、本番build成功。関連TS4ファイル72件、操作ブラウザ13件と強化した再起動試験1件の再確認、既存配置／背景crop18件が成功した。実OSのIME・Windows実機は未検証で、ブラウザIME試験は合成compositionイベントを使用する。共有モデルに変更がないため、Rustは今回ローカル再実行の対象外。既存の全体CIで最終差分を確認する。
+型チェックはエラー／警告なし、本番build成功。関連TS4ファイル72件、操作ブラウザ13件と強化した再起動試験1件の再確認、既存配置／背景crop18件が成功した。実OSのIME・Windows実機は未検証で、ブラウザIME試験は合成compositionイベントを使用する。共有モデルに変更がないため、Rustは今回ローカル再実行の対象外。実装コミット`316a12c`の[全体CI39457887476](https://github.com/tyaro/temp-scada/actions/runs/39457887476)が成功し、frontend／Rust／E2E4分割とcheckを通過した。
 
 ## 実画面
 

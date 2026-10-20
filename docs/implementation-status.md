@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定をローカル検証済み。I2以降は未着手。
+2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2以降は未着手。
 
 ## 保存契約と基盤
 
@@ -294,4 +294,4 @@ resize通知とpointerupの順序による位置の誤確定を修正し、実wi
 
 ## 上流変更中のI1：cropの比率固定
 
-[仕様・実画面](image-crop-aspect-design.md)に従い、配置／背景の「縦横比を固定」と数値・ハンドルの連動を追加した。固定だけではProject・dirty・Undoを変えず、不正な文字列・1画素未満・IME・取消を保護する。比率はフォーム内だけに保持し、Project0.32.0・原本・SDK依存は不変。型エラー／警告なし・関連TS72件・操作ブラウザ13件と強化した再起動試験1件の再確認・既存crop18件・本番build・整形が成功した。全体CIは区切りのPush後に確認する。
+[仕様・実画面](image-crop-aspect-design.md)に従い、配置／背景の「縦横比を固定」と数値・ハンドルの連動を追加した。固定だけではProject・dirty・Undoを変えず、不正な文字列・1画素未満・IME・取消を保護する。比率はフォーム内だけに保持し、Project0.32.0・原本・SDK依存は不変。型エラー／警告なし・関連TS72件・操作ブラウザ13件と強化した再起動試験1件の再確認・既存crop18件・本番build・整形が成功した。実装コミット`316a12c`の[全体CI39457887476](https://github.com/tyaro/temp-scada/actions/runs/39457887476)も成功した。
