@@ -57,6 +57,7 @@
     openDefinition,
     onselectsource,
     onopenequipment,
+    onopenequipmentsettings,
     openScreen,
     onreplaceimage,
     imageBusy,
@@ -88,6 +89,7 @@
     openDefinition: (id: string) => void;
     onselectsource: (id: string) => void;
     onopenequipment: (objectId: string) => void;
+    onopenequipmentsettings: (objectId: string) => void;
     openScreen: (id: string) => void;
     onreplaceimage: (id: string) => void;
     imageBusy: boolean;
@@ -420,6 +422,15 @@
       {/if}
     {/if}
     {#if selectedIds.length === 1 && selected?.shape.type === "symbol" && !activeDefinition}
+      <button
+        type="button"
+        disabled={!selected.shape.equipmentId}
+        title={selected.shape.equipmentId
+          ? "全画面で共有する機器台帳の設定を開く。配置のロックとは別に編集します。"
+          : "先に機器を関連付けてください"}
+        onclick={() => selected && onopenequipmentsettings(selected.id)}
+        >関連機器の台帳設定を開く</button
+      >
       <button
         type="button"
         disabled={!selected.shape.equipmentId}

@@ -40,6 +40,29 @@
     );
   }
   let view = $state<"instances" | "types">("instances");
+  let root: HTMLElement;
+  /** Caller resolves workspace drafts before switching the ledger target. */
+  export async function showEquipment(
+    id: string,
+  ): Promise<HTMLFormElement | null> {
+    if (!project.equipment?.some((item) => item.id === id)) return null;
+    const owner = generation;
+    view = "instances";
+    copySourceId = "";
+    selectedId = id;
+    await tick();
+    if (
+      owner !== generation ||
+      selectedId !== id ||
+      view !== "instances" ||
+      !root?.isConnected
+    )
+      return null;
+    const form = root.querySelector<HTMLFormElement>(
+      'form[data-editor-form="equipment"]',
+    );
+    return form?.dataset.equipmentId === id ? form : null;
+  }
   let selectedId = $state("");
   let copySourceId = $state("");
   const copySource = $derived(
@@ -106,7 +129,7 @@
   });
 </script>
 
-<section aria-label="機器台帳">
+<section aria-label="機器台帳" bind:this={root}>
   <div class="actions views" role="group" aria-label="機器台帳の表示">
     <button
       class:active={view === "instances"}

@@ -1153,6 +1153,7 @@
     showEquipment: (id: string, origin: HTMLElement) => void;
   }>();
   let equipmentDetailsButton = $state<HTMLButtonElement>();
+  let equipmentLibrary = $state<EquipmentLibrary>();
   let inspectorPanel = $state<HTMLElement>();
   let inspectorController = $state<{
     focusName: () => void;
@@ -2131,7 +2132,10 @@
       selectedIds = [];
     });
   }
-  function openSelectedEquipment(objectId: string) {
+  function openSelectedEquipment(
+    objectId: string,
+    destination: "read" | "settings" = "read",
+  ) {
     if (menuBlocked || mode !== "edit" || activeDefinition) return;
     const generation = workspaceGeneration,
       ownerId = screen.id;
@@ -2149,6 +2153,29 @@
         object?.shape.type === "symbol" ? object.shape.equipmentId : undefined;
       if (!id || !project.equipment?.some((item) => item.id === id)) {
         report("error", "機器の関連付けを確認してください。");
+        return;
+      }
+      if (destination === "settings") {
+        setAuxPanelVisibility({ sidebar: true });
+        activePanel = "project";
+        const library = equipmentLibrary;
+        void library?.showEquipment(id).then((form) => {
+          if (
+            workspaceGeneration !== generation ||
+            screen.id !== ownerId ||
+            mode !== "edit" ||
+            activeDefinition ||
+            equipmentLibrary !== library ||
+            !form?.isConnected ||
+            form.dataset.equipmentId !== id
+          )
+            return;
+          expandTreeAncestors(form);
+          form.scrollIntoView({ block: "nearest" });
+          const input = form.elements.namedItem("code");
+          if (input instanceof HTMLInputElement)
+            input.focus({ preventScroll: true });
+        });
         return;
       }
       mode = "preview";
@@ -2897,6 +2924,7 @@
           </TreeSection>
           <TreeSection label="機器" count={project.equipment?.length ?? 0}>
             {#key workspaceGeneration}<EquipmentLibrary
+                bind:this={equipmentLibrary}
                 {project}
                 generation={workspaceGeneration}
                 {drafts}
@@ -3314,6 +3342,7 @@
       {openDefinition}
       onselectsource={(id) => selectObjects(id)}
       onopenequipment={openSelectedEquipment}
+      onopenequipmentsettings={(id) => openSelectedEquipment(id, "settings")}
       {openScreen}
       images={assetImages}
       onreplaceimage={imageImport.openReplacement}
