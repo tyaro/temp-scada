@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入もローカル検証済み。I3以降は未着手。
+2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入も全体CI成功確認済み。I3以降は未着手。
 
 ## 保存契約と基盤
 
@@ -186,7 +186,7 @@ Imageのfitをcontain／cover／stretchへ拡張し、共通描画と独立し�
 
 型エラー／警告0、TS943件（85ファイル）、Rust49件、Clippy・buildが成功。背景の新旧ブラウザ17件が成功し、両テーマ4方式の実画素・opacity一回・原本保存／Undo・draft・遅延取込・埋込／ミニマップ／小窓を確認した。Astra指摘の2つのProxyコピー経路を修正し、通常Proxyの単体回帰と取込エラー不在も確認する。修正の再レビューに追加の必須指摘なし。ライト／ダークの実画面を掲載した。
 
-配置画像の3方式`94c8ae5`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39394502122)も成功。0.29.0の全体CIはPush後に確認する。
+配置画像の3方式`94c8ae5`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39394502122)も成功。0.29.0の実装`e53a304`の[全体CI39462449843](https://github.com/tyaro/temp-scada/actions/runs/39462449843)が成功した。
 
 ## 原本プレビュー上の切出し調整（0.29.0）
 
@@ -298,4 +298,4 @@ resize通知とpointerupの順序による位置の誤確定を修正し、実wi
 
 ## 上流変更中のI2：レイヤーの兄弟内挿入
 
-[仕様・実画面](layer-relative-order-design.md)に従い、フォルダーの上下端・配置行の上下半分で前後挿入する。所属と描画順のモデルを分け、完全な一つのグループを維持する。単体67件・新規ブラウザ6件と強化後の確認・既存回帰のtrace保存競合の切り分けと再確認、型／buildを記録した。Project形式・SDK依存は不変。全体CIはPush後に確認する。
+[仕様・実画面](layer-relative-order-design.md)に従い、フォルダーの上下端・配置行の上下半分で前後挿入する。所属と描画順のモデルを分け、完全な一つのグループを維持する。単体67件・新規ブラウザ6件と強化後の確認・既存回帰のtrace保存競合の切り分けと再確認、型／buildを記録した。Project形式・SDK依存は不変。実装`e53a304`の[全体CI39462449843](https://github.com/tyaro/temp-scada/actions/runs/39462449843)が成功した。

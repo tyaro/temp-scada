@@ -1,6 +1,6 @@
 # レイヤーの兄弟内挿入
 
-2026-10-21。状態: **I2a／I2bを実装・ローカル検証済み。全体CIはPush後に確認**。[単体開発計画](upstream-independent-plan.md)のI2a／I2b。Project0.32.0の既存orderだけを使い、Banto／Industrialの契約は変更しない。
+2026-10-21。状態: **I2a／I2bを実装・全体CI成功確認済み**。[単体開発計画](upstream-independent-plan.md)のI2a／I2b。Project0.32.0の既存orderだけを使い、Banto／Industrialの契約は変更しない。
 
 ## 操作と意味
 
@@ -31,7 +31,7 @@ I2bは既存のdrop surfaceへ位置判定と挿入線を追加する。ライ�
 
 関連単体5ファイル67件、型エラー／警告なし、本番buildが成功。新規ブラウザ6件、順序変更による失効を強化した1件、案内高調整後の両テーマnative drag2件が成功した。既存の所属／親変更・フォルダー順の回帰は22件中、初回21件成功・1件が並行実行した別runnerとの成果物ディレクトリ競合によるtrace保存ENOENTで失敗した。出力先を分離し、そのdark nativeケースを再実行して成功した。アプリのassertionを緩めず、CIのretry／timeoutも変更していない。以後、別runnerを同時実行する場合は`--output`を分離する。
 
-Project0.32.0・schema・原本・SDK依存は不変。Rustのローカル再実行は対象外とし、全体CIで最終差分を確認する。
+Project0.32.0・schema・原本・SDK依存は不変。Rustのローカル再実行は対象外とし、実装コミット`e53a304`の[全体CI39462449843](https://github.com/tyaro/temp-scada/actions/runs/39462449843)が成功した。
 
 ## 実画面
 
