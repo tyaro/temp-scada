@@ -38,6 +38,7 @@ export function createImageImportController(host: ImageImportHost) {
   let imageReadRequest = 0;
   let imageBusy = $state(false);
 
+  let backgroundCropEpoch = 0;
   let replacementImageEpoch = 0;
   let replacementCropEpoch = 0;
   let replacementImageIntent: {
@@ -181,6 +182,8 @@ export function createImageImportController(host: ImageImportHost) {
   ) {
     const request = ++imageReadRequest,
       candidate = new AssetStore();
+    const backgroundEpoch =
+      !placement && !replacing ? backgroundCropEpoch : undefined;
     const current = () =>
       request === imageReadRequest &&
       generation === host.owner.generation &&
@@ -189,6 +192,8 @@ export function createImageImportController(host: ImageImportHost) {
       !host.owner.busy &&
       !host.owner.replacing &&
       host.owner.mode === "edit" &&
+      (backgroundEpoch === undefined ||
+        backgroundEpoch === backgroundCropEpoch) &&
       (!replacing ||
         (replacing.epoch === replacementImageEpoch &&
           replacing.cropEpoch === replacementCropEpoch &&
@@ -252,6 +257,9 @@ export function createImageImportController(host: ImageImportHost) {
               assetId: asset.id,
               fit: previous?.fit ?? "contain",
               opacity: previous?.opacity ?? 1,
+              ...(previous?.assetId === asset.id && previous.crop
+                ? { crop: { ...previous.crop } }
+                : {}),
             },
           });
         } catch (error) {
@@ -305,6 +313,17 @@ export function createImageImportController(host: ImageImportHost) {
       placementIntent = null;
       imageReadRequest++;
       imageBusy = false;
+    });
+  });
+
+  const backgroundCropScope = $derived.by(() => {
+    const image = host.background(host.owner.screenId);
+    return `${image?.assetId ?? ""}:${JSON.stringify(image?.crop ?? null)}`;
+  });
+  $effect(() => {
+    backgroundCropScope;
+    untrack(() => {
+      backgroundCropEpoch++;
     });
   });
 

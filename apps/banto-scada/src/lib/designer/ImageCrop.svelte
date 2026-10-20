@@ -9,7 +9,8 @@
     asset,
     url,
     crop,
-    objectId,
+    objectId = "",
+    background = false,
     targetKey,
     locked,
     drafts,
@@ -18,7 +19,8 @@
     asset: ImageAsset;
     url?: string;
     crop?: ImageCrop;
-    objectId: string;
+    objectId?: string;
+    background?: boolean;
     targetKey: string;
     locked: boolean;
     drafts: ReturnType<typeof createDraftGuard>;
@@ -71,11 +73,11 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions (explicit form and IME guard) -->
 <form
   use:track={values}
-  data-editor-form="image-crop"
-  data-object-id={objectId}
+  data-editor-form={background ? "background-crop" : "image-crop"}
+  data-object-id={background ? undefined : objectId}
   data-asset-id={asset.id}
   data-target-key={targetKey}
-  aria-label="画像のトリミング"
+  aria-label={background ? "背景画像のトリミング" : "画像のトリミング"}
   oninput={() => void refresh()}
   onreset={() => void refresh()}
   oncompositionstart={() => (composing = true)}
@@ -97,7 +99,7 @@
     else onsubmit(event);
   }}
 >
-  <h3>トリミング</h3>
+  <h3>{background ? "背景画像のトリミング" : "トリミング"}</h3>
   <fieldset disabled={locked}>
     <div class="fields">
       {#each [["cropX", "左から（%）"], ["cropY", "上から（%）"], ["cropWidth", "切出し幅（%）"], ["cropHeight", "切出し高さ（%）"]] as [name, label]}
@@ -148,7 +150,9 @@
           })}>原本全体へ戻す</button
       >
       <button type="button" onclick={() => write(values)}>入力を戻す</button>
-      <button type="submit">切出しを適用</button>
+      <button type="submit"
+        >{background ? "背景の切出しを適用" : "切出しを適用"}</button
+      >
     </div>
   </fieldset>
 </form>

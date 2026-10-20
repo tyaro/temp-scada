@@ -1,9 +1,11 @@
 <script lang="ts">
+  import ImageCrop from "./ImageCrop.svelte";
   import type { BackgroundImage, ImageAsset } from "../project";
   import type { createDraftGuard } from "./drafts.svelte";
   let {
     image,
     asset,
+    url,
     targetKey,
     drafts,
     busy,
@@ -13,6 +15,7 @@
   }: {
     image?: BackgroundImage;
     asset?: ImageAsset;
+    url?: string;
     targetKey: string;
     drafts: ReturnType<typeof createDraftGuard>;
     busy: boolean;
@@ -97,10 +100,22 @@
       >
       <button type="submit" disabled={busy}>背景画像の設定を適用</button>
     </form>
+    <ImageCrop
+      background
+      {asset}
+      {url}
+      crop={image.crop}
+      {targetKey}
+      locked={busy}
+      {drafts}
+      {onsubmit}
+    />
     <button type="button" disabled={busy} onclick={onremove}
       >背景画像を解除</button
     >
-    <p>画像は図形の背面に表示します。通常の選択対象には含めません。</p>
+    <p>
+      画像は図形の背面に表示します。通常の選択対象には含めません。切出し後の範囲に表示方法を適用し、元のサイズでは元画素寸法のまま中央へ配置します。
+    </p>
   {/if}
 </section>
 

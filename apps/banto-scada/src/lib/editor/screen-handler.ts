@@ -36,7 +36,11 @@ export function applyScreenCommand(
         throw new Error("背景解除と資産登録は同時に指定できません");
       delete targetScreen!.backgroundImage;
     } else {
-      const image = structuredClone(command.image);
+      // UI command values may be Svelte proxies; copy the known nested crop as data.
+      const image = {
+        ...command.image,
+        ...(command.image.crop ? { crop: { ...command.image.crop } } : {}),
+      };
       if (command.asset) {
         if (command.asset.id !== image.assetId)
           throw new Error("背景画像と登録資産のIDが一致しません");

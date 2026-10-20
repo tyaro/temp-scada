@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.28.0"
+          "const": "0.29.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.28.0"
+          "const": "0.29.0"
         },
         "name": {
           "type": "string",
@@ -761,6 +761,9 @@
         },
         "opacity": {
           "$ref": "#/$defs/opacity"
+        },
+        "crop": {
+          "$ref": "#/$defs/imageCrop"
         }
       },
       "required": ["assetId", "fit", "opacity"],

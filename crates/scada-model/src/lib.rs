@@ -32,6 +32,32 @@ pub struct TextBinding {
     pub external_name: String,
 }
 
+fn validate_image_crop(value: &Value, image: &Value) -> Result<(), String> {
+    if let Some(crop) = image.get("crop") {
+        let asset = value["assets"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|asset| asset["id"] == image["assetId"])
+            .unwrap();
+        let x = crop["x"].as_f64().unwrap();
+        let y = crop["y"].as_f64().unwrap();
+        let width = crop["width"].as_f64().unwrap();
+        let height = crop["height"].as_f64().unwrap();
+        let epsilon = 16.0 * f64::EPSILON;
+        let source_width = asset["width"].as_f64().unwrap();
+        let source_height = asset["height"].as_f64().unwrap();
+        if x + width > 1.0 + epsilon
+            || y + height > 1.0 + epsilon
+            || width.min(1.0 - x) * source_width < 1.0 - epsilon * source_width
+            || height.min(1.0 - y) * source_height < 1.0 - epsilon * source_height
+        {
+            return Err("切出し範囲は画像の内側・元画像の1画素以上にしてください。".into());
+        }
+    }
+    Ok(())
+}
+
 impl Project {
     pub fn id(&self) -> &str {
         self.0["manifest"]["projectId"].as_str().unwrap()
@@ -68,8 +94,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.28.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.28.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.29.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.29.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -195,6 +221,9 @@ impl Project {
                     };
                 }
             }
+            if let Some(image) = screen.get("backgroundImage") {
+                validate_image_crop(&value, image)?;
+            }
             let mut orders = HashSet::new();
             for object in screen["objects"].as_array().unwrap() {
                 if let Some(folder) = object.get("folderId").and_then(Value::as_str) {
@@ -207,30 +236,7 @@ impl Project {
                 }
                 let shape = &object["shape"];
                 if shape["type"] == "image" {
-                    if let Some(crop) = shape.get("crop") {
-                        let asset = value["assets"]
-                            .as_array()
-                            .unwrap()
-                            .iter()
-                            .find(|asset| asset["id"] == shape["assetId"])
-                            .unwrap();
-                        let x = crop["x"].as_f64().unwrap();
-                        let y = crop["y"].as_f64().unwrap();
-                        let width = crop["width"].as_f64().unwrap();
-                        let height = crop["height"].as_f64().unwrap();
-                        let epsilon = 16.0 * f64::EPSILON;
-                        let source_width = asset["width"].as_f64().unwrap();
-                        let source_height = asset["height"].as_f64().unwrap();
-                        if x + width > 1.0 + epsilon
-                            || y + height > 1.0 + epsilon
-                            || width.min(1.0 - x) * source_width < 1.0 - epsilon * source_width
-                            || height.min(1.0 - y) * source_height < 1.0 - epsilon * source_height
-                        {
-                            return Err(
-                                "切出し範囲は画像の内側・元画像の1画素以上にしてください。".into(),
-                            );
-                        }
-                    }
+                    validate_image_crop(&value, shape)?;
                 }
 
                 if (shape["type"] == "rectangle" || shape["type"] == "ellipse")
@@ -717,6 +723,30 @@ mod tests {
                 object["shape"]["crop"] = crop.clone();
             }
             value["screens"][0]["objects"] = serde_json::json!([object]);
+            assert_eq!(
+                Project::from_json(&value.to_string()).is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+        }
+    }
+
+    #[test]
+    fn background_crop_shares_the_browser_contract() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/image-crop-cases.json")).unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut value: Value =
+                serde_json::from_str(include_str!("../../../examples/minimal.project.json"))
+                    .unwrap();
+            let id = "0199fc00-0000-7000-8000-000000001100";
+            value["assets"] = serde_json::json!([{"id":id,"sha256":"8".repeat(64),"mime":"image/png","byteLength":100,"width":400,"height":200,"name":"background.png"}]);
+            let mut image = serde_json::json!({"assetId":id,"fit":"original","opacity":0.4});
+            if let Some(crop) = case.get("crop") {
+                image["crop"] = crop.clone();
+            }
+            value["screens"][0]["backgroundImage"] = image;
             assert_eq!(
                 Project::from_json(&value.to_string()).is_ok(),
                 case["valid"].as_bool().unwrap(),
@@ -1332,8 +1362,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.28.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.28.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.29.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.29.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

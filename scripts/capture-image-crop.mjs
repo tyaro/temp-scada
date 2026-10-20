@@ -1,5 +1,5 @@
 import { chromium, expect } from "@playwright/test";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 const fitMode = process.env.SCADA_CAPTURE_IMAGE_FIT === "1";
 const output = resolve(process.argv[2] ?? "test-results/image-crop");
@@ -143,6 +143,7 @@ try {
           requestAnimationFrame(() => requestAnimationFrame(resolve)),
         ),
     );
+    let verifiedFrame;
     if (fitMode) {
       await expect
         .poll(async () => {
@@ -150,7 +151,8 @@ try {
             .locator(".sheet [data-image-fit]")
             .boundingBox();
           if (!frame) return false;
-          const encoded = (await page.screenshot()).toString("base64");
+          verifiedFrame = await page.screenshot({ animations: "disabled" });
+          const encoded = verifiedFrame.toString("base64");
           return page.evaluate(
             async ({ encoded, frame }) => {
               const image = new Image();
@@ -178,14 +180,17 @@ try {
         })
         .toBe(true);
     }
-    await page.screenshot({
-      path: resolve(
-        output,
-        `${fitMode ? "image-fit" : "image-crop"}-${theme}.png`,
-      ),
-      fullPage: false,
-      animations: "disabled",
-    });
+    if (fitMode)
+      await writeFile(resolve(output, `image-fit-${theme}.png`), verifiedFrame);
+    else
+      await page.screenshot({
+        path: resolve(
+          output,
+          `${fitMode ? "image-fit" : "image-crop"}-${theme}.png`,
+        ),
+        fullPage: false,
+        animations: "disabled",
+      });
     await page.close();
   }
 } finally {

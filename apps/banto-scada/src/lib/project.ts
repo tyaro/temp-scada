@@ -130,6 +130,7 @@ export interface ImageAsset extends ImageMetadata {
 }
 export interface BackgroundImage {
   assetId: string;
+  crop?: ImageCrop;
   fit: "contain" | "cover" | "stretch" | "original";
   opacity: number;
 }
@@ -164,10 +165,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.28.0";
+    schemaVersion: "0.29.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.28.0";
+    minRuntimeVersion: "0.29.0";
     name: string;
   };
   screens: Screen[];
@@ -191,8 +192,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.28.0",
-        minRuntimeVersion: "0.28.0",
+        schemaVersion: "0.29.0",
+        minRuntimeVersion: "0.29.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -271,6 +272,13 @@ export function parseProject(json: string): Project {
     throw new Error("画像の資産が見つかりません");
 
   for (const owner of [...project.screens, ...project.symbols]) {
+    if ("backgroundImage" in owner && owner.backgroundImage)
+      imageCropViewBox(
+        project.assets.find(
+          (asset) => asset.id === owner.backgroundImage!.assetId,
+        )!,
+        owner.backgroundImage.crop,
+      );
     if (ids.has(owner.id)) throw new Error("ID が重複しています");
     ids.add(owner.id);
     const folders = new Map(owner.folders.map((folder) => [folder.id, folder]));

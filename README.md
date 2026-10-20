@@ -5,6 +5,7 @@
 - [現在の実装状況](docs/implementation-status.md): 対応機能、保存契約、検証範囲、未実装。
 - [操作ガイド](docs/user-guide.md): 編集、画像、画面再利用、入力保護、パネルとキー操作。
 - [開発計画](docs/development-plan.md)と[実装履歴](docs/implementation-history.md): 今後と過去を分離。
+- [背景の数値トリミング](docs/background-image-crop-design.md): 背景4方式と原本・切出しの保持。
 - [画像の表示方式](docs/image-fit-design.md): contain／cover／stretchと切出し・原本保持。
 - [機器種別の編集](docs/equipment-type-editing.md): 任意のbool／number読取slotと採用保護。
 - [機器の読取詳細](docs/equipment-read-details.md): 採用信号の状態と機器ごとの読取小窓。
@@ -295,3 +296,5 @@ Rustの読取adapterは[型付きslot context](docs/typed-read-slots-design.md)�
 [操作ガイドの該当節](docs/user-guide.md#guide-055)へ移動しました。
 
 0.28.0で[配置画像の表示方式](docs/image-fit-design.md)にcontain／cover／stretchを追加しました。切出し・原本・配置枠を保持し、編集・表示プレビュー・埋込・小窓・ミニマップの共通描画へ接続します。
+
+0.29.0で[背景画像の数値トリミング](docs/background-image-crop-design.md)を追加しました。配置と共通の数値契約を使い、背景4方式・原本保持・取込の世代保護へ接続します。

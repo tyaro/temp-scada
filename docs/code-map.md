@@ -190,3 +190,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 機器のcontext操作は`designer-actions.ts`の`selectionContext`が単一・画面Symbolだけに二つの入口を追加し、hostの`openEquipment`へ委譲する。Appの既存起動関数を共用し、メニュー側に別の対象解決・draft処理を作らない。`e2e/equipment-context.spec.ts`でcanvas／レイヤーのShift＋F10・プロパティ非表示・ロック・未関連・複数選択・未適用割付を確認する。
 
 配置画像の表示方式は`image-fit.ts`の閉じた型／SVG対応と、既存image handlerの`set-image-fit`が担当する。`ImageFitSettings`／`forms/image-fit.ts`が独立draft・実枠比率の見本と対象世代照合を持つ。`ObjectPainting`から共通`ImagePainting`へfitを渡し、crop矩形とviewportのclipを共用する。`image-fit-cases.json`をTS／Rustで検証し、`image-fit.test.ts`と`e2e/image-fit.spec.ts`・cropの全fit共通描画試験を変更時の入口とする。[具体設計](image-fit-design.md)。
+
+背景cropは`BackgroundImage.crop`と共通schema、TSの`imageCropViewBox`とRustの`validate_image_crop`で配置と同じ数値契約を使う。`ImageCrop`のbackgroundモードを背景設定へ置き、`forms/background-crop.ts`が対象世代とassetを照合して既存`set-background-image`へ渡す。`screen-handler`でProxy由来のcropをplain dataへコピーし未知属性は最終schemaへ残す。`ScreenBackground`はcrop時だけ共通`ImagePainting`を使い、originalの元画素配置とopacity一回を担当する。
+
+`image-import.svelte.ts`の背景epochはasset＋cropの変更・往復を失効させ、fit／opacityだけは確定時の最新値を保持する。同hashではcropをコピーし別hashでは解除する。`background-crop.test.ts`／Rust共通fixtureと`e2e/background-crop.spec.ts`・既存background-imageが数値、Proxy、実画素、原本往復、遅延取込、全描画入口を検証する。[設計と実画面](background-image-crop-design.md)。
