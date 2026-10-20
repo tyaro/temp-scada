@@ -1,3 +1,4 @@
+import type { EquipmentSlot } from "../../equipment";
 import type { EditCommand, ObjectPatch } from "../../editor";
 import { parsePoints, type ScreenObject } from "../../project";
 import { parseLineStyle } from "../../line-style";
@@ -5,6 +6,7 @@ import { parseNumericProperty } from "../numeric-properties";
 
 export interface ObjectFormContext {
   screenId: string;
+  readSlots?: readonly EquipmentSlot[];
   definition: boolean;
   selected: ScreenObject | undefined;
 }
@@ -49,6 +51,13 @@ export function objectFormCommand(
     if (context.definition && data.has("slotName")) {
       const slotName = String(data.get("slotName") ?? "");
       patch.slotBinding = slotName ? { slotName } : null;
+      if (
+        selected.shape.boolColors &&
+        !context.readSlots?.some(
+          (slot) => slot.name === slotName && slot.type === "bool",
+        )
+      )
+        patch.boolColors = null;
     }
     if (!context.definition) {
       const externalName = String(data.get("externalName") ?? "");

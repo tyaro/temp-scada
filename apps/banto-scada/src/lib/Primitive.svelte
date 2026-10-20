@@ -1,5 +1,6 @@
 <script lang="ts">
   import { slotPresentation, type SlotPresentation } from "./symbol-slots";
+  import { boolSlotState } from "./slot-presentation";
   import { patternGeometry } from "./pattern-paint";
   import { linearGradientEndpoints } from "./linear-gradient";
   import { lineDash, lineCap } from "./line-style";
@@ -63,6 +64,21 @@
           binding ? readings?.get(binding.externalName) : undefined,
         ),
   );
+  const textColor = $derived.by(() => {
+    if (object.shape.type === "text" && object.shape.boolColors) {
+      const state = boolSlotState(
+        slotDisplay ?? slotPresentation("unbound"),
+      ).state;
+      return object.shape.boolColors[
+        state === "true"
+          ? "trueColor"
+          : state === "false"
+            ? "falseColor"
+            : "unknownColor"
+      ];
+    }
+    return color ?? object.fill!;
+  });
   const shape = $derived("width" in object ? null : object.shape);
   function arrowPoints() {
     if (!shape || shape.arrow !== "end") return "";
@@ -165,7 +181,7 @@
       width={object.width}
       height={object.height}
       style={object.shape.style}
-      color={color ?? object.fill!}
+      color={textColor}
       numeric={bound}
       tagName={slotBinding?.slotName ?? binding?.externalName}
       tagState={bound ? presentation.state : undefined}

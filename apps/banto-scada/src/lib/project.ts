@@ -33,6 +33,11 @@ interface BaseObject {
   y: number;
   fill?: string;
 }
+export interface BoolColors {
+  trueColor: string;
+  falseColor: string;
+  unknownColor: string;
+}
 export interface TagBinding {
   externalName: string;
 }
@@ -85,6 +90,7 @@ export interface LayoutObject extends BaseObject {
         style: TextStyle;
         binding?: TagBinding;
         slotBinding?: { slotName: string };
+        boolColors?: BoolColors;
       }
     | {
         type: "symbol";
@@ -152,10 +158,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.25.0";
+    schemaVersion: "0.26.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.25.0";
+    minRuntimeVersion: "0.26.0";
     name: string;
   };
   screens: Screen[];
@@ -179,8 +185,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.25.0",
-        minRuntimeVersion: "0.25.0",
+        schemaVersion: "0.26.0",
+        minRuntimeVersion: "0.26.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,

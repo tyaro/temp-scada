@@ -22,6 +22,14 @@ export function validateSymbolSlots(project: Project) {
       if (object.shape.type !== "text" || !object.shape.slotBinding) continue;
       if (!definition)
         throw new Error("slot表示は共有定義内のTextだけに設定できます");
+      const slotName = object.shape.slotBinding.slotName;
+      if (
+        object.shape.boolColors &&
+        !definition.readSlots?.some(
+          (slot) => slot.name === slotName && slot.type === "bool",
+        )
+      )
+        throw new Error("状態別の文字色にはbool slotが必要です");
       if (!slots.has(object.shape.slotBinding.slotName))
         throw new Error("Symbolの読取slot宣言が見つかりません");
     }

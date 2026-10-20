@@ -385,5 +385,11 @@
     "path": "/manifest/schemaVersion",
     "value": "0.24.0",
     "valid": false
+  },
+  {
+    "name": "reject previous 0.25 schema",
+    "path": "/manifest/schemaVersion",
+    "value": "0.25.0",
+    "valid": false
   }
 ]

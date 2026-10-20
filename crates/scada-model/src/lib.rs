@@ -68,8 +68,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.25.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.25.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.26.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.26.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -289,6 +289,18 @@ impl Project {
                     {
                         return Err("Symbolの読取slot宣言が見つかりません".into());
                     }
+                }
+                if shape.get("boolColors").is_some()
+                    && !screen["readSlots"]
+                        .as_array()
+                        .into_iter()
+                        .flatten()
+                        .any(|slot| {
+                            slot["name"] == shape["slotBinding"]["slotName"]
+                                && slot["type"] == "bool"
+                        })
+                {
+                    return Err("状態別の文字色にはbool slotが必要です".into());
                 }
                 if shape["type"] == "symbol"
                     && !symbols.contains(shape["symbolId"].as_str().unwrap())
@@ -1225,8 +1237,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.25.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.25.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.26.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.26.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

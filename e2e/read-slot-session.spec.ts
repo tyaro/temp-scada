@@ -25,6 +25,16 @@ for (const theme of ["light", "dark"] as const)
         const { parseProject } = await import(projectPath);
         const { default: Renderer } = await import(rendererPath),
           { default: ScreenPainting } = await import(paintingPath);
+        // Dynamic bool text colors must win even when a placement forces monochrome.
+        (sample.symbols[0].objects[5].shape as any).boolColors = {
+          trueColor: "#16a34a",
+          falseColor: "#64748b",
+          unknownColor: "#d97706",
+        };
+        (sample.symbols[0].objects[5] as any).colorAlpha = 0.4;
+        (sample.symbols[0].objects[5] as any).opacity = 0.5;
+        sample.screens[0].objects[0].shape.colorMode = "monochrome";
+        sample.screens[0].objects[0].fill = "#ff00ff";
         for (const equipment of sample.equipment) equipment.bindings = [];
         sample.equipment[0].bindings = [
           { slotName: "running", externalName: "Demo.Value" },
@@ -144,11 +154,15 @@ for (const theme of ["light", "dark"] as const)
                 (node) => ({
                   state: node.dataset.tagState,
                   text: node.querySelector("[data-text-content]")?.textContent,
+                  color: node
+                    .querySelector("[data-text-content]")
+                    ?.getAttribute("fill"),
                   source: node.getAttribute("data-tag-source"),
                   mode: node.getAttribute("data-collection-mode"),
                   time: node.getAttribute("data-source-timestamp-ms"),
                   description: node.getAttribute("aria-label"),
                   reason: node.getAttribute("data-tag-reason"),
+                  opacity: node.closest("g")?.getAttribute("opacity"),
                 }),
               ),
             ),
@@ -168,6 +182,12 @@ for (const theme of ["light", "dark"] as const)
           await publish(
             "good",
             session.receive(session.generation, good()).frame,
+          );
+          const trueValue = good();
+          (trueValue.slots[0].reading as any).value.value = true;
+          await publish(
+            "true",
+            session.receive(session.generation, trueValue).frame,
           );
           const invalidValue = good();
           invalidValue.slots[0].reading = {
@@ -234,6 +254,15 @@ for (const theme of ["light", "dark"] as const)
             "invalid",
             session.receive(session.generation, duplicate).frame,
           );
+          for (const screen of project.screens)
+            for (const object of screen.objects)
+              if (object.shape.type === "symbol")
+                object.shape.colorMode = "definition";
+          session.reset(project);
+          await publish(
+            "definition-color",
+            session.receive(session.generation, good()).frame,
+          );
           const token = session.generation;
           await publish(
             "good-before-reset",
@@ -265,6 +294,7 @@ for (const theme of ["light", "dark"] as const)
       "good",
       "good-again",
       "recovered",
+      "definition-color",
       "good-before-invalid",
       "good-before-reset",
       "new-generation",
@@ -272,12 +302,20 @@ for (const theme of ["light", "dark"] as const)
     ])
       for (const view of byName(name)) {
         expect(view.map((row: any) => row.text)).toEqual(["false", "0"]);
+        expect(view[0].color).toBe("#64748b");
         expect(view.map((row: any) => row.state)).toEqual(["good", "good"]);
         expect(view.map((row: any) => row.source)).toEqual(["real", "real"]);
         expect(view.map((row: any) => row.reason)).toEqual([null, null]);
         expect(view[0].description).not.toContain("disabled");
       }
+    for (const snapshot of results)
+      for (const view of snapshot.views) expect(view[0].opacity).toBe("0.2");
+    for (const view of byName("true")) {
+      expect(view[0].text).toBe("true");
+      expect(view[0].color).toBe("#16a34a");
+    }
     for (const view of byName("invalid-value")) {
+      expect(view[0].color).toBe("#d97706");
       expect(view[0].text).toBe("-- · 値が不正");
       expect(view[0].reason).toBe("disabled");
       expect(view[0].description).toContain("値が不正 · disabled");
@@ -289,12 +327,14 @@ for (const theme of ["light", "dark"] as const)
         "SIM · false",
         "SIM · 0",
       ]);
+      expect(view[0].color).toBe("#64748b");
       expect(view[0].description).toContain("source simulation");
       expect(view[0].mode).toBe("configured");
       expect(view[0].time).toBe("1000");
     }
     for (const name of ["stale", "bad"])
       for (const view of byName(name)) {
+        expect(view[0].color).toBe("#d97706");
         expect(view.map((row: any) => row.state)).toEqual([name, name]);
         for (const row of view)
           expect(row.text).toContain(
@@ -314,6 +354,7 @@ for (const theme of ["light", "dark"] as const)
           name === "invalid" ? "invalid" : "disconnected",
           name === "invalid" ? "invalid" : "disconnected",
         ]);
+        expect(view[0].color).toBe("#d97706");
         for (const row of view) {
           expect(row.text).toContain("-- ·");
           expect(row.source).toBeNull();

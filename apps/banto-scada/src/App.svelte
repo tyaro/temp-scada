@@ -31,6 +31,7 @@
     selectionColorCommand,
     acknowledgeSelectionColor,
   } from "./lib/designer/forms/selection-color";
+  import { boolColorsCommand } from "./lib/designer/forms/bool-colors";
   import { symbolColorModeCommand } from "./lib/designer/forms/symbol-color-mode";
   import { backgroundImageCommand } from "./lib/designer/forms/background-image";
   import {
@@ -1892,6 +1893,21 @@
           selected,
         },
       );
+    if (form.dataset.editorForm === "bool-colors")
+      return boolColorsCommand(
+        {
+          data,
+          objectId: form.dataset.objectId,
+          targetKey: form.dataset.targetKey,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selected,
+          readSlots: ("readSlots" in screen ? screen.readSlots : []) ?? [],
+        },
+      );
     if (form.dataset.editorForm === "symbol-color-mode")
       return symbolColorModeCommand(
         {
@@ -1970,6 +1986,7 @@
     if (form.dataset.editorForm === "move")
       return moveFormCommand(data, { screenId: screen.id, selectedIds });
     return objectFormCommand(data, {
+      readSlots: ("readSlots" in screen ? screen.readSlots : []) ?? [],
       screenId: screen.id,
       definition: !!activeDefinition,
       selected,
@@ -1979,6 +1996,26 @@
   function validateDrafts(forms: HTMLFormElement[]): boolean {
     let validatingForm: HTMLFormElement | undefined;
     try {
+      // Applying a slot change can remove the color form before the next submit.
+      // Reject both dirty forms together before creating any history entry.
+      const colorDraft = forms.find(
+        (form) => form.isConnected && form.dataset.editorForm === "bool-colors",
+      );
+      const objectDraft = forms.find(
+        (form) => form.isConnected && form.dataset.editorForm === "object",
+      );
+      if (colorDraft && objectDraft) {
+        const slotName = new FormData(objectDraft).get("slotName");
+        const slots = ("readSlots" in screen ? screen.readSlots : []) ?? [];
+        if (
+          !slots.some((slot) => slot.name === slotName && slot.type === "bool")
+        ) {
+          validatingForm = objectDraft;
+          throw new Error(
+            "読取slotの解除・numberへの変更と状態別の文字色は同時に適用できません。文字色の入力を戻してからslotを変更してください。",
+          );
+        }
+      }
       let candidate = project;
       for (const form of forms) {
         validatingForm = form;
@@ -2977,7 +3014,7 @@
           >Symbol 定義を編集中 · {symbolUsage(project, activeDefinition.id)} 配置で共有</strong
         >
         <p>
-          確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。別の形にする場合は定義を複製してください。
+          確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。bool状態別の文字色は両方の配置で優先します。別の形にする場合は定義を複製してください。
         </p>
         {#if symbolStrokeOverflow > 0}<p role="status">
             枠線が表示領域外へ出ている図形が{symbolStrokeOverflow}件あります。配置では領域外が切れます。図形の位置・寸法または定義の表示領域を変更してください。
@@ -3251,7 +3288,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.25.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.26.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

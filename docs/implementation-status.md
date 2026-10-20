@@ -9,9 +9,9 @@
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | アプリ基盤 | Banto v6.7.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
-| Project    | `schemaVersion`／`minRuntimeVersion`は**0.25.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
+| Project    | `schemaVersion`／`minRuntimeVersion`は**0.26.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
-| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.24.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
+| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.25.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
 | IDと変更   | lowercase UUID v7、有限座標、明示order。編集失敗は原子的拒否、同値はno-op、Undo／Redoでもrevisionは巻き戻さない                         |
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
@@ -31,11 +31,11 @@
 | 表示確認       | 同一Projectの読取Popup最大4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                     | Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                           |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                        | 実図面・画像／Symbol等の計測と必要な最適化                                             |
 | 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                           | 実catalog選択、draftのDOM分離                                                          |
-| タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                       | 実Hub／catalog、動的配色、Host、正式RuntimeとAction境界                                |
+| タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                       | 実Hub／catalog、Text以外の動的配色、Host、正式RuntimeとAction境界                      |
 | server・監視   | 提供段階と共有層の設計                                                                                                                 | Core v1のS9b、その上のv1.1 Alarm／Event・Action／History・Trend、Camera、HTTP／Program |
 | 認証・MES      | ログイン不要のローカル編集                                                                                                             | industrialの修正後に認証再確認。ユーザー管理・運用移行・MESは未実装                    |
 
-共有Symbolは定義と単色／定義色、独立コピー、機器関連付け、型付きslot宣言とText表示に対応する。状態別の動的配色・設備操作は未実装。整理フォルダーを幾何グループとして扱わない。読取プレビューから実機要求は送らない。
+共有Symbolは定義と単色／定義色、独立コピー、機器関連付け、型付きslot宣言とText表示・bool状態別文字色に対応する。Text以外の動的配色・設備操作は未実装。整理フォルダーを幾何グループとして扱わない。読取プレビューから実機要求は送らない。
 
 ## 検証の範囲
 
@@ -95,3 +95,9 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 ## boolの型付き状態と理由表示
 
 [動的配色の前段](bool-slot-state.md)として、Goodだけに型付き値を持つ表示結果と、boolのtrue／false／unknownへの純粋な判定を追加した。0／1をboolへ変換せず、元Qualityと未知理由・SIM由来を分離する。返却valueの変更で受理frameが変わらない。invalid理由コードをTextのtooltip・読み上げへ伝え、Good復帰時に消す。メイン・埋込・小窓で同一mount更新を両テーマで確認した。Project0.25.0を維持し、配色の保存宣言・編集UI・図形への適用と実Hostは未実装。最終検証は型0エラー／0警告・TS834件・関連ブラウザ2件・build・全体整形。Rust／共通schemaは変更していない。
+
+## bool Textの状態別文字色
+
+0.26.0で[共有Symbolのbool Textに対する状態別文字色](bool-text-colors.md)を追加した。true／false／取得不能の3色を保存・編集し、配置の単色より優先する。状態・理由・SIMの文字表示と既存αは維持する。slot変更時の配色解除を同じUndoへまとめ、二重draftの競合は適用前に拒否する。TS／Rustの現行契約とサンプルを更新した。矩形・楕円・配管の動的色、実Host接続・Faceplateは後続。
+
+この区切りは型0エラー／0警告・TS852件・Rust46件・Clippy・Rust fmt・本番build・全体整形・CLIと、関連ブラウザ11件／追加修正後4件の確認が成功。両テーマの実画面を撮影し、設計書へ掲載した。

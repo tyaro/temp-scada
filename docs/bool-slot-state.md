@@ -43,3 +43,5 @@ SIMは真偽と独立した由来である。simulation／derived_simulation、�
 `read-slot-session.test.ts`はRust共通fixtureの型付き値・invalid理由・非Goodで値がないこと、返却値変更によるframe汚染の防止、旧frameと不正入力のunknown化も確認する。`e2e/read-slot-session.spec.ts`は、同じmountのメイン・埋込・小窓でinvalid理由が表示され、Good復帰時に理由が消え、他slotが影響を受けないことを両テーマで確認する。
 
 Astraの静的レビューを実施。製品コードの必須修正なし。追加E2Eの余分な引数を修正し、両テーマの関連2件が成功した。最終検証結果は[実装状況](implementation-status.md)へ記録する。
+
+後続の0.26.0で[bool Textの状態別文字色](bool-text-colors.md)へ接続した。色だけのランプを先行させず、状態・理由・SIMを文字で維持する初回範囲とした。矩形・楕円・配管の動的配色は引き続き後続。

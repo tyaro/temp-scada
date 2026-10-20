@@ -65,6 +65,7 @@ export function applySingleObjectCommand(
       text,
       binding,
       slotBinding,
+      boolColors,
       symbolId,
       equipmentId,
       sourceScreenId,
@@ -148,6 +149,12 @@ export function applySingleObjectCommand(
         throw new Error("slot表示は共有定義内のTextだけに設定できます");
       if (slotBinding === null) delete object.shape.slotBinding;
       else object.shape.slotBinding = slotBinding;
+    }
+    if (boolColors !== undefined) {
+      if (object.shape.type !== "text" || !definitionId)
+        throw new Error("状態別の文字色は共有定義内のTextだけに設定できます");
+      if (boolColors === null) delete object.shape.boolColors;
+      else object.shape.boolColors = structuredClone(boolColors);
     }
     if (binding !== undefined) {
       if (definitionId || object.shape.type !== "text")

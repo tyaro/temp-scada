@@ -125,5 +125,264 @@
     "key": "name",
     "valid": false,
     "value": "other"
+  },
+  {
+    "name": "bool Text state colors",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": true,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "slotBinding": {
+        "slotName": "running"
+      },
+      "boolColors": {
+        "trueColor": "#16a34a",
+        "falseColor": "#64748b",
+        "unknownColor": "#d97706"
+      }
+    }
+  },
+  {
+    "name": "state colors require trueColor",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "slotBinding": {
+        "slotName": "running"
+      },
+      "boolColors": {
+        "falseColor": "#64748b",
+        "unknownColor": "#d97706"
+      }
+    }
+  },
+  {
+    "name": "state colors require falseColor",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "slotBinding": {
+        "slotName": "running"
+      },
+      "boolColors": {
+        "trueColor": "#16a34a",
+        "unknownColor": "#d97706"
+      }
+    }
+  },
+  {
+    "name": "state colors require unknownColor",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "slotBinding": {
+        "slotName": "running"
+      },
+      "boolColors": {
+        "trueColor": "#16a34a",
+        "falseColor": "#64748b"
+      }
+    }
+  },
+  {
+    "name": "number slot refuses bool colors",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "slotBinding": {
+        "slotName": "current"
+      },
+      "boolColors": {
+        "trueColor": "#16a34a",
+        "falseColor": "#64748b",
+        "unknownColor": "#d97706"
+      }
+    }
+  },
+  {
+    "name": "static Text refuses bool colors",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "boolColors": {
+        "trueColor": "#16a34a",
+        "falseColor": "#64748b",
+        "unknownColor": "#d97706"
+      }
+    }
+  },
+  {
+    "name": "state color format 'red'",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "slotBinding": {
+        "slotName": "running"
+      },
+      "boolColors": {
+        "trueColor": "#16a34a",
+        "falseColor": "#64748b",
+        "unknownColor": "red"
+      }
+    }
+  },
+  {
+    "name": "state color format '#ffffff\\n'",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "slotBinding": {
+        "slotName": "running"
+      },
+      "boolColors": {
+        "trueColor": "#16a34a",
+        "falseColor": "#64748b",
+        "unknownColor": "#ffffff\n"
+      }
+    }
+  },
+  {
+    "name": "state color format '#12345678'",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "slotBinding": {
+        "slotName": "running"
+      },
+      "boolColors": {
+        "trueColor": "#16a34a",
+        "falseColor": "#64748b",
+        "unknownColor": "#12345678"
+      }
+    }
+  },
+  {
+    "name": "rectangle refuses bool colors",
+    "target": "/symbols/0/objects/0/shape",
+    "key": "boolColors",
+    "valid": false,
+    "value": {
+      "trueColor": "#16a34a",
+      "falseColor": "#64748b",
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "screen refuses bool colors",
+    "target": "/screens/0/objects/1",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "slotBinding": {
+        "slotName": "running"
+      },
+      "boolColors": {
+        "trueColor": "#16a34a",
+        "falseColor": "#64748b",
+        "unknownColor": "#d97706"
+      }
+    }
+  },
+  {
+    "name": "unknown state color property",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "STATIC FALLBACK",
+      "style": {
+        "fontSize": 17,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "slotBinding": {
+        "slotName": "running"
+      },
+      "boolColors": {
+        "trueColor": "#16a34a",
+        "falseColor": "#64748b",
+        "unknownColor": "#d97706",
+        "futureColor": "#000000"
+      }
+    }
   }
 ]

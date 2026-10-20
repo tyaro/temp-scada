@@ -160,3 +160,5 @@ Equipmentは`lib/equipment.ts`と`crates/scada-model/src/equipment.rs`が保存�
 Symbol宣言のCRUDは`editor/symbol-handler.ts`、全Text参照の導出は`symbolSlotUsages()`。`designer/SymbolSlots.svelte`は左の宣言UIと使用保護の説明、`forms/symbol-slot.ts`は世代・定義・元のslot名を照合し、成功した追加フォームだけ初期化する。既存`add-symbol-readout`は宣言行からの操作では存在を再確認する。`symbol-slot-editing.test.ts`／`e2e/symbol-slot-editing.spec.ts`で検証する。[編集契約](symbol-slot-editing.md)を参照する。
 
 読取表示結果の判別共用体・欠測文言・SIM判定・boolのtrue／false／unknownへの純粋な変換は`lib/slot-presentation.ts`が担当する。Goodだけに型付きvalueを持たせる。`read-slot-session.ts`は所有コピーを返し、`TextPrimitive`はinvalid理由も表示する。`slot-presentation.test.ts`と既存session／ブラウザ検証で確認する。[動的配色への前段と残り](bool-slot-state.md)を参照する。
+
+状態別文字色はTextの`boolColors`として`project.ts`と共通schemaに保存し、`symbol-slots.ts`／Rustの意味検証でbool宣言へ制限する。`Primitive`が型付き状態を色へ接続し、`BoolColors.svelte`と`forms/bool-colors.ts`が独立した編集フォームを持つ。`object-form.ts`は静的／number変更時の同時解除、Appのdraft事前検証は二重入力の競合拒否を担当する。[提供範囲と検証](bool-text-colors.md)を参照する。

@@ -8,6 +8,7 @@
   import SelectionColor from "./SelectionColor.svelte";
   import SelectionOutline from "./SelectionOutline.svelte";
   import SelectionLine from "./SelectionLine.svelte";
+  import BoolColors from "./BoolColors.svelte";
   import SymbolColorMode from "./SymbolColorMode.svelte";
   import TagPicker from "./TagPicker.svelte";
   import {
@@ -543,6 +544,16 @@
             onsubmit={properties}
           />
         {/if}
+        {#if activeDefinition && selected.shape.type === "text" && ("readSlots" in screen ? screen.readSlots : [])?.some((slot) => slot.name === (selected.shape.type === "text" ? selected.shape.slotBinding?.slotName : undefined) && slot.type === "bool")}
+          <BoolColors
+            colors={selected.shape.boolColors}
+            objectId={selected.id}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            locked={selectionLocked}
+            {drafts}
+            onsubmit={properties}
+          />
+        {/if}
         <form
           use:drafts.track={objectFormValues(selected, activeDefinition)}
           data-editor-form="object"
@@ -806,7 +817,8 @@
                     ></label
                   >
                   <p class="full-width tag-note">
-                    配置に関連付けた機器から解決します。定義編集中は機器未関連付けです。
+                    配置に関連付けた機器から解決します。定義編集中は機器未関連付けです。静的テキスト・number
+                    slotへ変更すると状態別の文字色も解除します。
                   </p>
                 {:else}
                   <div class="full-width tag-binding">

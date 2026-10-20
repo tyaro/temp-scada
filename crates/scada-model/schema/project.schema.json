@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.25.0"
+          "const": "0.26.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.25.0"
+          "const": "0.26.0"
         },
         "name": {
           "type": "string",
@@ -284,12 +284,37 @@
                   },
                   "required": ["slotName"],
                   "additionalProperties": false
+                },
+                "boolColors": {
+                  "type": "object",
+                  "properties": {
+                    "trueColor": {
+                      "$ref": "#/$defs/color",
+                      "maxLength": 7,
+                      "type": "string"
+                    },
+                    "falseColor": {
+                      "$ref": "#/$defs/color",
+                      "maxLength": 7,
+                      "type": "string"
+                    },
+                    "unknownColor": {
+                      "$ref": "#/$defs/color",
+                      "maxLength": 7,
+                      "type": "string"
+                    }
+                  },
+                  "required": ["trueColor", "falseColor", "unknownColor"],
+                  "additionalProperties": false
                 }
               },
               "required": ["type", "text", "style"],
               "additionalProperties": false,
               "not": {
                 "required": ["binding", "slotBinding"]
+              },
+              "dependentRequired": {
+                "boolColors": ["slotBinding"]
               }
             }
           ]
