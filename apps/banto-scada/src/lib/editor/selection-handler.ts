@@ -35,7 +35,53 @@ export function applySelectionCommand(
     objects.some((object) => groupFor(screen, object.id))
   )
     return arrangeUnits(screen, command);
-  if (command.type === "set-size") {
+  if (command.type === "set-text-style") {
+    const patch = command.patch;
+    if (
+      !patch ||
+      typeof patch !== "object" ||
+      Array.isArray(patch) ||
+      Object.keys(patch).some(
+        (key) => !["fontSize", "fontWeight", "align"].includes(key),
+      )
+    )
+      throw new Error("文字書式の指定が不正です");
+    const { fontSize, fontWeight, align } = patch;
+    if (
+      fontSize === undefined &&
+      fontWeight === undefined &&
+      align === undefined
+    )
+      throw new Error("変更する文字書式を指定してください");
+    if (
+      fontSize !== undefined &&
+      (typeof fontSize !== "number" ||
+        !Number.isFinite(fontSize) ||
+        fontSize <= 0 ||
+        fontSize > 512)
+    )
+      throw new Error(
+        "文字サイズは0より大きく512以下の有限の数値で指定してください",
+      );
+    if (
+      fontWeight !== undefined &&
+      fontWeight !== "normal" &&
+      fontWeight !== "bold"
+    )
+      throw new Error("文字の太さは標準または太字を指定してください");
+    if (align !== undefined && !["left", "center", "right"].includes(align))
+      throw new Error("文字揃えは左・中央・右を指定してください");
+    if (objects.some((object) => object.shape.type !== "text"))
+      throw new Error(
+        "Textだけを選択してください。選択内の文字だけを暗黙に変更しません",
+      );
+    for (const object of objects) {
+      if (object.shape.type !== "text") continue;
+      if (fontSize !== undefined) object.shape.style.fontSize = fontSize;
+      if (fontWeight !== undefined) object.shape.style.fontWeight = fontWeight;
+      if (align !== undefined) object.shape.style.align = align;
+    }
+  } else if (command.type === "set-size") {
     setSelectionSize(objects, command);
   } else if (command.type === "set-opacity") {
     if (

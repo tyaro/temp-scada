@@ -30,6 +30,10 @@
     acknowledgeSelectionLine,
   } from "./lib/designer/forms/selection-line";
   import {
+    selectionTextStyleCommand,
+    acknowledgeSelectionTextStyle,
+  } from "./lib/designer/forms/selection-text-style";
+  import {
     selectionSizeCommand,
     acknowledgeSelectionSize,
   } from "./lib/designer/forms/selection-size";
@@ -1593,6 +1597,8 @@
       acknowledgeSelectionOpacity(form);
     if (form.dataset.editorForm === "selection-size")
       acknowledgeSelectionSize(form);
+    if (form.dataset.editorForm === "selection-text-style")
+      acknowledgeSelectionTextStyle(form);
     if (form.dataset.editorForm === "project")
       acknowledgeProjectForm(form, project.manifest.name);
     if (form.dataset.editorForm === "object")
@@ -2125,6 +2131,20 @@
       );
     if (form.dataset.editorForm === "selection-line")
       return selectionLineCommand(
+        {
+          data,
+          targetKey: form.dataset.targetKey,
+          objectIds: form.dataset.objectIds,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selectedIds,
+        },
+      );
+    if (form.dataset.editorForm === "selection-text-style")
+      return selectionTextStyleCommand(
         {
           data,
           targetKey: form.dataset.targetKey,

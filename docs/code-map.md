@@ -251,3 +251,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ## 複数配置のサイズ統一
 
 `set-size`はobject分類・lock／group guardから`editor/size-arrangement.ts`へ送る。全候補の中心・回転・描画範囲と桁落ちを検証してから反映する。`designer/SelectionSize.svelte`／`forms/selection-size.ts`は寸法別の混在値と空欄の明示patch、既存のsnapshot／draft guardを使う。`selection-size.test.ts`と`e2e/selection-size.spec.ts`が幾何・参照・原子性・入力を検証し、`scripts/capture-selection-size.mjs`が両テーマの実画面を記録する。
+
+## Textの一括文字書式
+
+`set-text-style`はobject分類と共通guardを経て`selection-handler.ts`でpatchと全対象を検証する。`designer/SelectionTextStyle.svelte`／`forms/selection-text-style.ts`はTextだけの選択を明示し、未指定項目をpatchへ含めない。`selection-text-style.test.ts`が保存・所有者・表示元保持・原子性を、`e2e/selection-text-style.spec.ts`がIME・draft・両テーマ・描画を確認する。実画面は`scripts/capture-selection-text-style.mjs`で記録する。

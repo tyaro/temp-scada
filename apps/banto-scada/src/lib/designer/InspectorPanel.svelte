@@ -1,5 +1,6 @@
 <script lang="ts">
   import InspectorPanelHeader from "./InspectorPanelHeader.svelte";
+  import SelectionTextStyle from "./SelectionTextStyle.svelte";
   import SelectionSize from "./SelectionSize.svelte";
   import SelectionOpacity from "./SelectionOpacity.svelte";
   import type { FloatingInspector } from "./controllers/floating-inspector.svelte";
@@ -530,6 +531,18 @@
             ).length}
             {paintDisabledCount}
             count={selectedIds.length}
+            hiddenCount={hiddenSelectionCount}
+            locked={selectionLocked}
+            definition={activeDefinition}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            objectIds={selectedIds}
+            {drafts}
+            onsubmit={properties}
+          />
+          <SelectionTextStyle
+            objects={screen.objects.filter((object) =>
+              selectedIds.includes(object.id),
+            )}
             hiddenCount={hiddenSelectionCount}
             locked={selectionLocked}
             definition={activeDefinition}

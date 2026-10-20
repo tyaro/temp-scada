@@ -188,6 +188,12 @@ export type ObjectCommand = (
       };
     }
   | {
+      type: "set-text-style";
+      screenId: string;
+      objectIds: string[];
+      patch: Partial<TextStyle>;
+    }
+  | {
       type: "set-size";
       screenId: string;
       objectIds: string[];
@@ -373,6 +379,7 @@ const commandScopes = {
   "set-color": "object",
   "set-opacity": "object",
   "set-size": "object",
+  "set-text-style": "object",
   "set-visibility": "object",
   "set-lock": "object",
   group: "object",
