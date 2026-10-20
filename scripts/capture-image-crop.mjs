@@ -2,6 +2,7 @@ import { chromium, expect } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 const fitMode = process.env.SCADA_CAPTURE_IMAGE_FIT === "1";
+const pointerMode = process.env.SCADA_CAPTURE_IMAGE_CROP_POINTER === "1";
 const output = resolve(process.argv[2] ?? "test-results/image-crop");
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
@@ -133,7 +134,13 @@ try {
         "data-image-fit",
         "cover",
       );
-    } else await form.scrollIntoViewIfNeeded();
+    } else {
+      if (pointerMode)
+        await form
+          .getByRole("button", { name: "範囲をマウスで調整", exact: true })
+          .click();
+      await form.scrollIntoViewIfNeeded();
+    }
     const close = page.locator(".toast-host button.close");
     while (await close.count()) await close.first().click();
     await page.evaluate(() => document.fonts.ready);
@@ -144,11 +151,13 @@ try {
         ),
     );
     let verifiedFrame;
-    if (fitMode) {
+    if (fitMode || pointerMode) {
       await expect
         .poll(async () => {
           const frame = await page
-            .locator(".sheet [data-image-fit]")
+            .locator(
+              fitMode ? ".sheet [data-image-fit]" : ".sheet [data-image-frame]",
+            )
             .boundingBox();
           if (!frame) return false;
           verifiedFrame = await page.screenshot({ animations: "disabled" });
@@ -180,8 +189,14 @@ try {
         })
         .toBe(true);
     }
-    if (fitMode)
-      await writeFile(resolve(output, `image-fit-${theme}.png`), verifiedFrame);
+    if (fitMode || pointerMode)
+      await writeFile(
+        resolve(
+          output,
+          `${pointerMode ? "image-crop-pointer" : "image-fit"}-${theme}.png`,
+        ),
+        verifiedFrame,
+      );
     else
       await page.screenshot({
         path: resolve(

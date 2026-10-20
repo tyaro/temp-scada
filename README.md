@@ -5,6 +5,7 @@
 - [現在の実装状況](docs/implementation-status.md): 対応機能、保存契約、検証範囲、未実装。
 - [操作ガイド](docs/user-guide.md): 編集、画像、画面再利用、入力保護、パネルとキー操作。
 - [開発計画](docs/development-plan.md)と[実装履歴](docs/implementation-history.md): 今後と過去を分離。
+- [マウスによる切出し調整](docs/image-crop-pointer-design.md): 原本上の指定・移動・サイズ変更と取消。
 - [背景の数値トリミング](docs/background-image-crop-design.md): 背景4方式と原本・切出しの保持。
 - [画像の表示方式](docs/image-fit-design.md): contain／cover／stretchと切出し・原本保持。
 - [機器種別の編集](docs/equipment-type-editing.md): 任意のbool／number読取slotと採用保護。

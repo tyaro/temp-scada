@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
   import ImagePainting from "../ImagePainting.svelte";
+  import ImageCropSelection from "./ImageCropSelection.svelte";
   import { imageCropViewBox, type ImageCrop } from "../image-crop";
   import { imageCropFromForm } from "./image-crop-fields";
   import type { ImageAsset } from "../project";
@@ -30,6 +31,7 @@
   let composing = false;
   let preview = $state<ImageCrop | undefined>();
   let error = $state("");
+  let selectionOpen = $state(false);
   const percent = (value: number) =>
     String(Number((value * 100).toPrecision(15)));
   const values = $derived({
@@ -106,6 +108,29 @@
         <label>{label}<input {name} inputmode="decimal" required /></label>
       {/each}
     </div>
+    {#if url}
+      <button
+        type="button"
+        aria-expanded={selectionOpen}
+        onclick={() => (selectionOpen = !selectionOpen)}
+      >
+        {selectionOpen ? "マウス調整を閉じる" : "範囲をマウスで調整"}
+      </button>
+      {#if selectionOpen && !locked && !error}
+        <ImageCropSelection
+          {asset}
+          {url}
+          crop={preview}
+          onchange={(next) =>
+            write({
+              cropX: percent(next.x),
+              cropY: percent(next.y),
+              cropWidth: percent(next.width),
+              cropHeight: percent(next.height),
+            })}
+        />
+      {/if}
+    {/if}
     {#if error}<p role="status" class="error">{error}</p>
     {:else if url && box}
       <div class="previews" aria-label="未適用の切出し見本">
