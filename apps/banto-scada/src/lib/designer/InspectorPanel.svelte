@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SymbolEquipmentCheck from "./SymbolEquipmentCheck.svelte";
   import StateColor from "./StateColor.svelte";
   import { stateColorUsages } from "../state-color";
   import GroupInspector from "./GroupInspector.svelte";
@@ -978,6 +979,14 @@
               <button type="submit">変更を適用</button>
             </div>
           </fieldset>
+          {#if selected.shape.type === "symbol" && !activeDefinition}
+            <SymbolEquipmentCheck
+              {project}
+              targetKey={`${generation}:${screen.id}:${selected.id}`}
+              symbolId={selected.shape.symbolId}
+              equipmentId={selected.shape.equipmentId ?? ""}
+            />
+          {/if}
         </form>
       {/key}
     {:else}<p>

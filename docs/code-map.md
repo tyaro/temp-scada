@@ -182,3 +182,5 @@ TextPrimitiveの非表示計測の再試行はResizeObserver通知中にprobeへ
 機器小窓の図面使用先は既存`equipmentUsages`を`PreviewWindow`から`EquipmentReadDetails`へ渡し、独立した20件ページで表示する。移動は`App.openPreviewEquipmentUsage`から既存`openSymbolUsage`を呼び、世代・呼出mode・Symbol／機器参照の再確認と編集復帰、グループ選択を共用する。`e2e/equipment-usage-navigation.spec.ts`が非表示／ロック・別画面・グループ・ページ境界・保存不変を確認する。
 
 別機器登録は`EquipmentLibrary`が登録元IDと新規入力を保持し、`forms/equipment.ts`が現行Projectの元機器から採用slotを未割付にして既存`create-equipment`へ渡す。戻る処理はクリック時のID・世代を固定し、登録後の自動選択と競合させない。`e2e/equipment-copy.spec.ts`で両テーマの独立登録・元機器と配置の不変・重複拒否・Undo／Redoとdraft分岐を確認する。
+
+Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを既存resolverで保存設定だけから導出する。`SymbolEquipmentCheck.svelte`は親フォームの現在値を読取専用で監視し、モデル反映後のtick・フォーム同一性・対象keyを保護する。`InspectorPanel`はobjectの世代key内、編集fieldset外へ置く。`symbol-equipment-check.test.ts`と`e2e/symbol-equipment-check.spec.ts`がhidden・未使用・設定状態と未適用／破棄／Undo・ロック・ページ境界を確認する。[詳細](symbol-equipment-check.md)。

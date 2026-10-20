@@ -147,3 +147,9 @@ Project 0.27.0を維持し、表示プレビューの機器検索から読取専
 既存の種別・採用slotを引き継ぎ、外部名をすべて未割付として新しい番号で登録できる。図面配置・元機器・共有種別を変更せず、作成一回をUndo／Redoできる。元機器と登録中の入力保護も維持する。[仕様と実画面](equipment-register-design.md)。読取詳細の図面使用先`f33d661`は[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39388959155)が成功した。
 
 この区切りは型エラー／警告0、TS906件、関連ブラウザ8件と本番buildが成功。Astra指摘の遅延時の元ID喪失を修正し、適用して元機器へ戻る経路も確認した。Undoで内容は戻し、Project revisionは単調増加を維持する。両テーマの実画面と設計を更新した。Rust／schemaは変更していない。
+
+## Symbolと機器の関連付け候補の確認
+
+未適用のSymbol／機器候補に対して、実使用slotの保存設定を確認できる。hidden Textも含め、未使用宣言は別に集計する。不足・型違い・未採用・未割付と「外部名あり・catalog未確認」を表示し、候補を自動変更しない。[仕様と実画面](symbol-equipment-check.md)。型エラー／警告0、TS909件（83ファイル）、関連ブラウザ8件・buildが成功。Astraレビューに必須修正なし。両テーマ・両候補の変更順・キャンセル／破棄／適用／Undo・ロック・24slotページ境界を確認した。Rust／保存schemaは変更していない。
+
+別機器登録`8af2377`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39389952118)も成功した。industrial #682は再確認時もOPENで、実Host接続の上流契約待ちを維持する。
