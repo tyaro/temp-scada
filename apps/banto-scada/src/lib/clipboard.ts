@@ -1,4 +1,5 @@
 import { completeGroupSelection, groupsOf } from "./geometric-groups";
+import { clipboardDependencies } from "./clipboard-dependencies";
 import {
   parseProject,
   serializeProject,
@@ -14,7 +15,7 @@ export interface ClipboardImage {
 }
 export interface ObjectClipboard {
   format: "banto-scada.objects";
-  version: 1 | 2 | 3;
+  version: 1 | 2 | 3 | 4;
   images?: ClipboardImage[];
   origin: string;
   project: Project;
@@ -29,13 +30,18 @@ export function parseClipboard(text: string): ObjectClipboard {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("SCADAの図形コピーではありません");
   const data = value as Record<string, unknown>;
+  const assetEnvelope =
+    data.version === 2 || data.version === 3 || data.version === 4;
   if (
     Object.keys(data).sort().join(",") !==
-      (data.version === 2 || data.version === 3
+      (assetEnvelope
         ? "format,images,origin,project,version"
         : "format,origin,project,version") ||
     data.format !== "banto-scada.objects" ||
-    (data.version !== 1 && data.version !== 2 && data.version !== 3) ||
+    (data.version !== 1 &&
+      data.version !== 2 &&
+      data.version !== 3 &&
+      data.version !== 4) ||
     typeof data.origin !== "string" ||
     !data.origin.length ||
     data.origin.length > 100
@@ -48,7 +54,7 @@ export function parseClipboard(text: string): ObjectClipboard {
   )
     throw new Error("クリップボードのデータが4MiBを超えています");
   if (
-    (data.version === 2 || data.version === 3) &&
+    assetEnvelope &&
     new TextEncoder().encode(JSON.stringify(data.project)).length >
       CLIPBOARD_LIMIT
   )
@@ -70,13 +76,22 @@ export function parseClipboard(text: string): ObjectClipboard {
     throw new Error(
       "画像を含むコピーの貼り付けは未対応です。画像同梱Projectを使ってください。",
     );
-  if (project.screens.length !== 1 || !project.screens[0].objects.length)
+  if (
+    (data.version === 4
+      ? project.screens.length < 2
+      : project.screens.length !== 1) ||
+    !project.screens[0].objects.length
+  )
     throw new Error("コピー対象の図形がありません");
-  if (data.version !== 3 && project.screens[0].groups.length)
+  if (
+    data.version !== 3 &&
+    data.version !== 4 &&
+    project.screens[0].groups.length
+  )
     throw new Error("グループはclipboard v3で指定してください");
   if (data.version === 3 && !project.screens[0].groups.length)
     throw new Error("clipboard v3にはグループが必要です");
-  if (data.version === 2 || data.version === 3) {
+  if (assetEnvelope) {
     if (
       (data.version === 2 && !project.assets.length) ||
       project.screens[0].backgroundImage ||
@@ -85,11 +100,24 @@ export function parseClipboard(text: string): ObjectClipboard {
       throw new Error(
         "画像clipboardには選択した配置と必要な資産だけを含めてください。",
       );
-    const usedSymbols = new Set(
-      project.screens[0].objects.flatMap((o) =>
-        o.shape.type === "symbol" ? [o.shape.symbolId] : [],
-      ),
+    const dependencies = clipboardDependencies(
+      project,
+      project.screens[0].objects,
     );
+    const usedSymbols = dependencies.symbols;
+    if (
+      data.version === 4 &&
+      (!dependencies.screens.size ||
+        dependencies.screens.size !== project.screens.length - 1 ||
+        project.screens
+          .slice(1)
+          .some((screen) => !dependencies.screens.has(screen.id)) ||
+        dependencies.assets.size !== project.assets.length ||
+        project.assets.some((asset) => !dependencies.assets.has(asset.id)))
+    )
+      throw new Error(
+        "埋込画面clipboardには必要な画面・資産だけを含めてください。",
+      );
     if (
       project.symbols.length !== usedSymbols.size ||
       project.symbols.some((symbol) => !usedSymbols.has(symbol.id))
@@ -130,9 +158,7 @@ export function parseClipboard(text: string): ObjectClipboard {
     version: data.version,
     origin: data.origin,
     project,
-    ...(data.version === 2 || data.version === 3
-      ? { images: data.images as ClipboardImage[] }
-      : {}),
+    ...(assetEnvelope ? { images: data.images as ClipboardImage[] } : {}),
   };
 }
 export function copyObjectSnapshot(
@@ -153,12 +179,12 @@ export function copyObjectSnapshot(
     .map((object) => ({ ...object }));
   if (objects.length !== wanted.size)
     throw new Error("コピー対象が見つかりません");
-  if (objects.some((object) => object.shape.type === "screenView"))
-    throw new Error(
-      "埋込画面を含むコピー・切り取りは未対応です。配置の複製またはProject全体の保存を使ってください。",
-    );
+  const dependencies = clipboardDependencies(project, objects);
+  const dependencyScreens = project.screens.filter((screen) =>
+    dependencies.screens.has(screen.id),
+  );
   if (
-    objects.some(
+    [...objects, ...dependencyScreens.flatMap((screen) => screen.objects)].some(
       (object) => object.shape.type === "symbol" && object.shape.equipmentId,
     )
   )
@@ -183,19 +209,9 @@ export function copyObjectSnapshot(
     );
   // Clipboard placements deliberately start at the destination root.
   for (const object of objects) delete object.folderId;
-  const dependencies = new Set(
-    objects.flatMap((o) =>
-      o.shape.type === "symbol" ? [o.shape.symbolId] : [],
-    ),
-  );
   const fragment: Project = {
     manifest: { ...project.manifest },
-    assets: project.assets.filter((asset) =>
-      objects.some(
-        (object) =>
-          object.shape.type === "image" && object.shape.assetId === asset.id,
-      ),
-    ),
+    assets: project.assets.filter((asset) => dependencies.assets.has(asset.id)),
     screens: [
       {
         id: target.id,
@@ -216,8 +232,9 @@ export function copyObjectSnapshot(
             memberIds: [...group.memberIds],
           })),
       },
+      ...dependencyScreens,
     ],
-    symbols: project.symbols.filter((s) => dependencies.has(s.id)),
+    symbols: project.symbols.filter((s) => dependencies.symbols.has(s.id)),
   };
   return {
     format: "banto-scada.objects",
@@ -232,12 +249,19 @@ export function copyObjects(
   origin: string,
 ): string {
   const snapshot = copyObjectSnapshot(project, targetId, ids, origin);
+  return serializeObjectClipboard(snapshot);
+}
+export function serializeObjectClipboard(
+  snapshot: Omit<ObjectClipboard, "version" | "images">,
+): string {
   if (snapshot.project.assets.length)
     throw new Error("画像を含むコピーは原本付きclipboardを使ってください。");
   const text = JSON.stringify(
-    snapshot.project.screens[0].groups.length
-      ? { ...snapshot, version: 3, images: [] }
-      : { ...snapshot, version: 1 },
+    snapshot.project.screens.length > 1
+      ? { ...snapshot, version: 4, images: [] }
+      : snapshot.project.screens[0].groups.length
+        ? { ...snapshot, version: 3, images: [] }
+        : { ...snapshot, version: 1 },
   );
   parseClipboard(text);
   return text;

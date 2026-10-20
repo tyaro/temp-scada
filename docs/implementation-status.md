@@ -27,7 +27,7 @@
 | 配置・レイヤー | 名前、編集ロック、静的非表示、整理フォルダー、親と所属のドラッグ変更                                                                                             | 継承表示、一時非表示、フォルダーの手動順変更                                           |
 | 図形・文字     | 矩形／楕円の塗り・枠線、一括編集、実線／破線／点線、配置opacityと色α、2色線形gradient、斜線／交差線／点pattern、Textの書式と揃え                                 | 放射gradient、多点stop、複数行Text・縁取り、α一括                                      |
 | 画像           | 原本共有、背景fit、Imageのcontain／cover／stretch枠、比率復帰、原本付きclipboard、差し替え、配置・背景の非破壊cropと原本プレビュー上の範囲指定・移動・サイズ変更 | 図面上の直接crop、縦横比固定、Symbol内画像                                             |
-| 画面再利用     | 同一Project・1段の読取埋込View、共有参照、参照先編集、使用中画面の削除保護、複製                                                                                 | Viewのclipboard、機器context付き共通画面、独立テンプレート                             |
+| 画面再利用     | 同一Project・1段の読取埋込View、共有参照、参照先編集、使用中画面の削除保護、複製、依存画面と原本付きclipboard v4                                                 | 機器context付き共通画面、独立テンプレート                                              |
 | 表示確認       | 画面／機器の読取Popup合計4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                                                | 正式Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                       |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                                                  | 実図面・画像／Symbol等の計測と必要な最適化                                             |
 | 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                                                     | 実catalog選択、draftのDOM分離                                                          |
@@ -193,3 +193,11 @@ Imageのfitをcontain／cover／stretchへ拡張し、共通描画と独立し�
 直前の背景cropコミット`0b65310`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39397453493)はfrontend・Rust・全E2E4分割・checkが成功。
 
 検証: 型エラー／警告0、TS954件（86ファイル）、本番build、全体整形が成功。既存の配置crop11件・背景crop7件と新しい操作8件を確認した。ドラッグ終了前保存、開始前の入力文字列を保つ取消、capture／blur／resize、余白・単クリック・原本外の逆方向・実ハンドル、背景とUndo、プレビュー切替を検証した。Astraの指摘した境界計算とフォーカスの座標ずれを修正済み。保存契約は不変でRustの変更はない。
+
+## 埋込画面のclipboard（Project0.29.0・clipboard v4）
+
+Viewの選択に参照画面・必要Symbol・画像原本を同梱し、同じProject世代では現行参照を再利用、別Projectでは新IDで取り込む。空の参照画面、背景だけの画像・crop、隠れた配置、folder／groupを保持する。原本付きの判定はsnapshot全体の資産で行い、現行画面再利用時には古い資産・定義を追加しない。機器関連付けを含むコピー、入れ子・自己参照、Symbol定義への貼付は拒否する。切取の書込完了・所有者照合と失敗時の原子性を維持する。[仕様と検証](screen-view-clipboard-design.md)。
+
+直前のマウスcropコミット`e6777dd`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39399367125)はfrontend・Rust・全E2E4分割・checkが成功。
+
+検証: 型エラー／警告0、TS962件（87ファイル）、本番build、全体整形が成功。新規の埋込clipboard4件と既存埋込・通常clipboard・画像clipboardを合わせた関連ブラウザ28件を確認した。背景だけの画像原本・cropの別Project往復、共有元の集約・現行再利用、1回のUndo／Redo、自己参照の拒否、書込失敗と遅延応答、容量／原本不正時の全体拒否を含む。Astraの読取レビューで必須修正なし。Project保存契約・Rustは変更していない。

@@ -200,7 +200,7 @@ test("insertion searches source, excludes nested references, duplicates and undo
     await expect(radio).toBeDisabled();
   await btn(p, "キャンセル").click();
 });
-test("reference change is guarded by unapplied inputs; copy and cut leave Project and OS clipboard untouched", async ({
+test("reference change is guarded; copy and cut carry source screens and Undo restores the placement", async ({
   page: p,
 }) => {
   const project = structuredClone(sample) as any;
@@ -233,16 +233,15 @@ test("reference change is guarded by unapplied inputs; copy and cut leave Projec
   await btn(p, "元に戻す").click();
   await expect(projection(p)).toHaveAttribute("data-screen-view", source.id);
   await editMenu(p, "コピー");
-  await expect(p.getByTestId("project-status")).toContainText(
-    "埋込画面を含むコピー",
-  );
+  await expect(p.getByTestId("project-status")).toContainText("コピーしました");
   await editMenu(p, "切り取り");
-  await expect(p.getByTestId("project-status")).toContainText(
-    "埋込画面を含むコピー",
-  );
-  expect(await p.evaluate(() => (window as any).__writes)).toBe(0);
+  await expect(projection(p)).toHaveCount(0);
+  expect(await p.evaluate(() => (window as any).__writes)).toBe(2);
+  await btn(p, "元に戻す").click();
+  await expect(projection(p)).toBeVisible();
   const result = await save(p);
   expect(result.screens[0].objects).toEqual(project.screens[0].objects);
+  await p.locator(`button[data-layer-id="${view.id}"]`).click();
   await p.getByLabel("配置名", { exact: true }).fill("未適用");
   await btn(p, "参照する画面を開く").click();
   await expect(p.getByRole("dialog")).toContainText("未適用");

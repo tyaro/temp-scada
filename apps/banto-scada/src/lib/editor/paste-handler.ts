@@ -27,11 +27,12 @@ export function applyPasteCommand(
       (o) =>
         o.shape.type === "symbol" ||
         o.shape.type === "image" ||
+        o.shape.type === "screenView" ||
         (o.shape.type === "text" && o.shape.binding),
     )
   )
     throw new Error(
-      "Symbol定義には画像・Symbol配置・タグ付きTextを貼り付けできません",
+      "Symbol定義には画像・埋込画面・Symbol配置・タグ付きTextを貼り付けできません",
     );
   if (
     !Number.isFinite(command.center.x) ||
@@ -39,25 +40,53 @@ export function applyPasteCommand(
     !Number.isFinite(command.offset ?? 0)
   )
     throw new Error("貼り付け先は有限の座標にしてください");
+  const sameWorkspace =
+    fragment.origin === command.origin &&
+    fragment.project.manifest.projectId === originalProjectId;
+  const screenReferences = new Map<string, string>();
+  const importedScreens: Screen[] = [];
+  for (const source of fragment.project.screens.slice(1)) {
+    const live = sameWorkspace
+      ? next.screens.find((s) => s.id === source.id)
+      : undefined;
+    if (live) screenReferences.set(source.id, live.id);
+    else {
+      const copy = renewOwnerIds(JSON.parse(JSON.stringify(source)) as Screen);
+      importedScreens.push(copy);
+      screenReferences.set(source.id, copy.id);
+    }
+  }
+  // Stop snapshot dependency expansion at reused live screens.
+  const importedObjects = [
+    ...objects,
+    ...importedScreens.flatMap((source) => source.objects),
+  ];
+  const usedAssets = new Set(
+    importedObjects.flatMap((object) =>
+      object.shape.type === "image" ? [object.shape.assetId] : [],
+    ),
+  );
+  for (const source of importedScreens)
+    if (source.backgroundImage) usedAssets.add(source.backgroundImage.assetId);
   const assetReferences = new Map<string, string>();
-  for (const asset of fragment.project.assets) {
+  for (const asset of fragment.project.assets.filter((asset) =>
+    usedAssets.has(asset.id),
+  )) {
     const existing = next.assets.find((a) => a.sha256 === asset.sha256);
     const incoming = { ...asset, id: existing?.id ?? newId() };
     assetReferences.set(asset.id, registerAsset(next, incoming));
   }
   const references = new Map<string, string>();
-  for (const object of objects)
+  for (const object of importedObjects)
     if (
       object.shape.type === "symbol" &&
       !references.has(object.shape.symbolId)
     ) {
       const symbolId = object.shape.symbolId;
       const source = fragment.project.symbols.find((s) => s.id === symbolId)!;
-      const live =
-        fragment.origin === command.origin &&
-        fragment.project.manifest.projectId === originalProjectId
-          ? next.symbols.find((s) => s.id === source.id)
-          : undefined;
+      const live = sameWorkspace
+        ? next.symbols.find((s) => s.id === source.id)
+        : undefined;
       if (live) references.set(source.id, live.id);
       else {
         const copy = renewOwnerIds(
@@ -67,6 +96,22 @@ export function applyPasteCommand(
         references.set(source.id, copy.id);
       }
     }
+  function remapReferences(object: ScreenObject) {
+    if (object.shape.type === "symbol")
+      object.shape.symbolId = references.get(object.shape.symbolId)!;
+    if (object.shape.type === "image")
+      object.shape.assetId = assetReferences.get(object.shape.assetId)!;
+    if (object.shape.type === "screenView")
+      object.shape.screenId = screenReferences.get(object.shape.screenId)!;
+  }
+  for (const source of importedScreens) {
+    for (const object of source.objects) remapReferences(object);
+    if (source.backgroundImage)
+      source.backgroundImage.assetId = assetReferences.get(
+        source.backgroundImage.assetId,
+      )!;
+    next.screens.push(source);
+  }
   const bounds = objects.map((o) => {
     const b = getBounds(o);
     return {
@@ -107,10 +152,7 @@ export function applyPasteCommand(
       delete copy.folderId;
       copy.x += dx;
       copy.y += dy;
-      if (copy.shape.type === "symbol")
-        copy.shape.symbolId = references.get(copy.shape.symbolId)!;
-      if (copy.shape.type === "image")
-        copy.shape.assetId = assetReferences.get(copy.shape.assetId)!;
+      remapReferences(copy);
       screen.objects.push(copy);
     });
 }

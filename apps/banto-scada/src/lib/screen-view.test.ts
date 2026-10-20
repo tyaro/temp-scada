@@ -60,17 +60,17 @@ it("protects used screen deletion with names, including hidden references", () =
   ).toThrow("設備監視・埋込先／循環設備の埋込表示");
   expect(p).toEqual(before);
 });
-it("rejects view copy/cut snapshots and mixed colors atomically; duplicate is allowed", () => {
+it("copies view snapshots and still rejects mixed color edits atomically", () => {
   const p = fresh(),
     screen = p.screens[0];
-  expect(() =>
+  expect(
     copyObjects(
       p,
       screen.id,
       screen.objects.map((o) => o.id),
       "session",
     ),
-  ).toThrow("埋込画面");
+  ).toContain('"version":4');
   expect(() =>
     applyCommand(
       p,

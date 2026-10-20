@@ -41,7 +41,12 @@ export async function encodeAssetClipboard(
     }
     const text = JSON.stringify({
       ...fragment,
-      version: fragment.project.screens[0].groups.length ? 3 : 2,
+      version:
+        fragment.project.screens.length > 1
+          ? 4
+          : fragment.project.screens[0].groups.length
+            ? 3
+            : 2,
       images,
     });
     if (new TextEncoder().encode(text).length > IMAGE_CLIPBOARD_LIMIT)

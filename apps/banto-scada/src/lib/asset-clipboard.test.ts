@@ -13,7 +13,7 @@ import {
   decodeAssetClipboard,
   validateAssetClipboardSnapshot,
 } from "./asset-clipboard";
-import type { FillPaint } from "./project";
+import type { FillPaint, ScreenObject } from "./project";
 import { emptyHistory, recordEdit, travelHistory } from "./history";
 const png = Uint8Array.from(
   atob(
@@ -75,6 +75,97 @@ async function fixture(paint?: FillPaint) {
     ),
   };
 }
+it("carries a background-only source in v4 and avoids importing obsolete assets when reusing live screens", async () => {
+  const { store, asset } = await fixture();
+  const project = createProject(),
+    source = project.screens[0];
+  project.assets = [asset];
+  source.backgroundImage = {
+    assetId: asset.id,
+    fit: "cover",
+    opacity: 0.35,
+    crop: { x: 0, y: 0, width: 1, height: 1 },
+  };
+  const view: ScreenObject = {
+    id: newId(),
+    order: 0,
+    x: 20,
+    y: 30,
+    width: 300,
+    height: 200,
+    rotation: 0,
+    shape: { type: "screenView", screenId: source.id, fit: "contain" },
+  };
+  const host = {
+    ...structuredClone(source),
+    id: newId(),
+    name: "埋込先",
+    objects: [view],
+    backgroundImage: undefined,
+  };
+  project.screens.unshift(host);
+  const snapshot = copyObjectSnapshot(project, host.id, [view.id], "origin");
+  const text = await (await encodeAssetClipboard(snapshot, store)).text(),
+    fragment = parseClipboard(text);
+  expect(fragment.version).toBe(4);
+  expect(fragment.images).toHaveLength(1);
+  const decoded = await decodeAssetClipboard(fragment);
+  try {
+    expect(
+      new Uint8Array(await decoded.blob(asset.sha256).arrayBuffer()),
+    ).toEqual(png);
+    const destination = createProject();
+    const result = recordEdit(
+      destination,
+      emptyHistory(),
+      {
+        type: "paste",
+        screenId: destination.screens[0].id,
+        text,
+        origin: "other",
+        center: { x: 300, y: 200 },
+      },
+      "edit",
+    );
+    expect(result.project.assets).toHaveLength(1);
+    expect(result.project.screens[1].backgroundImage).toEqual({
+      ...source.backgroundImage,
+      assetId: result.project.assets[0].id,
+    });
+    expect(result.project.assets[0].id).not.toBe(asset.id);
+    expect(
+      travelHistory(result.project, result.history, "undo", "edit").project
+        .screens,
+    ).toEqual(destination.screens);
+    const live = applyCommand(
+      project,
+      { type: "set-background-image", screenId: source.id, image: null },
+      "edit",
+    );
+    const reused = applyCommand(
+      live,
+      {
+        type: "paste",
+        screenId: host.id,
+        text,
+        origin: "origin",
+        center: { x: 300, y: 200 },
+      },
+      "edit",
+    );
+    expect(reused.screens).toHaveLength(2);
+    expect(reused.assets).toHaveLength(0);
+    expect(reused.screens[1].backgroundImage).toBeUndefined();
+    const extra = JSON.parse(text);
+    delete extra.project.screens[1].backgroundImage;
+    expect(() => parseClipboard(JSON.stringify(extra))).toThrow(
+      "未使用の画像資産",
+    );
+  } finally {
+    decoded.dispose();
+    store.dispose();
+  }
+});
 it("carries grouped images and paint in v3 while encoding each original once", async () => {
   const { project, store, screenId } = await fixture();
   const grouped = applyCommand(

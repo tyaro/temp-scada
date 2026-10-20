@@ -10,7 +10,7 @@ import {
   type PastePayload,
 } from "../../image-clipboard";
 import {
-  copyObjects,
+  serializeObjectClipboard,
   copyObjectSnapshot,
   parseClipboard,
 } from "../../clipboard";
@@ -195,10 +195,13 @@ export function createClipboardController(host: ClipboardHost) {
         } else {
           if (kind === "cut")
             applyCommand(host.project, command, host.owner.mode);
-          const hasImages = host.objects.some(
-            (object) =>
-              ids.includes(object.id) && object.shape.type === "image",
+          const snapshot = copyObjectSnapshot(
+            host.project,
+            target,
+            ids,
+            origin,
           );
+          const hasImages = snapshot.project.assets.length > 0;
           if (hasImages) {
             if (
               typeof ClipboardItem === "undefined" ||
@@ -207,12 +210,6 @@ export function createClipboardController(host: ClipboardHost) {
               throw new Error(
                 "このブラウザは画像を含む図形コピーに対応していません。画像同梱Projectを使ってください。",
               );
-            const snapshot = copyObjectSnapshot(
-              host.project,
-              target,
-              ids,
-              origin,
-            );
             validateAssetClipboardSnapshot(snapshot);
             // Initiate the write in the user's gesture. Never await before writing event clipboardData.
             const content = encodeAssetClipboard(snapshot, host.store);
@@ -221,7 +218,7 @@ export function createClipboardController(host: ClipboardHost) {
               new ClipboardItem({ "text/plain": content }),
             ]);
           } else {
-            const text = copyObjects(host.project, target, ids, origin);
+            const text = serializeObjectClipboard(snapshot);
             if (native) native.setData("text/plain", text);
             else await navigator.clipboard.writeText(text);
           }

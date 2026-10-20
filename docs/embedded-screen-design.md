@@ -77,3 +77,7 @@ Astraの読取専用レビューを実施した。SymbolのCSSが寸法を上書
 ![同じProjectのダーク画面](assets/frontend-ux/screen-view-dark.png)
 
 独自の読込用サンプル`examples/embedded-screen.project.json`を、`scripts/capture-screen-view.mjs`で1920×1080撮影した。画面内の数値は静的サンプルで、実Hub接続を示さない。
+
+## clipboard v4への拡張（Project0.29.0）
+
+[参照画面・Symbol・画像原本を同梱するclipboard v4](screen-view-clipboard-design.md)を追加した。同一編集世代の現行再利用、別Projectへのsnapshot取込、背景のcrop／fit／opacityと原本保持、内部ID・外部参照の再配線を実装する。初回copy／cut拒否の記録を置き換える現行範囲で、1段埋込・機器関連付けを含むコピー拒否は維持する。
