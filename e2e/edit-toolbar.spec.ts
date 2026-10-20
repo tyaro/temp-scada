@@ -123,11 +123,11 @@ test("toolbar keyboard navigation skips unavailable actions and preserves editor
   await page.keyboard.press("Enter");
   await expect(svg(page).locator('[data-selected="true"]')).toHaveCount(3);
   await page.keyboard.press("End");
-  await expect(button(page, "中心を垂直方向に等間隔")).toBeFocused();
+  await expect(button(page, "隙間を垂直方向に均等化")).toBeFocused();
   await page.keyboard.press("Home");
   await expect(button(page, "すべて選択")).toBeFocused();
   await page.keyboard.press("ArrowLeft");
-  await expect(button(page, "中心を垂直方向に等間隔")).toBeFocused();
+  await expect(button(page, "隙間を垂直方向に均等化")).toBeFocused();
   await button(page, "選択解除").click();
   await selectPanel(page, "プロジェクト");
   const name = page.getByLabel("画面名", { exact: true });
@@ -158,6 +158,7 @@ for (const theme of ["light", "dark"])
       await expect(toolbar(page)).toBeInViewport();
       await expect(button(page, "下揃え")).toBeInViewport();
       await expect(button(page, "中心を垂直方向に等間隔")).toBeInViewport();
+      await expect(button(page, "隙間を垂直方向に均等化")).toBeInViewport();
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
