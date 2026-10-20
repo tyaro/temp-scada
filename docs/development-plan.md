@@ -22,7 +22,7 @@ Core v1へ向けた技術工程:
 
 v1.1のAlarm・常時Event／Action・History／Trend・recorderとWindowsサービス化はS9bの上に追加する。Design DomainはCore v1、Design APIのREST／OpenAPI公開は後続という区分を維持する。
 
-[複数配置の不透明度](selection-opacity-design.md)を追加し、色αの一括編集は後続として分離した。次の作図補助は幅／高さの明示的な統一を検討する。選択順を暗黙の基準にせず、ローカル枠寸法と配置中心・回転の保持を具体化する。
+[複数配置の不透明度](selection-opacity-design.md)を追加し、色αの一括編集は後続として分離した。[幅／高さの明示的な統一](selection-size-design.md)も追加した。選択順を暗黙の基準にせず、ローカル枠寸法と配置中心・回転を保持する。線・グループの変形、回転後の外接寸法を揃える操作は後続とする。
 
 ## 作成支援・プラント運用の追加検討（2026-10-20・日本時間）
 

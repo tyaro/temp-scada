@@ -48,6 +48,7 @@ export function applyObjectCommand(
       "set-line-style",
       "set-outline-style",
       "set-opacity",
+      "set-size",
     ].includes(command.type) &&
     requestedIds.some((id) => groupFor(screen, id))
   )
@@ -88,6 +89,7 @@ export function applyObjectCommand(
     command.type === "set-folder" ||
     command.type === "distribute" ||
     command.type === "distribute-gaps" ||
+    command.type === "set-size" ||
     command.type === "set-opacity" ||
     command.type === "set-color" ||
     command.type === "set-line-style" ||

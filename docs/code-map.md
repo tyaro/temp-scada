@@ -247,3 +247,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ## 複数配置の不透明度
 
 `set-opacity`を`commands.ts`のobject分類から`object-handler.ts`の共通lock／group guardを経て`selection-handler.ts`へ送る。全対象・値検証後に既存opacityだけを更新する。`designer/SelectionOpacity.svelte`／`forms/selection-opacity.ts`は既存の選択snapshot・draft guardを使い、成功時にこの入力だけを解除する。`selection-opacity.test.ts`／`e2e/selection-opacity.spec.ts`で値・所有者・参照・拒否・Undo・IME・複数フォームを検証する。実画面は`scripts/capture-selection-opacity.mjs`で記録する。
+
+## 複数配置のサイズ統一
+
+`set-size`はobject分類・lock／group guardから`editor/size-arrangement.ts`へ送る。全候補の中心・回転・描画範囲と桁落ちを検証してから反映する。`designer/SelectionSize.svelte`／`forms/selection-size.ts`は寸法別の混在値と空欄の明示patch、既存のsnapshot／draft guardを使う。`selection-size.test.ts`と`e2e/selection-size.spec.ts`が幾何・参照・原子性・入力を検証し、`scripts/capture-selection-size.mjs`が両テーマの実画面を記録する。

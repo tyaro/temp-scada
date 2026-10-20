@@ -1,3 +1,4 @@
+import { setSelectionSize } from "./size-arrangement";
 import { duplicatePlacements } from "./duplicate-placement";
 import { validateArrayCopy } from "../array-copy";
 import { distributeGaps } from "./gap-arrangement";
@@ -34,7 +35,9 @@ export function applySelectionCommand(
     objects.some((object) => groupFor(screen, object.id))
   )
     return arrangeUnits(screen, command);
-  if (command.type === "set-opacity") {
+  if (command.type === "set-size") {
+    setSelectionSize(objects, command);
+  } else if (command.type === "set-opacity") {
     if (
       typeof command.opacity !== "number" ||
       !Number.isFinite(command.opacity) ||
