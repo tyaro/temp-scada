@@ -57,6 +57,7 @@ export interface FloatingPanelHost {
   readonly viewport: PanelViewport;
   readonly element: HTMLElement | undefined;
   readonly visible: boolean;
+  readonly floatingEnabled?: boolean;
   readonly blocked: boolean;
   beforePlacementChange(): void;
   cancelWorkspaceInteraction(): void;
@@ -89,7 +90,7 @@ export function createFloatingPanel(
   let announcement = $state("");
   const supported = $derived(config.supports(host.viewport));
   const rect = $derived(
-    mode === "floating" && supported
+    mode === "floating" && supported && host.floatingEnabled !== false
       ? config.visible(desired, host.viewport)
       : null,
   );
@@ -202,6 +203,7 @@ export function createFloatingPanel(
     host.beforePlacementChange();
     mode = value.mode;
     desired = copy(value.rect);
+    config.workspace.raise(config.panelId);
   }
   function toggle() {
     if (mode === "floating")
@@ -365,7 +367,20 @@ export function createFloatingPanel(
       window.removeEventListener("resize", cancel);
     };
   });
+  function raise() {
+    if (
+      rect &&
+      host.visible &&
+      !host.blocked &&
+      !hasVisibleLayerAbove({ except: host.element })
+    )
+      config.workspace.raise(config.panelId);
+  }
   return {
+    raise,
+    front: () => {
+      if (!host.blocked) config.workspace.raise(config.panelId);
+    },
     get floating() {
       return !!rect;
     },
@@ -398,7 +413,7 @@ export function createFloatingPanel(
     },
     get style() {
       return rect
-        ? `position:fixed;left:${rect.x}px;top:${rect.y}px;width:${rect.width}px;height:${rect.height}px;`
+        ? `position:fixed;left:${rect.x}px;top:${rect.y}px;width:${rect.width}px;height:${rect.height}px;z-index:calc(var(--banto-z-header, 100) + ${config.workspace.rank(config.panelId)});`
         : undefined;
     },
     pointerStart,

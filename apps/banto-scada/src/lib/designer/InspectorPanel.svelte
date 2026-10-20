@@ -1,5 +1,5 @@
 <script lang="ts">
-  import InspectorPanelHeader from "./InspectorPanelHeader.svelte";
+  import FloatingPanelHeader from "./FloatingPanelHeader.svelte";
   import SelectionTextStyle from "./SelectionTextStyle.svelte";
   import SelectionSize from "./SelectionSize.svelte";
   import SelectionOpacity from "./SelectionOpacity.svelte";
@@ -376,6 +376,8 @@
 
 <aside
   class="inspector"
+  onpointerdown={() => layout?.raise()}
+  onfocusin={() => layout?.raise()}
   class:floating={layout?.floating}
   data-panel-placement={layout?.floating ? "floating" : "docked"}
   style={layout?.style}
@@ -385,7 +387,7 @@
   hidden={!visible}
   tabindex="-1"
 >
-  <InspectorPanelHeader {layout} {onclose} />
+  <FloatingPanelHeader {layout} {onclose} />
   {#if selected}<div class="inspector-subject">
       <strong title={placementLabel(selected, project.symbols)}
         >{placementLabel(selected, project.symbols)}</strong

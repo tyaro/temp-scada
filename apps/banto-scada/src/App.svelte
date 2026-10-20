@@ -199,6 +199,10 @@
     panelWidthMaximum,
     type PanelWidths,
   } from "./lib/designer/panel-widths";
+  import FloatingPanelHeader from "./lib/designer/FloatingPanelHeader.svelte";
+  import { createFloatingPanelWorkspace } from "./lib/designer/controllers/floating-panel.svelte";
+  import { createFloatingSidebar } from "./lib/designer/controllers/floating-sidebar.svelte";
+  const floatingPanels = createFloatingPanelWorkspace();
   import { createFloatingInspector } from "./lib/designer/controllers/floating-inspector.svelte";
   let windowWidth = $state(window.innerWidth);
   let windowHeight = $state(window.innerHeight);
@@ -208,6 +212,7 @@
       const top = node.getBoundingClientRect().top;
       if (top !== workspaceTop) {
         floatingInspector.cancel();
+        floatingSidebar.cancel();
         workspaceTop = top;
       }
     };
@@ -285,41 +290,85 @@
   let leftResizer = $state<{ cancel: () => void }>();
   let rightResizer = $state<{ cancel: () => void }>();
   let bottomResizer = $state<{ cancel: () => void }>();
-  const floatingInspector = createFloatingInspector({
-    get viewport() {
-      return {
-        width: windowWidth,
-        height: windowHeight,
-        top: workspaceTop,
-      };
+  const floatingInspector = createFloatingInspector(
+    {
+      get viewport() {
+        return {
+          width: windowWidth,
+          height: windowHeight,
+          top: workspaceTop,
+        };
+      },
+      get element() {
+        return inspectorPanel;
+      },
+      get visible() {
+        return mode === "edit" && showInspector;
+      },
+      get blocked() {
+        return busy || !!drafts.pending || !!replacement || mode !== "edit";
+      },
+      beforePlacementChange() {
+        leftResizer?.cancel();
+        rightResizer?.cancel();
+        bottomResizer?.cancel();
+        canvasWorkspace?.preparePanelResize();
+      },
+      cancelWorkspaceInteraction() {
+        leftResizer?.cancel();
+        rightResizer?.cancel();
+        bottomResizer?.cancel();
+        stopPlacement();
+        canvasWorkspace?.cancelInteractions();
+        layerTreeBindings.endLayerDrag();
+      },
+      report(message) {
+        report("success", message);
+      },
     },
-    get element() {
-      return inspectorPanel;
+    floatingPanels,
+  );
+  const floatingSidebar = createFloatingSidebar(
+    {
+      get viewport() {
+        return {
+          width: windowWidth,
+          height: windowHeight,
+          top: workspaceTop,
+        };
+      },
+      get element() {
+        return sidebarPanel;
+      },
+      get floatingEnabled() {
+        return mode === "edit";
+      },
+      get visible() {
+        return mode === "edit" && showSidebar;
+      },
+      get blocked() {
+        return busy || !!drafts.pending || !!replacement || mode !== "edit";
+      },
+      beforePlacementChange() {
+        leftResizer?.cancel();
+        rightResizer?.cancel();
+        bottomResizer?.cancel();
+        canvasWorkspace?.preparePanelResize();
+      },
+      cancelWorkspaceInteraction() {
+        leftResizer?.cancel();
+        rightResizer?.cancel();
+        bottomResizer?.cancel();
+        stopPlacement();
+        canvasWorkspace?.cancelInteractions();
+        layerTreeBindings.endLayerDrag();
+      },
+      report(message) {
+        report("success", message);
+      },
     },
-    get visible() {
-      return mode === "edit" && showInspector;
-    },
-    get blocked() {
-      return busy || !!drafts.pending || !!replacement || mode !== "edit";
-    },
-    beforePlacementChange() {
-      leftResizer?.cancel();
-      rightResizer?.cancel();
-      bottomResizer?.cancel();
-      canvasWorkspace?.preparePanelResize();
-    },
-    cancelWorkspaceInteraction() {
-      leftResizer?.cancel();
-      rightResizer?.cancel();
-      bottomResizer?.cancel();
-      stopPlacement();
-      canvasWorkspace?.cancelInteractions();
-      layerTreeBindings.endLayerDrag();
-    },
-    report(message) {
-      report("success", message);
-    },
-  });
+    floatingPanels,
+  );
   function restorePanelLayout() {
     if (mode !== "edit" || busy || drafts.pending || replacement) return;
     leftResizer?.cancel();
@@ -327,6 +376,7 @@
     bottomResizer?.cancel();
     canvasWorkspace?.preparePanelResize();
     floatingInspector.standard();
+    floatingSidebar.standard();
     panelWidths = { ...DEFAULT_PANEL_LAYOUT.widths };
     referenceHeight = DEFAULT_PANEL_LAYOUT.referenceHeight;
     showSidebar = DEFAULT_PANEL_LAYOUT.panels.sidebar;
@@ -2576,7 +2626,7 @@
     }
   }
   const menuBlocked = $derived(
-    busy || !!drafts.pending || !!replacement || floatingInspector.gesturing,
+    busy || !!drafts.pending || !!replacement || floatingPanels.gesturing,
   );
   const editBlocked = $derived(menuBlocked || mode !== "edit");
   const selectionViewTarget = $derived(selectionTarget(screen, selectedIds));
@@ -2730,6 +2780,7 @@
     },
     view: {
       inspectorLayout: floatingInspector,
+      sidebarLayout: floatingSidebar,
       get mode() {
         return mode;
       },
@@ -3034,7 +3085,7 @@
   class:editing={mode === "edit"}
   class:fullscreen-preview={mode === "preview" && previewFullscreenActive}
   class:sidebar-visible={mode === "edit"
-    ? showSidebar
+    ? showSidebar && !floatingSidebar.floating
     : !previewFullscreenActive}
   class:inspector-visible={showInspector &&
     mode === "edit" &&
@@ -3042,20 +3093,25 @@
 >
   <aside
     class="project-sidebar"
+    class:floating={floatingSidebar.floating}
+    data-panel-placement={floatingSidebar.floating ? "floating" : "docked"}
+    style={floatingSidebar.style}
+    onpointerdown={() => floatingSidebar.raise()}
+    onfocusin={() => floatingSidebar.raise()}
     id="designer-project-panel"
     aria-label="Project と部品"
     hidden={mode === "edit" && !showSidebar}
     bind:this={sidebarPanel}
     tabindex="-1"
   >
-    {#if mode === "edit"}<div class="sidebar-heading">
-        <span>作業パネル</span><button
-          aria-label="左パネルを隠す"
-          title="左パネルを隠す"
-          onclick={() => setAuxPanelVisibility({ sidebar: false }, "sidebar")}
-          >×</button
-        >
-      </div>{/if}
+    {#if mode === "edit"}<FloatingPanelHeader
+        layout={floatingSidebar}
+        label="作業パネル"
+        panelName="作業パネル"
+        dockSide="左"
+        hideLabel="左パネルを隠す"
+        onclose={() => setAuxPanelVisibility({ sidebar: false }, "sidebar")}
+      />{/if}
     <DesignerSidebar bind:active={activePanel} editable={mode === "edit"}>
       {#snippet projectPanel()}
         <div class="project-root" title={project.manifest.name}>
@@ -3335,6 +3391,19 @@
         {/if}
       {/snippet}
     </DesignerSidebar>
+    {#if floatingSidebar.floating && floatingSidebar.rect}
+      <button
+        type="button"
+        class="sidebar-floating-size"
+        aria-label="作業パネルのサイズを変更"
+        title="ドラッグまたはEnterと矢印でサイズ変更"
+        style:left={`${floatingSidebar.rect.x + floatingSidebar.rect.width - 22}px`}
+        style:top={`${floatingSidebar.rect.y + floatingSidebar.rect.height - 22}px`}
+        onpointerdown={(event) => floatingSidebar.pointerStart("resize", event)}
+        onkeydown={(event) => floatingSidebar.keyboardStart("resize", event)}
+        >↘</button
+      >
+    {/if}
   </aside>
   <section aria-label="画面プレビュー" bind:this={editorRegion}>
     {#if activeDefinition}
@@ -3561,7 +3630,7 @@
     />
   {/if}
   {#if mode === "edit" && windowWidth >= 1100}
-    {#if showSidebar}
+    {#if showSidebar && !floatingSidebar.floating}
       <PanelResizeHandle
         bind:this={leftResizer}
         side="left"
@@ -4001,20 +4070,27 @@
   [hidden] {
     display: none;
   }
-  .sidebar-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 6px 14px;
-    border-bottom: 1px solid var(--banto-border);
-    font-size: 12px;
-    color: var(--banto-text-muted);
+  .project-sidebar.floating {
+    border: 1px solid var(--banto-border);
+    border-radius: 6px;
+    box-shadow: 0 10px 32px #0003;
+    overflow: auto;
+    min-height: 0;
+    box-sizing: border-box;
   }
-  .sidebar-heading button {
-    width: 28px;
+  .sidebar-floating-size {
+    position: fixed;
+    width: 22px;
+    height: 22px;
     margin: 0;
-    padding: 2px;
-    font-size: 18px;
+    padding: 0;
+    z-index: 2;
+    background: var(--banto-surface);
+    color: var(--banto-text);
+    border: 1px solid var(--banto-border);
+    border-radius: 3px;
+    touch-action: none;
+    cursor: nwse-resize;
   }
   aside {
     padding: 16px;

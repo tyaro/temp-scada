@@ -1,4 +1,8 @@
 import {
+  parseFloatingPanelPlacement,
+  type FloatingPanelPlacement,
+} from "../designer/floating-panel-layout";
+import {
   parseInspectorPlacement,
   type InspectorPlacement,
 } from "../designer/inspector-layout";
@@ -87,6 +91,40 @@ export async function saveInspectorPlacement(
     toastStore.push(
       "warning",
       "プロパティの配置を保存できません。現在の配置と以前の保存配置を保持します。",
+    );
+    return false;
+  }
+}
+const SIDEBAR_PLACEMENT_KEY = "scada.designer.sidebar-placement";
+let savedSidebarPlacement: FloatingPanelPlacement | null = null;
+export function getSavedSidebarPlacement(): FloatingPanelPlacement | null {
+  return savedSidebarPlacement
+    ? { ...savedSidebarPlacement, rect: { ...savedSidebarPlacement.rect } }
+    : null;
+}
+/** Explicit save only; a failed write leaves the previous slot available. */
+export async function saveSidebarPlacement(
+  value: FloatingPanelPlacement,
+): Promise<boolean> {
+  const candidate = parseFloatingPanelPlacement(
+    JSON.stringify(value),
+    "sidebar",
+  );
+  if (!candidate) {
+    toastStore.push(
+      "warning",
+      "作業パネルの配置を保存できません。配置の設定を確認してください。",
+    );
+    return false;
+  }
+  try {
+    await uiSettings.set(SIDEBAR_PLACEMENT_KEY, JSON.stringify(candidate));
+    savedSidebarPlacement = candidate;
+    return true;
+  } catch {
+    toastStore.push(
+      "warning",
+      "作業パネルの配置を保存できません。現在の配置と以前の保存配置を保持します。",
     );
     return false;
   }
@@ -275,6 +313,18 @@ export async function initializeBanto(): Promise<() => void> {
     toastStore.push(
       "warning",
       "プロパティの保存配置を読み込めません。右側の標準配置を使います。",
+    );
+  }
+  try {
+    savedSidebarPlacement = parseFloatingPanelPlacement(
+      await uiSettings.get(SIDEBAR_PLACEMENT_KEY),
+      "sidebar",
+    );
+  } catch {
+    savedSidebarPlacement = null;
+    toastStore.push(
+      "warning",
+      "作業パネルの保存配置を読み込めません。左側の標準配置を使います。",
     );
   }
   try {

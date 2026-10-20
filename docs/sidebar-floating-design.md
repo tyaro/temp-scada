@@ -1,6 +1,6 @@
 # 左作業パネルの浮動配置
 
-状態: **Astraレビュー反映・実装中**。プロジェクト／レイヤー／部品の3タブを含む左作業パネル全体を対象とする。左右固定を標準に保ち、タブ個別分離・任意端へのドッキング・別OS窓は後続。[プロパティの初回設計](inspector-floating-design.md)と同じ入力保持契約を使う。
+状態: **Astraレビューを反映して実装・関連検証済み**。プロジェクト／レイヤー／部品の3タブを含む左作業パネル全体を対象とする。左右固定を標準に保ち、タブ個別分離・任意端へのドッキング・別OS窓は後続。[プロパティの初回設計](inspector-floating-design.md)と同じ入力保持契約を使う。
 
 ## 配置と操作
 
@@ -26,3 +26,17 @@
 - キーボード移動とresize、Tab・IME・上位Menu／Modal、部品／レイヤーDnDを確認する。
 - 保存・再読込・破損／未知version・失敗、狭幅／プレビュー退避、手動倍率とキャンバス中心を確認する。
 - Project・Undo・保存状態を配置操作だけでは変更しない。
+
+## 実装と検証
+
+`floating-panel.svelte.ts`の共通操作と単一所有者を左右で使う。`floating-sidebar.svelte.ts`は作業パネルの保存slot・文言・初期位置を渡し、`FloatingPanelHeader.svelte`が両パネルの見出し操作を共用する。前面化はpointer／focusに加え常設メニューからも指定できる。Panel ID／保存slotの識別・所有者は単体試験で確認する。
+
+Banto UI設定のslotは`scada.designer.sidebar-placement`、形式は`layoutVersion:1`／`panelId:sidebar`／mode／rect。Inspectorの既存slotは維持する。左右とも幅280〜640px・高さ240〜900pxの範囲を使い、表示時だけ画面内へ補正する。
+
+TS全1064件、型チェック（エラー／警告なし）と本番buildが成功。ブラウザは新規8件と既存Inspector12件が成功。両テーマ・同じDOM・左右のdraft・検索・Tab／前面化、保存／失敗／再読込、狭幅／プレビュー退避、部品DnD／Undo、操作排他、resize通知より早いpointerupの取消を確認した。位置補正の試験は、画面縮小による表示用clampとドラッグ確定の誤りを区別する。
+
+`node scripts/capture-sidebar-floating.mjs docs/assets/frontend-ux`で実画面を撮影する。実際の文字画素を検査した同一PNGを記録する。
+
+![左作業パネルとプロパティ・ライト](assets/frontend-ux/sidebar-floating-light.png)
+
+![左作業パネルとプロパティ・ダーク](assets/frontend-ux/sidebar-floating-dark.png)

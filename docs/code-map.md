@@ -238,8 +238,8 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ## プロパティの浮動配置
 
 - `designer/floating-panel-layout.ts`: Project外のversion付き配置、表示用clamp、固定起点の移動／サイズ計算。`inspector-layout.ts`は既存slotのadapter。`inspector-layout.test.ts`で不正設定・境界を確認する。
-- `designer/controllers/floating-panel.svelte.ts`: 同じDOMの配置、pointer／keyboard transaction、取消・上位層優先・明示保存。workspaceは操作所有者を一つにし、二枚の前面順位を管理する。`floating-inspector.svelte.ts`は保存slot・文言・幾何のadapter。
-- `designer/InspectorPanelHeader.svelte`／`InspectorPanel.svelte`: 非モーダルな操作ハンドルと配置メニュー。フォーム本体を移設・再生成しない。
+- `designer/controllers/floating-panel.svelte.ts`: 同じDOMの配置、pointer／keyboard transaction、取消・上位層優先・明示保存。workspaceは操作所有者を一つにし、二枚の前面順位を管理する。`floating-inspector.svelte.ts`と`floating-sidebar.svelte.ts`は各保存slot・文言・幾何のadapter。`FloatingPanelHeader.svelte`が左右の見出しを共用する。
+- `designer/FloatingPanelHeader.svelte`／`InspectorPanel.svelte`: 非モーダルな操作ハンドルと配置メニュー。フォーム本体を移設・再生成しない。
 - `banto/setup.ts`: Banto UI設定の専用slot。書込成功時のみ保存済みsnapshotを更新する。
 - Appの`measureWorkspace`: ResizeObserverで上部境界を追跡。`CanvasWorkspace.cancelInteractions`は配置変更と作図gestureを排他にする。既存の手動倍率・中心保持は共用する。
 - `e2e/inspector-floating.spec.ts`: DOM identity・複数draft・IME・通常blur・取消・保存復元・狭い画面・上位Menuを実操作で確認する。
@@ -261,3 +261,5 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 `multiline-text-layout.ts`の`normalizeTextNewlines`／`fitTextWidth`／`fitStaticLines`は純粋な文字計測adapterを受け取り、空行と幅／高さの省略・実inkのunionを計算する。`multiline-text-layout.test.ts`で字体・grapheme・縦省略と一時cacheを検証する。`text-content.ts`がTS公開読込・編集・保存のLF正規化を担い、Rust・schema・共有ケースを揃える。`Primitive.svelte`は静的かつLFを含む配置だけ`MultilineTextPrimitive.svelte`へ渡し、従来の一行描画を保つ。`InspectorPanel.svelte`のtextareaと`object-form.ts`がIME・確定・入力保護を接続する。`multiline-text.spec.ts`が両テーマ、動的表示・再利用・保存・clipboardを確認する。Project0.32.0の契約と範囲は[具体設計](multiline-text-design.md)を参照する。
 
 浮動Inspectorのgestureは開始時のnative window寸法も保持し、入力捕捉時に照合する。`e2e/inspector-floating.spec.ts`の通知遅延ケースはresizeイベントへの依存を切り離して確定競合を再現する。
+
+左右の浮動配置は`App.svelte`で一つのworkspaceへ接続し、表示・上位層・作図操作・固定幅と連携する。sidebarはプレビュー時だけ浮動を休止する。`setup.ts`は各slotを独立して明示保存し、`designer-actions.ts`は復帰と前面表示を提供する。`sidebar-floating.spec.ts`と`inspector-floating.spec.ts`で同じDOM・入力保持・排他・永続化を確認する。

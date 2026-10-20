@@ -79,6 +79,7 @@ export interface DesignerActionsHost {
   };
   view: {
     inspectorLayout?: FloatingInspector;
+    sidebarLayout?: FloatingInspector;
     readonly mode: "edit" | "preview";
     readonly menuBlocked: boolean;
     readonly selectionViewReason: string | null;
@@ -736,8 +737,62 @@ export function createDesignerActions(host: DesignerActionsHost) {
             run: () =>
               host.view.setInspectorVisibility(!host.view.showInspector, true),
           },
+          ...(host.view.sidebarLayout
+            ? [
+                {
+                  label: "作業パネルを前面に表示",
+                  disabled: host.editing.editBlocked,
+                  run: () => {
+                    host.view.setAuxPanelVisibility(
+                      { sidebar: true },
+                      "sidebar",
+                    );
+                    host.view.sidebarLayout?.front();
+                  },
+                },
+                {
+                  label: host.view.sidebarLayout.preferredFloating
+                    ? "作業パネルを左へ戻す"
+                    : "作業パネルを浮動にする",
+                  disabled:
+                    host.editing.editBlocked ||
+                    (!host.view.sidebarLayout.preferredFloating &&
+                      !host.view.sidebarLayout.supported),
+                  run: () => host.view.sidebarLayout?.toggle(),
+                },
+                {
+                  label: "作業パネル配置を保存",
+                  disabled:
+                    host.editing.editBlocked || host.view.sidebarLayout.saving,
+                  run: () => {
+                    void host.view.sidebarLayout?.save();
+                  },
+                },
+                {
+                  label: "保存した作業パネル配置に戻す",
+                  disabled:
+                    host.editing.editBlocked ||
+                    !host.view.sidebarLayout.hasSaved,
+                  run: () => {
+                    host.view.sidebarLayout?.restore();
+                    host.view.setAuxPanelVisibility(
+                      { sidebar: true },
+                      "sidebar",
+                    );
+                  },
+                },
+              ]
+            : []),
           ...(host.view.inspectorLayout
             ? [
+                {
+                  label: "プロパティを前面に表示",
+                  disabled: host.editing.editBlocked,
+                  run: () => {
+                    host.view.setInspectorVisibility(true, true);
+                    host.view.inspectorLayout?.front();
+                  },
+                },
                 {
                   label: host.view.inspectorLayout.preferredFloating
                     ? "プロパティを右へ戻す"

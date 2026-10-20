@@ -1,8 +1,22 @@
 <script lang="ts">
   import { Menu, MenuItem } from "@banto/ui";
-  import type { FloatingInspector } from "./controllers/floating-inspector.svelte";
-  let { layout, onclose }: { layout?: FloatingInspector; onclose: () => void } =
-    $props();
+  import type { FloatingPanel } from "./controllers/floating-panel.svelte";
+  let {
+    layout,
+    onclose,
+    label = "プロパティ",
+    panelName = "プロパティパネル",
+    dockSide = "右",
+    hideLabel = "プロパティを隠す",
+  }: {
+    layout?: FloatingPanel;
+    onclose: () => void;
+    label?: string;
+    panelName?: string;
+    dockSide?: string;
+    hideLabel?: string;
+  } = $props();
+  const helpId = $props.id();
 </script>
 
 <div class="panel-header">
@@ -10,26 +24,26 @@
     {#if layout?.floating}<button
         type="button"
         class="grip"
-        aria-label="プロパティパネルを移動"
-        aria-describedby="inspector-placement-help"
+        aria-label={`${panelName}を移動`}
+        aria-describedby={helpId}
         title="ドラッグで移動。Enterでキーボード操作"
         onpointerdown={(event) => layout?.pointerStart("move", event)}
         onkeydown={(event) => layout?.keyboardStart("move", event)}
-        >⠿ プロパティ</button
-      >{:else}プロパティ{/if}
+        >⠿ {label}</button
+      >{:else}{label}{/if}
   </h2>
   <div class="actions">
     {#if layout}
-      <Menu label="プロパティの配置" placement="bottom-end">
+      <Menu label={`${label}の配置`} placement="bottom-end">
         {#snippet trigger(props)}<button
             {...props}
             type="button"
-            title="プロパティの配置"
-            aria-label="プロパティの配置">⋯</button
+            title={`${label}の配置`}
+            aria-label={`${label}の配置`}>⋯</button
           >{/snippet}
         <MenuItem
           label={layout.preferredFloating
-            ? "右へ戻す"
+            ? `${dockSide}へ戻す`
             : layout.supported
               ? "浮動にする"
               : "浮動にする（広い画面で利用できます）"}
@@ -38,27 +52,27 @@
           onSelect={layout.toggle}
         />
         <MenuItem
-          label="プロパティ配置を保存"
+          label={`${label}配置を保存`}
           disabled={layout.blocked || layout.saving || layout.gesturing}
           onSelect={() => void layout?.save()}
         />
         <MenuItem
-          label="保存したプロパティ配置に戻す"
+          label={`保存した${label}配置に戻す`}
           disabled={layout.blocked || !layout.hasSaved}
           onSelect={layout.restore}
         />
-        <MenuItem label="プロパティを隠す" onSelect={onclose} />
+        <MenuItem label={hideLabel} onSelect={onclose} />
       </Menu>
     {/if}
     <button
       type="button"
-      aria-label="プロパティを隠す"
-      title="プロパティを隠す"
+      aria-label={hideLabel}
+      title={hideLabel}
       onclick={onclose}>×</button
     >
   </div>
 </div>
-<span class="sr-only" id="inspector-placement-help"
+<span class="sr-only" id={helpId}
   >EnterまたはSpaceで開始、矢印で8px、Shiftと矢印で32px、Enterで確定、Escapeで取消、Tabで確定して移動します。</span
 >
 {#if layout}<span class="sr-only" role="status" aria-live="polite"
