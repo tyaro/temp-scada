@@ -1,14 +1,14 @@
 import {
   getBounds,
   type Screen,
-  type SymbolDefinition,
   type ScreenObject,
   type GeometricGroup,
 } from "./project";
 import { normalizeRotation, rotatePoint, rotationPivot } from "./rotation";
 
-export function groupsOf(owner: Screen | SymbolDefinition): GeometricGroup[] {
-  return "groups" in owner ? owner.groups : [];
+export type GroupOwner = { objects: ScreenObject[]; groups?: GeometricGroup[] };
+export function groupsOf(owner: GroupOwner): GeometricGroup[] {
+  return owner.groups ?? [];
 }
 export function validateGroups(screen: Screen, ids: Set<string>): void {
   const ordered = [...screen.objects].sort((a, b) => a.order - b.order);
@@ -31,11 +31,49 @@ export function validateGroups(screen: Screen, ids: Set<string>): void {
     });
   }
 }
-export function groupFor(owner: Screen | SymbolDefinition, id: string) {
+export function groupFor(owner: GroupOwner, id: string) {
   return groupsOf(owner).find((group) => group.memberIds.includes(id));
 }
+/** Canvas selection keeps the existing fully-contained, visible, unlocked rule. */
+export function canvasSelectionIds(
+  owner: GroupOwner,
+  ids: readonly string[],
+): string[] {
+  const wanted = new Set(ids);
+  const blocked = new Set(
+    groupsOf(owner).flatMap((group) =>
+      group.memberIds.every(
+        (id) =>
+          wanted.has(id) &&
+          owner.objects.some(
+            (object) =>
+              object.id === id && !object.locked && object.visible !== false,
+          ),
+      )
+        ? []
+        : group.memberIds,
+    ),
+  );
+  return owner.objects
+    .filter(
+      (object) =>
+        wanted.has(object.id) &&
+        !blocked.has(object.id) &&
+        !object.locked &&
+        object.visible !== false,
+    )
+    .sort((a, b) => a.order - b.order)
+    .map((object) => object.id);
+}
+export function selectedGroup(owner: GroupOwner, ids: readonly string[]) {
+  return groupsOf(owner).find(
+    (group) =>
+      group.memberIds.length === ids.length &&
+      group.memberIds.every((id) => ids.includes(id)),
+  );
+}
 export function completeGroupSelection(
-  owner: Screen | SymbolDefinition,
+  owner: GroupOwner,
   ids: readonly string[],
 ) {
   const selected = new Set(ids);
@@ -49,7 +87,7 @@ export function completeGroupSelection(
       );
 }
 export function expandGroupSelection(
-  owner: Screen | SymbolDefinition,
+  owner: GroupOwner,
   ids: readonly string[],
 ): string[] {
   const selected = new Set(ids);
@@ -62,7 +100,7 @@ export function expandGroupSelection(
     .map((object) => object.id);
 }
 export function selectionUnits(
-  owner: Screen | SymbolDefinition,
+  owner: GroupOwner,
   ids: readonly string[],
 ): ScreenObject[][] {
   completeGroupSelection(owner, ids);

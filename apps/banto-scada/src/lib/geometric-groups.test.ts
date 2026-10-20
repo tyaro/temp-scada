@@ -6,6 +6,7 @@ import { applyCommand } from "./editor";
 import { emptyHistory, recordEdit, travelHistory } from "./history";
 import { projectContent } from "./save-state";
 import {
+  canvasSelectionIds,
   expandGroupSelection,
   selectionUnits,
   unitBounds,
@@ -319,4 +320,75 @@ it("uses schema Unicode code point limits for group names", () => {
       "edit",
     ),
   ).toThrow();
+});
+it("selects complete unlocked visible units on canvas and excludes partial or mixed units", () => {
+  const project = grouped(),
+    screen = project.screens[0],
+    ids = screen.objects.map((object) => object.id);
+  expect(canvasSelectionIds(screen, [ids[0]])).toEqual([]);
+  expect(canvasSelectionIds(screen, ids)).toEqual(ids);
+  screen.objects[1].locked = true;
+  expect(canvasSelectionIds(screen, ids)).toEqual([ids[2]]);
+  delete screen.objects[1].locked;
+  screen.objects[1].visible = false;
+  expect(canvasSelectionIds(screen, ids)).toEqual([ids[2]]);
+});
+it("round-trips rotation of Text, Polyline, cropped Image and shared Symbol without changing shape data", () => {
+  let project = fresh();
+  const screenId = project.screens[0].id;
+  project = applyCommand(
+    project,
+    { type: "add-symbol", screenId, template: "pump" },
+    "edit",
+  );
+  project = applyCommand(
+    project,
+    { type: "add", screenId, kind: "line" },
+    "edit",
+  );
+  project = applyCommand(
+    project,
+    {
+      type: "add-image",
+      screenId,
+      asset: {
+        id: "0199f400-0000-7000-8000-000000000001",
+        sha256: "0".repeat(64),
+        mime: "image/png",
+        byteLength: 100,
+        width: 400,
+        height: 200,
+        name: "crop.png",
+      },
+      frame: { x: 100, y: 300, width: 120, height: 70 },
+    },
+    "edit",
+  );
+  const image = project.screens[0].objects.at(-1)!;
+  if (image.shape.type !== "image") throw new Error("fixture");
+  image.shape.crop = { x: 0.1, y: 0.1, width: 0.5, height: 0.5 };
+  project.screens[0].objects.forEach(
+    (object, index) => (object.rotation = 17 + index * 31),
+  );
+  const ids = project.screens[0].objects.map((object) => object.id);
+  project = applyCommand(
+    project,
+    { type: "group", screenId, objectIds: ids },
+    "edit",
+  );
+  const before = structuredClone(project);
+  for (let index = 0; index < 4; index++)
+    project = applyCommand(
+      project,
+      { type: "rotate-groups", screenId, objectIds: ids, delta: 90 },
+      "edit",
+    );
+  project.screens[0].objects.forEach((object, index) => {
+    expect(object.x).toBeCloseTo(before.screens[0].objects[index].x, 9);
+    expect(object.y).toBeCloseTo(before.screens[0].objects[index].y, 9);
+    expect(object.shape).toEqual(before.screens[0].objects[index].shape);
+    expect(object.rotation).toBe(before.screens[0].objects[index].rotation);
+  });
+  expect(project.assets).toEqual(before.assets);
+  expect(project.symbols).toEqual(before.symbols);
 });

@@ -2,11 +2,21 @@ import {
   MAX_FOLDER_DEPTH,
   type LayerFolder,
   type ScreenObject,
+  type GeometricGroup,
 } from "../project";
-type Owner = { folders: LayerFolder[]; objects: ScreenObject[] };
+type Owner = {
+  folders: LayerFolder[];
+  objects: ScreenObject[];
+  groups?: GeometricGroup[];
+};
 export type LayerRow =
   | { kind: "folder"; folder: LayerFolder; depth: number; open: boolean }
-  | { kind: "object"; object: ScreenObject; depth: number };
+  | {
+      kind: "object";
+      object: ScreenObject;
+      depth: number;
+      group?: GeometricGroup;
+    };
 export function folderAncestors(
   folders: LayerFolder[],
   id?: string,
@@ -38,10 +48,19 @@ export function layerTree(
   const matchingObjects = objects.filter(
     (object) =>
       !normalized ||
-      `${label(object)} ${folderPath(folders, object.folderId)}`
+      `${label(object)} ${folderPath(folders, object.folderId)} ${owner.groups?.find((group) => group.memberIds.includes(object.id))?.name ?? ""}`
         .toLocaleLowerCase()
         .includes(normalized),
   );
+  for (const group of owner.groups ?? [])
+    if (matchingObjects.some((object) => group.memberIds.includes(object.id)))
+      for (const object of objects)
+        if (
+          group.memberIds.includes(object.id) &&
+          !matchingObjects.includes(object)
+        )
+          matchingObjects.push(object);
+  matchingObjects.sort((a, b) => a.order - b.order);
   const included = new Set<string>();
   function include(id?: string) {
     for (const folder of folderAncestors(folders, id)) included.add(folder.id);
@@ -64,8 +83,13 @@ export function layerTree(
     }
     for (const object of matchingObjects.filter(
       (object) => object.folderId === parentId,
-    ))
-      rows.push({ kind: "object", object, depth });
+    )) {
+      const group = owner.groups?.find((group) =>
+        group.memberIds.includes(object.id),
+      );
+      if (group && object.id !== group.memberIds[0]) continue;
+      rows.push({ kind: "object", object, depth, ...(group ? { group } : {}) });
+    }
   }
   visit(undefined, 0);
   return { rows, matchingObjects };

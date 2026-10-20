@@ -75,6 +75,65 @@ async function fixture(paint?: FillPaint) {
     ),
   };
 }
+it("carries grouped images and paint in v3 while encoding each original once", async () => {
+  const { project, store, screenId } = await fixture();
+  const grouped = applyCommand(
+    project,
+    {
+      type: "group",
+      screenId,
+      objectIds: project.screens[0].objects.map((object) => object.id),
+      name: "設備",
+    },
+    "edit",
+  );
+  const snapshot = copyObjectSnapshot(
+    grouped,
+    screenId,
+    grouped.screens[0].groups[0].memberIds,
+    "source",
+  );
+  const fragment = parseClipboard(
+    await (await encodeAssetClipboard(snapshot, store)).text(),
+  );
+  const decoded = await decodeAssetClipboard(fragment);
+  try {
+    expect(fragment.version).toBe(3);
+    expect(fragment.images).toHaveLength(1);
+    expect(
+      new Uint8Array(
+        await decoded.blob(fragment.project.assets[0].sha256).arrayBuffer(),
+      ),
+    ).toEqual(png);
+    const destination = createProject();
+    const next = applyCommand(
+      destination,
+      {
+        type: "paste",
+        screenId: destination.screens[0].id,
+        text: JSON.stringify(fragment),
+        origin: "other",
+        center: { x: 200, y: 200 },
+      },
+      "edit",
+    );
+    expect(next.screens[0].groups[0].memberIds).toEqual(
+      next.screens[0].objects.map((object) => object.id),
+    );
+    expect(next.screens[0].groups[0].id).not.toBe(
+      grouped.screens[0].groups[0].id,
+    );
+    expect(next.assets).toHaveLength(1);
+    expect(next.screens[0].objects.map((object) => object.shape.type)).toEqual([
+      "image",
+      "image",
+      "rectangle",
+    ]);
+  } finally {
+    decoded.dispose();
+    store.dispose();
+  }
+});
 it("encodes each original once and verifies exact bytes into a fresh Store, then pastes mixed images and gradient paint with one Undo", async () => {
   const { snapshot, store, project } = await fixture();
   const text = await (await encodeAssetClipboard(snapshot, store)).text(),

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import GroupInspector from "./GroupInspector.svelte";
+  import { selectedGroup, groupFor } from "../geometric-groups";
   import { screenViewOptions } from "../screen-references";
   import { placementLabel } from "../placement-label";
   import ImageCrop from "./ImageCrop.svelte";
@@ -20,7 +22,12 @@
     type NumericProperty,
     type NumericTarget,
   } from "./numeric-properties";
-  import type { Project, ScreenObject } from "../project";
+  import type {
+    Project,
+    Screen,
+    SymbolDefinition,
+    ScreenObject,
+  } from "../project";
   import type { EditCommand } from "../editor";
   import { symbolUsage } from "../editor";
   import type { createDraftGuard } from "./drafts.svelte";
@@ -67,7 +74,7 @@
     ontogglevisibility: (id: string) => void;
     ontogglelock: (id: string) => void;
     activeDefinition: boolean;
-    screen: { id: string; name: string; objects: ScreenObject[] };
+    screen: Screen | SymbolDefinition;
     drafts: ReturnType<typeof createDraftGuard>;
     properties: (event: SubmitEvent) => void;
     moveSelection: (event: SubmitEvent) => void;
@@ -78,6 +85,10 @@
     imageBusy: boolean;
     images: ReadonlyMap<string, { url: string; width: number; height: number }>;
   } = $props();
+  const group = $derived(selectedGroup(screen, selectedIds));
+  const containsGroups = $derived(
+    selectedIds.some((id) => groupFor(screen, id)),
+  );
   const selectedColors = $derived(
     new Set(
       screen.objects
@@ -170,7 +181,7 @@
   }
   export function focusName() {
     const input = element?.querySelector<HTMLInputElement>(
-      'form[data-editor-form="object"] input[name="name"]',
+      'form[data-editor-form="group-name"] input[name="name"], form[data-editor-form="object"] input[name="name"]',
     );
     input?.focus();
     input?.select();
@@ -401,6 +412,21 @@
       {/if}
     {/if}
     {#if selectedIds.length > 1}
+      {#if group}
+        {#key `${generation}:${screen.id}:${group.id}`}
+          <GroupInspector
+            {group}
+            objects={screen.objects.filter((object) =>
+              group.memberIds.includes(object.id),
+            )}
+            {generation}
+            screenId={screen.id}
+            locked={selectionLocked}
+            {drafts}
+            {properties}
+          />
+        {/key}
+      {/if}
       <p>
         {selectedIds.length} 件選択しています。図形をドラッグするとまとめて移動します。
       </p>
@@ -432,51 +458,53 @@
           </div>
         </fieldset>
       </form>
-      {#key `${generation}:${screen.id}:${activeDefinition}:${[...selectedIds].sort().join(",")}`}
-        <SelectionColor
-          current={commonColor}
-          {definitionColorCount}
-          {gradientCount}
-          imageCount={screen.objects.filter(
-            (o) =>
-              selectedIds.includes(o.id) &&
-              (o.shape.type === "image" || o.shape.type === "screenView"),
-          ).length}
-          {paintDisabledCount}
-          count={selectedIds.length}
-          hiddenCount={hiddenSelectionCount}
-          locked={selectionLocked}
-          definition={activeDefinition}
-          targetKey={`${generation}:${screen.id}:${activeDefinition}`}
-          objectIds={selectedIds}
-          {drafts}
-          onsubmit={properties}
-        />
-        <SelectionOutline
-          objects={screen.objects.filter((object) =>
-            selectedIds.includes(object.id),
-          )}
-          hiddenCount={hiddenSelectionCount}
-          locked={selectionLocked}
-          definition={activeDefinition}
-          targetKey={`${generation}:${screen.id}:${activeDefinition}`}
-          objectIds={selectedIds}
-          {drafts}
-          onsubmit={properties}
-        />
-        <SelectionLine
-          objects={screen.objects.filter((object) =>
-            selectedIds.includes(object.id),
-          )}
-          hiddenCount={hiddenSelectionCount}
-          locked={selectionLocked}
-          definition={activeDefinition}
-          targetKey={`${generation}:${screen.id}:${activeDefinition}`}
-          objectIds={selectedIds}
-          {drafts}
-          onsubmit={properties}
-        />
-      {/key}
+      {#if !containsGroups}
+        {#key `${generation}:${screen.id}:${activeDefinition}:${[...selectedIds].sort().join(",")}`}
+          <SelectionColor
+            current={commonColor}
+            {definitionColorCount}
+            {gradientCount}
+            imageCount={screen.objects.filter(
+              (o) =>
+                selectedIds.includes(o.id) &&
+                (o.shape.type === "image" || o.shape.type === "screenView"),
+            ).length}
+            {paintDisabledCount}
+            count={selectedIds.length}
+            hiddenCount={hiddenSelectionCount}
+            locked={selectionLocked}
+            definition={activeDefinition}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            objectIds={selectedIds}
+            {drafts}
+            onsubmit={properties}
+          />
+          <SelectionOutline
+            objects={screen.objects.filter((object) =>
+              selectedIds.includes(object.id),
+            )}
+            hiddenCount={hiddenSelectionCount}
+            locked={selectionLocked}
+            definition={activeDefinition}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            objectIds={selectedIds}
+            {drafts}
+            onsubmit={properties}
+          />
+          <SelectionLine
+            objects={screen.objects.filter((object) =>
+              selectedIds.includes(object.id),
+            )}
+            hiddenCount={hiddenSelectionCount}
+            locked={selectionLocked}
+            definition={activeDefinition}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            objectIds={selectedIds}
+            {drafts}
+            onsubmit={properties}
+          />
+        {/key}
+      {:else}<p>グループを含むため、内部の書式は解除後に編集できます。</p>{/if}
     {:else if selected}
       {#key `${generation}:${screen.id}:${selected.id}`}
         {#if selected.shape.type === "rectangle" || selected.shape.type === "ellipse"}

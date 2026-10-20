@@ -103,3 +103,62 @@ it("distinguishes common membership, explicit root, and mixed or missing destina
   expect(commonFolderId([{ folderId: "a" }, {}])).toBeUndefined();
   expect(commonFolderId([])).toBeUndefined();
 });
+
+// Group members remain searchable, but their operation unit occupies one row.
+it("shows one group row and routes child and group-name search to that unit", () => {
+  const owner = {
+    folders: [],
+    objects: [
+      {
+        id: "a",
+        order: 0,
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 10,
+        rotation: 0,
+        shape: {
+          type: "text" as const,
+          text: "A",
+          style: {
+            fontSize: 12,
+            fontWeight: "normal" as const,
+            align: "left" as const,
+          },
+        },
+      },
+      {
+        id: "b",
+        order: 1,
+        x: 20,
+        y: 0,
+        width: 10,
+        height: 10,
+        rotation: 0,
+        shape: {
+          type: "text" as const,
+          text: "B",
+          style: {
+            fontSize: 12,
+            fontWeight: "normal" as const,
+            align: "left" as const,
+          },
+        },
+      },
+    ],
+    groups: [{ id: "unit", name: "設備", memberIds: ["a", "b"] }],
+  };
+  for (const query of ["", "b", "設備"]) {
+    const result = layerTree(owner, query, new Set(), (object) => object.id);
+    expect(result.rows).toHaveLength(1);
+    expect(result.rows[0]).toMatchObject({
+      kind: "object",
+      object: { id: "a" },
+      group: { id: "unit" },
+    });
+    expect(result.matchingObjects.map((object) => object.id)).toEqual([
+      "a",
+      "b",
+    ]);
+  }
+});

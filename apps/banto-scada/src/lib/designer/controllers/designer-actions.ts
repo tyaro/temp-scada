@@ -11,6 +11,16 @@ interface PanelVisibility {
   references: boolean;
 }
 export interface DesignerActionsHost {
+  groups?: {
+    readonly groupId?: string;
+    readonly containsGroups: boolean;
+    readonly definition: boolean;
+    readonly unitCount: number;
+    readonly selectableIds: string[];
+    rename(): void;
+    create(): void;
+    ungroup(): void;
+  };
   editing: {
     readonly editBlocked: boolean;
     readonly mutationBlocked: boolean;
@@ -177,9 +187,11 @@ export function createDesignerActions(host: DesignerActionsHost) {
             run: () =>
               host.editing.transition(
                 () =>
-                  (host.editing.selectedIds = host.editing.objects
-                    .filter((o) => !o.locked && o.visible !== false)
-                    .map((o) => o.id)),
+                  (host.editing.selectedIds =
+                    host.groups?.selectableIds ??
+                    host.editing.objects
+                      .filter((o) => !o.locked && o.visible !== false)
+                      .map((o) => o.id)),
               ),
           },
           {
@@ -206,16 +218,43 @@ export function createDesignerActions(host: DesignerActionsHost) {
           },
         ],
       },
+      ...(host.groups
+        ? [
+            {
+              id: "geometric-groups",
+              label: "幾何グループ",
+              items: [
+                {
+                  label: "グループ化",
+                  icon: "M3 3H10V10H3ZM14 14H21V21H14ZM1 1H23V23H1Z",
+                  disabled:
+                    host.editing.mutationBlocked ||
+                    host.groups.definition ||
+                    host.groups.containsGroups ||
+                    host.editing.selectedIds.length < 2,
+                  run: host.groups.create,
+                },
+                {
+                  label: "グループ解除",
+                  icon: "M3 3H10V10H3ZM14 14H21V21H14ZM1 8V1H8M16 1H23V8M23 16V23H16M8 23H1V16",
+                  disabled:
+                    host.editing.mutationBlocked || !host.groups.groupId,
+                  run: host.groups.ungroup,
+                },
+              ],
+            },
+          ]
+        : []),
       {
         id: "rotation",
-        label: "回転（単一選択）",
+        label: "回転",
         items: [
           {
             label: "左へ90°回転",
             icon: "M3 10A9 9 0 1 1 5 18M3 3V10H10",
             disabled:
               host.editing.mutationBlocked ||
-              host.editing.selectedIds.length !== 1,
+              (host.editing.selectedIds.length !== 1 && !host.groups?.groupId),
             run: () => host.editing.rotateSelection(-90),
           },
           {
@@ -223,14 +262,14 @@ export function createDesignerActions(host: DesignerActionsHost) {
             icon: "M21 10A9 9 0 1 0 19 18M21 3V10H14",
             disabled:
               host.editing.mutationBlocked ||
-              host.editing.selectedIds.length !== 1,
+              (host.editing.selectedIds.length !== 1 && !host.groups?.groupId),
             run: () => host.editing.rotateSelection(90),
           },
         ],
       },
       {
         id: "order",
-        label: "重なり順（単一選択）",
+        label: "重なり順",
         items: [
           {
             direction: "back" as const,
@@ -256,9 +295,16 @@ export function createDesignerActions(host: DesignerActionsHost) {
           ...item,
           disabled:
             host.editing.mutationBlocked ||
-            host.editing.selectedIds.length !== 1,
+            (host.editing.selectedIds.length !== 1 && !host.groups?.groupId),
           run: () => {
-            if (host.editing.selectedIds.length === 1)
+            if (host.groups?.groupId)
+              host.editing.edit({
+                type: "reorder-group",
+                screenId: host.editing.screenId,
+                groupId: host.groups.groupId,
+                direction: item.direction,
+              });
+            else if (host.editing.selectedIds.length === 1)
               host.editing.edit({
                 type: "reorder",
                 screenId: host.editing.screenId,
@@ -307,7 +353,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
             ...item,
             disabled:
               host.editing.mutationBlocked ||
-              host.editing.selectedIds.length < 2,
+              (host.groups?.unitCount ?? host.editing.selectedIds.length) < 2,
             run: () =>
               host.editing.edit({
                 type: "align",
@@ -331,7 +377,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
             ...item,
             disabled:
               host.editing.mutationBlocked ||
-              host.editing.selectedIds.length < 3,
+              (host.groups?.unitCount ?? host.editing.selectedIds.length) < 3,
             run: () =>
               host.editing.edit({
                 type: "distribute",
@@ -433,6 +479,15 @@ export function createDesignerActions(host: DesignerActionsHost) {
             host.selection.origin ?? undefined,
           ),
       },
+      ...(host.groups?.groupId
+        ? [
+            {
+              label: "グループ名を変更",
+              disabled: host.editing.mutationBlocked,
+              run: host.groups.rename,
+            },
+          ]
+        : []),
       ...(host.selection.selected
         ? [
             {
@@ -475,6 +530,10 @@ export function createDesignerActions(host: DesignerActionsHost) {
         : []),
       ...clipboardItems,
       ...editGroupItems("selection").slice(2),
+      ...(host.groups ? editGroupItems("geometric-groups") : []),
+      ...(host.groups?.groupId
+        ? [...editGroupItems("rotation"), ...editGroupItems("order")]
+        : []),
       ...(host.editing.selectedIds.length > 1
         ? editGroupItems("align")
         : [...editGroupItems("rotation"), ...editGroupItems("order")]),

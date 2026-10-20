@@ -1,4 +1,13 @@
 <script lang="ts">
+  import {
+    groupsOf,
+    groupFor,
+    selectedGroup as findSelectedGroup,
+    expandGroupSelection,
+    canvasSelectionIds,
+    selectionUnits,
+  } from "./lib/geometric-groups";
+  import { groupNameFormCommand } from "./lib/designer/forms/group-name";
   import { createDesignerActions } from "./lib/designer/controllers/designer-actions";
   import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
   import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
@@ -820,10 +829,15 @@
       event.preventDefault();
       transition(
         () =>
-          (selectedIds = screen.objects
-            .filter((o) => !o.locked && o.visible !== false)
-            .map((o) => o.id)),
+          (selectedIds = canvasSelectionIds(
+            screen,
+            screen.objects.map((object) => object.id),
+          )),
       );
+    } else if (key === "g") {
+      event.preventDefault();
+      if (event.shiftKey) ungroupSelection();
+      else groupSelection();
     } else if (key === "d" && !event.shiftKey && selectedIds.length) {
       event.preventDefault();
       duplicateSelection();
@@ -842,13 +856,14 @@
       if (!additive) selectedIds = [];
       return [...selectedIds];
     }
+    const unit = expandGroupSelection(screen, [id]);
     selectedIds = additive
-      ? selectedIds.includes(id)
-        ? selectedIds.filter((s) => s !== id)
-        : [...selectedIds, id]
-      : preserve && selectedIds.includes(id)
+      ? unit.every((member) => selectedIds.includes(member))
+        ? selectedIds.filter((member) => !unit.includes(member))
+        : [...new Set([...selectedIds, ...unit])]
+      : preserve && unit.every((member) => selectedIds.includes(member))
         ? selectedIds
-        : [id];
+        : unit;
     if (selectedIds.includes(id)) layerTreeBindings.revealLayerObject(id);
     return [...selectedIds];
   }
@@ -861,7 +876,8 @@
       id &&
       screen.objects.some(
         (object) =>
-          object.id === id && (object.locked || object.visible === false),
+          expandGroupSelection(screen, [id]).includes(object.id) &&
+          (object.locked || object.visible === false),
       )
     )
       return [...selectedIds];
@@ -877,30 +893,32 @@
         workspaceGeneration !== generation
       )
         return;
-      const live = ids.filter((id) =>
-        screen.objects.some(
-          (object) =>
-            object.id === id && !object.locked && object.visible !== false,
-        ),
-      );
+      const live = canvasSelectionIds(screen, ids);
       selectedIds = additive
-        ? [
-            ...new Set([
-              ...selectedIds.filter((id) =>
-                screen.objects.some(
-                  (object) =>
-                    object.id === id &&
-                    !object.locked &&
-                    object.visible !== false,
-                ),
-              ),
-              ...live,
-            ]),
-          ]
+        ? canvasSelectionIds(screen, [...new Set([...selectedIds, ...live])])
         : live;
       for (const id of live) layerTreeBindings.revealLayerObject(id);
     };
     if (drafts.allow(apply)) apply();
+  }
+  function groupSelection() {
+    if (
+      mutationBlocked ||
+      activeDefinition ||
+      containsGroups ||
+      selectedIds.length < 2
+    )
+      return;
+    transition(() =>
+      edit({ type: "group", screenId: screen.id, objectIds: [...selectedIds] }),
+    );
+  }
+  function ungroupSelection() {
+    if (mutationBlocked || !activeGroup) return;
+    transition(() => {
+      if (activeGroup)
+        edit({ type: "ungroup", screenId: screen.id, groupId: activeGroup.id });
+    });
   }
   function duplicateSelection() {
     if (selectedIds.length === 1)
@@ -1127,7 +1145,7 @@
       setInspectorVisibility(true);
       editingSymbolId = null;
       screenId = usage.screenId;
-      selectedIds = [usage.objectId];
+      selectedIds = expandGroupSelection(screen, [usage.objectId]);
       layerTreeBindings.revealLayerObject(usage.objectId);
       void tick().then(() => {
         editorRegion?.scrollTo({ top: 0 });
@@ -1245,7 +1263,8 @@
       }
       editingSymbolId = null;
       screenId = usage.screenId;
-      selectedIds = [usage.objectId];
+      const targetIds = expandGroupSelection(screen, [usage.objectId]);
+      selectedIds = targetIds;
       libraryId = usage.symbolId;
       void tick().then(() =>
         requestAnimationFrame(() =>
@@ -1254,7 +1273,8 @@
               generation !== workspaceGeneration ||
               screenId !== usage.screenId ||
               editingSymbolId ||
-              selectedId !== usage.objectId
+              selectedIds.length !== targetIds.length ||
+              targetIds.some((id) => !selectedIds.includes(id))
             )
               return;
             editorRegion?.scrollTo({ top: 0 });
@@ -1285,6 +1305,10 @@
     activeDefinition ??
       project.screens.find((s) => s.id === screenId) ??
       project.screens[0],
+  );
+  const activeGroup = $derived(findSelectedGroup(screen, selectedIds));
+  const containsGroups = $derived(
+    selectedIds.some((id) => groupFor(screen, id)),
   );
   const backgroundScreen = $derived(
     project.screens.find((item) => item.id === screen.id),
@@ -1359,7 +1383,19 @@
   let selected = $derived(screen.objects.find((o) => o.id === selectedId));
 
   function rotateSelection(delta: number) {
-    if (mutationBlocked || !selectedId) return;
+    if (mutationBlocked) return;
+    if (activeGroup && (delta === 90 || delta === -90)) {
+      transition(() =>
+        edit({
+          type: "rotate-groups",
+          screenId: screen.id,
+          objectIds: [...selectedIds],
+          delta,
+        }),
+      );
+      return;
+    }
+    if (!selectedId) return;
     const id = selectedId,
       scope = folderScope;
     transition(() => {
@@ -1423,6 +1459,10 @@
     }
   }
   function acknowledgeForm(form: HTMLFormElement) {
+    if (form.dataset.editorForm === "group-name") {
+      const input = form.querySelector<HTMLInputElement>('input[name="name"]');
+      if (input) input.value = activeGroup?.name ?? "";
+    }
     if (form.dataset.editorForm === "selection-outline")
       acknowledgeSelectionOutline(form);
 
@@ -1507,14 +1547,24 @@
         command.type === "duplicate-many" ||
         command.type === "paste"
       )
-        selectedIds = screen.objects
-          .filter((o) => !oldIds.has(o.id) && !o.locked && o.visible !== false)
-          .map((o) => o.id);
+        selectedIds = canvasSelectionIds(
+          screen,
+          screen.objects
+            .filter((object) => !oldIds.has(object.id))
+            .map((object) => object.id),
+        );
       if (command.type === "remove" || command.type === "remove-many")
         selectedIds = [];
       if (command.type === "set-visibility" && !command.visible) {
         const hiddenId = command.objectId;
         selectedIds = selectedIds.filter((id) => id !== hiddenId);
+      }
+      if (command.type === "set-group-state" && command.visible === false) {
+        const groupId = command.groupId;
+        const hiddenIds =
+          groupsOf(screen).find((group) => group.id === groupId)?.memberIds ??
+          [];
+        selectedIds = selectedIds.filter((id) => !hiddenIds.includes(id));
       }
       if (form) acknowledgeForm(form);
       report(
@@ -1560,18 +1610,26 @@
         return;
       const object = screen.objects.find((object) => object.id === id);
       if (!object) return;
-      if (object.locked) {
-        report("info", "ロックを解除してから配置名を変更してください。");
+      const group = groupFor(screen, id),
+        ids = group ? [...group.memberIds] : [id];
+      if (screen.objects.some((item) => ids.includes(item.id) && item.locked)) {
+        report("info", "ロックを解除してから名前を変更してください。");
         return;
       }
-      if (selectedId !== id && !drafts.allow(run)) return;
-      selectedIds = [id];
+      if (
+        (selectedIds.length !== ids.length ||
+          !ids.every((member) => selectedIds.includes(member))) &&
+        !drafts.allow(run)
+      )
+        return;
+      selectedIds = ids;
       setInspectorVisibility(true);
       void tick().then(() => {
         if (
           generation === workspaceGeneration &&
           screen.id === target &&
-          selectedId === id &&
+          selectedIds.length === ids.length &&
+          ids.every((member) => selectedIds.includes(member)) &&
           mode === "edit"
         )
           inspectorController?.focusName();
@@ -1604,7 +1662,8 @@
     const layer = target.closest<HTMLElement>("[data-layer-id]");
     if (layer) renamePlacement(layer.dataset.layerId!);
     else if (target.matches('[aria-label="キャンバス操作領域"]')) {
-      if (selectedId) renamePlacement(selectedId);
+      const id = selectedId ?? activeGroup?.memberIds[0];
+      if (id) renamePlacement(id);
       else report("info", "名前を変更する配置を1件選択してください。");
     }
   }
@@ -1853,6 +1912,19 @@
         screenId: screen.id,
         definitionId: activeDefinition?.id,
       });
+    if (form.dataset.editorForm === "group-name")
+      return groupNameFormCommand(
+        {
+          data,
+          targetKey: form.dataset.targetKey,
+          groupId: form.dataset.groupId,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          groupId: activeGroup?.id,
+        },
+      );
     if (form.dataset.editorForm === "move")
       return moveFormCommand(data, { screenId: screen.id, selectedIds });
     return objectFormCommand(data, {
@@ -1992,6 +2064,19 @@
       )
         return;
       const object = screen.objects.find((object) => object.id === id);
+      const group = groupFor(screen, id);
+      if (group) {
+        edit({
+          type: "set-group-state",
+          screenId: screen.id,
+          groupId: group.id,
+          visible: screen.objects.some(
+            (item) =>
+              group.memberIds.includes(item.id) && item.visible === false,
+          ),
+        });
+        return;
+      }
       if (object)
         edit({
           type: "set-visibility",
@@ -2015,6 +2100,18 @@
       )
         return;
       const object = screen.objects.find((object) => object.id === id);
+      const group = groupFor(screen, id);
+      if (group) {
+        edit({
+          type: "set-group-state",
+          screenId: screen.id,
+          groupId: group.id,
+          locked: !screen.objects.some(
+            (item) => group.memberIds.includes(item.id) && item.locked,
+          ),
+        });
+        return;
+      }
       if (object)
         edit({
           type: "set-lock",
@@ -2061,7 +2158,7 @@
       )
         return;
       if (request.objectId && !selectedIds.includes(request.objectId))
-        selectedIds = [request.objectId];
+        selectedIds = expandGroupSelection(screen, [request.objectId]);
       const requestId = ++contextRequest;
       selectionOrigin = request.origin;
       contextKind = request.objectId ? "selection" : "blank";
@@ -2121,6 +2218,33 @@
   );
   const mutationBlocked = $derived(editBlocked || selectionLocked);
   const designerActions = createDesignerActions({
+    groups: {
+      get groupId() {
+        return activeGroup?.id;
+      },
+      get containsGroups() {
+        return containsGroups;
+      },
+      get definition() {
+        return !!activeDefinition;
+      },
+      get unitCount() {
+        return containsGroups
+          ? selectionUnits(screen, selectedIds).length
+          : selectedIds.length;
+      },
+      get selectableIds() {
+        return canvasSelectionIds(
+          screen,
+          screen.objects.map((object) => object.id),
+        );
+      },
+      rename: () => {
+        if (activeGroup) renamePlacement(activeGroup.memberIds[0]);
+      },
+      create: groupSelection,
+      ungroup: ungroupSelection,
+    },
     editing: {
       get editBlocked() {
         return editBlocked;
@@ -2144,7 +2268,7 @@
         return selectedIds;
       },
       set selectedIds(value) {
-        selectedIds = value;
+        selectedIds = canvasSelectionIds(screen, value);
       },
       travel,
       transition,

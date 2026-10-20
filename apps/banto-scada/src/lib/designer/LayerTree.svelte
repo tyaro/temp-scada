@@ -239,19 +239,33 @@
           </div>
         {:else}
           {@const object = row.object}
+          {@const members = row.group
+            ? tree.screen.objects.filter((item) =>
+                row.group!.memberIds.includes(item.id),
+              )
+            : [object]}
+          {@const locked = members.some((item) => item.locked)}
+          {@const hidden = members.some((item) => item.visible === false)}
+          {@const mixedVisibility =
+            hidden && members.some((item) => item.visible !== false)}
+          {@const mixedLock = locked && members.some((item) => !item.locked)}
+          {@const label = row.group
+            ? `${row.group.name ?? "グループ"} · ${members.length} 配置`
+            : tree.objectLabel(object)}
 
           <div
             class="layer-entry"
             style:margin-left={`${row.depth * 10}px`}
-            class:hidden-placement={object.visible === false}
+            class:hidden-placement={hidden}
           >
             <button
               class:active={tree.selectedIds.includes(object.id)}
               aria-pressed={tree.selectedIds.includes(object.id)}
               data-layer-id={object.id}
+              data-layer-group={row.group?.id}
               draggable={!tree.editBlocked}
               ondragstart={(event) => tree.beginLayerDrag(event, object.id)}
-              title={`${tree.objectLabel(object)}
+              title={`${label}${row.group ? "\n" + members.map((item) => tree.objectLabel(item)).join("\n") : ""}
 ${object.shape.type} · ${object.order}
 ${object.id}`}
               onclick={(event) => tree.layerClick(event, object.id)}
@@ -260,22 +274,31 @@ ${object.id}`}
                 tree.layerContext(object.id, event.currentTarget);
               }}
               onkeydown={(event) => tree.layerContextKey(event, object.id)}
-              ><ObjectIcon
-                {object}
-                definition={object.shape.type === "symbol"
-                  ? tree.symbols.find(
-                      (d) =>
-                        object.shape.type === "symbol" &&
-                        d.id === object.shape.symbolId,
-                    )
-                  : undefined}
-              /><span>{tree.objectLabel(object)}</span></button
+              >{#if row.group}<svg
+                  width="19"
+                  height="19"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  aria-hidden="true"
+                  ><path d="M2 2h20v20H2zM6 6h5v5H6zM13 13h5v5h-5z" /></svg
+                >{:else}<ObjectIcon
+                  {object}
+                  definition={object.shape.type === "symbol"
+                    ? tree.symbols.find(
+                        (d) =>
+                          object.shape.type === "symbol" &&
+                          d.id === object.shape.symbolId,
+                      )
+                    : undefined}
+                />{/if}<span>{label}</span></button
             >
             <button
               class="layer-visible"
-              aria-label={`${object.visible === false ? "再表示" : "非表示"}：${tree.objectLabel(object)}`}
-              aria-pressed={object.visible !== false}
-              title={object.visible === false
+              aria-label={`${mixedVisibility ? "一部非表示・再表示" : hidden ? "再表示" : "非表示"}：${label}`}
+              aria-pressed={!hidden}
+              title={hidden
                 ? "図面に再表示"
                 : "図面から非表示（表示プレビューにも反映）"}
               disabled={tree.menuBlocked}
@@ -290,21 +313,17 @@ ${object.id}`}
                 aria-hidden="true"
                 ><path
                   d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"
-                /><circle
-                  cx="12"
-                  cy="12"
-                  r="3"
-                />{#if object.visible === false}<path
+                /><circle cx="12" cy="12" r="3" />{#if hidden}<path
                     d="M3 3l18 18"
                   />{/if}</svg
               ></button
             >
             <button
               class="layer-lock"
-              class:locked={!!object.locked}
-              aria-label={`${object.locked ? "ロック解除" : "ロック"}：${tree.objectLabel(object)}`}
-              aria-pressed={!!object.locked}
-              title={object.locked
+              class:locked
+              aria-label={`${mixedLock ? "一部ロック・解除" : locked ? "ロック解除" : "ロック"}：${label}`}
+              aria-pressed={locked}
+              title={locked
                 ? "編集ロックを解除"
                 : "配置の直接編集をロック（共有定義の変更は反映）"}
               disabled={tree.menuBlocked}
@@ -318,7 +337,7 @@ ${object.id}`}
                 stroke-width="1.7"
                 aria-hidden="true"
                 ><rect x="5" y="10" width="14" height="11" rx="2" /><path
-                  d={object.locked
+                  d={locked
                     ? "M8 10V7a4 4 0 0 1 8 0v3"
                     : "M8 10V7a4 4 0 0 1 8 0"}
                 /><path d="M12 14v4" /></svg
@@ -326,8 +345,8 @@ ${object.id}`}
             >
             <button
               class="layer-more"
-              aria-label={`操作：${tree.objectLabel(object)}`}
-              title={`${tree.objectLabel(object)} の操作`}
+              aria-label={`操作：${label}`}
+              title={`${label} の操作`}
               aria-haspopup="menu"
               onclick={(event) =>
                 tree.layerContext(object.id, event.currentTarget)}

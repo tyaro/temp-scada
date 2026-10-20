@@ -136,7 +136,7 @@ handlerは候補だけを変更する。表示／lock・等間隔の両端一致
 
 `apps/banto-scada/scripts/benchmark-editor.mjs`はViteのSSR loaderで現行ドメイン関数を読み込み、100／1,000／5,000配置の編集・履歴・Undo・保存と各処理の独立probeを計測する。ブラウザ描画や入力から表示までの遅延は測らない。実行方法・fixture・解釈・結果は[編集性能の計測](editor-performance.md)を参照する。通常のunit／E2Eに時間閾値を追加するものではない。
 
-## 幾何グループ（0.22.0、G1／G2）
+## 幾何グループ（0.22.0）
 
 - `lib/geometric-groups.ts`：所属の意味検証、選択全体の検査・展開、操作単位、bounds・90度回転。UI状態・履歴を持たない。
 - `lib/editor/group-handler.ts`：作成／解除／名前／回転／状態／描画順。候補だけを変更し、共通finish・Undoは入口側。
@@ -145,4 +145,4 @@ handlerは候補だけを変更する。表示／lock・等間隔の両端一致
 - `clipboard.ts`／`asset-clipboard.ts`／`paste-handler.ts`：明示v3、画像原本・所属・配置ID再採番。旧v1／v2でgroupを受理しない。
 - `examples/geometric-group-cases.json`をTS／Rust双方で使用。`geometric-groups.test.ts`は原子性・Undo・幾何・再利用・Proxy・名前と状態の境界。`geometric-group-contract.spec.ts`は実ブラウザの読込・v3コピー・保存／Undoと不正読込保持。
 
-Designerのグループ表示・選択・メニューは次のG3で接続する。現在の機能提供段階は[実装状況](implementation-status.md)を参照する。
+G3でDesignerも接続した。`App.svelte`の選択・キー・mode境界を純粋なgroup単位へ接続し、`layer-tree.ts`／`LayerTree.svelte`が検索可能な1行を表示する。`layer-drag.ts`は全メンバーの所属変更を扱う。`GroupInspector.svelte`と`forms/group-name.ts`は名前の世代・対象・draft・IMEを保護し、共通操作は`designer-actions.ts`のtoolbar／メニュー／右クリックへ置く。`geometric-groups.spec.ts`は両テーマ・F2・IME・Undo後のdraft・使用先・状態・ドラッグ／方向キーを確認する。現在の機能提供段階は[実装状況](implementation-status.md)を参照する。

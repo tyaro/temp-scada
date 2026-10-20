@@ -1,8 +1,13 @@
-import type { LayerFolder, ScreenObject } from "../project";
+import { expandGroupSelection } from "../geometric-groups";
+import type { LayerFolder, ScreenObject, GeometricGroup } from "../project";
 import { folderAncestors, folderDestinations } from "./layer-tree";
 
 export const LAYER_MIME = "application/x-banto-scada-layer-membership";
-type Owner = { objects: ScreenObject[]; folders: LayerFolder[] };
+type Owner = {
+  objects: ScreenObject[];
+  folders: LayerFolder[];
+  groups?: GeometricGroup[];
+};
 type DragSession = { token: string; scope: string; hidden: number };
 export type LayerDrag = DragSession &
   (
@@ -49,7 +54,13 @@ export function layerDragSource(
   source: string,
   selected: string[],
 ): string[] | null {
-  const ids = selected.includes(source) ? [...selected] : [source];
+  const requested = selected.includes(source) ? [...selected] : [source];
+  if (
+    new Set(requested).size !== requested.length ||
+    requested.some((id) => !owner.objects.some((object) => object.id === id))
+  )
+    return null;
+  const ids = expandGroupSelection(owner, requested);
   if (
     !ids.length ||
     new Set(ids).size !== ids.length ||
