@@ -158,3 +158,5 @@ Equipmentは`lib/equipment.ts`と`crates/scada-model/src/equipment.rs`が保存�
 読取DTOの構造は`crates/scada-runtime/schema/read-slot-view.schema.json`、TSの受入・plan照合・世代／frame所有は`lib/read-slot-session.ts`が担当する。`equipmentReadContext()`がcurrentProjectと返却frameを表示contextへ接続し、`symbol-slots.ts`が保存設定を優先して解決する。`TextPrimitive`はSIM・Quality・由来の文字／属性を描画し、接続やQuality判定を所有しない。共通`read-slot-view-cases.json`とRustの実投影、`read-slot-session.test.ts`、`e2e/read-slot-session.spec.ts`で確認する。[受入契約](read-slot-presentation.md)を参照する。
 
 Symbol宣言のCRUDは`editor/symbol-handler.ts`、全Text参照の導出は`symbolSlotUsages()`。`designer/SymbolSlots.svelte`は左の宣言UIと使用保護の説明、`forms/symbol-slot.ts`は世代・定義・元のslot名を照合し、成功した追加フォームだけ初期化する。既存`add-symbol-readout`は宣言行からの操作では存在を再確認する。`symbol-slot-editing.test.ts`／`e2e/symbol-slot-editing.spec.ts`で検証する。[編集契約](symbol-slot-editing.md)を参照する。
+
+読取表示結果の判別共用体・欠測文言・SIM判定・boolのtrue／false／unknownへの純粋な変換は`lib/slot-presentation.ts`が担当する。Goodだけに型付きvalueを持たせる。`read-slot-session.ts`は所有コピーを返し、`TextPrimitive`はinvalid理由も表示する。`slot-presentation.test.ts`と既存session／ブラウザ検証で確認する。[動的配色への前段と残り](bool-slot-state.md)を参照する。

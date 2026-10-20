@@ -1,11 +1,13 @@
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-runtime/schema/read-slot-view.schema.json";
 import { parseProject, type Project } from "./project";
+import type { EquipmentContext } from "./symbol-slots";
 import {
   slotPresentation,
-  type EquipmentContext,
+  isSimulatedSlot,
   type SlotPresentation,
-} from "./symbol-slots";
+  type SlotValue,
+} from "./slot-presentation";
 
 export interface SlotProvenance {
   catalogRevision: number;
@@ -26,8 +28,7 @@ export type ReadSlotReading =
   | {
       state: "resolved";
       quality: "good";
-      value:
-        { type: "bool"; value: boolean } | { type: "number"; value: number };
+      value: SlotValue;
     }
   | { state: "resolved"; quality: "stale" | "bad"; value: null };
 export interface ReadSlotRow {
@@ -252,22 +253,27 @@ export function equipmentReadContext(
       if (accepted.phase !== "ready") return slotPresentation(accepted.phase);
       const row = get(accepted.rows, equipmentId, slotName)!;
       const reading = row.reading;
-      if (reading.state !== "resolved") return slotPresentation(reading.state);
+      if (reading.state !== "resolved")
+        return slotPresentation(
+          reading.state,
+          reading.state === "invalid" ? reading.reason : undefined,
+        );
       const provenance = row.provenance!;
-      const simulated =
-        provenance.collectionMode === "all_simulation" ||
-        provenance.valueSource === "simulation" ||
-        provenance.valueSource === "derived_simulation";
-      const state = reading.quality;
-      const label = { good: "Good", stale: "Stale", bad: "Bad" }[state];
-      const text =
-        reading.quality === "good"
-          ? String(reading.value.value)
-          : `-- · ${label}`;
+      const simulated = isSimulatedSlot(provenance);
+      if (reading.quality === "good") {
+        const text = String(reading.value.value);
+        return {
+          state: "good",
+          label: "Good",
+          text: simulated ? `SIM · ${text}` : text,
+          value: { ...reading.value },
+          provenance: { ...provenance },
+        };
+      }
+      const unavailable = slotPresentation(reading.quality);
       const presentation: SlotPresentation = {
-        state,
-        label,
-        text: simulated ? `SIM · ${text}` : text,
+        ...unavailable,
+        text: simulated ? `SIM · ${unavailable.text}` : unavailable.text,
         provenance: { ...provenance },
       };
       return presentation;

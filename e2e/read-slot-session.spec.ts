@@ -148,6 +148,7 @@ for (const theme of ["light", "dark"] as const)
                   mode: node.getAttribute("data-collection-mode"),
                   time: node.getAttribute("data-source-timestamp-ms"),
                   description: node.getAttribute("aria-label"),
+                  reason: node.getAttribute("data-tag-reason"),
                 }),
               ),
             ),
@@ -166,6 +167,20 @@ for (const theme of ["light", "dark"] as const)
           await publish("pending");
           await publish(
             "good",
+            session.receive(session.generation, good()).frame,
+          );
+          const invalidValue = good();
+          invalidValue.slots[0].reading = {
+            state: "invalid",
+            reason: "disabled",
+          } as any;
+          invalidValue.slots[0].provenance = null;
+          await publish(
+            "invalid-value",
+            session.receive(session.generation, invalidValue).frame,
+          );
+          await publish(
+            "recovered",
             session.receive(session.generation, good()).frame,
           );
           const simulated = good();
@@ -249,6 +264,7 @@ for (const theme of ["light", "dark"] as const)
     for (const name of [
       "good",
       "good-again",
+      "recovered",
       "good-before-invalid",
       "good-before-reset",
       "new-generation",
@@ -258,7 +274,16 @@ for (const theme of ["light", "dark"] as const)
         expect(view.map((row: any) => row.text)).toEqual(["false", "0"]);
         expect(view.map((row: any) => row.state)).toEqual(["good", "good"]);
         expect(view.map((row: any) => row.source)).toEqual(["real", "real"]);
+        expect(view.map((row: any) => row.reason)).toEqual([null, null]);
+        expect(view[0].description).not.toContain("disabled");
       }
+    for (const view of byName("invalid-value")) {
+      expect(view[0].text).toBe("-- · 値が不正");
+      expect(view[0].reason).toBe("disabled");
+      expect(view[0].description).toContain("値が不正 · disabled");
+      expect(view[0].source).toBeNull();
+      expect(view[1].text).toBe("0");
+    }
     for (const view of byName("simulation")) {
       expect(view.map((row: any) => row.text)).toEqual([
         "SIM · false",

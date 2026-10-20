@@ -31,11 +31,11 @@
 | 表示確認       | 同一Projectの読取Popup最大4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                     | Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                           |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                        | 実図面・画像／Symbol等の計測と必要な最適化                                             |
 | 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                           | 実catalog選択、draftのDOM分離                                                          |
-| タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                       | 実Hub／catalog、slotの図面表示、Host、正式RuntimeとAction境界                          |
+| タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                       | 実Hub／catalog、動的配色、Host、正式RuntimeとAction境界                                |
 | server・監視   | 提供段階と共有層の設計                                                                                                                 | Core v1のS9b、その上のv1.1 Alarm／Event・Action／History・Trend、Camera、HTTP／Program |
 | 認証・MES      | ログイン不要のローカル編集                                                                                                             | industrialの修正後に認証再確認。ユーザー管理・運用移行・MESは未実装                    |
 
-共有Symbolは静的な定義と単色／定義色、独立コピーに対応する。状態別表示・機器slotを使うSymbol・Binding付きSymbolは未実装。整理フォルダーを幾何グループとして扱わない。読取プレビューから実機要求は送らない。
+共有Symbolは定義と単色／定義色、独立コピー、機器関連付け、型付きslot宣言とText表示に対応する。状態別の動的配色・設備操作は未実装。整理フォルダーを幾何グループとして扱わない。読取プレビューから実機要求は送らない。
 
 ## 検証の範囲
 
@@ -82,7 +82,7 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 ## Symbolの読取slotと割付状態
 
-0.25.0で[読取宣言・Text割付・取得前状態の表示](symbol-read-slots.md)を追加した。共有定義はbool／numberの役割を宣言し、各配置の機器contextから未関連付け・slot欠落・型不一致・未採用・未割付・未接続をText単位で表示する。宣言とTextの追加は一回のUndo。slot単体clipboardは理由付き拒否し、未関連Symbol全体は宣言ごと保持する。TS747件・Rust45件・関連ブラウザ41件、型／Clippy／build／CLIを確認。この区切りの実値受入は後続だった。現在の表示DTO受入は次節の範囲。宣言の自由編集・改名／削除、動的配色・実Host接続は後続。
+0.25.0で[読取宣言・Text割付・取得前状態の表示](symbol-read-slots.md)を追加した。共有定義はbool／numberの役割を宣言し、各配置の機器contextから未関連付け・slot欠落・型不一致・未採用・未割付・未接続をText単位で表示する。宣言とTextの追加は一回のUndo。slot単体clipboardは理由付き拒否し、未関連Symbol全体は宣言ごと保持する。TS747件・Rust45件・関連ブラウザ41件、型／Clippy／build／CLIを確認。この区切りの実値受入は後続だった。現在の表示DTO受入は次節の範囲。宣言の追加・未使用行の改名／型変更／削除は後続節で実装済み。動的配色・実Host接続は後続。
 
 ## 型付き結果の受入とGood／Quality表示
 
@@ -91,3 +91,7 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 ## Symbolのslot宣言編集
 
 [任意名の宣言追加・未使用行の改名／型変更／削除](symbol-slot-editing.md)を左のプロジェクト設定へ追加した。hidden／lockedを含むText参照中の変更・削除をドメインとUIで保護し、同値編集はno-op。draft・IME・対象世代・Undoへ接続した。表示追加は既存コマンドを共用し、改名の適用後に古い宣言を再作成しない。Project0.25.0を維持し、機器側のslot・外部名を自動変更しない。型0エラー／0警告・TS807件・関連ブラウザ9件・buildと両テーマの実画面を確認。動的配色・実Host接続・Faceplateは後続。
+
+## boolの型付き状態と理由表示
+
+[動的配色の前段](bool-slot-state.md)として、Goodだけに型付き値を持つ表示結果と、boolのtrue／false／unknownへの純粋な判定を追加した。0／1をboolへ変換せず、元Qualityと未知理由・SIM由来を分離する。返却valueの変更で受理frameが変わらない。invalid理由コードをTextのtooltip・読み上げへ伝え、Good復帰時に消す。メイン・埋込・小窓で同一mount更新を両テーマで確認した。Project0.25.0を維持し、配色の保存宣言・編集UI・図形への適用と実Hostは未実装。最終検証は型0エラー／0警告・TS834件・関連ブラウザ2件・build・全体整形。Rust／共通schemaは変更していない。

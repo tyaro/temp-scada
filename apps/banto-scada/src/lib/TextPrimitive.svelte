@@ -13,6 +13,7 @@
     tagName,
     tagState,
     tagLabel,
+    tagDetail,
     provenance,
     onsummary,
   }: {
@@ -25,6 +26,7 @@
     tagName?: string;
     tagState?: string;
     tagLabel?: string;
+    tagDetail?: string;
     provenance?: SlotProvenance;
     onsummary?: (description: string) => void;
   } = $props();
@@ -57,7 +59,7 @@
       : "",
   );
   const description = $derived(
-    `${tagName ? `${tagName} · ${tagLabel}${origin} · ` : ""}${!current ? "文字の計測中 · " : current.mode === "full" ? "" : current?.mode === "ellipsis" ? "省略表示 · " : "表示枠に収まりません · "}${text}`,
+    `${tagName ? `${tagName} · ${tagLabel}${tagDetail ? ` · ${tagDetail}` : ""}${origin} · ` : ""}${!current ? "文字の計測中 · " : current.mode === "full" ? "" : current?.mode === "ellipsis" ? "省略表示 · " : "表示枠に収まりません · "}${text}`,
   );
   onMount(() => {
     let active = true;
@@ -122,6 +124,7 @@
   data-text-layout={current?.mode ?? "pending"}
   data-tag-name={tagName}
   data-tag-state={tagState}
+  data-tag-reason={tagDetail}
   data-tag-source={provenance?.valueSource}
   data-collection-mode={provenance?.collectionMode}
   data-source-timestamp-ms={provenance?.sourceTimestampMs}

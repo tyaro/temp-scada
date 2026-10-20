@@ -19,7 +19,7 @@ Project・保存schema・現行サンプル形式・固定SDK revは変更しな
 
 将来のHostは受信・resetの返すframeを必ずreactiveな状態へ格納し、currentProjectとframeからcontext propを作り直す。resolverの内部状態だけを変えて再描画を期待しない。受信は一つの更新列として順に渡す。同一token内の非同期処理の並べ替えを検出するsequenceや、Hostのネットワーク／task管理は今回提供しない。購読元の置き換えはresetで世代を分ける。SDKの接続状態が非Liveになった通知では値を消し、同じ更新列から再度Liveになる場合も新しい有効結果が必要。
 
-frameは不透明で不変。planは所有コピー、受理行も所有コピーとし、受理後のpayload変更や返却provenanceの変更で次の表示が変わらないようにする。旧frameとのmergeはしない。
+frameは不透明で不変。planは所有コピー、受理行も所有コピーとし、受理後のpayload変更や返却value／provenanceの変更で次の表示が変わらないようにする。旧frameとのmergeはしない。
 
 ## 検証する内容
 
@@ -61,3 +61,5 @@ TSの追加検証は不正DTO、plan・型・外部名、重複／不足、metad
 ## 後続
 
 実HostのSDK更新・対応catalogの受信、購読generationとframeのreactiveな配布は後続。SDKの前提は[industrial #682](https://github.com/tyaro/banto-industrial/issues/682)。正式Runtime・実Tag Browser・設備Faceplate・動的配色・認証は完成扱いしない。宣言の追加・未使用行の編集／削除は[後続の編集工程](symbol-slot-editing.md)で実装した。
+
+後続で[Good限定の型付き値とbool状態判定](bool-slot-state.md)を追加した。値を文字列化した後も型付きsnapshotを保ち、invalid理由を詳細表示へ渡す。配色UI・実Host接続は引き続き後続。

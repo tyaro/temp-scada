@@ -7,8 +7,11 @@ import {
   createReadSlotSession,
   equipmentReadContext,
   type ReadSlotFrame,
+  type ReadSlotReading,
+  type ReadSlotView,
 } from "./read-slot-session";
 import { resolveSymbolSlot } from "./symbol-slots";
+import { boolSlotState } from "./slot-presentation";
 import ScreenPainting from "./ScreenPainting.svelte";
 
 function setup(fixture = fixtures[0]) {
@@ -33,7 +36,20 @@ it.each(fixtures)("Rust read-slot fixture: $name", (fixture) => {
   const result = session.receive(session.generation, fixture.view);
   expect(result.accepted).toBe(true);
   expect(read(result.frame).text).toBe(fixture.display);
-  expect(read().provenance ?? null).toEqual(fixture.view.slots[0].provenance);
+  const display = read();
+  const reading = fixture.view.slots[0].reading as ReadSlotReading;
+  expect(display.provenance ?? null).toEqual(fixture.view.slots[0].provenance);
+  if (reading.state === "resolved" && reading.quality === "good") {
+    expect(display.value).toEqual(reading.value);
+    expect(boolSlotState(display).state).toBe(
+      reading.value.type === "bool" ? String(reading.value.value) : "unknown",
+    );
+  } else {
+    expect(display).not.toHaveProperty("value");
+    expect(boolSlotState(display).state).toBe("unknown");
+    if (reading.state === "invalid")
+      expect(display.reason).toBe(reading.reason);
+  }
 });
 it("ignores old tokens while resetting identical IDs and revisions and invalidates old frames", () => {
   const { project, session, read } = setup();
@@ -51,6 +67,7 @@ it("ignores old tokens while resetting identical IDs and revisions and invalidat
   const reset = session.reset(project);
   expect(reset.generation).not.toBe(token);
   expect(read(first).state).toBe("disconnected");
+  expect(boolSlotState(read(first)).state).toBe("unknown");
   expect(read(reset.frame).state).toBe("disconnected");
   const second = session.receive(reset.generation, fixtures[1].view).frame;
   expect(read(second).text).toBe("true");
@@ -69,6 +86,10 @@ it("owns its plan, accepted payload and provenance without caller mutations chan
   payload.slots[0].provenance!.valueSource = "simulation";
   const presentation = read();
   expect(presentation.text).toBe("false");
+  if (presentation.state !== "good") throw new Error("expected Good");
+  // Even untyped consumers cannot mutate the accepted frame through the snapshot.
+  (presentation.value as any).value = true;
+  expect(read().value).toEqual({ type: "bool", value: false });
   presentation.provenance!.valueSource = "db";
   expect(read().provenance!.valueSource).toBe("real");
   project.equipment![0].bindings[0].externalName = "replacement";
@@ -148,6 +169,8 @@ it.each(corruptions)("rejects $0 and clears the old value", (_, corrupt) => {
   expect(rejected.accepted).toBe(false);
   expect(read().state).toBe("invalid");
   expect(read().provenance).toBeUndefined();
+  expect(read()).not.toHaveProperty("value");
+  expect(boolSlotState(read()).state).toBe("unknown");
   expect(read(old).state).toBe("disconnected");
 });
 it("never accepts nonfinite numeric payloads", () => {
@@ -273,4 +296,51 @@ it("rejects invalid Project resets before changing a healthy session", () => {
   expect(session.generation).toBe(generation);
   expect(session.frame).toBe(frame);
   expect(read().text).toBe("false");
+});
+
+it("keeps bool states independent per equipment and never retains false/true after degradation", () => {
+  const { project } = setup();
+  const [first, second] = project.equipment!;
+  second.bindings = [{ slotName: "running", externalName: "Demo.Value" }];
+  const session = createReadSlotSession(project);
+  const view = structuredClone(fixtures[0].view) as ReadSlotView;
+  const other = structuredClone(view.slots[0]);
+  other.key.equipmentId = second.id;
+  (other.reading as any).value.value = true;
+  view.slots.push(other);
+  const read = (id: string) =>
+    boolSlotState(
+      resolveSymbolSlot(
+        project.symbols[0],
+        "running",
+        id,
+        equipmentReadContext(project, session.frame),
+      ),
+    );
+  expect(session.receive(session.generation, view).accepted).toBe(true);
+  expect(read(first.id).state).toBe("false");
+  expect(read(second.id).state).toBe("true");
+  const stale = structuredClone(view);
+  stale.slots[0].reading = {
+    state: "resolved",
+    quality: "stale",
+    value: null,
+  } as any;
+  stale.slots[0].provenance!.valueSource = "simulation";
+  expect(session.receive(session.generation, stale).accepted).toBe(true);
+  expect(read(first.id)).toMatchObject({
+    state: "unknown",
+    reason: "stale",
+    simulated: true,
+  });
+  expect(read(second.id)).toMatchObject({ state: "true", simulated: false });
+  session.reset(project);
+  for (const equipment of [first, second]) {
+    expect(read(equipment.id)).toMatchObject({
+      state: "unknown",
+      reason: "disconnected",
+      simulated: false,
+    });
+    expect(read(equipment.id).provenance).toBeUndefined();
+  }
 });

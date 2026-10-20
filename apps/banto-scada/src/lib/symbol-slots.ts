@@ -1,4 +1,9 @@
-import type { SlotProvenance } from "./read-slot-session";
+import { slotPresentation, type SlotPresentation } from "./slot-presentation";
+export {
+  slotPresentation,
+  type SlotPresentation,
+  type SlotStatus,
+} from "./slot-presentation";
 import type { Project, SymbolDefinition } from "./project";
 
 /** Shared declarations describe roles, never equipment-specific tag names. */
@@ -31,41 +36,6 @@ export type EquipmentContext = Pick<Project, "equipmentTypes" | "equipment"> & {
     externalName: string,
   ) => SlotPresentation;
 };
-export type SlotStatus =
-  | "unbound"
-  | "missingSlot"
-  | "typeMismatch"
-  | "unadopted"
-  | "unassigned"
-  | "disconnected"
-  | "unresolved"
-  | "invalid"
-  | "good"
-  | "stale"
-  | "bad";
-const labels: Record<SlotStatus, string> = {
-  unbound: "機器未関連付け",
-  missingSlot: "機器種別にslotなし",
-  typeMismatch: "slot型不一致",
-  unadopted: "未採用",
-  unassigned: "未割付",
-  disconnected: "未接続",
-  unresolved: "未解決",
-  invalid: "値が不正",
-  good: "Good",
-  stale: "Stale",
-  bad: "Bad",
-};
-export function slotPresentation(state: SlotStatus): SlotPresentation {
-  return { state, label: labels[state], text: `-- · ${labels[state]}` };
-}
-export interface SlotPresentation {
-  state: SlotStatus;
-  label: string;
-  text: string;
-  provenance?: SlotProvenance;
-}
-
 /** Saved context takes priority over accepted runtime results, one Text at a time. */
 export function resolveSymbolSlot(
   definition: SymbolDefinition,
