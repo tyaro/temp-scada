@@ -1,3 +1,4 @@
+import { isEquipmentPropertyField } from "../../equipment-property";
 import type { EquipmentSlot } from "../../equipment";
 import type { EditCommand, ObjectPatch } from "../../editor";
 import { parsePoints, type ScreenObject } from "../../project";
@@ -50,7 +51,16 @@ export function objectFormCommand(
     };
     if (context.definition && data.has("slotName")) {
       const slotName = String(data.get("slotName") ?? "");
-      patch.slotBinding = slotName ? { slotName } : null;
+      if (slotName.startsWith("@")) {
+        const field = slotName.slice(1);
+        if (!isEquipmentPropertyField(field))
+          throw new Error("機器情報の表示項目を選択してください");
+        patch.equipmentProperty = { field };
+        patch.slotBinding = null;
+      } else {
+        patch.equipmentProperty = null;
+        patch.slotBinding = slotName ? { slotName } : null;
+      }
       if (
         selected.shape.boolColors &&
         !context.readSlots?.some(

@@ -94,8 +94,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.30.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.30.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.31.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.31.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -305,6 +305,11 @@ impl Project {
                     && shape.get("binding").is_some()
                 {
                     return Err("Symbol 定義内の直接タグ割り当てには対応していません".into());
+                }
+                if shape.get("equipmentProperty").is_some()
+                    && !symbols.contains(screen["id"].as_str().unwrap())
+                {
+                    return Err("機器情報は共有定義内のTextだけに設定できます".into());
                 }
                 if let Some(binding) = shape.get("slotBinding") {
                     if !symbols.contains(screen["id"].as_str().unwrap()) {
@@ -1385,8 +1390,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.30.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.30.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.31.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.31.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

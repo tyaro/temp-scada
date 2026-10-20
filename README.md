@@ -5,6 +5,7 @@
 - [現在の実装状況](docs/implementation-status.md): 対応機能、保存契約、検証範囲、未実装。
 - [操作ガイド](docs/user-guide.md): 編集、画像、画面再利用、入力保護、パネルとキー操作。
 - [開発計画](docs/development-plan.md)と[実装履歴](docs/implementation-history.md): 今後と過去を分離。
+- [共有シンボルの機器情報表示](docs/equipment-property-design.md): 機器名・コード・種別名と定義例示。
 - [2色放射グラデーション](docs/radial-gradient-design.md): 中心・半径、色αと未適用見本。
 - [埋込画面のコピー](docs/screen-view-clipboard-design.md): 参照画面・Symbol・画像原本の同梱と再利用。
 - [マウスによる切出し調整](docs/image-crop-pointer-design.md): 原本上の指定・移動・サイズ変更と取消。

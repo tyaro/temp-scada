@@ -1,0 +1,535 @@
+{
+  "manifest": {
+    "product": "banto-scada",
+    "schemaVersion": "0.31.0",
+    "projectId": "0199f200-0000-7000-8000-000000000001",
+    "projectRevision": 1,
+    "minRuntimeVersion": "0.31.0",
+    "name": "共有シンボル / 機器台帳の情報表示"
+  },
+  "screens": [
+    {
+      "id": "0199f200-0000-7000-8000-000000000002",
+      "name": "機器情報と読取状態",
+      "width": 960,
+      "height": 540,
+      "objects": [
+        {
+          "id": "0199f600-0000-7000-8000-000000000020",
+          "name": "P-101 / 未割付・未採用",
+          "order": 0,
+          "x": 30,
+          "y": 160,
+          "width": 280,
+          "height": 260,
+          "rotation": 0,
+          "fill": "#0f766e",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199f100-0000-7000-8000-000000001000",
+            "colorMode": "definition",
+            "equipmentId": "0199f700-0000-7000-8000-000000000002"
+          }
+        },
+        {
+          "id": "0199f600-0000-7000-8000-000000000030",
+          "order": 3,
+          "x": 30,
+          "y": 110,
+          "width": 280,
+          "height": 40,
+          "rotation": 0,
+          "fill": "#334155",
+          "shape": {
+            "type": "text",
+            "text": "P-101 / 未割付・未採用",
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199f600-0000-7000-8000-000000000021",
+          "name": "P-102 / 未接続・未割付",
+          "order": 1,
+          "x": 330,
+          "y": 160,
+          "width": 280,
+          "height": 260,
+          "rotation": 0,
+          "fill": "#0f766e",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199f100-0000-7000-8000-000000001000",
+            "colorMode": "definition",
+            "equipmentId": "0199f700-0000-7000-8000-000000000003"
+          }
+        },
+        {
+          "id": "0199f600-0000-7000-8000-000000000031",
+          "order": 4,
+          "x": 330,
+          "y": 110,
+          "width": 280,
+          "height": 40,
+          "rotation": 0,
+          "fill": "#334155",
+          "shape": {
+            "type": "text",
+            "text": "P-102 / 未接続・未割付",
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199f600-0000-7000-8000-000000000022",
+          "name": "機器未関連付け",
+          "order": 2,
+          "x": 630,
+          "y": 160,
+          "width": 280,
+          "height": 260,
+          "rotation": 0,
+          "fill": "#0f766e",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199f100-0000-7000-8000-000000001000",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199f600-0000-7000-8000-000000000032",
+          "order": 5,
+          "x": 630,
+          "y": 110,
+          "width": 280,
+          "height": 40,
+          "rotation": 0,
+          "fill": "#334155",
+          "shape": {
+            "type": "text",
+            "text": "機器未関連付け",
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "background": "#ffffff",
+      "folders": [],
+      "groups": []
+    }
+  ],
+  "symbols": [
+    {
+      "id": "0199f100-0000-7000-8000-000000001000",
+      "name": "ポンプと読取slot",
+      "width": 280,
+      "height": 260,
+      "objects": [
+        {
+          "id": "0199f100-0000-7000-8000-000000001001",
+          "order": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 80.0,
+                "y": 45.0
+              },
+              {
+                "x": 78.978,
+                "y": 52.765
+              },
+              {
+                "x": 75.981,
+                "y": 60.0
+              },
+              {
+                "x": 71.213,
+                "y": 66.213
+              },
+              {
+                "x": 65.0,
+                "y": 70.981
+              },
+              {
+                "x": 57.765,
+                "y": 73.978
+              },
+              {
+                "x": 50.0,
+                "y": 75.0
+              },
+              {
+                "x": 42.235,
+                "y": 73.978
+              },
+              {
+                "x": 35.0,
+                "y": 70.981
+              },
+              {
+                "x": 28.787,
+                "y": 66.213
+              },
+              {
+                "x": 24.019,
+                "y": 60.0
+              },
+              {
+                "x": 21.022,
+                "y": 52.765
+              },
+              {
+                "x": 20.0,
+                "y": 45.0
+              },
+              {
+                "x": 21.022,
+                "y": 37.235
+              },
+              {
+                "x": 24.019,
+                "y": 30.0
+              },
+              {
+                "x": 28.787,
+                "y": 23.787
+              },
+              {
+                "x": 35.0,
+                "y": 19.019
+              },
+              {
+                "x": 42.235,
+                "y": 16.022
+              },
+              {
+                "x": 50.0,
+                "y": 15.0
+              },
+              {
+                "x": 57.765,
+                "y": 16.022
+              },
+              {
+                "x": 65.0,
+                "y": 19.019
+              },
+              {
+                "x": 71.213,
+                "y": 23.787
+              },
+              {
+                "x": 75.981,
+                "y": 30.0
+              },
+              {
+                "x": 78.978,
+                "y": 37.235
+              },
+              {
+                "x": 80.0,
+                "y": 45.0
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000001002",
+          "order": 1,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 34,
+                "y": 60
+              },
+              {
+                "x": 65,
+                "y": 45
+              },
+              {
+                "x": 34,
+                "y": 30
+              },
+              {
+                "x": 34,
+                "y": 60
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000001003",
+          "order": 2,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 30,
+                "y": 74
+              },
+              {
+                "x": 25,
+                "y": 88
+              },
+              {
+                "x": 75,
+                "y": 88
+              },
+              {
+                "x": 70,
+                "y": 74
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000001004",
+          "order": 3,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 0,
+                "y": 45
+              },
+              {
+                "x": 20,
+                "y": 45
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f100-0000-7000-8000-000000001005",
+          "order": 4,
+          "x": 0,
+          "y": 0,
+          "fill": "#83bfcd",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 80,
+                "y": 45
+              },
+              {
+                "x": 100,
+                "y": 45
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f600-0000-7000-8000-000000000001",
+          "order": 10,
+          "x": 0,
+          "y": 100,
+          "width": 280,
+          "height": 30,
+          "rotation": 0,
+          "fill": "#334155",
+          "shape": {
+            "type": "text",
+            "text": "STATIC FALLBACK",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "slotBinding": {
+              "slotName": "running"
+            }
+          }
+        },
+        {
+          "id": "0199f600-0000-7000-8000-000000000002",
+          "order": 11,
+          "x": 0,
+          "y": 135,
+          "width": 280,
+          "height": 30,
+          "rotation": 0,
+          "fill": "#334155",
+          "shape": {
+            "type": "text",
+            "text": "STATIC FALLBACK",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "slotBinding": {
+              "slotName": "current"
+            }
+          }
+        },
+        {
+          "id": "019a0000-0000-7000-8000-000000009000",
+          "x": 8,
+          "y": 182,
+          "width": 200,
+          "height": 22,
+          "rotation": 0,
+          "fill": "#0f172a",
+          "order": 100,
+          "shape": {
+            "type": "text",
+            "text": "STATIC METADATA FALLBACK",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "equipmentProperty": {
+              "field": "code"
+            }
+          }
+        },
+        {
+          "id": "019a0000-0000-7000-8000-000000009001",
+          "x": 8,
+          "y": 206,
+          "width": 200,
+          "height": 22,
+          "rotation": 0,
+          "fill": "#0f172a",
+          "order": 101,
+          "shape": {
+            "type": "text",
+            "text": "STATIC METADATA FALLBACK",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "equipmentProperty": {
+              "field": "name"
+            }
+          }
+        },
+        {
+          "id": "019a0000-0000-7000-8000-000000009002",
+          "x": 8,
+          "y": 230,
+          "width": 200,
+          "height": 22,
+          "rotation": 0,
+          "fill": "#0f172a",
+          "order": 102,
+          "shape": {
+            "type": "text",
+            "text": "STATIC METADATA FALLBACK",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "equipmentProperty": {
+              "field": "typeName"
+            }
+          }
+        }
+      ],
+      "folders": [],
+      "readSlots": [
+        {
+          "name": "running",
+          "type": "bool",
+          "direction": "read"
+        },
+        {
+          "name": "current",
+          "type": "number",
+          "direction": "read"
+        }
+      ]
+    }
+  ],
+  "assets": [],
+  "equipmentTypes": [
+    {
+      "id": "0199f700-0000-7000-8000-000000000001",
+      "name": "モーター",
+      "slots": [
+        {
+          "name": "running",
+          "type": "bool",
+          "direction": "read"
+        },
+        {
+          "name": "current",
+          "type": "number",
+          "direction": "read"
+        }
+      ]
+    }
+  ],
+  "equipment": [
+    {
+      "id": "0199f700-0000-7000-8000-000000000002",
+      "typeId": "0199f700-0000-7000-8000-000000000001",
+      "code": "P-101",
+      "name": "循環ポンプ",
+      "bindings": [
+        {
+          "slotName": "running",
+          "externalName": null
+        }
+      ]
+    },
+    {
+      "id": "0199f700-0000-7000-8000-000000000003",
+      "typeId": "0199f700-0000-7000-8000-000000000001",
+      "code": "P-102",
+      "name": "予備ポンプ",
+      "bindings": [
+        {
+          "slotName": "running",
+          "externalName": "Demo.Water.Pump02.Run"
+        },
+        {
+          "slotName": "current",
+          "externalName": null
+        }
+      ]
+    }
+  ]
+}

@@ -52,7 +52,7 @@ for (const theme of ["light", "dark"] as const) {
     const saved = JSON.parse(
       await readFile((await (await saving).path())!, "utf8"),
     );
-    expect(saved.manifest.schemaVersion).toBe("0.30.0");
+    expect(saved.manifest.schemaVersion).toBe("0.31.0");
     expect(saved.equipment[0].bindings).toEqual([
       { slotName: "running", externalName: "PLC01.Fast.Fan01.Run" },
       { slotName: "current", externalName: null },

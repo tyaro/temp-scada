@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-10-20（日本時間）、Project 0.30.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-10-20（日本時間）、Project 0.31.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
@@ -9,9 +9,9 @@
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | アプリ基盤 | Banto v6.7.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
-| Project    | `schemaVersion`／`minRuntimeVersion`は**0.30.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
+| Project    | `schemaVersion`／`minRuntimeVersion`は**0.31.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
-| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.29.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
+| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.30.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
 | IDと変更   | lowercase UUID v7、有限座標、明示order。編集失敗は原子的拒否、同値はno-op、Undo／Redoでもrevisionは巻き戻さない                         |
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
@@ -225,3 +225,9 @@ Viewの選択に参照画面・必要Symbol・画像原本を同梱し、同じP
 検証: 型エラー／警告0、TS990件（88ファイル）、本番buildが成功。フォルダー構造・親変更・並べ替えの関連ブラウザ25件と、並べ替え後のフォーカス復帰の再確認1件が成功した。図面画素・配置情報の不変、親・隠し／ロック・共有定義、疎なorderと安全整数上限、端のno-op、検索中の無効、未適用名のキャンセル・適用と独立Undoを含む。保存契約・Rustに変更はない。
 
 直前の放射gradient`93058ce`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39404742241)も成功した。
+
+## 共有シンボルの機器情報表示
+
+[Project0.31.0の範囲と実画面](equipment-property-design.md)。共有Textの表示元へ機器コード・機器名・機器種別名を追加した。現在の保存台帳から配置ごとに解決し、未関連付けと定義の例示を区別する。信号Quality・SIMやruntime frameへ混ぜず、台帳の適用・Undoと表示を共用する。正式Faceplateと共通画面contextは後続。
+
+機器情報表示の検証はTS1,006件（89ファイル）・Rust49件、型エラー／警告0、Clippy・Rust fmt・本番build・CLIサンプル18件が成功。新規6件と既存slot／bool文字色／状態色7件の関連ブラウザ13件が成功し、メイン・ミニマップ・埋込・小窓と台帳適用／Undoを確認した。Astra指摘のProxyを受けるcommand境界を補強し、同値no-opと履歴なしを回帰検証。両テーマのスクリーンショットは文字領域の実画素も検査した。

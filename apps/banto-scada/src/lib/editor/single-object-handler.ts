@@ -65,6 +65,7 @@ export function applySingleObjectCommand(
       text,
       binding,
       slotBinding,
+      equipmentProperty,
       boolColors,
       stateColor,
       symbolId,
@@ -144,6 +145,12 @@ export function applySingleObjectCommand(
       if (!next.symbols.some((item) => item.id === symbolId))
         throw new Error("Symbol 定義が見つかりません");
       object.shape.symbolId = symbolId;
+    }
+    if (equipmentProperty !== undefined) {
+      if (object.shape.type !== "text" || !definitionId)
+        throw new Error("機器情報は共有定義内のTextだけに設定できます");
+      if (equipmentProperty === null) delete object.shape.equipmentProperty;
+      else object.shape.equipmentProperty = { ...equipmentProperty };
     }
     if (slotBinding !== undefined) {
       if (object.shape.type !== "text" || !definitionId)

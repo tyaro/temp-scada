@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolveEquipmentProperty } from "./equipment-property";
   import { resolveStateColor } from "./state-color";
   import { resolveSymbolSlot, type EquipmentContext } from "./symbol-slots";
   import type { ScreenObject, SymbolDefinition } from "./project";
@@ -50,6 +51,14 @@
         opacity={compositedOpacity(child)}
         ><Primitive
           object={child}
+          equipmentPropertyDisplay={child.shape.type === "text" &&
+          child.shape.equipmentProperty
+            ? resolveEquipmentProperty(
+                child.shape.equipmentProperty.field,
+                object.shape.equipmentId,
+                equipmentContext,
+              )
+            : undefined}
           stateColor={resolveStateColor(
             child,
             definition,
@@ -83,6 +92,16 @@
   {/if}
 {:else}<Primitive
     {object}
+    equipmentPropertyDisplay={ownerDefinition &&
+    object.shape.type === "text" &&
+    object.shape.equipmentProperty
+      ? resolveEquipmentProperty(
+          object.shape.equipmentProperty.field,
+          undefined,
+          undefined,
+          true,
+        )
+      : undefined}
     {readings}
     {onsummary}
     stateColor={ownerDefinition

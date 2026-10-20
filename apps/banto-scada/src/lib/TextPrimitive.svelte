@@ -1,4 +1,8 @@
 <script lang="ts">
+  import {
+    equipmentPropertyLabels,
+    type EquipmentPropertyPresentation,
+  } from "./equipment-property";
   import type { SlotProvenance } from "./read-slot-session";
   import { onMount, untrack } from "svelte";
   import { fitText, TEXT_FONT, type TextLayout } from "./text-layout";
@@ -15,6 +19,7 @@
     tagLabel,
     tagDetail,
     provenance,
+    equipmentProperty,
     onsummary,
   }: {
     text: string;
@@ -28,6 +33,7 @@
     tagLabel?: string;
     tagDetail?: string;
     provenance?: SlotProvenance;
+    equipmentProperty?: EquipmentPropertyPresentation;
     onsummary?: (description: string) => void;
   } = $props();
   let viewport = $state<SVGSVGElement>();
@@ -59,7 +65,7 @@
       : "",
   );
   const description = $derived(
-    `${tagName ? `${tagName} · ${tagLabel}${tagDetail ? ` · ${tagDetail}` : ""}${origin} · ` : ""}${!current ? "文字の計測中 · " : current.mode === "full" ? "" : current?.mode === "ellipsis" ? "省略表示 · " : "表示枠に収まりません · "}${text}`,
+    `${equipmentProperty ? `${equipmentPropertyLabels[equipmentProperty.field]} · 保存した機器情報${equipmentProperty.state === "example" ? " · 定義編集中の例示" : ""} · ` : ""}${tagName ? `${tagName} · ${tagLabel}${tagDetail ? ` · ${tagDetail}` : ""}${origin} · ` : ""}${!current ? "文字の計測中 · " : current.mode === "full" ? "" : current?.mode === "ellipsis" ? "省略表示 · " : "表示枠に収まりません · "}${text}`,
   );
   onMount(() => {
     let active = true;
@@ -129,6 +135,8 @@
   viewBox={`0 0 ${width} ${height}`}
   overflow="hidden"
   data-text-layout={current?.mode ?? "pending"}
+  data-equipment-property={equipmentProperty?.field}
+  data-equipment-property-state={equipmentProperty?.state}
   data-tag-name={tagName}
   data-tag-state={tagState}
   data-tag-reason={tagDetail}

@@ -210,3 +210,11 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ### フォルダーの兄弟順
 
 `folder-order.ts`は同じ親の隣を判定し、`editor/folder-handler.ts`の`reorder-folder`はorderの交換だけを実施する。controllerの世代・draft照合とfolderContextメニューへ接続する。`layer-folders.test.ts`は通常／共有定義・境界・大きなorder・原子性・履歴、`e2e/folder-order.spec.ts`はツリー表示・図面画素の不変・検索・未適用名を確認する。
+
+## 機器情報のText表示
+
+- `lib/equipment-property.ts`: 保存済みmetadataのpure resolver、例示の明示と未関連表示。値・Qualityは扱わない。
+- `ObjectPainting.svelte`／`Primitive.svelte`／`TextPrimitive.svelte`／`designer/SymbolThumbnail.svelte`: 配置context・定義例示と通常Textの省略表示。
+- `symbol-slots.ts`／model schema／Rust検証: Symbol内限定・信号参照との排他。`single-object-handler.ts`と既存state-color検証で原子的変更。
+- `designer/forms/object-form.ts`／`numeric-properties.ts`／`InspectorPanel.svelte`: 単一表示元、slot・metadata切替と既存draft保護。
+- `equipment-property.test.ts`／`examples/symbol-slot-cases.json`／`e2e/equipment-property.spec.ts`: 解決・保存・no-op・Undo・コピー・実描画。`scripts/capture-equipment-property.mjs`が実画面を記録する。

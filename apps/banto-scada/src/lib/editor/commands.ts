@@ -2,6 +2,7 @@ import type { EquipmentSlot, EquipmentBinding } from "../equipment";
 import type { ImageFit } from "../image-fit";
 import type { ImageCrop } from "../image-crop";
 import type {
+  EquipmentPropertyField,
   BoolColors,
   StateColor,
   BackgroundImage,
@@ -29,6 +30,7 @@ export interface ObjectPatch {
   text?: string;
   binding?: TagBinding | null;
   slotBinding?: { slotName: string } | null;
+  equipmentProperty?: { field: EquipmentPropertyField } | null;
   boolColors?: BoolColors | null;
   stateColor?: StateColor | null;
   symbolId?: string;

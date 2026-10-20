@@ -618,3 +618,7 @@ Windows標準操作の補完として、Ctrl／Command＋クリックをキャ�
 ## レイヤーフォルダーの整理操作
 
 同じ親内での一つ上・下への手動順変更を追加した。既存のorderを交換し、図面の重なり順や所属を変更しない。右クリックとShift＋F10、検索中と端の無効状態、未適用入力・Undoを確認する。位置指定ドラッグはこの工程と分ける。
+
+## 機器metadata表示の先行工程
+
+[機器情報Text](equipment-property-design.md)をProject0.31.0へ追加する。詳細提案§16.2／§17 C段階のうち、保存済み機器名・コード・種別名だけを共有Symbolへ投影する。定義例示・未関連状態・排他とコピー制約を明記し、現在Projectの台帳を表示元とする。正式Faceplate、機器context付きView、実catalog／Hostは引き続き後続。直前のフォルダー順変更`db4906b`は[全CI](https://github.com/tyaro/temp-scada/actions/runs/39406247823)成功。

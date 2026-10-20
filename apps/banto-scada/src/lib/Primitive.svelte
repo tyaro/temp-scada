@@ -1,4 +1,8 @@
 <script lang="ts">
+  import {
+    resolveEquipmentProperty,
+    type EquipmentPropertyPresentation,
+  } from "./equipment-property";
   import { slotPresentation, type SlotPresentation } from "./symbol-slots";
   import { boolSlotState } from "./slot-presentation";
   import { patternGeometry } from "./pattern-paint";
@@ -12,6 +16,7 @@
     color,
     readings,
     slotDisplay,
+    equipmentPropertyDisplay,
     stateColor,
     onsummary,
   }: {
@@ -19,6 +24,7 @@
     color?: string;
     readings?: TagReadings;
     slotDisplay?: SlotPresentation;
+    equipmentPropertyDisplay?: EquipmentPropertyPresentation;
     stateColor?: string;
     onsummary?: (description: string) => void;
   } = $props();
@@ -65,6 +71,12 @@
   );
   const slotBinding = $derived(
     object.shape.type === "text" ? object.shape.slotBinding : undefined,
+  );
+  const metadata = $derived(
+    object.shape.type === "text" && object.shape.equipmentProperty
+      ? (equipmentPropertyDisplay ??
+          resolveEquipmentProperty(object.shape.equipmentProperty.field))
+      : undefined,
   );
   const bound = $derived(!!binding || !!slotBinding);
   const presentation = $derived(
@@ -220,7 +232,12 @@
       stroke-linecap={lineCap(object.shape.paint.stroke?.lineStyle)}
     />
   {:else if object.shape.type === "text"}<TextPrimitive
-      text={bound ? presentation.text : object.shape.text}
+      text={metadata
+        ? metadata.text
+        : bound
+          ? presentation.text
+          : object.shape.text}
+      equipmentProperty={metadata}
       width={object.width}
       height={object.height}
       style={object.shape.style}

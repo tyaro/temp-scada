@@ -193,11 +193,13 @@ export function copyObjectSnapshot(
     );
   if (
     objects.some(
-      (object) => object.shape.type === "text" && object.shape.slotBinding,
+      (object) =>
+        object.shape.type === "text" &&
+        (object.shape.slotBinding || object.shape.equipmentProperty),
     )
   )
     throw new Error(
-      "slot表示単体のコピー・切り取りは未対応です。共有Symbol全体のコピーまたは定義内の複製を使ってください。",
+      "slot表示単体・機器情報単体のコピー・切り取りは未対応です。共有Symbol全体のコピーまたは定義内の複製を使ってください。",
     );
   if (
     objects.some(

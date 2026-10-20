@@ -384,5 +384,179 @@
         "futureColor": "#000000"
       }
     }
+  },
+  {
+    "name": "equipment property code in shared Text",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": true,
+    "value": {
+      "type": "text",
+      "text": "",
+      "style": {
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "equipmentProperty": {
+        "field": "code"
+      }
+    }
+  },
+  {
+    "name": "equipment property name in shared Text",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": true,
+    "value": {
+      "type": "text",
+      "text": "",
+      "style": {
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "equipmentProperty": {
+        "field": "name"
+      }
+    }
+  },
+  {
+    "name": "equipment property typeName in shared Text",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": true,
+    "value": {
+      "type": "text",
+      "text": "",
+      "style": {
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "equipmentProperty": {
+        "field": "typeName"
+      }
+    }
+  },
+  {
+    "name": "equipment property unknown field",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "",
+      "style": {
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "equipmentProperty": {
+        "field": "id"
+      }
+    }
+  },
+  {
+    "name": "equipment property extra key",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "",
+      "style": {
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "equipmentProperty": {
+        "field": "name",
+        "equipmentId": "other"
+      }
+    }
+  },
+  {
+    "name": "equipment property signal slot conflict",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "",
+      "style": {
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "equipmentProperty": {
+        "field": "name"
+      },
+      "slotBinding": {
+        "slotName": "running"
+      }
+    }
+  },
+  {
+    "name": "equipment property direct tag conflict",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "",
+      "style": {
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "equipmentProperty": {
+        "field": "name"
+      },
+      "binding": {
+        "externalName": "tag"
+      }
+    }
+  },
+  {
+    "name": "equipment property bool color conflict",
+    "target": "/symbols/0/objects/5",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "",
+      "style": {
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "equipmentProperty": {
+        "field": "name"
+      },
+      "boolColors": {
+        "trueColor": "#00ff00",
+        "falseColor": "#888888",
+        "unknownColor": "#999999"
+      }
+    }
+  },
+  {
+    "name": "equipment property forbidden on screen Text",
+    "target": "/screens/0/objects/1",
+    "key": "shape",
+    "valid": false,
+    "value": {
+      "type": "text",
+      "text": "",
+      "style": {
+        "fontSize": 14,
+        "fontWeight": "normal",
+        "align": "left"
+      },
+      "equipmentProperty": {
+        "field": "name"
+      }
+    }
   }
 ]

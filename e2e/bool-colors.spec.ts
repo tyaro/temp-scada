@@ -57,17 +57,17 @@ for (const theme of ["light", "dark"] as const)
     );
     await expect(text).toHaveAttribute("fill", "#2563eb");
     const form = page.locator('form[data-editor-form="object"]');
-    await form.getByLabel("読取slot", { exact: true }).selectOption("current");
+    await form.getByLabel("表示元", { exact: true }).selectOption("current");
     await form.getByRole("button", { name: "変更を適用", exact: true }).click();
     await expect(colors).toHaveCount(0);
     await page.getByRole("button", { name: "元に戻す", exact: true }).click();
     await expect(colors).toBeVisible();
-    await expect(form.getByLabel("読取slot", { exact: true })).toHaveValue(
+    await expect(form.getByLabel("表示元", { exact: true })).toHaveValue(
       "running",
     );
     await expect(text).toHaveAttribute("fill", "#2563eb");
     // Two dirty forms must not partly apply when the first one removes bool eligibility.
-    await form.getByLabel("読取slot", { exact: true }).selectOption("current");
+    await form.getByLabel("表示元", { exact: true }).selectOption("current");
     await colors.getByLabel("状態別の文字色を使用").selectOption("disabled");
     await page.getByRole("button", { name: "画面へ戻る", exact: true }).click();
     await prompt
@@ -82,7 +82,7 @@ for (const theme of ["light", "dark"] as const)
         ),
     ).toBeVisible();
     await expect(colors).toBeVisible();
-    await expect(form.getByLabel("読取slot", { exact: true })).toHaveValue(
+    await expect(form.getByLabel("表示元", { exact: true })).toHaveValue(
       "current",
     );
     await expect(colors.getByLabel("状態別の文字色を使用")).toHaveValue(
@@ -90,7 +90,7 @@ for (const theme of ["light", "dark"] as const)
     );
     await expect(text).toHaveAttribute("fill", "#2563eb");
     // Restoring drafts to their committed values permits saving the unchanged model.
-    await form.getByLabel("読取slot", { exact: true }).selectOption("running");
+    await form.getByLabel("表示元", { exact: true }).selectOption("running");
     await colors.getByLabel("状態別の文字色を使用").selectOption("enabled");
     const downloading = page.waitForEvent("download");
     await fileCommand(page, "Project を保存");
@@ -101,5 +101,5 @@ for (const theme of ["light", "dark"] as const)
       ...object.shape.boolColors,
       unknownColor: "#2563eb",
     });
-    expect(saved.manifest.schemaVersion).toBe("0.30.0");
+    expect(saved.manifest.schemaVersion).toBe("0.31.0");
   });

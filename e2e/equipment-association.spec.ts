@@ -58,7 +58,7 @@ for (const theme of ["light", "dark"] as const) {
     const saved = JSON.parse(
       await readFile((await (await save).path())!, "utf8"),
     );
-    expect(saved.manifest.schemaVersion).toBe("0.30.0");
+    expect(saved.manifest.schemaVersion).toBe("0.31.0");
     expect(saved.screens[0].objects[10].shape.equipmentId).toBe(equipment.id);
   });
 }

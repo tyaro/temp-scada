@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolveEquipmentProperty } from "../equipment-property";
   import type { SymbolDefinition } from "../project";
   import { objectTransform } from "../rotation";
   import { compositedOpacity } from "../opacity";
@@ -22,6 +23,15 @@
     <g transform={objectTransform(object)} opacity={compositedOpacity(object)}
       ><Primitive
         {object}
+        equipmentPropertyDisplay={object.shape.type === "text" &&
+        object.shape.equipmentProperty
+          ? resolveEquipmentProperty(
+              object.shape.equipmentProperty.field,
+              undefined,
+              undefined,
+              true,
+            )
+          : undefined}
         stateColor={resolveStateColor(object, definition)}
         color="var(--banto-text-muted)"
       /></g

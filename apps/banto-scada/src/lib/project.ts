@@ -89,6 +89,7 @@ export interface TextStyle {
   fontWeight: "normal" | "bold";
   align: "left" | "center" | "right";
 }
+export type EquipmentPropertyField = "code" | "name" | "typeName";
 export type SymbolColorMode = "monochrome" | "definition";
 export interface LayoutObject extends BaseObject {
   width: number;
@@ -102,6 +103,7 @@ export interface LayoutObject extends BaseObject {
         style: TextStyle;
         binding?: TagBinding;
         slotBinding?: { slotName: string };
+        equipmentProperty?: { field: EquipmentPropertyField };
         boolColors?: BoolColors;
       }
     | {
@@ -172,10 +174,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.30.0";
+    schemaVersion: "0.31.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.30.0";
+    minRuntimeVersion: "0.31.0";
     name: string;
   };
   screens: Screen[];
@@ -199,8 +201,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.30.0",
-        minRuntimeVersion: "0.30.0",
+        schemaVersion: "0.31.0",
+        minRuntimeVersion: "0.31.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,

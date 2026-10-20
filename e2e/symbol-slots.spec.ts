@@ -68,7 +68,7 @@ for (const theme of ["light", "dark"] as const)
     expect(saved.symbols[0].objects.at(-1).shape.slotBinding).toEqual({
       slotName: "value",
     });
-    expect(saved.manifest.schemaVersion).toBe("0.30.0");
+    expect(saved.manifest.schemaVersion).toBe("0.31.0");
   });
 test("slot selection is draft protected, applies with Undo and refuses clipboard cut", async ({
   page,
@@ -81,7 +81,7 @@ test("slot selection is draft protected, applies with Undo and refuses clipboard
   const object = sample.symbols[0].objects[5];
   await page.locator(`button[data-layer-id="${object.id}"]`).click();
   const form = page.locator('form[data-editor-form="object"]');
-  const slot = form.getByRole("combobox", { name: "読取slot", exact: true });
+  const slot = form.getByRole("combobox", { name: "表示元", exact: true });
   await expect(slot).toHaveValue("running");
   await slot.selectOption("current");
   await button(page, "画面へ戻る").click();

@@ -19,7 +19,10 @@ export function validateSymbolSlots(project: Project) {
       slots.add(slot.name);
     }
     for (const object of owner.objects) {
-      if (object.shape.type !== "text" || !object.shape.slotBinding) continue;
+      if (object.shape.type !== "text") continue;
+      if (object.shape.equipmentProperty && !definition)
+        throw new Error("機器情報は共有定義内のTextだけに設定できます");
+      if (!object.shape.slotBinding) continue;
       if (!definition)
         throw new Error("slot表示は共有定義内のTextだけに設定できます");
       const slotName = object.shape.slotBinding.slotName;

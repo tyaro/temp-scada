@@ -873,15 +873,21 @@
                 >
                 {#if activeDefinition}
                   <label class="full-width"
-                    >読取slot<select name="slotName" aria-label="読取slot"
-                      ><option value="">静的テキスト</option
-                      >{#each ("readSlots" in screen ? screen.readSlots : []) ?? [] as slot}<option
-                          value={slot.name}>{slot.name} · {slot.type}</option
-                        >{/each}</select
+                    >表示元<select name="slotName" aria-label="表示元"
+                      ><option value="">静的テキスト</option>
+                      <optgroup label="機器情報">
+                        <option value="@code">機器コード</option>
+                        <option value="@name">機器名</option>
+                        <option value="@typeName">機器種別名</option>
+                      </optgroup><optgroup label="読取slot"
+                        >{#each ("readSlots" in screen ? screen.readSlots : []) ?? [] as slot}<option
+                            value={slot.name}>{slot.name} · {slot.type}</option
+                          >{/each}</optgroup
+                      ></select
                     ></label
                   >
                   <p class="full-width tag-note">
-                    配置に関連付けた機器から解決します。定義編集中は機器未関連付けです。静的テキスト・number
+                    配置に関連付けた機器から解決します。機器情報は保存した台帳を表示し、定義編集中だけ例示します。読取slotは定義編集中も機器未関連付けです。機器情報・静的テキスト・number
                     slotへ変更すると状態別の文字色も解除します。
                   </p>
                 {:else}
