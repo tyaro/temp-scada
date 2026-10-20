@@ -13,6 +13,7 @@
     symbolSlotFormCommand,
     acknowledgeSymbolSlotForm,
   } from "./lib/designer/forms/symbol-slot";
+  import { equipmentTypeFormCommand } from "./lib/designer/forms/equipment-type";
   import { equipmentFormCommand } from "./lib/designer/forms/equipment";
   import { groupNameFormCommand } from "./lib/designer/forms/group-name";
   import { createDesignerActions } from "./lib/designer/controllers/designer-actions";
@@ -155,7 +156,11 @@
   }
   function revealDraftForm(form: HTMLFormElement) {
     expandTreeAncestors(form);
-    if (["screen", "project"].includes(form.dataset.editorForm ?? "")) {
+    if (
+      ["screen", "project", "equipment", "equipment-type"].includes(
+        form.dataset.editorForm ?? "",
+      )
+    ) {
       setAuxPanelVisibility({ sidebar: true });
       activePanel = "project";
     } else setInspectorVisibility(true);
@@ -1482,7 +1487,9 @@
   function acknowledgeForm(form: HTMLFormElement) {
     if (form.dataset.editorForm === "symbol-slot")
       acknowledgeSymbolSlotForm(form);
-    if (form.dataset.editorForm === "equipment") {
+    if (
+      ["equipment", "equipment-type"].includes(form.dataset.editorForm ?? "")
+    ) {
       for (const name of ["code", "name"]) {
         const input = form.querySelector<HTMLInputElement>(
           `input[name="${name}"]`,
@@ -1856,6 +1863,17 @@
           generation: workspaceGeneration,
           definitionId: activeDefinition?.id,
         },
+      );
+    if (form.dataset.editorForm === "equipment-type")
+      return equipmentTypeFormCommand(
+        {
+          connected: form.isConnected,
+          targetKey: form.dataset.targetKey,
+          typeId: form.dataset.typeId,
+          data,
+        },
+        project,
+        workspaceGeneration,
       );
     if (form.dataset.editorForm === "equipment")
       return equipmentFormCommand(form, project, workspaceGeneration);

@@ -5,6 +5,7 @@
 - [現在の実装状況](docs/implementation-status.md): 対応機能、保存契約、検証範囲、未実装。
 - [操作ガイド](docs/user-guide.md): 編集、画像、画面再利用、入力保護、パネルとキー操作。
 - [開発計画](docs/development-plan.md)と[実装履歴](docs/implementation-history.md): 今後と過去を分離。
+- [機器種別の編集](docs/equipment-type-editing.md): 任意のbool／number読取slotと採用保護。
 - [機器の読取詳細](docs/equipment-read-details.md): 採用信号の状態と機器ごとの読取小窓。
 - [共有図形・配管の状態色追従](docs/state-color-following.md): bool状態色、参照保護と実画面。
 - [統合設計](docs/scada-integrated-design.md): 機能仕様の基準。
