@@ -1,3 +1,7 @@
+import {
+  parseInspectorPlacement,
+  type InspectorPlacement,
+} from "../designer/inspector-layout";
 import { DEFAULT_FAVORITES, parseFavorites } from "../designer/favorites";
 import { DEFAULT_PANEL_LAYOUT } from "../designer/panel-layout";
 import { parseReferenceHeight } from "../designer/panel-height";
@@ -54,6 +58,37 @@ export async function setPaletteView(view: PaletteView): Promise<void> {
       "warning",
       "部品の表示形式を保存できません。このタブだけに適用します。",
     );
+  }
+}
+const INSPECTOR_PLACEMENT_KEY = "scada.designer.inspector-placement";
+let savedInspectorPlacement: InspectorPlacement | null = null;
+export function getSavedInspectorPlacement(): InspectorPlacement | null {
+  return savedInspectorPlacement
+    ? { ...savedInspectorPlacement, rect: { ...savedInspectorPlacement.rect } }
+    : null;
+}
+/** Explicit save only; a failed write leaves the previous slot available. */
+export async function saveInspectorPlacement(
+  value: InspectorPlacement,
+): Promise<boolean> {
+  const candidate = parseInspectorPlacement(JSON.stringify(value));
+  if (!candidate) {
+    toastStore.push(
+      "warning",
+      "プロパティの配置を保存できません。配置の設定を確認してください。",
+    );
+    return false;
+  }
+  try {
+    await uiSettings.set(INSPECTOR_PLACEMENT_KEY, JSON.stringify(candidate));
+    savedInspectorPlacement = candidate;
+    return true;
+  } catch {
+    toastStore.push(
+      "warning",
+      "プロパティの配置を保存できません。現在の配置と以前の保存配置を保持します。",
+    );
+    return false;
   }
 }
 const PANEL_WIDTHS_KEY = "scada.designer.panel-widths";
@@ -229,6 +264,17 @@ export async function initializeBanto(): Promise<() => void> {
     toastStore.push(
       "warning",
       "部品の表示形式を読み込めません。アイコン一覧を使います。",
+    );
+  }
+  try {
+    savedInspectorPlacement = parseInspectorPlacement(
+      await uiSettings.get(INSPECTOR_PLACEMENT_KEY),
+    );
+  } catch {
+    savedInspectorPlacement = null;
+    toastStore.push(
+      "warning",
+      "プロパティの保存配置を読み込めません。右側の標準配置を使います。",
     );
   }
   try {

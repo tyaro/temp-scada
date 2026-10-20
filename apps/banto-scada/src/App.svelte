@@ -187,7 +187,23 @@
     panelWidthMaximum,
     type PanelWidths,
   } from "./lib/designer/panel-widths";
+  import { createFloatingInspector } from "./lib/designer/controllers/floating-inspector.svelte";
   let windowWidth = $state(window.innerWidth);
+  let windowHeight = $state(window.innerHeight);
+  let workspaceTop = $state(108);
+  function measureWorkspace(node: HTMLElement) {
+    const measure = () => {
+      const top = node.getBoundingClientRect().top;
+      if (top !== workspaceTop) {
+        floatingInspector.cancel();
+        workspaceTop = top;
+      }
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    measure();
+    return { destroy: () => observer.disconnect() };
+  }
   let panelWidths = $state(getPanelWidths());
   const leftWidth = $derived(
     Math.min(panelWidths.left, panelWidthMaximum("left", windowWidth)),
@@ -257,12 +273,48 @@
   let leftResizer = $state<{ cancel: () => void }>();
   let rightResizer = $state<{ cancel: () => void }>();
   let bottomResizer = $state<{ cancel: () => void }>();
+  const floatingInspector = createFloatingInspector({
+    get viewport() {
+      return {
+        width: windowWidth,
+        height: windowHeight,
+        top: workspaceTop,
+      };
+    },
+    get element() {
+      return inspectorPanel;
+    },
+    get visible() {
+      return mode === "edit" && showInspector;
+    },
+    get blocked() {
+      return busy || !!drafts.pending || !!replacement || mode !== "edit";
+    },
+    beforePlacementChange() {
+      leftResizer?.cancel();
+      rightResizer?.cancel();
+      bottomResizer?.cancel();
+      canvasWorkspace?.preparePanelResize();
+    },
+    cancelWorkspaceInteraction() {
+      leftResizer?.cancel();
+      rightResizer?.cancel();
+      bottomResizer?.cancel();
+      stopPlacement();
+      canvasWorkspace?.cancelInteractions();
+      layerTreeBindings.endLayerDrag();
+    },
+    report(message) {
+      report("success", message);
+    },
+  });
   function restorePanelLayout() {
     if (mode !== "edit" || busy || drafts.pending || replacement) return;
     leftResizer?.cancel();
     rightResizer?.cancel();
     bottomResizer?.cancel();
     canvasWorkspace?.preparePanelResize();
+    floatingInspector.standard();
     panelWidths = { ...DEFAULT_PANEL_LAYOUT.widths };
     referenceHeight = DEFAULT_PANEL_LAYOUT.referenceHeight;
     showSidebar = DEFAULT_PANEL_LAYOUT.panels.sidebar;
@@ -618,6 +670,7 @@
     centerOn: (point: Point) => void;
     visibleCenter: () => Point;
     revealObject: (id: string) => void;
+    cancelInteractions: () => void;
     preparePanelResize: (continuous?: boolean) => void;
     finishPanelResize: () => void;
     showSelection: () => boolean;
@@ -2458,7 +2511,9 @@
       layerContext(objectId, event.currentTarget as HTMLElement);
     }
   }
-  const menuBlocked = $derived(busy || !!drafts.pending || !!replacement);
+  const menuBlocked = $derived(
+    busy || !!drafts.pending || !!replacement || floatingInspector.gesturing,
+  );
   const editBlocked = $derived(menuBlocked || mode !== "edit");
   const selectionViewTarget = $derived(selectionTarget(screen, selectedIds));
   const selectionViewReason = $derived(
@@ -2610,6 +2665,7 @@
       add,
     },
     view: {
+      inspectorLayout: floatingInspector,
       get mode() {
         return mode;
       },
@@ -2688,6 +2744,7 @@
 
 <svelte:window
   bind:innerWidth={windowWidth}
+  bind:innerHeight={windowHeight}
   oncopy={nativeClipboard}
   oncut={nativeClipboard}
   onpaste={nativeClipboard}
@@ -2907,6 +2964,7 @@
   actions={screenContextItems}
 />
 <main
+  use:measureWorkspace
   style:--sidebar-width={`${leftWidth}px`}
   style:--inspector-width={`${rightWidth}px`}
   class:editing={mode === "edit"}
@@ -2914,7 +2972,9 @@
   class:sidebar-visible={mode === "edit"
     ? showSidebar
     : !previewFullscreenActive}
-  class:inspector-visible={showInspector && mode === "edit"}
+  class:inspector-visible={showInspector &&
+    mode === "edit" &&
+    !floatingInspector.floating}
 >
   <aside
     class="project-sidebar"
@@ -3406,6 +3466,7 @@
   </section>
   {#if mode === "edit"}
     <InspectorPanel
+      layout={floatingInspector}
       bind:this={inspectorController}
       bind:element={inspectorPanel}
       generation={workspaceGeneration}
@@ -3450,7 +3511,7 @@
         canCommit={() => window.innerWidth >= 1100}
       />
     {/if}
-    {#if showInspector}
+    {#if showInspector && !floatingInspector.floating}
       <PanelResizeHandle
         bind:this={rightResizer}
         side="right"

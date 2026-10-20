@@ -1,3 +1,4 @@
+import type { FloatingInspector } from "./floating-inspector.svelte";
 import type { ContextAction } from "../ContextActions.svelte";
 import type { ToolbarGroup } from "../EditToolbar.svelte";
 import type { DesignerMenu } from "../DesignerMenubar.svelte";
@@ -77,6 +78,7 @@ export interface DesignerActionsHost {
     add(kind: AddKind): void;
   };
   view: {
+    inspectorLayout?: FloatingInspector;
     readonly mode: "edit" | "preview";
     readonly menuBlocked: boolean;
     readonly selectionViewReason: string | null;
@@ -734,6 +736,39 @@ export function createDesignerActions(host: DesignerActionsHost) {
             run: () =>
               host.view.setInspectorVisibility(!host.view.showInspector, true),
           },
+          ...(host.view.inspectorLayout
+            ? [
+                {
+                  label: host.view.inspectorLayout.preferredFloating
+                    ? "プロパティを右へ戻す"
+                    : "プロパティを浮動にする",
+                  disabled:
+                    host.editing.editBlocked ||
+                    (!host.view.inspectorLayout.preferredFloating &&
+                      !host.view.inspectorLayout.supported),
+                  run: () => host.view.inspectorLayout?.toggle(),
+                },
+                {
+                  label: "プロパティ配置を保存",
+                  disabled:
+                    host.editing.editBlocked ||
+                    host.view.inspectorLayout.saving,
+                  run: () => {
+                    void host.view.inspectorLayout?.save();
+                  },
+                },
+                {
+                  label: "保存したプロパティ配置に戻す",
+                  disabled:
+                    host.editing.editBlocked ||
+                    !host.view.inspectorLayout.hasSaved,
+                  run: () => {
+                    host.view.inspectorLayout?.restore();
+                    host.view.setInspectorVisibility(true, true);
+                  },
+                },
+              ]
+            : []),
           {
             label: host.view.showMinimap
               ? "ミニマップを隠す"

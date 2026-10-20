@@ -234,3 +234,12 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 配列設定の実画面は`scripts/capture-array-copy.mjs`で記録し、入力値の実画素も確認する。
 
 `e2e/toolbar-status-layout.spec.ts`は保存／dirty表示の寸法変化を検証する。Appの`.save-state`は固定領域と常設dirty行を持ち、数値blur中に作業領域の高さを変えない。`numeric-properties`／`range-input`／`edit-toolbar`の実操作回帰を併用する。
+
+## プロパティの浮動配置
+
+- `designer/inspector-layout.ts`: Project外のversion付き配置slot、表示用clamp、固定起点の移動／サイズ計算。`inspector-layout.test.ts`で不正設定・境界を確認する。
+- `designer/controllers/floating-inspector.svelte.ts`: 同じDOMの配置、pointer／keyboard transaction、取消・上位層優先・明示保存。
+- `designer/InspectorPanelHeader.svelte`／`InspectorPanel.svelte`: 非モーダルな操作ハンドルと配置メニュー。フォーム本体を移設・再生成しない。
+- `banto/setup.ts`: Banto UI設定の専用slot。書込成功時のみ保存済みsnapshotを更新する。
+- Appの`measureWorkspace`: ResizeObserverで上部境界を追跡。`CanvasWorkspace.cancelInteractions`は配置変更と作図gestureを排他にする。既存の手動倍率・中心保持は共用する。
+- `e2e/inspector-floating.spec.ts`: DOM identity・複数draft・IME・通常blur・取消・保存復元・狭い画面・上位Menuを実操作で確認する。

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import InspectorPanelHeader from "./InspectorPanelHeader.svelte";
+  import type { FloatingInspector } from "./controllers/floating-inspector.svelte";
   import SymbolEquipmentCheck from "./SymbolEquipmentCheck.svelte";
   import StateColor from "./StateColor.svelte";
   import { stateColorUsages } from "../state-color";
@@ -39,6 +41,7 @@
   let {
     element = $bindable<HTMLElement>(),
     visible,
+    layout,
     generation,
     commitNumber,
     onclose,
@@ -66,6 +69,7 @@
   }: {
     element?: HTMLElement;
     visible: boolean;
+    layout?: FloatingInspector;
     generation: number;
     commitNumber: (
       target: NumericTarget,
@@ -370,21 +374,16 @@
 
 <aside
   class="inspector"
+  class:floating={layout?.floating}
+  data-panel-placement={layout?.floating ? "floating" : "docked"}
+  style={layout?.style}
   id="designer-inspector-panel"
   aria-label="プロパティパネル"
   bind:this={element}
   hidden={!visible}
   tabindex="-1"
 >
-  <div class="panel-header">
-    <h2>プロパティ</h2>
-    <button
-      type="button"
-      aria-label="プロパティを隠す"
-      title="プロパティを隠す"
-      onclick={onclose}>×</button
-    >
-  </div>
+  <InspectorPanelHeader {layout} {onclose} />
   {#if selected}<div class="inspector-subject">
       <strong title={placementLabel(selected, project.symbols)}
         >{placementLabel(selected, project.symbols)}</strong
@@ -1023,6 +1022,19 @@
         図形をクリック、または一覧から選んでください。図形はドラッグして移動できます。
       </p>{/if}
   </div>
+  {#if layout?.floating && layout.rect}
+    <button
+      type="button"
+      class="floating-size"
+      aria-label="プロパティパネルのサイズを変更"
+      aria-describedby="inspector-placement-help"
+      title="ドラッグでサイズ変更。Enterでキーボード操作"
+      style:left={`${layout.rect.x + layout.rect.width - 22}px`}
+      style:top={`${layout.rect.y + layout.rect.height - 22}px`}
+      onpointerdown={(event) => layout?.pointerStart("resize", event)}
+      onkeydown={(event) => layout?.keyboardStart("resize", event)}>↘</button
+    >
+  {/if}
 </aside>
 
 <TagPicker
@@ -1075,28 +1087,25 @@
   .inspector[hidden] {
     display: none;
   }
-  .panel-header {
-    position: sticky;
-    top: 0;
-    z-index: 1;
+  .inspector.floating {
+    z-index: calc(var(--banto-z-header, 100) + 1);
+    border: 1px solid var(--banto-border);
+    border-radius: 6px;
+    box-shadow: 0 10px 32px #0003;
+  }
+  .floating-size {
+    position: fixed;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    padding: 0;
+    z-index: 2;
     background: var(--banto-surface);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--banto-border);
-  }
-  h2 {
-    font-size: 13px;
-    margin: 0;
-  }
-  .panel-header button {
-    width: 28px;
-    margin: 0;
-    padding: 2px;
-    font-size: 20px;
-    text-align: center;
+    color: var(--banto-text);
+    border: 1px solid var(--banto-border);
+    border-radius: 3px;
+    touch-action: none;
+    cursor: nwse-resize;
   }
   .panel-content {
     padding: 14px;

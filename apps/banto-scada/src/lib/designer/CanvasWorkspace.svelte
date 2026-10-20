@@ -244,6 +244,14 @@
     viewport.scrollTop = state.top;
     views[screen.id] = state;
   }
+  export function cancelInteractions() {
+    renderer?.cancelInteraction();
+    cancelRange();
+    cancelPlacementPointer();
+    cancelPan();
+    space = false;
+    dropPoint = null;
+  }
   export function preparePanelResize(continuous = false) {
     if (!editable || stored?.zoom == null) return;
     const anchor = {
