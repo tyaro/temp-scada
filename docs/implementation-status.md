@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-10-20（日本時間）、Project 0.22.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-10-20（日本時間）、Project 0.23.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
@@ -9,9 +9,9 @@
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | アプリ基盤 | Banto v6.7.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
-| Project    | `schemaVersion`／`minRuntimeVersion`は**0.22.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
+| Project    | `schemaVersion`／`minRuntimeVersion`は**0.23.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
-| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.21.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
+| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.22.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
 | IDと変更   | lowercase UUID v7、有限座標、明示order。編集失敗は原子的拒否、同値はno-op、Undo／Redoでもrevisionは巻き戻さない                         |
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
@@ -21,7 +21,7 @@
 | 領域           | 実装した範囲                                                                                                                     | 主な残り                                                                               |
 | -------------- | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | Studio         | 薄いheader、6分類メニュー、共通toolbar、ライト／ダーク／OS連動                                                                   | 5種類の開発画面全体、外観の仕上げ                                                      |
-| 左ペイン・部品 | プロジェクト／レイヤー／部品、ツリー、検索、分類、アイコン／名称、右クリック、お気に入りと連続配置                               | 機器台帳、グループ内部編集等                                                           |
+| 左ペイン・部品 | プロジェクト／レイヤー／部品、ツリー、検索、分類、アイコン／名称、右クリック、お気に入りと連続配置、初期機器台帳                 | 大規模機器一覧、グループ内部編集等                                                     |
 | パネル         | 個別／一括表示と復帰、左右幅と下部高さの保存、固定標準配置の復元                                                                 | 浮動／再ドッキング、名前付き配置、draftのDOM分離                                       |
 | 共通作図       | 選択・範囲選択、移動・サイズ・回転・整列・中心等間隔、頂点、コピー／切取／貼付、Undo／Redo、幾何グループ                         | グループ任意拡縮・入れ子、図形演算、接続口と配管追従                                   |
 | 配置・レイヤー | 名前、編集ロック、静的非表示、整理フォルダー、親と所属のドラッグ変更                                                             | 継承表示、一時非表示、フォルダーの手動順変更                                           |
@@ -31,11 +31,11 @@
 | 表示確認       | 同一Projectの読取Popup最大4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                               | Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                           |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                  | 実図面・画像／Symbol等の計測と必要な最適化                                             |
 | 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                     | 実catalog選択、draftのDOM分離                                                          |
-| タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                 | 実Hub／catalog、型付きslot、Host、正式RuntimeとAction境界                              |
+| タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                 | 実Hub／catalog、slotの図面表示、Host、正式RuntimeとAction境界                          |
 | server・監視   | 提供段階と共有層の設計                                                                                                           | Core v1のS9b、その上のv1.1 Alarm／Event・Action／History・Trend、Camera、HTTP／Program |
 | 認証・MES      | ログイン不要のローカル編集                                                                                                       | industrialの修正後に認証再確認。ユーザー管理・運用移行・MESは未実装                    |
 
-共有Symbolは静的な定義と単色／定義色、独立コピーに対応する。状態別表示・機器slot・Binding付きSymbolは未実装。整理フォルダーを幾何グループとして扱わない。読取プレビューから実機要求は送らない。
+共有Symbolは静的な定義と単色／定義色、独立コピーに対応する。状態別表示・機器slotを使うSymbol・Binding付きSymbolは未実装。整理フォルダーを幾何グループとして扱わない。読取プレビューから実機要求は送らない。
 
 ## 検証の範囲
 
@@ -66,4 +66,8 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 ## 型付き読取slotの前段
 
-[表示用adapter](typed-read-slots-design.md)へbool／numberと構造化した機器／slot keyを追加した。外部名の重複要求を集約し、未割付・未接続・未解決・型不一致・Qualityを区別する。既存数値Textと同じ検証処理を共有し、Rust40件・Clippy・Rust fmt、TS676件・全体整形が成功。Astraレビューと別正常タグの局所成功も確認した。Project0.22.0・UI・固定SDK revは変更していない。Equipmentの保存・台帳UI、動的Symbol、Host、実Hub接続の完成ではない。
+[表示用adapter](typed-read-slots-design.md)へbool／numberと構造化した機器／slot keyを追加した。外部名の重複要求を集約し、未割付・未接続・未解決・型不一致・Qualityを区別する。既存数値Textと同じ検証処理を共有し、Rust40件・Clippy・Rust fmt、TS676件・全体整形が成功。Astraレビューと別正常タグの局所成功も確認した。この先行区切りではProject0.22.0・UI・固定SDK revは変更していない。現在のEquipment保存は次節の範囲。Equipmentの保存・台帳UI、動的Symbol、Host、実Hub接続の完成ではない。
+
+## Equipmentの保存と初期台帳
+
+0.23.0で[機器種別・Instance・採用read slot](equipment-register-design.md)の保存とTS／Rust検証、原子的CRUDを実装した。プロジェクトツリーの「機器」から読取種別の追加・登録・割付・削除を行い、draft保護とUndoへ接続する。未採用と採用未割付を区別し、使用中種別の削除と採用slotの破壊的変更を拒否する。ProjectからReadSlotPlanへ接続した。TS715件・Rust43件・関連ブラウザ24件・型／Clippy／buildが成功。図面との機器参照、動的Symbol、実catalog・Host、正式Runtimeは後続。

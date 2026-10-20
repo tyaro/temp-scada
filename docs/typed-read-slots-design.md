@@ -64,3 +64,7 @@ Rust全40件（model23・runtime単体14・SDK統合3）が成功。新単体8�
 統合テストの初回コンパイルでは、shutdownがhandleを消費するSDK契約に対して停止後のhandleを参照していた。既存watch receiverから停止状態を読むように修正し、全体を実行した。初回Clippyの冗長field名2件も修正済み。テストの無効化やassert緩和はしていない。
 
 Astraの静的レビューでは必須修正や既存数値の回帰は見つからず、提案された別外部名の正常slot併存を単体テストへ補強した。補強後もRust40件・Clippy（警告をエラー扱い）・Rust fmtが成功。TS全676件、全体Prettierも成功した。UIとProject契約は未変更で、この区切りのローカル全ブラウザ再実行・画面再撮影はしていない。最終差分の全体CIはPush後に確認する。
+
+## 後続のEquipment保存接続
+
+0.23.0で[機器の保存と初期台帳](equipment-register-design.md)を追加した。`ReadSlotPlan::from_project()`は検証済みProjectの採用read slotを機器contextへ変換し、`Result`を返す。slot plan自体や現在値は保存しない。先行実装時の0.22.0・UI未変更という記録は当時の範囲であり、現在の保存形式は実装状況を参照する。

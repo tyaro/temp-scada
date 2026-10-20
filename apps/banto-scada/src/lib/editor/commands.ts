@@ -1,3 +1,4 @@
+import type { EquipmentSlot, EquipmentBinding } from "../equipment";
 import type { ImageCrop } from "../image-crop";
 import type {
   BackgroundImage,
@@ -222,7 +223,32 @@ export type ObjectCommand = (
   | { type: "remove"; screenId: string; objectId: string }
 ) & { definitionId?: string };
 
-export type ProjectCommand = { type: "update-project"; name: string };
+export type EquipmentCommand =
+  | { type: "create-equipment-type"; name: string; slots: EquipmentSlot[] }
+  | {
+      type: "update-equipment-type";
+      typeId: string;
+      name: string;
+      slots: EquipmentSlot[];
+    }
+  | { type: "remove-equipment-type"; typeId: string }
+  | {
+      type: "create-equipment";
+      typeId: string;
+      code: string;
+      name: string;
+      bindings: EquipmentBinding[];
+    }
+  | {
+      type: "update-equipment";
+      equipmentId: string;
+      code: string;
+      name: string;
+      bindings: EquipmentBinding[];
+    }
+  | { type: "remove-equipment"; equipmentId: string };
+export type ProjectCommand =
+  { type: "update-project"; name: string } | EquipmentCommand;
 export type SymbolCommand =
   | { type: "create-symbol"; name: string; width: number; height: number }
   | {
@@ -299,6 +325,13 @@ const commandScopes = {
   reorder: "object",
   remove: "object",
   "update-project": "project",
+  "create-equipment-type": "project",
+  "update-equipment-type": "project",
+  "remove-equipment-type": "project",
+  "create-equipment": "project",
+  "update-equipment": "project",
+  "remove-equipment": "project",
+
   "create-symbol": "symbol",
   "update-symbol": "symbol",
   "duplicate-symbol": "symbol",

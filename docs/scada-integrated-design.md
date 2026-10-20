@@ -439,3 +439,7 @@ Project 0.19.0で矩形／楕円の塗りへ斜線・交差線・点を追加し
 ## 型付き読取投影の前段
 
 [初回設計と実装](typed-read-slots-design.md)で、Equipmentの保存／台帳UIに先立ち、Rust adapterのbool／number slotと機器contextを追加した。既存数値Textと共通投影を使う。Project契約とブラウザUIは変更せず、動的Symbol・実Hub・正式Hostは後続。
+
+## Equipmentの初期保存と台帳
+
+0.23.0で[EquipmentType／Instanceと読取slotの保存・初期台帳](equipment-register-design.md)を実装した。機器登録・未割付保存・一括適用・UndoとRuntime read planへの変換まで。図面の機器参照、動的Symbol、実Hub、Hostと正式Runtimeは後続とする。

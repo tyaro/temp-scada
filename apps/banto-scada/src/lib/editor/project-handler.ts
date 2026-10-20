@@ -1,6 +1,6 @@
+import { applyEquipmentCommand } from "./equipment-handler";
 import type { Project } from "../project";
 import type { ProjectCommand } from "./commands";
-import { unhandledCommand } from "./unhandled-command";
 
 /** Mutates only the candidate. Validation and revision updates belong to applyCommand. */
 export function applyProjectCommand(
@@ -15,6 +15,6 @@ export function applyProjectCommand(
       return;
     }
     default:
-      return unhandledCommand(command.type);
+      return applyEquipmentCommand(next, command);
   }
 }

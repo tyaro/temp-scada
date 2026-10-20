@@ -7,6 +7,8 @@
     canvasSelectionIds,
     selectionUnits,
   } from "./lib/geometric-groups";
+  import EquipmentLibrary from "./lib/designer/EquipmentLibrary.svelte";
+  import { equipmentFormCommand } from "./lib/designer/forms/equipment";
   import { groupNameFormCommand } from "./lib/designer/forms/group-name";
   import { createDesignerActions } from "./lib/designer/controllers/designer-actions";
   import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
@@ -1459,6 +1461,14 @@
     }
   }
   function acknowledgeForm(form: HTMLFormElement) {
+    if (form.dataset.editorForm === "equipment") {
+      for (const name of ["code", "name"]) {
+        const input = form.querySelector<HTMLInputElement>(
+          `input[name="${name}"]`,
+        );
+        if (input) input.value = input.value.trim();
+      }
+    }
     if (form.dataset.editorForm === "group-name") {
       const input = form.querySelector<HTMLInputElement>('input[name="name"]');
       if (input) input.value = activeGroup?.name ?? "";
@@ -1810,6 +1820,8 @@
   }
   function formCommand(form: HTMLFormElement): EditCommand {
     const data = new FormData(form);
+    if (form.dataset.editorForm === "equipment")
+      return equipmentFormCommand(form, project, workspaceGeneration);
     if (form.dataset.editorForm === "background-image")
       return backgroundImageCommand(
         { data, targetKey: form.dataset.targetKey },
@@ -2725,6 +2737,16 @@
               oncommand={symbolLibraryCommand}
             />
           </TreeSection>
+          <TreeSection label="機器" count={project.equipment?.length ?? 0}>
+            {#key workspaceGeneration}<EquipmentLibrary
+                {project}
+                generation={workspaceGeneration}
+                {drafts}
+                {transition}
+                oncommand={edit}
+                onsubmit={submitForm}
+              />{/key}
+          </TreeSection>
           <TreeSection label="プロジェクト設定">
             {#key `${workspaceGeneration}:${project.manifest.projectId}`}
               <form
@@ -3187,7 +3209,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.22.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.23.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

@@ -56,7 +56,7 @@ industrial と同じ **Banto v6.7.0** を git サブディレクトリ依存で�
 
 Banto の Rust サーバー・認証・ユーザー管理・Tauri の host はまだ接続していません。開発時はログイン不要、運用時はユーザー管理必須、再起動後はログインなしで閲覧専用の監視画面へ入る方針を [運用・ログイン方針](docs/access-policy.md) に記録しています。運用モードの切替機能は未実装です。
 
-Rustの読取adapterは[型付きslot context](docs/typed-read-slots-design.md)にも対応します。これはEquipmentの保存・台帳UI・ブラウザの実Hub接続に先立つライブラリの区切りです。
+Rustの読取adapterは[型付きslot context](docs/typed-read-slots-design.md)にも対応します。0.23.0では[機器の保存と初期台帳](docs/equipment-register-design.md)も追加しました。図面との関連付け・ブラウザの実Hub接続は後続です。
 
 ## リリース前の開発方針
 

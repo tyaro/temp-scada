@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.22.0"
+          "const": "0.23.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.22.0"
+          "const": "0.23.0"
         },
         "name": {
           "type": "string",
@@ -163,6 +163,20 @@
       "maxItems": 128,
       "items": {
         "$ref": "#/$defs/imageAsset"
+      }
+    },
+    "equipmentTypes": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "#/$defs/equipmentType"
+      }
+    },
+    "equipment": {
+      "type": "array",
+      "maxItems": 1000,
+      "items": {
+        "$ref": "#/$defs/equipmentInstance"
       }
     }
   },
@@ -999,6 +1013,103 @@
         }
       },
       "required": ["id", "memberIds"],
+      "additionalProperties": false
+    },
+    "equipmentSlot": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
+          "not": {
+            "pattern": "[^A-Za-z0-9_]"
+          }
+        },
+        "type": {
+          "enum": ["bool", "number"]
+        },
+        "direction": {
+          "const": "read"
+        }
+      },
+      "required": ["name", "type", "direction"],
+      "additionalProperties": false
+    },
+    "equipmentType": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "$ref": "#/$defs/placementName"
+        },
+        "slots": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/equipmentSlot"
+          }
+        }
+      },
+      "required": ["id", "name", "slots"],
+      "additionalProperties": false
+    },
+    "equipmentBinding": {
+      "type": "object",
+      "properties": {
+        "slotName": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
+          "not": {
+            "pattern": "[^A-Za-z0-9_]"
+          }
+        },
+        "externalName": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "[^\\u0009-\\u000D\\u0020\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]"
+            }
+          ]
+        }
+      },
+      "required": ["slotName", "externalName"],
+      "additionalProperties": false
+    },
+    "equipmentInstance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "typeId": {
+          "$ref": "#/$defs/id"
+        },
+        "code": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,63}$",
+          "not": {
+            "pattern": "[^A-Za-z0-9._:/-]"
+          }
+        },
+        "name": {
+          "$ref": "#/$defs/placementName"
+        },
+        "bindings": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/equipmentBinding"
+          }
+        }
+      },
+      "required": ["id", "typeId", "code", "name", "bindings"],
       "additionalProperties": false
     }
   }

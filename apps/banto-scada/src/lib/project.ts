@@ -1,3 +1,8 @@
+import {
+  validateEquipment,
+  type EquipmentType,
+  type EquipmentInstance,
+} from "./equipment";
 import { validateGroups } from "./geometric-groups";
 import { projectScreenReferences } from "./screen-references";
 import { patternGeometry, type PatternKind } from "./pattern-paint";
@@ -128,13 +133,15 @@ export interface SymbolDefinition {
   objects: ScreenObject[];
 }
 export interface Project {
+  equipmentTypes?: EquipmentType[];
+  equipment?: EquipmentInstance[];
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.22.0";
+    schemaVersion: "0.23.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.22.0";
+    minRuntimeVersion: "0.23.0";
     name: string;
   };
   screens: Screen[];
@@ -158,8 +165,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.22.0",
-        minRuntimeVersion: "0.22.0",
+        schemaVersion: "0.23.0",
+        minRuntimeVersion: "0.23.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -317,6 +324,7 @@ export function parseProject(json: string): Project {
     }
   }
   for (const screen of project.screens) validateGroups(screen, ids);
+  validateEquipment(project, ids);
   projectScreenReferences(project);
   return project;
 }

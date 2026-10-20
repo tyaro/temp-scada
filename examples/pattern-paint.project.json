@@ -1,10 +1,10 @@
 {
   "manifest": {
     "product": "banto-scada",
-    "schemaVersion": "0.22.0",
+    "schemaVersion": "0.23.0",
     "projectId": "0199f200-0000-7000-8000-000000000001",
     "projectRevision": 1,
-    "minRuntimeVersion": "0.22.0",
+    "minRuntimeVersion": "0.23.0",
     "name": "繰返しパターン / 水処理設備"
   },
   "screens": [

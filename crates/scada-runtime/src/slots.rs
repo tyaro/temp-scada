@@ -48,6 +48,25 @@ pub struct ReadSlotPlan {
 }
 
 impl ReadSlotPlan {
+    /// Builds only adopted read slots from the validated Project. Values stay outside it.
+    pub fn from_project(project: &scada_model::Project) -> Result<Self, ReadSlotPlanError> {
+        let requests = project
+            .equipment_read_bindings()
+            .into_iter()
+            .map(|binding| ReadSlotRequest {
+                key: ReadSlotKey {
+                    equipment_id: binding.equipment_id,
+                    slot_name: binding.slot_name,
+                },
+                expected_type: match binding.slot_type {
+                    scada_model::EquipmentReadType::Bool => ReadSlotType::Bool,
+                    scada_model::EquipmentReadType::Number => ReadSlotType::Number,
+                },
+                external_name: binding.external_name,
+            });
+        Self::new(project.id().into(), project.revision(), requests)
+    }
+
     /// IDと外部名は呼出元の確定値を保持する。trim・名前推測・タグ作成をしない。
     pub fn new(
         project_id: String,
@@ -62,14 +81,18 @@ impl ReadSlotPlan {
             if request.key.equipment_id.trim().is_empty() {
                 return Err(ReadSlotPlanError::BlankEquipmentId);
             }
-            if request.key.slot_name.trim().is_empty() {
+            if request
+                .key
+                .slot_name
+                .chars()
+                .all(|ch| ch.is_whitespace() || ch == '\u{feff}')
+            {
                 return Err(ReadSlotPlanError::BlankSlotName);
             }
-            if request
-                .external_name
-                .as_ref()
-                .is_some_and(|name| name.trim().is_empty())
-            {
+            if request.external_name.as_ref().is_some_and(|name| {
+                name.chars()
+                    .all(|ch| ch.is_whitespace() || ch == '\u{feff}')
+            }) {
                 return Err(ReadSlotPlanError::BlankExternalName);
             }
             let key = request.key.clone();
@@ -283,6 +306,35 @@ mod tests {
         if view.slots.len() > 1 {
             assert_eq!(view.slots[1].reading, ReadSlotReading::Unassigned);
         }
+    }
+    #[test]
+    fn validated_equipment_project_builds_context_without_copying_placements_or_values() {
+        let mut value: serde_json::Value =
+            serde_json::from_str(include_str!("../../../examples/equipment.project.json")).unwrap();
+        let mut second = value["equipment"][0].clone();
+        second["id"] = json!("0199f700-0000-7000-8000-000000000003");
+        second["code"] = json!("FAN-102");
+        second["bindings"] = json!([{ "slotName": "running", "externalName": "shared" }, { "slotName": "current", "externalName": "shared" }]);
+        value["equipment"].as_array_mut().unwrap().push(second);
+        let project = scada_model::Project::from_json(&value.to_string()).unwrap();
+        let plan = ReadSlotPlan::from_project(&project).unwrap();
+        assert_eq!(plan.slots.len(), 3);
+        assert_eq!(plan.requests().len(), 1);
+        let unassigned = plan
+            .slots
+            .values()
+            .find(|slot| slot.external_name.is_none())
+            .unwrap();
+        assert_eq!(unassigned.expected_type, ReadSlotType::Bool);
+        assert_eq!(
+            plan.slots
+                .values()
+                .filter(|slot| slot.expected_type == ReadSlotType::Number)
+                .count(),
+            1
+        );
+        assert_eq!(plan.project_id, project.id());
+        assert_eq!(plan.project_revision, project.revision());
     }
     #[test]
     fn plan_validates_keys_without_normalizing_or_guessing_names() {
