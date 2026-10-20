@@ -386,6 +386,7 @@ test("embedded View, minimap and preview Popup share cropped painting", async ({
         height: 720,
         background: "#ffffff",
         folders: [],
+        groups: [],
         objects: [],
       });
       // Use the application's UUID v7 generator for contract-valid IDs.

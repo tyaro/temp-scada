@@ -110,6 +110,7 @@ test("loads legacy geometry and saves the migrated version without losing identi
       ...screen,
       background: "#0b1220",
       folders: [],
+      groups: [],
       objects: screen.objects.map((object) => ({
         ...Object.fromEntries(
           Object.entries(object).filter(

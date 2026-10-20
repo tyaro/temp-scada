@@ -93,6 +93,7 @@ test("duplicates preserve frame and front existing window, fifth source is disab
       height: 100,
       background: "#ffffff",
       folders: [],
+      groups: [],
       objects: [],
     });
   await start(p, project);

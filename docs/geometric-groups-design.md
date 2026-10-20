@@ -113,3 +113,7 @@ clipboardは選択をグループ全体へ正規化し、所属情報を含む�
 ## G1／G2の保存区切り
 
 0.22.0の保存契約とドメイン・再利用を実装した。TS671件、Rust31件、型（エラー／警告なし）、Clippy、関連ブラウザ23件が成功。native clipboard v3の所属保持・ID再採番・保存／Undoと不正読込時の保持を実ブラウザで確認した。初回の新E2EはNode24のJSON import属性不足で収集時に停止したため、readFileSyncへ修正して全23件を実行した。Astraのレビューで見つかったProxy snapshot、明示default状態のno-op、Unicode名の文字数差は修正・回帰確認した。Designer接続はG3に残す。
+
+### G1／G2 CIで見つかったfixtureの追従漏れ
+
+`bde0411`の[CI](https://github.com/tyaro/temp-scada/actions/runs/39344061119)はブラウザ511件中505成功・6失敗だった。追加Screen fixtureのgroups不足（画像crop・Popup・View）、ScreenからSymbol定義を作るfixtureに継承した不要なgroups、legacy移行後と保存key一覧の期待値が原因。schemaや拒否条件は緩めず、fixtureと新契約の期待値を揃えた。同じ6ケースを現行の専用サーバー・2並列で再実行し全成功した。途中まで実行したG3全体検証は80件成功の時点で停止し、修正後の全体結果と区別する。最終全体検証は改めて実施する。

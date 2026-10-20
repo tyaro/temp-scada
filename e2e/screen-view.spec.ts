@@ -212,6 +212,7 @@ test("reference change is guarded by unapplied inputs; copy and cut leave Projec
     background: "#ffffff",
     objects: [],
     folders: [],
+    groups: [],
   };
   project.screens.push(empty);
   await p.addInitScript(() => {

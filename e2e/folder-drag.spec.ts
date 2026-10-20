@@ -242,6 +242,7 @@ test("shared-definition folder parenting stays isolated and a file reload invali
     name: "設備定義",
   };
   delete definition.background;
+  delete definition.groups;
   definition.objects.forEach(
     (o: any, i: number) =>
       (o.id = `0199fc00-0000-7000-8000-${String(900 + i).padStart(12, "0")}`),
