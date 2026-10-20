@@ -2,6 +2,8 @@
 
 状態: **Banto v6.7.0への局所adapter**。左作業パネルの操作追加後、常設メニューの末尾が小さい画面からはみ出す問題をCIで確認した。Bantoの依存コードは変更せず、上流へ[#427](https://github.com/tyaro/banto/issues/427)を報告した。
 
+2026-10-21追記: 上流#427は[PR #430](https://github.com/tyaro/banto/pull/430)で解決済み。SCADAはまだ固定依存を更新していないため、以下の局所adapterを維持する。更新後に内部／外部scroll・末尾項目・キー・resizeの既存試験を行い、adapterを撤去する。[引渡し一覧](reviews/banto-contribution-handoff.md)を参照。
+
 ## 原因と境界
 
 公開Menuは上下反転・横位置補正を持つが、上下いずれにも収まらない高さの制限がない。またwindowのcapture scrollで閉じるため、overflowだけを加えるとmenu自身のスクロールやEnd／矢印のfocus移動でも閉じる。
