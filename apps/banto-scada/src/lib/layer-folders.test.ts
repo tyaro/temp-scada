@@ -36,6 +36,135 @@ function withFolders() {
 const screenCommand = (project: Project) => ({
   screenId: project.screens[0].id,
 });
+it("reorders only sibling folders with sparse global orders and one Undo while drawing data stays unchanged", () => {
+  const project = withFolders(),
+    screen = project.screens[0];
+  screen.folders = [
+    { id: folderId(0), name: "A", order: 0 },
+    { id: folderId(1), name: "A1", order: 2, parentId: folderId(0) },
+    { id: folderId(2), name: "B", order: 4 },
+    { id: folderId(3), name: "A2", order: 7, parentId: folderId(0) },
+    { id: folderId(4), name: "C", order: 9 },
+  ];
+  screen.objects[0].locked = true;
+  screen.objects[0].visible = false;
+  const result = recordEdit(
+    project,
+    emptyHistory(),
+    {
+      type: "reorder-folder",
+      screenId: screen.id,
+      folderId: folderId(2),
+      direction: "up",
+    },
+    "edit",
+  );
+  expect(result.project.screens[0].folders.map((f) => f.order)).toEqual([
+    4, 2, 0, 7, 9,
+  ]);
+  expect(result.project.screens[0].objects).toEqual(screen.objects);
+  expect(result.project.symbols).toEqual(project.symbols);
+  expect(result.history.past).toHaveLength(1);
+  expect(
+    travelHistory(result.project, result.history, "undo", "edit").project
+      .screens,
+  ).toEqual(project.screens);
+  expect(parseProject(serializeProject(result.project))).toEqual(
+    result.project,
+  );
+  const child = applyCommand(
+    project,
+    {
+      type: "reorder-folder",
+      screenId: screen.id,
+      folderId: folderId(3),
+      direction: "up",
+    },
+    "edit",
+  );
+  expect(child.screens[0].folders.map((f) => f.order)).toEqual([0, 7, 4, 2, 9]);
+  expect(child.screens[0].folders.map((f) => f.parentId)).toEqual(
+    screen.folders.map((f) => f.parentId),
+  );
+});
+it("treats sibling boundaries as no-ops and supports safe-integer order endpoints", () => {
+  const project = withFolders(),
+    screen = project.screens[0];
+  screen.folders.push({
+    id: folderId(2),
+    name: "末尾",
+    order: Number.MAX_SAFE_INTEGER,
+  });
+  expect(
+    applyCommand(
+      project,
+      {
+        type: "reorder-folder",
+        screenId: screen.id,
+        folderId: folderId(0),
+        direction: "up",
+      },
+      "edit",
+    ),
+  ).toBe(project);
+  expect(
+    applyCommand(
+      project,
+      {
+        type: "reorder-folder",
+        screenId: screen.id,
+        folderId: folderId(1),
+        direction: "down",
+      },
+      "edit",
+    ),
+  ).toBe(project);
+  const next = applyCommand(
+    project,
+    {
+      type: "reorder-folder",
+      screenId: screen.id,
+      folderId: folderId(2),
+      direction: "up",
+    },
+    "edit",
+  );
+  expect(next.screens[0].folders[0].order).toBe(Number.MAX_SAFE_INTEGER);
+  expect(next.screens[0].folders[2].order).toBe(0);
+});
+it("reorders definition folders independently and rejects stale/foreign folders, invalid directions and preview", () => {
+  const project = withFolders(),
+    symbol = project.symbols[0],
+    screen = project.screens[0];
+  const id = folderId(2).replace("fc00", "fc01");
+  symbol.folders.push({ id, name: "別設備", order: 4 });
+  const command: EditCommand = {
+    type: "reorder-folder",
+    screenId: screen.id,
+    definitionId: symbol.id,
+    folderId: id,
+    direction: "up",
+  };
+  const next = applyCommand(project, command, "edit");
+  expect(next.screens).toEqual(project.screens);
+  expect(next.symbols[0].objects).toEqual(symbol.objects);
+  expect(next.symbols[0].folders.at(-1)!.order).toBe(0);
+  const before = serializeProject(project);
+  expect(() =>
+    applyCommand(project, { ...command, definitionId: undefined }, "edit"),
+  ).toThrow("フォルダーが見つかりません");
+  expect(() =>
+    applyCommand(
+      project,
+      { ...command, direction: "sideways" } as unknown as EditCommand,
+      "edit",
+    ),
+  ).toThrow("方向");
+  expect(() => applyCommand(project, command, "preview")).toThrow(
+    "表示プレビュー",
+  );
+  expect(serializeProject(project)).toBe(before);
+});
 
 it("creates stable folder IDs and trimmed names without changing drawing data, and renames with Undo", () => {
   const original = fresh(),

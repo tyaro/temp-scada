@@ -17,6 +17,7 @@ import type {
 } from "../../project";
 import type { EditCommand } from "../../editor";
 import { placementLabel } from "../../placement-label";
+import { folderNeighbour, type FolderDirection } from "../../folder-order";
 
 interface LayerOwner {
   generation: number;
@@ -372,6 +373,49 @@ export function createLayerTreeController(host: LayerTreeHost) {
         void folderMenu?.show(origin);
     });
   }
+  function canReorderFolder(direction: FolderDirection) {
+    if (
+      host.owner.editBlocked ||
+      layerQuery.trim() ||
+      !host.screen.folders.some((folder) => folder.id === contextFolderId)
+    )
+      return false;
+    return !!folderNeighbour(host.screen.folders, contextFolderId, direction);
+  }
+  function reorderFolder(direction: FolderDirection) {
+    if (!canReorderFolder(direction)) return;
+    const id = contextFolderId,
+      scope = folderScope;
+    host.transition(() => {
+      if (
+        scope !== folderScope ||
+        host.owner.mode !== "edit" ||
+        host.owner.editBlocked ||
+        layerQuery.trim() ||
+        !host.screen.folders.some((folder) => folder.id === id)
+      )
+        return;
+      if (
+        !host.edit({
+          type: "reorder-folder",
+          screenId: host.screen.id,
+          folderId: id,
+          direction,
+        })
+      )
+        return;
+      void tick().then(() => {
+        if (scope !== folderScope || host.owner.mode !== "edit") return;
+        const node = document.querySelector<HTMLButtonElement>(
+          `button[data-layer-folder="${id}"][aria-expanded]`,
+        );
+        if (node?.isConnected && node.getClientRects().length) {
+          node.scrollIntoView({ block: "nearest" });
+          node.focus({ preventScroll: true });
+        }
+      });
+    });
+  }
   function folderKey(event: KeyboardEvent, id: string) {
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey)
       return;
@@ -448,6 +492,9 @@ export function createLayerTreeController(host: LayerTreeHost) {
     get contextFolderId() {
       return contextFolderId;
     },
+    get orderFiltered() {
+      return !!layerQuery.trim();
+    },
     get folderOrigin() {
       return folderOrigin;
     },
@@ -467,6 +514,8 @@ export function createLayerTreeController(host: LayerTreeHost) {
     openFolderRequest,
     toggleFolder,
     showFolderMenu,
+    canReorderFolder,
+    reorderFolder,
     folderKey,
     beginFolderDrag,
     beginLayerDrag,

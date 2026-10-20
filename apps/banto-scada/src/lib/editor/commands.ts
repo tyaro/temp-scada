@@ -130,6 +130,12 @@ export type ObjectCommand = (
     }
   | { type: "rename-folder"; screenId: string; folderId: string; name: string }
   | {
+      type: "reorder-folder";
+      screenId: string;
+      folderId: string;
+      direction: "up" | "down";
+    }
+  | {
       type: "move-folder";
       screenId: string;
       folderId: string;
@@ -326,6 +332,7 @@ const commandScopes = {
   "reset-image-ratio": "object",
   "create-folder": "object",
   "rename-folder": "object",
+  "reorder-folder": "object",
   "move-folder": "object",
   "remove-folder": "object",
   "set-folder": "object",
@@ -393,7 +400,14 @@ export function isScreenCommand(
 
 export type FolderStructureCommand = Extract<
   ObjectCommand,
-  { type: "create-folder" | "rename-folder" | "move-folder" | "remove-folder" }
+  {
+    type:
+      | "create-folder"
+      | "rename-folder"
+      | "reorder-folder"
+      | "move-folder"
+      | "remove-folder";
+  }
 >;
 export type FolderAssignmentCommand = Extract<
   ObjectCommand,

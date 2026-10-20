@@ -2541,6 +2541,11 @@
       get origin() {
         return layerTreeBindings.folderOrigin;
       },
+      get orderFiltered() {
+        return layerTreeBindings.orderFiltered;
+      },
+      canReorder: layerTreeBindings.canReorderFolder,
+      reorder: layerTreeBindings.reorderFolder,
       open: layerTreeBindings.openFolderRequest,
     },
     clipboard: {

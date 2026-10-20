@@ -6,6 +6,7 @@ import type {
 } from "./commands";
 import { newId } from "./model-helpers";
 import { unhandledCommand } from "./unhandled-command";
+import { folderNeighbour } from "../folder-order";
 
 export function isFolderStructureCommand(
   command: ObjectCommand,
@@ -13,6 +14,7 @@ export function isFolderStructureCommand(
   return (
     command.type === "create-folder" ||
     command.type === "rename-folder" ||
+    command.type === "reorder-folder" ||
     command.type === "move-folder" ||
     command.type === "remove-folder"
   );
@@ -42,7 +44,15 @@ export function applyFolderStructureCommand(
   );
   if (!folder) throw new Error("フォルダーが見つかりません");
   if (command.type === "rename-folder") folder.name = folderName(command.name);
-  else if (command.type === "move-folder") {
+  else if (command.type === "reorder-folder") {
+    const neighbour = folderNeighbour(
+      screen.folders,
+      folder.id,
+      command.direction,
+    );
+    if (neighbour)
+      [folder.order, neighbour.order] = [neighbour.order, folder.order];
+  } else if (command.type === "move-folder") {
     if (
       command.parentId !== null &&
       !screen.folders.some((item) => item.id === command.parentId)

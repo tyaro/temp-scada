@@ -53,6 +53,9 @@ export interface DesignerActionsHost {
     readonly count: number;
     readonly contextId: string;
     readonly origin: HTMLElement | null;
+    readonly orderFiltered: boolean;
+    canReorder(direction: "up" | "down"): boolean;
+    reorder(direction: "up" | "down"): void;
     open(kind: FolderOperation, id?: string, origin?: HTMLElement): void;
   };
   clipboard: {
@@ -141,6 +144,11 @@ export function createDesignerActions(host: DesignerActionsHost) {
             host.folders.origin ?? undefined,
           ),
       },
+      ...(["up", "down"] as const).map((direction) => ({
+        label: `${direction === "up" ? "同じ階層で一つ上へ" : "同じ階層で一つ下へ"}${host.folders.orderFiltered ? "（検索中は不可）" : ""}`,
+        disabled: !host.folders.canReorder(direction),
+        run: () => host.folders.reorder(direction),
+      })),
       {
         label: "空のフォルダーを削除",
         disabled: host.editing.editBlocked,

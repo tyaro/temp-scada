@@ -206,3 +206,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ### 放射グラデーション
 
 `project.ts`と共通schema／RustはradialGradientの中心・半径・有限描画範囲を検証し、`paintBaseColor`は始点色を返す。`Primitive.svelte`はinstanceごとのSVG IDとobjectBoundingBox描画、`designer/radial-gradient-fields.ts`は％入力・未変更値の往復、`ShapePaint.svelte`は種類別draftと未適用見本を担当する。既存shape-paintフォームで1回の編集へ戻す。共通`shape-paint-cases.json`、`radial-gradient.test.ts`、`e2e/radial-gradient.spec.ts`が検証入口。[設計](radial-gradient-design.md)。
+
+### フォルダーの兄弟順
+
+`folder-order.ts`は同じ親の隣を判定し、`editor/folder-handler.ts`の`reorder-folder`はorderの交換だけを実施する。controllerの世代・draft照合とfolderContextメニューへ接続する。`layer-folders.test.ts`は通常／共有定義・境界・大きなorder・原子性・履歴、`e2e/folder-order.spec.ts`はツリー表示・図面画素の不変・検索・未適用名を確認する。
