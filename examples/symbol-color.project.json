@@ -1,7 +1,7 @@
 {
   "manifest": {
-    "schemaVersion": "0.29.0",
-    "minRuntimeVersion": "0.29.0",
+    "schemaVersion": "0.30.0",
+    "minRuntimeVersion": "0.30.0",
     "projectId": "0199ff20-0000-7000-8000-000000000001",
     "name": "共有Symbolの配色サンプル",
     "projectRevision": 1,

@@ -37,7 +37,7 @@ Banto基盤を維持し、認証はindustrial側の修正後まで延期する�
 
 ## 実装状況の追記（2026-10-20）
 
-[実線・破線・点線](line-style-design.md)をProject 0.13.0で実装した。単独／一括編集と共通描画へ接続し、矢印・連続したhit領域を保持する。続けて[配置全体の不透明度](opacity-design.md)をProject 0.14.0で実装した。[色ごとのα](color-alpha-design.md)もProject 0.15.0で追加した。[画像保存基盤と背景画像](image-assets-design.md)をProject 0.16.0で接続した。[Image配置](image-placement-design.md)もProject 0.17.0で追加した。[OS画像貼付と原本同梱clipboard](image-clipboard-design.md)も追加した。[paint再編と2色線形gradient](linear-gradient-design.md)もProject 0.18.0で追加した。[繰返しpattern](pattern-paint-design.md)もProject 0.19.0で追加した。放射gradient・画面展開は引き続き後続で、描画基盤全体の完成とはしない。
+[実線・破線・点線](line-style-design.md)をProject 0.13.0で実装した。単独／一括編集と共通描画へ接続し、矢印・連続したhit領域を保持する。続けて[配置全体の不透明度](opacity-design.md)をProject 0.14.0で実装した。[色ごとのα](color-alpha-design.md)もProject 0.15.0で追加した。[画像保存基盤と背景画像](image-assets-design.md)をProject 0.16.0で接続した。[Image配置](image-placement-design.md)もProject 0.17.0で追加した。[OS画像貼付と原本同梱clipboard](image-clipboard-design.md)も追加した。[paint再編と2色線形gradient](linear-gradient-design.md)もProject 0.18.0で追加した。[繰返しpattern](pattern-paint-design.md)もProject 0.19.0で追加した。0.30.0で[2色放射gradient](radial-gradient-design.md)も追加した。多点stop・独立焦点・図上ハンドル等は後続で、描画基盤全体の完成とはしない。
 
 ## 2. Paint・線種・αを先行する
 

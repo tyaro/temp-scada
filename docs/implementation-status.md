@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-10-20（日本時間）、Project 0.29.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-10-20（日本時間）、Project 0.30.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
@@ -9,9 +9,9 @@
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | アプリ基盤 | Banto v6.7.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
-| Project    | `schemaVersion`／`minRuntimeVersion`は**0.29.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
+| Project    | `schemaVersion`／`minRuntimeVersion`は**0.30.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
-| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.28.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
+| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.29.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
 | IDと変更   | lowercase UUID v7、有限座標、明示order。編集失敗は原子的拒否、同値はno-op、Undo／Redoでもrevisionは巻き戻さない                         |
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
@@ -25,7 +25,7 @@
 | パネル         | 個別／一括表示と復帰、左右幅と下部高さの保存、固定標準配置の復元                                                                                                 | 浮動／再ドッキング、名前付き配置、draftのDOM分離                                       |
 | 共通作図       | 選択・範囲選択、移動・サイズ・回転・整列・中心等間隔、頂点、コピー／切取／貼付、Undo／Redo、幾何グループ                                                         | グループ任意拡縮・入れ子、図形演算、接続口と配管追従                                   |
 | 配置・レイヤー | 名前、編集ロック、静的非表示、整理フォルダー、親と所属のドラッグ変更                                                                                             | 継承表示、一時非表示、フォルダーの手動順変更                                           |
-| 図形・文字     | 矩形／楕円の塗り・枠線、一括編集、実線／破線／点線、配置opacityと色α、2色線形gradient、斜線／交差線／点pattern、Textの書式と揃え                                 | 放射gradient、多点stop、複数行Text・縁取り、α一括                                      |
+| 図形・文字     | 矩形／楕円の塗り・枠線、一括編集、実線／破線／点線、配置opacityと色α、2色線形／放射gradient、斜線／交差線／点pattern、Textの書式と揃え                           | 多点stop・図上gradientハンドル、複数行Text・縁取り、α一括                              |
 | 画像           | 原本共有、背景fit、Imageのcontain／cover／stretch枠、比率復帰、原本付きclipboard、差し替え、配置・背景の非破壊cropと原本プレビュー上の範囲指定・移動・サイズ変更 | 図面上の直接crop、縦横比固定、Symbol内画像                                             |
 | 画面再利用     | 同一Project・1段の読取埋込View、共有参照、参照先編集、使用中画面の削除保護、複製、依存画面と原本付きclipboard v4                                                 | 機器context付き共通画面、独立テンプレート                                              |
 | 表示確認       | 画面／機器の読取Popup合計4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                                                | 正式Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                       |
@@ -207,3 +207,13 @@ Viewの選択に参照画面・必要Symbol・画像原本を同梱し、同じP
 キャンバス・レイヤーのCtrl／Command＋クリックを追加・解除へ接続し、幾何グループ単位の選択と既存の未適用入力保護を維持する。Ctrl／Command＋空白範囲は追加選択、単なる空白クリックは選択保持とする。既存Shift操作・単一選択・パン・プレビューは維持し、選択だけでProjectとUndoを変更しない。ツールバーと操作ガイドの説明を揃えた。
 
 型エラー／警告0、本番build、全体整形、複数選択・範囲選択の関連ブラウザ14件が成功。Ctrl／Command／Shift、グループ全体の追加・解除、保存JSONとUndoの不変、範囲の取消、未適用名のキャンセルと適用後再開を確認した。Project保存契約・Rustは変更していない。
+
+## 2色放射グラデーション（0.30.0）
+
+矩形／楕円の塗りに、図形を正規化した中心X／Yと半径・両端のRGB／αを追加した。半径50%は幅・高さの半分、非正方形では楕円状。独立した種類別draft・初回の両端色引継ぎ・未適用見本、％往復で未変更f64を保つ再適用を実装した。共有PrimitiveはobjectBoundingBox・中心と焦点・padを明示し、定義色／単色Symbol・埋込View・Popup・ミニマップで共用する。[仕様・実画面](radial-gradient-design.md)。
+
+直前の`502cc21`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39402603895)はfrontend・Rust・全E2E4分割・checkが成功。
+
+## 検証記録
+
+型エラー／警告0、TS987件（88ファイル、％入力のFormData4件も再確認）、Rust49件、Clippy・Rust fmt・本番build、CLIサンプル17件が成功。新規放射5件と既存線形・pattern12件の関連ブラウザ17件で、両テーマの実画素・回転・非正方形・resize、種類往復と両端継承、IME・不正入力の非適用、Symbol／miniのID分離とα、埋込View・Popupの共有描画を確認した。共通fixtureは中心・半径・α・不足／余剰属性・極端な寸法の描画範囲までTS／Rustで一致する。Astraの実装レビューでも必須修正なし。両テーマの原寸スクリーンショットを確認済み。

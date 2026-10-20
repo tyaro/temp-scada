@@ -3,6 +3,7 @@ import type { ScreenObject } from "../../project";
 import { normalizeGradientAngle } from "../../linear-gradient";
 import { parseLineStyle } from "../../line-style";
 import { patternFromForm } from "../pattern-fields";
+import { radialGradientFromForm } from "../radial-gradient-fields";
 import { parseNumericProperty } from "../numeric-properties";
 
 export interface ShapePaintInput {
@@ -83,6 +84,13 @@ export function shapePaintCommand(
                 },
               };
             if (kind === "pattern") return patternFromForm(data);
+            if (kind === "radialGradient")
+              return radialGradientFromForm(
+                data,
+                selected.shape.paint.fill.paint.type === "radialGradient"
+                  ? selected.shape.paint.fill.paint
+                  : undefined,
+              );
             throw new Error("塗りの種類を選択してください。");
           })(),
         },

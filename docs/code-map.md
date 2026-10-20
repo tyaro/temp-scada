@@ -202,3 +202,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ### 埋込Viewのclipboard
 
 `clipboard-dependencies.ts`はView参照画面・Symbol・画像原本の閉包収集、`clipboard.ts`は必要データだけのv4 envelopeとsnapshotを担当する。`paste-handler.ts`は現行画面再利用を先に決め、実取込配置から定義・資産の対応表を作り、内部ID更新と外部参照を再配線する。`asset-clipboard.ts`のlease／decodeとcontrollerの所有者・切取保護は共用する。`screen-view-clipboard.test.ts`、`asset-clipboard.test.ts`、`e2e/screen-view-clipboard.spec.ts`で参照・原本・失敗時を確認する。[設計](screen-view-clipboard-design.md)。
+
+### 放射グラデーション
+
+`project.ts`と共通schema／RustはradialGradientの中心・半径・有限描画範囲を検証し、`paintBaseColor`は始点色を返す。`Primitive.svelte`はinstanceごとのSVG IDとobjectBoundingBox描画、`designer/radial-gradient-fields.ts`は％入力・未変更値の往復、`ShapePaint.svelte`は種類別draftと未適用見本を担当する。既存shape-paintフォームで1回の編集へ戻す。共通`shape-paint-cases.json`、`radial-gradient.test.ts`、`e2e/radial-gradient.spec.ts`が検証入口。[設計](radial-gradient-design.md)。

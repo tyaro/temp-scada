@@ -60,6 +60,13 @@ export type FillPaint =
       end: PaintColor;
     }
   | {
+      type: "radialGradient";
+      center: Point;
+      radius: number;
+      start: PaintColor;
+      end: PaintColor;
+    }
+  | {
       type: "pattern";
       kind: PatternKind;
       spacing: number;
@@ -165,10 +172,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.29.0";
+    schemaVersion: "0.30.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.29.0";
+    minRuntimeVersion: "0.30.0";
     name: string;
   };
   screens: Screen[];
@@ -192,8 +199,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.29.0",
-        minRuntimeVersion: "0.29.0",
+        schemaVersion: "0.30.0",
+        minRuntimeVersion: "0.30.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -321,6 +328,24 @@ export function parseProject(json: string): Project {
         patternGeometry(pattern.kind, pattern.spacing, pattern.size);
       }
 
+      if (
+        (shape.type === "rectangle" || shape.type === "ellipse") &&
+        "width" in object &&
+        shape.paint.fill.paint.type === "radialGradient"
+      ) {
+        const { center, radius } = shape.paint.fill.paint;
+        if (
+          ![
+            object.width * (center.x - radius),
+            object.width * (center.x + radius),
+            object.height * (center.y - radius),
+            object.height * (center.y + radius),
+          ].every(Number.isFinite)
+        )
+          throw new Error(
+            "放射グラデーションの描画座標が有限の範囲を超えています。",
+          );
+      }
       if (
         (shape.type === "rectangle" || shape.type === "ellipse") &&
         "width" in object &&
@@ -463,7 +488,7 @@ export function referencedAssets(project: Project): Set<string> {
 export function paintBaseColor(paint: FillPaint): PaintColor {
   return paint.type === "solid"
     ? paint
-    : paint.type === "linearGradient"
+    : paint.type === "linearGradient" || paint.type === "radialGradient"
       ? paint.start
       : paint.foreground;
 }

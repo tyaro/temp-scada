@@ -68,7 +68,7 @@ for (const theme of ["light", "dark"] as const)
     expect(saved.symbols[0].objects.at(-1).shape.slotBinding).toEqual({
       slotName: "value",
     });
-    expect(saved.manifest.schemaVersion).toBe("0.29.0");
+    expect(saved.manifest.schemaVersion).toBe("0.30.0");
   });
 test("slot selection is draft protected, applies with Undo and refuses clipboard cut", async ({
   page,

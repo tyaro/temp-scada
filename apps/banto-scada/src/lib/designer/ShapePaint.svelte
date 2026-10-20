@@ -8,6 +8,10 @@
     type LayoutObject,
   } from "../project";
   import { patternFromForm } from "./pattern-fields";
+  import {
+    radialGradientFromForm,
+    radialPercent,
+  } from "./radial-gradient-fields";
   import type { createDraftGuard } from "./drafts.svelte";
   let {
     paint,
@@ -28,12 +32,10 @@
   let fillType = $state("solid");
   let patternKind = $state("hatch");
   let backgroundShown = $state(false);
-  let patternPreview = $state<Extract<FillPaint, { type: "pattern" }> | null>(
-    null,
-  );
+  let fillPreview = $state<FillPaint | null>(null);
   let previewError = $state("");
   const previewObject = $derived(
-    patternPreview
+    fillPreview
       ? ({
           id: "pattern-preview",
           order: 0,
@@ -45,7 +47,7 @@
           shape: {
             type: "rectangle",
             paint: {
-              fill: { enabled: true, paint: patternPreview },
+              fill: { enabled: true, paint: fillPreview },
               stroke: null,
             },
           },
@@ -68,13 +70,41 @@
     fillStartColor: base.color,
     fillStartAlpha: percent(base.alpha),
     fillEndColor:
-      paint.fill.paint.type === "linearGradient"
+      paint.fill.paint.type === "linearGradient" ||
+      paint.fill.paint.type === "radialGradient"
         ? paint.fill.paint.end.color
         : base.color,
     fillEndAlpha: percent(
-      paint.fill.paint.type === "linearGradient"
+      paint.fill.paint.type === "linearGradient" ||
+        paint.fill.paint.type === "radialGradient"
         ? paint.fill.paint.end.alpha
         : base.alpha,
+    ),
+    radialStartColor: base.color,
+    radialStartAlpha: radialPercent(base.alpha),
+    radialEndColor:
+      paint.fill.paint.type === "radialGradient"
+        ? paint.fill.paint.end.color
+        : base.color,
+    radialEndAlpha: radialPercent(
+      paint.fill.paint.type === "radialGradient"
+        ? paint.fill.paint.end.alpha
+        : base.alpha,
+    ),
+    radialCenterX: radialPercent(
+      paint.fill.paint.type === "radialGradient"
+        ? paint.fill.paint.center.x
+        : 0.5,
+    ),
+    radialCenterY: radialPercent(
+      paint.fill.paint.type === "radialGradient"
+        ? paint.fill.paint.center.y
+        : 0.5,
+    ),
+    radialRadius: radialPercent(
+      paint.fill.paint.type === "radialGradient"
+        ? paint.fill.paint.radius
+        : 0.5,
     ),
     patternKind: savedPattern?.kind ?? "hatch",
     patternSpacing: String(savedPattern?.spacing ?? 12),
@@ -104,23 +134,33 @@
   function switchFill() {
     const next = input("fillType").value;
     if (!initialized.has(next)) {
-      const source =
+      const gradientPrefix =
         fillType === "linearGradient"
-          ? "fillStart"
-          : fillType === "pattern"
-            ? "patternForeground"
-            : "fill";
-      const color = input(`${source}Color`).value,
-        alpha = input(`${source}Alpha`).value;
-      const destinations =
+          ? "fill"
+          : fillType === "radialGradient"
+            ? "radial"
+            : null;
+      const source = gradientPrefix
+        ? `${gradientPrefix}Start`
+        : fillType === "pattern"
+          ? "patternForeground"
+          : "fill";
+      const gradientDestination =
         next === "linearGradient"
-          ? ["fillStart", "fillEnd"]
-          : next === "pattern"
-            ? ["patternForeground"]
-            : ["fill"];
+          ? "fill"
+          : next === "radialGradient"
+            ? "radial"
+            : null;
+      const destinations = gradientDestination
+        ? [`${gradientDestination}Start`, `${gradientDestination}End`]
+        : [next === "pattern" ? "patternForeground" : "fill"];
       for (const prefix of destinations) {
-        input(`${prefix}Color`).value = color;
-        input(`${prefix}Alpha`).value = alpha;
+        const from =
+          gradientPrefix && prefix.endsWith("End")
+            ? `${gradientPrefix}End`
+            : source;
+        input(`${prefix}Color`).value = input(`${from}Color`).value;
+        input(`${prefix}Alpha`).value = input(`${from}Alpha`).value;
       }
       initialized.add(next);
       form.dispatchEvent(new Event("input", { bubbles: true }));
@@ -145,18 +185,29 @@
   async function refreshPreview() {
     await tick();
     if (!form?.isConnected) return;
-    if (fillType !== "pattern") {
-      patternPreview = null;
+    if (fillType !== "pattern" && fillType !== "radialGradient") {
+      fillPreview = null;
       previewError = "";
       return;
     }
     try {
-      patternPreview = locked
-        ? savedPattern
-        : patternFromForm(new FormData(form));
+      fillPreview = locked
+        ? fillType === "pattern"
+          ? savedPattern
+          : paint.fill.paint.type === "radialGradient"
+            ? paint.fill.paint
+            : null
+        : fillType === "pattern"
+          ? patternFromForm(new FormData(form))
+          : radialGradientFromForm(
+              new FormData(form),
+              paint.fill.paint.type === "radialGradient"
+                ? paint.fill.paint
+                : undefined,
+            );
       previewError = "";
     } catch (error) {
-      patternPreview = null;
+      fillPreview = null;
       previewError =
         error instanceof Error ? error.message : "入力を確認してください。";
     }
@@ -247,6 +298,7 @@
         onchange={switchFill}
         ><option value="solid">単色</option><option value="linearGradient"
           >線形グラデーション（2色）</option
+        ><option value="radialGradient">放射グラデーション（2色）</option
         ><option value="pattern">パターン（模様）</option></select
       ></label
     >
@@ -321,6 +373,71 @@
           disabled={fillType !== "linearGradient"}
         /></label
       >
+    </div>
+    <div hidden={fillType !== "radialGradient"}>
+      {#each [["Start", "中心"], ["End", "外側"]] as [stop, label]}
+        <div class="options">
+          <label
+            >{label}の色<input
+              type="color"
+              name={`radial${stop}Color`}
+              aria-label={`放射グラデーションの${label}の色`}
+              disabled={fillType !== "radialGradient"}
+            /></label
+          >
+          <label
+            >{label}の不透明度（%）<input
+              name={`radial${stop}Alpha`}
+              aria-label={`放射グラデーションの${label}の不透明度（%）`}
+              inputmode="decimal"
+              required
+              disabled={fillType !== "radialGradient"}
+            /></label
+          >
+        </div>
+      {/each}
+      <div class="options">
+        <label
+          >中心X（%）<input
+            name="radialCenterX"
+            aria-label="放射グラデーションの中心X（%）"
+            inputmode="decimal"
+            required
+            disabled={fillType !== "radialGradient"}
+          /></label
+        >
+        <label
+          >中心Y（%）<input
+            name="radialCenterY"
+            aria-label="放射グラデーションの中心Y（%）"
+            inputmode="decimal"
+            required
+            disabled={fillType !== "radialGradient"}
+          /></label
+        >
+      </div>
+      <label
+        >半径（%）<input
+          name="radialRadius"
+          aria-label="放射グラデーションの半径（%）"
+          inputmode="decimal"
+          required
+          disabled={fillType !== "radialGradient"}
+        /></label
+      >
+      {#if previewObject}<svg
+          class="pattern-preview"
+          viewBox="0 0 160 56"
+          role="img"
+          aria-label="放射グラデーションの見本（未適用）"
+          ><Primitive object={previewObject} /></svg
+        >
+      {:else}<p class="preview-error" role="status">
+          見本：{previewError}
+        </p>{/if}
+      <p>
+        中心は0〜100%、半径は0より大きく200%以下。半径50%は横に幅の半分・縦に高さの半分です。矩形の四隅は外側の色になり、非正方形では楕円状になります。
+      </p>
     </div>
     <div hidden={fillType !== "pattern"}>
       <label
@@ -429,7 +546,7 @@
       </p>
     </div>
     <p>
-      種類への初回切替は、単色・グラデーションの始点・模様の色を引き継ぎます。切替済みの入力は適用前まで保持し、塗りなしでも設定を保存します。
+      種類への初回切替は基準色を引き継ぎ、線形と放射の間では両端の色と不透明度をそれぞれ引き継ぎます。切替済みの入力は適用前まで保持し、塗りなしでも設定を保存します。
     </p>
     <div class="options" hidden={!strokeShown}>
       <label

@@ -94,8 +94,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.29.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.29.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.30.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.30.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -250,6 +250,29 @@ impl Project {
                     }
                 }
 
+                if (shape["type"] == "rectangle" || shape["type"] == "ellipse")
+                    && shape["paint"]["fill"]["paint"]["type"] == "radialGradient"
+                {
+                    let paint = &shape["paint"]["fill"]["paint"];
+                    let radius = paint["radius"].as_f64().unwrap();
+                    let x = paint["center"]["x"].as_f64().unwrap();
+                    let y = paint["center"]["y"].as_f64().unwrap();
+                    let width = object["width"].as_f64().unwrap();
+                    let height = object["height"].as_f64().unwrap();
+                    if [
+                        width * (x - radius),
+                        width * (x + radius),
+                        height * (y - radius),
+                        height * (y + radius),
+                    ]
+                    .iter()
+                    .any(|v| !v.is_finite())
+                    {
+                        return Err(
+                            "放射グラデーションの描画座標が有限の範囲を超えています。".into()
+                        );
+                    }
+                }
                 if (shape["type"] == "rectangle" || shape["type"] == "ellipse")
                     && shape["paint"]["fill"]["paint"]["type"] == "linearGradient"
                 {
@@ -1362,8 +1385,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.29.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.29.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.30.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.30.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

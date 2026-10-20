@@ -32,6 +32,9 @@
     fill?.paint.type === "linearGradient" ? fill.paint : null,
   );
   const pattern = $derived(fill?.paint.type === "pattern" ? fill.paint : null);
+  const radial = $derived(
+    fill?.paint.type === "radialGradient" ? fill.paint : null,
+  );
   const patternPath = $derived(
     pattern ? patternGeometry(pattern.kind, pattern.spacing, pattern.size) : "",
   );
@@ -43,7 +46,7 @@
   const fillColor = $derived(
     !fill?.enabled
       ? "none"
-      : gradient || pattern
+      : gradient || radial || pattern
         ? `url(#${gradientId})`
         : fill?.paint.type === "solid"
           ? (stateColor ??
@@ -129,6 +132,31 @@
         stop-opacity={gradient.end.alpha}
       />
     </linearGradient></defs
+  >
+{/if}
+{#if radial}
+  <defs
+    ><radialGradient
+      id={gradientId}
+      gradientUnits="objectBoundingBox"
+      cx={radial.center.x}
+      cy={radial.center.y}
+      r={radial.radius}
+      fx={radial.center.x}
+      fy={radial.center.y}
+      spreadMethod="pad"
+    >
+      <stop
+        offset="0%"
+        stop-color={color ?? radial.start.color}
+        stop-opacity={radial.start.alpha}
+      />
+      <stop
+        offset="100%"
+        stop-color={color ?? radial.end.color}
+        stop-opacity={radial.end.alpha}
+      />
+    </radialGradient></defs
   >
 {/if}
 {#if pattern}

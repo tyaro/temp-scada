@@ -60,3 +60,7 @@ TS／Rust／schema、異なる端点α、塗りなし往復、同一Symbol複数
 ![線形グラデーション・ライト](assets/frontend-ux/gradient-paint-light.png)
 
 [ダーク](assets/frontend-ux/gradient-paint-dark.png)・[撮影スクリプト](../scripts/capture-gradient-paint.mjs)。
+
+## 放射gradientの追加（0.30.0）
+
+[2色放射グラデーション](radial-gradient-design.md)を追加した。線形の局所角度契約は維持し、放射は図形を正規化した中心・半径を使う。種類ごとに独立したDOM入力と未適用値を保持し、初回のgradient間切替だけ両端色・αをそれぞれ引き継ぐ。
