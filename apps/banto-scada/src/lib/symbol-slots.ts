@@ -98,3 +98,15 @@ export function resolveSymbolSlot(
     ) ?? slotPresentation("disconnected")
   );
 }
+
+/** All children remain references, including hidden and locked Text. */
+export function symbolSlotUsages(
+  definition: SymbolDefinition,
+  slotName: string,
+) {
+  return definition.objects.filter(
+    (object) =>
+      object.shape.type === "text" &&
+      object.shape.slotBinding?.slotName === slotName,
+  );
+}

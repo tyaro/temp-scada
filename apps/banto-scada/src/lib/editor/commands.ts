@@ -253,8 +253,23 @@ export type ProjectCommand =
   { type: "update-project"; name: string } | EquipmentCommand;
 export type SymbolCommand =
   | {
+      type: "add-symbol-slot";
+      symbolId: string;
+      name: string;
+      slotType: "bool" | "number";
+    }
+  | {
+      type: "update-symbol-slot";
+      symbolId: string;
+      slotName: string;
+      name: string;
+      slotType: "bool" | "number";
+    }
+  | { type: "remove-symbol-slot"; symbolId: string; slotName: string }
+  | {
       type: "add-symbol-readout";
       symbolId: string;
+      requireExisting?: boolean;
       slotName: string;
       slotType: "bool" | "number";
     }
@@ -343,6 +358,9 @@ const commandScopes = {
   "create-symbol": "symbol",
   "update-symbol": "symbol",
   "add-symbol-readout": "symbol",
+  "add-symbol-slot": "symbol",
+  "update-symbol-slot": "symbol",
+  "remove-symbol-slot": "symbol",
   "duplicate-symbol": "symbol",
   "remove-symbol": "symbol",
   "place-symbol": "symbol",

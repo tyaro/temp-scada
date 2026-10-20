@@ -87,3 +87,7 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 ## 型付き結果の受入とGood／Quality表示
 
 [ReadSlotViewの受入・session世代・描画](read-slot-presentation.md)を追加した。Project保存形式は0.25.0を維持する。全採用slot・型・外部名・metadataを照合し、不正入力では値を消す。旧tokenを無視し、同ID／revisionの別Projectや旧frameも表示へ流用しない。Good false／0、Bad／Staleの値消去、SIMと取得由来をメイン・埋込・小窓へ反映する。通常Designerは実Host未接続のため未接続表示を維持する。実値の検証はRust共通fixtureとブラウザテスト入力によるものであり、実Hub動作完了ではない。TS800件・Rust46件・関連ブラウザ27件、型／Clippy／build／全体整形を確認した。
+
+## Symbolのslot宣言編集
+
+[任意名の宣言追加・未使用行の改名／型変更／削除](symbol-slot-editing.md)を左のプロジェクト設定へ追加した。hidden／lockedを含むText参照中の変更・削除をドメインとUIで保護し、同値編集はno-op。draft・IME・対象世代・Undoへ接続した。表示追加は既存コマンドを共用し、改名の適用後に古い宣言を再作成しない。Project0.25.0を維持し、機器側のslot・外部名を自動変更しない。型0エラー／0警告・TS807件・関連ブラウザ9件・buildと両テーマの実画面を確認。動的配色・実Host接続・Faceplateは後続。

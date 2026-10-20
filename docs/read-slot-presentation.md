@@ -60,4 +60,4 @@ TSの追加検証は不正DTO、plan・型・外部名、重複／不足、metad
 
 ## 後続
 
-実HostのSDK更新・対応catalogの受信、購読generationとframeのreactiveな配布は後続。SDKの前提は[industrial #682](https://github.com/tyaro/banto-industrial/issues/682)。正式Runtime・実Tag Browser・設備Faceplate・動的配色・認証は完成扱いしない。宣言の自由編集・改名／削除も独立した後続工程。
+実HostのSDK更新・対応catalogの受信、購読generationとframeのreactiveな配布は後続。SDKの前提は[industrial #682](https://github.com/tyaro/banto-industrial/issues/682)。正式Runtime・実Tag Browser・設備Faceplate・動的配色・認証は完成扱いしない。宣言の追加・未使用行の編集／削除は[後続の編集工程](symbol-slot-editing.md)で実装した。

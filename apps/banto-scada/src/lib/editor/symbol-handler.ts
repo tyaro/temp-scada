@@ -1,4 +1,5 @@
 import type { Project } from "../project";
+import { symbolSlotUsages } from "../symbol-slots";
 import { canvasColors } from "../canvas-colors";
 import type { SymbolCommand } from "./commands";
 import {
@@ -48,10 +49,57 @@ export function applySymbolCommand(
   }
   const definition = next.symbols.find((s) => s.id === command.symbolId);
   if (!definition) throw new Error("Symbol 定義が見つかりません");
+  if (command.type === "add-symbol-slot") {
+    if (definition.readSlots?.some((slot) => slot.name === command.name))
+      throw new Error("読取slot名が重複しています");
+    (definition.readSlots ??= []).push({
+      name: command.name,
+      type: command.slotType,
+      direction: "read",
+    });
+    return;
+  }
+  if (
+    command.type === "update-symbol-slot" ||
+    command.type === "remove-symbol-slot"
+  ) {
+    const slot = definition.readSlots?.find(
+      (slot) => slot.name === command.slotName,
+    );
+    if (!slot) throw new Error("読取slot宣言が見つかりません");
+    const changed =
+      command.type === "remove-symbol-slot" ||
+      slot.name !== command.name ||
+      slot.type !== command.slotType;
+    if (changed && symbolSlotUsages(definition, slot.name).length)
+      throw new Error(
+        "Textで使用中の読取slotは改名・型変更・削除できません。先にTextの割付を解除してください。",
+      );
+    if (command.type === "remove-symbol-slot") {
+      definition.readSlots = definition.readSlots!.filter(
+        (item) => item.name !== slot.name,
+      );
+      if (!definition.readSlots.length) delete definition.readSlots;
+    } else {
+      if (
+        definition.readSlots!.some(
+          (item) => item !== slot && item.name === command.name,
+        )
+      )
+        throw new Error("読取slot名が重複しています");
+      slot.name = command.name;
+      slot.type = command.slotType;
+    }
+    return;
+  }
   if (command.type === "add-symbol-readout") {
     const slot = definition.readSlots?.find(
       (item) => item.name === command.slotName,
     );
+    if (command.requireExisting && !slot)
+      throw new Error(
+        "読取slot宣言が変更されました。現在の宣言から操作し直してください。",
+      );
     if (slot && slot.type !== command.slotType)
       throw new Error("宣言済みslotの型と一致しません");
     if (!slot)

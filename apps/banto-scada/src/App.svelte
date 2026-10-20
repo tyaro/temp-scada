@@ -8,6 +8,11 @@
     selectionUnits,
   } from "./lib/geometric-groups";
   import EquipmentLibrary from "./lib/designer/EquipmentLibrary.svelte";
+  import SymbolSlots from "./lib/designer/SymbolSlots.svelte";
+  import {
+    symbolSlotFormCommand,
+    acknowledgeSymbolSlotForm,
+  } from "./lib/designer/forms/symbol-slot";
   import { equipmentFormCommand } from "./lib/designer/forms/equipment";
   import { groupNameFormCommand } from "./lib/designer/forms/group-name";
   import { createDesignerActions } from "./lib/designer/controllers/designer-actions";
@@ -1468,6 +1473,8 @@
     }
   }
   function acknowledgeForm(form: HTMLFormElement) {
+    if (form.dataset.editorForm === "symbol-slot")
+      acknowledgeSymbolSlotForm(form);
     if (form.dataset.editorForm === "equipment") {
       for (const name of ["code", "name"]) {
         const input = form.querySelector<HTMLInputElement>(
@@ -1827,6 +1834,22 @@
   }
   function formCommand(form: HTMLFormElement): EditCommand {
     const data = new FormData(form);
+    if (form.dataset.editorForm === "symbol-slot")
+      return symbolSlotFormCommand(
+        {
+          connected: form.isConnected,
+          targetKey: form.dataset.targetKey,
+          symbolId: form.dataset.symbolId,
+          slotName: form.dataset.slotName,
+          action: form.dataset.slotAction,
+          data,
+        },
+        {
+          project,
+          generation: workspaceGeneration,
+          definitionId: activeDefinition?.id,
+        },
+      );
     if (form.dataset.editorForm === "equipment")
       return equipmentFormCommand(form, project, workspaceGeneration);
     if (form.dataset.editorForm === "background-image")
@@ -2902,6 +2925,15 @@
                 />
               {/key}
             {/if}
+            {#if activeDefinition}
+              {#key `${workspaceGeneration}:${activeDefinition.id}`}<SymbolSlots
+                  definition={activeDefinition}
+                  generation={workspaceGeneration}
+                  {drafts}
+                  onsubmit={submitForm}
+                  oncommand={edit}
+                />{/key}
+            {/if}
             <p class="hint">
               サイズ変更は表示領域のみを変更します。図形の位置・サイズは変わりません。
             </p>
@@ -2947,19 +2979,6 @@
         <p>
           確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。別の形にする場合は定義を複製してください。
         </p>
-        <div class="slot-readout-actions" aria-label="読取slot表示を追加">
-          {#each [{ name: "running", type: "bool" as const }, { name: "current", type: "number" as const }, { name: "value", type: "number" as const }] as slot}
-            <button
-              onclick={() =>
-                edit({
-                  type: "add-symbol-readout",
-                  symbolId: activeDefinition!.id,
-                  slotName: slot.name,
-                  slotType: slot.type,
-                })}>{slot.name} · {slot.type} 表示を追加</button
-            >
-          {/each}
-        </div>
         {#if symbolStrokeOverflow > 0}<p role="status">
             枠線が表示領域外へ出ている図形が{symbolStrokeOverflow}件あります。配置では領域外が切れます。図形の位置・寸法または定義の表示領域を変更してください。
           </p>{/if}
