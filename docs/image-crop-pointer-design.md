@@ -22,7 +22,7 @@
 
 `image-crop-gesture.ts`は元画像の矩形計算だけ、`ImageCropSelection.svelte`は候補とpointer／キー・取消、`ImageCrop.svelte`は既存の数値入力・draft管理との接続を担当する。候補からProjectへ直接書き込む経路を作らない。
 
-回転済みの図面上で直接トリミングする操作、縦横比固定、描画中の数値欄への逐次書き戻しはこの工程に含めない。
+回転済みの図面上で直接トリミングする操作、描画中の数値欄への逐次書き戻しはこの工程に含めない。縦横比固定は後続の[I1で追加](image-crop-aspect-design.md)した。
 
 ## 実画面
 

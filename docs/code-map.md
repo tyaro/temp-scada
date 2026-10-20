@@ -199,6 +199,8 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 
 `designer/image-crop-gesture.ts`は原本内の移動・四辺／隅・範囲指定の幾何、`ImageCropSelection.svelte`はpointer候補・capture・取消・矢印操作、`ImageCrop.svelte`は数値欄とdraft保護への接続を担当する。Projectの更新は従来のcropフォーム／commandへ戻す。`image-crop-gesture.test.ts`と`e2e/image-crop-gesture.spec.ts`で境界・1画素・取消・保存とUndoを確認する。設計は[切出し操作](image-crop-pointer-design.md)。
 
+`cropAspect`／`cropWithAspect`と`cropGesture`の任意aspectは原本画素比率の取得・数値連動・比率付き幾何を共用する。`image-crop-fields.ts`が入力軸を渡し、`ImageCrop.svelte`が非永続の固定状態・対の欄の更新・native validityとIMEを担当する。Project／原本／SDKの契約は変えない。[比率固定の仕様](image-crop-aspect-design.md)。
+
 ### 埋込Viewのclipboard
 
 `clipboard-dependencies.ts`はView参照画面・Symbol・画像原本の閉包収集、`clipboard.ts`は必要データだけのv4 envelopeとsnapshotを担当する。`paste-handler.ts`は現行画面再利用を先に決め、実取込配置から定義・資産の対応表を作り、内部ID更新と外部参照を再配線する。`asset-clipboard.ts`のlease／decodeとcontrollerの所有者・切取保護は共用する。`screen-view-clipboard.test.ts`、`asset-clipboard.test.ts`、`e2e/screen-view-clipboard.spec.ts`で参照・原本・失敗時を確認する。[設計](screen-view-clipboard-design.md)。

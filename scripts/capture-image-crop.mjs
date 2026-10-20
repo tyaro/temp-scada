@@ -2,7 +2,9 @@ import { chromium, expect } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 const fitMode = process.env.SCADA_CAPTURE_IMAGE_FIT === "1";
-const pointerMode = process.env.SCADA_CAPTURE_IMAGE_CROP_POINTER === "1";
+const aspectMode = process.env.SCADA_CAPTURE_IMAGE_CROP_ASPECT === "1";
+const pointerMode =
+  process.env.SCADA_CAPTURE_IMAGE_CROP_POINTER === "1" || aspectMode;
 const output = resolve(process.argv[2] ?? "test-results/image-crop");
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
@@ -139,6 +141,16 @@ try {
         await form
           .getByRole("button", { name: "範囲をマウスで調整", exact: true })
           .click();
+      if (aspectMode) {
+        await form
+          .getByRole("button", { name: "縦横比を固定", exact: true })
+          .click();
+        await form.locator('[name="cropHeight"]').fill("75");
+        await expect(form.locator('[name="cropWidth"]')).toHaveValue("60");
+        await expect(
+          form.getByRole("button", { name: "縦横比を固定", exact: true }),
+        ).toHaveAttribute("aria-pressed", "true");
+      }
       await form.scrollIntoViewIfNeeded();
     }
     const close = page.locator(".toast-host button.close");
@@ -193,7 +205,7 @@ try {
       await writeFile(
         resolve(
           output,
-          `${pointerMode ? "image-crop-pointer" : "image-fit"}-${theme}.png`,
+          `${aspectMode ? "image-crop-aspect" : pointerMode ? "image-crop-pointer" : "image-fit"}-${theme}.png`,
         ),
         verifiedFrame,
       );

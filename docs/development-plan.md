@@ -6,7 +6,7 @@
 
 ## 次の実装順
 
-**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。各工程は未着手。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
+**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1はローカル検証済み、次はI2a。I1の全体CI確認後に着手する。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
 
 以下はこれまでの実装経緯とCore v1へ向けた長期工程を保持する。新しい短期順序と矛盾する場合は上記計画を優先し、最終的な機能仕様・提供段階は統合設計に従う。
 
@@ -650,3 +650,7 @@ Project0.32.0の[静的Text明示改行](multiline-text-design.md)を保存し�
 ## Bantoへの追加還元（2026-10-21）
 
 [共通機能の引渡し一覧](reviews/banto-contribution-handoff.md)に従い、操作／ショートカット[#435](https://github.com/tyaro/banto/issues/435)、非同期要求と一時資源[#436](https://github.com/tyaro/banto/issues/436)、UI設定の保存状態[#437](https://github.com/tyaro/banto/issues/437)、ブラウザ画像取込[#438](https://github.com/tyaro/banto/issues/438)を起票した。実装・回帰テストの固定リンクと受入候補を渡し、上流自身のテストへ抽出する。メニュー#427はPR#430で修正済み。固定依存更新・局所adapter撤去・共通化実装は未実施。
+
+## I1：画像cropの比率固定（2026-10-21）
+
+[SCADA単体開発計画](upstream-independent-plan.md)のI0／I1a／I1bを実施した。[操作仕様と実画面](image-crop-aspect-design.md)に、自由／現在比率の固定・原本境界・数値連動・不正入力・IME・保存とUndoを記録した。Project・SDK・Banto共通基盤は変更していない。次はI1の全体CIを確認してからI2aの兄弟内並び順の仕様・ドメインへ進む。

@@ -265,3 +265,143 @@ test("preview transition destroys the unfinished candidate without writing into 
   expect(await values(form(page))).toEqual([0, 0, 100, 100]);
   expect((await saved(page)).screens[0].objects[0].shape.crop).toBeUndefined();
 });
+
+for (const theme of ["light", "dark"] as const)
+  test(`${theme}: aspect lock captures draft pixel ratio, links numeric input, and saves one crop`, async ({
+    page,
+  }) => {
+    const f = await start(page);
+    await chooseTheme(page, theme);
+    const lock = f.getByRole("button", { name: "縦横比を固定", exact: true });
+    await lock.click();
+    await expect(lock).toHaveAttribute("aria-pressed", "true");
+    // Lock is an input aid: no dirty form or extra undo before a crop actually changes.
+    await expect(page.locator(".save-state")).not.toContainText("未適用");
+    await f.locator('[name="cropWidth"]').fill("050.00");
+    await expect(f.locator('[name="cropWidth"]')).toHaveValue("050.00");
+    await expect(f.locator('[name="cropHeight"]')).toHaveValue("50");
+    await f.locator('[name="cropHeight"]').fill("25");
+    await expect(f.locator('[name="cropWidth"]')).toHaveValue("25");
+    await f
+      .getByRole("button", { name: "切出し範囲の右下を変更", exact: true })
+      .focus();
+    await page.keyboard.press("Shift+ArrowRight");
+    const next = await values(f);
+    expect(next[2]).toBeCloseTo(27.5);
+    expect(next[3]).toBeCloseTo(27.5);
+    await expect(page.locator(".sheet [data-image-crop]")).toHaveCount(0);
+    await f.getByRole("button", { name: "切出しを適用", exact: true }).click();
+    await expect(lock).toHaveAttribute("aria-pressed", "true");
+    const project = await saved(page);
+    expect(project.screens[0].objects[0].shape.crop).toEqual({
+      x: 0,
+      y: 0,
+      width: 0.275,
+      height: 0.275,
+    });
+    await page.keyboard.press("Control+z");
+    await expect(page.locator(".sheet [data-image-crop]")).toHaveCount(0);
+    await page.keyboard.press("Control+y");
+    await expect(page.locator(".sheet [data-image-crop]")).toHaveCount(1);
+    // Explicit reset releases a ratio aid and returns to ordinary free edits.
+    await f.getByRole("button", { name: "入力を戻す", exact: true }).click();
+    await expect(lock).toHaveAttribute("aria-pressed", "false");
+    await f.locator('[name="cropWidth"]').fill("20");
+    await expect(f.locator('[name="cropHeight"]')).toHaveValue("27.5");
+  });
+
+test("locked reverse draw and edge resize preserve the captured non-square draft ratio and exact cancellation", async ({
+  page,
+}) => {
+  const f = await start(page);
+  await f.locator('[name="cropX"]').fill("025.00");
+  await f.locator('[name="cropY"]').fill("25");
+  await f.locator('[name="cropWidth"]').fill("50");
+  await f.locator('[name="cropHeight"]').fill("25");
+  await f.getByRole("button", { name: "縦横比を固定", exact: true }).click();
+  await drag(page, f, [0.75, 0.5], [0.65, 0.45], false);
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(f.locator('[name="cropX"]')).toHaveValue("025.00");
+  expect(await values(f)).toEqual([25, 25, 50, 25]);
+  await f.getByRole("button", { name: "範囲を指定", exact: true }).click();
+  await drag(page, f, [0.75, 0.75], [-0.25, 0.25]);
+  let next = await values(f);
+  expect(next[2] / next[3]).toBeCloseTo(2, 5);
+  expect(next[2]).toBeCloseTo(75, 1);
+  expect(next[3]).toBeCloseTo(37.5, 1);
+  const centerX = next[0] + next[2] / 2,
+    bottom = next[1] + next[3];
+  const edge = f.getByRole("button", {
+    name: "切出し範囲の上を変更",
+    exact: true,
+  });
+  await edge.focus();
+  await page.keyboard.press("Shift+ArrowDown");
+  next = await values(f);
+  expect(next[2] / next[3]).toBeCloseTo(2, 5);
+  expect(next[0] + next[2] / 2).toBeCloseTo(centerX, 5);
+  expect(next[1] + next[3]).toBeCloseTo(bottom, 5);
+});
+
+test("locked numeric invalidity blocks apply without erasing raw strings; IME waits for completion", async ({
+  page,
+}) => {
+  const f = await start(page);
+  const lock = f.getByRole("button", { name: "縦横比を固定", exact: true });
+  await lock.click();
+  const width = f.locator('[name="cropWidth"]'),
+    height = f.locator('[name="cropHeight"]');
+  await width.fill("0.25"); // 1px wide, but the required 0.5px height is invalid.
+  await expect(f.getByRole("status")).toContainText("1画素");
+  await f.getByRole("button", { name: "切出しを適用", exact: true }).click();
+  await expect(page.locator(".sheet [data-image-crop]")).toHaveCount(0);
+  await expect(width).toHaveValue("0.25");
+  expect(
+    await width.evaluate((el: HTMLInputElement) => el.checkValidity()),
+  ).toBe(false);
+  await width.fill(".");
+  await expect(width).toHaveValue(".");
+  await width.fill("40");
+  await expect(height).toHaveValue("40");
+  await width.dispatchEvent("compositionstart");
+  await width.fill("30");
+  await expect(height).toHaveValue("40");
+  await width.dispatchEvent("keydown", { key: "Enter", isComposing: true });
+  await expect(page.locator(".sheet [data-image-crop]")).toHaveCount(0);
+  await width.dispatchEvent("compositionend");
+  await expect(height).toHaveValue("30");
+  await f.getByRole("button", { name: "切出しを適用", exact: true }).click();
+  expect(
+    (await saved(page)).screens[0].objects[0].shape.crop.width,
+  ).toBeCloseTo(0.3);
+});
+
+test("background shares locked numeric crop, reset and Undo; lock does not persist after reload", async ({
+  page,
+}) => {
+  const f = await start(page, true);
+  const lock = f.getByRole("button", { name: "縦横比を固定", exact: true });
+  await lock.click();
+  await f.locator('[name="cropHeight"]').fill("50");
+  await expect(f.locator('[name="cropWidth"]')).toHaveValue("50");
+  await f
+    .getByRole("button", { name: "背景の切出しを適用", exact: true })
+    .click();
+  const project = await saved(page);
+  expect(project.screens[0].backgroundImage.crop).toEqual({
+    x: 0,
+    y: 0,
+    width: 0.5,
+    height: 0.5,
+  });
+  await page.keyboard.press("Control+z");
+  await expect(page.locator(".sheet [data-background-crop]")).toHaveCount(0);
+  await page.keyboard.press("Control+y");
+  await expect(page.locator(".sheet [data-background-crop]")).toHaveCount(1);
+  await page.reload();
+  const fresh = await start(page, true);
+  await expect(
+    fresh.getByRole("button", { name: "縦横比を固定", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+});

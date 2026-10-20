@@ -12,11 +12,13 @@
     asset,
     url,
     crop,
+    aspect,
     onchange,
   }: {
     asset: ImageAsset;
     url: string;
     crop?: ImageCrop;
+    aspect?: number;
     onchange: (crop: ImageCrop) => void;
   } = $props();
   let svg: SVGSVGElement;
@@ -66,6 +68,7 @@
     asset;
     url;
     crop;
+    aspect;
     untrack(cancel);
   });
   function start(event: PointerEvent) {
@@ -123,7 +126,14 @@
           event.clientX - current.clientX,
           event.clientY - current.clientY,
         ) >= 3,
-      next: cropGesture(asset, current.before, current.mode, current.start, p),
+      next: cropGesture(
+        asset,
+        current.before,
+        current.mode,
+        current.start,
+        p,
+        aspect,
+      ),
     };
   }
   function finish(event: PointerEvent) {
@@ -160,6 +170,7 @@
         mode,
         { x: 0, y: 0 },
         { x: (d.x * step) / asset.width, y: (d.y * step) / asset.height },
+        aspect,
       ),
     );
   }

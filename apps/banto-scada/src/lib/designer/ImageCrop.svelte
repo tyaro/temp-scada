@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { tick } from "svelte";
+  import { tick, untrack } from "svelte";
   import ImagePainting from "../ImagePainting.svelte";
   import ImageCropSelection from "./ImageCropSelection.svelte";
   import { imageCropViewBox, type ImageCrop } from "../image-crop";
   import { imageCropFromForm } from "./image-crop-fields";
+  import { cropAspect } from "./image-crop-gesture";
   import type { ImageAsset } from "../project";
   import type { createDraftGuard } from "./drafts.svelte";
   let {
@@ -28,10 +29,23 @@
     onsubmit: (event: SubmitEvent) => void;
   } = $props();
   let form: HTMLFormElement;
-  let composing = false;
+  let composing = $state(false);
+  let aspectInvalid: HTMLInputElement | undefined;
   let preview = $state<ImageCrop | undefined>();
   let error = $state("");
   let selectionOpen = $state(false);
+  let aspect = $state<number | undefined>();
+  let sizeAxis: "width" | "height" = "width";
+  let scope = "";
+  $effect(() => {
+    const nextScope = `${targetKey}:${asset.id}`;
+    untrack(() => {
+      if (scope !== nextScope) {
+        aspect = undefined;
+        scope = nextScope;
+      }
+    });
+  });
   const percent = (value: number) =>
     String(Number((value * 100).toPrecision(15)));
   const values = $derived({
@@ -41,16 +55,84 @@
     cropHeight: percent(crop?.height ?? 1),
   });
   const box = $derived(error ? null : imageCropViewBox(asset, preview));
+  function aspectValidity(message = "") {
+    aspectInvalid?.setCustomValidity("");
+    aspectInvalid = undefined;
+    if (message && aspect !== undefined) {
+      aspectInvalid = form.elements.namedItem(
+        sizeAxis === "width" ? "cropWidth" : "cropHeight",
+      ) as HTMLInputElement;
+      aspectInvalid.setCustomValidity(message);
+    }
+  }
   async function refresh() {
     await tick();
     if (!form?.isConnected) return;
     try {
-      preview = locked ? crop : imageCropFromForm(new FormData(form), asset);
+      preview = locked
+        ? crop
+        : imageCropFromForm(
+            new FormData(form),
+            asset,
+            aspect === undefined ? undefined : { aspect, axis: sizeAxis },
+          );
       error = "";
+      aspectValidity();
     } catch (e) {
       preview = undefined;
       error = e instanceof Error ? e.message : "切出し範囲を確認してください。";
+      aspectValidity(error);
     }
+  }
+  function toggleAspect() {
+    aspectValidity();
+    if (aspect !== undefined) aspect = undefined;
+    else {
+      try {
+        aspect = cropAspect(
+          asset,
+          imageCropFromForm(new FormData(form), asset),
+        );
+      } catch {
+        void refresh();
+        return;
+      }
+    }
+    void refresh();
+  }
+  function input(event: Event) {
+    if (composing) return;
+    aspectValidity();
+    const control = event.target;
+    if (aspect !== undefined && control instanceof HTMLInputElement) {
+      if (control.name === "cropWidth") sizeAxis = "width";
+      if (control.name === "cropHeight") sizeAxis = "height";
+      try {
+        const next = imageCropFromForm(new FormData(form), asset, {
+          aspect,
+          axis: sizeAxis,
+        });
+        const paired = form.elements.namedItem(
+          sizeAxis === "width" ? "cropHeight" : "cropWidth",
+        ) as HTMLInputElement;
+        paired.value = percent(
+          sizeAxis === "width" ? (next?.height ?? 1) : (next?.width ?? 1),
+        );
+        // Reconcile dirty state after both fields changed, without adding a second model edit.
+        form.dispatchEvent(new Event("input", { bubbles: true }));
+      } catch (e) {
+        aspectValidity(
+          e instanceof Error ? e.message : "切出し範囲を確認してください。",
+        );
+        // Keep unfinished/out-of-bounds strings. refresh reports the same validation error.
+      }
+    }
+    void refresh();
+  }
+  function restore(next: Record<string, string>) {
+    aspectValidity();
+    aspect = undefined;
+    write(next);
   }
   function write(next: Record<string, string>) {
     for (const [key, value] of Object.entries(next))
@@ -65,6 +147,17 @@
     return {
       update(value: Record<string, string>) {
         tracked.update(value);
+        if (aspect !== undefined) {
+          try {
+            const current = cropAspect(
+              asset,
+              imageCropFromForm(new FormData(node), asset),
+            );
+            if (Math.abs(current / aspect - 1) > 1e-10) aspect = undefined;
+          } catch {
+            // Model refresh never discards a dirty invalid input or its chosen lock.
+          }
+        }
         void refresh();
       },
       destroy: tracked.destroy,
@@ -80,10 +173,16 @@
   data-asset-id={asset.id}
   data-target-key={targetKey}
   aria-label={background ? "背景画像のトリミング" : "画像のトリミング"}
-  oninput={() => void refresh()}
-  onreset={() => void refresh()}
+  oninput={input}
+  onreset={() => {
+    aspect = undefined;
+    void refresh();
+  }}
   oncompositionstart={() => (composing = true)}
-  oncompositionend={() => (composing = false)}
+  oncompositionend={(event) => {
+    composing = false;
+    input(event);
+  }}
   onkeydown={(event) => {
     if (
       event.key === "Enter" &&
@@ -93,7 +192,7 @@
     if (event.key === "Escape" && !composing && !event.isComposing) {
       event.preventDefault();
       event.stopPropagation();
-      write(values);
+      restore(values);
     }
   }}
   onsubmit={(event) => {
@@ -108,6 +207,17 @@
         <label>{label}<input {name} inputmode="decimal" required /></label>
       {/each}
     </div>
+    <button
+      type="button"
+      aria-pressed={aspect !== undefined}
+      disabled={composing || (!!error && aspect === undefined)}
+      onclick={toggleAspect}>縦横比を固定</button
+    >
+    <p class="hint">
+      {aspect === undefined
+        ? "自由な比率で切り出します。"
+        : "固定した比率で幅・高さを連動します。"}
+    </p>
     {#if url}
       <button
         type="button"
@@ -121,6 +231,7 @@
           {asset}
           {url}
           crop={preview}
+          {aspect}
           onchange={(next) =>
             write({
               cropX: percent(next.x),
@@ -167,14 +278,14 @@
       <button
         type="button"
         onclick={() =>
-          write({
+          restore({
             cropX: "0",
             cropY: "0",
             cropWidth: "100",
             cropHeight: "100",
           })}>原本全体へ戻す</button
       >
-      <button type="button" onclick={() => write(values)}>入力を戻す</button>
+      <button type="button" onclick={() => restore(values)}>入力を戻す</button>
       <button type="submit"
         >{background ? "背景の切出しを適用" : "切出しを適用"}</button
       >
@@ -254,6 +365,10 @@
   button {
     cursor: pointer;
     font-size: 11px;
+  }
+  button[aria-pressed="true"] {
+    background: var(--banto-primary);
+    color: var(--banto-primary-contrast, white);
   }
   :is(input, button):focus-visible {
     outline: none;
