@@ -207,6 +207,12 @@ html[data-theme="dark"] #app {
   margin: 6px 16px;
 }
 @media (max-width: 1099px) {
+  #app .mode-tools {
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
   #app main > section > .toolbar {
     position: static;
     padding: 10px 12px 0;

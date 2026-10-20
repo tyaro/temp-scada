@@ -84,6 +84,12 @@ test("small screens stack editor controls without horizontal overflow", async ({
   await expect(
     page.getByRole("complementary", { name: "プロパティパネル" }),
   ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "画面を小窓で表示確認", exact: true }),
+  ).toBeInViewport();
+  await expect(
+    page.getByRole("button", { name: "機器の読取詳細", exact: true }),
+  ).toBeInViewport();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
