@@ -259,3 +259,5 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ## 静的複数行Textの計算基盤
 
 `multiline-text-layout.ts`の`normalizeTextNewlines`／`fitTextWidth`／`fitStaticLines`は純粋な文字計測adapterを受け取り、空行と幅／高さの省略・実inkのunionを計算する。`multiline-text-layout.test.ts`で字体・grapheme・縦省略と一時cacheを検証する。既存`fitText`は変更せず、Project0.31.0・UI・描画には未接続。接続の段階は[具体設計](multiline-text-design.md)を参照する。
+
+浮動Inspectorのgestureは開始時のnative window寸法も保持し、入力捕捉時に照合する。`e2e/inspector-floating.spec.ts`の通知遅延ケースはresizeイベントへの依存を切り離して確定競合を再現する。

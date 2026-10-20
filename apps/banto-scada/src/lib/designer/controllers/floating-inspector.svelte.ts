@@ -30,6 +30,7 @@ type Gesture = {
   start: FloatingPanelRect;
   origin: { x: number; y: number };
   delta: { x: number; y: number };
+  windowSize: { width: number; height: number };
 };
 const copy = (rect: FloatingPanelRect): FloatingPanelRect => ({ ...rect });
 const same = (a: FloatingPanelRect, b: FloatingPanelRect) =>
@@ -99,6 +100,7 @@ export function createFloatingInspector(host: InspectorFrameHost) {
       start: copy(rect),
       origin,
       delta: { x: 0, y: 0 },
+      windowSize: { width: window.innerWidth, height: window.innerHeight },
     };
     if (pointer !== null) target.setPointerCapture(pointer);
     return true;
@@ -205,7 +207,17 @@ export function createFloatingInspector(host: InspectorFrameHost) {
   }
   onMount(() => {
     function activeGesture() {
-      if (gesture && hasVisibleLayerAbove({ except: host.element }))
+      // The native viewport can change before its queued resize notification is delivered.
+      // Never commit a drag based on the preceding window, even if pointerup wins that race.
+      if (
+        gesture &&
+        (window.innerWidth !== gesture.windowSize.width ||
+          window.innerHeight !== gesture.windowSize.height ||
+          !host.visible ||
+          host.blocked ||
+          !host.element?.isConnected ||
+          hasVisibleLayerAbove({ except: host.element }))
+      )
         finish(false);
       return gesture;
     }

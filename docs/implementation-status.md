@@ -271,3 +271,7 @@ Viewの選択に参照画面・必要Symbol・画像原本を同梱し、同じP
 [設計と両テーマの実画面](selection-text-style-design.md)に従い、Textだけの複数選択で文字サイズ・太さ・揃えを明示適用する。未指定項目と本文・タグ／slot／機器情報・bool文字色・枠寸法は保持する。異種混在・group・lockは全体拒否。関連TS15件・ブラウザ19件と最終の機器情報を含む定義選択1件、型・buildが成功。Project0.31.0を維持する。
 
 幅／高さの統一`49fac29`は[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39419117189)の成功を確認した。
+
+## 浮動パネルの画面サイズ変更時の取消
+
+resize通知とpointerupの順序による位置の誤確定を修正し、実window寸法の照合を追加した。[再現試験と検証記録](inspector-floating-design.md#画面サイズ変更と確定の競合修正)を参照する。Project・UI保存slotの形式は維持する。静的複数行Textの計算基盤`1b04755`は[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39421224788)成功を確認した。保存形式・画面はまだ1行の段階。

@@ -341,3 +341,33 @@ test("a menu appearing during a pointer gesture cancels it and receives Escape",
   expect(await panel(page).boundingBox()).toEqual(old);
   await expect(button(page, "元に戻す")).toBeDisabled();
 });
+
+test("native viewport dimensions cancel a gesture before pointerup even when resize delivery is delayed", async ({
+  page,
+}) => {
+  // CDP's resize acknowledgement need not mean that the page's resize notification has run.
+  await page.addInitScript(() =>
+    window.addEventListener(
+      "resize",
+      (event) => event.stopImmediatePropagation(),
+      true,
+    ),
+  );
+  await start(page);
+  await float(page);
+  const original = await panel(page).boundingBox();
+  for (const size of [
+    { width: 1800, height: 1080 },
+    { width: 1920, height: 1000 },
+  ]) {
+    const box = (await button(page, "プロパティパネルを移動").boundingBox())!;
+    await page.mouse.move(box.x + 20, box.y + 12);
+    await page.mouse.down();
+    await page.mouse.move(box.x - 80, box.y + 32, { steps: 3 });
+    await page.setViewportSize(size);
+    await page.mouse.up();
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await expect.poll(() => panel(page).boundingBox()).toEqual(original);
+  }
+  await expect(button(page, "元に戻す")).toBeDisabled();
+});
