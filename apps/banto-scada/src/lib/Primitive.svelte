@@ -170,6 +170,7 @@
       tagName={slotBinding?.slotName ?? binding?.externalName}
       tagState={bound ? presentation.state : undefined}
       tagLabel={bound ? presentation.label : undefined}
+      provenance={slotBinding ? slotDisplay?.provenance : undefined}
       {onsummary}
     />{/if}
 {:else if shape}

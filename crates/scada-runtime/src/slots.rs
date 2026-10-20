@@ -308,6 +308,83 @@ mod tests {
         }
     }
     #[test]
+    fn browser_read_slot_fixtures_are_actual_rust_projection_and_schema_valid() {
+        let schema: serde_json::Value =
+            serde_json::from_str(include_str!("../schema/read-slot-view.schema.json")).unwrap();
+        let validator = jsonschema::validator_for(&schema).unwrap();
+        let fixtures: Vec<serde_json::Value> =
+            serde_json::from_str(include_str!("../../../examples/read-slot-view-cases.json"))
+                .unwrap();
+        for fixture in fixtures {
+            let input = &fixture["input"];
+            let mut expected = fixture["view"].clone();
+            // JSON integers and floats share the same number semantics in the browser.
+            if expected["slots"][0]["reading"]["value"]["type"] == "number" {
+                let number = expected["slots"][0]["reading"]["value"]["value"]
+                    .as_f64()
+                    .unwrap();
+                expected["slots"][0]["reading"]["value"]["value"] = json!(number);
+            }
+            let expected_row = &expected["slots"][0];
+            let kind = if input["slotType"] == "bool" {
+                ReadSlotType::Bool
+            } else {
+                ReadSlotType::Number
+            };
+            let plan = ReadSlotPlan::new(
+                expected["projectId"].as_str().unwrap().into(),
+                expected["projectRevision"].as_u64().unwrap(),
+                [request(
+                    expected_row["key"]["equipmentId"].as_str().unwrap(),
+                    expected_row["key"]["slotName"].as_str().unwrap(),
+                    kind,
+                    Some("Demo.Value"),
+                )],
+            )
+            .unwrap();
+            let mut metadata = catalog();
+            metadata.revision = 7;
+            metadata.run_id = Some(17);
+            metadata.collection_mode = CollectionMode::parse(input["mode"].as_str().unwrap());
+            metadata.tags[0].external_name = "Demo.Value".into();
+            metadata.tags[0].data_type = if kind == ReadSlotType::Bool {
+                "bit"
+            } else {
+                "f64"
+            }
+            .into();
+            metadata.tags[0].value_source = ValueSource::parse(input["source"].as_str().unwrap());
+            let mut values = snapshot();
+            values.revision = metadata.revision;
+            values.run_id = metadata.run_id;
+            values.collection_mode = metadata.collection_mode.clone();
+            values.values[0].tag = "Demo.Value".into();
+            values.values[0].v = input["value"].as_f64();
+            values.values[0].t = 1000;
+            values.values[0].q = match input["quality"].as_str().unwrap() {
+                "good" => ValueQuality::Good,
+                "stale" => ValueQuality::Stale,
+                _ => ValueQuality::Bad,
+            };
+            values.values[0].value_source = metadata.tags[0].value_source.clone();
+            if input["missingTag"] == true {
+                metadata.tags.clear();
+                values.values.clear();
+            }
+            let projected = if input["connected"] == false {
+                ReadSlotView::pending(&plan, "stopped".into(), None)
+            } else if input["metadata"] == false {
+                view(&plan, None, None)
+            } else {
+                view(&plan, Some(&values), Some(&metadata))
+            };
+            let serialized = serde_json::to_value(projected).unwrap();
+            assert_eq!(serialized, expected, "{}", fixture["name"]);
+            assert!(validator.is_valid(&serialized), "{}", fixture["name"]);
+        }
+    }
+
+    #[test]
     fn validated_equipment_project_builds_context_without_copying_placements_or_values() {
         let mut value: serde_json::Value =
             serde_json::from_str(include_str!("../../../examples/equipment.project.json")).unwrap();

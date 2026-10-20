@@ -1,0 +1,248 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "projectId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "projectRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "connection": {
+      "enum": [
+        "stopped",
+        "connecting",
+        "handshaking",
+        "live",
+        "rebinding",
+        "reconnecting",
+        "unauthorized"
+      ]
+    },
+    "lastError": {
+      "type": ["string", "null"]
+    },
+    "metadataReady": {
+      "type": "boolean"
+    },
+    "slots": {
+      "type": "array",
+      "maxItems": 64000,
+      "items": {
+        "$ref": "#/$defs/slot"
+      }
+    }
+  },
+  "required": [
+    "projectId",
+    "projectRevision",
+    "connection",
+    "lastError",
+    "metadataReady",
+    "slots"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "value": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "bool"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": ["type", "value"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "number"
+            },
+            "value": {
+              "type": "number"
+            }
+          },
+          "required": ["type", "value"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "catalogRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "runId": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "collectionMode": {
+          "enum": ["configured", "all_simulation"]
+        },
+        "valueSource": {
+          "enum": [
+            "real",
+            "simulation",
+            "computed",
+            "derived_simulation",
+            "internal",
+            "db"
+          ]
+        },
+        "sourceTimestampMs": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "catalogRevision",
+        "runId",
+        "collectionMode",
+        "valueSource",
+        "sourceTimestampMs"
+      ],
+      "additionalProperties": false
+    },
+    "slot": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "object",
+          "properties": {
+            "equipmentId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            },
+            "slotName": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          },
+          "required": ["equipmentId", "slotName"],
+          "additionalProperties": false
+        },
+        "expectedType": {
+          "enum": ["bool", "number"]
+        },
+        "externalName": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "reading": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "enum": ["unassigned", "disconnected", "unresolved"]
+                }
+              },
+              "required": ["state"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "const": "invalid"
+                },
+                "reason": {
+                  "enum": [
+                    "metadataUnavailable",
+                    "metadataMismatch",
+                    "invalidCatalog",
+                    "duplicateValues",
+                    "disabled",
+                    "typeMismatch",
+                    "unknownSource",
+                    "sourceMismatch",
+                    "missingValue",
+                    "invalidValue",
+                    "unknownQuality"
+                  ]
+                }
+              },
+              "required": ["state", "reason"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "const": "resolved"
+                },
+                "quality": {
+                  "const": "good"
+                },
+                "value": {
+                  "$ref": "#/$defs/value"
+                }
+              },
+              "required": ["state", "quality", "value"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "const": "resolved"
+                },
+                "quality": {
+                  "enum": ["stale", "bad"]
+                },
+                "value": {
+                  "type": "null"
+                }
+              },
+              "required": ["state", "quality", "value"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "provenance": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/provenance"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "key",
+        "expectedType",
+        "externalName",
+        "reading",
+        "provenance"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

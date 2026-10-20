@@ -1,6 +1,6 @@
 # 共有Symbolの読取slotと割付状態表示
 
-状態: **宣言・表示Textの追加・既存宣言への割付と、機器contextの取得前状態を実装**。2026-10-20、Project 0.25.0。[統合設計](scada-integrated-design.md)§5と上流§7の段階実装。実値の受入・動的配色・Faceplateは未実装。
+状態: **宣言・表示Textの追加・既存宣言への割付と、機器contextの取得前状態を実装**。2026-10-20、Project 0.25.0。[統合設計](scada-integrated-design.md)§5と上流§7の段階実装。後続で[表示DTOの受入とGood／Quality表示](read-slot-presentation.md)を実装した。実Host・動的配色・Faceplateは未実装。
 
 ## 保存契約
 
@@ -35,7 +35,7 @@ Textのプロパティ「読取slot」で既存宣言を選び、「変更を適
 
 不成立はそのTextに限定し、Symbolの静的図形や他のslot表示を消さない。別配置の機器contextを流用しない。静的文字、0／false、以前の値を代用しない。メイン図面・プレビュー・minimap・埋込画面・読取小窓で同じ解決を使う。
 
-今回の`resolveSymbolSlot()`は保存contextだけを解決する。外部名が設定済みでも最後は未接続であり、Rustの`ReadSlotView`を受け取るAPIはまだない。後続でProject ID／revision・Host generation・構造化key・expectedType・externalNameの照合と、Good／Bad／Stale・simulation由来を接続する。SDKのcatalog公開・未解決を含む購読は引き続き[industrial #682](https://github.com/tyaro/banto-industrial/issues/682)が前提。
+`601be15`の区切りは保存contextだけの解決だった。後続の[表示DTO受入口](read-slot-presentation.md)でProject identity・ID／revision・session generation・構造化key・expectedType・externalNameの照合と、Good／Bad／Stale・simulation由来を接続した。通常Designerにはまだ実Hostがなく、外部名設定済みでも未接続を表示する。SDKのcatalog公開・未解決を含む購読は引き続き[industrial #682](https://github.com/tyaro/banto-industrial/issues/682)が前提。
 
 ## 検証と実画面
 

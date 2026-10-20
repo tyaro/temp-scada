@@ -1,0 +1,687 @@
+[
+  {
+    "name": "false is a valid bool",
+    "input": {
+      "slotType": "bool",
+      "value": 0,
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "running"
+          },
+          "expectedType": "bool",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "good",
+            "value": {
+              "type": "bool",
+              "value": false
+            }
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "real",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "false"
+  },
+  {
+    "name": "true is a valid bool",
+    "input": {
+      "slotType": "bool",
+      "value": 1,
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "running"
+          },
+          "expectedType": "bool",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "good",
+            "value": {
+              "type": "bool",
+              "value": true
+            }
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "real",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "true"
+  },
+  {
+    "name": "zero is a valid number",
+    "input": {
+      "slotType": "number",
+      "value": 0,
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "current"
+          },
+          "expectedType": "number",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "good",
+            "value": {
+              "type": "number",
+              "value": 0
+            }
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "real",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "0"
+  },
+  {
+    "name": "finite negative number",
+    "input": {
+      "slotType": "number",
+      "value": -12.75,
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "current"
+          },
+          "expectedType": "number",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "good",
+            "value": {
+              "type": "number",
+              "value": -12.75
+            }
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "real",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "-12.75"
+  },
+  {
+    "name": "Stale removes retained bool",
+    "input": {
+      "slotType": "bool",
+      "value": 1,
+      "quality": "stale",
+      "source": "real",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "running"
+          },
+          "expectedType": "bool",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "stale",
+            "value": null
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "real",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "-- · Stale"
+  },
+  {
+    "name": "Bad removes retained number",
+    "input": {
+      "slotType": "number",
+      "value": 987.25,
+      "quality": "bad",
+      "source": "real",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "current"
+          },
+          "expectedType": "number",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "bad",
+            "value": null
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "real",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "-- · Bad"
+  },
+  {
+    "name": "missing tag is unresolved",
+    "input": {
+      "slotType": "number",
+      "value": 12.5,
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": true
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "current"
+          },
+          "expectedType": "number",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "unresolved"
+          },
+          "provenance": null
+        }
+      ]
+    },
+    "display": "-- · 未解決"
+  },
+  {
+    "name": "metadata unavailable",
+    "input": {
+      "slotType": "bool",
+      "value": 1,
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "connected": true,
+      "metadata": false,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": false,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "running"
+          },
+          "expectedType": "bool",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "invalid",
+            "reason": "metadataUnavailable"
+          },
+          "provenance": null
+        }
+      ]
+    },
+    "display": "-- · 値が不正"
+  },
+  {
+    "name": "disconnection removes provenance",
+    "input": {
+      "slotType": "number",
+      "value": 987.25,
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "connected": false,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "stopped",
+      "lastError": null,
+      "metadataReady": false,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "current"
+          },
+          "expectedType": "number",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "disconnected"
+          },
+          "provenance": null
+        }
+      ]
+    },
+    "display": "-- · 未接続"
+  },
+  {
+    "name": "configured simulation is valid",
+    "input": {
+      "slotType": "number",
+      "value": 12.5,
+      "quality": "good",
+      "source": "simulation",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "current"
+          },
+          "expectedType": "number",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "good",
+            "value": {
+              "type": "number",
+              "value": 12.5
+            }
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "simulation",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "SIM · 12.5"
+  },
+  {
+    "name": "all simulation bool",
+    "input": {
+      "slotType": "bool",
+      "value": 0,
+      "quality": "good",
+      "source": "simulation",
+      "mode": "all_simulation",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "running"
+          },
+          "expectedType": "bool",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "good",
+            "value": {
+              "type": "bool",
+              "value": false
+            }
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "all_simulation",
+            "valueSource": "simulation",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "SIM · false"
+  },
+  {
+    "name": "derived simulation Stale retains origin",
+    "input": {
+      "slotType": "number",
+      "value": 987.25,
+      "quality": "stale",
+      "source": "derived_simulation",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "current"
+          },
+          "expectedType": "number",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "stale",
+            "value": null
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "derived_simulation",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "SIM · -- · Stale"
+  },
+  {
+    "name": "computed source",
+    "input": {
+      "slotType": "number",
+      "value": 12.5,
+      "quality": "good",
+      "source": "computed",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "current"
+          },
+          "expectedType": "number",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "good",
+            "value": {
+              "type": "number",
+              "value": 12.5
+            }
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "computed",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "12.5"
+  },
+  {
+    "name": "internal source",
+    "input": {
+      "slotType": "number",
+      "value": 12.5,
+      "quality": "good",
+      "source": "internal",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "current"
+          },
+          "expectedType": "number",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "good",
+            "value": {
+              "type": "number",
+              "value": 12.5
+            }
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "internal",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "12.5"
+  },
+  {
+    "name": "db source",
+    "input": {
+      "slotType": "number",
+      "value": 12.5,
+      "quality": "good",
+      "source": "db",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "current"
+          },
+          "expectedType": "number",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "resolved",
+            "quality": "good",
+            "value": {
+              "type": "number",
+              "value": 12.5
+            }
+          },
+          "provenance": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "db",
+            "sourceTimestampMs": 1000
+          }
+        }
+      ]
+    },
+    "display": "12.5"
+  },
+  {
+    "name": "non binary bit is invalid",
+    "input": {
+      "slotType": "bool",
+      "value": 0.5,
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "connected": true,
+      "metadata": true,
+      "missingTag": false
+    },
+    "view": {
+      "projectId": "0199f200-0000-7000-8000-000000000001",
+      "projectRevision": 1,
+      "connection": "live",
+      "lastError": null,
+      "metadataReady": true,
+      "slots": [
+        {
+          "key": {
+            "equipmentId": "0199f700-0000-7000-8000-000000000002",
+            "slotName": "running"
+          },
+          "expectedType": "bool",
+          "externalName": "Demo.Value",
+          "reading": {
+            "state": "invalid",
+            "reason": "invalidValue"
+          },
+          "provenance": null
+        }
+      ]
+    },
+    "display": "-- · 値が不正"
+  }
+]

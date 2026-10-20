@@ -1,3 +1,4 @@
+import type { SlotProvenance } from "./read-slot-session";
 import type { Project, SymbolDefinition } from "./project";
 
 /** Shared declarations describe roles, never equipment-specific tag names. */
@@ -22,14 +23,26 @@ export function validateSymbolSlots(project: Project) {
   }
 }
 
-export type EquipmentContext = Pick<Project, "equipmentTypes" | "equipment">;
+export type EquipmentContext = Pick<Project, "equipmentTypes" | "equipment"> & {
+  readSlot?: (
+    equipmentId: string,
+    slotName: string,
+    expectedType: "bool" | "number",
+    externalName: string,
+  ) => SlotPresentation;
+};
 export type SlotStatus =
   | "unbound"
   | "missingSlot"
   | "typeMismatch"
   | "unadopted"
   | "unassigned"
-  | "disconnected";
+  | "disconnected"
+  | "unresolved"
+  | "invalid"
+  | "good"
+  | "stale"
+  | "bad";
 const labels: Record<SlotStatus, string> = {
   unbound: "機器未関連付け",
   missingSlot: "機器種別にslotなし",
@@ -37,13 +50,23 @@ const labels: Record<SlotStatus, string> = {
   unadopted: "未採用",
   unassigned: "未割付",
   disconnected: "未接続",
+  unresolved: "未解決",
+  invalid: "値が不正",
+  good: "Good",
+  stale: "Stale",
+  bad: "Bad",
 };
-export function slotPresentation(state: SlotStatus) {
+export function slotPresentation(state: SlotStatus): SlotPresentation {
   return { state, label: labels[state], text: `-- · ${labels[state]}` };
 }
-export type SlotPresentation = ReturnType<typeof slotPresentation>;
+export interface SlotPresentation {
+  state: SlotStatus;
+  label: string;
+  text: string;
+  provenance?: SlotProvenance;
+}
 
-/** Resolves saved context only. Real values will enter through the future Host boundary. */
+/** Saved context takes priority over accepted runtime results, one Text at a time. */
 export function resolveSymbolSlot(
   definition: SymbolDefinition,
   slotName: string,
@@ -66,5 +89,12 @@ export function resolveSymbolSlot(
   const binding = equipment.bindings.find((item) => item.slotName === slotName);
   if (!binding) return slotPresentation("unadopted");
   if (binding.externalName === null) return slotPresentation("unassigned");
-  return slotPresentation("disconnected");
+  return (
+    context?.readSlot?.(
+      equipment.id,
+      slotName,
+      requirement.type,
+      binding.externalName,
+    ) ?? slotPresentation("disconnected")
+  );
 }

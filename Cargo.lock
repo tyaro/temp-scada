@@ -896,6 +896,7 @@ version = "0.25.0"
 dependencies = [
  "banto-tagclient",
  "futures-util",
+ "jsonschema",
  "scada-model",
  "serde",
  "serde_json",

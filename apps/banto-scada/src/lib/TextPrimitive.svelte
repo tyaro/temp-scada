@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { SlotProvenance } from "./read-slot-session";
   import { onMount, untrack } from "svelte";
   import { fitText, TEXT_FONT, type TextLayout } from "./text-layout";
   import type { TextStyle } from "./project";
@@ -12,6 +13,7 @@
     tagName,
     tagState,
     tagLabel,
+    provenance,
     onsummary,
   }: {
     text: string;
@@ -23,6 +25,7 @@
     tagName?: string;
     tagState?: string;
     tagLabel?: string;
+    provenance?: SlotProvenance;
     onsummary?: (description: string) => void;
   } = $props();
   let viewport = $state<SVGSVGElement>();
@@ -48,8 +51,13 @@
         ? width - 2 - (current?.inkWidth ?? 0)
         : 2) - (current?.left ?? 0),
   );
+  const origin = $derived(
+    provenance
+      ? ` · source ${provenance.valueSource} · mode ${provenance.collectionMode} · catalog ${provenance.catalogRevision} · run ${provenance.runId ?? "none"} · t ${provenance.sourceTimestampMs}`
+      : "",
+  );
   const description = $derived(
-    `${tagName ? `${tagName} · ${tagLabel} · ` : ""}${!current ? "文字の計測中 · " : current.mode === "full" ? "" : current?.mode === "ellipsis" ? "省略表示 · " : "表示枠に収まりません · "}${text}`,
+    `${tagName ? `${tagName} · ${tagLabel}${origin} · ` : ""}${!current ? "文字の計測中 · " : current.mode === "full" ? "" : current?.mode === "ellipsis" ? "省略表示 · " : "表示枠に収まりません · "}${text}`,
   );
   onMount(() => {
     let active = true;
@@ -114,6 +122,11 @@
   data-text-layout={current?.mode ?? "pending"}
   data-tag-name={tagName}
   data-tag-state={tagState}
+  data-tag-source={provenance?.valueSource}
+  data-collection-mode={provenance?.collectionMode}
+  data-source-timestamp-ms={provenance?.sourceTimestampMs}
+  data-catalog-revision={provenance?.catalogRevision}
+  data-tag-run-id={provenance ? (provenance.runId ?? "none") : undefined}
   role="img"
   aria-label={description}
 >

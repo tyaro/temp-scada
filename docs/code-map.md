@@ -154,3 +154,5 @@ Equipmentは`lib/equipment.ts`と`crates/scada-model/src/equipment.rs`が保存�
 [機器とSymbolの関連付け](equipment-symbol-association.md)は`equipmentUsages()`が非永続の全画面参照索引を生成し、同じ意味検証をTS／Rustで実行する。`single-object-handler.ts`と既存objectフォームが関連付け、`equipment-handler.ts`が使用中削除拒否、`clipboard.ts`が機器移入の明示拒否を担当。`e2e/equipment-association.spec.ts`と共通`equipment-reference-cases.json`で検証する。
 
 共有Symbolの読取宣言は`project.ts`と共通schema、意味検証・機器contextの取得前状態解決は`lib/symbol-slots.ts`が担当する。`symbol-handler.ts`は宣言＋Textの原子的追加、既存objectフォームは宣言選択、`ObjectPainting`／`Primitive`は値を代用しない描画を担当する。`EquipmentContext`はメイン／minimap／埋込／小窓へ明示伝搬し、global stateを作らない。共通`symbol-slot-cases.json`、`symbol-slots.test.ts`、`e2e/symbol-slots.spec.ts`で確認する。[実装範囲](symbol-read-slots.md)を参照する。
+
+読取DTOの構造は`crates/scada-runtime/schema/read-slot-view.schema.json`、TSの受入・plan照合・世代／frame所有は`lib/read-slot-session.ts`が担当する。`equipmentReadContext()`がcurrentProjectと返却frameを表示contextへ接続し、`symbol-slots.ts`が保存設定を優先して解決する。`TextPrimitive`はSIM・Quality・由来の文字／属性を描画し、接続やQuality判定を所有しない。共通`read-slot-view-cases.json`とRustの実投影、`read-slot-session.test.ts`、`e2e/read-slot-session.spec.ts`で確認する。[受入契約](read-slot-presentation.md)を参照する。

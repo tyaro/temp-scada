@@ -68,3 +68,7 @@ Astraの静的レビューでは必須修正や既存数値の回帰は見つか
 ## 後続のEquipment保存接続
 
 0.23.0で[機器の保存と初期台帳](equipment-register-design.md)を追加した。`ReadSlotPlan::from_project()`は検証済みProjectの採用read slotを機器contextへ変換し、`Result`を返す。slot plan自体や現在値は保存しない。先行実装時の0.22.0・UI未変更という記録は当時の範囲であり、現在の保存形式は実装状況を参照する。
+
+## 後続の表示DTO受入
+
+Project0.25.0の共有Symbolに続き、[TSの受入境界・session世代とGood／Quality表示](read-slot-presentation.md)を実装した。Rust実投影からの共通fixtureとブラウザの同一mount更新を検証する。初回実装時の記録は維持し、実Host・実Hub接続が未完了であることと区別する。
