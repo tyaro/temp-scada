@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.26.0"
+          "const": "0.27.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.26.0"
+          "const": "0.27.0"
         },
         "name": {
           "type": "string",
@@ -234,6 +234,9 @@
                 },
                 "paint": {
                   "$ref": "#/$defs/shapePaint"
+                },
+                "stateColor": {
+                  "$ref": "#/$defs/stateColor"
                 }
               },
               "required": ["type", "paint"],
@@ -247,6 +250,9 @@
                 },
                 "paint": {
                   "$ref": "#/$defs/shapePaint"
+                },
+                "stateColor": {
+                  "$ref": "#/$defs/stateColor"
                 }
               },
               "required": ["type", "paint"],
@@ -445,6 +451,9 @@
             },
             "lineStyle": {
               "$ref": "#/$defs/lineStyle"
+            },
+            "stateColor": {
+              "$ref": "#/$defs/stateColor"
             }
           },
           "required": ["type", "points", "strokeWidth", "arrow"],
@@ -1162,6 +1171,16 @@
         }
       },
       "required": ["id", "typeId", "code", "name", "bindings"],
+      "additionalProperties": false
+    },
+    "stateColor": {
+      "type": "object",
+      "properties": {
+        "textId": {
+          "$ref": "#/$defs/id"
+        }
+      },
+      "required": ["textId"],
       "additionalProperties": false
     }
   }

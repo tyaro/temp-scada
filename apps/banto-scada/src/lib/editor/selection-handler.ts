@@ -8,7 +8,7 @@ import {
 } from "../project";
 import { parseLineStyle, setLineStyle } from "../line-style";
 import type { SelectionCommand } from "./commands";
-import { newId } from "./model-helpers";
+import { newId, remapStateColor } from "./model-helpers";
 import { applyFolderAssignment } from "./folder-handler";
 import { unhandledCommand } from "./unhandled-command";
 
@@ -275,6 +275,7 @@ export function applySelectionCommand(
     objects.forEach((o, i) => {
       const copy = JSON.parse(JSON.stringify(o));
       copy.id = copies.get(o.id)!;
+      remapStateColor(copy, copies);
       copy.x += 20;
       copy.y += 20;
       copy.order = order + i;

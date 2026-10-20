@@ -1,4 +1,6 @@
 <script lang="ts">
+  import StateColor from "./StateColor.svelte";
+  import { stateColorUsages } from "../state-color";
   import GroupInspector from "./GroupInspector.svelte";
   import { selectedGroup, groupFor } from "../geometric-groups";
   import { screenViewOptions } from "../screen-references";
@@ -52,6 +54,7 @@
     moveSelection,
     edit,
     openDefinition,
+    onselectsource,
     openScreen,
     onreplaceimage,
     imageBusy,
@@ -81,6 +84,7 @@
     moveSelection: (event: SubmitEvent) => void;
     edit: (command: EditCommand) => boolean;
     openDefinition: (id: string) => void;
+    onselectsource: (id: string) => void;
     openScreen: (id: string) => void;
     onreplaceimage: (id: string) => void;
     imageBusy: boolean;
@@ -508,6 +512,17 @@
       {:else}<p>グループを含むため、内部の書式は解除後に編集できます。</p>{/if}
     {:else if selected}
       {#key `${generation}:${screen.id}:${selected.id}`}
+        {#if activeDefinition && (selected.shape.type === "rectangle" || selected.shape.type === "ellipse" || selected.shape.type === "polyline")}
+          <StateColor
+            definition={screen as SymbolDefinition}
+            object={selected}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            locked={selectionLocked}
+            {drafts}
+            onsubmit={properties}
+            onsource={(id) => onselectsource(id)}
+          />
+        {/if}
         {#if selected.shape.type === "rectangle" || selected.shape.type === "ellipse"}
           <ShapePaint
             paint={selected.shape.paint}
@@ -545,6 +560,14 @@
           />
         {/if}
         {#if activeDefinition && selected.shape.type === "text" && ("readSlots" in screen ? screen.readSlots : [])?.some((slot) => slot.name === (selected.shape.type === "text" ? selected.shape.slotBinding?.slotName : undefined) && slot.type === "bool")}
+          {@const followers = stateColorUsages(
+            screen as SymbolDefinition,
+            selected.id,
+          )}
+          {#if followers.length}<p class="numeric-hint">
+              状態色の追従先 {followers.length}件。配色とbool
+              slotの変更はすべてに反映します。配色元の削除・配色解除・number化は先に追従を解除してください。
+            </p>{/if}
           <BoolColors
             colors={selected.shape.boolColors}
             objectId={selected.id}

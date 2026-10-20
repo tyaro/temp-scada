@@ -127,7 +127,7 @@ test("duplicate names survive duplication and JSON; clearing restores fallback w
     layers(page).getByRole("button", { name: "TK-101 液位", exact: true }),
   ).toHaveCount(2);
   const project = await download(page);
-  expect(project.manifest.schemaVersion).toBe("0.26.0");
+  expect(project.manifest.schemaVersion).toBe("0.27.0");
   const named = project.screens[0].objects.filter(
     (o: any) => o.name === "TK-101 液位",
   );

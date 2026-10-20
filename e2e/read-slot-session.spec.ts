@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import sample from "../examples/symbol-slots.project.json" with { type: "json" };
+import sample from "../examples/state-color.project.json" with { type: "json" };
 import fixtures from "../examples/read-slot-view-cases.json" with { type: "json" };
 import { chooseTheme } from "./helpers/designer";
 
@@ -35,12 +35,17 @@ for (const theme of ["light", "dark"] as const)
         };
         (sample.symbols[0].objects[5] as any).colorAlpha = 0.4;
         (sample.symbols[0].objects[5] as any).opacity = 0.5;
+        (sample.symbols[0].objects[0] as any).opacity = 0.5;
+        (sample.symbols[0].objects[0] as any).colorAlpha = 0.5;
         sample.screens[0].objects[0].shape.colorMode = "monochrome";
         sample.screens[0].objects[0].fill = "#ff00ff";
         for (const equipment of sample.equipment) equipment.bindings = [];
         sample.equipment[0].bindings = [
           { slotName: "running", externalName: "Demo.Value" },
           { slotName: "current", externalName: "Demo.Number" },
+        ];
+        sample.equipment[1].bindings = [
+          { slotName: "running", externalName: "Demo.Other" },
         ];
         const source = sample.screens[0];
         const direct = structuredClone(source.objects[0]);
@@ -176,6 +181,35 @@ for (const theme of ["light", "dark"] as const)
           await flush();
           snapshots.push({
             name,
+            paints: roots().map((root) => {
+              const line = root.querySelector(
+                `[data-symbol-child-id="${sample.symbols[0].objects[0].id}"]`,
+              )!;
+              const box = root.querySelector(
+                `[data-symbol-child-id="${sample.symbols[0].objects[7].id}"]`,
+              )!;
+              return {
+                line: line.querySelector("polyline")?.getAttribute("stroke"),
+                arrow: line.querySelector("polygon")?.getAttribute("fill"),
+                lineOpacity: line.getAttribute("opacity"),
+                fill: box.querySelector("rect")?.getAttribute("fill"),
+                stroke: box.querySelector("rect")?.getAttribute("stroke"),
+                fillAlpha: box
+                  .querySelector("rect")
+                  ?.getAttribute("fill-opacity"),
+                opacity: box.getAttribute("opacity"),
+              };
+            }),
+            secondary: [
+              main.querySelector(
+                `[data-source-object-id="${source.objects[2].id}"]`,
+              ),
+              popup.querySelector(
+                `[data-projected-object-id="${source.objects[2].id}"]`,
+              ),
+            ].map((root) =>
+              root?.querySelector("polyline")?.getAttribute("stroke"),
+            ),
             statuses: [mainStatus, popupStatus].map((root) => ({
               summary: root.querySelector("summary")?.textContent,
               open: root.querySelector("details")?.open,
@@ -211,6 +245,11 @@ for (const theme of ["light", "dark"] as const)
           const number = structuredClone(fixtures[2].view.slots[0]);
           number.externalName = "Demo.Number";
           view.slots.push(number as any);
+          const other = structuredClone(view.slots[0]);
+          other.key.equipmentId = sample.equipment[1].id;
+          other.externalName = "Demo.Other";
+          (other.reading as any).value.value = true;
+          view.slots.push(other);
           return view;
         }
         try {
@@ -296,9 +335,15 @@ for (const theme of ["light", "dark"] as const)
             session.receive(session.generation, duplicate).frame,
           );
           for (const screen of project.screens)
-            for (const object of screen.objects)
-              if (object.shape.type === "symbol")
-                object.shape.colorMode = "definition";
+            screen.objects = screen.objects.map((object: any) =>
+              object.shape.type === "symbol"
+                ? {
+                    ...object,
+                    shape: { ...object.shape, colorMode: "definition" },
+                  }
+                : object,
+            );
+          project = parseProject(JSON.stringify(project));
           session.reset(project);
           await publish(
             "definition-color",
@@ -342,17 +387,17 @@ for (const theme of ["light", "dark"] as const)
       (snapshot: any) => snapshot.name === "good",
     )!.statuses;
     expect(goodSummary[0].summary).toContain("表示参照 8件");
-    expect(goodSummary[0].summary).toContain("取得不能 4件");
+    expect(goodSummary[0].summary).toContain("取得不能 3件");
     const simSummary = results.find(
       (snapshot: any) => snapshot.name === "simulation",
     )!.statuses;
-    expect(simSummary[0].summary).toContain("SIM 4件");
-    expect(simSummary[1].summary).toContain("SIM 2件");
+    expect(simSummary[0].summary).toContain("SIM 5件");
+    expect(simSummary[1].summary).toContain("SIM 3件");
     const staleSummary = results.find(
       (snapshot: any) => snapshot.name === "stale",
     )!.statuses;
     expect(staleSummary[0].summary).toContain("取得不能 8件");
-    expect(staleSummary[0].summary).toContain("SIM 4件");
+    expect(staleSummary[0].summary).toContain("SIM 5件");
     for (const name of [
       "disconnected",
       "invalid",
@@ -371,6 +416,47 @@ for (const theme of ["light", "dark"] as const)
           expect(row.text).not.toContain("source simulation");
         }
       }
+    }
+    const goodNames = [
+      "good",
+      "true",
+      "recovered",
+      "simulation",
+      "good-again",
+      "good-before-invalid",
+      "good-before-reset",
+      "definition-color",
+      "new-generation",
+      "old-token-ignored",
+    ];
+    const definitionStart = results.findIndex(
+      (snapshot: any) => snapshot.name === "definition-color",
+    );
+    for (const [index, snapshot] of results.entries()) {
+      const color =
+        snapshot.name === "true"
+          ? "#16a34a"
+          : goodNames.includes(snapshot.name)
+            ? "#64748b"
+            : "#d97706";
+      for (const paint of snapshot.paints) {
+        expect(paint.line).toBe(color);
+        expect(paint.arrow).toBe(color);
+        expect(paint.fill).toBe(color);
+        expect(paint.stroke, `${snapshot.name} stroke`).toBe(
+          index >= definitionStart ? "#112233" : "#ff00ff",
+        );
+        expect(paint.lineOpacity).toBe("0.25");
+        expect(paint.opacity).toBe("0.5");
+        expect(paint.fillAlpha).toBe("0.4");
+      }
+      expect(snapshot.secondary).toEqual(
+        Array(2).fill(
+          goodNames.includes(snapshot.name) || snapshot.name === "invalid-value"
+            ? "#16a34a"
+            : "#d97706",
+        ),
+      );
     }
     const byName = (name: string) =>
       results.find((item: any) => item.name === name)!.views;

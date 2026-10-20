@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolveStateColor } from "./state-color";
   import { resolveSymbolSlot, type EquipmentContext } from "./symbol-slots";
   import type { ScreenObject, SymbolDefinition } from "./project";
   import type { TagReadings } from "./tag-presentation";
@@ -10,6 +11,7 @@
     object,
     symbols = [],
     equipmentContext,
+    ownerDefinition,
     images,
     readings,
     onsummary,
@@ -17,6 +19,7 @@
     object: ScreenObject;
     symbols?: SymbolDefinition[];
     equipmentContext?: EquipmentContext;
+    ownerDefinition?: SymbolDefinition;
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -41,9 +44,18 @@
     {#each [...definition.objects]
       .filter((object) => object.visible !== false)
       .sort((a, b) => a.order - b.order) as child (child.id)}
-      <g transform={objectTransform(child)} opacity={compositedOpacity(child)}
+      <g
+        data-symbol-child-id={child.id}
+        transform={objectTransform(child)}
+        opacity={compositedOpacity(child)}
         ><Primitive
           object={child}
+          stateColor={resolveStateColor(
+            child,
+            definition,
+            object.shape.equipmentId,
+            equipmentContext,
+          )}
           slotDisplay={child.shape.type === "text" && child.shape.slotBinding
             ? resolveSymbolSlot(
                 definition,
@@ -68,7 +80,14 @@
       crop={object.shape.crop}
     />
   {/if}
-{:else}<Primitive {object} {readings} {onsummary} />{/if}
+{:else}<Primitive
+    {object}
+    {readings}
+    {onsummary}
+    stateColor={ownerDefinition
+      ? resolveStateColor(object, ownerDefinition)
+      : undefined}
+  />{/if}
 
 <style>
   svg {

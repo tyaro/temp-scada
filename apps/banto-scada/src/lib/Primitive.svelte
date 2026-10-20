@@ -12,12 +12,14 @@
     color,
     readings,
     slotDisplay,
+    stateColor,
     onsummary,
   }: {
     object: ScreenObject;
     color?: string;
     readings?: TagReadings;
     slotDisplay?: SlotPresentation;
+    stateColor?: string;
     onsummary?: (description: string) => void;
   } = $props();
   const gradientId = $props.id();
@@ -44,7 +46,12 @@
       : gradient || pattern
         ? `url(#${gradientId})`
         : fill?.paint.type === "solid"
-          ? (color ?? fill.paint.color)
+          ? (stateColor ??
+            ("stateColor" in object.shape && object.shape.stateColor
+              ? "#64748b"
+              : undefined) ??
+            color ??
+            fill.paint.color)
           : "none",
   );
   const fillAlpha = $derived(
@@ -79,6 +86,14 @@
     }
     return color ?? object.fill!;
   });
+  const lineColor = $derived(
+    stateColor ??
+      ("stateColor" in object.shape && object.shape.stateColor
+        ? "#64748b"
+        : undefined) ??
+      color ??
+      object.fill!,
+  );
   const shape = $derived("width" in object ? null : object.shape);
   function arrowPoints() {
     if (!shape || shape.arrow !== "end") return "";
@@ -193,7 +208,7 @@
 {:else if shape}
   <polyline
     points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}
-    stroke={color ?? object.fill!}
+    stroke={lineColor}
     stroke-width={shape.strokeWidth}
     stroke-linejoin="round"
     stroke-linecap={lineCap(shape.lineStyle)}
@@ -202,6 +217,6 @@
   />
   {#if shape.arrow === "end"}<polygon
       points={arrowPoints()}
-      fill={color ?? object.fill!}
+      fill={lineColor}
     />{/if}
 {/if}

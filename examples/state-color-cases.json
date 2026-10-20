@@ -1,0 +1,625 @@
+[
+  {
+    "name": "same definition line source",
+    "target": "/symbols/0/objects/0/shape",
+    "key": "stateColor",
+    "valid": true,
+    "value": {
+      "textId": "0199f600-0000-7000-8000-000000000001"
+    }
+  },
+  {
+    "name": "same definition rectangle source",
+    "target": "/symbols/0/objects/7/shape",
+    "key": "stateColor",
+    "valid": true,
+    "value": {
+      "textId": "0199f600-0000-7000-8000-000000000001"
+    }
+  },
+  {
+    "name": "same definition ellipse source",
+    "target": "/symbols/0/objects/8/shape",
+    "key": "stateColor",
+    "valid": true,
+    "value": {
+      "textId": "0199f600-0000-7000-8000-000000000001"
+    }
+  },
+  {
+    "name": "hidden source retained",
+    "target": "/symbols/0/objects/5",
+    "key": "visible",
+    "valid": true,
+    "value": false
+  },
+  {
+    "name": "transparent source retained",
+    "target": "/symbols/0/objects/5",
+    "key": "opacity",
+    "valid": true,
+    "value": 0
+  },
+  {
+    "name": "missing source",
+    "target": "/symbols/0/objects/0/shape",
+    "key": "stateColor",
+    "valid": false,
+    "value": {
+      "textId": "0199f600-0000-7000-8000-000000000799"
+    }
+  },
+  {
+    "name": "self source refused",
+    "target": "/symbols/0/objects/0/shape",
+    "key": "stateColor",
+    "valid": false,
+    "value": {
+      "textId": "0199f100-0000-7000-8000-000000001001"
+    }
+  },
+  {
+    "name": "numeric source refused",
+    "target": "/symbols/0/objects/0/shape",
+    "key": "stateColor",
+    "valid": false,
+    "value": {
+      "textId": "0199f600-0000-7000-8000-000000000002"
+    }
+  },
+  {
+    "name": "source colors required",
+    "target": "/symbols/0/objects/5/shape",
+    "key": "boolColors",
+    "valid": false,
+    "remove": true
+  },
+  {
+    "name": "state reference required id",
+    "target": "/symbols/0/objects/0/shape",
+    "key": "stateColor",
+    "valid": false,
+    "value": {}
+  },
+  {
+    "name": "state reference unknown property",
+    "target": "/symbols/0/objects/0/shape",
+    "key": "stateColor",
+    "valid": false,
+    "value": {
+      "textId": "0199f600-0000-7000-8000-000000000001",
+      "future": true
+    }
+  },
+  {
+    "name": "Text cannot follow",
+    "target": "/symbols/0/objects/5/shape",
+    "key": "stateColor",
+    "valid": false,
+    "value": {
+      "textId": "0199f600-0000-7000-8000-000000000001"
+    }
+  },
+  {
+    "name": "source must have bool slot",
+    "target": "/symbols/0/objects/5/shape",
+    "key": "slotBinding",
+    "valid": false,
+    "value": {
+      "slotName": "current"
+    }
+  },
+  {
+    "name": "disabled fill refused",
+    "target": "/symbols/0/objects/7/shape/paint/fill",
+    "key": "enabled",
+    "valid": false,
+    "value": false
+  },
+  {
+    "name": "gradient fill refused",
+    "target": "/symbols/0/objects/7/shape/paint/fill",
+    "key": "paint",
+    "valid": false,
+    "value": {
+      "type": "linearGradient",
+      "angle": 0,
+      "start": {
+        "color": "#000000",
+        "alpha": 1
+      },
+      "end": {
+        "color": "#ffffff",
+        "alpha": 1
+      }
+    }
+  },
+  {
+    "name": "outside shared definition refused",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": false,
+    "value": [
+      {
+        "id": "0199f100-0000-7000-8000-000000001001",
+        "order": 0,
+        "x": 0,
+        "y": 0,
+        "fill": "#83bfcd",
+        "shape": {
+          "type": "polyline",
+          "points": [
+            {
+              "x": 80.0,
+              "y": 45.0
+            },
+            {
+              "x": 78.978,
+              "y": 52.765
+            },
+            {
+              "x": 75.981,
+              "y": 60.0
+            },
+            {
+              "x": 71.213,
+              "y": 66.213
+            },
+            {
+              "x": 65.0,
+              "y": 70.981
+            },
+            {
+              "x": 57.765,
+              "y": 73.978
+            },
+            {
+              "x": 50.0,
+              "y": 75.0
+            },
+            {
+              "x": 42.235,
+              "y": 73.978
+            },
+            {
+              "x": 35.0,
+              "y": 70.981
+            },
+            {
+              "x": 28.787,
+              "y": 66.213
+            },
+            {
+              "x": 24.019,
+              "y": 60.0
+            },
+            {
+              "x": 21.022,
+              "y": 52.765
+            },
+            {
+              "x": 20.0,
+              "y": 45.0
+            },
+            {
+              "x": 21.022,
+              "y": 37.235
+            },
+            {
+              "x": 24.019,
+              "y": 30.0
+            },
+            {
+              "x": 28.787,
+              "y": 23.787
+            },
+            {
+              "x": 35.0,
+              "y": 19.019
+            },
+            {
+              "x": 42.235,
+              "y": 16.022
+            },
+            {
+              "x": 50.0,
+              "y": 15.0
+            },
+            {
+              "x": 57.765,
+              "y": 16.022
+            },
+            {
+              "x": 65.0,
+              "y": 19.019
+            },
+            {
+              "x": 71.213,
+              "y": 23.787
+            },
+            {
+              "x": 75.981,
+              "y": 30.0
+            },
+            {
+              "x": 78.978,
+              "y": 37.235
+            },
+            {
+              "x": 80.0,
+              "y": 45.0
+            }
+          ],
+          "strokeWidth": 4,
+          "arrow": "end",
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000001"
+          }
+        },
+        "rotation": 0
+      }
+    ]
+  },
+  {
+    "name": "source-only deletion refused",
+    "target": "/symbols/0",
+    "key": "objects",
+    "valid": false,
+    "value": [
+      {
+        "id": "0199f100-0000-7000-8000-000000001001",
+        "order": 0,
+        "x": 0,
+        "y": 0,
+        "fill": "#83bfcd",
+        "shape": {
+          "type": "polyline",
+          "points": [
+            {
+              "x": 80.0,
+              "y": 45.0
+            },
+            {
+              "x": 78.978,
+              "y": 52.765
+            },
+            {
+              "x": 75.981,
+              "y": 60.0
+            },
+            {
+              "x": 71.213,
+              "y": 66.213
+            },
+            {
+              "x": 65.0,
+              "y": 70.981
+            },
+            {
+              "x": 57.765,
+              "y": 73.978
+            },
+            {
+              "x": 50.0,
+              "y": 75.0
+            },
+            {
+              "x": 42.235,
+              "y": 73.978
+            },
+            {
+              "x": 35.0,
+              "y": 70.981
+            },
+            {
+              "x": 28.787,
+              "y": 66.213
+            },
+            {
+              "x": 24.019,
+              "y": 60.0
+            },
+            {
+              "x": 21.022,
+              "y": 52.765
+            },
+            {
+              "x": 20.0,
+              "y": 45.0
+            },
+            {
+              "x": 21.022,
+              "y": 37.235
+            },
+            {
+              "x": 24.019,
+              "y": 30.0
+            },
+            {
+              "x": 28.787,
+              "y": 23.787
+            },
+            {
+              "x": 35.0,
+              "y": 19.019
+            },
+            {
+              "x": 42.235,
+              "y": 16.022
+            },
+            {
+              "x": 50.0,
+              "y": 15.0
+            },
+            {
+              "x": 57.765,
+              "y": 16.022
+            },
+            {
+              "x": 65.0,
+              "y": 19.019
+            },
+            {
+              "x": 71.213,
+              "y": 23.787
+            },
+            {
+              "x": 75.981,
+              "y": 30.0
+            },
+            {
+              "x": 78.978,
+              "y": 37.235
+            },
+            {
+              "x": 80.0,
+              "y": 45.0
+            }
+          ],
+          "strokeWidth": 4,
+          "arrow": "end",
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000001"
+          }
+        },
+        "rotation": 0
+      },
+      {
+        "id": "0199f100-0000-7000-8000-000000001002",
+        "order": 1,
+        "x": 0,
+        "y": 0,
+        "fill": "#83bfcd",
+        "shape": {
+          "type": "polyline",
+          "points": [
+            {
+              "x": 34,
+              "y": 60
+            },
+            {
+              "x": 65,
+              "y": 45
+            },
+            {
+              "x": 34,
+              "y": 30
+            },
+            {
+              "x": 34,
+              "y": 60
+            }
+          ],
+          "strokeWidth": 4,
+          "arrow": "none",
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000001"
+          }
+        },
+        "rotation": 0
+      },
+      {
+        "id": "0199f100-0000-7000-8000-000000001003",
+        "order": 2,
+        "x": 0,
+        "y": 0,
+        "fill": "#83bfcd",
+        "shape": {
+          "type": "polyline",
+          "points": [
+            {
+              "x": 30,
+              "y": 74
+            },
+            {
+              "x": 25,
+              "y": 88
+            },
+            {
+              "x": 75,
+              "y": 88
+            },
+            {
+              "x": 70,
+              "y": 74
+            }
+          ],
+          "strokeWidth": 4,
+          "arrow": "none",
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000001"
+          }
+        },
+        "rotation": 0
+      },
+      {
+        "id": "0199f100-0000-7000-8000-000000001004",
+        "order": 3,
+        "x": 0,
+        "y": 0,
+        "fill": "#83bfcd",
+        "shape": {
+          "type": "polyline",
+          "points": [
+            {
+              "x": 0,
+              "y": 45
+            },
+            {
+              "x": 20,
+              "y": 45
+            }
+          ],
+          "strokeWidth": 5,
+          "arrow": "none",
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000001"
+          }
+        },
+        "rotation": 0
+      },
+      {
+        "id": "0199f100-0000-7000-8000-000000001005",
+        "order": 4,
+        "x": 0,
+        "y": 0,
+        "fill": "#83bfcd",
+        "shape": {
+          "type": "polyline",
+          "points": [
+            {
+              "x": 80,
+              "y": 45
+            },
+            {
+              "x": 100,
+              "y": 45
+            }
+          ],
+          "strokeWidth": 5,
+          "arrow": "none",
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000001"
+          }
+        },
+        "rotation": 0
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000002",
+        "order": 11,
+        "x": 0,
+        "y": 135,
+        "width": 280,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "STATIC FALLBACK",
+          "style": {
+            "fontSize": 17,
+            "fontWeight": "normal",
+            "align": "left"
+          },
+          "slotBinding": {
+            "slotName": "current"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000700",
+        "order": 12,
+        "x": 150,
+        "y": 15,
+        "width": 110,
+        "height": 30,
+        "rotation": 0,
+        "name": "状態塗り rectangle",
+        "opacity": 0.5,
+        "shape": {
+          "type": "rectangle",
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000001"
+          },
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 0.4
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 0.7
+            }
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000701",
+        "order": 13,
+        "x": 190,
+        "y": 57,
+        "width": 60,
+        "height": 30,
+        "rotation": 0,
+        "name": "状態塗り ellipse",
+        "opacity": 0.5,
+        "shape": {
+          "type": "ellipse",
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000001"
+          },
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 0.4
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 0.7
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "source and followers deleted together",
+    "target": "/symbols/0",
+    "key": "objects",
+    "valid": true,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000002",
+        "order": 11,
+        "x": 0,
+        "y": 135,
+        "width": 280,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "STATIC FALLBACK",
+          "style": {
+            "fontSize": 17,
+            "fontWeight": "normal",
+            "align": "left"
+          },
+          "slotBinding": {
+            "slotName": "current"
+          }
+        }
+      }
+    ]
+  }
+]

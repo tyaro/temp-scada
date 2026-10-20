@@ -31,6 +31,7 @@
     selectionColorCommand,
     acknowledgeSelectionColor,
   } from "./lib/designer/forms/selection-color";
+  import { stateColorCommand } from "./lib/designer/forms/state-color";
   import SlotReadStatus from "./lib/designer/SlotReadStatus.svelte";
   import { boolColorsCommand } from "./lib/designer/forms/bool-colors";
   import { symbolColorModeCommand } from "./lib/designer/forms/symbol-color-mode";
@@ -1894,6 +1895,23 @@
           selected,
         },
       );
+    if (form.dataset.editorForm === "state-color") {
+      if (!activeDefinition) throw new Error("共有定義を選び直してください");
+      return stateColorCommand(
+        {
+          data,
+          objectId: form.dataset.objectId,
+          targetKey: form.dataset.targetKey,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: true,
+          selected,
+          owner: activeDefinition,
+        },
+      );
+    }
     if (form.dataset.editorForm === "bool-colors")
       return boolColorsCommand(
         {
@@ -3221,6 +3239,7 @@
       {moveSelection}
       {edit}
       {openDefinition}
+      onselectsource={(id) => selectObjects(id)}
       {openScreen}
       images={assetImages}
       onreplaceimage={imageImport.openReplacement}
@@ -3297,7 +3316,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.26.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.27.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

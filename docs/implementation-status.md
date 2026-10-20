@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-10-20（日本時間）、Project 0.25.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-10-20（日本時間）、Project 0.27.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
@@ -9,9 +9,9 @@
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | アプリ基盤 | Banto v6.7.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
-| Project    | `schemaVersion`／`minRuntimeVersion`は**0.26.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
+| Project    | `schemaVersion`／`minRuntimeVersion`は**0.27.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
-| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.25.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
+| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.26.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
 | IDと変更   | lowercase UUID v7、有限座標、明示order。編集失敗は原子的拒否、同値はno-op、Undo／Redoでもrevisionは巻き戻さない                         |
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
@@ -31,11 +31,11 @@
 | 表示確認       | 同一Projectの読取Popup最大4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                     | Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                           |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                        | 実図面・画像／Symbol等の計測と必要な最適化                                             |
 | 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                           | 実catalog選択、draftのDOM分離                                                          |
-| タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                       | 実Hub／catalog、Text以外の動的配色、Host、正式RuntimeとAction境界                      |
+| タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                       | 実Hub／catalog、汎用状態条件、Host、正式RuntimeとAction境界                            |
 | server・監視   | 提供段階と共有層の設計                                                                                                                 | Core v1のS9b、その上のv1.1 Alarm／Event・Action／History・Trend、Camera、HTTP／Program |
 | 認証・MES      | ログイン不要のローカル編集                                                                                                             | industrialの修正後に認証再確認。ユーザー管理・運用移行・MESは未実装                    |
 
-共有Symbolは定義と単色／定義色、独立コピー、機器関連付け、型付きslot宣言とText表示・bool状態別文字色に対応する。Text以外の動的配色・設備操作は未実装。整理フォルダーを幾何グループとして扱わない。読取プレビューから実機要求は送らない。
+共有Symbolは定義と単色／定義色、独立コピー、機器関連付け、型付きslot宣言とText表示・bool状態別文字色に対応する。矩形／楕円の単色塗りとPolyline・矢印はbool Textの状態色追従に対応する。汎用状態条件・設備操作は未実装。整理フォルダーを幾何グループとして扱わない。読取プレビューから実機要求は送らない。
 
 ## 検証の範囲
 
@@ -107,3 +107,9 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 [メイン図面・読取小窓の折り畳み状態一覧](slot-status-summary.md)を追加した。表示参照・取得不能・SIMの件数、配置経路・機器・slot・文字／Quality／理由・由来を図面のクリップとαから独立させる。閉じた状態では行をDOMに作らず、展開時も20件ずつ表示する。可視配置と1段埋込を対象にし、hidden／α0 Textの使用参照は保持する。図形の動的配色と実Hostは今回追加していない。Project0.26.0・Rust／schemaは変更しない。
 
 この区切りは型0エラー／0警告・TS855件・build・全体整形、状態一覧と同一mountの6件／既存小窓10件のブラウザ検証が成功。両テーマの実画面を撮影し、設計書へ掲載した。
+
+## 共有図形の状態色追従（2026-10-20）
+
+Project 0.27.0で、同じ定義のbool状態色Textを参照する矩形／楕円／Polylineを追加した。枠線と各図形のαを維持し、取得不能・SIMは図面外の読取状態一覧でも確認する。配色元の破壊的変更保護、参照を維持する複製、単体clipboard拒否を実装した。[仕様・検証・実画面](state-color-following.md)を参照する。
+
+この区切りのローカル検証は型エラー／警告0、TS878件（80ファイル）、Rust47件、Clippy、CLIサンプル検証、本番build、全体整形が成功。新機能と同一mount更新のブラウザ4件は専用サーバー・1並列で両テーマ成功した。初回のlocator重複と試験データの同一参照更新を修正し、同時dirty入力の原子的拒否も確認した。Astraの読取レビューで必須修正なし。実Hub接続の検証ではない。

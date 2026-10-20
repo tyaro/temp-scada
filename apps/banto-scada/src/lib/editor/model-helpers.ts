@@ -54,6 +54,7 @@ export function renewOwnerIds<T extends Screen | SymbolDefinition>(copy: T): T {
     }
   for (const object of copy.objects) {
     object.id = placements.get(object.id)!;
+    remapStateColor(object, placements);
     if (object.folderId) object.folderId = folders.get(object.folderId)!;
   }
   return copy;
@@ -86,4 +87,15 @@ export function registerAsset(project: Project, asset: ImageAsset): string {
   }
   project.assets.push(structuredClone(asset));
   return asset.id;
+}
+
+/** Selection copies remap a copied source; a follower-only copy keeps its local source. */
+export function remapStateColor(
+  object: ScreenObject,
+  ids: ReadonlyMap<string, string>,
+) {
+  if ("stateColor" in object.shape && object.shape.stateColor) {
+    object.shape.stateColor.textId =
+      ids.get(object.shape.stateColor.textId) ?? object.shape.stateColor.textId;
+  }
 }

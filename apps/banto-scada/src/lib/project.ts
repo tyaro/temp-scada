@@ -1,3 +1,4 @@
+import { validateStateColors } from "./state-color";
 import { validateSymbolSlots } from "./symbol-slots";
 import {
   validateEquipment,
@@ -32,6 +33,9 @@ interface BaseObject {
   x: number;
   y: number;
   fill?: string;
+}
+export interface StateColor {
+  textId: string;
 }
 export interface BoolColors {
   trueColor: string;
@@ -82,8 +86,8 @@ export interface LayoutObject extends BaseObject {
   width: number;
   height: number;
   shape:
-    | { type: "rectangle"; paint: ShapePaint }
-    | { type: "ellipse"; paint: ShapePaint }
+    | { type: "rectangle"; paint: ShapePaint; stateColor?: StateColor }
+    | { type: "ellipse"; paint: ShapePaint; stateColor?: StateColor }
     | {
         type: "text";
         text: string;
@@ -104,6 +108,7 @@ export interface LayoutObject extends BaseObject {
 export interface PolylineObject extends BaseObject {
   shape: {
     type: "polyline";
+    stateColor?: StateColor;
     points: Point[];
     strokeWidth: number;
     lineStyle?: LineStyle;
@@ -158,10 +163,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.26.0";
+    schemaVersion: "0.27.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.26.0";
+    minRuntimeVersion: "0.27.0";
     name: string;
   };
   screens: Screen[];
@@ -185,8 +190,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.26.0",
-        minRuntimeVersion: "0.26.0",
+        schemaVersion: "0.27.0",
+        minRuntimeVersion: "0.27.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -346,6 +351,7 @@ export function parseProject(json: string): Project {
   for (const screen of project.screens) validateGroups(screen, ids);
   validateEquipment(project, ids);
   validateSymbolSlots(project);
+  validateStateColors(project);
   projectScreenReferences(project);
   return project;
 }

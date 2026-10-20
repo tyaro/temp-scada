@@ -68,8 +68,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.26.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.26.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.27.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.27.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -302,6 +302,40 @@ impl Project {
                 {
                     return Err("状態別の文字色にはbool slotが必要です".into());
                 }
+                if let Some(state_color) = shape.get("stateColor") {
+                    if !symbols.contains(screen["id"].as_str().unwrap()) {
+                        return Err("状態色の追従は共有定義内だけに設定できます".into());
+                    }
+                    let source = screen["objects"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .find(|item| item["id"] == state_color["textId"]);
+                    if !source.is_some_and(|source| {
+                        let source_shape = &source["shape"];
+                        source_shape["type"] == "text"
+                            && source_shape.get("boolColors").is_some()
+                            && screen["readSlots"]
+                                .as_array()
+                                .into_iter()
+                                .flatten()
+                                .any(|slot| {
+                                    slot["name"] == source_shape["slotBinding"]["slotName"]
+                                        && slot["type"] == "bool"
+                                })
+                    }) {
+                        return Err(
+                            "状態色の配色元Textが見つからないか、有効なbool配色ではありません"
+                                .into(),
+                        );
+                    }
+                    if shape["type"] != "polyline"
+                        && (shape["paint"]["fill"]["enabled"] != true
+                            || shape["paint"]["fill"]["paint"]["type"] != "solid")
+                    {
+                        return Err("状態色の追従には有効な単色塗りが必要です".into());
+                    }
+                }
                 if shape["type"] == "symbol"
                     && !symbols.contains(shape["symbolId"].as_str().unwrap())
                 {
@@ -433,6 +467,36 @@ fn validate_screen_views(project: &Value) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn shared_state_color_contract() {
+        let base: Value =
+            serde_json::from_str(include_str!("../../../examples/state-color.project.json"))
+                .unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/state-color-cases.json")).unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            let node = input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_object_mut()
+                .unwrap();
+            let key = case["key"].as_str().unwrap();
+            if case["remove"] == true {
+                node.remove(key);
+            } else {
+                node.insert(key.into(), case["value"].clone());
+            }
+            assert_eq!(
+                Project::from_json(&input.to_string()).is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+        }
+        let project = Project::from_json(&base.to_string()).unwrap();
+        assert_eq!(Project::from_json(&project.to_json()).unwrap().0, project.0);
+    }
     #[test]
     fn shared_symbol_read_slot_contract() {
         let base: Value =
@@ -1237,8 +1301,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.26.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.26.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.27.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.27.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

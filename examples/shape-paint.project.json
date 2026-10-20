@@ -1,7 +1,7 @@
 {
   "manifest": {
-    "schemaVersion": "0.26.0",
-    "minRuntimeVersion": "0.26.0",
+    "schemaVersion": "0.27.0",
+    "minRuntimeVersion": "0.27.0",
     "projectId": "0199ff30-0000-7000-8000-000000000001",
     "name": "塗りと枠線のサンプル",
     "projectRevision": 1,

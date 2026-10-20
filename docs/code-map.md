@@ -166,3 +166,5 @@ Symbol宣言のCRUDは`editor/symbol-handler.ts`、全Text参照の導出は`sym
 図面外の読取状態は`lib/slot-status-summary.ts`が現在の可視配置経路・使用roleを収集し、既存resolverへ状態解決を委譲する。`SlotReadStatus.svelte`は件数・20件ページング・開閉のみを所有し、Appと`PreviewWindow`が描画と同じcontextを渡す。`slot-status-summary.test.ts`、`e2e/slot-status-summary.spec.ts`、既存の同一mount検証で確認する。[範囲と後続](slot-status-summary.md)を参照する。
 
 `studio.css`は取得状態一覧がある画面に限り図面タイトルを通常配置へ戻し、一覧との重なりを防ぐ。状態一覧のブラウザ検証で、折畳み時／展開時にタイトル・一覧・canvasが重ならないことを確認する。
+
+状態色追従は`lib/state-color.ts`が参照・塗り条件の検証と色解決、`designer/StateColor.svelte`と`forms/state-color.ts`が編集入力を担当する。`Primitive.svelte`は動的な塗り／線と静的枠線を分離する。`model-helpers.ts`の`remapStateColor`を定義複製・複数選択複製が共用する。`state-color.test.ts`、共通`examples/state-color-cases.json`、`e2e/state-color.spec.ts`と同一mount読取試験が回帰入口。[契約](state-color-following.md)。

@@ -87,7 +87,7 @@ for (const theme of ["light", "dark"])
       page.locator('.minimap svg [data-object-id="' + a + '"] polyline'),
     ).toHaveAttribute("stroke-dasharray", "24 12");
     const next = await saved(page);
-    expect(next.manifest.schemaVersion).toBe("0.26.0");
+    expect(next.manifest.schemaVersion).toBe("0.27.0");
     expect(
       next.screens[0].objects.find((o: any) => o.id === a).shape,
     ).toMatchObject({ lineStyle: "dashed", strokeWidth: 6, arrow: "end" });

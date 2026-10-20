@@ -66,6 +66,7 @@ export function applySingleObjectCommand(
       binding,
       slotBinding,
       boolColors,
+      stateColor,
       symbolId,
       equipmentId,
       sourceScreenId,
@@ -149,6 +150,21 @@ export function applySingleObjectCommand(
         throw new Error("slot表示は共有定義内のTextだけに設定できます");
       if (slotBinding === null) delete object.shape.slotBinding;
       else object.shape.slotBinding = slotBinding;
+    }
+    if (stateColor !== undefined) {
+      if (
+        !definitionId ||
+        !(
+          object.shape.type === "rectangle" ||
+          object.shape.type === "ellipse" ||
+          object.shape.type === "polyline"
+        )
+      )
+        throw new Error(
+          "状態色の追従は共有定義内の矩形・楕円・線だけに設定できます",
+        );
+      if (stateColor === null) delete object.shape.stateColor;
+      else object.shape.stateColor = structuredClone(stateColor);
     }
     if (boolColors !== undefined) {
       if (object.shape.type !== "text" || !definitionId)

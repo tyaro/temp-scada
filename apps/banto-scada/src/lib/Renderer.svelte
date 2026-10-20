@@ -619,6 +619,7 @@
         {:else}
           <ObjectPainting
             object={visual}
+            ownerDefinition={"background" in screen ? undefined : screen}
             {symbols}
             {images}
             {readings}

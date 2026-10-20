@@ -2,6 +2,7 @@ import type { EquipmentSlot, EquipmentBinding } from "../equipment";
 import type { ImageCrop } from "../image-crop";
 import type {
   BoolColors,
+  StateColor,
   BackgroundImage,
   ImageAsset,
   LineStyle,
@@ -28,6 +29,7 @@ export interface ObjectPatch {
   binding?: TagBinding | null;
   slotBinding?: { slotName: string } | null;
   boolColors?: BoolColors | null;
+  stateColor?: StateColor | null;
   symbolId?: string;
   equipmentId?: string | null;
   sourceScreenId?: string;

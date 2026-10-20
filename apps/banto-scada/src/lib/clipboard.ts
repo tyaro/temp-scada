@@ -173,6 +173,14 @@ export function copyObjectSnapshot(
     throw new Error(
       "slot表示単体のコピー・切り取りは未対応です。共有Symbol全体のコピーまたは定義内の複製を使ってください。",
     );
+  if (
+    objects.some(
+      (object) => "stateColor" in object.shape && object.shape.stateColor,
+    )
+  )
+    throw new Error(
+      "状態色に追従する図形単体のコピー・切り取りは未対応です。共有Symbol全体のコピーまたは定義内の複製を使ってください。",
+    );
   // Clipboard placements deliberately start at the destination root.
   for (const object of objects) delete object.folderId;
   const dependencies = new Set(

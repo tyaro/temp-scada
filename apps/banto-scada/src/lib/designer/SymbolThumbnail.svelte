@@ -2,6 +2,7 @@
   import type { SymbolDefinition } from "../project";
   import { objectTransform } from "../rotation";
   import { compositedOpacity } from "../opacity";
+  import { resolveStateColor } from "../state-color";
   import Primitive from "../Primitive.svelte";
   let {
     definition,
@@ -19,7 +20,11 @@
     .filter((object) => object.visible !== false)
     .sort((a, b) => a.order - b.order) as object (object.id)}
     <g transform={objectTransform(object)} opacity={compositedOpacity(object)}
-      ><Primitive {object} color="var(--banto-text-muted)" /></g
+      ><Primitive
+        {object}
+        stateColor={resolveStateColor(object, definition)}
+        color="var(--banto-text-muted)"
+      /></g
     >
   {/each}
 </svg>

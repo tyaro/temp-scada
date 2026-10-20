@@ -54,3 +54,5 @@ Textのtrue／false、取得不能理由、SIMの文字表示と由来の詳細�
 実画面は`scripts/capture-bool-colors.mjs`で1920×1080に撮影した。暗い定義canvasに合わせて撮影入力の静的Text色を設定する。画像加工は行わない。
 
 最終ローカル検証は型0エラー／0警告・TS852件・Rust46件・Clippy・Rust fmt・本番build・全体整形・CLIサンプル検証が成功。関連ブラウザ11件に加え、二重draftと定義色／αの追加後に4件を再確認した。Astraの最終静的レビューで追加の必須修正なし。全体CIはPush後に確認する。
+
+後続のProject 0.27.0では[共有図形・配管の状態色追従](state-color-following.md)を追加した。この文書の初回範囲と区別する。
