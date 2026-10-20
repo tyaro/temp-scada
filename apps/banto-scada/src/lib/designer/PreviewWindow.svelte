@@ -1,4 +1,5 @@
 <script lang="ts">
+  import EquipmentReadDetails from "./EquipmentReadDetails.svelte";
   import SlotReadStatus from "./SlotReadStatus.svelte";
   import type { EquipmentContext } from "../symbol-slots";
   import { onDestroy, untrack } from "svelte";
@@ -21,7 +22,7 @@
     onclose,
   }: {
     entry: PreviewPopup;
-    screen: Screen;
+    screen?: Screen;
     project: Project;
     area: PopupArea;
     rank: number;
@@ -35,6 +36,15 @@
     onframe: (frame: PopupFrame) => void;
     onclose: () => void;
   } = $props();
+  const equipment = $derived(
+    project.equipment?.find(
+      (item) => entry.kind === "equipment" && item.id === entry.targetId,
+    ),
+  );
+  const title = $derived(
+    screen?.name ??
+      (equipment ? `${equipment.code} · ${equipment.name}` : "機器なし"),
+  );
   let panel = $state<HTMLElement>();
   let drag = $state<{
     pointer: number;
@@ -160,8 +170,9 @@
   bind:this={panel}
   role="dialog"
   aria-modal="false"
-  aria-label={`画面の小窓：${screen.name}`}
-  data-preview-popup={screen.id}
+  aria-label={`${entry.kind === "equipment" ? "機器の小窓" : "画面の小窓"}：${title}`}
+  data-preview-popup={entry.targetId}
+  data-popup-kind={entry.kind}
   tabindex="-1"
   style:left={`${entry.frame.x}px`}
   style:top={`${entry.frame.y}px`}
@@ -175,7 +186,7 @@
     <button
       class="move"
       data-popup-move
-      aria-label={`小窓を移動：${screen.name}`}
+      aria-label={`小窓を移動：${title}`}
       title="ドラッグまたは方向キーで移動・Shiftで大きく移動"
       onpointerdown={(e) => down(e, "move")}
       onpointermove={move}
@@ -186,36 +197,55 @@
       onpointercancel={() => finish(true)}
       onlostpointercapture={() => finish(true)}
       onkeydown={(e) => keys(e, "move")}
-      >{screen.name}<small>読取表示の確認</small></button
+      >{title}<small
+        >{entry.kind === "equipment"
+          ? "機器の読取詳細"
+          : "読取表示の確認"}</small
+      ></button
     >
     <button
       class="close"
-      aria-label={`小窓を閉じる：${screen.name}`}
+      aria-label={`小窓を閉じる：${title}`}
       title="小窓を閉じる"
       onclick={onclose}>×</button
     >
   </header>
-  <SlotReadStatus
-    {screen}
-    screens={project.screens}
-    symbols={project.symbols}
-    equipmentContext={equipmentContext ?? project}
-    compact
-  />
-  <div class="content">
-    <ScreenPainting
-      equipmentContext={equipmentContext ?? project}
+  {#if entry.kind === "equipment"}
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex (Keyboard scroll region for a read-only equipment list.) -->
+    <div
+      class="equipment-content"
+      tabindex="0"
+      role="region"
+      aria-label="機器の読取一覧をスクロール"
+    >
+      <EquipmentReadDetails
+        equipmentId={entry.targetId}
+        equipmentContext={equipmentContext ?? project}
+      />
+    </div>
+  {:else if screen}
+    <SlotReadStatus
       {screen}
       screens={project.screens}
       symbols={project.symbols}
-      {images}
-      {readings}
+      equipmentContext={equipmentContext ?? project}
+      compact
     />
-  </div>
+    <div class="content">
+      <ScreenPainting
+        equipmentContext={equipmentContext ?? project}
+        {screen}
+        screens={project.screens}
+        symbols={project.symbols}
+        {images}
+        {readings}
+      />
+    </div>
+  {/if}
   <button
     class="resize"
     data-popup-resize
-    aria-label={`小窓のサイズを変更：${screen.name}`}
+    aria-label={`小窓のサイズを変更：${title}`}
     title="ドラッグまたは方向キーでサイズ変更"
     onpointerdown={(e) => down(e, "resize")}
     onpointermove={move}
@@ -288,6 +318,12 @@
   .close:hover {
     background: var(--banto-danger);
     color: white;
+  }
+  .equipment-content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding-bottom: 18px;
   }
   .content {
     flex: 1;

@@ -10,11 +10,15 @@ export interface PopupFrame extends PopupArea {
   readonly y: number;
 }
 export interface PreviewPopup {
-  readonly screenId: string;
+  readonly targetId: string;
+  readonly kind: PopupKind;
   readonly cost: number;
   readonly frame: PopupFrame;
 }
-/** Bottom to top. Screen IDs are unique within the current Project generation. */
+export type PopupKind = "screen" | "equipment";
+export const popupKey = (entry: Pick<PreviewPopup, "kind" | "targetId">) =>
+  `${entry.kind}:${entry.targetId}`;
+/** Bottom to top. Identity is kind + target within the current Project generation. */
 export type PreviewPopups = readonly PreviewPopup[];
 function finite(value: number) {
   if (!Number.isFinite(value))
@@ -43,9 +47,10 @@ export function popupFrame(frame: PopupFrame, area: PopupArea): PopupFrame {
 }
 export function frontPopup(
   windows: PreviewPopups,
-  screenId: string,
+  targetId: string,
+  kind: PopupKind = "screen",
 ): PreviewPopups {
-  const entry = windows.find((w) => w.screenId === screenId);
+  const entry = windows.find((w) => w.targetId === targetId && w.kind === kind);
   if (!entry) throw new Error("小窓が見つかりません。");
   return windows.at(-1) === entry
     ? windows
@@ -53,13 +58,14 @@ export function frontPopup(
 }
 export function openPopup(
   windows: PreviewPopups,
-  screenId: string,
+  targetId: string,
   cost: number,
   area: PopupArea,
+  kind: PopupKind = "screen",
 ): PreviewPopups {
-  if (windows.some((w) => w.screenId === screenId))
-    return frontPopup(windows, screenId);
-  if (!screenId || !Number.isSafeInteger(cost) || cost < 0)
+  if (windows.some((w) => w.targetId === targetId && w.kind === kind))
+    return frontPopup(windows, targetId, kind);
+  if (!targetId || !Number.isSafeInteger(cost) || cost < 0)
     throw new Error("小窓の画面または描画配置数が不正です。");
   if (windows.length >= MAX_PREVIEW_POPUPS)
     throw new Error(
@@ -80,19 +86,20 @@ export function openPopup(
     },
     area,
   );
-  return [...windows, { screenId, cost, frame }];
+  return [...windows, { targetId, kind, cost, frame }];
 }
 export function positionPopup(
   windows: PreviewPopups,
-  screenId: string,
+  targetId: string,
   frame: PopupFrame,
   area: PopupArea,
+  kind: PopupKind = "screen",
 ): PreviewPopups {
-  if (!windows.some((w) => w.screenId === screenId))
+  if (!windows.some((w) => w.targetId === targetId && w.kind === kind))
     throw new Error("小窓が見つかりません。");
   const next = popupFrame(frame, area);
   return windows.map((w) =>
-    w.screenId === screenId ? { ...w, frame: next } : w,
+    w.targetId === targetId && w.kind === kind ? { ...w, frame: next } : w,
   );
 }
 export function constrainPopups(
@@ -103,7 +110,8 @@ export function constrainPopups(
 }
 export function closePopup(
   windows: PreviewPopups,
-  screenId: string,
+  targetId: string,
+  kind: PopupKind = "screen",
 ): PreviewPopups {
-  return windows.filter((w) => w.screenId !== screenId);
+  return windows.filter((w) => !(w.targetId === targetId && w.kind === kind));
 }

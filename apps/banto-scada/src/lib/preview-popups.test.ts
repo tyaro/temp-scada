@@ -17,7 +17,7 @@ it("opens at most four; duplicate open fronts the same frame without additional 
   expect(() => openPopup(windows, "5", 100, area)).toThrow("4件");
   expect(windows).toEqual(before);
   const moved = openPopup(windows, "0", 99999, area);
-  expect(moved.map((w) => w.screenId)).toEqual(["1", "2", "3", "0"]);
+  expect(moved.map((w) => w.targetId)).toEqual(["1", "2", "3", "0"]);
   expect(moved.at(-1)).toBe(windows[0]);
   expect(moved).toHaveLength(4);
   expect(windows).toEqual(before);
@@ -78,12 +78,43 @@ it("position, constrain and close preserve order, identity and input", () => {
   expect(moved[0].frame).toEqual({ x: 600, y: 400, width: 400, height: 300 });
   expect(moved[1]).toBe(windows[1]);
   const smaller = constrainPopups(moved, { width: 200, height: 120 });
-  expect(smaller.map((w) => w.screenId)).toEqual(["a", "b"]);
+  expect(smaller.map((w) => w.targetId)).toEqual(["a", "b"]);
   for (const w of smaller)
     expect(w.frame).toEqual({ x: 0, y: 0, width: 200, height: 120 });
-  expect(closePopup(smaller, "a").map((w) => w.screenId)).toEqual(["b"]);
+  expect(closePopup(smaller, "a").map((w) => w.targetId)).toEqual(["b"]);
   expect(windows).toEqual(before);
   expect(() =>
     positionPopup(windows, "missing", moved[0].frame, area),
   ).toThrow();
+});
+
+it("shares the window limit, order and frames across screen and equipment targets", () => {
+  let windows = openPopup([], "same", 12, area);
+  windows = openPopup(windows, "same", 0, area, "equipment");
+  const equipment = windows[1];
+  windows = openPopup(windows, "other", 0, area, "equipment");
+  windows = openPopup(windows, "screen-two", 15, area);
+  expect(() => openPopup(windows, "fifth", 0, area, "equipment")).toThrow(
+    "4件",
+  );
+  const fronted = openPopup(windows, "same", 99999, area, "equipment");
+  expect(fronted.at(-1)).toBe(equipment);
+  expect(fronted).toHaveLength(4);
+  const moved = positionPopup(
+    fronted,
+    "same",
+    { ...equipment.frame, x: 16 },
+    area,
+    "equipment",
+  );
+  expect(moved.find((w) => w.kind === "screen" && w.targetId === "same")).toBe(
+    windows[0],
+  );
+  const closed = closePopup(moved, "same", "equipment");
+  expect(closed.some((w) => w.kind === "screen" && w.targetId === "same")).toBe(
+    true,
+  );
+  expect(
+    closed.some((w) => w.kind === "equipment" && w.targetId === "same"),
+  ).toBe(false);
 });

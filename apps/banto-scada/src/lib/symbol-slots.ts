@@ -56,6 +56,16 @@ export function resolveSymbolSlot(
   );
   // Invalid definitions are normally rejected by parseProject; keep this renderer fail closed.
   if (!requirement) return slotPresentation("missingSlot");
+  return resolveEquipmentSlot(equipmentId, slotName, requirement.type, context);
+}
+
+/** Shared saved-context checks for Symbol roles and equipment read details. */
+export function resolveEquipmentSlot(
+  equipmentId: string | undefined,
+  slotName: string,
+  expectedType: "bool" | "number",
+  context?: EquipmentContext,
+): SlotPresentation {
   const equipment = context?.equipment?.find((item) => item.id === equipmentId);
   if (!equipment) return slotPresentation("unbound");
   const type = context?.equipmentTypes?.find(
@@ -63,7 +73,7 @@ export function resolveSymbolSlot(
   );
   const slot = type?.slots.find((item) => item.name === slotName);
   if (!slot) return slotPresentation("missingSlot");
-  if (slot.type !== requirement.type) return slotPresentation("typeMismatch");
+  if (slot.type !== expectedType) return slotPresentation("typeMismatch");
   const binding = equipment.bindings.find((item) => item.slotName === slotName);
   if (!binding) return slotPresentation("unadopted");
   if (binding.externalName === null) return slotPresentation("unassigned");
@@ -71,7 +81,7 @@ export function resolveSymbolSlot(
     context?.readSlot?.(
       equipment.id,
       slotName,
-      requirement.type,
+      expectedType,
       binding.externalName,
     ) ?? slotPresentation("disconnected")
   );

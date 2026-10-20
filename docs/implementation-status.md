@@ -28,7 +28,7 @@
 | 図形・文字     | 矩形／楕円の塗り・枠線、一括編集、実線／破線／点線、配置opacityと色α、2色線形gradient、斜線／交差線／点pattern、Textの書式と揃え       | 放射gradient、多点stop、複数行Text・縁取り、α一括                                      |
 | 画像           | 原本共有、背景fit、Imageのcontain枠、比率復帰、原本付きclipboard、差し替え、配置ごとの非破壊crop                                       | 背景crop、ドラッグcrop、Imageのcover／stretch、Symbol内画像                            |
 | 画面再利用     | 同一Project・1段の読取埋込View、共有参照、参照先編集、使用中画面の削除保護、複製                                                       | Viewのclipboard、機器context付き共通画面、独立テンプレート                             |
-| 表示確認       | 同一Projectの読取Popup最大4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                     | Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                           |
+| 表示確認       | 画面／機器の読取Popup合計4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                      | 正式Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                       |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                        | 実図面・画像／Symbol等の計測と必要な最適化                                             |
 | 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                           | 実catalog選択、draftのDOM分離                                                          |
 | タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                       | 実Hub／catalog、汎用状態条件、Host、正式RuntimeとAction境界                            |
@@ -113,3 +113,9 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 Project 0.27.0で、同じ定義のbool状態色Textを参照する矩形／楕円／Polylineを追加した。枠線と各図形のαを維持し、取得不能・SIMは図面外の読取状態一覧でも確認する。配色元の破壊的変更保護、参照を維持する複製、単体clipboard拒否を実装した。[仕様・検証・実画面](state-color-following.md)を参照する。
 
 この区切りのローカル検証は型エラー／警告0、TS878件（80ファイル）、Rust47件、Clippy、CLIサンプル検証、本番build、全体整形が成功。新機能と同一mount更新のブラウザ4件は専用サーバー・1並列で両テーマ成功した。初回のlocator重複と試験データの同一参照更新を修正し、同時dirty入力の原子的拒否も確認した。Astraの読取レビューで必須修正なし。実Hub接続の検証ではない。
+
+## 機器の読取詳細（2026-10-20）
+
+Project 0.27.0を維持し、表示プレビューの機器検索から読取専用の小窓を開く入口を追加した。図面未使用の採用slot・未割付も表示し、機器IDを固定して既存画面小窓と同じstack・合計4件上限を共用する。20件ページング、false／0・Quality・理由・SIM・来歴を既存読取sessionから表示する。[範囲と実画面](equipment-read-details.md)。正式Faceplate・設備操作・実Hostは未実装。
+
+この区切りは型エラー／警告0、TS896件（81ファイル）、本番buildが成功。関連ブラウザ15件を確認し、fixtureの採用状態・件数を修正した後の機器詳細3件も成功した。Astraの読取レビューに必須修正なし。追加観点の24slotページ切替・キーボードスクロールも確認済み。Rust／保存schemaは変更していない。

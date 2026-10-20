@@ -12,17 +12,22 @@
     closePopup,
     MAX_PREVIEW_POPUPS,
     MAX_POPUP_PLACEMENTS,
+    popupKey,
+    type PopupKind,
     type PreviewPopups as Windows,
     type PopupFrame,
   } from "../preview-popups";
   import PreviewWindow from "./PreviewWindow.svelte";
+  import type { EquipmentContext } from "../symbol-slots";
   let {
     project,
+    equipmentContext,
     images,
     readings,
     onmessage,
   }: {
     project: Project;
+    equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -35,12 +40,15 @@
     height = $state(0);
   let windows = $state<Windows>([]),
     picker = $state(false),
+    pickerKind = $state<PopupKind>("screen"),
     selected = $state(""),
     search = $state("");
   let active = true,
     opener: HTMLElement | null = null;
   const origins = new Map<string, HTMLElement>();
-  const controllers: Record<string, { cancel: () => void } | undefined> = {};
+  const controllers = $state<
+    Record<string, { cancel: () => void } | undefined>
+  >({});
   $effect(() => {
     const element = root;
     if (!element) return;
@@ -60,28 +68,52 @@
   const area = $derived({ width, height });
   // Keep DOM nodes stable during pointer capture; fronting changes only z-index.
   const rendered = $derived(
-    [...windows].sort((a, b) => a.screenId.localeCompare(b.screenId)),
+    [...windows].sort((a, b) => popupKey(a).localeCompare(popupKey(b))),
   );
   const costs = $derived(projectScreenReferences(project).expandedCosts);
   const options = $derived(
-    project.screens
-      .map((screen) => ({
-        screen,
-        reason: windows.some((w) => w.screenId === screen.id)
+    (pickerKind === "screen"
+      ? project.screens.map((screen) => ({
+          id: screen.id,
+          label: screen.name,
+          cost: costs.get(screen.id)!,
+        }))
+      : (project.equipment ?? []).map((item) => ({
+          id: item.id,
+          label: `${item.code} · ${item.name}`,
+          cost: 0,
+        }))
+    )
+      .map((target) => ({
+        ...target,
+        existing: windows.some(
+          (w) => w.kind === pickerKind && w.targetId === target.id,
+        ),
+        reason: windows.some(
+          (w) => w.kind === pickerKind && w.targetId === target.id,
+        )
           ? null
           : windows.length >= MAX_PREVIEW_POPUPS
             ? "小窓は4件までです"
-            : windows.reduce((sum, w) => sum + w.cost, 0) +
-                  costs.get(screen.id)! >
+            : windows.reduce((sum, w) => sum + w.cost, 0) + target.cost >
                 MAX_POPUP_PLACEMENTS
               ? "小窓全体の描画配置数が20,000件を超えます"
               : null,
       }))
       .filter((o) =>
-        o.screen.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
+        o.label.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
       ),
   );
-  const candidate = $derived(options.find((o) => o.screen.id === selected));
+  const candidate = $derived(options.find((o) => o.id === selected));
+  $effect(() => {
+    const missing = windows.filter((w) =>
+      w.kind === "screen"
+        ? !project.screens.some((s) => s.id === w.targetId)
+        : !project.equipment?.some((e) => e.id === w.targetId),
+    );
+    for (const entry of missing)
+      untrack(() => close(entry.targetId, entry.kind));
+  });
   $effect(() => {
     const next = area;
     untrack(() => (windows = constrainPopups(windows, next)));
@@ -89,22 +121,23 @@
   onDestroy(() => {
     active = false;
   });
-  export function showPicker(origin: HTMLElement) {
+  export function showPicker(origin: HTMLElement, kind: PopupKind = "screen") {
     if (!active) return;
     for (const controller of Object.values(controllers)) controller?.cancel();
+    pickerKind = kind;
     opener = origin;
     selected = "";
     search = "";
     picker = true;
   }
-  function focusWindow(id: string) {
+  function focusWindow(id: string, kind: PopupKind) {
     void tick().then(() => {
       if (active)
         requestAnimationFrame(() => {
           if (active)
             root
               ?.querySelector<HTMLElement>(
-                `[data-preview-popup="${id}"] [data-popup-move]`,
+                `[data-preview-popup="${id}"][data-popup-kind="${kind}"] [data-popup-move]`,
               )
               ?.focus({ preventScroll: true });
         });
@@ -112,31 +145,32 @@
   }
   function open() {
     if (!candidate || candidate.reason) return;
-    const id = candidate.screen.id;
+    const id = candidate.id;
+    const key = popupKey({ targetId: id, kind: pickerKind });
     try {
-      windows = openPopup(windows, id, costs.get(id)!, area);
-      if (opener && !origins.has(id)) origins.set(id, opener);
+      windows = openPopup(windows, id, candidate.cost, area, pickerKind);
+      if (opener && !origins.has(key)) origins.set(key, opener);
       picker = false;
-      focusWindow(id);
+      focusWindow(id, pickerKind);
     } catch (error) {
       onmessage(error instanceof Error ? error.message : "小窓を開けません。");
     }
   }
-  function front(id: string) {
-    if (active) windows = frontPopup(windows, id);
+  function front(id: string, kind: PopupKind) {
+    if (active) windows = frontPopup(windows, id, kind);
   }
-  function frame(id: string, value: PopupFrame) {
-    if (active && windows.some((w) => w.screenId === id))
-      windows = positionPopup(windows, id, value, area);
+  function frame(id: string, kind: PopupKind, value: PopupFrame) {
+    if (active && windows.some((w) => w.targetId === id && w.kind === kind))
+      windows = positionPopup(windows, id, value, area, kind);
   }
-  function close(id: string) {
+  function close(id: string, kind: PopupKind) {
     const panel = root?.querySelector<HTMLElement>(
-        `[data-preview-popup="${id}"]`,
+        `[data-preview-popup="${id}"][data-popup-kind="${kind}"]`,
       ),
       restore = !!panel?.contains(document.activeElement),
-      origin = origins.get(id);
-    windows = closePopup(windows, id);
-    origins.delete(id);
+      origin = origins.get(popupKey({ targetId: id, kind }));
+    windows = closePopup(windows, id, kind);
+    origins.delete(popupKey({ targetId: id, kind }));
     if (restore)
       void tick().then(() => {
         if (active) restoreFocus(origin, () => opener);
@@ -145,26 +179,32 @@
 </script>
 
 <div class="popup-area" bind:this={root} role="group" aria-label="小窓表示領域">
-  {#each rendered as entry (entry.screenId)}
-    {@const screen = project.screens.find((s) => s.id === entry.screenId)!}
+  {#each rendered as entry (popupKey(entry))}
+    {@const screen =
+      entry.kind === "screen"
+        ? project.screens.find((s) => s.id === entry.targetId)
+        : undefined}
     <PreviewWindow
-      bind:this={controllers[entry.screenId]}
+      bind:this={controllers[popupKey(entry)]}
       {entry}
       {screen}
       {project}
       {area}
-      rank={windows.findIndex((w) => w.screenId === entry.screenId)}
+      {equipmentContext}
+      rank={windows.findIndex((w) => popupKey(w) === popupKey(entry))}
       {images}
       {readings}
-      onfront={() => front(entry.screenId)}
-      onframe={(value) => frame(entry.screenId, value)}
-      onclose={() => close(entry.screenId)}
+      onfront={() => front(entry.targetId, entry.kind)}
+      onframe={(value) => frame(entry.targetId, entry.kind, value)}
+      onclose={() => close(entry.targetId, entry.kind)}
     />
   {/each}
 </div>
 <Modal
   open={picker}
-  title="画面を小窓で表示確認"
+  title={pickerKind === "screen"
+    ? "画面を小窓で表示確認"
+    : "機器の読取詳細を開く"}
   onclose={() => (picker = false)}
   focusFallback={() => opener}
 >
@@ -172,30 +212,39 @@
     プレビュー専用の読取表示です。位置やサイズは保存せず、画面切替・編集復帰・Project読込で閉じます。
   </p>
   <label
-    >画面を検索<input
+    >{pickerKind === "screen" ? "画面を検索" : "機器を検索"}<input
       type="search"
-      aria-label="小窓に表示する画面を検索"
+      aria-label={pickerKind === "screen"
+        ? "小窓に表示する画面を検索"
+        : "小窓に表示する機器を検索"}
       bind:value={search}
     /></label
   >
-  <div class="sources" role="group" aria-label="小窓に表示する画面">
-    {#each options as option (option.screen.id)}
+  <div
+    class="sources"
+    role="group"
+    aria-label={pickerKind === "screen"
+      ? "小窓に表示する画面"
+      : "小窓に表示する機器"}
+  >
+    {#each options as option (option.id)}
       <label
         ><input
           type="radio"
           name="popup-source"
-          value={option.screen.id}
+          value={option.id}
           bind:group={selected}
           disabled={!!option.reason}
         /><span
-          >{option.screen
-            .name}{#if windows.some((w) => w.screenId === option.screen.id)}<small
+          >{option.label}{#if option.existing}<small
               >既存の小窓を前面へ表示</small
             >{/if}{#if option.reason}<small>{option.reason}</small>{/if}</span
         ></label
       >
     {/each}
-    {#if !options.length}<p>一致する画面がありません。</p>{/if}
+    {#if !options.length}<p>
+        一致する{pickerKind === "screen" ? "画面" : "機器"}がありません。
+      </p>{/if}
   </div>
   <div class="actions">
     <button onclick={() => (picker = false)}>キャンセル</button><button

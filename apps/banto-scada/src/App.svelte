@@ -1142,7 +1142,9 @@
 
   let editorRegion = $state<HTMLElement>();
   let previewFullscreenActive = $state(false);
-  let previewPopups = $state<{ showPicker: (origin: HTMLElement) => void }>();
+  let previewPopups = $state<{
+    showPicker: (origin: HTMLElement, kind?: "screen" | "equipment") => void;
+  }>();
   let inspectorPanel = $state<HTMLElement>();
   let inspectorController = $state<{
     focusName: () => void;
@@ -2653,7 +2655,14 @@
           disabled={menuBlocked}
           onclick={(event) => previewPopups?.showPicker(event.currentTarget)}
           >画面を小窓で表示確認</button
-        >{/if}
+        >
+        <button
+          disabled={menuBlocked || !project.equipment?.length}
+          onclick={(event) =>
+            previewPopups?.showPicker(event.currentTarget, "equipment")}
+          >機器の読取詳細</button
+        >
+      {/if}
       {#if mode === "edit"}<button
           aria-label="キャンバスの操作"
           title="キャンバスの操作（Shift+F10）"

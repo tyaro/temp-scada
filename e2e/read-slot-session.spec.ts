@@ -25,6 +25,8 @@ for (const theme of ["light", "dark"] as const)
         );
         const { parseProject } = await import(projectPath);
         const { default: SlotReadStatus } = await import(statusPath);
+        const detailsPath = "/src/lib/designer/EquipmentReadDetails.svelte";
+        const { default: EquipmentReadDetails } = await import(detailsPath);
         const { default: Renderer } = await import(rendererPath),
           { default: ScreenPainting } = await import(paintingPath);
         // Dynamic bool text colors must win even when a placement forces monochrome.
@@ -119,7 +121,24 @@ for (const theme of ["light", "dark"] as const)
         const mainStatus = document.createElement("div"),
           popupStatus = document.createElement("div");
         target.append(mainStatus, popupStatus);
+        const detailTargets = [
+          document.createElement("div"),
+          document.createElement("div"),
+        ];
+        target.append(...detailTargets);
         const apps = [
+          ...detailTargets.map((target, index) =>
+            mount(EquipmentReadDetails, {
+              target,
+              props: {
+                equipmentId: project.equipment![index].id,
+                get equipmentContext() {
+                  track();
+                  return context;
+                },
+              },
+            }),
+          ),
           mount(SlotReadStatus, { target: mainStatus, props }),
           mount(SlotReadStatus, {
             target: popupStatus,
@@ -181,6 +200,17 @@ for (const theme of ["light", "dark"] as const)
           await flush();
           snapshots.push({
             name,
+            details: detailTargets.map((root) => ({
+              state: root
+                .querySelector('[data-equipment-slot="running"]')
+                ?.getAttribute("data-slot-state"),
+              value: root.querySelector(
+                '[data-equipment-slot="running"] .value',
+              )?.textContent,
+              origin: root.querySelector(
+                '[data-equipment-slot="running"] .origin',
+              )?.textContent,
+            })),
             paints: roots().map((root) => {
               const line = root.querySelector(
                 `[data-symbol-child-id="${sample.symbols[0].objects[0].id}"]`,
@@ -449,6 +479,45 @@ for (const theme of ["light", "dark"] as const)
         expect(paint.lineOpacity).toBe("0.25");
         expect(paint.opacity).toBe("0.5");
         expect(paint.fillAlpha).toBe("0.4");
+      }
+      const goodPrimary = goodNames.includes(snapshot.name);
+      const goodSecondary = goodPrimary || snapshot.name === "invalid-value";
+      expect(snapshot.details[0].state).toBe(
+        goodPrimary
+          ? "good"
+          : ["invalid-value", "invalid"].includes(snapshot.name)
+            ? "invalid"
+            : ["stale", "bad"].includes(snapshot.name)
+              ? snapshot.name
+              : "disconnected",
+      );
+      expect(snapshot.details[1].state).toBe(
+        goodSecondary
+          ? "good"
+          : snapshot.name === "invalid"
+            ? "invalid"
+            : ["stale", "bad"].includes(snapshot.name)
+              ? snapshot.name
+              : "disconnected",
+      );
+      if (goodPrimary)
+        expect(snapshot.details[0].value).toContain(
+          snapshot.name === "true" ? "true" : "false",
+        );
+      if (goodSecondary) expect(snapshot.details[1].value).toContain("true");
+      if (snapshot.name === "simulation" || snapshot.name === "stale")
+        expect(snapshot.details[0].value).toContain("SIM");
+      if (
+        [
+          "disconnected",
+          "invalid",
+          "reset",
+          "different-file-same-identity",
+          "replacement-reset",
+        ].includes(snapshot.name)
+      ) {
+        for (const detail of snapshot.details)
+          expect(detail.origin).toBeUndefined();
       }
       expect(snapshot.secondary).toEqual(
         Array(2).fill(
