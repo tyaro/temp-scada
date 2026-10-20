@@ -1,6 +1,7 @@
 import { chromium, expect } from "@playwright/test";
 import { mkdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+const fitMode = process.env.SCADA_CAPTURE_IMAGE_FIT === "1";
 const output = resolve(process.argv[2] ?? "test-results/image-crop");
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
@@ -11,7 +12,7 @@ try {
     const page = await browser.newPage({
       viewport: { width: 1920, height: 1080 },
     });
-    await page.goto("http://127.0.0.1:5173");
+    await page.goto(process.env.SCADA_CAPTURE_URL ?? "http://127.0.0.1:5173");
     await page
       .getByRole("button", { name: "テーマを変更", exact: true })
       .click();
@@ -27,7 +28,9 @@ try {
     );
     project.screens[0].width = 1280;
     project.screens[0].height = 720;
-    project.manifest.name = "画像の非破壊編集 / 原水供給設備";
+    project.manifest.name = fitMode
+      ? "画像の表示方式 / 原水供給設備"
+      : "画像の非破壊編集 / 原水供給設備";
     await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
       name: "demo.json",
       mimeType: "application/json",
@@ -93,7 +96,7 @@ try {
       ["x", "760"],
       ["y", "420"],
       ["width", "480"],
-      ["height", "240"],
+      ["height", fitMode ? "180" : "240"],
     ]) {
       const input = page.getByLabel(name, { exact: true });
       await input.fill(value);
@@ -116,12 +119,72 @@ try {
       "viewBox",
       "48 0 384 240",
     );
-    await form.scrollIntoViewIfNeeded();
+    if (fitMode) {
+      const display = page.getByRole("form", {
+        name: "画像の表示方式",
+        exact: true,
+      });
+      await display.getByRole("combobox").selectOption("cover");
+      await display
+        .getByRole("button", { name: "表示方式を適用", exact: true })
+        .click();
+      await display.scrollIntoViewIfNeeded();
+      await expect(page.locator(".sheet [data-image-fit]")).toHaveAttribute(
+        "data-image-fit",
+        "cover",
+      );
+    } else await form.scrollIntoViewIfNeeded();
     const close = page.locator(".toast-host button.close");
     while (await close.count()) await close.first().click();
+    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
+    if (fitMode) {
+      await expect
+        .poll(async () => {
+          const frame = await page
+            .locator(".sheet [data-image-fit]")
+            .boundingBox();
+          if (!frame) return false;
+          const encoded = (await page.screenshot()).toString("base64");
+          return page.evaluate(
+            async ({ encoded, frame }) => {
+              const image = new Image();
+              image.src = `data:image/png;base64,${encoded}`;
+              await image.decode();
+              const c = document.createElement("canvas");
+              c.width = image.width;
+              c.height = image.height;
+              const ctx = c.getContext("2d");
+              ctx.drawImage(image, 0, 0);
+              const rgba = ctx.getImageData(
+                Math.round(frame.x + frame.width * 0.45),
+                Math.round(frame.y + frame.height * 0.55),
+                1,
+                1,
+              ).data;
+              return (
+                Math.abs(rgba[0] - 167) < 8 &&
+                Math.abs(rgba[1] - 222) < 8 &&
+                Math.abs(rgba[2] - 209) < 8
+              );
+            },
+            { encoded, frame },
+          );
+        })
+        .toBe(true);
+    }
     await page.screenshot({
-      path: resolve(output, `image-crop-${theme}.png`),
-      fullPage: true,
+      path: resolve(
+        output,
+        `${fitMode ? "image-fit" : "image-crop"}-${theme}.png`,
+      ),
+      fullPage: false,
+      animations: "disabled",
     });
     await page.close();
   }

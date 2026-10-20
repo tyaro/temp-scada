@@ -6,6 +6,7 @@
   import { selectedGroup, groupFor } from "../geometric-groups";
   import { screenViewOptions } from "../screen-references";
   import { placementLabel } from "../placement-label";
+  import ImageFitSettings from "./ImageFitSettings.svelte";
   import ImageCrop from "./ImageCrop.svelte";
   import ShapePaint from "./ShapePaint.svelte";
   import SelectionColor from "./SelectionColor.svelte";
@@ -565,6 +566,18 @@
           {@const assetId = selected.shape.assetId}
           {@const asset = project.assets.find((a) => a.id === assetId)!}
           {#key assetId}
+            <ImageFitSettings
+              image={images.get(assetId)}
+              fit={selected.shape.fit}
+              crop={selected.shape.crop}
+              width={"width" in selected ? selected.width : 1}
+              height={"height" in selected ? selected.height : 1}
+              objectId={selected.id}
+              targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+              locked={selectionLocked}
+              {drafts}
+              onsubmit={properties}
+            />
             <ImageCrop
               {asset}
               url={images.get(assetId)?.url}
@@ -645,13 +658,13 @@
               {@const asset = project.assets.find((a) => a.id === assetId)!}
               <p class="numeric-hint">
                 原本：{asset.name} · {asset.width} × {asset.height} px<br
-                />画像は枠内で元比率を保ちます。余白も選択範囲に含みます。
+                />選択した表示方式で枠内に描画します。余白を含む枠全体が選択範囲です。
               </p>
               <button
                 type="button"
                 disabled={imageBusy}
                 onclick={() => selected && onreplaceimage(selected.id)}
-                title="差し替え後は画像全体を表示します。配置枠は維持します。"
+                title="別の原本への差し替えでは切出しを解除し、表示方式と配置枠は維持します。"
                 >画像を差し替え…</button
               >
               <button

@@ -10,6 +10,7 @@ import { validateGroups } from "./geometric-groups";
 import { projectScreenReferences } from "./screen-references";
 import { patternGeometry, type PatternKind } from "./pattern-paint";
 import { linearGradientEndpoints } from "./linear-gradient";
+import type { ImageFit } from "./image-fit";
 import { imageCropViewBox, type ImageCrop } from "./image-crop";
 import type { ImageMetadata } from "./image-assets";
 import { rotatedBounds, rotationPivot } from "./rotation";
@@ -102,7 +103,7 @@ export interface LayoutObject extends BaseObject {
         equipmentId?: string;
         colorMode: SymbolColorMode;
       }
-    | { type: "image"; assetId: string; fit: "contain"; crop?: ImageCrop }
+    | { type: "image"; assetId: string; fit: ImageFit; crop?: ImageCrop }
     | { type: "screenView"; screenId: string; fit: "contain" };
 }
 export interface PolylineObject extends BaseObject {
@@ -163,10 +164,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.27.0";
+    schemaVersion: "0.28.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.27.0";
+    minRuntimeVersion: "0.28.0";
     name: string;
   };
   screens: Screen[];
@@ -190,8 +191,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.27.0",
-        minRuntimeVersion: "0.27.0",
+        schemaVersion: "0.28.0",
+        minRuntimeVersion: "0.28.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,

@@ -62,3 +62,7 @@ cropありの比率復帰は「切出し範囲の比率に合わせる」と表�
 ![トリミングの原本・結果と適用操作：ダーク](assets/frontend-ux/image-crop-dark.png)
 
 実画面は独自に生成した参考図を使い、`node scripts/capture-image-crop.mjs docs/assets/frontend-ux`で再取得できる。外部リポジトリの画像を取り込んだものではない。
+
+## 表示方式の拡張（0.28.0）
+
+[配置Imageのcover／stretch](image-fit-design.md)を追加した。cropの元画素範囲は維持し、その後に表示方式を適用する。crop編集の見本は表示方式適用前の切出し範囲として明示し、実配置の枠比率を使う未適用見本は表示方式フォームへ置く。

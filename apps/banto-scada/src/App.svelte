@@ -19,6 +19,7 @@
   import { createDesignerActions } from "./lib/designer/controllers/designer-actions";
   import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
   import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
+  import { imageFitCommand } from "./lib/designer/forms/image-fit";
   import { imageCropCommand } from "./lib/designer/forms/image-crop";
   import {
     selectionOutlineCommand,
@@ -1897,6 +1898,21 @@
           image: backgroundScreen?.backgroundImage,
         },
       );
+    if (form.dataset.editorForm === "image-fit")
+      return imageFitCommand(
+        {
+          data,
+          connected: form.isConnected,
+          objectId: form.dataset.objectId,
+          targetKey: form.dataset.targetKey,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selected,
+        },
+      );
     if (form.dataset.editorForm === "image-crop")
       return imageCropCommand(
         {
@@ -3420,7 +3436,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.27.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.28.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

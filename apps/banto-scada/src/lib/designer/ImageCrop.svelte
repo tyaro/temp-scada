@@ -123,7 +123,7 @@
           </svg>
         </figure>
         <figure>
-          <figcaption>切出し結果</figcaption>
+          <figcaption>表示方式適用前の切出し範囲</figcaption>
           <svg viewBox="0 0 160 96" aria-label="切出し結果"
             ><ImagePainting
               image={{ url, width: asset.width, height: asset.height }}

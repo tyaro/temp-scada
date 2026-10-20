@@ -190,7 +190,7 @@ test("locked copying and paste preserve metadata; cut refuses before writing the
   await expect(canvas(page).locator('[data-selected="true"]')).toHaveCount(0);
   await expect(button(page, "ロック解除：保護したタンク")).toHaveCount(2);
   const saved = await exported(page);
-  expect(saved.manifest.schemaVersion).toBe("0.27.0");
+  expect(saved.manifest.schemaVersion).toBe("0.28.0");
   expect(saved.screens[0].objects.filter((o: any) => o.locked).length).toBe(2);
   await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "locked.json",

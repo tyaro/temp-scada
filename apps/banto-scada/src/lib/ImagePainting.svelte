@@ -1,27 +1,31 @@
 <script lang="ts">
+  import { imageAspectRatio, type ImageFit } from "./image-fit";
   import { imageCropViewBox, type ImageCrop } from "./image-crop";
   let {
     image,
     width,
     height,
     crop,
+    fit = "contain",
   }: {
     image: { url: string; width: number; height: number };
     width: number;
     height: number;
     crop?: ImageCrop;
+    fit?: ImageFit;
   } = $props();
   const id = $props.id();
   const box = $derived(imageCropViewBox(image, crop));
 </script>
 
-{#if crop}
+{#if crop || fit === "cover"}
   <svg
-    data-image-crop
+    data-image-crop={crop ? true : undefined}
+    data-image-fit={fit}
     {width}
     {height}
     viewBox={`${box.x} ${box.y} ${box.width} ${box.height}`}
-    preserveAspectRatio="xMidYMid meet"
+    preserveAspectRatio={imageAspectRatio(fit)}
     overflow="hidden"
     pointer-events="none"
   >
@@ -42,10 +46,11 @@
 {:else}
   <image
     data-image-frame
+    data-image-fit={fit}
     href={image.url}
     {width}
     {height}
-    preserveAspectRatio="xMidYMid meet"
+    preserveAspectRatio={imageAspectRatio(fit)}
     pointer-events="none"
   />
 {/if}

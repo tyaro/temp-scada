@@ -594,3 +594,7 @@ Astraレビューの次候補として、Symbolが実際に使うslotと機器�
 ## 機器操作のcontext入口（2026-10-20）
 
 右クリックの既存選択メニューへ、単一Symbolからの台帳設定・読取詳細の入口を追加した。プロパティを隠した編集とレイヤーのキーボードメニューにも対応し、既存draft・対象再取得を共用する。共通操作をプロパティへ重複実装せず、メニュー生成の責務を維持する。
+
+## 配置画像の表示方式（2026-10-20）
+
+計画に残っていたcover／stretchを[配置Imageの独立設定](image-fit-design.md)として追加する。保存とminRuntimeVersionを0.28.0へ揃え、crop後の範囲を中央meet／slice／noneで枠へ写す。原本・配置枠・crop・回転・opacityを維持し、既存の原本付きpackage／clipboardを共用する。背景crop・ドラッグcrop・Symbol内画像は後続。機器context／Hostの上流待ちとは独立した工程とする。

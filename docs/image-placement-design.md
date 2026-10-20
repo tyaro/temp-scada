@@ -51,3 +51,7 @@ Symbol定義・非Image・ロック中の配置・表示プレビューからの
 検証結果は[開発計画の差し替え記録](development-plan.md#image-replacement-progress)を参照。
 
 0.21.0では任意のcropを追加した。異なる原本への差し替えはcropを同時解除し、同じ原本のno-opはcropも維持する。枠の保持・共有原本・履歴と入力保護は維持する。
+
+## 0.28.0の配置Imageの表示方式
+
+初回のcontain限定から、[contain／cover／stretch](image-fit-design.md)へ拡張した。背景のfitとは別契約で、配置枠・crop・原本を維持して変更できる。現行の対応範囲はリンク先と実装状況を参照する。

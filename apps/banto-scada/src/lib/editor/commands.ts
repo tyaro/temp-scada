@@ -1,4 +1,5 @@
 import type { EquipmentSlot, EquipmentBinding } from "../equipment";
+import type { ImageFit } from "../image-fit";
 import type { ImageCrop } from "../image-crop";
 import type {
   BoolColors,
@@ -119,6 +120,7 @@ export type ObjectCommand = (
       objectId: string;
       crop: ImageCrop | null;
     }
+  | { type: "set-image-fit"; screenId: string; objectId: string; fit: ImageFit }
   | { type: "reset-image-ratio"; screenId: string; objectId: string }
   | {
       type: "create-folder";
@@ -320,6 +322,7 @@ const commandScopes = {
   "add-image": "object",
   "replace-image": "object",
   "set-image-crop": "object",
+  "set-image-fit": "object",
   "reset-image-ratio": "object",
   "create-folder": "object",
   "rename-folder": "object",
@@ -403,7 +406,13 @@ export type ImagePlacementCommand = Extract<
 >;
 export type ImageEditCommand = Extract<
   ObjectCommand,
-  { type: "replace-image" | "set-image-crop" | "reset-image-ratio" }
+  {
+    type:
+      | "replace-image"
+      | "set-image-crop"
+      | "set-image-fit"
+      | "reset-image-ratio";
+  }
 >;
 
 export function isProjectCommand(

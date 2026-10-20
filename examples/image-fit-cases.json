@@ -1,0 +1,11 @@
+[
+  { "name": "contain", "fit": "contain", "valid": true },
+  { "name": "cover", "fit": "cover", "valid": true },
+  { "name": "stretch", "fit": "stretch", "valid": true },
+  { "name": "original is background only", "fit": "original", "valid": false },
+  { "name": "SVG literal is not a fit", "fit": "none", "valid": false },
+  { "name": "case is exact", "fit": "Cover", "valid": false },
+  { "name": "empty", "fit": "", "valid": false },
+  { "name": "null", "fit": null, "valid": false },
+  { "name": "missing", "valid": false }
+]

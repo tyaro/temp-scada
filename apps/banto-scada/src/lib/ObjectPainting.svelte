@@ -78,6 +78,7 @@
       width={object.width}
       height={object.height}
       crop={object.shape.crop}
+      fit={object.shape.fit}
     />
   {/if}
 {:else}<Primitive

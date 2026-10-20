@@ -4,6 +4,7 @@ import type {
   SymbolDefinition,
   ScreenObject,
 } from "../project";
+import { parseImageFit } from "../image-fit";
 import { imageCropViewBox, normalizeImageCrop } from "../image-crop";
 import type {
   ObjectCommand,
@@ -19,6 +20,7 @@ export function isImageEditCommand(
   return (
     command.type === "replace-image" ||
     command.type === "set-image-crop" ||
+    command.type === "set-image-fit" ||
     command.type === "reset-image-ratio"
   );
 }
@@ -55,6 +57,10 @@ export function applyImageEdit(
     const assetId = registerAsset(next, command.asset);
     if (assetId !== object.shape.assetId) delete object.shape.crop;
     object.shape.assetId = assetId;
+  } else if (command.type === "set-image-fit") {
+    if (definitionId || object.shape.type !== "image")
+      throw new Error("画面上の画像配置だけ表示方式を変更できます。");
+    object.shape.fit = parseImageFit(command.fit);
   } else if (command.type === "set-image-crop") {
     if (definitionId || object.shape.type !== "image")
       throw new Error("画面上の画像配置だけをトリミングできます。");

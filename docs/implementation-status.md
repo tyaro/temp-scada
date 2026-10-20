@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-10-20（日本時間）、Project 0.27.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-10-20（日本時間）、Project 0.28.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
@@ -9,9 +9,9 @@
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | アプリ基盤 | Banto v6.7.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
-| Project    | `schemaVersion`／`minRuntimeVersion`は**0.27.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
+| Project    | `schemaVersion`／`minRuntimeVersion`は**0.28.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
-| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.26.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
+| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.27.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
 | IDと変更   | lowercase UUID v7、有限座標、明示order。編集失敗は原子的拒否、同値はno-op、Undo／Redoでもrevisionは巻き戻さない                         |
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
@@ -26,7 +26,7 @@
 | 共通作図       | 選択・範囲選択、移動・サイズ・回転・整列・中心等間隔、頂点、コピー／切取／貼付、Undo／Redo、幾何グループ                                         | グループ任意拡縮・入れ子、図形演算、接続口と配管追従                                   |
 | 配置・レイヤー | 名前、編集ロック、静的非表示、整理フォルダー、親と所属のドラッグ変更                                                                             | 継承表示、一時非表示、フォルダーの手動順変更                                           |
 | 図形・文字     | 矩形／楕円の塗り・枠線、一括編集、実線／破線／点線、配置opacityと色α、2色線形gradient、斜線／交差線／点pattern、Textの書式と揃え                 | 放射gradient、多点stop、複数行Text・縁取り、α一括                                      |
-| 画像           | 原本共有、背景fit、Imageのcontain枠、比率復帰、原本付きclipboard、差し替え、配置ごとの非破壊crop                                                 | 背景crop、ドラッグcrop、Imageのcover／stretch、Symbol内画像                            |
+| 画像           | 原本共有、背景fit、Imageのcontain／cover／stretch枠、比率復帰、原本付きclipboard、差し替え、配置ごとの非破壊crop                                 | 背景crop、ドラッグcrop、Symbol内画像                                                   |
 | 画面再利用     | 同一Project・1段の読取埋込View、共有参照、参照先編集、使用中画面の削除保護、複製                                                                 | Viewのclipboard、機器context付き共通画面、独立テンプレート                             |
 | 表示確認       | 画面／機器の読取Popup合計4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                                | 正式Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                       |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                                  | 実図面・画像／Symbol等の計測と必要な最適化                                             |
@@ -167,3 +167,13 @@ Project 0.27.0を維持し、表示プレビューの機器検索から読取専
 型エラー／警告0、TS909件とbuildが成功。既存選択メニュー12件と機器メニュー4件を確認した。最初のcanvas試験は図形の上にある正規hit領域へ内部polylineのクリックが遮られたため、実際の配置hit領域をクリックする試験へ修正し、4件の再検証が成功した。アプリ側でforceクリックやhit領域の変更は行わない。保存契約は維持する。
 
 候補確認`386e636`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39390905952)と、台帳への直接移動`3c01b22`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39391528579)も成功した。
+
+## 配置画像の表示方式（0.28.0）
+
+Imageのfitをcontain／cover／stretchへ拡張し、共通描画と独立したプロパティへ接続した。crop後の元画素範囲を枠へ写し、原本・crop・配置枠・回転・opacityはfit変更で変えない。未適用見本は実枠の比率を使う。別原本への差替えではcropを解除し、fitを維持する。背景やScreenViewの契約は変更していない。[仕様と実画面](image-fit-design.md)。
+
+型エラー／警告0、TS923件（84ファイル）、Rust48件、Clippy・Rust fmt・CLIサンプル16件とbuildが成功。既存crop9件とfit3件の関連ブラウザ12件、3方式の埋込／小窓／ミニマップ確認3件と、回転・αを加えた最終fit4件が成功した。回転画素の試験では回転用SVG子の座標変換を使い、配置の平行移動だけと混同しない。Astraレビューのstretchと矛盾する旧説明を修正した。ライト／ダークの実画面を掲載した。
+
+機器の右クリック操作`1630106`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39392343865)も成功した。0.28.0全体のCIはPush後に確認する。
+
+画像配置・差替えの既存ブラウザ14件も成功。変更文書のローカルリンク370件・全体整形を確認した。実画面はviewport内で撮影し、参考図の実画素の描画を待って保存する。

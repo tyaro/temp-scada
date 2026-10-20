@@ -1,10 +1,10 @@
 {
   "manifest": {
     "product": "banto-scada",
-    "schemaVersion": "0.27.0",
+    "schemaVersion": "0.28.0",
     "projectId": "0199f000-0000-7000-8000-000000000001",
     "projectRevision": 1,
-    "minRuntimeVersion": "0.27.0",
+    "minRuntimeVersion": "0.28.0",
     "name": "幾何グループのサンプル"
   },
   "screens": [

@@ -364,67 +364,90 @@ test("EXIF-oriented JPEG crops in display coordinates", async ({ page: p }) => {
   expect(colors[0][1]).toBeGreaterThan(150);
   expect(colors[0][2]).toBeGreaterThan(120);
 });
-test("embedded View, minimap and preview Popup share cropped painting", async ({
-  page: p,
-}) => {
-  await start(p);
-  await crop(p);
-  const archive = await save(p);
-  const bytes = await p.evaluate(
-    async (bytes) => {
-      const path = "/src/lib/project-package.ts",
-        { readProjectFile, writeProjectPackage } = await import(path);
-      const candidate = await readProjectFile(
-          new Blob([new Uint8Array(bytes)]),
-        ),
-        project = candidate.project;
-      const sourceId = project.screens[0].id;
-      project.screens.unshift({
-        id: "temporary-host-id",
-        name: "埋込先",
-        width: 1280,
-        height: 720,
-        background: "#ffffff",
-        folders: [],
-        groups: [],
-        objects: [],
-      });
-      // Use the application's UUID v7 generator for contract-valid IDs.
-      const editorPath = "/src/lib/editor.ts",
-        { newId } = await import(editorPath);
-      project.screens[0].id = newId();
-      project.screens[0].objects.push({
-        id: newId(),
-        order: 0,
-        x: 0,
-        y: 0,
-        width: 800,
-        height: 600,
-        rotation: 0,
-        shape: { type: "screenView", screenId: sourceId, fit: "contain" },
-      });
-      const blob = await writeProjectPackage(project, candidate.store);
-      candidate.store.dispose();
-      return { bytes: [...new Uint8Array(await blob.arrayBuffer())], sourceId };
-    },
-    [...archive],
-  );
-  await load(p, Buffer.from(bytes.bytes));
-  await expect(
-    p.locator(".sheet [data-source-object-id] [data-image-crop]"),
-  ).toHaveAttribute("viewBox", "120 0 120 120");
-  await expect(
-    p.locator('[aria-label="ミニマップ"] [data-image-crop]'),
-  ).toHaveCount(1);
-  await button(p, "表示プレビュー").click();
-  await button(p, "画面を小窓で表示確認").click();
-  const dialog = p.getByRole("dialog", {
-    name: "画面を小窓で表示確認",
-    exact: true,
+for (const fit of ["contain", "cover", "stretch"] as const)
+  test(`embedded View, minimap and preview Popup share cropped ${fit} painting`, async ({
+    page: p,
+  }) => {
+    await start(p);
+    await crop(p);
+    const fitForm = p.getByRole("form", {
+      name: "画像の表示方式",
+      exact: true,
+    });
+    await fitForm.getByRole("combobox").selectOption(fit);
+    await fitForm
+      .getByRole("button", { name: "表示方式を適用", exact: true })
+      .click();
+    const archive = await save(p);
+    const bytes = await p.evaluate(
+      async (bytes) => {
+        const path = "/src/lib/project-package.ts",
+          { readProjectFile, writeProjectPackage } = await import(path);
+        const candidate = await readProjectFile(
+            new Blob([new Uint8Array(bytes)]),
+          ),
+          project = candidate.project;
+        const sourceId = project.screens[0].id;
+        project.screens.unshift({
+          id: "temporary-host-id",
+          name: "埋込先",
+          width: 1280,
+          height: 720,
+          background: "#ffffff",
+          folders: [],
+          groups: [],
+          objects: [],
+        });
+        // Use the application's UUID v7 generator for contract-valid IDs.
+        const editorPath = "/src/lib/editor.ts",
+          { newId } = await import(editorPath);
+        project.screens[0].id = newId();
+        project.screens[0].objects.push({
+          id: newId(),
+          order: 0,
+          x: 0,
+          y: 0,
+          width: 800,
+          height: 600,
+          rotation: 0,
+          shape: { type: "screenView", screenId: sourceId, fit: "contain" },
+        });
+        const blob = await writeProjectPackage(project, candidate.store);
+        candidate.store.dispose();
+        return {
+          bytes: [...new Uint8Array(await blob.arrayBuffer())],
+          sourceId,
+        };
+      },
+      [...archive],
+    );
+    await load(p, Buffer.from(bytes.bytes));
+    await expect(
+      p.locator(".sheet [data-source-object-id] [data-image-crop]"),
+    ).toHaveAttribute("viewBox", "120 0 120 120");
+    await expect(
+      p.locator('[aria-label="ミニマップ"] [data-image-crop]'),
+    ).toHaveCount(1);
+    await expect(
+      p.locator(".sheet [data-source-object-id] [data-image-fit]"),
+    ).toHaveAttribute("data-image-fit", fit);
+    await expect(
+      p.locator('[aria-label="ミニマップ"] [data-image-fit]'),
+    ).toHaveAttribute("data-image-fit", fit);
+    await button(p, "表示プレビュー").click();
+    await button(p, "画面を小窓で表示確認").click();
+    const dialog = p.getByRole("dialog", {
+      name: "画面を小窓で表示確認",
+      exact: true,
+    });
+    await dialog.locator(`input[value="${bytes.sourceId}"]`).check();
+    await dialog
+      .getByRole("button", { name: "小窓を表示", exact: true })
+      .click();
+    await expect(
+      p.locator(`[data-preview-popup="${bytes.sourceId}"] [data-image-crop]`),
+    ).toHaveAttribute("viewBox", "120 0 120 120");
+    await expect(
+      p.locator(`[data-preview-popup="${bytes.sourceId}"] [data-image-fit]`),
+    ).toHaveAttribute("data-image-fit", fit);
   });
-  await dialog.locator(`input[value="${bytes.sourceId}"]`).check();
-  await dialog.getByRole("button", { name: "小窓を表示", exact: true }).click();
-  await expect(
-    p.locator(`[data-preview-popup="${bytes.sourceId}"] [data-image-crop]`),
-  ).toHaveAttribute("viewBox", "120 0 120 120");
-});
