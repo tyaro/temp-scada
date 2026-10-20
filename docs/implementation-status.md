@@ -4,6 +4,8 @@
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
+2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。計画の各工程は未着手であり、以下の実装済み範囲はこの文書更新で変わらない。
+
 ## 保存契約と基盤
 
 | 項目       | 現在の契約                                                                                                                              |

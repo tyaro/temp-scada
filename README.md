@@ -7,6 +7,7 @@
 - [Bantoパネル基盤との比較](docs/reviews/banto-dock-comparison.md): 分割・タブ・入力保護の実験と共通化の提案。移行は未実施。
 - [静的Textの明示改行](docs/multiline-text-design.md): 空行・省略・入力保護と実画面。
 - [操作ガイド](docs/user-guide.md): 編集、画像、画面再利用、入力保護、パネルとキー操作。
+- [上流変更中のSCADA単体開発計画](docs/upstream-independent-plan.md): crop比率固定、レイヤー並び替え、静的Text折返しの順と完了条件。
 - [開発計画](docs/development-plan.md)と[実装履歴](docs/implementation-history.md): 今後と過去を分離。
 - [共有シンボルの機器情報表示](docs/equipment-property-design.md): 機器名・コード・種別名と定義例示。
 - [2色放射グラデーション](docs/radial-gradient-design.md): 中心・半径、色αと未適用見本。
