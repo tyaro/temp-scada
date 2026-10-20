@@ -14,14 +14,24 @@ export function equipmentFormCommand(
     equipmentId = form.dataset.equipmentId;
   const code = String(data.get("code") ?? ""),
     name = String(data.get("name") ?? "");
-  if (!equipmentId)
+  if (!equipmentId) {
+    const sourceId = form.dataset.copyEquipmentId;
+    const source = sourceId
+      ? project.equipment?.find((item) => item.id === sourceId)
+      : undefined;
+    if (sourceId && !source) throw new Error("登録元の機器が見つかりません");
     return {
       type: "create-equipment",
-      typeId: String(data.get("typeId") ?? ""),
+      typeId: source?.typeId ?? String(data.get("typeId") ?? ""),
       code,
       name,
-      bindings: [],
+      bindings:
+        source?.bindings.map((binding) => ({
+          slotName: binding.slotName,
+          externalName: null,
+        })) ?? [],
     };
+  }
   const item = project.equipment?.find((item) => item.id === equipmentId);
   if (!item) throw new Error("機器が見つかりません");
   const kind = project.equipmentTypes!.find((type) => type.id === item.typeId)!;

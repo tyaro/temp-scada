@@ -2,6 +2,7 @@ import { chromium, expect } from "@playwright/test";
 import { mkdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 const associations = process.env.SCADA_CAPTURE_ASSOCIATIONS === "1";
+const copy = process.env.SCADA_CAPTURE_EQUIPMENT_COPY === "1";
 const output = resolve(process.argv[2] ?? "test-results/equipment");
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
@@ -79,6 +80,25 @@ try {
         .getByRole("region", { name: "機器の使用先", exact: true })
         .scrollIntoViewIfNeeded();
     }
+    if (copy) {
+      await library
+        .getByRole("button", {
+          name: "この機器を元に別の機器を登録",
+          exact: true,
+        })
+        .click();
+      const form = library.getByRole("form", {
+        name: "機器を登録",
+        exact: true,
+      });
+      await expect(form.getByLabel("機器番号", { exact: true })).toHaveValue(
+        "",
+      );
+      await form.getByLabel("機器名", { exact: true }).fill("押込送風機");
+      await library.evaluate((element) =>
+        element.scrollIntoView({ block: "start" }),
+      );
+    }
     for (const close of await page
       .locator(".toast-host .toast button.close")
       .all())
@@ -87,7 +107,7 @@ try {
     await page.screenshot({
       path: join(
         output,
-        `${associations ? "equipment-association" : "equipment"}-${theme}.png`,
+        `${copy ? "equipment-copy" : associations ? "equipment-association" : "equipment"}-${theme}.png`,
       ),
       animations: "disabled",
     });

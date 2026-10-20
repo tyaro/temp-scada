@@ -41,6 +41,10 @@
   }
   let view = $state<"instances" | "types">("instances");
   let selectedId = $state("");
+  let copySourceId = $state("");
+  const copySource = $derived(
+    project.equipment?.find((item) => item.id === copySourceId),
+  );
   let search = $state("");
   let page = $state(0);
   const PAGE_SIZE = 20;
@@ -84,7 +88,7 @@
   const values = $derived.by(() => {
     const values: Record<string, string> = {
       code: selected?.code ?? "",
-      name: selected?.name ?? "",
+      name: selected?.name ?? copySource?.name ?? "",
       typeId: project.equipmentTypes?.[0]?.id ?? "",
     };
     for (const slot of kind?.slots ?? []) {
@@ -166,8 +170,11 @@
           data-equipment-choice={item.id}
           class:active={selected?.id === item.id}
           aria-pressed={selected?.id === item.id}
-          onclick={() => transition(() => (selectedId = item.id))}
-          >{item.code} · {item.name}</button
+          onclick={() =>
+            transition(() => {
+              copySourceId = "";
+              selectedId = item.id;
+            })}>{item.code} · {item.name}</button
         >
       {/each}
       {#if !matching.length}<p>一致する機器はありません。</p>{/if}
@@ -188,19 +195,23 @@
       {/if}
       <button
         disabled={!project.equipmentTypes?.length}
-        onclick={() => transition(() => (selectedId = ""))}
-        >機器を新規登録</button
+        onclick={() =>
+          transition(() => {
+            copySourceId = "";
+            selectedId = "";
+          })}>機器を新規登録</button
       >
     </nav>
     {#if selected && !matching.some((item) => item.id === selected.id)}<p>
         編集中: {selected.code}（検索結果外）
       </p>{/if}
     {#if project.equipmentTypes?.length}
-      {#key `${generation}:${selected?.id ?? "new"}`}
+      {#key `${generation}:${selected?.id ?? "new"}:${copySourceId}`}
         <form
           use:drafts.track={values}
           data-editor-form="equipment"
           data-equipment-id={selected?.id ?? ""}
+          data-copy-equipment-id={copySourceId}
           data-target-key={`${generation}:${project.manifest.projectId}`}
           aria-label={selected ? "機器情報と割付" : "機器を登録"}
           oncompositionstart={() => (composing = true)}
@@ -210,19 +221,37 @@
             else {
               const before = new Set(project.equipment?.map((item) => item.id));
               const owner = generation;
+              const form = event.currentTarget;
               onsubmit(event);
               if (!selected)
                 void tick().then(() => {
-                  if (owner !== generation) return;
+                  if (owner !== generation || !form.isConnected) return;
                   const created = project.equipment?.find(
                     (item) => !before.has(item.id),
                   );
-                  if (created) transition(() => (selectedId = created.id));
+                  if (created)
+                    transition(() => {
+                      copySourceId = "";
+                      selectedId = created.id;
+                    });
                 });
             }
           }}
         >
           {#if selected}<p>種別: {kind?.name}</p>
+          {:else if copySourceId}
+            <strong>別の機器として登録</strong>
+            <p>
+              登録元: {copySource?.code ?? "削除済み"} · {copySource?.name ??
+                ""}
+            </p>
+            <p>
+              種別: {typeNames.get(copySource?.typeId ?? "") ?? "不明"} · 採用slot
+              {copySource?.bindings.length ?? 0}件
+            </p>
+            <p>
+              採用した信号はすべて未割付で登録します。図面の配置と外部タグの割付は引き継ぎません。
+            </p>
           {:else}<label
               >機器種別<select name="typeId"
                 >{#each project.equipmentTypes as type}<option value={type.id}
@@ -236,7 +265,7 @@
               name="code"
               required
               maxlength="64"
-              placeholder="FAN-101"
+              placeholder={copySourceId ? "新しい機器番号" : "FAN-101"}
             /></label
           >
           <label
@@ -272,7 +301,39 @@
             >{selected ? "機器情報と割付を適用" : "機器を登録"}</button
           >
         </form>
+        {#if copySourceId}
+          <button
+            onclick={() => {
+              const sourceId = copySourceId,
+                owner = generation;
+              transition(() => {
+                if (
+                  owner !== generation ||
+                  !project.equipment?.some((item) => item.id === sourceId)
+                )
+                  return;
+                selectedId = sourceId;
+                copySourceId = "";
+              });
+            }}>登録元の機器へ戻る</button
+          >
+        {/if}
         {#if selected}
+          <button
+            onclick={() => {
+              const sourceId = selectedId,
+                owner = generation;
+              transition(() => {
+                if (
+                  owner !== generation ||
+                  !project.equipment?.some((item) => item.id === sourceId)
+                )
+                  return;
+                copySourceId = sourceId;
+                selectedId = "";
+              });
+            }}>この機器を元に別の機器を登録</button
+          >
           <section aria-label="機器の使用先">
             <strong>図面の使用先 {usages.length} 件</strong>
             {#each usages as usage (usage.objectId)}
