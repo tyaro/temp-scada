@@ -157,6 +157,12 @@ export type ObjectCommand = (
       axis: "x" | "y";
     }
   | {
+      type: "distribute-gaps";
+      screenId: string;
+      objectIds: string[];
+      axis: "x" | "y";
+    }
+  | {
       type: "set-outline-style";
       screenId: string;
       objectIds: string[];
@@ -339,6 +345,7 @@ const commandScopes = {
   "remove-folder": "object",
   "set-folder": "object",
   distribute: "object",
+  "distribute-gaps": "object",
   "set-outline-style": "object",
   "set-line-style": "object",
   "set-color": "object",

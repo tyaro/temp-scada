@@ -373,14 +373,28 @@ export function createDesignerActions(host: DesignerActionsHost) {
           })),
           ...[
             {
+              type: "distribute" as const,
               axis: "x" as const,
               label: "中心を水平方向に等間隔",
               icon: "M3 3V21M21 3V21M4 9H6V15H4ZM11 6H13V18H11ZM18 9H20V15H18Z",
             },
             {
+              type: "distribute" as const,
               axis: "y" as const,
               label: "中心を垂直方向に等間隔",
               icon: "M3 3H21M3 21H21M9 4H15V6H9ZM6 11H18V13H6ZM9 18H15V20H9Z",
+            },
+            {
+              type: "distribute-gaps" as const,
+              axis: "x" as const,
+              label: "隙間を水平方向に均等化",
+              icon: "M2 5H5V19H2ZM10 5H14V19H10ZM19 5H22V19H19ZM6 11H9M15 11H18M6 14H9M15 14H18",
+            },
+            {
+              type: "distribute-gaps" as const,
+              axis: "y" as const,
+              label: "隙間を垂直方向に均等化",
+              icon: "M5 2H19V5H5ZM5 10H19V14H5ZM5 19H19V22H5ZM11 6V9M11 15V18M14 6V9M14 15V18",
             },
           ].map((item) => ({
             ...item,
@@ -389,7 +403,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
               (host.groups?.unitCount ?? host.editing.selectedIds.length) < 3,
             run: () =>
               host.editing.edit({
-                type: "distribute",
+                type: item.type,
                 screenId: host.editing.screenId,
                 objectIds: [...host.editing.selectedIds],
                 axis: item.axis,

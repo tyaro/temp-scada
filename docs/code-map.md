@@ -218,3 +218,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 - `symbol-slots.ts`／model schema／Rust検証: Symbol内限定・信号参照との排他。`single-object-handler.ts`と既存state-color検証で原子的変更。
 - `designer/forms/object-form.ts`／`numeric-properties.ts`／`InspectorPanel.svelte`: 単一表示元、slot・metadata切替と既存draft保護。
 - `equipment-property.test.ts`／`examples/symbol-slot-cases.json`／`e2e/equipment-property.spec.ts`: 解決・保存・no-op・Undo・コピー・実描画。`scripts/capture-equipment-property.mjs`が実画面を記録する。
+
+## 隙間の均等化
+
+`editor/gap-arrangement.ts`は`selectionUnits`／`unitBounds`を共用し、回転後外形の隙間と固定端を計算する。`commands.ts`／`object-handler.ts`／`selection-handler.ts`で原子的な`distribute-gaps`をroutingし、共通`designer-actions.ts`から実行する。`gap-arrangement.test.ts`と`e2e/gap-arrangement.spec.ts`で異幅・回転・矢印・グループ・拒否・no-op・Undoを確認する。中心等間隔の既存経路は維持する。

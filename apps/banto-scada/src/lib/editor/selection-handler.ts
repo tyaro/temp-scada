@@ -1,3 +1,4 @@
+import { distributeGaps } from "./gap-arrangement";
 import { groupFor, groupsOf } from "../geometric-groups";
 import { arrangeUnits } from "./group-arrangement";
 import {
@@ -25,6 +26,8 @@ export function applySelectionCommand(
     .sort((a, b) => a.order - b.order);
   if (objects.length !== ids.size)
     throw new Error("選択した図形が見つかりません");
+  if (command.type === "distribute-gaps")
+    return distributeGaps(screen, command.objectIds, command.axis);
   if (
     (command.type === "align" || command.type === "distribute") &&
     objects.some((object) => groupFor(screen, object.id))

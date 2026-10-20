@@ -84,6 +84,7 @@ export function applyObjectCommand(
   if (
     command.type === "set-folder" ||
     command.type === "distribute" ||
+    command.type === "distribute-gaps" ||
     command.type === "set-color" ||
     command.type === "set-line-style" ||
     command.type === "set-outline-style" ||

@@ -622,3 +622,7 @@ Windows標準操作の補完として、Ctrl／Command＋クリックをキャ�
 ## 機器metadata表示の先行工程
 
 [機器情報Text](equipment-property-design.md)をProject0.31.0へ追加する。詳細提案§16.2／§17 C段階のうち、保存済み機器名・コード・種別名だけを共有Symbolへ投影する。定義例示・未関連状態・排他とコピー制約を明記し、現在Projectの台帳を表示元とする。正式Faceplate、機器context付きView、実catalog／Hostは引き続き後続。直前のフォルダー順変更`db4906b`は[全CI](https://github.com/tyaro/temp-scada/actions/runs/39406247823)成功。
+
+## 隙間の均等化
+
+追加提案§4の寸法・配置補助から、[水平／垂直の隙間均等化](gap-arrangement-design.md)を先行する。Astraの推薦に沿い、中心等間隔を維持し、中心順・同中心は描画順、両端固定・負隙間拒否・グループ単位と明記する。既存の未適用入力・ロック・一回のUndoを共用し、新保存モデルは導入しない。
