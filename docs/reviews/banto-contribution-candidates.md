@@ -18,6 +18,7 @@ SCADAの局所実装をそのまま移すのではなく、Bantoの既存APIに�
 | 高   | 画像の原本・URL・pinのブラウザ回帰 | Redo破棄、履歴上限、同一package再読込、原本bytesの受入条件     | #438の既存試験と照合し、足りないケースだけ抽出  |
 | 中   | 既存TreeViewへの追加要件           | 明示確定、行内操作、ドラッグ事前判定・失効の受入ケース         | 小さいconsumer fixtureで現APIとの差を確定       |
 | 中   | 編集性能の診断手順                 | 実キー入力計測、CPU source map、交互比較、見送り候補の記録方法 | Bantoの開発者向けrecipeとして適否を確認         |
+| 中   | 保存・参照検証・ローカル編集履歴   | Hub／ChronoGazerとの契約比較・保持集合の試験                   | 横断fixtureで汎用部分とadapterを評価            |
 | 継続 | dock・操作定義・request・設定保存  | 起票済み資産と10ケースの再現fixture                            | 新設Issueを重ねず、上流公開APIのSCADA受入へ進む |
 
 高優先も即座のAPI追加を意味しない。上流の最新試験を照合し、既存機能で満たせるものは採用側adapterで対応する。
@@ -88,9 +89,15 @@ SCADAのsourceとテスト（`01d5df0`固定）:
 
 計測のinclusive時間は重なりを含み、2回のrAFは実ディスプレイ表示完了を保証しない。I5gは50履歴で改善したが、短履歴・再読込は悪化した比較もある。Bantoの性能欠陥や全操作の改善を示す資料として渡さない。
 
-## SCADA／Industrialに残すもの
+## 5. 保存・参照検証・編集履歴の横断候補
 
-- Project保存形式・参照整合性・command／Undo／Redoと履歴資産索引（`history-assets.ts`）。
+[Hub／ChronoGazerとの調査](cross-app-document-history-research.md)で、取込前検証・差分計画、ローカル下書きのUndo、参照診断、履歴資産の保持集合を追加候補にした。「Project・履歴をすべてSCADA専用」とは扱わない。schema・domain規則はconsumerに残し、汎用処理は最小fixtureで共通化の効果を確認する。
+
+Hubには既存の構成packageと遅延削除取消、ChronoGazerにはBanto由来のDB backupと競合検出がある。SCADA実装を丸ごと移植しない。履歴資産索引の第2consumerは未確認であり、原子的file保存は現在のSCADAに実装されていない。
+
+## SCADA／Industrialに残すdomain契約
+
+- Projectのschema・参照の意味・commandの妥当性・revision。Undo管理と履歴資産索引の汎用部分は横断候補へ分け、現行`history-assets.ts`の直接移植を前提にしない。
 - 設備・Symbol・接続anchor・配管・型付きtagの意味、runtimeへの投影。
 - Hub／catalog接続・認証・正式Faceplate。Industrialの契約再確認後に進める。
 - 図面固有の性能fixtureと採否判断。一般的な大域cacheや検証省略を共通化案にしない。

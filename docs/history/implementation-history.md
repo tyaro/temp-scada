@@ -1835,3 +1835,9 @@ Astraの安全性／採用レビューは必須修正なし。TS全1,214件、�
 [還元候補と採用境界](../reviews/banto-contribution-candidates.md)を追加。上流main `ac571ebf`のdraft／TreeView公開APIを照合し、複数フォームの事前検証・画像寿命回帰・既存TreeViewへの追加要件・性能診断recipeを優先順に分けた。#432〜#438のClosedとdraft／画像Storeのmergeを当初引渡し記録へ追記した。現在の独自ツリーと、上流に既存の`@banto/tree-svelte`を区別する。
 
 文書整形・ローカルリンク・差分の確認のみ。追加Issue／追補の投稿・Banto依存更新・アプリの移行やテスト再実行は行っていない。
+
+## 保存・参照検証・編集履歴の横断調査（2026-10-21）
+
+[Hub／ChronoGazerとの比較](../reviews/cross-app-document-history-research.md)を追加。Industrial `46c283d8`とBanto `ac571ebf`の公開ソース・試験を静的確認し、取込計画・ローカル編集履歴・参照診断を共通化候補へ再分類した。Hubの削除取消は送信前の遅延取消、ChronoGazerのbackupは既存Bantoサービスであり、SCADAのsnapshot Undoとの契約差を記録した。原子的file保存はSCADAの実装済み資産ではない。
+
+文書整形・ローカルリンク・固定参照先の存在・差分を確認。上流テスト再実行・アプリ実装・Issue投稿・依存更新は行っていない。
