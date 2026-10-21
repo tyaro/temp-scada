@@ -434,4 +434,42 @@ SCADA_PROFILE_URL=http://localhost:5351 node apps/banto-scada/scripts/profile-ed
 node apps/banto-scada/scripts/summarize-editor-profile.mjs /tmp/scada-i5h-direct-cpu-1000/reload.cpuprofile /tmp/scada-i5h-profile-build 'parseProject|readProjectFile|fitText|withSvgTextMeasure'
 ```
 
+<a id="font-events-i5i"></a>
+
+## I5i：font準備・通知共有候補のローカル比較（2026-10-22）
+
+状態: **候補評価完了・未採用。アプリの変更なし**。基準`473b0f8`から、単一行・複数行componentの`document.fonts.ready`取得と`loadingdone`／`loadingerror`通知の共有を試した。同一frameの通知をまとめ、最後の購読解除でlistener・予約frameを解放する。文字寸法・fit・非表示時のResizeObserver再試行・保存・Undoは変更しない。[候補コードと6件の単体試験](i5i-font-events-candidate.patch)をpatchに保存し、稼働コードへの接続は戻した。
+
+### 条件・観測・採否
+
+このPCのmacOS・Apple M1・Node24.16.0・既存Chromium148.0.7778.96、Playwright1.64.1、viewport1920×1080で実行。以前のLinux／Chromium154のI5hとは環境が異なるため過去値を改善率にしない。固定lockfileで依存を導入し、依存更新はしていない。
+
+通常production buildを基準／候補に分け、同じ100／500／1,000配置packageと既存runnerの`--direct-file-query`を使う。各runは新しいブラウザで初回Project取込・同一package再読込を1回ずつ計測。1,000配置は基準→候補→候補→基準、100／500配置は各build1runだけ。少数試行であり統計的有意性は評価していない。計測中にbuild・試験は並走していない。
+
+| 配置数・run | 基準 初回ms | 候補 初回ms | 基準 再読込ms | 候補 再読込ms |
+| ----------- | ----------- | ----------- | ------------- | ------------- |
+| 100         | 220.5       | 260.2       | 215.4         | 214.7         |
+| 500         | 1,614.0     | 1,637.2     | 1,763.6       | 1,734.1       |
+| 1,000・a    | 5,246.4     | 5,298.8     | 5,918.9       | 5,857.3       |
+| 1,000・b    | 5,332.6     | 4,963.1     | 6,125.9       | 5,769.5       |
+
+1,000配置の再読込LayoutCountは14,006→13,606と400減った。一方、RecalcStyleDurationは基準約4.32〜4.43秒、候補約4.26〜4.36秒。全体時間に対する一貫した大きな改善を確認できず、小規模の初回は遅い観測もあるため**候補は採用しない**。各CDP時間は重なるため合算しない。[全8runの生report・source／build／patchのSHA](i5i-font-events-comparison.json)を保存した。
+
+サンドボックスによるChromium起動拒否と、記録末尾の`spawnSync git`実行パスエラーで終了した試行は表に含めない。ローカルブラウザの実行権限と`PATH=/usr/bin:$PATH`で解消して取り直した。
+
+### 品質確認と未検証
+
+全8runの初回／再読込に加え、規模ごとに**基準と候補の文字投影SHAが一致**した。40／200／400 Textのmode・label・描画文字列・x／yを含む。4画像原本のSHA／bytes、再読込後の旧URL解放、一時計測host0、pageerrorなしも確認。保存操作・長時間運転・実Hub・Windowsはこの読込比較では再検証していない。
+
+候補で型エラー／警告0、単体1,220件（追加6件を含む）、production build成功。文字style・複数行・SVG寸法の関連ブラウザ30件は24成功・6失敗。失敗6件だけを基準コードで再実行し、全件で同じ失敗を確認した。
+
+- `multiline-text.spec.ts:113／333／476`と`text-style.spec.ts:142`：Controlによるnative貼付・コピーが期待どおり進まない。OSショートカット差が原因候補で、今回テスト・入力実装は変更していない。
+- `svg-text-measure.spec.ts:59`の両テーマ：隔離probeの寸法比較が許容差0.0001を超え、基準・候補とも最大差199.42047882080078。フォント／ブラウザ差を含めた原因切分けは未実施。
+
+ブラウザ全成功や性能改善提供済みとは扱わない。候補を外したため追加6件もpatch内だけに保存する。最終差分は調査記録・生JSON・候補patchで、Rust／schema／Project0.35.0／固定Banto・Industrial SDKは変更しない。
+
+### 次の判断
+
+まず既存の寸法比較失敗を標準ブラウザ環境でも切り分け、共通の品質基準を確認する。そのうえで、残る`getBBox`・style／layoutの呼出元と反復回数をCPU診断し、根拠から別候補を選ぶ。今回の共有候補や過去の単一行probe隔離は自動採用しない。
+
 raw cpuprofileとbuildは`/tmp`にあり、repoには集計とSHAを残した。再生成は上記コマンドを使う。追加runnerの構文・整形、source mapの既知fixture（mapped caller／unmapped callerへのnative self振分け）、実ブラウザの7run、文書リンクを確認した。アプリコード・Rust・schemaは変更しておらず、全unit／E2Eの再実行や性能改善の全体CI完了を意味しない。
