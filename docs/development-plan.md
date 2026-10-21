@@ -687,4 +687,4 @@ I5bの次の区切りは残るScriptDurationのサンプリングprofile。Node�
 
 ## 次工程I6（2026-10-21）
 
-I5eのstyle tree分離候補は実測で読込短縮を確認できず未採用。[評価記録](mixed-editor-quality.md)を残し、性能の限定改善・候補評価は一区切りとした。次は[参照名一括置換](text-reference-replacement-design.md)を純粋計算／commandとUIに分けて進める。統合設計§9の具体化であり、I6aの差分計算・command基盤を実装済み、I6bのUIは未接続。実Hub・Equipment／Symbol slot・認証の延期は維持する。
+I5eのstyle tree分離候補は実測で読込短縮を確認できず未採用。[評価記録](mixed-editor-quality.md)を残し、性能の限定改善・候補評価は一区切りとした。次は[参照名一括置換](text-reference-replacement-design.md)を純粋計算／commandとUIに分けて進める。統合設計§9の具体化であり、I6aの基盤は実装・全体CI成功。I6bの差分確認UIも実装・ローカル検証済みで、全体CI確認待ち。実Hub・Equipment／Symbol slot・認証の延期は維持する。

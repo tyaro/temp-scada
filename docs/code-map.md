@@ -292,4 +292,4 @@ I5dの一律隔離候補は速度面の採用条件を満たさず未採用。�
 
 ## タグ参照名の置換基盤（I6a）
 
-`lib/binding-replacement.ts`の`previewBindingReplacement`が完全一致の全画面差分・既存参照先・ロック／グループの拒否理由を算出する。`applyBindingReplacement`はsnapshotを照合して対象を再収集し、`editor/project-handler.ts`の`replace-binding-reference`から候補Projectへ適用する。最終検証・revision・履歴は従来の`applyCommand`／`recordEdit`が所有する。`binding-replacement.test.ts`が不正・no-op・原子性・世代・Undo／Redoを検証する。I6bのUI・workspace世代・draft接続は未実装。[詳細仕様](text-reference-replacement-design.md)を参照。
+`lib/binding-replacement.ts`の`previewBindingReplacement`が完全一致の全画面差分・既存参照先・ロック／グループの拒否理由を算出する。`applyBindingReplacement`はsnapshotを照合して対象を再収集し、`editor/project-handler.ts`の`replace-binding-reference`から候補Projectへ適用する。最終検証・revision・履歴は従来の`applyCommand`／`recordEdit`が所有する。`binding-replacement.test.ts`が不正・no-op・原子性・世代・Undo／Redoを検証する。I6bの`designer/BindingReplacement.svelte`を`BindingReferences.svelte`から開き、全画面差分・取消・明示適用を表示する。AppからProject・編集scope・既存draft guard・editを渡し、`revealDraftForm`／`validateDrafts`が未適用の置換を保護する。`e2e/binding-replacement.spec.ts`は両テーマ・IME・履歴・保存・Project差替えを検証する。[詳細仕様](text-reference-replacement-design.md)を参照。

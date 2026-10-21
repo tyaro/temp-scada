@@ -1,4 +1,8 @@
 <script lang="ts">
+  import BindingReplacement from "./BindingReplacement.svelte";
+  import type { Project } from "../project";
+  import type { EditCommand } from "../editor";
+  import type { createDraftGuard } from "./drafts.svelte";
   import { StatusBadge } from "@banto/ui";
   import {
     searchReferences,
@@ -6,6 +10,11 @@
     type BindingUsage,
   } from "../binding-references";
   let {
+    project,
+    scope,
+    editable,
+    drafts,
+    onedit,
     references,
     onopen,
     onclose,
@@ -14,6 +23,15 @@
     onbeforetoggle,
     onaftertoggle,
   }: {
+    project: Project;
+    scope: string;
+    editable: boolean;
+    drafts: ReturnType<typeof createDraftGuard>;
+    onedit: (
+      command: EditCommand,
+      form: HTMLFormElement,
+      onerror: (message: string) => void,
+    ) => boolean;
     references: BindingReference[];
     onopen: (usage: BindingUsage) => void;
     onclose: () => void;
@@ -22,6 +40,13 @@
     onbeforetoggle?: () => void;
     onaftertoggle?: () => void;
   } = $props();
+  let replacing = $state<string | null>(null);
+  function beginReplacement(from: string) {
+    const start = () => {
+      replacing = from;
+    };
+    if (drafts.allow(start)) start();
+  }
   let togglePending = false;
   let search = $state("");
   const filtered = $derived(searchReferences(references, search));
@@ -68,6 +93,17 @@
         {#if search}<button onclick={() => (search = "")}>検索をクリア</button
           >{/if}
       </div>
+      {#if replacing !== null}
+        {#key replacing}<BindingReplacement
+            {project}
+            from={replacing}
+            {scope}
+            {editable}
+            {drafts}
+            {onedit}
+            oncancel={() => (replacing = null)}
+          />{/key}
+      {/if}
       <p role="status">{filtered.length} / {references.length} タグを表示</p>
       {#if filtered.length}
         <div class="scroll">
@@ -82,7 +118,16 @@
             <tbody>
               {#each filtered as reference (reference.externalName)}
                 <tr data-tag-reference={reference.externalName}>
-                  <th scope="row">{reference.externalName}</th>
+                  <th scope="row"
+                    >{reference.externalName}
+                    <button
+                      class="replace"
+                      disabled={!editable}
+                      aria-label={`${reference.externalName} を一括置換`}
+                      onclick={() => beginReplacement(reference.externalName)}
+                      >一括置換</button
+                    >
+                  </th>
                   <td
                     ><div class="usages">
                       {#each reference.usages as usage (usage.objectId)}
@@ -110,6 +155,10 @@
 {/if}
 
 <style>
+  .replace {
+    display: block;
+    margin-top: 6px;
+  }
   .close {
     float: right;
   }

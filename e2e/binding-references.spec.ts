@@ -46,7 +46,7 @@ test("groups references across screens, searches without editing, navigates with
   });
   await expect(panel.locator("tbody tr")).toHaveCount(2);
   const level = panel.locator('[data-tag-reference="PLC01.Fast.Tank01.Level"]');
-  await expect(level.getByRole("button")).toHaveCount(2);
+  await expect(level.locator(".usages button")).toHaveCount(2);
   await panel.getByLabel("タグ参照を検索").fill("ＰＲＥＳＳＵＲＥ");
   await expect(panel.locator("tbody tr")).toHaveCount(1);
   await expect(panel).toContainText("PLC01.Fast.Pump01.Pressure");

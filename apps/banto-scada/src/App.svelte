@@ -174,6 +174,11 @@
       if (parent instanceof HTMLDetailsElement) parent.open = true;
   }
   function revealDraftForm(form: HTMLFormElement) {
+    if (form.dataset.editorForm === "binding-replacement") {
+      setAuxPanelVisibility({ references: true });
+      referencesExpanded = true;
+      return;
+    }
     expandTreeAncestors(form);
     if (
       [
@@ -2307,6 +2312,14 @@
   function validateDrafts(forms: HTMLFormElement[]): boolean {
     let validatingForm: HTMLFormElement | undefined;
     try {
+      validatingForm = forms.find(
+        (form) =>
+          form.isConnected && form.dataset.editorForm === "binding-replacement",
+      );
+      if (validatingForm)
+        throw new Error(
+          "タグ参照名の置換は差分を確認して明示適用するか、置換を取消してください。",
+        );
       // Applying a slot change can remove the color form before the next submit.
       // Reject both dirty forms together before creating any history entry.
       const colorDraft = forms.find(
@@ -3605,6 +3618,11 @@
           {/if}
           {#key workspaceGeneration}
             <BindingReferences
+              {project}
+              scope={`${workspaceGeneration}:${mode}:${screenId}:${editingSymbolId ?? ""}`}
+              editable={mode === "edit"}
+              {drafts}
+              onedit={edit}
               bind:expanded={referencesExpanded}
               sized={canSizeReferences && referencesExpanded}
               onbeforetoggle={() => canvasWorkspace?.preparePanelResize(true)}
@@ -3612,7 +3630,9 @@
               {references}
               onopen={openBinding}
               onclose={() =>
-                setAuxPanelVisibility({ references: false }, "references")}
+                transition(() =>
+                  setAuxPanelVisibility({ references: false }, "references"),
+                )}
             />
           {/key}
         </div>
