@@ -6,6 +6,8 @@
 
 最新の区切り: I0〜I4の作図改善と[I6の参照名一括置換](text-reference-replacement-design.md)は提供済み・全体CI成功。I5は限定改善・候補評価を一区切りとし、大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
+I7は[Symbol内画像の段階設計](symbol-image-design.md)に従い、I7aの資産参照集計・clipboard依存収集を先行実装・ローカル検証済み（全体CI確認待ち）。保存版は0.33.0のまま、Symbol内画像の読込・配置・描画機能はまだ提供していない。
+
 ## 保存契約と基盤
 
 | 項目       | 現在の契約                                                                                                                              |

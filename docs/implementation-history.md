@@ -1783,3 +1783,7 @@ I5bの次の区切りは残るScriptDurationのサンプリングprofile。Node�
 ### I5d進捗：単一行Text計測の切分けと候補評価（2026-10-21）
 
 [診断・寸法比較・通常benchmark・A/B/B/A](mixed-editor-quality.md)を保存した。残る図面側の単一行計測2,400回を隔離へ移す候補は400 Textの表示一致を満たしたが、交互比較の再読込平均は基準約18.4秒／候補約21.9秒で、改善を確認できなかった。一律置換は採用せず、アプリのTextPrimitiveは基準へ戻した。診断runnerと単一行fitの両テーマ288条件比較試験、再生できる候補patchを資産として残す。候補では関連ブラウザ35件・単体1107件・型・buildと保存／原本／資源解放が成功した。最終差分`94078be`の[全体CI39553076790](https://github.com/tyaro/temp-scada/actions/runs/39553076790)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。現行の保存契約・上流依存は不変で、I5dは評価の区切り。次はstyle／layout局所化の別候補を設計し、cacheや計測省略は先行しない。
+
+## I7a：Symbol内画像へ向けた資産参照の先行基盤（2026-10-21）
+
+[段階設計](symbol-image-design.md)に従い、TS／Rustの全所有者の画像参照集計と、clipboardの到達したSymbol内の依存収集を追加した。schema0.33.0・Symbol内画像の公開拒否・描画・配色・paste再配線は変更していない。追加TS8件、全TS1129件・Rust52件・Clippy・CLI3サンプル・関連ブラウザ12件・型・build・整形がローカル成功。新しい画面機能の完成とは扱わず、公開に必要な保存・貼付・描画・作成UIを後続へ分けた。全体CIはPush後の確認待ち。

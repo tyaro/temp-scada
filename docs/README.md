@@ -69,6 +69,8 @@
 
 ### 画像・画面再利用
 
+- [共有Symbol内の静止画像：段階設計](symbol-image-design.md)
+
 - [背景画像の数値トリミング](background-image-crop-design.md)
 - [別画面を表示する埋込View](embedded-screen-design.md)
 - [画像資産と背景画像の最小保存基盤](image-assets-design.md)

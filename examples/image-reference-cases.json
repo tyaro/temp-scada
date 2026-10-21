@@ -1,0 +1,101 @@
+{
+  "description": "Low-level reference projection cases, NOT valid importable Projects. Symbol images remain rejected by public schema 0.33.0.",
+  "cases": [
+    {
+      "name": "empty",
+      "project": { "screens": [], "symbols": [] },
+      "expected": []
+    },
+    {
+      "name": "shared background and hidden image",
+      "project": {
+        "screens": [
+          {
+            "id": "screen",
+            "backgroundImage": { "assetId": "shared" },
+            "objects": [
+              {
+                "id": "hidden",
+                "visible": false,
+                "locked": true,
+                "shape": { "type": "image", "assetId": "shared" }
+              }
+            ]
+          }
+        ],
+        "symbols": []
+      },
+      "expected": ["shared"]
+    },
+    {
+      "name": "unplaced definitions retain originals",
+      "project": {
+        "screens": [{ "id": "screen", "objects": [] }],
+        "symbols": [
+          {
+            "id": "unplaced",
+            "objects": [
+              {
+                "id": "image",
+                "visible": false,
+                "locked": true,
+                "shape": { "type": "image", "assetId": "symbol-original" }
+              }
+            ]
+          },
+          {
+            "id": "another",
+            "objects": [
+              {
+                "id": "image2",
+                "shape": { "type": "image", "assetId": "second-original" }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": ["symbol-original", "second-original"]
+    },
+    {
+      "name": "all owners and repeated placement references",
+      "project": {
+        "screens": [
+          {
+            "id": "screen",
+            "backgroundImage": { "assetId": "background" },
+            "objects": [
+              {
+                "id": "a",
+                "shape": { "type": "symbol", "symbolId": "definition" }
+              },
+              {
+                "id": "b",
+                "shape": { "type": "symbol", "symbolId": "definition" }
+              },
+              {
+                "id": "direct",
+                "shape": { "type": "image", "assetId": "direct-original" }
+              }
+            ]
+          }
+        ],
+        "symbols": [
+          {
+            "id": "definition",
+            "objects": [
+              {
+                "id": "image",
+                "shape": { "type": "image", "assetId": "direct-original" }
+              },
+              {
+                "id": "other",
+                "shape": { "type": "image", "assetId": "symbol-original" }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": ["background", "direct-original", "symbol-original"]
+    }
+  ]
+}

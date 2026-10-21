@@ -293,3 +293,7 @@ I5dの一律隔離候補は速度面の採用条件を満たさず未採用。�
 ## タグ参照名の置換基盤（I6a）
 
 `lib/binding-replacement.ts`の`previewBindingReplacement`が完全一致の全画面差分・既存参照先・ロック／グループの拒否理由を算出する。`applyBindingReplacement`はsnapshotを照合して対象を再収集し、`editor/project-handler.ts`の`replace-binding-reference`から候補Projectへ適用する。最終検証・revision・履歴は従来の`applyCommand`／`recordEdit`が所有する。`binding-replacement.test.ts`が不正・no-op・原子性・世代・Undo／Redoを検証する。I6bの`designer/BindingReplacement.svelte`を`BindingReferences.svelte`から開き、全画面差分・取消・明示適用を表示する。AppからProject・編集scope・既存draft guard・editを渡し、`revealDraftForm`／`validateDrafts`が未適用の置換を保護する。`e2e/binding-replacement.spec.ts`は両テーマ・IME・履歴・保存・Project差替えを検証する。[詳細仕様](text-reference-replacement-design.md)を参照。
+
+## Symbol内画像へ向けた資産参照基盤（I7a）
+
+`lib/asset-references.ts:imageAssetReferences`は画面背景・直接Image・全Symbol定義から所有者付き参照を投影する。`project.ts:referencedAssets`とRustの`referenced_assets`は保存対象の集合を作る。`clipboard-dependencies.ts`は選択配置から到達する定義／埋込画面だけを収集する。両者の範囲を混同しない。共通低層fixtureは`examples/image-reference-cases.json`、TSの契約試験は`asset-references.test.ts`。公開validatorのSymbol内Image拒否は維持し、paste再配線・描画は[I7の後続](symbol-image-design.md)。

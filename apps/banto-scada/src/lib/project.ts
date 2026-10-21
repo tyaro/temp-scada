@@ -1,3 +1,4 @@
+import { imageAssetReferences } from "./asset-references";
 import { normalizeProjectText } from "./text-content";
 import { validateStateColors } from "./state-color";
 import { validateSymbolSlots } from "./symbol-slots";
@@ -484,12 +485,7 @@ export function parsePoints(text: string): Point[] {
 /** All current image references. History retains its own project declarations. */
 export function referencedAssets(project: Project): Set<string> {
   return new Set(
-    project.screens.flatMap((screen) => [
-      ...(screen.backgroundImage ? [screen.backgroundImage.assetId] : []),
-      ...screen.objects.flatMap((object) =>
-        object.shape.type === "image" ? [object.shape.assetId] : [],
-      ),
-    ]),
+    imageAssetReferences(project).map((reference) => reference.assetId),
   );
 }
 

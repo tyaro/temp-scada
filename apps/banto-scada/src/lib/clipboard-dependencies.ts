@@ -11,7 +11,14 @@ export function clipboardDependencies(
   function placements(items: readonly ScreenObject[]) {
     for (const { shape } of items) {
       if (shape.type === "image") assets.add(shape.assetId);
-      if (shape.type === "symbol") symbols.add(shape.symbolId);
+      if (shape.type === "symbol" && !symbols.has(shape.symbolId)) {
+        symbols.add(shape.symbolId);
+        const definition = project.symbols.find(
+          (symbol) => symbol.id === shape.symbolId,
+        );
+        if (!definition) throw new Error("Symbolの参照先が見つかりません。");
+        placements(definition.objects);
+      }
       if (shape.type === "screenView" && !screens.has(shape.screenId)) {
         screens.add(shape.screenId);
         const source = project.screens.find(

@@ -21,6 +21,25 @@ static LEGACY_VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
     .expect("valid legacy schema")
 });
 
+/// Projection only. Call after schema validation; hidden/unplaced definitions retain originals.
+fn referenced_assets(value: &Value) -> HashSet<&str> {
+    let screens = value["screens"].as_array().unwrap();
+    let symbols = value["symbols"].as_array().unwrap();
+    screens
+        .iter()
+        .filter_map(|screen| screen.get("backgroundImage"))
+        .map(|image| image["assetId"].as_str().unwrap())
+        .chain(screens.iter().chain(symbols.iter()).flat_map(|owner| {
+            owner["objects"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|object| object["shape"]["type"] == "image")
+                .map(|object| object["shape"]["assetId"].as_str().unwrap())
+        }))
+        .collect()
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Project(Value);
 
@@ -149,25 +168,7 @@ impl Project {
         VALIDATOR.validate(&value).map_err(|e| e.to_string())?;
         let mut ids = HashSet::new();
         ids.insert(value["manifest"]["projectId"].as_str().unwrap());
-        let used_assets: HashSet<_> = value["screens"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .flat_map(|screen| {
-                screen
-                    .get("backgroundImage")
-                    .into_iter()
-                    .map(|image| image["assetId"].as_str().unwrap())
-                    .chain(
-                        screen["objects"]
-                            .as_array()
-                            .unwrap()
-                            .iter()
-                            .filter(|object| object["shape"]["type"] == "image")
-                            .map(|object| object["shape"]["assetId"].as_str().unwrap()),
-                    )
-            })
-            .collect();
+        let used_assets = referenced_assets(&value);
         let mut asset_ids = HashSet::new();
         let mut hashes = HashSet::new();
         let mut total_bytes = 0u64;
@@ -531,6 +532,24 @@ fn validate_screen_views(project: &Value) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn image_reference_projection_includes_unplaced_definitions_without_accepting_them_as_projects()
+    {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/image-reference-cases.json"))
+                .unwrap();
+        for case in cases["cases"].as_array().unwrap() {
+            let actual = referenced_assets(&case["project"]);
+            let expected: HashSet<_> = case["expected"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|id| id.as_str().unwrap())
+                .collect();
+            assert_eq!(actual, expected, "{}", case["name"]);
+        }
+    }
+
     #[test]
     fn shared_state_color_contract() {
         let base: Value =
