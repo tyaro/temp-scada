@@ -453,7 +453,7 @@ node apps/banto-scada/scripts/summarize-editor-profile.mjs /tmp/scada-i5h-direct
 | 1,000・a    | 5,246.4     | 5,298.8     | 5,918.9       | 5,857.3       |
 | 1,000・b    | 5,332.6     | 4,963.1     | 6,125.9       | 5,769.5       |
 
-1,000配置の再読込LayoutCountは14,006→13,606と400減った。一方、RecalcStyleDurationは基準約4.32〜4.43秒、候補約4.26〜4.36秒。全体時間に対する一貫した大きな改善を確認できず、小規模の初回は遅い観測もあるため**候補は採用しない**。各CDP時間は重なるため合算しない。[全8runの生report・source／build／patchのSHA](i5i-font-events-comparison.json)を保存した。
+1,000配置の再読込LayoutCountは14,006→13,606と400減った。一方、RecalcStyleDurationは基準約4.32〜4.43秒、候補約4.26〜4.36秒。全体時間に対する一貫した大きな改善を確認できず、小規模の初回は遅い観測もあるため**候補は採用しない**。各CDP時間は重なるため合算しない。[全8runの必要な計測値・source／build／patchのSHA](i5i-font-events-comparison.json)を保存した。
 
 サンドボックスによるChromium起動拒否と、記録末尾の`spawnSync git`実行パスエラーで終了した試行は表に含めない。ローカルブラウザの実行権限と`PATH=/usr/bin:$PATH`で解消して取り直した。
 
@@ -473,3 +473,45 @@ node apps/banto-scada/scripts/summarize-editor-profile.mjs /tmp/scada-i5h-direct
 まず既存の寸法比較失敗を標準ブラウザ環境でも切り分け、共通の品質基準を確認する。そのうえで、残る`getBBox`・style／layoutの呼出元と反復回数をCPU診断し、根拠から別候補を選ぶ。今回の共有候補や過去の単一行probe隔離は自動採用しない。
 
 raw cpuprofileとbuildは`/tmp`にあり、repoには集計とSHAを残した。再生成は上記コマンドを使う。追加runnerの構文・整形、source mapの既知fixture（mapped caller／unmapped callerへのnative self振分け）、実ブラウザの7run、文書リンクを確認した。アプリコード・Rust・schemaは変更しておらず、全unit／E2Eの再実行や性能改善の全体CI完了を意味しない。
+
+<a id="font-ready-batch-i5i"></a>
+
+### 取得集約のみの追加比較（2026-10-22）
+
+状態: **効果なしのため不採用。アプリの変更なし。計測記録のみをPRにまとめる**。`git fetch`・`git switch work`・`git pull --ff-only`後の`473b0f8`から`perf/i5i-font-ready-batch`で計測した。その後のユーザー指示に従い、候補と記録を既存の`perf/font-readiness-batching`へ移した。候補は`font-ready.ts`の`fontReady(document)`に、同一mount batchの`document.fonts.ready`取得だけを共有させる。共有表は次のmicrotaskでgetterを読む直前に破棄し、次のbatchでは現在のfont-loading cycleを取得し直す。フォント準備完了後もcallbackは各componentへ従来どおり通知する。持続的なready／文字寸法cacheや通知のframe集約は入れない。
+
+`loadingdone`／`loadingerror`のlistener、`active`による破棄後callback抑止、ResizeObserverと非表示復帰、既存の計測・fit・listener／frameのcleanupは変更しない。Project0.35.0・依存・Rust／schemaも変更しない。
+
+#### 前後の計測
+
+macOS・Apple M1・Node24.16.0、固定Playwright1.64.1が導入するChrome for Testing156.0.8078.4の完全版をheadlessで使用した。I5hのLinux／Chromium154や、別候補を既存Chromium148で測った値とは混ぜない。通常production build・同じ入力bytes・1920×1080・既存`profile-editor-load.mjs --direct-file-query`で比較。各runは新規ブラウザで初回Project取込・再読込を1回ずつ計測し、1,000配置は基準→候補→候補→基準を2組、各build・phaseで4観測。100／500配置は各1観測だけ。計測中にbuild・試験・CPU採取を並走していない。
+
+| 配置数・観測数     | 初回 基準ms | 初回 候補ms | 再読込 基準ms | 再読込 候補ms |
+| ------------------ | ----------- | ----------- | ------------- | ------------- |
+| 100・各1回         | 458.5       | 288.7       | 507.7         | 290.3         |
+| 500・各1回         | 1,384.9     | 1,309.4     | 1,430.2       | 1,559.3       |
+| 1,000・各4回の平均 | 3,685.9     | 3,772.1     | 4,602.8       | 4,681.7       |
+
+1,000配置の初回範囲は基準3,549.3〜3,760.6ms／候補3,622.2〜3,900.3ms、再読込は基準4,450.8〜4,884.2ms／候補4,645.8〜4,738.2ms。初回の標本標準偏差は基準95.3ms／候補118.6ms、再読込は196.4ms／40.4ms。平均で短縮せず、観測範囲も重なった。**一貫した読込短縮を実証できず、効果なしのため不採用とする。** 小規模の単一観測だけで改善と判断しない。統計的有意性は評価していない。
+
+[全12runの必要な計測値・集計に必要なデータ・source／buildのSHA](i5i-font-ready-batch-comparison.json)を保存した。基準の確定buildは元のcomponent2本を復元して順番に作成した`baseline-clean`（既存`index-z42DYoHf.js`と同じ内容）。作成中にソースが変わった最初の仮buildは使用しない。
+
+#### 一致確認・検証・停止後の範囲
+
+全12run・24取込で、規模ごとの文字投影SHAが**基準と候補で一致**した。40／200／400 Textのmode・label・文字列・x／yを含む。4原本のSHA／bytes一致、旧URL解放、一時計測host0、pageerrorなしも確認した。これは当該図面の読込比較であり、theme・倍率・非表示復帰・font loading通知を含む全回帰の代用にはしない。
+
+停止判断前に、取得共有・document分離・次batch／次font-loading cycle・失敗時の再試行を確認する追加単体5件、前後のproduction build、ソースのprettierが成功した。全単体・関連ブラウザ・型チェック・CIは停止後に進めていない。不採用のcomponent変更とhelper／追加テストは元に戻した。本PRは計測記録だけで、候補アプリの採用を含まない。
+
+headless shell156の試行は、初回操作前のタイムアウトとICU／GPUエラーでreportを生成せず比較から除外した。ユーザーから「書類」フォルダ許可を拒否したとの申告があり、再起動でも再表示されなかった。`tccutil reset SystemPolicyDocumentsFolder headless_shell`はbundle未登録で失敗した。他アプリを含む一括リセットは行っていない。完全版Chromeでの有効な比較とは分けて記録する。
+
+#### 締めと次工程
+
+ユーザー指示により本候補は不採用で締め、次は別ブランチでgetBBoxの診断（I5j）を行う。通知集約の単独効果とI5hと同等環境での差は未確認。共有の寿命・通知方式・計測回数・cache・probe隔離を広げるアプリ変更には進まない。
+
+#### 取得集約と通知集約の効果の分離
+
+- **取得集約だけ**：上記のChrome156比較。1,000配置の平均は初回3,685.9→3,772.1ms、再読込4,602.8→4,681.7msで、短縮を確認できない。loadingdone／loadingerrorのlistenerと通知は既存のまま。
+- **取得と通知の両方を共有**：先のChrome148比較。文字投影は一致しLayoutCountは減ったが、一貫した大きな読込短縮は確認できなかった。
+- **通知集約だけの寄与**：未分離。同じ環境での対照実験ではなく、共有の寿命も異なるため、前後差を引き算して通知集約の効果とは表記できない。停止条件を維持するため追加実験には進まない。
+
+指定ブランチ`perf/font-readiness-batching`には計測記録だけを残す。候補アプリの全回帰が成功したという記録にはせず、記録PRの最終HEADに対するCIで確認する。以前の`5f590e0`に対するCI成功とは区別する。

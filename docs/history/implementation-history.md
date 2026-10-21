@@ -1853,9 +1853,3 @@ Issue本文を作成結果と照合し、文書整形・リンク・差分を確
 [読込・再読込の計測](../performance/mixed-editor-quality.md#load-diagnostics-i5h)を追加。通常100／500／1,000配置と別CPU採取を行い、driverのラベル検索負荷と、アプリの文字寸法・font ready取得を切り分けた。driver検索を絞っただけでは全体短縮を確認できず、アプリ改善は未採用。JSON検証の省略やcacheは導入しない。
 
 7runで文字投影・4画像原本のSHA／bytes、再読込時の旧URL解放と一時host解放、pageerrorなしを確認。runner2本の構文・整形、source map既知fixture、文書リンク・差分を確認した。raw report・CPU集計・source／buildのSHAを保存。アプリ／Rust／schema／依存は変更せず、全体試験の再実行や性能改善完了とは扱わない。
-
-## I5i：font準備・通知共有候補の比較と見送り（2026-10-22）
-
-[ローカル比較](../performance/mixed-editor-quality.md#font-events-i5i)で100／500／1,000配置を計測し、1,000配置は基準→候補→候補→基準で比較。文字投影と4画像原本の一致・旧URLと一時DOMの解放を確認したが、一貫した速度改善を確認できず未採用。候補と追加6件の試験はpatchだけに保存し、アプリは基準へ戻した。
-
-候補の型エラー／警告0・単体1,220件・本番build成功。関連ブラウザは24成功・6失敗で、失敗6件は基準でも同じ内容で再現。全体CI成功や性能改善完了とは扱わない。最終変更は記録・生JSON・候補patchのみ。Rust・schema・依存・保存形式の変更はない。
