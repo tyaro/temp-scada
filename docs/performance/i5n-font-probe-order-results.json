@@ -1,0 +1,1691 @@
+{
+  "baseCommit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+  "adopted": false,
+  "reason": "Initial-import average is near neutral, ranges overlap, reload order reverses in the last pair, and first-to-last baseline drift exceeds the average improvement. No clear total-time improvement beyond variability was established in the specified 4+4 runs. Getter cost reduction alone is not an adoption criterion.",
+  "method": "Mac Apple M1 / Chrome for Testing 156.0.8078.4 headless / 1920x1080 / same mixed-1000 bytes. Normal order before,after,after,before,after,before,before,after: 4 fresh-browser runs per variant, each cold+reload. Separate wrapped-read diagnostics: before,after,after,before (2 per variant). No builds/tests run concurrently. Cold is first Project import into loaded editor, not browser startup. CDP times overlap and diagnostics are never used as normal latency.",
+  "fixtureSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+  "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea",
+  "originals": [
+    {
+      "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+      "bytes": 33491
+    },
+    {
+      "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+      "bytes": 33492
+    },
+    {
+      "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+      "bytes": 33523
+    },
+    {
+      "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+      "bytes": 33392
+    }
+  ],
+  "sourceSha256": {
+    "apps/banto-scada/src/lib/TextPrimitive.svelte": {
+      "before": "c4209c3c3b5fa84d8147a15a0be1801d3789fdd9155f1de624b50bd52c3c3d91",
+      "candidate": "d3e7c0a42ca288fc582cb8c58ff34d5688e6a1b3e081cce58576f63f116e83c6"
+    },
+    "apps/banto-scada/src/lib/MultilineTextPrimitive.svelte": {
+      "before": "25c210140bec1d63fd52346338fe3a0ba34684316e918e379fe6d1369685a92e",
+      "candidate": "1b6a49f97df12b396b2dfb03742424c33a750140e7fd4d2a793b1d60dadc7266"
+    }
+  },
+  "artifactsSha256": {
+    "before-build/assets/index-z42DYoHf.js": "11b895e329e31cf9da4eddca68dfc68e18730cbcde21b1748e5cd68462785272",
+    "after-build/assets/index-tHNdrryW.js": "468846308616fd64dcb17c82d2bc098268d2e6558c4df1a2913b6685fdbc0168",
+    "candidate.patch": "beaa705ba4eeaf04513f6ce955cc4570b317375732a8524da8ad98ffcd3362ed",
+    "capture-reads.mjs": "5fa553c73d46e95c5de34482ef546adeef9bed8d7262174a0dada852cdaefe21",
+    "run-comparison.mjs": "522ab683d1e9339fd78285373a40ddbe8d0fa2b3f0b00a5782c576d442595b3a",
+    "summarize.py": "f64a01c5a19b7ae1a70f283f130c08bb9db2cec3c671dac52846a3c5a88e5ac7"
+  },
+  "summary": {
+    "normal": {
+      "cold": {
+        "before": {
+          "runs": 4,
+          "meanMs": 3821.408802,
+          "medianMs": 3751.4791665000002,
+          "minMs": 3592.32175,
+          "maxMs": 4190.355124999999,
+          "valuesMs": [4190.355124999999, 3592.32175, 3905.723916, 3597.234417],
+          "cdp": {
+            "ScriptDuration": {
+              "mean": 0.7818745,
+              "min": 0.722863,
+              "max": 0.883694
+            },
+            "LayoutDuration": {
+              "mean": 0.5965232500000001,
+              "min": 0.567975,
+              "max": 0.646128
+            },
+            "RecalcStyleDuration": {
+              "mean": 2.03818025,
+              "min": 1.922482,
+              "max": 2.188728
+            },
+            "TaskDuration": {
+              "mean": 3.77297825,
+              "min": 3.546653,
+              "max": 4.126252
+            },
+            "LayoutCount": {
+              "mean": 14008.25,
+              "min": 14008,
+              "max": 14009
+            },
+            "RecalcStyleCount": {
+              "mean": 14013.5,
+              "min": 14012,
+              "max": 14014
+            }
+          }
+        },
+        "after": {
+          "runs": 4,
+          "meanMs": 3781.907781,
+          "medianMs": 3776.164354,
+          "minMs": 3667.752375,
+          "maxMs": 3907.5500410000004,
+          "valuesMs": [
+            3907.5500410000004, 3822.2719580000003, 3667.752375,
+            3730.0567499999997
+          ],
+          "cdp": {
+            "ScriptDuration": {
+              "mean": 0.79744925,
+              "min": 0.760782,
+              "max": 0.82328
+            },
+            "LayoutDuration": {
+              "mean": 0.58240525,
+              "min": 0.555914,
+              "max": 0.605692
+            },
+            "RecalcStyleDuration": {
+              "mean": 2.00944975,
+              "min": 1.976433,
+              "max": 2.045357
+            },
+            "TaskDuration": {
+              "mean": 3.7324444999999997,
+              "min": 3.632771,
+              "max": 3.8524849999999997
+            },
+            "LayoutCount": {
+              "mean": 13607,
+              "min": 13607,
+              "max": 13607
+            },
+            "RecalcStyleCount": {
+              "mean": 13613.75,
+              "min": 13613,
+              "max": 13614
+            }
+          }
+        },
+        "meanChangePercent": -1.0336769250996247
+      },
+      "reload": {
+        "before": {
+          "runs": 4,
+          "meanMs": 4756.2855315,
+          "medianMs": 4733.067938,
+          "minMs": 4430.452624999999,
+          "maxMs": 5128.553624999999,
+          "valuesMs": [
+            5128.553624999999, 4691.486459, 4774.649417, 4430.452624999999
+          ],
+          "cdp": {
+            "ScriptDuration": {
+              "mean": 0.69397675,
+              "min": 0.6631859999999999,
+              "max": 0.755123
+            },
+            "LayoutDuration": {
+              "mean": 0.579796,
+              "min": 0.550643,
+              "max": 0.6367019999999999
+            },
+            "RecalcStyleDuration": {
+              "mean": 2.79924925,
+              "min": 2.538568,
+              "max": 3.03229
+            },
+            "TaskDuration": {
+              "mean": 4.724410000000001,
+              "min": 4.407609,
+              "max": 5.094096
+            },
+            "LayoutCount": {
+              "mean": 14006.75,
+              "min": 14006,
+              "max": 14007
+            },
+            "RecalcStyleCount": {
+              "mean": 14008.5,
+              "min": 14007,
+              "max": 14011
+            }
+          }
+        },
+        "after": {
+          "runs": 4,
+          "meanMs": 4533.66818725,
+          "medianMs": 4542.1954375000005,
+          "minMs": 4406.551916,
+          "maxMs": 4643.729958,
+          "valuesMs": [
+            4450.104625000001, 4406.551916, 4643.729958, 4634.286250000001
+          ],
+          "cdp": {
+            "ScriptDuration": {
+              "mean": 0.7130572500000001,
+              "min": 0.6939560000000001,
+              "max": 0.726049
+            },
+            "LayoutDuration": {
+              "mean": 0.5690175,
+              "min": 0.5494910000000001,
+              "max": 0.581554
+            },
+            "RecalcStyleDuration": {
+              "mean": 2.607024,
+              "min": 2.5099650000000002,
+              "max": 2.7362339999999996
+            },
+            "TaskDuration": {
+              "mean": 4.49987375,
+              "min": 4.365425,
+              "max": 4.606250000000001
+            },
+            "LayoutCount": {
+              "mean": 13607,
+              "min": 13607,
+              "max": 13607
+            },
+            "RecalcStyleCount": {
+              "mean": 13608.25,
+              "min": 13608,
+              "max": 13609
+            }
+          }
+        },
+        "meanChangePercent": -4.680487384023646
+      }
+    },
+    "diagnostic": {
+      "cold": {
+        "before": {
+          "runs": 2,
+          "meanMs": 3801.2781665,
+          "medianMs": 3801.2781665,
+          "minMs": 3641.2078749999996,
+          "maxMs": 3961.3484580000004,
+          "valuesMs": [3961.3484580000004, 3641.2078749999996],
+          "cdp": {
+            "ScriptDuration": {
+              "mean": 0.7835215,
+              "min": 0.750542,
+              "max": 0.816501
+            },
+            "LayoutDuration": {
+              "mean": 0.5960735,
+              "min": 0.570736,
+              "max": 0.621411
+            },
+            "RecalcStyleDuration": {
+              "mean": 2.039292,
+              "min": 1.955254,
+              "max": 2.12333
+            },
+            "TaskDuration": {
+              "mean": 3.7635245,
+              "min": 3.608216,
+              "max": 3.918833
+            },
+            "LayoutCount": {
+              "mean": 14008,
+              "min": 14008,
+              "max": 14008
+            },
+            "RecalcStyleCount": {
+              "mean": 14014,
+              "min": 14014,
+              "max": 14014
+            }
+          },
+          "reads": {
+            "ready": {
+              "calls": [1003, 1003],
+              "totalMs": [1170.6000000163913, 1080.1000000536442],
+              "p95Ms": [2, 1.8999999985098839]
+            },
+            "rects": {
+              "calls": [800, 800],
+              "totalMs": [470.699999935925, 426.3000000268221],
+              "p95Ms": [1.3999999985098839, 1.3999999985098839]
+            },
+            "bbox": {
+              "calls": [13405, 13405],
+              "totalMs": [1236.5000000670552, 1147.500000141561],
+              "p95Ms": [0.20000000298023224, 0.20000000298023224]
+            }
+          }
+        },
+        "after": {
+          "runs": 2,
+          "meanMs": 3816.2461665000005,
+          "medianMs": 3816.2461665000005,
+          "minMs": 3745.6536670000005,
+          "maxMs": 3886.8386660000006,
+          "valuesMs": [3745.6536670000005, 3886.8386660000006],
+          "cdp": {
+            "ScriptDuration": {
+              "mean": 0.818829,
+              "min": 0.785802,
+              "max": 0.851856
+            },
+            "LayoutDuration": {
+              "mean": 0.592052,
+              "min": 0.574942,
+              "max": 0.609162
+            },
+            "RecalcStyleDuration": {
+              "mean": 2.042121,
+              "min": 2.035461,
+              "max": 2.048781
+            },
+            "TaskDuration": {
+              "mean": 3.780347,
+              "min": 3.711971,
+              "max": 3.848723
+            },
+            "LayoutCount": {
+              "mean": 13607,
+              "min": 13607,
+              "max": 13607
+            },
+            "RecalcStyleCount": {
+              "mean": 13613.5,
+              "min": 13613,
+              "max": 13614
+            }
+          },
+          "reads": {
+            "ready": {
+              "calls": [1003, 1003],
+              "totalMs": [3.7999999970197678, 3.600000023841858],
+              "p95Ms": [0, 0]
+            },
+            "rects": {
+              "calls": [800, 800],
+              "totalMs": [826.6000001356006, 870.7000000998378],
+              "p95Ms": [1.3000000044703484, 1.5]
+            },
+            "bbox": {
+              "calls": [13405, 13405],
+              "totalMs": [1903.999999962747, 1917.6000000089407],
+              "p95Ms": [1.6999999955296516, 1.6000000014901161]
+            }
+          }
+        },
+        "meanChangePercent": 0.39376229111329764
+      },
+      "reload": {
+        "before": {
+          "runs": 2,
+          "meanMs": 4531.287708500001,
+          "medianMs": 4531.287708500001,
+          "minMs": 4220.089459000001,
+          "maxMs": 4842.485958000001,
+          "valuesMs": [4220.089459000001, 4842.485958000001],
+          "cdp": {
+            "ScriptDuration": {
+              "mean": 0.694612,
+              "min": 0.691303,
+              "max": 0.697921
+            },
+            "LayoutDuration": {
+              "mean": 0.5713044999999999,
+              "min": 0.559796,
+              "max": 0.5828129999999999
+            },
+            "RecalcStyleDuration": {
+              "mean": 2.6381685,
+              "min": 2.4036469999999994,
+              "max": 2.87269
+            },
+            "TaskDuration": {
+              "mean": 4.500769,
+              "min": 4.186605,
+              "max": 4.814933
+            },
+            "LayoutCount": {
+              "mean": 14006.5,
+              "min": 14006,
+              "max": 14007
+            },
+            "RecalcStyleCount": {
+              "mean": 14009.5,
+              "min": 14008,
+              "max": 14011
+            }
+          },
+          "reads": {
+            "ready": {
+              "calls": [801, 801],
+              "totalMs": [1293.4000001251698, 1570.8000000938773],
+              "p95Ms": [2.2999999970197678, 2.8000000044703484]
+            },
+            "rects": {
+              "calls": [800, 800],
+              "totalMs": [507.7999999895692, 587.8000000491738],
+              "p95Ms": [1.5, 1.7999999970197678]
+            },
+            "bbox": {
+              "calls": [12800, 12800],
+              "totalMs": [1284.7999999895692, 1431.4000000357628],
+              "p95Ms": [0.20000000298023224, 0.20000000298023224]
+            }
+          }
+        },
+        "after": {
+          "runs": 2,
+          "meanMs": 4431.4349999999995,
+          "medianMs": 4431.4349999999995,
+          "minMs": 4233.771041999999,
+          "maxMs": 4629.0989580000005,
+          "valuesMs": [4629.0989580000005, 4233.771041999999],
+          "cdp": {
+            "ScriptDuration": {
+              "mean": 0.6857765,
+              "min": 0.6856019999999999,
+              "max": 0.6859510000000001
+            },
+            "LayoutDuration": {
+              "mean": 0.554084,
+              "min": 0.544089,
+              "max": 0.564079
+            },
+            "RecalcStyleDuration": {
+              "mean": 2.5673555000000006,
+              "min": 2.4312590000000003,
+              "max": 2.7034520000000004
+            },
+            "TaskDuration": {
+              "mean": 4.395764999999999,
+              "min": 4.1941,
+              "max": 4.597429999999999
+            },
+            "LayoutCount": {
+              "mean": 13606.5,
+              "min": 13606,
+              "max": 13607
+            },
+            "RecalcStyleCount": {
+              "mean": 13610,
+              "min": 13608,
+              "max": 13612
+            }
+          },
+          "reads": {
+            "ready": {
+              "calls": [801, 801],
+              "totalMs": [3.2000000178813934, 2.6999999955296516],
+              "p95Ms": [0, 0]
+            },
+            "rects": {
+              "calls": [800, 800],
+              "totalMs": [1115.7999999076128, 1010.8999999761581],
+              "p95Ms": [1.7000000029802322, 1.5]
+            },
+            "bbox": {
+              "calls": [12800, 12800],
+              "totalMs": [2279.6999997869134, 2089.5000001192093],
+              "p95Ms": [2.1999999955296516, 2]
+            }
+          }
+        },
+        "meanChangePercent": -2.2036276423739953
+      }
+    }
+  },
+  "runs": [
+    {
+      "variant": "before",
+      "mode": "normal",
+      "label": "normal-before-1",
+      "report": {
+        "recordedAt": "2026-10-21T20:37:16.419Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5411",
+        "sampled": false,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 4190.355124999999,
+            "metrics": {
+              "ScriptDuration": 0.883694,
+              "LayoutDuration": 0.646128,
+              "RecalcStyleDuration": 2.188728,
+              "TaskDuration": 4.126252,
+              "LayoutCount": 14009,
+              "RecalcStyleCount": 14012
+            },
+            "heapAfterGc": 113549880,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 5128.553624999999,
+            "metrics": {
+              "ScriptDuration": 0.755123,
+              "LayoutDuration": 0.6367019999999999,
+              "RecalcStyleDuration": 3.03229,
+              "TaskDuration": 5.094096,
+              "LayoutCount": 14006,
+              "RecalcStyleCount": 14007
+            },
+            "heapAfterGc": 114323016,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "after",
+      "mode": "normal",
+      "label": "normal-after-1",
+      "report": {
+        "recordedAt": "2026-10-21T20:37:28.177Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5412",
+        "sampled": false,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3907.5500410000004,
+            "metrics": {
+              "ScriptDuration": 0.82328,
+              "LayoutDuration": 0.605692,
+              "RecalcStyleDuration": 2.045357,
+              "TaskDuration": 3.8524849999999997,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13614
+            },
+            "heapAfterGc": 113614240,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4450.104625000001,
+            "metrics": {
+              "ScriptDuration": 0.7217630000000002,
+              "LayoutDuration": 0.5762539999999999,
+              "RecalcStyleDuration": 2.569181,
+              "TaskDuration": 4.421760999999999,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13608
+            },
+            "heapAfterGc": 114335152,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "after",
+      "mode": "normal",
+      "label": "normal-after-2",
+      "report": {
+        "recordedAt": "2026-10-21T20:37:40.534Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5412",
+        "sampled": false,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3822.2719580000003,
+            "metrics": {
+              "ScriptDuration": 0.804382,
+              "LayoutDuration": 0.594575,
+              "RecalcStyleDuration": 2.016332,
+              "TaskDuration": 3.757949,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13614
+            },
+            "heapAfterGc": 113593960,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4406.551916,
+            "metrics": {
+              "ScriptDuration": 0.726049,
+              "LayoutDuration": 0.5687709999999999,
+              "RecalcStyleDuration": 2.5099650000000002,
+              "TaskDuration": 4.365425,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13609
+            },
+            "heapAfterGc": 114307204,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "before",
+      "mode": "normal",
+      "label": "normal-before-2",
+      "report": {
+        "recordedAt": "2026-10-21T20:37:52.374Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5411",
+        "sampled": false,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3592.32175,
+            "metrics": {
+              "ScriptDuration": 0.733305,
+              "LayoutDuration": 0.570389,
+              "RecalcStyleDuration": 1.922482,
+              "TaskDuration": 3.5537210000000004,
+              "LayoutCount": 14008,
+              "RecalcStyleCount": 14014
+            },
+            "heapAfterGc": 113577704,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4691.486459,
+            "metrics": {
+              "ScriptDuration": 0.6631859999999999,
+              "LayoutDuration": 0.5595920000000001,
+              "RecalcStyleDuration": 2.7867059999999997,
+              "TaskDuration": 4.651121,
+              "LayoutCount": 14007,
+              "RecalcStyleCount": 14008
+            },
+            "heapAfterGc": 114259064,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "after",
+      "mode": "normal",
+      "label": "normal-after-3",
+      "report": {
+        "recordedAt": "2026-10-21T20:38:03.308Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5412",
+        "sampled": false,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3667.752375,
+            "metrics": {
+              "ScriptDuration": 0.760782,
+              "LayoutDuration": 0.555914,
+              "RecalcStyleDuration": 1.999677,
+              "TaskDuration": 3.632771,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13614
+            },
+            "heapAfterGc": 113586288,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4643.729958,
+            "metrics": {
+              "ScriptDuration": 0.6939560000000001,
+              "LayoutDuration": 0.5494910000000001,
+              "RecalcStyleDuration": 2.7362339999999996,
+              "TaskDuration": 4.606059,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13608
+            },
+            "heapAfterGc": 114349176,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "before",
+      "mode": "normal",
+      "label": "normal-before-3",
+      "report": {
+        "recordedAt": "2026-10-21T20:38:15.052Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5411",
+        "sampled": false,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3905.723916,
+            "metrics": {
+              "ScriptDuration": 0.787636,
+              "LayoutDuration": 0.601601,
+              "RecalcStyleDuration": 2.108984,
+              "TaskDuration": 3.865287,
+              "LayoutCount": 14008,
+              "RecalcStyleCount": 14014
+            },
+            "heapAfterGc": 113561368,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4774.649417,
+            "metrics": {
+              "ScriptDuration": 0.683706,
+              "LayoutDuration": 0.572247,
+              "RecalcStyleDuration": 2.839433,
+              "TaskDuration": 4.744814000000001,
+              "LayoutCount": 14007,
+              "RecalcStyleCount": 14008
+            },
+            "heapAfterGc": 114296352,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "before",
+      "mode": "normal",
+      "label": "normal-before-4",
+      "report": {
+        "recordedAt": "2026-10-21T20:38:26.817Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5411",
+        "sampled": false,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3597.234417,
+            "metrics": {
+              "ScriptDuration": 0.722863,
+              "LayoutDuration": 0.567975,
+              "RecalcStyleDuration": 1.932527,
+              "TaskDuration": 3.546653,
+              "LayoutCount": 14008,
+              "RecalcStyleCount": 14014
+            },
+            "heapAfterGc": 113572136,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4430.452624999999,
+            "metrics": {
+              "ScriptDuration": 0.6738919999999999,
+              "LayoutDuration": 0.550643,
+              "RecalcStyleDuration": 2.538568,
+              "TaskDuration": 4.407609,
+              "LayoutCount": 14007,
+              "RecalcStyleCount": 14011
+            },
+            "heapAfterGc": 114348072,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "after",
+      "mode": "normal",
+      "label": "normal-after-4",
+      "report": {
+        "recordedAt": "2026-10-21T20:38:38.192Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5412",
+        "sampled": false,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3730.0567499999997,
+            "metrics": {
+              "ScriptDuration": 0.801353,
+              "LayoutDuration": 0.57344,
+              "RecalcStyleDuration": 1.976433,
+              "TaskDuration": 3.686573,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13613
+            },
+            "heapAfterGc": 113623752,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4634.286250000001,
+            "metrics": {
+              "ScriptDuration": 0.710461,
+              "LayoutDuration": 0.581554,
+              "RecalcStyleDuration": 2.6127160000000003,
+              "TaskDuration": 4.606250000000001,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13608
+            },
+            "heapAfterGc": 114384564,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "before",
+      "mode": "diagnostic",
+      "label": "reads-before-1",
+      "report": {
+        "recordedAt": "2026-10-21T20:38:50.282Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5411",
+        "sampled": false,
+        "readDiagnostic": true,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3961.3484580000004,
+            "readsDiagnostic": {
+              "ready": {
+                "calls": 1003,
+                "totalMs": 1170.6000000163913,
+                "p95Ms": 2
+              },
+              "bbox": {
+                "calls": 13405,
+                "totalMs": 1236.5000000670552,
+                "p95Ms": 0.20000000298023224
+              },
+              "rects": {
+                "calls": 800,
+                "totalMs": 470.699999935925,
+                "p95Ms": 1.3999999985098839
+              }
+            },
+            "metrics": {
+              "ScriptDuration": 0.816501,
+              "LayoutDuration": 0.621411,
+              "RecalcStyleDuration": 2.12333,
+              "TaskDuration": 3.918833,
+              "LayoutCount": 14008,
+              "RecalcStyleCount": 14014
+            },
+            "heapAfterGc": 113708876,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4220.089459000001,
+            "readsDiagnostic": {
+              "ready": {
+                "calls": 801,
+                "totalMs": 1293.4000001251698,
+                "p95Ms": 2.2999999970197678
+              },
+              "rects": {
+                "calls": 800,
+                "totalMs": 507.7999999895692,
+                "p95Ms": 1.5
+              },
+              "bbox": {
+                "calls": 12800,
+                "totalMs": 1284.7999999895692,
+                "p95Ms": 0.20000000298023224
+              }
+            },
+            "metrics": {
+              "ScriptDuration": 0.691303,
+              "LayoutDuration": 0.559796,
+              "RecalcStyleDuration": 2.4036469999999994,
+              "TaskDuration": 4.186605,
+              "LayoutCount": 14006,
+              "RecalcStyleCount": 14011
+            },
+            "heapAfterGc": 114438168,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "after",
+      "mode": "diagnostic",
+      "label": "reads-after-1",
+      "report": {
+        "recordedAt": "2026-10-21T20:39:01.668Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5412",
+        "sampled": false,
+        "readDiagnostic": true,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3745.6536670000005,
+            "readsDiagnostic": {
+              "bbox": {
+                "calls": 13405,
+                "totalMs": 1903.999999962747,
+                "p95Ms": 1.6999999955296516
+              },
+              "ready": {
+                "calls": 1003,
+                "totalMs": 3.7999999970197678,
+                "p95Ms": 0
+              },
+              "rects": {
+                "calls": 800,
+                "totalMs": 826.6000001356006,
+                "p95Ms": 1.3000000044703484
+              }
+            },
+            "metrics": {
+              "ScriptDuration": 0.785802,
+              "LayoutDuration": 0.574942,
+              "RecalcStyleDuration": 2.035461,
+              "TaskDuration": 3.711971,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13613
+            },
+            "heapAfterGc": 113734068,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4629.0989580000005,
+            "readsDiagnostic": {
+              "rects": {
+                "calls": 800,
+                "totalMs": 1115.7999999076128,
+                "p95Ms": 1.7000000029802322
+              },
+              "bbox": {
+                "calls": 12800,
+                "totalMs": 2279.6999997869134,
+                "p95Ms": 2.1999999955296516
+              },
+              "ready": {
+                "calls": 801,
+                "totalMs": 3.2000000178813934,
+                "p95Ms": 0
+              }
+            },
+            "metrics": {
+              "ScriptDuration": 0.6859510000000001,
+              "LayoutDuration": 0.564079,
+              "RecalcStyleDuration": 2.7034520000000004,
+              "TaskDuration": 4.597429999999999,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13608
+            },
+            "heapAfterGc": 114487520,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "after",
+      "mode": "diagnostic",
+      "label": "reads-after-2",
+      "report": {
+        "recordedAt": "2026-10-21T20:39:12.795Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5412",
+        "sampled": false,
+        "readDiagnostic": true,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3886.8386660000006,
+            "readsDiagnostic": {
+              "bbox": {
+                "calls": 13405,
+                "totalMs": 1917.6000000089407,
+                "p95Ms": 1.6000000014901161
+              },
+              "ready": {
+                "calls": 1003,
+                "totalMs": 3.600000023841858,
+                "p95Ms": 0
+              },
+              "rects": {
+                "calls": 800,
+                "totalMs": 870.7000000998378,
+                "p95Ms": 1.5
+              }
+            },
+            "metrics": {
+              "ScriptDuration": 0.851856,
+              "LayoutDuration": 0.609162,
+              "RecalcStyleDuration": 2.048781,
+              "TaskDuration": 3.848723,
+              "LayoutCount": 13607,
+              "RecalcStyleCount": 13614
+            },
+            "heapAfterGc": 113757852,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4233.771041999999,
+            "readsDiagnostic": {
+              "rects": {
+                "calls": 800,
+                "totalMs": 1010.8999999761581,
+                "p95Ms": 1.5
+              },
+              "bbox": {
+                "calls": 12800,
+                "totalMs": 2089.5000001192093,
+                "p95Ms": 2
+              },
+              "ready": {
+                "calls": 801,
+                "totalMs": 2.6999999955296516,
+                "p95Ms": 0
+              }
+            },
+            "metrics": {
+              "ScriptDuration": 0.6856019999999999,
+              "LayoutDuration": 0.544089,
+              "RecalcStyleDuration": 2.4312590000000003,
+              "TaskDuration": 4.1941,
+              "LayoutCount": 13606,
+              "RecalcStyleCount": 13612
+            },
+            "heapAfterGc": 114478312,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    },
+    {
+      "variant": "before",
+      "mode": "diagnostic",
+      "label": "reads-before-2",
+      "report": {
+        "recordedAt": "2026-10-21T20:39:23.811Z",
+        "commit": "2d09779e0217762c8bf050082e63dc430ad16b00",
+        "chromium": "156.0.8078.4",
+        "node": "v24.16.0",
+        "platform": "darwin",
+        "kernel": "27.0.0",
+        "cpu": "Apple M1",
+        "placements": 1000,
+        "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+        "origin": "http://127.0.0.1:5411",
+        "sampled": false,
+        "readDiagnostic": true,
+        "fileQuery": "direct",
+        "samplingIntervalUs": null,
+        "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling changes timing; do not compare it as normal latency. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+        "results": [
+          {
+            "phase": "cold",
+            "elapsedMs": 3641.2078749999996,
+            "readsDiagnostic": {
+              "ready": {
+                "calls": 1003,
+                "totalMs": 1080.1000000536442,
+                "p95Ms": 1.8999999985098839
+              },
+              "bbox": {
+                "calls": 13405,
+                "totalMs": 1147.500000141561,
+                "p95Ms": 0.20000000298023224
+              },
+              "rects": {
+                "calls": 800,
+                "totalMs": 426.3000000268221,
+                "p95Ms": 1.3999999985098839
+              }
+            },
+            "metrics": {
+              "ScriptDuration": 0.750542,
+              "LayoutDuration": 0.570736,
+              "RecalcStyleDuration": 1.955254,
+              "TaskDuration": 3.608216,
+              "LayoutCount": 14008,
+              "RecalcStyleCount": 14014
+            },
+            "heapAfterGc": 113674372,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          },
+          {
+            "phase": "reload",
+            "elapsedMs": 4842.485958000001,
+            "readsDiagnostic": {
+              "ready": {
+                "calls": 801,
+                "totalMs": 1570.8000000938773,
+                "p95Ms": 2.8000000044703484
+              },
+              "rects": {
+                "calls": 800,
+                "totalMs": 587.8000000491738,
+                "p95Ms": 1.7999999970197678
+              },
+              "bbox": {
+                "calls": 12800,
+                "totalMs": 1431.4000000357628,
+                "p95Ms": 0.20000000298023224
+              }
+            },
+            "metrics": {
+              "ScriptDuration": 0.697921,
+              "LayoutDuration": 0.5828129999999999,
+              "RecalcStyleDuration": 2.87269,
+              "TaskDuration": 4.814933,
+              "LayoutCount": 14007,
+              "RecalcStyleCount": 14008
+            },
+            "heapAfterGc": 114429284,
+            "originals": [
+              {
+                "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+                "bytes": 33491
+              },
+              {
+                "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+                "bytes": 33492
+              },
+              {
+                "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+                "bytes": 33523
+              },
+              {
+                "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+                "bytes": 33392
+              }
+            ],
+            "oldUrlsRevoked": [true, true, true, true],
+            "textCount": 400,
+            "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea"
+          }
+        ]
+      }
+    }
+  ]
+}

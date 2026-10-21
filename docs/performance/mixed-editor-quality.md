@@ -534,3 +534,9 @@ I5jの`9a2119a`から、独立段落／行の書込→読取を同期の段階�
 ## I5m：可測定性判定の矩形取得削減（2026-10-22）
 
 workの`dba09f2`から、`withSvgTextMeasure`の可測定性判定だけを限定試作した。同じMac／Chrome156の1000配置で通常前後各4run、getter診断各2run。getClientRectsは800→0回になったが、通常平均は初回3328.6→3343.4ms、再読込3917.2→3934.9ms（ともに約＋0.45%）で範囲が重なり、**試作は不採用**。当時はpush／PR作成せず、2026-10-22の追加指示で記録のみを小さいdocs PRへ公開する。試作source・testは元へ戻した。[条件・hidden保護・表・限界](i5m-measurability-dedupe.md)と[集計値](i5m-measurability-dedupe-results.json)を参照。
+
+<a id="font-probe-order-i5n"></a>
+
+## I5n：font準備取得とprobe書込の順序（2026-10-22）
+
+PR #3マージ後のwork `2d09779`から、初回font準備取得を同期文字計測直後・probe片付け前へ移す限定試作を行った。同じMac M1／Chrome156／1920×1080／mixed-1000の通常前後各4runで、平均は初回3821.4→3781.9ms（−1.03%）、再読込4756.3→4533.7ms（−4.68%）。範囲が重なり、最後の組で逆転し、基準側の変動も大きいため、**明確な全体短縮を確認できず不採用**。別runのgetter診断ではfont取得内の時間が減る一方、他の読取内の時間が増えた。試作アプリ・テストは戻し、記録のみ保存する。[変更範囲・採否・検証](i5n-font-probe-order.md)と[集計JSON](i5n-font-probe-order-results.json)を参照。I5mの記録公開は別の[PR #5](https://github.com/tyaro/temp-scada/pull/5)で行う。
