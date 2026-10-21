@@ -1,0 +1,540 @@
+{
+  "status": "not adopted: no clear latency reduction; no I5m push/PR; candidate source restored after capture and exported as patch",
+  "dateJst": "2026-10-22",
+  "branch": "perf/i5m-measurability-dedupe",
+  "baseCommit": "dba09f2",
+  "ignoredStatusCommit": "4c41c77",
+  "pr3ConflictResolutionCommit": "492a389e0353c112a7f50b63105a7c2549181328",
+  "environment": {
+    "chromium": "156.0.8078.4",
+    "node": "v24.16.0",
+    "platform": "darwin",
+    "kernel": "27.0.0",
+    "cpu": "Apple M1"
+  },
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "provenance": {
+    "sourceSha256": "e9a43486b19f23cb68ce8cdb0c0d02500078f50f6bd7a43520c5456a36ba31f3",
+    "baselineBuildSha256": "11b895e329e31cf9da4eddca68dfc68e18730cbcde21b1748e5cd68462785272",
+    "candidateBuildSha256": "ad0197797f2bf027a1785da7cf892377c5a163e17a907476c6361ee575613169",
+    "diagnosticClientSha256": "cfe4748d128377e74fb5beb21f09968b854231142c3ddc2900c3a26ab054efb6",
+    "candidatePatchSha256": "1a515f57873aed8e40dd92406f77ebfc898183f79f736a94160f74012220b64e",
+    "browserTestSha256": "af78b3e0fb781bfede0b37da2756007cd6c12fc601caf9d617e6cb26c67689e1"
+  },
+  "method": "Same fixture bytes and Chrome156; normal before/after each 4 fresh-browser runs in before-after-after-before-after-before-before-after order. Diagnostic before-after-after-before, each 2 fresh-browser runs. Native Element.getClientRects wrapper only records SVGSVGElement receivers during import; return/receiver/args/errors forwarded. Diagnostic times are not normal-latency observations. No queue, metrics cache or asynchronous measurement. Rendered SVG svg/g ancestor display checks plus current checkVisibility can bypass a duplicate geometry query; unknown/nonrendering SVG ancestors, shadow tree, missing/throwing API, display:contents and ambiguous visibility retain the native legacy check. Existing transforms/font/measurement location/cleanup unchanged.",
+  "fixture": {
+    "placements": 1000,
+    "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+    "textCount": 400,
+    "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea",
+    "all24ImportProjectionsEqual": true,
+    "originals": [
+      {
+        "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+        "bytes": 33491
+      },
+      {
+        "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+        "bytes": 33492
+      },
+      {
+        "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+        "bytes": 33523
+      },
+      {
+        "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+        "bytes": 33392
+      }
+    ],
+    "oldUrlsRevoked": true,
+    "temporaryHosts": 0,
+    "pageErrors": 0
+  },
+  "normalSummary": [
+    {
+      "phase": "cold",
+      "before": {
+        "runs": 4,
+        "meanMs": 3328.56864575,
+        "minMs": 3264.2068750000003,
+        "maxMs": 3401.1377909999997
+      },
+      "after": {
+        "runs": 4,
+        "meanMs": 3343.4075732500005,
+        "minMs": 3301.4423750000005,
+        "maxMs": 3405.9399169999997
+      },
+      "deltaPercent": 0.44580506155242894
+    },
+    {
+      "phase": "reload",
+      "before": {
+        "runs": 4,
+        "meanMs": 3917.18996875,
+        "minMs": 3807.9302500000003,
+        "maxMs": 4105.175042
+      },
+      "after": {
+        "runs": 4,
+        "meanMs": 3934.9392497500007,
+        "minMs": 3875.163791000001,
+        "maxMs": 4005.589000000001
+      },
+      "deltaPercent": 0.4531125919753354
+    }
+  ],
+  "runs": [
+    {
+      "label": "normal-before-1",
+      "variant": "before",
+      "mode": "normal",
+      "recordedAt": "2026-10-21T18:51:25.746Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3401.1377909999997,
+          "metrics": {
+            "ScriptDuration": 0.694886,
+            "LayoutDuration": 0.519149,
+            "RecalcStyleDuration": 1.814361,
+            "TaskDuration": 3.358085,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14015
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 3807.9302500000003,
+          "metrics": {
+            "ScriptDuration": 0.6061500000000001,
+            "LayoutDuration": 0.4899220000000001,
+            "RecalcStyleDuration": 2.162402,
+            "TaskDuration": 3.7736770000000006,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-after-1",
+      "variant": "after",
+      "mode": "normal",
+      "recordedAt": "2026-10-21T18:51:34.957Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3301.4423750000005,
+          "metrics": {
+            "ScriptDuration": 0.675152,
+            "LayoutDuration": 0.504742,
+            "RecalcStyleDuration": 1.802918,
+            "TaskDuration": 3.262338,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14014
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 3875.163791000001,
+          "metrics": {
+            "ScriptDuration": 0.608517,
+            "LayoutDuration": 0.49854299999999996,
+            "RecalcStyleDuration": 2.2544449999999996,
+            "TaskDuration": 3.834187,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-after-2",
+      "variant": "after",
+      "mode": "normal",
+      "recordedAt": "2026-10-21T18:51:44.131Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3405.9399169999997,
+          "metrics": {
+            "ScriptDuration": 0.695646,
+            "LayoutDuration": 0.518081,
+            "RecalcStyleDuration": 1.848895,
+            "TaskDuration": 3.3654830000000002,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14014
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 3890.6273330000004,
+          "metrics": {
+            "ScriptDuration": 0.606538,
+            "LayoutDuration": 0.507443,
+            "RecalcStyleDuration": 2.2394289999999994,
+            "TaskDuration": 3.848206,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14010
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-before-2",
+      "variant": "before",
+      "mode": "normal",
+      "recordedAt": "2026-10-21T18:51:53.274Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3335.38025,
+          "metrics": {
+            "ScriptDuration": 0.678853,
+            "LayoutDuration": 0.51499,
+            "RecalcStyleDuration": 1.822172,
+            "TaskDuration": 3.3052159999999997,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14013
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 3902.2357079999992,
+          "metrics": {
+            "ScriptDuration": 0.610056,
+            "LayoutDuration": 0.50207,
+            "RecalcStyleDuration": 2.2710789999999994,
+            "TaskDuration": 3.8639520000000003,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-after-3",
+      "variant": "after",
+      "mode": "normal",
+      "recordedAt": "2026-10-21T18:52:02.507Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3349.1969590000003,
+          "metrics": {
+            "ScriptDuration": 0.664223,
+            "LayoutDuration": 0.499144,
+            "RecalcStyleDuration": 1.850607,
+            "TaskDuration": 3.311738,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14014
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 3968.376875000001,
+          "metrics": {
+            "ScriptDuration": 0.620411,
+            "LayoutDuration": 0.513796,
+            "RecalcStyleDuration": 2.307766,
+            "TaskDuration": 3.9342469999999996,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-before-3",
+      "variant": "before",
+      "mode": "normal",
+      "recordedAt": "2026-10-21T18:52:12.103Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3264.2068750000003,
+          "metrics": {
+            "ScriptDuration": 0.642319,
+            "LayoutDuration": 0.506402,
+            "RecalcStyleDuration": 1.786926,
+            "TaskDuration": 3.2216519999999997,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14014
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4105.175042,
+          "metrics": {
+            "ScriptDuration": 0.6149270000000001,
+            "LayoutDuration": 0.50853,
+            "RecalcStyleDuration": 2.4599580000000003,
+            "TaskDuration": 4.064280999999999,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-before-4",
+      "variant": "before",
+      "mode": "normal",
+      "recordedAt": "2026-10-21T18:52:21.403Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3313.549667,
+          "metrics": {
+            "ScriptDuration": 0.662966,
+            "LayoutDuration": 0.508223,
+            "RecalcStyleDuration": 1.810771,
+            "TaskDuration": 3.274994,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14014
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 3853.4188749999994,
+          "metrics": {
+            "ScriptDuration": 0.6013939999999999,
+            "LayoutDuration": 0.49944299999999997,
+            "RecalcStyleDuration": 2.231002,
+            "TaskDuration": 3.8144280000000004,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14012
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-after-4",
+      "variant": "after",
+      "mode": "normal",
+      "recordedAt": "2026-10-21T18:52:30.676Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3317.0510420000005,
+          "metrics": {
+            "ScriptDuration": 0.670612,
+            "LayoutDuration": 0.509009,
+            "RecalcStyleDuration": 1.820578,
+            "TaskDuration": 3.286055,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14013
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4005.589000000001,
+          "metrics": {
+            "ScriptDuration": 0.639391,
+            "LayoutDuration": 0.5155959999999999,
+            "RecalcStyleDuration": 2.320245,
+            "TaskDuration": 3.9658309999999997,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          }
+        }
+      ]
+    },
+    {
+      "label": "rects-before-1",
+      "variant": "before",
+      "mode": "diagnostic",
+      "recordedAt": "2026-10-21T18:52:39.795Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3370.4921249999998,
+          "metrics": {
+            "ScriptDuration": 0.678623,
+            "LayoutDuration": 0.50426,
+            "RecalcStyleDuration": 1.840445,
+            "TaskDuration": 3.3263230000000004,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14014
+          },
+          "rectsDiagnostic": {
+            "calls": 800,
+            "totalMs": 370.9999999925494,
+            "meanMs": 0.4637499999906868,
+            "p95Ms": 1.1000000014901161
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 3852.139583000001,
+          "metrics": {
+            "ScriptDuration": 0.6099350000000001,
+            "LayoutDuration": 0.4961,
+            "RecalcStyleDuration": 2.240964,
+            "TaskDuration": 3.8193649999999995,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          },
+          "rectsDiagnostic": {
+            "calls": 800,
+            "totalMs": 450.69999995082617,
+            "meanMs": 0.5633749999385327,
+            "p95Ms": 1.2000000029802322
+          }
+        }
+      ]
+    },
+    {
+      "label": "rects-after-1",
+      "variant": "after",
+      "mode": "diagnostic",
+      "recordedAt": "2026-10-21T18:52:49.327Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3449.853042,
+          "metrics": {
+            "ScriptDuration": 0.681896,
+            "LayoutDuration": 0.507837,
+            "RecalcStyleDuration": 1.911923,
+            "TaskDuration": 3.4424550000000003,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14015
+          },
+          "rectsDiagnostic": {
+            "calls": 0,
+            "totalMs": 0,
+            "meanMs": null,
+            "p95Ms": null
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4108.065916,
+          "metrics": {
+            "ScriptDuration": 0.620971,
+            "LayoutDuration": 0.505025,
+            "RecalcStyleDuration": 2.3785239999999996,
+            "TaskDuration": 4.08166,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14010
+          },
+          "rectsDiagnostic": {
+            "calls": 0,
+            "totalMs": 0,
+            "meanMs": null,
+            "p95Ms": null
+          }
+        }
+      ]
+    },
+    {
+      "label": "rects-after-2",
+      "variant": "after",
+      "mode": "diagnostic",
+      "recordedAt": "2026-10-21T18:52:58.766Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3465.583334,
+          "metrics": {
+            "ScriptDuration": 0.718061,
+            "LayoutDuration": 0.535677,
+            "RecalcStyleDuration": 1.884594,
+            "TaskDuration": 3.423317,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14014
+          },
+          "rectsDiagnostic": {
+            "calls": 0,
+            "totalMs": 0,
+            "meanMs": null,
+            "p95Ms": null
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4028.2282909999994,
+          "metrics": {
+            "ScriptDuration": 0.6228780000000002,
+            "LayoutDuration": 0.520978,
+            "RecalcStyleDuration": 2.345955,
+            "TaskDuration": 3.9920549999999997,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          },
+          "rectsDiagnostic": {
+            "calls": 0,
+            "totalMs": 0,
+            "meanMs": null,
+            "p95Ms": null
+          }
+        }
+      ]
+    },
+    {
+      "label": "rects-before-2",
+      "variant": "before",
+      "mode": "diagnostic",
+      "recordedAt": "2026-10-21T18:53:07.946Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3366.4000000000005,
+          "metrics": {
+            "ScriptDuration": 0.69036,
+            "LayoutDuration": 0.519151,
+            "RecalcStyleDuration": 1.842251,
+            "TaskDuration": 3.335954,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14014
+          },
+          "rectsDiagnostic": {
+            "calls": 800,
+            "totalMs": 395.49999998509884,
+            "meanMs": 0.4943749999813736,
+            "p95Ms": 1.1999999955296516
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 3842.1553330000006,
+          "metrics": {
+            "ScriptDuration": 0.621654,
+            "LayoutDuration": 0.5037739999999999,
+            "RecalcStyleDuration": 2.20424,
+            "TaskDuration": 3.8047980000000003,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          },
+          "rectsDiagnostic": {
+            "calls": 800,
+            "totalMs": 455.89999990165234,
+            "meanMs": 0.5698749998770655,
+            "p95Ms": 1.2999999970197678
+          }
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "unitPassed": 1214,
+    "browserPassed": 28,
+    "newBrowserCases": 2,
+    "typeErrors": 0,
+    "typeWarnings": 0,
+    "buildPassed": true,
+    "knownNineE2eFailuresUntouched": true
+  },
+  "limits": [
+    "Normal ranges overlap, 4 observations per side; no significance claim",
+    "Absolute baseline faster than prior I5l; only current paired before/after data compared",
+    "Rect getter elimination does not eliminate style/layout needed by other read APIs; exact cost migration not measured",
+    "SVG checkVisibility and CTMs alone were observed to accept display:none/nonrendering contexts; not used as sole positive proof",
+    "Only this Mac/Chrome156/fixture; no Windows/Linux/Hub/long run validation"
+  ]
+}
