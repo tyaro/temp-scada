@@ -287,3 +287,5 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 I5bでは`benchmark-editor.mjs --mixed`が同じ混在fixtureのドメイン費用を担当し、`benchmark-mixed-editor.mjs`の`keyBreakdown`はwarmup2回＋移動9回＋Undo9回のCDP差を保存する。`history.ts`の復元候補はrevision変更後に一度再検証し、snapshot入口と現在状態の検証を維持する。`history.test.ts`はUndo／Redo両方向の不正履歴・現在状態・revision上限での原子的拒否とテキスト正規化を追加確認する。[I5bの根拠](mixed-editor-quality.md)を参照。
 
 I5cの診断は`profile-editor.mjs`（独立したCPU採取）、`summarize-editor-profile.mjs`（source mapで関数開始位置へ対応、self／inclusive集計）、`compare-editor-load.mjs`（別buildをA/B/B/A順に読込）に分ける。通常の性能値は既存`benchmark-mixed-editor.mjs`へ残す。AppのProjectとproject-files controllerの確認待ちcandidateはルート差替えを監視し、ネストした変更通知には使わない。編集入口はcommand・history・adopt。`save-state.spec.ts`で確認置換後の編集・Undo／Redoと保存baselineも確認する。[I5cの根拠](mixed-editor-quality.md)を参照。
+
+I5dの一律隔離候補は速度面の採用条件を満たさず未採用。現行`TextPrimitive.svelte`は図面側の直接計測、`MultilineTextPrimitive.svelte`は既存の隔離計測を維持する。`profile-text-load.mjs`はnative getBBoxの場所別回数・時間、CDP差、全Text投影を診断する。`svg-text-measure.spec.ts`の単一行fit両テーマ288条件比較は残し、従来の寸法・非表示／失敗時解放も維持する。候補patchと比較専用Vite configは`docs/performance/i5d-*`へ保管し、通常buildでは読み込まない。[I5dの結果](mixed-editor-quality.md)を参照。

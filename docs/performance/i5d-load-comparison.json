@@ -1,0 +1,120 @@
+{
+  "recordedAt": "2026-10-21T05:59:21.814Z",
+  "chromium": "154.0.8037.57",
+  "placements": 1000,
+  "before": "http://localhost:5237",
+  "after": "http://127.0.0.1:5233",
+  "method": "A/B/B/A, fresh context per pair, cold load then one reload. Sequential; no local build/test/profiler. Driver-to-two-rAF including text layout and image decode. Durations in seconds overlap; samples too few for significance or a performance guarantee.",
+  "results": [
+    {
+      "label": "before",
+      "phase": "cold",
+      "elapsedMs": 14183.624592999999,
+      "metrics": {
+        "ScriptDuration": 2.933636,
+        "LayoutDuration": 1.876412,
+        "RecalcStyleDuration": 6.18198,
+        "TaskDuration": 14.152338,
+        "LayoutCount": 17609,
+        "RecalcStyleCount": 17611
+      }
+    },
+    {
+      "label": "before",
+      "phase": "reload",
+      "elapsedMs": 17971.333103,
+      "metrics": {
+        "ScriptDuration": 2.7619629999999997,
+        "LayoutDuration": 1.9322450000000002,
+        "RecalcStyleDuration": 7.145402999999999,
+        "TaskDuration": 17.903031,
+        "LayoutCount": 17606,
+        "RecalcStyleCount": 17608
+      }
+    },
+    {
+      "label": "after",
+      "phase": "cold",
+      "elapsedMs": 14292.419154000003,
+      "metrics": {
+        "ScriptDuration": 3.454998,
+        "LayoutDuration": 1.957036,
+        "RecalcStyleDuration": 5.309698,
+        "TaskDuration": 14.235536999999999,
+        "LayoutCount": 18010,
+        "RecalcStyleCount": 18013
+      }
+    },
+    {
+      "label": "after",
+      "phase": "reload",
+      "elapsedMs": 18298.624970999997,
+      "metrics": {
+        "ScriptDuration": 2.917033,
+        "LayoutDuration": 1.9188800000000001,
+        "RecalcStyleDuration": 6.552491000000001,
+        "TaskDuration": 18.274115000000002,
+        "LayoutCount": 18006,
+        "RecalcStyleCount": 18007
+      }
+    },
+    {
+      "label": "after",
+      "phase": "cold",
+      "elapsedMs": 14326.092552000002,
+      "metrics": {
+        "ScriptDuration": 2.933379,
+        "LayoutDuration": 1.963107,
+        "RecalcStyleDuration": 5.749351,
+        "TaskDuration": 14.2642,
+        "LayoutCount": 18010,
+        "RecalcStyleCount": 18013
+      }
+    },
+    {
+      "label": "after",
+      "phase": "reload",
+      "elapsedMs": 25576.427427999995,
+      "metrics": {
+        "ScriptDuration": 9.458662,
+        "LayoutDuration": 1.893933,
+        "RecalcStyleDuration": 7.631722000000001,
+        "TaskDuration": 25.555169999999997,
+        "LayoutCount": 18006,
+        "RecalcStyleCount": 18007
+      }
+    },
+    {
+      "label": "before",
+      "phase": "cold",
+      "elapsedMs": 12613.363467999996,
+      "metrics": {
+        "ScriptDuration": 2.580928,
+        "LayoutDuration": 1.618741,
+        "RecalcStyleDuration": 5.588155,
+        "TaskDuration": 12.563004,
+        "LayoutCount": 17609,
+        "RecalcStyleCount": 17611
+      }
+    },
+    {
+      "label": "before",
+      "phase": "reload",
+      "elapsedMs": 18897.564253000004,
+      "metrics": {
+        "ScriptDuration": 3.0551259999999996,
+        "LayoutDuration": 1.9321359999999999,
+        "RecalcStyleDuration": 7.862527,
+        "TaskDuration": 18.838451,
+        "LayoutCount": 17606,
+        "RecalcStyleCount": 17608
+      }
+    }
+  ],
+  "baselineCommit": "1e86740",
+  "builds": {
+    "before": "1e86740 TextPrimitive overlay, emitted index-Cu0HSCLM.js matches current baseline",
+    "candidate": "Only TextPrimitive routed through existing withSvgTextMeasure; patch and source hashes saved beside this JSON"
+  },
+  "decision": "Not adopted: this small A/B/B/A trial did not establish a production load benefit; observed reload means were worse. It does not establish statistical significance or a general regression guarantee."
+}

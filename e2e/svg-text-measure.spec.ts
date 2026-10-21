@@ -107,3 +107,89 @@ for (const theme of ["light", "dark"] as const)
       hosts: 0,
     });
   });
+
+for (const theme of ["light", "dark"] as const)
+  test(`single-line fitting preserves text, overflow and alignment metrics in ${theme}`, async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await chooseTheme(page, theme);
+    const result = await page.evaluate(async () => {
+      const measurePath = "/src/lib/svg-text-measure.ts",
+        layoutPath = "/src/lib/text-layout.ts";
+      const { withSvgTextMeasure } = await import(measurePath);
+      const { fitText, TEXT_FONT } = await import(layoutPath);
+      await document.fonts.ready;
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("width", "300");
+      svg.setAttribute("height", "200");
+      const source = document.createElementNS(
+        svg.namespaceURI,
+        "text",
+      ) as SVGTextElement;
+      source.setAttribute("font-family", TEXT_FONT);
+      source.setAttribute("font-size", "20");
+      source.style.whiteSpace = "normal";
+      svg.append(source);
+      document.body.append(svg);
+      let maxDifference = 0,
+        cases = 0;
+      try {
+        for (const scale of [1, 0.137]) {
+          svg.setAttribute("viewBox", `0 0 ${300 / scale} ${200 / scale}`);
+          for (const weight of ["normal", "bold"]) {
+            source.setAttribute("font-weight", weight);
+            for (const text of [
+              "  A B  ",
+              "原水ポンプ A",
+              "👩‍🔧設備",
+              "12345.67",
+              "",
+              "…",
+            ])
+              for (const numeric of [false, true])
+                for (const width of [4, 70, 300])
+                  for (const height of [10, 40]) {
+                    const before = fitText(
+                      text,
+                      width,
+                      height,
+                      20,
+                      numeric,
+                      (value: string) => {
+                        source.textContent = value;
+                        return source.getBBox();
+                      },
+                    );
+                    const after = withSvgTextMeasure(source, (measure: any) =>
+                      fitText(text, width, height, 20, numeric, measure),
+                    );
+                    if (
+                      before.text !== after.text ||
+                      before.mode !== after.mode
+                    )
+                      throw new Error(
+                        "Single-line fitting changed content or overflow mode",
+                      );
+                    for (const field of [
+                      "baseline",
+                      "left",
+                      "inkWidth",
+                    ] as const)
+                      maxDifference = Math.max(
+                        maxDifference,
+                        Math.abs(before[field] - after[field]),
+                      );
+                    cases++;
+                  }
+          }
+        }
+        return { maxDifference, cases };
+      } finally {
+        svg.remove();
+      }
+    });
+    expect(result.cases).toBe(288);
+    expect(result.maxDifference).toBeLessThan(0.0001);
+    await expect(page.locator("[data-text-measure-host]")).toHaveCount(0);
+  });

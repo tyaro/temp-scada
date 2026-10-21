@@ -195,3 +195,57 @@ node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-mixed-quality/m
 通常runの3規模とも保存Project・PNG4原本が一致し、1000配置の文字投影は変更前との許容差0.0001図面単位の比較を通過した。資産なし図面への3回の切替でlive URL／bytesは0、一時文字計測DOMも0。画面エラーは0。内容・資産寿命・履歴形式は維持する。1000配置は変更後も移動約497ms／Undo約410msで、十分な応答性能の完了とはしない。
 
 型チェックはエラー・警告なし、全単体1107件、保存状態・未適用入力・履歴・キー操作のブラウザ17件、本番buildが成功した。確認置換後の編集・Undo／Redoと読込baselineの表示も既存試験へ追加した。root差替え契約を維持できる範囲で採用し、実装`fa595d0`の[全体CI39548196580](https://github.com/tyaro/temp-scada/actions/runs/39548196580)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。Project0.33.0、Banto、Industrial SDK、認証の保留方針は不変。次はI5の読込時のstyle／文字計測費用を再評価し、適応的文字計測の回数やcacheを先行変更せずに対象を絞る。
+
+## I5d：単一行Textの計測診断と候補評価（変更見送り）
+
+I5c後の`1e86740`を基準に、読込時の`getBBox`を診断runnerで分類した。図面外の計測host内と図面内の呼出しを分け、native呼出しの経過時間（内部の同期style／layoutを含む）とCDP差を記録する。wrapperによる診断負荷があるため、通常の読込速度として扱わない。記録は初回読込と同一図面の再読込の2回で、合計やCDP指標からSvelte時間を差し引かない。
+
+1000配置の再読込は、複数行Textの隔離済み呼出し14,000回、図面内の単一行Textが2,400回だった。ソース内のnative呼出し元も`TextPrimitive.svelte`と既存`svg-text-measure.ts`に限られ、少ない図面内呼出しが大きなnative時間を使っていた。両テーマ等の計測を変えず、まずこの残る図面内probeを減らす。
+
+候補は`TextPrimitive.svelte`から既存`withSvgTextMeasure`へ接続するだけ。static単一行・数値／Quality・機器プロパティ・共有Symbolの共通描画が対象になる。`fitText`の省略規則、数値overflow、元の文字列、SVGのfont／座標変換、非表示時の再試行、font loadingdone／loadingerror時の再計測、finallyでのprobe解放を維持する。文字計測回数・cache・描画済み結果の保持・Project／Undo形式は変えない。Shadow DOMや別documentはこの区切りでは導入しない。
+
+単一行fitの両テーマ比較を追加し、SVG倍率2種・weight2種・6文字列・numeric2種・width3種・height2種の288条件ずつで、従来の図面内計測と文字列／表示モード一致、baseline／left／inkWidthの誤差0.0001図面単位未満を要求する。既存の変換・寸法・失敗時解放、text-style・複数行・設備メタデータのブラウザ回帰も実行する。
+
+```sh
+source scripts/cloud-env.sh
+# source map不要。通常buildのpreviewを別ターミナルで起動する。
+node apps/banto-scada/scripts/profile-text-load.mjs /tmp/scada-mixed-quality/mixed-1000.bantoscada /tmp/scada-text-load.json 1000
+```
+
+診断runnerのURLは既定`http://127.0.0.1:5233`、`SCADA_PROFILE_URL`で変更する。wrapperは通常実装を呼び出した戻り値をそのまま返し、browser context終了で破棄する。本番アプリへ診断分岐は追加しない。400個の実描画Textのmode・原文ラベル・描画内容・x／yも保存し、複数行だけでなくSymbol内の単一行も前後比較する。
+
+### I5dの結果と見送り判断
+
+[診断の生JSON・400 Textの投影](performance/i5d-text-load.json)、[候補の通常benchmark](performance/i5d-browser-candidate.json)、[候補patch](performance/i5d-candidate.patch)を保存した。初回の採取と再読込で呼出し数に差があるため、同じ再読込同士を比べる。基準は隔離14,000回＋図面側2,400回、候補は隔離16,400回＋図面側0回で、合計は変わらなかった。native累積は基準約1.86秒＋4.08秒、候補約3.13秒。ただしCDPのLayoutCountは17,606→18,006で、host作成・transform／fontの準備などnative以外の費用もある。native getBBox時間だけから全体の改善とは判断しない。
+
+400 Textのmode・原文ラベル・描画文字列は一致し、x／yの最大差は`0.00000095367431640625`図面単位で、許容差0.0001以内だった。関連ブラウザ35件、型チェック、単体1107件、本番buildは候補コードで成功した。静的単一行・数値overflow・font再読込・非表示復帰・共有Symbol／ミニマップ／埋込／小窓・機器情報を含む。保存Project・PNG原本、一時DOMとURL解放も通常benchmarkの3規模すべてで成功した。表示品質の比較は通過したが、速度面の採用条件は別に判断する。
+
+表は[基準の通常JSON](performance/i5c-browser-after.json)→[候補JSON](performance/i5d-browser-candidate.json)の中央値、ms。各1run、再読込／保存3回、移動／Undo9回、連続移動50回。未変更の保存等にも大きな差があり、統計的な有意性は評価していない。
+
+| 操作             | 100配置（基準→候補） | 500配置（基準→候補） | 1000配置（基準→候補） |
+| ---------------- | -------------------: | -------------------: | --------------------: |
+| 再読込           |            1015→1863 |            5138→7956 |           26973→18945 |
+| キー移動         |                46→63 |              165→220 |               497→402 |
+| Undo             |                36→57 |              166→166 |               410→402 |
+| 50履歴を積む移動 |                57→61 |              197→257 |               514→472 |
+| 保存download開始 |                60→56 |               82→173 |               161→365 |
+
+1000配置だけで判断せず、[同じ時間帯のA/B/B/A](performance/i5d-load-comparison.json)も実行した。再読込は順に基準18.0秒／候補18.3秒／候補25.6秒／基準18.9秒。各2件の算術平均は基準約18.4秒、候補約21.9秒だった。初回読込も基準14.2／12.6秒、候補14.3／14.3秒で、改善を示していない。この少数試験で一般的な悪化率を断定はしないが、一律置換を採用する根拠も得られなかった。
+
+**今回の候補は採用せず、`TextPrimitive.svelte`は基準の直接計測へ戻した。** 現行アプリの文字描画・Project・Undo・保存・上流SDKは変わらない。診断runner、単一行fitの寸法比較試験、候補patchと結果を残す。I5dは切分けと候補評価の完了であり、読込性能の改善完了ではない。次は計測回数やcacheを先に変えず、style／layoutを局所化する別の候補を設計し、同じ寸法・資源・読込の基準で比較する。
+
+### 候補を作業ファイルへ書き戻さず再現する
+
+[比較専用config](performance/i5d-comparison-vite.config.mjs)は、既定ではTextPrimitiveの`1e86740`をVite loaderへ渡す。`SCADA_I5D_TEXT_SOURCE`指定時は再生した候補ファイルを使う。このI5d評価時の他の実行時コードが同じツリー上で使い、任意の将来版を丸ごと基準へ戻すconfigとしては扱わない。通常のvite.configや本番起動からは読み込まない。
+
+```sh
+source scripts/cloud-env.sh
+git show 1e86740:apps/banto-scada/src/lib/TextPrimitive.svelte > /tmp/scada-i5d-original.svelte
+patch --output /tmp/scada-i5d-candidate.svelte /tmp/scada-i5d-original.svelte docs/performance/i5d-candidate.patch
+pnpm --filter banto-scada exec vite build --config ../../docs/performance/i5d-comparison-vite.config.mjs --outDir /tmp/scada-i5d-before
+SCADA_I5D_TEXT_SOURCE=/tmp/scada-i5d-candidate.svelte pnpm --filter banto-scada exec vite build --config ../../docs/performance/i5d-comparison-vite.config.mjs --outDir /tmp/scada-i5d-candidate
+# それぞれのpreviewをport 5237／5238で別途起動して比較する。
+node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-mixed-quality/mixed-1000.bantoscada /tmp/scada-i5d-comparison.json http://localhost:5237 http://localhost:5238 1000
+```
+
+patch再生後のsource hashは診断JSONの候補hashと一致した。作業ツリーのTextPrimitiveは変更しない。source overlayも含めて独立した出力先を使い、build・test・CPU採取を通常benchmarkと並走させない。候補を戻した最終差分でも寸法試験4件・通常build・整形が成功した。候補を作業ファイルへ戻さずconfigからbuildする再現手順も実行し、通常buildのmain assetは基準の`index-Cu0HSCLM.js`へ戻っている。全体CIはPush後に確認する。

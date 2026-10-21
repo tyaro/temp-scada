@@ -106,3 +106,7 @@ I5bの次の区切りは残るScriptDurationのサンプリングprofile。Node�
 ### I5c進捗：Project snapshotの監視境界（2026-10-21）
 
 [profile・通常計測・交互比較](mixed-editor-quality.md)を根拠に、AppのProjectと確認待ちreplacementだけを`$state.raw`へ変更した。command・history・adoptで検証済みの独立候補を作りルート更新する契約を維持する。深い監視の費用を減らし、通常runの1000配置の移動中央値は約697→497ms、Undo約655→410msだった。一方、再読込には大きなばらつきがあり、通常runの増加を交互比較で一貫して再現したとは判断しない。読込非劣化や十分な大図面性能の保証ではない。保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ17件・型・buildが成功した。実装`fa595d0`の[全体CI39548196580](https://github.com/tyaro/temp-scada/actions/runs/39548196580)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。検証・履歴・保存モデル・上流SDKの契約は変更しない。
+
+### I5d進捗：単一行Text計測の切分けと候補評価（2026-10-21）
+
+[診断・寸法比較・通常benchmark・A/B/B/A](mixed-editor-quality.md)を保存した。残る図面側の単一行計測2,400回を隔離へ移す候補は400 Textの表示一致を満たしたが、交互比較の再読込平均は基準約18.4秒／候補約21.9秒で、改善を確認できなかった。一律置換は採用せず、アプリのTextPrimitiveは基準へ戻した。診断runnerと単一行fitの両テーマ288条件比較試験、再生できる候補patchを資産として残す。候補では関連ブラウザ35件・単体1107件・型・buildと保存／原本／資源解放が成功した。最終差分の全体CIはPush後に確認する。現行の保存契約・上流依存は不変で、I5dは評価の区切り。次はstyle／layout局所化の別候補を設計し、cacheや計測省略は先行しない。

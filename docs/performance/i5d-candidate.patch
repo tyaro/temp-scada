@@ -1,0 +1,39 @@
+diff --git a/apps/banto-scada/src/lib/TextPrimitive.svelte b/apps/banto-scada/src/lib/TextPrimitive.svelte
+index ef49ad3..5caf515 100644
+--- a/apps/banto-scada/src/lib/TextPrimitive.svelte
++++ b/apps/banto-scada/src/lib/TextPrimitive.svelte
+@@ -5,6 +5,7 @@
+   } from "./equipment-property";
+   import type { SlotProvenance } from "./read-slot-session";
+   import { onMount, untrack } from "svelte";
++  import { withSvgTextMeasure } from "./svg-text-measure";
+   import { fitText, TEXT_FONT, type TextLayout } from "./text-layout";
+   import type { TextStyle } from "./project";
+   let {
+@@ -100,24 +101,11 @@
+     if (!element) return;
+     untrack(() => {
+       try {
+-        const fitted = fitText(
+-          text,
+-          width,
+-          height,
+-          style.fontSize,
+-          numeric,
+-          (value) => {
+-            element.textContent = value;
+-            const box = element.getBBox();
+-            if (value.trim() && box.width === 0 && box.height === 0)
+-              throw new Error("Text is not measurable while hidden");
+-            return box;
+-          },
++        const fitted = withSvgTextMeasure(element, (measure) =>
++          fitText(text, width, height, style.fontSize, numeric, measure),
+         );
+-        element.textContent = "";
+         layout = { ...fitted, key: snapshot };
+       } catch {
+-        element.textContent = "";
+         layout = null;
+       }
+     });
