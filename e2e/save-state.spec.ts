@@ -240,6 +240,23 @@ test("replacement validates first, preserves changes on cancel and exports befor
   await expect(page.getByTestId("save-state")).toContainText(
     "読込後の変更なし",
   );
+  // After a confirmed replacement, edits must still refresh drawing and dirty
+  // state; Undo must return to this file's baseline, not the previous Project.
+  await button("Rectangle を追加").click();
+  await expect(svg.locator("[data-object-id]")).toHaveCount(4);
+  await expect(page.getByTestId("save-state")).toContainText(
+    "未書き出しの変更あり",
+  );
+  await button("元に戻す").click();
+  await expect(svg.locator("[data-object-id]")).toHaveCount(3);
+  await expect(page.getByTestId("save-state")).toContainText(
+    "読込後の変更なし",
+  );
+  await button("やり直す").click();
+  await expect(svg.locator("[data-object-id]")).toHaveCount(4);
+  await expect(page.getByTestId("save-state")).toContainText(
+    "未書き出しの変更あり",
+  );
 });
 test("a failed export never marks the current project as written out", async ({
   page,

@@ -1204,7 +1204,9 @@
   function moveSelection(event: SubmitEvent) {
     submitForm(event);
   }
-  let project = $state(parseProject(JSON.stringify(sample)));
+  // Commands, history and file adoption replace the whole validated Project.
+  // Track that boundary, not every field in the immutable document snapshot.
+  let project = $state.raw(parseProject(JSON.stringify(sample)));
   let assetStore = $state.raw(new AssetStore());
   const assetImages = $derived(
     new Map(

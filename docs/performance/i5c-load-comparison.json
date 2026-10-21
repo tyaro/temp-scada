@@ -1,0 +1,116 @@
+{
+  "recordedAt": "2026-10-21T05:09:42.849Z",
+  "chromium": "154.0.8037.57",
+  "placements": 1000,
+  "before": "http://localhost:5235",
+  "after": "http://127.0.0.1:5233",
+  "method": "A/B/B/A, fresh context per pair, cold load then one reload. Sequential; no local build/test/profiler. Driver-to-two-rAF including text layout and image decode. Durations in seconds overlap; samples too few for significance or a performance guarantee.",
+  "results": [
+    {
+      "label": "before",
+      "phase": "cold",
+      "elapsedMs": 25776.546334,
+      "metrics": {
+        "ScriptDuration": 4.084971,
+        "LayoutDuration": 3.437579,
+        "RecalcStyleDuration": 12.648302,
+        "TaskDuration": 25.746444,
+        "LayoutCount": 17609,
+        "RecalcStyleCount": 17611
+      }
+    },
+    {
+      "label": "before",
+      "phase": "reload",
+      "elapsedMs": 29085.141073000003,
+      "metrics": {
+        "ScriptDuration": 6.254646999999999,
+        "LayoutDuration": 3.064474,
+        "RecalcStyleDuration": 10.857204000000001,
+        "TaskDuration": 29.021001000000002,
+        "LayoutCount": 17606,
+        "RecalcStyleCount": 17608
+      }
+    },
+    {
+      "label": "after",
+      "phase": "cold",
+      "elapsedMs": 16910.377313999998,
+      "metrics": {
+        "ScriptDuration": 3.513285,
+        "LayoutDuration": 2.358989,
+        "RecalcStyleDuration": 7.361631,
+        "TaskDuration": 16.893066,
+        "LayoutCount": 17609,
+        "RecalcStyleCount": 17611
+      }
+    },
+    {
+      "label": "after",
+      "phase": "reload",
+      "elapsedMs": 24924.280981000004,
+      "metrics": {
+        "ScriptDuration": 3.7348439999999994,
+        "LayoutDuration": 2.2826490000000006,
+        "RecalcStyleDuration": 11.370333000000002,
+        "TaskDuration": 24.899134000000004,
+        "LayoutCount": 17606,
+        "RecalcStyleCount": 17608
+      }
+    },
+    {
+      "label": "after",
+      "phase": "cold",
+      "elapsedMs": 15239.707022000002,
+      "metrics": {
+        "ScriptDuration": 3.157349,
+        "LayoutDuration": 2.02871,
+        "RecalcStyleDuration": 6.781892,
+        "TaskDuration": 15.184614,
+        "LayoutCount": 17609,
+        "RecalcStyleCount": 17611
+      }
+    },
+    {
+      "label": "after",
+      "phase": "reload",
+      "elapsedMs": 21365.189801,
+      "metrics": {
+        "ScriptDuration": 3.277888,
+        "LayoutDuration": 2.496788,
+        "RecalcStyleDuration": 8.021737000000002,
+        "TaskDuration": 21.347152,
+        "LayoutCount": 17606,
+        "RecalcStyleCount": 17608
+      }
+    },
+    {
+      "label": "before",
+      "phase": "cold",
+      "elapsedMs": 15482.192784000013,
+      "metrics": {
+        "ScriptDuration": 3.871245,
+        "LayoutDuration": 1.905467,
+        "RecalcStyleDuration": 6.966686,
+        "TaskDuration": 15.455931,
+        "LayoutCount": 17609,
+        "RecalcStyleCount": 17611
+      }
+    },
+    {
+      "label": "before",
+      "phase": "reload",
+      "elapsedMs": 16590.582672999997,
+      "metrics": {
+        "ScriptDuration": 3.0727130000000002,
+        "LayoutDuration": 1.343692,
+        "RecalcStyleDuration": 6.241032,
+        "TaskDuration": 16.518357,
+        "LayoutCount": 17606,
+        "RecalcStyleCount": 17608
+      }
+    }
+  ],
+  "baselineBuild": "a17fc96 App.svelte and project-files.svelte.ts via Vite loader overlay; other runtime source unchanged. Emitted main index-fjnTrq38.js matches baseline profile asset.",
+  "candidateBuild": "a17fc96 plus raw root state in those two files; main index-Cu0HSCLM.js. Source hashes in i5c-profiles.json."
+}

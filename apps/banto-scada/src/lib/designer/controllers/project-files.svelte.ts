@@ -29,7 +29,9 @@ export function createProjectFilesController(host: ProjectFilesHost) {
   let baselineSource = $state<"sample" | "file" | "download" | "new">("sample");
   let lastExport = $state<string | null>(null);
   let projectChanged = $derived(projectContent(host.project) !== baseline);
-  let replacement = $state<{
+  // A pending file candidate is replaced as a unit; keep its Project unproxied
+  // when the user confirms adoption into App's immutable document state.
+  let replacement = $state.raw<{
     project: Project;
     source: "sample" | "file" | "new";
     store: AssetStore;

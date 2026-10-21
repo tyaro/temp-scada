@@ -1,0 +1,2524 @@
+{
+  "baselineCommit": "a17fc96",
+  "candidate": "Baseline plus raw root state for App Project and project-files pending replacement; domain validation/history unchanged.",
+  "sourceHashes": {
+    "apps/banto-scada/src/App.svelte": {
+      "before": "d114069f84b6ee0e616f9aa9d579d49631aa0cad6577d4cc94eb1a66033cca46",
+      "after": "e09ca69cb7f26116821e5292a0b4e312fc43d3664b10457331dfe67227ed8df9"
+    },
+    "apps/banto-scada/src/lib/designer/controllers/project-files.svelte.ts": {
+      "before": "8179b585d3ac93ccf6f0d17984b4509d7bfbca87cf448051625751c1c80cebdd",
+      "after": "9b97ff401c30518ef9ef52aebf1e8a7a27c9e5606b85c3768ca891a18dc99b34"
+    }
+  },
+  "before": {
+    "metadata": {
+      "recordedAt": "2026-10-21T04:55:21.715Z",
+      "chromium": "154.0.8037.57",
+      "placements": 1000,
+      "package": "/tmp/scada-i5b-browser-after/mixed-1000.bantoscada",
+      "samplingIntervalUs": 1000,
+      "keysPerProfile": 9,
+      "method": "Separate CPU diagnostic with source maps; includes browser/driver idle and coordination. Not an input-latency benchmark."
+    },
+    "move": {
+      "trace": "i5c-before-move.cpuprofile",
+      "sha256": "02abc8a8507db8a30015e6844e1eeec22c37233deffa9e495c9f97814363535c",
+      "summary": {
+        "method": "Sample-weighted microseconds, including idle/driver work. Inclusive paths overlap; do not sum. Source positions are function starts, not individual hot statements. Sampling is not exact function timing.",
+        "samples": 8228,
+        "sampledUs": 10129570,
+        "sourceMapHashes": {
+          "browser-ZwEudKjr.js.map": "2f0b2baee4c573cdd9578fcf405e1e13ccb0e050a31a691caea23716ede51c3c",
+          "index-fjnTrq38.js.map": "f683613d7d11a82dddfa7483063e6c0ccb1e4965a015054e5ad96ab57981267b"
+        },
+        "mappedFunctions": 973,
+        "filesBySelf": [
+          {
+            "label": "(native)",
+            "selfUs": 3462683,
+            "inclusiveUs": 10129570
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js",
+            "selfUs": 1938390,
+            "inclusiveUs": 5106702
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts",
+            "selfUs": 735709,
+            "inclusiveUs": 932033
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js",
+            "selfUs": 670548,
+            "inclusiveUs": 914295
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js",
+            "selfUs": 529132,
+            "inclusiveUs": 530226
+          },
+          {
+            "label": "http://localhost:5234/assets/index-fjnTrq38.js",
+            "selfUs": 457504,
+            "inclusiveUs": 1475893
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts",
+            "selfUs": 432839,
+            "inclusiveUs": 783550
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js",
+            "selfUs": 309877,
+            "inclusiveUs": 5479308
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor.ts",
+            "selfUs": 194266,
+            "inclusiveUs": 1052455
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Primitive.svelte",
+            "selfUs": 171351,
+            "inclusiveUs": 530809
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js",
+            "selfUs": 161420,
+            "inclusiveUs": 168649
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js",
+            "selfUs": 159144,
+            "inclusiveUs": 2999410
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte",
+            "selfUs": 107925,
+            "inclusiveUs": 1673140
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js",
+            "selfUs": 106623,
+            "inclusiveUs": 530548
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js",
+            "selfUs": 98813,
+            "inclusiveUs": 102065
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Renderer.svelte",
+            "selfUs": 84873,
+            "inclusiveUs": 245581
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js",
+            "selfUs": 63872,
+            "inclusiveUs": 1249739
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js",
+            "selfUs": 58806,
+            "inclusiveUs": 58806
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/ObjectPainting.svelte",
+            "selfUs": 52650,
+            "inclusiveUs": 170223
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js",
+            "selfUs": 46972,
+            "inclusiveUs": 641227
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/LayerTree.svelte",
+            "selfUs": 34814,
+            "inclusiveUs": 159520
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/opacity.ts",
+            "selfUs": 28031,
+            "inclusiveUs": 71828
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/layer-tree.ts",
+            "selfUs": 26591,
+            "inclusiveUs": 51920
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor/model-helpers.ts",
+            "selfUs": 18955,
+            "inclusiveUs": 37483
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/drafts.svelte.ts",
+            "selfUs": 18583,
+            "inclusiveUs": 18583
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/rotation.ts",
+            "selfUs": 18174,
+            "inclusiveUs": 31968
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/SymbolThumbnail.svelte",
+            "selfUs": 16246,
+            "inclusiveUs": 55472
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/slot-status-summary.ts",
+            "selfUs": 13728,
+            "inclusiveUs": 29593
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/TextPrimitive.svelte",
+            "selfUs": 13324,
+            "inclusiveUs": 50327
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js",
+            "selfUs": 12010,
+            "inclusiveUs": 12010
+          }
+        ],
+        "filesByInclusive": [
+          {
+            "label": "(native)",
+            "selfUs": 3462683,
+            "inclusiveUs": 10129570
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/task.js",
+            "selfUs": 0,
+            "inclusiveUs": 5480402
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js",
+            "selfUs": 309877,
+            "inclusiveUs": 5479308
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js",
+            "selfUs": 1938390,
+            "inclusiveUs": 5106702
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js",
+            "selfUs": 159144,
+            "inclusiveUs": 2999410
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte",
+            "selfUs": 107925,
+            "inclusiveUs": 1673140
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js",
+            "selfUs": 5229,
+            "inclusiveUs": 1530978
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/CanvasWorkspace.svelte",
+            "selfUs": 3350,
+            "inclusiveUs": 1526980
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/bindings/shared.js",
+            "selfUs": 0,
+            "inclusiveUs": 1524668
+          },
+          {
+            "label": "http://localhost:5234/assets/index-fjnTrq38.js",
+            "selfUs": 457504,
+            "inclusiveUs": 1475893
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/history.ts",
+            "selfUs": 1172,
+            "inclusiveUs": 1436365
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js",
+            "selfUs": 63872,
+            "inclusiveUs": 1249739
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor.ts",
+            "selfUs": 194266,
+            "inclusiveUs": 1052455
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts",
+            "selfUs": 735709,
+            "inclusiveUs": 932033
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js",
+            "selfUs": 670548,
+            "inclusiveUs": 914295
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts",
+            "selfUs": 432839,
+            "inclusiveUs": 783550
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js",
+            "selfUs": 46972,
+            "inclusiveUs": 641227
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Primitive.svelte",
+            "selfUs": 171351,
+            "inclusiveUs": 530809
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js",
+            "selfUs": 106623,
+            "inclusiveUs": 530548
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js",
+            "selfUs": 529132,
+            "inclusiveUs": 530226
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/controllers/project-files.svelte.ts",
+            "selfUs": 0,
+            "inclusiveUs": 518527
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Renderer.svelte",
+            "selfUs": 84873,
+            "inclusiveUs": 245581
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/ObjectPainting.svelte",
+            "selfUs": 52650,
+            "inclusiveUs": 170223
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js",
+            "selfUs": 161420,
+            "inclusiveUs": 168649
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/LayerTree.svelte",
+            "selfUs": 34814,
+            "inclusiveUs": 159520
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js",
+            "selfUs": 98813,
+            "inclusiveUs": 102065
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/opacity.ts",
+            "selfUs": 28031,
+            "inclusiveUs": 71828
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/controllers/layer-tree.svelte.ts",
+            "selfUs": 747,
+            "inclusiveUs": 69357
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js",
+            "selfUs": 58806,
+            "inclusiveUs": 58806
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/SymbolThumbnail.svelte",
+            "selfUs": 16246,
+            "inclusiveUs": 55472
+          }
+        ],
+        "functionsBySelf": [
+          {
+            "label": "(native):0:-1 (program)",
+            "selfUs": 2211541,
+            "inclusiveUs": 2211541
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:220:16 update_reaction",
+            "selfUs": 714243,
+            "inclusiveUs": 4963245
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:373:9 remove_reaction",
+            "selfUs": 590743,
+            "inclusiveUs": 590743
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts:5:47 ",
+            "selfUs": 503369,
+            "inclusiveUs": 695742
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:354:9 mark_reactions",
+            "selfUs": 416921,
+            "inclusiveUs": 416921
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js:170:2 get",
+            "selfUs": 414243,
+            "inclusiveUs": 640169
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:540:16 get",
+            "selfUs": 406635,
+            "inclusiveUs": 1314027
+          },
+          {
+            "label": "(native):0:-1 (garbage collector)",
+            "selfUs": 361089,
+            "inclusiveUs": 361089
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:397:16 serializeProject",
+            "selfUs": 307713,
+            "inclusiveUs": 562786
+          },
+          {
+            "label": "(native):5816:20 query",
+            "selfUs": 303035,
+            "inclusiveUs": 374907
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:493:1 #v",
+            "selfUs": 246805,
+            "inclusiveUs": 5252676
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts:3:16 projectContent",
+            "selfUs": 214196,
+            "inclusiveUs": 932033
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor.ts:32:16 applyCommand",
+            "selfUs": 175183,
+            "inclusiveUs": 1052455
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js:390:16 update_derived",
+            "selfUs": 159144,
+            "inclusiveUs": 2999410
+          },
+          {
+            "label": "(native):0:-1 (idle)",
+            "selfUs": 133448,
+            "inclusiveUs": 133448
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:195:9 schedule_possible_effect_self_invalidation",
+            "selfUs": 123127,
+            "inclusiveUs": 123127
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js:206:2 getOwnPropertyDescriptor",
+            "selfUs": 115573,
+            "inclusiveUs": 121328
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:191:16 parseProject",
+            "selfUs": 113407,
+            "inclusiveUs": 412379
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:189:16 internal_set",
+            "selfUs": 112211,
+            "inclusiveUs": 530226
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js:343:2 ownKeys",
+            "selfUs": 107716,
+            "inclusiveUs": 109921
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js:76:12 #a",
+            "selfUs": 106790,
+            "inclusiveUs": 108346
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:154:16 is_dirty",
+            "selfUs": 102552,
+            "inclusiveUs": 1026264
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:1221:11 collectAssets",
+            "selfUs": 92058,
+            "inclusiveUs": 92058
+          },
+          {
+            "label": "http://localhost:5234/assets/index-fjnTrq38.js:24:1200 ",
+            "selfUs": 89523,
+            "inclusiveUs": 146285
+          },
+          {
+            "label": "(native):0:-1 querySelectorAll",
+            "selfUs": 71872,
+            "inclusiveUs": 71872
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js:158:16 set_attribute",
+            "selfUs": 66750,
+            "inclusiveUs": 102065
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js:392:2 ",
+            "selfUs": 63872,
+            "inclusiveUs": 1237318
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js:60:1 block",
+            "selfUs": 63186,
+            "inclusiveUs": 530548
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js:4:16 equals",
+            "selfUs": 58806,
+            "inclusiveUs": 58806
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:290:1 #g",
+            "selfUs": 58342,
+            "inclusiveUs": 58342
+          }
+        ],
+        "functionsByInclusive": [
+          {
+            "label": "(native):0:-1 (root)",
+            "selfUs": 0,
+            "inclusiveUs": 10129570
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:329:1 #_",
+            "selfUs": 4730,
+            "inclusiveUs": 5479308
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:668:1 flush",
+            "selfUs": 0,
+            "inclusiveUs": 5479308
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:920:4 queue_micro_task",
+            "selfUs": 0,
+            "inclusiveUs": 5479308
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/task.js:7:9 run_micro_tasks",
+            "selfUs": 0,
+            "inclusiveUs": 5479308
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/task.js:19:2 ",
+            "selfUs": 0,
+            "inclusiveUs": 5479308
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:493:1 #v",
+            "selfUs": 246805,
+            "inclusiveUs": 5252676
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:220:16 update_reaction",
+            "selfUs": 714243,
+            "inclusiveUs": 4963245
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js:390:16 update_derived",
+            "selfUs": 159144,
+            "inclusiveUs": 2999410
+          },
+          {
+            "label": "(native):0:-1 (program)",
+            "selfUs": 2211541,
+            "inclusiveUs": 2211541
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js:60:10 target_handler",
+            "selfUs": 2825,
+            "inclusiveUs": 1529897
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/CanvasWorkspace.svelte:526:11 key",
+            "selfUs": 1038,
+            "inclusiveUs": 1524668
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js:66:10 without_reactive_context",
+            "selfUs": 0,
+            "inclusiveUs": 1524668
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/bindings/shared.js:39:16 without_reactive_context",
+            "selfUs": 0,
+            "inclusiveUs": 1524668
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:1168:4 transition",
+            "selfUs": 2212,
+            "inclusiveUs": 1523630
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:730:11 transition",
+            "selfUs": 0,
+            "inclusiveUs": 1523630
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:1164:11 nudgeSelection",
+            "selfUs": 0,
+            "inclusiveUs": 1523630
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:1668:11 edit",
+            "selfUs": 4263,
+            "inclusiveUs": 1514666
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/history.ts:11:16 recordEdit",
+            "selfUs": 1172,
+            "inclusiveUs": 1436365
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:540:16 get",
+            "selfUs": 406635,
+            "inclusiveUs": 1314027
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js:392:2 ",
+            "selfUs": 63872,
+            "inclusiveUs": 1237318
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor.ts:32:16 applyCommand",
+            "selfUs": 175183,
+            "inclusiveUs": 1052455
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:154:16 is_dirty",
+            "selfUs": 102552,
+            "inclusiveUs": 1026264
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts:3:16 projectContent",
+            "selfUs": 214196,
+            "inclusiveUs": 932033
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor.ts:63:9 finish",
+            "selfUs": 19083,
+            "inclusiveUs": 726228
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts:5:47 ",
+            "selfUs": 503369,
+            "inclusiveUs": 695742
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js:170:2 get",
+            "selfUs": 414243,
+            "inclusiveUs": 640169
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:373:9 remove_reaction",
+            "selfUs": 590743,
+            "inclusiveUs": 590743
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:397:16 serializeProject",
+            "selfUs": 307713,
+            "inclusiveUs": 562786
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js:268:14 block",
+            "selfUs": 29282,
+            "inclusiveUs": 551934
+          }
+        ]
+      }
+    },
+    "undo": {
+      "trace": "i5c-before-undo.cpuprofile",
+      "sha256": "715b6761b9a9d6f14886d14a1bb1fa0d3ca64b2daa6f118b5b653e5e3424f39f",
+      "summary": {
+        "method": "Sample-weighted microseconds, including idle/driver work. Inclusive paths overlap; do not sum. Source positions are function starts, not individual hot statements. Sampling is not exact function timing.",
+        "samples": 6383,
+        "sampledUs": 7770047,
+        "sourceMapHashes": {
+          "browser-ZwEudKjr.js.map": "2f0b2baee4c573cdd9578fcf405e1e13ccb0e050a31a691caea23716ede51c3c",
+          "index-fjnTrq38.js.map": "f683613d7d11a82dddfa7483063e6c0ccb1e4965a015054e5ad96ab57981267b"
+        },
+        "mappedFunctions": 845,
+        "filesBySelf": [
+          {
+            "label": "(native)",
+            "selfUs": 2994453,
+            "inclusiveUs": 7770047
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js",
+            "selfUs": 1402978,
+            "inclusiveUs": 4043463
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js",
+            "selfUs": 509368,
+            "inclusiveUs": 666898
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js",
+            "selfUs": 464428,
+            "inclusiveUs": 464428
+          },
+          {
+            "label": "http://localhost:5234/assets/index-fjnTrq38.js",
+            "selfUs": 394675,
+            "inclusiveUs": 1230913
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts",
+            "selfUs": 307601,
+            "inclusiveUs": 533434
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js",
+            "selfUs": 252911,
+            "inclusiveUs": 4354344
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts",
+            "selfUs": 213788,
+            "inclusiveUs": 367750
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte",
+            "selfUs": 173317,
+            "inclusiveUs": 868071
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js",
+            "selfUs": 157954,
+            "inclusiveUs": 165627
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js",
+            "selfUs": 150037,
+            "inclusiveUs": 2316383
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Primitive.svelte",
+            "selfUs": 139728,
+            "inclusiveUs": 371143
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js",
+            "selfUs": 65633,
+            "inclusiveUs": 442648
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js",
+            "selfUs": 64954,
+            "inclusiveUs": 64954
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js",
+            "selfUs": 55575,
+            "inclusiveUs": 55575
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Renderer.svelte",
+            "selfUs": 52688,
+            "inclusiveUs": 160308
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/ObjectPainting.svelte",
+            "selfUs": 49130,
+            "inclusiveUs": 127783
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js",
+            "selfUs": 46605,
+            "inclusiveUs": 963567
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js",
+            "selfUs": 45629,
+            "inclusiveUs": 515668
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/opacity.ts",
+            "selfUs": 26351,
+            "inclusiveUs": 53027
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor/model-helpers.ts",
+            "selfUs": 24050,
+            "inclusiveUs": 56204
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/LayerTree.svelte",
+            "selfUs": 18402,
+            "inclusiveUs": 109074
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/history.ts",
+            "selfUs": 16987,
+            "inclusiveUs": 547117
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/slot-status-summary.ts",
+            "selfUs": 15676,
+            "inclusiveUs": 23411
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/layer-tree.ts",
+            "selfUs": 14301,
+            "inclusiveUs": 37434
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/rotation.ts",
+            "selfUs": 12399,
+            "inclusiveUs": 18185
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/TextPrimitive.svelte",
+            "selfUs": 12126,
+            "inclusiveUs": 47220
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js",
+            "selfUs": 11223,
+            "inclusiveUs": 11223
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/MultilineTextPrimitive.svelte",
+            "selfUs": 9473,
+            "inclusiveUs": 30460
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/SymbolThumbnail.svelte",
+            "selfUs": 7884,
+            "inclusiveUs": 34356
+          }
+        ],
+        "filesByInclusive": [
+          {
+            "label": "(native)",
+            "selfUs": 2994453,
+            "inclusiveUs": 7770047
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js",
+            "selfUs": 252911,
+            "inclusiveUs": 4354344
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/task.js",
+            "selfUs": 0,
+            "inclusiveUs": 4354344
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js",
+            "selfUs": 1402978,
+            "inclusiveUs": 4043463
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js",
+            "selfUs": 150037,
+            "inclusiveUs": 2316383
+          },
+          {
+            "label": "http://localhost:5234/assets/index-fjnTrq38.js",
+            "selfUs": 394675,
+            "inclusiveUs": 1230913
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js",
+            "selfUs": 46605,
+            "inclusiveUs": 963567
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte",
+            "selfUs": 173317,
+            "inclusiveUs": 868071
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js",
+            "selfUs": 509368,
+            "inclusiveUs": 666898
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js",
+            "selfUs": 1162,
+            "inclusiveUs": 637755
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/bindings/shared.js",
+            "selfUs": 0,
+            "inclusiveUs": 636593
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/history.ts",
+            "selfUs": 16987,
+            "inclusiveUs": 547117
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts",
+            "selfUs": 307601,
+            "inclusiveUs": 533434
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js",
+            "selfUs": 45629,
+            "inclusiveUs": 515668
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js",
+            "selfUs": 464428,
+            "inclusiveUs": 464428
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js",
+            "selfUs": 65633,
+            "inclusiveUs": 442648
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Primitive.svelte",
+            "selfUs": 139728,
+            "inclusiveUs": 371143
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/controllers/project-files.svelte.ts",
+            "selfUs": 1055,
+            "inclusiveUs": 368805
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts",
+            "selfUs": 213788,
+            "inclusiveUs": 367750
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js",
+            "selfUs": 157954,
+            "inclusiveUs": 165627
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Renderer.svelte",
+            "selfUs": 52688,
+            "inclusiveUs": 160308
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/ObjectPainting.svelte",
+            "selfUs": 49130,
+            "inclusiveUs": 127783
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/LayerTree.svelte",
+            "selfUs": 18402,
+            "inclusiveUs": 109074
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js",
+            "selfUs": 64954,
+            "inclusiveUs": 64954
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor/model-helpers.ts",
+            "selfUs": 24050,
+            "inclusiveUs": 56204
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js",
+            "selfUs": 55575,
+            "inclusiveUs": 55575
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/controllers/layer-tree.svelte.ts",
+            "selfUs": 2605,
+            "inclusiveUs": 53399
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/opacity.ts",
+            "selfUs": 26351,
+            "inclusiveUs": 53027
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/TextPrimitive.svelte",
+            "selfUs": 12126,
+            "inclusiveUs": 47220
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/SymbolLibrary.svelte",
+            "selfUs": 0,
+            "inclusiveUs": 46205
+          }
+        ],
+        "functionsBySelf": [
+          {
+            "label": "(native):0:-1 (program)",
+            "selfUs": 1950146,
+            "inclusiveUs": 1950146
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:220:16 update_reaction",
+            "selfUs": 494416,
+            "inclusiveUs": 3926113
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:373:9 remove_reaction",
+            "selfUs": 465978,
+            "inclusiveUs": 465978
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:354:9 mark_reactions",
+            "selfUs": 392779,
+            "inclusiveUs": 392779
+          },
+          {
+            "label": "(native):0:-1 (garbage collector)",
+            "selfUs": 337683,
+            "inclusiveUs": 337683
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js:170:2 get",
+            "selfUs": 317277,
+            "inclusiveUs": 478493
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:540:16 get",
+            "selfUs": 280721,
+            "inclusiveUs": 1036983
+          },
+          {
+            "label": "(native):5816:20 query",
+            "selfUs": 262703,
+            "inclusiveUs": 325920
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:397:16 serializeProject",
+            "selfUs": 219990,
+            "inclusiveUs": 353330
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts:3:16 projectContent",
+            "selfUs": 213788,
+            "inclusiveUs": 367750
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:493:1 #v",
+            "selfUs": 209100,
+            "inclusiveUs": 4091673
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:1221:11 collectAssets",
+            "selfUs": 159838,
+            "inclusiveUs": 159838
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js:390:16 update_derived",
+            "selfUs": 150037,
+            "inclusiveUs": 2316383
+          },
+          {
+            "label": "(native):0:-1 (idle)",
+            "selfUs": 132407,
+            "inclusiveUs": 132407
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js:76:12 #a",
+            "selfUs": 112933,
+            "inclusiveUs": 112933
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js:206:2 getOwnPropertyDescriptor",
+            "selfUs": 110183,
+            "inclusiveUs": 120610
+          },
+          {
+            "label": "http://localhost:5234/assets/index-fjnTrq38.js:24:1200 ",
+            "selfUs": 99767,
+            "inclusiveUs": 134931
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:195:9 schedule_possible_effect_self_invalidation",
+            "selfUs": 85920,
+            "inclusiveUs": 85920
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:191:16 parseProject",
+            "selfUs": 85400,
+            "inclusiveUs": 270819
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:154:16 is_dirty",
+            "selfUs": 75943,
+            "inclusiveUs": 802739
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:189:16 internal_set",
+            "selfUs": 71649,
+            "inclusiveUs": 463298
+          },
+          {
+            "label": "(native):0:-1 querySelectorAll",
+            "selfUs": 63217,
+            "inclusiveUs": 63217
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js:4:16 equals",
+            "selfUs": 54449,
+            "inclusiveUs": 54449
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js:392:2 ",
+            "selfUs": 45448,
+            "inclusiveUs": 957057
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js:186:1 ensure",
+            "selfUs": 45021,
+            "inclusiveUs": 164482
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js:158:16 set_attribute",
+            "selfUs": 43458,
+            "inclusiveUs": 62700
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Primitive.svelte:114:11 arrowPoints",
+            "selfUs": 43280,
+            "inclusiveUs": 56725
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:290:1 #g",
+            "selfUs": 41572,
+            "inclusiveUs": 41572
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js:60:1 block",
+            "selfUs": 39905,
+            "inclusiveUs": 442648
+          },
+          {
+            "label": "(native):3:674 validate21",
+            "selfUs": 37831,
+            "inclusiveUs": 45331
+          }
+        ],
+        "functionsByInclusive": [
+          {
+            "label": "(native):0:-1 (root)",
+            "selfUs": 0,
+            "inclusiveUs": 7770047
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:329:1 #_",
+            "selfUs": 1161,
+            "inclusiveUs": 4354344
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:668:1 flush",
+            "selfUs": 0,
+            "inclusiveUs": 4354344
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:920:4 queue_micro_task",
+            "selfUs": 0,
+            "inclusiveUs": 4354344
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/task.js:7:9 run_micro_tasks",
+            "selfUs": 0,
+            "inclusiveUs": 4354344
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/task.js:19:2 ",
+            "selfUs": 0,
+            "inclusiveUs": 4354344
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:493:1 #v",
+            "selfUs": 209100,
+            "inclusiveUs": 4091673
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:220:16 update_reaction",
+            "selfUs": 494416,
+            "inclusiveUs": 3926113
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js:390:16 update_derived",
+            "selfUs": 150037,
+            "inclusiveUs": 2316383
+          },
+          {
+            "label": "(native):0:-1 (program)",
+            "selfUs": 1950146,
+            "inclusiveUs": 1950146
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:540:16 get",
+            "selfUs": 280721,
+            "inclusiveUs": 1036983
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js:392:2 ",
+            "selfUs": 45448,
+            "inclusiveUs": 957057
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:154:16 is_dirty",
+            "selfUs": 75943,
+            "inclusiveUs": 802739
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js:60:10 target_handler",
+            "selfUs": 1162,
+            "inclusiveUs": 637755
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:798:11 shortcut",
+            "selfUs": 3899,
+            "inclusiveUs": 636593
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js:66:10 without_reactive_context",
+            "selfUs": 0,
+            "inclusiveUs": 636593
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/bindings/shared.js:39:16 without_reactive_context",
+            "selfUs": 0,
+            "inclusiveUs": 636593
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:757:11 travel",
+            "selfUs": 1367,
+            "inclusiveUs": 632694
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/history.ts:28:16 travelHistory",
+            "selfUs": 16987,
+            "inclusiveUs": 547117
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js:170:2 get",
+            "selfUs": 317277,
+            "inclusiveUs": 478493
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:373:9 remove_reaction",
+            "selfUs": 465978,
+            "inclusiveUs": 465978
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:189:16 internal_set",
+            "selfUs": 71649,
+            "inclusiveUs": 463298
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js:268:14 block",
+            "selfUs": 29336,
+            "inclusiveUs": 457142
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js:60:1 block",
+            "selfUs": 39905,
+            "inclusiveUs": 442648
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:354:9 mark_reactions",
+            "selfUs": 392779,
+            "inclusiveUs": 392779
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/controllers/project-files.svelte.ts:31:6 $.derived",
+            "selfUs": 1055,
+            "inclusiveUs": 368805
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts:3:16 projectContent",
+            "selfUs": 213788,
+            "inclusiveUs": 367750
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:397:16 serializeProject",
+            "selfUs": 219990,
+            "inclusiveUs": 353330
+          },
+          {
+            "label": "(native):1:0 ",
+            "selfUs": 0,
+            "inclusiveUs": 349985
+          },
+          {
+            "label": "(native):364:10 evaluate",
+            "selfUs": 0,
+            "inclusiveUs": 349985
+          }
+        ]
+      }
+    }
+  },
+  "after": {
+    "metadata": {
+      "recordedAt": "2026-10-21T05:06:26.072Z",
+      "chromium": "154.0.8037.57",
+      "placements": 1000,
+      "package": "/tmp/scada-i5b-browser-after/mixed-1000.bantoscada",
+      "samplingIntervalUs": 1000,
+      "keysPerProfile": 9,
+      "method": "Separate CPU diagnostic with source maps; includes browser/driver idle and coordination. Not an input-latency benchmark."
+    },
+    "move": {
+      "trace": "i5c-after-move.cpuprofile",
+      "sha256": "bb1eca6d22c84b6147c12b1cb2b27ddde04e749d19076ea2ba3b6fd837f9a1ba",
+      "summary": {
+        "method": "Sample-weighted microseconds, including idle/driver work. Inclusive paths overlap; do not sum. Source positions are function starts, not individual hot statements. Sampling is not exact function timing.",
+        "samples": 3784,
+        "sampledUs": 5017987,
+        "sourceMapHashes": {
+          "browser-ZwEudKjr.js.map": "2f0b2baee4c573cdd9578fcf405e1e13ccb0e050a31a691caea23716ede51c3c",
+          "index-Cu0HSCLM.js.map": "2342010f40d453122031214fcadc9b44e7eeef602e9e3815002f2c4d9e0f095c"
+        },
+        "mappedFunctions": 470,
+        "filesBySelf": [
+          {
+            "label": "(native)",
+            "selfUs": 2521840,
+            "inclusiveUs": 5017987
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js",
+            "selfUs": 463816,
+            "inclusiveUs": 1836419
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js",
+            "selfUs": 362299,
+            "inclusiveUs": 365434
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts",
+            "selfUs": 315445,
+            "inclusiveUs": 315445
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts",
+            "selfUs": 252305,
+            "inclusiveUs": 510493
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js",
+            "selfUs": 197066,
+            "inclusiveUs": 2053708
+          },
+          {
+            "label": "http://localhost:5236/assets/index-Cu0HSCLM.js",
+            "selfUs": 171584,
+            "inclusiveUs": 525850
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js",
+            "selfUs": 115683,
+            "inclusiveUs": 122683
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte",
+            "selfUs": 89673,
+            "inclusiveUs": 829260
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js",
+            "selfUs": 51712,
+            "inclusiveUs": 58471
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Primitive.svelte",
+            "selfUs": 51349,
+            "inclusiveUs": 92183
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Renderer.svelte",
+            "selfUs": 50121,
+            "inclusiveUs": 116398
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js",
+            "selfUs": 47625,
+            "inclusiveUs": 259905
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js",
+            "selfUs": 43445,
+            "inclusiveUs": 358709
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js",
+            "selfUs": 40189,
+            "inclusiveUs": 40189
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor.ts",
+            "selfUs": 34492,
+            "inclusiveUs": 493899
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js",
+            "selfUs": 30793,
+            "inclusiveUs": 388440
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js",
+            "selfUs": 26247,
+            "inclusiveUs": 549534
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js",
+            "selfUs": 19149,
+            "inclusiveUs": 26431
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/LayerTree.svelte",
+            "selfUs": 18079,
+            "inclusiveUs": 39176
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/ObjectPainting.svelte",
+            "selfUs": 13294,
+            "inclusiveUs": 25448
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/TextPrimitive.svelte",
+            "selfUs": 10996,
+            "inclusiveUs": 18957
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/drafts.svelte.ts",
+            "selfUs": 9592,
+            "inclusiveUs": 9592
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js",
+            "selfUs": 6628,
+            "inclusiveUs": 6628
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/layer-tree.ts",
+            "selfUs": 6331,
+            "inclusiveUs": 6331
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/class.js",
+            "selfUs": 5561,
+            "inclusiveUs": 5561
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/opacity.ts",
+            "selfUs": 4712,
+            "inclusiveUs": 4712
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/geometric-groups.ts",
+            "selfUs": 4418,
+            "inclusiveUs": 4418
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/text-content.ts",
+            "selfUs": 4409,
+            "inclusiveUs": 4409
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/controllers/layer-tree.svelte.ts",
+            "selfUs": 3432,
+            "inclusiveUs": 16457
+          }
+        ],
+        "filesByInclusive": [
+          {
+            "label": "(native)",
+            "selfUs": 2521840,
+            "inclusiveUs": 5017987
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/task.js",
+            "selfUs": 0,
+            "inclusiveUs": 2056843
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js",
+            "selfUs": 197066,
+            "inclusiveUs": 2053708
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js",
+            "selfUs": 463816,
+            "inclusiveUs": 1836419
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte",
+            "selfUs": 89673,
+            "inclusiveUs": 829260
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/CanvasWorkspace.svelte",
+            "selfUs": 2204,
+            "inclusiveUs": 730078
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js",
+            "selfUs": 0,
+            "inclusiveUs": 727874
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/bindings/shared.js",
+            "selfUs": 0,
+            "inclusiveUs": 727874
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/history.ts",
+            "selfUs": 1100,
+            "inclusiveUs": 667202
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js",
+            "selfUs": 26247,
+            "inclusiveUs": 549534
+          },
+          {
+            "label": "http://localhost:5236/assets/index-Cu0HSCLM.js",
+            "selfUs": 171584,
+            "inclusiveUs": 525850
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts",
+            "selfUs": 252305,
+            "inclusiveUs": 510493
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor.ts",
+            "selfUs": 34492,
+            "inclusiveUs": 493899
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js",
+            "selfUs": 30793,
+            "inclusiveUs": 388440
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js",
+            "selfUs": 362299,
+            "inclusiveUs": 365434
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js",
+            "selfUs": 43445,
+            "inclusiveUs": 358709
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts",
+            "selfUs": 315445,
+            "inclusiveUs": 315445
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js",
+            "selfUs": 47625,
+            "inclusiveUs": 259905
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/controllers/project-files.svelte.ts",
+            "selfUs": 0,
+            "inclusiveUs": 192251
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js",
+            "selfUs": 115683,
+            "inclusiveUs": 122683
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Renderer.svelte",
+            "selfUs": 50121,
+            "inclusiveUs": 116398
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Primitive.svelte",
+            "selfUs": 51349,
+            "inclusiveUs": 92183
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js",
+            "selfUs": 51712,
+            "inclusiveUs": 58471
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js",
+            "selfUs": 40189,
+            "inclusiveUs": 40189
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/LayerTree.svelte",
+            "selfUs": 18079,
+            "inclusiveUs": 39176
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js",
+            "selfUs": 19149,
+            "inclusiveUs": 26431
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/ObjectPainting.svelte",
+            "selfUs": 13294,
+            "inclusiveUs": 25448
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/TextPrimitive.svelte",
+            "selfUs": 10996,
+            "inclusiveUs": 18957
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/controllers/layer-tree.svelte.ts",
+            "selfUs": 3432,
+            "inclusiveUs": 16457
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/actions.js",
+            "selfUs": 862,
+            "inclusiveUs": 11570
+          }
+        ],
+        "functionsBySelf": [
+          {
+            "label": "(native):0:-1 (program)",
+            "selfUs": 1562364,
+            "inclusiveUs": 1562364
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts:3:16 projectContent",
+            "selfUs": 315445,
+            "inclusiveUs": 315445
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:354:9 mark_reactions",
+            "selfUs": 275568,
+            "inclusiveUs": 275568
+          },
+          {
+            "label": "(native):0:-1 (idle)",
+            "selfUs": 263782,
+            "inclusiveUs": 263782
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:220:16 update_reaction",
+            "selfUs": 190203,
+            "inclusiveUs": 1765168
+          },
+          {
+            "label": "(native):5816:20 query",
+            "selfUs": 176717,
+            "inclusiveUs": 235235
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:540:16 get",
+            "selfUs": 151401,
+            "inclusiveUs": 302621
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:493:1 #v",
+            "selfUs": 148252,
+            "inclusiveUs": 1874255
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:397:16 serializeProject",
+            "selfUs": 143459,
+            "inclusiveUs": 341670
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:191:16 parseProject",
+            "selfUs": 103836,
+            "inclusiveUs": 364957
+          },
+          {
+            "label": "(native):0:-1 (garbage collector)",
+            "selfUs": 90626,
+            "inclusiveUs": 90626
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:189:16 internal_set",
+            "selfUs": 86731,
+            "inclusiveUs": 364319
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:1223:11 collectAssets",
+            "selfUs": 85045,
+            "inclusiveUs": 85045
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js:76:12 #a",
+            "selfUs": 84694,
+            "inclusiveUs": 85807
+          },
+          {
+            "label": "(native):5814:112 ",
+            "selfUs": 73051,
+            "inclusiveUs": 308286
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:195:9 schedule_possible_effect_self_invalidation",
+            "selfUs": 69311,
+            "inclusiveUs": 69311
+          },
+          {
+            "label": "(native):0:-1 querySelectorAll",
+            "selfUs": 58518,
+            "inclusiveUs": 58518
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:154:16 is_dirty",
+            "selfUs": 51630,
+            "inclusiveUs": 342521
+          },
+          {
+            "label": "(native):3:322 validate45",
+            "selfUs": 45739,
+            "inclusiveUs": 46830
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:290:1 #g",
+            "selfUs": 45326,
+            "inclusiveUs": 45326
+          },
+          {
+            "label": "(native):3:674 validate21",
+            "selfUs": 40989,
+            "inclusiveUs": 55786
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js:4:16 equals",
+            "selfUs": 40189,
+            "inclusiveUs": 40189
+          },
+          {
+            "label": "(native):3:356 validate41",
+            "selfUs": 39764,
+            "inclusiveUs": 39764
+          },
+          {
+            "label": "(native):3:774 validate20",
+            "selfUs": 36276,
+            "inclusiveUs": 243985
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js:158:16 set_attribute",
+            "selfUs": 35294,
+            "inclusiveUs": 57087
+          },
+          {
+            "label": "(native):0:-1 getScreenCTM",
+            "selfUs": 33823,
+            "inclusiveUs": 33823
+          },
+          {
+            "label": "(native):3:428 validate38",
+            "selfUs": 32760,
+            "inclusiveUs": 33841
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js:268:14 block",
+            "selfUs": 32309,
+            "inclusiveUs": 354002
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js:186:1 ensure",
+            "selfUs": 30989,
+            "inclusiveUs": 122683
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js:392:2 ",
+            "selfUs": 29680,
+            "inclusiveUs": 381535
+          }
+        ],
+        "functionsByInclusive": [
+          {
+            "label": "(native):0:-1 (root)",
+            "selfUs": 0,
+            "inclusiveUs": 5017987
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:329:1 #_",
+            "selfUs": 3488,
+            "inclusiveUs": 2053708
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:668:1 flush",
+            "selfUs": 0,
+            "inclusiveUs": 2053708
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:920:4 queue_micro_task",
+            "selfUs": 0,
+            "inclusiveUs": 2053708
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/task.js:19:2 ",
+            "selfUs": 0,
+            "inclusiveUs": 2053708
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:493:1 #v",
+            "selfUs": 148252,
+            "inclusiveUs": 1874255
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:220:16 update_reaction",
+            "selfUs": 190203,
+            "inclusiveUs": 1765168
+          },
+          {
+            "label": "(native):0:-1 (program)",
+            "selfUs": 1562364,
+            "inclusiveUs": 1562364
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/CanvasWorkspace.svelte:526:11 key",
+            "selfUs": 0,
+            "inclusiveUs": 727874
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js:66:10 without_reactive_context",
+            "selfUs": 0,
+            "inclusiveUs": 727874
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/bindings/shared.js:39:16 without_reactive_context",
+            "selfUs": 0,
+            "inclusiveUs": 727874
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js:60:10 target_handler",
+            "selfUs": 0,
+            "inclusiveUs": 727874
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:1168:4 transition",
+            "selfUs": 0,
+            "inclusiveUs": 726608
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:730:11 transition",
+            "selfUs": 0,
+            "inclusiveUs": 726608
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:1164:11 nudgeSelection",
+            "selfUs": 0,
+            "inclusiveUs": 726608
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:1670:11 edit",
+            "selfUs": 0,
+            "inclusiveUs": 725615
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/history.ts:11:16 recordEdit",
+            "selfUs": 1100,
+            "inclusiveUs": 667202
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor.ts:32:16 applyCommand",
+            "selfUs": 18672,
+            "inclusiveUs": 493899
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor.ts:63:9 finish",
+            "selfUs": 15820,
+            "inclusiveUs": 396268
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js:392:2 ",
+            "selfUs": 29680,
+            "inclusiveUs": 381535
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:191:16 parseProject",
+            "selfUs": 103836,
+            "inclusiveUs": 364957
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:189:16 internal_set",
+            "selfUs": 86731,
+            "inclusiveUs": 364319
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js:268:14 block",
+            "selfUs": 32309,
+            "inclusiveUs": 354002
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:154:16 is_dirty",
+            "selfUs": 51630,
+            "inclusiveUs": 342521
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:397:16 serializeProject",
+            "selfUs": 143459,
+            "inclusiveUs": 341670
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts:3:16 projectContent",
+            "selfUs": 315445,
+            "inclusiveUs": 315445
+          },
+          {
+            "label": "(native):364:10 evaluate",
+            "selfUs": 0,
+            "inclusiveUs": 313957
+          },
+          {
+            "label": "(native):1:1 ",
+            "selfUs": 0,
+            "inclusiveUs": 313957
+          },
+          {
+            "label": "(native):1:0 ",
+            "selfUs": 2178,
+            "inclusiveUs": 312722
+          },
+          {
+            "label": "(native):5597:9 _cached",
+            "selfUs": 0,
+            "inclusiveUs": 309452
+          }
+        ]
+      }
+    },
+    "undo": {
+      "trace": "i5c-after-undo.cpuprofile",
+      "sha256": "587a18b1fd45b2d527a624f75092c982614949419249bd79d39d10266b2f67d7",
+      "summary": {
+        "method": "Sample-weighted microseconds, including idle/driver work. Inclusive paths overlap; do not sum. Source positions are function starts, not individual hot statements. Sampling is not exact function timing.",
+        "samples": 4438,
+        "sampledUs": 5545775,
+        "sourceMapHashes": {
+          "browser-ZwEudKjr.js.map": "2f0b2baee4c573cdd9578fcf405e1e13ccb0e050a31a691caea23716ede51c3c",
+          "index-Cu0HSCLM.js.map": "2342010f40d453122031214fcadc9b44e7eeef602e9e3815002f2c4d9e0f095c"
+        },
+        "mappedFunctions": 652,
+        "filesBySelf": [
+          {
+            "label": "(native)",
+            "selfUs": 3115791,
+            "inclusiveUs": 5545775
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js",
+            "selfUs": 464862,
+            "inclusiveUs": 1926854
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js",
+            "selfUs": 409416,
+            "inclusiveUs": 411603
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js",
+            "selfUs": 251527,
+            "inclusiveUs": 2200556
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte",
+            "selfUs": 215081,
+            "inclusiveUs": 711009
+          },
+          {
+            "label": "http://localhost:5236/assets/index-Cu0HSCLM.js",
+            "selfUs": 205409,
+            "inclusiveUs": 590743
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts",
+            "selfUs": 165440,
+            "inclusiveUs": 389900
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js",
+            "selfUs": 113241,
+            "inclusiveUs": 122659
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts",
+            "selfUs": 78324,
+            "inclusiveUs": 78324
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js",
+            "selfUs": 76167,
+            "inclusiveUs": 77382
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Primitive.svelte",
+            "selfUs": 57273,
+            "inclusiveUs": 129129
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js",
+            "selfUs": 48642,
+            "inclusiveUs": 398771
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js",
+            "selfUs": 39112,
+            "inclusiveUs": 39112
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js",
+            "selfUs": 36742,
+            "inclusiveUs": 243359
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js",
+            "selfUs": 33748,
+            "inclusiveUs": 359404
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Renderer.svelte",
+            "selfUs": 30764,
+            "inclusiveUs": 85471
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js",
+            "selfUs": 29451,
+            "inclusiveUs": 481367
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/history.ts",
+            "selfUs": 20523,
+            "inclusiveUs": 407304
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js",
+            "selfUs": 20488,
+            "inclusiveUs": 26494
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/LayerTree.svelte",
+            "selfUs": 18785,
+            "inclusiveUs": 46442
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js",
+            "selfUs": 12317,
+            "inclusiveUs": 12317
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/MultilineTextPrimitive.svelte",
+            "selfUs": 11116,
+            "inclusiveUs": 12232
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/ObjectPainting.svelte",
+            "selfUs": 10352,
+            "inclusiveUs": 26905
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/TextPrimitive.svelte",
+            "selfUs": 8005,
+            "inclusiveUs": 19492
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/drafts.svelte.ts",
+            "selfUs": 6718,
+            "inclusiveUs": 6718
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/relative-layer-order.ts",
+            "selfUs": 5630,
+            "inclusiveUs": 5630
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/layer-tree.ts",
+            "selfUs": 4893,
+            "inclusiveUs": 4893
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/slot-status-summary.ts",
+            "selfUs": 4526,
+            "inclusiveUs": 4526
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/editor/model-helpers.ts",
+            "selfUs": 3869,
+            "inclusiveUs": 3869
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js",
+            "selfUs": 3718,
+            "inclusiveUs": 487381
+          }
+        ],
+        "filesByInclusive": [
+          {
+            "label": "(native)",
+            "selfUs": 3115791,
+            "inclusiveUs": 5545775
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/task.js",
+            "selfUs": 0,
+            "inclusiveUs": 2201699
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js",
+            "selfUs": 251527,
+            "inclusiveUs": 2200556
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js",
+            "selfUs": 464862,
+            "inclusiveUs": 1926854
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte",
+            "selfUs": 215081,
+            "inclusiveUs": 711009
+          },
+          {
+            "label": "http://localhost:5236/assets/index-Cu0HSCLM.js",
+            "selfUs": 205409,
+            "inclusiveUs": 590743
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js",
+            "selfUs": 3718,
+            "inclusiveUs": 487381
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/bindings/shared.js",
+            "selfUs": 0,
+            "inclusiveUs": 481482
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js",
+            "selfUs": 29451,
+            "inclusiveUs": 481367
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js",
+            "selfUs": 409416,
+            "inclusiveUs": 411603
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/history.ts",
+            "selfUs": 20523,
+            "inclusiveUs": 407304
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js",
+            "selfUs": 48642,
+            "inclusiveUs": 398771
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts",
+            "selfUs": 165440,
+            "inclusiveUs": 389900
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/deriveds.js",
+            "selfUs": 33748,
+            "inclusiveUs": 359404
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/if.js",
+            "selfUs": 36742,
+            "inclusiveUs": 243359
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Primitive.svelte",
+            "selfUs": 57273,
+            "inclusiveUs": 129129
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js",
+            "selfUs": 113241,
+            "inclusiveUs": 122659
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/Renderer.svelte",
+            "selfUs": 30764,
+            "inclusiveUs": 85471
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts",
+            "selfUs": 78324,
+            "inclusiveUs": 78324
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/controllers/project-files.svelte.ts",
+            "selfUs": 0,
+            "inclusiveUs": 78324
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js",
+            "selfUs": 76167,
+            "inclusiveUs": 77382
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/LayerTree.svelte",
+            "selfUs": 18785,
+            "inclusiveUs": 46442
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js",
+            "selfUs": 39112,
+            "inclusiveUs": 39112
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/ObjectPainting.svelte",
+            "selfUs": 10352,
+            "inclusiveUs": 26905
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/proxy.js",
+            "selfUs": 20488,
+            "inclusiveUs": 26494
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/designer/controllers/layer-tree.svelte.ts",
+            "selfUs": 2625,
+            "inclusiveUs": 19948
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/TextPrimitive.svelte",
+            "selfUs": 8005,
+            "inclusiveUs": 19492
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/runtime/ucs2length.js",
+            "selfUs": 12317,
+            "inclusiveUs": 12317
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/MultilineTextPrimitive.svelte",
+            "selfUs": 11116,
+            "inclusiveUs": 12232
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/key.js",
+            "selfUs": 0,
+            "inclusiveUs": 9418
+          }
+        ],
+        "functionsBySelf": [
+          {
+            "label": "(native):0:-1 (program)",
+            "selfUs": 2136461,
+            "inclusiveUs": 2136461
+          },
+          {
+            "label": "(native):5814:112 ",
+            "selfUs": 339520,
+            "inclusiveUs": 433000
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:354:9 mark_reactions",
+            "selfUs": 325756,
+            "inclusiveUs": 325756
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:1223:11 collectAssets",
+            "selfUs": 210705,
+            "inclusiveUs": 210705
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:493:1 #v",
+            "selfUs": 200499,
+            "inclusiveUs": 1867226
+          },
+          {
+            "label": "(native):0:-1 (garbage collector)",
+            "selfUs": 197599,
+            "inclusiveUs": 197599
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:540:16 get",
+            "selfUs": 149905,
+            "inclusiveUs": 337507
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:220:16 update_reaction",
+            "selfUs": 136823,
+            "inclusiveUs": 1821984
+          },
+          {
+            "label": "(native):0:-1 querySelectorAll",
+            "selfUs": 93480,
+            "inclusiveUs": 93480
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:191:16 parseProject",
+            "selfUs": 92598,
+            "inclusiveUs": 318248
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:195:9 schedule_possible_effect_self_invalidation",
+            "selfUs": 84160,
+            "inclusiveUs": 84160
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:154:16 is_dirty",
+            "selfUs": 84022,
+            "inclusiveUs": 288012
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/sources.js:189:16 internal_set",
+            "selfUs": 83660,
+            "inclusiveUs": 409475
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js:76:12 #a",
+            "selfUs": 80084,
+            "inclusiveUs": 82394
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/save-state.ts:3:16 projectContent",
+            "selfUs": 69702,
+            "inclusiveUs": 78324
+          },
+          {
+            "label": "(native):0:-1 (idle)",
+            "selfUs": 69631,
+            "inclusiveUs": 69631
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/lib/project.ts:397:16 serializeProject",
+            "selfUs": 68533,
+            "inclusiveUs": 183740
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/attributes.js:158:16 set_attribute",
+            "selfUs": 50033,
+            "inclusiveUs": 77382
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:290:1 #g",
+            "selfUs": 46286,
+            "inclusiveUs": 46286
+          },
+          {
+            "label": "(native):3:774 validate20",
+            "selfUs": 40209,
+            "inclusiveUs": 214595
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/equality.js:4:16 equals",
+            "selfUs": 39112,
+            "inclusiveUs": 39112
+          },
+          {
+            "label": "(native):3:428 validate38",
+            "selfUs": 39094,
+            "inclusiveUs": 41266
+          },
+          {
+            "label": "(native):3:390 validate43",
+            "selfUs": 33210,
+            "inclusiveUs": 37354
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/branches.js:186:1 ensure",
+            "selfUs": 33157,
+            "inclusiveUs": 122659
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/blocks/each.js:268:14 block",
+            "selfUs": 32690,
+            "inclusiveUs": 394383
+          },
+          {
+            "label": "(native):3:674 validate21",
+            "selfUs": 32363,
+            "inclusiveUs": 39990
+          },
+          {
+            "label": "(native):0:-1 getScreenCTM",
+            "selfUs": 32032,
+            "inclusiveUs": 32032
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js:392:2 ",
+            "selfUs": 29451,
+            "inclusiveUs": 471061
+          },
+          {
+            "label": "(native):3:356 validate41",
+            "selfUs": 28137,
+            "inclusiveUs": 31747
+          },
+          {
+            "label": "http://localhost:5236/assets/index-Cu0HSCLM.js:26:3100 ",
+            "selfUs": 27497,
+            "inclusiveUs": 62230
+          }
+        ],
+        "functionsByInclusive": [
+          {
+            "label": "(native):0:-1 (root)",
+            "selfUs": 0,
+            "inclusiveUs": 5545775
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:329:1 #_",
+            "selfUs": 4742,
+            "inclusiveUs": 2200556
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:920:4 queue_micro_task",
+            "selfUs": 0,
+            "inclusiveUs": 2200556
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/task.js:19:2 ",
+            "selfUs": 0,
+            "inclusiveUs": 2200556
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:668:1 flush",
+            "selfUs": 0,
+            "inclusiveUs": 2199334
+          },
+          {
+            "label": "(native):0:-1 (program)",
+            "selfUs": 2136461,
+            "inclusiveUs": 2136461
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/batch.js:493:1 #v",
+            "selfUs": 200499,
+            "inclusiveUs": 1867226
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/runtime.js:220:16 update_reaction",
+            "selfUs": 136823,
+            "inclusiveUs": 1821984
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js:60:10 target_handler",
+            "selfUs": 1448,
+            "inclusiveUs": 486305
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/events.js:66:10 without_reactive_context",
+            "selfUs": 0,
+            "inclusiveUs": 481482
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/dom/elements/bindings/shared.js:39:16 without_reactive_context",
+            "selfUs": 0,
+            "inclusiveUs": 481482
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:757:11 travel",
+            "selfUs": 1102,
+            "inclusiveUs": 480373
+          },
+          {
+            "label": "../../../workspace/temp-scada/apps/banto-scada/src/App.svelte:798:11 shortcut",
+            "selfUs": 0,
+            "inclusiveUs": 480373
+          },
+          {
+            "label": "../../../workspace/temp-scada/node_modules/.pnpm/svelte@5.57.2/node_modules/svelte/src/internal/client/reactivity/effects.js:392:2 ",
+            "selfUs": 29451,
+            "inclusiveUs": 471061
+          },
+          {
+            "label": "(native):1:1 ",
+            "selfUs": 1241,
+            "inclusiveUs": 442023
+          },
+          {
+            "label": "(native):364:10 evaluate",
+            "selfUs": 1274,
+            "inclusiveUs": 440782
+          },
+          {
+            "label": "(native):1:0 ",
+            "selfUs": 2044,
+            "inclusiveUs": 439508
+          },
+          {
+            "label": "(native):5631:7 query",
+            "selfUs": 1187,
+            "inclusiveUs": 434187
+          },
+          {
+            "label": "(native):7261:16 queryAll",
+            "selfUs": 0,
+            "inclusiveUs": 434187
+          },
+          {
+            "label": "(native):7240:17 _queryEngineAll",
+            "selfUs": 0,
+            "inclusiveUs": 434187
+          },
+          {
+            "label": "(native):7192:18 querySelectorAll",
+            "selfUs": 0,
+            "inclusiveUs": 434187
+          },
+          {
+            "label": "(native):5814:112 ",
+            "selfUs": 339520,
+            "inclusiveUs": 433000
+          },
+          {
+            "label": "(native):5597:9 _cached",
+            "selfUs": 0,
+            "inclusiveUs": 433000
+          },
+          {
+            "label": "(native):5813:11 _queryCSS",
+            "selfUs": 0,
+            "inclusiveUs": 433000
+          },
+          {
+            "label": "(native):5692:14 _querySimple",
+            "selfUs": 0,
+            "inclusiveUs": 433000
+          },
+          {
+            "label": "(native):5635:116 ",
+            "selfUs": 0,
+            "inclusiveUs": 433000
+          },
+          {
+            "label": "(native):5844:7 query",
+            "selfUs": 0,
+            "inclusiveUs": 433000
+          },
+          {
+            "label": "(native):5806:125 ",
+            "selfUs": 0,
+            "inclusiveUs": 433000
+          },
+          {
+            "label": "(native):5805:12 _callQuery",
+            "selfUs": 0,
+            "inclusiveUs": 433000
+          },
+          {
+            "label": "(native):5793:14 _queryEngine",
+            "selfUs": 0,
+            "inclusiveUs": 433000
+          }
+        ]
+      }
+    }
+  }
+}

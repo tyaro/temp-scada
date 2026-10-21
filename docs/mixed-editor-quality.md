@@ -139,3 +139,59 @@ node apps/banto-scada/scripts/benchmark-mixed-editor.mjs /tmp/i5b-browser 100 50
 3規模すべてで保存Project・PNG4原本が一致し、変更前後のText投影も完全一致した。資産なし図面への3回の切替後にlive URL／bytesは0、一時文字計測DOMも0。1000配置のGC後ヒープは50履歴の前約141.3MB→後194.5MB、最後の資産なし図面では約15.1MBで、履歴資源の大幅な削減はしていない。画面エラーは0だった。
 
 型チェックはエラー・警告なし、全単体1107件、履歴・キー操作のブラウザ9件、本番build・全体整形が成功した。Undo／Redoの不正snapshot・不正な現在状態・revision上限超過でProject／履歴を保持し、改行正規化・独立した復元候補も単体で確認した。実装`27f10b9`の[全体CI39545209042](https://github.com/tyaro/temp-scada/actions/runs/39545209042)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I5bは内訳計測と履歴候補の限定改善を保存する区切りで、スクリプト内の詳細切分けは残る。
+
+## I5c：Project snapshotの監視境界
+
+`a17fc96`の1000配置を別のsource map付き本番buildで診断した。移動9回／Undo9回を別々にCPU sampling（1ms間隔）し、生成位置をsource mapで元ファイルへ対応付ける。sampling中はドライバー待機・idle・GCも含むため、通常runnerの入力遅延とは比較しない。inclusiveの集計は祖先を含み重複するので合計しない。source mapの位置は関数開始位置で、個別のhot statementの特定ではない。
+
+移動profileは約10.13秒相当のsamplesで、Svelte task／batchを含むinclusiveが約5.48秒、runtime約5.11秒。Undoは約7.77秒中、task／batch約4.35秒、runtime約4.04秒。`update_reaction`・`remove_reaction`・`mark_reactions`・proxy getがself時間の上位に現れた。これをSvelte内部の不具合とは扱わず、アプリの監視範囲を見直す根拠とする。
+
+現行AppのProject変更入口を確認すると、初期parse、`recordEdit`、`travelHistory`、file／new／sampleの`adopt`が検証済みの独立したProjectを返し、Appがルートを差し替える。数値確定も同じrecordEdit経由で、子コンポーネントは編集通知を返す。UIからProjectの内部を直接書き換えるbindingはない。保存baseline・asset lease・非同期generationの契約は維持する。
+
+採用する限定変更はAppのProjectと確認待ちreplacementを`$state.raw`にする2箇所。replacementはconfirm時にProjectを渡すため、ここだけ深いproxyが残らないよう同じ境界に揃える。rawはimmutableを強制するfreezeではない。今後もProject変更はcommand／history／adoptで独立候補を作ってルート更新し、ネストした直接代入で変更を通知しない実装を追加しない。選択・draft・パネル等のUI state、ドメイン検証、履歴・JSON・保存モデルは変更しない。
+
+### 診断の再現
+
+通常benchmarkで生成した公開fixtureのpackageを使用する。別の出力先にsource map付きbuildを作る。アプリへ診断分岐や計測用APIは追加しない。
+
+```sh
+source scripts/cloud-env.sh
+pnpm --filter banto-scada exec vite build --sourcemap --outDir /tmp/scada-profile-build
+pnpm --filter banto-scada exec vite preview --outDir /tmp/scada-profile-build --port 5234 --strictPort
+# 別ターミナル。CPU採取は通常benchmarkやbuild・テストと並走させない。
+node apps/banto-scada/scripts/profile-editor.mjs /tmp/scada-mixed-quality/mixed-1000.bantoscada /tmp/scada-profile 1000
+node apps/banto-scada/scripts/summarize-editor-profile.mjs /tmp/scada-profile/move.cpuprofile /tmp/scada-profile-build > /tmp/scada-profile/move-summary.json
+node apps/banto-scada/scripts/summarize-editor-profile.mjs /tmp/scada-profile/undo.cpuprofile /tmp/scada-profile-build > /tmp/scada-profile/undo-summary.json
+```
+
+診断runnerの既定URLは`http://localhost:5234`で、`SCADA_PROFILE_URL`で変更できる。source map readerは固定中のSvelte compilerが既に依存する`source-map-js`をSvelteの解決元から使い、新しい依存は追加しない。Svelte依存更新時はこの診断ツールの解決も再確認する。通常の速度評価はsource mapなし本番buildで既存benchmarkを別途実行する。
+
+### I5cの結果と採用範囲
+
+[profile集計・source hash](performance/i5c-profiles.json)に、前後の生CPU traceへのリンク相当のファイル名とsource map hashを残した。移動9回のSvelte batch inclusiveは約5.48→2.05秒、Undo9回は約4.35→2.20秒になった。ドライバー・GCを含む採取ごとの時間も違うため、この数値を入力応答の短縮率とはしない。深い監視の費用を減らす根拠として、通常benchmarkと別に判断する。
+
+[変更前の通常JSON](performance/i5b-browser-after.json)と[変更後の通常JSON](performance/i5c-browser-after.json)。表は各9回（再読込／保存3回、連続移動50回）の中央値、ms。各1runで、統計的有意性は評価していない。
+
+| 操作             | 100配置（前→後） | 500配置（前→後） | 1000配置（前→後） |
+| ---------------- | ---------------: | ---------------: | ----------------: |
+| 再読込           |         747→1015 |        5906→5138 |       15872→26973 |
+| キー移動         |            70→46 |          307→165 |           697→497 |
+| Undo             |            60→36 |          277→166 |           655→410 |
+| 50履歴を積む移動 |            74→57 |          325→197 |           709→514 |
+| 保存download開始 |            52→60 |           148→82 |           232→161 |
+
+1000配置の再読込増加を採用前に追加確認した。[A/B/B/Aの生JSON](performance/i5c-load-comparison.json)は、各contextで初回読込＋再読込1回を実行した値。再読込は順に変更前29.1秒／変更後24.9秒／変更後21.4秒／変更前16.6秒。各2件の算術平均は変更前約22.8秒、変更後約23.1秒で、通常runの約15.9→27.0秒という増加を一貫して再現したとは判断しない。サンプルが少なく、読込非劣化の保証でもない。大規模図面の読込自体は依然遅く、ここで解決したとは扱わない。
+
+この対照buildは作業ツリーを巻き戻さず、[専用Vite config](performance/i5c-baseline-vite.config.mjs)のloaderで対象2ファイルだけを`a17fc96`から読み出した。他の実行時コードが同じI5c候補ツリー上で使う比較専用であり、任意の将来版全体をa17fc96に復元するものではない。変更前main asset名`index-fjnTrq38.js`は初回profileと一致した。通常buildと別の出力先・portにし、ローカルのbuild・test・profileを比較実行と並走させていない。
+
+```sh
+source scripts/cloud-env.sh
+pnpm --filter banto-scada exec vite build --config ../../docs/performance/i5c-baseline-vite.config.mjs --outDir /tmp/scada-before-build
+pnpm --filter banto-scada exec vite preview --outDir /tmp/scada-before-build --port 5235 --strictPort
+# 通常buildのpreview（5233）も起動したうえで別ターミナルから実行。
+node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-mixed-quality/mixed-1000.bantoscada /tmp/scada-load-comparison.json http://localhost:5235 http://127.0.0.1:5233 1000
+```
+
+通常runの3規模とも保存Project・PNG4原本が一致し、1000配置の文字投影は変更前との許容差0.0001図面単位の比較を通過した。資産なし図面への3回の切替でlive URL／bytesは0、一時文字計測DOMも0。画面エラーは0。内容・資産寿命・履歴形式は維持する。1000配置は変更後も移動約497ms／Undo約410msで、十分な応答性能の完了とはしない。
+
+型チェックはエラー・警告なし、全単体1107件、保存状態・未適用入力・履歴・キー操作のブラウザ17件、本番buildが成功した。確認置換後の編集・Undo／Redoと読込baselineの表示も既存試験へ追加した。root差替え契約を維持できる範囲で採用し、全体CIはPush後に確認する。Project0.33.0、Banto、Industrial SDK、認証の保留方針は不変。次はI5の読込時のstyle／文字計測費用を再評価し、適応的文字計測の回数やcacheを先行変更せずに対象を絞る。
