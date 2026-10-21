@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-最新の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（ローカル検証済み／CI確認待ち）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
+最新の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（全体CI成功）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
@@ -43,7 +43,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 ## 検証の範囲
 
-最新のI5gはTS全1,214件・関連ブラウザ40件・型エラー／警告0・build・整形・リンクをローカル確認済み。3規模の保存原本・資源確認と、履歴資産集計の限定改善を[計測記録](../performance/mixed-editor-quality.md#history-asset-index)へ記録した。全体CIはPush後に確認する。
+最新のI5gはTS全1,214件・関連ブラウザ40件・型エラー／警告0・build・整形・リンクをローカル確認済み。3規模の保存原本・資源確認と、履歴資産集計の限定改善を[計測記録](../performance/mixed-editor-quality.md#history-asset-index)へ記録した。実装`01d5df0`は[全体CI39589758815](https://github.com/tyaro/temp-scada/actions/runs/39589758815)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。
 
 I7c時点の`313b806`は[全体CI39570702994](https://github.com/tyaro/temp-scada/actions/runs/39570702994)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功。ローカルでは型（エラー・警告0）、単体1,142件、関連ブラウザ46ケース、本番build、整形と両テーマ実画面を確認した。全ブラウザ件数をローカル関連試験の件数と読み替えない。I8aは全体CI成功。I8bの`7faff97`は[全体CI39576110879](https://github.com/tyaro/temp-scada/actions/runs/39576110879)成功。I8cの`eef69fd`も[全体CI39578127673](https://github.com/tyaro/temp-scada/actions/runs/39578127673)成功。接続・解除UIはTS全1,207件・関連ブラウザ34件・型エラー／警告0・build・整形・リンクをローカル確認済み・全体CI成功。
 

@@ -535,4 +535,6 @@ Inspectorで検証した同一DOM・capture／Esc／blur／resize取消・上位
 
 ### I5g：計測後の履歴資産集計の限定削減
 
-R6の後続性能評価として、現在形式の混在図面を再計測した。[I5f／I5gの記録](../performance/mixed-editor-quality.md#history-asset-index)に従い、画像Map候補は戻し、App専用・現在保持する履歴だけの資産hash索引を追加した。Project検証・JSON snapshot・Undo単位・原本Storeとpin／leaseを維持する。大域cacheや汎用frameworkへの置換、読込・全操作の性能改善完了ではない。安全性のAstra読取レビューは必須修正なし、ローカル検証済み／CI確認待ち。
+R6の後続性能評価として、現在形式の混在図面を再計測した。[I5f／I5gの記録](../performance/mixed-editor-quality.md#history-asset-index)に従い、画像Map候補は戻し、App専用・現在保持する履歴だけの資産hash索引を追加した。Project検証・JSON snapshot・Undo単位・原本Storeとpin／leaseを維持する。大域cacheや汎用frameworkへの置換、読込・全操作の性能改善完了ではない。安全性のAstra読取レビューは必須修正なし、全体CI成功。
+
+実装`01d5df0`は[全体CI39589758815](https://github.com/tyaro/temp-scada/actions/runs/39589758815)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。

@@ -1828,4 +1828,4 @@ I8後のProject0.35.0を再計測し、画像Mapの再生成抑制候補は、�
 
 1,000配置の交互比較で50履歴移動中央値は約414→350ms、別の通常runは478→348ms。短履歴移動と再読込は交互比較で悪化しており、全般改善・読込非劣化は主張しない。50履歴を事前投入した9操作のCPU samplingで、資産集計inclusiveは移動925→29ms、Undo1007→33ms。GC後ヒープの差は約4.4KB。全3規模で保存Project・PNG原本・URLと一時DOMの解放、1,000配置の文字投影一致を確認した。検証・JSON snapshot・Undo単位・Storeのpin／lease・上流依存は不変。
 
-Astraの安全性／採用レビューは必須修正なし。TS全1,214件、型エラー／警告0、関連ブラウザ40件、本番build・整形・リンクが成功した。実原本のRedo破棄と50履歴上限・同一package再読込のURL更新を新規回帰で確認。I5fの候補sourceとbuildの再生一致も確認した。全体CIはPush後に確認する。
+Astraの安全性／採用レビューは必須修正なし。TS全1,214件、型エラー／警告0、関連ブラウザ40件、本番build・整形・リンクが成功した。実原本のRedo破棄と50履歴上限・同一package再読込のURL更新を新規回帰で確認。I5fの候補sourceとbuildの再生一致も確認した。実装`01d5df0`は[全体CI39589758815](https://github.com/tyaro/temp-scada/actions/runs/39589758815)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。

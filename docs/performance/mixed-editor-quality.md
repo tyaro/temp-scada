@@ -1,6 +1,6 @@
 # 混在図面の品質・性能計測（I5）
 
-2026-10-21。状態: **初回〜I5eの全体CI成功。I5fの現行再計測・候補見送り、I5gの履歴資産索引はローカル検証済み／CI確認待ち**。[単体開発計画](../project/upstream-independent-plan.md)のI5。[R6のNodeドメイン計測](editor-performance.md)と区別し、ブラウザで実際の読込・入力・保存・資源寿命を確認する。
+2026-10-21。状態: **初回〜I5eの全体CI成功。I5fの現行再計測・候補見送り、I5gの履歴資産索引も全体CI成功**。[単体開発計画](../project/upstream-independent-plan.md)のI5。[R6のNodeドメイン計測](editor-performance.md)と区別し、ブラウザで実際の読込・入力・保存・資源寿命を確認する。
 
 ## 条件と境界
 
@@ -319,7 +319,7 @@ node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-i5f-before/mixe
 
 <a id="history-asset-index"></a>
 
-## I5g：保持中履歴の資産hash索引（限定改善・ローカル検証済み）
+## I5g：保持中履歴の資産hash索引（限定改善・CI成功）
 
 I5fで観測した`collectAssets`の全履歴JSONの反復parseだけを対象にする。索引はAppインスタンス専用で、snapshot文字列そのものをキーとする。現在のpast／futureに含むsnapshotのhash配列だけを保持し、毎回現在の集合へ作り直して脱落entryを捨てる。現在Projectのassetsは毎回直接読む。Store／Blob／URL／leaseは索引へ保持しない。
 
@@ -364,6 +364,6 @@ profile runnerの`--history`は事前投入50件をmetadataへ残す。summarize
 
 TS全1,214件（資産索引の新規7件を含む）、型チェック（エラー・警告0）、関連ブラウザ40件、本番build・整形・文書リンクが成功した。Storeのpin／export leaseの単体、実画像のUndo後の新規編集によるRedo原本の解放、50件目での旧原本の解放・49件目までの保持、保存原本の一致、同一package再読込時の新StoreへのURL切替、Symbol内画像・原本付きclipboard・保存状態の既存回帰を確認した。
 
-I5fのpatch再生後のsource hashは記録と一致し、比較専用configでbuildしたmain asset `index-DZP628Bn.js`は元の候補buildとバイト一致した。現行の通常mainは資産索引だけを含む`index-B9CfaS6j.js`。Astraの安全性／採用レビューに必須修正なし。全体CIはPush後に確認する。
+I5fのpatch再生後のsource hashは記録と一致し、比較専用configでbuildしたmain asset `index-DZP628Bn.js`は元の候補buildとバイト一致した。現行の通常mainは資産索引だけを含む`index-B9CfaS6j.js`。Astraの安全性／採用レビューに必須修正なし。実装`01d5df0`は[全体CI39589758815](https://github.com/tyaro/temp-scada/actions/runs/39589758815)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。
 
 保存版0.35.0・Rust／schema・固定Banto／Industrial SDKは変更していない。今回は履歴資産集計の限定改善で区切る。大図面の読込とSvelte更新の費用は残課題とし、次回も新しい診断の根拠から別候補を選ぶ。
