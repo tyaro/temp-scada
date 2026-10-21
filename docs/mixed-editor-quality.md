@@ -279,3 +279,5 @@ node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-mixed-quality/m
 比較configは、この評価時と他の実行時コードが同じツリーで使う。将来版全体を巻き戻すものではない。I5eでは100／500／1000の通常benchmark、native呼出し分類や400 Text投影を再採取していない。それらの既存記録をI5eの結果に読み替えない。
 
 I5の限定改善・候補評価はここで一区切りとする。大図面の読込・キー操作の遅延は既知課題として残し、次に再開する場合は新しい仮説と同じ品質条件を先に定める。次の機能工程は[I6：参照名の一括置換](text-reference-replacement-design.md)の計画へ移る。Project0.33.0・Banto／Industrial SDK・認証延期は維持する。
+
+実装差分`f8bbdc9`の[全体CI39555810579](https://github.com/tyaro/temp-scada/actions/runs/39555810579)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。
