@@ -1,6 +1,6 @@
 # 単色塗り・枠線のα一括編集
 
-2026-10-21。状態: **I4実装・ローカル受入済み。全体CIはPush後に確認**。[単体開発計画](upstream-independent-plan.md)のI4。[単独の色α](color-alpha-design.md)と[配置opacity一括編集](selection-opacity-design.md)を区別する。
+2026-10-21。状態: **I4完了・全体CI成功確認済み**。[単体開発計画](upstream-independent-plan.md)のI4。[単独の色α](color-alpha-design.md)と[配置opacity一括編集](selection-opacity-design.md)を区別する。
 
 ## 初回の範囲
 
@@ -38,4 +38,4 @@ gradient stop／pattern別α、Text・線・Symbolの単色α一括指定、枠�
 
 ## 全体CIの追加確認
 
-実装`361aded`の[初回全体CI39534625475](https://github.com/tyaro/temp-scada/actions/runs/39534625475)はFrontend・Rustとブラウザ3分割が成功し、ブラウザ2/4の既存レイヤー試験1件で失敗した。[ドラッグ後の新しいクリックの修正](layer-relative-order-design.md)を別コミットで行う。α編集の新規試験は成功。修正後のレイヤー関連ブラウザ26件、型・build・全体整形が成功した。修正後の全体CIを確認してからI4完了とする。
+実装`361aded`の[初回全体CI39534625475](https://github.com/tyaro/temp-scada/actions/runs/39534625475)はFrontend・Rustとブラウザ3分割が成功し、ブラウザ2/4の既存レイヤー試験1件で失敗した。[ドラッグ後の新しいクリックの修正](layer-relative-order-design.md)を別コミットで行った。α編集の新規試験は成功。修正後のレイヤー関連ブラウザ26件、型・build・全体整形が成功した。修正`bf187f6`を含む[全体CI39535689050](https://github.com/tyaro/temp-scada/actions/runs/39535689050)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I4を完了した。

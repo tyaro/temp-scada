@@ -6,7 +6,7 @@
 
 ## 次の実装順
 
-**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み。継続指示でI2a／I2bも完了・全体CI成功確認済み。[I3の仕様](static-text-wrap-design.md)に沿って折返しを実装し、I3a／I3bも完了・全体CI成功確認済み。[I4の仕様](selection-paint-alpha-design.md)に沿い単色塗り・枠線のα一括編集を実装しローカル受入済み。I5は未着手。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
+**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み。継続指示でI2a／I2bも完了・全体CI成功確認済み。[I3の仕様](static-text-wrap-design.md)に沿って折返しを実装し、I3a／I3bも完了・全体CI成功確認済み。[I4の仕様](selection-paint-alpha-design.md)に沿い単色塗り・枠線のα一括編集も完了・全体CI成功確認済み。I5は未着手。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
 
 以下はこれまでの実装経緯とCore v1へ向けた長期工程を保持する。新しい短期順序と矛盾する場合は上記計画を優先し、最終的な機能仕様・提供段階は統合設計に従う。
 
@@ -665,4 +665,4 @@ Project0.32.0の[静的Text明示改行](multiline-text-design.md)を保存し�
 
 ## I4：単色塗り・枠線α一括編集（2026-10-21）
 
-[採用仕様と実画面](selection-paint-alpha-design.md)に従い、矩形・楕円の既存単色塗り／枠線だけを対象に実装した。Text・線・Symbol等やgradient／pattern別αへは広げない。全TS1104件、新規ブラウザ4件、既存回帰27件、型・buildが成功した。Project・Banto・Industrialの契約は変更しない。この区切りの全体CIを確認し、I5は条件を揃えた計測から判断する。
+[採用仕様と実画面](selection-paint-alpha-design.md)に従い、矩形・楕円の既存単色塗り／枠線だけを対象に実装した。Text・線・Symbol等やgradient／pattern別αへは広げない。全TS1104件、新規ブラウザ4件、既存回帰27件、型・buildが成功した。Project・Banto・Industrialの契約は変更しない。修正`bf187f6`を含む[全体CI39535689050](https://github.com/tyaro/temp-scada/actions/runs/39535689050)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I4を完了した。I5は条件を揃えた計測から判断する。

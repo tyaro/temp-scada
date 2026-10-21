@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入も全体CI成功確認済み。I3の静的Text折返しも全体CI成功確認済み。I4の単色塗り・枠線α一括編集を実装しローカル受入済み。I5は未着手。
+2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入も全体CI成功確認済み。I3の静的Text折返しも全体CI成功確認済み。I4の単色塗り・枠線α一括編集も完了・全体CI成功確認済み。I5は未着手。
 
 ## 保存契約と基盤
 
@@ -306,4 +306,4 @@ resize通知とpointerupの順序による位置の誤確定を修正し、実wi
 
 ## 上流変更中のI4：単色塗り・枠線α一括編集
 
-[仕様と実画面](selection-paint-alpha-design.md)に沿い、矩形・楕円の既存単色塗り／枠線を独立に変更する一括フォームを追加した。混在・空欄保持・適用不可理由・全件検査・同値no-op・Undoと入力保護を確認した。全TS1104件、新規ブラウザ4件、既存回帰27件、型・buildが成功。Project0.33.0・上流依存は不変。全体CIはPush後に確認する。
+[仕様と実画面](selection-paint-alpha-design.md)に沿い、矩形・楕円の既存単色塗り／枠線を独立に変更する一括フォームを追加した。混在・空欄保持・適用不可理由・全件検査・同値no-op・Undoと入力保護を確認した。全TS1104件、新規ブラウザ4件、既存回帰27件、型・buildが成功。Project0.33.0・上流依存は不変。修正`bf187f6`を含む[全体CI39535689050](https://github.com/tyaro/temp-scada/actions/runs/39535689050)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I4を完了した。
