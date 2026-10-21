@@ -515,3 +515,17 @@ headless shell156の試行は、初回操作前のタイムアウトとICU／GPU
 - **通知集約だけの寄与**：未分離。同じ環境での対照実験ではなく、共有の寿命も異なるため、前後差を引き算して通知集約の効果とは表記できない。停止条件を維持するため追加実験には進まない。
 
 指定ブランチ`perf/font-readiness-batching`には計測記録だけを残す。候補アプリの全回帰が成功したという記録にはせず、記録PRの最終HEADに対するCIで確認する。以前の`5f590e0`に対するCI成功とは区別する。
+
+<a id="getbbox-diagnosis-i5j"></a>
+
+## I5j：getBBoxの同期Layout診断（2026-10-22）
+
+[I5jの結果・候補比較](i5j-getbbox-diagnosis.md)と[集計値](i5j-getbbox-results.json)を追加した。Mac／Chrome for Testing156の1,000配置で、初回13,405回・再読込12,800回のgetBBoxを観測。再読込のtraceでは全12,800回で、probe変更後の同期Layoutが呼出区間内にあった。回数／時間とtraceは通常時間とは分けて扱う。通常・ラッパー・traceの文字投影と原本が一致した。段階的なwrite→readのbatch化を次の検証候補として推奨するが、改善は実装していない。I5hのLinux環境との差と未検証事項を明記した。後続の限定試作はI5kで不採用とした。
+
+<a id="batched-text-measure-i5k"></a>
+
+## I5k：同期の段階バッチ文字計測（2026-10-22）
+
+I5jの`9a2119a`から、独立段落／行の書込→読取を同期の段階ごとにまとめて試作した。同じMac・Chrome156で100／500／1000配置を前後比較し、1000配置は各4run。初回平均3799.2→3758.6ms（−1.1%）、再読込4444.5→4455.1ms（＋0.2%）で範囲が重なり、**明確な短縮なし・不採用。試作コードはpush／PR作成せず、docsのみ記録PRへ取り込む**。
+
+別runの診断ではgetBBox回数・文字投影SHAを維持して、1000配置再読込のgetBBox内同期Layoutありは12800→9600回になった。局所的な削減を読込全体の改善とは扱わない。[試作範囲・前後表・考えられる理由・検証](i5k-batched-text-measure.md)と[集計JSON](i5k-batched-text-measure-results.json)を参照する。
