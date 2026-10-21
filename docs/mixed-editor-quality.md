@@ -249,3 +249,33 @@ node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-mixed-quality/m
 ```
 
 patch再生後のsource hashは診断JSONの候補hashと一致した。作業ツリーのTextPrimitiveは変更しない。source overlayも含めて独立した出力先を使い、build・test・CPU採取を通常benchmarkと並走させない。候補を戻した最終差分でも寸法試験4件・通常build・整形が成功した。候補を作業ファイルへ戻さずconfigからbuildする再現手順も実行し、通常buildのmain assetは基準の`index-Cu0HSCLM.js`へ戻っている。最終差分`94078be`の[全体CI39553076790](https://github.com/tyaro/temp-scada/actions/runs/39553076790)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。
+
+## I5e：計測用SVGのstyle tree分離（変更見送り）
+
+基準`9563504`。I5dの単一行一律置換は採用せず、今回は既存の複数行計測hostだけをclosed ShadowRootへ分離する候補を調べる。TextPrimitiveは直接計測を維持する。変更箇所はhelperの`host.append(svg)`から`host.attachShadow(...).append(svg)`への1箇所で、fontのcomputed値コピー・SVG座標変換・計測回数・折返しアルゴリズム・cache・finally解放を変えない。
+
+ShadowRootは同じdocument内に作り、iframeや別document・別FontFaceSetは導入しない。外部selectorの適用範囲は変わるため、元SVGとのfont／寸法一致を採用条件にする。既存の両テーマ・SVG／CSS変換・単一行fit288条件・非表示と失敗時解放に加え、`document.fonts`へ動的に追加したFontFace（size-adjust 200%）も同じ寸法で使う回帰試験を追加した。ローカルのArial／Liberation Sans／DejaVu Sansを候補とし、ネットワークからfontを取得しない。
+
+まず29件の文字関連ブラウザを実行し、追加fontを含む寸法5件を再確認した（計30件の異なるケース）。型チェックはエラー・警告なし、本番buildも成功した。これは品質条件の確認であり、速度改善や採用の完了ではない。
+
+性能は同じ1000配置のpackageで基準／候補／候補／基準を順に読み込む。基準はI5dの対照build（main `index-Cu0HSCLM.js`）で、`9563504`までの実行時コードと同一。候補だけShadowRootへ変える。重いローカルbuild・test・診断採取と通常の読込比較を並走させず、各contextの初回＋再読込を記録する。読込全体の効果が見えなければ採用しない。
+
+### 結果と保存した再現資産
+
+[交互比較の生JSON](performance/i5e-load-comparison.json)で、再読込は基準22.5秒／候補24.4秒／候補22.8秒／基準20.4秒。各2件の算術平均は基準約21.5秒、候補約23.6秒だった。初回読込も基準17.8／13.1秒、候補24.6／18.8秒で改善を示さない。少数試験から一般的な悪化率は断定しないが、採用の根拠は得られなかった。
+
+**候補は採用せず、helperを基準へ戻した。実行時ソースの差分はない。** 動的FontFaceの回帰試験、[候補patch](performance/i5e-candidate.patch)、[比較config](performance/i5e-comparison-vite.config.mjs)を残す。最終基準コードでも寸法5件・全単体1107件・通常buildが成功した。patchを作業ツリーへ戻さずconfigから再buildし、基準main `index-Cu0HSCLM.js`と候補main `index-Bi7vBIUY.js`、候補source hashの一致を確認した。
+
+```sh
+source scripts/cloud-env.sh
+git show 9563504:apps/banto-scada/src/lib/svg-text-measure.ts > /tmp/scada-i5e-original.ts
+patch --output /tmp/scada-i5e-candidate.ts /tmp/scada-i5e-original.ts docs/performance/i5e-candidate.patch
+pnpm --filter banto-scada exec vite build --config ../../docs/performance/i5e-comparison-vite.config.mjs --outDir /tmp/scada-i5e-before
+SCADA_I5E_MEASURE_SOURCE=/tmp/scada-i5e-candidate.ts pnpm --filter banto-scada exec vite build --config ../../docs/performance/i5e-comparison-vite.config.mjs --outDir /tmp/scada-i5e-after
+# 両方のpreviewを5237／5238で別途起動する。
+node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-mixed-quality/mixed-1000.bantoscada /tmp/scada-i5e-comparison.json http://localhost:5237 http://localhost:5238 1000
+```
+
+比較configは、この評価時と他の実行時コードが同じツリーで使う。将来版全体を巻き戻すものではない。I5eでは100／500／1000の通常benchmark、native呼出し分類や400 Text投影を再採取していない。それらの既存記録をI5eの結果に読み替えない。
+
+I5の限定改善・候補評価はここで一区切りとする。大図面の読込・キー操作の遅延は既知課題として残し、次に再開する場合は新しい仮説と同じ品質条件を先に定める。次の機能工程は[I6：参照名の一括置換](text-reference-replacement-design.md)の計画へ移る。Project0.33.0・Banto／Industrial SDK・認証延期は維持する。

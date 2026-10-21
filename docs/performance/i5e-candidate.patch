@@ -1,0 +1,15 @@
+diff --git a/apps/banto-scada/src/lib/svg-text-measure.ts b/apps/banto-scada/src/lib/svg-text-measure.ts
+index 2d86fd9..b4497b7 100644
+--- a/apps/banto-scada/src/lib/svg-text-measure.ts
++++ b/apps/banto-scada/src/lib/svg-text-measure.ts
+@@ -60,7 +60,9 @@ export function withSvgTextMeasure<T>(
+     probe.style.setProperty(property, computed.getPropertyValue(property));
+   group.append(probe);
+   svg.append(group);
+-  host.append(svg);
++  // Keep the document's loaded FontFace set while containing selector invalidation
++  // within the temporary probe tree. Font metrics and SVG transforms stay explicit.
++  host.attachShadow({ mode: "closed" }).append(svg);
+   document.body.append(host);
+   try {
+     return run((text) => {

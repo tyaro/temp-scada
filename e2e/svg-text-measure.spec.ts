@@ -1,5 +1,60 @@
 import { test, expect } from "@playwright/test";
 import { chooseTheme } from "./helpers/designer";
+
+test("isolated measurement uses dynamically loaded document fonts and releases the probe", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const result = await page.evaluate(async () => {
+    const modulePath = "/src/lib/svg-text-measure.ts";
+    const { withSvgTextMeasure } = await import(modulePath);
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "300");
+    svg.setAttribute("height", "100");
+    const source = document.createElementNS(
+      svg.namespaceURI,
+      "text",
+    ) as SVGTextElement;
+    source.setAttribute("font-size", "18");
+    source.setAttribute("font-family", "monospace");
+    source.textContent = "WWWW";
+    source.setAttribute("visibility", "hidden");
+    svg.append(source);
+    document.body.append(svg);
+    const face = new FontFace(
+      "ScadaMeasureFont",
+      'local("Arial"), local("Liberation Sans"), local("DejaVu Sans")',
+      { sizeAdjust: "200%" },
+    );
+    try {
+      const fallback = source.getBBox().width;
+      document.fonts.add(face);
+      await face.load();
+      await document.fonts.ready;
+      source.setAttribute("font-family", "ScadaMeasureFont, monospace");
+      const original = source.getBBox();
+      const isolated = withSvgTextMeasure(source, (measure: any) =>
+        measure("WWWW"),
+      );
+      return {
+        loaded: face.status === "loaded",
+        usesLoadedFace: original.width > fallback * 1.5,
+        maxDifference: Math.max(
+          ...(["x", "y", "width", "height"] as const).map((key) =>
+            Math.abs(original[key] - isolated[key]),
+          ),
+        ),
+      };
+    } finally {
+      svg.remove();
+      document.fonts.delete(face);
+    }
+  });
+  expect(result.loaded).toBe(true);
+  expect(result.usesLoadedFace).toBe(true);
+  expect(result.maxDifference).toBeLessThan(0.0001);
+  await expect(page.locator("[data-text-measure-host]")).toHaveCount(0);
+});
 for (const theme of ["light", "dark"] as const)
   test(`isolated SVG measurement matches in-drawing metrics and releases temporary DOM in ${theme}`, async ({
     page,

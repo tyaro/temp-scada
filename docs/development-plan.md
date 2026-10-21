@@ -684,3 +684,7 @@ I5bの次の区切りは残るScriptDurationのサンプリングprofile。Node�
 ### I5d進捗：単一行Text計測の切分けと候補評価（2026-10-21）
 
 [診断・寸法比較・通常benchmark・A/B/B/A](mixed-editor-quality.md)を保存した。残る図面側の単一行計測2,400回を隔離へ移す候補は400 Textの表示一致を満たしたが、交互比較の再読込平均は基準約18.4秒／候補約21.9秒で、改善を確認できなかった。一律置換は採用せず、アプリのTextPrimitiveは基準へ戻した。診断runnerと単一行fitの両テーマ288条件比較試験、再生できる候補patchを資産として残す。候補では関連ブラウザ35件・単体1107件・型・buildと保存／原本／資源解放が成功した。最終差分`94078be`の[全体CI39553076790](https://github.com/tyaro/temp-scada/actions/runs/39553076790)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。現行の保存契約・上流依存は不変で、I5dは評価の区切り。次はstyle／layout局所化の別候補を設計し、cacheや計測省略は先行しない。
+
+## 次工程I6（2026-10-21）
+
+I5eのstyle tree分離候補は実測で読込短縮を確認できず未採用。[評価記録](mixed-editor-quality.md)を残し、性能の限定改善・候補評価は一区切りとした。次は[参照名一括置換](text-reference-replacement-design.md)を純粋計算／commandとUIに分けて進める。統合設計§9の具体化であり、現時点では未実装。実Hub・Equipment／Symbol slot・認証の延期は維持する。

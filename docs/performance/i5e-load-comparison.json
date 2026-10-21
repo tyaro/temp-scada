@@ -1,0 +1,125 @@
+{
+  "recordedAt": "2026-10-21T06:23:27.854Z",
+  "chromium": "154.0.8037.57",
+  "placements": 1000,
+  "before": "http://localhost:5237",
+  "after": "http://127.0.0.1:5233",
+  "method": "A/B/B/A, fresh context per pair, cold load then one reload. Sequential; no local build/test/profiler. Driver-to-two-rAF including text layout and image decode. Durations in seconds overlap; samples too few for significance or a performance guarantee.",
+  "results": [
+    {
+      "label": "before",
+      "phase": "cold",
+      "elapsedMs": 17819.377787,
+      "metrics": {
+        "ScriptDuration": 3.421571,
+        "LayoutDuration": 2.313076,
+        "RecalcStyleDuration": 7.343988,
+        "TaskDuration": 17.807724,
+        "LayoutCount": 17609,
+        "RecalcStyleCount": 17611
+      }
+    },
+    {
+      "label": "before",
+      "phase": "reload",
+      "elapsedMs": 22532.49605,
+      "metrics": {
+        "ScriptDuration": 3.6030499999999996,
+        "LayoutDuration": 2.145508,
+        "RecalcStyleDuration": 8.655542999999998,
+        "TaskDuration": 22.438775999999997,
+        "LayoutCount": 17606,
+        "RecalcStyleCount": 17608
+      }
+    },
+    {
+      "label": "after",
+      "phase": "cold",
+      "elapsedMs": 24580.383726,
+      "metrics": {
+        "ScriptDuration": 6.136114,
+        "LayoutDuration": 3.115422,
+        "RecalcStyleDuration": 10.122855,
+        "TaskDuration": 24.524801,
+        "LayoutCount": 17609,
+        "RecalcStyleCount": 17611
+      }
+    },
+    {
+      "label": "after",
+      "phase": "reload",
+      "elapsedMs": 24429.279559999995,
+      "metrics": {
+        "ScriptDuration": 3.8068630000000008,
+        "LayoutDuration": 2.7946699999999995,
+        "RecalcStyleDuration": 9.154414000000001,
+        "TaskDuration": 24.343827000000005,
+        "LayoutCount": 17606,
+        "RecalcStyleCount": 17608
+      }
+    },
+    {
+      "label": "after",
+      "phase": "cold",
+      "elapsedMs": 18793.67016400001,
+      "metrics": {
+        "ScriptDuration": 3.887717,
+        "LayoutDuration": 2.469686,
+        "RecalcStyleDuration": 7.602588,
+        "TaskDuration": 18.716156,
+        "LayoutCount": 17609,
+        "RecalcStyleCount": 17611
+      }
+    },
+    {
+      "label": "after",
+      "phase": "reload",
+      "elapsedMs": 22849.50052799999,
+      "metrics": {
+        "ScriptDuration": 2.8746570000000005,
+        "LayoutDuration": 1.993337,
+        "RecalcStyleDuration": 9.203996,
+        "TaskDuration": 22.823383999999997,
+        "LayoutCount": 17606,
+        "RecalcStyleCount": 17608
+      }
+    },
+    {
+      "label": "before",
+      "phase": "cold",
+      "elapsedMs": 13133.359954000014,
+      "metrics": {
+        "ScriptDuration": 3.040907,
+        "LayoutDuration": 1.52084,
+        "RecalcStyleDuration": 5.654241,
+        "TaskDuration": 13.073885,
+        "LayoutCount": 17609,
+        "RecalcStyleCount": 17611
+      }
+    },
+    {
+      "label": "before",
+      "phase": "reload",
+      "elapsedMs": 20429.403676000016,
+      "metrics": {
+        "ScriptDuration": 2.981794,
+        "LayoutDuration": 2.078533,
+        "RecalcStyleDuration": 8.957812,
+        "TaskDuration": 20.400329999999997,
+        "LayoutCount": 17606,
+        "RecalcStyleCount": 17608
+      }
+    }
+  ],
+  "baselineCommit": "9563504",
+  "candidate": "Only isolated SVG probe placement changed to closed ShadowRoot; single-line caller, fit algorithms, measurement count, caches and model unchanged.",
+  "sourceHashes": {
+    "before": "525e06cbee71cb13ee252618e6fdc65f2829ea15eba5a1b7b23fe65efbd41de2",
+    "candidate": "dc6127c9f3720bddd2e7af4f44eebcd6929c3e1e350bb8b3b0fe4f2cf00256d4"
+  },
+  "assets": {
+    "before": "index-Cu0HSCLM.js",
+    "candidate": "index-Bi7vBIUY.js"
+  },
+  "decision": "Not adopted: ABBA trial did not establish a production load benefit. Few samples and environment variation preclude a general performance claim."
+}
