@@ -1,3 +1,4 @@
+import { applyBindingReplacement } from "../binding-replacement";
 import { applyEquipmentCommand } from "./equipment-handler";
 import type { Project } from "../project";
 import type { ProjectCommand } from "./commands";
@@ -8,6 +9,9 @@ export function applyProjectCommand(
   command: ProjectCommand,
 ): void {
   switch (command.type) {
+    case "replace-binding-reference":
+      applyBindingReplacement(next, command);
+      return;
     case "update-project": {
       const name = command.name.trim();
       if (!name) throw new Error("プロジェクト名を入力してください");

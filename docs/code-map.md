@@ -289,3 +289,7 @@ I5bでは`benchmark-editor.mjs --mixed`が同じ混在fixtureのドメイン費�
 I5cの診断は`profile-editor.mjs`（独立したCPU採取）、`summarize-editor-profile.mjs`（source mapで関数開始位置へ対応、self／inclusive集計）、`compare-editor-load.mjs`（別buildをA/B/B/A順に読込）に分ける。通常の性能値は既存`benchmark-mixed-editor.mjs`へ残す。AppのProjectとproject-files controllerの確認待ちcandidateはルート差替えを監視し、ネストした変更通知には使わない。編集入口はcommand・history・adopt。`save-state.spec.ts`で確認置換後の編集・Undo／Redoと保存baselineも確認する。[I5cの根拠](mixed-editor-quality.md)を参照。
 
 I5dの一律隔離候補は速度面の採用条件を満たさず未採用。現行`TextPrimitive.svelte`は図面側の直接計測、`MultilineTextPrimitive.svelte`は既存の隔離計測を維持する。`profile-text-load.mjs`はnative getBBoxの場所別回数・時間、CDP差、全Text投影を診断する。`svg-text-measure.spec.ts`の単一行fit両テーマ288条件比較は残し、従来の寸法・非表示／失敗時解放も維持する。候補patchと比較専用Vite configは`docs/performance/i5d-*`へ保管し、通常buildでは読み込まない。[I5dの結果](mixed-editor-quality.md)を参照。
+
+## タグ参照名の置換基盤（I6a）
+
+`lib/binding-replacement.ts`の`previewBindingReplacement`が完全一致の全画面差分・既存参照先・ロック／グループの拒否理由を算出する。`applyBindingReplacement`はsnapshotを照合して対象を再収集し、`editor/project-handler.ts`の`replace-binding-reference`から候補Projectへ適用する。最終検証・revision・履歴は従来の`applyCommand`／`recordEdit`が所有する。`binding-replacement.test.ts`が不正・no-op・原子性・世代・Undo／Redoを検証する。I6bのUI・workspace世代・draft接続は未実装。[詳細仕様](text-reference-replacement-design.md)を参照。

@@ -1,3 +1,4 @@
+import type { BindingReplacementRequest } from "../binding-replacement";
 import type { PaintAlphaPatch } from "../selection-paint-alpha";
 import type { EquipmentSlot, EquipmentBinding } from "../equipment";
 import type { ImageFit } from "../image-fit";
@@ -319,7 +320,9 @@ export type EquipmentCommand =
     }
   | { type: "remove-equipment"; equipmentId: string };
 export type ProjectCommand =
-  { type: "update-project"; name: string } | EquipmentCommand;
+  | { type: "update-project"; name: string }
+  | ({ type: "replace-binding-reference" } & BindingReplacementRequest)
+  | EquipmentCommand;
 export type SymbolCommand =
   | {
       type: "add-symbol-slot";
@@ -427,6 +430,7 @@ const commandScopes = {
   reorder: "object",
   remove: "object",
   "update-project": "project",
+  "replace-binding-reference": "project",
   "create-equipment-type": "project",
   "update-equipment-type": "project",
   "remove-equipment-type": "project",

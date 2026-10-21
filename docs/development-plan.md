@@ -6,7 +6,7 @@
 
 ## 次の実装順
 
-**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み。継続指示でI2a／I2bも完了・全体CI成功確認済み。[I3の仕様](static-text-wrap-design.md)に沿って折返しを実装し、I3a／I3bも完了・全体CI成功確認済み。[I4の仕様](selection-paint-alpha-design.md)に沿い単色塗り・枠線のα一括編集も完了・全体CI成功確認済み。[I5の条件と結果](mixed-editor-quality.md)に従い初回計測と文字計測隔離も完了・全体CI成功確認済み。I5bの内訳計測・履歴復元の限定改善も全体CI成功確認済み。I5cのCPU採取とProject監視境界の限定改善も完了・全体CI成功確認済み。I5dの計測・候補評価も完了・全体CI成功確認済み。一律隔離は改善根拠を得られず未採用。次はstyle／layout局所化の別候補の設計。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
+**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み。継続指示でI2a／I2bも完了・全体CI成功確認済み。[I3の仕様](static-text-wrap-design.md)に沿って折返しを実装し、I3a／I3bも完了・全体CI成功確認済み。[I4の仕様](selection-paint-alpha-design.md)に沿い単色塗り・枠線のα一括編集も完了・全体CI成功確認済み。[I5の条件と結果](mixed-editor-quality.md)に従い初回計測と文字計測隔離も完了・全体CI成功確認済み。I5bの内訳計測・履歴復元の限定改善も全体CI成功確認済み。I5cのCPU採取とProject監視境界の限定改善も完了・全体CI成功確認済み。I5dの計測・候補評価も完了・全体CI成功確認済み。一律隔離は改善根拠を得られず未採用。I5eの候補評価も完了・未採用として区切り、次はI6の参照名一括置換。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
 
 以下はこれまでの実装経緯とCore v1へ向けた長期工程を保持する。新しい短期順序と矛盾する場合は上記計画を優先し、最終的な機能仕様・提供段階は統合設計に従う。
 
@@ -687,4 +687,4 @@ I5bの次の区切りは残るScriptDurationのサンプリングprofile。Node�
 
 ## 次工程I6（2026-10-21）
 
-I5eのstyle tree分離候補は実測で読込短縮を確認できず未採用。[評価記録](mixed-editor-quality.md)を残し、性能の限定改善・候補評価は一区切りとした。次は[参照名一括置換](text-reference-replacement-design.md)を純粋計算／commandとUIに分けて進める。統合設計§9の具体化であり、現時点では未実装。実Hub・Equipment／Symbol slot・認証の延期は維持する。
+I5eのstyle tree分離候補は実測で読込短縮を確認できず未採用。[評価記録](mixed-editor-quality.md)を残し、性能の限定改善・候補評価は一区切りとした。次は[参照名一括置換](text-reference-replacement-design.md)を純粋計算／commandとUIに分けて進める。統合設計§9の具体化であり、I6aの差分計算・command基盤を実装済み、I6bのUIは未接続。実Hub・Equipment／Symbol slot・認証の延期は維持する。

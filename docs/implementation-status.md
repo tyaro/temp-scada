@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入も全体CI成功確認済み。I3の静的Text折返しも全体CI成功確認済み。I4の単色塗り・枠線α一括編集も完了・全体CI成功確認済み。I5の初回計測と文字計測隔離、I5bの履歴候補コピー、I5cのCPU採取とProject監視境界の限定改善も完了・全体CI成功確認済み。I5dの候補評価も完了・全体CI成功確認済みだが、一律隔離は未採用。I5eのstyle tree分離も評価完了・全体CI成功確認済み・未採用。実行時コードを維持し、動的FontFaceの回帰試験と再現資産を追加した。I5はここで一区切り。大規模図面の読込・キー操作の遅延は残る。次の[I6：参照名一括置換](text-reference-replacement-design.md)は計画のみで未実装。
+2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入も全体CI成功確認済み。I3の静的Text折返しも全体CI成功確認済み。I4の単色塗り・枠線α一括編集も完了・全体CI成功確認済み。I5の初回計測と文字計測隔離、I5bの履歴候補コピー、I5cのCPU採取とProject監視境界の限定改善も完了・全体CI成功確認済み。I5dの候補評価も完了・全体CI成功確認済みだが、一律隔離は未採用。I5eのstyle tree分離も評価完了・全体CI成功確認済み・未採用。実行時コードを維持し、動的FontFaceの回帰試験と再現資産を追加した。I5はここで一区切り。大規模図面の読込・キー操作の遅延は残る。次の[I6：参照名一括置換](text-reference-replacement-design.md)はI6aの差分計算・command基盤を実装。I6bのUIは未接続で、画面からの一括置換は未提供。
 
 ## 保存契約と基盤
 

@@ -1,6 +1,6 @@
 # I6：ローカルProjectのタグ参照名一括置換
 
-2026-10-21。状態: **設計・計画のみ、未実装**。Astraの読取レビューを踏まえ、[統合設計§9](scada-integrated-design.md#9-開発保守を支える機能)の参照名置換・差分確認を具体化する。[単体開発計画](upstream-independent-plan.md)の次工程。Project0.33.0と固定上流依存を維持する。
+2026-10-21。状態: **I6aの基盤実装・ローカル検証済み、I6bのUIは未実装**。Astraの読取レビューを踏まえ、[統合設計§9](scada-integrated-design.md#9-開発保守を支える機能)の参照名置換・差分確認を具体化する。[単体開発計画](upstream-independent-plan.md)の次工程。Project0.33.0と固定上流依存を維持する。
 
 ## 対象と操作
 
@@ -20,9 +20,19 @@ Equipmentのslot割付、Symbol定義／slot名、機器プロパティ、Action
 
 ## 実装区切りと受入
 
-| 工程 | 内容                           | 完了条件                                                                                   | 状態   |
-| ---- | ------------------------------ | ------------------------------------------------------------------------------------------ | ------ |
-| I6a  | 純粋な対象収集・差分・command  | 完全一致、全画面／非表示、制約拒否、no-op、世代不一致、原子性、Undo／Redoを単体で確認      | 未着手 |
-| I6b  | タグ参照一覧から差分確認・適用 | 検索の独立、件数／使用先、IME・draft・取消、保存再読込、ライト／ダークの操作と実画面を確認 | 未着手 |
+| 工程 | 内容                           | 完了条件                                                                                   | 状態         |
+| ---- | ------------------------------ | ------------------------------------------------------------------------------------------ | ------------ |
+| I6a  | 純粋な対象収集・差分・command  | 完全一致、全画面／非表示、制約拒否、no-op、世代不一致、原子性、Undo／Redoを単体で確認      | 基盤実装済み |
+| I6b  | タグ参照一覧から差分確認・適用 | 検索の独立、件数／使用先、IME・draft・取消、保存再読込、ライト／ダークの操作と実画面を確認 | 未着手       |
 
-読む入口は`lib/binding-references.ts`、`designer/BindingReferences.svelte`、`editor/commands.ts`、`editor.ts`、`history.ts`、`designer/drafts.svelte.ts`（いずれも`apps/banto-scada/src/`配下）。現在は使用先の一覧・移動までで、置換commandとUIはない。基盤だけの完了を機能提供済みと記載せず、I6bと全体CI成功をもって初回提供完了とする。
+読む入口は`lib/binding-references.ts`、`designer/BindingReferences.svelte`、`editor/commands.ts`、`editor.ts`、`history.ts`、`designer/drafts.svelte.ts`（いずれも`apps/banto-scada/src/`配下）。現在の画面は使用先の一覧・移動まで。置換commandの基盤を追加したが、置換UIは未接続。基盤だけの完了を機能提供済みと記載せず、I6bと全体CI成功をもって初回提供完了とする。
+
+## I6aの実装（2026-10-21）
+
+`lib/binding-replacement.ts`が純粋な差分作成・既存使用先・拒否理由を所有し、`replace-binding-reference`をProject commandとして追加した。対象は呼出し側から受け取らず、適用時も全画面から完全一致で再収集する。新しい名前は候補Projectの既存検証を通す。原本は変更しない。
+
+基準照合はrevisionを含む検証済みProjectの直列化snapshotを使い、内容変更・Undoによるrevision前進・別Projectを拒否する。workspace世代と画面切替、draft／IME／取消のUI側保護はI6bで接続する。基盤だけでそれらの操作確認が完了したとは扱わない。
+
+追加単体14件で、全画面／非表示・完全一致・既存名統合・空白の保持・無効名・ロック／グループ・no-op・一括Undo／Redo・保存往復・古いsnapshot・revision上限・原子性を確認した。全単体1121件と型チェック（エラー・警告0）が成功。Project0.33.0・上流依存・読取接続の状態表示は変更しない。UI未接続のため、新しい機能の実画面はまだない。
+
+I6aのローカル回帰検証では、既存タグ参照・割付・履歴のブラウザ7件、本番build、全体整形も成功した。新規置換UIの試験ではなく、既存機能の回帰確認として記録する。
