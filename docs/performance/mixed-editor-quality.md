@@ -434,6 +434,8 @@ SCADA_PROFILE_URL=http://localhost:5351 node apps/banto-scada/scripts/profile-ed
 node apps/banto-scada/scripts/summarize-editor-profile.mjs /tmp/scada-i5h-direct-cpu-1000/reload.cpuprofile /tmp/scada-i5h-profile-build 'parseProject|readProjectFile|fitText|withSvgTextMeasure'
 ```
 
+raw cpuprofileとbuildは`/tmp`にあり、repoには集計とSHAを残した。再生成は上記コマンドを使う。追加runnerの構文・整形、source mapの既知fixture（mapped caller／unmapped callerへのnative self振分け）、実ブラウザの7run、文書リンクを確認した。アプリコード・Rust・schemaは変更しておらず、全unit／E2Eの再実行や性能改善の全体CI完了を意味しない。
+
 <a id="font-events-i5i"></a>
 
 ## I5i：font準備・通知共有候補のローカル比較（2026-10-22）
@@ -471,8 +473,6 @@ node apps/banto-scada/scripts/summarize-editor-profile.mjs /tmp/scada-i5h-direct
 ### 次の判断
 
 まず既存の寸法比較失敗を標準ブラウザ環境でも切り分け、共通の品質基準を確認する。そのうえで、残る`getBBox`・style／layoutの呼出元と反復回数をCPU診断し、根拠から別候補を選ぶ。今回の共有候補や過去の単一行probe隔離は自動採用しない。
-
-raw cpuprofileとbuildは`/tmp`にあり、repoには集計とSHAを残した。再生成は上記コマンドを使う。追加runnerの構文・整形、source mapの既知fixture（mapped caller／unmapped callerへのnative self振分け）、実ブラウザの7run、文書リンクを確認した。アプリコード・Rust・schemaは変更しておらず、全unit／E2Eの再実行や性能改善の全体CI完了を意味しない。
 
 <a id="font-ready-batch-i5i"></a>
 
