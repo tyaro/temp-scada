@@ -8,9 +8,10 @@ const expect = baseExpect.configure({ timeout: 60_000 });
 const [input, destination, size = "1000"] = process.argv.slice(2);
 assert(
   input && destination,
-  "Usage: profile-editor.mjs package output-directory [placements]",
+  "Usage: profile-editor.mjs package output-directory [placements] [--history]",
 );
 const count = Number(size);
+const prefillHistory = process.argv[5] === "--history" ? 50 : 0;
 assert(Number.isInteger(count) && count > 0 && count <= 1000);
 const output = resolve(destination);
 await mkdir(output, { recursive: true });
@@ -55,6 +56,7 @@ try {
   }
   await key("ArrowRight");
   await key("Control+z");
+  for (let i = 0; i < prefillHistory; i++) await key("ArrowRight");
   const initial = await selected.getAttribute("transform");
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Profiler.enable");
@@ -86,6 +88,7 @@ try {
         package: resolve(input),
         samplingIntervalUs: 1000,
         keysPerProfile: 9,
+        prefillHistory,
         method:
           "Separate CPU diagnostic with source maps; includes browser/driver idle and coordination. Not an input-latency benchmark.",
       },

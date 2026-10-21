@@ -11,8 +11,10 @@ const { SourceMapConsumer } = createRequire(
 const [input, build] = process.argv.slice(2);
 assert(
   input && build,
-  "Usage: summarize-editor-profile.mjs profile.cpuprofile build-directory",
+  "Usage: summarize-editor-profile.mjs profile.cpuprofile build-directory [function-filter-regex]",
 );
+const functionFilter = process.argv[4];
+const selected = functionFilter ? new RegExp(functionFilter) : undefined;
 const profile = JSON.parse(await readFile(input, "utf8"));
 const maps = new Map();
 const sourceMapHashes = {};
@@ -89,6 +91,13 @@ process.stdout.write(
         .length,
       filesBySelf: sorted(files, "selfUs"),
       filesByInclusive: sorted(files, "inclusiveUs"),
+      functionFilter,
+      selectedFunctions: selected
+        ? [...functions]
+            .filter(([label]) => selected.test(label))
+            .map(([label, times]) => ({ label, ...times }))
+            .sort((a, b) => b.inclusiveUs - a.inclusiveUs)
+        : undefined,
       functionsBySelf: sorted(functions, "selfUs"),
       functionsByInclusive: sorted(functions, "inclusiveUs"),
     },

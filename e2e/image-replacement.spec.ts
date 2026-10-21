@@ -278,3 +278,55 @@ test("geometry committed during replacement decode survives and does not cancel 
   await button(p, "元に戻す").click();
   expect((await saved(p)).project.screens[0].objects[0]).toEqual(before);
 });
+test("image originals follow Redo truncation and the 50-snapshot retention boundary", async ({
+  page: p,
+}) => {
+  const { id, next } = await start(p);
+  const image = picture(p, id);
+  const originalUrl = (await image.getAttribute("href"))!;
+  const readable = (src: string) =>
+    p.evaluate(async (src) => {
+      try {
+        return (await fetch(src)).ok;
+      } catch {
+        return false;
+      }
+    }, src);
+  await replace(p, next);
+  await expect(image).not.toHaveAttribute("href", originalUrl);
+  const redoOnlyUrl = (await image.getAttribute("href"))!;
+  await button(p, "元に戻す").click();
+  await expect(image).toHaveAttribute("href", originalUrl);
+  expect(await readable(redoOnlyUrl)).toBe(true);
+  await p.getByLabel("グリッドにスナップ", { exact: true }).uncheck();
+  const frame = p.getByRole("region", {
+    name: "キャンバス操作領域",
+    exact: true,
+  });
+  await frame.focus();
+  await p.keyboard.press("ArrowRight");
+  await expect(button(p, "やり直す")).toBeDisabled();
+  await expect.poll(() => readable(redoOnlyUrl)).toBe(false);
+  expect(await readable(originalUrl)).toBe(true);
+  await replace(p, next);
+  await expect(image).not.toHaveAttribute("href", originalUrl);
+  const currentUrl = (await image.getAttribute("href"))!;
+  expect(currentUrl).not.toBe(redoOnlyUrl);
+  const object = mainCanvas(p).locator(`:scope > [data-object-id="${id}"]`);
+  const position = () =>
+    object.evaluate((g) => {
+      const matrix = (g as SVGGElement).transform.baseVal.consolidate()!.matrix;
+      return { x: matrix.e, y: matrix.f };
+    });
+  const before = await position();
+  await frame.focus();
+  for (let i = 0; i < 49; i++) await p.keyboard.press("ArrowRight");
+  await expect.poll(position).toEqual({ x: before.x + 49, y: before.y });
+  expect(await readable(originalUrl)).toBe(true);
+  await p.keyboard.press("ArrowRight");
+  await expect.poll(position).toEqual({ x: before.x + 50, y: before.y });
+  await expect.poll(() => readable(originalUrl)).toBe(false);
+  expect(await readable(currentUrl)).toBe(true);
+  const output = await saved(p);
+  expect(output.originals!.map((a) => Buffer.from(a.bytes))).toEqual([next]);
+});

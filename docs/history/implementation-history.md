@@ -1821,3 +1821,11 @@ Inspectorに始点／終点のSymbol配置・anchorを明示適用するフォ�
 Astraの指摘を反映し、IME状態をcommand構築の事前検証まで伝達することで、他のdirtyフォームだけ先に適用されることを防いだ。TS全1,207件（新規フォーム6件）・型エラー／警告0・build・整形・リンク、新規ブラウザ7件と既存の接続／数値入力／回転27件が成功。新しい試験の初回欄名誤指定と修正は設計書に記録した。I8bの`7faff97`は全体CI39576110879成功。保存版0.35.0・Rust／schema・上流依存は変更しない。全体CIはPush後に確認する。
 
 I8cの`eef69fd`は[全体CI39578127673](https://github.com/tyaro/temp-scada/actions/runs/39578127673)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I8a〜cの採用した初回範囲を完了とし、マウス吸着・任意port・routingと上流依存の保留項目は残す。
+
+## I5f／I5g：現行大図面の再計測と保持履歴の資産索引（2026-10-21）
+
+I8後のProject0.35.0を再計測し、画像Mapの再生成抑制候補は、移動／Undoの改善を示さず基準へ戻した。patch・比較configと生JSONを残す。次にCPU診断で反復parseの費用を確認し、Appインスタンス専用・現在保持するpast／futureだけのsnapshot→資産hash索引を追加した。[測定・採否・限界](../performance/mixed-editor-quality.md#history-asset-index)。
+
+1,000配置の交互比較で50履歴移動中央値は約414→350ms、別の通常runは478→348ms。短履歴移動と再読込は交互比較で悪化しており、全般改善・読込非劣化は主張しない。50履歴を事前投入した9操作のCPU samplingで、資産集計inclusiveは移動925→29ms、Undo1007→33ms。GC後ヒープの差は約4.4KB。全3規模で保存Project・PNG原本・URLと一時DOMの解放、1,000配置の文字投影一致を確認した。検証・JSON snapshot・Undo単位・Storeのpin／lease・上流依存は不変。
+
+Astraの安全性／採用レビューは必須修正なし。TS全1,214件、型エラー／警告0、関連ブラウザ40件、本番build・整形・リンクが成功した。実原本のRedo破棄と50履歴上限・同一package再読込のURL更新を新規回帰で確認。I5fの候補sourceとbuildの再生一致も確認した。全体CIはPush後に確認する。

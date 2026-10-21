@@ -317,3 +317,9 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 ## 接続・解除の設定UI（I8c）
 
 `designer/ConnectionSettings.svelte`は端点ごとの明示フォーム・配置順付き候補・適用済み状態・lock／group／候補なしの表示を担当する。`designer/forms/line-connection.ts`はAppのcommand構築と一括draft事前検証から共用し、generation／owner／対象・候補・anchorとIME状態を検査する。InspectorのSymbol側は`connectionUsages`を投影するだけで、別の参照台帳を持たない。`line-connection-form.test.ts`と`e2e/connection-settings.spec.ts`でUndo・保存往復・両テーマ・同名候補・複数draftの部分適用防止を確認する。
+
+## 保持中履歴の資産索引（I5g）
+
+`history-assets.ts:createHistoryAssetCollector`はAppごとのclosureに、現在のpast／futureのsnapshot文字列→hash配列だけを保持する。現在Projectのassetsは毎回読み、脱落snapshotを捨てる。全抽出成功後にStore.collect、collect成功後に索引を置換する。Store／Blob／URL／pin／leaseとProject検証は所有しない。App.collectAssetsはこのhelperへ委譲し、既存のeffectと画像処理の回収入口を共用する。`history-assets.test.ts`が保持集合・再利用・失敗・脱落・初期化を、`image-replacement.spec.ts`が実原本のRedo破棄／50履歴上限・保存を、`symbol-image.spec.ts`が同一package再読込時のStore更新／URL解放を確認する。
+
+`compare-editor-load.mjs`の`--keys`／`--history`は通常の交互操作比較、`profile-editor.mjs --history`は50履歴を事前投入した別CPU診断。`summarize-editor-profile.mjs`の任意filterは上位30件から落ちた対象関数も抽出する。I5fの画像Map候補は速度根拠がなく未採用で、patch／source overlay configだけを保管する。[採否と測定条件](../performance/mixed-editor-quality.md#history-asset-index)を参照。

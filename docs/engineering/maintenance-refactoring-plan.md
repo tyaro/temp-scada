@@ -532,3 +532,7 @@ Inspectorで検証した同一DOM・capture／Esc／blur／resize取消・上位
 この区切りでは左パネルのUIを追加せず、Inspectorの契約を維持する。既存ブラウザ・型・buildと整形が完了条件。左作業パネルの機能追加は[別の区切り](../design/editor/sidebar-floating-design.md)で保存する。
 
 共通処理の抽出後、既存Inspectorブラウザ12件、配置の単体6件と所有者／slot識別の新規2件、型チェック（エラー／警告なし）・本番buildが成功した。幾何adapterの抽出後は保存／狭幅退避と通知遅延resizeのブラウザ2件も成功した。左パネルのUIはまだ追加していない。
+
+### I5g：計測後の履歴資産集計の限定削減
+
+R6の後続性能評価として、現在形式の混在図面を再計測した。[I5f／I5gの記録](../performance/mixed-editor-quality.md#history-asset-index)に従い、画像Map候補は戻し、App専用・現在保持する履歴だけの資産hash索引を追加した。Project検証・JSON snapshot・Undo単位・原本Storeとpin／leaseを維持する。大域cacheや汎用frameworkへの置換、読込・全操作の性能改善完了ではない。安全性のAstra読取レビューは必須修正なし、ローカル検証済み／CI確認待ち。

@@ -306,3 +306,45 @@ test("definition editing exposes image fit, crop and replacement controls", asyn
       .locator('input[name="cropX"]'),
   ).toBeEnabled();
 });
+test("geometry edits retain image URLs while identical-package reload replaces the Store and revokes old URLs", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await button(page, "編集").click();
+  await load(page);
+  const image = mainCanvas(page).locator("image[data-image-frame]");
+  const url = await image.getAttribute("href");
+  const beforePixels = await pixels(page);
+  await selectPanel(page, "レイヤー");
+  const id = sample.screens[0].objects[0].id;
+  await page.locator(`[data-layer-id="${id}"]`).click();
+  await page
+    .getByRole("region", { name: "キャンバス操作領域", exact: true })
+    .focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(image).toHaveAttribute("href", url!);
+  await button(page, "元に戻す").click();
+  await expect(image).toHaveAttribute("href", url!);
+  await expect(button(page, "元に戻す")).toBeDisabled();
+  await load(page);
+  await expect(image).not.toHaveAttribute("href", url!);
+  const nextUrl = await image.getAttribute("href");
+  expect(await pixels(page)).toEqual(beforePixels);
+  const readable = (src: string) =>
+    page.evaluate(async (src) => {
+      try {
+        return (await fetch(src)).ok;
+      } catch {
+        return false;
+      }
+    }, src);
+  expect(await readable(url!)).toBe(false);
+  expect(await readable(nextUrl!)).toBe(true);
+  await openProject(
+    page,
+    new URL("../examples/minimal.project.json", import.meta.url).pathname,
+  );
+  await expect(mainCanvas(page).locator("image")).toHaveCount(0);
+  expect(await readable(nextUrl!)).toBe(false);
+});

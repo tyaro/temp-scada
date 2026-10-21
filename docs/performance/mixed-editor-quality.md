@@ -1,6 +1,6 @@
 # 混在図面の品質・性能計測（I5）
 
-2026-10-21。状態: **初回計測・限定改善完了。全体CI成功確認済み**。[単体開発計画](../project/upstream-independent-plan.md)のI5。[R6のNodeドメイン計測](editor-performance.md)と区別し、ブラウザで実際の読込・入力・保存・資源寿命を確認する。
+2026-10-21。状態: **初回〜I5eの全体CI成功。I5fの現行再計測・候補見送り、I5gの履歴資産索引はローカル検証済み／CI確認待ち**。[単体開発計画](../project/upstream-independent-plan.md)のI5。[R6のNodeドメイン計測](editor-performance.md)と区別し、ブラウザで実際の読込・入力・保存・資源寿命を確認する。
 
 ## 条件と境界
 
@@ -281,3 +281,89 @@ node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-mixed-quality/m
 I5の限定改善・候補評価はここで一区切りとする。大図面の読込・キー操作の遅延は既知課題として残し、次に再開する場合は新しい仮説と同じ品質条件を先に定める。次の機能工程は[I6：参照名の一括置換](../design/equipment/text-reference-replacement-design.md)の計画へ移る。Project0.33.0・Banto／Industrial SDK・認証延期は維持する。
 
 実装差分`f8bbdc9`の[全体CI39555810579](https://github.com/tyaro/temp-scada/actions/runs/39555810579)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。
+
+## I5f：現行版の再計測と画像Map更新の候補（変更見送り）
+
+基準はI8完了後の`e9c5d46`、Project0.35.0。公開fixtureを現行形式で再生成し、本番build `index-BQZZi5es.js`で1,000配置を計測した。[通常の生JSON](i5f-browser-before.json)では、再読込中央値17,176ms、移動413ms、Undo438ms、50履歴の移動478ms。保存Project／PNG原本・200 Textの投影（過去基準との差0）・URLと計測DOMの解放は成功した。I7／I8で増えた機能を含む現行版の確認であり、過去版との速度差から因果関係を主張しない。
+
+[CPU診断のsource map集計](i5f-profiles.json)では、移動／Undo各9回でSvelte batch inclusive約2.02／2.06秒、mark_reactions self約330／389ms、AppのcollectAssets self約93／185msが見えた。samplingにはdriverのidle・native処理が含まれ、inclusiveは重複する。通常応答時間と相互に差し引かず、アプリ側の依存と反復処理を調べる根拠にする。診断時に既定port5234の旧サーバーを検出し、その試行は除外して専用port5344と現行asset名の一致を確認後に採取した。通常計測とbuild・試験・CPU採取は並走させていない。
+
+候補は、Appの`assetImages`の依存を`[id, sha256, width, height]`のJSON文字列とStoreに分けるもの。幾何だけ変わる編集で同内容のMapを再生成しない。Store変更時は必ず再生成し、asset collection・history・検証を変更しない。Astraも限定評価として妥当と判断したが、主因と断定せず交互比較した。
+
+[交互比較の生JSON](i5f-load-key-comparison.json)は基準／候補／候補／基準、各新contextで初回読込・再読込・warmup後9移動・9 Undo。単一環境の少数試行で、統計的有意性は評価していない。基準／候補をまとめた値は次のとおり。
+
+| 操作                             |         基準 |         候補 |
+| -------------------------------- | -----------: | -----------: |
+| 再読込（各2件の平均、ms）        |     16,737.5 |     15,505.1 |
+| 移動（各18件の中央値／平均、ms） | 347.9／357.8 | 345.1／392.8 |
+| Undo（各18件の中央値／平均、ms） | 333.3／339.8 | 330.2／366.2 |
+| 移動の最大値（ms）               |        428.2 |        701.3 |
+| Undoの最大値（ms）               |        520.6 |        821.1 |
+
+**応答改善の根拠を得られず候補は採用しない。Appの画像Mapは基準へ戻した。** 再読込の少数値だけで採用せず、中央値がほぼ変わらず平均・最大が増えた移動／Undoも判断に含める。改善率・一般的な悪化率を保証する計測ではない。
+
+### 再現と保持した検証
+
+`compare-editor-load.mjs`は従来の読込専用モードを維持し、`--keys`で信頼されたkeydownからtransform更新＋2rAFまでを測る。9移動・9 Undo後の位置復元と画像URL不変をassertする。追加の`--history`は50回確定して全変位を確認する。閾値をCIの成否条件にはしない。`symbol-image.spec.ts`へ、同一package再読込時の新StoreのURL・古いURLの解放、幾何編集／Undo中のURL保持と原画素一致の回帰を追加した。
+
+[候補patch](i5f-candidate.patch)と[比較専用config](i5f-comparison-vite.config.mjs)はAppのsourceだけをloaderへ渡す。通常起動からは読み込まない。他の実行時コードが同じ評価ツリーで使い、任意の将来版全体を巻き戻すconfigではない。
+
+```sh
+source scripts/cloud-env.sh
+git show e9c5d46:apps/banto-scada/src/App.svelte > /tmp/scada-i5f-original.svelte
+patch --output /tmp/scada-i5f-replayed.svelte /tmp/scada-i5f-original.svelte docs/performance/i5f-candidate.patch
+SCADA_I5F_APP_SOURCE=/tmp/scada-i5f-replayed.svelte pnpm --filter banto-scada exec vite build --config ../../docs/performance/i5f-comparison-vite.config.mjs --outDir /tmp/scada-i5f-replay
+# 基準・候補previewを別portに起動してから実行する。
+node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-i5f-before/mixed-1000.bantoscada /tmp/scada-i5f-abba.json http://127.0.0.1:5233 http://localhost:5345 1000 --keys
+```
+
+<a id="history-asset-index"></a>
+
+## I5g：保持中履歴の資産hash索引（限定改善・ローカル検証済み）
+
+I5fで観測した`collectAssets`の全履歴JSONの反復parseだけを対象にする。索引はAppインスタンス専用で、snapshot文字列そのものをキーとする。現在のpast／futureに含むsnapshotのhash配列だけを保持し、毎回現在の集合へ作り直して脱落entryを捨てる。現在Projectのassetsは毎回直接読む。Store／Blob／URL／leaseは索引へ保持しない。
+
+全snapshotの抽出成功後にStore.collectを呼び、成功後だけ索引を置き換える。抽出途中の失敗ではStoreも索引も変わらない。索引は参照集合の導出結果であり、検証済みの証明には使わない。Projectの入口・command・履歴復元・保存の検証、JSON snapshot、Undo単位・上限、Storeのpinと保存中leaseは変更しない。大域cacheや汎用memo基盤は追加しない。
+
+`history-assets.test.ts`で現在／past／futureの和集合、現在参照の再読取、Undo／Redo間の再利用、Redo破棄、履歴上限での脱落と再導入、抽出失敗の原子性、history初期化、インスタンス分離、外部Set変更からの保護を確認する。通常計測では短い履歴と50履歴を分けて評価し、改善が確認できなければこの候補も戻す。
+
+### I5gの測定結果と採用範囲
+
+[交互比較](i5g-load-key-comparison.json)はA／B／B／Aの各contextで初回＋再読込、warmup後の移動9回・Undo9回・連続移動50回を測った。個々の試行でばらつきがあり、基準の初回読込36.8秒・連続移動10.3秒、候補の短い履歴の移動1.07秒などの外れ値も省かず保存した。統計的有意性や一般的な性能保証ではない。
+
+| 操作                                 |     基準 |     候補 |
+| ------------------------------------ | -------: | -------: |
+| 再読込（各2件の平均、ms）            | 15,745.8 | 18,746.8 |
+| 短い履歴の移動（各18件の中央値、ms） |    344.8 |    362.5 |
+| Undo（各18件の中央値、ms）           |    387.8 |    327.6 |
+| 50連続移動（各100件の中央値、ms）    |    414.4 |    350.2 |
+
+**短い履歴の移動と再読込はこの比較で悪化した。全操作の改善や読込非劣化は主張しない。** 50連続移動の各context中央値は、基準374.1／476.0ms、候補345.9／351.8ms。保持履歴が長い集計処理の削減に絞って評価する。
+
+別の[通常benchmark](i5g-browser-after.json)では100／500／1,000配置を測定し、3規模とも保存Project・PNG4原本bytes・エラーなし・資産なし図面への3回切替後のlive URL／bytes 0・計測DOM 0を確認した。1,000配置の200 Textのmode・行内容・x／yはI5f基準と一致した。通常の1,000配置は移動342ms・Undo337ms・50履歴移動348ms。比較するI5fの各値は413／438／478msだが、別runの値だけから改善率を保証しない。100／500配置には同時間帯の基準runを追加しておらず、速度比較とは扱わない。
+
+GC後の1,000配置・50履歴のJSヒープは基準179,287,708 bytes、候補179,292,124 bytes（差4,416 bytes）。索引は現在保持するsnapshot文字列とhash配列だけを参照し、画像原本のURLは50履歴前後とも4件・133,898 bytesで不変。短い試行のJSヒープは全ブラウザ・GPU資源の計測や長時間リークの不存在証明ではない。
+
+[履歴満杯時のCPU診断](i5g-profiles.json)は、採取前に50回の移動を確定し、続く9移動・9 Undoを別々に1ms間隔でsamplingした。資産回収関数のinclusiveは移動約925→29ms、Undo約1,007→33ms。候補のApp wrapperとhistory-assetsの値は重複するので合算しない。厳密な関数実行時間でも、通常の入力遅延の短縮率でもない。未変更のSvelte更新等は依然大きい。
+
+**反復する資産抽出の削減と、長い履歴での通常操作の結果を根拠に、資産索引だけを限定採用する。** Project／Undo全体、読込、短い履歴の速度改善完了とはしない。I5fの画像Map候補は戻したまま。入力・保存・履歴復元の検証、Storeのpin／leaseや上流依存を変更しない。
+
+### I5gの再現と受入
+
+```sh
+source scripts/cloud-env.sh
+# 同じ評価ツリー上の基準／候補の通常buildを別portで起動する。
+node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-i5f-before/mixed-1000.bantoscada /tmp/scada-i5g-abba.json http://127.0.0.1:5233 http://localhost:5346 1000 --keys --history
+SCADA_BENCHMARK_URL=http://localhost:5346 SCADA_BENCHMARK_BASELINE=docs/performance/i5f-browser-before.json node apps/banto-scada/scripts/benchmark-mixed-editor.mjs /tmp/scada-i5g-after 100 500 1000
+# CPU採取はsource map付きの別buildで、通常benchmark・build・試験と並走させない。
+SCADA_PROFILE_URL=http://localhost:5347 node apps/banto-scada/scripts/profile-editor.mjs /tmp/scada-i5g-after/mixed-1000.bantoscada /tmp/scada-i5g-profile 1000 --history
+node apps/banto-scada/scripts/summarize-editor-profile.mjs /tmp/scada-i5g-profile/move.cpuprofile /tmp/scada-i5g-profile-build 'collectAssets|history-assets'
+```
+
+profile runnerの`--history`は事前投入50件をmetadataへ残す。summarizerの任意function filterは上位30件の圏外でも指定した関数を記録する。いずれも通常アプリには計測API・分岐を追加しない。JSON内のcommitは計測開始時のHEADで、未コミット候補のsource hashは別のprofile記録に示す。両buildはAppとhistory-assets以外の実行時ソースを揃えた。
+
+TS全1,214件（資産索引の新規7件を含む）、型チェック（エラー・警告0）、関連ブラウザ40件、本番build・整形・文書リンクが成功した。Storeのpin／export leaseの単体、実画像のUndo後の新規編集によるRedo原本の解放、50件目での旧原本の解放・49件目までの保持、保存原本の一致、同一package再読込時の新StoreへのURL切替、Symbol内画像・原本付きclipboard・保存状態の既存回帰を確認した。
+
+I5fのpatch再生後のsource hashは記録と一致し、比較専用configでbuildしたmain asset `index-DZP628Bn.js`は元の候補buildとバイト一致した。現行の通常mainは資産索引だけを含む`index-B9CfaS6j.js`。Astraの安全性／採用レビューに必須修正なし。全体CIはPush後に確認する。
+
+保存版0.35.0・Rust／schema・固定Banto／Industrial SDKは変更していない。今回は履歴資産集計の限定改善で区切る。大図面の読込とSvelte更新の費用は残課題とし、次回も新しい診断の根拠から別候補を選ぶ。

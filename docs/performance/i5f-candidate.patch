@@ -1,0 +1,37 @@
+diff --git a/apps/banto-scada/src/App.svelte b/apps/banto-scada/src/App.svelte
+index 1f03060..5ff1df7 100644
+--- a/apps/banto-scada/src/App.svelte
++++ b/apps/banto-scada/src/App.svelte
+@@ -1214,15 +1214,25 @@
+   // Track that boundary, not every field in the immutable document snapshot.
+   let project = $state.raw(parseProject(JSON.stringify(sample)));
+   let assetStore = $state.raw(new AssetStore());
++  // A geometry-only Project replacement must not invalidate every image consumer.
++  // Keep Store identity as a separate dependency: identical packages get fresh URLs.
++  const assetImageDescriptors = $derived(
++    JSON.stringify(
++      project.assets.map(({ id, sha256, width, height }) => [
++        id,
++        sha256,
++        width,
++        height,
++      ]),
++    ),
++  );
+   const assetImages = $derived(
+     new Map(
+-      project.assets.map((asset) => [
+-        asset.id,
+-        {
+-          url: assetStore.url(asset.sha256),
+-          width: asset.width,
+-          height: asset.height,
+-        },
++      (
++        JSON.parse(assetImageDescriptors) as [string, string, number, number][]
++      ).map(([id, hash, width, height]) => [
++        id,
++        { url: assetStore.url(hash), width, height },
+       ]),
+     ),
+   );

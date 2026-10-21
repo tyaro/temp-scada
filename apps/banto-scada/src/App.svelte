@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
     selectionPaintAlphaCommand,
     acknowledgeSelectionPaintAlpha,
@@ -1226,12 +1227,9 @@
       ]),
     ),
   );
+  const collectHistoryAssets = createHistoryAssetCollector();
   function collectAssets() {
-    const hashes = new Set(project.assets.map((asset) => asset.sha256));
-    for (const snapshot of [...history.past, ...history.future])
-      for (const asset of (JSON.parse(snapshot) as Project).assets)
-        hashes.add(asset.sha256);
-    assetStore.collect(hashes);
+    collectHistoryAssets(project.assets, history, assetStore);
   }
   $effect(collectAssets);
   let replacementImageInput: HTMLInputElement;
