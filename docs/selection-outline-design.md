@@ -2,7 +2,7 @@
 
 文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
 
-状態: **実装・関連回帰確認済み**。[実装・実画面](development-plan.md#selection-outline-progress)を参照する。Project 0.10.0のpaintを使い、schemaは変更しない。矩形・楕円だけの複数選択を対象とし、塗り・幾何・所属を変更しない。
+状態: **実装・関連回帰確認済み**。[実装・実画面](implementation-history.md#selection-outline-progress)を参照する。Project 0.10.0のpaintを使い、schemaは変更しない。矩形・楕円だけの複数選択を対象とし、塗り・幾何・所属を変更しない。
 
 ## 指定と適用
 

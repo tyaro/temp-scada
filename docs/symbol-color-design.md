@@ -2,7 +2,7 @@
 
 文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
 
-状態: **Project 0.9.0で実装済み**。Astraレビューに従い、Rust／TypeScript／Schema／現行サンプル・生成を同期した。[実装・検証・実画面](development-plan.md#symbol-color-progress)を参照する。[統合設計](scada-integrated-design.md)の多色Symbolの最初の工程であり、状態別表示・Binding・slotは追加しない。
+状態: **Project 0.9.0で実装済み**。Astraレビューに従い、Rust／TypeScript／Schema／現行サンプル・生成を同期した。[実装・検証・実画面](implementation-history.md#symbol-color-progress)を参照する。[統合設計](scada-integrated-design.md)の多色Symbolの最初の工程であり、状態別表示・Binding・slotは追加しない。
 
 ## 保存と描画
 
@@ -47,4 +47,4 @@ definitionモードのSymbolを含む場合は、現在の表示に定義色が�
 - 複製・独立コピー・同一／別Projectへのclipboard・JSON・Undo／Redoでモードとfillを保持する。
 - Editor／preview／minimap・両テーマ・狭幅・キーボードを確認する。UIアイコンの単色を実配色の確認と混同しない。
 
-進捗・実画面は[開発計画](development-plan.md#implementation-status)へ記録する。
+進捗・実画面は[開発計画](implementation-status.md)へ記録する。

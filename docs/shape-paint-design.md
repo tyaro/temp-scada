@@ -4,7 +4,7 @@
 
 > 0.18.0更新: 矩形／楕円の塗りは `paint.fill.enabled` と `paint.fill.paint`（solid／linearGradient）へ集約した。旧root `fill`／`colorAlpha` は図形では禁止する。以下は導入時の設計記録。現行契約・フォーム操作は[線形グラデーション設計](linear-gradient-design.md)を参照。Text・Polyline・Symbolの単色αと枠線αの合成規則は維持する。
 
-状態: **Project 0.10.0で実装・全体回帰確認済み**。Astraレビューに従い、Rust／TypeScript／Schema／現行サンプル・新規生成を同期した。[実装・検証・実画面](development-plan.md#shape-paint-progress)を参照する。認証・設備操作・状態別表示を追加しない。
+状態: **Project 0.10.0で実装・全体回帰確認済み**。Astraレビューに従い、Rust／TypeScript／Schema／現行サンプル・新規生成を同期した。[実装・検証・実画面](implementation-history.md#shape-paint-progress)を参照する。認証・設備操作・状態別表示を追加しない。
 
 ## 保存契約
 

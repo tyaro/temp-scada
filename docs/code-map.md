@@ -1,6 +1,6 @@
 # コードと検証の対応表
 
-状態: **現行構造の案内**。基準は画像crop接続後の`e04e44c`。責務や関数の移動時はこの対応表を更新する。[現在の実装状況](implementation-status.md)、[構造整理の計画・結果](maintenance-refactoring-plan.md)、[作業規則](../AGENTS.md)を併読する。
+状態: **現行構造の案内**。2026-10-21更新、I6b（`0bd2559`）までの追加を含む。責務や関数の移動時はこの対応表を更新する。[現在の実装状況](implementation-status.md)、[構造整理の計画・結果](maintenance-refactoring-plan.md)、[作業規則](../AGENTS.md)を併読する。
 
 パスはリポジトリルート基準。関数名を検索し、行番号・ファイルの大きさに依存しない。現在の依存方向はUI→編集／履歴→Project検証。純粋計算とモデルからDOMやAppをimportしない。
 

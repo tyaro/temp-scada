@@ -30,4 +30,4 @@ Project・選択・revision・Undo履歴を変更せず、未適用入力を適�
 - Fの有効範囲とIME・repeat・修飾キー・ドラッグ中の拒否を確認する。
 - 両テーマ、1280×720、共有定義の編集、既存のズーム・パン・ホイール・ミニマップ・メニュー・数値確定を確認する。
 
-進捗と実画面は[開発計画](development-plan.md#selection-view-progress)へ記録する。
+進捗と実画面は[開発計画](implementation-history.md#selection-view-progress)へ記録する。

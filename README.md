@@ -2,28 +2,16 @@
 
 `tyaro/banto-industrial`で計画するSCADAを並行開発する一時workspace。最終的に`apps/banto-scada`と`crates/scada-*`をindustrialへ戻します。現在はローカル工程図エディタと読取表示確認を提供し、正式Runtime・serverは開発中です。
 
-- [混在図面の品質・性能計測](docs/mixed-editor-quality.md): 画像・Symbol・折返しTextの実操作と資源解放。
-- [現在の実装状況](docs/implementation-status.md): 対応機能、保存契約、検証範囲、未実装。
-- [Bantoへの共通機能引渡し](docs/reviews/banto-contribution-handoff.md): 操作・非同期・設定保存・画像処理のIssueと実装／テスト資産。
-- [Bantoパネル基盤との比較](docs/reviews/banto-dock-comparison.md): 分割・タブ・入力保護の実験と共通化の提案。移行は未実施。
-- [塗り・枠線のα一括編集](docs/selection-paint-alpha-design.md): 独立項目・混在・原子的適用と実画面。
-- [静的Textの折返し](docs/static-text-wrap-design.md): 原文を保つ幅計測・保存・サンプルと実画面。
-- [静的Textの明示改行](docs/multiline-text-design.md): 空行・省略・入力保護と実画面。
-- [操作ガイド](docs/user-guide.md): 編集、画像、画面再利用、入力保護、パネルとキー操作。
-- [上流変更中のSCADA単体開発計画](docs/upstream-independent-plan.md): 作図機能、混在図面の計測・限定改善と残る工程。
-- [開発計画](docs/development-plan.md)と[実装履歴](docs/implementation-history.md): 今後と過去を分離。
-- [共有シンボルの機器情報表示](docs/equipment-property-design.md): 機器名・コード・種別名と定義例示。
-- [2色放射グラデーション](docs/radial-gradient-design.md): 中心・半径、色αと未適用見本。
-- [埋込画面のコピー](docs/screen-view-clipboard-design.md): 参照画面・Symbol・画像原本の同梱と再利用。
-- [マウスによる切出し調整](docs/image-crop-pointer-design.md): 原本上の指定・移動・サイズ変更と取消。
-- [背景の数値トリミング](docs/background-image-crop-design.md): 背景4方式と原本・切出しの保持。
-- [画像の表示方式](docs/image-fit-design.md): contain／cover／stretchと切出し・原本保持。
-- [機器種別の編集](docs/equipment-type-editing.md): 任意のbool／number読取slotと採用保護。
-- [機器の読取詳細](docs/equipment-read-details.md): 採用信号の状態と機器ごとの読取小窓。
-- [共有図形・配管の状態色追従](docs/state-color-following.md): bool状態色、参照保護と実画面。
-- [統合設計](docs/scada-integrated-design.md): 機能仕様の基準。
-- [コードと検証の対応表](docs/code-map.md): 変更対象の責務・入口・関連テスト。
-- [リファクタリング計画](docs/maintenance-refactoring-plan.md): R0〜R5の責務・不変条件・検証と進捗。
+## ドキュメント
+
+| 確認すること                 | 入口                                                                                    |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| 設計・操作・機能別資料を探す | [文書索引](docs/README.md)                                                              |
+| 今使える機能と残り           | [実装状況](docs/implementation-status.md)                                               |
+| 編集の操作                   | [操作ガイド](docs/user-guide.md)                                                        |
+| 次の工程・保留・統合         | [開発計画](docs/development-plan.md)・[単体開発計画](docs/upstream-independent-plan.md) |
+| コード変更・検証             | [コード対応表](docs/code-map.md)・[検証手順](#検証)                                     |
+| 過去の実装・検証             | [実装履歴](docs/implementation-history.md)                                              |
 
 ## 起動
 
@@ -92,222 +80,65 @@ Rustの読取adapterは[型付きslot context](docs/typed-read-slots-design.md)�
 
 ## 過去のリンクからの案内
 
-機能別の詳しい操作は[操作ガイド](docs/user-guide.md)に集約しています。以下は従来の見出しへのリンクを維持する案内です。
-
-## フロントエンドの UX 設計
-
-[操作ガイドの該当節](docs/user-guide.md#guide-001)へ移動しました。
-
-## 画像・描画表現・運用画面の追加検討
-
-[操作ガイドの該当節](docs/user-guide.md#guide-002)へ移動しました。
-
-## 別画面の埋込表示
-
-[操作ガイドの該当節](docs/user-guide.md#guide-003)へ移動しました。
-
-## 画面内の小窓で表示確認
-
-[操作ガイドの該当節](docs/user-guide.md#guide-004)へ移動しました。
-
-## 全画面での表示確認
-
-[操作ガイドの該当節](docs/user-guide.md#guide-005)へ移動しました。
-
-## 図面上への画像配置
-
-[操作ガイドの該当節](docs/user-guide.md#guide-006)へ移動しました。
-
-## クリップボード画像の貼り付け
-
-[操作ガイドの該当節](docs/user-guide.md#guide-007)へ移動しました。
-
-## 背景画像と持ち運べる保存
-
-[操作ガイドの該当節](docs/user-guide.md#guide-008)へ移動しました。
-
-## サイドチャットの操作試作レビュー
-
-[操作ガイドの該当節](docs/user-guide.md#guide-009)へ移動しました。
-
-## Project の読み込み・保存
-
-[操作ガイドの該当節](docs/user-guide.md#guide-010)へ移動しました。
-
-## 名前の変更と操作ガイド
-
-[操作ガイドの該当節](docs/user-guide.md#guide-011)へ移動しました。
-
-## Studio の外観
-
-[操作ガイドの該当節](docs/user-guide.md#guide-012)へ移動しました。
-
-## クリック位置へ連続配置
-
-[操作ガイドの該当節](docs/user-guide.md#guide-013)へ移動しました。
-
-## 図形の線形グラデーション
-
-[操作ガイドの該当節](docs/user-guide.md#guide-014)へ移動しました。
-
-## 繰返しパターン
-
-[操作ガイドの該当節](docs/user-guide.md#guide-015)へ移動しました。
-
-## 配置名とレイヤー検索
-
-[操作ガイドの該当節](docs/user-guide.md#guide-016)へ移動しました。
-
-## レイヤーフォルダー
-
-[操作ガイドの該当節](docs/user-guide.md#guide-017)へ移動しました。
-
-## 選択範囲を表示
-
-[操作ガイドの該当節](docs/user-guide.md#guide-018)へ移動しました。
-
-## 配置の回転
-
-[操作ガイドの該当節](docs/user-guide.md#guide-019)へ移動しました。
-
-## Textの書式と枠内表示
-
-[操作ガイドの該当節](docs/user-guide.md#guide-020)へ移動しました。
-
-## 配置全体の不透明度
-
-[操作ガイドの該当節](docs/user-guide.md#guide-021)へ移動しました。
-
-## 色ごとの不透明度
-
-[操作ガイドの該当節](docs/user-guide.md#guide-022)へ移動しました。
-
-## 中心の等間隔配置
-
-[操作ガイドの該当節](docs/user-guide.md#guide-023)へ移動しました。
-
-## 複数選択の色編集
-
-[操作ガイドの該当節](docs/user-guide.md#guide-024)へ移動しました。
-
-## 線・配管の一括スタイル編集
-
-[操作ガイドの該当節](docs/user-guide.md#guide-025)へ移動しました。
-
-## 実線・破線・点線
-
-[操作ガイドの該当節](docs/user-guide.md#guide-026)へ移動しました。
-
-## 矩形・楕円の塗りと枠線
-
-[操作ガイドの該当節](docs/user-guide.md#guide-027)へ移動しました。
-
-## 矩形・楕円の枠線をまとめて編集
-
-[操作ガイドの該当節](docs/user-guide.md#guide-028)へ移動しました。
-
-## 配置の編集ロック
-
-[操作ガイドの該当節](docs/user-guide.md#guide-029)へ移動しました。
-
-## 図面の表示切替
-
-[操作ガイドの該当節](docs/user-guide.md#guide-030)へ移動しました。
-
-## サンプルタグから選択
-
-[操作ガイドの該当節](docs/user-guide.md#guide-031)へ移動しました。
-
-## 方向キーでの移動
-
-[操作ガイドの該当節](docs/user-guide.md#guide-032)へ移動しました。
-
-## ルーラー
-
-[操作ガイドの該当節](docs/user-guide.md#guide-033)へ移動しました。
-
-## コピー・切り取り・貼り付け
-
-[操作ガイドの該当節](docs/user-guide.md#guide-034)へ移動しました。
-
-## ミニマップ
-
-[操作ガイドの該当節](docs/user-guide.md#guide-035)へ移動しました。
-
-## お気に入り部品
-
-[操作ガイドの該当節](docs/user-guide.md#guide-036)へ移動しました。
-
-## プロジェクトとレイヤーのツリー
-
-[操作ガイドの該当節](docs/user-guide.md#guide-037)へ移動しました。
-
-## プロパティの数値入力
-
-[操作ガイドの該当節](docs/user-guide.md#guide-038)へ移動しました。
-
-## パネルの幅
-
-[操作ガイドの該当節](docs/user-guide.md#guide-039)へ移動しました。
-
-## 下部パネルの高さ
-
-[操作ガイドの該当節](docs/user-guide.md#guide-040)へ移動しました。
-
-## 画面の背景色
-
-[操作ガイドの該当節](docs/user-guide.md#guide-041)へ移動しました。
-
-## Runtime の SDK 境界
-
-[操作ガイドの該当節](docs/user-guide.md#guide-044)へ移動しました。
-
-## タグ表示の割り当て
-
-[操作ガイドの該当節](docs/user-guide.md#guide-045)へ移動しました。
-
-## 工程図を試す
-
-[操作ガイドの該当節](docs/user-guide.md#guide-046)へ移動しました。
-
-## 編集履歴と配置操作
-
-[操作ガイドの該当節](docs/user-guide.md#guide-047)へ移動しました。
-
-## 複数選択・整列
-
-[操作ガイドの該当節](docs/user-guide.md#guide-048)へ移動しました。
-
-## グリッド・スナップと配管頂点の直接編集
-
-[操作ガイドの該当節](docs/user-guide.md#guide-049)へ移動しました。
-
-## キャンバスでのサイズ変更
-
-[操作ガイドの該当節](docs/user-guide.md#guide-050)へ移動しました。
-
-## 複数画面の管理
-
-[操作ガイドの該当節](docs/user-guide.md#guide-051)へ移動しました。
-
-## Symbol ライブラリと定義編集
-
-[操作ガイドの該当節](docs/user-guide.md#guide-052)へ移動しました。
-
-## 部品の検索と配置
-
-[操作ガイドの該当節](docs/user-guide.md#guide-053)へ移動しました。
-
-## ズーム・全体表示・パン
-
-[操作ガイドの該当節](docs/user-guide.md#guide-054)へ移動しました。
-
-## 編集ワークスペースとスクリーンショット
-
-[操作ガイドの該当節](docs/user-guide.md#guide-055)へ移動しました。
-
-0.28.0で[配置画像の表示方式](docs/image-fit-design.md)にcontain／cover／stretchを追加しました。切出し・原本・配置枠を保持し、編集・表示プレビュー・埋込・小窓・ミニマップの共通描画へ接続します。
-
-0.29.0で[背景画像の数値トリミング](docs/background-image-crop-design.md)を追加しました。配置と共通の数値契約を使い、背景4方式・原本保持・取込の世代保護へ接続します。
-
-0.30.0で[2色放射グラデーション](docs/radial-gradient-design.md)を追加しました。矩形・楕円の中心・半径と両端の色／α、種類別の未適用入力を保持します。[サンプル](examples/radial-paint.project.json)を開いて確認できます。
+従来の機能見出しへのリンクを維持する案内。詳しい操作は[操作ガイド](docs/user-guide.md)を参照する。
+
+<details>
+<summary>従来の機能見出しと操作ガイドの対応</summary>
+
+| 従来の項目                                                                                | 操作ガイド                                 |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------ |
+| <a id="フロントエンドの-ux-設計"></a>フロントエンドの UX 設計                             | [操作・仕様](docs/user-guide.md#guide-001) |
+| <a id="画像描画表現運用画面の追加検討"></a>画像・描画表現・運用画面の追加検討             | [操作・仕様](docs/user-guide.md#guide-002) |
+| <a id="別画面の埋込表示"></a>別画面の埋込表示                                             | [操作・仕様](docs/user-guide.md#guide-003) |
+| <a id="画面内の小窓で表示確認"></a>画面内の小窓で表示確認                                 | [操作・仕様](docs/user-guide.md#guide-004) |
+| <a id="全画面での表示確認"></a>全画面での表示確認                                         | [操作・仕様](docs/user-guide.md#guide-005) |
+| <a id="図面上への画像配置"></a>図面上への画像配置                                         | [操作・仕様](docs/user-guide.md#guide-006) |
+| <a id="クリップボード画像の貼り付け"></a>クリップボード画像の貼り付け                     | [操作・仕様](docs/user-guide.md#guide-007) |
+| <a id="背景画像と持ち運べる保存"></a>背景画像と持ち運べる保存                             | [操作・仕様](docs/user-guide.md#guide-008) |
+| <a id="サイドチャットの操作試作レビュー"></a>サイドチャットの操作試作レビュー             | [操作・仕様](docs/user-guide.md#guide-009) |
+| <a id="project-の読み込み保存"></a>Project の読み込み・保存                               | [操作・仕様](docs/user-guide.md#guide-010) |
+| <a id="名前の変更と操作ガイド"></a>名前の変更と操作ガイド                                 | [操作・仕様](docs/user-guide.md#guide-011) |
+| <a id="studio-の外観"></a>Studio の外観                                                   | [操作・仕様](docs/user-guide.md#guide-012) |
+| <a id="クリック位置へ連続配置"></a>クリック位置へ連続配置                                 | [操作・仕様](docs/user-guide.md#guide-013) |
+| <a id="図形の線形グラデーション"></a>図形の線形グラデーション                             | [操作・仕様](docs/user-guide.md#guide-014) |
+| <a id="繰返しパターン"></a>繰返しパターン                                                 | [操作・仕様](docs/user-guide.md#guide-015) |
+| <a id="配置名とレイヤー検索"></a>配置名とレイヤー検索                                     | [操作・仕様](docs/user-guide.md#guide-016) |
+| <a id="レイヤーフォルダー"></a>レイヤーフォルダー                                         | [操作・仕様](docs/user-guide.md#guide-017) |
+| <a id="選択範囲を表示"></a>選択範囲を表示                                                 | [操作・仕様](docs/user-guide.md#guide-018) |
+| <a id="配置の回転"></a>配置の回転                                                         | [操作・仕様](docs/user-guide.md#guide-019) |
+| <a id="textの書式と枠内表示"></a>Textの書式と枠内表示                                     | [操作・仕様](docs/user-guide.md#guide-020) |
+| <a id="配置全体の不透明度"></a>配置全体の不透明度                                         | [操作・仕様](docs/user-guide.md#guide-021) |
+| <a id="色ごとの不透明度"></a>色ごとの不透明度                                             | [操作・仕様](docs/user-guide.md#guide-022) |
+| <a id="中心の等間隔配置"></a>中心の等間隔配置                                             | [操作・仕様](docs/user-guide.md#guide-023) |
+| <a id="複数選択の色編集"></a>複数選択の色編集                                             | [操作・仕様](docs/user-guide.md#guide-024) |
+| <a id="線配管の一括スタイル編集"></a>線・配管の一括スタイル編集                           | [操作・仕様](docs/user-guide.md#guide-025) |
+| <a id="実線破線点線"></a>実線・破線・点線                                                 | [操作・仕様](docs/user-guide.md#guide-026) |
+| <a id="矩形楕円の塗りと枠線"></a>矩形・楕円の塗りと枠線                                   | [操作・仕様](docs/user-guide.md#guide-027) |
+| <a id="矩形楕円の枠線をまとめて編集"></a>矩形・楕円の枠線をまとめて編集                   | [操作・仕様](docs/user-guide.md#guide-028) |
+| <a id="配置の編集ロック"></a>配置の編集ロック                                             | [操作・仕様](docs/user-guide.md#guide-029) |
+| <a id="図面の表示切替"></a>図面の表示切替                                                 | [操作・仕様](docs/user-guide.md#guide-030) |
+| <a id="サンプルタグから選択"></a>サンプルタグから選択                                     | [操作・仕様](docs/user-guide.md#guide-031) |
+| <a id="方向キーでの移動"></a>方向キーでの移動                                             | [操作・仕様](docs/user-guide.md#guide-032) |
+| <a id="ルーラー"></a>ルーラー                                                             | [操作・仕様](docs/user-guide.md#guide-033) |
+| <a id="コピー切り取り貼り付け"></a>コピー・切り取り・貼り付け                             | [操作・仕様](docs/user-guide.md#guide-034) |
+| <a id="ミニマップ"></a>ミニマップ                                                         | [操作・仕様](docs/user-guide.md#guide-035) |
+| <a id="お気に入り部品"></a>お気に入り部品                                                 | [操作・仕様](docs/user-guide.md#guide-036) |
+| <a id="プロジェクトとレイヤーのツリー"></a>プロジェクトとレイヤーのツリー                 | [操作・仕様](docs/user-guide.md#guide-037) |
+| <a id="プロパティの数値入力"></a>プロパティの数値入力                                     | [操作・仕様](docs/user-guide.md#guide-038) |
+| <a id="パネルの幅"></a>パネルの幅                                                         | [操作・仕様](docs/user-guide.md#guide-039) |
+| <a id="下部パネルの高さ"></a>下部パネルの高さ                                             | [操作・仕様](docs/user-guide.md#guide-040) |
+| <a id="画面の背景色"></a>画面の背景色                                                     | [操作・仕様](docs/user-guide.md#guide-041) |
+| <a id="runtime-の-sdk-境界"></a>Runtime の SDK 境界                                       | [操作・仕様](docs/user-guide.md#guide-044) |
+| <a id="タグ表示の割り当て"></a>タグ表示の割り当て                                         | [操作・仕様](docs/user-guide.md#guide-045) |
+| <a id="工程図を試す"></a>工程図を試す                                                     | [操作・仕様](docs/user-guide.md#guide-046) |
+| <a id="編集履歴と配置操作"></a>編集履歴と配置操作                                         | [操作・仕様](docs/user-guide.md#guide-047) |
+| <a id="複数選択整列"></a>複数選択・整列                                                   | [操作・仕様](docs/user-guide.md#guide-048) |
+| <a id="グリッドスナップと配管頂点の直接編集"></a>グリッド・スナップと配管頂点の直接編集   | [操作・仕様](docs/user-guide.md#guide-049) |
+| <a id="キャンバスでのサイズ変更"></a>キャンバスでのサイズ変更                             | [操作・仕様](docs/user-guide.md#guide-050) |
+| <a id="複数画面の管理"></a>複数画面の管理                                                 | [操作・仕様](docs/user-guide.md#guide-051) |
+| <a id="symbol-ライブラリと定義編集"></a>Symbol ライブラリと定義編集                       | [操作・仕様](docs/user-guide.md#guide-052) |
+| <a id="部品の検索と配置"></a>部品の検索と配置                                             | [操作・仕様](docs/user-guide.md#guide-053) |
+| <a id="ズーム全体表示パン"></a>ズーム・全体表示・パン                                     | [操作・仕様](docs/user-guide.md#guide-054) |
+| <a id="編集ワークスペースとスクリーンショット"></a>編集ワークスペースとスクリーンショット | [操作・仕様](docs/user-guide.md#guide-055) |
+
+</details>

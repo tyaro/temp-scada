@@ -136,4 +136,4 @@ Banto基盤、両テーマ＋system、Project色の独立、お気に入りと�
 
 ### 2026-10-19・タグ選択fixture UXの実装追記
 
-数値Textの外部名入力から、明示した静的サンプルのmetadataを検索・ツリー選択するBanto Modalを追加した。数値型だけを確定可能とし、候補確認→未適用入力→適用→保存を分離する。検索Enter・IME・型不適合・非表示候補で誤確定しない。世代・対象・入力要素を返却前に再確認し、取消は元の入力へ戻る。実Hubのcatalog・値・接続状態を実装したものではない。[実装範囲・実画面・検証](development-plan.md#tag-picker-progress)を参照する。
+数値Textの外部名入力から、明示した静的サンプルのmetadataを検索・ツリー選択するBanto Modalを追加した。数値型だけを確定可能とし、候補確認→未適用入力→適用→保存を分離する。検索Enter・IME・型不適合・非表示候補で誤確定しない。世代・対象・入力要素を返却前に再確認し、取消は元の入力へ戻る。実Hubのcatalog・値・接続状態を実装したものではない。[実装範囲・実画面・検証](implementation-history.md#tag-picker-progress)を参照する。

@@ -30,7 +30,7 @@ copyイベントへ`Blob.arrayBuffer()`をawaitした後で`setData()`しない�
 
 OS貼付は両テーマの実Ctrl＋V、透過、受渡しバイトの保存、原本共有、Undo／Redo、SCADA文字列と画像の同時提供、壊れたSCADA、複数・不正画像、JPEG、メニューの権限拒否、入力欄／共有定義／preview、draft取消／続行、画面やモードの往復と遅延処理を確認する。
 
-第2段階では別Project／別ブラウザ、共有asset・ID衝突、混在図形の原子的Undo、容量不足、書込失敗時の切取保持、処理中の変更／取消、同じセッションのライブSymbol共有も確認する。実装状況は[開発計画](development-plan.md#image-paste-progress)へ記録する。
+第2段階では別Project／別ブラウザ、共有asset・ID衝突、混在図形の原子的Undo、容量不足、書込失敗時の切取保持、処理中の変更／取消、同じセッションのライブSymbol共有も確認する。実装状況は[開発計画](implementation-history.md#image-paste-progress)へ記録する。
 
 ## 保存・履歴との境界
 

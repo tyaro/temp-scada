@@ -2,7 +2,7 @@
 
 文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
 
-2026-10-19。基準は[統合設計](scada-integrated-design.md)。AstraのUXレビューに従い、工程図の見出し・機器名・数値表示を整える。実装・検証の記録は[開発計画](development-plan.md#text-style-progress)に記載する。
+2026-10-19。基準は[統合設計](scada-integrated-design.md)。AstraのUXレビューに従い、工程図の見出し・機器名・数値表示を整える。実装・検証の記録は[開発計画](implementation-history.md#text-style-progress)に記載する。
 
 ## 保存するもの
 

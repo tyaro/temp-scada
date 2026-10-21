@@ -83,7 +83,7 @@ Renderer・ミニマップ・Symbolサムネイルはフォルダーを描画や
 - UI: 親変更の候補、対象表示、検索解除時の開閉復帰、検索外選択、右クリック・キーボード・IME、未適用入力・取消、両テーマと狭幅。
 - フォルダー整理の前後で、描画結果・配置の座標と重なり・タグ読取投影が変わらないこと。
 
-実装後の状況と検証結果は[開発計画](development-plan.md#implementation-status)へ記録する。
+実装後の状況と検証結果は[開発計画](implementation-status.md)へ記録する。
 
 ## 実装の記録
 
@@ -95,7 +95,7 @@ Renderer・ミニマップ・Symbolサムネイルはフォルダーを描画や
 
 Astraの再レビューで、所属変更の初期値と確定ボタンの文字コントラストを修正した。確定ボタンはBantoのsolid／on-solidの組合せを使い、両テーマで通常・hoverの4.5:1以上をブラウザで検証する。
 
-実装と検証の詳細は[開発計画](development-plan.md#layer-folder-ui-progress)。
+実装と検証の詳細は[開発計画](implementation-history.md#layer-folder-ui-progress)。
 
 ## 同じ階層での手動並べ替え
 

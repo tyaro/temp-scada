@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入も全体CI成功確認済み。I3の静的Text折返しも全体CI成功確認済み。I4の単色塗り・枠線α一括編集も完了・全体CI成功確認済み。I5の初回計測と文字計測隔離、I5bの履歴候補コピー、I5cのCPU採取とProject監視境界の限定改善も完了・全体CI成功確認済み。I5dの候補評価も完了・全体CI成功確認済みだが、一律隔離は未採用。I5eのstyle tree分離も評価完了・全体CI成功確認済み・未採用。実行時コードを維持し、動的FontFaceの回帰試験と再現資産を追加した。I5はここで一区切り。大規模図面の読込・キー操作の遅延は残る。次の[I6：参照名一括置換](text-reference-replacement-design.md)はI6aの差分計算・command基盤を実装。I6bの差分確認・適用UIも実装し、ローカル検証済み。I6aの全体CIは成功、I6bの全体CI確認を残す。
+最新の区切り: I0〜I4の作図改善と[I6の参照名一括置換](text-reference-replacement-design.md)は提供済み・全体CI成功。I5は限定改善・候補評価を一区切りとし、大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
 ## 保存契約と基盤
 
@@ -33,7 +33,7 @@
 | 表示確認       | 画面／機器の読取Popup合計4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                                                                                                                                 | 正式Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                       |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                                                                                                                                   | 実図面・画像／Symbol等の計測と必要な最適化                                             |
 | 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                                                                                                                                      | 実catalog選択、draftのDOM分離                                                          |
-| タグ・Runtime  | TextのexternalName、参照一覧、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                                                                                                                                  | 実Hub／catalog、汎用状態条件、Host、正式RuntimeとAction境界                            |
+| タグ・Runtime  | TextのexternalName、参照一覧と全画面の差分確認・一括置換、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                                                                                                      | 実Hub／catalog、汎用状態条件、Host、正式RuntimeとAction境界                            |
 | server・監視   | 提供段階と共有層の設計                                                                                                                                                                                                                            | Core v1のS9b、その上のv1.1 Alarm／Event・Action／History・Trend、Camera、HTTP／Program |
 | 認証・MES      | ログイン不要のローカル編集                                                                                                                                                                                                                        | industrialの修正後に認証再確認。ユーザー管理・運用移行・MESは未実装                    |
 
@@ -41,13 +41,9 @@
 
 ## 検証の範囲
 
-R5a〜R5fで編集コマンド型・分類とProject／Symbol／Screen／Folder／Image／Objectのhandlerを分離した。最新のR5fは型チェック（エラー／警告なし）、TS全637件、全ブラウザ509件、Rust30件・Clippy・CLIサンプル3件、本番ビルド・全体整形が成功。全ブラウザは専用サーバー・2並列の一度の実行ですべて通過した。分類漏れ・誤分類と、分類後のhandler未実装を型エラーで検出することも一時変更で確認した。未知runtimeコマンドをProject／履歴を保って拒否する契約テスト1件を追加した。各区切りの詳細は[R5の記録](maintenance-refactoring-plan.md#r5a-command-types)を参照する。最終差分のCIも成功し、R0〜R5の構造整理を完了した。[R6の性能計測と候補コピーの限定改善](editor-performance.md)を追加した。同じparserによる入力拒否を維持して重複を減らし、TS641件・関連ブラウザ30件・型・build・全体整形が成功。5,000配置の編集中央値は同環境の計測で約251→197ms、履歴付きは約311→250ms。小規模では揺れがあり、ブラウザ応答時間の保証や履歴のメモリ最適化完了を示すものではない。R6と次工程設計`9b19048`までの[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39341399005)も成功した。
+最新機能I6bの`0bd2559`は[全体CI39559236819](https://github.com/tyaro/temp-scada/actions/runs/39559236819)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功。ローカルでは型（エラー・警告0）、単体1121件、関連ブラウザ13件、本番build、整形と両テーマ実画面を確認した。全ブラウザ件数をローカル関連試験の件数と読み替えない。
 
-全体CIは幾何グループのDesigner接続を含む`fdea3df`まで[成功を確認済み](https://github.com/tyaro/temp-scada/actions/runs/39348714448)。全ブラウザ521件と型・TS単体676件・ビルド・整形・Rust31件・Clippy・CLIサンプル検証を通過した。R4のローカル4並列での496件成功／13件失敗と、同一コードでの単独再確認13件成功、既存サーバーでの途中停止は[R4eの記録](maintenance-refactoring-plan.md#r4e-actions)に保持する。
-
-保存契約・画面配置・Undo単位は維持した。R4dの両テーマ・2画面幅の比較画像8枚は移動前後でpixel完全一致。R4eとR5a〜R5fは画面markup／CSSに変更なし。既存のJS bundle 500kB警告は継続する。
-
-過去のプレビューfit測定の失敗と、テスト側のレイアウト待機修正は[R0の記録](maintenance-refactoring-plan.md#refactoring-progress)を参照する。
+R0〜R5の構造整理は完了し、[リファクタリング記録](maintenance-refactoring-plan.md)に各段階の不変条件・テストを保持する。[当時の検証詳細](implementation-history.md#status-validation-archive)と[性能の実測条件・採否](mixed-editor-quality.md)を現在の機能保証と区別する。実Hub／catalog・正式Runtime・認証・Windows実機の運用確認は未完了。
 
 ## 仕様・実画面への入口
 
@@ -292,36 +288,22 @@ resize通知とpointerupの順序による位置の誤確定を修正し、実wi
 
 左パネル追加後の全体CIで、小さい画面の常設メニュー末尾が画面外になる問題を検出した。[可用高と内部スクロールの局所対応](designer-menu-viewport.md)を追加し、上流Banto #427へ報告した。関連ブラウザ19件、型・buildが成功。保存契約やメニュー項目の機能は変えない。
 
-## 上流変更中のI1：cropの比率固定
+## 単体開発の提供段階
 
-[仕様・実画面](image-crop-aspect-design.md)に従い、配置／背景の「縦横比を固定」と数値・ハンドルの連動を追加した。固定だけではProject・dirty・Undoを変えず、不正な文字列・1画素未満・IME・取消を保護する。比率はフォーム内だけに保持し、Project0.32.0・原本・SDK依存は不変。型エラー／警告なし・関連TS72件・操作ブラウザ13件と強化した再起動試験1件の再確認・既存crop18件・本番build・整形が成功した。実装コミット`316a12c`の[全体CI39457887476](https://github.com/tyaro/temp-scada/actions/runs/39457887476)も成功した。
+I1比率固定・I2兄弟内挿入・I3静的Text折返し・I4単色paintα一括編集・I6参照名置換を提供済み。仕様・実画面・採用範囲は[文書索引](README.md)から参照する。I5の候補評価完了は、大図面の性能改善完了を意味しない。
 
-## 上流変更中のI2：レイヤーの兄弟内挿入
+<details>
+<summary>従来の検証節から履歴へ</summary>
 
-[仕様・実画面](layer-relative-order-design.md)に従い、フォルダーの上下端・配置行の上下半分で前後挿入する。所属と描画順のモデルを分け、完全な一つのグループを維持する。単体67件・新規ブラウザ6件と強化後の確認・既存回帰のtrace保存競合の切り分けと再確認、型／buildを記録した。Project形式・SDK依存は不変。実装`e53a304`の[全体CI39462449843](https://github.com/tyaro/temp-scada/actions/runs/39462449843)が成功した。
+| 当時の節                                                                                                              | 履歴                                                   |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| <a id="上流変更中のi1cropの比率固定"></a>上流変更中のI1：cropの比率固定                                               | [当時の記録](implementation-history.md#status-note-01) |
+| <a id="上流変更中のi2レイヤーの兄弟内挿入"></a>上流変更中のI2：レイヤーの兄弟内挿入                                   | [当時の記録](implementation-history.md#status-note-02) |
+| <a id="上流変更中のi3静的textの折返し"></a>上流変更中のI3：静的Textの折返し                                           | [当時の記録](implementation-history.md#status-note-03) |
+| <a id="上流変更中のi4単色塗り枠線α一括編集"></a>上流変更中のI4：単色塗り・枠線α一括編集                               | [当時の記録](implementation-history.md#status-note-04) |
+| <a id="i5初回混在図面の品質計測と読込の限定改善"></a>I5初回：混在図面の品質計測と読込の限定改善                       | [当時の記録](implementation-history.md#status-note-05) |
+| <a id="i5b進捗履歴復元の重複検証2026-10-21"></a>I5b進捗：履歴復元の重複検証（2026-10-21）                             | [当時の記録](implementation-history.md#status-note-06) |
+| <a id="i5c進捗project-snapshotの監視境界2026-10-21"></a>I5c進捗：Project snapshotの監視境界（2026-10-21）             | [当時の記録](implementation-history.md#status-note-07) |
+| <a id="i5d進捗単一行text計測の切分けと候補評価2026-10-21"></a>I5d進捗：単一行Text計測の切分けと候補評価（2026-10-21） | [当時の記録](implementation-history.md#status-note-08) |
 
-## 上流変更中のI3：静的Textの折返し
-
-[仕様・サンプル・実画面](static-text-wrap-design.md)に沿い、TextStyleのwrap（未指定／none／word）と、原文を変えない計測付き折返しをProject0.33.0へ追加した。明示改行・空行・空白・書記素を保持し、動的表示は従来の一行を維持する。全TS1097件・Rust51件・Clippy・CLI4サンプル、新規ブラウザ4件と既存回帰26件の検証・時間上限超過の分離再確認を記録した。上流SDK・認証・正式Runtimeは変更していない。実装`858225d`の[全体CI39466367294](https://github.com/tyaro/temp-scada/actions/runs/39466367294)が成功した。I3a／I3bを完了した。
-
-## 上流変更中のI4：単色塗り・枠線α一括編集
-
-[仕様と実画面](selection-paint-alpha-design.md)に沿い、矩形・楕円の既存単色塗り／枠線を独立に変更する一括フォームを追加した。混在・空欄保持・適用不可理由・全件検査・同値no-op・Undoと入力保護を確認した。全TS1104件、新規ブラウザ4件、既存回帰27件、型・buildが成功。Project0.33.0・上流依存は不変。修正`bf187f6`を含む[全体CI39535689050](https://github.com/tyaro/temp-scada/actions/runs/39535689050)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I4を完了した。
-
-## I5初回：混在図面の品質計測と読込の限定改善
-
-[再現条件・比較表・実画面](mixed-editor-quality.md)に、画像・共有Symbol・折返しTextを含む100／500／1000配置の結果を記録した。SVG文字計測のprobeを一時領域へ隔離し、fontとSVG変換を維持する。1000配置の再読込中央値は約37.7→17.8秒。文字投影、保存内容、PNG原本と資源解放を確認した。全TS1104件・関連ブラウザ18件・型・build・整形が成功し、実装`8a7cf21`の[全体CI39540132164](https://github.com/tyaro/temp-scada/actions/runs/39540132164)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。Project0.33.0・上流依存は不変。キー操作・Undoの負荷は別の内訳計測へ進む。実案件やWindowsでの性能保証ではない。
-
-### I5b進捗：履歴復元の重複検証（2026-10-21）
-
-[内訳・再現手順](mixed-editor-quality.md)に沿い、Nodeの混在fixture計測と本番ブラウザのキー別CDP記録を追加した。履歴復元候補をserialize経由で二重検証する経路だけを減らし、入口検証・revision上限・独立コピー・現在状態のsnapshot検証を保持する。Nodeの1000配置Undo中央値は60.4→42.6ms。本番3規模で保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ9件・型・build・整形が成功した。変更後も1000配置のUndo約655ms・移動約697msで、ブラウザ全体の応答改善完了とは扱わない。実装`27f10b9`の[全体CI39545209042](https://github.com/tyaro/temp-scada/actions/runs/39545209042)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。差分Undo・大域cache・上流依存の変更はない。
-
-I5bの次の区切りは残るScriptDurationのサンプリングprofile。Nodeとブラウザ時間を差し引かず、Svelte更新・canonical比較・snapshotの実call stackから限定改善を選ぶ。
-
-### I5c進捗：Project snapshotの監視境界（2026-10-21）
-
-[profile・通常計測・交互比較](mixed-editor-quality.md)を根拠に、AppのProjectと確認待ちreplacementだけを`$state.raw`へ変更した。command・history・adoptで検証済みの独立候補を作りルート更新する契約を維持する。深い監視の費用を減らし、通常runの1000配置の移動中央値は約697→497ms、Undo約655→410msだった。一方、再読込には大きなばらつきがあり、通常runの増加を交互比較で一貫して再現したとは判断しない。読込非劣化や十分な大図面性能の保証ではない。保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ17件・型・buildが成功した。実装`fa595d0`の[全体CI39548196580](https://github.com/tyaro/temp-scada/actions/runs/39548196580)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。検証・履歴・保存モデル・上流SDKの契約は変更しない。
-
-### I5d進捗：単一行Text計測の切分けと候補評価（2026-10-21）
-
-[診断・寸法比較・通常benchmark・A/B/B/A](mixed-editor-quality.md)を保存した。残る図面側の単一行計測2,400回を隔離へ移す候補は400 Textの表示一致を満たしたが、交互比較の再読込平均は基準約18.4秒／候補約21.9秒で、改善を確認できなかった。一律置換は採用せず、アプリのTextPrimitiveは基準へ戻した。診断runnerと単一行fitの両テーマ288条件比較試験、再生できる候補patchを資産として残す。候補では関連ブラウザ35件・単体1107件・型・buildと保存／原本／資源解放が成功した。最終差分`94078be`の[全体CI39553076790](https://github.com/tyaro/temp-scada/actions/runs/39553076790)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。現行の保存契約・上流依存は不変で、I5dは評価の区切り。次はstyle／layout局所化の別候補を設計し、cacheや計測省略は先行しない。
+</details>

@@ -1,6 +1,6 @@
 # 上流変更中に進めるSCADA単体開発計画
 
-2026-10-21（日本時間）。状態: **I0〜I4は完了・全体CI成功確認済み。I5は初回計測・限定改善を完了し全体CI成功確認済み。I5bの内訳計測・履歴復元の限定改善も全体CI成功確認済み。I5cのCPU採取・監視境界の限定改善も完了・全体CI成功確認済み。I5dの候補評価も完了・全体CI成功確認済みで一律隔離は未採用。I5eも候補評価を完了・全体CI成功確認済み・未採用。I5を一区切りとし、I6aは基盤実装・全体CI成功、I6bもUI実装・ローカル検証済み。大規模図面の読込・応答の改善は残る**。計画作成時の基準は`8b4e05e`・Project0.32.0。現行保存契約はProject0.33.0。[統合設計](scada-integrated-design.md)のローカル作図・編集領域を具体化する。目標仕様を置き換えず、Banto／Industrialのリファクタ・仕様変更中の直近の実装順を定める。
+2026-10-21（日本時間）。状態: **I0〜I4・I6は完了・全体CI成功。I5は限定改善・候補評価完了、遅延は残課題**。現行保存契約はProject0.33.0。[統合設計](scada-integrated-design.md)のローカル作図領域を対象とする。次の機能は文書整理後に選定する。
 
 ## 方針と境界
 
@@ -8,7 +8,7 @@
 
 Projectのローカル属性追加は可能だが、共有SDK・Design API・正式packageの契約変更とは分ける。保存属性が変わる工程はTS／Rust／schema／現行サンプル／clipboard／描画を揃える。リリース前の旧形式互換・migrationは必須にしない。
 
-本計画は着手順を決めるもので、期間や一括完成を約束しない。I1〜I3を当面の実装対象とし、I4はその完了後、I5は実測に応じて判断する。各工程は詳細仕様を追記してから一つずつ実装し、未決事項が上流に波及するならその項目を保留して独立した項目へ進む。
+本計画は保存区切りと実装境界を定める。I1〜I4とI6は完了したため、下記は現在の受入結果と再開時に守る範囲を示す。各工程は詳細仕様を追記してから一つずつ実装し、未決事項が上流に波及するならその項目を保留して独立した項目へ進む。
 
 ## 工程と保存区切り
 
@@ -24,9 +24,9 @@ Projectのローカル属性追加は可能だが、共有SDK・Design API・正
 | I4 色αの一括編集       | 既存のRGB・配置opacityとは別に対象paintのαを編集       | 最初は対応を明示した単色塗り・枠線へ限定。未指定は保持し、非対応対象を黙って部分適用しない。gradient stop／pattern別αの一括編集は含めない | 完了・CI成功                                 |
 | I5 実図面での品質確認  | 画像・Symbol・Textを含むローカル図面の応答・資源を計測 | 計測条件・原本・限定改善・候補の採否を記録済み。大図面の読込・応答遅延は残す。差分Undo・大域cache・検証省略は未導入                       | 限定改善・候補評価完了／CI成功、遅延は残課題 |
 | I6a 参照名置換の基盤   | 全画面の完全一致・差分・原子command                    | ロック／グループ・古いsnapshot拒否、Undo／Redoと保存検証                                                                                  | 完了・CI成功                                 |
-| I6b 参照名置換のUI     | タグ参照一覧から全画面差分と明示適用                   | IME・draft・取消・検索独立・保存往復・両テーマ                                                                                            | 実装・ローカル検証済み／CI確認待ち           |
+| I6b 参照名置換のUI     | タグ参照一覧から全画面差分と明示適用                   | IME・draft・取消・検索独立・保存往復・両テーマ                                                                                            | 完了・CI成功                                 |
 
-I1a／I2a／I3aは、UI未接続の基盤だけで保存してよい。ただし「機能提供済み」と記載せず、b工程で実利用と回帰を確認して完了とする。I1→I2→I3は優先順位であり、技術的な必須依存ではない。I4の細部に未決があればI1〜I3を止めない。
+I1a／I2a／I3aは基盤だけの保存区切りとし、b工程でUI・実利用・回帰まで確認した。今後も基盤実装と機能提供の完了を区別する。下記の順序は当時の着手順であり、未着手の次工程を示すものではない。
 
 ## 工程別の実装境界
 
@@ -75,64 +75,32 @@ I5は[性能計測の既存記録](editor-performance.md)を再利用する。�
 - 詳細設計→基盤→UI→受入を区切り、日本語Conventional Commitで保存してPushする。`implementation-status.md`は提供できた機能だけ更新する。本書の状態と開発計画もその区切りで更新する。
 - 上流の契約判断、ユーザーの意図で決まる操作、データ損失を伴う仕様に迷い、既存方針で解決できない場合は、実装を推測で固めず具体的な未決事項を示して止まる。
 
-## I0／I1の実装記録（2026-10-21）
+## 最新の確認と次の判断
 
-基準`05c7ba7`の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/39454570139)成功と、既存crop計算11件の成功を確認して着手した。[比率固定の仕様・実画面](image-crop-aspect-design.md)に沿い、I1aの純粋計算とI1bの配置／背景UIを実装した。比率はフォーム内の補助状態で、Project0.32.0・SDK・原本bytesは不変。関連単体72件、操作ブラウザ13件、再起動試験の強化後の1件再確認、既存crop／背景18件、型・build・整形が成功した。実装コミット`316a12c`の[全体CI39457887476](https://github.com/tyaro/temp-scada/actions/runs/39457887476)も成功し、I1を完了した。
+I6bの`0bd2559`は[全体CI39559236819](https://github.com/tyaro/temp-scada/actions/runs/39559236819)ですべて成功。[置換の仕様・実画面](text-reference-replacement-design.md)を提供済み。I5の限定改善／未採用候補は[計測記録](mixed-editor-quality.md)を参照する。
 
-I1の保存後、継続指示によりI2を実装した。下記を現在の進捗とする。
+次機能は未選定。候補は実装状況表の残りから、上流依存・保存モデル・資産寿命・UI・受入の範囲を確認して定める。今回の文書整理では新規機能に着手しない。
 
-## I2の実装記録（2026-10-21）
+## 実施記録
 
-[兄弟内挿入](layer-relative-order-design.md)の計算・内部command・挿入線・入力確認と構造snapshotを接続した。新規と既存のローカル検証、両テーマ実画面を記録した。Project形式・上流依存は不変。実装`e53a304`の[全体CI39462449843](https://github.com/tyaro/temp-scada/actions/runs/39462449843)が成功した。[I3の詳細仕様](static-text-wrap-design.md)に沿い、静的Textの折返しへ進む。
+[当時のI0〜I6記録](implementation-history.md#independent-records)と[最終I6完了](implementation-history.md#i6-completion)を参照する。
 
-## I3の実装記録（2026-10-21）
+<details>
+<summary>従来の見出しと履歴の対応</summary>
 
-[I3の仕様・受入・実画面](static-text-wrap-design.md)に従い、Project0.33.0のwrap属性と、語境界／書記素での折返し・単独フォーム・共通描画を実装した。Banto／Industrialの固定依存は更新していない。ローカルで全TS1097件、Rust51件・Clippy・CLI4サンプル、関連ブラウザの新規4件・既存26件の確認と負荷を分けた再実行を記録した。実装`858225d`の[全体CI39466367294](https://github.com/tyaro/temp-scada/actions/runs/39466367294)が成功した。I3a／I3bを完了した。次はI4の対象paint・混在・拒否規則の詳細化。
+| 当時の区切り                                                                                                          | 履歴                                                        |
+| --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| <a id="i0i1の実装記録2026-10-21"></a>I0／I1の実装記録（2026-10-21）                                                   | [当時の記録](implementation-history.md#independent-note-01) |
+| <a id="i2の実装記録2026-10-21"></a>I2の実装記録（2026-10-21）                                                         | [当時の記録](implementation-history.md#independent-note-02) |
+| <a id="i3の実装記録2026-10-21"></a>I3の実装記録（2026-10-21）                                                         | [当時の記録](implementation-history.md#independent-note-03) |
+| <a id="i4の実装記録2026-10-21"></a>I4の実装記録（2026-10-21）                                                         | [当時の記録](implementation-history.md#independent-note-04) |
+| <a id="i5混在図面の計測2026-10-21"></a>I5：混在図面の計測（2026-10-21）                                               | [当時の記録](implementation-history.md#independent-note-05) |
+| <a id="i5b進捗履歴復元の重複検証2026-10-21"></a>I5b進捗：履歴復元の重複検証（2026-10-21）                             | [当時の記録](implementation-history.md#independent-note-06) |
+| <a id="i5c進捗project-snapshotの監視境界2026-10-21"></a>I5c進捗：Project snapshotの監視境界（2026-10-21）             | [当時の記録](implementation-history.md#independent-note-07) |
+| <a id="i5d進捗単一行text計測の切分けと候補評価2026-10-21"></a>I5d進捗：単一行Text計測の切分けと候補評価（2026-10-21） | [当時の記録](implementation-history.md#independent-note-08) |
+| <a id="i5estyle-tree分離候補の評価2026-10-21"></a>I5e：style tree分離候補の評価（2026-10-21）                         | [当時の記録](implementation-history.md#independent-note-09) |
+| <a id="i6次の上流非依存機能"></a>I6：次の上流非依存機能                                                               | [当時の記録](implementation-history.md#independent-note-10) |
+| <a id="i6aの進捗2026-10-21"></a>I6aの進捗（2026-10-21）                                                               | [当時の記録](implementation-history.md#independent-note-11) |
+| <a id="i6bの進捗2026-10-21"></a>I6bの進捗（2026-10-21）                                                               | [当時の記録](implementation-history.md#independent-note-12) |
 
-## I4の実装記録（2026-10-21）
-
-[単色塗り・枠線のα一括編集](selection-paint-alpha-design.md)に対象と原子的拒否規則を定め、矩形・楕円の既存paintへ接続した。塗り／枠線を独立に指定し、空欄保持・混在表示・省略alphaのno-op・Undo・入力保護を確認する。Text・Polyline・Symbolとgradient／pattern別αは後続。Project0.33.0・上流SDKは維持する。全TS1104件、新規ブラウザ4件、既存回帰27件、型・本番buildが成功した。両テーマの実画面も仕様へ保存した。修正`bf187f6`を含む[全体CI39535689050](https://github.com/tyaro/temp-scada/actions/runs/39535689050)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I4を完了した。次はI5の実測条件を整理する。
-
-## I5：混在図面の計測（2026-10-21）
-
-[条件・再現方法と判断](mixed-editor-quality.md)に従い、公開サンプル＋自作PNGの100／500／1000配置を本番buildのChromiumで計測する。読込、キー移動、Undo、50履歴、保存、画像URL解放を分け、実案件での保証とは区別する。遅延が再現した箇所だけを比較し、検証・Undo・画像原本の保持は変えない。
-
-I5の初回結果: [生JSON・比較表・実画面](mixed-editor-quality.md)を保存した。100／500／1000配置の再読込中央値は約1.55→0.94秒／11.53→6.40秒／37.70→17.84秒。SVG文字計測の一時領域と座標変換だけを限定改善し、保存・原本・文字投影・URL解放を確認した。実装`8a7cf21`の[全体CI39540132164](https://github.com/tyaro/temp-scada/actions/runs/39540132164)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。初回の区切りを完了する。次のI5bはキー移動・Undoのドメイン／Svelte／レイアウトの内訳計測とし、この結果だけで差分Undoや大域cacheへ置き換えない。
-
-### I5b進捗：履歴復元の重複検証（2026-10-21）
-
-[内訳・再現手順](mixed-editor-quality.md)に沿い、Nodeの混在fixture計測と本番ブラウザのキー別CDP記録を追加した。履歴復元候補をserialize経由で二重検証する経路だけを減らし、入口検証・revision上限・独立コピー・現在状態のsnapshot検証を保持する。Nodeの1000配置Undo中央値は60.4→42.6ms。本番3規模で保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ9件・型・build・整形が成功した。変更後も1000配置のUndo約655ms・移動約697msで、ブラウザ全体の応答改善完了とは扱わない。実装`27f10b9`の[全体CI39545209042](https://github.com/tyaro/temp-scada/actions/runs/39545209042)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。差分Undo・大域cache・上流依存の変更はない。
-
-I5bの次の区切りは残るScriptDurationのサンプリングprofile。Nodeとブラウザ時間を差し引かず、Svelte更新・canonical比較・snapshotの実call stackから限定改善を選ぶ。
-
-### I5c進捗：Project snapshotの監視境界（2026-10-21）
-
-[profile・通常計測・交互比較](mixed-editor-quality.md)を根拠に、AppのProjectと確認待ちreplacementだけを`$state.raw`へ変更した。command・history・adoptで検証済みの独立候補を作りルート更新する契約を維持する。深い監視の費用を減らし、通常runの1000配置の移動中央値は約697→497ms、Undo約655→410msだった。一方、再読込には大きなばらつきがあり、通常runの増加を交互比較で一貫して再現したとは判断しない。読込非劣化や十分な大図面性能の保証ではない。保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ17件・型・buildが成功した。実装`fa595d0`の[全体CI39548196580](https://github.com/tyaro/temp-scada/actions/runs/39548196580)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。検証・履歴・保存モデル・上流SDKの契約は変更しない。
-
-### I5d進捗：単一行Text計測の切分けと候補評価（2026-10-21）
-
-[診断・寸法比較・通常benchmark・A/B/B/A](mixed-editor-quality.md)を保存した。残る図面側の単一行計測2,400回を隔離へ移す候補は400 Textの表示一致を満たしたが、交互比較の再読込平均は基準約18.4秒／候補約21.9秒で、改善を確認できなかった。一律置換は採用せず、アプリのTextPrimitiveは基準へ戻した。診断runnerと単一行fitの両テーマ288条件比較試験、再生できる候補patchを資産として残す。候補では関連ブラウザ35件・単体1107件・型・buildと保存／原本／資源解放が成功した。最終差分`94078be`の[全体CI39553076790](https://github.com/tyaro/temp-scada/actions/runs/39553076790)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。現行の保存契約・上流依存は不変で、I5dは評価の区切り。次はstyle／layout局所化の別候補を設計し、cacheや計測省略は先行しない。
-
-### I5e：style tree分離候補の評価（2026-10-21）
-
-[寸法試験・交互比較・再現資産](mixed-editor-quality.md)を保存した。候補は30種類の文字関連ブラウザ条件を通過したが、1000配置再読込の交互比較平均は基準約21.5秒／候補約23.6秒で短縮を確認できず、採用しなかった。実行時コードは不変。最終基準でも寸法5件・単体1107件・通常buildが成功した。実装差分`f8bbdc9`の[全体CI39555810579](https://github.com/tyaro/temp-scada/actions/runs/39555810579)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I5の限定改善・候補評価はここで一区切りとし、遅延は既知課題として残す。
-
-## I6：次の上流非依存機能
-
-Astraのレビューと統合設計§9に基づき、[参照名一括置換の設計](text-reference-replacement-design.md)を追加した。**I6a／I6b実装済み。I6aは全体CI成功、I6bはCI確認待ち**。全画面の直接数値TextのexternalNameを完全一致で置換し、差分確認・原子適用・Undo・入力保護を接続する。I6a（対象・差分・command）→I6b（既存参照一覧UI・受入）の順。Equipment／Symbol slotや実Hubのrenameは含めない。保存形式・上流SDK・認証方針は変えない。
-
-### I6aの進捗（2026-10-21）
-
-[詳細仕様・受入](text-reference-replacement-design.md)に沿って、全画面の完全一致で対象／差分／既存名使用先／拒否理由を算出する純粋処理とProject commandを追加した。候補上の全体検証・全件適用・1回のUndoを既存入口へ接続。snapshotの内容・revision・Project ID照合で古い差分を拒否する。追加単体14件・全単体1121件・型チェック成功。I6aは基盤の区切りであり、画面から利用できる置換機能の完成ではない。
-
-次はI6b。既存のタグ参照一覧から置換フォームと全画面の差分確認へ接続し、workspace世代／画面切替／draft／IME・取消・検索独立・保存往復と両テーマの実画面を検証する。I6b完了までは機能提供済みと記載しない。保存形式・Banto／Industrial SDK・認証延期の方針は維持する。
-
-I6aのローカル回帰検証では、既存タグ参照・割付・履歴のブラウザ7件、本番build、全体整形も成功した。新規置換UIの試験ではなく、既存機能の回帰確認として記録する。
-
-### I6bの進捗（2026-10-21）
-
-タグ参照一覧へ置換フォーム・全画面の差分・明示適用・取消を接続した。[仕様と両テーマの実画面](text-reference-replacement-design.md)を保存。追加ブラウザ6件・既存参照一覧2件、全単体1121件、型（エラー・警告0）・build成功。旧差分の拒否はドメインsnapshotに加え、UIのProject・workspace／画面／mode／定義の変更でも保護する。既存draft guardを使い、置換を自動適用せず明示確認を維持する。
-
-I6aの`f783428`は[全体CI39558083032](https://github.com/tyaro/temp-scada/actions/runs/39558083032)成功。I6bは実装・ローカル検証済みで、Push後の全体CI成功確認を残す。I5工程表も限定改善・候補評価までの完了と残る遅延を明記し、初回計測だけの状態から更新した。次の機能範囲はI6全体CIの結果を確認してから選ぶ。
-
-I6bの既存タグ割付・履歴の追加回帰5件も成功した（新規6件＋既存7件、計13件の異なるブラウザケース）。画面撮影用の両テーマ2件再実行も成功。
+</details>

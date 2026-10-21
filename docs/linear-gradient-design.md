@@ -2,7 +2,7 @@
 
 文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](implementation-status.md)を正とする。
 
-2026-10-20（日本時間）。Astraの読取専用レビューを反映した次工程。[描画拡張の計画](scada-graphics-runtime-extension-design.md#2-paint線種αを先行する)に従う。**Project 0.18.0で保存契約・UI・共通描画へ接続済み**。[実装記録](development-plan.md#linear-gradient-progress)を参照。[patternも0.19.0で追加](pattern-paint-design.md)。放射・多点stopは後続。
+2026-10-20（日本時間）。Astraの読取専用レビューを反映した次工程。[描画拡張の計画](scada-graphics-runtime-extension-design.md#2-paint線種αを先行する)に従う。**Project 0.18.0で保存契約・UI・共通描画へ接続済み**。[実装記録](implementation-history.md#linear-gradient-progress)を参照。[patternも0.19.0で追加](pattern-paint-design.md)。放射・多点stopは後続。
 
 ## 塗りを1つの正へ整理する
 

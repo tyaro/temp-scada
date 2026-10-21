@@ -37,7 +37,7 @@
 
 ### 現状と提案の区別
 
-現在の進捗は[開発計画の実装状況一覧](development-plan.md#implementation-status)で管理する（2026-10-19、実装照合 `e6830b0` と後続のホイール操作）。以下の表は統合設計を整理した時点の比較であり、後続の実装状況は一覧と本節の追記を優先する。
+現在の進捗は[開発計画の実装状況一覧](implementation-status.md)で管理する（2026-10-19、実装照合 `e6830b0` と後続のホイール操作）。以下の表は統合設計を整理した時点の比較であり、後続の実装状況は一覧と本節の追記を優先する。
 
 | 項目             | 照合時点の現状                                                                                             | 今回まとめる完成形                                                    |
 | ---------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -320,7 +320,7 @@ MES・レシピ・生産実績・Tracking は従来どおり後続。設備テ�
 
 ### 2026-10-19・ルーラーの実装追記
 
-編集領域の上・左の22px帯にdesign unitの目盛りを追加した。倍率・スクロール・画面／定義に追従し、表示設定をBantoへ保存する。Project・履歴・選択・未適用入力から分離し、手動倍率の表示中心を保持する。プレビューでは隠す。ガイド作成は未実装。[実画面・検証記録](development-plan.md#rulers-progress)を参照する。
+編集領域の上・左の22px帯にdesign unitの目盛りを追加した。倍率・スクロール・画面／定義に追従し、表示設定をBantoへ保存する。Project・履歴・選択・未適用入力から分離し、手動倍率の表示中心を保持する。プレビューでは隠す。ガイド作成は未実装。[実画面・検証記録](implementation-history.md#rulers-progress)を参照する。
 
 ### 2026-10-19・方向キー移動の実装追記
 
@@ -328,57 +328,57 @@ MES・レシピ・生産実績・Tracking は従来どおり後続。設備テ�
 
 ### 2026-10-19・タグ選択fixture UXの実装追記
 
-数値Textの外部名入力から、明示した静的サンプルのmetadataを検索・ツリー選択するBanto Modalを追加した。数値型だけを確定可能とし、候補確認→未適用入力→適用→保存を分離する。検索Enter・IME・型不適合・非表示候補で誤確定しない。世代・対象・入力要素を返却前に再確認し、取消は元の入力へ戻る。実Hubのcatalog・値・接続状態を実装したものではない。[実装範囲・実画面・検証](development-plan.md#tag-picker-progress)を参照する。
+数値Textの外部名入力から、明示した静的サンプルのmetadataを検索・ツリー選択するBanto Modalを追加した。数値型だけを確定可能とし、候補確認→未適用入力→適用→保存を分離する。検索Enter・IME・型不適合・非表示候補で誤確定しない。世代・対象・入力要素を返却前に再確認し、取消は元の入力へ戻る。実Hubのcatalog・値・接続状態を実装したものではない。[実装範囲・実画面・検証](implementation-history.md#tag-picker-progress)を参照する。
 
 ## 新規Projectと標準ファイル操作の実装追記（2026-10-19）
 
-「新しいProject」は白い960×540の画面1枚から編集モードで始める。Ctrl／Command＋N・Oを新規作成／JSON読込へ接続し、未適用入力と内容置換の確認を共用する。選択取消・不正JSONで入力を失わず、古い非同期読込は採用しない。S／Shift＋Sは従来のJSONダウンロードで、保存先選択・既存ファイル上書きとは区別する。起動時は従来のサンプル表示を維持し、新規作成ウィザード・最近のファイル・復旧は後続。[実装範囲と検証](development-plan.md#new-project-progress)を参照する。
+「新しいProject」は白い960×540の画面1枚から編集モードで始める。Ctrl／Command＋N・Oを新規作成／JSON読込へ接続し、未適用入力と内容置換の確認を共用する。選択取消・不正JSONで入力を失わず、古い非同期読込は採用しない。S／Shift＋Sは従来のJSONダウンロードで、保存先選択・既存ファイル上書きとは区別する。起動時は従来のサンプル表示を維持し、新規作成ウィザード・最近のファイル・復旧は後続。[実装範囲と検証](implementation-history.md#new-project-progress)を参照する。
 
 ## 配置名の実装追記（2026-10-19）
 
-Project 0.5.0で任意の配置名を追加した。単一選択Inspectorの既存draft／適用経路、レイヤー表示・検索、SymbolとTextの使用先検索へ接続する。空欄は種類・表示順へ戻り、重複名とコピー時の名前保持を許容する。名前はUUIDによる識別・タグ外部名・共有定義名・画面上のTextと独立する。検索から外れた選択も保持する。表示／ロック／ユーザー作成グループは後続。[保存契約と検証](development-plan.md#placement-name-progress)を参照する。
+Project 0.5.0で任意の配置名を追加した。単一選択Inspectorの既存draft／適用経路、レイヤー表示・検索、SymbolとTextの使用先検索へ接続する。空欄は種類・表示順へ戻り、重複名とコピー時の名前保持を許容する。名前はUUIDによる識別・タグ外部名・共有定義名・画面上のTextと独立する。検索から外れた選択も保持する。表示／ロック／ユーザー作成グループは後続。[保存契約と検証](implementation-history.md#placement-name-progress)を参照する。
 
 ## 編集ロックの実装追記（2026-10-19）
 
-Project 0.6.0で配置と定義内部の編集ロックを追加した。レイヤーから変更し、キャンバス・範囲・全選択では除外する。レイヤー選択とコピー・解除を許可し、Inspectorと共通コマンドの両方で直接変更を防ぐ。混在選択は原子的に拒否する。参照する共有定義の変更・履歴・Projectや画面全体の管理は反映するため、権限や共有状態の固定とは区別する。静的な表示切替は次の独立した工程とする。[実画面・保存契約・検証](development-plan.md#edit-lock-progress)を参照する。
+Project 0.6.0で配置と定義内部の編集ロックを追加した。レイヤーから変更し、キャンバス・範囲・全選択では除外する。レイヤー選択とコピー・解除を許可し、Inspectorと共通コマンドの両方で直接変更を防ぐ。混在選択は原子的に拒否する。参照する共有定義の変更・履歴・Projectや画面全体の管理は反映するため、権限や共有状態の固定とは区別する。静的な表示切替は次の独立した工程とする。[実画面・保存契約・検証](implementation-history.md#edit-lock-progress)を参照する。
 
 ## 静的表示切替の実装追記（2026-10-19）
 
-Project 0.7.0で配置と定義内部の`visible`を追加した。図面・表示プレビュー・ミニマップ・共有定義のサムネイルへ反映し、レイヤーとInspectorへ再表示の入口を残す。非表示でも管理・参照・読取を保持し、見えない配置へのキャンバスの直接変更を防ぎながら、一覧で確認した明示操作を許可する。ロックとの意味を分離し、静的表示を権限や動的な表示条件とは扱わない。[実画面・保存契約・検証](development-plan.md#visibility-progress)を参照する。
+Project 0.7.0で配置と定義内部の`visible`を追加した。図面・表示プレビュー・ミニマップ・共有定義のサムネイルへ反映し、レイヤーとInspectorへ再表示の入口を残す。非表示でも管理・参照・読取を保持し、見えない配置へのキャンバスの直接変更を防ぎながら、一覧で確認した明示操作を許可する。ロックとの意味を分離し、静的表示を権限や動的な表示条件とは扱わない。[実画面・保存契約・検証](implementation-history.md#visibility-progress)を参照する。
 
-Project名の編集・F2の名前欄への移動・F1の操作ガイドを既存の編集基盤へ接続した。schemaは0.7.0を維持する。[実装状況](development-plan.md#standard-names-progress)を参照。
+Project名の編集・F2の名前欄への移動・F1の操作ガイドを既存の編集基盤へ接続した。schemaは0.7.0を維持する。[実装状況](implementation-history.md#standard-names-progress)を参照。
 
-複数選択の色編集を実装した。混在色と適用する色の未指定を区別し、既存の入力保護・共通コマンド・Undoを使う。共通スタイル全体の完了を示すものではない。[実画面と検証](development-plan.md#selection-color-progress)を参照。
+複数選択の色編集を実装した。混在色と適用する色の未指定を区別し、既存の入力保護・共通コマンド・Undoを使う。共通スタイル全体の完了を示すものではない。[実画面と検証](implementation-history.md#selection-color-progress)を参照。
 
-3件以上の中心を水平方向／垂直方向に等間隔で配置する操作を追加した。両端中心を固定し、隙間の均等化とは区別する。[実装範囲と検証](development-plan.md#distribute-progress)を参照。
+3件以上の中心を水平方向／垂直方向に等間隔で配置する操作を追加した。両端中心を固定し、隙間の均等化とは区別する。[実装範囲と検証](implementation-history.md#distribute-progress)を参照。
 
-固定パネルの「標準レイアウトに戻す」を実装した。寸法と補助領域の表示を戻し、タブ・ツリー・検索・draft・テーマ・お気に入り等の作業文脈を保持する。浮動／再ドッキングや名前付き保存は含まない。[実装範囲と検証](development-plan.md#layout-reset-progress)を参照。
+固定パネルの「標準レイアウトに戻す」を実装した。寸法と補助領域の表示を戻し、タブ・ツリー・検索・draft・テーマ・お気に入り等の作業文脈を保持する。浮動／再ドッキングや名前付き保存は含まない。[実装範囲と検証](implementation-history.md#layout-reset-progress)を参照。
 
-レイヤーの整理用フォルダーはProject 0.8.0で保存契約・階層UI・検索・親変更・所属変更／解除・空削除を実装した。[詳細仕様](layer-folders-design.md)と[実画面・検証](development-plan.md#layer-folder-ui-progress)を参照する。位置や重なりを変える幾何グループとは分け、複製／clipboardのIDと所属を保持する。継承表示・フォルダー単位ロック・再帰削除・ドラッグ移動は後続。
+レイヤーの整理用フォルダーはProject 0.8.0で保存契約・階層UI・検索・親変更・所属変更／解除・空削除を実装した。[詳細仕様](layer-folders-design.md)と[実画面・検証](implementation-history.md#layer-folder-ui-progress)を参照する。位置や重なりを変える幾何グループとは分け、複製／clipboardのIDと所属を保持する。継承表示・フォルダー単位ロック・再帰削除・ドラッグ移動は後続。
 
 ### 線・配管の共通スタイルの進捗（2026-10-19）
 
-既存のPolyline属性を使い、複数選択の線幅／終端矢印を一括編集できる。未指定を保持し、指定した項目だけを変更する。混在型とロックは一部適用せず拒否する。幾何・色・所属を保持し、既存の入力保護とUndoへ接続した。共有定義の内部編集と親配置を分ける。[実装範囲・検証](development-plan.md#selection-line-progress)を参照する。図形の線と塗り分け・多色Symbol・状態別表示の完了は意味しない。
+既存のPolyline属性を使い、複数選択の線幅／終端矢印を一括編集できる。未指定を保持し、指定した項目だけを変更する。混在型とロックは一部適用せず拒否する。幾何・色・所属を保持し、既存の入力保護とUndoへ接続した。共有定義の内部編集と親配置を分ける。[実装範囲・検証](implementation-history.md#selection-line-progress)を参照する。図形の線と塗り分け・多色Symbol・状態別表示の完了は意味しない。
 
 ### 静的な多色Symbol（2026-10-19）
 
-Project 0.9.0で配置単色／共有定義の静的な配色を実装した。共通色からの単色化には明示チェックを必要とし、モードと色をまとめてUndoできる。[仕様](symbol-color-design.md)と[実装・実画面](development-plan.md#symbol-color-progress)を参照する。状態別表示・Binding・slotは後続。
+Project 0.9.0で配置単色／共有定義の静的な配色を実装した。共通色からの単色化には明示チェックを必要とし、モードと色をまとめてUndoできる。[仕様](symbol-color-design.md)と[実装・実画面](implementation-history.md#symbol-color-progress)を参照する。状態別表示・Binding・slotは後続。
 
 ### 矩形・楕円の塗りと枠線（2026-10-19）
 
-[塗りと枠線の仕様](shape-paint-design.md)に従い、0.10.0で矩形・楕円の塗りの有無と枠線の色・幅を分離した。本体寸法と描画外形を区別し、枠線のみの図形・共通色・共有Symbolへ接続した。[実装・検証](development-plan.md#shape-paint-progress)を参照する。回転・幾何グループ・複数選択の枠線一括編集は混ぜない。
+[塗りと枠線の仕様](shape-paint-design.md)に従い、0.10.0で矩形・楕円の塗りの有無と枠線の色・幅を分離した。本体寸法と描画外形を区別し、枠線のみの図形・共通色・共有Symbolへ接続した。[実装・検証](implementation-history.md#shape-paint-progress)を参照する。回転・幾何グループ・複数選択の枠線一括編集は混ぜない。
 
 ### 枠線の一括編集（2026-10-19）
 
-[枠線一括編集の仕様](selection-outline-design.md)に従い、矩形・楕円の枠線のみを変更する部分指定・明示解除・新設時の必須指定を実装した。塗り・位置・本体寸法を保持し、既存のpaint契約と入力保護を利用する。[実装・検証・実画面](development-plan.md#selection-outline-progress)を参照する。
+[枠線一括編集の仕様](selection-outline-design.md)に従い、矩形・楕円の枠線のみを変更する部分指定・明示解除・新設時の必須指定を実装した。塗り・位置・本体寸法を保持し、既存のpaint契約と入力保護を利用する。[実装・検証・実画面](implementation-history.md#selection-outline-progress)を参照する。
 
 ### 選択範囲の表示（2026-10-19）
 
-[選択範囲表示の仕様](selection-view-design.md)に従い、ツールバー・表示メニュー・配置行／キャンバスのFから選択の表示可能部分へ倍率・中心を合わせる操作を追加した。入力・選択・Project・履歴を維持し、単発の手動倍率として扱う。非表示混在・全件画面外を理由付きで無効にし、画面外の部分は通知する。[実装・検証・実画面](development-plan.md#selection-view-progress)を参照する。
+[選択範囲表示の仕様](selection-view-design.md)に従い、ツールバー・表示メニュー・配置行／キャンバスのFから選択の表示可能部分へ倍率・中心を合わせる操作を追加した。入力・選択・Project・履歴を維持し、単発の手動倍率として扱う。非表示混在・全件画面外を理由付きで無効にし、画面外の部分は通知する。[実装・検証・実画面](implementation-history.md#selection-view-progress)を参照する。
 
 ### レイヤー配置のドラッグによる所属変更（2026-10-19・同日後続）
 
-配置の名称／アイコンからフォルダー直下またはルートへ所属を変更する。描画順・座標・選択は変えず、複数選択・非表示件数の案内・ロック全体拒否・入力保護・Undoを共用する。フォルダー自体のドラッグや並べ替えは後続。[実装範囲・実画面・検証](development-plan.md#layer-drag-progress)を参照する。
+配置の名称／アイコンからフォルダー直下またはルートへ所属を変更する。描画順・座標・選択は変えず、複数選択・非表示件数の案内・ロック全体拒否・入力保護・Undoを共用する。フォルダー自体のドラッグや並べ替えは後続。[実装範囲・実画面・検証](implementation-history.md#layer-drag-progress)を参照する。
 
 ### 配置の回転（2026-10-19・同日後続）
 
@@ -386,11 +386,11 @@ Project 0.9.0で配置単色／共有定義の静的な配色を実装した。�
 
 ## Textの基本書式と枠内表示の実装（2026-10-19）
 
-Project 0.12.0で単一Textの文字サイズ・標準／太字・左／中央／右を保存する。上下中央の1行表示とし、文字サイズを枠寸法から独立させる。静的文字は書記素を保持して省略し、数値と取得状態は枠不足時に全体を###または警告へ置換する。タグのQuality・保存文字列は変更しない。[仕様](text-style-design.md)と[実装・検証](development-plan.md#text-style-progress)を参照する。複数行・縁取り・一括書式は後続とする。
+Project 0.12.0で単一Textの文字サイズ・標準／太字・左／中央／右を保存する。上下中央の1行表示とし、文字サイズを枠寸法から独立させる。静的文字は書記素を保持して省略し、数値と取得状態は枠不足時に全体を###または警告へ置換する。タグのQuality・保存文字列は変更しない。[仕様](text-style-design.md)と[実装・検証](implementation-history.md#text-style-progress)を参照する。複数行・縁取り・一括書式は後続とする。
 
 ## フォルダーのドラッグ親変更の実装（2026-10-19）
 
-フォルダー名・アイコンから親を変更し、配下の配置・選択・座標・描画順を保持する。自己・子孫・深さ超過はhoverから拒否する。配置の所属dragと入力保護を共用し、共有定義にも対応する。[仕様](folder-drag-design.md)と[実装・検証](development-plan.md#folder-drag-progress)を参照する。兄弟順の変更や幾何グループは後続。
+フォルダー名・アイコンから親を変更し、配下の配置・選択・座標・描画順を保持する。自己・子孫・深さ超過はhoverから拒否する。配置の所属dragと入力保護を共用し、共有定義にも対応する。[仕様](folder-drag-design.md)と[実装・検証](implementation-history.md#folder-drag-progress)を参照する。兄弟順の変更や幾何グループは後続。
 
 ## 画像・描画表現・画面展開・kioskの追加検討（2026-10-19）
 
@@ -398,39 +398,39 @@ Project 0.12.0で単一Textの文字サイズ・標準／太字・左／中央�
 
 ## 実線・破線・点線の実装（2026-10-20）
 
-Project 0.13.0でPolylineと矩形／楕円の枠線に共通の線種を保存する。単独／一括適用・幅に比例する間隔・矢印／hit領域・両Symbol配色・Editor／表示プレビュー／ミニマップを共用する。[仕様](line-style-design.md)と[実装記録](development-plan.md#line-style-progress)を参照する。α・gradient／pattern・画像・埋込画面・Popupは後続。
+Project 0.13.0でPolylineと矩形／楕円の枠線に共通の線種を保存する。単独／一括適用・幅に比例する間隔・矢印／hit領域・両Symbol配色・Editor／表示プレビュー／ミニマップを共用する。[仕様](line-style-design.md)と[実装記録](implementation-history.md#line-style-progress)を参照する。α・gradient／pattern・画像・埋込画面・Popupは後続。
 
 ## 配置全体の不透明度（2026-10-20）
 
-Project 0.14.0で全配置の任意opacityを追加した。単一選択の百分率入力・Undo・JSON・clipboardと共通描画に接続する。Symbol合成後へ一度適用し、編集用選択枠は保持する。[仕様](opacity-design.md)・[実装記録](development-plan.md#opacity-progress)を参照。paintごとの色α・gradient／pattern・画像は後続。
+Project 0.14.0で全配置の任意opacityを追加した。単一選択の百分率入力・Undo・JSON・clipboardと共通描画に接続する。Symbol合成後へ一度適用し、編集用選択枠は保持する。[仕様](opacity-design.md)・[実装記録](implementation-history.md#opacity-progress)を参照。paintごとの色α・gradient／pattern・画像は後続。
 
 ## 色ごとのα（2026-10-20）
 
-Project 0.15.0で単色のcolorAlphaと枠線alphaを追加した。配置opacityと独立し、Symbol単色と線本体＋矢印は合成後へ一度適用する。塗りなし・定義色では保存αを保持して非適用とし、RGB一括編集もαを保持する。[仕様](color-alpha-design.md)・[実装記録](development-plan.md#color-alpha-progress)を参照。gradient／patternへ向けた判別型paintへの再編は後続。
+Project 0.15.0で単色のcolorAlphaと枠線alphaを追加した。配置opacityと独立し、Symbol単色と線本体＋矢印は合成後へ一度適用する。塗りなし・定義色では保存αを保持して非適用とし、RGB一括編集もαを保持する。[仕様](color-alpha-design.md)・[実装記録](implementation-history.md#color-alpha-progress)を参照。gradient／patternへ向けた判別型paintへの再編は後続。
 
 ## 背景画像と最小package profile（2026-10-20）
 
-Project 0.16.0で資産宣言と背景参照を保存し、取込／差替え／解除・fit／opacity・Undoと共通描画へ接続した。画像原本はProject外の不変Storeで共有する。画像ありは原本を同梱する最小 `.bantoscada` profileで保存・再読込し、資産なしは従来JSONを使う。[仕様](image-assets-design.md)・[実装記録](development-plan.md#background-image-progress)を参照。正式package全体・directory・Design Domain・更新競合・配布管理・Image配置／clipboardは後続。
+Project 0.16.0で資産宣言と背景参照を保存し、取込／差替え／解除・fit／opacity・Undoと共通描画へ接続した。画像原本はProject外の不変Storeで共有する。画像ありは原本を同梱する最小 `.bantoscada` profileで保存・再読込し、資産なしは従来JSONを使う。[仕様](image-assets-design.md)・[実装記録](implementation-history.md#background-image-progress)を参照。正式package全体・directory・Design Domain・更新競合・配布管理・Image配置／clipboardは後続。
 
 ## 画面上のImage配置（2026-10-20）
 
-Project 0.17.0で画面直置きのPNG／JPEGを追加した。背景と原本を共有し、画像枠の移動・サイズ・回転・不透明度・複製・ロック／非表示・Undoと最小画像同梱packageに接続する。containを既定とし、元比率復帰では中心を保持する。Symbol内画像・画像clipboard・差替え・トリミングは後続。[保存契約と操作](image-placement-design.md)・[実装記録](development-plan.md#image-placement-progress)を参照。
+Project 0.17.0で画面直置きのPNG／JPEGを追加した。背景と原本を共有し、画像枠の移動・サイズ・回転・不透明度・複製・ロック／非表示・Undoと最小画像同梱packageに接続する。containを既定とし、元比率復帰では中心を保持する。Symbol内画像・画像clipboard・差替え・トリミングは後続。[保存契約と操作](image-placement-design.md)・[実装記録](implementation-history.md#image-placement-progress)を参照。
 
 ## OS画像の貼り付け（2026-10-20）
 
-[画像clipboardの段階設計](image-clipboard-design.md)の第1段階として、画面への単一PNG／JPEG貼付を既存Image配置へ接続した。SCADA断片を優先し、入力欄を奪わず、遅延処理のscopeとdraftを保護する。ブラウザで受け取れた原本を保持する。原本を含む図形clipboardは次段階。[実装記録](development-plan.md#image-paste-progress)を参照。
+[画像clipboardの段階設計](image-clipboard-design.md)の第1段階として、画面への単一PNG／JPEG貼付を既存Image配置へ接続した。SCADA断片を優先し、入力欄を奪わず、遅延処理のscopeとdraftを保護する。ブラウザで受け取れた原本を保持する。原本を含む図形clipboardは次段階。[実装記録](implementation-history.md#image-paste-progress)を参照。
 
 ## 原本を含む図形clipboard（2026-10-20）
 
-[画像clipboardの第2段階](image-clipboard-design.md)で、選択した図形・Symbol・画像原本を別Projectへ運べるようにした。原本をhashごとに1回だけ含め、検証後に一括貼付し、書込み成功後だけcutを確定する。Project 0.17.0を維持し、clipboard v2の容量・ブラウザ制約を明示する。[実装記録](development-plan.md#asset-clipboard-progress)を参照。
+[画像clipboardの第2段階](image-clipboard-design.md)で、選択した図形・Symbol・画像原本を別Projectへ運べるようにした。原本をhashごとに1回だけ含め、検証後に一括貼付し、書込み成功後だけcutを確定する。Project 0.17.0を維持し、clipboard v2の容量・ブラウザ制約を明示する。[実装記録](implementation-history.md#asset-clipboard-progress)を参照。
 
 ### 2色線形グラデーションの実装追記（2026-10-20）
 
-Project 0.18.0で矩形／楕円のpaintを判別型へ再編し、塗りの色とαを一箇所へ保存する。単独フォームの明示適用、両端α、局所座標、Symbol両配色・ミニマップ・Undo／JSON／clipboardへ接続した。放射gradient・patternは後続。[仕様と実画面](linear-gradient-design.md)・[実装記録](development-plan.md#linear-gradient-progress)を参照。
+Project 0.18.0で矩形／楕円のpaintを判別型へ再編し、塗りの色とαを一箇所へ保存する。単独フォームの明示適用、両端α、局所座標、Symbol両配色・ミニマップ・Undo／JSON／clipboardへ接続した。放射gradient・patternは後続。[仕様と実画面](linear-gradient-design.md)・[実装記録](implementation-history.md#linear-gradient-progress)を参照。
 
 ### 繰返しパターンの実装追記（2026-10-20）
 
-Project 0.19.0で矩形／楕円の塗りへ斜線・交差線・点を追加した。前景と背景のα、local座標、Symbol両配色を共用し、明示適用と未適用見本・Undo／JSON／clipboardへ接続する。交点へ前景αを重ねない。[仕様・実画面](pattern-paint-design.md)・[実装記録](development-plan.md#pattern-paint-progress)を参照。画像タイルや自由原点は後続。
+Project 0.19.0で矩形／楕円の塗りへ斜線・交差線・点を追加した。前景と背景のα、local座標、Symbol両配色を共用し、明示適用と未適用見本・Undo／JSON／clipboardへ接続する。交点へ前景αを重ねない。[仕様・実画面](pattern-paint-design.md)・[実装記録](implementation-history.md#pattern-paint-progress)を参照。画像タイルや自由原点は後続。
 
 ## 幾何グループの初回実装へ向けた具体化
 
