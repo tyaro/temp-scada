@@ -135,10 +135,6 @@ export function createClipboardController(host: ClipboardHost) {
           )
             return;
           if (payload.kind === "image") {
-            if (host.owner.definitionId)
-              throw new Error(
-                "Symbol定義には画像を貼り付けできません。画面を開いてください。",
-              );
             await host.prepareImage(
               payload.file,
               generation,
@@ -149,10 +145,6 @@ export function createClipboardController(host: ClipboardHost) {
           }
           const text = payload.text;
           const fragment = parseClipboard(text);
-          if (fragment.project.assets.length && host.owner.definitionId)
-            throw new Error(
-              "Symbol定義には画像を貼り付けできません。画面を開いてください。",
-            );
           const candidate = await decodeAssetClipboard(fragment);
           try {
             if (

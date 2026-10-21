@@ -231,7 +231,7 @@ test("multiple, unsupported and corrupt images leave placements and Undo untouch
   const project = await archived(page);
   expect(project.assets[0].mime).toBe("image/jpeg");
 });
-test("paste is not intercepted in inputs or preview, and image paste in Symbol definitions gives a reason", async ({
+test("paste is not intercepted in inputs or preview, and images paste into Symbol definitions", async ({
   page,
 }) => {
   await start(page);
@@ -257,10 +257,12 @@ test("paste is not intercepted in inputs or preview, and image paste in Symbol d
   await selectPanel(page, "プロジェクト");
   await button(page, "定義を編集").click();
   await nativePaste(page, data);
-  await expect(page.getByTestId("project-status")).toContainText(
-    "Symbol定義には画像を貼り付けできません",
-  );
-  await expect(images(page)).toHaveCount(0);
+  await expect(images(page)).toHaveCount(1);
+  const project = await archived(page);
+  expect(
+    project.symbols[0].objects.some((o: any) => o.shape.type === "image"),
+  ).toBe(true);
+  expect(project.assets).toHaveLength(1);
 });
 test("an image awaiting decode cannot revive after leaving and returning to the same screen scope", async ({
   page,

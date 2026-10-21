@@ -30,9 +30,7 @@ export function applyImagePlacement(
   next: Project,
   screen: Screen | SymbolDefinition,
   command: ImagePlacementCommand,
-  definitionId?: string,
 ): void {
-  if (definitionId) throw new Error("Symbol定義には画像を配置できません");
   const assetId = registerAsset(next, command.asset);
   screen.objects.push({
     id: newId(),
@@ -49,21 +47,20 @@ export function applyImageEdit(
   next: Project,
   object: ScreenObject,
   command: ImageEditCommand,
-  definitionId?: string,
 ): void {
   if (command.type === "replace-image") {
-    if (definitionId || object.shape.type !== "image")
-      throw new Error("画面上の画像配置だけを差し替えられます。");
+    if (object.shape.type !== "image")
+      throw new Error("画像配置だけを差し替えられます。");
     const assetId = registerAsset(next, command.asset);
     if (assetId !== object.shape.assetId) delete object.shape.crop;
     object.shape.assetId = assetId;
   } else if (command.type === "set-image-fit") {
-    if (definitionId || object.shape.type !== "image")
-      throw new Error("画面上の画像配置だけ表示方式を変更できます。");
+    if (object.shape.type !== "image")
+      throw new Error("画像配置だけ表示方式を変更できます。");
     object.shape.fit = parseImageFit(command.fit);
   } else if (command.type === "set-image-crop") {
-    if (definitionId || object.shape.type !== "image")
-      throw new Error("画面上の画像配置だけをトリミングできます。");
+    if (object.shape.type !== "image")
+      throw new Error("画像配置だけをトリミングできます。");
     const asset = next.assets.find(
       (a) => object.shape.type === "image" && a.id === object.shape.assetId,
     )!;

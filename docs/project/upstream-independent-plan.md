@@ -1,6 +1,6 @@
 # 上流変更中に進めるSCADA単体開発計画
 
-2026-10-21（日本時間）。状態: **I0〜I4・I6は完了・全体CI成功。I5は限定改善・候補評価完了、遅延は残課題**。現行保存契約はProject0.34.0。[統合設計](../design/scada-integrated-design.md)のローカル作図領域を対象とする。次は[I7：Symbol内画像](../design/images/symbol-image-design.md)の資産参照基盤を先行する。
+2026-10-21（日本時間）。状態: **I0〜I4・I6は完了・全体CI成功。I5は限定改善・候補評価完了、遅延は残課題**。現行保存契約はProject0.34.0。[統合設計](../design/scada-integrated-design.md)のローカル作図領域を対象とする。[I7：Symbol内画像](../design/images/symbol-image-design.md)はI7a／bの全体CI成功、I7cの取込・編集UIを実装・ローカル検証済み（CI確認待ち）。
 
 ## 方針と境界
 
@@ -26,8 +26,8 @@ Projectのローカル属性追加は可能だが、共有SDK・Design API・正
 | I6a 参照名置換の基盤         | 全画面の完全一致・差分・原子command                    | ロック／グループ・古いsnapshot拒否、Undo／Redoと保存検証                                                                                  | 完了・CI成功                                 |
 | I6b 参照名置換のUI           | タグ参照一覧から全画面差分と明示適用                   | IME・draft・取消・検索独立・保存往復・両テーマ                                                                                            | 完了・CI成功                                 |
 | I7a 資産参照の基盤           | 全定義の画像参照索引と選択配置の依存閉包               | TS／Rust共通低層fixture・既存保存／clipboard回帰。Symbol内画像の公開拒否は維持                                                            | 完了・CI成功                                 |
-| I7b Symbol内画像の保存・表示 | 保存・貼付の原本再配線と共通描画                       | 未配置定義の原本保持・同hash共有・現行定義再利用・両配色／α・各描画入口                                                                   | 実装・ローカル検証済み／CI確認待ち           |
-| I7c Symbol内画像の作成UI     | 定義内取込・画像編集・貼付の操作                       | 所有者世代・遅延decode・draft／IME・lock・fit／crop・原本解放                                                                             | 未着手                                       |
+| I7b Symbol内画像の保存・表示 | 保存・貼付の原本再配線と共通描画                       | 未配置定義の原本保持・同hash共有・現行定義再利用・両配色／α・各描画入口                                                                   | 完了・CI成功                                 |
+| I7c Symbol内画像の作成UI     | 定義内取込・画像編集・貼付の操作                       | 所有者世代・遅延decode・draft／IME・lock・fit／crop・原本解放                                                                             | 実装・ローカル検証済み／CI確認待ち           |
 
 I1a／I2a／I3aは基盤だけの保存区切りとし、b工程でUI・実利用・回帰まで確認した。今後も基盤実装と機能提供の完了を区別する。下記の順序は当時の着手順であり、未着手の次工程を示すものではない。
 
@@ -82,7 +82,7 @@ I5は[性能計測の既存記録](../performance/editor-performance.md)を再�
 
 I6bの`0bd2559`は[全体CI39559236819](https://github.com/tyaro/temp-scada/actions/runs/39559236819)ですべて成功。[置換の仕様・実画面](../design/equipment/text-reference-replacement-design.md)を提供済み。I5の限定改善／未採用候補は[計測記録](../performance/mixed-editor-quality.md)を参照する。
 
-文書整理後の次工程は[I7](../design/images/symbol-image-design.md)。Astraのレビューを踏まえ、資産参照集計をI7aとして先行実装し、ローカル検証を完了した。I7aのCI成功後、I7bの保存・表示・貼付再配線へ進めた。新規の作成UIはI7cへ分け、合成後の配色／αと原本寿命を維持する。
+文書整理後の次工程は[I7](../design/images/symbol-image-design.md)。Astraのレビューを踏まえ、資産参照集計をI7aとして先行実装し、ローカル検証を完了した。I7bの`969a0c4`も[全体CI成功](https://github.com/tyaro/temp-scada/actions/runs/39568399640)。I7cは定義内の配置・貼付・fit／crop・差替えへ接続し、合成後の配色／αと原本寿命を維持してローカル検証済み（CI確認待ち）。
 
 ## 実施記録
 

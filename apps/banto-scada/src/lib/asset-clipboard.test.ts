@@ -338,7 +338,7 @@ it("rejects missing, duplicate, excess, malformed and noncanonical originals and
   ).rejects.toThrow(/宣言/);
   store.dispose();
 });
-it("rejects an image-containing paste into a Symbol atomically, preserving the Project and history", async () => {
+it("accepts an image-containing paste into a Symbol without mutating the source Project", async () => {
   const { snapshot, store } = await fixture(),
     text = await (await encodeAssetClipboard(snapshot, store)).text();
   let target = createProject();
@@ -348,20 +348,23 @@ it("rejects an image-containing paste into a Symbol atomically, preserving the P
     "edit",
   );
   const before = JSON.stringify(target);
-  expect(() =>
-    applyCommand(
-      target,
-      {
-        type: "paste",
-        screenId: target.screens[0].id,
-        definitionId: target.symbols[0].id,
-        text,
-        origin: "other",
-        center: { x: 20, y: 20 },
-      },
-      "edit",
-    ),
-  ).toThrow(/画像/);
+  const pasted = applyCommand(
+    target,
+    {
+      type: "paste",
+      screenId: target.screens[0].id,
+      definitionId: target.symbols[0].id,
+      text,
+      origin: "other",
+      center: { x: 20, y: 20 },
+    },
+    "edit",
+  );
+  expect(pasted.symbols[0].objects).toHaveLength(
+    target.symbols[0].objects.length +
+      snapshot.project.screens[0].objects.length,
+  );
+  expect(pasted.assets).toHaveLength(snapshot.project.assets.length);
   expect(JSON.stringify(target)).toBe(before);
   store.dispose();
 });

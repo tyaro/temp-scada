@@ -1793,3 +1793,9 @@ I5bの次の区切りは残るScriptDurationのサンプリングprofile。Node�
 Project0.34.0のschema・TS／Rust・現行サンプルを揃え、Symbol内Imageを受理し、未配置定義の原本保持と実取込する定義の画像ID再配線を接続した。[採用範囲・実画面・原本同梱サンプル](../design/images/symbol-image-design.md)を保存。子の順序・原色・親の合成後opacity／colorAlphaを維持し、各描画入口・thumbnailへ画像Mapを渡した。定義内への取込・画像編集UIはI7cへ分離し、未対応の操作は無効化した。
 
 TS全1137件＋追加再利用ケースを含む関連9件（計1138ケース）、Rust全53件、型・Clippy・CLI4サンプル・build・整形、ブラウザ新規6件＋既存24件をローカル確認。既存24件の初回1件timeoutと、併走終了後の同一コードでの単独成功も仕様に記録した。I7aの`2cbc930`は全体CI39563806934成功、I7bの全体CIはPush後の確認待ち。新旧形式のmigrationは追加していない。
+
+## I7c：Symbol定義内の画像取込・編集（2026-10-21）
+
+定義編集でも画像のファイル配置・OS貼付・原本付きコピー／切取／貼付・fit／crop・差替えを使えるようにした。背景専用の拒否とSymbol入れ子等の制限は維持し、既存controllerの所有者ID／generation／epoch、フォームの対象照合・draft／IME・Undoと原本Storeを共用する。[仕様・実画面・受入記録](../design/images/symbol-image-design.md#i7c定義内の取込編集ui2026-10-21)。
+
+TS全1,142件、ブラウザ新規6件＋既存40件（計46ケース）、型エラー／警告0、本番build・整形・リンク確認が成功。遅延処理のtest mock復元と旧拒否期待の修正は仕様の検証記録に残した。保存版0.34.0・Rust／schema・固定依存は維持。I7bの`969a0c4`は[全体CI39568399640](https://github.com/tyaro/temp-scada/actions/runs/39568399640)で全job成功、今回の全体CIはPush後に確認する。

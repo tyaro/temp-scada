@@ -1,6 +1,6 @@
 # コードと検証の対応表
 
-状態: **現行構造の案内**。2026-10-21更新、Symbol内画像の保存・共通表示（I7b）までの追加を含む。責務や関数の移動時はこの対応表を更新する。[現在の実装状況](../project/implementation-status.md)、[構造整理の計画・結果](maintenance-refactoring-plan.md)、[作業規則](../../AGENTS.md)を併読する。
+状態: **現行構造の案内**。2026-10-21更新、Symbol内画像の作成UI（I7c）までの追加を含む。責務や関数の移動時はこの対応表を更新する。[現在の実装状況](../project/implementation-status.md)、[構造整理の計画・結果](maintenance-refactoring-plan.md)、[作業規則](../../AGENTS.md)を併読する。
 
 パスはリポジトリルート基準。関数名を検索し、行番号・ファイルの大きさに依存しない。現在の依存方向はUI→編集／履歴→Project検証。純粋計算とモデルからDOMやAppをimportしない。
 
@@ -300,4 +300,8 @@ I5dの一律隔離候補は速度面の採用条件を満たさず未採用。�
 
 ## Symbol内Imageの保存・共通表示（I7b）
 
-Project0.34.0のSymbol定義はImageを許可する。`editor/paste-handler.ts`は実取込する定義を決めてから内部画像の原本登録・ID再配線を行い、現行定義再利用の境界で古い資産の展開を止める。`ObjectPainting.svelte`／`designer/SymbolThumbnail.svelte`はImagePaintingを呼び、Appからパレット・定義一覧・レイヤー・お気に入りへ画像Mapを渡す。親Symbolのopacity／colorAlphaは従来の合成位置を保つ。`symbol-image.test.ts`、RustのSymbol画像契約、`e2e/symbol-image.spec.ts`と原本同梱サンプルが受入入口。[段階設計](../design/images/symbol-image-design.md)のI7c作成UIは未接続。
+Project0.34.0のSymbol定義はImageを許可する。`editor/paste-handler.ts`は実取込する定義を決めてから内部画像の原本登録・ID再配線を行い、現行定義再利用の境界で古い資産の展開を止める。`ObjectPainting.svelte`／`designer/SymbolThumbnail.svelte`はImagePaintingを呼び、Appからパレット・定義一覧・レイヤー・お気に入りへ画像Mapを渡す。親Symbolのopacity／colorAlphaは従来の合成位置を保つ。`symbol-image.test.ts`、RustのSymbol画像契約、`e2e/symbol-image.spec.ts`と原本同梱サンプルが受入入口。[段階設計](../design/images/symbol-image-design.md)のI7cでは下記の既存入口へ接続する。
+
+## Symbol内Imageの取込・編集（I7c）
+
+`editor/image-handler.ts`は画面とSymbol定義に共通の配置・差替え・fit／cropを扱う。owner／lock／mode検査とfinish・履歴は従来どおり呼出側に残す。`designer/controllers/image-import.svelte.ts`のscreenIdは現在のキャンバス（定義なら定義ID）を指し、既存epochを使って往復後の遅延適用を止める。背景だけは定義で拒否する。clipboard controllerの画像拒否を外し、定義で非対応のgroup／Symbol／View／タグ付きTextはpaste-handlerに残す。Inspectorとfit／cropフォームは同じdraft・IME・対象照合を使用する。`symbol-image-authoring.test.ts`と`e2e/symbol-image-authoring.spec.ts`が受入入口。

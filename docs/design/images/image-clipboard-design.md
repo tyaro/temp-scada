@@ -1,5 +1,7 @@
 # 画像の貼り付けと原本を含む図形clipboard
 
+> 2026-10-21追記：以下は初回工程の範囲・受入記録。現在は[I7c](symbol-image-design.md)でSymbol定義内の画像取込・貼付・差替え・fit／cropにも対応する。背景は画面専用、入れ子Symbol等の制限は維持する。
+
 文書の位置付け: **採用済み設計・導入時の実装記録。文中の旧版・件数・当時の未実装表記は記録時点のもの。** 現在の対応範囲と保存契約は[実装状況](../../project/implementation-status.md)を正とする。
 
 2026-10-20（日本時間）。Astraの読取専用レビューを反映。[拡張検討の画像clipboard](../proposals/scada-graphics-runtime-extension-design.md#3-背景画像imageclipboard)を段階化する。Projectモデルは0.17.0を共用する。

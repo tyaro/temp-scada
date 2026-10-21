@@ -273,7 +273,7 @@ test("corrupt originals and destination capacity failure reject the entire mixed
   await expect(objects(page)).toHaveCount(4);
   expect((await saved(page)).assets).toHaveLength(2);
 });
-test("image fragments are rejected in a shared definition, and late verification cannot revive after a mode round trip", async ({
+test("nested Symbol fragments are rejected in a shared definition, and late verification cannot revive after a mode round trip", async ({
   page,
 }) => {
   await fixture(page);
@@ -283,7 +283,7 @@ test("image fragments are rejected in a shared definition, and late verification
   await viewport(page).focus();
   await page.keyboard.press("Control+v");
   await expect(page.getByTestId("project-status")).toContainText(
-    "Symbol定義には画像",
+    "Symbol定義には埋込画面",
   );
   await expect(images(page)).toHaveCount(0);
   // Use a separate clean Project for the delayed validation boundary.

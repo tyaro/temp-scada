@@ -18,7 +18,7 @@ export function applySingleObjectCommand(
   const index = screen.objects.findIndex((o) => o.id === command.objectId);
   if (index < 0) throw new Error("図形が見つかりません");
   if (isImageEditCommand(command)) {
-    applyImageEdit(next, screen.objects[index], command, definitionId);
+    applyImageEdit(next, screen.objects[index], command);
   } else if (command.type === "make-symbol-unique") {
     const object = screen.objects[index];
     if (definitionId || object.shape.type !== "symbol")

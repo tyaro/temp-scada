@@ -280,7 +280,7 @@ test("the portable example opens with native decode and saves the declared Proje
   expect(result.bytes).toEqual([...original]);
 });
 
-test("definition editing displays the image while unsupported image authoring controls stay disabled", async ({
+test("definition editing exposes image fit, crop and replacement controls", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1920, height: 1080 });
@@ -298,11 +298,11 @@ test("definition editing displays the image while unsupported image authoring co
   );
   await expect(
     page.getByRole("combobox", { name: "画像の表示方式", exact: true }),
-  ).toBeDisabled();
-  await expect(button(page, "画像を差し替え…")).toBeDisabled();
+  ).toBeEnabled();
+  await expect(button(page, "画像を差し替え…")).toBeEnabled();
   await expect(
     page
       .getByRole("form", { name: "画像のトリミング", exact: true })
       .locator('input[name="cropX"]'),
-  ).toBeDisabled();
+  ).toBeEnabled();
 });

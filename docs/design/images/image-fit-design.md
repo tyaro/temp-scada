@@ -1,5 +1,7 @@
 # 配置画像の表示方式
 
+> 2026-10-21追記：以下は初回工程の範囲・受入記録。現在は[I7c](symbol-image-design.md)でSymbol定義内の画像取込・貼付・差替え・fit／cropにも対応する。背景は画面専用、入れ子Symbol等の制限は維持する。
+
 2026-10-20。計画中のcover／stretchを、配置Imageの表示方式として具体化する。背景画像・ScreenView・Symbol内画像は対象に含めない。この文書の追加だけで実装完了とはしない。
 
 ProjectとminRuntimeVersionを0.28.0へ更新し、fitはcontain／cover／stretchの必須値とする。TS・Rust共通schema・現行例を揃え、旧Projectからの移行は追加しない。原本付きpackage／clipboardの包み形式は変更しない。

@@ -6,7 +6,7 @@
 
 最新の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は限定改善・候補評価を一区切りとし、大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
-I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bとしてProject0.34.0のSymbol内画像の保存・読込・共通表示・Symbol配置の原本付きコピーを実装・ローカル検証済み（全体CI確認待ち）。定義内への画像取込・貼付・差替え・crop／fitの作成UIはI7cに残す。
+I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを実装・ローカル検証済み／CI確認待ち。
 
 ## 保存契約と基盤
 
@@ -30,7 +30,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 | 共通作図       | 選択・範囲選択、移動・サイズ・回転・整列・中心等間隔・幅／高さの一括指定、頂点、コピー／切取／貼付、Undo／Redo、幾何グループ                                                                                                                      | グループ任意拡縮・入れ子、図形演算、接続口と配管追従                                   |
 | 配置・レイヤー | 名前、編集ロック、静的非表示、整理フォルダー、同階層の手動順変更、親と所属のドラッグ変更・兄弟内の位置指定ドラッグ                                                                                                                                | 継承表示、一時非表示                                                                   |
 | 図形・文字     | 矩形／楕円の塗り・枠線、一括編集、実線／破線／点線、配置opacityとその一括編集、色αと矩形／楕円の塗り・枠線α一括編集、2色線形／放射gradient、斜線／交差線／点pattern、Textの書式と揃え・静的Textの明示改行・枠幅での自動折返し・Textだけの一括書式 | 多点stop・図上gradientハンドル、任意行間・縁取り、Text／線／Symbol等のα一括            |
-| 画像           | Symbol内Imageの保存・読込・共通表示・原本付きSymbolコピー、原本共有、背景fit、Imageのcontain／cover／stretch枠、比率復帰、原本付きclipboard、差し替え、配置・背景の非破壊cropと原本プレビュー上の範囲指定・移動・サイズ変更・縦横比固定           | 図面上の直接crop、Symbol内画像の作成・編集UI（I7c）                                    |
+| 画像           | Symbol内Imageの取込・編集・貼付・保存・共通表示・原本付きコピー、原本共有、背景fit、Imageのcontain／cover／stretch枠、比率復帰、原本付きclipboard、差し替え、配置・背景の非破壊cropと原本プレビュー上の範囲指定・移動・サイズ変更・縦横比固定     | 図面上の直接crop                                                                       |
 | 画面再利用     | 同一Project・1段の読取埋込View、共有参照、参照先編集、使用中画面の削除保護、複製、依存画面と原本付きclipboard v4                                                                                                                                  | 機器context付き共通画面、独立テンプレート                                              |
 | 表示確認       | 画面／機器の読取Popup合計4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                                                                                                                                 | 正式Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                       |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                                                                                                                                   | 実図面・画像／Symbol等の計測と必要な最適化                                             |

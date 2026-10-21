@@ -447,3 +447,7 @@ Project 0.19.0で矩形／楕円の塗りへ斜線・交差線・点を追加し
 ## Symbol配置への機器参照
 
 0.24.0で[登録機器の関連付けと使用先](equipment/equipment-symbol-association.md)を追加した。共有定義への個別タグ埋込みを避け、画面Symbol配置で機器IDを参照する。動的slot描画と実値表示は後続。
+
+## ローカル共有Symbol内画像（I7、2026-10-21）
+
+Project0.34.0でSymbol定義内のPNG／JPEGを保存・表示し、原本同梱コピーに対応した。I7a／bは全体CI成功。I7cは定義内の取込・貼付・差替え・fit／cropを既存の画像操作へ接続し、ローカル検証済み（CI確認待ち）。原色と原本αを保ち、親Symbolの合成後opacity／colorAlpha、原本共有、Undo、draft／IMEと所有者切替中の取消を維持する。[段階仕様・受入・実画面](images/symbol-image-design.md)を参照。背景は画面専用、外部URL・SVG取込・動画・Symbol入れ子は含めない。

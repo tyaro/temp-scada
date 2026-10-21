@@ -26,13 +26,12 @@ export function applyPasteCommand(
     objects.some(
       (o) =>
         o.shape.type === "symbol" ||
-        o.shape.type === "image" ||
         o.shape.type === "screenView" ||
         (o.shape.type === "text" && o.shape.binding),
     )
   )
     throw new Error(
-      "Symbol定義には画像・埋込画面・Symbol配置・タグ付きTextを貼り付けできません",
+      "Symbol定義には埋込画面・Symbol配置・タグ付きTextを貼り付けできません",
     );
   if (
     !Number.isFinite(command.center.x) ||

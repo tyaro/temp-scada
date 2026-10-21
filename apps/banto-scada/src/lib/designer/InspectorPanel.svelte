@@ -618,7 +618,7 @@
           {@const assetId = selected.shape.assetId}
           {@const asset = project.assets.find((a) => a.id === assetId)!}
           {#if activeDefinition}<p class="numeric-hint">
-              共有定義内の画像は、表示方式・切出し・原本差替えを変更できません。
+              共有定義内の画像変更は、このSymbolを使うすべての配置に反映されます。
             </p>{/if}
           {#key assetId}
             <ImageFitSettings
@@ -629,7 +629,7 @@
               height={"height" in selected ? selected.height : 1}
               objectId={selected.id}
               targetKey={`${generation}:${screen.id}:${activeDefinition}`}
-              locked={selectionLocked || activeDefinition}
+              locked={selectionLocked}
               {drafts}
               onsubmit={properties}
             />
@@ -639,7 +639,7 @@
               crop={selected.shape.crop}
               objectId={selected.id}
               targetKey={`${generation}:${screen.id}:${activeDefinition}`}
-              locked={selectionLocked || activeDefinition}
+              locked={selectionLocked}
               {drafts}
               onsubmit={properties}
             />
@@ -717,7 +717,7 @@
               </p>
               <button
                 type="button"
-                disabled={imageBusy || activeDefinition}
+                disabled={imageBusy}
                 onclick={() => selected && onreplaceimage(selected.id)}
                 title="別の原本への差し替えでは切出しを解除し、表示方式と配置枠は維持します。"
                 >画像を差し替え…</button

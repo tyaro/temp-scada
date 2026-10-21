@@ -126,7 +126,7 @@ for (const fit of ["contain", "cover", "stretch"] as const)
     expect(reset.height).toBe(160);
     expect(reset.y + reset.height / 2).toBe(object.y + object.height / 2);
   });
-it("rejects invalid fit, nonimage, locked, definition and preview without changes", () => {
+it("rejects invalid fit, nonimage, locked, stale owner forms and preview without changes", () => {
   const { project, screenId, objectId } = fixture();
   const before = serializeProject(project),
     command = {

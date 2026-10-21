@@ -1,12 +1,12 @@
 # I7：共有Symbol内の静止画像
 
-2026-10-21（日本時間）。状態: **I7a完了・全体CI成功。I7bの保存・読込・共通描画を実装・ローカル検証済み（CI確認待ち）。I7cの作成UIは未提供**。[単体開発計画](../../project/upstream-independent-plan.md)で、既存Imageの共有Symbolへの再利用を段階化する。Astraの読取レビューを反映した。統合設計・現在の[画像配置仕様](image-placement-design.md)を置き換えず、公開する範囲ごとに保存・描画・コピーを揃える。
+2026-10-21（日本時間）。状態: **I7a完了・全体CI成功。I7bの保存・読込・共通描画は全体CI成功。I7cの取込・編集UIを実装・ローカル検証済み（CI確認待ち）**。[単体開発計画](../../project/upstream-independent-plan.md)で、既存Imageの共有Symbolへの再利用を段階化する。Astraの読取レビューを反映した。統合設計・現在の[画像配置仕様](image-placement-design.md)を置き換えず、公開する範囲ごとに保存・描画・コピーを揃える。
 
 ## 初回の対象と除外
 
 目標はPNG／JPEGの静止画像をSymbol定義に持ち、原本を共有しながら配置・回転・opacity・fit・cropを既存Imageと同じ規則で扱うこと。未配置定義・非表示配置の原本も保存する。外部URL・SVG取込・動画・Symbol入れ子・任意拡縮・新しいAssetStoreは含めない。
 
-Project0.33.0（I7a）まではSymbol内Imageを拒否していた。I7bでは0.34.0に進め、保存・読込・共通描画とSymbol配置の原本付きコピーへ対応する。Symbol定義内への取込・貼付・画像編集の作成UIはI7cに分け、既存の拒否を維持する。低層の参照集計が対応することと、公開validator／command／UIで利用できることを区別する。リリース前の旧形式互換は必須にしないが、保存属性を拡張するときはTS／Rust／schema／サンプルを同時に更新する。
+Project0.33.0（I7a）まではSymbol内Imageを拒否していた。I7bでは0.34.0に進め、保存・読込・共通描画とSymbol配置の原本付きコピーへ対応する。Symbol定義内への取込・貼付・画像編集の作成UIはI7cで接続する。低層の参照集計が対応することと、公開validator／command／UIで利用できることを区別する。リリース前の旧形式互換は必須にしないが、保存属性を拡張するときはTS／Rust／schema／サンプルを同時に更新する。
 
 ## 資産の保持とコピーの範囲
 
@@ -32,8 +32,8 @@ I7bはAstraの推奨を採用し、既存の合成後のα契約を維持する�
 | 工程 | 内容                                       | 完了条件                                                                                                                  | 状態                               |
 | ---- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
 | I7a  | TS／Rust資産参照集計、clipboard依存収集    | 低層共通fixtureで全定義／背景／共有を確認。既存の保存・剪定・履歴・package／clipboardを回帰。公開のSymbol内画像拒否を維持 | 完了・CI成功                       |
-| I7b  | 保存版・検証、貼付時の資産再配線、共通描画 | 未配置定義の保存・同hash共有・削除／Undo・別Project貼付・現行定義再利用・欠落時原子性、各描画入口・両配色と重なり順を確認 | 実装・ローカル検証済み／CI確認待ち |
-| I7c  | 取込・編集・clipboardの作成UI              | 画面／定義の所有者、遅延decode中の切替・往復、draft／IME、lock、fit／crop、原本解放と両テーマ実画面を確認                 | 未着手                             |
+| I7b  | 保存版・検証、貼付時の資産再配線、共通描画 | 未配置定義の保存・同hash共有・削除／Undo・別Project貼付・現行定義再利用・欠落時原子性、各描画入口・両配色と重なり順を確認 | 完了・CI成功                       |
+| I7c  | 取込・編集・clipboardの作成UI              | 画面／定義の所有者、遅延decode中の切替・往復、draft／IME、lock、fit／crop、原本解放と両テーマ実画面を確認                 | 実装・ローカル検証済み／CI確認待ち |
 
 I7bでschemaの拒否を外すときは、読込できた画像が消える・保存で原本が失われる・コピーで依存が欠落する状態を公開しない。描画・保存・pasteの必要範囲を同じ受入区切りで揃える。I7c完了前はSymbol内への取込操作を提供済みと記載しない。
 
@@ -69,7 +69,7 @@ Project0.34.0でSymbol定義内Imageを保存・検証・表示できるよう�
 
 ![Symbol内画像・ダーク](../../assets/frontend-ux/symbol-image-dark.png)
 
-I7aの`2cbc930`は[全体CI39563806934](https://github.com/tyaro/temp-scada/actions/runs/39563806934)で全job成功。I7bの全体CIはPush後に確認する。画像の新規取込・差替え・crop／fit操作をSymbol定義へ接続する工程はI7cに残す。
+I7aの`2cbc930`は[全体CI39563806934](https://github.com/tyaro/temp-scada/actions/runs/39563806934)で全job成功。I7bの`969a0c4`は[全体CI39568399640](https://github.com/tyaro/temp-scada/actions/runs/39568399640)で全job成功。取込・差替え・crop／fit操作の接続は下記I7cを参照する。
 
 ### I7bのローカル検証
 
@@ -77,3 +77,23 @@ I7aの`2cbc930`は[全体CI39563806934](https://github.com/tyaro/temp-scada/acti
 - 新規ブラウザ6ケースで両テーマのRGB／原本α・画像前後の図形の重なりを画素比較し、別Projectコピーと元バイト保存・Undo／Redo、ミニマップ・部品・埋込・Popup・定義編集画面、配布用サンプルを確認した。未提供のcrop／fit／原本差替えは定義内で操作不可にし、既存の幾何・opacityと区別する。
 - 既存の配色・α・原本付きclipboard回帰24件は、初回23件成功／1件が初期操作で30秒timeout。ビルド・単体試験等の併走を終えて同一コード・同じ制限で単独確認し8.5秒で成功した。原因を断定せず、全体CIでも回帰を確認する。新規6件と合わせて異なるブラウザ30ケースを確認した。
 - 原本同梱サンプルは既存profile 1のまま、native PNG decodeとchecksumを含めて読込・保存・原本バイト一致を確認した。0.33.0の読込・自動変換は未提供。固定依存や認証延期は変更しない。
+
+## I7c：定義内の取込・編集UI（2026-10-21）
+
+Symbolの「定義を編集」で、ファイルメニュー「画像を配置」、PNG／JPEGのOS貼付、画像単体の原本付きコピー／切取／貼付を利用できる。選択した画像のプロパティからcontain／cover／stretch、原本座標の非破壊crop・縦横比固定、原本差替え、元比率復帰、幾何・opacityを編集する。変更はその定義を使う全配置へ反映される旨を表示する。背景画像は画面専用のまま。Symbol入れ子・埋込画面・group・タグ付きTextの定義内貼付は引き続き拒否する。
+
+既存image-import controllerの`screenId`は、画面または編集中の定義のIDを表す。generation・所有者ID・mode・取込requestのepochを照合し、画面／定義を切り替えて戻っても遅延decodeを復活させない。差替えは選択・元asset・crop・lockのepochも照合する。背景専用の拒否は維持し、配置／差替えだけを定義へ許可する。fit／cropフォームはgeneration・所有者ID・定義種別・対象配置（cropはasset IDも）を確認し、draft／IMEと明示適用、1操作＝Undo1回を共用する。
+
+モデルはProject0.34.0のまま。画像は既存ImagePainting・AssetStore・履歴pin／lease・原本同梱packageを使い、別Storeや原本変更処理は作らない。同hashを共有し、差替え後の保存では現在参照する原本だけを同梱、Undo時は履歴から旧原本を復帰する。
+
+![定義内画像編集・ライト](../../assets/frontend-ux/symbol-image-authoring-light.png)
+
+![定義内画像編集・ダーク](../../assets/frontend-ux/symbol-image-authoring-dark.png)
+
+### I7cのローカル検証
+
+TS全1,142件が成功。新規4ケースは定義内fit／crop・差替え／Undo・原本剪定・入力不変性・lock／不正crop／preview／所有者不一致・子画像コピーのhash共有・フォームの対象照合を確認する。既存の画像貼付拒否の契約試験は新しい受入仕様へ更新した。
+
+ブラウザは新規6件＋既存40件の計46ケースを確認した。新規は両テーマの取込・fit／crop・差替え・lock・Undo・原本バイト保存と保存対象の剪定、定義内／画面への原本付きコピー、OS貼付、遅延配置／差替え中の所有者往復、draft取消とIMEを確認する。既存はSymbolの画素／α・重なり、サムネイル・埋込／Popup・packageと、画面画像の原本・clipboard・権限／破損／容量失敗・fit・貼付・差替えを回帰した。初回は遅延decodeのテスト用mockが保存検証時まで残り2件timeoutしたため、decode完了時にnative関数を復元して再実行し成功した。旧仕様の定義内画像拒否を期待していた既存ブラウザ1件も更新後に成功。timeout上限は変更していない。
+
+型チェック（エラー・警告0）、本番build・整形・文書リンク確認が成功。Rust／schema／原本同梱サンプル・保存版・固定依存は今回変更せず、I7bの全体CI成功を基準とする。I7cの全体CIはPush後に確認する。

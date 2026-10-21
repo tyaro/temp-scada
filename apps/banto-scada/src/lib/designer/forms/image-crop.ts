@@ -21,7 +21,6 @@ export function imageCropCommand(
 ): EditCommand {
   const selected = context.selected;
   if (
-    context.definition ||
     selected?.shape.type !== "image" ||
     input.objectId !== selected.id ||
     input.targetKey !==

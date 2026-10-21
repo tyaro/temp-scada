@@ -652,10 +652,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
           },
           {
             label: "画像を配置",
-            disabled:
-              host.editing.editBlocked ||
-              !!host.selection.definition ||
-              host.files.imageBusy,
+            disabled: host.editing.editBlocked || host.files.imageBusy,
             run: host.files.openPlacement,
           },
           {

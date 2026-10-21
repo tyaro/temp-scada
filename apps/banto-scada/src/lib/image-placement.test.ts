@@ -209,7 +209,7 @@ it("rejects image clipboard including mixed cut payloads before deletion, and ac
     ),
   ).toThrow(/画像/);
 });
-it("accepts saved Symbol images but keeps authoring placement guarded and rejects missing assets", () => {
+it("accepts Symbol image placement while rejecting missing assets", () => {
   let { project, screenId } = fixture();
   project = applyCommand(
     project,
@@ -217,13 +217,13 @@ it("accepts saved Symbol images but keeps authoring placement guarded and reject
     "edit",
   );
   const definitionId = project.symbols[0].id;
-  expect(() =>
-    applyCommand(
-      project,
-      { type: "add-image", screenId, definitionId, asset, frame },
-      "edit",
-    ),
-  ).toThrow(/Symbol/);
+  const placed = applyCommand(
+    project,
+    { type: "add-image", screenId, definitionId, asset, frame },
+    "edit",
+  );
+  expect(placed.symbols[0].objects.at(-1)?.shape.type).toBe("image");
+  expect(placed.assets).toHaveLength(1);
   const invalid = structuredClone(project);
   invalid.symbols[0].objects.push({
     ...invalid.screens[0].objects[0],

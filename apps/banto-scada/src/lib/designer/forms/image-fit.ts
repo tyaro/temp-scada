@@ -17,7 +17,6 @@ export function imageFitCommand(
 ): EditCommand {
   if (
     !input.connected ||
-    context.definition ||
     context.selected?.shape.type !== "image" ||
     input.objectId !== context.selected.id ||
     input.targetKey !==

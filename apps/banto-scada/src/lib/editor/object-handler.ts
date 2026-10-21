@@ -60,7 +60,7 @@ export function applyObjectCommand(
     return "finish";
   }
   if (command.type === "add-image") {
-    applyImagePlacement(next, screen, command, definitionId);
+    applyImagePlacement(next, screen, command);
     return "finish";
   }
   if (isFolderStructureCommand(command)) {

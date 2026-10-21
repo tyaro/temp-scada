@@ -8,6 +8,7 @@ import type { Size } from "../../viewport";
 
 interface ImageOwner {
   generation: number;
+  /** Active canvas ID: a screen ID or the edited Symbol definition ID. */
   screenId: string;
   mode: "edit" | "preview";
   definition: boolean;
@@ -52,7 +53,6 @@ export function createImageImportController(host: ImageImportHost) {
   function openImageReplacement(objectId: string) {
     if (
       host.owner.mode !== "edit" ||
-      host.owner.definition ||
       host.owner.busy ||
       imageBusy ||
       host.owner.replacing ||
@@ -80,7 +80,6 @@ export function createImageImportController(host: ImageImportHost) {
       intent.owner === host.owner.screenId &&
       intent.epoch === replacementImageEpoch &&
       host.owner.mode === "edit" &&
-      !host.owner.definition &&
       !host.owner.busy &&
       !host.owner.replacing &&
       host.selected?.id === intent.objectId &&
@@ -105,7 +104,6 @@ export function createImageImportController(host: ImageImportHost) {
   function openImageFile() {
     if (
       host.owner.mode !== "edit" ||
-      host.owner.definition ||
       host.owner.busy ||
       imageBusy ||
       host.owner.replacing
@@ -130,7 +128,6 @@ export function createImageImportController(host: ImageImportHost) {
       !intent ||
       intent.generation !== host.owner.generation ||
       intent.owner !== host.owner.screenId ||
-      host.owner.definition ||
       host.owner.mode !== "edit" ||
       host.owner.busy ||
       host.owner.replacing
@@ -140,7 +137,6 @@ export function createImageImportController(host: ImageImportHost) {
       if (
         intent.generation !== host.owner.generation ||
         intent.owner !== host.owner.screenId ||
-        host.owner.definition ||
         host.owner.mode !== "edit" ||
         host.owner.busy ||
         host.owner.replacing
@@ -188,7 +184,7 @@ export function createImageImportController(host: ImageImportHost) {
       request === imageReadRequest &&
       generation === host.owner.generation &&
       owner === host.owner.screenId &&
-      !host.owner.definition &&
+      (!host.owner.definition || !!placement || !!replacing) &&
       !host.owner.busy &&
       !host.owner.replacing &&
       host.owner.mode === "edit" &&
