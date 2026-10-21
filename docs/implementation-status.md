@@ -314,4 +314,6 @@ resize通知とpointerupの順序による位置の誤確定を修正し、実wi
 
 ### I5b進捗：履歴復元の重複検証（2026-10-21）
 
-[内訳・再現手順](mixed-editor-quality.md)に沿い、Nodeの混在fixture計測と本番ブラウザのキー別CDP記録を追加した。履歴復元候補をserialize経由で二重検証する経路だけを減らし、入口検証・revision上限・独立コピー・現在状態のsnapshot検証を保持する。Nodeの1000配置Undo中央値は60.4→42.6ms。ブラウザ全体の応答改善とは扱わず、実操作と回帰検証・全体CIは別途確認する。差分Undo・大域cache・上流依存の変更はない。
+[内訳・再現手順](mixed-editor-quality.md)に沿い、Nodeの混在fixture計測と本番ブラウザのキー別CDP記録を追加した。履歴復元候補をserialize経由で二重検証する経路だけを減らし、入口検証・revision上限・独立コピー・現在状態のsnapshot検証を保持する。Nodeの1000配置Undo中央値は60.4→42.6ms。本番3規模で保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ9件・型・build・整形が成功した。変更後も1000配置のUndo約655ms・移動約697msで、ブラウザ全体の応答改善完了とは扱わない。実装`27f10b9`の[全体CI39545209042](https://github.com/tyaro/temp-scada/actions/runs/39545209042)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。差分Undo・大域cache・上流依存の変更はない。
+
+I5bの次の区切りは残るScriptDurationのサンプリングprofile。Nodeとブラウザ時間を差し引かず、Svelte更新・canonical比較・snapshotの実call stackから限定改善を選ぶ。

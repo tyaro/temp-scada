@@ -1,6 +1,6 @@
 # 上流変更中に進めるSCADA単体開発計画
 
-2026-10-21（日本時間）。状態: **I0〜I4は完了・全体CI成功確認済み。I5は初回計測・限定改善を完了し全体CI成功確認済み。大規模キー操作の内訳確認は後続**。計画作成時の基準は`8b4e05e`・Project0.32.0。現行保存契約はProject0.33.0。[統合設計](scada-integrated-design.md)のローカル作図・編集領域を具体化する。目標仕様を置き換えず、Banto／Industrialのリファクタ・仕様変更中の直近の実装順を定める。
+2026-10-21（日本時間）。状態: **I0〜I4は完了・全体CI成功確認済み。I5は初回計測・限定改善を完了し全体CI成功確認済み。I5bの内訳計測・履歴復元の限定改善も全体CI成功確認済み。スクリプト内の詳細profileは後続**。計画作成時の基準は`8b4e05e`・Project0.32.0。現行保存契約はProject0.33.0。[統合設計](scada-integrated-design.md)のローカル作図・編集領域を具体化する。目標仕様を置き換えず、Banto／Industrialのリファクタ・仕様変更中の直近の実装順を定める。
 
 ## 方針と境界
 
@@ -99,4 +99,6 @@ I5の初回結果: [生JSON・比較表・実画面](mixed-editor-quality.md)を
 
 ### I5b進捗：履歴復元の重複検証（2026-10-21）
 
-[内訳・再現手順](mixed-editor-quality.md)に沿い、Nodeの混在fixture計測と本番ブラウザのキー別CDP記録を追加した。履歴復元候補をserialize経由で二重検証する経路だけを減らし、入口検証・revision上限・独立コピー・現在状態のsnapshot検証を保持する。Nodeの1000配置Undo中央値は60.4→42.6ms。ブラウザ全体の応答改善とは扱わず、実操作と回帰検証・全体CIは別途確認する。差分Undo・大域cache・上流依存の変更はない。
+[内訳・再現手順](mixed-editor-quality.md)に沿い、Nodeの混在fixture計測と本番ブラウザのキー別CDP記録を追加した。履歴復元候補をserialize経由で二重検証する経路だけを減らし、入口検証・revision上限・独立コピー・現在状態のsnapshot検証を保持する。Nodeの1000配置Undo中央値は60.4→42.6ms。本番3規模で保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ9件・型・build・整形が成功した。変更後も1000配置のUndo約655ms・移動約697msで、ブラウザ全体の応答改善完了とは扱わない。実装`27f10b9`の[全体CI39545209042](https://github.com/tyaro/temp-scada/actions/runs/39545209042)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。差分Undo・大域cache・上流依存の変更はない。
+
+I5bの次の区切りは残るScriptDurationのサンプリングprofile。Nodeとブラウザ時間を差し引かず、Svelte更新・canonical比較・snapshotの実call stackから限定改善を選ぶ。

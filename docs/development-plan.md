@@ -6,7 +6,7 @@
 
 ## 次の実装順
 
-**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み。継続指示でI2a／I2bも完了・全体CI成功確認済み。[I3の仕様](static-text-wrap-design.md)に沿って折返しを実装し、I3a／I3bも完了・全体CI成功確認済み。[I4の仕様](selection-paint-alpha-design.md)に沿い単色塗り・枠線のα一括編集も完了・全体CI成功確認済み。[I5の条件と結果](mixed-editor-quality.md)に従い初回計測と文字計測隔離も完了・全体CI成功確認済み。次はI5bの大規模キー移動・Undoの内訳確認。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
+**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み。継続指示でI2a／I2bも完了・全体CI成功確認済み。[I3の仕様](static-text-wrap-design.md)に沿って折返しを実装し、I3a／I3bも完了・全体CI成功確認済み。[I4の仕様](selection-paint-alpha-design.md)に沿い単色塗り・枠線のα一括編集も完了・全体CI成功確認済み。[I5の条件と結果](mixed-editor-quality.md)に従い初回計測と文字計測隔離も完了・全体CI成功確認済み。I5bの内訳計測・履歴復元の限定改善も全体CI成功確認済み。次は残るスクリプト実行の詳細profile。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
 
 以下はこれまでの実装経緯とCore v1へ向けた長期工程を保持する。新しい短期順序と矛盾する場合は上記計画を優先し、最終的な機能仕様・提供段階は統合設計に従う。
 
@@ -673,4 +673,6 @@ Project0.32.0の[静的Text明示改行](multiline-text-design.md)を保存し�
 
 ### I5b進捗：履歴復元の重複検証（2026-10-21）
 
-[内訳・再現手順](mixed-editor-quality.md)に沿い、Nodeの混在fixture計測と本番ブラウザのキー別CDP記録を追加した。履歴復元候補をserialize経由で二重検証する経路だけを減らし、入口検証・revision上限・独立コピー・現在状態のsnapshot検証を保持する。Nodeの1000配置Undo中央値は60.4→42.6ms。ブラウザ全体の応答改善とは扱わず、実操作と回帰検証・全体CIは別途確認する。差分Undo・大域cache・上流依存の変更はない。
+[内訳・再現手順](mixed-editor-quality.md)に沿い、Nodeの混在fixture計測と本番ブラウザのキー別CDP記録を追加した。履歴復元候補をserialize経由で二重検証する経路だけを減らし、入口検証・revision上限・独立コピー・現在状態のsnapshot検証を保持する。Nodeの1000配置Undo中央値は60.4→42.6ms。本番3規模で保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ9件・型・build・整形が成功した。変更後も1000配置のUndo約655ms・移動約697msで、ブラウザ全体の応答改善完了とは扱わない。実装`27f10b9`の[全体CI39545209042](https://github.com/tyaro/temp-scada/actions/runs/39545209042)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。差分Undo・大域cache・上流依存の変更はない。
+
+I5bの次の区切りは残るScriptDurationのサンプリングprofile。Nodeとブラウザ時間を差し引かず、Svelte更新・canonical比較・snapshotの実call stackから限定改善を選ぶ。

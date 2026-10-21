@@ -1,0 +1,6592 @@
+{
+  "recordedAt": "2026-10-21T04:44:02.174Z",
+  "commit": "27f10b948c86c6467ca606aeede4b64957e2f657",
+  "node": "v24.19.0",
+  "chromium": "154.0.8037.57",
+  "platform": "linux/x64",
+  "productionPreview": "http://127.0.0.1:5233",
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "method": "9 key samples after warmup; 3 reloads/saves; 50 retained move commits; event to DOM change plus two rAF, no real display timing",
+  "results": [
+    {
+      "placements": 100,
+      "symbolChildren": 9,
+      "byKind": {
+        "rectangle": 20,
+        "text": 20,
+        "symbol": 20,
+        "image": 20,
+        "polyline": 20
+      },
+      "projectJsonBytes": 68873,
+      "packageBytes": 204835,
+      "originals": [
+        {
+          "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33491
+        },
+        {
+          "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33492
+        },
+        {
+          "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33523
+        },
+        {
+          "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33392
+        }
+      ],
+      "textProjection": [
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-101 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-102 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-103 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-104 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-105 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-106 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-107 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-108 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-109 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-110 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-111 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-112 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-113 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-114 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-115 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-116 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-117 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-118 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-119 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        },
+        {
+          "layout": "full",
+          "lines": "2",
+          "content": [
+            {
+              "text": "P-120 確認",
+              "x": "2",
+              "y": "38.68320713043213"
+            },
+            {
+              "text": "原水供給・循環ポンプ",
+              "x": "2",
+              "y": "55.483207130432135"
+            }
+          ]
+        }
+      ],
+      "keyBreakdown": [
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 90.69999998807907,
+          "metrics": {
+            "ScriptDuration": 0.07715899999999998,
+            "LayoutDuration": 0.0014029999999999876,
+            "RecalcStyleDuration": 0.0010149999999999881,
+            "TaskDuration": 0.127799,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 70.5,
+          "metrics": {
+            "ScriptDuration": 0.056100999999999956,
+            "LayoutDuration": 0.0009759999999999769,
+            "RecalcStyleDuration": 0.0020880000000000343,
+            "TaskDuration": 0.08503099999999986,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 66,
+          "metrics": {
+            "ScriptDuration": 0.053512000000000004,
+            "LayoutDuration": 0.0012360000000000149,
+            "RecalcStyleDuration": 0.0009639999999999649,
+            "TaskDuration": 0.07848799999999967,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 75,
+          "metrics": {
+            "ScriptDuration": 0.061630000000000074,
+            "LayoutDuration": 0.0007300000000000084,
+            "RecalcStyleDuration": 0.0007040000000000379,
+            "TaskDuration": 0.0869399999999998,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 69.80000001192093,
+          "metrics": {
+            "ScriptDuration": 0.056872000000000034,
+            "LayoutDuration": 0.0010129999999999861,
+            "RecalcStyleDuration": 0.0008560000000000234,
+            "TaskDuration": 0.08142700000000014,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 67,
+          "metrics": {
+            "ScriptDuration": 0.05500700000000003,
+            "LayoutDuration": 0.0007599999999999829,
+            "RecalcStyleDuration": 0.003792999999999991,
+            "TaskDuration": 0.09606599999999998,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 84.39999997615814,
+          "metrics": {
+            "ScriptDuration": 0.07013800000000003,
+            "LayoutDuration": 0.0014419999999999988,
+            "RecalcStyleDuration": 0.0009030000000000427,
+            "TaskDuration": 0.11157199999999978,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 82.09999999403954,
+          "metrics": {
+            "ScriptDuration": 0.06779399999999991,
+            "LayoutDuration": 0.0013360000000000039,
+            "RecalcStyleDuration": 0.0008079999999999754,
+            "TaskDuration": 0.102881,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 75.90000000596046,
+          "metrics": {
+            "ScriptDuration": 0.058632999999999935,
+            "LayoutDuration": 0.0012220000000000009,
+            "RecalcStyleDuration": 0.0008799999999999919,
+            "TaskDuration": 0.07647200000000032,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 4
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 69.40000000596046,
+          "metrics": {
+            "ScriptDuration": 0.05485099999999998,
+            "LayoutDuration": 0.0012330000000000396,
+            "RecalcStyleDuration": 0.0006210000000000382,
+            "TaskDuration": 0.08276899999999987,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 4
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 68.39999997615814,
+          "metrics": {
+            "ScriptDuration": 0.051887000000000016,
+            "LayoutDuration": 0.0008489999999999887,
+            "RecalcStyleDuration": 0.0009389999999999676,
+            "TaskDuration": 0.08100200000000068,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 60.400000005960464,
+          "metrics": {
+            "ScriptDuration": 0.04647100000000015,
+            "LayoutDuration": 0.0009719999999999729,
+            "RecalcStyleDuration": 0.0008700000000000374,
+            "TaskDuration": 0.0756490000000003,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 68.19999998807907,
+          "metrics": {
+            "ScriptDuration": 0.05478799999999984,
+            "LayoutDuration": 0.0008020000000000249,
+            "RecalcStyleDuration": 0.0009399999999999964,
+            "TaskDuration": 0.08136199999999949,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 55.900000005960464,
+          "metrics": {
+            "ScriptDuration": 0.04405500000000018,
+            "LayoutDuration": 0.0008019999999999694,
+            "RecalcStyleDuration": 0.0010890000000000066,
+            "TaskDuration": 0.07054500000000008,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 78.69999998807907,
+          "metrics": {
+            "ScriptDuration": 0.06464999999999987,
+            "LayoutDuration": 0.0014380000000000503,
+            "RecalcStyleDuration": 0.0006519999999999859,
+            "TaskDuration": 0.08328700000000033,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 4
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 59.69999998807907,
+          "metrics": {
+            "ScriptDuration": 0.045765000000000056,
+            "LayoutDuration": 0.0011049999999999671,
+            "RecalcStyleDuration": 0.0007229999999999737,
+            "TaskDuration": 0.0757860000000008,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 58.099999994039536,
+          "metrics": {
+            "ScriptDuration": 0.044472999999999985,
+            "LayoutDuration": 0.0007840000000000069,
+            "RecalcStyleDuration": 0.0011960000000000304,
+            "TaskDuration": 0.08003800000000005,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 8
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 64.80000001192093,
+          "metrics": {
+            "ScriptDuration": 0.05245499999999992,
+            "LayoutDuration": 0.0008179999999999854,
+            "RecalcStyleDuration": 0.0008070000000000022,
+            "TaskDuration": 0.08085300000000029,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 58.10000002384186,
+          "metrics": {
+            "ScriptDuration": 0.043221000000000176,
+            "LayoutDuration": 0.0008290000000000242,
+            "RecalcStyleDuration": 0.0008579999999999699,
+            "TaskDuration": 0.06747699999999934,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 58.80000001192093,
+          "metrics": {
+            "ScriptDuration": 0.04517199999999999,
+            "LayoutDuration": 0.001367000000000007,
+            "RecalcStyleDuration": 0.0018540000000000223,
+            "TaskDuration": 0.08466099999999965,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 7
+          }
+        }
+      ],
+      "loadBreakdown": [
+        {
+          "LayoutCount": 968,
+          "LayoutDuration": 0.139855,
+          "RecalcStyleCount": 972,
+          "RecalcStyleDuration": 0.106507,
+          "ScriptDuration": 0.284676,
+          "TaskDuration": 0.790973
+        },
+        {
+          "LayoutCount": 965,
+          "LayoutDuration": 0.08585899999999999,
+          "RecalcStyleCount": 969,
+          "RecalcStyleDuration": 0.102378,
+          "ScriptDuration": 0.22859999999999997,
+          "TaskDuration": 0.7190070000000001
+        },
+        {
+          "LayoutCount": 966,
+          "LayoutDuration": 0.09550800000000001,
+          "RecalcStyleCount": 970,
+          "RecalcStyleDuration": 0.10496,
+          "ScriptDuration": 0.19276400000000005,
+          "TaskDuration": 0.671414
+        },
+        {
+          "LayoutCount": 965,
+          "LayoutDuration": 0.095302,
+          "RecalcStyleCount": 970,
+          "RecalcStyleDuration": 0.09801700000000002,
+          "ScriptDuration": 0.20802200000000004,
+          "TaskDuration": 0.713832
+        },
+        {
+          "LayoutCount": 1033,
+          "LayoutDuration": 0.1388419999999999,
+          "RecalcStyleCount": 1033,
+          "RecalcStyleDuration": 0.13278299999999998,
+          "ScriptDuration": 0.2927970000000002,
+          "TaskDuration": 0.8615859999999991
+        },
+        {
+          "LayoutCount": 1033,
+          "LayoutDuration": 0.15242899999999993,
+          "RecalcStyleCount": 1035,
+          "RecalcStyleDuration": 0.130436,
+          "ScriptDuration": 0.3086379999999993,
+          "TaskDuration": 0.9162619999999997
+        },
+        {
+          "LayoutCount": 1029,
+          "LayoutDuration": 0.13789800000000008,
+          "RecalcStyleCount": 1033,
+          "RecalcStyleDuration": 0.13178100000000004,
+          "ScriptDuration": 0.27866899999999983,
+          "TaskDuration": 0.811242
+        }
+      ],
+      "timing": {
+        "firstLoadMs": 869.839,
+        "reload": {
+          "samples": 3,
+          "medianMs": 746.636,
+          "maxMs": 767.335
+        },
+        "keyMove": {
+          "samples": 9,
+          "medianMs": 69.8,
+          "maxMs": 84.4
+        },
+        "undo": {
+          "samples": 9,
+          "medianMs": 59.7,
+          "maxMs": 78.7
+        },
+        "fiftyHistoryMoves": {
+          "samples": 50,
+          "medianMs": 73.9,
+          "maxMs": 190.4
+        },
+        "saveDownload": {
+          "samples": 3,
+          "medianMs": 51.891,
+          "maxMs": 60.007
+        }
+      },
+      "memory": {
+        "initial": {
+          "heapUsedBytes": 7442448,
+          "dom": {
+            "documents": 2,
+            "nodes": 5182,
+            "jsEventListeners": 371
+          },
+          "resources": {
+            "created": 0,
+            "revoked": 0,
+            "liveUrls": 0,
+            "liveBytes": 0,
+            "peakLiveBytes": 0
+          }
+        },
+        "loaded": {
+          "heapUsedBytes": 20322864,
+          "dom": {
+            "documents": 2,
+            "nodes": 16983,
+            "jsEventListeners": 695
+          },
+          "resources": {
+            "created": 4,
+            "revoked": 0,
+            "liveUrls": 4,
+            "liveBytes": 133898,
+            "peakLiveBytes": 133898
+          }
+        },
+        "beforeHistory": {
+          "heapUsedBytes": 24624120,
+          "dom": {
+            "documents": 2,
+            "nodes": 18083,
+            "jsEventListeners": 744
+          },
+          "resources": {
+            "created": 16,
+            "revoked": 12,
+            "liveUrls": 4,
+            "liveBytes": 133898,
+            "peakLiveBytes": 133898
+          }
+        },
+        "withHistory": {
+          "heapUsedBytes": 30405060,
+          "dom": {
+            "documents": 2,
+            "nodes": 18205,
+            "jsEventListeners": 744
+          },
+          "resources": {
+            "created": 16,
+            "revoked": 12,
+            "liveUrls": 4,
+            "liveBytes": 133898,
+            "peakLiveBytes": 133898
+          }
+        },
+        "assetFreeCycles": [
+          {
+            "heapUsedBytes": 11408276,
+            "dom": {
+              "documents": 2,
+              "nodes": 5979,
+              "jsEventListeners": 384
+            },
+            "resources": {
+              "created": 19,
+              "revoked": 19,
+              "liveUrls": 0,
+              "liveBytes": 0,
+              "peakLiveBytes": 748409
+            }
+          },
+          {
+            "heapUsedBytes": 11450272,
+            "dom": {
+              "documents": 2,
+              "nodes": 5924,
+              "jsEventListeners": 384
+            },
+            "resources": {
+              "created": 23,
+              "revoked": 23,
+              "liveUrls": 0,
+              "liveBytes": 0,
+              "peakLiveBytes": 748409
+            }
+          },
+          {
+            "heapUsedBytes": 11573324,
+            "dom": {
+              "documents": 2,
+              "nodes": 5901,
+              "jsEventListeners": 384
+            },
+            "resources": {
+              "created": 27,
+              "revoked": 27,
+              "liveUrls": 0,
+              "liveBytes": 0,
+              "peakLiveBytes": 748409
+            }
+          }
+        ]
+      },
+      "checks": {
+        "savedContentAndOriginals": true,
+        "noPageErrors": true,
+        "noLiveUrlsAfterAssetFreeCycles": true,
+        "noTemporaryMeasurementDom": true
+      }
+    },
+    {
+      "placements": 500,
+      "symbolChildren": 9,
+      "byKind": {
+        "rectangle": 100,
+        "text": 100,
+        "symbol": 100,
+        "image": 100,
+        "polyline": 100
+      },
+      "projectJsonBytes": 320405,
+      "packageBytes": 456367,
+      "originals": [
+        {
+          "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33491
+        },
+        {
+          "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33492
+        },
+        {
+          "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33523
+        },
+        {
+          "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33392
+        }
+      ],
+      "textProjection": [
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-101 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-102 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-103 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-104 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-105 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-106 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-107 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-108 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-109 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-110 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-111 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-112 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-113 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-114 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-115 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-116 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-117 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-118 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-119 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-120 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-121 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-122 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-123 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-124 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-125 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-126 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-127 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-128 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-129 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-130 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-131 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-132 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-133 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-134 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-135 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-136 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-137 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-138 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-139 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-140 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-141 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-142 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-143 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-144 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-145 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-146 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-147 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-148 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-149 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-150 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-151 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-152 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-153 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-154 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-155 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-156 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-157 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-158 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-159 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-160 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-161 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-162 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-163 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-164 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-165 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-166 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-167 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-168 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-169 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-170 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-171 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-172 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-173 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-174 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-175 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-176 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-177 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-178 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-179 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-180 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-181 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-182 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-183 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-184 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-185 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-186 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-187 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-188 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-189 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-190 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-191 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-192 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-193 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-194 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-195 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-196 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-197 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-198 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-199 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-200 確認",
+              "x": "2",
+              "y": "17.83406936645508"
+            },
+            {
+              "text": "原水供給・循環…",
+              "x": "2",
+              "y": "33.67406936645508"
+            }
+          ]
+        }
+      ],
+      "keyBreakdown": [
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 371.40000000596046,
+          "metrics": {
+            "ScriptDuration": 0.33399,
+            "LayoutDuration": 0.0026609999999998024,
+            "RecalcStyleDuration": 0.002372000000000263,
+            "TaskDuration": 0.42960399999999765,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 314,
+          "metrics": {
+            "ScriptDuration": 0.2765640000000005,
+            "LayoutDuration": 0.0016250000000002096,
+            "RecalcStyleDuration": 0.0013550000000002171,
+            "TaskDuration": 0.34078300000000183,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 306.40000000596046,
+          "metrics": {
+            "ScriptDuration": 0.27333300000000005,
+            "LayoutDuration": 0.0018120000000001468,
+            "RecalcStyleDuration": 0.001350999999999658,
+            "TaskDuration": 0.33669900000000297,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 294.19999998807907,
+          "metrics": {
+            "ScriptDuration": 0.2621759999999993,
+            "LayoutDuration": 0.0011699999999996713,
+            "RecalcStyleDuration": 0.0010360000000000369,
+            "TaskDuration": 0.31951899999999966,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 306.59999999403954,
+          "metrics": {
+            "ScriptDuration": 0.2719990000000001,
+            "LayoutDuration": 0.0012750000000001371,
+            "RecalcStyleDuration": 0.0010370000000001767,
+            "TaskDuration": 0.329975000000001,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 314.30000001192093,
+          "metrics": {
+            "ScriptDuration": 0.27731700000000004,
+            "LayoutDuration": 0.0016280000000001849,
+            "RecalcStyleDuration": 0.001146999999999565,
+            "TaskDuration": 0.339461,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 358.40000000596046,
+          "metrics": {
+            "ScriptDuration": 0.32590699999999995,
+            "LayoutDuration": 0.0017540000000000333,
+            "RecalcStyleDuration": 0.001294999999999824,
+            "TaskDuration": 0.3945730000000012,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 501.30000001192093,
+          "metrics": {
+            "ScriptDuration": 0.46003300000000014,
+            "LayoutDuration": 0.0026079999999999437,
+            "RecalcStyleDuration": 0.003259000000000789,
+            "TaskDuration": 0.5536270000000023,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 303.30000001192093,
+          "metrics": {
+            "ScriptDuration": 0.27113099999999957,
+            "LayoutDuration": 0.0014689999999997205,
+            "RecalcStyleDuration": 0.0010349999999998971,
+            "TaskDuration": 0.35843500000000006,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 339,
+          "metrics": {
+            "ScriptDuration": 0.2680600000000002,
+            "LayoutDuration": 0.0016490000000000116,
+            "RecalcStyleDuration": 0.0010769999999995505,
+            "TaskDuration": 0.3795019999999987,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 305.09999999403954,
+          "metrics": {
+            "ScriptDuration": 0.2704120000000003,
+            "LayoutDuration": 0.001968000000000192,
+            "RecalcStyleDuration": 0.001522999999999719,
+            "TaskDuration": 0.35341999999999985,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 266.5,
+          "metrics": {
+            "ScriptDuration": 0.2356929999999995,
+            "LayoutDuration": 0.001762999999999959,
+            "RecalcStyleDuration": 0.001487000000000016,
+            "TaskDuration": 0.29348899999999745,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 291,
+          "metrics": {
+            "ScriptDuration": 0.2563330000000015,
+            "LayoutDuration": 0.0015680000000002359,
+            "RecalcStyleDuration": 0.0015270000000002781,
+            "TaskDuration": 0.3233820000000023,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 276.5,
+          "metrics": {
+            "ScriptDuration": 0.24438599999999866,
+            "LayoutDuration": 0.0016859999999998543,
+            "RecalcStyleDuration": 0.001110999999999862,
+            "TaskDuration": 0.329461000000002,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 270.59999999403954,
+          "metrics": {
+            "ScriptDuration": 0.2398100000000003,
+            "LayoutDuration": 0.0021860000000000213,
+            "RecalcStyleDuration": 0.0011510000000001241,
+            "TaskDuration": 0.3168469999999992,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 308.10000002384186,
+          "metrics": {
+            "ScriptDuration": 0.2670690000000011,
+            "LayoutDuration": 0.001707000000000125,
+            "RecalcStyleDuration": 0.0017059999999995412,
+            "TaskDuration": 0.35300300000000107,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 264.5,
+          "metrics": {
+            "ScriptDuration": 0.23284199999999977,
+            "LayoutDuration": 0.0013710000000002331,
+            "RecalcStyleDuration": 0.0014289999999999026,
+            "TaskDuration": 0.3026699999999991,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 284.30000001192093,
+          "metrics": {
+            "ScriptDuration": 0.2547859999999993,
+            "LayoutDuration": 0.0014699999999998603,
+            "RecalcStyleDuration": 0.0012950000000007122,
+            "TaskDuration": 0.3115370000000013,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 300.19999998807907,
+          "metrics": {
+            "ScriptDuration": 0.2592300000000005,
+            "LayoutDuration": 0.0017979999999999663,
+            "RecalcStyleDuration": 0.001894999999999314,
+            "TaskDuration": 0.3508250000000004,
+            "LayoutCount": 4,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 275.7999999821186,
+          "metrics": {
+            "ScriptDuration": 0.23854599999999948,
+            "LayoutDuration": 0.0026559999999999917,
+            "RecalcStyleDuration": 0.00186300000000017,
+            "TaskDuration": 0.3240489999999987,
+            "LayoutCount": 4,
+            "RecalcStyleCount": 6
+          }
+        }
+      ],
+      "loadBreakdown": [
+        {
+          "LayoutCount": 8009,
+          "LayoutDuration": 0.737022,
+          "RecalcStyleCount": 8010,
+          "RecalcStyleDuration": 1.41577,
+          "ScriptDuration": 1.469954,
+          "TaskDuration": 4.9866779999999995
+        },
+        {
+          "LayoutCount": 8006,
+          "LayoutDuration": 0.748239,
+          "RecalcStyleCount": 8007,
+          "RecalcStyleDuration": 1.437661,
+          "ScriptDuration": 1.320776,
+          "TaskDuration": 5.835095
+        },
+        {
+          "LayoutCount": 8006,
+          "LayoutDuration": 0.859556,
+          "RecalcStyleCount": 8007,
+          "RecalcStyleDuration": 1.241101,
+          "ScriptDuration": 1.3435509999999997,
+          "TaskDuration": 6.013603000000002
+        },
+        {
+          "LayoutCount": 8006,
+          "LayoutDuration": 0.6085850000000002,
+          "RecalcStyleCount": 8008,
+          "RecalcStyleDuration": 1.346317,
+          "ScriptDuration": 1.2267970000000004,
+          "TaskDuration": 5.760888000000001
+        },
+        {
+          "LayoutCount": 8309,
+          "LayoutDuration": 1.1051609999999998,
+          "RecalcStyleCount": 8310,
+          "RecalcStyleDuration": 1.6609150000000001,
+          "ScriptDuration": 1.5696519999999978,
+          "TaskDuration": 5.766727000000003
+        },
+        {
+          "LayoutCount": 8308,
+          "LayoutDuration": 0.9355029999999998,
+          "RecalcStyleCount": 8308,
+          "RecalcStyleDuration": 1.4847460000000003,
+          "ScriptDuration": 1.328839000000002,
+          "TaskDuration": 4.846059000000004
+        },
+        {
+          "LayoutCount": 8308,
+          "LayoutDuration": 0.889901,
+          "RecalcStyleCount": 8308,
+          "RecalcStyleDuration": 1.3963260000000002,
+          "ScriptDuration": 1.1418929999999996,
+          "TaskDuration": 4.478328000000005
+        }
+      ],
+      "timing": {
+        "firstLoadMs": 5047.226,
+        "reload": {
+          "samples": 3,
+          "medianMs": 5905.682,
+          "maxMs": 6059.329
+        },
+        "keyMove": {
+          "samples": 9,
+          "medianMs": 306.6,
+          "maxMs": 501.3
+        },
+        "undo": {
+          "samples": 9,
+          "medianMs": 276.5,
+          "maxMs": 308.1
+        },
+        "fiftyHistoryMoves": {
+          "samples": 50,
+          "medianMs": 324.8,
+          "maxMs": 512.8
+        },
+        "saveDownload": {
+          "samples": 3,
+          "medianMs": 147.85,
+          "maxMs": 193.928
+        }
+      },
+      "memory": {
+        "initial": {
+          "heapUsedBytes": 7440816,
+          "dom": {
+            "documents": 2,
+            "nodes": 5182,
+            "jsEventListeners": 371
+          },
+          "resources": {
+            "created": 0,
+            "revoked": 0,
+            "liveUrls": 0,
+            "liveBytes": 0,
+            "peakLiveBytes": 0
+          }
+        },
+        "loaded": {
+          "heapUsedBytes": 65028988,
+          "dom": {
+            "documents": 2,
+            "nodes": 62515,
+            "jsEventListeners": 1895
+          },
+          "resources": {
+            "created": 4,
+            "revoked": 0,
+            "liveUrls": 4,
+            "liveBytes": 133898,
+            "peakLiveBytes": 133898
+          }
+        },
+        "beforeHistory": {
+          "heapUsedBytes": 76230836,
+          "dom": {
+            "documents": 2,
+            "nodes": 63455,
+            "jsEventListeners": 1944
+          },
+          "resources": {
+            "created": 16,
+            "revoked": 12,
+            "liveUrls": 4,
+            "liveBytes": 133898,
+            "peakLiveBytes": 133898
+          }
+        },
+        "withHistory": {
+          "heapUsedBytes": 102096580,
+          "dom": {
+            "documents": 2,
+            "nodes": 63425,
+            "jsEventListeners": 1944
+          },
+          "resources": {
+            "created": 16,
+            "revoked": 12,
+            "liveUrls": 4,
+            "liveBytes": 133898,
+            "peakLiveBytes": 133898
+          }
+        },
+        "assetFreeCycles": [
+          {
+            "heapUsedBytes": 12826936,
+            "dom": {
+              "documents": 2,
+              "nodes": 5835,
+              "jsEventListeners": 384
+            },
+            "resources": {
+              "created": 19,
+              "revoked": 19,
+              "liveUrls": 0,
+              "liveBytes": 0,
+              "peakLiveBytes": 1503005
+            }
+          },
+          {
+            "heapUsedBytes": 13212984,
+            "dom": {
+              "documents": 2,
+              "nodes": 5812,
+              "jsEventListeners": 384
+            },
+            "resources": {
+              "created": 23,
+              "revoked": 23,
+              "liveUrls": 0,
+              "liveBytes": 0,
+              "peakLiveBytes": 1503005
+            }
+          },
+          {
+            "heapUsedBytes": 13380612,
+            "dom": {
+              "documents": 2,
+              "nodes": 5837,
+              "jsEventListeners": 384
+            },
+            "resources": {
+              "created": 27,
+              "revoked": 27,
+              "liveUrls": 0,
+              "liveBytes": 0,
+              "peakLiveBytes": 1503005
+            }
+          }
+        ]
+      },
+      "checks": {
+        "savedContentAndOriginals": true,
+        "noPageErrors": true,
+        "noLiveUrlsAfterAssetFreeCycles": true,
+        "noTemporaryMeasurementDom": true
+      }
+    },
+    {
+      "placements": 1000,
+      "symbolChildren": 9,
+      "byKind": {
+        "rectangle": 200,
+        "text": 200,
+        "symbol": 200,
+        "image": 200,
+        "polyline": 200
+      },
+      "projectJsonBytes": 659268,
+      "packageBytes": 795230,
+      "originals": [
+        {
+          "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33491
+        },
+        {
+          "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33492
+        },
+        {
+          "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33523
+        },
+        {
+          "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+          "width": 1024,
+          "height": 512,
+          "byteLength": 33392
+        }
+      ],
+      "textProjection": [
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-101 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-102 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-103 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-104 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-105 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-106 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-107 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-108 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-109 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-110 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-111 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-112 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-113 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-114 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-115 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-116 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-117 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-118 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-119 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-120 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-121 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-122 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-123 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-124 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-125 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-126 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-127 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-128 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-129 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-130 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-131 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-132 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-133 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-134 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-135 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-136 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-137 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-138 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-139 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-140 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-141 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-142 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-143 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-144 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-145 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-146 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-147 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-148 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-149 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-150 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-151 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-152 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-153 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-154 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-155 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-156 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-157 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-158 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-159 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-160 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-161 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-162 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-163 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-164 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-165 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-166 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-167 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-168 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-169 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-170 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-171 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-172 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-173 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-174 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-175 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-176 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-177 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-178 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-179 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-180 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-181 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-182 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-183 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-184 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-185 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-186 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-187 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-188 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-189 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-190 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-191 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-192 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-193 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-194 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-195 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-196 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-197 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-198 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-199 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-200 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-201 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-202 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-203 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-204 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-205 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-206 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-207 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-208 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-209 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-210 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-211 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-212 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-213 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-214 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-215 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-216 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-217 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-218 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-219 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-220 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-221 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-222 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-223 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-224 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-225 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-226 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-227 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-228 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-229 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-230 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-231 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-232 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-233 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-234 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-235 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-236 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-237 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-238 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-239 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-240 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-241 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-242 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-243 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-244 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-245 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-246 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-247 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-248 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-249 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-250 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-251 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-252 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-253 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-254 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-255 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-256 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-257 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-258 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-259 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-260 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-261 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-262 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-263 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-264 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-265 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-266 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-267 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-268 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-269 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-270 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-271 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-272 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-273 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-274 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-275 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-276 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-277 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-278 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-279 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-280 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-281 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-282 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-283 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-284 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-285 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-286 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-287 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-288 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-289 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-290 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-291 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-292 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-293 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-294 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-295 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-296 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-297 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-298 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-299 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        },
+        {
+          "layout": "ellipsis",
+          "lines": "3",
+          "content": [
+            {
+              "text": "P-300 確認",
+              "x": "2",
+              "y": "13.143589508750217"
+            },
+            {
+              "text": "原水供給・循…",
+              "x": "2",
+              "y": "24.66358950875022"
+            }
+          ]
+        }
+      ],
+      "keyBreakdown": [
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 716.6000000238419,
+          "metrics": {
+            "ScriptDuration": 0.6545360000000002,
+            "LayoutDuration": 0.0024800000000002598,
+            "RecalcStyleDuration": 0.00265500000000074,
+            "TaskDuration": 0.810056000000003,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 604.7000000178814,
+          "metrics": {
+            "ScriptDuration": 0.538219999999999,
+            "LayoutDuration": 0.002914999999999779,
+            "RecalcStyleDuration": 0.002518999999999494,
+            "TaskDuration": 0.658332999999999,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 653.5,
+          "metrics": {
+            "ScriptDuration": 0.5859780000000008,
+            "LayoutDuration": 0.0028719999999999857,
+            "RecalcStyleDuration": 0.0022280000000023392,
+            "TaskDuration": 0.6959030000000013,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 679.5,
+          "metrics": {
+            "ScriptDuration": 0.6193239999999989,
+            "LayoutDuration": 0.0018010000000003856,
+            "RecalcStyleDuration": 0.0018910000000005311,
+            "TaskDuration": 0.7222860000000111,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 697.5999999940395,
+          "metrics": {
+            "ScriptDuration": 0.6215640000000011,
+            "LayoutDuration": 0.0016729999999993694,
+            "RecalcStyleDuration": 0.0015439999999991016,
+            "TaskDuration": 0.741115999999991,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 662.6999999880791,
+          "metrics": {
+            "ScriptDuration": 0.5875439999999994,
+            "LayoutDuration": 0.002068000000000403,
+            "RecalcStyleDuration": 0.0012369999999997106,
+            "TaskDuration": 0.745184000000009,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 697.2000000178814,
+          "metrics": {
+            "ScriptDuration": 0.6243689999999997,
+            "LayoutDuration": 0.0019540000000004554,
+            "RecalcStyleDuration": 0.0013189999999987378,
+            "TaskDuration": 0.7724639999999994,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 753.6999999880791,
+          "metrics": {
+            "ScriptDuration": 0.6714800000000007,
+            "LayoutDuration": 0.0024289999999993483,
+            "RecalcStyleDuration": 0.002320000000000988,
+            "TaskDuration": 0.8283729999999991,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 667.2000000178814,
+          "metrics": {
+            "ScriptDuration": 0.602329000000001,
+            "LayoutDuration": 0.0019369999999998555,
+            "RecalcStyleDuration": 0.0015670000000014284,
+            "TaskDuration": 0.7609149999999971,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 706.5999999940395,
+          "metrics": {
+            "ScriptDuration": 0.6318179999999991,
+            "LayoutDuration": 0.001927000000000234,
+            "RecalcStyleDuration": 0.0019519999999992876,
+            "TaskDuration": 0.7758639999999986,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "ArrowRight",
+          "elapsedMs": 718.6999999880791,
+          "metrics": {
+            "ScriptDuration": 0.648692999999998,
+            "LayoutDuration": 0.002253999999999756,
+            "RecalcStyleDuration": 0.0015059999999991192,
+            "TaskDuration": 0.8352450000000005,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 631.8000000119209,
+          "metrics": {
+            "ScriptDuration": 0.5535680000000021,
+            "LayoutDuration": 0.002399000000000484,
+            "RecalcStyleDuration": 0.0017940000000002954,
+            "TaskDuration": 0.7158649999999938,
+            "LayoutCount": 4,
+            "RecalcStyleCount": 8
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 654.5999999940395,
+          "metrics": {
+            "ScriptDuration": 0.5835350000000012,
+            "LayoutDuration": 0.0021079999999997767,
+            "RecalcStyleDuration": 0.0017989999999983297,
+            "TaskDuration": 0.7403000000000048,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 640.9000000059605,
+          "metrics": {
+            "ScriptDuration": 0.563763999999999,
+            "LayoutDuration": 0.001668000000000447,
+            "RecalcStyleDuration": 0.0015210000000003276,
+            "TaskDuration": 0.6833309999999955,
+            "LayoutCount": 2,
+            "RecalcStyleCount": 5
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 683.2999999821186,
+          "metrics": {
+            "ScriptDuration": 0.6081609999999991,
+            "LayoutDuration": 0.0026529999999995724,
+            "RecalcStyleDuration": 0.0029730000000007806,
+            "TaskDuration": 0.728359999999995,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 6
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 660.0999999940395,
+          "metrics": {
+            "ScriptDuration": 0.5762859999999996,
+            "LayoutDuration": 0.0025240000000001928,
+            "RecalcStyleDuration": 0.001632000000000744,
+            "TaskDuration": 0.7494179999999915,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 9
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 648.1999999880791,
+          "metrics": {
+            "ScriptDuration": 0.5756310000000013,
+            "LayoutDuration": 0.0017100000000001003,
+            "RecalcStyleDuration": 0.0016699999999971737,
+            "TaskDuration": 0.7332380000000001,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 779.5,
+          "metrics": {
+            "ScriptDuration": 0.6844000000000001,
+            "LayoutDuration": 0.0028850000000000264,
+            "RecalcStyleDuration": 0.0020020000000009475,
+            "TaskDuration": 0.8755320000000069,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 7
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 631.1999999880791,
+          "metrics": {
+            "ScriptDuration": 0.5514939999999982,
+            "LayoutDuration": 0.0029880000000002127,
+            "RecalcStyleDuration": 0.001860000000000639,
+            "TaskDuration": 0.7181910000000045,
+            "LayoutCount": 3,
+            "RecalcStyleCount": 8
+          }
+        },
+        {
+          "key": "Control+z",
+          "elapsedMs": 738.3000000119209,
+          "metrics": {
+            "ScriptDuration": 0.653614000000001,
+            "LayoutDuration": 0.0028959999999997876,
+            "RecalcStyleDuration": 0.0025590000000015323,
+            "TaskDuration": 0.8181249999999949,
+            "LayoutCount": 4,
+            "RecalcStyleCount": 7
+          }
+        }
+      ],
+      "loadBreakdown": [
+        {
+          "LayoutCount": 17609,
+          "LayoutDuration": 1.394281,
+          "RecalcStyleCount": 17611,
+          "RecalcStyleDuration": 5.450408,
+          "ScriptDuration": 2.713661,
+          "TaskDuration": 12.314276
+        },
+        {
+          "LayoutCount": 17606,
+          "LayoutDuration": 1.5364819999999997,
+          "RecalcStyleCount": 17608,
+          "RecalcStyleDuration": 6.242753999999999,
+          "ScriptDuration": 2.5618309999999997,
+          "TaskDuration": 15.848005
+        },
+        {
+          "LayoutCount": 17606,
+          "LayoutDuration": 1.3641110000000003,
+          "RecalcStyleCount": 17608,
+          "RecalcStyleDuration": 6.041334000000001,
+          "ScriptDuration": 2.5720270000000003,
+          "TaskDuration": 15.730484999999998
+        },
+        {
+          "LayoutCount": 17606,
+          "LayoutDuration": 1.4268919999999996,
+          "RecalcStyleCount": 17607,
+          "RecalcStyleDuration": 6.611319999999999,
+          "ScriptDuration": 2.7677899999999998,
+          "TaskDuration": 16.580386000000004
+        },
+        {
+          "LayoutCount": 18208,
+          "LayoutDuration": 2.6195769999999996,
+          "RecalcStyleCount": 18209,
+          "RecalcStyleDuration": 6.732493000000002,
+          "ScriptDuration": 2.7249029999999976,
+          "TaskDuration": 15.669072
+        },
+        {
+          "LayoutCount": 18208,
+          "LayoutDuration": 3.112819,
+          "RecalcStyleCount": 18209,
+          "RecalcStyleDuration": 7.349606999999999,
+          "ScriptDuration": 3.500101000000008,
+          "TaskDuration": 17.85963799999999
+        },
+        {
+          "LayoutCount": 18208,
+          "LayoutDuration": 2.8918610000000005,
+          "RecalcStyleCount": 18209,
+          "RecalcStyleDuration": 7.840738000000002,
+          "ScriptDuration": 3.1834810000000004,
+          "TaskDuration": 17.187680999999998
+        }
+      ],
+      "timing": {
+        "firstLoadMs": 12402.925,
+        "reload": {
+          "samples": 3,
+          "medianMs": 15871.998,
+          "maxMs": 16633.52
+        },
+        "keyMove": {
+          "samples": 9,
+          "medianMs": 697.2,
+          "maxMs": 753.7
+        },
+        "undo": {
+          "samples": 9,
+          "medianMs": 654.6,
+          "maxMs": 779.5
+        },
+        "fiftyHistoryMoves": {
+          "samples": 50,
+          "medianMs": 708.7,
+          "maxMs": 1552.4
+        },
+        "saveDownload": {
+          "samples": 3,
+          "medianMs": 232.085,
+          "maxMs": 248.722
+        }
+      },
+      "memory": {
+        "initial": {
+          "heapUsedBytes": 7440988,
+          "dom": {
+            "documents": 2,
+            "nodes": 5182,
+            "jsEventListeners": 371
+          },
+          "resources": {
+            "created": 0,
+            "revoked": 0,
+            "liveUrls": 0,
+            "liveBytes": 0,
+            "peakLiveBytes": 0
+          }
+        },
+        "loaded": {
+          "heapUsedBytes": 121024860,
+          "dom": {
+            "documents": 2,
+            "nodes": 119515,
+            "jsEventListeners": 3395
+          },
+          "resources": {
+            "created": 4,
+            "revoked": 0,
+            "liveUrls": 4,
+            "liveBytes": 133898,
+            "peakLiveBytes": 133898
+          }
+        },
+        "beforeHistory": {
+          "heapUsedBytes": 141317336,
+          "dom": {
+            "documents": 2,
+            "nodes": 120307,
+            "jsEventListeners": 3444
+          },
+          "resources": {
+            "created": 16,
+            "revoked": 12,
+            "liveUrls": 4,
+            "liveBytes": 133898,
+            "peakLiveBytes": 133898
+          }
+        },
+        "withHistory": {
+          "heapUsedBytes": 194540320,
+          "dom": {
+            "documents": 2,
+            "nodes": 120301,
+            "jsEventListeners": 3444
+          },
+          "resources": {
+            "created": 16,
+            "revoked": 12,
+            "liveUrls": 4,
+            "liveBytes": 133898,
+            "peakLiveBytes": 133898
+          }
+        },
+        "assetFreeCycles": [
+          {
+            "heapUsedBytes": 14702372,
+            "dom": {
+              "documents": 2,
+              "nodes": 5811,
+              "jsEventListeners": 384
+            },
+            "resources": {
+              "created": 19,
+              "revoked": 19,
+              "liveUrls": 0,
+              "liveBytes": 0,
+              "peakLiveBytes": 2519594
+            }
+          },
+          {
+            "heapUsedBytes": 14975612,
+            "dom": {
+              "documents": 2,
+              "nodes": 5812,
+              "jsEventListeners": 384
+            },
+            "resources": {
+              "created": 23,
+              "revoked": 23,
+              "liveUrls": 0,
+              "liveBytes": 0,
+              "peakLiveBytes": 2519594
+            }
+          },
+          {
+            "heapUsedBytes": 15137556,
+            "dom": {
+              "documents": 2,
+              "nodes": 5837,
+              "jsEventListeners": 384
+            },
+            "resources": {
+              "created": 27,
+              "revoked": 27,
+              "liveUrls": 0,
+              "liveBytes": 0,
+              "peakLiveBytes": 2519594
+            }
+          }
+        ]
+      },
+      "checks": {
+        "savedContentAndOriginals": true,
+        "noPageErrors": true,
+        "noLiveUrlsAfterAssetFreeCycles": true,
+        "noTemporaryMeasurementDom": true
+      }
+    }
+  ],
+  "implementation": "Production build from de1fe7f with history.ts candidate only; identical application source committed as 27f10b9. Benchmark runner includes keyBreakdown. No concurrent local build/test/domain benchmark.",
+  "checksAcrossRuns": {
+    "allTextProjectionsIdentical": true,
+    "comparedAgainst": "i5b-browser-before.json"
+  }
+}

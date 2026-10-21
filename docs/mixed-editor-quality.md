@@ -98,7 +98,7 @@ GC後JSヒープは50履歴の前→後で、100配置約24.6→30.3MB、500配�
 
 [1000配置の実画面](assets/frontend-ux/mixed-quality-1000-light.png)。必要な拡大表示は既存のツールバー／Ctrl+ホイールで行う。
 
-## I5b：キー移動・Undoの内訳と復元候補（着手）
+## I5b：キー移動・Undoの内訳と復元候補
 
 同じ`mixedFixture`をNode側でも計測できるよう、既存の`benchmark-editor.mjs`へ`--mixed`を追加する。既定のR6 fixtureは維持する。Nodeは実ドメイン関数をSSR loaderで呼び、ブラウザ版は本番bundleの実キー操作を使う。両者は別の実行環境なので、Nodeの時間をブラウザ時間から引いてSvelte処理時間とはしない。
 
@@ -113,10 +113,29 @@ node --expose-gc apps/banto-scada/scripts/benchmark-editor.mjs --mixed 100 500 1
 node apps/banto-scada/scripts/benchmark-mixed-editor.mjs /tmp/i5b-browser 100 500 1000
 ```
 
-この段階では比較計測と回帰検証が完了するまで採用結果を確定しない。UI更新全体の高速化とは扱わず、残るScriptDurationは後続のサンプリングprofileで調べる。
+復元候補の限定変更を採用する。UI更新全体の高速化とは扱わず、残るScriptDurationは後続のサンプリングprofileで調べる。
 
 ### I5bのドメイン比較
 
 [Node生JSON](performance/i5b-domain.json)。基準`de1fe7f`と履歴候補変更、同じ100／500／1000混在配置。各9回の中央値はUndoが6.732→5.129ms、32.856→22.946ms、60.379→42.557msだった。1回ずつのrunであり、ブラウザ応答の短縮率へ読み替えない。最大値と未変更操作の変動もJSONに残す。
 
 [ブラウザ変更前JSON](performance/i5b-browser-before.json)では1000配置のキー移動中央値1118ms、Undo1057ms。CDP ScriptDurationの中央値はそれぞれ1012／953msで、LayoutDurationは約3〜4ms、RecalcStyleDurationは約3msだった。Nodeとは実行環境も区間も違うため差分をSvelte時間と断定できない。スクリプト側を優先して追う根拠とする。50履歴移動の最大は約11.5秒で、このrunには大きなばらつきもある。
+
+### I5bの本番ブラウザ比較と残り
+
+[変更後JSON](performance/i5b-browser-after.json)。アプリ差分は`27f10b9`の履歴候補コピーのみで、Project0.33.0・Banto・Industrial SDKは維持する。beforeは`8a7cf21`のbuild、docs-only HEADは`de1fe7f`。afterも`de1fe7f`上の候補からbuildした同一コードで、`27f10b9`へコミットした。実行時のHEADとbuildの関係をJSONにも記録した。同じクラウド・Chromium・fixtureで、ローカルの重い処理は並走させていない。表は各9回（保存3回、連続移動50回）の中央値、ms。
+
+| 操作             | 100配置（前→後） | 500配置（前→後） | 1000配置（前→後） |
+| ---------------- | ---------------: | ---------------: | ----------------: |
+| キー移動         |            87→70 |          448→307 |          1118→697 |
+| Undo             |           107→60 |          392→277 |          1057→655 |
+| 50履歴を積む移動 |            94→74 |          340→325 |           810→709 |
+| 保存download開始 |            76→52 |          152→148 |           235→232 |
+
+この比較では未変更の移動・保存にも時間差があり、Undo差分の全部を今回の変更に帰属させない。ホスト負荷・JIT・GC等を制御しきれず、各1runの観測で統計的有意性も評価していない。Node側で候補コピー費用の削減を確認し、検証・正規化・原子的拒否を維持できた範囲で採用する。1000配置の変更後もUndo約655ms、移動約697ms、50履歴移動最大約1.55秒であり、大図面が快適になったという完了判断はしない。
+
+変更後1000配置のScriptDuration中央値は移動約622ms、Undo約576ms。Layout／RecalcStyleDurationは各約2〜3msで、スクリプト側が依然大きい。次はSvelte更新・canonical比較・snapshot等のサンプリングprofileを採り、実際のcall stackを根拠に候補を絞る。Node値からの差し引きでSvelte分を推定しない。差分Undo・大域cache・検証省略は引き続き未採用。
+
+3規模すべてで保存Project・PNG4原本が一致し、変更前後のText投影も完全一致した。資産なし図面への3回の切替後にlive URL／bytesは0、一時文字計測DOMも0。1000配置のGC後ヒープは50履歴の前約141.3MB→後194.5MB、最後の資産なし図面では約15.1MBで、履歴資源の大幅な削減はしていない。画面エラーは0だった。
+
+型チェックはエラー・警告なし、全単体1107件、履歴・キー操作のブラウザ9件、本番build・全体整形が成功した。Undo／Redoの不正snapshot・不正な現在状態・revision上限超過でProject／履歴を保持し、改行正規化・独立した復元候補も単体で確認した。実装`27f10b9`の[全体CI39545209042](https://github.com/tyaro/temp-scada/actions/runs/39545209042)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I5bは内訳計測と履歴候補の限定改善を保存する区切りで、スクリプト内の詳細切分けは残る。
