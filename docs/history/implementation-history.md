@@ -1819,3 +1819,5 @@ TS全1,201件・Rust全54件・型エラー／警告0・Clippy／rustfmt・CLI5�
 Inspectorに始点／終点のSymbol配置・anchorを明示適用するフォームを追加した。接続中状態・非表示候補・lock／group／候補なしの理由を示し、Symbol側には接続中の配管・端点を表示する。候補と状態には配置順を併記し、表示名ではなく配置IDを保存する。[仕様・実画面](../design/editor/connection-follow-design.md#i8cinspectorでの接続解除2026-10-21)。
 
 Astraの指摘を反映し、IME状態をcommand構築の事前検証まで伝達することで、他のdirtyフォームだけ先に適用されることを防いだ。TS全1,207件（新規フォーム6件）・型エラー／警告0・build・整形・リンク、新規ブラウザ7件と既存の接続／数値入力／回転27件が成功。新しい試験の初回欄名誤指定と修正は設計書に記録した。I8bの`7faff97`は全体CI39576110879成功。保存版0.35.0・Rust／schema・上流依存は変更しない。全体CIはPush後に確認する。
+
+I8cの`eef69fd`は[全体CI39578127673](https://github.com/tyaro/temp-scada/actions/runs/39578127673)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I8a〜cの採用した初回範囲を完了とし、マウス吸着・任意port・routingと上流依存の保留項目は残す。

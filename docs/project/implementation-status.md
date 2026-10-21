@@ -43,7 +43,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 ## 検証の範囲
 
-最新機能I7cの`313b806`は[全体CI39570702994](https://github.com/tyaro/temp-scada/actions/runs/39570702994)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功。ローカルでは型（エラー・警告0）、単体1,142件、関連ブラウザ46ケース、本番build、整形と両テーマ実画面を確認した。全ブラウザ件数をローカル関連試験の件数と読み替えない。I8aは全体CI成功。I8bの`7faff97`は[全体CI39576110879](https://github.com/tyaro/temp-scada/actions/runs/39576110879)成功。I8cの接続・解除UIはTS全1,207件・関連ブラウザ34件・型エラー／警告0・build・整形・リンクをローカル確認済み／CI確認待ち。
+I7c時点の`313b806`は[全体CI39570702994](https://github.com/tyaro/temp-scada/actions/runs/39570702994)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功。ローカルでは型（エラー・警告0）、単体1,142件、関連ブラウザ46ケース、本番build、整形と両テーマ実画面を確認した。全ブラウザ件数をローカル関連試験の件数と読み替えない。I8aは全体CI成功。I8bの`7faff97`は[全体CI39576110879](https://github.com/tyaro/temp-scada/actions/runs/39576110879)成功。I8cの`eef69fd`も[全体CI39578127673](https://github.com/tyaro/temp-scada/actions/runs/39578127673)成功。接続・解除UIはTS全1,207件・関連ブラウザ34件・型エラー／警告0・build・整形・リンクをローカル確認済み・全体CI成功。
 
 R0〜R5の構造整理は完了し、[リファクタリング記録](../engineering/maintenance-refactoring-plan.md)に各段階の不変条件・テストを保持する。[当時の検証詳細](../history/implementation-history.md#status-validation-archive)と[性能の実測条件・採否](../performance/mixed-editor-quality.md)を現在の機能保証と区別する。実Hub／catalog・正式Runtime・認証・Windows実機の運用確認は未完了。
 
