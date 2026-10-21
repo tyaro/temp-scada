@@ -1,6 +1,6 @@
 # Bantoへの還元候補と採用境界
 
-2026-10-21確認。状態: **候補整理・公開ソース照合済み。追加起票・上流への追補・依存更新は未実施**。
+2026-10-21確認。状態: **候補整理・公開ソース照合済み。横断設計はIndustrial [#762](https://github.com/tyaro/banto-industrial/issues/762)へ起票。その他の追加起票・上流への追補・依存更新は未実施**。
 
 SCADAの局所実装をそのまま移すのではなく、Bantoの既存APIに不足する契約と、再利用できる受入テストを渡す。[起票時の引渡し記録](banto-contribution-handoff.md)とは区別する。
 
@@ -91,7 +91,7 @@ SCADAのsourceとテスト（`01d5df0`固定）:
 
 ## 5. 保存・参照検証・編集履歴の横断候補
 
-[Hub／ChronoGazerとの調査](cross-app-document-history-research.md)で、取込前検証・差分計画、ローカル下書きのUndo、参照診断、履歴資産の保持集合を追加候補にした。「Project・履歴をすべてSCADA専用」とは扱わない。schema・domain規則はconsumerに残し、汎用処理は最小fixtureで共通化の効果を確認する。
+Industrialの親Issue [#762](https://github.com/tyaro/banto-industrial/issues/762)を起票し、固定source・試験資産・完了条件を引き渡した。[Hub／ChronoGazerとの調査](cross-app-document-history-research.md)で、取込前検証・差分計画、ローカル下書きのUndo、参照診断、履歴資産の保持集合を追加候補にした。「Project・履歴をすべてSCADA専用」とは扱わない。schema・domain規則はconsumerに残し、汎用処理は最小fixtureで共通化の効果を確認する。
 
 Hubには既存の構成packageと遅延削除取消、ChronoGazerにはBanto由来のDB backupと競合検出がある。SCADA実装を丸ごと移植しない。履歴資産索引の第2consumerは未確認であり、原子的file保存は現在のSCADAに実装されていない。
 

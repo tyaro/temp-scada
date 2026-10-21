@@ -1,6 +1,6 @@
 # 保存・参照検証・編集履歴の横断調査
 
-2026-10-21。状態: **公開ソースの静的調査・共通化候補の整理。実装・上流起票・consumer移行は未着手**。
+2026-10-21。状態: **静的調査済み。Industrialの横断設計Issue [#762](https://github.com/tyaro/banto-industrial/issues/762)を起票。実装・Bantoへの個別提案・consumer移行は未着手**。
 
 ## 結論
 
@@ -74,4 +74,4 @@ BantoからSCADA／Industrialへ逆依存を作らず、上流consumerに適合�
 3. **画像資産のテストを既存#438へ接続**。履歴索引はasset抽出と保持集合の試験を渡し、追加consumerが現れるまで新しい大規模基盤にしない。
 4. 最小fixtureと上流既存APIの不足が確定してから、Issueを「編集履歴」「取込・診断」「遅延取消」に分ける。保存containerの一括統一Issueは先に作らない。
 
-今回、上流への投稿・アプリコードの変更・依存更新はしていない。[還元候補一覧](banto-contribution-candidates.md)の「SCADAに残す」はdomain契約を意味するよう修正する。
+調査後、ユーザー確認に基づきIndustrialの親Issue [#762](https://github.com/tyaro/banto-industrial/issues/762)へ配置方針・段階・固定source／試験資産を引き渡した。Bantoへの個別Issue／PR、アプリコードの変更・依存更新は未実施。[還元候補一覧](banto-contribution-candidates.md)の「SCADAに残す」はdomain契約を意味するよう修正する。

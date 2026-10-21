@@ -1841,3 +1841,9 @@ Astraの安全性／採用レビューは必須修正なし。TS全1,214件、�
 [Hub／ChronoGazerとの比較](../reviews/cross-app-document-history-research.md)を追加。Industrial `46c283d8`とBanto `ac571ebf`の公開ソース・試験を静的確認し、取込計画・ローカル編集履歴・参照診断を共通化候補へ再分類した。Hubの削除取消は送信前の遅延取消、ChronoGazerのbackupは既存Bantoサービスであり、SCADAのsnapshot Undoとの契約差を記録した。原子的file保存はSCADAの実装済み資産ではない。
 
 文書整形・ローカルリンク・固定参照先の存在・差分を確認。上流テスト再実行・アプリ実装・Issue投稿・依存更新は行っていない。
+
+## 横断共通化の親Issue起票（2026-10-21）
+
+Industrial [#762](https://github.com/tyaro/banto-industrial/issues/762)を起票。汎用処理はBanto、tag／構成／runtimeの契約はIndustrial、schemaと固有操作は各アプリとする方針を記載し、SCADAの履歴・資産索引・package検査・ブラウザ回帰の固定版リンクを引き渡した。最小fixtureによる比較後にBantoの個別案件へ分ける。既存Issue一覧を確認し、Bantoの#432／#435／#436／#438を関連付けた。
+
+Issue本文を作成結果と照合し、文書整形・リンク・差分を確認。アプリ実装・依存更新は行っていない。
