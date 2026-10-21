@@ -367,3 +367,71 @@ TS全1,214件（資産索引の新規7件を含む）、型チェック（エラ
 I5fのpatch再生後のsource hashは記録と一致し、比較専用configでbuildしたmain asset `index-DZP628Bn.js`は元の候補buildとバイト一致した。現行の通常mainは資産索引だけを含む`index-B9CfaS6j.js`。Astraの安全性／採用レビューに必須修正なし。実装`01d5df0`は[全体CI39589758815](https://github.com/tyaro/temp-scada/actions/runs/39589758815)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。
 
 保存版0.35.0・Rust／schema・固定Banto／Industrial SDKは変更していない。今回は履歴資産集計の限定改善で区切る。大図面の読込とSvelte更新の費用は残課題とし、次回も新しい診断の根拠から別候補を選ぶ。
+
+<a id="load-diagnostics-i5h"></a>
+
+## I5h：読込・再読込の診断と計測処理の切り分け（2026-10-21）
+
+状態: **診断完了。アプリの性能改善は未実施**。アプリ`daf5760`（直近実装`01d5df0`）、Project0.35.0のまま、既存の100／500／1,000配置packageを同じproduction sourceから作った通常buildとsource map付きbuildで計測した。[生の計測値・CPU集計・source／build／原本SHA](i5h-load-diagnostics.json)を保存する。Linux6.18.55、Xeon Platinum8573C、Node24.19.0、Chromium154.0.8037.57、viewport1920×1080。
+
+### 計測方法
+
+`profile-editor-load.mjs`を追加し、初回取込と同一package再読込に限定した。coldはエディタ起動完了後の初回Project取込で、ブラウザ起動やネットワークcold cacheの意味ではない。file input差替え完了・配置数・Text pending解消・font ready・全画像decode・2rAFを待つ。GC後heap、画像原本SHA、文字投影、旧URL解放は時間計測の後に確認する。
+
+`--cpu`は別buildで1ms samplingする診断で、通常時間と比較しない。新しい`--direct-file-query`は、入力欄を`getByLabel`の全体検索から`input[type=file][aria-label]`へ絞る**計測側だけの差分**。操作・待機条件・アプリは同じ。初回はpreviewのlocalhost待受に127.0.0.1で接続して失敗し、取込前に終了した。その試行は計測値を生成せず、localhostへ揃えて再実行した。
+
+### 通常buildの観測値
+
+| 配置数・入力欄の検索 | 初回取込ms | 再読込ms |
+| -------------------- | ---------- | -------- |
+| 100・label           | 975.9      | 807.3    |
+| 500・label           | 5,107.1    | 5,516.7  |
+| 1,000・label初回run  | 11,234.0   | 16,184.1 |
+| 1,000・label再試行   | 11,970.9   | 18,201.9 |
+| 1,000・direct        | 14,495.5   | 18,833.1 |
+
+各runで初回・再読込は1観測ずつ。label／directは交互比較ではなく、時間変動も大きい。**direct queryへの変更で読込時間が改善したとは判断しない**。過去のI5g値との単純差も改善率にしない。
+
+通常label初回runの再読込では、100／500／1,000配置のLayoutCountは965／8,006／17,606、RecalcStyleDurationは約0.10／1.36／5.92秒だった。Task／Script／Layout／RecalcStyleの時間は重なるので合算しない。増加は反復する文字計測・style／layoutを調べる根拠であり、これだけで計算量やSvelteの欠陥を断定しない。
+
+### CPU診断で分かった呼出元
+
+`summarize-editor-profile.mjs`に、`getBBox`・`document.fonts.ready` getter・`getClientRects`のnative self sampleを最も近いsource map付きcallerへ集計する出力を追加した。従来のfile／function集計は維持する。inclusiveは重複するが、下表のnative self sampleは呼出元を分けている。samplingの重み付き時間であり、正確な関数実行時間ではない。
+
+| 再読込の呼出元                                               | label診断ms | direct診断ms           |
+| ------------------------------------------------------------ | ----------- | ---------------------- |
+| Playwright `getElementLabels` self                           | 4,053       | 上位self集計に現れない |
+| `TextPrimitive`からの`getBBox` self                          | 3,963       | 3,945                  |
+| `svg-text-measure`からの`getBBox` self                       | 1,433       | 1,432                  |
+| `TextPrimitive.onMount`からのfont ready getter self          | 1,347       | 1,280                  |
+| `MultilineTextPrimitive.onMount`からのfont ready getter self | 704         | 723                    |
+| `withSvgTextMeasure`からの`getClientRects` self              | 647         | 745                    |
+
+label診断で計測ツール自身のラベル検索が目立った。directはその経路を避けるが、全体時間の短縮は確認できていない。一方、両経路で文字寸法とfont ready取得の費用は残る。label再読込の`readProjectFile` inclusiveは約34ms、`parseProject`は約18msで、今回のsamplingでは主因ではない。これらもnativeや通常時間から差し引かない。
+
+CPU採取の初回／再読込はlabel約12.0／16.1秒、direct約24.2／11.7秒で、外れた値も記録した。direct採取中に短いrunner整形・構文確認が重なっているため、そのwall timeも比較根拠にしない。アプリbuild・通常benchmark・アプリ試験は採取と並走していない。
+
+### 品質確認と次の候補
+
+7runすべてで初回と再読込の文字投影が完全一致し、100／500／1,000配置で40／200／400 Text、4原本のSHAとbytesが入力package宣言に一致した。再読込後の旧4URLは解放され、一時計測hostは0、pageerrorなし。1,000配置の全runで同じ文字投影SHAだった。これは同一buildの読込間一致であり、別実装との見た目比較ではない。2回のGC後heapだけで長時間リークの不存在を保証しない。
+
+次候補は**文字componentごとのfont ready取得と再計測通知のまとめ方**を最小変更で比較すること。現在の呼出元を確認できたが、改善実装・採用はまだしていない。font loadingdone／loadingerror、非表示復帰、theme・倍率・文字の一致とcleanupを維持し、既に見送った単一行probe隔離を根拠なく再採用しない。大域cache・検証省略・Undo方式変更・上流依存更新は行わない。
+
+### 再現
+
+既存の`benchmark-mixed-editor.mjs`で生成したpackageを使う。通常buildとCPU用buildはそれぞれpreviewを起動し、診断と通常計測は順番に実行する。
+
+```sh
+source scripts/cloud-env.sh
+pnpm --filter banto-scada exec vite build --outDir /tmp/scada-i5h-normal-build
+pnpm --filter banto-scada exec vite build --sourcemap --outDir /tmp/scada-i5h-profile-build
+# 別ターミナルで各previewを起動。最初のコマンドは常駐する。
+pnpm --filter banto-scada exec vite preview --outDir /tmp/scada-i5h-normal-build --port 5350 --strictPort
+pnpm --filter banto-scada exec vite preview --outDir /tmp/scada-i5h-profile-build --port 5351 --strictPort
+# 通常計測と、別のCPU診断。
+SCADA_PROFILE_URL=http://localhost:5350 node apps/banto-scada/scripts/profile-editor-load.mjs /tmp/scada-i5g-after/mixed-1000.bantoscada /tmp/scada-i5h-normal-1000 1000
+SCADA_PROFILE_URL=http://localhost:5351 node apps/banto-scada/scripts/profile-editor-load.mjs /tmp/scada-i5g-after/mixed-1000.bantoscada /tmp/scada-i5h-direct-cpu-1000 1000 --cpu --direct-file-query
+node apps/banto-scada/scripts/summarize-editor-profile.mjs /tmp/scada-i5h-direct-cpu-1000/reload.cpuprofile /tmp/scada-i5h-profile-build 'parseProject|readProjectFile|fitText|withSvgTextMeasure'
+```
+
+raw cpuprofileとbuildは`/tmp`にあり、repoには集計とSHAを残した。再生成は上記コマンドを使う。追加runnerの構文・整形、source mapの既知fixture（mapped caller／unmapped callerへのnative self振分け）、実ブラウザの7run、文書リンクを確認した。アプリコード・Rust・schemaは変更しておらず、全unit／E2Eの再実行や性能改善の全体CI完了を意味しない。

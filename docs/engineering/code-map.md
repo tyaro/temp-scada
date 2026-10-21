@@ -323,3 +323,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 `history-assets.ts:createHistoryAssetCollector`はAppごとのclosureに、現在のpast／futureのsnapshot文字列→hash配列だけを保持する。現在Projectのassetsは毎回読み、脱落snapshotを捨てる。全抽出成功後にStore.collect、collect成功後に索引を置換する。Store／Blob／URL／pin／leaseとProject検証は所有しない。App.collectAssetsはこのhelperへ委譲し、既存のeffectと画像処理の回収入口を共用する。`history-assets.test.ts`が保持集合・再利用・失敗・脱落・初期化を、`image-replacement.spec.ts`が実原本のRedo破棄／50履歴上限・保存を、`symbol-image.spec.ts`が同一package再読込時のStore更新／URL解放を確認する。
 
 `compare-editor-load.mjs`の`--keys`／`--history`は通常の交互操作比較、`profile-editor.mjs --history`は50履歴を事前投入した別CPU診断。`summarize-editor-profile.mjs`の任意filterは上位30件から落ちた対象関数も抽出する。I5fの画像Map候補は速度根拠がなく未採用で、patch／source overlay configだけを保管する。[採否と測定条件](../performance/mixed-editor-quality.md#history-asset-index)を参照。
+
+### I5hの読込診断
+
+`apps/banto-scada/scripts/profile-editor-load.mjs`は初回取込／同一package再読込だけを計測し、通常runと`--cpu`を分ける。`--direct-file-query`で計測側の入力欄検索を比較できる。時間計測後に文字投影・原本SHA・旧URL解放を確認する。`summarize-editor-profile.mjs`はnative呼出しを最も近いmapped callerへ集計する。[結果と制限](../performance/mixed-editor-quality.md#load-diagnostics-i5h)。通常アプリへの計測APIは追加しない。

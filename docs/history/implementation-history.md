@@ -1847,3 +1847,9 @@ Astraの安全性／採用レビューは必須修正なし。TS全1,214件、�
 Industrial [#762](https://github.com/tyaro/banto-industrial/issues/762)を起票。汎用処理はBanto、tag／構成／runtimeの契約はIndustrial、schemaと固有操作は各アプリとする方針を記載し、SCADAの履歴・資産索引・package検査・ブラウザ回帰の固定版リンクを引き渡した。最小fixtureによる比較後にBantoの個別案件へ分ける。既存Issue一覧を確認し、Bantoの#432／#435／#436／#438を関連付けた。
 
 Issue本文を作成結果と照合し、文書整形・リンク・差分を確認。アプリ実装・依存更新は行っていない。
+
+## I5h：大図面の読込診断（2026-10-21）
+
+[読込・再読込の計測](../performance/mixed-editor-quality.md#load-diagnostics-i5h)を追加。通常100／500／1,000配置と別CPU採取を行い、driverのラベル検索負荷と、アプリの文字寸法・font ready取得を切り分けた。driver検索を絞っただけでは全体短縮を確認できず、アプリ改善は未採用。JSON検証の省略やcacheは導入しない。
+
+7runで文字投影・4画像原本のSHA／bytes、再読込時の旧URL解放と一時host解放、pageerrorなしを確認。runner2本の構文・整形、source map既知fixture、文書リンク・差分を確認した。raw report・CPU集計・source／buildのSHAを保存。アプリ／Rust／schema／依存は変更せず、全体試験の再実行や性能改善完了とは扱わない。

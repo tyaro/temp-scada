@@ -48,7 +48,8 @@ for (const node of profile.nodes) {
   });
 }
 const files = new Map(),
-  functions = new Map();
+  functions = new Map(),
+  nativeCallers = new Map();
 function add(table, label, field, us) {
   const row = table.get(label) ?? { selfUs: 0, inclusiveUs: 0 };
   row[field] += us;
@@ -60,6 +61,22 @@ for (let index = 0; index < profile.samples.length; index++) {
   const label = labels.get(id);
   add(files, label.source, "selfUs", us);
   add(functions, `${label.location} ${label.function}`, "selfUs", us);
+  // Attribute sampled native work to its nearest mapped caller, not just a file total.
+  if (
+    !label.mapped &&
+    ["getBBox", "get ready", "getClientRects"].includes(label.function)
+  ) {
+    let caller = parents.get(id);
+    while (caller !== undefined && !labels.get(caller).mapped)
+      caller = parents.get(caller);
+    const mapped = labels.get(caller);
+    add(
+      nativeCallers,
+      `${label.function} <- ${mapped ? `${mapped.location} ${mapped.function}` : "(no mapped caller)"}`,
+      "selfUs",
+      us,
+    );
+  }
   const seenFiles = new Set(),
     seenFunctions = new Set();
   for (
@@ -100,6 +117,7 @@ process.stdout.write(
         : undefined,
       functionsBySelf: sorted(functions, "selfUs"),
       functionsByInclusive: sorted(functions, "inclusiveUs"),
+      nativeCallsByMappedCaller: sorted(nativeCallers, "selfUs"),
     },
     null,
     2,
