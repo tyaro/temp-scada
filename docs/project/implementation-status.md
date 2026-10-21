@@ -6,7 +6,7 @@
 
 最新の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は限定改善・候補評価を一区切りとし、大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
-I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを実装・ローカル検証済み／CI確認待ち。
+I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
 ## 保存契約と基盤
 
@@ -43,7 +43,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 ## 検証の範囲
 
-最新機能I6bの`0bd2559`は[全体CI39559236819](https://github.com/tyaro/temp-scada/actions/runs/39559236819)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功。ローカルでは型（エラー・警告0）、単体1121件、関連ブラウザ13件、本番build、整形と両テーマ実画面を確認した。全ブラウザ件数をローカル関連試験の件数と読み替えない。
+最新機能I7cの`313b806`は[全体CI39570702994](https://github.com/tyaro/temp-scada/actions/runs/39570702994)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功。ローカルでは型（エラー・警告0）、単体1,142件、関連ブラウザ46ケース、本番build、整形と両テーマ実画面を確認した。全ブラウザ件数をローカル関連試験の件数と読み替えない。I8の接続・配管追従は段階実装中で、保存・操作UIは未提供。
 
 R0〜R5の構造整理は完了し、[リファクタリング記録](../engineering/maintenance-refactoring-plan.md)に各段階の不変条件・テストを保持する。[当時の検証詳細](../history/implementation-history.md#status-validation-archive)と[性能の実測条件・採否](../performance/mixed-editor-quality.md)を現在の機能保証と区別する。実Hub／catalog・正式Runtime・認証・Windows実機の運用確認は未完了。
 

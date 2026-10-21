@@ -61,6 +61,8 @@ docs/
 
 ### 作図・レイヤー・一括編集
 
+- [Symbol配置への接続と配管端点追従](design/editor/connection-follow-design.md)
+
 - [選択配置の配列複製](design/editor/array-copy-design.md)
 - [レイヤーフォルダーのドラッグによる親変更](design/editor/folder-drag-design.md)
 - [図形間の隙間の均等化](design/editor/gap-arrangement-design.md)

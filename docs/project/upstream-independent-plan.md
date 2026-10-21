@@ -1,6 +1,8 @@
 # 上流変更中に進めるSCADA単体開発計画
 
-2026-10-21（日本時間）。状態: **I0〜I4・I6は完了・全体CI成功。I5は限定改善・候補評価完了、遅延は残課題**。現行保存契約はProject0.34.0。[統合設計](../design/scada-integrated-design.md)のローカル作図領域を対象とする。[I7：Symbol内画像](../design/images/symbol-image-design.md)はI7a／bの全体CI成功、I7cの取込・編集UIを実装・ローカル検証済み（CI確認待ち）。
+2026-10-21（日本時間）。状態: **I0〜I4・I6は完了・全体CI成功。I5は限定改善・候補評価完了、遅延は残課題**。現行保存契約はProject0.34.0。[統合設計](../design/scada-integrated-design.md)のローカル作図領域を対象とする。[I7：Symbol内画像](../design/images/symbol-image-design.md)はI7a／bの全体CI成功、I7cの取込・編集UIも全体CI成功。
+
+次は[I8：接続と配管追従](../design/editor/connection-follow-design.md)へ進める。I8aは純粋幾何の基盤で、保存・UIは後続。
 
 ## 方針と境界
 
@@ -27,7 +29,10 @@ Projectのローカル属性追加は可能だが、共有SDK・Design API・正
 | I6b 参照名置換のUI           | タグ参照一覧から全画面差分と明示適用                   | IME・draft・取消・検索独立・保存往復・両テーマ                                                                                            | 完了・CI成功                                 |
 | I7a 資産参照の基盤           | 全定義の画像参照索引と選択配置の依存閉包               | TS／Rust共通低層fixture・既存保存／clipboard回帰。Symbol内画像の公開拒否は維持                                                            | 完了・CI成功                                 |
 | I7b Symbol内画像の保存・表示 | 保存・貼付の原本再配線と共通描画                       | 未配置定義の原本保持・同hash共有・現行定義再利用・両配色／α・各描画入口                                                                   | 完了・CI成功                                 |
-| I7c Symbol内画像の作成UI     | 定義内取込・画像編集・貼付の操作                       | 所有者世代・遅延decode・draft／IME・lock・fit／crop・原本解放                                                                             | 実装・ローカル検証済み／CI確認待ち           |
+| I7c Symbol内画像の作成UI     | 定義内取込・画像編集・貼付の操作                       | 所有者世代・遅延decode・draft／IME・lock・fit／crop・原本解放                                                                             | 完了・CI成功                                 |
+| I8a 接続の幾何               | Symbol配置枠anchor・両端同時更新                       | 任意回転・中間点world保持・退化／不正・no-op。保存・UI未対応                                                                              | 実装・ローカル検証済み／CI確認待ち           |
+| I8b 接続の保存・command      | 参照と解決済み形状・全操作の追従                       | TS／Rust／schema・削除／lock／group・複製／clipboard・Undo・drag途中                                                                      | 未着手                                       |
+| I8c 接続の操作UI             | Inspectorによる接続・解除                              | 状態・使用先・拒否理由、入力保護・両テーマ・保存往復                                                                                      | 未着手                                       |
 
 I1a／I2a／I3aは基盤だけの保存区切りとし、b工程でUI・実利用・回帰まで確認した。今後も基盤実装と機能提供の完了を区別する。下記の順序は当時の着手順であり、未着手の次工程を示すものではない。
 
@@ -66,7 +71,7 @@ I5は[性能計測の既存記録](../performance/editor-performance.md)を再�
 | 認証、ユーザー管理、運用切替                                               | 既存の延期指示を維持。Industrialの認証契約を確認してから接続する                                                                    |
 | S9b server／host、v1.1 Alarm／Event／History／Trend、Camera、HTTP／Program | server・SDK・実行境界に依存。S9bがCore v1の基盤である区分を変えず、独自の代替serverを作らない                                       |
 | 正式directory／ZIP、Design Domain API、自動復旧／配布管理、運用kiosk       | persistence・revision・host等の共有契約と合わせる。現在の最小画像packageを正式形式の完成扱いにしない                                |
-| 接続口・配管追従、グループ入れ子／任意拡縮、多点gradient                   | 上流待ちが必須という意味ではないが、モデル・操作の変更が広い。I1〜I4後に独立設計し、今回の範囲へ追加しない                          |
+| グループ入れ子／任意拡縮、多点gradient                                     | 上流待ちが必須という意味ではないが、モデル・操作の変更が広い。I1〜I4後に独立設計し、今回の範囲へ追加しない                          |
 
 保留は削除や永続的な中止ではない。各機能の最終提供段階は統合設計を維持する。上流Issueが閉じただけで即更新せず、修正コミット・公開API・SCADAの接続試験を確認する。
 
@@ -82,7 +87,7 @@ I5は[性能計測の既存記録](../performance/editor-performance.md)を再�
 
 I6bの`0bd2559`は[全体CI39559236819](https://github.com/tyaro/temp-scada/actions/runs/39559236819)ですべて成功。[置換の仕様・実画面](../design/equipment/text-reference-replacement-design.md)を提供済み。I5の限定改善／未採用候補は[計測記録](../performance/mixed-editor-quality.md)を参照する。
 
-文書整理後の次工程は[I7](../design/images/symbol-image-design.md)。Astraのレビューを踏まえ、資産参照集計をI7aとして先行実装し、ローカル検証を完了した。I7bの`969a0c4`も[全体CI成功](https://github.com/tyaro/temp-scada/actions/runs/39568399640)。I7cは定義内の配置・貼付・fit／crop・差替えへ接続し、合成後の配色／αと原本寿命を維持してローカル検証済み（CI確認待ち）。
+I7は保存・共通描画・作成UIまで実装し、全体CI成功。次は[I8の接続・配管追従](../design/editor/connection-follow-design.md)を進める。I8aの幾何、I8bの保存・全操作、I8cの操作UIを分け、入力・world座標・原子的な拒否とUndoの不変条件を確認する。
 
 ## 実施記録
 
@@ -107,3 +112,5 @@ I6bの`0bd2559`は[全体CI39559236819](https://github.com/tyaro/temp-scada/acti
 | <a id="i6bの進捗2026-10-21"></a>I6bの進捗（2026-10-21）                                                               | [当時の記録](../history/implementation-history.md#independent-note-12) |
 
 </details>
+
+I7cの`313b806`は[全体CI39570702994](https://github.com/tyaro/temp-scada/actions/runs/39570702994)で全job成功。I8はAstraのレビューを反映し、同一画面のSymbol配置枠と端点追従へ限定する。保存・操作と幾何の完了を区別する。
