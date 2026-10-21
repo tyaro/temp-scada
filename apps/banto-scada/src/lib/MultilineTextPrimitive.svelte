@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
+  import { withSvgTextMeasure } from "./svg-text-measure";
   import { TEXT_FONT } from "./text-layout";
   import {
     fitStaticLines,
@@ -82,24 +83,18 @@
     if (!element) return;
     untrack(() => {
       try {
-        const fitted = fitStaticLines(
-          text,
-          width,
-          height,
-          style.fontSize,
-          (value) => {
-            element.textContent = value;
-            const box = element.getBBox();
-            if (value.trim() && box.width === 0 && box.height === 0)
-              throw new Error("Text is not measurable while hidden");
-            return box;
-          },
-          style.wrap ?? "none",
+        const fitted = withSvgTextMeasure(element, (measure) =>
+          fitStaticLines(
+            text,
+            width,
+            height,
+            style.fontSize,
+            measure,
+            style.wrap ?? "none",
+          ),
         );
-        element.textContent = "";
         layout = { ...fitted, key: snapshot };
       } catch {
-        element.textContent = "";
         layout = null;
       }
     });
