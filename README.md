@@ -5,6 +5,7 @@
 - [現在の実装状況](docs/implementation-status.md): 対応機能、保存契約、検証範囲、未実装。
 - [Bantoへの共通機能引渡し](docs/reviews/banto-contribution-handoff.md): 操作・非同期・設定保存・画像処理のIssueと実装／テスト資産。
 - [Bantoパネル基盤との比較](docs/reviews/banto-dock-comparison.md): 分割・タブ・入力保護の実験と共通化の提案。移行は未実施。
+- [塗り・枠線のα一括編集](docs/selection-paint-alpha-design.md): 独立項目・混在・原子的適用と実画面。
 - [静的Textの折返し](docs/static-text-wrap-design.md): 原文を保つ幅計測・保存・サンプルと実画面。
 - [静的Textの明示改行](docs/multiline-text-design.md): 空行・省略・入力保護と実画面。
 - [操作ガイド](docs/user-guide.md): 編集、画像、画面再利用、入力保護、パネルとキー操作。

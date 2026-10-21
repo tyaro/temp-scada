@@ -275,3 +275,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ### 静的Textの折返し
 
 `static-text-wrap.ts`はLFなし段落の語／書記素境界と幅計測を使って原文を欠落させずに分割する。`fitStaticLines`の一時cacheを共用し、既存の空行・高さ省略・ink境界へ接続する。TextStyleのwrapは共通schema／TS・Rustで検証し、object-form／numeric-propertiesが既存draftと値を往復する。Primitiveは静的な非空本文だけMultilineTextPrimitiveへ渡し、wrapを再計測keyへ含める。動的表示は変更しない。`static-text-wrap*.test.ts`、共通text-style-cases、Rustの往復／旧形式拒否、`e2e/multiline-text.spec.ts`が入口。[仕様](static-text-wrap-design.md)。
+
+## 塗り・枠線のα一括編集（I4）
+
+`selection-paint-alpha.ts`は項目別適用可否・現在値・全件検査後の変更を担当する。`editor/selection-handler.ts`から呼び、`designer/SelectionPaintAlpha.svelte`とフォーム変換で所有者・選択・draftを接続する。`selection-paint-alpha.test.ts`が原子性・no-op・Undo・共有定義、`e2e/selection-paint-alpha.spec.ts`が実操作・入力保護を担当する。[採用仕様](selection-paint-alpha-design.md)に従う。

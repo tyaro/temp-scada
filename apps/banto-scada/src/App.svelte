@@ -1,5 +1,9 @@
 <script lang="ts">
   import {
+    selectionPaintAlphaCommand,
+    acknowledgeSelectionPaintAlpha,
+  } from "./lib/designer/forms/selection-paint-alpha";
+  import {
     groupsOf,
     groupFor,
     selectedGroup as findSelectedGroup,
@@ -1645,6 +1649,8 @@
       acknowledgeSelectionColor(form);
     if (form.dataset.editorForm === "selection-opacity")
       acknowledgeSelectionOpacity(form);
+    if (form.dataset.editorForm === "selection-paint-alpha")
+      acknowledgeSelectionPaintAlpha(form);
     if (form.dataset.editorForm === "selection-size")
       acknowledgeSelectionSize(form);
     if (form.dataset.editorForm === "selection-text-style")
@@ -2227,6 +2233,20 @@
       );
     if (form.dataset.editorForm === "selection-opacity")
       return selectionOpacityCommand(
+        {
+          data,
+          targetKey: form.dataset.targetKey,
+          objectIds: form.dataset.objectIds,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selectedIds,
+        },
+      );
+    if (form.dataset.editorForm === "selection-paint-alpha")
+      return selectionPaintAlphaCommand(
         {
           data,
           targetKey: form.dataset.targetKey,

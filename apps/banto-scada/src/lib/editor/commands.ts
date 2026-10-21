@@ -1,3 +1,4 @@
+import type { PaintAlphaPatch } from "../selection-paint-alpha";
 import type { EquipmentSlot, EquipmentBinding } from "../equipment";
 import type { ImageFit } from "../image-fit";
 import type { ImageCrop } from "../image-crop";
@@ -215,6 +216,12 @@ export type ObjectCommand = (
       height?: number;
     }
   | {
+      type: "set-paint-alpha";
+      screenId: string;
+      objectIds: string[];
+      patch: PaintAlphaPatch;
+    }
+  | {
       type: "set-opacity";
       screenId: string;
       objectIds: string[];
@@ -394,6 +401,7 @@ const commandScopes = {
   "set-line-style": "object",
   "set-color": "object",
   "set-opacity": "object",
+  "set-paint-alpha": "object",
   "set-size": "object",
   "set-text-style": "object",
   "set-visibility": "object",

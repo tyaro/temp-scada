@@ -48,6 +48,7 @@ export function applyObjectCommand(
       "set-line-style",
       "set-outline-style",
       "set-opacity",
+      "set-paint-alpha",
       "set-size",
       "set-text-style",
     ].includes(command.type) &&
@@ -95,6 +96,7 @@ export function applyObjectCommand(
     command.type === "set-text-style" ||
     command.type === "set-size" ||
     command.type === "set-opacity" ||
+    command.type === "set-paint-alpha" ||
     command.type === "set-color" ||
     command.type === "set-line-style" ||
     command.type === "set-outline-style" ||

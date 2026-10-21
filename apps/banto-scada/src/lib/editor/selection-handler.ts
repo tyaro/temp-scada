@@ -1,3 +1,4 @@
+import { setPaintAlpha } from "../selection-paint-alpha";
 import { relativeObjectOrder } from "../relative-layer-order";
 import { setSelectionSize } from "./size-arrangement";
 import { duplicatePlacements } from "./duplicate-placement";
@@ -101,6 +102,8 @@ export function applySelectionCommand(
     }
   } else if (command.type === "set-size") {
     setSelectionSize(objects, command);
+  } else if (command.type === "set-paint-alpha") {
+    setPaintAlpha(objects, command.patch);
   } else if (command.type === "set-opacity") {
     if (
       typeof command.opacity !== "number" ||

@@ -3,6 +3,7 @@
   import SelectionTextStyle from "./SelectionTextStyle.svelte";
   import SelectionSize from "./SelectionSize.svelte";
   import SelectionOpacity from "./SelectionOpacity.svelte";
+  import SelectionPaintAlpha from "./SelectionPaintAlpha.svelte";
   import type { FloatingInspector } from "./controllers/floating-inspector.svelte";
   import SymbolEquipmentCheck from "./SymbolEquipmentCheck.svelte";
   import StateColor from "./StateColor.svelte";
@@ -510,6 +511,18 @@
             onsubmit={properties}
           />
           <SelectionOpacity
+            objects={screen.objects.filter((object) =>
+              selectedIds.includes(object.id),
+            )}
+            hiddenCount={hiddenSelectionCount}
+            locked={selectionLocked}
+            definition={activeDefinition}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            objectIds={selectedIds}
+            {drafts}
+            onsubmit={properties}
+          />
+          <SelectionPaintAlpha
             objects={screen.objects.filter((object) =>
               selectedIds.includes(object.id),
             )}
