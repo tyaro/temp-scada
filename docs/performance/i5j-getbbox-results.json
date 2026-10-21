@@ -1,0 +1,596 @@
+{
+  "dateJapan": "2026-10-22",
+  "baselineCommit": "473b0f855ce6b263c97f795a871122921349c1cf",
+  "branch": "perf/i5j-getbbox-diagnosis",
+  "status": "diagnosis only; no application optimization and no PR",
+  "environment": {
+    "chromium": "156.0.8078.4",
+    "node": "v24.16.0",
+    "platform": "darwin",
+    "kernel": "27.0.0",
+    "cpu": "Apple M1"
+  },
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "fixture": {
+    "placements": 1000,
+    "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+    "textCountOnMainSheet": 400,
+    "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea",
+    "originals": [
+      {
+        "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+        "bytes": 33491
+      },
+      {
+        "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+        "bytes": 33492
+      },
+      {
+        "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+        "bytes": 33523
+      },
+      {
+        "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+        "bytes": 33392
+      }
+    ]
+  },
+  "method": "Cold means first Project import into a loaded editor, not browser startup. Each phase ends after text settles, font readiness, image decode and 2 rAF. CPU sampling, getBBox wrappers/MutationObserver, and layout tracing are diagnostics, not normal latency. getBBox timing includes any synchronous style/layout; timer-zero calls are below timer resolution, not proven free. Mutation records alone do not prove forced layout; trace attribution requires a fully enclosed synchronous event on the same thread. Repeated element requests do not prove reusable metrics across font/transform changes. CDP durations overlap; GC, hashes, projection and old URL checks are after timing. Projection equality covers cold/reload of the same build only.",
+  "getBBoxScope": "All SVGGraphicsElement.getBBox calls in the diagnostic document during import, including sheet, minimap and thumbnails. Buckets identify in-drawing text vs existing isolated measurement hosts, not only the main sheet. No new probe isolation, geometry cache, or skipped measurements.",
+  "order": ["normal-a", "bbox-a", "trace-a", "bbox-b", "normal-b"],
+  "invariants": {
+    "allNormalCountAndTraceProjectionsMatch": true,
+    "allOriginalAssetShaAndBytesMatch": true,
+    "allReloadOldUrlsRevoked": true,
+    "temporaryMeasureHostCount": 0,
+    "pageErrors": 0,
+    "traceLayoutAndStyleEventCountsMatchCDPCounters": true
+  },
+  "runs": [
+    {
+      "run": "normal-a",
+      "recordedAt": "2026-10-21T17:13:02.398Z",
+      "mode": "normal",
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3628.449708,
+          "metrics": {
+            "ScriptDuration": 0.726534,
+            "LayoutDuration": 0.564017,
+            "RecalcStyleDuration": 1.941786,
+            "TaskDuration": 3.586728,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14015
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4587.111,
+          "metrics": {
+            "ScriptDuration": 0.6546779999999999,
+            "LayoutDuration": 0.5640290000000001,
+            "RecalcStyleDuration": 2.6379840000000003,
+            "TaskDuration": 4.509575000000001,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14008
+          }
+        }
+      ]
+    },
+    {
+      "run": "bbox-a",
+      "recordedAt": "2026-10-21T17:13:15.301Z",
+      "mode": "bbox",
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 4036.0386659999995,
+          "metrics": {
+            "ScriptDuration": 0.850742,
+            "LayoutDuration": 0.60372,
+            "RecalcStyleDuration": 2.163017,
+            "TaskDuration": 4.175222000000001,
+            "LayoutCount": 14010,
+            "RecalcStyleCount": 14016
+          },
+          "bboxDiagnostics": {
+            "all": {
+              "calls": 13405,
+              "totalMs": 1226.0000000596046,
+              "meanMs": 0.09145841104510292,
+              "p50Ms": 0,
+              "p95Ms": 0.20000000298023224,
+              "maxMs": 8.799999997019768,
+              "zeroTimerCalls": 9555,
+              "callsAfterWrites": 13405,
+              "callsAfterProbeWrite": 13405,
+              "repeatElementRequests": 803,
+              "threw": 0
+            },
+            "buckets": {
+              "drawingText": {
+                "calls": 1405,
+                "totalMs": 822.1999999955297,
+                "meanMs": 0.5851957295341849,
+                "p50Ms": 0,
+                "p95Ms": 2.100000001490116,
+                "maxMs": 8.799999997019768,
+                "zeroTimerCalls": 770,
+                "callsAfterWrites": 1405,
+                "callsAfterProbeWrite": 1405,
+                "repeatElementRequests": 803,
+                "threw": 0
+              },
+              "isolatedText": {
+                "calls": 12000,
+                "totalMs": 403.800000064075,
+                "meanMs": 0.03365000000533958,
+                "p50Ms": 0,
+                "p95Ms": 0.19999999552965164,
+                "maxMs": 1.8999999985098839,
+                "zeroTimerCalls": 8785,
+                "callsAfterWrites": 12000,
+                "callsAfterProbeWrite": 12000,
+                "repeatElementRequests": 0,
+                "threw": 0
+              }
+            }
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4329.043334,
+          "metrics": {
+            "ScriptDuration": 0.7529469999999999,
+            "LayoutDuration": 0.5462469999999999,
+            "RecalcStyleDuration": 2.4286450000000004,
+            "TaskDuration": 4.443960000000001,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14010
+          },
+          "bboxDiagnostics": {
+            "all": {
+              "calls": 12800,
+              "totalMs": 1267.3000001236796,
+              "meanMs": 0.09900781250966247,
+              "p50Ms": 0,
+              "p95Ms": 0.20000000298023224,
+              "maxMs": 2.8000000044703484,
+              "zeroTimerCalls": 9052,
+              "callsAfterWrites": 12800,
+              "callsAfterProbeWrite": 12800,
+              "repeatElementRequests": 400,
+              "threw": 0
+            },
+            "buckets": {
+              "isolatedText": {
+                "calls": 12000,
+                "totalMs": 375.50000008940697,
+                "meanMs": 0.031291666674117244,
+                "p50Ms": 0,
+                "p95Ms": 0.10000000149011612,
+                "maxMs": 0.4000000059604645,
+                "zeroTimerCalls": 8873,
+                "callsAfterWrites": 12000,
+                "callsAfterProbeWrite": 12000,
+                "repeatElementRequests": 0,
+                "threw": 0
+              },
+              "drawingText": {
+                "calls": 800,
+                "totalMs": 891.8000000342727,
+                "meanMs": 1.1147500000428407,
+                "p50Ms": 0.20000000298023224,
+                "p95Ms": 2.399999998509884,
+                "maxMs": 2.8000000044703484,
+                "zeroTimerCalls": 179,
+                "callsAfterWrites": 800,
+                "callsAfterProbeWrite": 800,
+                "repeatElementRequests": 400,
+                "threw": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "run": "trace-a",
+      "recordedAt": "2026-10-21T17:13:32.061Z",
+      "mode": "trace",
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 4402.727541,
+          "metrics": {
+            "ScriptDuration": 0.979393,
+            "LayoutDuration": 0.961349,
+            "RecalcStyleDuration": 1.995143,
+            "TaskDuration": 4.525317,
+            "LayoutCount": 14009,
+            "RecalcStyleCount": 14010
+          },
+          "bboxDiagnostics": {
+            "all": {
+              "calls": 13405,
+              "totalMs": 1467.8000000342727,
+              "meanMs": 0.10949645654862161,
+              "p50Ms": 0,
+              "p95Ms": 0.3999999985098839,
+              "maxMs": 9.199999995529652,
+              "zeroTimerCalls": 9118,
+              "callsAfterWrites": 13405,
+              "callsAfterProbeWrite": 13405,
+              "repeatElementRequests": 803,
+              "threw": 0
+            },
+            "buckets": {
+              "drawingText": {
+                "calls": 1405,
+                "totalMs": 868.0000000074506,
+                "meanMs": 0.6177935943113527,
+                "p50Ms": 0.10000000149011612,
+                "p95Ms": 2.1999999955296516,
+                "maxMs": 9.199999995529652,
+                "zeroTimerCalls": 643,
+                "callsAfterWrites": 1405,
+                "callsAfterProbeWrite": 1405,
+                "repeatElementRequests": 803,
+                "threw": 0
+              },
+              "isolatedText": {
+                "calls": 12000,
+                "totalMs": 599.8000000268221,
+                "meanMs": 0.04998333333556851,
+                "p50Ms": 0,
+                "p95Ms": 0.30000000447034836,
+                "maxMs": 2.399999998509884,
+                "zeroTimerCalls": 8475,
+                "callsAfterWrites": 12000,
+                "callsAfterProbeWrite": 12000,
+                "repeatElementRequests": 0,
+                "threw": 0
+              }
+            },
+            "trace": {
+              "file": "cold.layout-trace.json",
+              "sha256": "e67af7103c034caa3a7911508248e3fb42f5bea4fbd8de9af16053b054339165",
+              "bytes": 25444234,
+              "dataLossOccurred": false,
+              "mainThreadEvents": {
+                "layout": 14009,
+                "style": 14010,
+                "layoutMs": 921.583,
+                "styleMs": 1993.805
+              },
+              "withinGetBBox": {
+                "calls": 13405,
+                "callsWithLayout": 12803,
+                "callsWithStyle": 12802,
+                "callsWithLayoutAfterWrites": 12803,
+                "callsWithLayoutAfterProbeWrite": 12803,
+                "callsWithStyleAfterWrites": 12802,
+                "layoutEvents": 12803,
+                "styleEvents": 12802,
+                "layoutMs": 630.7159999999844,
+                "styleMs": 703.4059999999907
+              },
+              "buckets": {
+                "drawingText": {
+                  "calls": 1405,
+                  "callsWithLayout": 803,
+                  "callsWithStyle": 802,
+                  "callsWithLayoutAfterWrites": 803,
+                  "callsWithLayoutAfterProbeWrite": 803,
+                  "callsWithStyleAfterWrites": 802,
+                  "layoutEvents": 803,
+                  "styleEvents": 802,
+                  "layoutMs": 197.94800000000006,
+                  "styleMs": 639.9889999999991
+                },
+                "isolatedText": {
+                  "calls": 12000,
+                  "callsWithLayout": 12000,
+                  "callsWithStyle": 12000,
+                  "callsWithLayoutAfterWrites": 12000,
+                  "callsWithLayoutAfterProbeWrite": 12000,
+                  "callsWithStyleAfterWrites": 12000,
+                  "layoutEvents": 12000,
+                  "styleEvents": 12000,
+                  "layoutMs": 432.7680000000005,
+                  "styleMs": 63.41700000000535
+                }
+              }
+            }
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 5310.123625,
+          "metrics": {
+            "ScriptDuration": 0.8832170000000001,
+            "LayoutDuration": 1.3799979999999998,
+            "RecalcStyleDuration": 2.3570679999999995,
+            "TaskDuration": 5.571764999999999,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14007
+          },
+          "bboxDiagnostics": {
+            "all": {
+              "calls": 12800,
+              "totalMs": 1860.699999935925,
+              "meanMs": 0.14536718749499414,
+              "p50Ms": 0,
+              "p95Ms": 0.7000000029802322,
+              "maxMs": 3.399999998509884,
+              "zeroTimerCalls": 8391,
+              "callsAfterWrites": 12800,
+              "callsAfterProbeWrite": 12800,
+              "repeatElementRequests": 400,
+              "threw": 0
+            },
+            "buckets": {
+              "isolatedText": {
+                "calls": 12000,
+                "totalMs": 800.3999999314547,
+                "meanMs": 0.06669999999428788,
+                "p50Ms": 0,
+                "p95Ms": 0.5,
+                "maxMs": 1.1999999955296516,
+                "zeroTimerCalls": 8379,
+                "callsAfterWrites": 12000,
+                "callsAfterProbeWrite": 12000,
+                "repeatElementRequests": 0,
+                "threw": 0
+              },
+              "drawingText": {
+                "calls": 800,
+                "totalMs": 1060.3000000044703,
+                "meanMs": 1.325375000005588,
+                "p50Ms": 0.3999999985098839,
+                "p95Ms": 2.8000000044703484,
+                "maxMs": 3.399999998509884,
+                "zeroTimerCalls": 12,
+                "callsAfterWrites": 800,
+                "callsAfterProbeWrite": 800,
+                "repeatElementRequests": 400,
+                "threw": 0
+              }
+            },
+            "trace": {
+              "file": "reload.layout-trace.json",
+              "sha256": "746b622d6104c58064b67b42f1d6049bd26a357b78b74cf5adec0937c7431c29",
+              "bytes": 27949908,
+              "dataLossOccurred": false,
+              "mainThreadEvents": {
+                "layout": 14006,
+                "style": 14007,
+                "layoutMs": 1338.252,
+                "styleMs": 2355.524
+              },
+              "withinGetBBox": {
+                "calls": 12800,
+                "callsWithLayout": 12800,
+                "callsWithStyle": 12800,
+                "callsWithLayoutAfterWrites": 12800,
+                "callsWithLayoutAfterProbeWrite": 12800,
+                "callsWithStyleAfterWrites": 12800,
+                "layoutEvents": 12800,
+                "styleEvents": 12800,
+                "layoutMs": 891.2439999999629,
+                "styleMs": 823.4169999999777
+              },
+              "buckets": {
+                "isolatedText": {
+                  "calls": 12000,
+                  "callsWithLayout": 12000,
+                  "callsWithStyle": 12000,
+                  "callsWithLayoutAfterWrites": 12000,
+                  "callsWithLayoutAfterProbeWrite": 12000,
+                  "callsWithStyleAfterWrites": 12000,
+                  "layoutEvents": 12000,
+                  "styleEvents": 12000,
+                  "layoutMs": 619.9699999999744,
+                  "styleMs": 66.86800000000409
+                },
+                "drawingText": {
+                  "calls": 800,
+                  "callsWithLayout": 800,
+                  "callsWithStyle": 800,
+                  "callsWithLayoutAfterWrites": 800,
+                  "callsWithLayoutAfterProbeWrite": 800,
+                  "callsWithStyleAfterWrites": 800,
+                  "layoutEvents": 800,
+                  "styleEvents": 800,
+                  "layoutMs": 271.274,
+                  "styleMs": 756.5489999999999
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "run": "bbox-b",
+      "recordedAt": "2026-10-21T17:13:44.582Z",
+      "mode": "bbox",
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3691.4040419999997,
+          "metrics": {
+            "ScriptDuration": 0.805409,
+            "LayoutDuration": 0.556595,
+            "RecalcStyleDuration": 1.947914,
+            "TaskDuration": 3.82076,
+            "LayoutCount": 14010,
+            "RecalcStyleCount": 14016
+          },
+          "bboxDiagnostics": {
+            "all": {
+              "calls": 13405,
+              "totalMs": 1123.3999999314547,
+              "meanMs": 0.08380455053572955,
+              "p50Ms": 0,
+              "p95Ms": 0.20000000298023224,
+              "maxMs": 9.899999998509884,
+              "zeroTimerCalls": 9647,
+              "callsAfterWrites": 13405,
+              "callsAfterProbeWrite": 13405,
+              "repeatElementRequests": 803,
+              "threw": 0
+            },
+            "buckets": {
+              "drawingText": {
+                "calls": 1405,
+                "totalMs": 739.1000000312924,
+                "meanMs": 0.5260498220863291,
+                "p50Ms": 0,
+                "p95Ms": 1.8999999985098839,
+                "maxMs": 9.899999998509884,
+                "zeroTimerCalls": 787,
+                "callsAfterWrites": 1405,
+                "callsAfterProbeWrite": 1405,
+                "repeatElementRequests": 803,
+                "threw": 0
+              },
+              "isolatedText": {
+                "calls": 12000,
+                "totalMs": 384.2999999001622,
+                "meanMs": 0.03202499999168019,
+                "p50Ms": 0,
+                "p95Ms": 0.10000000149011612,
+                "maxMs": 1.8999999985098839,
+                "zeroTimerCalls": 8860,
+                "callsAfterWrites": 12000,
+                "callsAfterProbeWrite": 12000,
+                "repeatElementRequests": 0,
+                "threw": 0
+              }
+            }
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4268.697416999999,
+          "metrics": {
+            "ScriptDuration": 0.6972609999999999,
+            "LayoutDuration": 0.5297780000000001,
+            "RecalcStyleDuration": 2.3679069999999998,
+            "TaskDuration": 4.385288999999999,
+            "LayoutCount": 14007,
+            "RecalcStyleCount": 14013
+          },
+          "bboxDiagnostics": {
+            "all": {
+              "calls": 12800,
+              "totalMs": 1235.2999998927116,
+              "meanMs": 0.09650781249161809,
+              "p50Ms": 0,
+              "p95Ms": 0.20000000298023224,
+              "maxMs": 3.3000000044703484,
+              "zeroTimerCalls": 9107,
+              "callsAfterWrites": 12800,
+              "callsAfterProbeWrite": 12800,
+              "repeatElementRequests": 400,
+              "threw": 0
+            },
+            "buckets": {
+              "isolatedText": {
+                "calls": 12000,
+                "totalMs": 363.90000004321337,
+                "meanMs": 0.030325000003601114,
+                "p50Ms": 0,
+                "p95Ms": 0.10000000149011612,
+                "maxMs": 0.4000000059604645,
+                "zeroTimerCalls": 8939,
+                "callsAfterWrites": 12000,
+                "callsAfterProbeWrite": 12000,
+                "repeatElementRequests": 0,
+                "threw": 0
+              },
+              "drawingText": {
+                "calls": 800,
+                "totalMs": 871.3999998494983,
+                "meanMs": 1.0892499998118728,
+                "p50Ms": 0.20000000298023224,
+                "p95Ms": 2.3000000044703484,
+                "maxMs": 3.3000000044703484,
+                "zeroTimerCalls": 168,
+                "callsAfterWrites": 800,
+                "callsAfterProbeWrite": 800,
+                "repeatElementRequests": 400,
+                "threw": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "run": "normal-b",
+      "recordedAt": "2026-10-21T17:13:55.467Z",
+      "mode": "normal",
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3516.4127909999997,
+          "metrics": {
+            "ScriptDuration": 0.736098,
+            "LayoutDuration": 0.53184,
+            "RecalcStyleDuration": 1.897444,
+            "TaskDuration": 3.473616,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14015
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4063.639625,
+          "metrics": {
+            "ScriptDuration": 0.655136,
+            "LayoutDuration": 0.530795,
+            "RecalcStyleDuration": 2.3355989999999998,
+            "TaskDuration": 4.029992999999999,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          }
+        }
+      ]
+    }
+  ],
+  "diagnosticSourceSha256": {
+    "apps/banto-scada/scripts/profile-editor-load.mjs": "8135ee31ecf03ed55decbcbfa71623b4462c74ac7af408e22c5119b6623440d1",
+    "apps/banto-scada/scripts/getbbox-diagnostics.mjs": "3e3709fad8aee0796fb4ef3b21d3176ce5991c6e408086d037909d411e584788"
+  },
+  "buildSha256": {
+    "assets/browser-ZwEudKjr.js": "5d59595342ac1a3bd6535037105be63cea2720ffd947c73323a89bb2fbc2226a",
+    "assets/index-DEk1NL4N.css": "de9938456d8bb4b307a8e798da842f96511478944b81ee92921cf1fe5e48572f",
+    "assets/index-z42DYoHf.js": "11b895e329e31cf9da4eddca68dfc68e18730cbcde21b1748e5cd68462785272",
+    "index.html": "df2b46f8a4184b913dd45086167baf0773f19a4c83ba69d9a58a5501ae7d2534"
+  },
+  "checks": {
+    "aggregationUnitTestsPassed": 5,
+    "realBrowserNativeReturnOptionsErrorAndCleanupContract": "passed on Chrome156",
+    "scriptSyntax": "passed",
+    "productionBuild": "passed; same index-z42DYoHf.js as baseline app"
+  },
+  "limitations": [
+    "Two count/timing runs and one trace run; no statistical significance test.",
+    "performance.now is quantized; zero timer samples do not mean no work.",
+    "Wrappers, MutationObserver, signatures and tracing perturb timings/memory. Diagnostic elapsed/heap are not normal latency/leak evidence.",
+    "Mutation records are not by themselves forced-layout proof. Attribution requires complete Layout/Style X events fully enclosed by marks on the same pid/tid.",
+    "A write to the measured element was observed, but exact mutation-to-layout dependency was not proven.",
+    "Repeated same-element signatures ignore inherited font/transform revisions and do not establish cache safety. Cross-element metric-reuse opportunity and offscreen counts are not measured.",
+    "Other layout/style callers outside getBBox and the initial-load extra 605 calls were not fully attributed.",
+    "Mac/Chrome156 only; different from I5h Linux/Chromium154; Windows, real Hub and long operation untested."
+  ],
+  "recommendation": "Evaluate staged write-then-read batching while retaining existing measurement context; no optimization implemented. User decides whether to start a design/prototype.",
+  "capturedRunnerSha256": "dc9598f581755a2c7de4a751bca5f5f363611909ad44d5ade149b148dc4fd385",
+  "sourceNote": "The final runner adds CDP/trace coverage assertions after capture and explicit disposal after report output; these are outside captured timing intervals. capturedRunnerSha256 identifies the timed version. Instrumentation helper and production app are unchanged."
+}

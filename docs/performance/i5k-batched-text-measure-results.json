@@ -1,0 +1,1504 @@
+{
+  "status": "not adopted: no clear 1000-placement latency reduction; experimental code remains local at e80f4a2; docs-only records PR excludes code",
+  "recordedDateJst": "2026-10-22",
+  "baselineCommit": "9a2119a",
+  "runtimeBaselineCommit": "473b0f8",
+  "branch": "perf/i5k-batched-text-measure",
+  "environment": {
+    "chromium": "156.0.8078.4",
+    "node": "v24.16.0",
+    "platform": "darwin",
+    "kernel": "27.0.0",
+    "cpu": "Apple M1"
+  },
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "sourcesAndBuilds": {
+    "apps/banto-scada/src/lib/MultilineTextPrimitive.svelte": "b4c1c05c4c75a0b6f9c77271a15bacb58bc097831ca5c753b982fc6cb87b7a4e",
+    "apps/banto-scada/src/lib/multiline-text-layout.ts": "8e5342747738fa4bd2a5338f0c13803b85655dd359ed83d8b11439a49c9d25a2",
+    "apps/banto-scada/src/lib/static-text-wrap.ts": "f468b29d174b8a37eff64542158e7aeaf065a07350202204e8cba586157532af",
+    "apps/banto-scada/src/lib/svg-text-measure.ts": "5586f5c2dfeef3b7253dbb756403e409d68e7c382a3244912d451c86e9cb59b6",
+    "apps/banto-scada/src/lib/text-measure-steps.ts": "b68b2d273aba78a5548643506f85fa047eb6c4cae5f93902a391f10bb88b1958",
+    "beforeBuild": {
+      "assets/browser-ZwEudKjr.js": "5d59595342ac1a3bd6535037105be63cea2720ffd947c73323a89bb2fbc2226a",
+      "assets/index-z42DYoHf.js": "11b895e329e31cf9da4eddca68dfc68e18730cbcde21b1748e5cd68462785272"
+    },
+    "afterBuild": {
+      "assets/browser-ZwEudKjr.js": "5d59595342ac1a3bd6535037105be63cea2720ffd947c73323a89bb2fbc2226a",
+      "assets/index-CXKKRb2v.js": "988e9394638d0a2de5433a7e2f1ab9c12b9fda0270fe59b6918ada5b6f83cf56"
+    },
+    "apps/banto-scada/scripts/profile-editor-load.mjs": "8135ee31ecf03ed55decbcbfa71623b4462c74ac7af408e22c5119b6623440d1",
+    "apps/banto-scada/scripts/getbbox-diagnostics.mjs": "3e3709fad8aee0796fb4ef3b21d3176ce5991c6e408086d037909d411e584788"
+  },
+  "method": "Sequential production preview runs on the same Mac and Chrome. Normal latency: 100/500 once per variant, 1000 four times per variant in before/after/after/before/after/before/before/after order. Separate traced diagnostics once per size/variant; trace timings are not normal latency. Native getBBox return values and existing measurement location/font/SVG transforms retained. Only independent paragraphs/lines within one synchronous fitStaticLines call are advanced in rounds. Existing per-call cache retained; no new cache, queue, async measuring or visibility omission. Projection/asset/URL/host/pageerror assertions after timing. All 36 imports checked. No statistical significance claimed. I5h Linux Chromium154 and prior I5i Chromium148 are not controls.",
+  "fixtures": [
+    {
+      "placements": 100,
+      "packageSha256": "d613507391d30fa27b66cd264bee30dbc19916ff534c2e204db11d27d9a53821",
+      "textCount": 40,
+      "textProjectionSha256": "946a85ef2e9799afcfb2a8c2a4f706eac1be4eaa6088149ac3e370e1df06e56d",
+      "allProjectionsEqual": true,
+      "originals": [
+        {
+          "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+          "bytes": 33491
+        },
+        {
+          "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+          "bytes": 33492
+        },
+        {
+          "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+          "bytes": 33523
+        },
+        {
+          "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+          "bytes": 33392
+        }
+      ],
+      "originalsEqualAcrossAllRuns": true,
+      "oldUrlsRevoked": true,
+      "temporaryHostsAfterImport": 0,
+      "pageErrors": 0
+    },
+    {
+      "placements": 500,
+      "packageSha256": "39adae5b2d229eca3c2940ad6126520c72d87e3ad1c8f07249b10b5977e98b60",
+      "textCount": 200,
+      "textProjectionSha256": "3c893ed4cbc92b449712c9e2e981800f29e8a4709ba9f1fdfcc2719d000b6b96",
+      "allProjectionsEqual": true,
+      "originals": [
+        {
+          "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+          "bytes": 33491
+        },
+        {
+          "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+          "bytes": 33492
+        },
+        {
+          "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+          "bytes": 33523
+        },
+        {
+          "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+          "bytes": 33392
+        }
+      ],
+      "originalsEqualAcrossAllRuns": true,
+      "oldUrlsRevoked": true,
+      "temporaryHostsAfterImport": 0,
+      "pageErrors": 0
+    },
+    {
+      "placements": 1000,
+      "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+      "textCount": 400,
+      "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea",
+      "allProjectionsEqual": true,
+      "originals": [
+        {
+          "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+          "bytes": 33491
+        },
+        {
+          "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+          "bytes": 33492
+        },
+        {
+          "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+          "bytes": 33523
+        },
+        {
+          "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+          "bytes": 33392
+        }
+      ],
+      "originalsEqualAcrossAllRuns": true,
+      "oldUrlsRevoked": true,
+      "temporaryHostsAfterImport": 0,
+      "pageErrors": 0
+    }
+  ],
+  "normalSummary": [
+    {
+      "placements": 100,
+      "phase": "cold",
+      "before": {
+        "runs": 1,
+        "meanMs": 371.00070800000003,
+        "minMs": 371.00070800000003,
+        "maxMs": 371.00070800000003
+      },
+      "after": {
+        "runs": 1,
+        "meanMs": 291.18883299999993,
+        "minMs": 291.18883299999993,
+        "maxMs": 291.18883299999993
+      },
+      "deltaPercent": -21.51259371720663
+    },
+    {
+      "placements": 100,
+      "phase": "reload",
+      "before": {
+        "runs": 1,
+        "meanMs": 320.8656249999999,
+        "minMs": 320.8656249999999,
+        "maxMs": 320.8656249999999
+      },
+      "after": {
+        "runs": 1,
+        "meanMs": 238.309708,
+        "minMs": 238.309708,
+        "maxMs": 238.309708
+      },
+      "deltaPercent": -25.729124769909507
+    },
+    {
+      "placements": 500,
+      "phase": "cold",
+      "before": {
+        "runs": 1,
+        "meanMs": 1440.8993750000002,
+        "minMs": 1440.8993750000002,
+        "maxMs": 1440.8993750000002
+      },
+      "after": {
+        "runs": 1,
+        "meanMs": 1378.9129999999998,
+        "minMs": 1378.9129999999998,
+        "maxMs": 1378.9129999999998
+      },
+      "deltaPercent": -4.30192254056605
+    },
+    {
+      "placements": 500,
+      "phase": "reload",
+      "before": {
+        "runs": 1,
+        "meanMs": 1641.595875,
+        "minMs": 1641.595875,
+        "maxMs": 1641.595875
+      },
+      "after": {
+        "runs": 1,
+        "meanMs": 1461.8974999999996,
+        "minMs": 1461.8974999999996,
+        "maxMs": 1461.8974999999996
+      },
+      "deltaPercent": -10.946565944556873
+    },
+    {
+      "placements": 1000,
+      "phase": "cold",
+      "before": {
+        "runs": 4,
+        "meanMs": 3799.17062525,
+        "minMs": 3616.5034579999997,
+        "maxMs": 3984.1737500000004
+      },
+      "after": {
+        "runs": 4,
+        "meanMs": 3758.59934375,
+        "minMs": 3636.3662499999996,
+        "maxMs": 3866.601334
+      },
+      "deltaPercent": -1.0678983784080498
+    },
+    {
+      "placements": 1000,
+      "phase": "reload",
+      "before": {
+        "runs": 4,
+        "meanMs": 4444.5392919999995,
+        "minMs": 4319.94425,
+        "maxMs": 4620.982084
+      },
+      "after": {
+        "runs": 4,
+        "meanMs": 4455.123239749999,
+        "minMs": 4341.222708999999,
+        "maxMs": 4575.729707999999
+      },
+      "deltaPercent": 0.23813374243422114
+    }
+  ],
+  "normalRuns": [
+    {
+      "label": "normal-before-100",
+      "placements": 100,
+      "variant": "before",
+      "recordedAt": "2026-10-21T17:44:07.712Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 371.00070800000003,
+          "metrics": {
+            "ScriptDuration": 0.099134,
+            "LayoutDuration": 0.060004,
+            "RecalcStyleDuration": 0.056687,
+            "TaskDuration": 0.327158,
+            "LayoutCount": 968,
+            "RecalcStyleCount": 973
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 320.8656249999999,
+          "metrics": {
+            "ScriptDuration": 0.091895,
+            "LayoutDuration": 0.037928,
+            "RecalcStyleDuration": 0.055519,
+            "TaskDuration": 0.268672,
+            "LayoutCount": 966,
+            "RecalcStyleCount": 975
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-after-100",
+      "placements": 100,
+      "variant": "after",
+      "recordedAt": "2026-10-21T17:44:10.064Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 291.18883299999993,
+          "metrics": {
+            "ScriptDuration": 0.084066,
+            "LayoutDuration": 0.034374,
+            "RecalcStyleDuration": 0.03655,
+            "TaskDuration": 0.256311,
+            "LayoutCount": 648,
+            "RecalcStyleCount": 652
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 238.309708,
+          "metrics": {
+            "ScriptDuration": 0.073073,
+            "LayoutDuration": 0.026881999999999996,
+            "RecalcStyleDuration": 0.036701,
+            "TaskDuration": 0.205127,
+            "LayoutCount": 646,
+            "RecalcStyleCount": 653
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-before-500",
+      "placements": 500,
+      "variant": "before",
+      "recordedAt": "2026-10-21T17:44:15.121Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 1440.8993750000002,
+          "metrics": {
+            "ScriptDuration": 0.393801,
+            "LayoutDuration": 0.250936,
+            "RecalcStyleDuration": 0.575054,
+            "TaskDuration": 1.388346,
+            "LayoutCount": 7008,
+            "RecalcStyleCount": 7013
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 1641.595875,
+          "metrics": {
+            "ScriptDuration": 0.33429099999999995,
+            "LayoutDuration": 0.245469,
+            "RecalcStyleDuration": 0.717801,
+            "TaskDuration": 1.600565,
+            "LayoutCount": 7005,
+            "RecalcStyleCount": 7011
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-after-500",
+      "placements": 500,
+      "variant": "after",
+      "recordedAt": "2026-10-21T17:44:20.041Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 1378.9129999999998,
+          "metrics": {
+            "ScriptDuration": 0.384271,
+            "LayoutDuration": 0.238305,
+            "RecalcStyleDuration": 0.534177,
+            "TaskDuration": 1.32433,
+            "LayoutCount": 5408,
+            "RecalcStyleCount": 5413
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 1461.8974999999996,
+          "metrics": {
+            "ScriptDuration": 0.31039100000000003,
+            "LayoutDuration": 0.204475,
+            "RecalcStyleDuration": 0.6400790000000001,
+            "TaskDuration": 1.4305070000000002,
+            "LayoutCount": 5405,
+            "RecalcStyleCount": 5411
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-before-1000-1",
+      "placements": 1000,
+      "variant": "before",
+      "recordedAt": "2026-10-21T17:44:30.586Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3783.473959,
+          "metrics": {
+            "ScriptDuration": 0.767518,
+            "LayoutDuration": 0.602692,
+            "RecalcStyleDuration": 2.057231,
+            "TaskDuration": 3.741632,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14014
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4620.982084,
+          "metrics": {
+            "ScriptDuration": 0.7002229999999999,
+            "LayoutDuration": 0.619629,
+            "RecalcStyleDuration": 2.673563,
+            "TaskDuration": 4.579263000000001,
+            "LayoutCount": 14007,
+            "RecalcStyleCount": 14008
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-after-1000-1",
+      "placements": 1000,
+      "variant": "after",
+      "recordedAt": "2026-10-21T17:44:41.082Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3828.336625,
+          "metrics": {
+            "ScriptDuration": 0.776566,
+            "LayoutDuration": 0.591521,
+            "RecalcStyleDuration": 2.079607,
+            "TaskDuration": 3.7820549999999997,
+            "LayoutCount": 10808,
+            "RecalcStyleCount": 10814
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4504.458542,
+          "metrics": {
+            "ScriptDuration": 0.712899,
+            "LayoutDuration": 0.5769369999999999,
+            "RecalcStyleDuration": 2.602083,
+            "TaskDuration": 4.47491,
+            "LayoutCount": 10806,
+            "RecalcStyleCount": 10807
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-after-1000-2",
+      "placements": 1000,
+      "variant": "after",
+      "recordedAt": "2026-10-21T17:44:51.610Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3866.601334,
+          "metrics": {
+            "ScriptDuration": 0.78383,
+            "LayoutDuration": 0.590607,
+            "RecalcStyleDuration": 2.111178,
+            "TaskDuration": 3.8197219999999996,
+            "LayoutCount": 10808,
+            "RecalcStyleCount": 10814
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4575.729707999999,
+          "metrics": {
+            "ScriptDuration": 0.703354,
+            "LayoutDuration": 0.592162,
+            "RecalcStyleDuration": 2.616378,
+            "TaskDuration": 4.536065,
+            "LayoutCount": 10806,
+            "RecalcStyleCount": 10807
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-before-1000-2",
+      "placements": 1000,
+      "variant": "before",
+      "recordedAt": "2026-10-21T17:45:02.051Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3984.1737500000004,
+          "metrics": {
+            "ScriptDuration": 0.828552,
+            "LayoutDuration": 0.626306,
+            "RecalcStyleDuration": 2.169349,
+            "TaskDuration": 3.945956,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14013
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4327.930625,
+          "metrics": {
+            "ScriptDuration": 0.6725369999999999,
+            "LayoutDuration": 0.5611029999999999,
+            "RecalcStyleDuration": 2.5408079999999997,
+            "TaskDuration": 4.298013999999999,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14009
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-after-1000-3",
+      "placements": 1000,
+      "variant": "after",
+      "recordedAt": "2026-10-21T17:45:12.169Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3636.3662499999996,
+          "metrics": {
+            "ScriptDuration": 0.759764,
+            "LayoutDuration": 0.560151,
+            "RecalcStyleDuration": 1.970694,
+            "TaskDuration": 3.592855,
+            "LayoutCount": 10808,
+            "RecalcStyleCount": 10813
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4399.081999999999,
+          "metrics": {
+            "ScriptDuration": 0.7095509999999999,
+            "LayoutDuration": 0.577,
+            "RecalcStyleDuration": 2.5397610000000004,
+            "TaskDuration": 4.367243,
+            "LayoutCount": 10807,
+            "RecalcStyleCount": 10809
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-before-1000-3",
+      "placements": 1000,
+      "variant": "before",
+      "recordedAt": "2026-10-21T17:45:22.385Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3616.5034579999997,
+          "metrics": {
+            "ScriptDuration": 0.737191,
+            "LayoutDuration": 0.562851,
+            "RecalcStyleDuration": 1.964322,
+            "TaskDuration": 3.5667459999999997,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14015
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4509.300208999999,
+          "metrics": {
+            "ScriptDuration": 0.6682629999999999,
+            "LayoutDuration": 0.555313,
+            "RecalcStyleDuration": 2.596452,
+            "TaskDuration": 4.473093,
+            "LayoutCount": 14007,
+            "RecalcStyleCount": 14008
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-before-1000-4",
+      "placements": 1000,
+      "variant": "before",
+      "recordedAt": "2026-10-21T17:45:32.586Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3812.5313340000002,
+          "metrics": {
+            "ScriptDuration": 0.758575,
+            "LayoutDuration": 0.593767,
+            "RecalcStyleDuration": 2.098391,
+            "TaskDuration": 3.7653659999999998,
+            "LayoutCount": 14008,
+            "RecalcStyleCount": 14015
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4319.94425,
+          "metrics": {
+            "ScriptDuration": 0.6542319999999999,
+            "LayoutDuration": 0.5528700000000001,
+            "RecalcStyleDuration": 2.5222240000000005,
+            "TaskDuration": 4.283151,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14011
+          }
+        }
+      ]
+    },
+    {
+      "label": "normal-after-1000-4",
+      "placements": 1000,
+      "variant": "after",
+      "recordedAt": "2026-10-21T17:45:42.706Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "elapsedMs": 3703.0931660000006,
+          "metrics": {
+            "ScriptDuration": 0.781804,
+            "LayoutDuration": 0.570241,
+            "RecalcStyleDuration": 2.002845,
+            "TaskDuration": 3.658427,
+            "LayoutCount": 10808,
+            "RecalcStyleCount": 10814
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 4341.222708999999,
+          "metrics": {
+            "ScriptDuration": 0.6965899999999999,
+            "LayoutDuration": 0.561972,
+            "RecalcStyleDuration": 2.5241919999999998,
+            "TaskDuration": 4.3214690000000004,
+            "LayoutCount": 10807,
+            "RecalcStyleCount": 10811
+          }
+        }
+      ]
+    }
+  ],
+  "traceRuns": [
+    {
+      "label": "trace-before-100",
+      "placements": 100,
+      "variant": "before",
+      "recordedAt": "2026-10-21T17:45:45.293Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "getBBoxCalls": 905,
+          "diagnosticGetBBoxTotalMs": 46.40000005811453,
+          "diagnosticGetBBoxMeanMs": 0.05127071829625915,
+          "buckets": {
+            "drawingText": {
+              "calls": 185,
+              "diagnosticMeanMs": 0.1081081085108422
+            },
+            "isolatedText": {
+              "calls": 720,
+              "diagnosticMeanMs": 0.036666666643901
+            }
+          },
+          "trace": {
+            "file": "cold.layout-trace.json",
+            "sha256": "5e73dae5b32ef55c559f608bec85c7722102b549bf0f1fa6a077347bbe5450bb",
+            "bytes": 2604387,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 968,
+              "style": 972,
+              "layoutMs": 38.691,
+              "styleMs": 33.27
+            },
+            "withinGetBBox": {
+              "calls": 905,
+              "callsWithLayout": 843,
+              "callsWithStyle": 842,
+              "callsWithLayoutAfterWrites": 843,
+              "callsWithLayoutAfterProbeWrite": 843,
+              "callsWithStyleAfterWrites": 842,
+              "layoutEvents": 843,
+              "styleEvents": 842,
+              "layoutMs": 27.673999999999985,
+              "styleMs": 15.434000000000042
+            },
+            "buckets": {
+              "drawingText": {
+                "calls": 185,
+                "callsWithLayout": 123,
+                "callsWithStyle": 122,
+                "callsWithLayoutAfterWrites": 123,
+                "callsWithLayoutAfterProbeWrite": 123,
+                "callsWithStyleAfterWrites": 122,
+                "layoutEvents": 123,
+                "styleEvents": 122,
+                "layoutMs": 7.901000000000001,
+                "styleMs": 11.419
+              },
+              "isolatedText": {
+                "calls": 720,
+                "callsWithLayout": 720,
+                "callsWithStyle": 720,
+                "callsWithLayoutAfterWrites": 720,
+                "callsWithLayoutAfterProbeWrite": 720,
+                "callsWithStyleAfterWrites": 720,
+                "layoutEvents": 720,
+                "styleEvents": 720,
+                "layoutMs": 19.77299999999998,
+                "styleMs": 4.014999999999976
+              }
+            }
+          },
+          "cdpLayoutCount": 968,
+          "cdpStyleCount": 972
+        },
+        {
+          "phase": "reload",
+          "getBBoxCalls": 840,
+          "diagnosticGetBBoxTotalMs": 47.09999995678663,
+          "diagnosticGetBBoxMeanMs": 0.05607142851998408,
+          "buckets": {
+            "isolatedText": {
+              "calls": 720,
+              "diagnosticMeanMs": 0.03916666662941377
+            },
+            "drawingText": {
+              "calls": 120,
+              "diagnosticMeanMs": 0.15749999986340601
+            }
+          },
+          "trace": {
+            "file": "reload.layout-trace.json",
+            "sha256": "f39e0e2d03bfa292e2ec424ef5daf7e8c5289a0b2227d95005e531d056f4dc09",
+            "bytes": 2213517,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 965,
+              "style": 968,
+              "layoutMs": 39.604,
+              "styleMs": 39.878
+            },
+            "withinGetBBox": {
+              "calls": 840,
+              "callsWithLayout": 840,
+              "callsWithStyle": 840,
+              "callsWithLayoutAfterWrites": 840,
+              "callsWithLayoutAfterProbeWrite": 840,
+              "callsWithStyleAfterWrites": 840,
+              "layoutEvents": 840,
+              "styleEvents": 840,
+              "layoutMs": 26.511999999999976,
+              "styleMs": 16.94100000000005
+            },
+            "buckets": {
+              "isolatedText": {
+                "calls": 720,
+                "callsWithLayout": 720,
+                "callsWithStyle": 720,
+                "callsWithLayoutAfterWrites": 720,
+                "callsWithLayoutAfterProbeWrite": 720,
+                "callsWithStyleAfterWrites": 720,
+                "layoutEvents": 720,
+                "styleEvents": 720,
+                "layoutMs": 20.220999999999965,
+                "styleMs": 4.1309999999999665
+              },
+              "drawingText": {
+                "calls": 120,
+                "callsWithLayout": 120,
+                "callsWithStyle": 120,
+                "callsWithLayoutAfterWrites": 120,
+                "callsWithLayoutAfterProbeWrite": 120,
+                "callsWithStyleAfterWrites": 120,
+                "layoutEvents": 120,
+                "styleEvents": 120,
+                "layoutMs": 6.2909999999999995,
+                "styleMs": 12.810000000000004
+              }
+            }
+          },
+          "cdpLayoutCount": 965,
+          "cdpStyleCount": 968
+        }
+      ]
+    },
+    {
+      "label": "trace-after-100",
+      "placements": 100,
+      "variant": "after",
+      "recordedAt": "2026-10-21T17:45:47.823Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "getBBoxCalls": 905,
+          "diagnosticGetBBoxTotalMs": 46.19999998807907,
+          "diagnosticGetBBoxMeanMs": 0.05104972374373378,
+          "buckets": {
+            "drawingText": {
+              "calls": 185,
+              "diagnosticMeanMs": 0.11297297292464488
+            },
+            "isolatedText": {
+              "calls": 720,
+              "diagnosticMeanMs": 0.035138888884749676
+            }
+          },
+          "trace": {
+            "file": "cold.layout-trace.json",
+            "sha256": "c6bb8aedf982820addbc355f6dfd23bc1697b93d30fac24376a852ba537a9df0",
+            "bytes": 2117607,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 648,
+              "style": 652,
+              "layoutMs": 38.081,
+              "styleMs": 34.55
+            },
+            "withinGetBBox": {
+              "calls": 905,
+              "callsWithLayout": 523,
+              "callsWithStyle": 522,
+              "callsWithLayoutAfterWrites": 523,
+              "callsWithLayoutAfterProbeWrite": 523,
+              "callsWithStyleAfterWrites": 522,
+              "layoutEvents": 523,
+              "styleEvents": 522,
+              "layoutMs": 27.183999999999987,
+              "styleMs": 16.579000000000004
+            },
+            "buckets": {
+              "drawingText": {
+                "calls": 185,
+                "callsWithLayout": 123,
+                "callsWithStyle": 122,
+                "callsWithLayoutAfterWrites": 123,
+                "callsWithLayoutAfterProbeWrite": 123,
+                "callsWithStyleAfterWrites": 122,
+                "layoutEvents": 123,
+                "styleEvents": 122,
+                "layoutMs": 8.176999999999998,
+                "styleMs": 12.660999999999998
+              },
+              "isolatedText": {
+                "calls": 720,
+                "callsWithLayout": 400,
+                "callsWithStyle": 400,
+                "callsWithLayoutAfterWrites": 400,
+                "callsWithLayoutAfterProbeWrite": 400,
+                "callsWithStyleAfterWrites": 400,
+                "layoutEvents": 400,
+                "styleEvents": 400,
+                "layoutMs": 19.00699999999998,
+                "styleMs": 3.9179999999999957
+              }
+            }
+          },
+          "cdpLayoutCount": 648,
+          "cdpStyleCount": 652
+        },
+        {
+          "phase": "reload",
+          "getBBoxCalls": 840,
+          "diagnosticGetBBoxTotalMs": 40.89999996870756,
+          "diagnosticGetBBoxMeanMs": 0.048690476153223285,
+          "buckets": {
+            "isolatedText": {
+              "calls": 720,
+              "diagnosticMeanMs": 0.030833333316776488
+            },
+            "drawingText": {
+              "calls": 120,
+              "diagnosticMeanMs": 0.1558333331719041
+            }
+          },
+          "trace": {
+            "file": "reload.layout-trace.json",
+            "sha256": "fdf7b125b6f1bd5aa8e1bd597f23c045c69f14e2db0f574f2b074ad465529cdb",
+            "bytes": 1904735,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 645,
+              "style": 648,
+              "layoutMs": 35.465,
+              "styleMs": 37.372
+            },
+            "withinGetBBox": {
+              "calls": 840,
+              "callsWithLayout": 520,
+              "callsWithStyle": 520,
+              "callsWithLayoutAfterWrites": 520,
+              "callsWithLayoutAfterProbeWrite": 520,
+              "callsWithStyleAfterWrites": 520,
+              "layoutEvents": 520,
+              "styleEvents": 520,
+              "layoutMs": 23.00199999999995,
+              "styleMs": 16.493
+            },
+            "buckets": {
+              "isolatedText": {
+                "calls": 720,
+                "callsWithLayout": 400,
+                "callsWithStyle": 400,
+                "callsWithLayoutAfterWrites": 400,
+                "callsWithLayoutAfterProbeWrite": 400,
+                "callsWithStyleAfterWrites": 400,
+                "layoutEvents": 400,
+                "styleEvents": 400,
+                "layoutMs": 17.530999999999974,
+                "styleMs": 3.8200000000000007
+              },
+              "drawingText": {
+                "calls": 120,
+                "callsWithLayout": 120,
+                "callsWithStyle": 120,
+                "callsWithLayoutAfterWrites": 120,
+                "callsWithLayoutAfterProbeWrite": 120,
+                "callsWithStyleAfterWrites": 120,
+                "layoutEvents": 120,
+                "styleEvents": 120,
+                "layoutMs": 5.471000000000002,
+                "styleMs": 12.673000000000004
+              }
+            }
+          },
+          "cdpLayoutCount": 645,
+          "cdpStyleCount": 648
+        }
+      ]
+    },
+    {
+      "label": "trace-before-500",
+      "placements": 500,
+      "variant": "before",
+      "recordedAt": "2026-10-21T17:45:54.809Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "getBBoxCalls": 6705,
+          "diagnosticGetBBoxTotalMs": 470.59999991208315,
+          "diagnosticGetBBoxMeanMs": 0.0701864280256649,
+          "buckets": {
+            "drawingText": {
+              "calls": 705,
+              "diagnosticMeanMs": 0.33049645393241384
+            },
+            "isolatedText": {
+              "calls": 6000,
+              "diagnosticMeanMs": 0.0395999999816219
+            }
+          },
+          "trace": {
+            "file": "cold.layout-trace.json",
+            "sha256": "74d9c528b2bcc04e193118ca7d172c69e211dde583ebc9e0054a92e16ebd3f45",
+            "bytes": 13024966,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 7009,
+              "style": 7015,
+              "layoutMs": 320.059,
+              "styleMs": 520.139
+            },
+            "withinGetBBox": {
+              "calls": 6705,
+              "callsWithLayout": 6403,
+              "callsWithStyle": 6402,
+              "callsWithLayoutAfterWrites": 6403,
+              "callsWithLayoutAfterProbeWrite": 6403,
+              "callsWithStyleAfterWrites": 6402,
+              "layoutEvents": 6403,
+              "styleEvents": 6402,
+              "layoutMs": 233.3949999999997,
+              "styleMs": 191.71699999999856
+            },
+            "buckets": {
+              "drawingText": {
+                "calls": 705,
+                "callsWithLayout": 403,
+                "callsWithStyle": 402,
+                "callsWithLayoutAfterWrites": 403,
+                "callsWithLayoutAfterProbeWrite": 403,
+                "callsWithStyleAfterWrites": 402,
+                "layoutEvents": 403,
+                "styleEvents": 402,
+                "layoutMs": 60.872,
+                "styleMs": 161.66199999999998
+              },
+              "isolatedText": {
+                "calls": 6000,
+                "callsWithLayout": 6000,
+                "callsWithStyle": 6000,
+                "callsWithLayoutAfterWrites": 6000,
+                "callsWithLayoutAfterProbeWrite": 6000,
+                "callsWithStyleAfterWrites": 6000,
+                "layoutEvents": 6000,
+                "styleEvents": 6000,
+                "layoutMs": 172.523,
+                "styleMs": 30.054999999999072
+              }
+            }
+          },
+          "cdpLayoutCount": 7009,
+          "cdpStyleCount": 7015
+        },
+        {
+          "phase": "reload",
+          "getBBoxCalls": 6400,
+          "diagnosticGetBBoxTotalMs": 531.4000000357628,
+          "diagnosticGetBBoxMeanMs": 0.08303125000558793,
+          "buckets": {
+            "isolatedText": {
+              "calls": 6000,
+              "diagnosticMeanMs": 0.044333333342025674
+            },
+            "drawingText": {
+              "calls": 400,
+              "diagnosticMeanMs": 0.6634999999590218
+            }
+          },
+          "trace": {
+            "file": "reload.layout-trace.json",
+            "sha256": "7618dcabe8b39a61ed05fec92e558641cbcbb34b04436557e2dd0e3500d94300",
+            "bytes": 12522064,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 7007,
+              "style": 7012,
+              "layoutMs": 364.838,
+              "styleMs": 590.971
+            },
+            "withinGetBBox": {
+              "calls": 6400,
+              "callsWithLayout": 6400,
+              "callsWithStyle": 6400,
+              "callsWithLayoutAfterWrites": 6400,
+              "callsWithLayoutAfterProbeWrite": 6400,
+              "callsWithStyleAfterWrites": 6400,
+              "layoutEvents": 6400,
+              "styleEvents": 6400,
+              "layoutMs": 261.73299999999875,
+              "styleMs": 217.15299999999684
+            },
+            "buckets": {
+              "isolatedText": {
+                "calls": 6000,
+                "callsWithLayout": 6000,
+                "callsWithStyle": 6000,
+                "callsWithLayoutAfterWrites": 6000,
+                "callsWithLayoutAfterProbeWrite": 6000,
+                "callsWithStyleAfterWrites": 6000,
+                "layoutEvents": 6000,
+                "styleEvents": 6000,
+                "layoutMs": 194.6240000000003,
+                "styleMs": 29.948999999999383
+              },
+              "drawingText": {
+                "calls": 400,
+                "callsWithLayout": 400,
+                "callsWithStyle": 400,
+                "callsWithLayoutAfterWrites": 400,
+                "callsWithLayoutAfterProbeWrite": 400,
+                "callsWithStyleAfterWrites": 400,
+                "layoutEvents": 400,
+                "styleEvents": 400,
+                "layoutMs": 67.10900000000001,
+                "styleMs": 187.20399999999995
+              }
+            }
+          },
+          "cdpLayoutCount": 7007,
+          "cdpStyleCount": 7012
+        }
+      ]
+    },
+    {
+      "label": "trace-after-500",
+      "placements": 500,
+      "variant": "after",
+      "recordedAt": "2026-10-21T17:46:02.712Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "getBBoxCalls": 6705,
+          "diagnosticGetBBoxTotalMs": 566.7000001370907,
+          "diagnosticGetBBoxMeanMs": 0.0845190156804013,
+          "buckets": {
+            "drawingText": {
+              "calls": 705,
+              "diagnosticMeanMs": 0.4097872339770304
+            },
+            "isolatedText": {
+              "calls": 6000,
+              "diagnosticMeanMs": 0.04630000003054738
+            }
+          },
+          "trace": {
+            "file": "cold.layout-trace.json",
+            "sha256": "818712695019ab633fb18beb7cd452c72bcf0f1d5305f403cc2529b77f14717b",
+            "bytes": 11425229,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 5409,
+              "style": 5415,
+              "layoutMs": 389,
+              "styleMs": 612.64
+            },
+            "withinGetBBox": {
+              "calls": 6705,
+              "callsWithLayout": 4803,
+              "callsWithStyle": 4802,
+              "callsWithLayoutAfterWrites": 4803,
+              "callsWithLayoutAfterProbeWrite": 4803,
+              "callsWithStyleAfterWrites": 4802,
+              "layoutEvents": 4803,
+              "styleEvents": 4802,
+              "layoutMs": 280.76199999999966,
+              "styleMs": 235.14699999999215
+            },
+            "buckets": {
+              "drawingText": {
+                "calls": 705,
+                "callsWithLayout": 403,
+                "callsWithStyle": 402,
+                "callsWithLayoutAfterWrites": 403,
+                "callsWithLayoutAfterProbeWrite": 403,
+                "callsWithStyleAfterWrites": 402,
+                "layoutEvents": 403,
+                "styleEvents": 402,
+                "layoutMs": 78.23300000000009,
+                "styleMs": 198.48299999999998
+              },
+              "isolatedText": {
+                "calls": 6000,
+                "callsWithLayout": 4400,
+                "callsWithStyle": 4400,
+                "callsWithLayoutAfterWrites": 4400,
+                "callsWithLayoutAfterProbeWrite": 4400,
+                "callsWithStyleAfterWrites": 4400,
+                "layoutEvents": 4400,
+                "styleEvents": 4400,
+                "layoutMs": 202.52900000000102,
+                "styleMs": 36.66400000000015
+              }
+            }
+          },
+          "cdpLayoutCount": 5409,
+          "cdpStyleCount": 5415
+        },
+        {
+          "phase": "reload",
+          "getBBoxCalls": 6400,
+          "diagnosticGetBBoxTotalMs": 561.7999998033047,
+          "diagnosticGetBBoxMeanMs": 0.08778124996926635,
+          "buckets": {
+            "isolatedText": {
+              "calls": 6000,
+              "diagnosticMeanMs": 0.04648333330824971
+            },
+            "drawingText": {
+              "calls": 400,
+              "diagnosticMeanMs": 0.707249999884516
+            }
+          },
+          "trace": {
+            "file": "reload.layout-trace.json",
+            "sha256": "03aaada06e0cb43fe578c8c6302c9afb652de4f376cb7fc5ccb285b923fa6cf8",
+            "bytes": 11237694,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 5407,
+              "style": 5412,
+              "layoutMs": 404.973,
+              "styleMs": 637.924
+            },
+            "withinGetBBox": {
+              "calls": 6400,
+              "callsWithLayout": 4800,
+              "callsWithStyle": 4800,
+              "callsWithLayoutAfterWrites": 4800,
+              "callsWithLayoutAfterProbeWrite": 4800,
+              "callsWithStyleAfterWrites": 4800,
+              "layoutEvents": 4800,
+              "styleEvents": 4800,
+              "layoutMs": 287.5190000000004,
+              "styleMs": 232.2879999999939
+            },
+            "buckets": {
+              "isolatedText": {
+                "calls": 6000,
+                "callsWithLayout": 4400,
+                "callsWithStyle": 4400,
+                "callsWithLayoutAfterWrites": 4400,
+                "callsWithLayoutAfterProbeWrite": 4400,
+                "callsWithStyleAfterWrites": 4400,
+                "layoutEvents": 4400,
+                "styleEvents": 4400,
+                "layoutMs": 214.18300000000218,
+                "styleMs": 32.740000000000016
+              },
+              "drawingText": {
+                "calls": 400,
+                "callsWithLayout": 400,
+                "callsWithStyle": 400,
+                "callsWithLayoutAfterWrites": 400,
+                "callsWithLayoutAfterProbeWrite": 400,
+                "callsWithStyleAfterWrites": 400,
+                "layoutEvents": 400,
+                "styleEvents": 400,
+                "layoutMs": 73.33600000000003,
+                "styleMs": 199.548
+              }
+            }
+          },
+          "cdpLayoutCount": 5407,
+          "cdpStyleCount": 5412
+        }
+      ]
+    },
+    {
+      "label": "trace-before-1000",
+      "placements": 1000,
+      "variant": "before",
+      "recordedAt": "2026-10-21T17:46:20.556Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "getBBoxCalls": 13405,
+          "diagnosticGetBBoxTotalMs": 1665.399999782443,
+          "diagnosticGetBBoxMeanMs": 0.12423722489984655,
+          "buckets": {
+            "drawingText": {
+              "calls": 1405,
+              "diagnosticMeanMs": 0.672811387935355
+            },
+            "isolatedText": {
+              "calls": 12000,
+              "diagnosticMeanMs": 0.06000833331110577
+            }
+          },
+          "trace": {
+            "file": "cold.layout-trace.json",
+            "sha256": "4acaea3ad92d166ebcd51dab8852c8aa96d089a880f4fcc0ea4f1b3f2a9438d0",
+            "bytes": 25483001,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 14009,
+              "style": 14010,
+              "layoutMs": 1072.948,
+              "styleMs": 2174.451
+            },
+            "withinGetBBox": {
+              "calls": 13405,
+              "callsWithLayout": 12803,
+              "callsWithStyle": 12802,
+              "callsWithLayoutAfterWrites": 12803,
+              "callsWithLayoutAfterProbeWrite": 12803,
+              "callsWithStyleAfterWrites": 12802,
+              "layoutEvents": 12803,
+              "styleEvents": 12802,
+              "layoutMs": 742.8529999999948,
+              "styleMs": 761.4970000000188
+            },
+            "buckets": {
+              "drawingText": {
+                "calls": 1405,
+                "callsWithLayout": 803,
+                "callsWithStyle": 802,
+                "callsWithLayoutAfterWrites": 803,
+                "callsWithLayoutAfterProbeWrite": 803,
+                "callsWithStyleAfterWrites": 802,
+                "layoutEvents": 803,
+                "styleEvents": 802,
+                "layoutMs": 228.68800000000007,
+                "styleMs": 683.6999999999991
+              },
+              "isolatedText": {
+                "calls": 12000,
+                "callsWithLayout": 12000,
+                "callsWithStyle": 12000,
+                "callsWithLayoutAfterWrites": 12000,
+                "callsWithLayoutAfterProbeWrite": 12000,
+                "callsWithStyleAfterWrites": 12000,
+                "layoutEvents": 12000,
+                "styleEvents": 12000,
+                "layoutMs": 514.1649999999809,
+                "styleMs": 77.79700000000173
+              }
+            }
+          },
+          "cdpLayoutCount": 14009,
+          "cdpStyleCount": 14010
+        },
+        {
+          "phase": "reload",
+          "getBBoxCalls": 12800,
+          "diagnosticGetBBoxTotalMs": 2010.599999949336,
+          "diagnosticGetBBoxMeanMs": 0.15707812499604187,
+          "buckets": {
+            "isolatedText": {
+              "calls": 12000,
+              "diagnosticMeanMs": 0.07338333332600692
+            },
+            "drawingText": {
+              "calls": 800,
+              "diagnosticMeanMs": 1.4125000000465662
+            }
+          },
+          "trace": {
+            "file": "reload.layout-trace.json",
+            "sha256": "c2640ffe7a735d06fbe700e8a1828506e65ae961fa620366340b73a1901ba25e",
+            "bytes": 27014313,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 14006,
+              "style": 14007,
+              "layoutMs": 1459.403,
+              "styleMs": 2530.731
+            },
+            "withinGetBBox": {
+              "calls": 12800,
+              "callsWithLayout": 12800,
+              "callsWithStyle": 12800,
+              "callsWithLayoutAfterWrites": 12800,
+              "callsWithLayoutAfterProbeWrite": 12800,
+              "callsWithStyleAfterWrites": 12800,
+              "layoutEvents": 12800,
+              "styleEvents": 12800,
+              "layoutMs": 971.8929999999973,
+              "styleMs": 875.1120000000225
+            },
+            "buckets": {
+              "isolatedText": {
+                "calls": 12000,
+                "callsWithLayout": 12000,
+                "callsWithStyle": 12000,
+                "callsWithLayoutAfterWrites": 12000,
+                "callsWithLayoutAfterProbeWrite": 12000,
+                "callsWithStyleAfterWrites": 12000,
+                "layoutEvents": 12000,
+                "styleEvents": 12000,
+                "layoutMs": 676.5539999999945,
+                "styleMs": 76.57600000000154
+              },
+              "drawingText": {
+                "calls": 800,
+                "callsWithLayout": 800,
+                "callsWithStyle": 800,
+                "callsWithLayoutAfterWrites": 800,
+                "callsWithLayoutAfterProbeWrite": 800,
+                "callsWithStyleAfterWrites": 800,
+                "layoutEvents": 800,
+                "styleEvents": 800,
+                "layoutMs": 295.339,
+                "styleMs": 798.5359999999997
+              }
+            }
+          },
+          "cdpLayoutCount": 14006,
+          "cdpStyleCount": 14007
+        }
+      ]
+    },
+    {
+      "label": "trace-after-1000",
+      "placements": 1000,
+      "variant": "after",
+      "recordedAt": "2026-10-21T17:46:39.359Z",
+      "phases": [
+        {
+          "phase": "cold",
+          "getBBoxCalls": 13405,
+          "diagnosticGetBBoxTotalMs": 1715.599999949336,
+          "diagnosticGetBBoxMeanMs": 0.1279820962289695,
+          "buckets": {
+            "drawingText": {
+              "calls": 1405,
+              "diagnosticMeanMs": 0.7185765125308172
+            },
+            "isolatedText": {
+              "calls": 12000,
+              "diagnosticMeanMs": 0.05883333332029482
+            }
+          },
+          "trace": {
+            "file": "cold.layout-trace.json",
+            "sha256": "ef1d321ee0aea7809fb927a5ebbbcfb548c52cd4139d12dab75e92df9a785678",
+            "bytes": 22171374,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 10809,
+              "style": 10810,
+              "layoutMs": 1072.463,
+              "styleMs": 2290.001
+            },
+            "withinGetBBox": {
+              "calls": 13405,
+              "callsWithLayout": 9603,
+              "callsWithStyle": 9602,
+              "callsWithLayoutAfterWrites": 9603,
+              "callsWithLayoutAfterProbeWrite": 9603,
+              "callsWithStyleAfterWrites": 9602,
+              "layoutEvents": 9603,
+              "styleEvents": 9602,
+              "layoutMs": 744.888999999994,
+              "styleMs": 824.3110000000324
+            },
+            "buckets": {
+              "drawingText": {
+                "calls": 1405,
+                "callsWithLayout": 803,
+                "callsWithStyle": 802,
+                "callsWithLayoutAfterWrites": 803,
+                "callsWithLayoutAfterProbeWrite": 803,
+                "callsWithStyleAfterWrites": 802,
+                "layoutEvents": 803,
+                "styleEvents": 802,
+                "layoutMs": 234.21099999999979,
+                "styleMs": 739.5919999999994
+              },
+              "isolatedText": {
+                "calls": 12000,
+                "callsWithLayout": 8800,
+                "callsWithStyle": 8800,
+                "callsWithLayoutAfterWrites": 8800,
+                "callsWithLayoutAfterProbeWrite": 8800,
+                "callsWithStyleAfterWrites": 8800,
+                "layoutEvents": 8800,
+                "styleEvents": 8800,
+                "layoutMs": 510.6779999999989,
+                "styleMs": 84.71900000000221
+              }
+            }
+          },
+          "cdpLayoutCount": 10809,
+          "cdpStyleCount": 10810
+        },
+        {
+          "phase": "reload",
+          "getBBoxCalls": 12800,
+          "diagnosticGetBBoxTotalMs": 2170.4000000059605,
+          "diagnosticGetBBoxMeanMs": 0.16956250000046566,
+          "buckets": {
+            "isolatedText": {
+              "calls": 12000,
+              "diagnosticMeanMs": 0.07593333334351579
+            },
+            "drawingText": {
+              "calls": 800,
+              "diagnosticMeanMs": 1.5739999998547136
+            }
+          },
+          "trace": {
+            "file": "reload.layout-trace.json",
+            "sha256": "8baed5213363adb6c4fe92ef2988e86bcf6edbcaf456af687440831912fcacff",
+            "bytes": 21060226,
+            "dataLossOccurred": false,
+            "mainThreadEvents": {
+              "layout": 10806,
+              "style": 10807,
+              "layoutMs": 1577.674,
+              "styleMs": 2600.737
+            },
+            "withinGetBBox": {
+              "calls": 12800,
+              "callsWithLayout": 9600,
+              "callsWithStyle": 9600,
+              "callsWithLayoutAfterWrites": 9600,
+              "callsWithLayoutAfterProbeWrite": 9600,
+              "callsWithStyleAfterWrites": 9600,
+              "layoutEvents": 9600,
+              "styleEvents": 9600,
+              "layoutMs": 1058.2139999999965,
+              "styleMs": 962.9820000000279
+            },
+            "buckets": {
+              "isolatedText": {
+                "calls": 12000,
+                "callsWithLayout": 8800,
+                "callsWithStyle": 8800,
+                "callsWithLayoutAfterWrites": 8800,
+                "callsWithLayoutAfterProbeWrite": 8800,
+                "callsWithStyleAfterWrites": 8800,
+                "layoutEvents": 8800,
+                "styleEvents": 8800,
+                "layoutMs": 712.3319999999978,
+                "styleMs": 85.84000000000307
+              },
+              "drawingText": {
+                "calls": 800,
+                "callsWithLayout": 800,
+                "callsWithStyle": 800,
+                "callsWithLayoutAfterWrites": 800,
+                "callsWithLayoutAfterProbeWrite": 800,
+                "callsWithStyleAfterWrites": 800,
+                "layoutEvents": 800,
+                "styleEvents": 800,
+                "layoutMs": 345.8820000000005,
+                "styleMs": 877.1419999999998
+              }
+            }
+          },
+          "cdpLayoutCount": 10806,
+          "cdpStyleCount": 10807
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "unitTestsPassed": 1216,
+    "diagnosticTestsPassed": 5,
+    "browserCases": 37,
+    "browserPassed": 28,
+    "browserFailed": 9,
+    "allNineFailuresReproducedOnBaselineChrome156": true,
+    "failures": "4 native clipboard/Control shortcuts plus 5 Control-click selection-style cases; prior Chromium148 isolated SVG metric failures (2) pass in Chrome156. No test expectations or OS privacy settings changed.",
+    "batchedVsSequentialCasesPerTheme": 324,
+    "typeErrors": 0,
+    "typeWarnings": 0,
+    "productionBuildPassed": true,
+    "formatChecked": true
+  },
+  "limits": [
+    "100/500 only one observation per variant",
+    "1000 only four observations per variant; ranges overlap; cold -1.1%, reload +0.2%",
+    "one trace per size/variant, diagnostics affect timing",
+    "single-line measurement and cross-component batching unchanged",
+    "cost of generator rounds, extra temporary probes, cache lookup versus layout savings not isolated",
+    "no Windows/Linux/real Hub/long-run verification",
+    "no remote CI run because PR gate failed"
+  ]
+}
