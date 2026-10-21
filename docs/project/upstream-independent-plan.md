@@ -2,7 +2,7 @@
 
 2026-10-21（日本時間）。状態: **I0〜I4・I6は完了・全体CI成功。I5は限定改善・候補評価完了、遅延は残課題**。現行保存契約はProject0.35.0。[統合設計](../design/scada-integrated-design.md)のローカル作図領域を対象とする。[I7：Symbol内画像](../design/images/symbol-image-design.md)はI7a／bの全体CI成功、I7cの取込・編集UIも全体CI成功。
 
-次は[I8：接続と配管追従](../design/editor/connection-follow-design.md)へ進める。I8aの幾何は全体CI成功。I8bの保存・編集・コピーをローカル検証済み／CI確認待ち、接続作成UIはI8c。
+[I8：接続と配管追従](../design/editor/connection-follow-design.md)はI8aの幾何・I8bの保存／編集／コピーが全体CI成功。I8cの接続・解除UIを実装・ローカル検証済み／CI確認待ち。
 
 ## 方針と境界
 
@@ -31,8 +31,8 @@ Projectのローカル属性追加は可能だが、共有SDK・Design API・正
 | I7b Symbol内画像の保存・表示 | 保存・貼付の原本再配線と共通描画                       | 未配置定義の原本保持・同hash共有・現行定義再利用・両配色／α・各描画入口                                                                   | 完了・CI成功                                 |
 | I7c Symbol内画像の作成UI     | 定義内取込・画像編集・貼付の操作                       | 所有者世代・遅延decode・draft／IME・lock・fit／crop・原本解放                                                                             | 完了・CI成功                                 |
 | I8a 接続の幾何               | Symbol配置枠anchor・両端同時更新                       | 任意回転・中間点world保持・退化／不正・no-op。保存・UI未対応                                                                              | 完了・CI成功                                 |
-| I8b 接続の保存・command      | 参照と解決済み形状・全操作の追従                       | TS／Rust／schema・削除／lock／group・複製／clipboard・Undo・drag途中                                                                      | 実装・ローカル検証済み／CI確認待ち           |
-| I8c 接続の操作UI             | Inspectorによる接続・解除                              | 状態・使用先・拒否理由、入力保護・両テーマ・保存往復                                                                                      | 未着手                                       |
+| I8b 接続の保存・command      | 参照と解決済み形状・全操作の追従                       | TS／Rust／schema・削除／lock／group・複製／clipboard・Undo・drag途中                                                                      | 完了・CI成功                                 |
+| I8c 接続の操作UI             | Inspectorによる接続・解除                              | 状態・使用先・拒否理由、入力保護・両テーマ・保存往復                                                                                      | 実装・ローカル検証済み／CI確認待ち           |
 
 I1a／I2a／I3aは基盤だけの保存区切りとし、b工程でUI・実利用・回帰まで確認した。今後も基盤実装と機能提供の完了を区別する。下記の順序は当時の着手順であり、未着手の次工程を示すものではない。
 

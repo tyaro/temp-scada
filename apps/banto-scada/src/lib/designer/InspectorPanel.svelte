@@ -13,6 +13,8 @@
   import { screenViewOptions } from "../screen-references";
   import { placementLabel } from "../placement-label";
   import ImageFitSettings from "./ImageFitSettings.svelte";
+  import ConnectionSettings from "./ConnectionSettings.svelte";
+  import { connectionUsages } from "../connections";
   import ImageCrop from "./ImageCrop.svelte";
   import ShapePaint from "./ShapePaint.svelte";
   import SelectionColor from "./SelectionColor.svelte";
@@ -614,6 +616,52 @@
             onsubmit={properties}
           />
         {/if}
+        {#if selected.shape.type === "polyline" && !activeDefinition}
+          <ConnectionSettings
+            objectId={selected.id}
+            connections={selected.shape.connections}
+            objects={screen.objects}
+            {project}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            locked={selectionLocked}
+            disabledReason={groupFor(screen, selected.id)
+              ? "グループ内の線は接続できません。先にグループを解除してください。"
+              : undefined}
+            {drafts}
+            onsubmit={properties}
+          />
+        {/if}
+        {#if selected.shape.type === "symbol" && !activeDefinition}
+          {@const usages = connectionUsages(screen, selected.id)}
+          {#if usages.length}
+            <section
+              class="connection-usages"
+              aria-label="このSymbolに接続中の配管"
+            >
+              <h3>接続中の配管 · {usages.length}端点</h3>
+              <ul>
+                {#each usages as usage (`${usage.objectId}:${usage.end}`)}
+                  <li>
+                    {usage.name ??
+                      placementLabel(
+                        screen.objects.find((o) => o.id === usage.objectId)!,
+                        project.symbols,
+                      )} · {usage.end === "start" ? "始点" : "終点"}（{{
+                      top: "上",
+                      right: "右",
+                      bottom: "下",
+                      left: "左",
+                      center: "中心",
+                    }[usage.anchor]}）
+                  </li>
+                {/each}
+              </ul>
+              <p class="numeric-hint">
+                接続を解除するか配管も選択してから、このSymbolを削除してください。
+              </p>
+            </section>
+          {/if}
+        {/if}
         {#if selected.shape.type === "image"}
           {@const assetId = selected.shape.assetId}
           {@const asset = project.assets.find((a) => a.id === assetId)!}
@@ -1112,6 +1160,19 @@
 />
 
 <style>
+  .connection-usages {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--banto-border);
+  }
+  .connection-usages h3 {
+    margin: 0 0 8px;
+    font-size: 12px;
+  }
+  .connection-usages ul {
+    padding-left: 16px;
+    font-size: 12px;
+    line-height: 1.7;
+  }
   fieldset {
     border: 0;
     padding: 0;

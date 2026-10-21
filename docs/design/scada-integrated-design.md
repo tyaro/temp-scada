@@ -454,4 +454,4 @@ Project0.34.0でSymbol定義内のPNG／JPEGを保存・表示し、原本同梱
 
 ## ローカルSymbol接続と配管追従（I8、2026-10-21）
 
-同じ画面のSymbol配置枠の5anchorへPolylineの始点／終点を接続する初回範囲を採用した。I8aは純粋幾何・world座標保持まで全体CI成功。I8bはProject0.35.0で接続参照・解決済みpointsの保存／検証・既存編集とdrag途中の追従・複製／clipboardをローカル検証済み／CI確認待ち。接続作成／解除のInspector UIはI8cに残す。Equipment上の接続関係、Symbol内の名前付きport、自動routingは含めない。[仕様と受入](editor/connection-follow-design.md)を参照。
+同じ画面のSymbol配置枠の5anchorへPolylineの始点／終点を接続する初回範囲を採用した。I8aは純粋幾何・world座標保持まで全体CI成功。I8bはProject0.35.0で接続参照・解決済みpointsの保存／検証・既存編集とdrag途中の追従・複製／clipboardを完了・CI成功。I8cのInspector接続／解除とSymbol使用先表示は実装・ローカル検証済み／CI確認待ち。Equipment上の接続関係、Symbol内の名前付きport、自動routingは含めない。[仕様と受入](editor/connection-follow-design.md)を参照。

@@ -23,6 +23,7 @@
   import { createDesignerActions } from "./lib/designer/controllers/designer-actions";
   import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
   import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
+  import { lineConnectionCommand } from "./lib/designer/forms/line-connection";
   import { imageFitCommand } from "./lib/designer/forms/image-fit";
   import { imageCropCommand } from "./lib/designer/forms/image-crop";
   import {
@@ -2089,6 +2090,24 @@
           screenId: screen.id,
           definition: !!activeDefinition,
           image: backgroundScreen?.backgroundImage,
+        },
+      );
+    if (form.dataset.editorForm === "line-connection")
+      return lineConnectionCommand(
+        {
+          connected: form.isConnected,
+          composing: form.dataset.composing === "true",
+          objectId: form.dataset.objectId,
+          targetKey: form.dataset.targetKey,
+          endpoint: form.dataset.endpoint,
+          data,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selected,
+          objects: screen.objects,
         },
       );
     if (form.dataset.editorForm === "image-fit")

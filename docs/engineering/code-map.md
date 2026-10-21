@@ -313,3 +313,7 @@ Project0.34.0のSymbol定義はImageを許可する。`editor/paste-handler.ts`�
 ## 接続の保存・全編集・コピー（I8b）
 
 Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを参照する。`connections.ts`のvalidate／resolve／remapを保存読込・finish・Renderer一時操作・各複製とclipboardへ接続する。画面の依存取込はrenewOwnerIds、root貼付はplacementIdsで別々に対応付ける。Rustは`scada-model/src/connections.rs`、共通ケースは`examples/connection-cases.json`、native sampleは`connection.project.json`。serde_jsonの`float_roundtrip`とTS同順の角度演算も保存精度の契約。`connections.test.ts`、`connection-contract.test.ts`、`e2e/connections.spec.ts`が受入入口。接続設定UIはI8c。
+
+## 接続・解除の設定UI（I8c）
+
+`designer/ConnectionSettings.svelte`は端点ごとの明示フォーム・配置順付き候補・適用済み状態・lock／group／候補なしの表示を担当する。`designer/forms/line-connection.ts`はAppのcommand構築と一括draft事前検証から共用し、generation／owner／対象・候補・anchorとIME状態を検査する。InspectorのSymbol側は`connectionUsages`を投影するだけで、別の参照台帳を持たない。`line-connection-form.test.ts`と`e2e/connection-settings.spec.ts`でUndo・保存往復・両テーマ・同名候補・複数draftの部分適用防止を確認する。

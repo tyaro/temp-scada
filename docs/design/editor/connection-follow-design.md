@@ -1,6 +1,6 @@
 # I8：Symbol配置への接続と配管端点追従
 
-2026-10-21（日本時間）。状態: **採用した初回範囲を設計、I8aは全体CI成功。I8bの保存・編集・コピーは実装・ローカル検証済み（CI確認待ち）。接続作成UIはI8c**。[単体開発計画](../../project/upstream-independent-plan.md)の次の区切り。Astraの読取レビューを反映する。
+2026-10-21（日本時間）。状態: **採用した初回範囲を設計、I8aは全体CI成功。I8bの保存・編集・コピーも全体CI成功。I8cの接続・解除UIは実装・ローカル検証済み／CI確認待ち**。[単体開発計画](../../project/upstream-independent-plan.md)の次の区切り。Astraの読取レビューを反映する。
 
 ## 初回の範囲
 
@@ -46,8 +46,8 @@ Symbolだけ複製しても元の線は元Symbolを参照する。画面複製�
 | 工程 | 内容                                | 完了条件                                                                                             | 状態                               |
 | ---- | ----------------------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------- |
 | I8a  | anchorと両端同時更新の純粋幾何      | cardinal／任意回転、両端／片端、world中間点、退化・不正・no-op・入力不変性。保存・UI未対応を明記     | 完了・CI成功                       |
-| I8b  | 保存・検証・command・既存操作の追従 | TS／Rust／schema／サンプル、参照と座標一致、lock／group／削除、複製／clipboard、Undo、drag途中の投影 | 実装・ローカル検証済み／CI確認待ち |
-| I8c  | Inspectorによる接続・解除UI         | 始点／終点のSymbol・anchor選択、接続状態と使用先・拒否理由、draft／IME・両テーマ、保存往復           | 未着手                             |
+| I8b  | 保存・検証・command・既存操作の追従 | TS／Rust／schema／サンプル、参照と座標一致、lock／group／削除、複製／clipboard、Undo、drag途中の投影 | 完了・CI成功                       |
+| I8c  | Inspectorによる接続・解除UI         | 始点／終点のSymbol・anchor選択、接続状態と使用先・拒否理由、draft／IME・両テーマ、保存往復           | 実装・ローカル検証済み／CI確認待ち |
 
 I8aは新しい公開Project属性・描画機能ではない。I8bで受理する接続をどの入口でも失わず保存・描画・コピーできるよう揃え、I8cで利用者の操作へ接続する。各区切りの関連検証・全体CIを確認して次へ進む。
 
@@ -84,7 +84,7 @@ Rustの角度変換をTSと同じ`(angle * PI) / 180`へ揃えた。359.99度・
 
 ### サンプルと検証入口
 
-[接続済みProject](../../../examples/connection.project.json)を開くと、2つのSymbol配置と両端接続のPolylineを試せる。画像原本は不要。接続の新規設定UIはI8cで追加し、この工程では読込・既存編集での追従を提供する。
+[接続済みProject](../../../examples/connection.project.json)を開くと、2つのSymbol配置と両端接続のPolylineを試せる。画像原本は不要。I8bでは読込・既存編集での追従を提供し、I8cで下記の設定UIを追加した。
 
 [共通保存ケース](../../../examples/connection-cases.json)の25件をTS／Rustで確認する。0／90／180／270／33度、各軸の誤差境界、所有者・種別・欠落・group・定義内拒否、非表示保持、大座標と359.99度の数値往復を含む。`connections.test.ts`の13件は移動・回転・Undo、削除／lock／group、複製／配列・画面・root／依存画面clipboardの参照を確認する。`e2e/connections.spec.ts`は両テーマのdrag途中・Esc取消・Undo・回転／resize、lock、削除／cut事前拒否とclipboard保持を確認する。
 
@@ -92,4 +92,25 @@ Rustの角度変換をTSと同じ`(angle * PI) / 180`へ揃えた。359.99度・
 
 TS全1,201件（共有25ケースとcommand／コピー13ケースを含む）、Rust全54件、型チェック（エラー・警告0）、Clippy／rustfmt、本番build・全体整形・文書リンクが成功。接続・drag新規4件＋回転・配列／group・原本clipboard・View依存・Symbol画像の既存47件、計51ブラウザケースが成功した。CLIはminimal／process／tag-binding／symbol-image／connectionの5サンプルを検証した。元バイト入り画像サンプルも0.35.0へ更新し、native読込・書出し・バイト一致を回帰した。
 
-Astraの読取レビューで角度演算順・大座標のJSON往復と、依存画面clipboardの検証不足を指摘され、修正／共通ケース・2つの依存画面ケースを追加した。serde_jsonのfeature変更後はRust全体とClippyも確認した。I8aの`3894f4c`は[全体CI39572973873](https://github.com/tyaro/temp-scada/actions/runs/39572973873)で全job成功。今回の全体CIはPush後に確認する。
+Astraの読取レビューで角度演算順・大座標のJSON往復と、依存画面clipboardの検証不足を指摘され、修正／共通ケース・2つの依存画面ケースを追加した。serde_jsonのfeature変更後はRust全体とClippyも確認した。I8aの`3894f4c`は[全体CI39572973873](https://github.com/tyaro/temp-scada/actions/runs/39572973873)で全job成功。I8bの`7faff97`は[全体CI39576110879](https://github.com/tyaro/temp-scada/actions/runs/39576110879)で全job成功。
+
+## I8c：Inspectorでの接続・解除（2026-10-21）
+
+配管を選ぶと、プロパティに始点／終点それぞれの接続先・位置と適用ボタンを表示する。選択しただけではProjectを変更しない。「接続なし（解除）」の明示適用で形状を保って参照だけを外す。候補と適用済み状態には配置順を併記し、同名のSymbolを識別できる。非表示の候補もその状態を表示する。
+
+対象は現在の同一画面のSymbol配置のみ。定義編集では設定を出さず、配管のlock・幾何group・候補なしは操作を無効化し理由を示す。Symbol選択時は、その配置を参照する配管名・端点・位置を表示し、削除前の解除または同時選択を案内する。
+
+`ConnectionSettings.svelte`は表示とdraftを担当し、`forms/line-connection.ts`がgeneration／owner／選択配置／候補／anchorを再検査して既存commandへ変換する。IME中は直接適用も「適用して続行」の事前検証も拒否する。別のdirtyフォームが先に登録されていても一部だけ適用しない。Undo／Redo・no-op・取消後の入力保持は既存の入口を使う。
+
+![接続設定：ライト](../../assets/frontend-ux/connection-settings-light.png)
+![接続設定：ダーク](../../assets/frontend-ux/connection-settings-dark.png)
+
+実画面は1920×1080のブラウザで取得した。接続先は設備絵のノズルではなく配置枠なので、Symbolの余白によって絵と線に隙間が見える場合がある。マウス吸着・任意port・routing・使用先からのジャンプは今回のUIには含めない。
+
+### I8cの検証
+
+TS全1,207件、型チェック（エラー・警告0）、本番build・整形・文書リンクが成功。保存版0.35.0・Rust／schema・固定依存はこの工程では変更していない。スクリーンショット取得時は配管上の画素も確認した。
+
+新しいフォーム契約6件とブラウザ7ケース（両テーマの設定・解除／保存往復、draft取消・IME、lock／参照保護、候補なし、複数dirtyフォームの部分適用防止、同名配置の識別）が成功。既存の接続drag4件・数値入力10件・回転13件も成功し、計34ケースを確認した。
+
+Astraの読取レビューで、IME中の「適用して続行」が別のdirtyフォームだけ先に適用する経路と同名候補の曖昧さを指摘され、事前検証へのcomposition状態伝達と配置順併記・回帰試験を追加した。再レビューの必須修正なし。新規ブラウザ試験の初回はテストの欄名を「オブジェクト名」と誤指定して1件timeout。実UIの「配置名」へ合わせ、34ケースが成功した。全体CIはPush後に確認する。

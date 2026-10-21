@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-10-21（日本時間）、Project 0.34.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-10-21（日本時間）、Project 0.35.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
@@ -27,7 +27,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 | Studio         | 薄いheader、6分類メニュー、共通toolbar、ライト／ダーク／OS連動                                                                                                                                                                                    | 5種類の開発画面全体、外観の仕上げ                                                      |
 | 左ペイン・部品 | プロジェクト／レイヤー／部品、ツリー、検索、分類、アイコン／名称、右クリック、お気に入りと連続配置、機器台帳と任意種別編集、Symbolの機器関連付け                                                                                                  | 大規模機器一覧、グループ内部編集等                                                     |
 | パネル         | 個別／一括表示と復帰、左右幅と下部高さの保存、固定標準配置の復元、左右パネルの固定／浮動・移動／resize・各専用配置の明示保存・前面化                                                                                                              | 下部の浮動・タブ個別分離・任意ドッキング、名前付き全体配置、draftのDOM分離             |
-| 共通作図       | 選択・範囲選択、移動・サイズ・回転・整列・中心等間隔・幅／高さの一括指定、頂点、コピー／切取／貼付、Undo／Redo、幾何グループ、接続済みPolylineのSymbol追従                                                                                        | グループ任意拡縮・入れ子、図形演算、接続の作成UI（I8c）                                |
+| 共通作図       | 選択・範囲選択、移動・サイズ・回転・整列・中心等間隔・幅／高さの一括指定、頂点、コピー／切取／貼付、Undo／Redo、幾何グループ、接続済みPolylineのSymbol追従、Inspectorでの端点接続・解除、Symbol使用先表示                                         | グループ任意拡縮・入れ子、図形演算、マウス吸着による接続作成・任意port／自動routing    |
 | 配置・レイヤー | 名前、編集ロック、静的非表示、整理フォルダー、同階層の手動順変更、親と所属のドラッグ変更・兄弟内の位置指定ドラッグ                                                                                                                                | 継承表示、一時非表示                                                                   |
 | 図形・文字     | 矩形／楕円の塗り・枠線、一括編集、実線／破線／点線、配置opacityとその一括編集、色αと矩形／楕円の塗り・枠線α一括編集、2色線形／放射gradient、斜線／交差線／点pattern、Textの書式と揃え・静的Textの明示改行・枠幅での自動折返し・Textだけの一括書式 | 多点stop・図上gradientハンドル、任意行間・縁取り、Text／線／Symbol等のα一括            |
 | 画像           | Symbol内Imageの取込・編集・貼付・保存・共通表示・原本付きコピー、原本共有、背景fit、Imageのcontain／cover／stretch枠、比率復帰、原本付きclipboard、差し替え、配置・背景の非破壊cropと原本プレビュー上の範囲指定・移動・サイズ変更・縦横比固定     | 図面上の直接crop                                                                       |
@@ -43,7 +43,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 ## 検証の範囲
 
-最新機能I7cの`313b806`は[全体CI39570702994](https://github.com/tyaro/temp-scada/actions/runs/39570702994)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功。ローカルでは型（エラー・警告0）、単体1,142件、関連ブラウザ46ケース、本番build、整形と両テーマ実画面を確認した。全ブラウザ件数をローカル関連試験の件数と読み替えない。I8aは全体CI成功。I8bはProject0.35.0で接続の保存・編集追従・複製／clipboardをローカル検証済み／CI確認待ち。接続作成UIはI8c。
+最新機能I7cの`313b806`は[全体CI39570702994](https://github.com/tyaro/temp-scada/actions/runs/39570702994)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功。ローカルでは型（エラー・警告0）、単体1,142件、関連ブラウザ46ケース、本番build、整形と両テーマ実画面を確認した。全ブラウザ件数をローカル関連試験の件数と読み替えない。I8aは全体CI成功。I8bの`7faff97`は[全体CI39576110879](https://github.com/tyaro/temp-scada/actions/runs/39576110879)成功。I8cの接続・解除UIはTS全1,207件・関連ブラウザ34件・型エラー／警告0・build・整形・リンクをローカル確認済み／CI確認待ち。
 
 R0〜R5の構造整理は完了し、[リファクタリング記録](../engineering/maintenance-refactoring-plan.md)に各段階の不変条件・テストを保持する。[当時の検証詳細](../history/implementation-history.md#status-validation-archive)と[性能の実測条件・採否](../performance/mixed-editor-quality.md)を現在の機能保証と区別する。実Hub／catalog・正式Runtime・認証・Windows実機の運用確認は未完了。
 
