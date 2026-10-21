@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.34.0"
+          "const": "0.35.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.34.0"
+          "const": "0.35.0"
         },
         "name": {
           "type": "string",
@@ -480,6 +480,9 @@
             },
             "stateColor": {
               "$ref": "#/$defs/stateColor"
+            },
+            "connections": {
+              "$ref": "#/$defs/lineConnections"
             }
           },
           "required": ["type", "points", "strokeWidth", "arrow"],
@@ -1251,6 +1254,32 @@
         }
       },
       "required": ["textId"],
+      "additionalProperties": false
+    },
+    "endpointConnection": {
+      "type": "object",
+      "properties": {
+        "targetObjectId": {
+          "$ref": "#/$defs/id"
+        },
+        "anchor": {
+          "enum": ["top", "right", "bottom", "left", "center"]
+        }
+      },
+      "required": ["targetObjectId", "anchor"],
+      "additionalProperties": false
+    },
+    "lineConnections": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/endpointConnection"
+        },
+        "end": {
+          "$ref": "#/$defs/endpointConnection"
+        }
+      },
       "additionalProperties": false
     }
   }

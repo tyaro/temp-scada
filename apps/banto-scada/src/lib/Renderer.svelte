@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolveConnectionObjects, connectedVertex } from "./connections";
   import type { EquipmentContext } from "./symbol-slots";
   import { untrack } from "svelte";
   import {
@@ -250,7 +251,7 @@
       cancelInteraction();
     }
   }
-  function previewObject(object: ScreenObject): ScreenObject {
+  function rawPreviewObject(object: ScreenObject): ScreenObject {
     if ("width" in object && resizeDrag?.id === object.id)
       return { ...object, ...resizeDrag.current };
     if ("width" in object || vertexDrag?.id !== object.id) return object;
@@ -265,6 +266,37 @@
       y: geometry.y,
       shape: { ...object.shape, points: geometry.points },
     };
+  }
+
+  const connectionPreviews = $derived.by(() => {
+    if (
+      !editable ||
+      !screen.objects.some(
+        (o) => o.shape.type === "polyline" && o.shape.connections,
+      )
+    )
+      return null;
+    const candidates = screen.objects.map((object) => {
+      const visual = rawPreviewObject(object);
+      return drag?.ids.includes(object.id)
+        ? { ...visual, x: visual.x + drag.dx, y: visual.y + drag.dy }
+        : visual;
+    });
+    try {
+      return new Map(
+        resolveConnectionObjects(candidates).map((object) => [
+          object.id,
+          object,
+        ]),
+      );
+    } catch {
+      // Invalid/locked pointer candidates stay at the last committed geometry.
+      // The command reports the concrete rejection on commit.
+      return new Map(screen.objects.map((object) => [object.id, object]));
+    }
+  });
+  function previewObject(object: ScreenObject): ScreenObject {
+    return connectionPreviews?.get(object.id) ?? rawPreviewObject(object);
   }
 
   function vertexKey(
@@ -303,7 +335,8 @@
       current.locked ||
       current.visible === false ||
       current.shape.type !== "polyline" ||
-      !current.shape.points[index]
+      !current.shape.points[index] ||
+      connectedVertex(current, index)
     )
       return;
     if (current.rotation) {
@@ -406,7 +439,8 @@
         object.visible === false ||
         object.shape.type !== "polyline" ||
         !start ||
-        !object.shape.points[index]
+        !object.shape.points[index] ||
+        connectedVertex(object, index)
       )
         return;
       event.preventDefault();
@@ -538,7 +572,7 @@
     }
   }
   function position(object: ScreenObject) {
-    return `translate(${object.x + (editable && drag?.ids.includes(object.id) ? drag.dx : 0)} ${object.y + (editable && drag?.ids.includes(object.id) ? drag.dy : 0)})`;
+    return `translate(${object.x + (editable && !connectionPreviews && drag?.ids.includes(object.id) ? drag.dx : 0)} ${object.y + (editable && !connectionPreviews && drag?.ids.includes(object.id) ? drag.dy : 0)})`;
   }
 </script>
 
@@ -718,8 +752,9 @@
             data-vertex-object-id={object.id}
             data-vertex-index={index}
             role="button"
-            tabindex="0"
-            aria-label={`頂点 ${index + 1}（方向キーで移動）`}
+            aria-disabled={connectedVertex(object, index)}
+            tabindex={connectedVertex(object, index) ? -1 : 0}
+            aria-label={`頂点 ${index + 1}${connectedVertex(object, index) ? "（接続中・移動するには接続を解除）" : "（方向キーで移動）"}`}
             onkeydown={(event) => vertexKey(event, object, index)}
           />
         {/each}
@@ -731,6 +766,9 @@
 <style>
   .vertex {
     cursor: crosshair;
+  }
+  .vertex[aria-disabled="true"] {
+    cursor: not-allowed;
   }
   .resize-handle:focus-visible,
   .vertex:focus-visible {

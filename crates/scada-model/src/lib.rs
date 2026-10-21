@@ -1,6 +1,7 @@
 //! SCADA の初期 Project 契約。共通 JSON Schema をブラウザと CLI で使う。
 //! Hub 接続・Tauri・式評価・正式な .bantoscada package には依存しない。
 use serde_json::Value;
+mod connections;
 mod equipment;
 pub use equipment::{EquipmentReadBinding, EquipmentReadType};
 use std::collections::{HashMap, HashSet};
@@ -142,8 +143,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.34.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.34.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.35.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.35.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -422,6 +423,7 @@ impl Project {
             }
         }
         validate_groups(&value, &mut ids)?;
+        connections::validate(&value)?;
         equipment::validate(&value, &mut ids)?;
         validate_screen_views(&value)?;
         Ok(Self(value))
@@ -1535,8 +1537,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.34.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.34.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.35.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.35.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

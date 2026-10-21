@@ -1,3 +1,4 @@
+import { connectedVertex, remapConnections } from "../connections";
 import { normalizeTextNewlines } from "../text-content";
 import { reorderUnit } from "./group-handler";
 import { type Project, type Screen, type SymbolDefinition } from "../project";
@@ -19,6 +20,25 @@ export function applySingleObjectCommand(
   if (index < 0) throw new Error("図形が見つかりません");
   if (isImageEditCommand(command)) {
     applyImageEdit(next, screen.objects[index], command);
+  } else if (command.type === "set-line-connection") {
+    const object = screen.objects[index];
+    if (definitionId || object.shape.type !== "polyline")
+      throw new Error("画面上の配管だけを接続できます");
+    if (command.endpoint !== "start" && command.endpoint !== "end")
+      throw new Error("始点または終点を選んでください");
+    if (
+      command.connection !== null &&
+      (!command.connection ||
+        typeof command.connection !== "object" ||
+        Array.isArray(command.connection))
+    )
+      throw new Error("接続先の指定が不正です");
+    const connections = { ...object.shape.connections };
+    if (command.connection === null) delete connections[command.endpoint];
+    else connections[command.endpoint] = structuredClone(command.connection);
+    if (connections.start || connections.end)
+      object.shape.connections = connections;
+    else delete object.shape.connections;
   } else if (command.type === "make-symbol-unique") {
     const object = screen.objects[index];
     if (definitionId || object.shape.type !== "symbol")
@@ -42,6 +62,10 @@ export function applySingleObjectCommand(
     const object = screen.objects[index];
     if (object.shape.type !== "polyline")
       throw new Error("折れ線だけを編集できます");
+    if (connectedVertex(object, command.index))
+      throw new Error(
+        "接続中の端点は直接移動できません。先に接続を解除してください。",
+      );
     const geometry = replaceRotatedVertex(
       object as typeof object & { shape: typeof shape },
       command.index,
@@ -53,6 +77,7 @@ export function applySingleObjectCommand(
   } else if (command.type === "duplicate") {
     const copy = JSON.parse(JSON.stringify(screen.objects[index]));
     copy.id = newId();
+    remapConnections(copy, new Map([[screen.objects[index].id, copy.id]]));
     copy.x += 20;
     copy.y += 20;
     copy.order = Math.max(-1, ...screen.objects.map((o) => o.order)) + 1;
@@ -209,7 +234,23 @@ export function applySingleObjectCommand(
       if (object.shape.type !== "polyline")
         throw new Error("折れ線以外に頂点や線幅は設定できません");
       if (lineStyle !== undefined) setLineStyle(object.shape, lineStyle);
-      if (points !== undefined) object.shape.points = points;
+      if (points !== undefined) {
+        const original = object.shape.points;
+        for (const [i, j] of [
+          [0, 0],
+          [original.length - 1, points.length - 1],
+        ])
+          if (
+            connectedVertex(object, i) &&
+            (!points[j] ||
+              points[j].x !== original[i].x ||
+              points[j].y !== original[i].y)
+          )
+            throw new Error(
+              "接続中の端点は直接変更できません。先に接続を解除してください。",
+            );
+        object.shape.points = points;
+      }
       if (strokeWidth !== undefined) object.shape.strokeWidth = strokeWidth;
       if (arrow !== undefined) object.shape.arrow = arrow;
     }

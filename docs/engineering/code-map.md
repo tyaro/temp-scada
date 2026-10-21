@@ -1,6 +1,6 @@
 # コードと検証の対応表
 
-状態: **現行構造の案内**。2026-10-21更新、Symbol内画像の作成UI（I7c）と接続の純粋幾何（I8a）の追加を含む。責務や関数の移動時はこの対応表を更新する。[現在の実装状況](../project/implementation-status.md)、[構造整理の計画・結果](maintenance-refactoring-plan.md)、[作業規則](../../AGENTS.md)を併読する。
+状態: **現行構造の案内**。2026-10-21更新、Symbol内画像の作成UI（I7c）と接続の保存・編集追従（I8b）の追加を含む。責務や関数の移動時はこの対応表を更新する。[現在の実装状況](../project/implementation-status.md)、[構造整理の計画・結果](maintenance-refactoring-plan.md)、[作業規則](../../AGENTS.md)を併読する。
 
 パスはリポジトリルート基準。関数名を検索し、行番号・ファイルの大きさに依存しない。現在の依存方向はUI→編集／履歴→Project検証。純粋計算とモデルからDOMやAppをimportしない。
 
@@ -309,3 +309,7 @@ Project0.34.0のSymbol定義はImageを許可する。`editor/paste-handler.ts`�
 ## 接続・配管追従の幾何（I8a）
 
 `lib/connection-geometry.ts`はSymbol配置枠のanchorをworld座標へ投影し、Polylineの両端を同時に変更して暗黙pivotの差を補正する。中間点と自由端点のworld座標を保つ。ID解決・lock／group・保存・UIは所有せず、`connection-geometry.test.ts`で幾何だけを確認する。公開Projectへの接続は[I8b以降](../design/editor/connection-follow-design.md)。
+
+## 接続の保存・全編集・コピー（I8b）
+
+Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを参照する。`connections.ts`のvalidate／resolve／remapを保存読込・finish・Renderer一時操作・各複製とclipboardへ接続する。画面の依存取込はrenewOwnerIds、root貼付はplacementIdsで別々に対応付ける。Rustは`scada-model/src/connections.rs`、共通ケースは`examples/connection-cases.json`、native sampleは`connection.project.json`。serde_jsonの`float_roundtrip`とTS同順の角度演算も保存精度の契約。`connections.test.ts`、`connection-contract.test.ts`、`e2e/connections.spec.ts`が受入入口。接続設定UIはI8c。

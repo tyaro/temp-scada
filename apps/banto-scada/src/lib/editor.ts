@@ -1,3 +1,4 @@
+import { followProjectConnections } from "./connections";
 import {
   parseProject,
   serializeProject,
@@ -61,6 +62,7 @@ export function applyCommand(
   return unhandledCommand(command);
 }
 function finish(project: Project, next: Project): Project {
+  followProjectConnections(next);
   const usedAssets = referencedAssets(next);
   next.assets = next.assets.filter((asset) => usedAssets.has(asset.id));
 

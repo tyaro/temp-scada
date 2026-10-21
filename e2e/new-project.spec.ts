@@ -36,7 +36,7 @@ test("new blank project is an editable clean baseline, exports current schema an
   await button(page, "元に戻す").click();
   await expect(state(page)).toContainText("新しいProject・未書き出し");
   const first = await exported(page);
-  expect(first.manifest.schemaVersion).toBe("0.34.0");
+  expect(first.manifest.schemaVersion).toBe("0.35.0");
   expect(first.screens).toHaveLength(1);
   expect(first.screens[0]).toMatchObject({
     name: "画面1",

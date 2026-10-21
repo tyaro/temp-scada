@@ -1,3 +1,4 @@
+import { remapConnections } from "./connections";
 import { completeGroupSelection, groupsOf } from "./geometric-groups";
 import { clipboardDependencies } from "./clipboard-dependencies";
 import {
@@ -179,6 +180,8 @@ export function copyObjectSnapshot(
     .map((object) => ({ ...object }));
   if (objects.length !== wanted.size)
     throw new Error("コピー対象が見つかりません");
+  const copyIds = new Map(objects.map((object) => [object.id, object.id]));
+  for (const object of objects) remapConnections(object, copyIds);
   const dependencies = clipboardDependencies(project, objects);
   const dependencyScreens = project.screens.filter((screen) =>
     dependencies.screens.has(screen.id),

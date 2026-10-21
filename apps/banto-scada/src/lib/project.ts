@@ -1,3 +1,4 @@
+import { validateConnections, type LineConnections } from "./connections";
 import { imageAssetReferences } from "./asset-references";
 import { normalizeProjectText } from "./text-content";
 import { validateStateColors } from "./state-color";
@@ -121,6 +122,7 @@ export interface LayoutObject extends BaseObject {
 export interface PolylineObject extends BaseObject {
   shape: {
     type: "polyline";
+    connections?: LineConnections;
     stateColor?: StateColor;
     points: Point[];
     strokeWidth: number;
@@ -177,10 +179,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.34.0";
+    schemaVersion: "0.35.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.34.0";
+    minRuntimeVersion: "0.35.0";
     name: string;
   };
   screens: Screen[];
@@ -204,8 +206,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.34.0",
-        minRuntimeVersion: "0.34.0",
+        schemaVersion: "0.35.0",
+        minRuntimeVersion: "0.35.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -393,6 +395,7 @@ export function parseProject(json: string): Project {
   validateSymbolSlots(project);
   validateStateColors(project);
   projectScreenReferences(project);
+  validateConnections(project);
   return project;
 }
 export function serializeProject(project: Project): string {

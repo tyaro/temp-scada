@@ -451,3 +451,7 @@ Project 0.19.0で矩形／楕円の塗りへ斜線・交差線・点を追加し
 ## ローカル共有Symbol内画像（I7、2026-10-21）
 
 Project0.34.0でSymbol定義内のPNG／JPEGを保存・表示し、原本同梱コピーに対応した。I7a／bは全体CI成功。I7cは定義内の取込・貼付・差替え・fit／cropを既存の画像操作へ接続し、全体CI成功。原色と原本αを保ち、親Symbolの合成後opacity／colorAlpha、原本共有、Undo、draft／IMEと所有者切替中の取消を維持する。[段階仕様・受入・実画面](images/symbol-image-design.md)を参照。背景は画面専用、外部URL・SVG取込・動画・Symbol入れ子は含めない。
+
+## ローカルSymbol接続と配管追従（I8、2026-10-21）
+
+同じ画面のSymbol配置枠の5anchorへPolylineの始点／終点を接続する初回範囲を採用した。I8aは純粋幾何・world座標保持まで全体CI成功。I8bはProject0.35.0で接続参照・解決済みpointsの保存／検証・既存編集とdrag途中の追従・複製／clipboardをローカル検証済み／CI確認待ち。接続作成／解除のInspector UIはI8cに残す。Equipment上の接続関係、Symbol内の名前付きport、自動routingは含めない。[仕様と受入](editor/connection-follow-design.md)を参照。

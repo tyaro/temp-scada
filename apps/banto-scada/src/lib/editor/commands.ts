@@ -1,3 +1,4 @@
+import type { EndpointConnection, ConnectionEnd } from "../connections";
 import type { BindingReplacementRequest } from "../binding-replacement";
 import type { PaintAlphaPatch } from "../selection-paint-alpha";
 import type { EquipmentSlot, EquipmentBinding } from "../equipment";
@@ -78,6 +79,13 @@ export type ScreenCommand =
   | { type: "duplicate-screen"; screenId: string }
   | { type: "remove-screen"; screenId: string };
 export type ObjectCommand = (
+  | {
+      type: "set-line-connection";
+      screenId: string;
+      objectId: string;
+      endpoint: ConnectionEnd;
+      connection: EndpointConnection | null;
+    }
   | { type: "group"; screenId: string; objectIds: string[]; name?: string }
   | { type: "ungroup"; screenId: string; groupId: string }
   | { type: "rename-group"; screenId: string; groupId: string; name?: string }
@@ -417,6 +425,7 @@ const commandScopes = {
   "reorder-group": "object",
   paste: "object",
   "move-vertex": "object",
+  "set-line-connection": "object",
   "move-many": "object",
   "duplicate-many": "object",
   "duplicate-array": "object",

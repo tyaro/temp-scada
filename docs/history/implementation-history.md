@@ -1805,3 +1805,11 @@ TS全1,142件、ブラウザ新規6件＋既存40件（計46ケース）、型�
 [I8の段階設計](../design/editor/connection-follow-design.md)を追加し、同一画面のSymbol配置枠5anchor、Polyline両端の同時更新とpivot補正、中間点・自由端点のworld座標保持を純粋関数へ分離した。Astraレビューで大座標の丸めによる保持誤差を指摘され、全頂点の事後照合・精度不足拒否を追加した。再レビューの必須修正なし。
 
 新規21ケースを含むTS全1,163件、型エラー／警告0、本番build・整形・文書リンク、既存回転操作の関連ブラウザ13件が成功。保存版0.34.0・Rust／schema・UIは変更しておらず、接続操作の提供完了ではない。I8bの保存・参照整合性／全編集／clipboard、I8cの操作UIを後続へ分ける。I7cの`313b806`は全体CI39570702994成功。今回の全体CIはPush後の確認待ち。
+
+## I8b：接続の保存・編集追従・複製とclipboard（2026-10-21）
+
+Project0.35.0へ進め、同一画面のSymbol配置枠を参照するPolyline接続をTS／Rust／schema・現行サンプルへ追加した。保存pointsを補修せず検証し、候補finishとdrag途中で同じ幾何を解決する。削除／cutの参照保護・配管lock・group制限、片端の明示接続／解除command、各複製とclipboardの集合内再配線・集合外detachを追加。[仕様・サンプル・検証](../design/editor/connection-follow-design.md)。接続作成UIはI8cに残した。
+
+Astra指摘の角度計算の順序を揃え、大座標の共通ケースでserde_json既定読込の1ULP損失も再現した。同じ数値を保つ`float_roundtrip` featureを既存依存で有効にして受入・Rustの保存往復を確認。許容誤差・座標上限・SDK revは変更していない。
+
+TS全1,201件・Rust全54件・型エラー／警告0・Clippy／rustfmt・CLI5サンプル・build・整形・リンク、ブラウザ新規4件＋既存47件（計51ケース）がローカル成功。共通25保存ケース・依存画面を含む13command／copyケースを確認。I8aの`3894f4c`は全体CI39572973873成功、今回の全体CIはPush後の確認待ち。0.34.0からの自動移行は追加しない。

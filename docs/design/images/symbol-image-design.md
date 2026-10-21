@@ -2,6 +2,8 @@
 
 2026-10-21（日本時間）。状態: **I7a完了・全体CI成功。I7bの保存・読込・共通描画は全体CI成功。I7cの取込・編集UIも全体CI成功**。[単体開発計画](../../project/upstream-independent-plan.md)で、既存Imageの共有Symbolへの再利用を段階化する。Astraの読取レビューを反映した。統合設計・現在の[画像配置仕様](image-placement-design.md)を置き換えず、公開する範囲ごとに保存・描画・コピーを揃える。
 
+現行保存版はI8bのProject0.35.0。以下の0.34.0はI7b導入時の記録で、サンプルは現行版へ更新している。
+
 ## 初回の対象と除外
 
 目標はPNG／JPEGの静止画像をSymbol定義に持ち、原本を共有しながら配置・回転・opacity・fit・cropを既存Imageと同じ規則で扱うこと。未配置定義・非表示配置の原本も保存する。外部URL・SVG取込・動画・Symbol入れ子・任意拡縮・新しいAssetStoreは含めない。

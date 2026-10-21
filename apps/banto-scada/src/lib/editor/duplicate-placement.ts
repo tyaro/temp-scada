@@ -1,3 +1,4 @@
+import { remapConnections } from "../connections";
 import { groupsOf } from "../geometric-groups";
 import type { Screen, SymbolDefinition, ScreenObject } from "../project";
 import { newId, remapStateColor } from "./model-helpers";
@@ -24,6 +25,7 @@ export function duplicatePlacements(
     const copy = structuredClone(object);
     copy.id = copies.get(object.id)!;
     remapStateColor(copy, copies);
+    remapConnections(copy, copies);
     copy.x += dx;
     copy.y += dy;
     copy.order = order + index;

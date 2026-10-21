@@ -1,0 +1,971 @@
+[
+  {
+    "name": "both-ends",
+    "valid": true,
+    "patches": []
+  },
+  {
+    "name": "hidden-target",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0/visible",
+        "value": false
+      }
+    ]
+  },
+  {
+    "name": "missing-target",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/targetObjectId",
+        "value": "0199fd00-0000-7000-8000-000000000090"
+      }
+    ]
+  },
+  {
+    "name": "definition-is-not-placement",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/targetObjectId",
+        "value": "0199f100-0000-7000-8000-000000001000"
+      }
+    ]
+  },
+  {
+    "name": "line-is-not-symbol",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/targetObjectId",
+        "value": "0199fd00-0000-7000-8000-000000000003"
+      }
+    ]
+  },
+  {
+    "name": "unknown-anchor",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "inlet"
+      }
+    ]
+  },
+  {
+    "name": "empty-connections",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/connections",
+        "value": {}
+      }
+    ]
+  },
+  {
+    "name": "extra-reference-field",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/offset",
+        "value": 0
+      }
+    ]
+  },
+  {
+    "name": "stale-target-geometry",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0/rotation",
+        "value": 90
+      }
+    ]
+  },
+  {
+    "name": "connected-line-in-group",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/groups",
+        "value": [
+          {
+            "id": "0199fd00-0000-7000-8000-000000000092",
+            "memberIds": [
+              "0199fd00-0000-7000-8000-000000000002",
+              "0199fd00-0000-7000-8000-000000000003"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "endpoint-x-delta-9e-08",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/points/0/x",
+        "value": 180.00000009
+      }
+    ]
+  },
+  {
+    "name": "endpoint-x-delta-1.1e-07",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/points/0/x",
+        "value": 180.00000011
+      }
+    ]
+  },
+  {
+    "name": "endpoint-x-delta-1e-06",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/points/0/x",
+        "value": 180.000001
+      }
+    ]
+  },
+  {
+    "name": "endpoint-y-delta-9e-08",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/points/0/y",
+        "value": 220.00000009
+      }
+    ]
+  },
+  {
+    "name": "endpoint-y-delta-1.1e-07",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/points/0/y",
+        "value": 220.00000011
+      }
+    ]
+  },
+  {
+    "name": "endpoint-y-delta-1e-06",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/shape/points/0/y",
+        "value": 220.000001
+      }
+    ]
+  },
+  {
+    "name": "cross-screen-target",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects",
+        "value": [
+          {
+            "id": "0199fd00-0000-7000-8000-000000000002",
+            "order": 1,
+            "name": "ポンプ2",
+            "x": 360,
+            "y": 300,
+            "width": 80,
+            "height": 40,
+            "rotation": 0,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000003",
+            "order": 2,
+            "name": "ポンプ間配管",
+            "x": 0,
+            "y": 0,
+            "rotation": 0,
+            "fill": "#238cb0",
+            "shape": {
+              "type": "polyline",
+              "points": [
+                {
+                  "x": 180,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 320
+                },
+                {
+                  "x": 360,
+                  "y": 320
+                }
+              ],
+              "strokeWidth": 4,
+              "arrow": "end",
+              "connections": {
+                "start": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000001",
+                  "anchor": "right"
+                },
+                "end": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000002",
+                  "anchor": "left"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "path": "/screens",
+        "value": [
+          {
+            "id": "0199f000-0000-7000-8000-000000000002",
+            "name": "プロセス画面",
+            "width": 960,
+            "height": 540,
+            "objects": [
+              {
+                "id": "0199fd00-0000-7000-8000-000000000002",
+                "order": 1,
+                "name": "ポンプ2",
+                "x": 360,
+                "y": 300,
+                "width": 80,
+                "height": 40,
+                "rotation": 0,
+                "fill": "#249f85",
+                "shape": {
+                  "type": "symbol",
+                  "symbolId": "0199f100-0000-7000-8000-000000001000",
+                  "colorMode": "monochrome"
+                }
+              },
+              {
+                "id": "0199fd00-0000-7000-8000-000000000003",
+                "order": 2,
+                "name": "ポンプ間配管",
+                "x": 0,
+                "y": 0,
+                "rotation": 0,
+                "fill": "#238cb0",
+                "shape": {
+                  "type": "polyline",
+                  "points": [
+                    {
+                      "x": 180,
+                      "y": 220
+                    },
+                    {
+                      "x": 260,
+                      "y": 220
+                    },
+                    {
+                      "x": 260,
+                      "y": 320
+                    },
+                    {
+                      "x": 360,
+                      "y": 320
+                    }
+                  ],
+                  "strokeWidth": 4,
+                  "arrow": "end",
+                  "connections": {
+                    "start": {
+                      "targetObjectId": "0199fd00-0000-7000-8000-000000000001",
+                      "anchor": "right"
+                    },
+                    "end": {
+                      "targetObjectId": "0199fd00-0000-7000-8000-000000000002",
+                      "anchor": "left"
+                    }
+                  }
+                }
+              }
+            ],
+            "background": "#ffffff",
+            "folders": [],
+            "groups": []
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000093",
+            "name": "別画面",
+            "width": 960,
+            "height": 540,
+            "objects": [
+              {
+                "id": "0199fd00-0000-7000-8000-000000000001",
+                "order": 0,
+                "name": "ポンプ1",
+                "x": 100,
+                "y": 200,
+                "width": 80,
+                "height": 40,
+                "rotation": 0,
+                "fill": "#249f85",
+                "shape": {
+                  "type": "symbol",
+                  "symbolId": "0199f100-0000-7000-8000-000000001000",
+                  "colorMode": "monochrome"
+                }
+              }
+            ],
+            "background": "#ffffff",
+            "folders": [],
+            "groups": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "definition-line-connection",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/symbols/0/objects",
+        "value": [
+          {
+            "id": "0199fd00-0000-7000-8000-000000000094",
+            "order": 2,
+            "name": "ポンプ間配管",
+            "x": 0,
+            "y": 0,
+            "rotation": 0,
+            "fill": "#238cb0",
+            "shape": {
+              "type": "polyline",
+              "points": [
+                {
+                  "x": 180,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 320
+                },
+                {
+                  "x": 360,
+                  "y": 320
+                }
+              ],
+              "strokeWidth": 4,
+              "arrow": "end",
+              "connections": {
+                "start": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000001",
+                  "anchor": "right"
+                },
+                "end": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000002",
+                  "anchor": "left"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "rotated-0",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects",
+        "value": [
+          {
+            "id": "0199fd00-0000-7000-8000-000000000001",
+            "order": 0,
+            "name": "ポンプ1",
+            "x": 100,
+            "y": 200,
+            "width": 80,
+            "height": 40,
+            "rotation": 0,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000002",
+            "order": 1,
+            "name": "ポンプ2",
+            "x": 360,
+            "y": 300,
+            "width": 80,
+            "height": 40,
+            "rotation": 0,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000003",
+            "order": 2,
+            "name": "ポンプ間配管",
+            "x": 0,
+            "y": 0,
+            "rotation": 0,
+            "fill": "#238cb0",
+            "shape": {
+              "type": "polyline",
+              "points": [
+                {
+                  "x": 180,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 320
+                },
+                {
+                  "x": 360,
+                  "y": 320
+                }
+              ],
+              "strokeWidth": 4,
+              "arrow": "end",
+              "connections": {
+                "start": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000001",
+                  "anchor": "right"
+                },
+                "end": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000002",
+                  "anchor": "left"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "rotated-90",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects",
+        "value": [
+          {
+            "id": "0199fd00-0000-7000-8000-000000000001",
+            "order": 0,
+            "name": "ポンプ1",
+            "x": 100,
+            "y": 200,
+            "width": 80,
+            "height": 40,
+            "rotation": 90,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000002",
+            "order": 1,
+            "name": "ポンプ2",
+            "x": 360,
+            "y": 300,
+            "width": 80,
+            "height": 40,
+            "rotation": 90,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000003",
+            "order": 2,
+            "name": "ポンプ間配管",
+            "x": 0,
+            "y": 0,
+            "rotation": 90,
+            "fill": "#238cb0",
+            "shape": {
+              "type": "polyline",
+              "points": [
+                {
+                  "x": 260,
+                  "y": 400
+                },
+                {
+                  "x": 260,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 320
+                },
+                {
+                  "x": 280,
+                  "y": 140
+                }
+              ],
+              "strokeWidth": 4,
+              "arrow": "end",
+              "connections": {
+                "start": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000001",
+                  "anchor": "right"
+                },
+                "end": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000002",
+                  "anchor": "left"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "rotated-180",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects",
+        "value": [
+          {
+            "id": "0199fd00-0000-7000-8000-000000000001",
+            "order": 0,
+            "name": "ポンプ1",
+            "x": 100,
+            "y": 200,
+            "width": 80,
+            "height": 40,
+            "rotation": 180,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000002",
+            "order": 1,
+            "name": "ポンプ2",
+            "x": 360,
+            "y": 300,
+            "width": 80,
+            "height": 40,
+            "rotation": 180,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000003",
+            "order": 2,
+            "name": "ポンプ間配管",
+            "x": 0,
+            "y": 0,
+            "rotation": 180,
+            "fill": "#238cb0",
+            "shape": {
+              "type": "polyline",
+              "points": [
+                {
+                  "x": 440,
+                  "y": 320
+                },
+                {
+                  "x": 260,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 320
+                },
+                {
+                  "x": 100,
+                  "y": 220
+                }
+              ],
+              "strokeWidth": 4,
+              "arrow": "end",
+              "connections": {
+                "start": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000001",
+                  "anchor": "right"
+                },
+                "end": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000002",
+                  "anchor": "left"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "rotated-270",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects",
+        "value": [
+          {
+            "id": "0199fd00-0000-7000-8000-000000000001",
+            "order": 0,
+            "name": "ポンプ1",
+            "x": 100,
+            "y": 200,
+            "width": 80,
+            "height": 40,
+            "rotation": 270,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000002",
+            "order": 1,
+            "name": "ポンプ2",
+            "x": 360,
+            "y": 300,
+            "width": 80,
+            "height": 40,
+            "rotation": 270,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000003",
+            "order": 2,
+            "name": "ポンプ間配管",
+            "x": 0,
+            "y": 0,
+            "rotation": 270,
+            "fill": "#238cb0",
+            "shape": {
+              "type": "polyline",
+              "points": [
+                {
+                  "x": 360,
+                  "y": 140
+                },
+                {
+                  "x": 260,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 320
+                },
+                {
+                  "x": 180,
+                  "y": 400
+                }
+              ],
+              "strokeWidth": 4,
+              "arrow": "end",
+              "connections": {
+                "start": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000001",
+                  "anchor": "right"
+                },
+                "end": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000002",
+                  "anchor": "left"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "rotated-33",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects",
+        "value": [
+          {
+            "id": "0199fd00-0000-7000-8000-000000000001",
+            "order": 0,
+            "name": "ポンプ1",
+            "x": 100,
+            "y": 200,
+            "width": 80,
+            "height": 40,
+            "rotation": 33,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000002",
+            "order": 1,
+            "name": "ポンプ2",
+            "x": 360,
+            "y": 300,
+            "width": 80,
+            "height": 40,
+            "rotation": 33,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000003",
+            "order": 2,
+            "name": "ポンプ間配管",
+            "x": 0,
+            "y": 0,
+            "rotation": 33,
+            "fill": "#238cb0",
+            "shape": {
+              "type": "polyline",
+              "points": [
+                {
+                  "x": 173.7408744163435,
+                  "y": 298.8695461546823
+                },
+                {
+                  "x": 260,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 320
+                },
+                {
+                  "x": 366.2591255836565,
+                  "y": 241.13045384531767
+                }
+              ],
+              "strokeWidth": 4,
+              "arrow": "end",
+              "connections": {
+                "start": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000001",
+                  "anchor": "right"
+                },
+                "end": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000002",
+                  "anchor": "left"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "large-world-translated",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects",
+        "value": [
+          {
+            "id": "0199fd00-0000-7000-8000-000000000001",
+            "order": 0,
+            "name": "ポンプ1",
+            "x": 1000000000100,
+            "y": 1000000000200,
+            "width": 80,
+            "height": 40,
+            "rotation": 0,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000002",
+            "order": 1,
+            "name": "ポンプ2",
+            "x": 1000000000360,
+            "y": 1000000000300,
+            "width": 80,
+            "height": 40,
+            "rotation": 0,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000003",
+            "order": 2,
+            "name": "ポンプ間配管",
+            "x": 1000000000000,
+            "y": 1000000000000,
+            "rotation": 0,
+            "fill": "#238cb0",
+            "shape": {
+              "type": "polyline",
+              "points": [
+                {
+                  "x": 180,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 220
+                },
+                {
+                  "x": 260,
+                  "y": 320
+                },
+                {
+                  "x": 360,
+                  "y": 320
+                }
+              ],
+              "strokeWidth": 4,
+              "arrow": "end",
+              "connections": {
+                "start": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000001",
+                  "anchor": "right"
+                },
+                "end": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000002",
+                  "anchor": "left"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "large-frame-ts-angle-order-359-99",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects",
+        "value": [
+          {
+            "id": "0199fd00-0000-7000-8000-000000000001",
+            "order": 0,
+            "name": "ポンプ1",
+            "x": 100,
+            "y": 200,
+            "width": 100000000000,
+            "height": 40,
+            "rotation": 359.99,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000002",
+            "order": 1,
+            "name": "ポンプ2",
+            "x": 360,
+            "y": 300,
+            "width": 80,
+            "height": 40,
+            "rotation": 0,
+            "fill": "#249f85",
+            "shape": {
+              "type": "symbol",
+              "symbolId": "0199f100-0000-7000-8000-000000001000",
+              "colorMode": "monochrome"
+            }
+          },
+          {
+            "id": "0199fd00-0000-7000-8000-000000000003",
+            "order": 2,
+            "name": "ポンプ間配管",
+            "x": 99999999338.45645,
+            "y": -8726426.215634134,
+            "rotation": 0,
+            "fill": "#238cb0",
+            "shape": {
+              "type": "polyline",
+              "points": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 100,
+                  "y": 0
+                }
+              ],
+              "strokeWidth": 4,
+              "arrow": "end",
+              "connections": {
+                "start": {
+                  "targetObjectId": "0199fd00-0000-7000-8000-000000000001",
+                  "anchor": "right"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+]

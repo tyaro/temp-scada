@@ -1,3 +1,4 @@
+import { remapConnections } from "../connections";
 import {
   getBounds,
   type Project,
@@ -155,6 +156,7 @@ export function applyPasteCommand(
     .forEach((object, index) => {
       const copy = JSON.parse(JSON.stringify(object)) as ScreenObject;
       copy.id = placementIds.get(object.id)!;
+      remapConnections(copy, placementIds);
       copy.order = order + index;
       delete copy.folderId;
       copy.x += dx;

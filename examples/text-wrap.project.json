@@ -1,10 +1,10 @@
 {
   "manifest": {
     "product": "banto-scada",
-    "schemaVersion": "0.34.0",
+    "schemaVersion": "0.35.0",
     "projectId": "0199f000-0000-7000-8000-000000000001",
     "projectRevision": 1,
-    "minRuntimeVersion": "0.34.0",
+    "minRuntimeVersion": "0.35.0",
     "name": "静的Textの自動折返し / 原水供給設備"
   },
   "screens": [

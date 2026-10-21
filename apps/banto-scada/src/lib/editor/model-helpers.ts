@@ -1,3 +1,4 @@
+import { remapConnections } from "../connections";
 import {
   getBounds,
   type Project,
@@ -55,6 +56,7 @@ export function renewOwnerIds<T extends Screen | SymbolDefinition>(copy: T): T {
   for (const object of copy.objects) {
     object.id = placements.get(object.id)!;
     remapStateColor(object, placements);
+    remapConnections(object, placements);
     if (object.folderId) object.folderId = folders.get(object.folderId)!;
   }
   return copy;
