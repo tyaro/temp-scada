@@ -363,6 +363,43 @@ try {
         noLiveUrlsAfterAssetFreeCycles: true,
       },
     };
+    if (process.env.SCADA_BENCHMARK_BASELINE) {
+      const baseline = JSON.parse(
+        await readFile(process.env.SCADA_BENCHMARK_BASELINE, "utf8"),
+      );
+      const previous = baseline.results.find(
+        (row) => row.placements === count,
+      )?.textProjection;
+      if (previous) {
+        assert.equal(result.textProjection.length, previous.length);
+        let maxCoordinateDifference = 0;
+        result.textProjection.forEach((node, index) => {
+          const old = previous[index];
+          assert.equal(node.layout, old.layout);
+          assert.equal(node.lines, old.lines);
+          assert.equal(node.content.length, old.content.length);
+          node.content.forEach((text, line) => {
+            assert.equal(text.text, old.content[line].text);
+            for (const key of ["x", "y"])
+              maxCoordinateDifference = Math.max(
+                maxCoordinateDifference,
+                Math.abs(Number(text[key]) - Number(old.content[line][key])),
+              );
+          });
+        });
+        assert(
+          maxCoordinateDifference <= 0.0001,
+          `Text projection changed by ${maxCoordinateDifference} design units`,
+        );
+        result.projectionComparison = {
+          nodes: previous.length,
+          maxCoordinateDifference,
+          textAndLineLayoutIdentical: true,
+        };
+      }
+    }
+    assert.equal(await page.locator("[data-text-measure-host]").count(), 0);
+    result.checks.noTemporaryMeasurementDom = true;
     results.push(result);
     await writeFile(
       resolve(output, `mixed-${count}.json`),

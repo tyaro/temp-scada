@@ -279,3 +279,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ## 塗り・枠線のα一括編集（I4）
 
 `selection-paint-alpha.ts`は項目別適用可否・現在値・全件検査後の変更を担当する。`editor/selection-handler.ts`から呼び、`designer/SelectionPaintAlpha.svelte`とフォーム変換で所有者・選択・draftを接続する。`selection-paint-alpha.test.ts`が原子性・no-op・Undo・共有定義、`e2e/selection-paint-alpha.spec.ts`が実操作・入力保護を担当する。[採用仕様](selection-paint-alpha-design.md)に従う。
+
+## 混在図面の計測とSVG文字計測（I5）
+
+`apps/banto-scada/scripts/mixed-editor-fixture.mjs`は公開サンプル＋自作PNG、`benchmark-mixed-editor.mjs`は本番ブラウザでの実操作・保存原本・資源寿命・投影比較を担当する。`svg-text-measure.ts`は複数行Textの一時SVG probeとfont／SVG座標変換・finally解放を担当し、`MultilineTextPrimitive.svelte`の既存折返し計算へ接続する。大域cacheやProject属性は追加しない。`e2e/svg-text-measure.spec.ts`は変換・文字寸法・失敗時解放、`e2e/multiline-text.spec.ts`は共通描画・入力と保存を確認する。[条件と結果](mixed-editor-quality.md)を参照。

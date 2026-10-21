@@ -23,33 +23,57 @@ for (const theme of ["light", "dark"] as const)
       );
       source.style.whiteSpace = "pre";
       source.setAttribute("visibility", "hidden");
-      svg.append(source);
+      const group = document.createElementNS(svg.namespaceURI, "g");
+      const inner = document.createElementNS(svg.namespaceURI, "svg");
+      inner.setAttribute("width", "180");
+      inner.setAttribute("height", "100");
+      inner.setAttribute("viewBox", "0 0 200 140");
+      inner.setAttribute("preserveAspectRatio", "none");
+      inner.append(source);
+      group.append(inner);
+      svg.append(group);
       document.body.append(svg);
       const differences = [];
       try {
-        for (const size of [8, 18, 32.5])
-          for (const weight of ["normal", "bold"])
-            for (const spacing of ["normal", "1.25px"]) {
-              source.setAttribute("font-size", String(size));
-              source.setAttribute("font-weight", weight);
-              source.style.letterSpacing = spacing;
-              for (const text of [
-                "原水ポンプ A",
-                "  A B  ",
-                "👩‍🔧 pump",
-                "…",
-                "",
-                "éÅg",
-              ]) {
-                source.textContent = text;
-                const before = source.getBBox();
-                const after = withSvgTextMeasure(source, (measure) =>
-                  measure(text),
-                );
-                for (const key of ["x", "y", "width", "height"] as const)
-                  differences.push(Math.abs(before[key] - after[key]));
-              }
+        for (const groupTransform of ["", "rotate(30) scale(1.25 0.8)"]) {
+          group.setAttribute("transform", groupTransform);
+          for (const scale of [1, 0.684375, 0.137]) {
+            svg.setAttribute("viewBox", `0 0 ${300 / scale} ${200 / scale}`);
+            for (const transform of [
+              "scale(0.137)",
+              "scale(0.684375)",
+              "scale(1)",
+              "scale(2.5)",
+              "rotate(30deg) scale(0.684375)",
+            ]) {
+              svg.style.transformOrigin = "0 0";
+              svg.style.transform = transform;
+              for (const size of [8, 9.6, 18, 32.5])
+                for (const weight of ["normal", "bold"])
+                  for (const spacing of ["normal", "1.25px"]) {
+                    source.setAttribute("font-size", String(size));
+                    source.setAttribute("font-weight", weight);
+                    source.style.letterSpacing = spacing;
+                    for (const text of [
+                      "原水ポンプ A",
+                      "  A B  ",
+                      "👩‍🔧 pump",
+                      "…",
+                      "",
+                      "éÅg",
+                    ]) {
+                      source.textContent = text;
+                      const before = source.getBBox();
+                      const after = withSvgTextMeasure(source, (measure) =>
+                        measure(text),
+                      );
+                      for (const key of ["x", "y", "width", "height"] as const)
+                        differences.push(Math.abs(before[key] - after[key]));
+                    }
+                  }
             }
+          }
+        }
         let failed = false;
         try {
           withSvgTextMeasure(source, () => {
@@ -75,7 +99,8 @@ for (const theme of ["light", "dark"] as const)
         svg.remove();
       }
     });
-    expect(result).toEqual({
+    expect(result.maxDifference).toBeLessThan(0.0001);
+    expect({ ...result, maxDifference: 0 }).toEqual({
       maxDifference: 0,
       failed: true,
       hidden: true,
