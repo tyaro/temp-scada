@@ -4,3 +4,6 @@ target/
 playwright-report/
 test-results/
 *.log
+
+# Local handoff notes
+docs/STATUS.md
