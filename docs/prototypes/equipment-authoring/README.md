@@ -1,6 +1,6 @@
 # 機器登録・画面再利用の操作試作
 
-2026-10-20（日本時間）。[詳細検討書](../../equipment-authoring-detail-proposal.md)の段階Aを確認する独立試作。本体アプリとは接続しない。
+2026-10-20（日本時間）。[詳細検討書](../../design/proposals/equipment-authoring-detail-proposal.md)の段階Aを確認する独立試作。本体アプリとは接続しない。
 
 ## 開き方
 

@@ -7,4 +7,4 @@
 - `preview-125-percent-equivalent.png`: 1536×864 CSS px、deviceScaleFactor 1.25。実機OS倍率の試験ではない。
 - `preview-tag-picker.png`: 架空の固定カタログによるタグ選択。
 
-[適用レビュー](../../../prototype-design-review.md)に適用可否・制約・相対コストを記載する。実設備の値・接続状態や、本体の機能提供を示す画像ではない。
+[適用レビュー](../../../design/editor/prototype-design-review.md)に適用可否・制約・相対コストを記載する。実設備の値・接続状態や、本体の機能提供を示す画像ではない。

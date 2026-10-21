@@ -25,7 +25,7 @@ Bantoは、SCADAがまだ持たない分割木・タブグループ・ドロッ�
 - [DockHost](https://github.com/tyaro/banto/blob/591294bea61c7dcbd0b41102dae57c3bdf0602b8/packages/dock-svelte/src/DockHost.svelte)、[DockedTree](https://github.com/tyaro/banto/blob/591294bea61c7dcbd0b41102dae57c3bdf0602b8/packages/dock-svelte/src/DockedTree.svelte)、[DockWindow](https://github.com/tyaro/banto/blob/591294bea61c7dcbd0b41102dae57c3bdf0602b8/packages/dock-svelte/src/DockWindow.svelte)。
 - [共通ドラッグ](https://github.com/tyaro/banto/blob/591294bea61c7dcbd0b41102dae57c3bdf0602b8/packages/dock-svelte/src/core/drag.svelte.ts)、[ツリー演算](https://github.com/tyaro/banto/blob/591294bea61c7dcbd0b41102dae57c3bdf0602b8/packages/dock-svelte/src/core/tree.ts)、[幾何](https://github.com/tyaro/banto/blob/591294bea61c7dcbd0b41102dae57c3bdf0602b8/packages/dock-svelte/src/core/geometry.ts)。
 
-SCADAの根拠は[浮動操作controller](../../apps/banto-scada/src/lib/designer/controllers/floating-panel.svelte.ts)、[配置計算](../../apps/banto-scada/src/lib/designer/floating-panel-layout.ts)、[DOM依存のdraft管理](../../apps/banto-scada/src/lib/designer/drafts.svelte.ts)、[既存設計](../sidebar-floating-design.md)を参照する。
+SCADAの根拠は[浮動操作controller](../../apps/banto-scada/src/lib/designer/controllers/floating-panel.svelte.ts)、[配置計算](../../apps/banto-scada/src/lib/designer/floating-panel-layout.ts)、[DOM依存のdraft管理](../../apps/banto-scada/src/lib/designer/drafts.svelte.ts)、[既存設計](../design/editor/sidebar-floating-design.md)を参照する。
 
 ## 2. 機能と責務の比較
 
