@@ -40,3 +40,9 @@ Project0.32.0・schema・原本・SDK依存は不変。Rustのローカル再実
 ![兄弟配置の挿入・ライト](assets/frontend-ux/layer-insertion-light.png)
 
 ![兄弟配置の挿入・ダーク](assets/frontend-ux/layer-insertion-dark.png)
+
+## CIで検出したドラッグ後の新規クリック（2026-10-21）
+
+I4の全体CI39534625475で、暗色のnativeドラッグ試験がフォルダー折りたたみ保持の確認に失敗した。既存の300msの派生click抑制が、ドラッグ後に始まった新しいpointer操作まで遮っていた。フォルダー・配置行の新しいpointerdownで、ドラッグ中でなければ抑制を解除する。新規pressを伴わない派生clickの抑制は維持する。同一ブラウザtask内でdragend→派生click→新規pointerdown→clickを発火する回帰試験を追加し、時間待ちやretryで隠さない。
+
+修正後のフォルダー移動・配置所属・兄弟順ブラウザ26件が成功し、型チェックはエラー・警告なし、本番build・全体整形も成功した。全体CIは修正コミットのPush後に確認する。

@@ -271,3 +271,34 @@ test("same-position insertion is a no-op and folder center keeps existing member
   expect(next.screens[0].objects[0].folderId).toBe(id(3));
   expect(ids(next.screens[0])).toEqual(original);
 });
+
+test("a new pointer press is not swallowed by post-drag click suppression", async ({
+  page,
+}) => {
+  const project = await start(page);
+  const owner = folder(page, 1);
+  await begin(page, sourceFolder(page, 1));
+  // Dispatch within one browser task: a derived click remains suppressed, a fresh press does not.
+  const result = await owner.evaluate((node) => {
+    node
+      .querySelector("[data-folder-drag-source]")!
+      .dispatchEvent(new DragEvent("dragend", { bubbles: true }));
+    node.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+    const derived = node.getAttribute("aria-expanded");
+    node.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, button: 0 }),
+    );
+    node.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+    return derived;
+  });
+  expect(result).toBe("true");
+  await expect(owner).toHaveAttribute("aria-expanded", "false");
+  // Repeat on an object row, where a fresh click must change selection.
+  const root = row(page, project.screens[0].objects[3].id);
+  const transfer = await begin(page, sourceFolder(page, 3));
+  await sourceFolder(page, 3).dispatchEvent("dragend", {
+    dataTransfer: transfer,
+  });
+  await root.click();
+  await expect(root).toHaveAttribute("aria-pressed", "true");
+});

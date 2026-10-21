@@ -35,3 +35,7 @@ gradient stop／pattern別α、Text・線・Symbolの単色α一括指定、枠�
 ![単色塗り・枠線α一括編集・ライト](assets/frontend-ux/selection-paint-alpha-light.png)
 
 ![単色塗り・枠線α一括編集・ダーク](assets/frontend-ux/selection-paint-alpha-dark.png)
+
+## 全体CIの追加確認
+
+実装`361aded`の[初回全体CI39534625475](https://github.com/tyaro/temp-scada/actions/runs/39534625475)はFrontend・Rustとブラウザ3分割が成功し、ブラウザ2/4の既存レイヤー試験1件で失敗した。[ドラッグ後の新しいクリックの修正](layer-relative-order-design.md)を別コミットで行う。α編集の新規試験は成功。修正後のレイヤー関連ブラウザ26件、型・build・全体整形が成功した。修正後の全体CIを確認してからI4完了とする。

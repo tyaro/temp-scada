@@ -606,6 +606,10 @@ export function createLayerTreeController(host: LayerTreeHost) {
     folderKey,
     beginFolderDrag,
     beginLayerDrag,
+    // A new press is a distinct gesture, even within the post-drag click window.
+    layerPointerDown() {
+      if (!layerDrag) layerDragClickUntil = 0;
+    },
     layerClick,
     closeFolderRequest,
     applyFolderCommand,

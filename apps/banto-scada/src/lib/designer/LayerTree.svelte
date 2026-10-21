@@ -41,6 +41,7 @@
     beginFolderDrag(event: DragEvent, id: string): void;
     beginLayerDrag(event: DragEvent, id: string): void;
     objectLabel(object: ScreenObject): string;
+    layerPointerDown(): void;
     layerClick(event: MouseEvent, id: string): void;
     layerContext(id: string, origin: HTMLElement): void;
     layerContextKey(event: KeyboardEvent, id: string): void;
@@ -204,6 +205,7 @@
           >
             <button
               data-layer-folder={row.folder.id}
+              onpointerdown={tree.layerPointerDown}
               aria-expanded={row.open}
               title={folderPath(tree.screen.folders, row.folder.id)}
               onclick={(event) => {
@@ -299,6 +301,7 @@
               title={`${label}${row.group ? "\n" + members.map((item) => tree.objectLabel(item)).join("\n") : ""}
 ${object.shape.type} · ${object.order}
 ${object.id}`}
+              onpointerdown={tree.layerPointerDown}
               onclick={(event) => tree.layerClick(event, object.id)}
               oncontextmenu={(event) => {
                 event.preventDefault();
