@@ -1,0 +1,361 @@
+{
+  "dateJapan": "2026-10-22",
+  "baselineCommit": "473b0f855ce6b263c97f795a871122921349c1cf",
+  "conclusion": "効果なしのため不採用。測定した環境で一貫した読込短縮を実証できなかった。",
+  "environment": [
+    {
+      "chromium": "148.0.7778.96",
+      "node": "v24.16.0",
+      "platform": "darwin",
+      "kernel": "27.0.0",
+      "cpu": "Apple M1"
+    }
+  ],
+  "method": "Same production source and fixture per size; direct file query for all runs; each run has a fresh browser, one cold Project import and one reload. 1000 placements order: baseline, candidate, candidate, baseline. No other builds or tests ran during measurement. Existing local Chromium 148 was used, not the earlier Linux Chromium 154. Timing ends after text, font readiness, image decode and two animation frames. GC and asset/projection/URL checks are after timing. No CPU sampling. Cross-build projection and original-asset equality asserted for each size.",
+  "candidatePatchSha256": "3770ccf01a653981a76481e7b7a37526178f9ad85b69359739cce0c58aa0d673",
+  "buildSha256": {
+    "baseline": {
+      "assets/browser-ZwEudKjr.js": "5d59595342ac1a3bd6535037105be63cea2720ffd947c73323a89bb2fbc2226a",
+      "assets/index-DEk1NL4N.css": "de9938456d8bb4b307a8e798da842f96511478944b81ee92921cf1fe5e48572f",
+      "assets/index-z42DYoHf.js": "11b895e329e31cf9da4eddca68dfc68e18730cbcde21b1748e5cd68462785272",
+      "index.html": "df2b46f8a4184b913dd45086167baf0773f19a4c83ba69d9a58a5501ae7d2534"
+    },
+    "candidate": {
+      "assets/browser-ZwEudKjr.js": "5d59595342ac1a3bd6535037105be63cea2720ffd947c73323a89bb2fbc2226a",
+      "assets/index-DEk1NL4N.css": "de9938456d8bb4b307a8e798da842f96511478944b81ee92921cf1fe5e48572f",
+      "assets/index-k4gihl0T.js": "35ab300876cb8d31eb791e79d16aa9f6a13d99c87c4efd9127553676340e6cf1",
+      "index.html": "5b3c780a7f30f43fc28c8584f5c10a7d63003856005498983f38b86e9bcf33b9"
+    }
+  },
+  "fixtures": [
+    {
+      "placements": 100,
+      "packageSha256": "d613507391d30fa27b66cd264bee30dbc19916ff534c2e204db11d27d9a53821",
+      "textProjectionSha256": "946a85ef2e9799afcfb2a8c2a4f706eac1be4eaa6088149ac3e370e1df06e56d",
+      "allCrossBuildProjectionsMatch": true,
+      "originals": [
+        {
+          "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+          "bytes": 33491
+        },
+        {
+          "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+          "bytes": 33492
+        },
+        {
+          "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+          "bytes": 33523
+        },
+        {
+          "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+          "bytes": 33392
+        }
+      ],
+      "allOriginalsMatch": true,
+      "allReloadOldUrlsRevoked": true
+    },
+    {
+      "placements": 500,
+      "packageSha256": "39adae5b2d229eca3c2940ad6126520c72d87e3ad1c8f07249b10b5977e98b60",
+      "textProjectionSha256": "3c893ed4cbc92b449712c9e2e981800f29e8a4709ba9f1fdfcc2719d000b6b96",
+      "allCrossBuildProjectionsMatch": true,
+      "originals": [
+        {
+          "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+          "bytes": 33491
+        },
+        {
+          "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+          "bytes": 33492
+        },
+        {
+          "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+          "bytes": 33523
+        },
+        {
+          "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+          "bytes": 33392
+        }
+      ],
+      "allOriginalsMatch": true,
+      "allReloadOldUrlsRevoked": true
+    },
+    {
+      "placements": 1000,
+      "packageSha256": "e7a8238340ca83397fd83d5cabb93bb2ada08c99103aafddbdf761020d811ffd",
+      "textProjectionSha256": "e195beaa7c4f47f1cbe8f2e916fa0a4d9a1d89e2024f8a05b3792963d8a0dcea",
+      "allCrossBuildProjectionsMatch": true,
+      "originals": [
+        {
+          "sha256": "10167c2bf96c16c16963bb11e98aa9ab6bbc5aa215c2ae191630362f8a6ab485",
+          "bytes": 33491
+        },
+        {
+          "sha256": "910a850f24ec0381de5420411563e9064404f84fc92c5ce5ad7a8cdb365ee042",
+          "bytes": 33492
+        },
+        {
+          "sha256": "ce64c53e41017bfe6dfa9f3d6354c9261775e052f510c0d8903cd87906274647",
+          "bytes": 33523
+        },
+        {
+          "sha256": "fc184b5b6f992cd8851a9485cac286abf5795f18eb44529e93955be09d6b104e",
+          "bytes": 33392
+        }
+      ],
+      "allOriginalsMatch": true,
+      "allReloadOldUrlsRevoked": true
+    }
+  ],
+  "runs": [
+    {
+      "run": "before-1000-a",
+      "recordedAt": "2026-10-21T16:09:28.044Z",
+      "placements": 1000,
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 5246.439125,
+          "metrics": {
+            "ScriptDuration": 0.678254,
+            "LayoutDuration": 0.400709,
+            "RecalcStyleDuration": 3.843047,
+            "TaskDuration": 5.216464,
+            "LayoutCount": 14010,
+            "RecalcStyleCount": 14009
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 5918.880541,
+          "metrics": {
+            "ScriptDuration": 0.654688,
+            "LayoutDuration": 0.40200199999999997,
+            "RecalcStyleDuration": 4.317653999999999,
+            "TaskDuration": 5.925335,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14006
+          }
+        }
+      ]
+    },
+    {
+      "run": "after-1000-a",
+      "recordedAt": "2026-10-21T16:10:26.144Z",
+      "placements": 1000,
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 5298.763790999999,
+          "metrics": {
+            "ScriptDuration": 0.729727,
+            "LayoutDuration": 0.404661,
+            "RecalcStyleDuration": 3.95115,
+            "TaskDuration": 5.266122,
+            "LayoutCount": 13610,
+            "RecalcStyleCount": 13611
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 5857.282499999999,
+          "metrics": {
+            "ScriptDuration": 0.6864699999999999,
+            "LayoutDuration": 0.403294,
+            "RecalcStyleDuration": 4.356316,
+            "TaskDuration": 5.821638999999999,
+            "LayoutCount": 13606,
+            "RecalcStyleCount": 13608
+          }
+        }
+      ]
+    },
+    {
+      "run": "after-1000-b",
+      "recordedAt": "2026-10-21T16:10:38.696Z",
+      "placements": 1000,
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 4963.058542000001,
+          "metrics": {
+            "ScriptDuration": 0.661056,
+            "LayoutDuration": 0.375422,
+            "RecalcStyleDuration": 3.752457,
+            "TaskDuration": 4.947254,
+            "LayoutCount": 13610,
+            "RecalcStyleCount": 13611
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 5769.485917,
+          "metrics": {
+            "ScriptDuration": 0.644926,
+            "LayoutDuration": 0.37265600000000004,
+            "RecalcStyleDuration": 4.2575780000000005,
+            "TaskDuration": 5.790922,
+            "LayoutCount": 13606,
+            "RecalcStyleCount": 13608
+          }
+        }
+      ]
+    },
+    {
+      "run": "before-1000-b",
+      "recordedAt": "2026-10-21T16:10:51.633Z",
+      "placements": 1000,
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 5332.635791000001,
+          "metrics": {
+            "ScriptDuration": 0.671554,
+            "LayoutDuration": 0.409217,
+            "RecalcStyleDuration": 3.914055,
+            "TaskDuration": 5.301317,
+            "LayoutCount": 14010,
+            "RecalcStyleCount": 14009
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 6125.886334000001,
+          "metrics": {
+            "ScriptDuration": 0.681176,
+            "LayoutDuration": 0.417464,
+            "RecalcStyleDuration": 4.429705,
+            "TaskDuration": 6.149808999999999,
+            "LayoutCount": 14006,
+            "RecalcStyleCount": 14006
+          }
+        }
+      ]
+    },
+    {
+      "run": "before-100",
+      "recordedAt": "2026-10-21T16:10:53.130Z",
+      "placements": 100,
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 220.54679099999998,
+          "metrics": {
+            "ScriptDuration": 0.061867,
+            "LayoutDuration": 0.020882,
+            "RecalcStyleDuration": 0.034232,
+            "TaskDuration": 0.189078,
+            "LayoutCount": 969,
+            "RecalcStyleCount": 971
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 215.35558300000002,
+          "metrics": {
+            "ScriptDuration": 0.06387499999999999,
+            "LayoutDuration": 0.018447999999999996,
+            "RecalcStyleDuration": 0.036600999999999995,
+            "TaskDuration": 0.17683400000000002,
+            "LayoutCount": 965,
+            "RecalcStyleCount": 973
+          }
+        }
+      ]
+    },
+    {
+      "run": "after-100",
+      "recordedAt": "2026-10-21T16:10:54.499Z",
+      "placements": 100,
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 260.201542,
+          "metrics": {
+            "ScriptDuration": 0.064475,
+            "LayoutDuration": 0.020145,
+            "RecalcStyleDuration": 0.032299,
+            "TaskDuration": 0.227731,
+            "LayoutCount": 929,
+            "RecalcStyleCount": 934
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 214.7144589999998,
+          "metrics": {
+            "ScriptDuration": 0.06795799999999999,
+            "LayoutDuration": 0.018262999999999998,
+            "RecalcStyleDuration": 0.035684,
+            "TaskDuration": 0.175504,
+            "LayoutCount": 926,
+            "RecalcStyleCount": 934
+          }
+        }
+      ]
+    },
+    {
+      "run": "before-500",
+      "recordedAt": "2026-10-21T16:10:58.969Z",
+      "placements": 500,
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 1614.01375,
+          "metrics": {
+            "ScriptDuration": 0.295812,
+            "LayoutDuration": 0.152691,
+            "RecalcStyleDuration": 0.984753,
+            "TaskDuration": 1.5836299999999999,
+            "LayoutCount": 7009,
+            "RecalcStyleCount": 7012
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 1763.5728340000005,
+          "metrics": {
+            "ScriptDuration": 0.27963699999999997,
+            "LayoutDuration": 0.148396,
+            "RecalcStyleDuration": 1.0565749999999998,
+            "TaskDuration": 1.7243559999999998,
+            "LayoutCount": 7005,
+            "RecalcStyleCount": 7009
+          }
+        }
+      ]
+    },
+    {
+      "run": "after-500",
+      "recordedAt": "2026-10-21T16:11:03.503Z",
+      "placements": 500,
+      "results": [
+        {
+          "phase": "cold",
+          "elapsedMs": 1637.2050840000002,
+          "metrics": {
+            "ScriptDuration": 0.332551,
+            "LayoutDuration": 0.153042,
+            "RecalcStyleDuration": 1.018457,
+            "TaskDuration": 1.604617,
+            "LayoutCount": 6809,
+            "RecalcStyleCount": 6813
+          }
+        },
+        {
+          "phase": "reload",
+          "elapsedMs": 1734.1060829999997,
+          "metrics": {
+            "ScriptDuration": 0.30293600000000004,
+            "LayoutDuration": 0.14813900000000002,
+            "RecalcStyleDuration": 1.066974,
+            "TaskDuration": 1.7106869999999998,
+            "LayoutCount": 6805,
+            "RecalcStyleCount": 6810
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": "Mac/Chrome環境での少数観測。I5hのLinux/Chromium154とは異なる。通知まとめの単独効果は未測定で、異なる版の比較を引き算して評価できない。"
+}

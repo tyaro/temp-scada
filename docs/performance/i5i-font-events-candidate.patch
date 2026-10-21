@@ -1,0 +1,300 @@
+diff --git a/apps/banto-scada/src/lib/MultilineTextPrimitive.svelte b/apps/banto-scada/src/lib/MultilineTextPrimitive.svelte
+index 502cfc3..90f6dc1 100644
+--- a/apps/banto-scada/src/lib/MultilineTextPrimitive.svelte
++++ b/apps/banto-scada/src/lib/MultilineTextPrimitive.svelte
+@@ -8,6 +8,7 @@
+     type StaticLine,
+   } from "./multiline-text-layout";
+   import type { TextStyle } from "./project";
++  import { subscribeTextFonts } from "./text-font-events";
+   let {
+     text,
+     width,
+@@ -56,9 +57,7 @@
+     const changed = () => {
+       if (active) fontRevision += 1;
+     };
+-    void document.fonts.ready.then(changed);
+-    document.fonts.addEventListener("loadingdone", changed);
+-    document.fonts.addEventListener("loadingerror", changed);
++    const unsubscribeFonts = subscribeTextFonts(document, changed);
+     let retryFrame: number | null = null;
+     const observer = new ResizeObserver(() => {
+       if (layout || !active || retryFrame !== null) return;
+@@ -71,8 +70,7 @@
+     return () => {
+       active = false;
+       if (retryFrame !== null) cancelAnimationFrame(retryFrame);
+-      document.fonts.removeEventListener("loadingdone", changed);
+-      document.fonts.removeEventListener("loadingerror", changed);
++      unsubscribeFonts();
+       observer.disconnect();
+     };
+   });
+diff --git a/apps/banto-scada/src/lib/TextPrimitive.svelte b/apps/banto-scada/src/lib/TextPrimitive.svelte
+index ef49ad3..f3485bc 100644
+--- a/apps/banto-scada/src/lib/TextPrimitive.svelte
++++ b/apps/banto-scada/src/lib/TextPrimitive.svelte
+@@ -7,6 +7,7 @@
+   import { onMount, untrack } from "svelte";
+   import { fitText, TEXT_FONT, type TextLayout } from "./text-layout";
+   import type { TextStyle } from "./project";
++  import { subscribeTextFonts } from "./text-font-events";
+   let {
+     text,
+     width,
+@@ -72,9 +73,7 @@
+     const changed = () => {
+       if (active) fontRevision += 1;
+     };
+-    void document.fonts.ready.then(changed);
+-    document.fonts.addEventListener("loadingdone", changed);
+-    document.fonts.addEventListener("loadingerror", changed);
++    const unsubscribeFonts = subscribeTextFonts(document, changed);
+     let retryFrame: number | null = null;
+     const observer = new ResizeObserver(() => {
+       if (layout || !active || retryFrame !== null) return;
+@@ -88,8 +87,7 @@
+     return () => {
+       active = false;
+       if (retryFrame !== null) cancelAnimationFrame(retryFrame);
+-      document.fonts.removeEventListener("loadingdone", changed);
+-      document.fonts.removeEventListener("loadingerror", changed);
++      unsubscribeFonts();
+       observer.disconnect();
+     };
+   });
+diff --git a/apps/banto-scada/src/lib/text-font-events.ts b/apps/banto-scada/src/lib/text-font-events.ts
+new file mode 100644
+index 0000000..38ad533
+--- /dev/null
++++ b/apps/banto-scada/src/lib/text-font-events.ts
+@@ -0,0 +1,73 @@
++type Subscriber = () => void;
++
++type FontWatch = {
++  subscribe: (changed: Subscriber) => () => void;
++};
++
++// Share readiness and event delivery, never measured text or font metrics.
++// The last subscriber releases the document, listeners and pending frame.
++const watches = new WeakMap<Document, FontWatch>();
++
++export function subscribeTextFonts(doc: Document, changed: Subscriber) {
++  let watch = watches.get(doc);
++  if (!watch) {
++    watch = createWatch(doc);
++    watches.set(doc, watch);
++  }
++  return watch.subscribe(changed);
++}
++
++function createWatch(doc: Document): FontWatch {
++  const fonts = doc.fonts;
++  const view = doc.defaultView!;
++  const subscribers = new Set<Subscriber>();
++  const pending = new Set<Subscriber>();
++  let active = true;
++  let ready = false;
++  let frame: number | null = null;
++
++  function schedule(listeners: Iterable<Subscriber>) {
++    if (!active) return;
++    for (const listener of listeners) pending.add(listener);
++    if (frame !== null) return;
++    frame = view.requestAnimationFrame(() => {
++      frame = null;
++      const batch = [...pending];
++      pending.clear();
++      for (const listener of batch) if (subscribers.has(listener)) listener();
++    });
++  }
++
++  const changed = () => schedule(subscribers);
++  fonts.addEventListener("loadingdone", changed);
++  fonts.addEventListener("loadingerror", changed);
++  // Wait until this mount batch finishes before reading ready, which may flush layout.
++  queueMicrotask(() => {
++    if (!active) return;
++    void fonts.ready.then(() => {
++      if (!active) return;
++      ready = true;
++      changed();
++    });
++  });
++
++  return {
++    subscribe(listener) {
++      // Each subscription has its own identity, including repeated callbacks.
++      const subscriber = () => listener();
++      subscribers.add(subscriber);
++      if (ready) schedule([subscriber]);
++      return () => {
++        subscribers.delete(subscriber);
++        pending.delete(subscriber);
++        if (!active || subscribers.size) return;
++        active = false;
++        if (frame !== null) view.cancelAnimationFrame(frame);
++        pending.clear();
++        fonts.removeEventListener("loadingdone", changed);
++        fonts.removeEventListener("loadingerror", changed);
++        watches.delete(doc);
++      };
++    },
++  };
++}
+diff --git a/apps/banto-scada/src/lib/text-font-events.test.ts b/apps/banto-scada/src/lib/text-font-events.test.ts
+new file mode 100644
+index 0000000..c8a5930
+--- /dev/null
++++ b/apps/banto-scada/src/lib/text-font-events.test.ts
+@@ -0,0 +1,149 @@
++import { expect, it, vi } from "vitest";
++import { subscribeTextFonts } from "./text-font-events";
++
++function fixture() {
++  const fonts = new EventTarget();
++  let finish!: () => void;
++  const ready = new Promise<void>((resolve) => (finish = resolve));
++  const readReady = vi.fn(() => ready);
++  Object.defineProperty(fonts, "ready", { get: readReady });
++  const add = vi.spyOn(fonts, "addEventListener");
++  const remove = vi.spyOn(fonts, "removeEventListener");
++  const frames = new Map<number, FrameRequestCallback>();
++  let id = 0;
++  const doc = {
++    fonts,
++    defaultView: {
++      requestAnimationFrame(callback: FrameRequestCallback) {
++        frames.set(++id, callback);
++        return id;
++      },
++      cancelAnimationFrame(frame: number) {
++        frames.delete(frame);
++      },
++    },
++  } as unknown as Document;
++  return {
++    doc,
++    fonts,
++    readReady,
++    add,
++    remove,
++    frames,
++    async ready() {
++      finish();
++      await Promise.resolve();
++      await Promise.resolve();
++    },
++    flush() {
++      const batch = [...frames.values()];
++      frames.clear();
++      batch.forEach((callback) => callback(0));
++    },
++  };
++}
++
++it("shares one readiness read and event pair for a mount batch and coalesces notifications", async () => {
++  const f = fixture();
++  const callbacks = Array.from({ length: 400 }, () => vi.fn());
++  const releases = callbacks.map((callback) =>
++    subscribeTextFonts(f.doc, callback),
++  );
++  expect(f.readReady).not.toHaveBeenCalled();
++  await f.ready();
++  f.fonts.dispatchEvent(new Event("loadingdone"));
++  f.fonts.dispatchEvent(new Event("loadingerror"));
++  expect(f.readReady).toHaveBeenCalledTimes(1);
++  expect(f.add.mock.calls.map(([name]) => name)).toEqual([
++    "loadingdone",
++    "loadingerror",
++  ]);
++  expect(f.frames.size).toBe(1);
++  f.flush();
++  callbacks.forEach((callback) => expect(callback).toHaveBeenCalledTimes(1));
++  f.fonts.dispatchEvent(new Event("loadingerror"));
++  f.flush();
++  callbacks.forEach((callback) => expect(callback).toHaveBeenCalledTimes(2));
++  releases.forEach((release) => release());
++  expect(f.remove.mock.calls).toEqual(f.add.mock.calls);
++});
++
++it("notifies a later subscriber without remeasuring existing subscribers or rereading ready", async () => {
++  const f = fixture();
++  const first = vi.fn(),
++    later = vi.fn();
++  const releaseFirst = subscribeTextFonts(f.doc, first);
++  await f.ready();
++  f.flush();
++  const releaseLater = subscribeTextFonts(f.doc, later);
++  f.flush();
++  expect(first).toHaveBeenCalledTimes(1);
++  expect(later).toHaveBeenCalledTimes(1);
++  expect(f.readReady).toHaveBeenCalledTimes(1);
++  releaseFirst();
++  releaseLater();
++});
++
++it("cancels pending frames and suppresses callbacks after unsubscribe", async () => {
++  const f = fixture();
++  const changed = vi.fn();
++  const release = subscribeTextFonts(f.doc, changed);
++  await f.ready();
++  expect(f.frames.size).toBe(1);
++  release();
++  release();
++  f.fonts.dispatchEvent(new Event("loadingdone"));
++  f.flush();
++  expect(f.frames.size).toBe(0);
++  expect(changed).not.toHaveBeenCalled();
++  expect(f.remove).toHaveBeenCalledTimes(2);
++});
++
++it("ignores old readiness after teardown and creates a fresh subscription lifetime", async () => {
++  const f = fixture();
++  const old = vi.fn(),
++    current = vi.fn();
++  const releaseOld = subscribeTextFonts(f.doc, old);
++  await Promise.resolve();
++  releaseOld();
++  const releaseCurrent = subscribeTextFonts(f.doc, current);
++  await f.ready();
++  f.flush();
++  expect(old).not.toHaveBeenCalled();
++  expect(current).toHaveBeenCalledTimes(1);
++  expect(f.readReady).toHaveBeenCalledTimes(2);
++  releaseCurrent();
++});
++
++it("skips readiness when destroyed before the mount batch ends and isolates documents", async () => {
++  const a = fixture(),
++    b = fixture();
++  const changedA = vi.fn(),
++    changedB = vi.fn();
++  subscribeTextFonts(a.doc, changedA)();
++  const releaseB = subscribeTextFonts(b.doc, changedB);
++  await a.ready();
++  await b.ready();
++  a.flush();
++  b.flush();
++  expect(a.readReady).not.toHaveBeenCalled();
++  expect(changedA).not.toHaveBeenCalled();
++  expect(changedB).toHaveBeenCalledTimes(1);
++  releaseB();
++});
++
++it("keeps repeated callback subscriptions independent and skips removed callbacks during delivery", async () => {
++  const f = fixture();
++  let releaseSecond = () => {};
++  const first = vi.fn(() => releaseSecond());
++  const second = vi.fn();
++  const releaseFirst = subscribeTextFonts(f.doc, first);
++  releaseSecond = subscribeTextFonts(f.doc, second);
++  const releaseDuplicate = subscribeTextFonts(f.doc, first);
++  await f.ready();
++  f.flush();
++  expect(first).toHaveBeenCalledTimes(2);
++  expect(second).not.toHaveBeenCalled();
++  releaseFirst();
++  releaseDuplicate();
++});
