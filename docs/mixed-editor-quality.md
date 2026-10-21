@@ -248,4 +248,4 @@ SCADA_I5D_TEXT_SOURCE=/tmp/scada-i5d-candidate.svelte pnpm --filter banto-scada 
 node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-mixed-quality/mixed-1000.bantoscada /tmp/scada-i5d-comparison.json http://localhost:5237 http://localhost:5238 1000
 ```
 
-patch再生後のsource hashは診断JSONの候補hashと一致した。作業ツリーのTextPrimitiveは変更しない。source overlayも含めて独立した出力先を使い、build・test・CPU採取を通常benchmarkと並走させない。候補を戻した最終差分でも寸法試験4件・通常build・整形が成功した。候補を作業ファイルへ戻さずconfigからbuildする再現手順も実行し、通常buildのmain assetは基準の`index-Cu0HSCLM.js`へ戻っている。全体CIはPush後に確認する。
+patch再生後のsource hashは診断JSONの候補hashと一致した。作業ツリーのTextPrimitiveは変更しない。source overlayも含めて独立した出力先を使い、build・test・CPU採取を通常benchmarkと並走させない。候補を戻した最終差分でも寸法試験4件・通常build・整形が成功した。候補を作業ファイルへ戻さずconfigからbuildする再現手順も実行し、通常buildのmain assetは基準の`index-Cu0HSCLM.js`へ戻っている。最終差分`94078be`の[全体CI39553076790](https://github.com/tyaro/temp-scada/actions/runs/39553076790)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。
