@@ -283,3 +283,5 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 ## 混在図面の計測とSVG文字計測（I5）
 
 `apps/banto-scada/scripts/mixed-editor-fixture.mjs`は公開サンプル＋自作PNG、`benchmark-mixed-editor.mjs`は本番ブラウザでの実操作・保存原本・資源寿命・投影比較を担当する。`svg-text-measure.ts`は複数行Textの一時SVG probeとfont／SVG座標変換・finally解放を担当し、`MultilineTextPrimitive.svelte`の既存折返し計算へ接続する。大域cacheやProject属性は追加しない。`e2e/svg-text-measure.spec.ts`は変換・文字寸法・失敗時解放、`e2e/multiline-text.spec.ts`は共通描画・入力と保存を確認する。[条件と結果](mixed-editor-quality.md)を参照。
+
+I5bでは`benchmark-editor.mjs --mixed`が同じ混在fixtureのドメイン費用を担当し、`benchmark-mixed-editor.mjs`の`keyBreakdown`はwarmup2回＋移動9回＋Undo9回のCDP差を保存する。`history.ts`の復元候補はrevision変更後に一度再検証し、snapshot入口と現在状態の検証を維持する。`history.test.ts`はUndo／Redo両方向の不正履歴・現在状態・revision上限での原子的拒否とテキスト正規化を追加確認する。[I5bの根拠](mixed-editor-quality.md)を参照。

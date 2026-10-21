@@ -39,7 +39,9 @@ export function travelHistory(
   if (restored.manifest.projectId !== project.manifest.projectId)
     throw new Error("別の Project の履歴は使えません");
   restored.manifest.projectRevision = project.manifest.projectRevision + 1;
-  const next = parseProject(serializeProject(restored));
+  // The snapshot was validated above. Validate the revised candidate once more
+  // (including revision overflow) without validating it twice via serializeProject.
+  const next = parseProject(JSON.stringify(restored));
   const current = serializeProject(project);
   return {
     project: next,

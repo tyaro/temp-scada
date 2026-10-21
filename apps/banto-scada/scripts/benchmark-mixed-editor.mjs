@@ -229,14 +229,36 @@ try {
       selector = `.sheet > svg > g[data-object-id="${object.id}"]`;
     await page.locator(`button[data-layer-id="${object.id}"]`).click();
     await frame(page).focus();
+    const keyBreakdown = [];
     async function key(name) {
+      const before = (await cdp.send("Performance.getMetrics")).metrics;
       await page.evaluate(
         ({ key, selector }) => window.__quality.arm(key, selector),
         { key: name.includes("+") ? name.split("+").at(-1) : name, selector },
       );
       await page.keyboard.press(name);
       await page.waitForFunction(() => window.__quality.result !== null);
-      return page.evaluate(() => window.__quality.result);
+      const elapsedMs = await page.evaluate(() => window.__quality.result);
+      const after = (await cdp.send("Performance.getMetrics")).metrics;
+      keyBreakdown.push({
+        key: name,
+        elapsedMs,
+        metrics: Object.fromEntries(
+          [
+            "ScriptDuration",
+            "LayoutDuration",
+            "RecalcStyleDuration",
+            "TaskDuration",
+            "LayoutCount",
+            "RecalcStyleCount",
+          ].map((metric) => [
+            metric,
+            after.find((entry) => entry.name === metric).value -
+              before.find((entry) => entry.name === metric).value,
+          ]),
+        ),
+      });
+      return elapsedMs;
     }
     await key("ArrowRight");
     await key("Control+z");
@@ -244,6 +266,10 @@ try {
       undos = [];
     for (let i = 0; i < 9; i++) moves.push(await key("ArrowRight"));
     for (let i = 0; i < 9; i++) undos.push(await key("Control+z"));
+    await writeFile(
+      resolve(output, `mixed-${count}-keys.json`),
+      JSON.stringify(keyBreakdown, null, 2) + "\n",
+    );
     const beforeHistory = await memory(),
       historyMoves = [];
     for (let i = 0; i < 50; i++) historyMoves.push(await key("ArrowRight"));
@@ -341,6 +367,9 @@ try {
             ),
           })),
         ),
+      // Warmup pair followed by nine moves and nine undos. CDP intervals also
+      // include driver coordination; durations are seconds and are not additive.
+      keyBreakdown: keyBreakdown.slice(0, 20),
       loadBreakdown,
       timing: {
         firstLoadMs: +firstLoadMs.toFixed(3),

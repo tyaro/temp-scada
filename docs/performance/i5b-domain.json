@@ -1,0 +1,464 @@
+{
+  "baselineCommit": "de1fe7f4f4e19d08f9a06985d34d205863e1881d",
+  "candidate": "Same baseline with history.ts validated candidate copy changed from parseProject(serializeProject(restored)) to parseProject(JSON.stringify(restored))",
+  "sourceHashes": {
+    "before": "96d5cb7ae6e149273c08dc3ffbbf07653cf2fcd60a0ab49f3b0aa5717c690490",
+    "after": "04bdcb470b61de7406aebc3d786619bdca5dfffb80bda2bd461e5ccc95a7c214"
+  },
+  "method": "Node SSR, I5 mixedFixture, nine samples after warmup, explicit GC outside timing. Separate from browser measurements. One run each; no local build or tests ran concurrently.",
+  "before": {
+    "node": "v24.19.0",
+    "platform": "linux/x64",
+    "fixture": "I5 mixedFixture: equal rectangle/wrapped Text/Symbol/image/Polyline, four shared PNG assets",
+    "results": [
+      {
+        "objects": 100,
+        "screens": 1,
+        "jsonBytes": 68873,
+        "timing": {
+          "edit": {
+            "samples": 9,
+            "medianMs": 12.412,
+            "maxMs": 16.085
+          },
+          "editWithHistory": {
+            "samples": 9,
+            "medianMs": 14.213,
+            "maxMs": 19.425
+          },
+          "undo": {
+            "samples": 9,
+            "medianMs": 6.732,
+            "maxMs": 11.584
+          },
+          "saveJson": {
+            "samples": 9,
+            "medianMs": 2.638,
+            "maxMs": 3.732
+          },
+          "parseAndValidate": {
+            "samples": 9,
+            "medianMs": 1.934,
+            "maxMs": 3.361
+          },
+          "serializeAndValidate": {
+            "samples": 9,
+            "medianMs": 2.743,
+            "maxMs": 4.194
+          },
+          "cloneWithValidation": {
+            "samples": 9,
+            "medianMs": 3.931,
+            "maxMs": 5.92
+          },
+          "candidateCloneWithValidation": {
+            "samples": 9,
+            "medianMs": 2.231,
+            "maxMs": 3.485
+          },
+          "compareCanonicalPair": {
+            "samples": 9,
+            "medianMs": 3.753,
+            "maxMs": 5.193
+          },
+          "collectAssetReferences": {
+            "samples": 9,
+            "medianMs": 0.038,
+            "maxMs": 0.062
+          },
+          "historySnapshot": {
+            "samples": 9,
+            "medianMs": 2.87,
+            "maxMs": 7.166
+          }
+        },
+        "consecutiveMoveCommits": {
+          "count": 50,
+          "medianMs": 10.556,
+          "maxMs": 28.989
+        },
+        "retainedHistory": {
+          "snapshots": 50,
+          "serializedUtf8Bytes": 3443691,
+          "heapDeltaBytes": 6905616,
+          "rssDeltaBytes": 37523456
+        }
+      },
+      {
+        "objects": 500,
+        "screens": 1,
+        "jsonBytes": 320405,
+        "timing": {
+          "edit": {
+            "samples": 9,
+            "medianMs": 38.439,
+            "maxMs": 49.611
+          },
+          "editWithHistory": {
+            "samples": 9,
+            "medianMs": 45.89,
+            "maxMs": 55.68
+          },
+          "undo": {
+            "samples": 9,
+            "medianMs": 32.856,
+            "maxMs": 37.764
+          },
+          "saveJson": {
+            "samples": 9,
+            "medianMs": 9.933,
+            "maxMs": 11.888
+          },
+          "parseAndValidate": {
+            "samples": 9,
+            "medianMs": 6.77,
+            "maxMs": 9.226
+          },
+          "serializeAndValidate": {
+            "samples": 9,
+            "medianMs": 10.038,
+            "maxMs": 25.751
+          },
+          "cloneWithValidation": {
+            "samples": 9,
+            "medianMs": 15.899,
+            "maxMs": 21.282
+          },
+          "candidateCloneWithValidation": {
+            "samples": 9,
+            "medianMs": 7.866,
+            "maxMs": 14.199
+          },
+          "compareCanonicalPair": {
+            "samples": 9,
+            "medianMs": 10.548,
+            "maxMs": 44.164
+          },
+          "collectAssetReferences": {
+            "samples": 9,
+            "medianMs": 0.144,
+            "maxMs": 0.372
+          },
+          "historySnapshot": {
+            "samples": 9,
+            "medianMs": 9.973,
+            "maxMs": 13.226
+          }
+        },
+        "consecutiveMoveCommits": {
+          "count": 50,
+          "medianMs": 45.134,
+          "maxMs": 140.402
+        },
+        "retainedHistory": {
+          "snapshots": 50,
+          "serializedUtf8Bytes": 16020291,
+          "heapDeltaBytes": 24990000,
+          "rssDeltaBytes": 91238400
+        }
+      },
+      {
+        "objects": 1000,
+        "screens": 1,
+        "jsonBytes": 659268,
+        "timing": {
+          "edit": {
+            "samples": 9,
+            "medianMs": 69.425,
+            "maxMs": 90.698
+          },
+          "editWithHistory": {
+            "samples": 9,
+            "medianMs": 87.141,
+            "maxMs": 151.811
+          },
+          "undo": {
+            "samples": 9,
+            "medianMs": 60.379,
+            "maxMs": 75.384
+          },
+          "saveJson": {
+            "samples": 9,
+            "medianMs": 19.244,
+            "maxMs": 21.321
+          },
+          "parseAndValidate": {
+            "samples": 9,
+            "medianMs": 12.694,
+            "maxMs": 23.895
+          },
+          "serializeAndValidate": {
+            "samples": 9,
+            "medianMs": 19.783,
+            "maxMs": 22.788
+          },
+          "cloneWithValidation": {
+            "samples": 9,
+            "medianMs": 30.726,
+            "maxMs": 36.873
+          },
+          "candidateCloneWithValidation": {
+            "samples": 9,
+            "medianMs": 16.267,
+            "maxMs": 25.917
+          },
+          "compareCanonicalPair": {
+            "samples": 9,
+            "medianMs": 22.268,
+            "maxMs": 28.837
+          },
+          "collectAssetReferences": {
+            "samples": 9,
+            "medianMs": 0.19,
+            "maxMs": 0.264
+          },
+          "historySnapshot": {
+            "samples": 9,
+            "medianMs": 19.27,
+            "maxMs": 24.662
+          }
+        },
+        "consecutiveMoveCommits": {
+          "count": 50,
+          "medianMs": 93.365,
+          "maxMs": 154.007
+        },
+        "retainedHistory": {
+          "snapshots": 50,
+          "serializedUtf8Bytes": 32963441,
+          "heapDeltaBytes": 33680648,
+          "rssDeltaBytes": 36503552
+        }
+      }
+    ]
+  },
+  "after": {
+    "measuredAt": "2026-10-21T04:37:29.728Z",
+    "commit": "de1fe7f4f4e19d08f9a06985d34d205863e1881d",
+    "worktreeDirty": true,
+    "node": "v24.19.0",
+    "platform": "linux/x64",
+    "fixture": "I5 mixedFixture: equal rectangle/wrapped Text/Symbol/image/Polyline, four shared PNG assets",
+    "results": [
+      {
+        "objects": 100,
+        "screens": 1,
+        "jsonBytes": 68873,
+        "timing": {
+          "edit": {
+            "samples": 9,
+            "medianMs": 8.009,
+            "maxMs": 9.534
+          },
+          "editWithHistory": {
+            "samples": 9,
+            "medianMs": 10.224,
+            "maxMs": 12.203
+          },
+          "undo": {
+            "samples": 9,
+            "medianMs": 5.129,
+            "maxMs": 8.014
+          },
+          "saveJson": {
+            "samples": 9,
+            "medianMs": 2.501,
+            "maxMs": 3.831
+          },
+          "parseAndValidate": {
+            "samples": 9,
+            "medianMs": 1.839,
+            "maxMs": 2.962
+          },
+          "serializeAndValidate": {
+            "samples": 9,
+            "medianMs": 2.671,
+            "maxMs": 4.799
+          },
+          "cloneWithValidation": {
+            "samples": 9,
+            "medianMs": 4.414,
+            "maxMs": 8.557
+          },
+          "candidateCloneWithValidation": {
+            "samples": 9,
+            "medianMs": 2.402,
+            "maxMs": 6.978
+          },
+          "compareCanonicalPair": {
+            "samples": 9,
+            "medianMs": 3.582,
+            "maxMs": 5.043
+          },
+          "collectAssetReferences": {
+            "samples": 9,
+            "medianMs": 0.036,
+            "maxMs": 0.043
+          },
+          "historySnapshot": {
+            "samples": 9,
+            "medianMs": 2.269,
+            "maxMs": 3.072
+          }
+        },
+        "consecutiveMoveCommits": {
+          "count": 50,
+          "medianMs": 10.111,
+          "maxMs": 20.271
+        },
+        "retainedHistory": {
+          "snapshots": 50,
+          "serializedUtf8Bytes": 3443691,
+          "heapDeltaBytes": 6885848,
+          "rssDeltaBytes": 37130240
+        }
+      },
+      {
+        "objects": 500,
+        "screens": 1,
+        "jsonBytes": 320405,
+        "timing": {
+          "edit": {
+            "samples": 9,
+            "medianMs": 34.266,
+            "maxMs": 64.558
+          },
+          "editWithHistory": {
+            "samples": 9,
+            "medianMs": 43.226,
+            "maxMs": 45.423
+          },
+          "undo": {
+            "samples": 9,
+            "medianMs": 22.946,
+            "maxMs": 42.636
+          },
+          "saveJson": {
+            "samples": 9,
+            "medianMs": 8.908,
+            "maxMs": 13.326
+          },
+          "parseAndValidate": {
+            "samples": 9,
+            "medianMs": 7.034,
+            "maxMs": 9.884
+          },
+          "serializeAndValidate": {
+            "samples": 9,
+            "medianMs": 8.704,
+            "maxMs": 10.869
+          },
+          "cloneWithValidation": {
+            "samples": 9,
+            "medianMs": 17.083,
+            "maxMs": 21.836
+          },
+          "candidateCloneWithValidation": {
+            "samples": 9,
+            "medianMs": 7.694,
+            "maxMs": 8.855
+          },
+          "compareCanonicalPair": {
+            "samples": 9,
+            "medianMs": 10.267,
+            "maxMs": 13.622
+          },
+          "collectAssetReferences": {
+            "samples": 9,
+            "medianMs": 0.113,
+            "maxMs": 0.471
+          },
+          "historySnapshot": {
+            "samples": 9,
+            "medianMs": 9.374,
+            "maxMs": 10.55
+          }
+        },
+        "consecutiveMoveCommits": {
+          "count": 50,
+          "medianMs": 39.87,
+          "maxMs": 77.435
+        },
+        "retainedHistory": {
+          "snapshots": 50,
+          "serializedUtf8Bytes": 16020291,
+          "heapDeltaBytes": 24989880,
+          "rssDeltaBytes": 91906048
+        }
+      },
+      {
+        "objects": 1000,
+        "screens": 1,
+        "jsonBytes": 659268,
+        "timing": {
+          "edit": {
+            "samples": 9,
+            "medianMs": 62.674,
+            "maxMs": 70.46
+          },
+          "editWithHistory": {
+            "samples": 9,
+            "medianMs": 82.454,
+            "maxMs": 99.347
+          },
+          "undo": {
+            "samples": 9,
+            "medianMs": 42.557,
+            "maxMs": 50.704
+          },
+          "saveJson": {
+            "samples": 9,
+            "medianMs": 18.709,
+            "maxMs": 21.153
+          },
+          "parseAndValidate": {
+            "samples": 9,
+            "medianMs": 11.924,
+            "maxMs": 15.624
+          },
+          "serializeAndValidate": {
+            "samples": 9,
+            "medianMs": 18.903,
+            "maxMs": 25.189
+          },
+          "cloneWithValidation": {
+            "samples": 9,
+            "medianMs": 31.72,
+            "maxMs": 42.8
+          },
+          "candidateCloneWithValidation": {
+            "samples": 9,
+            "medianMs": 15.323,
+            "maxMs": 26.154
+          },
+          "compareCanonicalPair": {
+            "samples": 9,
+            "medianMs": 17.237,
+            "maxMs": 22.71
+          },
+          "collectAssetReferences": {
+            "samples": 9,
+            "medianMs": 0.168,
+            "maxMs": 0.813
+          },
+          "historySnapshot": {
+            "samples": 9,
+            "medianMs": 16.825,
+            "maxMs": 22.262
+          }
+        },
+        "consecutiveMoveCommits": {
+          "count": 50,
+          "medianMs": 80.999,
+          "maxMs": 152.127
+        },
+        "retainedHistory": {
+          "snapshots": 50,
+          "serializedUtf8Bytes": 32963441,
+          "heapDeltaBytes": 33704904,
+          "rssDeltaBytes": 37015552
+        }
+      }
+    ]
+  }
+}

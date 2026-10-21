@@ -311,3 +311,7 @@ resize通知とpointerupの順序による位置の誤確定を修正し、実wi
 ## I5初回：混在図面の品質計測と読込の限定改善
 
 [再現条件・比較表・実画面](mixed-editor-quality.md)に、画像・共有Symbol・折返しTextを含む100／500／1000配置の結果を記録した。SVG文字計測のprobeを一時領域へ隔離し、fontとSVG変換を維持する。1000配置の再読込中央値は約37.7→17.8秒。文字投影、保存内容、PNG原本と資源解放を確認した。全TS1104件・関連ブラウザ18件・型・build・整形が成功し、実装`8a7cf21`の[全体CI39540132164](https://github.com/tyaro/temp-scada/actions/runs/39540132164)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。Project0.33.0・上流依存は不変。キー操作・Undoの負荷は別の内訳計測へ進む。実案件やWindowsでの性能保証ではない。
+
+### I5b進捗：履歴復元の重複検証（2026-10-21）
+
+[内訳・再現手順](mixed-editor-quality.md)に沿い、Nodeの混在fixture計測と本番ブラウザのキー別CDP記録を追加した。履歴復元候補をserialize経由で二重検証する経路だけを減らし、入口検証・revision上限・独立コピー・現在状態のsnapshot検証を保持する。Nodeの1000配置Undo中央値は60.4→42.6ms。ブラウザ全体の応答改善とは扱わず、実操作と回帰検証・全体CIは別途確認する。差分Undo・大域cache・上流依存の変更はない。

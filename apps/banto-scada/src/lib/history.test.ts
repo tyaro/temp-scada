@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import sample from "../../../../examples/minimal.project.json";
-import { parseProject } from "./project";
+import { parseProject, serializeProject } from "./project";
 import {
   emptyHistory,
   recordEdit,
@@ -109,4 +109,63 @@ it("deletion of a Symbol instance can be undone without losing the shared defini
   );
   expect(restored.project.screens).toEqual(added.project.screens);
   expect(restored.project.symbols).toEqual(added.project.symbols);
+});
+
+it.each(["undo", "redo"] as const)(
+  "%s rejects corrupt history, invalid current state and revision overflow atomically",
+  (direction) => {
+    const project = fresh();
+    const snapshot = serializeProject(project);
+    const history = {
+      past: direction === "undo" ? [snapshot] : [],
+      future: direction === "redo" ? [snapshot] : [],
+    };
+    const corrupt = structuredClone(history);
+    corrupt[direction === "undo" ? "past" : "future"] = [
+      JSON.stringify({ ...project, screens: [] }),
+    ];
+    const corruptBefore = structuredClone(corrupt);
+    expect(() => travelHistory(project, corrupt, direction, "edit")).toThrow();
+    expect(corrupt).toEqual(corruptBefore);
+    for (const mutate of [
+      (value: typeof project) => {
+        value.manifest.projectRevision = Number.MAX_SAFE_INTEGER;
+      },
+      (value: typeof project) => {
+        value.screens[0].objects[0].x = NaN;
+      },
+    ]) {
+      const candidate = structuredClone(project);
+      mutate(candidate);
+      const before = structuredClone(candidate);
+      expect(() =>
+        travelHistory(candidate, history, direction, "edit"),
+      ).toThrow();
+      expect(candidate).toEqual(before);
+      expect(history).toEqual({
+        past: direction === "undo" ? [snapshot] : [],
+        future: direction === "redo" ? [snapshot] : [],
+      });
+    }
+    expect(project).toEqual(fresh());
+  },
+);
+it("normalizes snapshot text and isolates restored state from its source", () => {
+  const project = fresh();
+  const source = structuredClone(project);
+  const text = source.screens[0].objects.find(
+    (object) => object.shape.type === "text",
+  )!;
+  if (text.shape.type !== "text") throw new Error("Missing sample text");
+  text.shape.text = "first\r\nsecond\u2028third";
+  const raw = JSON.stringify(source);
+  const history = { past: [raw], future: [] };
+  const restored = travelHistory(project, history, "undo", "edit");
+  expect(restored.project.screens).toEqual(parseProject(raw).screens);
+  expect(restored.project.manifest.projectRevision).toBe(
+    project.manifest.projectRevision + 1,
+  );
+  restored.project.screens[0].objects[0].x++;
+  expect(history).toEqual({ past: [raw], future: [] });
+  expect(project).toEqual(fresh());
 });

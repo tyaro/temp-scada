@@ -670,3 +670,7 @@ Project0.32.0の[静的Text明示改行](multiline-text-design.md)を保存し�
 ## I5初回：混在図面の計測・読込改善（2026-10-21）
 
 [結果と再現手順](mixed-editor-quality.md)に、100／500／1000配置の本番ブラウザ計測、SVG変換を含む文字寸法一致、保存と資源寿命を記録した。文字計測probeだけを隔離し、1000配置の再読込中央値を約37.7→17.8秒へ短縮した。実装`8a7cf21`の[全体CI39540132164](https://github.com/tyaro/temp-scada/actions/runs/39540132164)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。初回の区切りを完了した。I5bはキー移動・Undoのドメイン処理／Svelte更新／レイアウトの内訳を計測する。残る遅延を隠さず、差分Undo・大域cache・検証省略を先行導入しない。SDK・認証・正式Runtimeへは拡張していない。
+
+### I5b進捗：履歴復元の重複検証（2026-10-21）
+
+[内訳・再現手順](mixed-editor-quality.md)に沿い、Nodeの混在fixture計測と本番ブラウザのキー別CDP記録を追加した。履歴復元候補をserialize経由で二重検証する経路だけを減らし、入口検証・revision上限・独立コピー・現在状態のsnapshot検証を保持する。Nodeの1000配置Undo中央値は60.4→42.6ms。ブラウザ全体の応答改善とは扱わず、実操作と回帰検証・全体CIは別途確認する。差分Undo・大域cache・上流依存の変更はない。

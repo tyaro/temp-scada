@@ -97,3 +97,26 @@ GC後JSヒープは50履歴の前→後で、100配置約24.6→30.3MB、500配�
 ![100配置の混在図面・ダーク](assets/frontend-ux/mixed-quality-100-dark.png)
 
 [1000配置の実画面](assets/frontend-ux/mixed-quality-1000-light.png)。必要な拡大表示は既存のツールバー／Ctrl+ホイールで行う。
+
+## I5b：キー移動・Undoの内訳と復元候補（着手）
+
+同じ`mixedFixture`をNode側でも計測できるよう、既存の`benchmark-editor.mjs`へ`--mixed`を追加する。既定のR6 fixtureは維持する。Nodeは実ドメイン関数をSSR loaderで呼び、ブラウザ版は本番bundleの実キー操作を使う。両者は別の実行環境なので、Nodeの時間をブラウザ時間から引いてSvelte処理時間とはしない。
+
+ブラウザrunnerではwarmupの移動／Undoに続く各9回についてCDPのScriptDuration・LayoutDuration・RecalcStyleDuration・TaskDurationと回数の差を記録する。期間はドライバーとの通信や待機も含み、キーイベントから2rAFまでの既存指標と厳密に同じ区間ではない。CDP durationの単位は秒で、指標は重なるため合計しない。性能の合否閾値やCI待機時間は変更しない。
+
+Undoの候補変更は、履歴snapshotを検証・正規化したあとrevisionを更新し、候補を`parseProject(JSON.stringify(restored))`で再検証する。旧経路の`parseProject(serializeProject(restored))`はserialize内部と外側で同じ候補を2回検証する。履歴の入口検証、更新後revisionの上限、現在Projectのsnapshot生成時の検証、別Project拒否、独立候補、原子的失敗は残す。履歴の件数・形式・資産寿命・保存モデルは変えない。
+
+```sh
+source scripts/cloud-env.sh
+node --expose-gc apps/banto-scada/scripts/benchmark-editor.mjs --mixed 100 500 1000 > /tmp/i5b-domain.json
+# 本番previewの起動後。Node計測やbuild・テストとは並走させない。
+node apps/banto-scada/scripts/benchmark-mixed-editor.mjs /tmp/i5b-browser 100 500 1000
+```
+
+この段階では比較計測と回帰検証が完了するまで採用結果を確定しない。UI更新全体の高速化とは扱わず、残るScriptDurationは後続のサンプリングprofileで調べる。
+
+### I5bのドメイン比較
+
+[Node生JSON](performance/i5b-domain.json)。基準`de1fe7f`と履歴候補変更、同じ100／500／1000混在配置。各9回の中央値はUndoが6.732→5.129ms、32.856→22.946ms、60.379→42.557msだった。1回ずつのrunであり、ブラウザ応答の短縮率へ読み替えない。最大値と未変更操作の変動もJSONに残す。
+
+[ブラウザ変更前JSON](performance/i5b-browser-before.json)では1000配置のキー移動中央値1118ms、Undo1057ms。CDP ScriptDurationの中央値はそれぞれ1012／953msで、LayoutDurationは約3〜4ms、RecalcStyleDurationは約3msだった。Nodeとは実行環境も区間も違うため差分をSvelte時間と断定できない。スクリプト側を優先して追う根拠とする。50履歴移動の最大は約11.5秒で、このrunには大きなばらつきもある。

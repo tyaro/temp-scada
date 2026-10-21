@@ -2,9 +2,11 @@
 // Measures domain work in Node, not browser rendering or end-to-end input latency.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { performance } from "node:perf_hooks";
 import { createServer } from "vite";
+import { mixedFixture } from "./mixed-editor-fixture.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const sample = JSON.parse(
@@ -12,11 +14,18 @@ const sample = JSON.parse(
     new URL("../../../examples/minimal.project.json", import.meta.url),
   ),
 );
-const sizes = process.argv.slice(2).map(Number);
-if (!sizes.length) sizes.push(100, 1000, 5000);
+const mixed = process.argv.includes("--mixed");
+const sizes = process.argv
+  .slice(2)
+  .filter((arg) => arg !== "--mixed")
+  .map(Number);
+if (!sizes.length)
+  sizes.push(...(mixed ? [100, 500, 1000] : [100, 1000, 5000]));
 assert(
   sizes.every((size) => Number.isInteger(size) && size >= 10 && size <= 10000),
 );
+if (mixed)
+  assert(sizes.every((size) => size >= 25 && size <= 1000 && size % 5 === 0));
 assert(global.gc, "Use node --expose-gc to measure retained heap");
 const server = await createServer({
   root,
@@ -75,7 +84,9 @@ try {
         ),
       }),
     );
-    const project = parseProject(JSON.stringify(fixture));
+    const project = parseProject(
+      JSON.stringify(mixed ? mixedFixture(count).project : fixture),
+    );
     const screenId = project.screens[0].id;
     const object = project.screens[0].objects[0];
     const command = {
@@ -168,10 +179,20 @@ try {
   process.stdout.write(
     JSON.stringify(
       {
+        measuredAt: new Date().toISOString(),
+        commit: execFileSync("git", ["rev-parse", "HEAD"], { cwd: root })
+          .toString()
+          .trim(),
+        worktreeDirty: Boolean(
+          execFileSync("git", ["status", "--porcelain"], { cwd: root })
+            .toString()
+            .trim(),
+        ),
         node: process.version,
         platform: `${process.platform}/${process.arch}`,
-        fixture:
-          "Up to 1000 objects per screen, equal rectangle/ellipse/text mix, no assets or symbols",
+        fixture: mixed
+          ? "I5 mixedFixture: equal rectangle/wrapped Text/Symbol/image/Polyline, four shared PNG assets"
+          : "Up to 1000 objects per screen, equal rectangle/ellipse/text mix, no assets or symbols",
         results,
       },
       null,
