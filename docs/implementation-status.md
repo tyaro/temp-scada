@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入も全体CI成功確認済み。I3の静的Text折返しも全体CI成功確認済み。I4の単色塗り・枠線α一括編集も完了・全体CI成功確認済み。I5は混在図面の初回計測と文字計測隔離を受入確認中。
+2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入も全体CI成功確認済み。I3の静的Text折返しも全体CI成功確認済み。I4の単色塗り・枠線α一括編集も完了・全体CI成功確認済み。I5の初回計測と文字計測隔離も完了・全体CI成功確認済み。大規模なキー移動・Undoの遅延は残る。
 
 ## 保存契約と基盤
 
@@ -307,3 +307,7 @@ resize通知とpointerupの順序による位置の誤確定を修正し、実wi
 ## 上流変更中のI4：単色塗り・枠線α一括編集
 
 [仕様と実画面](selection-paint-alpha-design.md)に沿い、矩形・楕円の既存単色塗り／枠線を独立に変更する一括フォームを追加した。混在・空欄保持・適用不可理由・全件検査・同値no-op・Undoと入力保護を確認した。全TS1104件、新規ブラウザ4件、既存回帰27件、型・buildが成功。Project0.33.0・上流依存は不変。修正`bf187f6`を含む[全体CI39535689050](https://github.com/tyaro/temp-scada/actions/runs/39535689050)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。I4を完了した。
+
+## I5初回：混在図面の品質計測と読込の限定改善
+
+[再現条件・比較表・実画面](mixed-editor-quality.md)に、画像・共有Symbol・折返しTextを含む100／500／1000配置の結果を記録した。SVG文字計測のprobeを一時領域へ隔離し、fontとSVG変換を維持する。1000配置の再読込中央値は約37.7→17.8秒。文字投影、保存内容、PNG原本と資源解放を確認した。全TS1104件・関連ブラウザ18件・型・build・整形が成功し、実装`8a7cf21`の[全体CI39540132164](https://github.com/tyaro/temp-scada/actions/runs/39540132164)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。Project0.33.0・上流依存は不変。キー操作・Undoの負荷は別の内訳計測へ進む。実案件やWindowsでの性能保証ではない。
