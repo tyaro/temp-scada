@@ -64,14 +64,14 @@ I5は[性能計測の既存記録](../performance/editor-performance.md)を再�
 
 ## 今は保留するもの
 
-| 対象                                                                       | 保留理由・再開条件                                                                                                                  |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| 任意ドッキング、tab分離、汎用draft／shortcut／request／画像Store基盤       | [Banto #432〜#438](../reviews/banto-contribution-handoff.md)と二重実装しない。公開APIと受入テストが揃った範囲から固定依存を更新する |
-| 実Hub／catalog、設備・タグ契約の拡張、正式Faceplate／Action                | Industrial側の仕様変更に追随する費用が大きい。対象SDKと責務の安定を確認して再計画。既存の読取投影は維持する                         |
-| 認証、ユーザー管理、運用切替                                               | 既存の延期指示を維持。Industrialの認証契約を確認してから接続する                                                                    |
-| S9b server／host、v1.1 Alarm／Event／History／Trend、Camera、HTTP／Program | server・SDK・実行境界に依存。S9bがCore v1の基盤である区分を変えず、独自の代替serverを作らない                                       |
-| 正式directory／ZIP、Design Domain API、自動復旧／配布管理、運用kiosk       | persistence・revision・host等の共有契約と合わせる。現在の最小画像packageを正式形式の完成扱いにしない                                |
-| グループ入れ子／任意拡縮、多点gradient                                     | 上流待ちが必須という意味ではないが、モデル・操作の変更が広い。I1〜I4後に独立設計し、今回の範囲へ追加しない                          |
+| 対象                                                                       | 保留理由・再開条件                                                                                                                                                                                |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 任意ドッキング、tab分離、汎用draft／shortcut／request／画像Store基盤       | [Banto #432〜#438](../reviews/banto-contribution-handoff.md)はClosed。二重実装せず、[追加還元候補](../reviews/banto-contribution-candidates.md)と既存APIを照合し、SCADA受入後に固定依存を更新する |
+| 実Hub／catalog、設備・タグ契約の拡張、正式Faceplate／Action                | Industrial側の仕様変更に追随する費用が大きい。対象SDKと責務の安定を確認して再計画。既存の読取投影は維持する                                                                                       |
+| 認証、ユーザー管理、運用切替                                               | 既存の延期指示を維持。Industrialの認証契約を確認してから接続する                                                                                                                                  |
+| S9b server／host、v1.1 Alarm／Event／History／Trend、Camera、HTTP／Program | server・SDK・実行境界に依存。S9bがCore v1の基盤である区分を変えず、独自の代替serverを作らない                                                                                                     |
+| 正式directory／ZIP、Design Domain API、自動復旧／配布管理、運用kiosk       | persistence・revision・host等の共有契約と合わせる。現在の最小画像packageを正式形式の完成扱いにしない                                                                                              |
+| グループ入れ子／任意拡縮、多点gradient                                     | 上流待ちが必須という意味ではないが、モデル・操作の変更が広い。I1〜I4後に独立設計し、今回の範囲へ追加しない                                                                                        |
 
 保留は削除や永続的な中止ではない。各機能の最終提供段階は統合設計を維持する。上流Issueが閉じただけで即更新せず、修正コミット・公開API・SCADAの接続試験を確認する。
 
