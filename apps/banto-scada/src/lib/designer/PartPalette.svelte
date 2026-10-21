@@ -13,6 +13,7 @@
     type PaletteView,
   } from "../banto/setup";
   let {
+    images,
     definitions,
     allowSymbols = true,
     onadd,
@@ -30,6 +31,10 @@
     onarm,
     onimmediate,
   }: {
+    images?: ReadonlyMap<
+      string,
+      { url: string; width: number; height: number }
+    >;
     definitions: SymbolDefinition[];
     allowSymbols?: boolean;
     onadd: (kind: AddKind) => void;
@@ -313,6 +318,7 @@
                     onclick={() => onbuiltin(part.template)}
                   >
                     <SymbolThumbnail
+                      {images}
                       definition={builtins[
                         part.template
                       ] as unknown as SymbolDefinition}
@@ -395,7 +401,7 @@
                       ondragend={onenddrag}
                       onclick={() => onplace(definition.id)}
                     >
-                      <SymbolThumbnail {definition} /><span
+                      <SymbolThumbnail {images} {definition} /><span
                         class:sr-only={view === "icons"}>{definition.name}</span
                       ><small class="sr-only">配置を追加</small>
                     </button>

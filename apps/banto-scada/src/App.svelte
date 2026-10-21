@@ -3207,6 +3207,7 @@
           </TreeSection>
           <TreeSection label="シンボル" count={project.symbols.length}>
             <SymbolLibrary
+              images={assetImages}
               {project}
               selectedId={libraryId}
               workspaceKey={workspaceGeneration}
@@ -3399,12 +3400,13 @@
       {/snippet}
       {#snippet layersPanel()}
         {#if mode === "edit"}
-          <LayerTree tree={layerTreeBindings} />
+          <LayerTree images={assetImages} tree={layerTreeBindings} />
         {/if}
       {/snippet}
       {#snippet partsPanel()}
         {#if mode === "edit"}
           <PartPalette
+            images={assetImages}
             {isFavorite}
             {positionPlacement}
             {isArmed}
@@ -3556,6 +3558,7 @@
       {#if mode === "edit" && (showSidebar || showInspector || showReferences)}
         <div class="canvas-navigation" class:has-map={showMinimap}>
           <FavoritesDock
+            images={assetImages}
             items={favoriteItems}
             {positionPlacement}
             {isArmed}
@@ -3754,7 +3757,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.33.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.34.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

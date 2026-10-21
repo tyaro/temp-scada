@@ -49,34 +49,42 @@
         data-symbol-child-id={child.id}
         transform={objectTransform(child)}
         opacity={compositedOpacity(child)}
-        ><Primitive
-          object={child}
-          equipmentPropertyDisplay={child.shape.type === "text" &&
-          child.shape.equipmentProperty
-            ? resolveEquipmentProperty(
-                child.shape.equipmentProperty.field,
-                object.shape.equipmentId,
-                equipmentContext,
-              )
-            : undefined}
-          stateColor={resolveStateColor(
-            child,
-            definition,
-            object.shape.equipmentId,
-            equipmentContext,
-          )}
-          slotDisplay={child.shape.type === "text" && child.shape.slotBinding
-            ? resolveSymbolSlot(
-                definition,
-                child.shape.slotBinding.slotName,
-                object.shape.equipmentId,
-                equipmentContext,
-              )
-            : undefined}
-          color={object.shape.colorMode === "definition"
-            ? undefined
-            : object.fill}
-        /></g
+        >{#if child.shape.type === "image" && "width" in child}
+          {#if images?.get(child.shape.assetId)}<ImagePainting
+              image={images.get(child.shape.assetId)!}
+              width={child.width}
+              height={child.height}
+              crop={child.shape.crop}
+              fit={child.shape.fit}
+            />{/if}
+        {:else}<Primitive
+            object={child}
+            equipmentPropertyDisplay={child.shape.type === "text" &&
+            child.shape.equipmentProperty
+              ? resolveEquipmentProperty(
+                  child.shape.equipmentProperty.field,
+                  object.shape.equipmentId,
+                  equipmentContext,
+                )
+              : undefined}
+            stateColor={resolveStateColor(
+              child,
+              definition,
+              object.shape.equipmentId,
+              equipmentContext,
+            )}
+            slotDisplay={child.shape.type === "text" && child.shape.slotBinding
+              ? resolveSymbolSlot(
+                  definition,
+                  child.shape.slotBinding.slotName,
+                  object.shape.equipmentId,
+                  equipmentContext,
+                )
+              : undefined}
+            color={object.shape.colorMode === "definition"
+              ? undefined
+              : object.fill}
+          />{/if}</g
       >
     {/each}
   </svg>

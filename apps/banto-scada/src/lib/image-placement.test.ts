@@ -209,7 +209,7 @@ it("rejects image clipboard including mixed cut payloads before deletion, and ac
     ),
   ).toThrow(/画像/);
 });
-it("rejects Image in Symbol definitions and missing assets across the shared schema", () => {
+it("accepts saved Symbol images but keeps authoring placement guarded and rejects missing assets", () => {
   let { project, screenId } = fixture();
   project = applyCommand(
     project,
@@ -230,7 +230,9 @@ it("rejects Image in Symbol definitions and missing assets across the shared sch
     id: newId(),
     order: 1,
   });
-  expect(() => parseProject(JSON.stringify(invalid))).toThrow();
+  expect(parseProject(JSON.stringify(invalid)).symbols[0].objects).toHaveLength(
+    2,
+  );
   const missing = structuredClone(project);
   missing.assets = [];
   expect(() => parseProject(JSON.stringify(missing))).toThrow(/資産/);

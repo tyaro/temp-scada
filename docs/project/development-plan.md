@@ -6,14 +6,14 @@
 
 [SCADA単体開発計画](upstream-independent-plan.md)のI0〜I4・I6は完了し、全体CIの成功を確認済み。I5は限定改善と候補評価までを完了した。大図面の読込・操作遅延は残課題であり、性能改善全体の完了とはしない。
 
-| 区分                                | 現在の状態・次の判断                                            | 根拠                                                                       |
-| ----------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| ローカル作図                        | 比率固定・兄弟内挿入・折返し・単色paintα一括編集を提供          | [I0〜I4](upstream-independent-plan.md#工程と保存区切り)                    |
-| タグ参照名の置換                    | 全画面差分・入力保護・明示適用を提供。I6b CI成功                | [I6設計・実画面](../design/equipment/text-reference-replacement-design.md) |
-| 大図面の性能                        | 限定改善を採用、I5d／I5e候補は未採用。遅延は残る                | [計測・採否](../performance/mixed-editor-quality.md)                       |
-| 次のローカル機能                    | I7aの資産参照基盤はローカル検証済み・CI確認待ち。画像提供は後続 | [Symbol内画像の段階設計](../design/images/symbol-image-design.md)          |
-| 共通パネル・入力基盤                | Bantoの公開API・受入テスト・固定依存更新を確認して再計画        | [共通機能引渡し](../reviews/banto-contribution-handoff.md)                 |
-| 実Hub／catalog・正式Faceplate・認証 | Industrialの契約変更中につき保留                                | [保留と再開条件](upstream-independent-plan.md#今は保留するもの)            |
+| 区分                                | 現在の状態・次の判断                                                          | 根拠                                                                       |
+| ----------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| ローカル作図                        | 比率固定・兄弟内挿入・折返し・単色paintα一括編集を提供                        | [I0〜I4](upstream-independent-plan.md#工程と保存区切り)                    |
+| タグ参照名の置換                    | 全画面差分・入力保護・明示適用を提供。I6b CI成功                              | [I6設計・実画面](../design/equipment/text-reference-replacement-design.md) |
+| 大図面の性能                        | 限定改善を採用、I5d／I5e候補は未採用。遅延は残る                              | [計測・採否](../performance/mixed-editor-quality.md)                       |
+| 次のローカル機能                    | I7aはCI成功。I7bの保存・表示・貼付はローカル検証済み・CI確認待ち。作成UIはI7c | [Symbol内画像の段階設計](../design/images/symbol-image-design.md)          |
+| 共通パネル・入力基盤                | Bantoの公開API・受入テスト・固定依存更新を確認して再計画                      | [共通機能引渡し](../reviews/banto-contribution-handoff.md)                 |
+| 実Hub／catalog・正式Faceplate・認証 | Industrialの契約変更中につき保留                                              | [保留と再開条件](upstream-independent-plan.md#今は保留するもの)            |
 
 次機能の候補調査は採用・着手完了を意味しない。新しい機能は詳細仕様→基盤→UI→受入の区切りで進める。
 

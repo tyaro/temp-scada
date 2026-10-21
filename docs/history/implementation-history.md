@@ -1787,3 +1787,9 @@ I5bの次の区切りは残るScriptDurationのサンプリングprofile。Node�
 ## I7a：Symbol内画像へ向けた資産参照の先行基盤（2026-10-21）
 
 [段階設計](../design/images/symbol-image-design.md)に従い、TS／Rustの全所有者の画像参照集計と、clipboardの到達したSymbol内の依存収集を追加した。schema0.33.0・Symbol内画像の公開拒否・描画・配色・paste再配線は変更していない。追加TS8件、全TS1129件・Rust52件・Clippy・CLI3サンプル・関連ブラウザ12件・型・build・整形がローカル成功。新しい画面機能の完成とは扱わず、公開に必要な保存・貼付・描画・作成UIを後続へ分けた。全体CIはPush後の確認待ち。
+
+## I7b：Symbol内画像の保存・表示・原本付きコピー（2026-10-21）
+
+Project0.34.0のschema・TS／Rust・現行サンプルを揃え、Symbol内Imageを受理し、未配置定義の原本保持と実取込する定義の画像ID再配線を接続した。[採用範囲・実画面・原本同梱サンプル](../design/images/symbol-image-design.md)を保存。子の順序・原色・親の合成後opacity／colorAlphaを維持し、各描画入口・thumbnailへ画像Mapを渡した。定義内への取込・画像編集UIはI7cへ分離し、未対応の操作は無効化した。
+
+TS全1137件＋追加再利用ケースを含む関連9件（計1138ケース）、Rust全53件、型・Clippy・CLI4サンプル・build・整形、ブラウザ新規6件＋既存24件をローカル確認。既存24件の初回1件timeoutと、併走終了後の同一コードでの単独成功も仕様に記録した。I7aの`2cbc930`は全体CI39563806934成功、I7bの全体CIはPush後の確認待ち。新旧形式のmigrationは追加していない。

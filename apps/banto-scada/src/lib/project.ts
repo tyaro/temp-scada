@@ -177,10 +177,10 @@ export interface Project {
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.33.0";
+    schemaVersion: "0.34.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.33.0";
+    minRuntimeVersion: "0.34.0";
     name: string;
   };
   screens: Screen[];
@@ -204,8 +204,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.33.0",
-        minRuntimeVersion: "0.33.0",
+        schemaVersion: "0.34.0",
+        minRuntimeVersion: "0.34.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,

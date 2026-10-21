@@ -142,8 +142,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.33.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.33.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.34.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.34.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -533,8 +533,27 @@ fn validate_screen_views(project: &Value) -> Result<(), String> {
 mod tests {
     use super::*;
     #[test]
-    fn image_reference_projection_includes_unplaced_definitions_without_accepting_them_as_projects()
-    {
+    fn saved_symbol_image_retains_unplaced_original_and_validates_crop() {
+        let mut value: Value =
+            serde_json::from_str(include_str!("../../../examples/symbol-image.project.json"))
+                .unwrap();
+        assert!(Project::from_json(&value.to_string()).is_ok());
+        value["screens"][0]["objects"] = serde_json::json!([]);
+        value["symbols"][0]["objects"][1]["visible"] = serde_json::json!(false);
+        assert!(Project::from_json(&value.to_string()).is_ok());
+        let mut missing = value.clone();
+        missing["assets"] = serde_json::json!([]);
+        assert!(Project::from_json(&missing.to_string()).is_err());
+        value["symbols"][0]["objects"][1]["shape"]["crop"] =
+            serde_json::json!({"x":0.5,"y":0,"width":0.5,"height":1});
+        assert!(Project::from_json(&value.to_string()).is_ok());
+        value["symbols"][0]["objects"][1]["shape"]["crop"] =
+            serde_json::json!({"x":1,"y":0,"width":1,"height":1});
+        assert!(Project::from_json(&value.to_string()).is_err());
+    }
+
+    #[test]
+    fn image_reference_projection_matches_shared_low_level_cases() {
         let cases: Value =
             serde_json::from_str(include_str!("../../../examples/image-reference-cases.json"))
                 .unwrap();
@@ -865,7 +884,7 @@ mod tests {
     }
 
     #[test]
-    fn image_placements_share_assets_and_reject_missing_references_and_symbol_children() {
+    fn image_placements_share_assets_include_symbol_children_and_reject_missing_references() {
         let mut value: Value =
             serde_json::from_str(include_str!("../../../examples/minimal.project.json")).unwrap();
         let id = "0199fc00-0000-7000-8000-000000001100";
@@ -887,7 +906,7 @@ mod tests {
         let mut child = object.clone();
         child["id"] = serde_json::json!("0199fc00-0000-7000-8000-000000001103");
         value["symbols"] = serde_json::json!([{"id":"0199fc00-0000-7000-8000-000000001102","name":"共有","width":200,"height":150,"folders":[],"objects":[child]}]);
-        assert!(Project::from_json(&value.to_string()).is_err());
+        assert!(Project::from_json(&value.to_string()).is_ok());
     }
 
     #[test]
@@ -1516,8 +1535,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.33.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.33.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.34.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.34.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]

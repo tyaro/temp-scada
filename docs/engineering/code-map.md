@@ -1,6 +1,6 @@
 # コードと検証の対応表
 
-状態: **現行構造の案内**。2026-10-21更新、I6b（`0bd2559`）までの追加を含む。責務や関数の移動時はこの対応表を更新する。[現在の実装状況](../project/implementation-status.md)、[構造整理の計画・結果](maintenance-refactoring-plan.md)、[作業規則](../../AGENTS.md)を併読する。
+状態: **現行構造の案内**。2026-10-21更新、Symbol内画像の保存・共通表示（I7b）までの追加を含む。責務や関数の移動時はこの対応表を更新する。[現在の実装状況](../project/implementation-status.md)、[構造整理の計画・結果](maintenance-refactoring-plan.md)、[作業規則](../../AGENTS.md)を併読する。
 
 パスはリポジトリルート基準。関数名を検索し、行番号・ファイルの大きさに依存しない。現在の依存方向はUI→編集／履歴→Project検証。純粋計算とモデルからDOMやAppをimportしない。
 
@@ -296,4 +296,8 @@ I5dの一律隔離候補は速度面の採用条件を満たさず未採用。�
 
 ## Symbol内画像へ向けた資産参照基盤（I7a）
 
-`lib/asset-references.ts:imageAssetReferences`は画面背景・直接Image・全Symbol定義から所有者付き参照を投影する。`project.ts:referencedAssets`とRustの`referenced_assets`は保存対象の集合を作る。`clipboard-dependencies.ts`は選択配置から到達する定義／埋込画面だけを収集する。両者の範囲を混同しない。共通低層fixtureは`examples/image-reference-cases.json`、TSの契約試験は`asset-references.test.ts`。公開validatorのSymbol内Image拒否は維持し、paste再配線・描画は[I7の後続](../design/images/symbol-image-design.md)。
+`lib/asset-references.ts:imageAssetReferences`は画面背景・直接Image・全Symbol定義から所有者付き参照を投影する。`project.ts:referencedAssets`とRustの`referenced_assets`は保存対象の集合を作る。`clipboard-dependencies.ts`は選択配置から到達する定義／埋込画面だけを収集する。両者の範囲を混同しない。共通低層fixtureは`examples/image-reference-cases.json`、TSの契約試験は`asset-references.test.ts`。I7aでは公開validatorのSymbol内Image拒否を維持した。保存・paste再配線・描画は[I7b](../design/images/symbol-image-design.md)。
+
+## Symbol内Imageの保存・共通表示（I7b）
+
+Project0.34.0のSymbol定義はImageを許可する。`editor/paste-handler.ts`は実取込する定義を決めてから内部画像の原本登録・ID再配線を行い、現行定義再利用の境界で古い資産の展開を止める。`ObjectPainting.svelte`／`designer/SymbolThumbnail.svelte`はImagePaintingを呼び、Appからパレット・定義一覧・レイヤー・お気に入りへ画像Mapを渡す。親Symbolのopacity／colorAlphaは従来の合成位置を保つ。`symbol-image.test.ts`、RustのSymbol画像契約、`e2e/symbol-image.spec.ts`と原本同梱サンプルが受入入口。[段階設計](../design/images/symbol-image-design.md)のI7c作成UIは未接続。

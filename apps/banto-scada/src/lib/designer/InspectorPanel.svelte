@@ -617,6 +617,9 @@
         {#if selected.shape.type === "image"}
           {@const assetId = selected.shape.assetId}
           {@const asset = project.assets.find((a) => a.id === assetId)!}
+          {#if activeDefinition}<p class="numeric-hint">
+              共有定義内の画像は、表示方式・切出し・原本差替えを変更できません。
+            </p>{/if}
           {#key assetId}
             <ImageFitSettings
               image={images.get(assetId)}
@@ -626,7 +629,7 @@
               height={"height" in selected ? selected.height : 1}
               objectId={selected.id}
               targetKey={`${generation}:${screen.id}:${activeDefinition}`}
-              locked={selectionLocked}
+              locked={selectionLocked || activeDefinition}
               {drafts}
               onsubmit={properties}
             />
@@ -636,7 +639,7 @@
               crop={selected.shape.crop}
               objectId={selected.id}
               targetKey={`${generation}:${screen.id}:${activeDefinition}`}
-              locked={selectionLocked}
+              locked={selectionLocked || activeDefinition}
               {drafts}
               onsubmit={properties}
             />
@@ -714,7 +717,7 @@
               </p>
               <button
                 type="button"
-                disabled={imageBusy}
+                disabled={imageBusy || activeDefinition}
                 onclick={() => selected && onreplaceimage(selected.id)}
                 title="別の原本への差し替えでは切出しを解除し、表示方式と配置枠は維持します。"
                 >画像を差し替え…</button
@@ -813,6 +816,9 @@
                     >{/if}
                 </label>
               {/if}
+              {#if selected.shape.type === "symbol"}<p class="numeric-hint">
+                  画像のRGBは原色を保持します。配置の単色モードでは、色の不透明度が画像を含むSymbol全体に作用します。
+                </p>{/if}
               {#if selected.shape.type === "symbol" && selected.shape.colorMode === "definition"}<p
                   class="numeric-hint"
                 >

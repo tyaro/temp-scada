@@ -8,6 +8,7 @@
   import builtins from "../symbol-library.json";
   import type { SymbolDefinition } from "../project";
   let {
+    images,
     items,
     contextKey,
     onplace,
@@ -20,6 +21,10 @@
     onarm,
     onimmediate,
   }: {
+    images?: ReadonlyMap<
+      string,
+      { url: string; width: number; height: number }
+    >;
     items: FavoriteItem[];
     contextKey: string;
     onplace: (part: PalettePart) => void;
@@ -76,11 +81,13 @@
           onclick={() => onplace(item.part)}
         >
           {#if item.part.type === "builtin"}<SymbolThumbnail
+              {images}
               definition={builtins[
                 item.part.template
               ] as unknown as SymbolDefinition}
             />
           {:else if item.definition}<SymbolThumbnail
+              {images}
               definition={item.definition}
             />
           {:else}<svg

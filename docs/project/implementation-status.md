@@ -1,21 +1,21 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-10-21（日本時間）、Project 0.33.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-10-21（日本時間）、Project 0.34.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
 最新の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は限定改善・候補評価を一区切りとし、大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
-I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aの資産参照集計・clipboard依存収集を先行実装・ローカル検証済み（全体CI確認待ち）。保存版は0.33.0のまま、Symbol内画像の読込・配置・描画機能はまだ提供していない。
+I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bとしてProject0.34.0のSymbol内画像の保存・読込・共通表示・Symbol配置の原本付きコピーを実装・ローカル検証済み（全体CI確認待ち）。定義内への画像取込・貼付・差替え・crop／fitの作成UIはI7cに残す。
 
 ## 保存契約と基盤
 
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | アプリ基盤 | Banto v6.7.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
-| Project    | `schemaVersion`／`minRuntimeVersion`は**0.33.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
+| Project    | `schemaVersion`／`minRuntimeVersion`は**0.34.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
-| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.32.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
+| 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.33.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
 | IDと変更   | lowercase UUID v7、有限座標、明示order。編集失敗は原子的拒否、同値はno-op、Undo／Redoでもrevisionは巻き戻さない                         |
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
@@ -30,7 +30,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 | 共通作図       | 選択・範囲選択、移動・サイズ・回転・整列・中心等間隔・幅／高さの一括指定、頂点、コピー／切取／貼付、Undo／Redo、幾何グループ                                                                                                                      | グループ任意拡縮・入れ子、図形演算、接続口と配管追従                                   |
 | 配置・レイヤー | 名前、編集ロック、静的非表示、整理フォルダー、同階層の手動順変更、親と所属のドラッグ変更・兄弟内の位置指定ドラッグ                                                                                                                                | 継承表示、一時非表示                                                                   |
 | 図形・文字     | 矩形／楕円の塗り・枠線、一括編集、実線／破線／点線、配置opacityとその一括編集、色αと矩形／楕円の塗り・枠線α一括編集、2色線形／放射gradient、斜線／交差線／点pattern、Textの書式と揃え・静的Textの明示改行・枠幅での自動折返し・Textだけの一括書式 | 多点stop・図上gradientハンドル、任意行間・縁取り、Text／線／Symbol等のα一括            |
-| 画像           | 原本共有、背景fit、Imageのcontain／cover／stretch枠、比率復帰、原本付きclipboard、差し替え、配置・背景の非破壊cropと原本プレビュー上の範囲指定・移動・サイズ変更・縦横比固定                                                                      | 図面上の直接crop、Symbol内画像                                                         |
+| 画像           | Symbol内Imageの保存・読込・共通表示・原本付きSymbolコピー、原本共有、背景fit、Imageのcontain／cover／stretch枠、比率復帰、原本付きclipboard、差し替え、配置・背景の非破壊cropと原本プレビュー上の範囲指定・移動・サイズ変更・縦横比固定           | 図面上の直接crop、Symbol内画像の作成・編集UI（I7c）                                    |
 | 画面再利用     | 同一Project・1段の読取埋込View、共有参照、参照先編集、使用中画面の削除保護、複製、依存画面と原本付きclipboard v4                                                                                                                                  | 機器context付き共通画面、独立テンプレート                                              |
 | 表示確認       | 画面／機器の読取Popup合計4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                                                                                                                                 | 正式Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                       |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                                                                                                                                   | 実図面・画像／Symbol等の計測と必要な最適化                                             |

@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.33.0"
+          "const": "0.34.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.33.0"
+          "const": "0.34.0"
         },
         "name": {
           "type": "string",
@@ -146,6 +146,9 @@
                 },
                 {
                   "$ref": "#/$defs/polyline"
+                },
+                {
+                  "$ref": "#/$defs/imageInstance"
                 }
               ]
             }

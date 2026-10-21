@@ -113,6 +113,6 @@ for (const theme of ["light", "dark"] as const) {
     expect(saved.symbols[0].objects[7].shape.paint).toEqual(
       sample.symbols[0].objects[7].shape.paint,
     );
-    expect(saved.manifest.schemaVersion).toBe("0.33.0");
+    expect(saved.manifest.schemaVersion).toBe("0.34.0");
   });
 }

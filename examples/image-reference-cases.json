@@ -1,9 +1,12 @@
 {
-  "description": "Low-level reference projection cases, NOT valid importable Projects. Symbol images remain rejected by public schema 0.33.0.",
+  "description": "Low-level reference projection cases, NOT valid importable Projects: owners and shapes omit required saved fields.",
   "cases": [
     {
       "name": "empty",
-      "project": { "screens": [], "symbols": [] },
+      "project": {
+        "screens": [],
+        "symbols": []
+      },
       "expected": []
     },
     {
@@ -12,13 +15,18 @@
         "screens": [
           {
             "id": "screen",
-            "backgroundImage": { "assetId": "shared" },
+            "backgroundImage": {
+              "assetId": "shared"
+            },
             "objects": [
               {
                 "id": "hidden",
                 "visible": false,
                 "locked": true,
-                "shape": { "type": "image", "assetId": "shared" }
+                "shape": {
+                  "type": "image",
+                  "assetId": "shared"
+                }
               }
             ]
           }
@@ -30,7 +38,12 @@
     {
       "name": "unplaced definitions retain originals",
       "project": {
-        "screens": [{ "id": "screen", "objects": [] }],
+        "screens": [
+          {
+            "id": "screen",
+            "objects": []
+          }
+        ],
         "symbols": [
           {
             "id": "unplaced",
@@ -39,7 +52,10 @@
                 "id": "image",
                 "visible": false,
                 "locked": true,
-                "shape": { "type": "image", "assetId": "symbol-original" }
+                "shape": {
+                  "type": "image",
+                  "assetId": "symbol-original"
+                }
               }
             ]
           },
@@ -48,7 +64,10 @@
             "objects": [
               {
                 "id": "image2",
-                "shape": { "type": "image", "assetId": "second-original" }
+                "shape": {
+                  "type": "image",
+                  "assetId": "second-original"
+                }
               }
             ]
           }
@@ -62,19 +81,30 @@
         "screens": [
           {
             "id": "screen",
-            "backgroundImage": { "assetId": "background" },
+            "backgroundImage": {
+              "assetId": "background"
+            },
             "objects": [
               {
                 "id": "a",
-                "shape": { "type": "symbol", "symbolId": "definition" }
+                "shape": {
+                  "type": "symbol",
+                  "symbolId": "definition"
+                }
               },
               {
                 "id": "b",
-                "shape": { "type": "symbol", "symbolId": "definition" }
+                "shape": {
+                  "type": "symbol",
+                  "symbolId": "definition"
+                }
               },
               {
                 "id": "direct",
-                "shape": { "type": "image", "assetId": "direct-original" }
+                "shape": {
+                  "type": "image",
+                  "assetId": "direct-original"
+                }
               }
             ]
           }
@@ -85,11 +115,17 @@
             "objects": [
               {
                 "id": "image",
-                "shape": { "type": "image", "assetId": "direct-original" }
+                "shape": {
+                  "type": "image",
+                  "assetId": "direct-original"
+                }
               },
               {
                 "id": "other",
-                "shape": { "type": "image", "assetId": "symbol-original" }
+                "shape": {
+                  "type": "image",
+                  "assetId": "symbol-original"
+                }
               }
             ]
           }

@@ -59,7 +59,16 @@
     layerDragError,
     layerDropError,
   } from "./layer-drag";
-  let { tree }: { tree: LayerTreeBindings } = $props();
+  let {
+    tree,
+    images,
+  }: {
+    tree: LayerTreeBindings;
+    images?: ReadonlyMap<
+      string,
+      { url: string; width: number; height: number }
+    >;
+  } = $props();
 </script>
 
 <div
@@ -318,6 +327,7 @@ ${object.id}`}
                   aria-hidden="true"
                   ><path d="M2 2h20v20H2zM6 6h5v5H6zM13 13h5v5h-5z" /></svg
                 >{:else}<ObjectIcon
+                  {images}
                   {object}
                   definition={object.shape.type === "symbol"
                     ? tree.symbols.find(

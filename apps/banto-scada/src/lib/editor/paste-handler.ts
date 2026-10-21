@@ -61,22 +61,8 @@ export function applyPasteCommand(
     ...objects,
     ...importedScreens.flatMap((source) => source.objects),
   ];
-  const usedAssets = new Set(
-    importedObjects.flatMap((object) =>
-      object.shape.type === "image" ? [object.shape.assetId] : [],
-    ),
-  );
-  for (const source of importedScreens)
-    if (source.backgroundImage) usedAssets.add(source.backgroundImage.assetId);
-  const assetReferences = new Map<string, string>();
-  for (const asset of fragment.project.assets.filter((asset) =>
-    usedAssets.has(asset.id),
-  )) {
-    const existing = next.assets.find((a) => a.sha256 === asset.sha256);
-    const incoming = { ...asset, id: existing?.id ?? newId() };
-    assetReferences.set(asset.id, registerAsset(next, incoming));
-  }
   const references = new Map<string, string>();
+  const importedSymbols: SymbolDefinition[] = [];
   for (const object of importedObjects)
     if (
       object.shape.type === "symbol" &&
@@ -92,10 +78,28 @@ export function applyPasteCommand(
         const copy = renewOwnerIds(
           JSON.parse(JSON.stringify(source)) as SymbolDefinition,
         );
-        next.symbols.push(copy);
+        importedSymbols.push(copy);
         references.set(source.id, copy.id);
       }
     }
+  const usedAssets = new Set(
+    [
+      ...importedObjects,
+      ...importedSymbols.flatMap((definition) => definition.objects),
+    ].flatMap((object) =>
+      object.shape.type === "image" ? [object.shape.assetId] : [],
+    ),
+  );
+  for (const source of importedScreens)
+    if (source.backgroundImage) usedAssets.add(source.backgroundImage.assetId);
+  const assetReferences = new Map<string, string>();
+  for (const asset of fragment.project.assets.filter((asset) =>
+    usedAssets.has(asset.id),
+  )) {
+    const existing = next.assets.find((a) => a.sha256 === asset.sha256);
+    const incoming = { ...asset, id: existing?.id ?? newId() };
+    assetReferences.set(asset.id, registerAsset(next, incoming));
+  }
   function remapReferences(object: ScreenObject) {
     if (object.shape.type === "symbol")
       object.shape.symbolId = references.get(object.shape.symbolId)!;
@@ -103,6 +107,10 @@ export function applyPasteCommand(
       object.shape.assetId = assetReferences.get(object.shape.assetId)!;
     if (object.shape.type === "screenView")
       object.shape.screenId = screenReferences.get(object.shape.screenId)!;
+  }
+  for (const definition of importedSymbols) {
+    for (const object of definition.objects) remapReferences(object);
+    next.symbols.push(definition);
   }
   for (const source of importedScreens) {
     for (const object of source.objects) remapReferences(object);

@@ -124,7 +124,7 @@ it("migrates legacy text into the current canonical contract and rejects the pre
     object = raw.screens[0].objects.find((o) => o.shape.type === "text")!;
   object.shape.text = "先頭\r\n末尾\r";
   const p = parseProject(JSON.stringify(raw));
-  expect(p.manifest.schemaVersion).toBe("0.33.0");
+  expect(p.manifest.schemaVersion).toBe("0.34.0");
   expect(
     p.screens[0].objects.find((o) => o.id === object.id)!.shape,
   ).toMatchObject({ text: "先頭\n末尾\n" });

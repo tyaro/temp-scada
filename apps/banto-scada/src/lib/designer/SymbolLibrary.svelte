@@ -7,6 +7,7 @@
   import { symbolUsage, type EditCommand } from "../editor";
   import type { Project } from "../project";
   let {
+    images,
     project,
     selectedId,
     screenId,
@@ -19,6 +20,10 @@
     ondelete,
     oncommand,
   }: {
+    images?: ReadonlyMap<
+      string,
+      { url: string; width: number; height: number }
+    >;
     project: Project;
     selectedId: string;
     screenId: string;
@@ -117,7 +122,7 @@
             aria-pressed={selected.id === definition.id}
             onclick={() => onchoose(definition.id)}
           >
-            <SymbolThumbnail {definition} compact /><span
+            <SymbolThumbnail {images} {definition} compact /><span
               >{definition.name}</span
             ><small>{symbolUsage(project, definition.id)} 配置で共有</small>
           </button>

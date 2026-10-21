@@ -101,5 +101,5 @@ for (const theme of ["light", "dark"] as const)
       ...object.shape.boolColors,
       unknownColor: "#2563eb",
     });
-    expect(saved.manifest.schemaVersion).toBe("0.33.0");
+    expect(saved.manifest.schemaVersion).toBe("0.34.0");
   });

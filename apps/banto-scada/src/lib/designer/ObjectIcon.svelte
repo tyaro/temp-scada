@@ -2,12 +2,20 @@
   import SymbolThumbnail from "./SymbolThumbnail.svelte";
   import type { ScreenObject, SymbolDefinition } from "../project";
   let {
+    images,
     object,
     definition,
-  }: { object: ScreenObject; definition?: SymbolDefinition } = $props();
+  }: {
+    object: ScreenObject;
+    images?: ReadonlyMap<
+      string,
+      { url: string; width: number; height: number }
+    >;
+    definition?: SymbolDefinition;
+  } = $props();
 </script>
 
-{#if definition}<SymbolThumbnail {definition} compact />{:else}
+{#if definition}<SymbolThumbnail {images} {definition} compact />{:else}
   <svg
     aria-hidden="true"
     width="22"

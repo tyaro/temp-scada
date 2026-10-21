@@ -116,7 +116,7 @@ for (const theme of ["light", "dark"] as const)
     await page.getByLabel("height", { exact: true }).press("Enter");
     await pixels(page, 360, 120);
     const result = await save(page);
-    expect(result.manifest.schemaVersion).toBe("0.33.0");
+    expect(result.manifest.schemaVersion).toBe("0.34.0");
     expect(result.screens[0].objects[0].shape.paint.fill.paint).toEqual({
       type: "radialGradient",
       center: { x: 0.5, y: 0.5 },
