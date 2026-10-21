@@ -529,3 +529,8 @@ headless shell156の試行は、初回操作前のタイムアウトとICU／GPU
 I5jの`9a2119a`から、独立段落／行の書込→読取を同期の段階ごとにまとめて試作した。同じMac・Chrome156で100／500／1000配置を前後比較し、1000配置は各4run。初回平均3799.2→3758.6ms（−1.1%）、再読込4444.5→4455.1ms（＋0.2%）で範囲が重なり、**明確な短縮なし・不採用。試作コードはpush／PR作成せず、docsのみ記録PRへ取り込む**。
 
 別runの診断ではgetBBox回数・文字投影SHAを維持して、1000配置再読込のgetBBox内同期Layoutありは12800→9600回になった。局所的な削減を読込全体の改善とは扱わない。[試作範囲・前後表・考えられる理由・検証](i5k-batched-text-measure.md)と[集計JSON](i5k-batched-text-measure-results.json)を参照する。
+<a id="measurability-dedupe-i5m"></a>
+
+## I5m：可測定性判定の矩形取得削減（2026-10-22）
+
+workの`dba09f2`から、`withSvgTextMeasure`の可測定性判定だけを限定試作した。同じMac／Chrome156の1000配置で通常前後各4run、getter診断各2run。getClientRectsは800→0回になったが、通常平均は初回3328.6→3343.4ms、再読込3917.2→3934.9ms（ともに約＋0.45%）で範囲が重なり、**試作は不採用**。当時はpush／PR作成せず、2026-10-22の追加指示で記録のみを小さいdocs PRへ公開する。試作source・testは元へ戻した。[条件・hidden保護・表・限界](i5m-measurability-dedupe.md)と[集計値](i5m-measurability-dedupe-results.json)を参照。
