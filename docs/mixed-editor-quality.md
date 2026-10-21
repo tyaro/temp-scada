@@ -194,4 +194,4 @@ node apps/banto-scada/scripts/compare-editor-load.mjs /tmp/scada-mixed-quality/m
 
 通常runの3規模とも保存Project・PNG4原本が一致し、1000配置の文字投影は変更前との許容差0.0001図面単位の比較を通過した。資産なし図面への3回の切替でlive URL／bytesは0、一時文字計測DOMも0。画面エラーは0。内容・資産寿命・履歴形式は維持する。1000配置は変更後も移動約497ms／Undo約410msで、十分な応答性能の完了とはしない。
 
-型チェックはエラー・警告なし、全単体1107件、保存状態・未適用入力・履歴・キー操作のブラウザ17件、本番buildが成功した。確認置換後の編集・Undo／Redoと読込baselineの表示も既存試験へ追加した。root差替え契約を維持できる範囲で採用し、全体CIはPush後に確認する。Project0.33.0、Banto、Industrial SDK、認証の保留方針は不変。次はI5の読込時のstyle／文字計測費用を再評価し、適応的文字計測の回数やcacheを先行変更せずに対象を絞る。
+型チェックはエラー・警告なし、全単体1107件、保存状態・未適用入力・履歴・キー操作のブラウザ17件、本番buildが成功した。確認置換後の編集・Undo／Redoと読込baselineの表示も既存試験へ追加した。root差替え契約を維持できる範囲で採用し、実装`fa595d0`の[全体CI39548196580](https://github.com/tyaro/temp-scada/actions/runs/39548196580)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。Project0.33.0、Banto、Industrial SDK、認証の保留方針は不変。次はI5の読込時のstyle／文字計測費用を再評価し、適応的文字計測の回数やcacheを先行変更せずに対象を絞る。

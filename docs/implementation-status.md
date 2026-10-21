@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](implementation-history.md)は過去の仕様・検証。[リファクタリング計画](maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入も全体CI成功確認済み。I3の静的Text折返しも全体CI成功確認済み。I4の単色塗り・枠線α一括編集も完了・全体CI成功確認済み。I5の初回計測と文字計測隔離も完了・全体CI成功確認済み。大規模なキー移動・Undoの遅延は残る。
+2026-10-21の計画追記: Banto・Industrialの変更中は[SCADA単体開発計画](upstream-independent-plan.md)でローカル作図を優先する。I0／I1の比率固定を実装・全体CI成功確認済み。I2の兄弟内挿入も全体CI成功確認済み。I3の静的Text折返しも全体CI成功確認済み。I4の単色塗り・枠線α一括編集も完了・全体CI成功確認済み。I5の初回計測と文字計測隔離、I5bの履歴候補コピー、I5cのCPU採取とProject監視境界の限定改善も完了・全体CI成功確認済み。大規模図面の読込・キー操作の遅延は残る。
 
 ## 保存契約と基盤
 
@@ -320,4 +320,4 @@ I5bの次の区切りは残るScriptDurationのサンプリングprofile。Node�
 
 ### I5c進捗：Project snapshotの監視境界（2026-10-21）
 
-[profile・通常計測・交互比較](mixed-editor-quality.md)を根拠に、AppのProjectと確認待ちreplacementだけを`$state.raw`へ変更した。command・history・adoptで検証済みの独立候補を作りルート更新する契約を維持する。深い監視の費用を減らし、通常runの1000配置の移動中央値は約697→497ms、Undo約655→410msだった。一方、再読込には大きなばらつきがあり、通常runの増加を交互比較で一貫して再現したとは判断しない。読込非劣化や十分な大図面性能の保証ではない。保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ17件・型・buildが成功した。全体CIはPush後に確認する。検証・履歴・保存モデル・上流SDKの契約は変更しない。
+[profile・通常計測・交互比較](mixed-editor-quality.md)を根拠に、AppのProjectと確認待ちreplacementだけを`$state.raw`へ変更した。command・history・adoptで検証済みの独立候補を作りルート更新する契約を維持する。深い監視の費用を減らし、通常runの1000配置の移動中央値は約697→497ms、Undo約655→410msだった。一方、再読込には大きなばらつきがあり、通常runの増加を交互比較で一貫して再現したとは判断しない。読込非劣化や十分な大図面性能の保証ではない。保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ17件・型・buildが成功した。実装`fa595d0`の[全体CI39548196580](https://github.com/tyaro/temp-scada/actions/runs/39548196580)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。検証・履歴・保存モデル・上流SDKの契約は変更しない。

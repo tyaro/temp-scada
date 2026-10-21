@@ -6,7 +6,7 @@
 
 ## 次の実装順
 
-**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み。継続指示でI2a／I2bも完了・全体CI成功確認済み。[I3の仕様](static-text-wrap-design.md)に沿って折返しを実装し、I3a／I3bも完了・全体CI成功確認済み。[I4の仕様](selection-paint-alpha-design.md)に沿い単色塗り・枠線のα一括編集も完了・全体CI成功確認済み。[I5の条件と結果](mixed-editor-quality.md)に従い初回計測と文字計測隔離も完了・全体CI成功確認済み。I5bの内訳計測・履歴復元の限定改善も全体CI成功確認済み。次は残るスクリプト実行の詳細profile。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
+**2026-10-21更新: Banto・Industrialの変更中は、[SCADA単体開発計画](upstream-independent-plan.md)を直近の実装順とする。** I0基準確認→I1画像cropの比率固定→I2レイヤー兄弟内並び替え→I3静的Textの折返しを進め、I4色α一括編集はその後、I5性能改善は実測に応じて判断する。I0／I1は完了・全体CI成功確認済み。継続指示でI2a／I2bも完了・全体CI成功確認済み。[I3の仕様](static-text-wrap-design.md)に沿って折返しを実装し、I3a／I3bも完了・全体CI成功確認済み。[I4の仕様](selection-paint-alpha-design.md)に沿い単色塗り・枠線のα一括編集も完了・全体CI成功確認済み。[I5の条件と結果](mixed-editor-quality.md)に従い初回計測と文字計測隔離も完了・全体CI成功確認済み。I5bの内訳計測・履歴復元の限定改善も全体CI成功確認済み。I5cのCPU採取とProject監視境界の限定改善も完了・全体CI成功確認済み。次は残る大規模図面の読込費用の再評価。実catalog／Host／正式Faceplate・認証・共通パネル基盤は保留し、以下の長期工程を直ちに再開する指示として扱わない。
 
 以下はこれまでの実装経緯とCore v1へ向けた長期工程を保持する。新しい短期順序と矛盾する場合は上記計画を優先し、最終的な機能仕様・提供段階は統合設計に従う。
 
@@ -679,4 +679,4 @@ I5bの次の区切りは残るScriptDurationのサンプリングprofile。Node�
 
 ### I5c進捗：Project snapshotの監視境界（2026-10-21）
 
-[profile・通常計測・交互比較](mixed-editor-quality.md)を根拠に、AppのProjectと確認待ちreplacementだけを`$state.raw`へ変更した。command・history・adoptで検証済みの独立候補を作りルート更新する契約を維持する。深い監視の費用を減らし、通常runの1000配置の移動中央値は約697→497ms、Undo約655→410msだった。一方、再読込には大きなばらつきがあり、通常runの増加を交互比較で一貫して再現したとは判断しない。読込非劣化や十分な大図面性能の保証ではない。保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ17件・型・buildが成功した。全体CIはPush後に確認する。検証・履歴・保存モデル・上流SDKの契約は変更しない。
+[profile・通常計測・交互比較](mixed-editor-quality.md)を根拠に、AppのProjectと確認待ちreplacementだけを`$state.raw`へ変更した。command・history・adoptで検証済みの独立候補を作りルート更新する契約を維持する。深い監視の費用を減らし、通常runの1000配置の移動中央値は約697→497ms、Undo約655→410msだった。一方、再読込には大きなばらつきがあり、通常runの増加を交互比較で一貫して再現したとは判断しない。読込非劣化や十分な大図面性能の保証ではない。保存・原本・文字投影・URL解放、単体1107件・関連ブラウザ17件・型・buildが成功した。実装`fa595d0`の[全体CI39548196580](https://github.com/tyaro/temp-scada/actions/runs/39548196580)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。検証・履歴・保存モデル・上流SDKの契約は変更しない。
