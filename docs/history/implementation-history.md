@@ -1,9 +1,5 @@
 # 実装履歴
 
-## Banto基盤のv6.9.0更新（2026-10-22）
-
-アプリのadmin-core／theme／uiをv6.9.0（`1bd12fe023cf3958dbdde923e1bdd4fdb28a9139`）へ揃えた。v6.8.0→v6.9.0の公開APIに必須移行はなく、寸法トークン追加は任意採用。LAN／Windows配布支援は現在未接続のHost側のため今回の対象外。依存の導入はsandbox外で実施済みの状態を引き継ぎ、再installは行わない。Menuの局所adapter撤去は別工程とする。
-
 状態: **履歴**。各節は記載日時点の仕様・検証結果。古い版、未実装という表記、テスト件数を現在情報として使わない。現在は[実装状況](../project/implementation-status.md)、今後は[開発計画](../project/development-plan.md)を参照する。
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
@@ -19,6 +15,18 @@
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
 ここから下の順序は移動元の並びを保持し、厳密な時系列に再構成していない。機能別の採用仕様は[文書索引](../README.md)を参照する。
+
+## Banto基盤のv6.9.0更新（2026-10-22・日本時間）
+
+アプリのadmin-core／theme／uiをv6.9.0（`1bd12fe023cf3958dbdde923e1bdd4fdb28a9139`）へ揃えた。v6.8.0→v6.9.0の公開APIに必須移行はなく、寸法トークンは任意採用。LAN／Windows配布支援・認証・Host接続は対象外。Menuの局所adapter撤去と上流修正の受入はPR #9の別工程とする。
+
+依存更新時のE2E 746件は4並列で画像比較の差分と後半のtimeoutが出た後、残りを1並列で再実行して成功扱いにした記録で、単一の全件成功runではない。レビュー修正後の型検証はエラー／警告0、単体1,214件（111ファイル）とbuildが成功した（既存のbundleサイズ警告あり）。
+
+Linux CIのshard 3/4は178成功・1失敗で、Shift＋F10後の初期focusを検出した。macOS・Node v24.22.1・Playwright 1.64.1・CIと同版のChrome Headless Shell 156.0.8078.4で、修正前の既存focus試験と追加回帰試験がそれぞれ3回中3回失敗した。Bantoのmount順の項目登録とSCADAのkey付き並べ替えによるDOM順の不一致が、v6.9.0の初期focusで顕在化した回帰である。ContextActionsのMenuItemを表示位置ごとに再利用し、登録順とDOM順を揃えた。修正後の関連8specはChrome 155.0.8059.85・2並列で50件すべて成功。Chromium 156・2並列で同8specとtag-pickerを実行し、57成功・1失敗だった。残るtag-pickerの失敗はmacOSでredoにならないControl＋Yを使う既存試験で、PR #9のテスト変更で対応する。
+
+修正後のChromium 156・4並列の全745件は741成功・2skip・2失敗で、画像比較の差分はなかった。高負荷下（load average最大約200）でimage-replacementの遅延差替え試験が41.5秒でtimeoutし、同specを1並列で再実行すると9件すべて成功した。もう1件は上記tag-picker。再実行を含む結果を単一の全件成功runとは扱わない。
+
+常設メニューの幅はChromium 156でbase work（Banto v6.7.0＋adapter）と本PR（v6.9.0＋adapter）を比較し、200pxでともにx=4／右端196／幅192px、240pxでx=4／幅212.19px、320／480pxも同じだった。以前の200pxで左端−4px／幅204pxという観測はadapterの幅制限を外した状態であり、PR #8の回帰ではなくPR #9の撤去時の狭幅制約とする。修正後Linux CIはpush後に確認する。実Hub・認証・Windows Hostは未検証。
 
 <a id="image-crop-progress"></a>
 
