@@ -24,7 +24,7 @@
 
 Linux CIのshard 3/4は178成功・1失敗で、Shift＋F10後の初期focusを検出した。macOS・Node v24.22.1・Playwright 1.64.1・CIと同版のChrome Headless Shell 156.0.8078.4で、修正前の既存focus試験と追加回帰試験がそれぞれ3回中3回失敗した。Bantoのmount順の項目登録とSCADAのkey付き並べ替えによるDOM順の不一致が、v6.9.0の初期focusで顕在化した回帰である。ContextActionsのMenuItemを表示位置ごとに再利用し、登録順とDOM順を揃えた。修正後の関連8specはChrome 155.0.8059.85・2並列で50件すべて成功。Chromium 156・2並列で同8specとtag-pickerを実行し、57成功・1失敗だった。残るtag-pickerの失敗はmacOSでredoにならないControl＋Yを使う既存試験で、PR #9のテスト変更で対応する。
 
-修正後のChromium 156・4並列の全745件は741成功・2skip・2失敗で、画像比較の差分はなかった。高負荷下（load average最大約200）でimage-replacementの遅延差替え試験が41.5秒でtimeoutし、同specを1並列で再実行すると9件すべて成功した。もう1件は上記tag-picker。再実行を含む結果を単一の全件成功runとは扱わない。
+修正後のChromium 156・4並列の全745件は741成功・2skip・2失敗で、画像比較の差分はなかった。高負荷下（load average最大約200）でimage-replacementの遅延差替え試験が41.5秒でtimeoutし、同specを1並列で再実行すると9件すべて成功した。もう1件は上記tag-picker。再実行を含む結果を単一の全件成功runとは扱わない。比較のためbase work（v6.7.0）も同じChromium 156・4並列で全件を実行し、733成功・2skip・9失敗だった。失敗は画像・Symbol・文字装飾などの30秒超timeoutとmacOSのtag-picker 2件で、4並列時の失敗は依存更新前から高負荷下で起きる。
 
 常設メニューの幅はChromium 156でbase work（Banto v6.7.0＋adapter）と本PR（v6.9.0＋adapter）を比較し、200pxでともにx=4／右端196／幅192px、240pxでx=4／幅212.19px、320／480pxも同じだった。以前の200pxで左端−4px／幅204pxという観測はadapterの幅制限を外した状態であり、PR #8の回帰ではなくPR #9の撤去時の狭幅制約とする。修正後Linux CIはpush後に確認する。実Hub・認証・Windows Hostは未検証。
 
