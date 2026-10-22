@@ -21,14 +21,14 @@ importers:
   apps/banto-scada:
     dependencies:
       '@banto/admin-core':
-        specifier: github:tyaro/banto#v6.7.0&path:packages/admin-core
-        version: https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e#path:packages/admin-core
+        specifier: github:tyaro/banto#v6.9.0&path:packages/admin-core
+        version: https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139#path:packages/admin-core
       '@banto/theme':
-        specifier: github:tyaro/banto#v6.7.0&path:packages/theme
-        version: https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e#path:packages/theme
+        specifier: github:tyaro/banto#v6.9.0&path:packages/theme
+        version: https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139#path:packages/theme
       '@banto/ui':
-        specifier: github:tyaro/banto#v6.7.0&path:packages/ui
-        version: https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e#path:packages/ui
+        specifier: github:tyaro/banto#v6.9.0&path:packages/ui
+        version: https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139#path:packages/ui
       ajv:
         specifier: 8.20.0
         version: 8.20.0
@@ -57,17 +57,17 @@ importers:
 
 packages:
 
-  '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e#path:packages/admin-core':
-    resolution: {path: packages/admin-core, tarball: https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e}
-    version: 6.7.0
+  '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139#path:packages/admin-core':
+    resolution: {path: packages/admin-core, tarball: https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139}
+    version: 6.9.0
 
-  '@banto/theme@https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e#path:packages/theme':
-    resolution: {path: packages/theme, tarball: https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e}
-    version: 6.7.0
+  '@banto/theme@https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139#path:packages/theme':
+    resolution: {path: packages/theme, tarball: https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139}
+    version: 6.9.0
 
-  '@banto/ui@https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e#path:packages/ui':
-    resolution: {path: packages/ui, tarball: https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e}
-    version: 6.7.0
+  '@banto/ui@https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139#path:packages/ui':
+    resolution: {path: packages/ui, tarball: https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139}
+    version: 6.9.0
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -612,11 +612,11 @@ packages:
 
 snapshots:
 
-  '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e#path:packages/admin-core': {}
+  '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139#path:packages/admin-core': {}
 
-  '@banto/theme@https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e#path:packages/theme': {}
+  '@banto/theme@https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139#path:packages/theme': {}
 
-  '@banto/ui@https://codeload.github.com/tyaro/banto/tar.gz/1ffe507da973ca5103ede93b5ca438cda7c28d4e#path:packages/ui': {}
+  '@banto/ui@https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139#path:packages/ui': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

@@ -12,9 +12,9 @@
     "benchmark:editor": "node --expose-gc scripts/benchmark-editor.mjs"
   },
   "dependencies": {
-    "@banto/admin-core": "github:tyaro/banto#v6.7.0&path:packages/admin-core",
-    "@banto/theme": "github:tyaro/banto#v6.7.0&path:packages/theme",
-    "@banto/ui": "github:tyaro/banto#v6.7.0&path:packages/ui",
+    "@banto/admin-core": "github:tyaro/banto#v6.9.0&path:packages/admin-core",
+    "@banto/theme": "github:tyaro/banto#v6.9.0&path:packages/theme",
+    "@banto/ui": "github:tyaro/banto#v6.9.0&path:packages/ui",
     "ajv": "8.20.0",
     "fflate": "0.8.3",
     "svelte": "5.57.2"

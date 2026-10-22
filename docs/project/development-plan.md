@@ -41,7 +41,9 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 
 ## 共有部品の扱い
 
-Banto v6.7.0を使い、汎用機能の共通化は上流へ還元する。SCADAはPLCへ直接接続せず、Hubを外部サービスとして利用する。ドライバ・式評価を複製しない。`banto-tagclient`は固定commit依存で利用済み。`banto-expr`は式機能を導入するときに動作確認済みcommitへ固定する。
+Banto v6.9.0を使い、汎用機能の共通化は上流へ還元する。SCADAはPLCへ直接接続せず、Hubを外部サービスとして利用する。ドライバ・式評価を複製しない。`banto-tagclient`は固定commit依存で利用済み。`banto-expr`は式機能を導入するときに動作確認済みcommitへ固定する。
+
+Banto v6.9.0への依存更新では公開APIの必須移行はなく、既存の `optimizeDeps.exclude` を維持する。Menu #427／#430の上流修正の受入と局所adapter撤去は、依存更新後の別工程として検証する。認証・Host・新しい共通APIの採用は含めない。
 
 認証はIndustrial側の修正中につき延期。ローカル編集はログイン不要。運用時のユーザー管理必須と、再起動後の読取監視の要望は[運用・ログイン方針](../design/runtime/access-policy.md)を維持する。リリース前の旧Project互換性を必須とせず、変更後のTS／Rust／schema／サンプル／検証を揃える。
 
