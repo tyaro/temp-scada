@@ -20,6 +20,8 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
 
+Banto Menu #427／#430へ可用高・内部scroll・初回focusを移管し、PR #9で局所adapterを撤去済み。レビュー修正ではcontextKeyによる再生成をMenuGroup／項目だけへ狭め、Menu／popover／⋮ triggerを保持する。focus回帰試験を追加し、Chromium 156とChrome 155で関連13spec・76件が成功した。200px幅では左端−4pxの既知制約が残る。[責務と検証範囲](../design/editor/designer-menu-viewport.md)を参照する。
+
 ## 機能の対応範囲
 
 | 領域           | 実装した範囲                                                                                                                                                                                                                                      | 主な残り                                                                               |

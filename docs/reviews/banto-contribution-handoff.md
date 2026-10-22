@@ -35,3 +35,9 @@ Banto main `ac571ebffa76db61e28230a7138223f069eee067`で再確認し、#432〜#4
 - [#427 メニューの可用高・内部scroll](https://github.com/tyaro/banto/issues/427): **Closed**。[PR #430](https://github.com/tyaro/banto/pull/430)が2026-10-21 00:46（日本時間）にmergeされた。新規Issueは重ねない。2026-10-22にSCADAの固定依存更新と暫定adapter撤去を実施した。[Menuの責務と受入](../design/editor/designer-menu-viewport.md)と`e2e/menu-viewport.spec.ts`を、上流接続時の受入に使う。接続後の受入範囲は同仕様を参照する。 adapterありの成功だけでは上流受入の証拠にならないため、撤去後の検証と区別する。Chromium 156でのadapterありのbase work／PR #8の比較では、ともに200px幅でx=4／右端196／幅192pxとなり、はみ出しはなかった。以前の左端−4px／幅204pxはadapterの幅制限を外した観測で、PR #8の回帰ではない。PR #9の撤去後の狭幅制約として同仕様に残す。
 
 パネルの[10ケース再現fixture](banto-dock-fixture/README.md)も引き続き利用できる。当初の引渡し時点ではIssue・文書の引渡しのみで、アプリ・依存・Project形式は変更していない。検証は出典ファイルとリンク、Issue本文の確認・整形であり、上記の全体テストを再実行した記録ではない。
+
+## 追加の上流報告候補：viewportより広いMenu
+
+PR #9のadapter撤去後、Chrome 155の200px viewportで常設Menuはx=−4／幅204pxとなった。幅制限を適用するとx=4／幅192pxであり、adapterありのbase work／PR #8もx=4／幅192pxだった。上流v6.9.0の`Menu.svelte:computePosition`の横clampは`Math.min(Math.max(left, GAP), viewportWidth - menuRect.width - GAP)`で、後半が負になる場合に左端を負値へ押す。viewportに応じた幅上限と位置補正の契約をBantoへ報告する候補として残す。新規Issueの投稿・依存変更はこの区切りでは行っていない。320px以上の受入とは区別し、局所adapterは再導入しない。
+
+PR #9のレビュー修正ではMenuGroupだけをcontextKeyで再生成し、Menu／popover／triggerとfocus復帰先を保持した。SCADA固有のcontext寿命の修正であり、上流#427／#430の撤回ではない。修正後のブラウザ受入はChromium 156とChrome 155で関連13spec・76件が成功した。その他の共通APIの採用状態は上記のまま。

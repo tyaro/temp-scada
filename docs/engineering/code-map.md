@@ -266,7 +266,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 
 左右の浮動配置は`App.svelte`で一つのworkspaceへ接続し、表示・上位層・作図操作・固定幅と連携する。sidebarはプレビュー時だけ浮動を休止する。`setup.ts`は各slotを独立して明示保存し、`designer-actions.ts`は復帰と前面表示を提供する。`sidebar-floating.spec.ts`と`inspector-floating.spec.ts`で同じDOM・入力保持・排他・永続化を確認する。
 
-Banto v6.9.0の`Menu`が可用高・内部scroll・初回フォーカス・resize・Esc復帰を所有する。Designerの局所adapterとmount前のcapture listenerは撤去した。`DesignerMenubar.svelte`は横方向のメニュー移動、`ContextActions.svelte`はSCADA対象の選択と起動、画面外へ残った仮想trigger座標の高さ補正を担う。contextKeyごとにMenuを再生成し、項目差替え後も上流の登録順を表示順へ揃える。同じcontext内のMenuItemは表示位置ごとに再利用する。`selection-context.spec.ts`が選択／空白contextの往復、初期フォーカス・全有効項目の矢印巡回・Home／End・Esc復帰を確認する。`menu-viewport.spec.ts`が内部／外部scroll・キー・resize・狭幅と両テーマを確認する。[Menuの責務と受入](../design/editor/designer-menu-viewport.md)。
+Banto v6.9.0の`Menu`が可用高・内部scroll・初回フォーカス・resize・Esc復帰を所有する。Designerの局所adapterとmount前のcapture listenerは撤去した。`DesignerMenubar.svelte`は横方向のメニュー移動、`ContextActions.svelte`はSCADA対象の選択と起動、画面外へ残った仮想trigger座標の高さ補正を担う。contextKeyごとにMenuの子のMenuGroup／MenuItemだけを再生成し、項目差替え後も上流の登録順を表示順へ揃える。Menu・popover・⋮ triggerを維持して、effectによる同じpopupのcloseとclosed()のorigin消去・条件付きfocus復帰、dialogへ渡したopenerの寿命を保つ。openedKeyの実行前照合も維持する。同じcontext内のMenuItemは表示位置ごとに再利用する。`selection-context.spec.ts`が選択／空白contextの往復、初期フォーカス・全有効項目の矢印巡回・Home／End・Esc復帰を確認する。`selection-context.spec.ts`のCtrl／Command＋Aはcanvas／行へのfocus復帰・次のキー操作・他へ移ったfocusの保持も検証する。`screen-context.spec.ts`は⋮からの複製・未適用入力dialog確定後のtrigger identity／focus／再操作を検証する。`menu-viewport.spec.ts`が内部／外部scroll・キー・resize・狭幅と両テーマを確認する。[Menuの責務と受入](../design/editor/designer-menu-viewport.md)。
 
 ### レイヤーの兄弟内挿入
 

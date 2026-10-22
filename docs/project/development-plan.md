@@ -43,7 +43,7 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 
 Banto v6.9.0を使い、汎用機能の共通化は上流へ還元する。SCADAはPLCへ直接接続せず、Hubを外部サービスとして利用する。ドライバ・式評価を複製しない。`banto-tagclient`は固定commit依存で利用済み。`banto-expr`は式機能を導入するときに動作確認済みcommitへ固定する。
 
-Banto v6.9.0への依存更新では公開APIの必須移行はなく、既存の `optimizeDeps.exclude` を維持する。Menu #427／#430の上流修正を受け、依存更新後の別工程で局所adapterを撤去した。可用高・内部scroll・フォーカス・Esc・resize・狭幅の受入は[Menu仕様](../design/editor/designer-menu-viewport.md)に従う。認証・Host・新しい共通APIの採用は含めない。
+Banto v6.9.0への依存更新では公開APIの必須移行はなく、既存の `optimizeDeps.exclude` を維持する。Menu #427／#430の上流修正を受け、依存更新後の別工程で局所adapterを撤去した。可用高・内部scroll・フォーカス・Esc・resize・狭幅の受入は[Menu仕様](../design/editor/designer-menu-viewport.md)に従う。PR #9レビュー修正ではMenuGroupだけをcontextKeyで再生成し、Menu／triggerとfocus復帰先を保持する。修正後のブラウザ受入はChromium 156とChrome 155で関連13spec・76件が成功した。200px幅の左端−4pxは撤去後の既知制約として上流報告候補に残す。認証・Host・新しい共通APIの採用は含めない。
 
 SCADAはBanto v6.9.0で先行し、参照スナップショットのIndustrialはv6.7.0のまま。統合時にこの版差を照合する。寸法トークンは今回は採用せず、採用前に既存の`--banto-*`参照（レビュー時点で約58ファイル）との重複・移行範囲を整理する。
 

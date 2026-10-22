@@ -16,9 +16,21 @@
 
 ここから下の順序は移動元の並びを保持し、厳密な時系列に再構成していない。機能別の採用仕様は[文書索引](../README.md)を参照する。
 
+<a id="menu-review-phase-b"></a>
+
+## Menuのレビュー修正とブラウザ版の照合（2026-10-22・日本時間）
+
+PR #9を更新済みPR #8（`ebd2d94`）へrebaseした。Menu全体を囲んでいたcontextKeyのkeyを子のMenuGroup／MenuItemだけへ狭め、trigger／popoverを保持した。context変更のeffectが同じpopupを閉じ、closed()がoriginを消去して条件付きでcanvas／行へfocusを戻す。openedKeyの照合と、項目実行前にdialogへ可視openerを渡す処理を維持した。Ctrl／Command＋A後の復帰と再操作、外へ移ったfocusの保持、⋮からの画面複製と未適用入力dialog確定後のtrigger identity／focusをE2Eへ追加した。タグ検索ではmacOS標準Shift＋Command＋Zを維持し、非macOSにCtrl＋Yのnative検索Redoと背景編集を遮断する検査を戻した（menu外の試験変更として別コミット予定）。
+
+ブラウザ版をローカルの`playwright-core@1.64.1/browsers.json`とキャッシュで照合した。同梱Chromium／Chrome Headless Shellは**156.0.8078.4（revision 1248）**で、導入済み。残っている**Chromium 148（revision 1223）**は旧Playwrightのキャッシュで、現在のCIが取得する版ではない。撤去当初のローカル受入は**Chrome 155.0.8059.85**を指定して実施した。148でcontext menuが即closeした過去の記録（adapterを一時復元しても再現）は保持するが、その原因は未特定で、156のCIにそのまま当てはめない。
+
+別途の実測では、PR #8の旧headのselection-context初期focus不具合は156でも各3/3で再現したが、#8で修正済み。PR #9の旧head `610c76e`はLinux CIのE2E全shardが成功した。これらは今回のphase B修正後のCI成功を示さない。4並列の全体runは高負荷の同じMacでbase workでも733成功／9失敗／2skip、PR #8でも741成功／2失敗／2skipとなり、timeoutは依存更新前から発生している。負荷の影響は考えられるが全timeoutの原因は断定せず、過去の画像差分の原因も未特定。macOSのCtrl＋Y失敗はOS標準キーの違いとして説明でき、Linux CIでは成功している。
+
+修正後の検証は型エラー／警告0、単体111ファイル・1,214件、build、変更ファイル整形が成功。macOS・Playwright 1.64.1で、CIと同版のChrome Headless Shell 156.0.8078.4（2並列）と導入済みChrome 155.0.8059.85（2並列）の関連13spec・76件がいずれも全件成功した。追加したfocus回帰4件（canvas／レイヤーのCtrl／Command＋A後の復帰、⋮からの画面複製、未適用入力dialog確定後）は修正前のContextActionsで156により失敗し、修正後は3回反復の21件がすべて成功した。全体はChromium 156・2並列で751件中747成功・2skip・2失敗。失敗は高負荷下（load average約200）のimage-crop-gestureとselection-opacityの40.8秒timeoutで、両specを1並列で再実行すると18件すべて成功した。再実行を含む結果を単一の全件成功runとは扱わない。非macOSのCtrl＋Y経路はLinux CIで確認する。
+
 ## Banto Menuの局所adapter撤去（2026-10-22・日本時間）
 
-v6.9.0の上流#427／#430修正へ移管し、menu-viewport／settle-menu-focusとmain／App／DesignerMenubar／ContextActionsの接続を撤去した。横方向のmenubar移動、context対象選択、仮想triggerの画面外座標補正は維持する。contextKeyごとにMenuを再生成し、動的な項目の登録順と表示順を揃えた。未選択から選択対象へ切り替えた後の初期フォーカスと矢印／Homeの回帰を追加した。タグ検索のUndo／Redo試験に残るControl固定もOS標準キーへ揃えた。Project形式は0.35.0のまま。
+v6.9.0の上流#427／#430修正へ移管し、menu-viewport／settle-menu-focusとmain／App／DesignerMenubar／ContextActionsの接続を撤去した。横方向のmenubar移動、context対象選択、仮想triggerの画面外座標補正は維持する。撤去当初はcontextKeyごとにMenu全体を再生成して動的な項目の登録順と表示順を揃えたが、後続のレビュー修正（上節）でMenuGroupだけへ狭めた。未選択から選択対象へ切り替えた後の初期フォーカスと矢印／Homeの回帰を追加した。タグ検索のUndo／Redo試験に残るControl固定もOS標準キーへ揃えた。Project形式は0.35.0のまま。
 
 型エラー／警告0、TS全1,214件、build、Chrome 155の修正後の関連ブラウザ54件が成功。修正後のmacOS全746件は、4並列の成功632件・Ctrlクリックのskip2件と、失敗／中断／未実行112件の1並列再開（全件成功）をIDで照合し、最新結果744成功・2skip・未検証0件を確認した。単一の全件一括成功ではない。4並列では画像比較1件と終盤の遅延によるtimeoutが発生し、アプリ・テスト・timeout・retryを変えない1並列再開では再現しなかった。Chromium 148ではcontext menuが直ちに閉じる失敗をContextActionsのadapter接続の一時復元でも再現し、導入済みChrome 155で再検証した。再install・ブラウザ取得は行っていない。
 
