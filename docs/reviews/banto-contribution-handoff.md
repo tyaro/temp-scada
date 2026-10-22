@@ -1,10 +1,10 @@
 # SCADAからBantoへの共通機能引渡し
 
-2026-10-21（日本時間）。状態: **起票・当初資産の引渡し済み。上流IssueはClosed、SCADAへの採用は未完了**。既存の[パネル基盤比較](banto-dock-comparison.md)に加え、汎用化の候補と受入資産を記録する。
+2026-10-22（日本時間）更新。状態: **起票・当初資産の引渡し済み。上流IssueはClosed、SCADAへの採用は未完了**。既存の[パネル基盤比較](banto-dock-comparison.md)に加え、汎用化の候補と受入資産を記録する。
 
 ## 現在の確認状態
 
-Banto main `ac571ebffa76db61e28230a7138223f069eee067`で再確認し、#432〜#438はすべてClosed。[PR #447](https://github.com/tyaro/banto/pull/447)のdraft基盤と[PR #453](https://github.com/tyaro/banto/pull/453)の画像Storeはmerge済み。SCADAはv6.7.0のままで、依存更新・接続後の受入は未実施。
+Banto main `ac571ebffa76db61e28230a7138223f069eee067`で再確認し、#432〜#438はすべてClosed。[PR #447](https://github.com/tyaro/banto/pull/447)のdraft基盤と[PR #453](https://github.com/tyaro/banto/pull/453)の画像Storeはmerge済み。SCADAのadmin-core／theme／uiはv6.9.0（`1bd12fe023cf3958dbdde923e1bdd4fdb28a9139`）へ固定依存更新済み。Menuの上流修正受入と局所adapter撤去、その他の共通APIへの接続・受入は未完了。
 
 追加候補・TreeViewの既存APIとの差・現在渡せる試験は[還元候補と採用境界](banto-contribution-candidates.md)へ整理した。以下は当初起票時の目的と引渡し資産であり、未実装項目の現行一覧ではない。
 
@@ -32,6 +32,6 @@ Banto main `ac571ebffa76db61e28230a7138223f069eee067`で再確認し、#432〜#4
 - [#432 入力保持とpane切替前guard](https://github.com/tyaro/banto/issues/432): formsとdock lifecycle。#436の非同期primitiveと連携する。
 - [#433 gestureの所有者・取消](https://github.com/tyaro/banto/issues/433): 移動／resize／divider。#435のキーscopeと整合させる。
 - [#434 layout検証・到達性](https://github.com/tyaro/banto/issues/434): #437はその永続化consumerを支援し、幾何検証は重複させない。
-- [#427 メニューの可用高・内部scroll](https://github.com/tyaro/banto/issues/427): **Closed**。[PR #430](https://github.com/tyaro/banto/pull/430)が2026-10-21 00:46（日本時間）にmergeされた。新規Issueは重ねない。SCADAの固定依存更新と暫定adapter撤去は未実施。[局所対応の仕様](../design/editor/designer-menu-viewport.md)と`e2e/menu-viewport.spec.ts`を、上流接続時の受入に使う。今回、修正後BantoをSCADAへ接続しての動作検証はしていない。
+- [#427 メニューの可用高・内部scroll](https://github.com/tyaro/banto/issues/427): **Closed**。[PR #430](https://github.com/tyaro/banto/pull/430)が2026-10-21 00:46（日本時間）にmergeされた。新規Issueは重ねない。SCADAの固定依存はv6.9.0へ更新済み。上流修正の受入と暫定adapter撤去はPR #9に残す。[局所対応の仕様](../design/editor/designer-menu-viewport.md)に従い、adapterを外した状態で`e2e/menu-viewport.spec.ts`を通すことを受入条件にする。同試験はadapterありでも通るため、ありの成功だけでは上流受入の証拠にならない。Chromium 156での常設メニューの比較では、adapterありのbase work／本PRはともに幅200pxでx=4／右端196／幅192pxとなり、はみ出しはない。以前の左端−4px／幅204pxはadapterの幅制限を外した状態の観測で、PR #9の撤去時の狭幅制約として残す。
 
 パネルの[10ケース再現fixture](banto-dock-fixture/README.md)も引き続き利用できる。当初の引渡し時点ではIssue・文書の引渡しのみで、アプリ・依存・Project形式は変更していない。検証は出典ファイルとリンク、Issue本文の確認・整形であり、上記の全体テストを再実行した記録ではない。

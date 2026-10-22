@@ -1,8 +1,8 @@
 import { registerMenuViewport, unregisterMenuViewport } from "./menu-viewport";
 import { tick } from "svelte";
 
-/** Banto 6.7.0 focuses before its popup visibility style has flushed.
- * Retry after that flush; keep Banto's navigation and native light dismiss.
+/** Duplicates Banto v6.9.0's upstream focus flush (#427/#430); removal awaits PR #9 acceptance.
+ * Retain the fallback for now; keep Banto's navigation and native light dismiss.
  */
 export function settleMenuFocus(root: HTMLElement) {
   const originalStyles = new Map<HTMLElement, string>();

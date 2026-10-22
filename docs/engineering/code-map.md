@@ -266,6 +266,8 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 
 左右の浮動配置は`App.svelte`で一つのworkspaceへ接続し、表示・上位層・作図操作・固定幅と連携する。sidebarはプレビュー時だけ浮動を休止する。`setup.ts`は各slotを独立して明示保存し、`designer-actions.ts`は復帰と前面表示を提供する。`sidebar-floating.spec.ts`と`inspector-floating.spec.ts`で同じDOM・入力保持・排他・永続化を確認する。
 
+`designer/ContextActions.svelte`はMenuItemを表示位置ごとに再利用し、Bantoのmount順の登録とDOMの順序を揃える。labelをkeyにして既存項目を移動すると初期focusと矢印移動の順序がずれるため、動的項目にkeyを付けない。`e2e/selection-context.spec.ts`で選択／空白contextを往復し、初期focus・全項目の矢印巡回・Home／End・Esc復帰を確認する。
+
 `designer/menu-viewport.ts`はDesignerの登録済みMenu自身のscrollだけをBantoのancestor-dismissから区別し、可用高を制限する。`main.ts`でmount前にcapture境界を登録し、`settle-menu-focus.ts`がopen／close／破棄の登録を担う。`menu-viewport.spec.ts`が内部／外部scroll・キー・resizeの境界を確認する。[上流課題と暫定対応](../design/editor/designer-menu-viewport.md)。
 
 ### レイヤーの兄弟内挿入

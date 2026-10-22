@@ -1,4 +1,5 @@
-/** Temporary Banto 6.7 adapter: bounded Designer menus keep their own scroll open.
+/** Duplicates Banto v6.9.0 upstream behavior (#427/#430); removal awaits PR #9 acceptance.
+ * The upstream remeasurement replaces maxHeight; the other inline constraints remain.
  * Install before mounting Banto Menu so this capture boundary precedes its ancestor-scroll close.
  */
 const menus = new Map<HTMLElement, HTMLElement>();

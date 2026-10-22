@@ -12,7 +12,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| アプリ基盤 | Banto v6.7.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
+| アプリ基盤 | Banto v6.9.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
 | Project    | `schemaVersion`／`minRuntimeVersion`は**0.35.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
 | 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.34.0や未知の形式は拒否。リリース前の互換性を保証しない                            |

@@ -1,12 +1,18 @@
 # Bantoへの還元候補と採用境界
 
-2026-10-21確認。状態: **候補整理・公開ソース照合済み。横断設計はIndustrial [#762](https://github.com/tyaro/banto-industrial/issues/762)へ起票。その他の追加起票・上流への追補・依存更新は未実施**。
+2026-10-22（日本時間）更新。状態: **候補整理・公開ソース照合済み。横断設計はIndustrial [#762](https://github.com/tyaro/banto-industrial/issues/762)へ起票。v6.9.0へ固定依存更新済み。その他の追加起票・上流への追補、共通APIへの採用・受入は未完了**。
 
 SCADAの局所実装をそのまま移すのではなく、Bantoの既存APIに不足する契約と、再利用できる受入テストを渡す。[起票時の引渡し記録](banto-contribution-handoff.md)とは区別する。
 
-## 比較基準
+## 現在の確認状態
 
-- SCADA: `2abc53f`（アプリ実装の直近変更は`01d5df0`）。固定依存は引き続きBanto v6.7.0。
+SCADAのadmin-core／theme／uiはBanto v6.9.0（`1bd12fe023cf3958dbdde923e1bdd4fdb28a9139`）へ固定依存更新済み。Menu #427／#430の上流修正受入と局所adapter撤去はPR #9に残す。その他の共通APIへの接続・採用・受入は未完了。
+
+## 比較基準（2026-10-21確認時点）
+
+以下は当時の比較基準の記録であり、現在の固定依存を示すものではない。
+
+- SCADA: `2abc53f`（アプリ実装の直近変更は`01d5df0`）。確認時点の固定依存はBanto v6.7.0。
 - Banto main: [`ac571ebffa76db61e28230a7138223f069eee067`](https://github.com/tyaro/banto/tree/ac571ebffa76db61e28230a7138223f069eee067)。以下の公開API照合はこの版に限る。
 - 起票済みの[#432〜#438](banto-contribution-handoff.md#関連する起票済み事項)はすべてClosed。[PR #447](https://github.com/tyaro/banto/pull/447)のdraft基盤、[PR #453](https://github.com/tyaro/banto/pull/453)の画像Storeはmerge済み。IssueのClosedと、SCADAでの採用・受入完了は別である。
 
