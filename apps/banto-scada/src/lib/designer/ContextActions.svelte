@@ -185,7 +185,9 @@
       >
     {/snippet}
     <MenuGroup {label}>
-      {#each items as item (item.label)}
+      <!-- Banto navigates in MenuItem mount order. Reuse positions so changing
+           context actions keeps that registration order aligned with the DOM. -->
+      {#each items as item}
         <MenuItem
           label={item.label}
           disabled={item.disabled}

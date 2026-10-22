@@ -228,6 +228,44 @@ test("context key and named action buttons recover properties and return focus t
   ).toBeLessThan(2);
 });
 
+test("changing context actions keeps initial focus and arrow navigation in visible order", async ({
+  page,
+}) => {
+  await edit(page);
+  const row = list(page).getByRole("button", {
+    name: "rectangle · 3",
+    exact: true,
+  });
+  async function checkOrder(popup: ReturnType<typeof menu>, first: string) {
+    const enabled = popup.locator(
+      '[role="menuitem"]:not([aria-disabled="true"])',
+    );
+    await expect(enabled.first()).toHaveText(first);
+    await expect(enabled.first()).toBeFocused();
+    const count = await enabled.count();
+    for (let index = 1; index <= count; index++) {
+      await page.keyboard.press("ArrowDown");
+      await expect(enabled.nth(index % count)).toBeFocused();
+    }
+    await page.keyboard.press("ArrowUp");
+    await expect(enabled.last()).toBeFocused();
+    await page.keyboard.press("Home");
+    await expect(enabled.first()).toBeFocused();
+    await page.keyboard.press("End");
+    await expect(enabled.last()).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(popup).toHaveCount(0);
+  }
+  for (let round = 0; round < 2; round++) {
+    await row.focus();
+    await row.press("Shift+F10");
+    await checkOrder(menu(page, "rectangle · 3"), "プロパティを表示");
+    await expect(row).toBeFocused();
+    await at(page, 920, 500);
+    await checkOrder(menu(page, "キャンバス"), "Rectangle を挿入");
+  }
+});
+
 test("context sessions close on selection changes and can reopen on another canvas target", async ({
   page,
 }) => {
