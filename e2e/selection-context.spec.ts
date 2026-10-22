@@ -176,6 +176,15 @@ test("context key and named action buttons recover properties and return focus t
   await expect(
     popup.getByRole("menuitem", { name: "プロパティを表示", exact: true }),
   ).toBeFocused();
+  // 未選択から選択対象へ項目を差し替えても、表示順に移動する。
+  await page.keyboard.press("ArrowDown");
+  await expect(
+    popup.getByRole("menuitem", { name: "配置の所属を変更", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(
+    popup.getByRole("menuitem", { name: "プロパティを表示", exact: true }),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(row).toBeFocused();
   await button(page, "キャンバスの操作").click();

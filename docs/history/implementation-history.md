@@ -16,6 +16,14 @@
 
 ここから下の順序は移動元の並びを保持し、厳密な時系列に再構成していない。機能別の採用仕様は[文書索引](../README.md)を参照する。
 
+## Banto Menuの局所adapter撤去（2026-10-22・日本時間）
+
+v6.9.0の上流#427／#430修正へ移管し、menu-viewport／settle-menu-focusとmain／App／DesignerMenubar／ContextActionsの接続を撤去した。横方向のmenubar移動、context対象選択、仮想triggerの画面外座標補正は維持する。contextKeyごとにMenuを再生成し、動的な項目の登録順と表示順を揃えた。未選択から選択対象へ切り替えた後の初期フォーカスと矢印／Homeの回帰を追加した。タグ検索のUndo／Redo試験に残るControl固定もOS標準キーへ揃えた。Project形式は0.35.0のまま。
+
+型エラー／警告0、TS全1,214件、build、Chrome 155の修正後の関連ブラウザ54件が成功。修正後のmacOS全746件は、4並列の成功632件・Ctrlクリックのskip2件と、失敗／中断／未実行112件の1並列再開（全件成功）をIDで照合し、最新結果744成功・2skip・未検証0件を確認した。単一の全件一括成功ではない。4並列では画像比較1件と終盤の遅延によるtimeoutが発生し、アプリ・テスト・timeout・retryを変えない1並列再開では再現しなかった。Chromium 148ではcontext menuが直ちに閉じる失敗をContextActionsのadapter接続の一時復元でも再現し、導入済みChrome 155で再検証した。再install・ブラウザ取得は行っていない。
+
+両テーマの320／360／480px幅でフォーカス・キー・Escと外接矩形を確認した。旧横幅制限だけの比較では常設Menuは240px以上で同幅だが、200pxでは上流版の左端が4pxはみ出す。[責務と検証範囲](../design/editor/designer-menu-viewport.md)を参照する。
+
 ## Banto基盤のv6.9.0更新（2026-10-22・日本時間）
 
 アプリのadmin-core／theme／uiをv6.9.0（`1bd12fe023cf3958dbdde923e1bdd4fdb28a9139`）へ揃えた。v6.8.0→v6.9.0の公開APIに必須移行はなく、寸法トークンは任意採用。LAN／Windows配布支援・認証・Host接続は対象外。Menuの局所adapter撤去と上流修正の受入はPR #9の別工程とする。
@@ -34,7 +42,7 @@ Linux CIのshard 3/4は178成功・1失敗で、Shift＋F10後の初期focusを�
 
 ## 小さい画面での常設メニュー復帰を修正（2026-10-20・日本時間）
 
-左パネル追加`2822881`の全体CIで標準復元2件とメニューバー復帰1件の画面外項目を検出し、ローカルで3件を再現した。Banto Menuへ可用高と内部scrollの限定adapterを接続し、3件が成功した。依存コードの複製はせず、上流Banto #427へ報告した。[原因・境界と検証](../design/editor/designer-menu-viewport.md)。新規機能は追加せず、正常な保存区切りで一旦停止するための修正。
+左パネル追加`2822881`の全体CI39430512454で標準復元2件とメニューバー復帰1件の画面外項目を検出し、ローカルで3件を再現した。Banto Menuへ可用高と内部scrollの限定adapterを接続し、3件が成功した。menu-viewport・layout-reset・menubarの関連19件、型エラー／警告なし、本番buildも成功した。依存コードの複製はせず、上流Banto #427へ報告した。[原因・境界と検証](../design/editor/designer-menu-viewport.md)。新規機能は追加せず、正常な保存区切りで一旦停止するための修正。
 
 ## 左作業パネル全体を固定／浮動へ接続（2026-10-20・日本時間）
 

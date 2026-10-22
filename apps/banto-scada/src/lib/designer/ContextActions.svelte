@@ -9,7 +9,6 @@
 <script lang="ts">
   import { tick, type Snippet } from "svelte";
   import { Menu, MenuGroup, MenuItem } from "@banto/ui";
-  import { settleMenuFocus } from "./settle-menu-focus";
   let {
     label,
     contextKey,
@@ -160,49 +159,51 @@
   style:top={floating ? `${anchor.y}px` : undefined}
   bind:this={root}
   use:manage
-  use:settleMenuFocus
 >
   {@render children?.()}
-  <Menu label={`${label} の操作`} placement="bottom-start">
-    {#snippet trigger(props)}
-      <button
-        {...props}
-        bind:this={menuButton}
-        type="button"
-        tabindex={floating ? -1 : 0}
-        aria-hidden={floating ? true : undefined}
-        class="more"
-        aria-label={`操作：${label}`}
-        title={`${label} の操作`}
-        onclick={(event) => {
-          openedKey = contextKey;
-          props.onclick(event);
-        }}
-        onkeydown={(event) => {
-          openedKey = contextKey;
-          props.onkeydown(event);
-        }}>⋮</button
-      >
-    {/snippet}
-    <MenuGroup {label}>
-      <!-- Banto navigates in MenuItem mount order. Reuse positions so changing
-           context actions keeps that registration order aligned with the DOM. -->
-      {#each items as item}
-        <MenuItem
-          label={item.label}
-          disabled={item.disabled}
-          onSelect={() => {
-            if (openedKey !== contextKey) return;
-            // Give overlays a visible opener before they capture focus for restoration.
-            const opener = origin ?? menuButton;
-            if (opener?.isConnected && opener.getClientRects().length)
-              opener.focus({ preventScroll: true });
-            item.run();
+  <!-- 対象切替で項目の登録順と表示順がずれないよう、Menuの寿命もcontextに合わせる。 -->
+  {#key contextKey}
+    <Menu label={`${label} の操作`} placement="bottom-start">
+      {#snippet trigger(props)}
+        <button
+          {...props}
+          bind:this={menuButton}
+          type="button"
+          tabindex={floating ? -1 : 0}
+          aria-hidden={floating ? true : undefined}
+          class="more"
+          aria-label={`操作：${label}`}
+          title={`${label} の操作`}
+          onclick={(event) => {
+            openedKey = contextKey;
+            props.onclick(event);
           }}
-        />
-      {/each}
-    </MenuGroup>
-  </Menu>
+          onkeydown={(event) => {
+            openedKey = contextKey;
+            props.onkeydown(event);
+          }}>⋮</button
+        >
+      {/snippet}
+      <MenuGroup {label}>
+        <!-- Banto navigates in MenuItem mount order. Reuse positions to keep
+             that registration order aligned with the DOM within this context. -->
+        {#each items as item}
+          <MenuItem
+            label={item.label}
+            disabled={item.disabled}
+            onSelect={() => {
+              if (openedKey !== contextKey) return;
+              // Give overlays a visible opener before they capture focus for restoration.
+              const opener = origin ?? menuButton;
+              if (opener?.isConnected && opener.getClientRects().length)
+                opener.focus({ preventScroll: true });
+              item.run();
+            }}
+          />
+        {/each}
+      </MenuGroup>
+    </Menu>
+  {/key}
 </div>
 
 <style>

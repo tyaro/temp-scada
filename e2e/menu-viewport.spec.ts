@@ -1,3 +1,4 @@
+import { chooseTheme } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 const trigger = (p: Page) =>
   p.getByRole("button", { name: "メニュー", exact: true });
@@ -43,7 +44,7 @@ test("long permanent menu fits the viewport and keeps keyboard and wheel scrolli
   await expect(popup(page)).toHaveCount(0);
   await expect(trigger(page)).toBeFocused();
 });
-test("an open menu remeasures available height before Banto repositions on resize", async ({
+test("an open menu remeasures available height using Banto positioning on resize", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -82,3 +83,42 @@ test("outside canvas scrolling still dismisses a bounded menu", async ({
     });
   await expect(popup(page)).toHaveCount(0);
 });
+
+// 局所adapterなしで上流Menuの寸法・フォーカス契約を両テーマで確認する。
+for (const theme of ["light", "dark"] as const) {
+  test(`上流Menuは狭幅でも操作とEsc復帰を保つ（${theme}）`, async ({
+    page,
+  }, testInfo) => {
+    await start(page);
+    await chooseTheme(page, theme);
+    for (const width of [480, 360, 320]) {
+      await page.setViewportSize({ width, height: 480 });
+      await trigger(page).press("ArrowDown");
+      await expect(popup(page).getByRole("menuitem").first()).toBeFocused();
+      await bounds(page);
+      const box = (await popup(page).boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      await page.keyboard.press("ArrowDown");
+      await expect(popup(page).getByRole("menuitem").nth(1)).toBeFocused();
+      await page.keyboard.press("End");
+      await expect(popup(page).getByRole("menuitem").last()).toBeFocused();
+      const dimensions = await popup(page).evaluate((el) => ({
+        width: el.getBoundingClientRect().width,
+        maxWidth: getComputedStyle(el).maxWidth,
+        height: el.getBoundingClientRect().height,
+      }));
+      await testInfo.attach(`menu-${theme}-${width}.json`, {
+        body: JSON.stringify(dimensions),
+        contentType: "application/json",
+      });
+      await page.screenshot({
+        path: testInfo.outputPath(`menu-${theme}-${width}.png`),
+        animations: "disabled",
+      });
+      await page.keyboard.press("Escape");
+      await expect(popup(page)).toHaveCount(0);
+      await expect(trigger(page)).toBeFocused();
+    }
+  });
+}

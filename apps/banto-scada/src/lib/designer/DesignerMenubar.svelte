@@ -7,7 +7,6 @@
 
 <script lang="ts">
   import { Menu, MenuItem } from "@banto/ui";
-  import { settleMenuFocus } from "./settle-menu-focus";
   let { groups }: { groups: DesignerMenu[] } = $props();
   let root: HTMLDivElement;
   let active = $state(0);
@@ -44,7 +43,6 @@
 
 <div
   bind:this={root}
-  use:settleMenuFocus
   role="menubar"
   tabindex="-1"
   aria-label="Designer メニューバー"
