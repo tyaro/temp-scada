@@ -29,15 +29,15 @@ test("native clipboard copies, pastes with repeat offset, cuts and deletes with 
   page,
 }) => {
   await start(page);
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press("ControlOrMeta+c");
   const text = await page.evaluate(() => navigator.clipboard.readText());
   expect(JSON.parse(text).format).toBe("banto-scada.objects");
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(shapes(page)).toHaveCount(4);
   const first = await page
     .locator('[data-object-id][data-selected="true"]')
     .getAttribute("transform");
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(shapes(page)).toHaveCount(5);
   expect(
     await page
@@ -49,7 +49,7 @@ test("native clipboard copies, pastes with repeat offset, cuts and deletes with 
   await layers(page)
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   await expect(shapes(page)).toHaveCount(3);
   await page.keyboard.press("Control+z");
   await expect(shapes(page)).toHaveCount(4);
@@ -130,7 +130,7 @@ test("text controls retain native clipboard and Delete; draft cancel preserves m
   const input = page.getByLabel("テキスト", { exact: true });
   await input.fill("native clipboard");
   await input.selectText();
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press("ControlOrMeta+c");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     "native clipboard",
   );
@@ -198,7 +198,7 @@ test("Delete and clipboard outside placement scope leave objects unchanged", asy
     .focus();
   await page.keyboard.press("Delete");
   await page.evaluate(() => navigator.clipboard.writeText("keep"));
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press("ControlOrMeta+c");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     "keep",
   );
@@ -210,7 +210,7 @@ test("Delete and clipboard outside placement scope leave objects unchanged", asy
     .getByRole("region", { name: "キャンバス操作領域", exact: true })
     .focus();
   await page.keyboard.press("Delete");
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(shapes(page)).toHaveCount(3);
 });
 test("cut validates final definition child before writing to OS clipboard", async ({
@@ -223,7 +223,7 @@ test("cut validates final definition child before writing to OS clipboard", asyn
   await page.getByRole("button", { name: "定義を編集", exact: true }).click();
   await selectPanel(page, "レイヤー");
   await layers(page).getByRole("button").first().focus();
-  await page.keyboard.press("Control+a");
+  await page.keyboard.press("ControlOrMeta+a");
   await page.evaluate(() =>
     navigator.clipboard.writeText("keep existing clipboard"),
   );

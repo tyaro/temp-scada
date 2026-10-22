@@ -79,7 +79,7 @@ async function menu(p: Page, name: string) {
     .click();
 }
 async function copy(p: Page) {
-  await p.keyboard.press("Control+c");
+  await p.keyboard.press("ControlOrMeta+c");
   await expect(p.getByTestId("project-status")).toContainText("コピーしました");
   await expect
     .poll(() =>
@@ -127,7 +127,7 @@ test("native copy/paste reuses one live source for two wrappers and cuts only th
   const clip = await copy(page);
   expect(clip.project.screens).toHaveLength(2);
   expect(clip.project.screens[0].objects).toHaveLength(2);
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(views(page)).toHaveCount(4);
   let project = (await save(page)).project;
   expect(project.screens).toHaveLength(2);
@@ -138,7 +138,7 @@ test("native copy/paste reuses one live source for two wrappers and cuts only th
   await page.keyboard.press("Control+z");
   await expect(views(page)).toHaveCount(2);
   await select(page);
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   await expect(views(page)).toHaveCount(1);
   project = (await save(page)).project;
   expect(project.screens[1]).toEqual(source);

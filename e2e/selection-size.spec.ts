@@ -41,7 +41,7 @@ async function two(
   ids = sample.screens[0].objects.slice(0, 2).map((o) => o.id),
 ) {
   await row(page, ids[0]).click();
-  await row(page, ids[1]).click({ modifiers: ["Control"] });
+  await row(page, ids[1]).click({ modifiers: ["ControlOrMeta"] });
 }
 for (const theme of ["light", "dark"] as const)
   test(`explicit local width preserves rotated centers, unspecified height and supports one Undo in ${theme}`, async ({
@@ -123,7 +123,7 @@ test("line-containing selections are refused as a whole; hidden placements and l
 }) => {
   await start(page, processSample);
   await page.getByRole("region", { name: "キャンバス操作領域" }).focus();
-  await page.keyboard.press("Control+a");
+  await page.keyboard.press("ControlOrMeta+a");
   await expect(form(page)).toContainText("線・配管を含むため");
   await expect(width(page)).toBeDisabled();
   await expect(

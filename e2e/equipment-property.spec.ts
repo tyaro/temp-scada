@@ -156,7 +156,7 @@ test("display-source draft guards navigation and metadata cut preserves clipboar
     navigator.clipboard.writeText("preserve metadata clipboard"),
   );
   await page.locator(`button[data-layer-id="${object.id}"]`).focus();
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   await expect(
     page.getByRole("status").filter({ hasText: "機器情報単体" }).first(),
   ).toBeVisible();

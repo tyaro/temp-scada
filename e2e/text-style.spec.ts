@@ -163,8 +163,8 @@ test("invalid size, IME, staged formatting and multiline paste use existing inpu
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.evaluate(() => navigator.clipboard.writeText("first\nsecond"));
   await text.focus();
-  await text.press("Control+a");
-  await text.press("Control+v");
+  await text.press("ControlOrMeta+a");
+  await text.press("ControlOrMeta+v");
   await expect(text).toHaveValue("first\nsecond");
   await expect(textBox(page).locator("[data-text-content]")).toHaveText(
     sample.screens[0].objects[2].shape.text!,

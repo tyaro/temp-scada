@@ -47,11 +47,11 @@ async function fixture(page: Page) {
   await button(page, "ポンプを追加").click();
   await expect(objects(page)).toHaveCount(3);
   await viewport(page).focus();
-  await page.keyboard.press("Control+a");
+  await page.keyboard.press("ControlOrMeta+a");
 }
 async function copy(page: Page) {
   await viewport(page).focus();
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press("ControlOrMeta+c");
   await expect(page.getByTestId("project-status")).toContainText(
     "コピーしました",
   );
@@ -102,7 +102,7 @@ for (const theme of ["light", "dark"])
       other = await ctx.newPage();
     await start(other);
     await viewport(other).focus();
-    await other.keyboard.press("Control+v");
+    await other.keyboard.press("ControlOrMeta+v");
     await expect(objects(other)).toHaveCount(3);
     await expect(images(other)).toHaveCount(1);
     const first = await saved(other);
@@ -123,7 +123,7 @@ for (const theme of ["light", "dark"])
       fragment.images[0].data,
     );
     await viewport(other).focus();
-    await other.keyboard.press("Control+v");
+    await other.keyboard.press("ControlOrMeta+v");
     await expect(objects(other)).toHaveCount(6);
     const second = await saved(other);
     expect(second.assets).toHaveLength(1);
@@ -138,7 +138,7 @@ test("native cut writes a complete image fragment before removal and one Undo re
 }) => {
   await fixture(page);
   await viewport(page).focus();
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   await expect(objects(page)).toHaveCount(0);
   const fragment = JSON.parse(
     await page.evaluate(() => navigator.clipboard.readText()),
@@ -149,7 +149,7 @@ test("native cut writes a complete image fragment before removal and one Undo re
   await expect(objects(page)).toHaveCount(3);
   await expect(images(page)).toHaveCount(1);
   await viewport(page).focus();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(objects(page)).toHaveCount(6);
   expect((await saved(page)).assets).toHaveLength(1);
 });
@@ -164,7 +164,7 @@ test("denied and unsupported async image copy preserve the clipboard, source and
     };
   });
   await viewport(page).focus();
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   await expect(page.getByTestId("project-status")).toContainText("denied");
   await expect(objects(page)).toHaveCount(3);
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
@@ -173,7 +173,7 @@ test("denied and unsupported async image copy preserve the clipboard, source and
   await page.evaluate(() => {
     (window as any).ClipboardItem = undefined;
   });
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   await expect(page.getByTestId("project-status")).toContainText(
     "対応していません",
   );
@@ -197,7 +197,7 @@ test("cut becomes copy-only when editing changes during an asynchronous clipboar
     };
   });
   await viewport(page).focus();
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   await expect
     .poll(() => page.evaluate(() => typeof (window as any).releaseWrite))
     .toBe("function");
@@ -227,7 +227,7 @@ test("corrupt originals and destination capacity failure reject the entire mixed
   await rawImage(page, "#ff9980");
   await expect(images(page)).toHaveCount(2);
   await viewport(page).focus();
-  await page.keyboard.press("Control+a");
+  await page.keyboard.press("ControlOrMeta+a");
   const text = await copy(page);
   await empty(page);
   const bad = JSON.parse(text);
@@ -237,7 +237,7 @@ test("corrupt originals and destination capacity failure reject the entire mixed
     JSON.stringify(bad),
   );
   await viewport(page).focus();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(page.getByTestId("project-status")).toContainText("宣言");
   await expect(objects(page)).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
@@ -259,7 +259,7 @@ test("corrupt originals and destination capacity failure reject the entire mixed
     };
   });
   await page.evaluate((text) => navigator.clipboard.writeText(text), text);
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(page.getByTestId("project-status")).toContainText("容量不足");
   await expect(objects(page)).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
@@ -269,7 +269,7 @@ test("corrupt originals and destination capacity failure reject the entire mixed
     .toBe(0);
   await page.evaluate(() => (window as any).restoreImport());
   await viewport(page).focus();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(objects(page)).toHaveCount(4);
   expect((await saved(page)).assets).toHaveLength(2);
 });
@@ -281,7 +281,7 @@ test("nested Symbol fragments are rejected in a shared definition, and late veri
   await selectPanel(page, "プロジェクト");
   await button(page, "定義を編集").click();
   await viewport(page).focus();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(page.getByTestId("project-status")).toContainText(
     "Symbol定義には埋込画面",
   );
@@ -307,7 +307,7 @@ test("nested Symbol fragments are rejected in a shared definition, and late veri
   });
   await page.evaluate((text) => navigator.clipboard.writeText(text), text);
   await viewport(page).focus();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect
     .poll(() => page.evaluate(() => typeof (window as any).releaseVerify))
     .toBe("function");

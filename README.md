@@ -48,6 +48,10 @@ cargo run --locked -p scada-model -- validate examples/process.project.json
 
 E2E は開発サーバーを自動起動します。既に同じサーバーを起動しているときは再利用します。
 
+macOS でも同じ `pnpm e2e` を使います。コピー・切り取り・貼り付けや通常の追加選択は、Playwright の `ControlOrMeta` で OS 標準の修飾キーを送ります。Ctrl 自体のクリック契約は、Ctrl＋クリックが右クリックになる macOS ではスキップします。Ctrl＋ホイールなど、Ctrl 固有の操作はそのまま検証します。
+
+macOS のプライバシー制限により、headless Chrome から `~/Documents` 内のファイルを読めない場合があります。`setInputFiles` にファイルパスを渡すテストだけが読込で失敗する場合は、`~/dev` など制限のない場所のチェックアウトで再実行してください。
+
 ## Banto 基盤
 
 industrial と同じ **Banto v6.7.0** を git サブディレクトリ依存で利用します。`pnpm-lock.yaml` は参照先コミット `1ffe507da973ca5103ede93b5ca438cda7c28d4e` を固定しています。

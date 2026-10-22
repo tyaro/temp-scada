@@ -38,7 +38,7 @@ async function two(
   ids = sample.screens[0].objects.slice(0, 2).map((o) => o.id),
 ) {
   await row(page, ids[0]).click();
-  await row(page, ids[1]).click({ modifiers: ["Control"] });
+  await row(page, ids[1]).click({ modifiers: ["ControlOrMeta"] });
 }
 for (const theme of ["light", "dark"] as const)
   test(`mixed opacity applies once, zero stays reachable and blank is unchanged in ${theme}`, async ({

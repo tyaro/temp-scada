@@ -38,7 +38,7 @@ async function start(page: Page, p = fixture()) {
   });
   await selectPanel(page, "レイヤー");
   await row(page, 0).click();
-  await row(page, 1).click({ modifiers: ["Control"] });
+  await row(page, 1).click({ modifiers: ["ControlOrMeta"] });
 }
 async function saved(page: Page) {
   const download = page.waitForEvent("download");
@@ -126,7 +126,7 @@ test("unsupported selections disable each channel and hidden/locked targets stay
   await expect(fill(page)).toBeEnabled();
   await fill(page).fill("50");
   await apply(page).click();
-  await row(page, 2).click({ modifiers: ["Control"] });
+  await row(page, 2).click({ modifiers: ["ControlOrMeta"] });
   await expect(fill(page)).toBeDisabled();
   await expect(stroke(page)).toBeDisabled();
   p = fixture();

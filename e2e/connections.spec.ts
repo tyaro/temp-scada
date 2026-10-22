@@ -131,7 +131,7 @@ test("target-only delete and cut are rejected before clipboard write; grouped se
   await expect(p.getByTestId("project-status")).toContainText("接続先");
   await p.evaluate(() => navigator.clipboard.writeText("keep clipboard"));
   await mainCanvas(p).focus();
-  await p.keyboard.press("Control+x");
+  await p.keyboard.press("ControlOrMeta+x");
   await expect(p.getByTestId("project-status")).toContainText("接続先");
   expect(await p.evaluate(() => navigator.clipboard.readText())).toBe(
     "keep clipboard",

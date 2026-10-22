@@ -98,14 +98,14 @@ async function archived(page: Page) {
   }, Array.from(archive));
 }
 for (const theme of ["light", "dark"])
-  test(`native Ctrl+V keeps delivered PNG bytes and transparency, repeats share the asset and undo in ${theme}`, async ({
+  test(`native ControlOrMeta+V keeps delivered PNG bytes and transparency, repeats share the asset and undo in ${theme}`, async ({
     page,
   }) => {
     await start(page);
     await chooseTheme(page, theme);
     const delivered = await systemImage(page);
     await viewport(page).focus();
-    await page.keyboard.press("Control+v");
+    await page.keyboard.press("ControlOrMeta+v");
     await expect(images(page)).toHaveCount(1);
     expect(
       await images(page).evaluate(async (el) =>
@@ -130,7 +130,7 @@ for (const theme of ["light", "dark"])
     });
     expect(alpha).toBe(128);
     await viewport(page).focus();
-    await page.keyboard.press("Control+v");
+    await page.keyboard.press("ControlOrMeta+v");
     await expect(images(page)).toHaveCount(2);
     const project = await archived(page);
     expect(project.assets).toHaveLength(1);

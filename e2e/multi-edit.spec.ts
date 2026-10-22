@@ -92,6 +92,10 @@ for (const modifier of ["Shift", "Control", "Meta"] as const)
   test(`canvas ${modifier}-click toggles selection and preview disables batch shortcuts`, async ({
     page,
   }) => {
+    test.skip(
+      process.platform === "darwin" && modifier === "Control",
+      "macOS treats Control-click as a context-menu click",
+    );
     await page.goto("/");
     await page.getByRole("button", { name: "編集", exact: true }).click();
     const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
@@ -102,12 +106,12 @@ for (const modifier of ["Shift", "Control", "Meta"] as const)
     await objects.nth(1).click({ modifiers: [modifier] });
     await expect(svg.locator('[data-selected="true"]')).toHaveCount(1);
     await page.getByRole("button", { name: "すべて選択", exact: true }).focus();
-    await page.keyboard.press("Control+a");
+    await page.keyboard.press("ControlOrMeta+a");
     await expect(svg.locator('[data-selected="true"]')).toHaveCount(3);
     await page
       .getByRole("button", { name: "表示プレビュー", exact: true })
       .click();
-    await page.keyboard.press("Control+a");
+    await page.keyboard.press("ControlOrMeta+a");
     await page.keyboard.press("Control+d");
     await expect(objects).toHaveCount(3);
     await expect(svg.locator('[data-selected="true"]')).toHaveCount(0);
