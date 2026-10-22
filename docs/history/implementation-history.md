@@ -20,13 +20,28 @@
 
 ## Menuのレビュー修正とブラウザ版の照合（2026-10-22・日本時間）
 
-PR #9を更新済みPR #8（`ebd2d94`）へrebaseした。Menu全体を囲んでいたcontextKeyのkeyを子のMenuGroup／MenuItemだけへ狭め、trigger／popoverを保持した。context変更のeffectが同じpopupを閉じ、closed()がoriginを消去して条件付きでcanvas／行へfocusを戻す。openedKeyの照合と、項目実行前にdialogへ可視openerを渡す処理を維持した。Ctrl／Command＋A後の復帰と再操作、外へ移ったfocusの保持、⋮からの画面複製と未適用入力dialog確定後のtrigger identity／focusをE2Eへ追加した。タグ検索ではmacOS標準Shift＋Command＋Zを維持し、非macOSにCtrl＋Yのnative検索Redoと背景編集を遮断する検査を戻した（menu外の試験変更として別コミット予定）。
+PR #9を更新済みPR #8（`ebd2d94`）へrebaseした。Menu全体を囲んでいたcontextKeyのkeyを子のMenuGroup／MenuItemだけへ狭め、trigger／popoverを保持した。context変更のeffectが同じpopupを閉じ、closed()がoriginを消去して条件付きでcanvas／行へfocusを戻す。openedKeyの照合と、項目実行前にdialogへ可視openerを渡す処理を維持した。Ctrl／Command＋A後の復帰と再操作、外へ移ったfocusの保持、⋮からの画面複製と未適用入力dialog確定後のtrigger identity／focusをE2Eへ追加した。タグ検索ではmacOS標準Shift＋Command＋Zを維持し、非macOSにCtrl＋Yのnative検索Redoと背景編集を遮断する検査を戻した（menu外の試験変更として別コミット済み。当初`3e2a0a4`、PR #8の文書修正取込後は`4c432d7`）。
 
 ブラウザ版をローカルの`playwright-core@1.64.1/browsers.json`とキャッシュで照合した。同梱Chromium／Chrome Headless Shellは**156.0.8078.4（revision 1248）**で、導入済み。残っている**Chromium 148（revision 1223）**は旧Playwrightのキャッシュで、現在のCIが取得する版ではない。撤去当初のローカル受入は**Chrome 155.0.8059.85**を指定して実施した。148でcontext menuが即closeした過去の記録（adapterを一時復元しても再現）は保持するが、その原因は未特定で、156のCIにそのまま当てはめない。
 
-別途の実測では、PR #8の旧headのselection-context初期focus不具合は156でも各3/3で再現したが、#8で修正済み。PR #9の旧head `610c76e`はLinux CIのE2E全shardが成功した。これらは今回のphase B修正後のCI成功を示さない。4並列の全体runは高負荷の同じMacでbase workでも733成功／9失敗／2skip、PR #8でも741成功／2失敗／2skipとなり、timeoutは依存更新前から発生している。負荷の影響は考えられるが全timeoutの原因は断定せず、過去の画像差分の原因も未特定。macOSのCtrl＋Y失敗はOS標準キーの違いとして説明でき、Linux CIでは成功している。
+別途の実測では、PR #8の旧headのselection-context初期focus不具合は156でも各3/3で再現したが、#8で修正済み。PR #9の旧head `610c76e`はLinux CIのE2E全shardが成功した。これはphase B修正後のCIとは別の結果である。4並列の全体runは高負荷の同じMacでbase workが733成功／9失敗／2skip、PR #8が741成功／2失敗／2skipだった。この比較は失敗件数のみで、失敗したテスト名の突き合わせはしていない。依存更新との因果関係や、両runの失敗原因が同じかは断定しない。負荷の影響は考えられるが全timeoutの原因は断定せず、過去の画像差分の原因も未特定。macOSのCtrl＋Y失敗はOS標準キーの違いとして説明でき、Linux CIでは成功している。
 
-修正後の検証は型エラー／警告0、単体111ファイル・1,214件、build、変更ファイル整形が成功。macOS・Playwright 1.64.1で、CIと同版のChrome Headless Shell 156.0.8078.4（2並列）と導入済みChrome 155.0.8059.85（2並列）の関連13spec・76件がいずれも全件成功した。追加したfocus回帰4件（canvas／レイヤーのCtrl／Command＋A後の復帰、⋮からの画面複製、未適用入力dialog確定後）は修正前のContextActionsで156により失敗し、修正後は3回反復の21件がすべて成功した。全体はChromium 156・2並列で751件中747成功・2skip・2失敗。失敗は高負荷下（load average約200）のimage-crop-gestureとselection-opacityの40.8秒timeoutで、両specを1並列で再実行すると18件すべて成功した。再実行を含む結果を単一の全件成功runとは扱わない。非macOSのCtrl＋Y経路はLinux CIで確認する。
+修正後の検証は型エラー／警告0、単体111ファイル・1,214件、build、変更ファイル整形が成功。macOS・Playwright 1.64.1で、CIと同版のChrome Headless Shell 156.0.8078.4（2並列）と導入済みChrome 155.0.8059.85（2並列）の関連13spec・76件がいずれも全件成功した。
+
+Chromium 156の修正前確認は追加5テスト中4失敗・1成功だった。失敗したfocus復帰4テストはcanvas／レイヤーのCtrl／Command＋A後の復帰、⋮からの画面複製、未適用入力dialog確定後で、外へ移ったfocusの保持1テストは修正前から成功した。修正後の反復は、この追加5テストと既存の関連2テスト（context keyからの操作・復帰、context変更後の初期focus・矢印巡回）を合わせた**7テスト×3回＝21実行**で、すべて成功した。
+
+全体はChromium 156・2並列で751件中747成功・2skip・2失敗。失敗は高負荷下（load average約200）のimage-crop-gestureとselection-opacityの40.8秒timeoutで、両specを1並列で再実行すると18件すべて成功した。負荷との因果関係は未特定で、再実行を含む結果を単一の全件成功runとは扱わない。
+
+2026-10-23（日本時間）追記: レビュー修正後の`3f7cc0c`はGitHub ActionsのLinux CIで[push run 39799706570](https://github.com/tyaro/temp-scada/actions/runs/39799706570)・[pull_request run 39799715324](https://github.com/tyaro/temp-scada/actions/runs/39799715324)とも初回attemptでfrontend・Rust・E2E全4shardを含む全jobが成功し、runの再実行はない。各runのE2Eはshard順に200＋182＋184＋185＝751成功、失敗0・テストretryなし。`tag-picker.spec.ts`の非macOS Ctrl＋Y検査も含む。上記のmacOSローカル再実行とは別の検証結果であり、その後のPR #8文書修正取込後のheadのCI結果には読み替えない。
+
+残課題（2026-10-23・日本時間）:
+
+- Chromium 148でcontext menuが即closeする原因の調査は未完了（原因未特定）。
+- 過去の4並列実行で発生した画像比較差分の原因の調査は未完了（原因未特定）。
+- floatingのoriginが消えた場合に常設メニューへfocusを戻すfallback経路を狙うE2Eは未追加。
+- 200px viewportで左へ4pxはみ出す既知制約（x=−4／幅204px）はBanto Issue未起票。[引渡し一覧](../reviews/banto-contribution-handoff.md#追加の上流報告候補viewportより広いmenu)の報告候補に留まる。
+
+レビュー対応まとめの「採用しなかった提案：なし」を訂正し、上記4項目を未完了の残課題として記録する。
 
 ## Banto Menuの局所adapter撤去（2026-10-22・日本時間）
 

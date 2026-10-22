@@ -6,7 +6,7 @@ SCADAの局所実装をそのまま移すのではなく、Bantoの既存APIに�
 
 ## 現在の確認状態
 
-SCADAのadmin-core／theme／uiはBanto v6.9.0（`1bd12fe023cf3958dbdde923e1bdd4fdb28a9139`）へ固定依存更新済み。Menu #427／#430の上流修正受入と局所adapter撤去はPR #9に残す。その他の共通APIへの接続・採用・受入は未完了。
+SCADAのadmin-core／theme／uiはBanto v6.9.0（`1bd12fe023cf3958dbdde923e1bdd4fdb28a9139`）へ固定依存更新済み。Menu #427／#430の上流修正受入と局所adapter撤去はPR #9で実施済み。[検証範囲と残課題](../design/editor/designer-menu-viewport.md)を参照する。その他の共通APIへの接続・採用・受入は未完了。
 
 ## 比較基準（2026-10-21確認時点）
 

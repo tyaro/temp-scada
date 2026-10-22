@@ -25,3 +25,7 @@ PR #8の訂正記録: Chromium 156.0.8078.4でadapterありのbase work（v6.7.0
 2026-10-22・レビュー修正前の受入: 型エラー／警告0、TS1,214件、build、修正後の関連ブラウザ54件が成功。macOSの全746件も実行結果をIDで照合し、成功632件と再開成功112件、Ctrlクリックのskip2件を確認した。4並列実行での画像比較・遅延timeout後に1並列で未成功分を再開した結果で、単一の全件一括成功ではない。局所adapterへの接続は残っていない。
 
 レビュー修正後のMenuGroup限定key・focus復帰試験を追加し、Chromium 156とChrome 155で関連13spec・76件が成功した。上記54件／全746件の過去の成功を、今回の修正後の受入結果として扱わない。ブラウザ版・CIとの差と再検証範囲は[履歴](../../history/implementation-history.md#menu-review-phase-b)を参照する。
+
+## 残課題（2026-10-23・日本時間）
+
+floatingのorigin消失時に常設メニューへfocusを戻すfallbackは実装済みだが、この経路を狙うE2Eは未追加。既存のcanvas／行への復帰や外へ移ったfocusの保持の成功を、この経路の検証済みとは扱わない。Chromium 148でcontext menuが即closeする原因と、過去の4並列実行で発生した画像比較差分の原因も未特定。200px幅の左4pxはみ出し（x=−4／幅204px）は[上流報告候補](../../reviews/banto-contribution-handoff.md#追加の上流報告候補viewportより広いmenu)であり、Banto Issueは未起票。

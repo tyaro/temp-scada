@@ -41,3 +41,5 @@ Banto main `ac571ebffa76db61e28230a7138223f069eee067`で再確認し、#432〜#4
 PR #9のadapter撤去後、Chrome 155の200px viewportで常設Menuはx=−4／幅204pxとなった。幅制限を適用するとx=4／幅192pxであり、adapterありのbase work／PR #8もx=4／幅192pxだった。上流v6.9.0の`Menu.svelte:computePosition`の横clampは`Math.min(Math.max(left, GAP), viewportWidth - menuRect.width - GAP)`で、後半が負になる場合に左端を負値へ押す。viewportに応じた幅上限と位置補正の契約をBantoへ報告する候補として残す。新規Issueの投稿・依存変更はこの区切りでは行っていない。320px以上の受入とは区別し、局所adapterは再導入しない。
 
 PR #9のレビュー修正ではMenuGroupだけをcontextKeyで再生成し、Menu／popover／triggerとfocus復帰先を保持した。SCADA固有のcontext寿命の修正であり、上流#427／#430の撤回ではない。修正後のブラウザ受入はChromium 156とChrome 155で関連13spec・76件が成功した。その他の共通APIの採用状態は上記のまま。
+
+2026-10-23（日本時間）時点でも、この200px幅の左4pxはみ出しはBanto Issue未起票の残課題。Chromium 148のcontext menu即closeと過去の4並列画像比較差分も原因未特定で、上流原因と断定しない。floatingのorigin消失時に常設メニューへ戻すfallback経路のE2Eも未追加。[PR #9の検証結果と残課題](../history/implementation-history.md#menu-review-phase-b)を参照する。
