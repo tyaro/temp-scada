@@ -85,6 +85,9 @@ test("outside canvas scrolling still dismisses a bounded menu", async ({
 });
 
 // 局所adapterなしで上流Menuの寸法・フォーカス契約を両テーマで確認する。
+// 添付する寸法JSON／スクリーンショットは証跡用で、基準値・画像との比較はしない。
+// 受入assertionは320/360/480pxでの画面内外接矩形・初期focus・キー移動・Esc復帰。
+// 200px幅でx=-4pxとなる既知の制約はdesigner-menu-viewport.mdに記録する。
 for (const theme of ["light", "dark"] as const) {
   test(`上流Menuは狭幅でも操作とEsc復帰を保つ（${theme}）`, async ({
     page,

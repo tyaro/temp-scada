@@ -190,3 +190,99 @@ test("screen actions protect object drafts and keep selection when another scree
   await input.click({ button: "right" });
   await expect(menu(page, "プロセス画面")).not.toBeVisible();
 });
+
+test("screen tab duplicate keeps its more trigger and clears the previous context origin", async ({
+  page,
+}) => {
+  await start(page, false);
+  const tabs = page.getByRole("navigation", { name: "画面タブ", exact: true });
+  const tab = tabs.getByRole("button", { name: "プロセス画面", exact: true });
+  const trigger = tabs.getByRole("button", {
+    name: "操作：画面タブ：プロセス画面",
+    exact: true,
+  });
+  const popup = page.getByRole("menu", {
+    name: "画面タブ：プロセス画面 の操作",
+    exact: true,
+  });
+  const originalTrigger = await trigger.elementHandle();
+  await tab.focus();
+  await page.keyboard.press("Shift+F10");
+  await expect(popup.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("ControlOrMeta+a");
+  await expect(popup).toHaveCount(0);
+  await expect(tab).toBeFocused();
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  await expect(popup.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await expect(
+    popup.getByRole("menuitem", { name: "画面を複製", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    tabs.getByRole("button", { name: "プロセス画面 コピー", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(popup).toHaveCount(0);
+  expect(
+    await trigger.evaluate((el, original) => el === original, originalTrigger),
+  ).toBe(true);
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(popup.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+});
+
+test("screen tab action restores its more trigger after a draft dialog applies and changes revision", async ({
+  page,
+}) => {
+  await start(page);
+  await page.getByLabel("画面名", { exact: true }).fill("仕上工程");
+  const tabs = page.getByRole("navigation", { name: "画面タブ", exact: true });
+  const trigger = tabs.getByRole("button", {
+    name: "操作：画面タブ：プロセス画面",
+    exact: true,
+  });
+  const originalTrigger = await trigger.elementHandle();
+  await trigger.focus();
+  await page.keyboard.press("Enter");
+  const popup = page.getByRole("menu", {
+    name: "画面タブ：プロセス画面 の操作",
+    exact: true,
+  });
+  await expect(popup.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await expect(
+    popup.getByRole("menuitem", { name: "画面を複製", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Enter");
+  const prompt = page.getByRole("dialog", {
+    name: "未適用の入力があります",
+    exact: true,
+  });
+  await expect(prompt).toBeVisible();
+  await expect
+    .poll(() => prompt.evaluate((el) => el.contains(document.activeElement)))
+    .toBe(true);
+  await prompt
+    .getByRole("button", { name: "適用して続行", exact: true })
+    .click();
+  await expect(prompt).toBeHidden();
+  await expect(
+    tabs.getByRole("button", { name: "仕上工程", exact: true }),
+  ).toBeVisible();
+  await expect(
+    tabs.getByRole("button", { name: "プロセス画面 コピー", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+  expect(
+    await trigger.evaluate((el, original) => el === original, originalTrigger),
+  ).toBe(true);
+  await expect(trigger).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(popup.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+});

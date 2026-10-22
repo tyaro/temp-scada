@@ -275,19 +275,81 @@ test("changing context actions keeps initial focus and arrow navigation in visib
   }
 });
 
-test("context sessions close on selection changes and can reopen on another canvas target", async ({
+for (const source of ["canvas", "layer"] as const)
+  test(`context sessions close on selection changes and restore ${source} keyboard focus`, async ({
+    page,
+  }) => {
+    await edit(page);
+    await svg(page)
+      .locator("[data-object-id]")
+      .first()
+      .click({ button: "right" });
+    await expect(menu(page, "rectangle · 3")).toBeVisible();
+    const origin =
+      source === "canvas"
+        ? canvas(page)
+        : list(page).getByRole("button", { name: "ellipse · 4", exact: true });
+    if (source === "canvas")
+      await svg(page)
+        .locator("[data-object-id]")
+        .nth(1)
+        .click({ button: "right" });
+    else {
+      await origin.focus();
+      await origin.press("Shift+F10");
+    }
+    const popup = menu(page, "ellipse · 4");
+    await expect(popup.getByRole("menuitem").first()).toBeFocused();
+    const popover = await popup.elementHandle();
+    await page.keyboard.press("ControlOrMeta+a");
+    await expect(page.getByRole("menu")).toHaveCount(0);
+    await expect(svg(page).locator('[data-selected="true"]')).toHaveCount(3);
+    await expect(origin).toBeFocused();
+    // Reopen from the restored target without refocusing it, then exercise Esc.
+    await page.keyboard.press("Shift+F10");
+    const selection = menu(page, "選択図形（3 件）");
+    await expect(selection.getByRole("menuitem").first()).toBeFocused();
+    expect(
+      await selection.evaluate((el, previous) => el === previous, popover),
+    ).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(selection).toHaveCount(0);
+    await expect(origin).toBeFocused();
+    await page.keyboard.press("ControlOrMeta+d");
+    await expect(svg(page).locator("[data-object-id]")).toHaveCount(6);
+  });
+
+test("context invalidation preserves focus moved elsewhere before the close event", async ({
   page,
 }) => {
   await edit(page);
-  const first = svg(page).locator("[data-object-id]").first();
-  const second = svg(page).locator("[data-object-id]").nth(1);
-  await first.click({ button: "right" });
-  await expect(menu(page, "rectangle · 3")).toBeVisible();
-  await second.click({ button: "right" });
-  await expect(menu(page, "ellipse · 4")).toBeVisible();
-  await page.keyboard.press("Control+a");
+  await svg(page)
+    .locator("[data-object-id]")
+    .first()
+    .click({ button: "right" });
+  await expect(
+    menu(page, "rectangle · 3").getByRole("menuitem").first(),
+  ).toBeFocused();
+  const search = page.getByRole("searchbox", {
+    name: "レイヤーを検索",
+    exact: true,
+  });
+  // Change selection and move focus in the same task, before the queued toggle.
+  await search.evaluate((el, mac) => {
+    document.activeElement!.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "a",
+        bubbles: true,
+        cancelable: true,
+        ctrlKey: !mac,
+        metaKey: mac,
+      }),
+    );
+    el.focus();
+  }, process.platform === "darwin");
   await expect(page.getByRole("menu")).toHaveCount(0);
   await expect(svg(page).locator('[data-selected="true"]')).toHaveCount(3);
+  await expect(search).toBeFocused();
 });
 
 test("symbol context operations share the existing independent-copy and definition-edit paths", async ({

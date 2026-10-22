@@ -33,8 +33,10 @@
   }
   $effect(() => {
     contextKey;
-    const element = root;
-    if (element) popup()?.matches(":popover-open") && popup()?.hidePopover();
+    // Menu/trigger survive the item reset, so this closes the original popup.
+    // Its toggle event clears origin and restores focus unless it moved elsewhere.
+    const menu = popup();
+    if (menu?.matches(":popover-open")) menu.hidePopover();
   });
   let anchor = $state({ x: 0, y: 0 });
   export async function show(
@@ -161,29 +163,29 @@
   use:manage
 >
   {@render children?.()}
-  <!-- 対象切替で項目の登録順と表示順がずれないよう、Menuの寿命もcontextに合わせる。 -->
-  {#key contextKey}
-    <Menu label={`${label} の操作`} placement="bottom-start">
-      {#snippet trigger(props)}
-        <button
-          {...props}
-          bind:this={menuButton}
-          type="button"
-          tabindex={floating ? -1 : 0}
-          aria-hidden={floating ? true : undefined}
-          class="more"
-          aria-label={`操作：${label}`}
-          title={`${label} の操作`}
-          onclick={(event) => {
-            openedKey = contextKey;
-            props.onclick(event);
-          }}
-          onkeydown={(event) => {
-            openedKey = contextKey;
-            props.onkeydown(event);
-          }}>⋮</button
-        >
-      {/snippet}
+  <Menu label={`${label} の操作`} placement="bottom-start">
+    {#snippet trigger(props)}
+      <button
+        {...props}
+        bind:this={menuButton}
+        type="button"
+        tabindex={floating ? -1 : 0}
+        aria-hidden={floating ? true : undefined}
+        class="more"
+        aria-label={`操作：${label}`}
+        title={`${label} の操作`}
+        onclick={(event) => {
+          openedKey = contextKey;
+          props.onclick(event);
+        }}
+        onkeydown={(event) => {
+          openedKey = contextKey;
+          props.onkeydown(event);
+        }}>⋮</button
+      >
+    {/snippet}
+    <!-- 項目だけを再登録し、trigger/popoverとフォーカス復帰先の寿命を保つ。 -->
+    {#key contextKey}
       <MenuGroup {label}>
         <!-- Banto navigates in MenuItem mount order. Reuse positions to keep
              that registration order aligned with the DOM within this context. -->
@@ -202,8 +204,8 @@
           />
         {/each}
       </MenuGroup>
-    </Menu>
-  {/key}
+    {/key}
+  </Menu>
 </div>
 
 <style>
