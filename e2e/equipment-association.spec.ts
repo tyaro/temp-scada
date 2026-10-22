@@ -83,7 +83,7 @@ test("bound equipment clipboard and cut reject the whole selection without chang
     exact: true,
   });
   await canvas.focus();
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   await expect(page.getByTestId("project-status")).toContainText("未対応");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     "preserved clipboard",

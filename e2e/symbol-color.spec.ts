@@ -280,8 +280,8 @@ test("native same/cross-project clipboard and screen duplication preserve mode a
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await start(page);
   await row(page, placements[1].id).click();
-  await page.keyboard.press("Control+c");
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+c");
+  await page.keyboard.press("ControlOrMeta+v");
   let result = await exported(page);
   expect(result.screens[0].objects.at(-1)).toMatchObject({
     fill: placements[1].fill,
@@ -307,7 +307,7 @@ test("native same/cross-project clipboard and screen duplication preserve mode a
   await page
     .getByRole("region", { name: "キャンバス操作領域", exact: true })
     .focus();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   result = await exported(page);
   expect(result.screens[0].objects.at(-1)).toMatchObject({
     fill: placements[1].fill,

@@ -20,8 +20,8 @@ test("group Project, native clipboard v3, save and history retain membership", a
   const canvas = page.getByRole("img", { name: "プロセス画面", exact: true });
   await expect(canvas.locator("[data-object-id]")).toHaveCount(3);
   await canvas.click({ position: { x: 10, y: 10 } });
-  await page.keyboard.press("Control+a");
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.press("ControlOrMeta+c");
   const payload = JSON.parse(
     await page.evaluate(() => navigator.clipboard.readText()),
   );
@@ -29,7 +29,7 @@ test("group Project, native clipboard v3, save and history retain membership", a
   expect(payload.project.screens[0].groups[0].memberIds).toEqual(
     sample.screens[0].groups[0].memberIds,
   );
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(canvas.locator("[data-object-id]")).toHaveCount(6);
   const download = page.waitForEvent("download");
   await fileCommand(page, "Project を保存");

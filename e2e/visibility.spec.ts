@@ -96,7 +96,7 @@ test("all-hidden diagrams remain valid, explain recovery, and allow showing a lo
     page.getByRole("status").filter({ hasText: "表示中の配置がありません" }),
   ).toBeVisible();
   await viewport(page).focus();
-  await page.keyboard.press("Control+a");
+  await page.keyboard.press("ControlOrMeta+a");
   await expect(canvas(page).locator('[data-selected="true"]')).toHaveCount(0);
   await layers(page)
     .getByRole("button", { name: "rectangle · 3", exact: true })
@@ -183,7 +183,7 @@ test("hidden mixed selection rejects canvas movement/delete/cut, while explicit 
   await page.keyboard.press("ArrowRight");
   await page.keyboard.press("Delete");
   await page.evaluate(() => navigator.clipboard.writeText("keep"));
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     "keep",
   );
@@ -218,8 +218,8 @@ test("hidden copying, paste and JSON keep invisible locked metadata and never au
   await layers(page)
     .getByRole("button", { name: "非表示の予備設備", exact: true })
     .click();
-  await page.keyboard.press("Control+c");
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+c");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(
     layers(page).getByRole("button", { name: "非表示の予備設備", exact: true }),
   ).toHaveCount(2);

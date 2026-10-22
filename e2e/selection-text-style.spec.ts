@@ -37,7 +37,7 @@ async function start(page: Page, fixture: object = sample) {
 }
 async function two(page: Page, selected = ids) {
   await row(page, selected[0]).click();
-  await row(page, selected[1]).click({ modifiers: ["Control"] });
+  await row(page, selected[1]).click({ modifiers: ["ControlOrMeta"] });
 }
 async function saved(page: Page) {
   const download = page.waitForEvent("download");

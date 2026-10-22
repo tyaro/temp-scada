@@ -120,8 +120,8 @@ test("native pasted separators normalize without mutating the staged memo", asyn
   );
   const input = page.getByLabel("テキスト", { exact: true });
   await input.focus();
-  await input.press("Control+a");
-  await input.press("Control+v");
+  await input.press("ControlOrMeta+a");
+  await input.press("ControlOrMeta+v");
   await expect(input).toHaveValue(/first/);
   await expect(button(page, "元に戻す")).toBeDisabled();
   await input.press("Control+Enter");
@@ -337,11 +337,11 @@ test("multiline clipboard and file round trips keep blank rows with one undo per
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   const row = page.locator(`button[data-layer-id="${note.id}"]`);
   await row.focus();
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press("ControlOrMeta+c");
   await expect(
     page.getByRole("status").filter({ hasText: "コピーしました" }).first(),
   ).toBeVisible();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   const all = page.locator(".sheet > svg [data-object-id]");
   await expect(all).toHaveCount(sample.screens[0].objects.length + 1);
   const copied = await saved(page);
@@ -492,11 +492,11 @@ test("word wrap remains a static setting across direct-tag mode and native file/
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   const row = page.locator(`button[data-layer-id="${note.id}"]`);
   await row.focus();
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press("ControlOrMeta+c");
   await expect(
     page.getByRole("status").filter({ hasText: "コピーしました" }).first(),
   ).toBeVisible();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   current = await saved(page);
   expect(current.screens[0].objects.at(-1).shape).toEqual(
     current.screens[0].objects[4].shape,

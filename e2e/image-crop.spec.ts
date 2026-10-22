@@ -307,7 +307,7 @@ test("transparent PNG keeps alpha within crop while the original still travels t
     ]);
   await p.context().grantPermissions(["clipboard-read", "clipboard-write"]);
   await p.getByLabel("キャンバス操作領域", { exact: true }).focus();
-  await p.keyboard.press("Control+c");
+  await p.keyboard.press("ControlOrMeta+c");
   await expect
     .poll(() =>
       p.evaluate(async () =>

@@ -69,7 +69,7 @@ test("locked placements remain visible, exclude canvas/all/range selection, and 
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
   await expect(canvas(page).locator('[data-selected="true"]')).toHaveCount(0);
   await viewport(page).focus();
-  await page.keyboard.press("Control+a");
+  await page.keyboard.press("ControlOrMeta+a");
   await expect(canvas(page).locator('[data-selected="true"]')).toHaveCount(2);
   await expect(rect).not.toHaveAttribute("data-selected", "true");
   await range(page);
@@ -174,18 +174,18 @@ test("locked copying and paste preserve metadata; cut refuses before writing the
     exact: true,
   });
   await row.click();
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press("ControlOrMeta+c");
   const text = await page.evaluate(() => navigator.clipboard.readText());
   expect(JSON.parse(text).project.screens[0].objects[0].locked).toBe(true);
   await page.evaluate(() => navigator.clipboard.writeText("keep"));
   await row.focus();
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   await expect(page.getByTestId("project-status")).toContainText("ロック中");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
     "keep",
   );
   await page.evaluate((text) => navigator.clipboard.writeText(text), text);
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(canvas(page).locator("[data-object-id]")).toHaveCount(4);
   await expect(canvas(page).locator('[data-selected="true"]')).toHaveCount(0);
   await expect(button(page, "ロック解除：保護したタンク")).toHaveCount(2);

@@ -101,7 +101,7 @@ test("slot selection is draft protected, applies with Undo and refuses clipboard
   await page
     .getByRole("region", { name: "キャンバス操作領域", exact: true })
     .focus();
-  await page.keyboard.press("Control+x");
+  await page.keyboard.press("ControlOrMeta+x");
   await expect(page.getByTestId("project-status")).toContainText(
     "slot表示単体",
   );

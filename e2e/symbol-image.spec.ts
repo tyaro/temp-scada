@@ -153,7 +153,7 @@ test("Symbol images are copied with original bytes into another Project and one 
   await page
     .getByRole("region", { name: "キャンバス操作領域", exact: true })
     .focus();
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press("ControlOrMeta+c");
   await expect(page.getByTestId("project-status")).toContainText(
     "コピーしました",
   );
@@ -166,7 +166,7 @@ test("Symbol images are copied with original bytes into another Project and one 
   await page
     .getByRole("region", { name: "キャンバス操作領域", exact: true })
     .focus();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(mainCanvas(page).locator("image[data-image-frame]")).toHaveCount(
     1,
   );

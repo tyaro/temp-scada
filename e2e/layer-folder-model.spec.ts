@@ -94,7 +94,7 @@ test("native cross-project clipboard pastes at root and remaps dependency folder
     (o: any) => o.shape.type === "symbol",
   );
   await page.locator(`button[data-layer-id="${source.id}"]`).click();
-  await page.keyboard.press("Control+c");
+  await page.keyboard.press("ControlOrMeta+c");
   const fragment = JSON.parse(
     await page.evaluate(() => navigator.clipboard.readText()),
   );
@@ -104,7 +104,7 @@ test("native cross-project clipboard pastes at root and remaps dependency folder
   await page
     .getByRole("region", { name: "キャンバス操作領域", exact: true })
     .focus();
-  await page.keyboard.press("Control+v");
+  await page.keyboard.press("ControlOrMeta+v");
   await expect(canvas(page).locator("[data-object-id]")).toHaveCount(4);
   const result = await saved(page);
   expect(result.screens[0].objects.at(-1).folderId).toBeUndefined();
