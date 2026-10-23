@@ -206,19 +206,32 @@ test("native search undo stays local while row undo cannot affect background val
   await button(page, "タグを選択").click();
   const search = dialog(page).getByLabel("タグ候補を検索", { exact: true });
   await search.focus();
-  await search.press("Control+z");
+  await search.press("ControlOrMeta+z");
   await expect(x).toHaveValue("101");
   await search.fill("液位");
-  await search.press("Control+z");
+  await search.press("ControlOrMeta+z");
   await expect(search).toHaveValue("");
   await expect(x).toHaveValue("101");
-  await search.press("Control+y");
+  await search.press("ControlOrMeta+Shift+z");
   await expect(search).toHaveValue("液位");
   await expect(x).toHaveValue("101");
+  if (process.platform !== "darwin") {
+    // Ctrl+Y is a separate app shortcut and a native redo key outside macOS.
+    await search.press("Control+z");
+    await expect(search).toHaveValue("");
+    await search.press("Control+y");
+    await expect(search).toHaveValue("液位");
+    await expect(x).toHaveValue("101");
+  }
   await tag(page, /原水タンク 液位/).focus();
-  await page.keyboard.press("Control+z");
-  await page.keyboard.press("Control+y");
+  await page.keyboard.press("ControlOrMeta+z");
+  await page.keyboard.press("ControlOrMeta+Shift+z");
   await expect(x).toHaveValue("101");
+  if (process.platform !== "darwin") {
+    await page.keyboard.press("Control+z");
+    await page.keyboard.press("Control+y");
+    await expect(x).toHaveValue("101");
+  }
   await button(page, "キャンセル").click();
   await expect(field(page)).toHaveValue("");
 });

@@ -43,7 +43,9 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 
 Banto v6.9.0を使い、汎用機能の共通化は上流へ還元する。SCADAはPLCへ直接接続せず、Hubを外部サービスとして利用する。ドライバ・式評価を複製しない。`banto-tagclient`は固定commit依存で利用済み。`banto-expr`は式機能を導入するときに動作確認済みcommitへ固定する。
 
-Banto v6.9.0への依存更新では公開APIの必須移行はなく、既存の `optimizeDeps.exclude` を維持する。Menu #427／#430の上流修正の受入と局所adapter撤去は未完了で、PR #9の別工程として検証する。adapterを外した状態で`e2e/menu-viewport.spec.ts`を通すことを受入条件とする。同試験はadapterありでも通るため、ありの成功だけでは上流受入の証拠にならない。認証・Host・新しい共通APIの採用は含めない。
+Banto v6.9.0への依存更新では公開APIの必須移行はなく、既存の `optimizeDeps.exclude` を維持する。Menu #427／#430の上流修正を受け、依存更新後の別工程で局所adapterを撤去した。可用高・内部scroll・フォーカス・Esc・resize・狭幅の受入は[Menu仕様](../design/editor/designer-menu-viewport.md)に従う。PR #9レビュー修正ではMenuGroupだけをcontextKeyで再生成し、Menu／triggerとfocus復帰先を保持する。修正後のブラウザ受入はChromium 156とChrome 155で関連13spec・76件が成功した。200px幅の左端−4pxは撤去後の既知制約として上流報告候補に残す。認証・Host・新しい共通APIの採用は含めない。
+
+PR #9の残課題（2026-10-23・日本時間）は、Chromium 148のcontext menu即closeと過去の4並列画像比較差分の原因調査（ともに原因未特定）、floatingのorigin消失時に常設メニューへ戻すfallback経路のE2E追加、200px幅の左はみ出し（x=−4／幅204px）のBantoへの報告（Issue未起票）。[検証結果と残課題](../history/implementation-history.md#menu-review-phase-b)を参照する。
 
 SCADAはBanto v6.9.0で先行し、参照スナップショットのIndustrialはv6.7.0のまま。統合時にこの版差を照合する。寸法トークンは今回は採用せず、採用前に既存の`--banto-*`参照（レビュー時点で約58ファイル）との重複・移行範囲を整理する。
 

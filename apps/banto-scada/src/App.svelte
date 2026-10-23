@@ -98,7 +98,6 @@
     toastStore,
   } from "./lib/banto/setup";
   import DesignerMenubar from "./lib/designer/DesignerMenubar.svelte";
-  import { settleMenuFocus } from "./lib/designer/settle-menu-focus";
   let theme = $state(getThemeMode());
   let showRulers = $state(getRulersVisible());
   function toggleRulers() {
@@ -2960,7 +2959,7 @@
   <span class="studio-brand">SCADA<span>/ studio</span></span>
   <h1 title={project.manifest.name}>{project.manifest.name}</h1>
   {#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
-  <div class="header-actions" use:settleMenuFocus>
+  <div class="header-actions">
     <Menu label="常設メニュー" placement="bottom-end">
       {#snippet trigger(props)}
         <button

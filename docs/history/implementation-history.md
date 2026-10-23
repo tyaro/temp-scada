@@ -16,6 +16,41 @@
 
 ここから下の順序は移動元の並びを保持し、厳密な時系列に再構成していない。機能別の採用仕様は[文書索引](../README.md)を参照する。
 
+<a id="menu-review-phase-b"></a>
+
+## Menuのレビュー修正とブラウザ版の照合（2026-10-22・日本時間）
+
+PR #9を更新済みPR #8（`ebd2d94`）へrebaseした。Menu全体を囲んでいたcontextKeyのkeyを子のMenuGroup／MenuItemだけへ狭め、trigger／popoverを保持した。context変更のeffectが同じpopupを閉じ、closed()がoriginを消去して条件付きでcanvas／行へfocusを戻す。openedKeyの照合と、項目実行前にdialogへ可視openerを渡す処理を維持した。Ctrl／Command＋A後の復帰と再操作、外へ移ったfocusの保持、⋮からの画面複製と未適用入力dialog確定後のtrigger identity／focusをE2Eへ追加した。タグ検索ではmacOS標準Shift＋Command＋Zを維持し、非macOSにCtrl＋Yのnative検索Redoと背景編集を遮断する検査を戻した（menu外の試験変更として別コミット済み。当初`3e2a0a4`、PR #8の文書修正取込後は`4c432d7`）。
+
+ブラウザ版をローカルの`playwright-core@1.64.1/browsers.json`とキャッシュで照合した。同梱Chromium／Chrome Headless Shellは**156.0.8078.4（revision 1248）**で、導入済み。残っている**Chromium 148（revision 1223）**は旧Playwrightのキャッシュで、現在のCIが取得する版ではない。撤去当初のローカル受入は**Chrome 155.0.8059.85**を指定して実施した。148でcontext menuが即closeした過去の記録（adapterを一時復元しても再現）は保持するが、その原因は未特定で、156のCIにそのまま当てはめない。
+
+別途の実測では、PR #8の旧headのselection-context初期focus不具合は156でも各3/3で再現したが、#8で修正済み。PR #9の旧head `610c76e`はLinux CIのE2E全shardが成功した。これはphase B修正後のCIとは別の結果である。4並列の全体runは高負荷の同じMacでbase workが733成功／9失敗／2skip、PR #8が741成功／2失敗／2skipだった。この比較は失敗件数のみで、失敗したテスト名の突き合わせはしていない。依存更新との因果関係や、両runの失敗原因が同じかは断定しない。負荷の影響は考えられるが全timeoutの原因は断定せず、過去の画像差分の原因も未特定。macOSのCtrl＋Y失敗はOS標準キーの違いとして説明でき、Linux CIでは成功している。
+
+修正後の検証は型エラー／警告0、単体111ファイル・1,214件、build、変更ファイル整形が成功。macOS・Playwright 1.64.1で、CIと同版のChrome Headless Shell 156.0.8078.4（2並列）と導入済みChrome 155.0.8059.85（2並列）の関連13spec・76件がいずれも全件成功した。
+
+Chromium 156の修正前確認は追加5テスト中4失敗・1成功だった。失敗したfocus復帰4テストはcanvas／レイヤーのCtrl／Command＋A後の復帰、⋮からの画面複製、未適用入力dialog確定後で、外へ移ったfocusの保持1テストは修正前から成功した。修正後の反復は、この追加5テストと既存の関連2テスト（context keyからの操作・復帰、context変更後の初期focus・矢印巡回）を合わせた**7テスト×3回＝21実行**で、すべて成功した。
+
+全体はChromium 156・2並列で751件中747成功・2skip・2失敗。失敗は高負荷下（load average約200）のimage-crop-gestureとselection-opacityの40.8秒timeoutで、両specを1並列で再実行すると18件すべて成功した。負荷との因果関係は未特定で、再実行を含む結果を単一の全件成功runとは扱わない。
+
+2026-10-23（日本時間）追記: レビュー修正後の`3f7cc0c`はGitHub ActionsのLinux CIで[push run 39799706570](https://github.com/tyaro/temp-scada/actions/runs/39799706570)・[pull_request run 39799715324](https://github.com/tyaro/temp-scada/actions/runs/39799715324)とも初回attemptでfrontend・Rust・E2E全4shardを含む全jobが成功し、runの再実行はない。各runのE2Eはshard順に200＋182＋184＋185＝751成功、失敗0・テストretryなし。`tag-picker.spec.ts`の非macOS Ctrl＋Y検査も含む。上記のmacOSローカル再実行とは別の検証結果であり、その後のPR #8文書修正取込後のheadのCI結果には読み替えない。
+
+残課題（2026-10-23・日本時間）:
+
+- Chromium 148でcontext menuが即closeする原因の調査は未完了（原因未特定）。
+- 過去の4並列実行で発生した画像比較差分の原因の調査は未完了（原因未特定）。
+- floatingのoriginが消えた場合に常設メニューへfocusを戻すfallback経路を狙うE2Eは未追加。
+- 200px viewportで左へ4pxはみ出す既知制約（x=−4／幅204px）はBanto Issue未起票。[引渡し一覧](../reviews/banto-contribution-handoff.md#追加の上流報告候補viewportより広いmenu)の報告候補に留まる。
+
+レビュー対応まとめの「採用しなかった提案：なし」を訂正し、上記4項目を未完了の残課題として記録する。
+
+## Banto Menuの局所adapter撤去（2026-10-22・日本時間）
+
+v6.9.0の上流#427／#430修正へ移管し、menu-viewport／settle-menu-focusとmain／App／DesignerMenubar／ContextActionsの接続を撤去した。横方向のmenubar移動、context対象選択、仮想triggerの画面外座標補正は維持する。撤去当初はcontextKeyごとにMenu全体を再生成して動的な項目の登録順と表示順を揃えたが、後続のレビュー修正（上節）でMenuGroupだけへ狭めた。未選択から選択対象へ切り替えた後の初期フォーカスと矢印／Homeの回帰を追加した。タグ検索のUndo／Redo試験に残るControl固定もOS標準キーへ揃えた。Project形式は0.35.0のまま。
+
+型エラー／警告0、TS全1,214件、build、Chrome 155の修正後の関連ブラウザ54件が成功。修正後のmacOS全746件は、4並列の成功632件・Ctrlクリックのskip2件と、失敗／中断／未実行112件の1並列再開（全件成功）をIDで照合し、最新結果744成功・2skip・未検証0件を確認した。単一の全件一括成功ではない。4並列では画像比較1件と終盤の遅延によるtimeoutが発生し、アプリ・テスト・timeout・retryを変えない1並列再開では再現しなかった。Chromium 148ではcontext menuが直ちに閉じる失敗をContextActionsのadapter接続の一時復元でも再現し、導入済みChrome 155で再検証した。再install・ブラウザ取得は行っていない。
+
+両テーマの320／360／480px幅でフォーカス・キー・Escと外接矩形を確認した。旧横幅制限だけの比較では常設Menuは240px以上で同幅だが、200pxでは上流版の左端が4pxはみ出す。[責務と検証範囲](../design/editor/designer-menu-viewport.md)を参照する。
+
 ## Banto基盤のv6.9.0更新（2026-10-22・日本時間）
 
 アプリのadmin-core／theme／uiをv6.9.0（`1bd12fe023cf3958dbdde923e1bdd4fdb28a9139`）へ揃えた。v6.8.0→v6.9.0の公開APIに必須移行はなく、寸法トークンは任意採用。LAN／Windows配布支援・認証・Host接続は対象外。Menuの局所adapter撤去と上流修正の受入はPR #9の別工程とする。
@@ -34,7 +69,7 @@ Linux CIのshard 3/4は178成功・1失敗で、Shift＋F10後の初期focusを�
 
 ## 小さい画面での常設メニュー復帰を修正（2026-10-20・日本時間）
 
-左パネル追加`2822881`の全体CIで標準復元2件とメニューバー復帰1件の画面外項目を検出し、ローカルで3件を再現した。Banto Menuへ可用高と内部scrollの限定adapterを接続し、3件が成功した。依存コードの複製はせず、上流Banto #427へ報告した。[原因・境界と検証](../design/editor/designer-menu-viewport.md)。新規機能は追加せず、正常な保存区切りで一旦停止するための修正。
+左パネル追加`2822881`の全体CI39430512454で標準復元2件とメニューバー復帰1件の画面外項目を検出し、ローカルで3件を再現した。Banto Menuへ可用高と内部scrollの限定adapterを接続し、3件が成功した。menu-viewport・layout-reset・menubarの関連19件、型エラー／警告なし、本番buildも成功した。依存コードの複製はせず、上流Banto #427へ報告した。[原因・境界と検証](../design/editor/designer-menu-viewport.md)。新規機能は追加せず、正常な保存区切りで一旦停止するための修正。
 
 ## 左作業パネル全体を固定／浮動へ接続（2026-10-20・日本時間）
 

@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-10-21（日本時間）、Project 0.35.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-10-22（日本時間）、Project 0.35.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
@@ -19,6 +19,8 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 | IDと変更   | lowercase UUID v7、有限座標、明示order。編集失敗は原子的拒否、同値はno-op、Undo／Redoでもrevisionは巻き戻さない                         |
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
+
+Banto Menu #427／#430へ可用高・内部scroll・初回focusを移管し、PR #9で局所adapterを撤去済み。レビュー修正ではcontextKeyによる再生成をMenuGroup／項目だけへ狭め、Menu／popover／⋮ triggerを保持する。focus回帰試験を追加し、Chromium 156とChrome 155で関連13spec・76件が成功した。200px幅では左端−4pxの既知制約が残る。[責務と検証範囲](../design/editor/designer-menu-viewport.md)を参照する。
 
 ## 機能の対応範囲
 
@@ -290,7 +292,7 @@ resize通知とpointerupの順序による位置の誤確定を修正し、実wi
 
 [設計と両テーマの実画面](../design/editor/sidebar-floating-design.md)に従い、3タブを含む同じasideを左固定／浮動へ切り替える。プロパティと操作所有者・前面順位を共有し、入力を保持して個別配置を明示保存する。プレビューと狭い画面では一時的に固定へ戻し、編集時の希望を保持する。全体配置保存・任意ドッキング・下部浮動は後続。TS1064件、型・build、関連ブラウザ20件が成功。共通化の前段`9e7e5b0`は全体CI39428835461が成功した。
 
-左パネル追加後の全体CIで、小さい画面の常設メニュー末尾が画面外になる問題を検出した。[可用高と内部スクロールの局所対応](../design/editor/designer-menu-viewport.md)を追加し、上流Banto #427へ報告した。関連ブラウザ19件、型・buildが成功。保存契約やメニュー項目の機能は変えない。
+小さい画面の常設メニューの[可用高・内部スクロール](../design/editor/designer-menu-viewport.md)は、Banto v6.9.0のMenuを利用する。上流#427／#430の修正を受け、局所adapterとフォーカス再試行を撤去した。保存契約やメニュー項目の機能は変えない。
 
 ## 単体開発の提供段階
 

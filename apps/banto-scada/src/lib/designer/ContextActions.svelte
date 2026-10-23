@@ -9,7 +9,6 @@
 <script lang="ts">
   import { tick, type Snippet } from "svelte";
   import { Menu, MenuGroup, MenuItem } from "@banto/ui";
-  import { settleMenuFocus } from "./settle-menu-focus";
   let {
     label,
     contextKey,
@@ -34,8 +33,10 @@
   }
   $effect(() => {
     contextKey;
-    const element = root;
-    if (element) popup()?.matches(":popover-open") && popup()?.hidePopover();
+    // Menu/trigger survive the item reset, so this closes the original popup.
+    // Its toggle event clears origin and restores focus unless it moved elsewhere.
+    const menu = popup();
+    if (menu?.matches(":popover-open")) menu.hidePopover();
   });
   let anchor = $state({ x: 0, y: 0 });
   export async function show(
@@ -160,7 +161,6 @@
   style:top={floating ? `${anchor.y}px` : undefined}
   bind:this={root}
   use:manage
-  use:settleMenuFocus
 >
   {@render children?.()}
   <Menu label={`${label} の操作`} placement="bottom-start">
@@ -184,24 +184,27 @@
         }}>⋮</button
       >
     {/snippet}
-    <MenuGroup {label}>
-      <!-- Banto navigates in MenuItem mount order. Reuse positions so changing
-           context actions keeps that registration order aligned with the DOM. -->
-      {#each items as item}
-        <MenuItem
-          label={item.label}
-          disabled={item.disabled}
-          onSelect={() => {
-            if (openedKey !== contextKey) return;
-            // Give overlays a visible opener before they capture focus for restoration.
-            const opener = origin ?? menuButton;
-            if (opener?.isConnected && opener.getClientRects().length)
-              opener.focus({ preventScroll: true });
-            item.run();
-          }}
-        />
-      {/each}
-    </MenuGroup>
+    <!-- 項目だけを再登録し、trigger/popoverとフォーカス復帰先の寿命を保つ。 -->
+    {#key contextKey}
+      <MenuGroup {label}>
+        <!-- Banto navigates in MenuItem mount order. Reuse positions to keep
+             that registration order aligned with the DOM within this context. -->
+        {#each items as item}
+          <MenuItem
+            label={item.label}
+            disabled={item.disabled}
+            onSelect={() => {
+              if (openedKey !== contextKey) return;
+              // Give overlays a visible opener before they capture focus for restoration.
+              const opener = origin ?? menuButton;
+              if (opener?.isConnected && opener.getClientRects().length)
+                opener.focus({ preventScroll: true });
+              item.run();
+            }}
+          />
+        {/each}
+      </MenuGroup>
+    {/key}
   </Menu>
 </div>
 
