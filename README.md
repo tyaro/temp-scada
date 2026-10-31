@@ -66,6 +66,8 @@ Banto の Rust サーバー・認証・ユーザー管理・Tauri の host は�
 
 Rustの読取adapterは[型付きslot context](docs/design/equipment/typed-read-slots-design.md)にも対応します。0.23.0では[機器の保存と初期台帳](docs/design/equipment/equipment-register-design.md)も追加しました。0.24.0では[静的Symbolとの関連付け・使用先](docs/design/equipment/equipment-symbol-association.md)にも対応します。0.25.0では[共有Symbolの読取slotと割付状態表示](docs/design/equipment/symbol-read-slots.md)を追加しました。[表示DTOの受入とGood／Quality描画](docs/design/equipment/read-slot-presentation.md)も追加し、Rust共通fixtureとブラウザのテスト入力で検証します。[slot宣言の編集と参照保護](docs/design/equipment/symbol-slot-editing.md)にも対応します。[boolの型付き状態判定](docs/design/equipment/bool-slot-state.md)も追加しました。0.26.0で[bool Textの状態別文字色](docs/design/graphics/bool-text-colors.md)の編集と描画を追加しました。[図面外の読取状態一覧](docs/design/equipment/slot-status-summary.md)で件数・取得不能理由・SIMも確認できます。0.27.0で[共有図形・配管の状態色追従](docs/design/equipment/state-color-following.md)を追加しました。通常Designerの実Hub接続は後続です。
 
+Historian／Trendの記録・検索・共通利用は[P5の設計](docs/design/runtime/historian-trend-contract.md)で整理しています。不足機能は新設を含めて設計し、後でChronoGazerへ還元できる境界にします。履歴サービスと長期間トレンドの実装は後続です。
+
 ## リリース前の開発方針
 
 機能開発を優先して領域を分離する方針を維持し、可動パネルと配置保存は UI 改訂提案の独立段階として検討します。固定 shell の整理、未適用入力の保持、同一画面内の浮動／再ドッキング、タグ選択 UX を段階化し、SDK に依存しない部分を先に進められるようにします。

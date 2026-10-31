@@ -1,6 +1,6 @@
 # S7 SOAK中のSCADA読取開発計画
 
-2026-11-01（日本時間）。状態: **採用・P1／P2／P3aマージ済み、P4実装・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
+2026-11-01（日本時間）。状態: **採用・P1／P2／P3a／P4マージ済み、P5設計完了・実装前**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
 
 ## 前提と責務
 
@@ -10,7 +10,7 @@
 - Project0.35.0とBanto v6.9.0を維持。認証・運用移行・設備操作の接続は従来どおり保留する。
 - 2026-11-01の責務整理: Hubは現在値配信と書込み。SCADAサーバは警報評価・ACK・常時Actionと警報／操作イベント。Historianは時系列記録・保持・検索・History API。画面はAPIを介して表示する。
 - Historianは論理的に分離する。初期はSCADAサーバと同一プロセスへの同梱を許し、独立サービス化できる境界にする。時系列と警報／操作イベントの記録は別の契約とし、二重記録しない。
-- ChronoGazerの`banto-tstore`／`banto-tsquery`とTrend資産を共通利用する。SOAK中は資産の複製やアプリ全体の取込みをしない。既存History APIの1時間制限と未実装のヒストリカル画面を、長期間トレンド完成と扱わない。
+- ChronoGazerの`banto-tstore`／`banto-tsquery`とTrend資産は、SCADAの要件に適合する部分を共通利用する。2026-11-01の追加指示により、不足機能へ無理に合わせず新しく設計し、後でChronoGazerへ還元できる境界にする。SOAK中は既存資産の複製やアプリ全体の取込み、上流変更をしない。既存History APIの1時間制限と未実装のヒストリカル画面を、長期間トレンド完成と扱わない。
 
 既存の[統合設計](../design/scada-integrated-design.md)の提供段階を維持する。Historianの責務分離は同設計§6の「History APIはSCADA server側」を詳細化する差分であり、HubへHistory APIを追加する変更ではない。`docs/upstream/industrial`は参照スナップショットのまま変更しない。
 
@@ -24,8 +24,8 @@
 | P2 読取Host          | Projectごとにhandle1つ。Textと機器slotの要求を集約       | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認       | 完了・PR #11マージ済み       |
 | P3a 表示DTO・session | 数値Text・Symbol・機器小窓への一括更新                   | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMと旧通知拒否を通常Appの同一mountで確認  | 完了・PR #12マージ済み       |
 | P3b 製品transport    | Hostと画面の配送経路・接続設定                           | transportと認証境界を明示設計し、Host sessionと画面deliveryを対応付けて実接続を検証      | 境界設計済み・製品実装は保留 |
-| P4 Tag Browser       | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 実装・ローカル検証済み       |
-| P5 Historian／Trend  | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 未着手                       |
+| P4 Tag Browser       | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
+| P5 Historian／Trend  | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了（Astra）・実装前    |
 
 ## P1の実装契約
 
@@ -53,7 +53,7 @@ P1の試験: 正常＋未作成の混在、全件未解決→追加→Live→削
 - タグidentity: Hubの名前、Historian内の系列ID、rename・同名再作成・複数Hubの区別。過去系列を無断で接続しない。
 - History API: UTC時刻、期間、タグ数、点数、min/max包絡、timeout、欠測・Quality・SIM、保持期限、未記録・サービス停止の応答。
 - ライブと履歴の境界: 初期履歴窓とライブ追記の重複／欠測、flush遅延、Hub再起動と世代変更。
-- 共通化: ChronoGazerの保存・検索・描画の依存を調べ、共通crate／packageとSCADA固有widget・Project属性を分ける。DBやデータファイルを画面から直接読まない。
+- 共通化と還元: ChronoGazerの保存・検索・描画の依存を調べ、適合部分の共通利用、不足する保存・検索・描画契約の新設と後日還元、SCADA固有widget・Project属性を分ける。既存実装の制限をSCADAの必要要件として固定しない。DBやデータファイルを画面から直接読まない。
 - 障害分離: 履歴検索・保存失敗でライブ表示・警報評価を止めない。容量・保持・サービス監視はHistorianの責務にする。
 
 ## 検証と保存
@@ -80,7 +80,7 @@ P1の試験: 正常＋未作成の混在、全件未解決→追加→Live→削
 - 初回の認証拒否試験はSDKがshutdownにも終端エラーを返す契約を成功と誤期待して失敗した。拒否の保持を確認する期待へ修正した。ブラウザ試験は追加したUnboundの期待状態を既存disconnectedからunresolvedへ修正し、再実行で成功。アプリの拒否条件・timeout・retryは緩和していない。
 - S7環境・実PLC・実Hub・Windows・正式Hostの検証はしていない。独立レビューのエージェントは使用していない。全体CIはPRの最終HEADで確認する。
 
-P1は[全体CI 41225435243](https://github.com/tyaro/temp-scada/actions/runs/41225435243)の全7job成功後、[PR #10](https://github.com/tyaro/temp-scada/pull/10)でマージされた（`b8c2a98ad220ebcbcb86be549293eb5cbf677007`）。P2とP3aは下記。P3b以降は未実装。
+P1は[全体CI 41225435243](https://github.com/tyaro/temp-scada/actions/runs/41225435243)の全7job成功後、[PR #10](https://github.com/tyaro/temp-scada/pull/10)でマージされた（`b8c2a98ad220ebcbcb86be549293eb5cbf677007`）。P2・P3a・P4は下記。P3bの製品transportとP5の履歴サービスは未実装。
 
 ## P2の実施結果（2026-11-01）
 
@@ -116,4 +116,16 @@ Appの任意`CatalogSource`からsessionに束縛した結果を受け入れ、�
 
 P4は製品transportを含まない。catalogの取得時点の型確認と現在値の接続成功を区別する。Rustの実SDK＋loopback試験、Rust／Schema／TS共通fixture、両テーマの通常App注入と保存往復で検証する。実Hub・S7・PLC・Windows運用と認証は引き続き保留する。Rust workspace75件、Clippy／fmt、TS1,267件、型検査0エラー・0警告、buildが成功した。関連ブラウザ6spec・21件と、候補上限追加後のTagPicker／catalog10件が成功した。全体CIはPRを参照する。
 
-次はP5のHistorian／Trend共通利用とAPI境界の設計。共有crate／packageの切出し・履歴サービスの実装はSOAK後の作業として分ける。
+P4は[全体CI 41241713088](https://github.com/tyaro/temp-scada/actions/runs/41241713088)の全7job成功後、[PR #13](https://github.com/tyaro/temp-scada/pull/13)でマージ済み（`a955b1d06115ba07991d24f65114c64e2ced67f2`）。次はP5のHistorian／Trend共通利用とAPI境界の設計。ユーザー指示によりAstraが主設計を担当する。上流への共有crate／packageの切出し・製品接続はSOAK後の作業として分け、SCADA内で独立する契約fixtureと新設計は先に進められる。
+
+## P5の実施結果（2026-11-01）
+
+ユーザー指定によりAstraが[Historian／Trend契約](../design/runtime/historian-trend-contract.md)と[ChronoGazer共通利用調査](../reviews/chronogazer-historian-reuse.md)を主設計した。固定sourceの機能と不足を照合し、記録設定のdesired／applied、系列identity、周期snapshot記録の保証、時刻とrecordId、Quality／値側source／SIM、半開区間History API、coverage／commit watermark、長期検索、ライブとの接続、障害・保持の分離を具体化した。
+
+既存ChronoGazerにSCADAの必要要件を合わせて削らず、不足する保存・検索層と包絡描画は新設を含めて設計し、後日還元する。既存1時間制限は最初のライブ初期窓の予算であり、長期Historianの最終上限ではない。HubのHistory API追加案や既存NULLからQuality・SIMを復元する方式は採用しない。
+
+- P5は契約設計の完了。アプリ・Rust crate・Project形式・SDK・依存versionを変更していない。履歴サービスと長期Trendの提供完了ではない。
+- 固定ソースの静的照合、文書整形、参照リンク、現行実装との境界を確認した。全体Prettier、相対リンク558件、固定sourceの参照先24ファイルと明示anchorの検査が成功した。新しいサービス試験・実Hub／PLC／DB・本番負荷・Windows・停電耐性の試験は行っていない。PRの全体CI結果は確認後にPR本文へ記録する。
+- 上流Issue #725／#726への責務整理と共通層の還元はSOAK後の作業へ記録した。今回はread-onlyで、IssueやIndustrialを変更していない。
+
+次は契約のH1（共通fixtureと保存方式の比較・transaction／recovery設計）。SCADA内の純粋な契約とモックを進め、製品transport・認証・実機接続を保留する。H2以降は既存crate拡張と新しい層の両方を比較し、ChronoGazerへの還元を後続工程とする。
