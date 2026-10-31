@@ -1,5 +1,7 @@
 # 上流変更中に進めるSCADA単体開発計画
 
+2026-11-01追記: 今後の読取開発は[S7 SOAK中の計画](soak-independent-runtime-plan.md)を正とする。本書のI工程の提供状況は維持し、下記の実Hub／catalog／Hostの保留は固定SDKとモックによる同計画の範囲だけ解除する。実S7環境・認証・正式運用の保留は維持する。
+
 2026-10-21（日本時間）。状態: **I0〜I4・I6は完了・全体CI成功。I5は再計測・I5f候補見送り、I5gの履歴資産索引を限定改善・全体CI成功。I5hで読込診断を追加、アプリ改善は未実施。遅延は残課題**。現行保存契約はProject0.35.0。[統合設計](../design/scada-integrated-design.md)のローカル作図領域を対象とする。[I7：Symbol内画像](../design/images/symbol-image-design.md)はI7a／bの全体CI成功、I7cの取込・編集UIも全体CI成功。
 
 [I8：接続と配管追従](../design/editor/connection-follow-design.md)はI8aの幾何・I8bの保存／編集／コピーが全体CI成功。I8cの接続・解除UIも完了・CI成功。

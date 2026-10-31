@@ -28,6 +28,8 @@ docs/
 
 ## 目的別の入口
 
+現在の実行計画: [S7 SOAK中のSCADA読取開発](project/soak-independent-runtime-plan.md)。固定SDKの更新から進め、IndustrialとS7環境は変更しない。
+
 | 確認すること             | 正とする文書                                                                                                              |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
 | 目標仕様・提供段階       | [統合設計](design/scada-integrated-design.md)。S9bはCore v1のserver基盤。v1.1のAlarm／Event／History／Trendはその上に追加 |
