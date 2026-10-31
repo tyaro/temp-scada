@@ -4,11 +4,11 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1／P2／P3aはPR #10／#11／#12で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)を明記し、認証延期に伴う実装を保留した。独立して進められるP4の[Host catalogとタグ選択](../design/equipment/catalog-selection.md)を実装・ローカル検証済み。次はP5のHistorian／Trend共通利用とAPI境界を設計する。通常Designerの実Hub接続・認証は未実装。
+2026-11-01の進捗: P1／P2／P3a／P4はPR #10／#11／#12／#13で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。P5はユーザー指定のAstraが[Historian／Trend契約](../design/runtime/historian-trend-contract.md)と[共通利用調査](../reviews/chronogazer-historian-reuse.md)を設計した。不足機能はSCADAで先行設計し、後でChronoGazerへ還元できる境界にする。次はH1の共通fixture・保存方式の比較とtransaction／recovery設計。通常Designerの実Hub接続・認証・履歴サービスは未実装。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 
-責務はHub＝現在値／書込み、SCADAサーバ＝警報評価／ACK／常時Action、Historian＝時系列記録／保持／検索／History APIと整理した。Historianは初期の同一プロセス同梱を許す論理境界とし、ChronoGazerの保存・検索・Trend資産を共有する。詳細とSOAK後の作業は同計画P5で確定する。
+責務はHub＝現在値／書込み、SCADAサーバ＝警報評価／ACK／常時Action、Historian＝時系列記録／保持／検索／History APIと整理した。Historianは初期の同一プロセス同梱を許す論理境界とし、ChronoGazerの保存・検索・Trend資産は要件に適合する部分を共有する。2026-11-01のユーザー追加指示により、不足機能は新設を許容し、後でChronoGazerへ還元する方針とする。採用契約と未決・SOAK後の還元作業はP5の2文書へ記録した。
 
 [SCADA単体開発計画](upstream-independent-plan.md)のI0〜I4・I6は完了し、全体CIの成功を確認済み。I5は現行版を再計測し、I5fの画像Map候補は見送り、I5gで履歴資産集計を限定改善し、全体CI成功を確認した。大図面の読込・操作遅延は残課題であり、性能改善全体の完了とはしない。
 

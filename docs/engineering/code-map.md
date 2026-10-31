@@ -351,3 +351,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 `lib/catalog-session.ts`はProject所有者・payload検証・immutableな候補・旧delivery拒否を担当し、`designer/controllers/catalog.svelte.ts`は任意CatalogSourceの購読寿命を担当する。`tag-catalog.ts`はmetadata階層と型互換、`TagPicker.svelte`は検索・確認・明示選択、InspectorPanelとEquipmentLibraryは現在の配置／機器／slotと入力要素の再確認を所有する。適用・保存・履歴は既存フォームに残す。
 
 関連検証はRust `tests/catalog.rs`、`catalog-session.test.ts`、`e2e/catalog-selection.spec.ts`と既存tag-picker／equipment系。製品transportと資格情報は[P3b](../design/runtime/transport-boundary.md)に残し、通常entrypointはsourceを渡さない。
+
+## Historian／Trendの設計入口（P5、未実装）
+
+[Historian／Trend契約](../design/runtime/historian-trend-contract.md)と[ChronoGazer固定版の共通利用調査](../reviews/chronogazer-historian-reuse.md)を後続実装の入口にする。現行の`ReadHost`／`ReadDisplayStream`とSDK watchは最新snapshotの表示用であり、全変化の永続記録には使わない。記録設定・系列identity・History API・liveとの接続・障害分離は新契約の実装を必要とする。共有crateの切出しやアプリの取込みはこの文書工程に含めない。

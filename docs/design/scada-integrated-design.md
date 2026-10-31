@@ -171,7 +171,7 @@
 
 ### 表示オブジェクトと処理基盤
 
-リストを画面へ配置する設定と、アラーム判定・記録・履歴取得の設定を分離する。24/365 の recorder、Alarm、常時 Event / Action は上流 §13.2 の SCADA server core が所有し、UI の開閉へ寿命を結び付けない。Hub へ新しい履歴・警報エンジンを追加する設計にはしない。
+リストを画面へ配置する設定と、アラーム判定・記録・履歴取得の設定を分離する。24/365 の recorder はHistorian、Alarmと常時 Event / Action はSCADA serverが所有し、UI の開閉へ寿命を結び付けない。初期は上流 §13.2 のSCADA server coreと同じプロセスへ同梱できる論理境界とする。Hub へ新しい履歴・警報エンジンを追加する設計にはしない。
 
 ### アラーム
 
@@ -190,7 +190,7 @@ UI の on_click 等の「実行契機」と、運用者が見る「発生記録�
 
 複数タグ、時間範囲、軸・単位・凡例、リアルタイム／履歴を設定する。直近の表示バッファと永続履歴を区別し、欠測をゼロで補間しない。履歴のタグ選択・収集周期・変化時記録・保持期間は recorder 契約と揃える。
 
-上流 §13 の ChronoGazer と共有する recorder / `banto-tstore` / `banto-tsquery` / Trend UI を候補とする。History API は SCADA server 側。Hub のバックフィル用 tstore を画面から直接読む方式にしない。Historical Trend と Alarm は v1.1、Replay は後続 Extension を維持する。ブラウザ内の模擬値テストは録画・履歴 Replay の実装とは別である。
+上流 §13 のChronoGazerの `banto-tstore` / `banto-tsquery` / Trend資産はSCADAの要件に適合する部分を共通利用する。不足部分は新しく設計し、後でChronoGazerへ還元できる境界にする（2026-11-01ユーザー追加指示）。[Historian／Trend契約（P5）](runtime/historian-trend-contract.md)で記録・保持・検索・History APIをHistorianへ論理分離する。SCADA serverと同一プロセスに置く場合も、この所有境界を維持する。Hub のバックフィル用 tstore を画面から直接読む方式にしない。Historical Trend と Alarm は v1.1、Replay は後続 Extension を維持する。ブラウザ内の模擬値テストは録画・履歴 Replay の実装とは別である。
 
 ## 7. カメラ映像表示
 
@@ -458,4 +458,4 @@ Project0.34.0でSymbol定義内のPNG／JPEGを保存・表示し、原本同梱
 
 ## 2026-11-01の責務詳細化
 
-ユーザーとの確認により、時系列の継続記録・保持・検索・History APIはHistorianの責務として論理分離する。初期はSCADAサーバと同一プロセスへ同梱してよく、画面はAPIから読む。§6のSCADA server側のHistory APIはこの境界へ詳細化し、Hubへ追加しない。警報評価・ACK・常時Actionと警報／操作イベントの責務はSCADAサーバに残す。ChronoGazerの保存・検索・トレンド資産を共通利用する。[S7 SOAK中の実行計画](../project/soak-independent-runtime-plan.md)P5で未決の契約を設計する。Historianや正式Hostの実装完了を意味しない。
+ユーザーとの確認により、時系列の継続記録・保持・検索・History APIはHistorianの責務として論理分離する。初期はSCADAサーバと同一プロセスへ同梱してよく、画面はAPIから読む。§6のSCADA server側のHistory APIはこの境界へ詳細化し、Hubへ追加しない。警報評価・ACK・常時Actionと警報／操作イベントの責務はSCADAサーバに残す。ChronoGazerの保存・検索・トレンド資産は適合する部分を共通利用し、不足は新設して後日の還元対象とする。[P5のHistorian／Trend契約](runtime/historian-trend-contract.md)と[共通利用調査](../reviews/chronogazer-historian-reuse.md)で責務と後続の実装条件を整理する。Historianや正式Hostの実装完了を意味しない。

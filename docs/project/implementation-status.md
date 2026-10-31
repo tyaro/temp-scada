@@ -22,7 +22,11 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 ## Host catalogとタグ選択（P4、2026-11-01）
 
-[CatalogHostと選択session](../design/equipment/catalog-selection.md)を実装・ローカル検証した。Rust75件・TS1,267件・型検査・build、関連ブラウザ21件が成功した。SDK RESTで明示取得し、表示タグ0件でも使える。最小DTOと任意CatalogSourceを数値Text・機器のnumber／bool slotの既存選択画面へ配る。無効・未知型と古い結果の確定を拒否し、選択は未適用入力へ返す。通常起動は明示サンプル、製品transportは[P3bの境界](../design/runtime/transport-boundary.md)に従い未接続。
+[CatalogHostと選択session](../design/equipment/catalog-selection.md)を実装・ローカル検証した。Rust75件・TS1,267件・型検査・build、関連ブラウザ21件が成功した。[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41241713088)の全7job成功後、PR #13でマージ済み。SDK RESTで明示取得し、表示タグ0件でも使える。最小DTOと任意CatalogSourceを数値Text・機器のnumber／bool slotの既存選択画面へ配る。無効・未知型と古い結果の確定を拒否し、選択は未適用入力へ返す。通常起動は明示サンプル、製品transportは[P3bの境界](../design/runtime/transport-boundary.md)に従い未接続。
+
+## Historian／Trend契約（P5、2026-11-01）
+
+ユーザー指定によりAstraが[契約](../design/runtime/historian-trend-contract.md)と[固定版ChronoGazerの共通利用調査](../reviews/chronogazer-historian-reuse.md)を設計した。Historianの論理分離、記録設定と系列identity、周期記録・Quality／SIM・時刻、History APIと長期検索、ライブとの接続、保持・障害分離を具体化した。不足機能は新設して後日還元する経路を許容する。P5は設計のみで、履歴サービス・Trend widget・共有crateは未実装。次はH1の契約fixtureと保存方式の比較。
 
 ## 保存契約と基盤
 
