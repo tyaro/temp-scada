@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+  import type { TagReadings } from "../tag-presentation";
   import type { EquipmentContext } from "../symbol-slots";
   import { tick, untrack, flushSync } from "svelte";
   import { selectionTarget, selectionView } from "../selection-view";
@@ -39,6 +40,7 @@
     symbols,
     screens = [],
     equipmentContext,
+    readings,
     images,
     editable,
     selectedIds,
@@ -66,6 +68,7 @@
     symbols: SymbolDefinition[];
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
+    readings?: TagReadings;
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -945,6 +948,7 @@
             {onresize}
             {onvertexmove}
             {equipmentContext}
+            {readings}
           />
         {/key}
         {#if rangeBox && editable}

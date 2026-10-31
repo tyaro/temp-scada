@@ -1,0 +1,550 @@
+[
+  {
+    "name": "good",
+    "input": {
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "value": 0,
+      "connection": "live"
+    },
+    "update": {
+      "sequence": 1,
+      "sdkGeneration": 1,
+      "text": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "live",
+        "lastError": null,
+        "metadataReady": true,
+        "readings": {
+          "Demo.Number": {
+            "state": "resolved",
+            "quality": "good",
+            "numericValue": 0
+          }
+        },
+        "provenance": {
+          "Demo.Number": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "real",
+            "sourceTimestampMs": 1000
+          }
+        }
+      },
+      "slots": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "live",
+        "lastError": null,
+        "metadataReady": true,
+        "slots": [
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "current"
+            },
+            "expectedType": "number",
+            "externalName": "Demo.Number",
+            "reading": {
+              "state": "resolved",
+              "quality": "good",
+              "value": {
+                "type": "number",
+                "value": 0
+              }
+            },
+            "provenance": {
+              "catalogRevision": 7,
+              "runId": 17,
+              "collectionMode": "configured",
+              "valueSource": "real",
+              "sourceTimestampMs": 1000
+            }
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Bool",
+            "reading": {
+              "state": "resolved",
+              "quality": "good",
+              "value": {
+                "type": "bool",
+                "value": false
+              }
+            },
+            "provenance": {
+              "catalogRevision": 7,
+              "runId": 17,
+              "collectionMode": "configured",
+              "valueSource": "real",
+              "sourceTimestampMs": 1000
+            }
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000003",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Missing",
+            "reading": {
+              "state": "unresolved"
+            },
+            "provenance": null
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "simulation",
+    "input": {
+      "quality": "good",
+      "source": "simulation",
+      "mode": "configured",
+      "value": 12.5,
+      "connection": "live"
+    },
+    "update": {
+      "sequence": 1,
+      "sdkGeneration": 1,
+      "text": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "live",
+        "lastError": null,
+        "metadataReady": true,
+        "readings": {
+          "Demo.Number": {
+            "state": "resolved",
+            "quality": "good",
+            "numericValue": 12.5
+          }
+        },
+        "provenance": {
+          "Demo.Number": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "simulation",
+            "sourceTimestampMs": 1000
+          }
+        }
+      },
+      "slots": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "live",
+        "lastError": null,
+        "metadataReady": true,
+        "slots": [
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "current"
+            },
+            "expectedType": "number",
+            "externalName": "Demo.Number",
+            "reading": {
+              "state": "resolved",
+              "quality": "good",
+              "value": {
+                "type": "number",
+                "value": 12.5
+              }
+            },
+            "provenance": {
+              "catalogRevision": 7,
+              "runId": 17,
+              "collectionMode": "configured",
+              "valueSource": "simulation",
+              "sourceTimestampMs": 1000
+            }
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Bool",
+            "reading": {
+              "state": "resolved",
+              "quality": "good",
+              "value": {
+                "type": "bool",
+                "value": false
+              }
+            },
+            "provenance": {
+              "catalogRevision": 7,
+              "runId": 17,
+              "collectionMode": "configured",
+              "valueSource": "simulation",
+              "sourceTimestampMs": 1000
+            }
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000003",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Missing",
+            "reading": {
+              "state": "unresolved"
+            },
+            "provenance": null
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "stale",
+    "input": {
+      "quality": "stale",
+      "source": "derived_simulation",
+      "mode": "configured",
+      "value": 99,
+      "connection": "live"
+    },
+    "update": {
+      "sequence": 1,
+      "sdkGeneration": 1,
+      "text": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "live",
+        "lastError": null,
+        "metadataReady": true,
+        "readings": {
+          "Demo.Number": {
+            "state": "resolved",
+            "quality": "stale",
+            "numericValue": null
+          }
+        },
+        "provenance": {
+          "Demo.Number": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "derived_simulation",
+            "sourceTimestampMs": 1000
+          }
+        }
+      },
+      "slots": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "live",
+        "lastError": null,
+        "metadataReady": true,
+        "slots": [
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "current"
+            },
+            "expectedType": "number",
+            "externalName": "Demo.Number",
+            "reading": {
+              "state": "resolved",
+              "quality": "stale",
+              "value": null
+            },
+            "provenance": {
+              "catalogRevision": 7,
+              "runId": 17,
+              "collectionMode": "configured",
+              "valueSource": "derived_simulation",
+              "sourceTimestampMs": 1000
+            }
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Bool",
+            "reading": {
+              "state": "resolved",
+              "quality": "stale",
+              "value": null
+            },
+            "provenance": {
+              "catalogRevision": 7,
+              "runId": 17,
+              "collectionMode": "configured",
+              "valueSource": "derived_simulation",
+              "sourceTimestampMs": 1000
+            }
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000003",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Missing",
+            "reading": {
+              "state": "unresolved"
+            },
+            "provenance": null
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "bad",
+    "input": {
+      "quality": "bad",
+      "source": "real",
+      "mode": "configured",
+      "value": 99,
+      "connection": "live"
+    },
+    "update": {
+      "sequence": 1,
+      "sdkGeneration": 1,
+      "text": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "live",
+        "lastError": null,
+        "metadataReady": true,
+        "readings": {
+          "Demo.Number": {
+            "state": "resolved",
+            "quality": "bad",
+            "numericValue": null
+          }
+        },
+        "provenance": {
+          "Demo.Number": {
+            "catalogRevision": 7,
+            "runId": 17,
+            "collectionMode": "configured",
+            "valueSource": "real",
+            "sourceTimestampMs": 1000
+          }
+        }
+      },
+      "slots": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "live",
+        "lastError": null,
+        "metadataReady": true,
+        "slots": [
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "current"
+            },
+            "expectedType": "number",
+            "externalName": "Demo.Number",
+            "reading": {
+              "state": "resolved",
+              "quality": "bad",
+              "value": null
+            },
+            "provenance": {
+              "catalogRevision": 7,
+              "runId": 17,
+              "collectionMode": "configured",
+              "valueSource": "real",
+              "sourceTimestampMs": 1000
+            }
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Bool",
+            "reading": {
+              "state": "resolved",
+              "quality": "bad",
+              "value": null
+            },
+            "provenance": {
+              "catalogRevision": 7,
+              "runId": 17,
+              "collectionMode": "configured",
+              "valueSource": "real",
+              "sourceTimestampMs": 1000
+            }
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000003",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Missing",
+            "reading": {
+              "state": "unresolved"
+            },
+            "provenance": null
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "waiting",
+    "input": {
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "value": 0,
+      "connection": "unbound"
+    },
+    "update": {
+      "sequence": 1,
+      "sdkGeneration": 1,
+      "text": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "unbound",
+        "lastError": null,
+        "metadataReady": true,
+        "readings": {
+          "Demo.Number": {
+            "state": "unresolved"
+          }
+        },
+        "provenance": {}
+      },
+      "slots": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "unbound",
+        "lastError": null,
+        "metadataReady": true,
+        "slots": [
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "current"
+            },
+            "expectedType": "number",
+            "externalName": "Demo.Number",
+            "reading": {
+              "state": "unresolved"
+            },
+            "provenance": null
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Bool",
+            "reading": {
+              "state": "unresolved"
+            },
+            "provenance": null
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000003",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Missing",
+            "reading": {
+              "state": "unresolved"
+            },
+            "provenance": null
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "disconnected",
+    "input": {
+      "quality": "good",
+      "source": "real",
+      "mode": "configured",
+      "value": 0,
+      "connection": "stopped"
+    },
+    "update": {
+      "sequence": 1,
+      "sdkGeneration": null,
+      "text": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "stopped",
+        "lastError": null,
+        "metadataReady": false,
+        "readings": {
+          "Demo.Number": {
+            "state": "disconnected"
+          }
+        },
+        "provenance": {}
+      },
+      "slots": {
+        "projectId": "0199f200-0000-7000-8000-000000000001",
+        "projectRevision": 1,
+        "connection": "stopped",
+        "lastError": null,
+        "metadataReady": false,
+        "slots": [
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "current"
+            },
+            "expectedType": "number",
+            "externalName": "Demo.Number",
+            "reading": {
+              "state": "disconnected"
+            },
+            "provenance": null
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000002",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Bool",
+            "reading": {
+              "state": "disconnected"
+            },
+            "provenance": null
+          },
+          {
+            "key": {
+              "equipmentId": "0199f700-0000-7000-8000-000000000003",
+              "slotName": "running"
+            },
+            "expectedType": "bool",
+            "externalName": "Demo.Missing",
+            "reading": {
+              "state": "disconnected"
+            },
+            "provenance": null
+          }
+        ]
+      }
+    }
+  }
+]

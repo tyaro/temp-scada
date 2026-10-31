@@ -14,7 +14,11 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 ## Rust読取Host（P2、2026-11-01）
 
-[ReadHost](../design/runtime/read-host.md)をライブラリとして追加した。Textと機器slotを1つのSDK購読へ集約し、Project／接続先／要求の置換・停止で先に無値と新tokenを公開する。旧通知の拒否、取消・drop、SDK終端エラーをモックで確認し、Rust workspace68件とClippy／fmtが成功した。P2の全体CIはPRを参照。Tauri／HTTP transportと画面への接続はP3であり、通常Designerは引き続き実Hub未接続。
+[ReadHost](../design/runtime/read-host.md)をライブラリとして追加した。Textと機器slotを1つのSDK購読へ集約し、Project／接続先／要求の置換・停止で先に無値と新tokenを公開する。旧通知の拒否、取消・drop、SDK終端エラーをモックで確認し、Rust workspace68件とClippy／fmtが成功した。[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41229716292)の全7job成功後、PR #11でマージ済み。通常Designerは引き続き実Hub未接続。
+
+## 表示DTOと画面session（P3a、2026-11-01）
+
+[表示・配送契約](../design/runtime/read-presentation.md)を追加した。同じHost frameのText／slotを連番付きDTOとして一括検証し、通常Appの任意の`ReadSource`から主画面・Symbol・埋込・小窓・機器詳細・ミニマップへ配る。SIM／Quality／由来を表示し、不正更新やsession終了時は旧値を消す。共通fixtureと両テーマで受け入れ、Rust71件・TS1,253件・型検査・buildが成功した。製品transportと実接続はP3b。通常起動はsourceなしの未接続で、認証延期を維持する。
 
 ## 保存契約と基盤
 
@@ -45,7 +49,7 @@ Banto Menu #427／#430へ可用高・内部scroll・初回focusを移管し、PR
 | 表示確認       | 画面／機器の読取Popup合計4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                                                                                                                                 | 正式Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                       |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                                                                                                                                   | 実図面・画像／Symbol等の計測と必要な最適化                                             |
 | 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                                                                                                                                      | 実catalog選択、draftのDOM分離                                                          |
-| タグ・Runtime  | TextのexternalName、参照一覧と全画面の差分確認・一括置換、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影                                                                                                                                      | 実Hub／catalog、汎用状態条件、Host、正式RuntimeとAction境界                            |
+| タグ・Runtime  | TextのexternalName、参照一覧と全画面の差分確認・一括置換、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影・読取Host、Text／slot表示DTOと任意sourceの画面配布                                                                                   | 製品transport・実Hub／catalog、汎用状態条件、正式RuntimeとAction境界                   |
 | server・監視   | 提供段階と共有層の設計                                                                                                                                                                                                                            | Core v1のS9b、その上のv1.1 Alarm／Event・Action／History・Trend、Camera、HTTP／Program |
 | 認証・MES      | ログイン不要のローカル編集                                                                                                                                                                                                                        | industrialの修正後に認証再確認。ユーザー管理・運用移行・MESは未実装                    |
 

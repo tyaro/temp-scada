@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:banto:read-display-update",
+  "type": "object",
+  "properties": {
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "sdkGeneration": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "text": {
+      "$ref": "urn:banto:runtime-view"
+    },
+    "slots": {
+      "$ref": "urn:banto:read-slot-view"
+    }
+  },
+  "required": ["sequence", "sdkGeneration", "text", "slots"],
+  "additionalProperties": false
+}

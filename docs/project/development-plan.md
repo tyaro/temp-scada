@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1はPR #10で全体CI成功・マージ済み。P2の[読取Host](../design/runtime/read-host.md)はRust実装・ローカル検証済み。全体CIの確定結果は各PRを参照し、次はP3のHostと表示sessionの配布・transport契約を設計する。通常Designerの実接続は未実装。
+2026-11-01の進捗: P1／P2はPR #10／#11で全体CI成功・マージ済み。P3を[表示DTO・session配布のP3aと製品transportのP3b](../design/runtime/read-presentation.md)に分けた。P3aは実装・ローカル検証済み。通常Appへのfixture sourceで表示を受け入れた。次はP3bのtransport・接続設定を明示設計し、保留条件を確認する。通常Designerの実Hub接続・認証は未実装。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 

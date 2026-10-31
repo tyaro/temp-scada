@@ -1,11 +1,14 @@
+import type { SlotProvenance } from "./read-slot-session";
+import { isSimulatedSlot } from "./slot-presentation";
 /** Host が SDK の解決状態・Quality を変換して渡す表示用データ。Hub wire DTO ではない。 */
-export type NumericReading =
+export type NumericReading = (
   | { state: "disconnected" | "unresolved" | "invalid" }
   | {
       state: "resolved";
       quality: "good" | "stale" | "bad";
       numericValue: number | null;
-    };
+    }
+) & { provenance?: SlotProvenance };
 export type TagReadings = ReadonlyMap<string, NumericReading>;
 const labels = {
   disconnected: "未接続",
@@ -28,12 +31,19 @@ export function presentNumeric(reading?: NumericReading) {
       state = "invalid";
   }
   const label = labels[state];
+  const origin =
+    reading?.state === "resolved" && state !== "invalid"
+      ? reading.provenance
+      : undefined;
+  const simulated = origin && isSimulatedSlot(origin);
+  const text =
+    state === "good" && reading?.state === "resolved"
+      ? String(reading.numericValue)
+      : `-- · ${label}`;
   return {
     state,
     label,
-    text:
-      state === "good" && reading?.state === "resolved"
-        ? String(reading.numericValue)
-        : `-- · ${label}`,
+    text: simulated ? `SIM · ${text}` : text,
+    ...(origin ? { provenance: { ...origin } } : {}),
   };
 }

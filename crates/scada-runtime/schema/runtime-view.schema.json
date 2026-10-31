@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:banto:runtime-view",
+  "type": "object",
+  "properties": {
+    "projectId": {
+      "$ref": "urn:banto:read-slot-view#/properties/projectId"
+    },
+    "projectRevision": {
+      "$ref": "urn:banto:read-slot-view#/properties/projectRevision"
+    },
+    "connection": {
+      "$ref": "urn:banto:read-slot-view#/properties/connection"
+    },
+    "lastError": {
+      "$ref": "urn:banto:read-slot-view#/properties/lastError"
+    },
+    "metadataReady": {
+      "$ref": "urn:banto:read-slot-view#/properties/metadataReady"
+    },
+    "readings": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      },
+      "maxProperties": 64000,
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "enum": ["disconnected", "unresolved", "invalid"]
+              }
+            },
+            "required": ["state"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "const": "resolved"
+              },
+              "quality": {
+                "const": "good"
+              },
+              "numericValue": {
+                "type": "number"
+              }
+            },
+            "required": ["state", "quality", "numericValue"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "const": "resolved"
+              },
+              "quality": {
+                "enum": ["bad", "stale"]
+              },
+              "numericValue": {
+                "type": "null"
+              }
+            },
+            "required": ["state", "quality", "numericValue"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 512
+      },
+      "maxProperties": 64000,
+      "additionalProperties": {
+        "$ref": "urn:banto:read-slot-view#/$defs/provenance"
+      }
+    }
+  },
+  "required": [
+    "projectId",
+    "projectRevision",
+    "connection",
+    "lastError",
+    "metadataReady",
+    "readings",
+    "provenance"
+  ],
+  "additionalProperties": false
+}
