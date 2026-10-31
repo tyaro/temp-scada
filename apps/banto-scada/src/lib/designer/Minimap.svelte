@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { TagReadings } from "../tag-presentation";
   import type { EquipmentContext } from "../symbol-slots";
   import { onDestroy } from "svelte";
   import Renderer from "../Renderer.svelte";
@@ -9,6 +10,7 @@
     symbols,
     screens = [],
     equipmentContext,
+    readings,
     images,
     view,
     oncenter,
@@ -18,6 +20,7 @@
     symbols: SymbolDefinition[];
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
+    readings?: TagReadings;
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -134,7 +137,14 @@
     onlostpointercapture={() => finish(true)}
   >
     <div class="thumbnail" aria-hidden="true">
-      <Renderer {screen} {symbols} {images} {screens} {equipmentContext} />
+      <Renderer
+        {screen}
+        {symbols}
+        {images}
+        {screens}
+        {equipmentContext}
+        {readings}
+      />
     </div>
     <svg
       class="outline"

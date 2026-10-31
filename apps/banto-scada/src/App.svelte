@@ -1,4 +1,9 @@
 <script lang="ts">
+  import {
+    createReadPresentationController,
+    type ReadSource,
+  } from "./lib/designer/controllers/read-presentation.svelte";
+  let { readSource }: { readSource?: ReadSource } = $props();
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
     selectionPaintAlphaCommand,
@@ -1213,6 +1218,11 @@
   // Commands, history and file adoption replace the whole validated Project.
   // Track that boundary, not every field in the immutable document snapshot.
   let project = $state.raw(parseProject(JSON.stringify(sample)));
+  const readPresentation = createReadPresentationController(
+    () => project,
+    () => readSource,
+  );
+  const readContext = $derived(readPresentation.context);
   let assetStore = $state.raw(new AssetStore());
   const assetImages = $derived(
     new Map(
@@ -3493,13 +3503,14 @@
         {screen}
         screens={project.screens}
         symbols={project.symbols}
-        equipmentContext={project}
+        equipmentContext={readContext.equipmentContext}
       />
     {/key}
     <div class="canvas-stack" bind:clientHeight={canvasStackHeight}>
       {#key workspaceGeneration}
         <CanvasWorkspace
-          equipmentContext={project}
+          equipmentContext={readContext.equipmentContext}
+          readings={readContext.readings}
           bind:this={canvasWorkspace}
           onviewchange={(view) => (canvasView = view)}
           oncontextrequest={requestSelectionContext}
@@ -3552,6 +3563,8 @@
         {#key `${workspaceGeneration}:${screen.id}:${mode}`}
           <PreviewPopups
             bind:this={previewPopups}
+            equipmentContext={readContext.equipmentContext}
+            readings={readContext.readings}
             {project}
             images={assetImages}
             onopenusage={openPreviewEquipmentUsage}
@@ -3590,7 +3603,8 @@
           {#if showMinimap}
             {#key `${workspaceGeneration}:${screen.id}`}
               <Minimap
-                equipmentContext={project}
+                equipmentContext={readContext.equipmentContext}
+                readings={readContext.readings}
                 {screen}
                 symbols={project.symbols}
                 screens={project.screens}

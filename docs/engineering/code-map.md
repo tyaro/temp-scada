@@ -20,7 +20,7 @@
 | 表示と操作               | `lib/ObjectPainting.svelte`・`ScreenPainting.svelte`・`ScreenBackground.svelte`・`Primitive.svelte`・`ImagePainting.svelte`、`Renderer.svelte`・`designer/CanvasWorkspace.svelte` | 読取描画を選択・ドラッグ・入力処理から分ける。追加済みの画像描画部品も確認する |
 | レイヤー                 | `designer/LayerTree.svelte`の一覧markup／CSS、`designer/controllers/layer-tree.svelte.ts`の検索・展開・drag・folder操作、`layer-tree.ts`・`layer-drag.ts`                         | フォルダーの所属と描画順・座標を区別する                                       |
 | 共通操作定義             | `designer/controllers/designer-actions.ts`のfolder／toolbar／clipboard／selection context／menu builder、Appの`designerActions`接続                                               | 実行時の現在値・共通項目の参照・同期chooser呼出しを保つ                        |
-| Runtime読取              | `lib/tag-presentation.ts`、`crates/scada-runtime/src/{lib,slots,projection}.rs`                                                                                                   | 現在値・QualityをProject定義と分ける。Hub／PLC機能を複製しない                 |
+| Runtime読取              | `lib/tag-presentation.ts`、`lib/read-presentation.ts`、`designer/controllers/read-presentation.svelte.ts`、`crates/scada-runtime/src/{lib,slots,projection,host,display}.rs`      | 現在値・QualityをProject定義と分ける。Hub／PLC機能を複製しない                 |
 | テスト                   | `lib/*.test.ts`、`examples/*-cases.json`、`e2e`、`.github/workflows/ci.yml`                                                                                                       | 単体の契約とブラウザ操作を併用し、既存の拒否ケースを保持                       |
 
 `lib/`は`apps/banto-scada/src/lib/`を指す。現在の依存方向は「UI → 編集／履歴 → Project検証」。純粋計算・モデルからDOMやAppをimportしない。
@@ -335,3 +335,11 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 ## Project単位の読取Host（P2）
 
 `crates/scada-runtime/src/host.rs`の`ReadHost`がProjectのText／slot要求とSDK handleの所有者。`ReadPlan`が重複排除、`Running`がSDKとpumpの終了、`publish_if_current`が同じwatch slot内のsession照合を担当する。`RuntimeView::pending`／`ReadSlotView::pending`は無値DTOの共通生成。SDKの再試行・再解決を複製しない。関連検証は`tests/read_host.rs`とHostの旧token拒否試験。[API・取消・drop・未接続境界](../design/runtime/read-host.md)を参照する。画面のHost transportはまだ接続していない。
+
+## 表示DTOとAppのsession配布（P3a）
+
+`display.rs:ReadDisplayStream`はHost sessionに束縛した連番付き`ReadDisplayUpdate`を生成する。ローカルtokenは直列化しない。`schema/{runtime-view,read-display-update}.schema.json`は既存slot schemaを参照する。`lib/read-presentation.ts`は両DTOの一括検証、旧sequence／SDK世代の拒否、guard付きreadingsとequipment contextを所有する。
+
+`designer/controllers/read-presentation.svelte.ts`はAppから現在Project／任意ReadSourceのgetterを受け、session reset、購読解除、旧callback拒否を所有する。Project・編集履歴はAppに残す。CanvasWorkspace・Minimap・PreviewPopupsは同じcontextを受け、Primitiveの数値TextもQualityと由来を描画する。通常entrypointにはsourceを渡さない。
+
+関連検証は`display.rs`のRust単体、`examples/read-display-cases.json`、`lib/read-presentation.test.ts`、`e2e/read-presentation.spec.ts`。既存`read-slot-session`と型付きslot表示を再利用する。[製品transport未実装の境界](../design/runtime/read-presentation.md)を維持する。

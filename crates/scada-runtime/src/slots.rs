@@ -235,7 +235,7 @@ impl ReadSlotView {
 }
 
 #[cfg(test)]
-fn project_slot_snapshot(
+pub(crate) fn project_slot_snapshot(
     plan: &ReadSlotPlan,
     snapshot: Option<&ValuesSnapshot>,
     catalog: Option<&CatalogSnapshot>,

@@ -245,5 +245,6 @@
       ],
       "additionalProperties": false
     }
-  }
+  },
+  "$id": "urn:banto:read-slot-view"
 }

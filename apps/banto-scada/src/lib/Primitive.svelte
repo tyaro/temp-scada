@@ -257,7 +257,9 @@
         tagName={slotBinding?.slotName ?? binding?.externalName}
         tagState={bound ? presentation.state : undefined}
         tagLabel={bound ? presentation.label : undefined}
-        provenance={slotBinding ? slotDisplay?.provenance : undefined}
+        provenance={slotBinding
+          ? slotDisplay?.provenance
+          : presentation.provenance}
         tagDetail={slotBinding ? slotDisplay?.reason : undefined}
         {onsummary}
       />{/if}{/if}

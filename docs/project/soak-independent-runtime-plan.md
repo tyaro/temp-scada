@@ -1,6 +1,6 @@
 # S7 SOAK中のSCADA読取開発計画
 
-2026-11-01（日本時間）。状態: **採用・P1マージ済み、P2実装・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
+2026-11-01（日本時間）。状態: **採用・P1／P2マージ済み、P3a実装・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
 
 ## 前提と責務
 
@@ -18,13 +18,14 @@
 
 各工程は詳細契約→実装→受入→保存の順に進める。P1から順に着手し、後続の未実装を提供済みと記載しない。
 
-| 工程                | 内容                                                     | 完了条件                                                                                                      | 状態                   |
-| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| P1 固定SDKと投影    | rev更新、同一世代snapshot、部分解決、Unbound、値側source | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                                          | 完了・PR #10マージ済み |
-| P2 読取Host         | Projectごとにhandle1つ。Textと機器slotの要求を集約       | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認                            | 実装・ローカル検証済み |
-| P3 表示受入         | 数値Text・Symbol・機器小窓への読取更新                   | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMを同一mountで確認。実Hostと画面のtransportは明示設計後に接続 | 未着手                 |
-| P4 Tag Browser      | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない                          | 未着手                 |
-| P5 Historian／Trend | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない                      | 未着手                 |
+| 工程                 | 内容                                                     | 完了条件                                                                                 | 状態                      |
+| -------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------- |
+| P1 固定SDKと投影     | rev更新、同一世代snapshot、部分解決、Unbound、値側source | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                     | 完了・PR #10マージ済み    |
+| P2 読取Host          | Projectごとにhandle1つ。Textと機器slotの要求を集約       | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認       | 完了・PR #11マージ済み    |
+| P3a 表示DTO・session | 数値Text・Symbol・機器小窓への一括更新                   | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMと旧通知拒否を通常Appの同一mountで確認  | 実装・ローカル検証済み    |
+| P3b 製品transport    | Hostと画面の配送経路・接続設定                           | transportと認証境界を明示設計し、Host sessionと画面deliveryを対応付けて実接続を検証      | 未着手・認証／実Hubは保留 |
+| P4 Tag Browser       | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 未着手                    |
+| P5 Historian／Trend  | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 未着手                    |
 
 ## P1の実装契約
 
@@ -79,7 +80,7 @@ P1の試験: 正常＋未作成の混在、全件未解決→追加→Live→削
 - 初回の認証拒否試験はSDKがshutdownにも終端エラーを返す契約を成功と誤期待して失敗した。拒否の保持を確認する期待へ修正した。ブラウザ試験は追加したUnboundの期待状態を既存disconnectedからunresolvedへ修正し、再実行で成功。アプリの拒否条件・timeout・retryは緩和していない。
 - S7環境・実PLC・実Hub・Windows・正式Hostの検証はしていない。独立レビューのエージェントは使用していない。全体CIはPRの最終HEADで確認する。
 
-P1は[全体CI 41225435243](https://github.com/tyaro/temp-scada/actions/runs/41225435243)の全7job成功後、[PR #10](https://github.com/tyaro/temp-scada/pull/10)でマージされた（`b8c2a98ad220ebcbcb86be549293eb5cbf677007`）。P2は下記。P3以降は未実装。
+P1は[全体CI 41225435243](https://github.com/tyaro/temp-scada/actions/runs/41225435243)の全7job成功後、[PR #10](https://github.com/tyaro/temp-scada/pull/10)でマージされた（`b8c2a98ad220ebcbcb86be549293eb5cbf677007`）。P2とP3aは下記。P3b以降は未実装。
 
 ## P2の実施結果（2026-11-01）
 
@@ -88,7 +89,21 @@ P1は[全体CI 41225435243](https://github.com/tyaro/temp-scada/actions/runs/412
 - Rust workspace 68件成功（model35、runtime単体18、Host統合12、SDK投影3）。Clippy `-D warnings`、rustfmt成功。
 - Host統合試験は共通名の重複排除と別名の合算、複数context、空要求、同ID／revision、要求集合／接続先の置換、旧socketの終了、取消2段階、catalog待機中のdrop、Quality／切断／Unbound／認証拒否、shutdownエラー保持を含む。
 - Tokioは既存workspace依存をdevから通常依存へ移した。新規crate・依存version・SDK rev・Project形式は追加／変更していない。
-- TS／画面・正式transportを変更していないため、ローカルのブラウザHost接続試験は実施していない。全体CIの確定結果はP2のPRを参照する。
+- TS／画面・正式transportを変更していないため、ローカルのブラウザHost接続試験は実施していない。[全体CI 41229716292](https://github.com/tyaro/temp-scada/actions/runs/41229716292)の全7jobが成功し、[PR #11](https://github.com/tyaro/temp-scada/pull/11)でマージ済み（`19bc275ec48af6c365666813d27f3d5187edb21a`）。
 - Industrial・S7環境へ接続／変更していない。実Hub・実PLC・Windows運用と通常Designerの実データ表示は未検証。
 
-次はP3。Host session変更とフロントsessionのresetの対応、Text／slot両DTOの配布、必要なtransportの責務を明示設計してから接続する。認証延期とローカル編集は維持する。
+次のP3は[表示・配送契約](../design/runtime/read-presentation.md)でP3aとP3bに分ける。認証延期とローカル編集は維持する。
+
+## P3aの実施結果（2026-11-01）
+
+`ReadDisplayStream`が同じHost sessionのText／slotを一つの連番付きDTOへ直列化する。Rust／JSON Schema／TSと共通fixtureを揃え、フロントは両側の整合を検証してから公開する。同名数値タグの状態・値・Quality・由来の不一致、片側破損、世代逆行を拒否する。新しい不正更新は両側の旧値を消し、旧sequenceや旧tokenの通知は無視する。
+
+通常Appに任意の`ReadSource`を渡せるようにし、controllerがProjectとsourceの購読寿命を所有する。主画面・Symbol・埋込・画面小窓・機器詳細・ミニマップへ同じcontextを配る。数値TextにもSIM／由来を表示し、Project保存には入れない。通常entrypointはsourceを渡さず、引き続き未接続で起動する。テストだけでentry moduleへfixture sourceを差し込む。
+
+- Rust workspace71件、Clippy `-D warnings`、rustfmt成功。
+- TS単体1,253件、型検査0エラー・0警告、build成功。500kB超chunkの既知警告は残る。
+- 通常Appの両テーマでGood／部分未解決／Unbound／Bad／Stale／切断／SIM、同一DOMの継続、Project再読込、source切替・終了・例外、旧通知拒否、保存往復を確認。関連ブラウザ5spec・13件成功。全体CIはPRを参照する。
+- [表示・配送契約と実画面](../design/runtime/read-presentation.md)へ受入範囲を記録。SDK rev・Project形式・依存versionは変更していない。
+- P3bの製品transport・Hub接続設定・資格情報／認証の受渡しは未実装。実Hub／PLC／S7環境・Windows運用は未検証。P3全体の完了ではない。
+
+次はP3bのtransport・接続設定の設計を具体化する。認証延期で接続できない部分を明記し、独立して進められるP4のcatalog DTO契約へ進む。
