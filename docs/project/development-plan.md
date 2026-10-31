@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1／P2はPR #10／#11で全体CI成功・マージ済み。P3を[表示DTO・session配布のP3aと製品transportのP3b](../design/runtime/read-presentation.md)に分けた。P3aは実装・ローカル検証済み。通常Appへのfixture sourceで表示を受け入れた。次はP3bのtransport・接続設定を明示設計し、保留条件を確認する。通常Designerの実Hub接続・認証は未実装。
+2026-11-01の進捗: P1／P2／P3aはPR #10／#11／#12で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)を明記し、認証延期に伴う実装を保留した。独立して進められるP4の[Host catalogとタグ選択](../design/equipment/catalog-selection.md)を実装・ローカル検証済み。次はP5のHistorian／Trend共通利用とAPI境界を設計する。通常Designerの実Hub接続・認証は未実装。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 

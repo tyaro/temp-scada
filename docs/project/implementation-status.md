@@ -18,7 +18,11 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 ## 表示DTOと画面session（P3a、2026-11-01）
 
-[表示・配送契約](../design/runtime/read-presentation.md)を追加した。同じHost frameのText／slotを連番付きDTOとして一括検証し、通常Appの任意の`ReadSource`から主画面・Symbol・埋込・小窓・機器詳細・ミニマップへ配る。SIM／Quality／由来を表示し、不正更新やsession終了時は旧値を消す。共通fixtureと両テーマで受け入れ、Rust71件・TS1,253件・型検査・buildが成功した。製品transportと実接続はP3b。通常起動はsourceなしの未接続で、認証延期を維持する。
+[表示・配送契約](../design/runtime/read-presentation.md)を追加した。同じHost frameのText／slotを連番付きDTOとして一括検証し、通常Appの任意の`ReadSource`から主画面・Symbol・埋込・小窓・機器詳細・ミニマップへ配る。SIM／Quality／由来を表示し、不正更新やsession終了時は旧値を消す。共通fixtureと両テーマで受け入れ、Rust71件・TS1,253件・型検査・buildが成功した。[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41239680237)の全7job成功後、PR #12でマージ済み。製品transportと実接続はP3b。通常起動はsourceなしの未接続で、認証延期を維持する。
+
+## Host catalogとタグ選択（P4、2026-11-01）
+
+[CatalogHostと選択session](../design/equipment/catalog-selection.md)を実装・ローカル検証した。Rust75件・TS1,267件・型検査・build、関連ブラウザ21件が成功した。SDK RESTで明示取得し、表示タグ0件でも使える。最小DTOと任意CatalogSourceを数値Text・機器のnumber／bool slotの既存選択画面へ配る。無効・未知型と古い結果の確定を拒否し、選択は未適用入力へ返す。通常起動は明示サンプル、製品transportは[P3bの境界](../design/runtime/transport-boundary.md)に従い未接続。
 
 ## 保存契約と基盤
 
@@ -49,7 +53,7 @@ Banto Menu #427／#430へ可用高・内部scroll・初回focusを移管し、PR
 | 表示確認       | 画面／機器の読取Popup合計4件、前面化・移動・resize・Esc、ブラウザ全画面と終了経路                                                                                                                                                                 | 正式Equipment Faceplate、設備操作、正式RuntimeのPopup、運用kiosk                       |
 | viewport       | 画面別倍率・pan、ミニマップ、ルーラー、選択範囲表示、縦／横ホイールとCtrlズーム                                                                                                                                                                   | 実図面・画像／Symbol等の計測と必要な最適化                                             |
 | 入力           | 数値Enter／blur、明示適用フォーム、IME、未適用入力保護、対象世代と非同期破棄                                                                                                                                                                      | 実catalog選択、draftのDOM分離                                                          |
-| タグ・Runtime  | TextのexternalName、参照一覧と全画面の差分確認・一括置換、サンプルタグ検索と型絞込、未接続表示、Rust SDK投影・読取Host、Text／slot表示DTOと任意sourceの画面配布                                                                                   | 製品transport・実Hub／catalog、汎用状態条件、正式RuntimeとAction境界                   |
+| タグ・Runtime  | TextのexternalName、参照一覧と全画面の差分確認・一括置換、サンプル／任意catalog sourceの検索と型絞込、未接続表示、Rust SDK投影・読取Host、Text／slot表示DTOと任意sourceの画面配布                                                                 | 製品transport・実Hub接続、汎用状態条件、正式RuntimeとAction境界                        |
 | server・監視   | 提供段階と共有層の設計                                                                                                                                                                                                                            | Core v1のS9b、その上のv1.1 Alarm／Event・Action／History・Trend、Camera、HTTP／Program |
 | 認証・MES      | ログイン不要のローカル編集                                                                                                                                                                                                                        | industrialの修正後に認証再確認。ユーザー管理・運用移行・MESは未実装                    |
 

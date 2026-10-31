@@ -8,7 +8,8 @@ export type TagType =
   | "u64"
   | "f64"
   | "bit"
-  | "string";
+  | "string"
+  | (string & {});
 export interface CatalogTag {
   id: string;
   groupId: string;
@@ -17,6 +18,7 @@ export interface CatalogTag {
   type: TagType;
   unit?: string;
   description: string;
+  enabled?: boolean;
 }
 export interface CatalogGroup {
   id: string;
@@ -28,6 +30,7 @@ export interface TagCatalog {
   groups: readonly CatalogGroup[];
   tags: readonly CatalogTag[];
 }
+export const MAX_CATALOG_CANDIDATES = 200;
 export const sampleCatalog: TagCatalog = {
   revision: "scada-sample-tags-1",
   groups: [
@@ -92,8 +95,18 @@ export const sampleCatalog: TagCatalog = {
   ],
 };
 export function numericTag(tag: CatalogTag) {
-  return ["i16", "u16", "i32", "u32", "f32", "i64", "u64", "f64"].includes(
-    tag.type,
+  return (
+    tag.enabled !== false &&
+    ["i16", "u16", "i32", "u32", "f32", "i64", "u64", "f64"].includes(tag.type)
+  );
+}
+export function compatibleTag(
+  tag: CatalogTag,
+  expected: "number" | "bool" = "number",
+) {
+  return (
+    tag.enabled !== false &&
+    (expected === "bool" ? tag.type === "bit" : numericTag(tag))
   );
 }
 export interface CatalogNode {
@@ -110,6 +123,7 @@ export function catalogNodes(
   query: string,
   compatibleOnly: boolean,
   expanded: ReadonlySet<string>,
+  expected: "number" | "bool" = "number",
 ): CatalogNode[] {
   const text = query.trim().toLocaleLowerCase();
   const groups = new Map(catalog.groups.map((g) => [g.id, g]));
@@ -124,24 +138,29 @@ export function catalogNodes(
     }
     return chain;
   }
-  const tags = catalog.tags.filter(
-    (t) =>
-      (!compatibleOnly || numericTag(t)) &&
-      (!text ||
-        [
-          t.name,
-          t.externalName,
-          t.type,
-          t.unit ?? "",
-          t.description,
-          ...ancestry(t.groupId).map((g) => g.name),
-        ]
-          .join(" ")
-          .toLocaleLowerCase()
-          .includes(text)),
-  );
+  const tags = catalog.tags
+    .filter(
+      (t) =>
+        (!compatibleOnly || compatibleTag(t, expected)) &&
+        (!text ||
+          [
+            t.name,
+            t.externalName,
+            t.type,
+            t.unit ?? "",
+            t.description,
+            ...ancestry(t.groupId).map((g) => g.name),
+          ]
+            .join(" ")
+            .toLocaleLowerCase()
+            .includes(text)),
+    )
+    .slice(0, MAX_CATALOG_CANDIDATES);
   const included = new Set(
     tags.flatMap((t) => ancestry(t.groupId).map((g) => g.id)),
+  );
+  const visibleGroups = catalog.groups.filter((group) =>
+    included.has(group.id),
   );
   const nodes: CatalogNode[] = [];
   function visit(
@@ -149,7 +168,7 @@ export function catalogNodes(
     depth: number,
     seen: ReadonlySet<string>,
   ) {
-    for (const group of catalog.groups.filter(
+    for (const group of visibleGroups.filter(
       (g) => g.parentId === parentId && included.has(g.id) && !seen.has(g.id),
     )) {
       const open = !!text || expanded.has(group.id);
@@ -181,15 +200,16 @@ export function selectedCatalogTag(
   revision: string,
   nodes: CatalogNode[],
   id: string | null,
+  expected: "number" | "bool" = "number",
 ) {
   if (catalog.revision !== revision) return undefined;
   const candidate = nodes.find((n) => n.id === id)?.tag;
-  return candidate && numericTag(candidate)
+  return candidate && compatibleTag(candidate, expected)
     ? catalog.tags.find(
         (t) =>
           t.id === candidate.id &&
           t.externalName === candidate.externalName &&
-          numericTag(t),
+          compatibleTag(t, expected),
       )
     : undefined;
 }

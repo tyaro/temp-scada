@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:banto:catalog-view",
+  "type": "object",
+  "properties": {
+    "projectId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "[^\\u0009-\\u000D\\u0020\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]"
+    },
+    "projectRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "catalogRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "runId": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "collectionMode": {
+      "enum": ["configured", "all_simulation"]
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 64000,
+      "items": {
+        "type": "object",
+        "properties": {
+          "externalName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "[^\\u0009-\\u000D\\u0020\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]",
+            "not": {
+              "pattern": "[\\u0000-\\u001f\\u007f-\\u009f]"
+            }
+          },
+          "connection": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "[^\\u0009-\\u000D\\u0020\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]"
+          },
+          "group": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "[^\\u0009-\\u000D\\u0020\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "[^\\u0009-\\u000D\\u0020\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]"
+          },
+          "dataType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "[^\\u0009-\\u000D\\u0020\\u0085\\u00A0\\u1680\\u2000-\\u200A\\u2028\\u2029\\u202F\\u205F\\u3000\\uFEFF]"
+          },
+          "unit": {
+            "type": ["string", "null"],
+            "maxLength": 512
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "externalName",
+          "connection",
+          "group",
+          "name",
+          "dataType",
+          "unit",
+          "enabled"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "projectId",
+    "projectRevision",
+    "catalogRevision",
+    "runId",
+    "collectionMode",
+    "tags"
+  ],
+  "additionalProperties": false
+}

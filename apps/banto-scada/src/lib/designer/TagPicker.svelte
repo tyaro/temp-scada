@@ -3,21 +3,29 @@
   import { tick, untrack } from "svelte";
   import {
     catalogNodes,
-    numericTag,
+    compatibleTag,
+    MAX_CATALOG_CANDIDATES,
     selectedCatalogTag,
     type TagCatalog,
     type CatalogNode,
     type CatalogTag,
   } from "./tag-catalog";
+  import { sampleSelection, type CatalogSelection } from "../catalog-session";
   let {
     open,
     catalog,
+    selection = sampleSelection,
+    expected = "number",
+    applyLabel = "変更を適用",
     targetLabel,
     onclose,
     onchoose,
   }: {
     open: boolean;
     catalog: TagCatalog;
+    selection?: CatalogSelection;
+    expected?: "number" | "bool";
+    applyLabel?: string;
     targetLabel: string;
     onclose: () => void;
     onchoose: (tag: CatalogTag, revision: string) => void;
@@ -71,11 +79,11 @@
       onclose();
   });
   const nodes = $derived(
-    catalogNodes(catalog, query, compatibleOnly, expanded),
+    catalogNodes(catalog, query, compatibleOnly, expanded, expected),
   );
   const detail = $derived(nodes.find((n) => n.id === selected)?.tag);
   const candidate = $derived(
-    selectedCatalogTag(catalog, revision, nodes, selected),
+    selectedCatalogTag(catalog, revision, nodes, selected, expected),
   );
   const tabstop = $derived(
     nodes.some((n) => n.id === focused) ? focused : nodes[0]?.id,
@@ -97,8 +105,8 @@
     selected = null;
   }
   function choose(id = selected) {
-    if (!open || opened !== catalog) return;
-    const tag = selectedCatalogTag(catalog, revision, nodes, id);
+    if (!open || opened !== catalog || !selection.isCurrent()) return;
+    const tag = selectedCatalogTag(catalog, revision, nodes, id, expected);
     if (tag) onchoose(tag, revision);
   }
   async function focus(id: string | undefined) {
@@ -176,9 +184,11 @@
 >
   <!-- svelte-ignore a11y_no_static_element_interactions (dialog内のアプリ共通ショートカットとの境界) -->
   <div class="tag-picker" bind:this={body} onkeydown={shortcuts}>
-    <p class="target">割付先：{targetLabel} ／ 数値Text</p>
+    <p class="target">
+      割付先：{targetLabel} ／ {expected === "bool" ? "bool" : "数値"}
+    </p>
     <p class="sample-note">
-      サンプル候補・Hub未接続。実在や接続成功は未確認です。型の互換性はサンプル定義による判定です。
+      {selection.notice}
     </p>
     <div class="search-row">
       <input
@@ -198,6 +208,11 @@
         />互換タグのみ</label
       >
     </div>
+    {#if catalog.tags.length > MAX_CATALOG_CANDIDATES}
+      <p class="hint">
+        表示候補は最大{MAX_CATALOG_CANDIDATES}件です。検索で絞り込めます。
+      </p>
+    {/if}
     {#if query.trim()}<p class="hint">
         検索中は一致する階層を展開しています。
       </p>{/if}
@@ -214,7 +229,8 @@
               aria-selected={node.tag ? selected === node.id : undefined}
               tabindex={tabstop === node.id ? 0 : -1}
               class:selected={selected === node.id}
-              class:incompatible={node.tag && !numericTag(node.tag)}
+              class:incompatible={node.tag &&
+                !compatibleTag(node.tag, expected)}
               style:padding-left={`${(node.depth - 1) * 18 + 8}px`}
               onfocus={() => {
                 focused = node.id;
@@ -254,21 +270,21 @@
             <dd>{detail.description}</dd>
           </dl>
           <p>
-            {numericTag(detail)
-              ? "数値Textに互換（サンプル定義）"
-              : "型が不適合です。数値Textにはbit／stringを割り付けできません。"}
+            {compatibleTag(detail, expected)
+              ? "対象の型に互換（候補の定義による判定）"
+              : "型が不適合です。またはタグが無効です。"}
           </p>
           <p class="sample-note">現在値は取得していません。</p>
         {:else}<p>タグを選ぶと詳細を確認できます。</p>{/if}
       </section>
     </div>
     <p class="hint">
-      選択は未適用の入力へ返します。確定後、プロパティの「変更を適用」とJSON保存が必要です。
+      選択は未適用の入力へ返します。確定後、「{applyLabel}」とJSON保存が必要です。
     </p>
     <div class="actions">
       <button type="button" onclick={onclose}>キャンセル</button><button
         type="button"
-        disabled={!candidate}
+        disabled={!candidate || !selection.available}
         onclick={() => choose()}>選択して入力</button
       >
     </div>

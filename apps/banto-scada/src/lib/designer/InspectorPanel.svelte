@@ -23,12 +23,8 @@
   import BoolColors from "./BoolColors.svelte";
   import SymbolColorMode from "./SymbolColorMode.svelte";
   import TagPicker from "./TagPicker.svelte";
-  import {
-    sampleCatalog,
-    numericTag,
-    type CatalogTag,
-    type TagCatalog,
-  } from "./tag-catalog";
+  import { sampleSelection, type CatalogSelection } from "../catalog-session";
+  import { numericTag, type CatalogTag, type TagCatalog } from "./tag-catalog";
   import {
     objectFormValues,
     parseNumericProperty,
@@ -72,8 +68,10 @@
     onreplaceimage,
     imageBusy,
     images,
+    catalogSelection = sampleSelection,
   }: {
     element?: HTMLElement;
+    catalogSelection?: CatalogSelection;
     visible: boolean;
     layout?: FloatingInspector;
     generation: number;
@@ -202,10 +200,18 @@
     `${generation}:${screen.id}:${selected?.id ?? ""}:${!!selected?.locked}:${visible}:${activeDefinition}`,
   );
   $effect(() => {
-    if (pickerOpen && pickerRequest?.key !== pickerKey) pickerOpen = false;
+    if (
+      pickerOpen &&
+      (pickerRequest?.key !== pickerKey ||
+        pickerRequest.catalog !== catalogSelection.catalog ||
+        !catalogSelection.isCurrent())
+    )
+      pickerOpen = false;
   });
   function openTagPicker() {
     if (
+      !catalogSelection.available ||
+      !catalogSelection.isCurrent() ||
       !tagInput ||
       !selected ||
       selected.locked ||
@@ -218,8 +224,8 @@
     pickerRequest = {
       key: pickerKey,
       input: tagInput,
-      catalog: sampleCatalog,
-      revision: sampleCatalog.revision,
+      catalog: catalogSelection.catalog,
+      revision: catalogSelection.catalog.revision,
       label: `${screen.name} ／ ${selected.name ? `${selected.name}（Text · ${selected.order}）` : `Text · ${selected.order}`} ／ 表示タグ`,
     };
     pickerOpen = true;
@@ -237,11 +243,12 @@
       request.key !== pickerKey ||
       request.input !== tagInput ||
       !request.input.isConnected ||
-      request.catalog !== sampleCatalog ||
+      !catalogSelection.isCurrent() ||
+      request.catalog !== catalogSelection.catalog ||
       request.revision !== revision ||
-      sampleCatalog.revision !== revision ||
+      catalogSelection.catalog.revision !== revision ||
       !numericTag(tag) ||
-      !sampleCatalog.tags.some(
+      !catalogSelection.catalog.tags.some(
         (candidate) =>
           candidate.id === tag.id &&
           candidate.externalName === tag.externalName &&
@@ -1017,12 +1024,13 @@
                     <button
                       type="button"
                       aria-label="タグを選択"
-                      title="サンプル候補からタグを選択"
+                      title="候補からタグを選択"
+                      disabled={!catalogSelection.available}
                       onclick={openTagPicker}>…</button
                     >
                   </div>
                   <p class="full-width tag-note">
-                    Hub未接続のため、手入力した外部名の存在・型は未確認です。
+                    {catalogSelection.notice}
                   </p>
                 {/if}
               {/if}
@@ -1153,7 +1161,8 @@
 
 <TagPicker
   open={pickerOpen}
-  catalog={sampleCatalog}
+  catalog={catalogSelection.catalog}
+  selection={catalogSelection}
   targetLabel={pickerRequest?.label ?? ""}
   onclose={() => (pickerOpen = false)}
   onchoose={chooseTag}

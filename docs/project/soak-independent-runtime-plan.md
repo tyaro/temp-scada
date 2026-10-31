@@ -1,6 +1,6 @@
 # S7 SOAK中のSCADA読取開発計画
 
-2026-11-01（日本時間）。状態: **採用・P1／P2マージ済み、P3a実装・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
+2026-11-01（日本時間）。状態: **採用・P1／P2／P3aマージ済み、P4実装・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
 
 ## 前提と責務
 
@@ -18,14 +18,14 @@
 
 各工程は詳細契約→実装→受入→保存の順に進める。P1から順に着手し、後続の未実装を提供済みと記載しない。
 
-| 工程                 | 内容                                                     | 完了条件                                                                                 | 状態                      |
-| -------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------- |
-| P1 固定SDKと投影     | rev更新、同一世代snapshot、部分解決、Unbound、値側source | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                     | 完了・PR #10マージ済み    |
-| P2 読取Host          | Projectごとにhandle1つ。Textと機器slotの要求を集約       | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認       | 完了・PR #11マージ済み    |
-| P3a 表示DTO・session | 数値Text・Symbol・機器小窓への一括更新                   | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMと旧通知拒否を通常Appの同一mountで確認  | 実装・ローカル検証済み    |
-| P3b 製品transport    | Hostと画面の配送経路・接続設定                           | transportと認証境界を明示設計し、Host sessionと画面deliveryを対応付けて実接続を検証      | 未着手・認証／実Hubは保留 |
-| P4 Tag Browser       | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 未着手                    |
-| P5 Historian／Trend  | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 未着手                    |
+| 工程                 | 内容                                                     | 完了条件                                                                                 | 状態                         |
+| -------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------- |
+| P1 固定SDKと投影     | rev更新、同一世代snapshot、部分解決、Unbound、値側source | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                     | 完了・PR #10マージ済み       |
+| P2 読取Host          | Projectごとにhandle1つ。Textと機器slotの要求を集約       | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認       | 完了・PR #11マージ済み       |
+| P3a 表示DTO・session | 数値Text・Symbol・機器小窓への一括更新                   | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMと旧通知拒否を通常Appの同一mountで確認  | 完了・PR #12マージ済み       |
+| P3b 製品transport    | Hostと画面の配送経路・接続設定                           | transportと認証境界を明示設計し、Host sessionと画面deliveryを対応付けて実接続を検証      | 境界設計済み・製品実装は保留 |
+| P4 Tag Browser       | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 実装・ローカル検証済み       |
+| P5 Historian／Trend  | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 未着手                       |
 
 ## P1の実装契約
 
@@ -106,4 +106,14 @@ P1は[全体CI 41225435243](https://github.com/tyaro/temp-scada/actions/runs/412
 - [表示・配送契約と実画面](../design/runtime/read-presentation.md)へ受入範囲を記録。SDK rev・Project形式・依存versionは変更していない。
 - P3bの製品transport・Hub接続設定・資格情報／認証の受渡しは未実装。実Hub／PLC／S7環境・Windows運用は未検証。P3全体の完了ではない。
 
-次はP3bのtransport・接続設定の設計を具体化する。認証延期で接続できない部分を明記し、独立して進められるP4のcatalog DTO契約へ進む。
+P3aは[全体CI 41239680237](https://github.com/tyaro/temp-scada/actions/runs/41239680237)の全7job成功後、[PR #12](https://github.com/tyaro/temp-scada/pull/12)でマージ済み（`389212f91a5baf656a942d4142f1f5dc0b4fc356`）。P3bは[transport・接続設定の境界と再開条件](../design/runtime/transport-boundary.md)を採用し、製品hostの選択・認証・実接続を保留する。P4のcatalog取得・選択準備を独立して進める。
+
+## P4の実施結果（2026-11-01）
+
+[Host catalogとタグ選択](../design/equipment/catalog-selection.md)に従い、`CatalogHost`を追加した。固定SDKのREST取得を明示要求ごとに1回行い、値購読や表示タグの存在を前提にしない。Project・接続先の置換、停止、後続要求で旧結果を拒否する。SDKの重複名検査と表示DTOへの最小化を行い、アドレス・式・値・資格情報を公開しない。
+
+Appの任意`CatalogSource`からsessionに束縛した結果を受け入れ、既存TagPickerを数値Textと機器のnumber／bool slotへ接続した。型不適合・無効タグ・未知型を確定できず、候補変更・切断・対象変更で取消す。入力とProjectへ自動適用せず、明示的に選んだexternalNameだけを未適用入力へ返す。sourceがある場合は取得失敗からサンプルへ切り替えない。通常起動の明示サンプルは維持する。
+
+P4は製品transportを含まない。catalogの取得時点の型確認と現在値の接続成功を区別する。Rustの実SDK＋loopback試験、Rust／Schema／TS共通fixture、両テーマの通常App注入と保存往復で検証する。実Hub・S7・PLC・Windows運用と認証は引き続き保留する。Rust workspace75件、Clippy／fmt、TS1,267件、型検査0エラー・0警告、buildが成功した。関連ブラウザ6spec・21件と、候補上限追加後のTagPicker／catalog10件が成功した。全体CIはPRを参照する。
+
+次はP5のHistorian／Trend共通利用とAPI境界の設計。共有crate／packageの切出し・履歴サービスの実装はSOAK後の作業として分ける。
