@@ -3,7 +3,14 @@
     createReadPresentationController,
     type ReadSource,
   } from "./lib/designer/controllers/read-presentation.svelte";
-  let { readSource }: { readSource?: ReadSource } = $props();
+  import {
+    createCatalogController,
+    type CatalogSource,
+  } from "./lib/designer/controllers/catalog.svelte";
+  let {
+    readSource,
+    catalogSource,
+  }: { readSource?: ReadSource; catalogSource?: CatalogSource } = $props();
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
     selectionPaintAlphaCommand,
@@ -844,6 +851,7 @@
         replacement ||
         helpOpen ||
         inspectorController?.isTagPickerOpen() ||
+        equipmentLibrary?.isTagPickerOpen() ||
         document.querySelector(
           '[role="dialog"]:not([aria-modal="false"]):not([data-layer-inactive="true"])',
         )
@@ -859,6 +867,7 @@
       arrayCopy.request !== null ||
       folderRequest !== null ||
       inspectorController?.isTagPickerOpen() ||
+      equipmentLibrary?.isTagPickerOpen() ||
       (event.target instanceof Element &&
         event.target.closest('[role="dialog"][aria-label="タグを選択"]'))
     ) {
@@ -1223,6 +1232,11 @@
     () => readSource,
   );
   const readContext = $derived(readPresentation.context);
+  const catalogController = createCatalogController(
+    () => project,
+    () => catalogSource,
+  );
+  const catalogSelection = $derived(catalogController.selection);
   let assetStore = $state.raw(new AssetStore());
   const assetImages = $derived(
     new Map(
@@ -3249,6 +3263,7 @@
           </TreeSection>
           <TreeSection label="機器" count={project.equipment?.length ?? 0}>
             {#key workspaceGeneration}<EquipmentLibrary
+                {catalogSelection}
                 bind:this={equipmentLibrary}
                 {project}
                 generation={workspaceGeneration}
@@ -3674,6 +3689,7 @@
   </section>
   {#if mode === "edit"}
     <InspectorPanel
+      {catalogSelection}
       layout={floatingInspector}
       bind:this={inspectorController}
       bind:element={inspectorPanel}

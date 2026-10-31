@@ -1,4 +1,7 @@
 <script lang="ts">
+  import TagPicker from "./TagPicker.svelte";
+  import { compatibleTag, type CatalogTag } from "./tag-catalog";
+  import { sampleSelection, type CatalogSelection } from "../catalog-session";
   import EquipmentTypes from "./EquipmentTypes.svelte";
   import { equipmentUsages, type EquipmentUsage } from "../equipment";
   import { tick } from "svelte";
@@ -13,8 +16,10 @@
     oncommand,
     onsubmit,
     onopenusage,
+    catalogSelection = sampleSelection,
   }: {
     project: Project;
+    catalogSelection?: CatalogSelection;
     generation: number;
     drafts: ReturnType<typeof createDraftGuard>;
     transition: (action: () => void) => void;
@@ -127,6 +132,96 @@
     }
     return values;
   });
+  let picker = $state.raw<{
+    project: Project;
+    generation: number;
+    equipmentId: string;
+    typeId: string;
+    slot: string;
+    expected: "number" | "bool";
+    input: HTMLInputElement;
+    catalog: typeof catalogSelection.catalog;
+  } | null>(null);
+  export function isTagPickerOpen() {
+    return picker !== null;
+  }
+  function pickerCurrent() {
+    return (
+      !!picker &&
+      picker.project === project &&
+      picker.generation === generation &&
+      picker.equipmentId === selected?.id &&
+      picker.typeId === kind?.id &&
+      view === "instances" &&
+      picker.input.isConnected &&
+      kind.slots.some(
+        (slot) => slot.name === picker!.slot && slot.type === picker!.expected,
+      ) &&
+      picker.catalog === catalogSelection.catalog &&
+      catalogSelection.isCurrent()
+    );
+  }
+  $effect(() => {
+    if (picker && !pickerCurrent()) picker = null;
+  });
+  function pickSlot(
+    event: MouseEvent,
+    slot: string,
+    expected: "number" | "bool",
+  ) {
+    const input = (
+      event.currentTarget as HTMLElement
+    ).parentElement?.querySelector<HTMLInputElement>("input");
+    if (
+      !input ||
+      !selected ||
+      !kind ||
+      !catalogSelection.available ||
+      !catalogSelection.isCurrent() ||
+      drafts.pending
+    )
+      return;
+    picker = {
+      project,
+      generation,
+      equipmentId: selected.id,
+      typeId: kind.id,
+      slot,
+      expected,
+      input,
+      catalog: catalogSelection.catalog,
+    };
+  }
+  function chooseSlot(tag: CatalogTag, revision: string) {
+    if (
+      !pickerCurrent() ||
+      !picker ||
+      picker.catalog.revision !== revision ||
+      !compatibleTag(tag, picker.expected) ||
+      !picker.catalog.tags.some(
+        (row) =>
+          row.id === tag.id &&
+          row.externalName === tag.externalName &&
+          compatibleTag(row, picker!.expected),
+      )
+    ) {
+      picker = null;
+      return;
+    }
+    const input = picker.input;
+    const state = input
+      .closest(".slot")
+      ?.querySelector<HTMLSelectElement>("select");
+    if (!state) {
+      picker = null;
+      return;
+    }
+    input.value = tag.externalName;
+    state.value = "assigned";
+    state.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    picker = null;
+  }
 </script>
 
 <section aria-label="機器台帳" bind:this={root}>
@@ -317,9 +412,18 @@
                   placeholder="PLC01.Fast.Fan01.Run"
                 /></label
               >
+              {#if selected}
+                <button
+                  type="button"
+                  aria-label={`${slot.name}のタグを選択`}
+                  disabled={!catalogSelection.available}
+                  onclick={(event) => pickSlot(event, slot.name, slot.type)}
+                  >タグを選択</button
+                >
+              {/if}
             </div>
           {/each}
-          <p>割付名は保存のみ。型・単位・接続状態は実catalog未確認です。</p>
+          <p>{catalogSelection.notice}</p>
           <button type="submit"
             >{selected ? "機器情報と割付を適用" : "機器を登録"}</button
           >
@@ -382,6 +486,17 @@
     {/if}
   {/if}
 </section>
+
+<TagPicker
+  applyLabel="機器情報と割付を適用"
+  open={picker !== null}
+  catalog={catalogSelection.catalog}
+  selection={catalogSelection}
+  expected={picker?.expected ?? "number"}
+  targetLabel={`${selected?.code ?? ""} ／ ${picker?.slot ?? ""}`}
+  onclose={() => (picker = null)}
+  onchoose={chooseSlot}
+/>
 
 <style>
   section,

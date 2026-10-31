@@ -76,7 +76,7 @@ Rustの読取adapterは[型付きslot context](docs/design/equipment/typed-read-
 
 - `apps/banto-scada`: Svelte 5 / TypeScript / Vite の最小エディタと共通描画部品。将来 Tauri の host を追加する配置。
 - `crates/scada-model`: GUI 非依存の Project 検証・JSON 往復と検証 CLI。
-- `crates/scada-runtime`: 共有SDKのsnapshotから読み取り表示へ投影し、Project単位の[読取Host](docs/design/runtime/read-host.md)を提供するRustライブラリ。[表示DTOとAppのsession配布](docs/design/runtime/read-presentation.md)も提供する。製品transportは後続で、通常起動は未接続。
+- `crates/scada-runtime`: 共有SDKのsnapshotから読み取り表示へ投影し、Project単位の[読取Host](docs/design/runtime/read-host.md)を提供するRustライブラリ。[表示DTOとAppのsession配布](docs/design/runtime/read-presentation.md)も提供する。[catalog取得とタグ選択](docs/design/equipment/catalog-selection.md)の準備も提供する。製品transportは後続で、通常起動は未接続。
 - `crates/scada-model/schema/project.schema.json`: Rust / ブラウザ共通の初期 JSON Schema。
 - `examples`: サンプルと、Rust / TypeScript が共に実行する契約テストのケース。
 - `docs/upstream/industrial`: industrial の設計ドキュメントを変更せず保存した参照スナップショット。

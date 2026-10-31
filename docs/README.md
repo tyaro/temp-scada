@@ -124,6 +124,8 @@ docs/
 - [Runtime の SDK 投影境界](design/runtime/runtime-sdk.md)
 - [Project単位の読取Host（P2）](design/runtime/read-host.md)
 - [Host表示DTOと画面sessionの接続（P3a）](design/runtime/read-presentation.md)
+- [製品transport・接続設定の境界（P3b）](design/runtime/transport-boundary.md)
+- [Host catalogとタグ選択（P4）](design/equipment/catalog-selection.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)
 - [Symbolと機器の関連付け候補の確認](design/equipment/symbol-equipment-check.md)

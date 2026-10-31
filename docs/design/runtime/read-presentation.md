@@ -1,6 +1,6 @@
 # P3a: Host表示DTOと画面sessionの接続
 
-2026-11-01（日本時間）。状態: **採用・P3a実装／ローカル検証済み、P3b未実装**。P2は[PR #11](https://github.com/tyaro/temp-scada/pull/11)でマージ済み。
+2026-11-01（日本時間）。状態: **P3aはPR #12でCI成功・マージ済み、P3b製品実装は保留**。P2は[PR #11](https://github.com/tyaro/temp-scada/pull/11)でマージ済み。
 
 ## 提供区切り
 
@@ -48,3 +48,5 @@ Rust workspace71件、Clippy／rustfmtが成功。共通fixture6種はRust投影
 | ライト                                                           | ダーク                                                          |
 | ---------------------------------------------------------------- | --------------------------------------------------------------- |
 | ![ライトの読取表示](../../assets/runtime/read-display-light.png) | ![ダークの読取表示](../../assets/runtime/read-display-dark.png) |
+
+P3bの現行境界と再開条件は[製品transport・接続設定](transport-boundary.md)を参照する。

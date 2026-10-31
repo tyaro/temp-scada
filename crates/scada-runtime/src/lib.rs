@@ -1,9 +1,11 @@
 //! SDK の current snapshot を SCADA の読み取り表示へ変換する。
 //! 接続・再試行・Stale 判定・式評価を実装せず、書込み API を公開しない。
+mod catalog;
 mod display;
 mod host;
 mod projection;
 mod slots;
+pub use catalog::*;
 pub use display::*;
 pub use host::*;
 pub use slots::*;

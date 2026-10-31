@@ -343,3 +343,11 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 `designer/controllers/read-presentation.svelte.ts`はAppから現在Project／任意ReadSourceのgetterを受け、session reset、購読解除、旧callback拒否を所有する。Project・編集履歴はAppに残す。CanvasWorkspace・Minimap・PreviewPopupsは同じcontextを受け、Primitiveの数値TextもQualityと由来を描画する。通常entrypointにはsourceを渡さない。
 
 関連検証は`display.rs`のRust単体、`examples/read-display-cases.json`、`lib/read-presentation.test.ts`、`e2e/read-presentation.spec.ts`。既存`read-slot-session`と型付きslot表示を再利用する。[製品transport未実装の境界](../design/runtime/read-presentation.md)を維持する。
+
+## Host catalogとタグ選択（P4）
+
+`crates/scada-runtime/src/catalog.rs`の`CatalogHost`がSDK REST clientとProject／要求tokenを所有する。`request().fetch()`は一度だけ取得し、`accept`が最新要求と一致した結果だけを公開する。`catalog_view`はSDKの重複名検査を再利用して表示metadataへ投影する。`schema/catalog-view.schema.json`と`examples/catalog-view.json`をRust／TSで共有する。値購読・再接続・自動pollを所有しない。
+
+`lib/catalog-session.ts`はProject所有者・payload検証・immutableな候補・旧delivery拒否を担当し、`designer/controllers/catalog.svelte.ts`は任意CatalogSourceの購読寿命を担当する。`tag-catalog.ts`はmetadata階層と型互換、`TagPicker.svelte`は検索・確認・明示選択、InspectorPanelとEquipmentLibraryは現在の配置／機器／slotと入力要素の再確認を所有する。適用・保存・履歴は既存フォームに残す。
+
+関連検証はRust `tests/catalog.rs`、`catalog-session.test.ts`、`e2e/catalog-selection.spec.ts`と既存tag-picker／equipment系。製品transportと資格情報は[P3b](../design/runtime/transport-boundary.md)に残し、通常entrypointはsourceを渡さない。

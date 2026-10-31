@@ -19,7 +19,7 @@ use crate::{
 pub struct ReadSession(Arc<()>);
 
 impl ReadSession {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self(Arc::new(()))
     }
 }
