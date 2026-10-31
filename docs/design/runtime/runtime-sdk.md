@@ -1,74 +1,55 @@
 # Runtime の SDK 投影境界
 
-文書の位置付け: **現行SDK投影境界の仕様と検証記録。ブラウザの実Hub接続・正式Runtimeは後続。** 現在の対応範囲と保存契約は[実装状況](../../project/implementation-status.md)を正とする。
+状態: **P1ローカル検証成功・全体CI待ち**（2026-11-01、日本時間）。[S7 SOAK中の実行計画](../../project/soak-independent-runtime-plan.md)に従う。製品Host・実Hub接続・正式Runtimeは後続であり、通常Designerは未接続のまま。
 
-2026-10-18。`crates/scada-runtime` は、共有 SDK の読み取り結果を SCADA の表示用データへ変換するライブラリ。Tauri・HTTP サーバー・接続設定 UI・正式な Runtime 起動 mode はまだ実装していない。ブラウザの表示プレビューは引き続き Hub 未接続のまま。
+## 依存と公開API
 
-## 依存と公開 API
+`banto-tagclient`はIndustrialの`v0.3.0-alpha.1`に対応する`33410f6d25d36559c5ce81375e243eb6f3e85038`へ`git + rev`と`Cargo.lock`で固定する。#682の部分解決・`Unbound`・同一世代snapshotを利用する。共有SDKの接続・再試行・再解決・Stale判定・式評価を複製しない。
 
-`banto-tagclient` は industrial の `c4a61bc08ddf6d03fa56974bf1fcad08d12cbb5a` を `git + rev` で固定参照し、`Cargo.lock` でも固定する。共有 SDK をコピーせず、接続・再試行・購読・再解決・Stale 判定を再実装しない。式評価と書込み経路も作らない。
+- `BindingPlan::new(project)`は数値Textの同じ外部名を集約し、使用先を保持する。
+- `ReadSlotPlan::from_project(project)`は採用済み機器slotの構造化key、bool／number型、未割付を保持する。同じ外部名を複数contextへ配るがSDK要求は重複させない。
+- `project_view(plan, state)`／`read_slot_view(plan, state)`は、同じ`state.snapshot()`のcatalog・resolution・値から表示DTOを生成する。別fetchのcatalogを受け取る引数は廃止した。
+- planの各要求についてSDK resolution内のbinding keyと外部名を照合する。要求外の名前を未作成と誤診せず、plan不一致は`invalidCatalog`とする。Textとslotを合わせた購読の一部分を投影することは許す。
 
-- `scada_model::Project::text_bindings()` は、検証済み Project の画面 Text から画面 ID・配置 ID・外部名を返す。共有定義内の直接 Binding は既存の検証で拒否する。
-- `BindingPlan::new()` は同じ外部名を集約し、全使用箇所を保持する。`requests()` は SDK が要求する一意な `BindingRequest` を返す。参照がなければ空配列となり、将来の Host は SDK の `start()` を呼ばない。
-- `project_view(plan, state, catalog)` は SDK の `TagClientState` と対応 catalog を受け、`RuntimeView` を返す。ここでネットワーク I/O を行わない。
+値・Quality・provenanceはProjectとUndo履歴に保存しない。秘密鍵・接続先・任意のSDKエラー文字列を表示DTOへ含めない。snapshot全件をfrontendへ渡さない。
 
-`RuntimeView` は Project ID / revision、SDK の接続状態と安定したエラー分類、metadata の整合状態、外部名ごとの `NumericReading`、値の由来を持つ。Project JSON や編集履歴には保存しない。秘密鍵・接続先・SDK エラーの任意文字列は出力しない。
+## 接続状態と表示
 
-## 型付き読取slot
+| SDK状態 | 表示DTO                                                                                                                |
+| ------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Live    | metadata確認後、解決済み参照を投影。未解決参照はその名前だけunresolved                                                 |
+| Unbound | catalog／resolution確認済みでmetadataReady=true。割付済みはunresolved、未割付はunassigned。値・Quality・provenanceなし |
+| その他  | metadataReady=false。割付済みはdisconnected、未割付はunassigned。旧値とprovenanceを消す                                |
 
-2026-10-20、[型付き読取slotの初回実装](../equipment/typed-read-slots-design.md)を追加した。`ReadSlotPlan`は機器ID／slot名とbool／numberの期待型を持ち、`read_slot_view`で未割付を保持して投影する。既存数値Textとmetadata・値の検証を`projection.rs`へ共通化し、`NumericReading`のJSON契約は維持した。EquipmentのProject保存・UIとHostは未実装。表示用DTOを式評価の唯一の入力としない。
+`metadataReady`は対応するmetadataの確認を意味し、値の存在を意味しない。未知collection_modeやplan不一致を正常なタグ待ちに変換しない。不正なUnbound DTOもブラウザで拒否して値を消す。
 
-## 表示へ値を渡す条件
+SDKはcatalog・resolution・currentの同一世代を保証する。adapterもrevision／run_id／collection_mode・重複行を検査し、未知modeや不整合を正常表示にしない。旧SDKの「未解決1件で全購読停止」という制限は解消済みで、その再現テストを新契約の回帰へ置き換えた。
 
-SDK が Live 以外なら全参照を `disconnected` とし、現在値と provenance を消す。Live でも current または catalog が欠ける場合は数値表示せず `invalid` とする。
+## 型・Quality・値の由来
 
-catalog と current の revision / run_id / collection_mode が一致し、既知の collection_mode である場合だけ metadata が整合したと扱う。catalog の重複は SDK の `resolve_bindings()` による検証を使う。snapshot に同名の値が重複する場合も任意の 1 件を選ばず全値を無効にする。
+| 条件                                  | 投影                                                    |
+| ------------------------------------- | ------------------------------------------------------- |
+| 名前がcatalogにない                   | unresolved                                              |
+| 無効タグ・期待型と不一致              | その参照だけinvalid                                     |
+| 値側sourceが未知、値欠落、未知Quality | その参照だけinvalid                                     |
+| Goodの有限値                          | numberは数値、bitは0／1だけboolへ変換                   |
+| Bad／Stale                            | Qualityを保持し、valueはnull                            |
+| catalogと値のsourceラベルの不一致     | 値側を正として投影。catalogの情報ラベルで値を抑止しない |
 
-整合した metadata の各参照について、次を確認する。
+数値型は`i16/u16/i32/u32/f32/i64/u64/f64`。f64搬送のため2^53を超える整数精度の制約は維持する。boolは`bit`だけを受け、任意の数値を真偽に丸めない。未解決・Bad／Staleをfalseや0にしない。
 
-| 状態                                       | 投影結果                               |
-| ------------------------------------------ | -------------------------------------- |
-| catalog に名前がない                       | その参照だけ `unresolved`              |
-| 無効化されたタグ、bit / string / 未知の型  | `invalid`                              |
-| source 不一致、未知の source、現在値の欠落 | `invalid`                              |
-| Good の有限数                              | `resolved` / `good` / 数値             |
-| Good の null / 非有限数、未知の Quality    | `invalid`                              |
-| Stale / Bad                                | `resolved` と品質を保持し、数値は null |
+`ValueEntry.value_source`を正とする（#682 R7）。未知sourceをRealへ昇格させない。provenanceはcatalog revision・run_id・collection_mode・値側source・source timestampを保持し、simulation／derived_simulationを画面で識別する。既存DTOの`sourceMismatch`理由は語彙として残すが、catalogと値の情報ラベルの違いでは生成しない。
 
-数値型は `i16/u16/i32/u32/f32/i64/u64/f64`。Hub の数値搬送は f64 なので、i64 / u64 が 2^53 を超える場合の精度制約を解消するものではない。
+## Hostとの境界
 
-provenance には catalog revision・run_id・collection_mode・value_source・source timestamp を保持する。simulation を実データと区別する情報を落とさない。将来 UI を接続するときは、simulation を画面でも識別できることを受入条件にする。現在はこの wire DTO を UI に渡す Host 自体がない。
+今回のAPIは純粋投影で、ネットワークI/Oを行わない。P2でProjectごとに1つのSDK handleを所有する読取Hostを追加する。Textとslotの要求を集約し、0件ではSDKを開始しない。要求変更は`shutdown()`→`start(new_requests)`とし、`restart()`が要求を引き継ぐ点に注意する。
 
-## 共有 SDK の前提条件
-
-Astra との設計レビューにより、次の共有契約を [industrial #682](https://github.com/tyaro/banto-industrial/issues/682) に起票した。
-
-1. 未解決名が混在しても正常タグを購読し、未解決を個別診断として公開する。
-2. 対応する catalog / Binding resolution / current を同じ SDK 世代の状態 snapshot として公開する。
-
-固定 SDK の worker は、未解決が 1 件でもあると購読全体を `BindingUnresolved` / Rebinding にして current を公開しない。また public state は current の値 snapshot だけを持ち、対応 catalog を同じ更新として取得できない。調査時の main `55d9d75ff55f9b856d7e9d61f15ead0e77f59c69` まで対象 API の変更はなかった。
-
-adapter の部分成功テストは表示変換の保証であり、現 SDK の一つの購読でその入力に到達できることを示すものではない。統合テストでは全体が停止する現状も再現し、仕様の差を明示する。SDK 更新後に、この制限の再現テストを新契約の回帰検証へ置き換える。
-
-Host 側で存在する名前だけを先に選別する方法や、タグごとに handle を増やす方法は恒久策にしない。再発見・再購読・世代管理を SCADA 側へ重複させるためである。別 fetch で取得した catalog も、adapter の世代照合は可能だが、今回のテストでは単にモック Hub と同じ fixture を渡しており、製品 Host の取得手順を実装したものではない。
-
-## 次の Host 実装
-
-共有契約の更新・検証済みコミットを参照してから、Project ごとに一つの SDK handle を所有する薄い Host を作る。Host が接続・停止を所有し、同じ SDK 状態更新から adapter へ投影する。
-
-Project または接続先の置換時には旧値を直ちに消し、旧 task からの通知を拒否するローカル session 世代を設ける。同じ projectId / revision を持つ別ファイルの読込があるため、それらだけを session の識別に使わない。新しい metadata と current が成立するまでは値を公開しない。
-
-上流の Tauri / mode / capability の境界は維持する。認証・ユーザー管理は industrial 側で修正中のため延期し、今回独自のログイン機能や公開 API を追加していない。
+Project・接続先の置換と停止では先に表示を無効化する。Hostのローカルsession tokenで旧task通知を拒否し、同ID／revisionの別Projectも区別する。SDK generationだけでProject sessionを識別しない。認証・ユーザー管理・正式transportは今回接続しない。
 
 ## 検証
 
-```sh
-source scripts/cloud-env.sh
-cargo test --workspace --locked
-cargo clippy --workspace --locked --all-targets -- -D warnings
-pnpm test
-```
+`tests/sdk_projection.rs`は実SDKとloopbackモックHubを使い、部分成功・Unbound・追加／削除／rename・run_id変更・再解決中の旧値消去・認証拒否・Quality変更・切断・停止を確認する。世代境界でモックのcatalog応答を保留し、watchが中間状態を取りこぼしても無効化を観測できるようにする。
 
-単体テストは要求の集約・使用箇所 ID・数値 / Quality・型 / source・世代不一致・重複を検証する。`examples/runtime-reading-cases.json` を Rust と TypeScript の表示テストで共用し、Rust が出す `numericValue` 等の JSON 契約と画面の表示文字列を揃える。
+`examples/read-slot-view-cases.json`はRust投影→JSON Schema→TS受入の共通fixture。Unboundと値側source優先を含む。ブラウザは同一mountのメイン・埋込・小窓・機器詳細へ更新を渡し、タグ待ちで値と由来が消え、Liveで復帰することを両テーマで確認する。
 
-`tests/sdk_projection.rs` は実 SDK を loopback のモック Hub に接続し、REST / WebSocket の初回値・値更新・Bad 化・切断・停止と、未解決 1 件による全要求停止を検証する。使用するキーはテスト内だけの固定文字列で、外部の秘密情報は不要。実設備・実 Hub・本番の再接続や認証連携の検証ではない。
+実行結果は[実行計画](../../project/soak-independent-runtime-plan.md)に記録する。実設備・S7環境・Windows運用の検証ではない。

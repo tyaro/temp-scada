@@ -18,6 +18,7 @@
         "connecting",
         "handshaking",
         "live",
+        "unbound",
         "rebinding",
         "reconnecting",
         "unauthorized"

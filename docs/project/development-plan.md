@@ -34,7 +34,8 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 ## 参照元
 
 - repository: https://github.com/tyaro/banto-industrial
-- 固定commit: `c4a61bc08ddf6d03fa56974bf1fcad08d12cbb5a`
+- 設計スナップショットの固定commit: `c4a61bc08ddf6d03fa56974bf1fcad08d12cbb5a`
+- SDKの固定commit（P1）: `33410f6d25d36559c5ce81375e243eb6f3e85038`（`v0.3.0-alpha.1`）
 - [SCADA設計](../upstream/industrial/scada-design.md)、[上流索引](../upstream/industrial/README.md)、[Hub SDK](../upstream/industrial/banto-tagclient-design.md)、[実装時の注意](../upstream/industrial/implementation-checklist.md)
 
 `docs/upstream/industrial`は出典付きの参照スナップショットであり編集しない。上流の「実装済み」はIndustrial側の状態。monorepoへ戻す配置方針を維持し、独立開発を一時的な例外とする。

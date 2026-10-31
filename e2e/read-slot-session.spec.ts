@@ -339,6 +339,16 @@ for (const theme of ["light", "dark"] as const)
               value: null,
             } as any;
           await publish("bad", session.receive(session.generation, bad).frame);
+          const unbound = good();
+          unbound.connection = "unbound";
+          for (const row of unbound.slots) {
+            row.reading = { state: "unresolved" } as any;
+            row.provenance = null;
+          }
+          await publish(
+            "unbound",
+            session.receive(session.generation, unbound).frame,
+          );
           await publish(
             "good-again",
             session.receive(session.generation, good()).frame,
@@ -430,6 +440,7 @@ for (const theme of ["light", "dark"] as const)
     expect(staleSummary[0].summary).toContain("SIM 5件");
     for (const name of [
       "disconnected",
+      "unbound",
       "invalid",
       "reset",
       "different-file-same-identity",
@@ -487,8 +498,10 @@ for (const theme of ["light", "dark"] as const)
           ? "good"
           : ["invalid-value", "invalid"].includes(snapshot.name)
             ? "invalid"
-            : ["stale", "bad"].includes(snapshot.name)
-              ? snapshot.name
+            : ["stale", "bad", "unbound"].includes(snapshot.name)
+              ? snapshot.name === "unbound"
+                ? "unresolved"
+                : snapshot.name
               : "disconnected",
       );
       expect(snapshot.details[1].state).toBe(
@@ -496,8 +509,10 @@ for (const theme of ["light", "dark"] as const)
           ? "good"
           : snapshot.name === "invalid"
             ? "invalid"
-            : ["stale", "bad"].includes(snapshot.name)
-              ? snapshot.name
+            : ["stale", "bad", "unbound"].includes(snapshot.name)
+              ? snapshot.name === "unbound"
+                ? "unresolved"
+                : snapshot.name
               : "disconnected",
       );
       if (goodPrimary)
@@ -510,6 +525,7 @@ for (const theme of ["light", "dark"] as const)
       if (
         [
           "disconnected",
+          "unbound",
           "invalid",
           "reset",
           "different-file-same-identity",
@@ -583,6 +599,7 @@ for (const theme of ["light", "dark"] as const)
     for (const name of [
       "pending",
       "disconnected",
+      "unbound",
       "invalid",
       "reset",
       "different-file-same-identity",
@@ -590,8 +607,16 @@ for (const theme of ["light", "dark"] as const)
     ])
       for (const view of byName(name)) {
         expect(view.map((row: any) => row.state)).toEqual([
-          name === "invalid" ? "invalid" : "disconnected",
-          name === "invalid" ? "invalid" : "disconnected",
+          name === "invalid"
+            ? "invalid"
+            : name === "unbound"
+              ? "unresolved"
+              : "disconnected",
+          name === "invalid"
+            ? "invalid"
+            : name === "unbound"
+              ? "unresolved"
+              : "disconnected",
         ]);
         expect(view[0].color).toBe("#d97706");
         for (const row of view) {

@@ -1,6 +1,6 @@
 # S7 SOAK中のSCADA読取開発計画
 
-2026-11-01（日本時間）。状態: **採用・P1着手**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
+2026-11-01（日本時間）。状態: **採用・P1ローカル完了／CI待ち**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
 
 ## 前提と責務
 
@@ -18,13 +18,13 @@
 
 各工程は詳細契約→実装→受入→保存の順に進める。P1から順に着手し、後続の未実装を提供済みと記載しない。
 
-| 工程                | 内容                                                     | 完了条件                                                                                                      | 状態   |
-| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------ |
-| P1 固定SDKと投影    | rev更新、同一世代snapshot、部分解決、Unbound、値側source | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                                          | 着手   |
-| P2 読取Host         | Projectごとにhandle1つ。Textと機器slotの要求を集約       | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認                            | 未着手 |
-| P3 表示受入         | 数値Text・Symbol・機器小窓への読取更新                   | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMを同一mountで確認。実Hostと画面のtransportは明示設計後に接続 | 未着手 |
-| P4 Tag Browser      | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない                          | 未着手 |
-| P5 Historian／Trend | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない                      | 未着手 |
+| 工程                | 内容                                                     | 完了条件                                                                                                      | 状態                 |
+| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------- |
+| P1 固定SDKと投影    | rev更新、同一世代snapshot、部分解決、Unbound、値側source | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                                          | ローカル完了・CI待ち |
+| P2 読取Host         | Projectごとにhandle1つ。Textと機器slotの要求を集約       | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認                            | 未着手               |
+| P3 表示受入         | 数値Text・Symbol・機器小窓への読取更新                   | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMを同一mountで確認。実Hostと画面のtransportは明示設計後に接続 | 未着手               |
+| P4 Tag Browser      | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない                          | 未着手               |
+| P5 Historian／Trend | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない                      | 未着手               |
 
 ## P1の実装契約
 
@@ -66,3 +66,17 @@ P1の試験: 正常＋未作成の混在、全件未解決→追加→Live→削
 - SCADA基準: `work`の`1d2e51c8d494694622cc09f61136b4fe211e0372`。取得直後はdirty差分なし。
 - I1〜I4・I6〜I8は提供済み。性能のI5i〜I5n等の候補は効果不足で不採用。読取経路の前提として再試作しない。
 - 現行の認証延期とローカル編集を維持する。S7終了後の実Hub・Windows・本番運用の検証は別に記録する。
+
+## P1の実施結果（2026-11-01）
+
+固定revとlockfileを更新し、両投影APIからcatalog引数を撤去した。同一snapshotのresolution照合、Unboundの無値診断、値側source優先を実装した。Rust／Schema／TS／共通fixtureを揃え、ブラウザでタグ待ち→Live復帰を既存の同一mountへ接続した。SDKのTLS対応に伴う推移依存の追加をlockfileへ反映した。Project保存版は変更していない。
+
+- `cargo test --workspace --locked`: 55件成功（model35、runtime単体17、実SDK＋モック3）。
+- `cargo clippy --workspace --locked --all-targets -- -D warnings`、`cargo fmt --all --check`: 成功。
+- `pnpm check`: 0エラー・0警告。`pnpm test`: 111ファイル・1,220件成功。
+- `pnpm build`、`pnpm format:check`: 成功。buildの500kB超chunk警告は残る。
+- `pnpm exec playwright test e2e/read-slot-session.spec.ts --workers=1`: 両テーマ2件成功。メイン・埋込・小窓・機器詳細の同一mountで旧値・由来の消去と復帰を確認。
+- 初回の認証拒否試験はSDKがshutdownにも終端エラーを返す契約を成功と誤期待して失敗した。拒否の保持を確認する期待へ修正した。ブラウザ試験は追加したUnboundの期待状態を既存disconnectedからunresolvedへ修正し、再実行で成功。アプリの拒否条件・timeout・retryは緩和していない。
+- S7環境・実PLC・実Hub・Windows・正式Hostの検証はしていない。独立レビューのエージェントは使用していない。全体CIはPRの最終HEADで確認する。
+
+次の工程はP2。P1の全体CI成功を確認した後、Text＋slotの要求を集約するHostの所有権・session・停止の契約から着手する。P2以降は未実装。

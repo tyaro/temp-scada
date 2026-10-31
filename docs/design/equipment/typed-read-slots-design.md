@@ -16,7 +16,7 @@
 | `ReadSlotRequest`                                   | キー・期待型・任意の`external_name`。未割付は`None`のみ                 |
 | `ReadSlotPlan::new(project_id, revision, requests)` | 重複キー・空のProject／機器／slot／外部名を拒否してplanを生成           |
 | `ReadSlotPlan::requests()`                          | 同じ外部名を一度だけSDKへ要求。全て未割付なら空配列                     |
-| `read_slot_view(plan, state, catalog)`              | SDKのstateと対応metadataから表示結果を生成。ネットワークI/O・書込みなし |
+| `read_slot_view(plan, state)`                       | SDKのstateと対応metadataから表示結果を生成。ネットワークI/O・書込みなし |
 
 空白だけの名前は拒否するが、自動trimや大文字小文字の変換はしない。同じ外部名を複数機器・用途で参照できる。slotキーは別なので一方の型不一致が他方を無効化しない。存在しないキーを未割付へ変換しない。機能未採用のslotはplanに含めず、必須slotの宣言不足や機器種別適合は後続の定義検証へ分離する。
 
@@ -72,3 +72,5 @@ Astraの静的レビューでは必須修正や既存数値の回帰は見つか
 ## 後続の表示DTO受入
 
 Project0.25.0の共有Symbolに続き、[TSの受入境界・session世代とGood／Quality表示](read-slot-presentation.md)を実装した。Rust実投影からの共通fixtureとブラウザの同一mount更新を検証する。初回実装時の記録は維持し、実Host・実Hub接続が未完了であることと区別する。
+
+2026-11-01更新: 同一世代snapshotとUnboundの現行契約は[SDK投影境界](../runtime/runtime-sdk.md)に従う。catalog引数は廃止し、値側sourceを正とする。

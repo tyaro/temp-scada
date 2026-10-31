@@ -17,7 +17,7 @@ Project・保存schema・現行サンプル形式・固定SDK revは変更しな
 - `reset(project)`は新tokenと未接続frameを返す。Projectや購読元を置き換える際に使う。新Projectの検証に失敗すれば例外となり、元のsessionを維持する。失敗したProjectへ画面だけを切り替えない。
 - `equipmentReadContext(currentProject, frame)`で描画用contextを作る。Projectのobject identity・ID／revision、最新token／publicationを照合し、失効frame・別Projectでは未接続を返す。
 
-将来のHostは受信・resetの返すframeを必ずreactiveな状態へ格納し、currentProjectとframeからcontext propを作り直す。resolverの内部状態だけを変えて再描画を期待しない。受信は一つの更新列として順に渡す。同一token内の非同期処理の並べ替えを検出するsequenceや、Hostのネットワーク／task管理は今回提供しない。購読元の置き換えはresetで世代を分ける。SDKの接続状態が非Liveになった通知では値を消し、同じ更新列から再度Liveになる場合も新しい有効結果が必要。
+将来のHostは受信・resetの返すframeを必ずreactiveな状態へ格納し、currentProjectとframeからcontext propを作り直す。resolverの内部状態だけを変えて再描画を期待しない。受信は一つの更新列として順に渡す。同一token内の非同期処理の並べ替えを検出するsequenceや、Hostのネットワーク／task管理は今回提供しない。購読元の置き換えはresetで世代を分ける。SDKの接続状態が非Liveになった通知では値を消し（Unboundは無値の未解決診断を保持）、同じ更新列から再度Liveになる場合も新しい有効結果が必要。
 
 frameは不透明で不変。planは所有コピー、受理行も所有コピーとし、受理後のpayload変更や返却value／provenanceの変更で次の表示が変わらないようにする。旧frameとのmergeはしない。
 
@@ -25,18 +25,19 @@ frameは不透明で不変。planは所有コピー、受理行も所有コピ�
 
 `crates/scada-runtime/schema/read-slot-view.schema.json`はProjectと独立した表示DTOの共通schema。AJVで構造・既知enum・必須項目・余分な値を検証した後、次を照合する。
 
-| 対象         | 受入条件                                                                                |
-| ------------ | --------------------------------------------------------------------------------------- |
-| Project      | 現sessionのID／revisionと一致                                                           |
-| slot結果     | 全採用slotについてちょうど1行。構造化した機器ID／slot名で照合し、追加・不足・重複を拒否 |
-| 割付         | 行のexpectedType・externalNameが現在planと一致                                          |
-| 未割付       | unassigned、provenanceなし                                                              |
-| 非Live       | metadataReady=false、割付済みはdisconnected、値・provenanceなし                         |
-| resolved     | LiveかつmetadataReady=true、provenanceあり                                              |
-| Good         | 期待するbool／numberと一致し、numberは有限。falseと0を欠測にしない                      |
-| Bad／Stale   | value=null。直前値や保持payloadを表示しない                                             |
-| その他の状態 | provenanceなし。Liveの割付済みをunassigned／disconnectedへ丸めない                      |
-| metadata     | resolved行間でcatalogRevision／runId／collectionModeが一致                              |
+| 対象           | 受入条件                                                                                |
+| -------------- | --------------------------------------------------------------------------------------- |
+| Project        | 現sessionのID／revisionと一致                                                           |
+| slot結果       | 全採用slotについてちょうど1行。構造化した機器ID／slot名で照合し、追加・不足・重複を拒否 |
+| 割付           | 行のexpectedType・externalNameが現在planと一致                                          |
+| 未割付         | unassigned、provenanceなし                                                              |
+| Unbound        | metadataReady=true、割付済みはunresolved、値・provenanceなし                            |
+| その他の非Live | metadataReady=false、割付済みはdisconnected、値・provenanceなし                         |
+| resolved       | LiveかつmetadataReady=true、provenanceあり                                              |
+| Good           | 期待するbool／numberと一致し、numberは有限。falseと0を欠測にしない                      |
+| Bad／Stale     | value=null。直前値や保持payloadを表示しない                                             |
+| その他の状態   | provenanceなし。Liveの割付済みをunassigned／disconnectedへ丸めない                      |
+| metadata       | resolved行間でcatalogRevision／runId／collectionModeが一致                              |
 
 catalogRevision／runId／sourceTimestampMsはJS safe integer範囲に限定し、範囲外を拒否する。Rustのu64／i64全域をJSON numberで正確に扱えるという契約にはしない。測定値自体は有限f64を保ち、再丸め・再スケーリングを行わない。
 
@@ -52,7 +53,7 @@ simulation／derived_simulation由来、またはall_simulation modeの表示は
 
 ## 検証
 
-`examples/read-slot-view-cases.json`の16ケースをRustの実投影からserializeし、JSON schemaと一致確認する。TSは同じ結果をsessionへ受け入れ、表示文字とprovenanceを確認する。false／0・負数・Stale／Bad・未解決・metadata欠落・切断・6種のsource・simulationを含む。Rustの0.0とJSONの0は数値として正規化して比較する。
+`examples/read-slot-view-cases.json`の共通ケースをRustの実投影からserializeし、JSON schemaと一致確認する。TSは同じ結果をsessionへ受け入れ、表示文字とprovenanceを確認する。false／0・負数・Stale／Bad・未解決・metadata欠落・切断・6種のsource・simulationを含む。Rustの0.0とJSONの0は数値として正規化して比較する。
 
 TSの追加検証は不正DTO、plan・型・外部名、重複／不足、metadata世代、safe integer、受理後の変更、旧token・旧frame、同ID／revisionの別Projectを対象とする。ブラウザは同じmountを保ち、メイン・埋込画面・読取小窓に対してGood→Quality劣化／切断／不正入力／resetを切り替える。新しいframeをpropへ反映し、文字とprovenanceが更新・消去されることを確認する。
 
@@ -63,3 +64,5 @@ TSの追加検証は不正DTO、plan・型・外部名、重複／不足、metad
 実HostのSDK更新・対応catalogの受信、購読generationとframeのreactiveな配布は後続。SDKの前提は[industrial #682](https://github.com/tyaro/banto-industrial/issues/682)。正式Runtime・実Tag Browser・設備Faceplate・動的配色・認証は完成扱いしない。宣言の追加・未使用行の編集／削除は[後続の編集工程](symbol-slot-editing.md)で実装した。
 
 後続で[Good限定の型付き値とbool状態判定](bool-slot-state.md)を追加した。値を文字列化した後も型付きsnapshotを保ち、invalid理由を詳細表示へ渡す。配色UI・実Host接続は引き続き後続。
+
+2026-11-01のP1でUnboundと値側source優先の共通fixtureを追加した。現在のSDK契約と検証結果は[SDK投影境界](../runtime/runtime-sdk.md)と[S7 SOAK計画](../../project/soak-independent-runtime-plan.md)を参照する。

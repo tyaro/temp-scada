@@ -8,6 +8,10 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 固定SDKへの追従（2026-11-01）
+
+[S7 SOAK中の計画](soak-independent-runtime-plan.md)のP1をローカル検証した。Industrial `v0.3.0-alpha.1`の完全revを固定し、Rust投影はSDKの同一世代snapshotを使用する。部分未解決・Unbound・値側source優先をSchema／TSと揃え、共通fixtureと両テーマのブラウザで確認した。全体CIは未確認。通常Designerの実Hub接続、読取Host（P2）、認証・正式Runtimeの完成ではない。
+
 ## 保存契約と基盤
 
 | 項目       | 現在の契約                                                                                                                              |

@@ -12,6 +12,6 @@ publish = false
 serde_json = { version = "1", features = ["float_roundtrip"] }
 jsonschema = { version = "0.33", default-features = false }
 
-banto-tagclient = { git = "https://github.com/tyaro/banto-industrial.git", rev = "c4a61bc08ddf6d03fa56974bf1fcad08d12cbb5a" }
+banto-tagclient = { git = "https://github.com/tyaro/banto-industrial.git", rev = "33410f6d25d36559c5ce81375e243eb6f3e85038" }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt", "net", "sync", "time", "io-util"] }

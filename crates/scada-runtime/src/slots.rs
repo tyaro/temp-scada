@@ -1,9 +1,9 @@
 //! Equipment永続化の前段となる、Host内部の型付き読取context。Project形式ではない。
 use std::collections::{BTreeMap, BTreeSet};
 
-use banto_tagclient::{
-    BindingRequest, CatalogSnapshot, TagClientConnectionState, TagClientState, ValuesSnapshot,
-};
+use banto_tagclient::{BindingRequest, TagClientConnectionState, TagClientState};
+#[cfg(test)]
+use banto_tagclient::{CatalogSnapshot, ValuesSnapshot};
 use serde::Serialize;
 
 use crate::{projection::SnapshotIndex, Provenance, Quality};
@@ -184,20 +184,22 @@ pub struct ReadSlotView {
 
 /// SDK更新ごとに全結果を作り直す。未割付を未接続やfalseへ変換しない。
 /// session世代の所有・旧task通知の破棄は将来のHostの責務。
-pub fn read_slot_view(
-    plan: &ReadSlotPlan,
-    state: &TagClientState,
-    catalog: Option<&CatalogSnapshot>,
-) -> ReadSlotView {
+pub fn read_slot_view(plan: &ReadSlotPlan, state: &TagClientState) -> ReadSlotView {
     let mut view = ReadSlotView::pending(
         plan,
         state.connection_state().to_string(),
         state.last_error().map(|kind| kind.as_str().into()),
     );
-    if state.connection_state() != TagClientConnectionState::Live {
-        return view;
+    if matches!(
+        state.connection_state(),
+        TagClientConnectionState::Live | TagClientConnectionState::Unbound
+    ) {
+        let index = state
+            .snapshot()
+            .ok_or(ReadSlotInvalidReason::MetadataUnavailable)
+            .and_then(|generation| SnapshotIndex::from_generation(&plan.requests(), generation));
+        project_slot_index(index, &mut view);
     }
-    project_slot_snapshot(plan, state.current(), catalog, &mut view);
     view
 }
 
@@ -228,6 +230,7 @@ impl ReadSlotView {
     }
 }
 
+#[cfg(test)]
 fn project_slot_snapshot(
     plan: &ReadSlotPlan,
     snapshot: Option<&ValuesSnapshot>,
@@ -235,9 +238,18 @@ fn project_slot_snapshot(
     view: &mut ReadSlotView,
 ) {
     let index = match (snapshot, catalog) {
-        (Some(snapshot), Some(catalog)) => SnapshotIndex::new(&plan.requests(), snapshot, catalog),
+        (Some(snapshot), Some(catalog)) => {
+            SnapshotIndex::new(&plan.requests(), Some(snapshot), catalog)
+        }
         _ => Err(ReadSlotInvalidReason::MetadataUnavailable),
     };
+    project_slot_index(index, view);
+}
+
+fn project_slot_index(
+    index: Result<SnapshotIndex<'_>, ReadSlotInvalidReason>,
+    view: &mut ReadSlotView,
+) {
     match index {
         Ok(index) => {
             view.metadata_ready = true;
@@ -353,7 +365,11 @@ mod tests {
                 "f64"
             }
             .into();
-            metadata.tags[0].value_source = ValueSource::parse(input["source"].as_str().unwrap());
+            metadata.tags[0].value_source = ValueSource::parse(
+                input["catalogSource"]
+                    .as_str()
+                    .unwrap_or(input["source"].as_str().unwrap()),
+            );
             let mut values = snapshot();
             values.revision = metadata.revision;
             values.run_id = metadata.run_id;
@@ -366,7 +382,7 @@ mod tests {
                 "stale" => ValueQuality::Stale,
                 _ => ValueQuality::Bad,
             };
-            values.values[0].value_source = metadata.tags[0].value_source.clone();
+            values.values[0].value_source = ValueSource::parse(input["source"].as_str().unwrap());
             if input["missingTag"] == true {
                 metadata.tags.clear();
                 values.values.clear();
@@ -375,6 +391,22 @@ mod tests {
                 ReadSlotView::pending(&plan, "stopped".into(), None)
             } else if input["metadata"] == false {
                 view(&plan, None, None)
+            } else if input["unbound"] == true {
+                let generation = banto_tagclient::GenerationSnapshot {
+                    generation: 1,
+                    resolution: std::sync::Arc::new(
+                        banto_tagclient::resolve_bindings(&plan.requests(), &metadata.tags)
+                            .unwrap(),
+                    ),
+                    catalog: std::sync::Arc::new(metadata),
+                    values: None,
+                };
+                let mut projected = ReadSlotView::pending(&plan, "unbound".into(), None);
+                project_slot_index(
+                    SnapshotIndex::from_generation(&plan.requests(), &generation),
+                    &mut projected,
+                );
+                projected
             } else {
                 view(&plan, Some(&values), Some(&metadata))
             };
@@ -647,7 +679,7 @@ mod tests {
     }
     #[test]
     fn missing_disabled_and_source_failures_are_local_and_never_publish_provenance() {
-        for change in 0..5 {
+        for change in 0..3 {
             let mut catalog = catalog();
             let mut snapshot = snapshot();
             let expected = match change {
@@ -656,20 +688,12 @@ mod tests {
                     ReadSlotInvalidReason::Disabled
                 }
                 1 => {
-                    catalog.tags[0].value_source = ValueSource::Unknown("future".into());
-                    ReadSlotInvalidReason::UnknownSource
-                }
-                2 => {
-                    snapshot.values[0].value_source = ValueSource::Simulation;
-                    ReadSlotInvalidReason::SourceMismatch
-                }
-                3 => {
                     snapshot.values.clear();
                     ReadSlotInvalidReason::MissingValue
                 }
                 _ => {
                     snapshot.values[0].value_source = ValueSource::Unknown("future".into());
-                    ReadSlotInvalidReason::SourceMismatch
+                    ReadSlotInvalidReason::UnknownSource
                 }
             };
             let mut other_tag = self::catalog().tags[0].clone();
