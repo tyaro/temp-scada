@@ -1,6 +1,6 @@
 # Runtime の SDK 投影境界
 
-状態: **P1ローカル検証成功・全体CI待ち**（2026-11-01、日本時間）。[S7 SOAK中の実行計画](../../project/soak-independent-runtime-plan.md)に従う。製品Host・実Hub接続・正式Runtimeは後続であり、通常Designerは未接続のまま。
+状態: **P1検証成功・PR #10マージ済み、P2読取Host追加**（2026-11-01、日本時間）。[S7 SOAK中の実行計画](../../project/soak-independent-runtime-plan.md)に従う。製品Host・実Hub接続・正式Runtimeは後続であり、通常Designerは未接続のまま。
 
 ## 依存と公開API
 
@@ -42,7 +42,7 @@ SDKはcatalog・resolution・currentの同一世代を保証する。adapterもr
 
 ## Hostとの境界
 
-今回のAPIは純粋投影で、ネットワークI/Oを行わない。P2でProjectごとに1つのSDK handleを所有する読取Hostを追加する。Textとslotの要求を集約し、0件ではSDKを開始しない。要求変更は`shutdown()`→`start(new_requests)`とし、`restart()`が要求を引き継ぐ点に注意する。
+投影APIは引き続き純粋で、ネットワークI/Oを行わない。P2でProjectごとに1つのSDK handleを所有する[読取Host](read-host.md)を追加した。Textとslotの要求を集約し、0件ではSDKを開始しない。要求変更は`shutdown()`→`start(new_requests)`とし、`restart()`が要求を引き継ぐ点に注意する。
 
 Project・接続先の置換と停止では先に表示を無効化する。Hostのローカルsession tokenで旧task通知を拒否し、同ID／revisionの別Projectも区別する。SDK generationだけでProject sessionを識別しない。認証・ユーザー管理・正式transportは今回接続しない。
 

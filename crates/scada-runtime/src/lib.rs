@@ -1,7 +1,9 @@
 //! SDK の current snapshot を SCADA の読み取り表示へ変換する。
 //! 接続・再試行・Stale 判定・式評価を実装せず、書込み API を公開しない。
+mod host;
 mod projection;
 mod slots;
+pub use host::*;
 pub use slots::*;
 
 use std::collections::BTreeMap;
@@ -97,22 +99,36 @@ pub struct RuntimeView {
     pub provenance: BTreeMap<String, Provenance>,
 }
 
+impl RuntimeView {
+    pub(crate) fn pending(
+        plan: &BindingPlan,
+        connection: String,
+        last_error: Option<String>,
+    ) -> Self {
+        Self {
+            project_id: plan.project_id.clone(),
+            project_revision: plan.project_revision,
+            connection,
+            last_error,
+            metadata_ready: false,
+            readings: plan
+                .references
+                .keys()
+                .map(|name| (name.clone(), NumericReading::Disconnected))
+                .collect(),
+            provenance: BTreeMap::new(),
+        }
+    }
+}
+
 /// 同じSDK状態のcatalog・解決結果・値から投影する。別fetchのmetadataを受け取らない。
 /// Live以外で値を保持せず、Unboundは無値の未解決診断を返す。
 pub fn project_view(plan: &BindingPlan, state: &TagClientState) -> RuntimeView {
-    let mut view = RuntimeView {
-        project_id: plan.project_id.clone(),
-        project_revision: plan.project_revision,
-        connection: state.connection_state().to_string(),
-        last_error: state.last_error().map(|kind| kind.as_str().into()),
-        metadata_ready: false,
-        readings: plan
-            .references
-            .keys()
-            .map(|name| (name.clone(), NumericReading::Disconnected))
-            .collect(),
-        provenance: BTreeMap::new(),
-    };
+    let mut view = RuntimeView::pending(
+        plan,
+        state.connection_state().to_string(),
+        state.last_error().map(|kind| kind.as_str().into()),
+    );
     if matches!(
         state.connection_state(),
         TagClientConnectionState::Live | TagClientConnectionState::Unbound

@@ -122,6 +122,7 @@ docs/
 - [機器種別と任意の読取slotの編集](design/equipment/equipment-type-editing.md)
 - [型付き読取結果の受入とSymbol表示](design/equipment/read-slot-presentation.md)
 - [Runtime の SDK 投影境界](design/runtime/runtime-sdk.md)
+- [Project単位の読取Host（P2）](design/runtime/read-host.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)
 - [Symbolと機器の関連付け候補の確認](design/equipment/symbol-equipment-check.md)

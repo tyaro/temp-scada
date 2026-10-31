@@ -331,3 +331,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 ## S7 SOAK中の読取開発（P1）
 
 `scada-runtime::project_view(plan, state)`／`read_slot_view(plan, state)`はSDKの同一世代snapshotから投影する。`projection.rs`はresolutionの要求対応・型・Quality・値側sourceを検証し、`slots.rs`は機器contextへ配る。別catalog取得・ネットワーク・session寿命は所有しない。表示DTOはRustのschemaと`lib/read-slot-session.ts`で共有し、Unboundの無値診断を受け入れる。関連検証は`tests/sdk_projection.rs`、`examples/read-slot-view-cases.json`、`read-slot-session.test.ts`、`e2e/read-slot-session.spec.ts`。[工程・未実装境界](../project/soak-independent-runtime-plan.md)を参照する。
+
+## Project単位の読取Host（P2）
+
+`crates/scada-runtime/src/host.rs`の`ReadHost`がProjectのText／slot要求とSDK handleの所有者。`ReadPlan`が重複排除、`Running`がSDKとpumpの終了、`publish_if_current`が同じwatch slot内のsession照合を担当する。`RuntimeView::pending`／`ReadSlotView::pending`は無値DTOの共通生成。SDKの再試行・再解決を複製しない。関連検証は`tests/read_host.rs`とHostの旧token拒否試験。[API・取消・drop・未接続境界](../design/runtime/read-host.md)を参照する。画面のHost transportはまだ接続していない。
