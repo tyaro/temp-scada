@@ -327,3 +327,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 ### I5hの読込診断
 
 `apps/banto-scada/scripts/profile-editor-load.mjs`は初回取込／同一package再読込だけを計測し、通常runと`--cpu`を分ける。`--direct-file-query`で計測側の入力欄検索を比較できる。時間計測後に文字投影・原本SHA・旧URL解放を確認する。`summarize-editor-profile.mjs`はnative呼出しを最も近いmapped callerへ集計する。[結果と制限](../performance/mixed-editor-quality.md#load-diagnostics-i5h)。通常アプリへの計測APIは追加しない。
+
+## S7 SOAK中の読取開発（P1）
+
+`scada-runtime::project_view(plan, state)`／`read_slot_view(plan, state)`はSDKの同一世代snapshotから投影する。`projection.rs`はresolutionの要求対応・型・Quality・値側sourceを検証し、`slots.rs`は機器contextへ配る。別catalog取得・ネットワーク・session寿命は所有しない。表示DTOはRustのschemaと`lib/read-slot-session.ts`で共有し、Unboundの無値診断を受け入れる。関連検証は`tests/sdk_projection.rs`、`examples/read-slot-view-cases.json`、`read-slot-session.test.ts`、`e2e/read-slot-session.spec.ts`。[工程・未実装境界](../project/soak-independent-runtime-plan.md)を参照する。

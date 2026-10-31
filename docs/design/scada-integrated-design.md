@@ -455,3 +455,7 @@ Project0.34.0でSymbol定義内のPNG／JPEGを保存・表示し、原本同梱
 ## ローカルSymbol接続と配管追従（I8、2026-10-21）
 
 同じ画面のSymbol配置枠の5anchorへPolylineの始点／終点を接続する初回範囲を採用した。I8aは純粋幾何・world座標保持まで全体CI成功。I8bはProject0.35.0で接続参照・解決済みpointsの保存／検証・既存編集とdrag途中の追従・複製／clipboardを完了・CI成功。I8cのInspector接続／解除とSymbol使用先表示は完了・CI成功。Equipment上の接続関係、Symbol内の名前付きport、自動routingは含めない。[仕様と受入](editor/connection-follow-design.md)を参照。
+
+## 2026-11-01の責務詳細化
+
+ユーザーとの確認により、時系列の継続記録・保持・検索・History APIはHistorianの責務として論理分離する。初期はSCADAサーバと同一プロセスへ同梱してよく、画面はAPIから読む。§6のSCADA server側のHistory APIはこの境界へ詳細化し、Hubへ追加しない。警報評価・ACK・常時Actionと警報／操作イベントの責務はSCADAサーバに残す。ChronoGazerの保存・検索・トレンド資産を共通利用する。[S7 SOAK中の実行計画](../project/soak-independent-runtime-plan.md)P5で未決の契約を設計する。Historianや正式Hostの実装完了を意味しない。

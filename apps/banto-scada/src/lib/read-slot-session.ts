@@ -122,6 +122,13 @@ function accept(
     if (row.externalName === null) {
       if (reading.state !== "unassigned" || row.provenance !== null)
         throw new Error("未割付の値です");
+    } else if (payload.connection === "unbound") {
+      if (
+        !payload.metadataReady ||
+        reading.state !== "unresolved" ||
+        row.provenance !== null
+      )
+        throw new Error("タグ待ち状態に値または未確認の結果があります");
     } else if (payload.connection !== "live") {
       if (
         payload.metadataReady ||
@@ -160,7 +167,13 @@ function accept(
     put(rows, row.key, structuredClone(row));
     count++;
   }
-  if (payload.connection !== "live" && payload.metadataReady)
+  if (payload.connection === "unbound" && !payload.metadataReady)
+    throw new Error("タグ待ちのmetadataがありません");
+  if (
+    payload.connection !== "live" &&
+    payload.connection !== "unbound" &&
+    payload.metadataReady
+  )
     throw new Error("非Liveのmetadataです");
   if (
     count !== [...expected.values()].reduce((sum, slots) => sum + slots.size, 0)

@@ -4,6 +4,10 @@
 
 ## 次の実装順
 
+2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
+
+責務はHub＝現在値／書込み、SCADAサーバ＝警報評価／ACK／常時Action、Historian＝時系列記録／保持／検索／History APIと整理した。Historianは初期の同一プロセス同梱を許す論理境界とし、ChronoGazerの保存・検索・Trend資産を共有する。詳細とSOAK後の作業は同計画P5で確定する。
+
 [SCADA単体開発計画](upstream-independent-plan.md)のI0〜I4・I6は完了し、全体CIの成功を確認済み。I5は現行版を再計測し、I5fの画像Map候補は見送り、I5gで履歴資産集計を限定改善し、全体CI成功を確認した。大図面の読込・操作遅延は残課題であり、性能改善全体の完了とはしない。
 
 | 区分                                | 現在の状態・次の判断                                                                                      | 根拠                                                                       |
@@ -30,7 +34,8 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 ## 参照元
 
 - repository: https://github.com/tyaro/banto-industrial
-- 固定commit: `c4a61bc08ddf6d03fa56974bf1fcad08d12cbb5a`
+- 設計スナップショットの固定commit: `c4a61bc08ddf6d03fa56974bf1fcad08d12cbb5a`
+- SDKの固定commit（P1）: `33410f6d25d36559c5ce81375e243eb6f3e85038`（`v0.3.0-alpha.1`）
 - [SCADA設計](../upstream/industrial/scada-design.md)、[上流索引](../upstream/industrial/README.md)、[Hub SDK](../upstream/industrial/banto-tagclient-design.md)、[実装時の注意](../upstream/industrial/implementation-checklist.md)
 
 `docs/upstream/industrial`は出典付きの参照スナップショットであり編集しない。上流の「実装済み」はIndustrial側の状態。monorepoへ戻す配置方針を維持し、独立開発を一時的な例外とする。

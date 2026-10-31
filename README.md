@@ -4,14 +4,14 @@
 
 ## ドキュメント
 
-| 確認すること                 | 入口                                                                                                    |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------- |
-| 設計・操作・機能別資料を探す | [文書索引](docs/README.md)                                                                              |
-| 今使える機能と残り           | [実装状況](docs/project/implementation-status.md)                                                       |
-| 編集の操作                   | [操作ガイド](docs/guides/user-guide.md)                                                                 |
-| 次の工程・保留・統合         | [開発計画](docs/project/development-plan.md)・[単体開発計画](docs/project/upstream-independent-plan.md) |
-| コード変更・検証             | [コード対応表](docs/engineering/code-map.md)・[検証手順](#検証)                                         |
-| 過去の実装・検証             | [実装履歴](docs/history/implementation-history.md)                                                      |
+| 確認すること                 | 入口                                                                                                            |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 設計・操作・機能別資料を探す | [文書索引](docs/README.md)                                                                                      |
+| 今使える機能と残り           | [実装状況](docs/project/implementation-status.md)                                                               |
+| 編集の操作                   | [操作ガイド](docs/guides/user-guide.md)                                                                         |
+| 次の工程・保留・統合         | [開発計画](docs/project/development-plan.md)・[SOAK中の読取開発](docs/project/soak-independent-runtime-plan.md) |
+| コード変更・検証             | [コード対応表](docs/engineering/code-map.md)・[検証手順](#検証)                                                 |
+| 過去の実装・検証             | [実装履歴](docs/history/implementation-history.md)                                                              |
 
 ## 起動
 

@@ -6,8 +6,8 @@ use crate::{
     ReadSlotValue,
 };
 use banto_tagclient::{
-    resolve_bindings, BindingRequest, CatalogSnapshot, CatalogTag, CollectionMode, ValueEntry,
-    ValueQuality, ValueSource, ValuesSnapshot,
+    resolve_bindings, BindingRequest, CatalogSnapshot, CatalogTag, CollectionMode,
+    GenerationSnapshot, ValueEntry, ValueQuality, ValueSource, ValuesSnapshot,
 };
 
 pub(crate) struct SnapshotIndex<'a> {
@@ -17,15 +17,45 @@ pub(crate) struct SnapshotIndex<'a> {
 }
 
 impl<'a> SnapshotIndex<'a> {
+    /// Public SDK state owns the catalog/resolution/values relationship.
+    /// A projection may use a subset of a combined Text + slot subscription,
+    /// but must never diagnose an unrequested name as a missing Hub tag.
+    pub(crate) fn from_generation(
+        requests: &[BindingRequest],
+        generation: &'a GenerationSnapshot,
+    ) -> Result<Self, Reason> {
+        let requested: HashMap<_, _> =
+            generation
+                .resolution
+                .resolved
+                .iter()
+                .map(|binding| (binding.binding_key.as_str(), binding.external_name.as_str()))
+                .chain(
+                    generation.resolution.unresolved.iter().map(|binding| {
+                        (binding.binding_key.as_str(), binding.external_name.as_str())
+                    }),
+                )
+                .collect();
+        if requests.iter().any(|request| {
+            requested.get(request.binding_key.as_str()).copied()
+                != Some(request.external_name.as_str())
+        }) {
+            return Err(Reason::InvalidCatalog);
+        }
+        Self::new(requests, generation.values.as_deref(), &generation.catalog)
+    }
+
     pub(crate) fn new(
         requests: &[BindingRequest],
-        snapshot: &'a ValuesSnapshot,
+        snapshot: Option<&'a ValuesSnapshot>,
         catalog: &'a CatalogSnapshot,
     ) -> Result<Self, Reason> {
-        if snapshot.revision != catalog.revision
-            || snapshot.run_id != catalog.run_id
-            || snapshot.collection_mode != catalog.collection_mode
-            || matches!(catalog.collection_mode, CollectionMode::Unknown(_))
+        if matches!(catalog.collection_mode, CollectionMode::Unknown(_))
+            || snapshot.is_some_and(|snapshot| {
+                snapshot.revision != catalog.revision
+                    || snapshot.run_id != catalog.run_id
+                    || snapshot.collection_mode != catalog.collection_mode
+            })
         {
             return Err(Reason::MetadataMismatch);
         }
@@ -38,7 +68,7 @@ impl<'a> SnapshotIndex<'a> {
             .map(|tag| (tag.external_name.as_str(), tag))
             .collect();
         let mut values = HashMap::new();
-        for value in &snapshot.values {
+        for value in snapshot.into_iter().flat_map(|snapshot| &snapshot.values) {
             if values.insert(value.tag.as_str(), value).is_some() {
                 return Err(Reason::DuplicateValues);
             }
@@ -72,14 +102,13 @@ impl<'a> SnapshotIndex<'a> {
         if !compatible {
             return invalid(Reason::TypeMismatch);
         }
-        if matches!(tag.value_source, ValueSource::Unknown(_)) {
-            return invalid(Reason::UnknownSource);
-        }
         let Some(value) = self.values.get(name) else {
             return invalid(Reason::MissingValue);
         };
-        if value.value_source != tag.value_source {
-            return invalid(Reason::SourceMismatch);
+        // The catalog label is informational. Only the value entry owns its
+        // source, including simulation and derived_simulation (#682 R7).
+        if matches!(value.value_source, ValueSource::Unknown(_)) {
+            return invalid(Reason::UnknownSource);
         }
         let (quality, projected) = match value.q {
             ValueQuality::Good => {
@@ -113,5 +142,50 @@ impl<'a> SnapshotIndex<'a> {
                 source_timestamp_ms: value.t,
             }),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[test]
+    fn unrequested_names_and_keys_are_not_diagnosed_as_missing_hub_tags() {
+        let catalog = crate::tests::catalog();
+        let request = BindingRequest {
+            binding_key: catalog.tags[0].external_name.clone(),
+            external_name: catalog.tags[0].external_name.clone(),
+        };
+        let generation = GenerationSnapshot {
+            generation: 1,
+            resolution: Arc::new(
+                resolve_bindings(std::slice::from_ref(&request), &catalog.tags).unwrap(),
+            ),
+            catalog: Arc::new(catalog),
+            values: Some(Arc::new(crate::tests::snapshot())),
+        };
+        assert!(
+            SnapshotIndex::from_generation(std::slice::from_ref(&request), &generation).is_ok()
+        );
+        for request in [
+            BindingRequest {
+                binding_key: "unrequested".into(),
+                external_name: "missing".into(),
+            },
+            BindingRequest {
+                binding_key: request.binding_key.clone(),
+                external_name: "wrong-name".into(),
+            },
+            BindingRequest {
+                binding_key: "wrong-key".into(),
+                external_name: request.external_name,
+            },
+        ] {
+            assert!(matches!(
+                SnapshotIndex::from_generation(&[request], &generation),
+                Err(Reason::InvalidCatalog)
+            ));
+        }
     }
 }

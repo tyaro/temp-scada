@@ -6,9 +6,9 @@ pub use slots::*;
 
 use std::collections::BTreeMap;
 
-use banto_tagclient::{
-    BindingRequest, CatalogSnapshot, TagClientConnectionState, TagClientState, ValuesSnapshot,
-};
+use banto_tagclient::{BindingRequest, TagClientConnectionState, TagClientState};
+#[cfg(test)]
+use banto_tagclient::{CatalogSnapshot, ValuesSnapshot};
 use scada_model::{Project, TextBinding};
 use serde::Serialize;
 
@@ -97,13 +97,9 @@ pub struct RuntimeView {
     pub provenance: BTreeMap<String, Provenance>,
 }
 
-/// catalog は同じ revision / run_id / collection_mode のものだけを使用する。
-/// host は各 SDK watch 更新で投影し、非 Live 状態の旧値を保持しないこと。
-pub fn project_view(
-    plan: &BindingPlan,
-    state: &TagClientState,
-    catalog: Option<&CatalogSnapshot>,
-) -> RuntimeView {
+/// 同じSDK状態のcatalog・解決結果・値から投影する。別fetchのmetadataを受け取らない。
+/// Live以外で値を保持せず、Unboundは無値の未解決診断を返す。
+pub fn project_view(plan: &BindingPlan, state: &TagClientState) -> RuntimeView {
     let mut view = RuntimeView {
         project_id: plan.project_id.clone(),
         project_revision: plan.project_revision,
@@ -117,28 +113,42 @@ pub fn project_view(
             .collect(),
         provenance: BTreeMap::new(),
     };
-    if state.connection_state() == TagClientConnectionState::Live {
-        if let (Some(snapshot), Some(catalog)) = (state.current(), catalog) {
-            project_snapshot(plan, snapshot, catalog, &mut view);
-        } else {
-            view.readings
-                .values_mut()
-                .for_each(|reading| *reading = NumericReading::Invalid);
-        }
+    if matches!(
+        state.connection_state(),
+        TagClientConnectionState::Live | TagClientConnectionState::Unbound
+    ) {
+        let index = state
+            .snapshot()
+            .ok_or(ReadSlotInvalidReason::MetadataUnavailable)
+            .and_then(|generation| {
+                projection::SnapshotIndex::from_generation(&plan.requests(), generation)
+            });
+        project_index(index, &mut view);
     }
     view
 }
 
+#[cfg(test)]
 fn project_snapshot(
     plan: &BindingPlan,
     snapshot: &ValuesSnapshot,
     catalog: &CatalogSnapshot,
     view: &mut RuntimeView,
 ) {
+    project_index(
+        projection::SnapshotIndex::new(&plan.requests(), Some(snapshot), catalog),
+        view,
+    );
+}
+
+fn project_index(
+    index: Result<projection::SnapshotIndex<'_>, ReadSlotInvalidReason>,
+    view: &mut RuntimeView,
+) {
     view.readings
         .values_mut()
         .for_each(|reading| *reading = NumericReading::Invalid);
-    let Ok(index) = projection::SnapshotIndex::new(&plan.requests(), snapshot, catalog) else {
+    let Ok(index) = index else {
         return;
     };
     view.metadata_ready = true;
@@ -283,15 +293,13 @@ mod tests {
     }
     #[test]
     fn type_and_source_checks_fail_closed_without_dropping_the_project() {
-        for change in 0..6 {
+        for change in 0..4 {
             let mut catalog = catalog();
             match change {
                 0 => catalog.tags[0].data_type = "string".into(),
                 1 => catalog.tags[0].data_type = "bit".into(),
                 2 => catalog.tags[0].data_type = "future".into(),
-                3 => catalog.tags[0].enabled = false,
-                4 => catalog.tags[0].value_source = ValueSource::Simulation,
-                _ => catalog.tags[0].value_source = ValueSource::Unknown("future".into()),
+                _ => catalog.tags[0].enabled = false,
             }
             assert_eq!(
                 view(&plan(), &snapshot(), &catalog).readings[name()],

@@ -122,6 +122,7 @@ const corruptions: [string, (view: any) => void][] = [
   ["Bad cannot retain value", (v) => (v.slots[0].reading.quality = "bad")],
   ["unknown state", (v) => (v.slots[0].reading.state = "future")],
   ["unknown connection", (v) => (v.connection = "future")],
+  ["Unbound cannot retain value", (v) => (v.connection = "unbound")],
   ["non Live cannot retain value", (v) => (v.connection = "reconnecting")],
   ["resolved requires metadata", (v) => (v.metadataReady = false)],
   ["resolved requires provenance", (v) => (v.slots[0].provenance = null)],
@@ -343,4 +344,31 @@ it("keeps bool states independent per equipment and never retains false/true aft
     });
     expect(read(equipment.id).provenance).toBeUndefined();
   }
+});
+
+it("accepts tag waiting after live, removes old values, and rejects invalid Unbound diagnostics", () => {
+  const { session, read } = setup(fixtures[2]);
+  const waiting = structuredClone(
+    fixtures.find((fixture) => fixture.view.connection === "unbound")!.view,
+  );
+  session.receive(session.generation, fixtures[2].view);
+  expect(read().text).toBe("0");
+  expect(session.receive(session.generation, waiting).accepted).toBe(true);
+  expect(read().state).toBe("unresolved");
+  expect(read()).not.toHaveProperty("value");
+  expect(read().provenance).toBeUndefined();
+  for (const mutate of [
+    (v: any) => (v.metadataReady = false),
+    (v: any) => (v.slots[0].reading = { state: "disconnected" }),
+    (v: any) => (v.slots[0].provenance = fixtures[2].view.slots[0].provenance),
+  ]) {
+    const corrupt = structuredClone(waiting);
+    mutate(corrupt);
+    expect(session.receive(session.generation, corrupt).accepted).toBe(false);
+    expect(read().state).toBe("invalid");
+  }
+  expect(session.receive(session.generation, fixtures[2].view).accepted).toBe(
+    true,
+  );
+  expect(read().text).toBe("0");
 });
