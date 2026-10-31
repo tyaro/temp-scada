@@ -10,7 +10,11 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 ## 固定SDKへの追従（2026-11-01）
 
-[S7 SOAK中の計画](soak-independent-runtime-plan.md)のP1をローカル検証した。Industrial `v0.3.0-alpha.1`の完全revを固定し、Rust投影はSDKの同一世代snapshotを使用する。部分未解決・Unbound・値側source優先をSchema／TSと揃え、共通fixtureと両テーマのブラウザで確認した。全体CIは未確認。通常Designerの実Hub接続、読取Host（P2）、認証・正式Runtimeの完成ではない。
+[S7 SOAK中の計画](soak-independent-runtime-plan.md)のP1をローカル検証した。Industrial `v0.3.0-alpha.1`の完全revを固定し、Rust投影はSDKの同一世代snapshotを使用する。部分未解決・Unbound・値側source優先をSchema／TSと揃え、共通fixtureと両テーマのブラウザで確認した。[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41225435243)が成功し、PR #10でマージ済み。通常Designerの実Hub接続・認証・正式Runtimeの完成ではない。
+
+## Rust読取Host（P2、2026-11-01）
+
+[ReadHost](../design/runtime/read-host.md)をライブラリとして追加した。Textと機器slotを1つのSDK購読へ集約し、Project／接続先／要求の置換・停止で先に無値と新tokenを公開する。旧通知の拒否、取消・drop、SDK終端エラーをモックで確認し、Rust workspace68件とClippy／fmtが成功した。P2の全体CIはPRを参照。Tauri／HTTP transportと画面への接続はP3であり、通常Designerは引き続き実Hub未接続。
 
 ## 保存契約と基盤
 

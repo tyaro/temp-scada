@@ -183,7 +183,7 @@ pub struct ReadSlotView {
 }
 
 /// SDK更新ごとに全結果を作り直す。未割付を未接続やfalseへ変換しない。
-/// session世代の所有・旧task通知の破棄は将来のHostの責務。
+/// session世代の所有・旧task通知の破棄はReadHostの責務。
 pub fn read_slot_view(plan: &ReadSlotPlan, state: &TagClientState) -> ReadSlotView {
     let mut view = ReadSlotView::pending(
         plan,
@@ -204,7 +204,11 @@ pub fn read_slot_view(plan: &ReadSlotPlan, state: &TagClientState) -> ReadSlotVi
 }
 
 impl ReadSlotView {
-    fn pending(plan: &ReadSlotPlan, connection: String, last_error: Option<String>) -> Self {
+    pub(crate) fn pending(
+        plan: &ReadSlotPlan,
+        connection: String,
+        last_error: Option<String>,
+    ) -> Self {
         ReadSlotView {
             project_id: plan.project_id.clone(),
             project_revision: plan.project_revision,

@@ -4,6 +4,8 @@
 
 ## 次の実装順
 
+2026-11-01の進捗: P1はPR #10で全体CI成功・マージ済み。P2の[読取Host](../design/runtime/read-host.md)はRust実装・ローカル検証済み。全体CIの確定結果は各PRを参照し、次はP3のHostと表示sessionの配布・transport契約を設計する。通常Designerの実接続は未実装。
+
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 
 責務はHub＝現在値／書込み、SCADAサーバ＝警報評価／ACK／常時Action、Historian＝時系列記録／保持／検索／History APIと整理した。Historianは初期の同一プロセス同梱を許す論理境界とし、ChronoGazerの保存・検索・Trend資産を共有する。詳細とSOAK後の作業は同計画P5で確定する。

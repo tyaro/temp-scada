@@ -1,6 +1,6 @@
 # S7 SOAK中のSCADA読取開発計画
 
-2026-11-01（日本時間）。状態: **採用・P1ローカル完了／CI待ち**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
+2026-11-01（日本時間）。状態: **採用・P1マージ済み、P2実装・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
 
 ## 前提と責務
 
@@ -18,13 +18,13 @@
 
 各工程は詳細契約→実装→受入→保存の順に進める。P1から順に着手し、後続の未実装を提供済みと記載しない。
 
-| 工程                | 内容                                                     | 完了条件                                                                                                      | 状態                 |
-| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------- |
-| P1 固定SDKと投影    | rev更新、同一世代snapshot、部分解決、Unbound、値側source | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                                          | ローカル完了・CI待ち |
-| P2 読取Host         | Projectごとにhandle1つ。Textと機器slotの要求を集約       | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認                            | 未着手               |
-| P3 表示受入         | 数値Text・Symbol・機器小窓への読取更新                   | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMを同一mountで確認。実Hostと画面のtransportは明示設計後に接続 | 未着手               |
-| P4 Tag Browser      | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない                          | 未着手               |
-| P5 Historian／Trend | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない                      | 未着手               |
+| 工程                | 内容                                                     | 完了条件                                                                                                      | 状態                   |
+| ------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| P1 固定SDKと投影    | rev更新、同一世代snapshot、部分解決、Unbound、値側source | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                                          | 完了・PR #10マージ済み |
+| P2 読取Host         | Projectごとにhandle1つ。Textと機器slotの要求を集約       | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認                            | 実装・ローカル検証済み |
+| P3 表示受入         | 数値Text・Symbol・機器小窓への読取更新                   | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMを同一mountで確認。実Hostと画面のtransportは明示設計後に接続 | 未着手                 |
+| P4 Tag Browser      | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない                          | 未着手                 |
+| P5 Historian／Trend | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない                      | 未着手                 |
 
 ## P1の実装契約
 
@@ -79,4 +79,16 @@ P1の試験: 正常＋未作成の混在、全件未解決→追加→Live→削
 - 初回の認証拒否試験はSDKがshutdownにも終端エラーを返す契約を成功と誤期待して失敗した。拒否の保持を確認する期待へ修正した。ブラウザ試験は追加したUnboundの期待状態を既存disconnectedからunresolvedへ修正し、再実行で成功。アプリの拒否条件・timeout・retryは緩和していない。
 - S7環境・実PLC・実Hub・Windows・正式Hostの検証はしていない。独立レビューのエージェントは使用していない。全体CIはPRの最終HEADで確認する。
 
-次の工程はP2。P1の全体CI成功を確認した後、Text＋slotの要求を集約するHostの所有権・session・停止の契約から着手する。P2以降は未実装。
+P1は[全体CI 41225435243](https://github.com/tyaro/temp-scada/actions/runs/41225435243)の全7job成功後、[PR #10](https://github.com/tyaro/temp-scada/pull/10)でマージされた（`b8c2a98ad220ebcbcb86be549293eb5cbf677007`）。P2は下記。P3以降は未実装。
+
+## P2の実施結果（2026-11-01）
+
+[読取Hostの契約](../design/runtime/read-host.md)に従い、`ReadHost`をRustライブラリへ追加した。Textと機器slotの要求を集約し、1つのSDK handleとwatch投影taskを所有する。token照合とresetは同じwatch slotで直列化する。置換／停止の最初のawait前に無値を公開し、取消・dropでも旧通知を新sessionへ流さない。SDKの再接続・再解決は複製していない。
+
+- Rust workspace 68件成功（model35、runtime単体18、Host統合12、SDK投影3）。Clippy `-D warnings`、rustfmt成功。
+- Host統合試験は共通名の重複排除と別名の合算、複数context、空要求、同ID／revision、要求集合／接続先の置換、旧socketの終了、取消2段階、catalog待機中のdrop、Quality／切断／Unbound／認証拒否、shutdownエラー保持を含む。
+- Tokioは既存workspace依存をdevから通常依存へ移した。新規crate・依存version・SDK rev・Project形式は追加／変更していない。
+- TS／画面・正式transportを変更していないため、ローカルのブラウザHost接続試験は実施していない。全体CIの確定結果はP2のPRを参照する。
+- Industrial・S7環境へ接続／変更していない。実Hub・実PLC・Windows運用と通常Designerの実データ表示は未検証。
+
+次はP3。Host session変更とフロントsessionのresetの対応、Text／slot両DTOの配布、必要なtransportの責務を明示設計してから接続する。認証延期とローカル編集は維持する。
