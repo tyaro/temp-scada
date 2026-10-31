@@ -1,0 +1,4144 @@
+[
+  {
+    "name": "query-raw",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["series-a"],
+      "fromMs": 1000,
+      "toMs": 3000,
+      "mode": "raw",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "query-minmax",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["series-a"],
+      "fromMs": 1000,
+      "toMs": 3000,
+      "mode": "minmax",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "query-adjacent-next-window",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["series-a"],
+      "fromMs": 3000,
+      "toMs": 5000,
+      "mode": "raw",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "query-zero-width",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["series-a"],
+      "fromMs": 1000,
+      "toMs": 1000,
+      "mode": "raw",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "query-over-one-hour",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["series-a"],
+      "fromMs": 1000,
+      "toMs": 3601001,
+      "mode": "raw",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "query-product-budget",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["s1", "s2", "s3", "s4", "s5"],
+      "fromMs": 1000,
+      "toMs": 3000,
+      "mode": "raw",
+      "maxPointsPerSeries": 2000
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "query-duplicate-series",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["series-a", "series-a"],
+      "fromMs": 1000,
+      "toMs": 3000,
+      "mode": "raw",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "query-unsafe-time",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["series-a"],
+      "fromMs": 9007199254740992,
+      "toMs": 3000,
+      "mode": "raw",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "query-too-many-series",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"],
+      "fromMs": 1000,
+      "toMs": 3000,
+      "mode": "raw",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "query-unknown-mode",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["series-a"],
+      "fromMs": 1000,
+      "toMs": 3000,
+      "mode": "avg",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "query-secret-field",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["series-a"],
+      "fromMs": 1000,
+      "toMs": 3000,
+      "mode": "raw",
+      "maxPointsPerSeries": 20,
+      "apiKey": "fixture-only-not-a-secret"
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "query-unsupported-version",
+    "input": {
+      "version": 2,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["series-a"],
+      "fromMs": 1000,
+      "toMs": 3000,
+      "mode": "raw",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "sample-good-zero",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-good-false",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "bool",
+          "unit": null,
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": false,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-bad",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "bad",
+          "source": "real",
+          "value": null,
+          "reason": "bad"
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-stale",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "stale",
+          "source": "real",
+          "value": null,
+          "reason": "stale"
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-unknown-quality",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "unknown",
+          "source": "real",
+          "value": null,
+          "reason": "unknownQuality"
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-excluded-simulation",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "simulation"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "simulation",
+          "value": null,
+          "reason": "simulationExcluded"
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-excluded-derivedSimulation",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "derivedSimulation"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "derivedSimulation",
+          "value": null,
+          "reason": "simulationExcluded"
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-excluded-unknown",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "unknown"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "unknown",
+          "value": null,
+          "reason": "unknownSource"
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-sourceUnavailable",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": null,
+          "ingestedAtMs": 1000,
+          "quality": null,
+          "source": null,
+          "value": null,
+          "reason": "sourceUnavailable"
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-unresolved",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": null,
+          "ingestedAtMs": 1000,
+          "quality": null,
+          "source": null,
+          "value": null,
+          "reason": "unresolved"
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-identityPending",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": null,
+          "ingestedAtMs": 1000,
+          "quality": null,
+          "source": null,
+          "value": null,
+          "reason": "identityPending"
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-same-timestamp-two-records",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        },
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 2
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 2
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-clock-rollback",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 2000,
+          "sourceTimeMs": 2000,
+          "ingestedAtMs": 2000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        },
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 2
+          },
+          "clockEpoch": "clock-b",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 2
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-accepted-not-committed",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": null
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-partially-committed",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        },
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 2
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 2000,
+          "sourceTimeMs": 2000,
+          "ingestedAtMs": 2000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "identity-same-name-distinct-hubs",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        },
+        {
+          "seriesId": "series-b",
+          "hubInstanceId": "hub-b",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-b",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        },
+        {
+          "seriesId": "series-b",
+          "segmentId": "seg-b",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "identity-recreated-name-new-series",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        },
+        {
+          "seriesId": "series-b",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-b",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-b",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        },
+        {
+          "seriesId": "series-b",
+          "segmentId": "seg-b",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "identity-explicit-rename-segment",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        },
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Renamed",
+          "segmentId": "seg-b",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        },
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-b",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 2
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 2000,
+          "sourceTimeMs": 2000,
+          "ingestedAtMs": 2000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 2
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-good-without-source-time",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": null,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "sample-bad-retains-value",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "bad",
+          "source": "real",
+          "value": 0,
+          "reason": "bad"
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "sample-boolean-as-number",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "bool",
+          "unit": null,
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "sample-null-without-reason",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": null,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "sample-sim-value-leak",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "simulation"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "simulation",
+          "value": 5,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "sample-source-mismatch",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "db",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "sample-missing-segment",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "absent",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "sample-duplicate-record",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        },
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "sample-wrong-session",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "old-session",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "sample-sequence-regression",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 2
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        },
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "sample-commit-beyond-observed",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 2
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "identity-rebinds-series-to-other-hub",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        },
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-b",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-b",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        },
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-b",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 2
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 2
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "identity-duplicate-incarnation-under-new-series",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        },
+        {
+          "seriesId": "series-b",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-b",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        },
+        {
+          "seriesId": "series-b",
+          "segmentId": "seg-b",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "identity-period-too-fast",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 99,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "identity-name-too-long",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "identity-secret-field",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real",
+          "endpoint": "https://fixture.invalid"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "result-raw-lower-bound-inclusive",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-raw-upper-bound-exclusive",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 3000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-same-timestamp-distinct-records",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            },
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 2
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 2
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-clock-rollback-time-sorted",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 2
+              },
+              "clockEpoch": "clock-b",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            },
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 2000,
+              "sourceTimeMs": 2000,
+              "ingestedAtMs": 2000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 2
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-pending-flush",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [
+            {
+              "fromMs": 2000,
+              "toMs": 3000,
+              "reason": "pendingFlush"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-raw-beyond-watermark",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 2
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-raw-not-time-sorted",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 2000,
+              "sourceTimeMs": 2000,
+              "ingestedAtMs": 2000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            },
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 2
+              },
+              "clockEpoch": "clock-b",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 2
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-query-order-mismatch",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-b",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-point-budget",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 1
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            },
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 2
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-envelope",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-partial",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 1,
+              "state": "partial",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 2000,
+              "toMs": 3000,
+              "reason": "bad"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-gap-unrecorded",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "state": "gap",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "reason": "unrecorded"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-gap-expired",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "state": "gap",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "reason": "expired"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-mixed-segment",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": null,
+              "max": null,
+              "validCount": 3,
+              "invalidCount": 0,
+              "state": "mixedSegment",
+              "segmentId": null,
+              "source": null
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-bool-both-states",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 1,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-bool-midpoint",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0.5,
+              "max": 1,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-inverted-envelope",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 11,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-complete-with-coverage",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 2000,
+              "toMs": 3000,
+              "reason": "bad"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-mixed-with-value",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 1,
+              "validCount": 3,
+              "invalidCount": 0,
+              "state": "mixedSegment",
+              "segmentId": null,
+              "source": null
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-grid-does-not-cover-query",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 2000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-coverage-overlap",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 2500,
+              "reason": "bad"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 3000,
+              "reason": "stale"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-coverage-outside-query",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 1000,
+              "reason": "expired"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-all-unknown-is-ready",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "unknownSeries",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-service-unavailable",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "unavailable",
+      "snapshotId": null,
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "queryUnavailable",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-partial-unknown-and-unavailable",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a", "series-b"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "partial",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "unknownSeries",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        },
+        {
+          "seriesId": "series-b",
+          "status": "queryUnavailable",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-unknown-mislabeled-unavailable",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "unavailable",
+      "snapshotId": null,
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "unknownSeries",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-unavailable-mislabeled-ready",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "queryUnavailable",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-secret-extra-field",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          },
+          "databasePath": "/fixture/not-a-real-db"
+        }
+      ]
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "query-id-trailing-newline",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a\n",
+      "seriesIds": ["series-a"],
+      "fromMs": 1000,
+      "toMs": 3000,
+      "mode": "raw",
+      "maxPointsPerSeries": 20
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "identity-unicode-512-codepoints",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "identity-unicode-over-512-codepoints",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡🌡",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "schema"
+  },
+  {
+    "name": "query-exact-window-and-product-budget",
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "request-a",
+      "seriesIds": ["s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7"],
+      "fromMs": 1000,
+      "toMs": 3601000,
+      "mode": "raw",
+      "maxPointsPerSeries": 1000
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-good-true",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "bool",
+          "unit": null,
+          "periodMs": 1000,
+          "source": "real"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "real",
+          "value": true,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-good-computed",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "computed"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "computed",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-good-internal",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "internal"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "internal",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "sample-good-db",
+    "input": {
+      "version": 1,
+      "kind": "sampleBatch",
+      "sessionId": "session-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "hubInstanceId": "hub-a",
+          "incarnationId": "tag-life-a",
+          "externalName": "Plant.Temp",
+          "segmentId": "seg-a",
+          "valueType": "number",
+          "unit": "C",
+          "periodMs": 1000,
+          "source": "db"
+        }
+      ],
+      "samples": [
+        {
+          "seriesId": "series-a",
+          "segmentId": "seg-a",
+          "recordId": {
+            "sessionId": "session-a",
+            "sequence": 1
+          },
+          "clockEpoch": "clock-a",
+          "sampleTimeMs": 1000,
+          "sourceTimeMs": 1000,
+          "ingestedAtMs": 1000,
+          "quality": "good",
+          "source": "db",
+          "value": 0,
+          "reason": null
+        }
+      ],
+      "committedThrough": 1
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-cross-series-duplicate-incarnation",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a", "series-b"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "raw",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-a",
+              "segmentId": "seg-a",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        },
+        {
+          "seriesId": "series-b",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-b",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-b",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "series-b",
+              "segmentId": "seg-b",
+              "recordId": {
+                "sessionId": "session-a",
+                "sequence": 1
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 1000,
+              "ingestedAtMs": 1000,
+              "quality": "good",
+              "source": "real",
+              "value": 0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-single-sample-cannot-have-envelope",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 1,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-single-sample-equal-min-max",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 10,
+              "max": 10,
+              "validCount": 1,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-multiple-series-common-grid",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a", "series-b"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        },
+        {
+          "seriesId": "series-b",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-b",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-b",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-b",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-b",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-multiple-series-grid-mismatch",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a", "series-b"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        },
+        {
+          "seriesId": "series-b",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-b",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-b",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-b",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 2000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-b",
+              "source": "real"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "complete",
+              "segmentId": "seg-b",
+              "source": "real"
+            }
+          ],
+          "coverage": [],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  }
+]

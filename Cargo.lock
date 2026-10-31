@@ -1326,6 +1326,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "scada-historian"
+version = "0.35.0"
+dependencies = [
+ "jsonschema",
+ "serde_json",
+]
+
+[[package]]
 name = "scada-model"
 version = "0.35.0"
 dependencies = [

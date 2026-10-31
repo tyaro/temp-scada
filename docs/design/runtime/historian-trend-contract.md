@@ -1,6 +1,8 @@
 # Historian／Trendの契約
 
-2026-11-01（日本時間）。状態: **P5の採用設計・実装前**。ユーザー指定によりAstraが主設計を担当した。[SOAK中の開発計画](../../project/soak-independent-runtime-plan.md)のP5を具体化する。[固定sourceの調査と共通利用](../../reviews/chronogazer-historian-reuse.md)を根拠とし、以下の「採用」は今後の実装契約を意味する。共有crateの切出し、Historyサービス、Trend画面の提供完了を意味しない。
+2026-11-01（日本時間）。状態: **P5はPR #14でマージ済み。履歴サービスは未実装**。ユーザー指定によりAstraが主設計を担当した。[SOAK中の開発計画](../../project/soak-independent-runtime-plan.md)のP5を具体化する。[固定sourceの調査と共通利用](../../reviews/chronogazer-historian-reuse.md)を根拠とし、以下の「採用」は今後の実装契約を意味する。共有crateの切出し、Historyサービス、Trend画面の提供完了を意味しない。
+
+H1の具体契約は[版付きJSONとfixture](historian-contract-fixtures.md)、保存方式の比較・復旧設計は[H2に向けた保存決定](historian-storage-decision.md)へ進めた。
 
 ## 1. 基準と今回の範囲
 

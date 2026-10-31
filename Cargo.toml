@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/scada-model", "crates/scada-runtime"]
+members = ["crates/scada-model", "crates/scada-runtime", "crates/scada-historian"]
 
 [workspace.package]
 version = "0.35.0"
