@@ -132,3 +132,7 @@ DELETE は空き page を再利用可能にする処理で、DB file の縮小�
 Rust workspace174件（writer13単体・expired5単体・新fixture統合1関数）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,401件、型検査0エラー・0警告、build、関連Chromium5件が成功した。6ケースを実SQLite・TS・ブラウザで共有し、COMMIT前後5境界のprocess終了、snapshot競合、safe整数端点、上限、再送、破損と取消・panic後cleanupを確認した。
 
 Astraの実装レビューで、panic中のcleanup失敗でもwriterを直接poisonする規律、各SQLのVM予算課金、必須singletonと最新operationの照合、対象receiptの`begin < receipt < end <= snapshot`検査を修正・確認した。最終レビューに必須修正はない。全体CIはPRで確認する。buildの既知chunkサイズ警告は残る。
+
+## H2c2の容量診断への接続
+
+次の[H2c2](historian-maintenance.md)でDB/WAL診断と明示PASSIVE checkpointを追加した。trim後のfree pageと実file長、reader pinによる未完了を確認できる。保持規則・format 3・receipt本文残存の意味は維持し、物理縮小・自動保持・disk-full運用は後続とする。

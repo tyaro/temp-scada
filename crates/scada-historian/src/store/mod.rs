@@ -3,6 +3,7 @@
 mod types;
 pub use types::*;
 pub mod evidence;
+pub mod maintenance;
 pub mod query;
 pub mod retention;
 
@@ -30,6 +31,7 @@ pub enum StoreError {
     SessionInactive,
     NeedsReopen,
     RetentionLimit,
+    MaintenanceLimit,
     RetentionCutoff,
     CorruptData,
     Control(query::QueryError),
@@ -54,6 +56,7 @@ impl fmt::Display for StoreError {
                 Self::Conflict => "immutable payload conflict",
                 Self::SessionInactive => "session inactive",
                 Self::Sequence { .. } => "non-contiguous sequence",
+                Self::MaintenanceLimit => "passive checkpoint WAL limit exceeded",
                 Self::RetentionLimit => "retention tick limit exceeded",
                 Self::RetentionCutoff => "sample precedes retention cutoff",
                 Self::CorruptData => "inconsistent stored data",
