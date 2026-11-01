@@ -493,3 +493,13 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 `scada-historian/src/store/types.rs`の公開`SessionSpec::validate`が既存内部検証へ委譲する。SDKの依存方向はruntime→historianとし、HistorianコアにSDK／tokioを持ち込まない。DB format 5・H1・周期計算は維持する。
 
 `recorder_source/tests.rs`の8単体がpin・epoch・Quality／source・値の境界とsnapshot上限を担当する。`crates/scada-runtime/tests/recorder_source.rs`の9統合がloopback Hub→SDK→spawn_blocking上のH3a→実SQLite、exact replayによるepoch保存、raw／minmax、未解決／切断／再接続、source変更、UI寿命独立、Unauthorized・shutdown取消／再呼出し・Dropを検証する。[設計・SDKの限界・後続](../design/runtime/historian-sdk-source.md)を参照する。
+
+## Historianの単一group実行Host（H3c）
+
+`crates/scada-runtime/src/recording_host.rs`がwriterと一つのblocking JoinHandleを所有し、start／request_stop／取消安全join／take_storeを提供する。開始は受理、FinishedUnjoinedは未join、Joinedは結果付きのidleとして区別する。Dropは取消要求だけで、blocking workerの完了・lock即時解放を偽称しない。
+
+`recording_host/types.rs`がoptions、opaque run token、phase、sanitized progress／status、詳細completionを所有する。`worker.rs`がH3a反復・専用SDK shutdown・writer返却を担当する。status更新は同runへ限定し、StoppingをRunningで上書きしない。最新観測／各receiptを固定個数で残し、観測とreceiptが別stepである可能性を維持する。詳細エラーを監視statusへ流さない。
+
+`scada-historian/src/recorder/types.rs`のRecorderConfig検証と`store/evidence.rs`のPlanRef検証を公開し、既存start／TimedStartでも同じ検証を共用する。保存形式と位相固定周期は変更しない。
+
+`recording_host/tests.rs`の6単体が制御gate、取消・Drop中writer所有、panic／Faulted、開始前取消、旧run／phase、receiptと診断を担当する。`crates/scada-runtime/tests/recording_host.rs`の7統合がcurrent-thread SDK→Host→実SQLite、有限終了／raw照会、再join／差替え、開始／SDK終了失敗を検証する。既存source統合と共有するloopback fixtureは`tests/support/recorder_hub.rs`。実FULL／時計異常はH3aから継承し、Host固有試験の範囲と[後続](../design/runtime/historian-recording-host.md)を区別する。

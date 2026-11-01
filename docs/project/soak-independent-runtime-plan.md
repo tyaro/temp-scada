@@ -29,7 +29,8 @@
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
 | H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c10実装済み・運用受入残り  |
 | H3a 位相固定recorder  | 単一groupをabsolute deadlineで周期保存                            | 仮想1時間3600枠と実SQLite commit、欠測・停止を検証                                       | PR #31マージ・全体CI成功     |
-| H3b 専用SDK入力       | UIと独立した固定SDK ownerから同世代snapshotを取り込む             | mock Hub→SDK→recorder→実SQLite、無値・再接続・identity変更停止を検証                     | ローカル実装・受入済み       |
+| H3b 専用SDK入力       | UIと独立した固定SDK ownerから同世代snapshotを取り込む             | mock Hub→SDK→recorder→実SQLite、無値・再接続・identity変更停止を検証                     | PR #32マージ・全体CI成功     |
+| H3c 単一group Host    | 一つのwriterと専用SDK入力をblocking workerで実行                  | 開始・停止・取消安全join、差替え、writer所有・Drop／panicを検証                          | ローカル実装・受入済み       |
 
 ## P1の実装契約
 
@@ -361,3 +362,15 @@ H3aは[PR #31](https://github.com/tyaro/temp-scada/pull/31)でマージ済み（
 Rust347件（新規8単体・9統合）・Clippy／rustfmt・関連Chromium6件が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。DB format 5・H1・外部依存・SDK・Project・Banto・通常Appを維持し、workspace依存だけをruntime→historianへ追加した。
 
 次は記録計画の配布・複数group／queue、保持協調と時計domain再開、製品History／Trendへの接続。catalog変更時の安全な再承認・segment遷移、永続slot台帳、正式host、実媒体I/O・receipt GC・暦日timezoneも残る。SDKのlatest取得やREST由来sourceの限界を維持し、全通知・実S7で異なる実測3600件を保証しない。上流・S7・実環境への接続はない。
+
+## H3cの実装と残り（2026-11-01）
+
+H3bは[PR #32](https://github.com/tyaro/temp-scada/pull/32)でマージ済み（`7a7e45cb74de93f078a669f52189ad1ed0635969`）、[全体CI 41304864071](https://github.com/tyaro/temp-scada/actions/runs/41304864071)成功。Astra主設計の[単一group Host](../design/runtime/historian-recording-host.md)を実装した。
+
+- SDK executorと同期記録workerを分離し、明示start／request_stop／join／take_storeで一つのwriterを管理する。周期計算はH3aへ委ね、反復末尾に相対sleepを追加しない。
+- 未joinならBusyを維持し、join取消・timeoutでもhandle／writerを失わない。新sessionの開始は旧workerのjoin後だけにする。
+- bounded latest statusと詳細completionを分ける。Dropは取消要求であり、workerが持つlockを即時解放・正常joinしたとは扱わない。panicはFaultedで外側の明示復旧へ返す。
+
+Rust360件（新規6単体・7統合）・Clippy／rustfmt・関連Chromium6件が成功。共有mock Hub→Host→実SQLite・raw、SDK稼働、差替え・取消・開始失敗・終了失敗・Drop／panicを検証し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+次は保持との停止／再開協調と時計domain再確認、製品計画の配布・複数group／queue、History／共通Trendへの接続。単一active session制約、永続slot台帳、実媒体I/O／receipt GC・暦日timezoneは残る。DB format 5・H1・外部依存・固定SDK・Project・Banto・通常Appを維持し、上流・S7・実環境へ接続していない。

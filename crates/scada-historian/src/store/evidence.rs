@@ -14,6 +14,16 @@ pub struct PlanRef {
     pub revision: u64,
 }
 
+impl PlanRef {
+    /// Validate a plan reference without writing recording evidence.
+    pub fn validate(&self) -> StoreResult<()> {
+        if !id(&self.plan_id) || !(1..=MAX_SAFE).contains(&self.revision) {
+            return invalid("invalid recording plan reference");
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ClockStamp {
@@ -71,14 +81,10 @@ fn safe_time(value: i64) -> bool {
 }
 impl TimedStart {
     pub(super) fn validate(&self) -> StoreResult<()> {
-        if !id(&self.clock_epoch)
-            || !safe_time(self.at_ms)
-            || !id(&self.plan.plan_id)
-            || !(1..=MAX_SAFE).contains(&self.plan.revision)
-        {
+        if !id(&self.clock_epoch) || !safe_time(self.at_ms) {
             return invalid("invalid recording start evidence");
         }
-        Ok(())
+        self.plan.validate()
     }
 }
 impl ClockStamp {

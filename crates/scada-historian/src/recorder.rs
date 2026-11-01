@@ -23,26 +23,10 @@ pub struct Recorder {
 impl Recorder {
     pub fn start(
         store: &mut SqliteStore,
-        mut config: RecorderConfig,
+        config: RecorderConfig,
         clock: &mut impl RecorderClock,
     ) -> Result<Self, RecorderStartError> {
-        config.session = config
-            .session
-            .validated()
-            .map_err(RecorderStartError::Store)?;
-        if !(100..=3_600_000).contains(&config.period_ms)
-            || config
-                .session
-                .members
-                .iter()
-                .any(|m| m.period_ms != config.period_ms)
-            || config
-                .slot_count
-                .is_some_and(|n| !(1..=MAX_SAFE).contains(&n))
-            || config.max_clock_skew_ms > MAX_SAFE
-        {
-            return Err(RecorderStartError::InvalidConfig);
-        }
+        let config = config.validated()?;
         if store
             .session_status(&config.session.session_id)
             .map_err(RecorderStartError::Store)?

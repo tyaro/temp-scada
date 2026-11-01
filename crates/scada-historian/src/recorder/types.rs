@@ -12,6 +12,36 @@ pub struct RecorderConfig {
     pub slot_count: Option<u64>,
     pub max_clock_skew_ms: u64,
 }
+
+impl RecorderConfig {
+    /// Check static configuration before starting a source or database session.
+    /// Clock horizon and current store state are checked by Recorder::start.
+    pub fn validate(&self) -> Result<(), RecorderStartError> {
+        self.clone().validated().map(|_| ())
+    }
+
+    pub(super) fn validated(mut self) -> Result<Self, RecorderStartError> {
+        self.session = self
+            .session
+            .validated()
+            .map_err(RecorderStartError::Store)?;
+        self.plan.validate().map_err(RecorderStartError::Store)?;
+        if !(100..=3_600_000).contains(&self.period_ms)
+            || self
+                .session
+                .members
+                .iter()
+                .any(|m| m.period_ms != self.period_ms)
+            || self
+                .slot_count
+                .is_some_and(|n| !(1..=crate::store::MAX_SAFE).contains(&n))
+            || self.max_clock_skew_ms > crate::store::MAX_SAFE
+        {
+            return Err(RecorderStartError::InvalidConfig);
+        }
+        Ok(self)
+    }
+}
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClockReading {
     pub monotonic_ms: u64,
