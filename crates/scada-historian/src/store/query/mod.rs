@@ -1,5 +1,6 @@
 //! Bounded raw and min/max snapshot queries without inferred recording coverage.
 mod control;
+mod coverage;
 mod minmax;
 pub use control::{CancellationToken, QueryControl, QueryLimits};
 
@@ -27,6 +28,8 @@ pub enum QueryError {
     TooManyPoints,
     MetadataLimit,
     MetadataAmbiguous,
+    EvidenceLimit,
+    CoverageLimit,
     CorruptData,
     Database,
     ReaderUnusable,
@@ -43,10 +46,12 @@ impl fmt::Display for QueryError {
                 Self::Cancelled => "cancelled",
                 Self::Deadline => "deadline exceeded",
                 Self::WorkLimit => "work limit exceeded",
-                Self::ByteLimit => "result byte limit exceeded",
+                Self::ByteLimit => "query byte limit exceeded",
                 Self::TooManyPoints => "raw point limit exceeded",
                 Self::MetadataLimit => "metadata limit exceeded",
                 Self::MetadataAmbiguous => "empty bin metadata cannot be determined",
+                Self::EvidenceLimit => "recording evidence limit exceeded",
+                Self::CoverageLimit => "coverage interval limit exceeded",
                 Self::CorruptData => "inconsistent stored data",
                 Self::Database => "database failure",
                 Self::ReaderUnusable => "reader must be reopened",
@@ -319,9 +324,10 @@ fn series_result(
     } else {
         return Err(QueryError::CorruptData);
     };
+    let coverage = coverage::project(connection, id, query, budget)?;
     Ok(json!({
         "seriesId": id, "status": "ready", "segments": segments, "raw": raw, "bins": bins,
-        "coverage": [{"fromMs": query["fromMs"], "toMs": query["toMs"], "reason": "unknownCoverage"}],
+        "coverage": coverage,
         "watermark": watermark
     }))
 }

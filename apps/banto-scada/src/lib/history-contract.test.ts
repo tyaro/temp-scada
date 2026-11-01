@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import cases from "../../../../examples/history-contract-cases.json";
 import queryCases from "../../../../examples/history-query-cases.json";
 import minmaxCases from "../../../../examples/history-minmax-cases.json";
+import coverageCases from "../../../../examples/history-coverage-cases.json";
 import {
   parseHistoryContract,
   validateHistoryContract,
@@ -23,6 +24,11 @@ it.each(cases)("shared Rust contract fixture: $name", (fixture) => {
 });
 
 it.each(queryCases)("SQLite query result fixture: $name", (fixture) => {
+  expect(validateHistoryContract(fixture.expected)).toBe("accepted");
+  expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
+});
+
+it.each(coverageCases)("SQLite coverage result fixture: $name", (fixture) => {
   expect(validateHistoryContract(fixture.expected)).toBe("accepted");
   expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
 });

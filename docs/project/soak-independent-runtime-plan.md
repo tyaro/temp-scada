@@ -1,6 +1,6 @@
 # S7 SOAK中のSCADA読取開発計画
 
-2026-11-01（日本時間）。状態: **採用・P1／P2／P3a／P4マージ済み、P5マージ済み、H1マージ済み、H2aマージ済み、H2b1マージ済み、H2b2マージ済み、H2b3記録証拠・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
+2026-11-01（日本時間）。状態: **採用・P1／P2／P3a／P4マージ済み、P5マージ済み、H1マージ済み、H2aマージ済み、H2b1マージ済み、H2b2マージ済み、H2b3マージ済み、H2b4 coverage投影・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
 
 ## 前提と責務
 
@@ -27,7 +27,7 @@
 | P4 Tag Browser        | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
 | P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
-| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2b3実装済み・後続未着手     |
+| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2b4実装済み・H2c未着手      |
 
 ## P1の実装契約
 
@@ -148,11 +148,11 @@ H1の最終ローカル検証: Rust workspace77件（H1は2 test関数で110 fix
 
 H1は[全体CI 41255744026](https://github.com/tyaro/temp-scada/actions/runs/41255744026)の全7job成功後、[PR #15](https://github.com/tyaro/temp-scada/pull/15)でマージ済み（`3ae2675e2054928f93911b833ebd64f7dc06f5e3`）。Astraが[H2aの詳細契約](../design/runtime/historian-atomic-store.md)を主設計し、H2を次の区切りへ具体化した。
 
-| 区切り               | 内容と受入                                                                                                                                                                       | 状態                     |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| H2a 原子append       | 同周期の固定session全memberを1tickで保存。identity・source世代・型付き値・receipt・sequenceの原子性、冪等再送、プロセス排他、終了後の再送、途中終了後のinterruptedを一時DBで確認 | 完了・PR #16マージ済み   |
-| H2b 検索snapshot     | 同一snapshotからmetadata・raw／minmax・coverage・watermarkを投影しH1へ適合。未記録／中断の説明、検索の仕事量・取消・資源寿命を検証                                               | H2b3実装済み・後続未着手 |
-| H2c 保持・容量・復旧 | expired根拠と削除の原子性、再送での復活防止、異常時刻、容量・WAL・checkpoint、障害回復の残りを検証                                                                               | 未着手                   |
+| 区切り               | 内容と受入                                                                                                                                                                       | 状態                    |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| H2a 原子append       | 同周期の固定session全memberを1tickで保存。identity・source世代・型付き値・receipt・sequenceの原子性、冪等再送、プロセス排他、終了後の再送、途中終了後のinterruptedを一時DBで確認 | 完了・PR #16マージ済み  |
+| H2b 検索snapshot     | 同一snapshotからmetadata・raw／minmax・coverage・watermarkを投影しH1へ適合。未記録／中断の説明、検索の仕事量・取消・資源寿命を検証                                               | H2b4実装済み・H2c未着手 |
+| H2c 保持・容量・復旧 | expired根拠と削除の原子性、再送での復活防止、異常時刻、容量・WAL・checkpoint、障害回復の残りを検証                                                                               | 未着手                  |
 
 H2aは専用directoryへ固定DBとwriter lockを作る同期ライブラリで、通常Appからは呼ばない。既存directoryを初期化せず、既存format／store・deployment IDを照合する。query・retention・常時recorderや製品transportへ同時接続しない。全memberの観測（無値理由も含む）が揃った連続tickだけをcommitし、入力watermarkは受け取らない。未終了sessionは再openでinterruptedにするが、失われた時刻・件数やcoverageを捏造しない。
 
@@ -203,3 +203,13 @@ DB format 2へ明示更新し、format 1をsilent migrationしない。新規一
 ローカル検証: Rust workspace140件、Clippy `-D warnings`／rustfmt、関連Chromium3件が成功。新規14 test関数（child worker含む）でplan不変性、再送と終了後照会、時刻逆行／epoch、gapとrecordの双方向矛盾防止、隣接・半開端点、別domainの同UTC、safe整数端点、SQL失敗の全rollback／NeedsReopen、COMMIT前後7箇所のprocess終了、旧DB非変更を確認。既存H1／raw／minmax fixtureを維持した。画面・TS実装は変更していない。全体CIはPRで確認する。
 
 次はcoverage投影。保存した局所gapをseries全域の欠測へ直結せず、全session／clock domain・raw／bin・計画と同じsnapshotで照合し、根拠のない部分はunknownCoverageとして残す。その後H2cでexpiredと削除の原子性・復活防止・異常時刻・容量／WAL／checkpoint・復旧を進める。H2全体・常時recorder・製品History API・UI接続は未完了。
+
+## H2b4の実装と残り（2026-11-01）
+
+H2b3は[PR #19](https://github.com/tyaro/temp-scada/pull/19)でマージ済み（`b804257ac4f655aeab25bb50a1f0233245ca3af8`）、[全体CI 41272492900](https://github.com/tyaro/temp-scada/actions/runs/41272492900)全7job成功。Astra主設計の[coverage投影](../design/runtime/historian-coverage-projection.md)を実装した。以下が今回の採用範囲である。
+
+- raw／minmaxと同一snapshotでsession・plan・gapを検証し、他domainが記録し得る期間を除外して明示samplingMissed／storageLossを公開する。終了不明sessionをfrontierで切らず、untimedがあれば全域unknownCoverageとする。
+- session最大256／候補gap1024と最終coverage256の超過をtyped errorで拒否する。参照欠落・plan／永久descriptor不一致・残存欠測内のGood／無値recordを破損として拒否する。
+- Rust155件、TS1,395件、型検査・build・Clippy／rustfmt、関連Chromium4件が成功。6共有fixture、snapshot競合、safe整数端点、上限、破損・取消とcleanupを確認し、Astraの再レビューを完了した。全体CIはPRで確認する。
+
+DB format 2・H1 JSON v1・依存・SDK・Project・Bantoは維持。停止・expired・pendingFlushや全変化記録を推測しない。通常App・上流・S7・実環境への接続はない。次はH2cの保持削除とexpired根拠の原子性・再送による復活防止・異常時刻・容量／WAL／checkpoint・障害復旧を詳細設計する。H2全体、常時recorder、製品History APIとTrend画面は未完了。
