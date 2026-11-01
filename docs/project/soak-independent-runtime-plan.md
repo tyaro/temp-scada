@@ -1,6 +1,6 @@
 # S7 SOAK中のSCADA読取開発計画
 
-2026-11-01（日本時間）。状態: **採用・P1／P2／P3a／P4マージ済み、P5マージ済み、H1マージ済み、H2a原子保存コア・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
+2026-11-01（日本時間）。状態: **採用・P1／P2／P3a／P4マージ済み、P5マージ済み、H1マージ済み、H2aマージ済み、H2b1 raw検索・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
 
 ## 前提と責務
 
@@ -27,7 +27,7 @@
 | P4 Tag Browser        | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
 | P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
-| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2a実装済み・後続未着手      |
+| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2b1実装済み・後続未着手     |
 
 ## P1の実装契約
 
@@ -148,14 +148,31 @@ H1の最終ローカル検証: Rust workspace77件（H1は2 test関数で110 fix
 
 H1は[全体CI 41255744026](https://github.com/tyaro/temp-scada/actions/runs/41255744026)の全7job成功後、[PR #15](https://github.com/tyaro/temp-scada/pull/15)でマージ済み（`3ae2675e2054928f93911b833ebd64f7dc06f5e3`）。Astraが[H2aの詳細契約](../design/runtime/historian-atomic-store.md)を主設計し、H2を次の区切りへ具体化した。
 
-| 区切り               | 内容と受入                                                                                                                                                                       | 状態                   |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| H2a 原子append       | 同周期の固定session全memberを1tickで保存。identity・source世代・型付き値・receipt・sequenceの原子性、冪等再送、プロセス排他、終了後の再送、途中終了後のinterruptedを一時DBで確認 | 実装・ローカル検証済み |
-| H2b 検索snapshot     | 同一snapshotからmetadata・raw／minmax・coverage・watermarkを投影しH1へ適合。未記録／中断の説明、検索の仕事量・取消・資源寿命を検証                                               | 未着手                 |
-| H2c 保持・容量・復旧 | expired根拠と削除の原子性、再送での復活防止、異常時刻、容量・WAL・checkpoint、障害回復の残りを検証                                                                               | 未着手                 |
+| 区切り               | 内容と受入                                                                                                                                                                       | 状態                     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| H2a 原子append       | 同周期の固定session全memberを1tickで保存。identity・source世代・型付き値・receipt・sequenceの原子性、冪等再送、プロセス排他、終了後の再送、途中終了後のinterruptedを一時DBで確認 | 完了・PR #16マージ済み   |
+| H2b 検索snapshot     | 同一snapshotからmetadata・raw／minmax・coverage・watermarkを投影しH1へ適合。未記録／中断の説明、検索の仕事量・取消・資源寿命を検証                                               | H2b1実装済み・後続未着手 |
+| H2c 保持・容量・復旧 | expired根拠と削除の原子性、再送での復活防止、異常時刻、容量・WAL・checkpoint、障害回復の残りを検証                                                                               | 未着手                   |
 
 H2aは専用directoryへ固定DBとwriter lockを作る同期ライブラリで、通常Appからは呼ばない。既存directoryを初期化せず、既存format／store・deployment IDを照合する。query・retention・常時recorderや製品transportへ同時接続しない。全memberの観測（無値理由も含む）が揃った連続tickだけをcommitし、入力watermarkは受け取らない。未終了sessionは再openでinterruptedにするが、失われた時刻・件数やcoverageを捏造しない。
 
 検証: Rust workspace96件（H2a19 test関数、child worker含む）、Clippy `-D warnings`、rustfmt成功。SQLiteの途中4境界で子プロセスを終了すると未commit tick全体が消え、COMMIT直後の終了では同payload再送が同じreceiptを返す。SQL失敗後は再openまで追加writeを拒否する。source世代u64の2^53境界・最大値、型付き0／false、同時刻別record、時計逆行、同Hub世代混在拒否、別Hub世代差、symlink拒否・2プロセス排他も確認。H1の110 fixtureを維持した。画面変更がないため新しいブラウザ試験は追加しない。全体CIはPRで確認する。
 
 SQLite依存追加は別commitで確認し、rusqlite 0.41.1のbundled build（既定feature無効、libsqlite3-sys 0.39.1）を固定した。既存crate version・固定SDK・Project0.35.0・Banto6.9.0を維持し、上流・S7・実DB／設定へアクセスしていない。媒体故障・電源断・Windows実機、queryとの競合やretentionはH2aのprocess終了試験では未検証。
+
+## H2b1の実装と残り（2026-11-01）
+
+H2aは[PR #16](https://github.com/tyaro/temp-scada/pull/16)でマージ済み（`45105ab0c95d6d0482f7f99c738b46e49eab89cc`）、[全体CI 41264959997](https://github.com/tyaro/temp-scada/actions/runs/41264959997)全7job成功。Astraが[H2b1](../design/runtime/historian-query-snapshot.md)を主設計し、保存コアと別のREAD_ONLY接続でraw検索を実装した。最初のstore_meta読取でsnapshotを固定し、全系列のdescriptor・raw・watermarkを同じtransactionから返す。
+
+H2aには時刻付き計画、停止／保持削除や未commitキューの永続根拠がないため、要求全域をunknownCoverageとする。保存点や無値理由はそのまま返すが、unrecorded／expired／pendingFlush／recorderStopped等の区間を推測で作らない。minmaxは空binのsegment根拠も必要になるためH2b2に分離し、UnsupportedModeと明示する。
+
+| 区切り               | 内容と受入                                                                                                                                  | 状態                   |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| H2b1 raw検索         | snapshot内で型・metadata・安定順・直近commitを維持。2reader上限、VM／decode／bytes／期限と取消・終了までの資源所有。SQLite出力の共有fixture | 実装・ローカル検証済み |
+| H2b2 minmax          | 共通grid、count・包絡、型／source／clockEpoch混在、空binに適用できるmetadataの根拠を設計・試験                                              | 未着手                 |
+| 確定coverage         | 時刻付き計画と停止・中断・未commit等の根拠を永続化し、raw／binと矛盾しないcoverageを生成。現unknownCoverageからの移行を明示                 | 未着手                 |
+| H2c 保持・容量・復旧 | expired根拠と削除の原子性、復活防止、異常時刻、容量・WAL・checkpoint、障害回復の残り                                                        | 未着手                 |
+
+ローカル検証: Rust workspace112件、Clippy `-D warnings`／rustfmt、TS114ファイル・1,383件、型検査0エラー・0警告、build、関連Chromium2件が成功。新しい15単体試験でsnapshot中のappend／session切替、未commit非公開、同時刻・時計逆行、metadataと点数上限、VM／行／bytes、取消・deadline、cleanup失敗とpanic、2readerとwriter lock寿命を確認した。実SQLite出力4ケースをRustの1統合test関数とTS／ブラウザで共有し、H1の110 fixtureも維持する。buildの既知chunkサイズ警告は残る。全体CIはPRで確認する。
+
+rusqliteは既存0.41.1へhooksを追加し、snapshot ID用に既存lockのuuid 1.28.0をv4で直接利用する。新しいpackage／依存versionは追加せず、固定SDK・DB format 1・H1 JSON v1・Project0.35.0・Banto6.9.0を維持。上流・実環境・通常Appへの接続はない。VM予算は保守的な計上であり、OS I/Oの厳密な時間制限や実運用規模の性能・容量を保証するものではない。

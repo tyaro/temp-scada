@@ -1,10 +1,13 @@
-//! H2a fixed-group atomic append core. Not a recorder or a History API.
+//! Synchronous atomic append core and bounded raw snapshot reader.
+//! No recorder or product History API is connected.
 mod types;
 pub use types::*;
+pub mod query;
 
 use std::fmt;
 use std::fs::{self, File, OpenOptions};
 use std::path::{Path, PathBuf};
+use std::sync::{atomic::AtomicUsize, Arc};
 use std::time::Duration;
 
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension, Transaction};
@@ -78,8 +81,23 @@ fn invalid<T>(message: &'static str) -> StoreResult<T> {
 /// Owns a dedicated local directory. Connections close before the OS lock drops.
 pub struct SqliteStore {
     connection: Connection,
-    _writer_lock: File,
+    ownership: Arc<WriterOwnership>,
+    database_path: PathBuf,
     needs_reopen: bool,
+}
+
+struct WriterOwnership {
+    _writer_lock: File,
+    readers: AtomicUsize,
+}
+
+impl WriterOwnership {
+    fn new(file: File) -> Arc<Self> {
+        Arc::new(Self {
+            _writer_lock: file,
+            readers: AtomicUsize::new(0),
+        })
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -114,7 +132,8 @@ impl SqliteStore {
         tx.commit()?;
         Ok(Self {
             connection,
-            _writer_lock: writer_lock,
+            ownership: WriterOwnership::new(writer_lock),
+            database_path: path,
             needs_reopen: false,
         })
     }
@@ -170,7 +189,8 @@ impl SqliteStore {
         tx.commit()?;
         Ok(Self {
             connection,
-            _writer_lock: writer_lock,
+            ownership: WriterOwnership::new(writer_lock),
+            database_path: path,
             needs_reopen: false,
         })
     }
@@ -493,5 +513,7 @@ fn status(connection: &Connection, session_id: &str) -> StoreResult<Option<Sessi
     .transpose()
 }
 
+#[cfg(test)]
+mod test_support;
 #[cfg(test)]
 mod tests;

@@ -38,6 +38,12 @@ H1は[PR #15](https://github.com/tyaro/temp-scada/pull/15)でマージ済み（`
 
 SQLite driverはrusqlite 0.41.1（bundled、既定feature無効）、libsqlite3-sys 0.39.1をlockへ追加。既存依存version・SDK・Project・Bantoは維持。Rust workspace96件（保存コア19 test関数、child worker含む）、Clippy・rustfmt成功。子プロセスをCOMMIT前4境界／COMMIT直後に終了し、全rollback／receipt再取得を確認した。媒体I/O障害・停電・Windows運用を保証する試験ではない。通常App・実Hub・Industrialには未接続。検索snapshot・coverage生成・保持・容量・常時記録は未実装で、H2全体は継続中。
 
+## Historianのraw snapshot検索（H2b1、2026-11-01）
+
+H2aは[PR #16](https://github.com/tyaro/temp-scada/pull/16)でマージ済み（`45105ab0c95d6d0482f7f99c738b46e49eab89cc`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41264959997)は全7job成功。Astra主設計の[H2b1](../design/runtime/historian-query-snapshot.md)に従い、ownedな読取専用接続からrawを同一snapshotで検索する。半開区間・安定順・型・過去metadata・直近sessionのcommit位置を維持し、既知系列には要求全域のunknownCoverageを返す。記録・欠測の連続性は推測しない。reader最大2個、期限・VM・decode行数・出力bytesを制限し、上限超過や取消を途中のreadyへ変換しない。
+
+Rust workspace112件（H2b1単体15件と共通検索fixture4ケースを確認する1関数を追加）、TS114ファイル・1,383件、型検査0エラー・0警告、build、Clippy・rustfmt、関連Chromium2件成功。保存中の未commitデータ非公開、append／session切替とのsnapshot競合、取消・SQL中断・cleanup失敗・panic後の接続終了／再利用、所有の保持を一時DBで確認した。共通fixtureはH1の110件に加え、実SQLite出力4ケースをRust／TS／ブラウザで照合する。minmax、時刻付き計画と確定coverage、保持・容量、常時recorder、公開Historyサービス／UI接続は後続で、H2全体は継続中。
+
 ## 保存契約と基盤
 
 | 項目       | 現在の契約                                                                                                                              |
