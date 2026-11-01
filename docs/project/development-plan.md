@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a／H3bはPR #10〜#32で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H3c 単一group Host](../design/runtime/historian-recording-host.md)をローカル実装・検証した。専用SDKと位相固定recorderを一つのblocking workerで実行し、明示開始・停止・取消安全なjoin・session差替え・writer返却を提供する。mock Hub→SDK→Host→実SQLiteとraw照会、SDK executorの稼働と所有境界を検証した。DB format 5・H1と1秒周期の累積ずれ対策を維持する。次は保持協調と時計domain再開、製品計画の配布・複数group／queue、History／共通Trendの接続を進める。製品認証・transport、暦日timezone、receipt GC・実媒体I/O／checkpoint障害、H2／H3全体・正式Runtimeは未完了。
+2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜cはPR #10〜#33で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H3d 記録pause・保持turn・明示再開](../design/runtime/historian-recording-retention.md)をローカル実装・検証した。正常終了・join後のHost内writerで最大一回の保持操作を実行し、guard／失敗停止状態とjob有無を回収する。異常・job未完了／不明・未join時は再開を拒否し、新session・直前と異なるclock epochでだけ明示再開する。mock Hub→記録→分割削除／exact step再送→再記録とraw／expiredを検証した。DB format 5・H1と位相固定周期を維持する。次は製品計画の配布・複数group／queue、History／共通Trendへの接続を進める。製品認証・transport、自動保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O／checkpoint障害、H2／H3全体・正式Runtimeは未完了。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 

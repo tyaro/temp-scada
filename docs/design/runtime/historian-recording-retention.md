@@ -1,0 +1,129 @@
+# Historian H3d: 記録のclean pauseと一回の保持操作、明示再開
+
+2026-11-01。状態: **Astra 主設計、ローカル実装・受入済み。全体CIはPRで確認する**。[RecordingHost](historian-recording-host.md)、[保持coordinator](historian-retention-coordinator.md)、[policy原子適用](historian-retention-policy-application.md)、[clock guard](historian-retention-clock-guard.md)を接続する。
+
+## 小工程の目的と境界
+
+単一active recording sessionというstore制約の下で、記録を止めずに保持jobを開始することはできない。H3dは既存hostがwriterを外へ失わずに、**明示stop／join→clean pause検査→最大一回の保持job操作→明示new session再開**を行うlibrary境界を閉じる。
+
+任意callbackでstoreを貸し出すAPIや、自動pause／jobループ／resume schedulerは追加しない。製品desired配布、recording plan永続CAS、複数group、queue、service、auth／transportは対象外。DB format 5、H1、固定SDK／Project／Bantoを維持し、新依存は不要。試験はloopback mock Hubと隔離一時SQLiteだけを使う。
+
+## clean pauseを権威にする
+
+保持入口は、hostが記録workerをjoinしてwriterを回収した後に限る。FinishedUnjoinedや停止要求だけでは不足する。最後のrecording completionが次を全て満たす場合だけclean pauseとする。
+
+- Recorder::startエラーがない。
+- recorder終端causeがCompleted／Requested／Cancelledのいずれか。
+- CleanupOutcome::Closedで、実時刻の終了境界が保存されている。
+- SDK source.shutdownが成功し、workerのjoinが確認済み。
+
+Interrupted、cleanup失敗、source／clock／store異常、panic、worker開始前取消でDBsessionがない場合はclean pauseとしない。同一msでcloseできずinterruptとなった正常取消も、この狭い入口では拒否する。境界の不明な終了を便宜的に正常終了へ読み替えない。必要な手動復旧はstoreを明示回収／再openして既存APIで行い、このhostが自動で補修しない。
+
+新規Idle hostからの保持操作も対象外。既存manual store APIは残るが、それを「記録を正常pauseした経路」と偽称しない。
+
+## APIと状態所有
+
+最終の綴りは実装に従う。
+
+```rust
+struct RetentionTurnInput {
+    policy: RetentionClockPolicy,
+    sample: ClockSample,
+    candidate_cutoff_ms: Option<i64>,
+    intent: CoordinatorIntent,
+}
+struct RetentionTurnCompletion {
+    run: RetentionTurnRun,
+    report: CoordinatorReport,
+}
+```
+
+RecordingHostに次の狭い入口を追加する。
+
+- start_retention_turn(input, QueryControl): 同期受理。clean pauseと所有状態を確認し、一つのblocking workerを開始してopaque turn tokenを返す。
+- join_retention_turn(): async。保持JoinHandleをself内で借用awaitし、storeと`Arc<RetentionTurnCompletion>`を回収する。
+- retention_guard_state(): RetentionGuardSnapshotとしてguard_state、rearm_required、job_pendingの診断用cloneを返す。
+- rearm_retention(): clean pauseかつworkerなしで明示的にUnarmedへresetする。
+- cancel_retention_turn(): 進行中turnのQueryControl取消tokenへ通知する。join完了やrollback完了とは解釈しない。
+
+caller入力にguard_stateを含めない。hostが初期Unarmedから結果のnext_stateを引き継ぎ、古いTrackingを各要求に差し戻す経路を作らない。GuardStateを永続再開tokenにせず、host再作成時も自動復元しない。
+
+ClockSampleはcallerが明示する。hostはSystemTimeを読んでtrusted=trueを勝手に作らない。candidateはElapsedならNone、ExplicitならSomeという既存契約を守る。新jobを開始できるのは実appliedとの全文一致を満たすpolicyであり、未適用Explicitを自動保持の代わりに採用しない。
+
+## 一回の保持turn
+
+workerはstore、input、hostの現在GuardState、QueryControlを受け、既存coordinate_retention_onceを一回だけ呼ぶ。復旧状態照会とassessmentの後、Observeならwriteなし、BeginまたはContinueExistingなら最大一回の既存job APIとなる。
+
+job ID、step、max_ticks、expected cutoffをhostが採番／補正しない。callerは正確な要求を明示する。応答喪失の再送で勝手に次stepへ進めない。pre-operation recoveryをpost-operation状態として表示しない。終了jobの最終receipt再送など既存coordinatorの対象外操作は直接store APIの契約に従う。
+
+各turnはH2c7の予算契約をそのまま使う。共通deadline／取消token、復旧照会と最大一回のwriteそれぞれの有限Budgetであり、単一総VMカウンタへ変更したとはしない。host独自の取消ループ、無制限削除、retention日数defaultを追加しない。
+
+hostが記録worker、保持worker、storeを同時に所有して使い回すことはない。いずれかのworkerが未joinなら記録start、次保持turn、take_store、rearmをBusyにする。workerが完了済みでもjoin前はBusyである。
+
+## 判定失敗とsticky状態
+
+join_retention_turnは成功／失敗を問わずCoordinatorReport.next_stateを必ずhostへ反映する。CoordinatorReportがErrを持つことと、blocking worker自体のjoinが成功したことを分離する。Errを単純なResultで返してassessmentやnext_stateを捨てない。
+
+outcome=Errのときはretention_rearm_requiredをstickyにする。GuardStateが古いTrackingのまま返った復旧照会失敗も、次の正常sampleだけで忘れない。次stateがSuspendedの場合も明示rearmが必要な状態とする。
+
+この状態では新Beginとrecording resumeを拒否する。Observeや正確なContinueExistingは既に固定されたjobの診断／復旧操作として許せるが、成功してもlatchを自動解除しない。rearm_retentionだけがUnarmedへのresetとlatch解除を行う。resetはstoreのNeedsReopen、異常recording completion、active jobを修復したことにはならない。job_pendingも解除しない。新Beginのclock条件は再び二つのtrusted sampleで満たす必要がある。
+
+既存job中のClockEpochChanged等でも、その固定jobの明示stepを許すH2c7契約は維持する。一方、保持jobが完了したからといって新たな記録を自動で再開しない。
+
+## applied設定と競合
+
+actual appliedの照合は既存coordinator／bound beginに任せる。hostがinput.policyをappliedだと仮定しない。新Beginは現在applied全文一致を要求し、BEGIN IMMEDIATE内でも期待適用世代を再確認する。policy変更がguardのfull policy snapshotと異なれば既存PolicyChangedが停止を維持する。
+
+既存jobのContinueExistingは、開始時のpolicy_applied_revisionと固定cutoffを保ち、現在設定へ読み替えない。active job中の新policy適用禁止、job中のrecording begin／append禁止、receipt再送優先という既存store規律を変更しない。
+
+## 明示resumeとclock domain
+
+自動replace／resume wrapperは不要。保持turnをjoinした後、callerが既存start(plan,options,client)を明示して再開する。Joined経路ではclean pause、retention rearm状態、新session ID、新clock_epochを検査する。新規Idle startはH3cの初回契約を維持する。
+
+SystemRecorderClockは各runでmonotonic originを作り直すため、直前runと同じclock_epoch文字列を再利用しない。hostは直前のepochとの差を検査し、過去全runや全processに対する文字列一意性を証明したとはしない。永続clock domainはsessionとの組で区別する。旧runと異なるepochを要求し、hostは直前session IDの再利用をSessionReuseとして同期拒否し、それ以前も含む全履歴session IDの再利用拒否は既存storeを最終権威とする。旧sessionの最後UTCと新anchorのUTCが逆転しても、時刻を予定境界へ偽装せず新domainとして扱う。新run内部のclock検証はH3aどおりである。
+
+保持guardに渡すclock epochと、recorder runのclock epochは別の契約である。同一文字列でなければならないとはしない。guardの継続性はcallerが供給するtrusted clockの連続sampleで評価する。
+
+active jobが残る、または不明な場合は記録を開始しない。hostは保持turnのjoin時に保守的なjob_pendingを更新する。Begunならtrue、Steppedなら!completed、Observed／NoWriteなら同reportのrecovery.active_jobの有無を採用する。後二者はwriteを行わないのでpre-operation snapshotをそのturnの状態根拠として使える。outcome=Errなら不明としてtrueにする。trueは必ずしもjobの存在を断定せず、再開を保留する意味である。
+
+job_pending中のstartはSDK接続前にJobPending等で拒否し、既存のclean recording completionを維持する。rearm_retentionはjob_pendingをクリアしない。失敗後はfresh Observe成功でjobなしを確認する必要がある。成功Observeでもrearm latchは自動解除しない。
+
+writerはhostが専有し、paused中のjob操作はこの入口からだけ行うため、独立したresume用recovery preflightは追加しない。take_storeで所有を渡したhostは再startできない。最終権威として既存Recorder::start→begin_timed_sessionの原子的active job gateも維持する。これが他の開始条件とともに失敗した場合、SDK接続は一時起動し得るがDB sessionは作らず、source shutdownとjoinを行う。
+
+明示rearm後のGuardState::Unarmedでも記録resumeは許す。削除認可のTrackingを記録開始条件へ流用しない。新runのSystemTimeがtrustedだとは主張せず、今後の削除Beginには二つの新しいtrusted sampleを要求する。
+
+pause中の区間や旧／新clock domain間にsamplingMissed／recorderStoppedを推測生成しない。既存timed終了・新開始とunknownCoverageを残す。UTC逆行のため同時刻に別domainのrecordが存在しても、既存coverage／minmaxの混在規則を維持する。
+
+## join、取消、Dropと診断
+
+保持workerもspawn_blockingで実行し、JoinHandleをself内に保持したままawaitする。join future取消／外側timeoutでstoreを失わず、次のjoin_retention_turnで同じ結果を回収する。保持処理の取消は渡されたQueryControlのtokenで要求する。timeoutは原子COMMIT済みの操作を取り消したことにはならない。
+
+hostのDropでは記録用cancelと保持用QueryControl cancelを通知し、blocking workerをabortしない。workerが保有するwriterは処理／cleanup完了まで解放しない。媒体I/Oのhard deadlineや、runtimeを先に停止した場合の正常joinは保証しない。
+
+job_pending、retention_rearm_required、guard状態はhostの別々の診断として保持する。最新保持診断は一枠に限定し、全turn reportをqueueへ蓄積しない。保持turn token、phase、guard状態、rearm要否、有限なoutcome分類／receiptを公開できる。生StoreErrorやendpointをwatchへ載せず、詳細CoordinatorReportはjoin結果へ分離する。記録のclean completionと保持の最新completionは別々に最大一つずつ保持し、保持turnの終了で元recording completionを失わない。新しいrecording startを受理した時点では、旧recording completionと旧保持completionを無効化し、新run中／終了後のjoin_retention_turnが古いturnを今回の結果として返さないようにする。guard／rearm_required／job_pendingはこのcompletion無効化でresetしない。
+
+panic／JoinErrorではstoreとguard反映を確定できないためFaultedとし、同hostでresume／新turnを行わない。保持commit後にcallerが結果を失った場合は既存永続job receiptとrecovery stateで外側から復旧し、新requestを勝手に採番しない。
+
+## 受入
+
+- loopback SDK→実recording hostでrecordを保存し、正常stop/joinでClosedを得る。同host内でObserve→明示Begin→一回ずつstepを実行し、raw削除／expired／fenceを確認する。
+- 最後のstepまでjob_pendingでresumeをSDK接続前に拒否し、clean completionを失わずContinueExistingできる。完了後、新session／new clock epochでのみ明示再開できる。Err後はrearmだけでpendingを解除せず、fresh Observeで確認する。
+- 停止要求だけ、FinishedUnjoined、Interrupted、source／clock／storage異常、SDK shutdown失敗の各状態で保持入口を拒否する。
+- 未join保持turn中はrecording start／take_store／rearm／次turnをBusyにする。外側timeout後に再joinで同じreceiptとnext_stateを回収する。
+- 時計逆行／epoch変更／untrusted sampleでSuspendedが保持され、既存jobを明示完遂しても自動rearm／resumeしない。明示rearm後はUnarmedから再観測する。
+- input不正／store失敗後に古いTrackingを流用できず、retention_rearm_requiredを維持する。policyがactual appliedと異なる新Beginを拒否する。
+- 同じstep/max_ticks要求を再送して同じreceiptを返し、hostが次stepへ進めない。最大一回のwrite契約と既存予算を維持する。
+- 旧／新domain間にgapを捏造せず、停止中はunknownCoverageを維持する。同epoch再利用／同session再利用を拒否する。
+- Drop／panic時のwriter ownershipとFaultedを検証し、live値読取／UI ownerとは独立していることを確認する。
+
+この工程は明示操作による単一groupの保持協調である。自動保持scheduler、trusted clock adapter、製品設定配布、恒久recording plan管理、暦日timezone、複数group休止、容量運用は後続に残す。
+
+## 実装・検証結果
+
+`recording_host/retention.rs`にtyped turn入力、opaque token、guard snapshot、保持worker所有とjoinを追加した。Hostは最後のclean recording completionを保持したまま一回のcoordinatorを実行し、join時にwriter／next_state／失敗停止状態／job_pendingを回収する。既存coordinatorとDBの原子gateを再利用し、保存形式・外部依存は変更しない。
+
+Rust workspace372件（新規7単体・5統合）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。単体ではclean pauseの全拒否条件、Host所有guardの前進と重複／policy変更、不正要求でも旧Trackingを失わず停止状態を維持すること、取消後rearmだけではpendingが消えないこと、join取消・Drop中lock／cancel・panicを確認した。
+
+loopback統合では記録→clean pause→実appliedに結び付くBegin→一tickずつstep／exact再送→時計非信頼でも既存job完了→rearmまで再開拒否→新session／新epochで記録→raw／expiredを接続した。pause区間をsamplingMissedとして捏造しない。未適用policy、取消後のfresh Observe、idle／実行中／未join、session／epoch再利用、異常source終了の拒否も確認した。Astra最終レビューに必須修正はない。
+
+sampleのtrustedはfixture側で明示した入力であり、OS時計の正確性を証明しない。実FULL／媒体I/O／時計jumpの基盤試験は既存H2／H3aから継承し、このHost保持経路で新しい実媒体障害を注入したとはしない。実Hub／S7／設定／資格情報へ接続していない。

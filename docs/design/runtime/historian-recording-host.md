@@ -109,3 +109,7 @@ Rust workspace360件（新規6単体・7統合）・Clippy `-D warnings`／rustf
 loopback統合はcurrent-thread SDKの稼働、有限horizonから実SQLiteへの記録とraw照会、未join中のBusy、join timeoutからの再join／新session差替え、static拒否・runtime無し・開始時DB失敗、UnauthorizedとSDK shutdown失敗、Drop後のcleanupを検証する。H3bの既存9統合も共有mock Hub fixtureへ移して回帰した。Astra最終レビューに必須修正はない。
 
 実S7の点数／精度、host固有の実FULL・実時計jump、停止不能I/Oやruntime早期破棄のhard timeoutを新たに保証しない。H3aの仮想1時間3600枠・実FULL・時計異常等の回帰は成功しており、hostが追加の相対sleepや自動restartで契約を変えないことを維持する。
+
+## H3dで追加した再開条件
+
+[記録と保持の協調](historian-recording-retention.md)で、Joinedからの再開をclean pause、job未完了／不明なし、保持の停止状態解除済みに限定した。新sessionと直前runとは異なるclock_epochを要求する。異常終了やInterruptedを通常再開で修復せず、必要な手動復旧はtake_store等の明示経路へ返す。保持workerが未joinの間もstart／take_store等はBusyとなる。
