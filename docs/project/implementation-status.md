@@ -517,3 +517,13 @@ H3cは[PR #33](https://github.com/tyaro/temp-scada/pull/33)でマージ済み（
 Rust workspace372件（新規7単体・5統合）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。実appliedとの照合、分割削除とexact step再送、clock停止中の既存job完了、rearm／Observe後再開、raw／expiredとpause区間、取消・writer所有・異常時拒否を確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 DB format 5・H1・外部依存・SDK・Project・Banto・通常Appを維持する。単一groupの明示library操作であり、製品計画配布・複数group／queue、History／Trend、保持scheduler・信頼時計adapter・実媒体運用等は後続。上流・S7・実環境には接続していない。
+
+## Historianの非同期History読取Host（H4a、2026-11-02）
+
+H3dは[PR #34](https://github.com/tyaro/temp-scada/pull/34)でマージ済み（`38551495fd67680a639f3e5b848d4921530ab6ea`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41309473589)成功。Astra主設計の[H4a](../design/runtime/historian-history-host.md)を実装し、既存SQLite HistoryReaderのraw／minmaxを一要求ずつ非同期に実行できるようにした。
+
+共有8KiB／H1検証を受理前に使い、opaque tokenで古いjoin／cancelを拒否する。未join中はBusyとし、取消・timeout後もreaderと結果の所有を維持する。通常queryエラー後は再利用でき、ReaderUnusable／panicは再利用を拒否する。結果Arc一件とreader leaseを分け、画面要求で記録開始／停止を連動させない。
+
+Rust workspace384件（新規7単体・5統合）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。記録中の検索、保持後の同readerでのexpired、raw／minmax・無値・unknownSeries、上限・取消・lease・token／旧結果の保護を確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+DB format 5・H1・外部依存バージョン・SDK・Project・Banto・通常Appは維持する。既存serde_jsonだけをruntime通常依存へ移した。プロセス内library入口であり、製品History transport／認証、画面側配送・共通Trend、計画配布・複数group等は後続。上流・S7・実環境へ接続していない。

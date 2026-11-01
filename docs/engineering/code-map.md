@@ -511,3 +511,11 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 `recording_host.rs`が記録workerとの相互Busy、clean pause、新session／直前epoch差、job_pending／rearm_requiredによる再開拒否を適用する。保持中も元のclean completionを維持し、join時にwriter・next_stateを必ず回収する。Dropは両workerの取消を要求し、完了前のlock解放を偽称しない。新recording開始で過去turn completionを無効化し、guard／停止状態は消さない。
 
 `recording_host/retention/tests.rs`の7単体がguard／失敗停止状態、全clean拒否条件、保持join取消・Drop／panicを担当する。`crates/scada-runtime/tests/recording_retention.rs`の5統合がmock Hub→記録→実applied保持job→step再送／expired→明示再開、異常・未適用／再利用拒否を検証する。既存Host差替え試験もfresh epochへ揃えた。[設計・状態の意味・試験範囲](../design/runtime/historian-recording-retention.md)を参照する。
+
+## Historianの非同期History読取Host（H4a）
+
+`crates/scada-runtime/src/history_host.rs`が一つのHistoryReaderと一つのblocking JoinHandleを所有し、start_query／exact tokenのcancel・join／take_readerを提供する。結果watchや無制限queue、暗黙fallback／再試行は作らない。未join Busy、通常エラー後再利用、ReaderUnusableとpanicの停止、Drop中lease保持を担当する。
+
+`history_host/types.rs`がopaque要求token、軽いphase、H1結果またはQueryErrorを持つcompletionを所有する。coreの`store/query/mod.rs`に共有validate_query_request／HistoryQueryModeを抽出し、受理前8KiB／H1検証と既存readerのmode一致検査を共用する。QueryControlは同じdeadline／token／予算をworkerへ渡す。
+
+`history_host/tests.rs`の7単体が拒否・token・取消join・待機中deadline・reader再利用・Drop／panic分類を担当する。`crates/scada-runtime/tests/history_host.rs`の5統合がraw／minmax・無値・unknownSeries、2lease、結果不変性、mock Hubの記録中検索から保持後expiredまでを検証する。製品transport／画面接続とは分けて[設計と試験境界](../design/runtime/historian-history-host.md)を参照する。

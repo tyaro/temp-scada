@@ -17,6 +17,36 @@ use super::{
 use control::Budget;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HistoryQueryMode {
+    Raw,
+    MinMax,
+}
+impl HistoryQueryMode {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Raw => "raw",
+            Self::MinMax => "minmax",
+        }
+    }
+}
+
+/// Validate the bounded H1 query envelope without opening a snapshot. This
+/// shares the reader's request checks; it does not reserve data or validate a
+/// caller's execution deadline/budgets.
+pub fn validate_query_request(query: &Value) -> Result<HistoryQueryMode, QueryError> {
+    control::serialized_size(query, 8192)?;
+    crate::validate_history_contract(query).map_err(QueryError::InvalidRequest)?;
+    if query["kind"] != "query" {
+        return Err(QueryError::InvalidRequest(crate::ContractError::Schema));
+    }
+    match query["mode"].as_str() {
+        Some("raw") => Ok(HistoryQueryMode::Raw),
+        Some("minmax") => Ok(HistoryQueryMode::MinMax),
+        _ => Err(QueryError::UnsupportedMode),
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum QueryError {
     InvalidRequest(crate::ContractError),
     InvalidLimits,
@@ -181,12 +211,7 @@ impl HistoryReader {
         control.validate()?;
         let mut budget = Budget::new(control);
         budget.work.check()?;
-        control::serialized_size(query, 8192)?;
-        crate::validate_history_contract(query).map_err(QueryError::InvalidRequest)?;
-        if query["kind"] != "query" {
-            return Err(QueryError::InvalidRequest(crate::ContractError::Schema));
-        }
-        if query["mode"] != mode {
+        if validate_query_request(query)?.as_str() != mode {
             return Err(QueryError::UnsupportedMode);
         }
         budget.work.check()?;

@@ -220,3 +220,7 @@ P5の完了は本契約、source根拠、共通化境界、下記の受入・未
 | 読取権限で設定変更、秘密入りエラー                               | 管理操作を拒否し、公開応答に秘密・絶対パスがない                                              |
 
 P5自体の検証は固定sourceとの照合、文書整形、参照リンク、現行実装との境界確認とする。サービス・実Hub・PLC・DB・本番負荷・停電耐性は未検証である。
+
+## H4aの実装境界
+
+[非同期History読取Host](historian-history-host.md)が既存H1 raw／minmaxをプロセス内の要求／応答へ接続した。一つのHistoryReaderで一要求ずつ実行し、取消安全joinとreader leaseを維持する。製品History transport／認証、画面側HistorySourceと共通Trendの提供は後続であり、この読取Hostだけで正式サービス完成とはしない。
