@@ -477,3 +477,13 @@ coordinatorの新Beginは実appliedの全文一致を要求し、job開始transa
 Rust workspace314件（新規16単体、child worker含む）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。CAS、immutable定義、記録中／job中、raw削除後receipt再送、coordinator途中apply競合、容量不足・取消・panic・SQL／rollback poison、COMMIT前後5境界のprocess終了、pointer／receipt／binding破損と旧format4非変更拒否を検証した。Astra指摘の保存receipt内active jobを拒否し、最終レビューに必須修正はない。全体CIはPRで確認する。
 
 旧format 1〜4は自動移行しない。H1・依存・SDK・Project・Banto・TS／通常Appは維持する。製品desired配布／管理認証、ローカル暦日／timezone、信頼時計adapter、scheduler／recorder、receipt GC・実媒体保守は後続。上流・S7・実環境には接続していない。
+
+## Historianの位相固定周期recorder（H3a、2026-11-01）
+
+H2c10は[PR #30](https://github.com/tyaro/temp-scada/pull/30)でマージ済み（`5c9fa8445c7d81877ad67247457beca53bfcc097`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41300113647)成功。ユーザーのS7で「1秒周期でも誤差が積み重なり1時間3600点に届かない」経験を受け、Astra主設計の[H3a](../design/runtime/historian-periodic-recorder.md)を実装した。
+
+単調時計anchor＋n×periodの絶対deadlineで固定groupを記録し、処理完了時刻を次の基準にしない。capture直後の実UTCでslotを決め、飛ばしたslotはsamplingMissedと診断へ残す。slot・実観測・source時刻・連続保存sequenceを分け、過去slotを最新値で水増ししない。mock source／制御時計とstd時計adapterから実SQLiteへ接続する。
+
+仮想1時間試験ではwake jitterとcapture／処理相当時間を加えても3600予定・3600観測・3600commit・missed0となった。Rust workspace330件（新規16単体）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。境界・overrun／horizon、raw／minmaxとgap、無値／source、時計・source異常、overflow、取消、gap成功後FULLとcleanup失敗、std時計待機を確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+DB format 5・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。専用SDK購読、計画配布・複数group・queue、永続slot台帳とgap／tick一括commit、保持との停止再開、製品History／Trendは後続。同期adapter／SQLite I/Oに硬い時間上限はなく、任意UTC正時や実S7の異なる実測3600件を保証しない。上流・S7・実環境には接続していない。

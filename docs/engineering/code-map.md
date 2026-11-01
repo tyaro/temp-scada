@@ -473,3 +473,13 @@ reportは評価済みのnext_state／assessment／recoveryを操作エラーで�
 format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続根拠を所有する。`jobs.rs`はcoordinator専用bound beginのwrite transaction内で現在appliedの世代・全文を再照合し、内部StoredJobRequestと列のoriginを一致させる。`coordinator.rs`は新Beginの未適用／不一致をNoWriteとし、Observe／固定job継続と直接保守APIを維持する。policy／preview／recovery保存DTOのDeserializeを追加し、GuardState復元は増やさない。
 
 `application/tests.rs`の5単体が適用・実比較・CAS・記録／job・再送・bound source、`tests/failures.rs`の10単体（child worker含む）が容量不足・取消／fault・破損・旧format・origin・非再帰・SQLpoison・process5境界を確認する。coordinatorの新1単体が判定とbegin間のpolicy変更を検証する。既存coordinatorの正常Begin試験は適用済みElapsedへ移行し、counterは適用commitを含める。ブラウザ契約6件を回帰し、[製品統合](../design/runtime/historian-retention-policy-application.md)は後続とする。
+
+## Historianの位相固定周期recorder（H3a）
+
+`src/recorder.rs`がRecorderのstart／step／stop、固定anchorとslot計算、clock連続性、capture後のslot再評価、実UTC tick、missed gap、terminal cleanupを所有する。最大一capture／一gap／一tickで同期実行し、source／DB処理完了を次anchorへ加算しない。予定slotと連続commit sequenceを分離し、horizon外にtickを押し込まない。
+
+`recorder/types.rs`が明示Config、Clock／Source trait、counter／ObservedSlot／Report、停止原因とcleanup結果を所有する。`recorder/clock.rs`はInstant originと実SystemTime、取消確認付きabsolute waitを担当する。無制限のイベントvector・背景task・queue・実SDK接続は追加しない。
+
+`store/types.rs`の既存ID／SessionSpec／Tick検証をcrate内で共用し、検査を複製・弱体化しない。test_supportのcrate内可視性とconnection accessorはcfg(test)のfixtureだけに限定する。製品のwriter lock／再open規律は維持する。
+
+`recorder/tests.rs`の5単体が仮想1h／各系列3600点・相対sleep対照、overrun／gap／raw・minmax、capture境界／horizon、無値・固定source・sourceTime、early wakeを担当する。`tests/failures.rs`の11単体が取消・clock／epoch／source異常・overflow・実FULL／gap成功後失敗・std時計待機を担当する。ブラウザ契約6件を回帰する。専用SDK所有・永続slot台帳・複数group／queue・保持協調は[後続](../design/runtime/historian-periodic-recorder.md)。

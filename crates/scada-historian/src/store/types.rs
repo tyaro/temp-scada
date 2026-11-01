@@ -3,7 +3,7 @@ use serde_json::{json, Value};
 
 use super::{invalid, StoreResult};
 
-pub(super) const MAX_SAFE: u64 = 9_007_199_254_740_991;
+pub(crate) const MAX_SAFE: u64 = 9_007_199_254_740_991;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StoreIdentity {
@@ -153,7 +153,7 @@ pub struct CommitReceipt {
     pub commit_version: u64,
 }
 
-pub(super) fn id(value: &str) -> bool {
+pub(crate) fn id(value: &str) -> bool {
     (1..=64).contains(&value.len())
         && value.as_bytes()[0].is_ascii_alphanumeric()
         && value
@@ -162,7 +162,7 @@ pub(super) fn id(value: &str) -> bool {
 }
 
 impl SessionSpec {
-    pub(super) fn validated(mut self) -> StoreResult<Self> {
+    pub(crate) fn validated(mut self) -> StoreResult<Self> {
         if !id(&self.session_id) || !(1..=8).contains(&self.members.len()) {
             return invalid("session identity or member count");
         }
@@ -184,7 +184,7 @@ impl SessionSpec {
 }
 
 impl Tick {
-    pub(super) fn validated(mut self, spec: &SessionSpec) -> StoreResult<(Self, String)> {
+    pub(crate) fn validated(mut self, spec: &SessionSpec) -> StoreResult<(Self, String)> {
         if self.session_id != spec.session_id || self.observations.len() != spec.members.len() {
             return invalid("tick does not explain the complete recording group");
         }
