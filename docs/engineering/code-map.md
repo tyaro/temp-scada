@@ -453,3 +453,13 @@ reportは評価済みのnext_state／assessment／recoveryを操作エラーで�
 `clock_guard.rs`はcutoff_ruleを全policy snapshotに含め、ExplicitCandidate／SomeとElapsed／Noneのmodeを検査する。clock評価・active job・非stable待機の後、安定した新候補だけを内部導出し、失敗はCutoffComputationFailedへ停止を保持する。`coordinator.rs`はOptionをそのまま渡し、従来のproposal一致とreport保持を使う。
 
 `policy/tests.rs`の7単体が整数・policy／mode・時計停止・rearmを、`tests/integration.rs`の5単体が実DBの停止待ち・canonical Begin・削除境界とraw／expired・上限・既存job継続を担当する。既存Explicit guard／coordinator試験は明示mode／Someへ移行し、ブラウザ契約6件を回帰する。暦日保持・製品policy／短縮プレビューは[後続](../design/runtime/historian-retention-duration.md)。
+
+## Historianの保持変更の実データ影響preview（H2c9）
+
+`store/retention/preview.rs`がRetentionPreviewRequest／RetentionPreview、policy影響・差分・件数DTOと`preview_retention_change`を所有する。elapsed policyを同referenceで導出し、提案／比較／非空差分側の最大3集約とtick／observation partitionを検証する。比較policyをappliedと扱わず、削除や適用を行わない。
+
+`preview/validate.sql`はmax cutoffで選択されたtickの全memberを検査し、member集合・時刻／clock／commit・session／参照・ASCII IDとNULを照合する。spec／receipt JSON本文や値の全監査は実stepへ残す。`counts.sql`はrawをRustへdecodeせず、tick／observation／distinct seriesとsample extremaを集約する。単一Budgetで部分countを返さない。
+
+`recovery.rs::read_snapshot`へ既存復旧照会のtransaction内部読取を抽出した。既存`recovery_state`とpreviewが同じhelperを使い、各callerがBEGIN／ROLLBACKを所有する。last_commit初回readのsnapshot pinと既存hook／予算・cleanup・poisonを維持する。
+
+`preview/tests.rs`の6単体が件数・差分・境界・active／partialを、`tests/failures.rs`の8単体がreadonly、同snapshot、破損／NUL、1025tick／有限予算、取消・panic・SQLfailure／rollback poisonを担当する。既存recovery15単体とブラウザ契約6件を回帰する。永続policy適用・製品管理口は[後続](../design/runtime/historian-retention-preview.md)。
