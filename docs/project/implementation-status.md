@@ -487,3 +487,13 @@ H2c10は[PR #30](https://github.com/tyaro/temp-scada/pull/30)でマージ済み�
 仮想1時間試験ではwake jitterとcapture／処理相当時間を加えても3600予定・3600観測・3600commit・missed0となった。Rust workspace330件（新規16単体）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。境界・overrun／horizon、raw／minmaxとgap、無値／source、時計・source異常、overflow、取消、gap成功後FULLとcleanup失敗、std時計待機を確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 DB format 5・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。専用SDK購読、計画配布・複数group・queue、永続slot台帳とgap／tick一括commit、保持との停止再開、製品History／Trendは後続。同期adapter／SQLite I/Oに硬い時間上限はなく、任意UTC正時や実S7の異なる実測3600件を保証しない。上流・S7・実環境には接続していない。
+
+## Historianの専用SDK入力（H3b、2026-11-01）
+
+H3aは[PR #31](https://github.com/tyaro/temp-scada/pull/31)でマージ済み（`41d5a2872294cd168d35a2eb77e8af40bd885b42`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41302448259)成功。Astra主設計の[H3b](../design/runtime/historian-sdk-source.md)を実装し、UIとは別の固定SDK所有者をSnapshotSourceへ接続した。
+
+一回のcaptureでSDK状態を一度だけ参照し、同一generationのcatalog／resolution／valuesから固定group全体を投影する。一時切断は無値、catalog／run／source／identityの変更は再確認まで停止する。値側sourceを使い、SDKが公開しないsource変更を検出できたとは扱わない。記録処理をSDK executorから分離し、mock Hub→固定SDK→recorder→実SQLite→raw／minmaxを検証した。
+
+Rust workspace347件（新規8単体・9統合）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。Good0／false、部分／全未解決、Bad／Stale、切断／再接続、SIM／未知source、固定identity、epoch保存、UI寿命の双方向独立、Unauthorized・shutdown取消・再呼出し・Dropを確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+DB format 5・H1・外部依存・固定SDK・Project・Banto・TS／通常Appを維持し、runtime→historianのworkspace依存を追加した。無関係catalog変更でも初期は停止する。計画配布・複数group／queue・保持との停止再開、製品History／Trend・正式host、実媒体運用受入は後続。上流・S7・実環境には接続していない。

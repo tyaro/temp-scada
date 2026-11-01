@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10はPR #10〜#30で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。H2の媒体運用受入を残し、Astra主設計の[H3a 位相固定recorder](../design/runtime/historian-periodic-recorder.md)を実装・ローカル検証した。単調時計anchor＋n×periodで累積ずれを防ぎ、mock latest sourceから実SQLiteへ保存する。仮想1時間で3600予定・3600観測・3600commitを確認した。大きな遅延は欠測として分離する。DB format 5・H1・依存は維持する。次は専用SDK購読adapter、記録計画の配布と複数group／queue、保持協調と時計domain再開、History／共通Trendの接続を進める。製品認証・transport、暦日timezone、receipt GC・実媒体I/O／checkpoint障害、H2／H3全体・正式Runtimeは未完了。
+2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3aはPR #10〜#31で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。H2の媒体運用受入を残し、Astra主設計の[H3a 位相固定recorder](../design/runtime/historian-periodic-recorder.md)に続いて[H3b 専用SDK入力](../design/runtime/historian-sdk-source.md)をローカル実装・検証した。UIとは別のSDK ownerから同一snapshotを取り、mock Hub→固定SDK→recorder→実SQLiteとraw／minmax照会を接続する。一時切断は無値、identity／source変更は再確認まで停止する。単調時計anchor＋n×periodの累積ずれ対策、DB format 5・H1を維持する。次は記録計画の配布と複数group／queue、保持協調と時計domain再開、History／共通Trendの接続を進める。製品認証・transport、暦日timezone、receipt GC・実媒体I/O／checkpoint障害、H2／H3全体・正式Runtimeは未完了。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 

@@ -162,6 +162,11 @@ pub(crate) fn id(value: &str) -> bool {
 }
 
 impl SessionSpec {
+    /// Validate a fixed recording group without starting a database session.
+    pub fn validate(&self) -> StoreResult<()> {
+        self.clone().validated().map(|_| ())
+    }
+
     pub(crate) fn validated(mut self) -> StoreResult<Self> {
         if !id(&self.session_id) || !(1..=8).contains(&self.members.len()) {
             return invalid("session identity or member count");
