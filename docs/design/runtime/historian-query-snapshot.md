@@ -119,3 +119,5 @@ H2b2でminmaxの共通grid、count・包絡、clockEpoch／segment混在、空bi
 Rust workspace112件、Clippy `-D warnings`／rustfmt、TS114ファイル・1,383件、型検査0エラー・0警告、build、関連Chromium2件が成功。H2b1の単体15件に加え、`tests/query_fixtures.rs`の1関数で実SQLiteの期待出力4ケースを照合し、同じresultをTSと実ブラウザがH1として受理した。H1共通110 fixtureは変更していない。buildの既知chunkサイズ警告は残る。
 
 競合・未commit・取消・低予算の各経路と、authorizerでROLLBACKを拒否するcleanup障害、query内panicを試験した。cleanup失敗時は接続を閉じてreaderを再利用不可にし、枠とwriter lockはreader Dropまで保つ。Astraのread-only実装整合レビューでは追加の必須修正は見つからなかった。これらは隔離一時DBでの受入であり、実媒体・停電・Windows運用・大規模性能試験は別途必要である。全体CIの確定結果はPR本文へ記録する。
+
+H2b2の[SQL min/max集約](historian-minmax-query.md)を追加した。`query_raw`のmode制約は維持し、別の`query_minmax`入口から同じsnapshot・control・cleanupを使う。空binのmetadata曖昧は推測せず全要求エラーとし、確定coverageは引き続き後続へ残す。

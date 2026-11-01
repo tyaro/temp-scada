@@ -44,6 +44,12 @@ H2aは[PR #16](https://github.com/tyaro/temp-scada/pull/16)でマージ済み（
 
 Rust workspace112件（H2b1単体15件と共通検索fixture4ケースを確認する1関数を追加）、TS114ファイル・1,383件、型検査0エラー・0警告、build、Clippy・rustfmt、関連Chromium2件成功。保存中の未commitデータ非公開、append／session切替とのsnapshot競合、取消・SQL中断・cleanup失敗・panic後の接続終了／再利用、所有の保持を一時DBで確認した。共通fixtureはH1の110件に加え、実SQLite出力4ケースをRust／TS／ブラウザで照合する。minmax、時刻付き計画と確定coverage、保持・容量、常時recorder、公開Historyサービス／UI接続は後続で、H2全体は継続中。
 
+## Historianのmin/max集約（H2b2、2026-11-01）
+
+H2b1は[PR #17](https://github.com/tyaro/temp-scada/pull/17)でマージ済み（`3113b51c8a8a49da018f1a18de00b182ae5a10aa`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41267109291)全7job成功。Astra主設計の[H2b2](../design/runtime/historian-minmax-query.md)に従い、`HistoryReader::query_minmax`を追加した。共通gridを整数で作り、SQLで観測をbinへ集約する。number／boolのピークと件数を保持し、segment・session＋clockEpoch・取得元世代が混ざればnull包絡のmixedSegmentにする。空binで適用metadataが不明ならMetadataAmbiguousとして要求全体を拒否する。連続記録は未証明なので全域unknownCoverageを維持し、completeは生成しない。
+
+Rust workspace126件（新規単体13件・共通minmax fixtureの統合1関数）、TS114ファイル・1,389件、型検査0エラー・0警告、build、Clippy・rustfmt、関連Chromium3件成功。9,001tickをdecode上限20行で集約し短い山を保持した。SQLが破損recordをinvalidCount／混在へ隠さないこと、H1の正常sample理由の一致、NUL入り時計ID拒否、集約SQL処理中の取消・writer継続を確認した。実SQLiteの6成功resultとmetadata曖昧1失敗を共通fixtureに追加し、正常resultはRust／TS／実ブラウザで照合した。時刻付き計画・確定coverage・保持・容量・常時recorder・公開Historyサービス／UI接続は後続で、H2全体は継続中。
+
 ## 保存契約と基盤
 
 | 項目       | 現在の契約                                                                                                                              |
