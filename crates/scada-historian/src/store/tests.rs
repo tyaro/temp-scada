@@ -620,14 +620,14 @@ fn only_one_process_owns_the_directory_and_lock_inode_is_retained() {
 #[test]
 fn create_open_format_and_identity_failures_do_not_initialize_existing_data() {
     let directory = TempStore::new();
-    assert!(SqliteStore::open_existing(&directory.0, &identity()).is_err());
+    assert!(reopen_unowned(&directory.0, &identity()).is_err());
     assert!(!directory.0.exists());
     drop(directory.create());
     assert!(SqliteStore::create(&directory.0, identity()).is_err());
     let mut wrong = identity();
     wrong.deployment_id = "other".into();
     assert!(matches!(
-        SqliteStore::open_existing(&directory.0, &wrong),
+        reopen_unowned(&directory.0, &wrong),
         Err(StoreError::IdentityMismatch)
     ));
     let path = directory.0.join("store.sqlite3");
@@ -636,7 +636,7 @@ fn create_open_format_and_identity_failures_do_not_initialize_existing_data() {
     drop(raw);
     let before = fs::read(&path).unwrap();
     assert!(matches!(
-        SqliteStore::open_existing(&directory.0, &identity()),
+        reopen_unowned(&directory.0, &identity()),
         Err(StoreError::UnsupportedStore)
     ));
     assert_eq!(fs::read(&path).unwrap(), before);
@@ -646,12 +646,12 @@ fn create_open_format_and_identity_failures_do_not_initialize_existing_data() {
     drop(raw);
     let before = fs::read(&path).unwrap();
     assert!(matches!(
-        SqliteStore::open_existing(&directory.0, &identity()),
+        reopen_unowned(&directory.0, &identity()),
         Err(StoreError::UnsupportedStore)
     ));
     assert_eq!(fs::read(&path).unwrap(), before);
     fs::write(&path, b"corrupt database fixture").unwrap();
-    assert!(SqliteStore::open_existing(&directory.0, &identity()).is_err());
+    assert!(reopen_unowned(&directory.0, &identity()).is_err());
     assert_eq!(fs::read(&path).unwrap(), b"corrupt database fixture");
 }
 
@@ -675,7 +675,7 @@ fn canonical_directory_alias_obeys_lock_and_file_symlinks_are_rejected() {
         fs::rename(&path, &moved).unwrap();
         symlink(&moved, &path).unwrap();
         assert!(matches!(
-            SqliteStore::open_existing(&directory.0, &identity()),
+            reopen_unowned(&directory.0, &identity()),
             Err(StoreError::Invalid(_))
         ));
         fs::remove_file(&path).unwrap();
@@ -697,7 +697,7 @@ fn process_worker() {
         ));
         return;
     }
-    let mut store = SqliteStore::open_existing(&directory, &identity()).unwrap();
+    let mut store = reopen_unowned(&directory, &identity()).unwrap();
     if mode == "open" {
         return;
     }

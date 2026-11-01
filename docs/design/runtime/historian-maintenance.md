@@ -114,3 +114,7 @@ volume の free bytes、allocated blocks、disk-full 復旧、WAL上限超過時
 Rust workspace190件（保守15単体・query snapshot競合1単体、child worker含む）、Clippy `-D warnings`／rustfmt、関連Chromium5件が成功。trim後のfree page、SQLとFSの別測定、reader pin中Incompleteと解放後Complete、64 MiB境界、NoWal、不正counter、予算・取消・SQL failure・panic cleanup、checkpoint前後のprocess終了後のreceipt／queryを確認した。TS・通常Appは未変更で、新しい製品画面は追加していない。
 
 Astraレビューで、固定main DBの事前確認不足を指摘した。全SQLを拒否するfixtureでDB不存在／symlinkの先行拒否失敗を再現後、両API共通の事前検査へ修正した。page値はstore_metaの最初のreadでsnapshotを固定してから測る。最終レビューに必須修正はない。全体CIはPRで確認する。
+
+## CIの成功再open fixture修正
+
+同一headのpush CIだけがstore drop後の成功再openでBusyとなり、PR CIは成功した。64並列の反復でも既存の別試験から同じ失敗を再現した。複製したUnix lock FDの短時間保持で同じ寿命を再現する回帰を追加し、所有者不在を前提とする再open helper（成功・形式／identity拒否の検証）だけをBusy限定の最大1秒retryへ変更した。これは実際のfork継承をCIで直接観測した試験ではない。製品の即時Busy、writer／reader ownershipとcleanupの意味は変更していない。

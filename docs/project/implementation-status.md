@@ -389,3 +389,9 @@ checkpointは一度だけ実行し、Complete／Incomplete／Busy／NoWalを返�
 Rust workspace190件（新規保守15単体・snapshot競合1単体、child worker含む）、Clippy `-D warnings`／rustfmt、関連Chromium5件が成功。固定DBの事前検査、64 MiB境界、reader pinと再checkpoint、trim後のfree page、SQL/FS別sample、取消・予算・SQL failure・panic cleanup、checkpoint前後のprocess終了と再open後のreceipt／履歴を確認した。Astraレビューで見つかったmain file事前検査不足を回帰で再現・修正済み。全体CIはPRで確認する。
 
 DB format 3・H1 JSON v1・依存・SDK・Project・Banto・TS・通常Appは変更していない。診断値はvolume空き容量や物理消去を意味せず、PASSIVEはファイル縮小を保証しない。自動保持・時刻異常・recorder協調・receipt GC・disk-full運用は後続。上流・S7・実環境には接続していない。
+
+## H2c2のCI再オープン競合修正（2026-11-01）
+
+同じhead `4ac4740` の[push CI](https://github.com/tyaro/temp-scada/actions/runs/41283679980)では、Rustの保守SQL障害テストがstore drop後のテスト用再openでBusyとなった。一方、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41283706313)は全job成功。64並列の反復4回目に既存の時刻付きsession試験でも同じhelperのBusyを再現したため、H2c2のcheckpoint処理だけの問題ではない。
+
+Unixの複製lock handleを短時間保持する回帰でも即時再openの失敗を再現した。このFD寿命は並列fork→exec中のflock継承と整合するが、CIでfork起因を直接観測したとは断定しない。所有者不在を前提とする再open fixture（成功・形式／identity拒否の検証）だけをBusy限定・最大1秒の有限retryに変更した。製品のopen／排他・reader ownershipの即時拒否試験は維持する。Astraの差分レビューで必須修正はない。修正後は64並列の全Historian単体試験を10回連続で成功し、Rust workspace191件・Clippy・rustfmt・全体Prettierも成功した。修正後CIはPRで確認する。

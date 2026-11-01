@@ -405,3 +405,5 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 `store/maintenance.rs`のStorageDiagnostics／CheckpointReportとSqliteStoreの2 APIが、SQL page snapshot・filesystemの別sample・reader lease数、64 MiB事前guard、一度だけのPASSIVE結果分類を所有する。DB fileは両APIのSQL開始前に検査し、diagnosticsは後段でもfile長をsampleする。Complete／Incomplete／Busy／NoWalを区別し、成功後のlate cancellationではreportを捨てない。内部I/Oのhard deadlineは保証しない。
 
 同moduleの`Operation`がprogress handler解除→rollbackと直接needs_reopen保持を共通化し、retentionもこのguardを使う。`maintenance/tests.rs`の15単体（child worker含む）が診断・free page・上限・各失敗とprocess終了後の整合を担当する。`query/tests.rs`の追加1単体がreader snapshot pin中のIncompleteと旧query維持、解放後Completeと所有を確認する。既存ブラウザ契約5件も回帰する。公開History JSONやTS/UIへ新DTOを接続せず、[H2c2設計](../design/runtime/historian-maintenance.md)のlibrary境界を維持する。
+
+所有者不在を前提とする`store/test_support.rs::reopen_unowned`は、並列process試験のFD寿命と整合する一時的なlock競合に備え、Busyだけを最大1秒retryする。TempStore::openと、形式／identityなどの非Busy結果を検証するfixtureで共用する。他のエラーは即失敗する。Unixの複製FD回帰で待機と製品の即時Busy拒否を確認し、所有競合の試験は製品APIを直接使い続ける。

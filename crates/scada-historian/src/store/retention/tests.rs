@@ -347,7 +347,7 @@ fn format_two_is_refused_without_rewriting_the_database() {
     drop(db);
     let before = std::fs::read(&path).unwrap();
     assert!(matches!(
-        SqliteStore::open_existing(&directory.0, &identity()),
+        reopen_unowned(&directory.0, &identity()),
         Err(StoreError::UnsupportedStore)
     ));
     assert_eq!(std::fs::read(path).unwrap(), before);
@@ -436,7 +436,7 @@ fn trim_process_worker() {
         return;
     };
     let boundary = std::env::var("SCADA_TRIM_TEST_BOUNDARY").unwrap();
-    let mut store = SqliteStore::open_existing(path, &identity()).unwrap();
+    let mut store = reopen_unowned(path, &identity()).unwrap();
     store
         .trim_with_hook(request("trim", 1, None), &control(), &mut |b| {
             if format!("{b:?}") == boundary {

@@ -443,7 +443,7 @@ fn format_one_and_mismatched_metadata_are_refused_without_rewriting_the_database
     drop(connection);
     let bytes = std::fs::read(&path).unwrap();
     assert!(matches!(
-        SqliteStore::open_existing(&directory.0, &identity()),
+        reopen_unowned(&directory.0, &identity()),
         Err(StoreError::UnsupportedStore)
     ));
     assert_eq!(std::fs::read(&path).unwrap(), bytes);
@@ -452,7 +452,7 @@ fn format_one_and_mismatched_metadata_are_refused_without_rewriting_the_database
     drop(connection);
     let bytes = std::fs::read(&path).unwrap();
     assert!(matches!(
-        SqliteStore::open_existing(&directory.0, &identity()),
+        reopen_unowned(&directory.0, &identity()),
         Err(StoreError::UnsupportedStore)
     ));
     assert_eq!(std::fs::read(&path).unwrap(), bytes);
@@ -629,7 +629,7 @@ fn process_worker() {
         return;
     };
     let mode = std::env::var("SCADA_EVIDENCE_MODE").unwrap();
-    let mut store = SqliteStore::open_existing(directory, &identity()).unwrap();
+    let mut store = reopen_unowned(directory, &identity()).unwrap();
     let boundary = if mode.ends_with("after") {
         Boundary::AfterCommit
     } else {

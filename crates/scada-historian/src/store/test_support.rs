@@ -18,9 +18,28 @@ impl TempStore {
         SqliteStore::create(&self.0, identity()).unwrap()
     }
     pub(super) fn open(&self) -> SqliteStore {
-        SqliteStore::open_existing(&self.0, &identity()).unwrap()
+        reopen_unowned(&self.0, &identity()).unwrap()
     }
 }
+/// Fixture opens with no intended owner, including format/identity error checks.
+/// Immediate Busy/ownership assertions must call the production API directly.
+pub(super) fn reopen_unowned(
+    directory: impl AsRef<Path>,
+    expected: &StoreIdentity,
+) -> StoreResult<SqliteStore> {
+    // A parallel crash test can fork while another test owns a flock. CLOEXEC
+    // closes that inherited handle at exec, not at fork. Bound this fixture wait.
+    let deadline = std::time::Instant::now() + Duration::from_secs(1);
+    loop {
+        match SqliteStore::open_existing(directory.as_ref(), expected) {
+            Err(StoreError::Busy) if std::time::Instant::now() < deadline => {
+                std::thread::sleep(Duration::from_millis(5));
+            }
+            result => return result,
+        }
+    }
+}
+
 impl Drop for TempStore {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
@@ -113,4 +132,26 @@ pub(super) fn counter(store: &SqliteStore) -> i64 {
         .connection
         .query_row("SELECT last_commit FROM store_meta", [], |r| r.get(0))
         .unwrap()
+}
+
+#[cfg(unix)]
+#[test]
+fn successful_fixture_reopen_waits_for_a_transient_inherited_lock_handle() {
+    let directory = TempStore::new();
+    let store = directory.create();
+    // fork inherits the same open file description until exec closes CLOEXEC
+    // handles. A duplicated handle reproduces that lifetime without unsafe fork.
+    let inherited = store.ownership._writer_lock.try_clone().unwrap();
+    drop(store);
+    assert!(matches!(
+        SqliteStore::open_existing(&directory.0, &identity()),
+        Err(StoreError::Busy)
+    ));
+    let release = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(25));
+        drop(inherited);
+    });
+    let reopened = directory.open();
+    release.join().unwrap();
+    assert_eq!(counter(&reopened), 0);
 }

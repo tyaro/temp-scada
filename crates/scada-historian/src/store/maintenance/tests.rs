@@ -462,7 +462,7 @@ fn maintenance_process_worker() {
         return;
     };
     let phase = std::env::var("SCADA_MAINTENANCE_TEST_PHASE").unwrap();
-    let mut store = SqliteStore::open_existing(path, &identity()).unwrap();
+    let mut store = reopen_unowned(path, &identity()).unwrap();
     if phase == "before" {
         std::process::exit(83);
     }
