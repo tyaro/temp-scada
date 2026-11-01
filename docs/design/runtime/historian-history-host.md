@@ -1,6 +1,6 @@
 # Historian H4a: bounded HistoryReaderの非同期request／response host
 
-2026-11-01。状態: **Astra 主設計、ローカル実装・受入済み。全体CIはPRで確認する**。[raw snapshot query](historian-query-snapshot.md)、[minmax](historian-minmax-query.md)、[記録と保持の協調](historian-recording-retention.md)を前提にする。
+2026-11-02。状態: **Astra 主設計、ローカル実装・受入済み。全体CIはPRで確認する**。[raw snapshot query](historian-query-snapshot.md)、[minmax](historian-minmax-query.md)、[記録と保持の協調](historian-recording-retention.md)を前提にする。
 
 ## 今回の目的と範囲
 

@@ -389,7 +389,7 @@ Rust372件（新規7単体・5統合）・Clippy／rustfmt・関連Chromium6件�
 
 製品計画配布・永続CAS、複数group／queue、History／共通Trend、保持schedulerと信頼時計adapter、実媒体I/O・receipt GC・暦日timezoneは残る。単一active sessionの制約や任意UTC正時の別実測3600点保証は変更せず、上流・S7・実環境へ接続していない。
 
-## H4aの実装と残り（2026-11-01）
+## H4aの実装と残り（2026-11-02）
 
 H3dは[PR #34](https://github.com/tyaro/temp-scada/pull/34)でマージ済み（`38551495fd67680a639f3e5b848d4921530ab6ea`）、[全体CI 41309473589](https://github.com/tyaro/temp-scada/actions/runs/41309473589)成功。Astra主設計の[非同期History読取Host](../design/runtime/historian-history-host.md)を実装した。
 

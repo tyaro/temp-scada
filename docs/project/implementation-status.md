@@ -518,7 +518,7 @@ Rust workspace372件（新規7単体・5統合）・Clippy `-D warnings`／rustf
 
 DB format 5・H1・外部依存・SDK・Project・Banto・通常Appを維持する。単一groupの明示library操作であり、製品計画配布・複数group／queue、History／Trend、保持scheduler・信頼時計adapter・実媒体運用等は後続。上流・S7・実環境には接続していない。
 
-## Historianの非同期History読取Host（H4a、2026-11-01）
+## Historianの非同期History読取Host（H4a、2026-11-02）
 
 H3dは[PR #34](https://github.com/tyaro/temp-scada/pull/34)でマージ済み（`38551495fd67680a639f3e5b848d4921530ab6ea`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41309473589)成功。Astra主設計の[H4a](../design/runtime/historian-history-host.md)を実装し、既存SQLite HistoryReaderのraw／minmaxを一要求ずつ非同期に実行できるようにした。
 
