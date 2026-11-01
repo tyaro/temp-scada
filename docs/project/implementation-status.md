@@ -425,3 +425,13 @@ H2c4は[PR #24](https://github.com/tyaro/temp-scada/pull/24)でマージ済み�
 Rust workspace234件（新規15単体、child worker含む）、Clippy `-D warnings`／rustfmt、関連Chromium6件が成功。begin／partial／complete後のprocess終了からIDなし発見、同時刻pending、元request再送、最新出典、stale next_step、同snapshot、全write拒否下の読取、破損参照、予算・取消・SQL failure・panic cleanupを確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 DB format 4・H1 JSON v1・依存・SDK・Project・Banto・TS・通常Appは変更していない。snapshot位置は内部観測値で、書込みの予約やcapacity／recorder健全性の保証ではない。自動driver・自動保持・信頼時計・recorder調停・receipt GC・実媒体の容量運用は後続。上流・S7・実環境には接続していない。
+
+## Historianの明示保持候補の時刻安全判定（H2c6、2026-11-01）
+
+H2c5は[PR #25](https://github.com/tyaro/temp-scada/pull/25)でマージ済み（`34bf723b2f24697b3b51da438397abe3fbaf2145`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41290868079)成功。Astra主設計の[H2c6](../design/runtime/historian-retention-clock-guard.md)に従い、純粋関数`assess_retention`を追加した。callerの明示policy・信頼状態付きwall／monotonic sample・復旧状態・候補cutoffから、次のguard stateとactionを返す。
+
+初回sampleはwarmupだけで、二つ目の安定sampleから評価する。時計の逆行・前進差・間隔超過、信頼喪失、policy／epoch変更、sample形式不正ではSuspendedを保持する。後続の正常sampleで自動解除せず、明示rearm後も再warmupする。正常時計でもfuture cutoff・前進上限・初回ceilingを検査し、既存job発見・NoAdvance・記録停止待ちを区別する。guard自体はDB・session・jobを変更しない。
+
+Rust workspace256件（新規22単体、隔離DB統合4件を含む）、Clippy `-D warnings`／rustfmt、関連Chromium6件が成功。全停止理由、境界・広い算術・u64 wrap、full policy比較、不正DTO、無変更性、明示job実行と既存CAS／Busyによるstale拒否を確認した。Astra実装レビューによる累積件数検査を補強し、最終レビューに必須修正はない。全体CIはPRで確認する。
+
+DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。proposalは実行権限・leaseではなく、実行直前の再評価が必要。信頼時計adapter、timezone／保持日数、製品policy管理、自動hostとrecorder協調、receipt GC・実媒体保守は後続。上流・S7・実環境へ接続していない。

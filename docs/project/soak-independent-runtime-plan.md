@@ -27,7 +27,7 @@
 | P4 Tag Browser        | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
 | P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
-| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c5実装済み・後続未着手     |
+| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c6実装済み・後続未着手     |
 
 ## P1の実装契約
 
@@ -275,3 +275,15 @@ H2c4は[PR #24](https://github.com/tyaro/temp-scada/pull/24)でマージ済み�
 Rust234件・Clippy／rustfmt・関連Chromium6件が成功。process begin／partial／complete後の発見、元request再送とstale値、同snapshot、読取専用性、破損・予算／取消・SQL failure・panic cleanupを確認し、Astra最終レビューを完了した。全体CIはPRで確認する。DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。
 
 自動保持設定・timezone・信頼時計・recorder調停・receipt GC・実媒体容量／I/O・物理縮小は後続。H2全体・常時recorder・History API／Trend画面は未完了である。
+
+## H2c6の実装と残り（2026-11-01）
+
+H2c5は[PR #25](https://github.com/tyaro/temp-scada/pull/25)でマージ済み（`34bf723b2f24697b3b51da438397abe3fbaf2145`）、[全体CI 41290868079](https://github.com/tyaro/temp-scada/actions/runs/41290868079)成功。Astra主設計の[明示保持候補の時刻安全判定](../design/runtime/historian-retention-clock-guard.md)をRust libraryへ実装した。
+
+- callerがpolicy・trusted clock sample・cutoff・recoveryを与える純粋関数で、初回warmup後の安定sampleから候補を判定する。
+- 時計異常・policy変更・sample形式不正は明示rearmまで停止を保持する。未来候補、前進上限、初回ceilingを検査し、既存job／記録停止待ちを返す。
+- proposalだけでは書き込まず、実行時には既存begin APIのCAS／Busy検査が働く。古い提案で新fence・記録・別jobを迂回しない。
+
+Rust256件（新規22単体、うち隔離DB統合4件）・Clippy／rustfmt・関連Chromium6件が成功。Astra実装レビューの累積件数検査を補強し、最終レビューに必須修正はない。全体CIはPRで確認する。DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。
+
+trustedの根拠となる時計adapter、timezone／保持日数と製品policy管理、実行host・recorder停止／再開、receipt GC・実媒体保守は後続。二つの安定sampleは絶対時刻の正しさを証明せず、proposalは実行権限やleaseではない。通常App・上流・S7・実環境へ接続していない。
