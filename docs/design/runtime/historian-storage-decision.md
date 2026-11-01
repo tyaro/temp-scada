@@ -125,3 +125,5 @@ H2で同時刻非破壊、再送冪等性、値／metadata／coverage／commit�
 H1のpure fixtureはこの検証の入力を揃える。H2は新保存層をSCADA内で先行できるが、上流の共有crate切出し、ChronoGazer移行、実Hub接続、実環境のDB／設定操作は別工程である。SOAK終了後に新契約と回帰fixtureを共有層へ還元し、ChronoGazerの既存SIMポリシーや旧formatを黙って変えない。
 
 H2の最初の実装区切りは[Astra主設計のH2a原子appendコア](historian-atomic-store.md)へ具体化した。固定sessionと1tick保存を隔離一時DBで検証し、検索snapshot・coverage生成・保持・容量・復旧の残りはH2b／H2cへ継続する。H2aをH2全体の完了とは扱わない。
+
+[H2b3の証拠保存](historian-recording-evidence.md)でDB format 2へ進めた。旧format 1を自動migrationせず拒否する。timed sessionと明示gapを原子的に保存するが、公開coverageへの投影と保持・容量・復旧は後続である。

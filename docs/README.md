@@ -132,6 +132,7 @@ docs/
 - [Historianの固定session・SQLite原子appendコア（H2a）](design/runtime/historian-atomic-store.md)
 - [Historianのraw snapshot検索・有限予算と取消（H2b1）](design/runtime/historian-query-snapshot.md)
 - [Historianの共通grid・min/max集約（H2b2）](design/runtime/historian-minmax-query.md)
+- [Historianの時刻付き記録計画と欠測の証拠保存（H2b3）](design/runtime/historian-recording-evidence.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)

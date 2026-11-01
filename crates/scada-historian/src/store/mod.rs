@@ -2,6 +2,7 @@
 //! No recorder or product History API is connected.
 mod types;
 pub use types::*;
+pub mod evidence;
 pub mod query;
 
 use std::fmt;
@@ -13,6 +14,7 @@ use std::time::Duration;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension, Transaction};
 
 pub type StoreResult<T> = Result<T, StoreError>;
+pub const STORE_FORMAT_VERSION: i64 = 2;
 
 #[derive(Debug)]
 pub enum StoreError {
@@ -126,8 +128,12 @@ impl SqliteStore {
         let tx = connection.transaction()?;
         tx.execute_batch(include_str!("schema.sql"))?;
         tx.execute(
-            "INSERT INTO store_meta VALUES (1, 1, ?1, ?2, 0)",
-            params![identity.store_id, identity.deployment_id],
+            "INSERT INTO store_meta VALUES (1, ?1, ?2, ?3, 0)",
+            params![
+                STORE_FORMAT_VERSION,
+                identity.store_id,
+                identity.deployment_id
+            ],
         )?;
         tx.commit()?;
         Ok(Self {
@@ -151,7 +157,7 @@ impl SqliteStore {
         let mut connection = connect(&path)?;
         let application: i64 = connection.query_row("PRAGMA application_id", [], |r| r.get(0))?;
         let version: i64 = connection.query_row("PRAGMA user_version", [], |r| r.get(0))?;
-        if application != 1_396_918_337 || version != 1 {
+        if application != 1_396_918_337 || version != STORE_FORMAT_VERSION {
             return Err(StoreError::UnsupportedStore);
         }
         let (format, store, deployment): (i64, String, String) = connection.query_row(
@@ -159,7 +165,7 @@ impl SqliteStore {
             [],
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
         )?;
-        if format != 1 {
+        if format != STORE_FORMAT_VERSION {
             return Err(StoreError::UnsupportedStore);
         }
         if store != expected.store_id || deployment != expected.deployment_id {
@@ -211,11 +217,24 @@ impl SqliteStore {
         spec: SessionSpec,
         hook: &mut impl FnMut(Boundary) -> StoreResult<()>,
     ) -> StoreResult<SessionStatus> {
+        self.begin_evidence_with_hook(spec, None, hook)
+    }
+
+    fn begin_evidence_with_hook(
+        &mut self,
+        spec: SessionSpec,
+        start: Option<evidence::TimedStart>,
+        hook: &mut impl FnMut(Boundary) -> StoreResult<()>,
+    ) -> StoreResult<SessionStatus> {
         let spec = spec.validated()?;
+        if let Some(start) = &start {
+            start.validate()?;
+        }
         let encoded = serde_json::to_string(&spec)?;
         let tx = self.connection.transaction()?;
         if let Some(existing) = status(&tx, &spec.session_id)? {
-            return if existing.spec == spec {
+            let saved_start = evidence::load(&tx, &spec.session_id)?.map(|e| e.start);
+            return if existing.spec == spec && saved_start == start {
                 Ok(existing)
             } else {
                 Err(StoreError::Conflict)
@@ -288,8 +307,13 @@ impl SqliteStore {
                 params![spec.session_id, member.series_id, member.segment_id],
             )?;
         }
+        if let Some(start) = &start {
+            evidence::save_start(&tx, &spec, start, commit)?;
+        }
         hook(Boundary::Metadata)?;
+        hook(Boundary::BeforeCommit)?;
         tx.commit()?;
+        hook(Boundary::AfterCommit)?;
         Ok(SessionStatus {
             spec,
             state: SessionState::Active,
@@ -306,10 +330,20 @@ impl SqliteStore {
     }
 
     fn close_inner(&mut self, session_id: &str) -> StoreResult<SessionStatus> {
+        self.close_evidence_with_hook(session_id, None, &mut |_| Ok(()))
+    }
+
+    fn close_evidence_with_hook(
+        &mut self,
+        session_id: &str,
+        stamp: Option<evidence::ClockStamp>,
+        hook: &mut impl FnMut(Boundary) -> StoreResult<()>,
+    ) -> StoreResult<SessionStatus> {
         let tx = self.connection.transaction()?;
         let Some(mut existing) = status(&tx, session_id)? else {
             return invalid("unknown session");
         };
+        evidence::check_close(&tx, &existing, stamp.as_ref())?;
         if existing.state != SessionState::Active {
             return Ok(existing);
         }
@@ -318,7 +352,13 @@ impl SqliteStore {
             "UPDATE sessions SET state = 'closed', end_commit = ?1 WHERE session_id = ?2",
             params![commit, session_id],
         )?;
+        if let Some(stamp) = &stamp {
+            tx.execute("UPDATE session_evidence SET end_ms = ?1, observed_frontier_ms = ?1 WHERE session_id = ?2", params![stamp.at_ms, session_id])?;
+        }
+        hook(Boundary::Metadata)?;
+        hook(Boundary::BeforeCommit)?;
         tx.commit()?;
+        hook(Boundary::AfterCommit)?;
         existing.state = SessionState::Closed;
         existing.end_commit_version = Some(commit as u64);
         Ok(existing)
@@ -375,6 +415,7 @@ impl SqliteStore {
         if tick.sequence != expected {
             return Err(StoreError::Sequence { expected });
         }
+        evidence::advance_tick(&tx, &tick)?;
         let commit = next_commit(&tx)?;
         tx.execute(
             "INSERT INTO commits VALUES (?1, ?2, ?3, ?4)",
