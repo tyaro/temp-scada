@@ -1,8 +1,8 @@
 PRAGMA application_id = 1396918337;
-PRAGMA user_version = 4;
+PRAGMA user_version = 5;
 CREATE TABLE store_meta (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-    format_version INTEGER NOT NULL CHECK (format_version = 4),
+    format_version INTEGER NOT NULL CHECK (format_version = 5),
     store_id TEXT NOT NULL,
     deployment_id TEXT NOT NULL,
     last_commit INTEGER NOT NULL CHECK (last_commit >= 0)
@@ -85,6 +85,33 @@ CREATE TABLE observations (
 CREATE INDEX observation_time ON observations (series_id, sample_time_ms, session_id, sequence);
 CREATE INDEX observation_commit ON observations (commit_version);
 CREATE INDEX observation_session_time ON observations (session_id, sample_time_ms);
+CREATE TABLE retention_policy_definitions (
+    policy_id TEXT NOT NULL,
+    policy_revision INTEGER NOT NULL CHECK (policy_revision BETWEEN 1 AND 9007199254740991),
+    payload_json TEXT NOT NULL,
+    created_commit INTEGER NOT NULL CHECK (created_commit > 0),
+    PRIMARY KEY (policy_id, policy_revision)
+) STRICT;
+CREATE TABLE retention_policy_applications (
+    request_id TEXT PRIMARY KEY NOT NULL,
+    payload_json TEXT NOT NULL,
+    applied_revision INTEGER UNIQUE NOT NULL CHECK (applied_revision BETWEEN 1 AND 9007199254740991),
+    expected_applied_revision INTEGER REFERENCES retention_policy_applications (applied_revision),
+    commit_version INTEGER UNIQUE NOT NULL CHECK (commit_version > 0),
+    policy_id TEXT NOT NULL,
+    policy_revision INTEGER NOT NULL,
+    receipt_json TEXT NOT NULL,
+    FOREIGN KEY (policy_id, policy_revision) REFERENCES retention_policy_definitions,
+    CHECK ((applied_revision = 1) = (expected_applied_revision IS NULL)),
+    CHECK ((applied_revision = 1 AND expected_applied_revision IS NULL)
+        OR (applied_revision > 1 AND expected_applied_revision = applied_revision - 1))
+) STRICT;
+CREATE TABLE retention_policy_state (
+    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+    applied_revision INTEGER REFERENCES retention_policy_applications (applied_revision)
+) STRICT;
+INSERT INTO retention_policy_state VALUES (1, NULL);
+CREATE INDEX retention_policy_origin ON retention_policy_applications (policy_id, policy_revision, commit_version);
 CREATE TABLE recording_plans (
     plan_id TEXT NOT NULL,
     revision INTEGER NOT NULL CHECK (revision BETWEEN 1 AND 9007199254740991),
@@ -156,6 +183,7 @@ CREATE TABLE retention_jobs (
     deleted_ticks INTEGER NOT NULL CHECK (deleted_ticks BETWEEN 0 AND 9007199254740991),
     deleted_observations INTEGER NOT NULL CHECK (deleted_observations BETWEEN 0 AND 9007199254740991),
     completion_commit INTEGER UNIQUE CHECK (completion_commit > begin_commit),
+    policy_applied_revision INTEGER REFERENCES retention_policy_applications (applied_revision),
     CHECK ((state = 'complete') = (completion_commit IS NOT NULL))
 ) STRICT;
 CREATE UNIQUE INDEX one_active_retention_job ON retention_jobs ((1)) WHERE state = 'active';

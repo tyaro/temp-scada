@@ -10,12 +10,19 @@ fn policy() -> RetentionClockPolicy {
     RetentionClockPolicy {
         policy_id: "policy".into(),
         revision: 1,
-        cutoff_rule: super::super::policy::CutoffRule::ExplicitCandidate,
+        cutoff_rule: super::super::policy::CutoffRule::Elapsed {
+            retain_for_ms: 1100,
+        },
         tolerance_ms: 10,
         max_observation_gap_ms: 1000,
         max_cutoff_advance_ms: 500,
         initial_cutoff_ceiling_ms: Some(1500),
     }
+}
+fn applied_store(directory: &TempStore) -> SqliteStore {
+    let mut store = directory.create();
+    apply_test_policy(&mut store, policy());
+    store
 }
 fn sample(wall: i64, mono: u64) -> ClockSample {
     ClockSample {
@@ -27,7 +34,7 @@ fn sample(wall: i64, mono: u64) -> ClockSample {
 }
 fn setup(times: &[i64]) -> (TempStore, SqliteStore) {
     let directory = TempStore::new();
-    let mut store = directory.create();
+    let mut store = applied_store(&directory);
     store.begin_session(spec("recording")).unwrap();
     for (index, time) in times.iter().enumerate() {
         store
@@ -56,7 +63,7 @@ fn input(state: GuardState, mono: u64, intent: CoordinatorIntent) -> Coordinator
         policy: policy(),
         guard_state: state,
         sample: sample(2000 + mono as i64, mono),
-        candidate_cutoff_ms: Some(1000),
+        candidate_cutoff_ms: None,
         intent,
     }
 }
@@ -80,7 +87,7 @@ fn no_write(report: &CoordinatorReport, reason: NoWriteReason) {
 fn observe_is_read_only_even_when_a_stable_clock_proposes_a_job() {
     use rusqlite::hooks::{AuthAction, AuthContext, Authorization};
     let directory = TempStore::new();
-    let mut store = directory.create();
+    let mut store = applied_store(&directory);
     // All modifying SQL is denied; discovery and assessment still succeed.
     store
         .connection
@@ -103,7 +110,7 @@ fn observe_is_read_only_even_when_a_stable_clock_proposes_a_job() {
         report.assessment.unwrap().action,
         RetentionAction::ProposeJob { .. }
     ));
-    assert_eq!(counter(&store), 0);
+    assert_eq!(counter(&store), 1);
     assert!(store.connection.is_autocommit());
 }
 
@@ -142,7 +149,7 @@ fn begin_requires_stable_clock_and_never_also_performs_a_step() {
 #[test]
 fn duplicate_sample_cannot_execute_an_earlier_observed_proposal() {
     let directory = TempStore::new();
-    let mut store = directory.create();
+    let mut store = applied_store(&directory);
     let primed = prime(&mut store);
     let observed = store
         .coordinate_retention_once(&input(primed, 100, CoordinatorIntent::Observe), &control());
@@ -155,13 +162,13 @@ fn duplicate_sample_cannot_execute_an_earlier_observed_proposal() {
         duplicate.assessment.unwrap().action,
         RetentionAction::WaitForClock
     );
-    assert_eq!(counter(&store), 0);
+    assert_eq!(counter(&store), 1);
 }
 
 #[test]
 fn begin_payload_must_match_the_current_cutoff_and_fence_exactly() {
     let directory = TempStore::new();
-    let mut store = directory.create();
+    let mut store = applied_store(&directory);
     let state = prime(&mut store);
     for request in [
         JobRequest {
@@ -179,20 +186,20 @@ fn begin_payload_must_match_the_current_cutoff_and_fence_exactly() {
         );
         no_write(&report, NoWriteReason::BeginRequestMismatch);
     }
-    assert_eq!(counter(&store), 0);
+    assert_eq!(counter(&store), 1);
 }
 
 #[test]
 fn deferred_suspended_and_recording_states_do_not_begin_or_close_a_session() {
     let directory = TempStore::new();
-    let mut store = directory.create();
+    let mut store = applied_store(&directory);
     let state = prime(&mut store);
     let mut future = input(state.clone(), 100, CoordinatorIntent::Begin(begin()));
-    future.candidate_cutoff_ms = Some(2101);
-    future.intent = CoordinatorIntent::Begin(JobRequest {
-        cutoff_ms: 2101,
-        ..begin()
-    });
+    future.policy.initial_cutoff_ceiling_ms = Some(999);
+    future.guard_state = GuardState::Primed {
+        policy_snapshot: future.policy.clone(),
+        last_sample: sample(2000, 0),
+    };
     let future = store.coordinate_retention_once(&future, &control());
     no_write(&future, NoWriteReason::NotProposed);
     assert!(matches!(
@@ -209,7 +216,7 @@ fn deferred_suspended_and_recording_states_do_not_begin_or_close_a_session() {
         &control(),
     );
     no_write(&later, NoWriteReason::NotProposed);
-    assert_eq!(counter(&store), 0);
+    assert_eq!(counter(&store), 1);
     store.begin_session(spec("active")).unwrap();
     let before = counter(&store);
     let report = store.coordinate_retention_once(
@@ -390,4 +397,49 @@ fn explicit_continuation_keeps_clock_suspension_and_does_not_rearm() {
     );
     assert_eq!(observed.next_state, old);
     assert_eq!(count(&store, "observations"), 2);
+}
+
+#[test]
+fn a_policy_change_between_discovery_and_begin_is_rejected_in_the_write_transaction() {
+    use crate::store::retention::application::{PolicyApplyRequest, PolicyPreparationRequest};
+    let directory = TempStore::new();
+    let mut store = applied_store(&directory);
+    let state = prime(&mut store);
+    let result = store.coordinate_with_hook(
+        &input(state, 100, CoordinatorIntent::Begin(begin())),
+        &control(),
+        &mut |store| {
+            let changed = RetentionClockPolicy {
+                revision: 2,
+                ..policy()
+            };
+            let prep = store.preview_retention_policy_application(
+                &PolicyPreparationRequest {
+                    proposed_policy: changed.clone(),
+                    reference_wall_ms: 3000,
+                },
+                &control(),
+            )?;
+            store.apply_retention_policy(
+                &PolicyApplyRequest {
+                    request_id: "between-check-and-begin".into(),
+                    expected_applied_revision: prep.expected_applied_revision,
+                    expected_preview_snapshot_commit: prep.snapshot_commit,
+                    proposed_policy: changed,
+                    reference_wall_ms: 3000,
+                },
+                &control(),
+            )?;
+            Ok(())
+        },
+    );
+    assert!(matches!(
+        result.outcome,
+        Err(CoordinatorError::Store(StoreError::Conflict))
+    ));
+    assert!(matches!(result.next_state, GuardState::Tracking { .. }));
+    let fresh = store.recovery_state(&control()).unwrap();
+    assert!(fresh.active_job.is_none());
+    assert_eq!(fresh.applied_retention_policy.unwrap().applied_revision, 2);
+    assert_eq!(counter(&store), 2);
 }

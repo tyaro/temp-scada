@@ -465,3 +465,15 @@ H2c8は[PR #28](https://github.com/tyaro/temp-scada/pull/28)でマージ済み�
 Rust workspace298件（新規14単体）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。read-only性、全member構造・参照破損、snapshot競合、境界・差分・active／途中job、1025tick／有限SQL予算、取消・panic・SQLfailure／cleanupを確認した。AstraレビューのNUL検査を補強し、最終レビューに必須修正はない。全体CIはPRで確認する。
 
 DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。previewは削除・適用・対象予約を行わず、全JSON内容や実行成功を保証しない。policy永続適用と期待revision、ローカル暦日／timezone、信頼時計、scheduler／recorder、receipt GC・実媒体保守は後続。上流・S7・実環境には接続していない。
+
+## Historianの保持policy原子適用と実applied比較（H2c10、2026-11-01）
+
+H2c9は[PR #29](https://github.com/tyaro/temp-scada/pull/29)でマージ済み（`d5e55fd6219b57fc11a6c64f47e35eaccd2b31d2`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41297414808)成功。Astra主設計の[H2c10](../design/runtime/historian-retention-policy-application.md)に従い、実appliedを比較基準にするpreviewと、revision／preview snapshotの両CASによる原子適用を追加した。
+
+format 5にimmutable policy定義・適用operation／安定receipt・current pointerを保存し、復旧照会で同snapshotに復元する。同ID異内容はConflict、同内容再送は保存receiptを返し、後日のraw削除や新policy適用で過去結果を書き換えない。新規適用はactive job中に拒否し、記録中はmetadataだけを適用する。適用では削除・job開始・fence変更・guard rearmを行わない。
+
+coordinatorの新Beginは実appliedの全文一致を要求し、job開始transaction内でも適用世代を再確認する。job列と内部canonical payloadにpolicy_applied_revisionを保存し、復旧時に照合する。Observe／既存jobの正確な継続・再送、直接保守用job／trimは維持する。
+
+Rust workspace314件（新規16単体、child worker含む）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。CAS、immutable定義、記録中／job中、raw削除後receipt再送、coordinator途中apply競合、容量不足・取消・panic・SQL／rollback poison、COMMIT前後5境界のprocess終了、pointer／receipt／binding破損と旧format4非変更拒否を検証した。Astra指摘の保存receipt内active jobを拒否し、最終レビューに必須修正はない。全体CIはPRで確認する。
+
+旧format 1〜4は自動移行しない。H1・依存・SDK・Project・Banto・TS／通常Appは維持する。製品desired配布／管理認証、ローカル暦日／timezone、信頼時計adapter、scheduler／recorder、receipt GC・実媒体保守は後続。上流・S7・実環境には接続していない。

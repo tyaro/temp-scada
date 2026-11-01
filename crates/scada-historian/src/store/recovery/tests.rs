@@ -308,7 +308,7 @@ fn missing_singletons_or_malformed_trim_origin_are_not_normal_initial_state() {
 
 #[test]
 fn duplicate_candidates_and_recording_retention_overlap_are_rejected() {
-    for corruption in ["DROP INDEX one_active_retention_job; INSERT INTO retention_jobs SELECT 'second',payload_json,cutoff_ms,expected_cutoff_ms,state,begin_commit+1,last_step,deleted_ticks,deleted_observations,completion_commit FROM retention_jobs", "UPDATE sessions SET state='active',end_commit=NULL"] {
+    for corruption in ["DROP INDEX one_active_retention_job; INSERT INTO retention_jobs SELECT 'second',payload_json,cutoff_ms,expected_cutoff_ms,state,begin_commit+1,last_step,deleted_ticks,deleted_observations,completion_commit,policy_applied_revision FROM retention_jobs", "UPDATE sessions SET state='active',end_commit=NULL"] {
  let (_directory,mut store)=setup([1000]);store.begin_retention_job(request(),&control()).unwrap();store.connection.execute_batch(corruption).unwrap();assert!(matches!(store.recovery_state(&control()),Err(StoreError::CorruptData)),"{corruption}");
  }
     let directory = TempStore::new();

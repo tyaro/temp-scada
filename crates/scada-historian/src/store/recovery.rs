@@ -10,9 +10,9 @@ use super::{
     SessionSpec, SqliteStore, StoreError, StoreResult, MAX_SAFE,
 };
 use rusqlite::{Connection, OptionalExtension};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -23,32 +23,33 @@ pub enum FenceSource {
     SingleTrim { request_id: String },
     CompletedJob { job_id: String },
 }
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RetentionFence {
     pub cutoff_ms: Option<i64>,
     pub revision_commit: u64,
     pub source: FenceSource,
 }
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct StepRecovery {
     pub request: JobStepRequest,
     pub receipt: JobStepReceipt,
 }
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ActiveJobRecovery {
     pub status: JobStatus,
     pub last_step: Option<StepRecovery>,
 }
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct StoreRecoveryState {
     pub snapshot_commit: u64,
     pub retention_fence: RetentionFence,
     pub active_session_id: Option<String>,
     pub active_job: Option<ActiveJobRecovery>,
+    pub applied_retention_policy: Option<retention::application::AppliedRetentionPolicy>,
 }
 
 impl SqliteStore {
@@ -114,6 +115,17 @@ pub(super) fn read_snapshot(
         .first()
         .map(|id| jobs::recover_active(connection, id, cutoff, revision, snapshot, budget))
         .transpose()?;
+    let applied_retention_policy =
+        retention::application::load_current(connection, budget, snapshot as u64)?;
+    if active_job.as_ref().is_some_and(|job| {
+        job.status.policy_applied_revision.is_some_and(|rev| {
+            applied_retention_policy.as_ref().is_none_or(|p| {
+                p.applied_revision != rev || p.commit_version >= job.status.begin_commit
+            })
+        })
+    }) {
+        return Err(StoreError::CorruptData);
+    }
     Ok(StoreRecoveryState {
         snapshot_commit: snapshot as u64,
         retention_fence: RetentionFence {
@@ -123,6 +135,7 @@ pub(super) fn read_snapshot(
         },
         active_session_id,
         active_job,
+        applied_retention_policy,
     })
 }
 

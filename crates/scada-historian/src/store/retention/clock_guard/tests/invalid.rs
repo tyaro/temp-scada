@@ -18,6 +18,7 @@ fn active() -> StoreRecoveryState {
                 deleted_observations: 2,
                 begin_commit: 4,
                 completion_commit: None,
+                policy_applied_revision: None,
             },
             last_step: Some(StepRecovery {
                 request: JobStepRequest {

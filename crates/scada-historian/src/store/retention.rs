@@ -1,4 +1,5 @@
 //! Explicit, quiescent maintenance of query observations, not physical erasure.
+pub mod application;
 pub mod clock_guard;
 pub mod coordinator;
 pub mod jobs;

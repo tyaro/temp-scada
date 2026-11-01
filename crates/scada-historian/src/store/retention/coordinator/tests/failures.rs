@@ -7,7 +7,7 @@ use crate::store::{
 #[test]
 fn discovery_failure_has_no_assessment_or_write_and_retains_the_input_state() {
     let directory = TempStore::new();
-    let mut store = directory.create();
+    let mut store = applied_store(&directory);
     let state = prime(&mut store);
     for kind in 0..6 {
         let mut c = control();
@@ -30,7 +30,7 @@ fn discovery_failure_has_no_assessment_or_write_and_retains_the_input_state() {
         assert_eq!(report.next_state, state);
         assert!(report.recovery.is_none() && report.assessment.is_none());
         assert!(!report.rearm_required);
-        assert_eq!(counter(&store), 0);
+        assert_eq!(counter(&store), 1);
         assert!(store.connection.is_autocommit());
         assert!(!store.needs_reopen);
     }
@@ -149,7 +149,7 @@ fn post_assessment_cancellation_returns_tracking_or_latched_suspension_with_the_
 fn intervening_fence_recording_or_job_still_uses_the_store_conflict_gates() {
     for kind in 0..3 {
         let directory = TempStore::new();
-        let mut store = directory.create();
+        let mut store = applied_store(&directory);
         let state = prime(&mut store);
         let report = store.coordinate_with_hook(
             &input(state, 100, CoordinatorIntent::Begin(begin())),
@@ -188,7 +188,7 @@ fn intervening_fence_recording_or_job_still_uses_the_store_conflict_gates() {
             RetentionAction::ProposeJob { .. }
         ));
         // The report describes the pre-operation discovery, not the later write.
-        assert_eq!(report.recovery.unwrap().snapshot_commit, 0);
+        assert_eq!(report.recovery.unwrap().snapshot_commit, 1);
         match kind {
             0 => assert!(matches!(
                 report.outcome,
@@ -199,7 +199,7 @@ fn intervening_fence_recording_or_job_still_uses_the_store_conflict_gates() {
                 Err(CoordinatorError::Store(StoreError::Busy))
             )),
         }
-        assert_eq!(counter(&store), 1); // Only the injected competing operation.
+        assert_eq!(counter(&store), 2); // Initial policy plus the competing operation.
         assert!(!store.needs_reopen);
     }
 }
@@ -207,7 +207,7 @@ fn intervening_fence_recording_or_job_still_uses_the_store_conflict_gates() {
 #[test]
 fn invalid_job_parameters_remain_store_errors_with_the_assessment_attached() {
     let directory = TempStore::new();
-    let mut store = directory.create();
+    let mut store = applied_store(&directory);
     let state = prime(&mut store);
     let bad_begin = store.coordinate_retention_once(
         &input(
@@ -225,7 +225,7 @@ fn invalid_job_parameters_remain_store_errors_with_the_assessment_attached() {
         Err(CoordinatorError::Store(StoreError::Invalid(_)))
     ));
     assert!(bad_begin.assessment.is_some());
-    assert_eq!(counter(&store), 0);
+    assert_eq!(counter(&store), 1);
     store.begin_retention_job(begin(), &control()).unwrap();
     for request in [step(0, 1), step(1, 0), step(1, 1025)] {
         let report = store.coordinate_retention_once(
@@ -241,7 +241,7 @@ fn invalid_job_parameters_remain_store_errors_with_the_assessment_attached() {
             Err(CoordinatorError::Store(StoreError::Invalid(_)))
         ));
         assert!(report.assessment.is_some());
-        assert_eq!(counter(&store), 1);
+        assert_eq!(counter(&store), 2);
     }
 }
 
@@ -249,7 +249,7 @@ fn invalid_job_parameters_remain_store_errors_with_the_assessment_attached() {
 fn sql_failure_keeps_the_new_state_and_poison_is_not_cleared_by_the_coordinator() {
     use rusqlite::hooks::{AuthAction, AuthContext, Authorization};
     let directory = TempStore::new();
-    let mut store = directory.create();
+    let mut store = applied_store(&directory);
     let state = prime(&mut store);
     store
         .connection
@@ -277,7 +277,7 @@ fn sql_failure_keeps_the_new_state_and_poison_is_not_cleared_by_the_coordinator(
     assert!(matches!(report.next_state, GuardState::Tracking { .. }));
     assert!(report.assessment.is_some() && report.recovery.is_some());
     assert!(store.needs_reopen);
-    assert_eq!(counter(&store), 0);
+    assert_eq!(counter(&store), 1);
     let denied = store.coordinate_retention_once(
         &input(report.next_state, 200, CoordinatorIntent::Observe),
         &control(),

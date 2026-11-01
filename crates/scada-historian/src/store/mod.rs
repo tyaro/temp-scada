@@ -17,7 +17,7 @@ use std::time::Duration;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 
 pub type StoreResult<T> = Result<T, StoreError>;
-pub const STORE_FORMAT_VERSION: i64 = 4;
+pub const STORE_FORMAT_VERSION: i64 = 5;
 
 #[derive(Debug)]
 pub enum StoreError {

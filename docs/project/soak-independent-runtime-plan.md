@@ -27,7 +27,7 @@
 | P4 Tag Browser        | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
 | P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
-| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c9実装済み・後続未着手     |
+| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c10実装済み・後続未着手    |
 
 ## P1の実装契約
 
@@ -323,3 +323,15 @@ H2c8は[PR #28](https://github.com/tyaro/temp-scada/pull/28)でマージ済み�
 Rust298件（新規14単体）・Clippy／rustfmt・関連Chromium6件が成功。snapshot競合・破損／NUL・1025tick・有限予算・取消／panic／cleanupを確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。
 
 policy永続適用と期待revision、製品管理口、ローカル暦日／timezone、信頼時計、scheduler／recorder協調、receipt GC・実媒体保守は後続。previewは全JSON監査や後続削除の成功保証ではない。上流・S7・実環境には接続していない。
+
+## H2c10の実装と残り（2026-11-01）
+
+H2c9は[PR #29](https://github.com/tyaro/temp-scada/pull/29)でマージ済み（`d5e55fd6219b57fc11a6c64f47e35eaccd2b31d2`）、[全体CI 41297414808](https://github.com/tyaro/temp-scada/actions/runs/41297414808)成功。Astra主設計の[保持policy原子適用](../design/runtime/historian-retention-policy-application.md)を実装した。
+
+- 実applied比較previewとrevision／snapshot CAS、同transactionのfresh previewから、immutable定義・安定receipt・current pointerを原子適用する。再送では後日のrawを再集計しない。
+- 記録中のmetadata適用は許可し、active job中の新適用は拒否する。適用だけでは削除・job開始・fence変更・guard rearmを行わない。
+- coordinator新Beginは実applied全文一致を必須とし、開始transactionで再照合する。jobの適用世代を列とcanonical payloadへ保存する。既存job継続／再送と直接保守APIは維持する。
+
+DB format 5へ更新、旧1〜4は非変更拒否で自動移行しない。H1・依存・SDK・Project・Banto・TS／通常Appは維持する。Rust314件（新規16単体、child worker含む）・Clippy／rustfmt・関連Chromium6件が成功。CAS・raw削除後再送・race・実FULL・取消／panic・SQLpoison・process5境界・破損を確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+製品desired配布／管理認証、ローカル暦日／timezone、信頼時計adapter、scheduler／recorder、receipt GC・実媒体保守は後続。H2全体や自動運転・常時recorder・製品History API／Trend画面の完成とはしない。上流・S7・実環境には接続していない。

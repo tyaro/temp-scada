@@ -35,6 +35,7 @@ fn duration_drives_explicit_job_creation_and_exclusive_raw_deletion_boundary() {
     store.append_tick(tick("recording", 2, 1100)).unwrap();
     store.append_tick(tick("recording", 3, 1101)).unwrap();
     let p = policy(1000);
+    apply_test_policy(&mut store, p.clone());
     let first = store.coordinate_retention_once(
         &input(&p, GuardState::Unarmed, 1800, 0, CoordinatorIntent::Observe),
         &control(),

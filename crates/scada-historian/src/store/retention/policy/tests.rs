@@ -44,6 +44,7 @@ fn initial() -> StoreRecoveryState {
         },
         active_session_id: None,
         active_job: None,
+        applied_retention_policy: None,
     }
 }
 fn prime(policy: &RetentionClockPolicy, s: &ClockSample) -> GuardState {

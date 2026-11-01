@@ -24,6 +24,8 @@ CoordinatorInput は次を持つ。
 
 [H2c8](historian-retention-duration.md)で必須CutoffRuleとOption入力を追加した。ExplicitCandidateはSome(UTC候補)、ElapsedはNoneとし、Elapsedではguardが同呼出しの安定sampleからcutoffを導出する。外部計算候補による迂回や、導出失敗時の旧候補流用を許可しない。coordinatorの操作上限・report保持契約は維持する。
 
+[H2c10](historian-retention-policy-application.md)で現在のDBはformat 5となり、coordinatorの新規Beginには永続appliedとの全文一致を必須化した。未適用はNoWrite(PolicyNotApplied)、不一致はNoWrite(AppliedPolicyMismatch)。job開始transaction内でも適用世代と全文を再照合し、jobのpolicy_applied_revisionと内部canonical payloadへ出典を保存する。Observeと固定済みjobのContinueExistingはこの新規条件を要求しない。ExplicitCandidateの純粋guardと直接job／trimは明示保守用として残す。
+
 CoordinatorReport は次を持つ。
 
 | field             | 意味                                                                                       |

@@ -43,9 +43,16 @@ pub(super) fn state(state: &GuardState) -> Result<(), InvalidInput> {
     }
     Ok(())
 }
-pub(super) fn recovery(recovery: &StoreRecoveryState) -> Result<(), InvalidInput> {
+pub(in crate::store::retention) fn recovery(
+    recovery: &StoreRecoveryState,
+) -> Result<(), InvalidInput> {
     let invalid = InvalidInput::RecoveryState;
     let fence = &recovery.retention_fence;
+    if recovery.applied_retention_policy.as_ref().is_some_and(|p| {
+        !crate::store::retention::application::validate_snapshot(p, recovery.snapshot_commit)
+    }) {
+        return Err(invalid);
+    }
     if recovery.snapshot_commit > i64::MAX as u64
         || fence.revision_commit > recovery.snapshot_commit
         || fence.cutoff_ms.is_some_and(|t| !safe(t))
@@ -70,6 +77,14 @@ pub(super) fn recovery(recovery: &StoreRecoveryState) -> Result<(), InvalidInput
         return Ok(());
     };
     let job = &active.status;
+    if job.policy_applied_revision.is_some_and(|rev| {
+        recovery
+            .applied_retention_policy
+            .as_ref()
+            .is_none_or(|p| p.applied_revision != rev || p.commit_version >= job.begin_commit)
+    }) {
+        return Err(invalid);
+    }
     if !id(&job.job_id)
         || job.state != JobState::Active
         || !safe(job.cutoff_ms)
