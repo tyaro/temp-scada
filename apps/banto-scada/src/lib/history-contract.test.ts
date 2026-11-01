@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import cases from "../../../../examples/history-contract-cases.json";
+import queryCases from "../../../../examples/history-query-cases.json";
 import {
   parseHistoryContract,
   validateHistoryContract,
@@ -18,6 +19,11 @@ it.each(cases)("shared Rust contract fixture: $name", (fixture) => {
     expect(() => parseHistoryContract(fixture.input)).toThrow(
       `History contract: ${fixture.expected}`,
     );
+});
+
+it.each(queryCases)("SQLite query result fixture: $name", (fixture) => {
+  expect(validateHistoryContract(fixture.expected)).toBe("accepted");
+  expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
 });
 
 it("rejects non-finite numeric samples that JSON cannot represent", () => {
