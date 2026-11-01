@@ -27,7 +27,8 @@ pub struct CoordinatorInput {
     pub policy: RetentionClockPolicy,
     pub guard_state: GuardState,
     pub sample: ClockSample,
-    pub candidate_cutoff_ms: i64,
+    /// Some for ExplicitCandidate; None for Elapsed, derived from this sample.
+    pub candidate_cutoff_ms: Option<i64>,
     pub intent: CoordinatorIntent,
 }
 

@@ -141,6 +141,7 @@ docs/
 - [Historianの同snapshot復旧状態とjob発見（H2c5）](design/runtime/historian-recovery-state.md)
 - [Historianの明示保持候補の時刻安全判定（H2c6）](design/runtime/historian-retention-clock-guard.md)
 - [Historianの明示意図による一回分の保持coordinator（H2c7）](design/runtime/historian-retention-coordinator.md)
+- [Historianの明示duration policyとUTC cutoff計算（H2c8）](design/runtime/historian-retention-duration.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)

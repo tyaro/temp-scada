@@ -1,6 +1,8 @@
 //! Pure assessment of caller-supplied retention candidates and clock continuity.
 //! No clock, timezone, policy defaults, job ID generation, or DB work occurs here.
-mod validate;
+pub(super) mod validate;
+use super::policy::derive_cutoff;
+pub use super::policy::CutoffRule;
 use crate::store::recovery::StoreRecoveryState;
 use serde::Serialize;
 use std::fmt;
@@ -10,6 +12,7 @@ use std::fmt;
 pub struct RetentionClockPolicy {
     pub policy_id: String,
     pub revision: u64,
+    pub cutoff_rule: CutoffRule,
     pub tolerance_ms: u64,
     pub max_observation_gap_ms: u64,
     pub max_cutoff_advance_ms: u64,
@@ -35,6 +38,7 @@ pub enum SuspendReason {
     MonotonicClockDiscontinuity,
     ObservationGap,
     ClockDriftExceeded,
+    CutoffComputationFailed,
 }
 #[derive(Clone, Debug, Default, Serialize, PartialEq, Eq)]
 #[serde(
@@ -127,22 +131,26 @@ impl fmt::Display for InvalidInput {
 impl std::error::Error for InvalidInput {}
 
 /// Returns an advisory candidate, never a deletion authorization or a lease.
+/// ExplicitCandidate requires Some(cutoff); Elapsed requires None and derives
+/// from this sample only after clock continuity permits a new candidate.
 /// On InvalidInput the caller must stop its automatic path rather than reuse a
 /// previous proposal/state; fix the input and explicitly rearm as appropriate.
 pub fn assess_retention(
     policy: &RetentionClockPolicy,
     state: &GuardState,
     sample: &ClockSample,
-    candidate_cutoff_ms: i64,
+    candidate_cutoff_ms: Option<i64>,
     recovery: &StoreRecoveryState,
 ) -> Result<Assessment, InvalidInput> {
     validate::policy(policy)?;
     validate::state(state)?;
     validate::recovery(recovery)?;
-    if !validate::safe(candidate_cutoff_ms) {
-        return Err(InvalidInput::Cutoff);
+    match (policy.cutoff_rule, candidate_cutoff_ms) {
+        (CutoffRule::ExplicitCandidate, Some(t)) if validate::safe(t) => {}
+        (CutoffRule::Elapsed { .. }, None) => {}
+        _ => return Err(InvalidInput::Cutoff),
     }
-    let (next_state, stable) = advance(policy, state, sample);
+    let (mut next_state, stable) = advance(policy, state, sample);
     let action = if let Some(job) = &recovery.active_job {
         RetentionAction::ExistingJob {
             job_id: job.status.job_id.clone(),
@@ -150,7 +158,21 @@ pub fn assess_retention(
     } else if !stable {
         RetentionAction::WaitForClock
     } else {
-        candidate(policy, sample, candidate_cutoff_ms, recovery)
+        let cutoff = match policy.cutoff_rule {
+            CutoffRule::ExplicitCandidate => candidate_cutoff_ms,
+            CutoffRule::Elapsed { .. } => derive_cutoff(policy, sample.wall_time_ms)
+                .ok()
+                .map(|d| d.cutoff_ms),
+        };
+        match cutoff {
+            Some(cutoff) => candidate(policy, sample, cutoff, recovery),
+            None => {
+                next_state = GuardState::Suspended {
+                    reason: SuspendReason::CutoffComputationFailed,
+                };
+                RetentionAction::WaitForClock
+            }
+        }
     };
     Ok(Assessment { next_state, action })
 }

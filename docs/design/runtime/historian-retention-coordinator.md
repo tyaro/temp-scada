@@ -19,8 +19,10 @@ CoordinatorInput は次を持つ。
 - policy: RetentionClockPolicy
 - guard_state: GuardState
 - sample: ClockSample
-- candidate_cutoff_ms
+- candidate_cutoff_ms: Option<i64>
 - intent: Observe／Begin(JobRequest)／ContinueExisting(JobStepRequest)
+
+[H2c8](historian-retention-duration.md)で必須CutoffRuleとOption入力を追加した。ExplicitCandidateはSome(UTC候補)、ElapsedはNoneとし、Elapsedではguardが同呼出しの安定sampleからcutoffを導出する。外部計算候補による迂回や、導出失敗時の旧候補流用を許可しない。coordinatorの操作上限・report保持契約は維持する。
 
 CoordinatorReport は次を持つ。
 
@@ -55,7 +57,7 @@ Observeで使ったsampleを次のBeginへそのまま流用すると、H2c6の�
 
 ### Begin(JobRequest)
 
-新job APIを呼べるのは、今回のactionがProposeJobのときだけである。さらにrequest.cutoff_msがcandidateおよびproposalのcutoffと一致し、request.expected_cutoff_msが今回のfence／proposalの期待値と一致することを要求する。
+新job APIを呼べるのは、今回のactionがProposeJobのときだけである。さらにrequest.cutoff_msが今回の明示または導出candidateとproposalのcutoffに一致し、request.expected_cutoff_msが今回のfence／proposalの期待値と一致することを要求する。
 
 - actionがWaitForClock、Deferred、NoAdvance、WaitForRecordingStop、ExistingJob等ならNoWrite(NotProposed)。理由はreport.assessment.actionから分かる。
 - requestと今回の候補／期待fenceが異なればNoWrite(BeginRequestMismatch)。requestを書き換えたり、新しいcutoffへ補正したりしない。

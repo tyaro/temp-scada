@@ -6,6 +6,7 @@ fn policy() -> RetentionClockPolicy {
     RetentionClockPolicy {
         policy_id: "policy".into(),
         revision: 1,
+        cutoff_rule: CutoffRule::ExplicitCandidate,
         tolerance_ms: 10,
         max_observation_gap_ms: 1000,
         max_cutoff_advance_ms: 500,
@@ -33,7 +34,7 @@ fn initial() -> StoreRecoveryState {
     }
 }
 fn primed(p: &RetentionClockPolicy, s: ClockSample) -> GuardState {
-    assess_retention(p, &GuardState::Unarmed, &s, 1000, &initial())
+    assess_retention(p, &GuardState::Unarmed, &s, Some(1000), &initial())
         .unwrap()
         .next_state
 }
@@ -55,7 +56,7 @@ fn stable(p: &RetentionClockPolicy, cutoff: i64, recovery: &StoreRecoveryState) 
         p,
         &primed(p, sample(2000, 0)),
         &sample(2100, 100),
-        cutoff,
+        Some(cutoff),
         recovery,
     )
     .unwrap()
@@ -69,11 +70,18 @@ fn first_sample_only_primes_then_a_stable_sample_proposes_without_mutation() {
     let p = policy();
     let state = GuardState::Unarmed;
     let context = initial();
-    let first = assess_retention(&p, &state, &sample(2000, 0), 1000, &context).unwrap();
+    let first = assess_retention(&p, &state, &sample(2000, 0), Some(1000), &context).unwrap();
     assert_eq!(first.action, RetentionAction::WaitForClock);
     assert!(matches!(first.next_state, GuardState::Primed { .. }));
     assert_eq!(state, GuardState::Unarmed);
-    let next = assess_retention(&p, &first.next_state, &sample(2100, 100), 1000, &context).unwrap();
+    let next = assess_retention(
+        &p,
+        &first.next_state,
+        &sample(2100, 100),
+        Some(1000),
+        &context,
+    )
+    .unwrap();
     assert!(matches!(next.next_state, GuardState::Tracking { .. }));
     assert_eq!(
         next.action,
@@ -92,11 +100,12 @@ fn first_sample_only_primes_then_a_stable_sample_proposes_without_mutation() {
 fn duplicate_samples_cannot_warm_up_or_repeat_a_proposal() {
     let p = policy();
     let state = primed(&p, sample(2000, 0));
-    let duplicate = assess_retention(&p, &state, &sample(2000, 0), 1000, &initial()).unwrap();
+    let duplicate = assess_retention(&p, &state, &sample(2000, 0), Some(1000), &initial()).unwrap();
     assert_eq!(duplicate.next_state, state);
     assert_eq!(duplicate.action, RetentionAction::WaitForClock);
     let tracking = stable(&p, 1000, &initial()).next_state;
-    let duplicate = assess_retention(&p, &tracking, &sample(2100, 100), 1000, &initial()).unwrap();
+    let duplicate =
+        assess_retention(&p, &tracking, &sample(2100, 100), Some(1000), &initial()).unwrap();
     assert_eq!(duplicate.next_state, tracking);
     assert_eq!(duplicate.action, RetentionAction::WaitForClock);
 }
@@ -139,7 +148,7 @@ fn each_clock_anomaly_suspends_instead_of_proposing() {
     ];
     for (s, reason) in cases {
         assert_suspended(
-            assess_retention(&p, &state, &s, 1000, &initial()).unwrap(),
+            assess_retention(&p, &state, &s, Some(1000), &initial()).unwrap(),
             reason,
         );
     }
@@ -164,7 +173,7 @@ fn policy_snapshot_detects_revision_and_same_revision_content_changes() {
         },
     ] {
         assert_suspended(
-            assess_retention(&changed, &state, &sample(2100, 100), 1000, &initial()).unwrap(),
+            assess_retention(&changed, &state, &sample(2100, 100), Some(1000), &initial()).unwrap(),
             SuspendReason::PolicyChanged,
         );
     }
@@ -174,24 +183,30 @@ fn policy_snapshot_detects_revision_and_same_revision_content_changes() {
 fn forward_jump_stays_latched_until_explicit_rearm_and_two_new_samples() {
     let p = policy();
     let state = primed(&p, sample(2000, 0));
-    let jumped = assess_retention(&p, &state, &sample(9000, 100), 1000, &initial()).unwrap();
+    let jumped = assess_retention(&p, &state, &sample(9000, 100), Some(1000), &initial()).unwrap();
     assert_suspended(jumped.clone(), SuspendReason::ClockDriftExceeded);
-    let later =
-        assess_retention(&p, &jumped.next_state, &sample(9100, 200), 1000, &initial()).unwrap();
+    let later = assess_retention(
+        &p,
+        &jumped.next_state,
+        &sample(9100, 200),
+        Some(1000),
+        &initial(),
+    )
+    .unwrap();
     assert_eq!(later, jumped);
     let untrusted = ClockSample {
         trusted: false,
         ..sample(9200, 300)
     };
     assert_eq!(
-        assess_retention(&p, &later.next_state, &untrusted, 1000, &initial()).unwrap(),
+        assess_retention(&p, &later.next_state, &untrusted, Some(1000), &initial()).unwrap(),
         jumped
     );
     let restarted = assess_retention(
         &p,
         &later.next_state.rearm(),
         &sample(9100, 200),
-        1000,
+        Some(1000),
         &initial(),
     )
     .unwrap();
@@ -200,7 +215,7 @@ fn forward_jump_stays_latched_until_explicit_rearm_and_two_new_samples() {
         &p,
         &restarted.next_state,
         &sample(9200, 300),
-        1000,
+        Some(1000),
         &initial(),
     )
     .unwrap();
@@ -213,14 +228,14 @@ fn tolerance_and_observation_gap_are_inclusive_and_checked_in_both_directions() 
     let state = primed(&p, sample(2000, 0));
     for (wall, mono) in [(2090, 100), (2110, 100), (3000, 1000)] {
         assert!(matches!(
-            assess_retention(&p, &state, &sample(wall, mono), 1000, &initial())
+            assess_retention(&p, &state, &sample(wall, mono), Some(1000), &initial())
                 .unwrap()
                 .action,
             RetentionAction::ProposeJob { .. }
         ));
     }
     assert_suspended(
-        assess_retention(&p, &state, &sample(2089, 100), 1000, &initial()).unwrap(),
+        assess_retention(&p, &state, &sample(2089, 100), Some(1000), &initial()).unwrap(),
         SuspendReason::ClockDriftExceeded,
     );
     let exact = RetentionClockPolicy {
@@ -237,9 +252,15 @@ fn tolerance_and_observation_gap_are_inclusive_and_checked_in_both_directions() 
     };
     let state = primed(&stalled_wall, sample(2000, 0));
     assert!(matches!(
-        assess_retention(&stalled_wall, &state, &sample(2000, 100), 1000, &initial())
-            .unwrap()
-            .next_state,
+        assess_retention(
+            &stalled_wall,
+            &state,
+            &sample(2000, 100),
+            Some(1000),
+            &initial()
+        )
+        .unwrap()
+        .next_state,
         GuardState::Tracking { .. }
     ));
 }
@@ -248,10 +269,18 @@ fn tolerance_and_observation_gap_are_inclusive_and_checked_in_both_directions() 
 fn full_u64_monotonic_range_is_valid_but_wrap_is_regression() {
     let p = policy();
     let state = primed(&p, sample(2000, u64::MAX - 100));
-    let valid = assess_retention(&p, &state, &sample(2100, u64::MAX), 1000, &initial()).unwrap();
+    let valid =
+        assess_retention(&p, &state, &sample(2100, u64::MAX), Some(1000), &initial()).unwrap();
     assert!(matches!(valid.action, RetentionAction::ProposeJob { .. }));
     assert_suspended(
-        assess_retention(&p, &valid.next_state, &sample(2101, 0), 1000, &initial()).unwrap(),
+        assess_retention(
+            &p,
+            &valid.next_state,
+            &sample(2101, 0),
+            Some(1000),
+            &initial(),
+        )
+        .unwrap(),
         SuspendReason::MonotonicClockRegressed,
     );
     assert_suspended(
@@ -259,7 +288,7 @@ fn full_u64_monotonic_range_is_valid_but_wrap_is_regression() {
             &p,
             &primed(&p, sample(2000, 0)),
             &sample(2100, u64::MAX),
-            1000,
+            Some(1000),
             &initial(),
         )
         .unwrap(),
@@ -276,17 +305,23 @@ fn safe_wall_endpoints_and_wide_differences_do_not_overflow() {
     };
     for (wall, cutoff) in [(-max, -max), (max - 100, max)] {
         let state = primed(&p, sample(wall, 0));
-        let result =
-            assess_retention(&p, &state, &sample(wall + 100, 100), cutoff, &initial()).unwrap();
+        let result = assess_retention(
+            &p,
+            &state,
+            &sample(wall + 100, 100),
+            Some(cutoff),
+            &initial(),
+        )
+        .unwrap();
         assert!(matches!(result.action, RetentionAction::ProposeJob { .. }));
     }
     let state = primed(&p, sample(-max, 0));
     assert_suspended(
-        assess_retention(&p, &state, &sample(max, 100), 1000, &initial()).unwrap(),
+        assess_retention(&p, &state, &sample(max, 100), Some(1000), &initial()).unwrap(),
         SuspendReason::ClockDriftExceeded,
     );
     let state = primed(&p, sample(max - 100, 0));
-    let result = assess_retention(&p, &state, &sample(max, 100), max, &fenced(-max)).unwrap();
+    let result = assess_retention(&p, &state, &sample(max, 100), Some(max), &fenced(-max)).unwrap();
     assert_eq!(
         result.action,
         RetentionAction::Deferred {

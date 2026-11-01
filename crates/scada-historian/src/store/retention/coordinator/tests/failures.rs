@@ -65,7 +65,7 @@ fn invalid_assessment_requires_rearm_and_never_executes_even_explicit_continuati
                 InvalidInput::Policy
             }
             1 => {
-                request.candidate_cutoff_ms = i64::MAX;
+                request.candidate_cutoff_ms = Some(i64::MAX);
                 InvalidInput::Cutoff
             }
             _ => {

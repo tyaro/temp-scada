@@ -14,6 +14,8 @@ H2c6 は、caller が明示した保持候補を、信頼状態付き clock samp
 
 概念 API は `assess_retention(policy, &guard_state, sample, candidate_cutoff_ms, &StoreRecoveryState) -> Result<Assessment, InvalidInput>`。結果は `Assessment {next_state,action}` とする。最終の型・名前は実装に従う。
 
+[H2c8](historian-retention-duration.md)で、policyに必須`cutoff_rule`を追加した。現在のcandidate引数は`Option<i64>`で、ExplicitCandidateはSome、ElapsedはNoneを指定する。Elapsedは安定clockから同呼出し内で計算し、導出不能ならCutoffComputationFailedへ停止する。duration／modeも保存policy全体の比較対象となる。以下の明示候補の規則はExplicitCandidateに適用し、導出後のElapsedにも同じfence／上限／停止待ちを適用する。
+
 ### caller が指定する policy
 
 | field                            | 意味                                                                        |

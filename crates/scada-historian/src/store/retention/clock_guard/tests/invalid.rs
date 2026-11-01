@@ -43,7 +43,7 @@ fn active() -> StoreRecoveryState {
 fn active_job_has_action_priority_but_cannot_hide_a_clock_anomaly() {
     let p = policy();
     let state = primed(&p, sample(2000, 0));
-    let result = assess_retention(&p, &state, &sample(9000, 100), 8000, &active()).unwrap();
+    let result = assess_retention(&p, &state, &sample(9000, 100), Some(8000), &active()).unwrap();
     assert_eq!(
         result.action,
         RetentionAction::ExistingJob {
@@ -106,7 +106,7 @@ fn invalid_policies_and_stored_states_return_errors_without_mutating_inputs() {
                 &invalid,
                 &GuardState::Unarmed,
                 &sample(2100, 100),
-                1000,
+                Some(1000),
                 &initial()
             ),
             Err(InvalidInput::Policy)
@@ -121,7 +121,7 @@ fn invalid_policies_and_stored_states_return_errors_without_mutating_inputs() {
     };
     let before = state.clone();
     assert_eq!(
-        assess_retention(&p, &state, &sample(2100, 100), 1000, &initial()),
+        assess_retention(&p, &state, &sample(2100, 100), Some(1000), &initial()),
         Err(InvalidInput::GuardState)
     );
     assert_eq!(state, before);
@@ -130,7 +130,7 @@ fn invalid_policies_and_stored_states_return_errors_without_mutating_inputs() {
         last_sample: sample(i64::MIN, 0),
     };
     assert_eq!(
-        assess_retention(&p, &state, &sample(2100, 100), 1000, &initial()),
+        assess_retention(&p, &state, &sample(2100, 100), Some(1000), &initial()),
         Err(InvalidInput::GuardState)
     );
 }
@@ -146,12 +146,12 @@ fn unsafe_candidate_errors_but_malformed_new_sample_latches_a_stop() {
         -(MAX_SAFE as i64) - 1,
     ] {
         assert_eq!(
-            assess_retention(&p, &state, &sample(2100, 100), cutoff, &initial()),
+            assess_retention(&p, &state, &sample(2100, 100), Some(cutoff), &initial()),
             Err(InvalidInput::Cutoff)
         );
     }
     assert_suspended(
-        assess_retention(&p, &state, &sample(i64::MIN, 100), 1000, &initial()).unwrap(),
+        assess_retention(&p, &state, &sample(i64::MIN, 100), Some(1000), &initial()).unwrap(),
         SuspendReason::MalformedClockSample,
     );
     assert_suspended(
@@ -162,7 +162,7 @@ fn unsafe_candidate_errors_but_malformed_new_sample_latches_a_stop() {
                 trusted: false,
                 ..sample(2000, 0)
             },
-            1000,
+            Some(1000),
             &initial(),
         )
         .unwrap(),
@@ -211,7 +211,13 @@ fn contradictory_recovery_sources_and_active_sessions_are_rejected() {
 fn assert_invalid_recovery(r: &StoreRecoveryState) {
     let before = r.clone();
     assert_eq!(
-        assess_retention(&policy(), &GuardState::Unarmed, &sample(2000, 0), 1000, r),
+        assess_retention(
+            &policy(),
+            &GuardState::Unarmed,
+            &sample(2000, 0),
+            Some(1000),
+            r
+        ),
         Err(InvalidInput::RecoveryState)
     );
     assert_eq!(r, &before);
