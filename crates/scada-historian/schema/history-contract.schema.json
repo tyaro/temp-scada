@@ -1,0 +1,539 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://temp-scada.invalid/schema/history-contract-v1.json",
+  "title": "Historian pure contract v1",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/query"
+    },
+    {
+      "$ref": "#/$defs/sampleBatch"
+    },
+    {
+      "$ref": "#/$defs/result"
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "not": {
+        "pattern": "[^A-Za-z0-9._:-]"
+      }
+    },
+    "time": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "source": {
+      "enum": [
+        "real",
+        "computed",
+        "internal",
+        "db",
+        "simulation",
+        "derivedSimulation",
+        "unknown"
+      ]
+    },
+    "quality": {
+      "enum": ["good", "bad", "stale", "unknown"]
+    },
+    "reason": {
+      "enum": [
+        "bad",
+        "stale",
+        "unknownQuality",
+        "simulationExcluded",
+        "unknownSource",
+        "sourceUnavailable",
+        "unresolved",
+        "identityPending",
+        "missingValue",
+        "nonFinite",
+        "typeMismatch"
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "properties": {
+        "seriesId": {
+          "$ref": "#/$defs/id"
+        },
+        "hubInstanceId": {
+          "$ref": "#/$defs/id"
+        },
+        "incarnationId": {
+          "$ref": "#/$defs/id"
+        },
+        "externalName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "segmentId": {
+          "$ref": "#/$defs/id"
+        },
+        "valueType": {
+          "enum": ["number", "bool"]
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 64
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "periodMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 3600000
+        },
+        "source": {
+          "$ref": "#/$defs/source"
+        }
+      },
+      "required": [
+        "seriesId",
+        "hubInstanceId",
+        "incarnationId",
+        "externalName",
+        "segmentId",
+        "valueType",
+        "unit",
+        "periodMs",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "recordId": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "$ref": "#/$defs/id"
+        },
+        "sequence": {
+          "$ref": "#/$defs/sequence"
+        }
+      },
+      "required": ["sessionId", "sequence"],
+      "additionalProperties": false
+    },
+    "sample": {
+      "type": "object",
+      "properties": {
+        "seriesId": {
+          "$ref": "#/$defs/id"
+        },
+        "segmentId": {
+          "$ref": "#/$defs/id"
+        },
+        "recordId": {
+          "$ref": "#/$defs/recordId"
+        },
+        "clockEpoch": {
+          "$ref": "#/$defs/id"
+        },
+        "sampleTimeMs": {
+          "$ref": "#/$defs/time"
+        },
+        "sourceTimeMs": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ingestedAtMs": {
+          "$ref": "#/$defs/time"
+        },
+        "quality": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/quality"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "type": ["number", "boolean", "null"]
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/reason"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "seriesId",
+        "segmentId",
+        "recordId",
+        "clockEpoch",
+        "sampleTimeMs",
+        "sourceTimeMs",
+        "ingestedAtMs",
+        "quality",
+        "source",
+        "value",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "query": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "query"
+        },
+        "requestId": {
+          "$ref": "#/$defs/id"
+        },
+        "seriesIds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/id"
+          },
+          "maxItems": 8,
+          "minItems": 1
+        },
+        "fromMs": {
+          "$ref": "#/$defs/time"
+        },
+        "toMs": {
+          "$ref": "#/$defs/time"
+        },
+        "mode": {
+          "enum": ["raw", "minmax"]
+        },
+        "maxPointsPerSeries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "requestId",
+        "seriesIds",
+        "fromMs",
+        "toMs",
+        "mode",
+        "maxPointsPerSeries"
+      ],
+      "additionalProperties": false
+    },
+    "sampleBatch": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "sampleBatch"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/id"
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identity"
+          },
+          "maxItems": 32,
+          "minItems": 1
+        },
+        "samples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sample"
+          },
+          "maxItems": 8000,
+          "minItems": 1
+        },
+        "committedThrough": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/sequence"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "sessionId",
+        "series",
+        "samples",
+        "committedThrough"
+      ],
+      "additionalProperties": false
+    },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "fromMs": {
+          "$ref": "#/$defs/time"
+        },
+        "toMs": {
+          "$ref": "#/$defs/time"
+        },
+        "reason": {
+          "enum": [
+            "unrecorded",
+            "expired",
+            "pendingFlush",
+            "sourceUnavailable",
+            "recorderStopped",
+            "samplingMissed",
+            "storageLoss",
+            "unknownCoverage",
+            "bad",
+            "stale",
+            "unknownQuality",
+            "simulationExcluded",
+            "unknownSource",
+            "unresolved",
+            "identityPending",
+            "missingValue",
+            "nonFinite",
+            "typeMismatch"
+          ]
+        }
+      },
+      "required": ["fromMs", "toMs", "reason"],
+      "additionalProperties": false
+    },
+    "bin": {
+      "type": "object",
+      "properties": {
+        "fromMs": {
+          "$ref": "#/$defs/time"
+        },
+        "toMs": {
+          "$ref": "#/$defs/time"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validCount": {
+          "$ref": "#/$defs/count"
+        },
+        "invalidCount": {
+          "$ref": "#/$defs/count"
+        },
+        "state": {
+          "enum": ["complete", "partial", "gap", "mixedSegment"]
+        },
+        "segmentId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "fromMs",
+        "toMs",
+        "min",
+        "max",
+        "validCount",
+        "invalidCount",
+        "state",
+        "segmentId",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "watermark": {
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "$ref": "#/$defs/id"
+        },
+        "committedThrough": {
+          "$ref": "#/$defs/sequence"
+        }
+      },
+      "required": ["sessionId", "committedThrough"],
+      "additionalProperties": false
+    },
+    "seriesResult": {
+      "type": "object",
+      "properties": {
+        "seriesId": {
+          "$ref": "#/$defs/id"
+        },
+        "status": {
+          "enum": ["ready", "unknownSeries", "queryUnavailable"]
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/identity"
+          },
+          "maxItems": 32
+        },
+        "raw": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/sample"
+          },
+          "maxItems": 2000
+        },
+        "bins": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/bin"
+          },
+          "maxItems": 2000
+        },
+        "coverage": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/coverage"
+          },
+          "maxItems": 256
+        },
+        "watermark": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/watermark"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "seriesId",
+        "status",
+        "segments",
+        "raw",
+        "bins",
+        "coverage",
+        "watermark"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "result"
+        },
+        "query": {
+          "$ref": "#/$defs/query"
+        },
+        "status": {
+          "enum": ["ready", "partial", "unavailable"]
+        },
+        "snapshotId": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/seriesResult"
+          },
+          "maxItems": 8,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "version",
+        "kind",
+        "query",
+        "status",
+        "snapshotId",
+        "series"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

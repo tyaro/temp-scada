@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1／P2／P3a／P4はPR #10／#11／#12／#13で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。P5はユーザー指定のAstraが[Historian／Trend契約](../design/runtime/historian-trend-contract.md)と[共通利用調査](../reviews/chronogazer-historian-reuse.md)を設計した。不足機能はSCADAで先行設計し、後でChronoGazerへ還元できる境界にする。次はH1の共通fixture・保存方式の比較とtransaction／recovery設計。通常Designerの実Hub接続・認証・履歴サービスは未実装。
+2026-11-01の進捗: P1／P2／P3a／P4／P5はPR #10〜#14で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H1契約・fixture](../design/runtime/historian-contract-fixtures.md)と[保存方式・復旧契約](../design/runtime/historian-storage-decision.md)を基に、Rust／TSの純粋validatorを実装・ローカル検証済み。次はH2の隔離一時DBでの新保存層・検索・障害注入。通常Designerの実Hub接続・認証・履歴サービスは未実装。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 

@@ -1,6 +1,6 @@
 # S7 SOAK中のSCADA読取開発計画
 
-2026-11-01（日本時間）。状態: **採用・P1／P2／P3a／P4マージ済み、P5設計完了・実装前**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
+2026-11-01（日本時間）。状態: **採用・P1／P2／P3a／P4マージ済み、P5マージ済み、H1契約実装・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
 
 ## 前提と責務
 
@@ -18,14 +18,16 @@
 
 各工程は詳細契約→実装→受入→保存の順に進める。P1から順に着手し、後続の未実装を提供済みと記載しない。
 
-| 工程                 | 内容                                                     | 完了条件                                                                                 | 状態                         |
-| -------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------- |
-| P1 固定SDKと投影     | rev更新、同一世代snapshot、部分解決、Unbound、値側source | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                     | 完了・PR #10マージ済み       |
-| P2 読取Host          | Projectごとにhandle1つ。Textと機器slotの要求を集約       | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認       | 完了・PR #11マージ済み       |
-| P3a 表示DTO・session | 数値Text・Symbol・機器小窓への一括更新                   | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMと旧通知拒否を通常Appの同一mountで確認  | 完了・PR #12マージ済み       |
-| P3b 製品transport    | Hostと画面の配送経路・接続設定                           | transportと認証境界を明示設計し、Host sessionと画面deliveryを対応付けて実接続を検証      | 境界設計済み・製品実装は保留 |
-| P4 Tag Browser       | catalog表示DTOと既存選択UIの接続準備                     | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
-| P5 Historian／Trend  | 共通利用とAPI境界の設計                                  | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了（Astra）・実装前    |
+| 工程                  | 内容                                                              | 完了条件                                                                                 | 状態                         |
+| --------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------- |
+| P1 固定SDKと投影      | rev更新、同一世代snapshot、部分解決、Unbound、値側source          | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                     | 完了・PR #10マージ済み       |
+| P2 読取Host           | Projectごとにhandle1つ。Textと機器slotの要求を集約                | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認       | 完了・PR #11マージ済み       |
+| P3a 表示DTO・session  | 数値Text・Symbol・機器小窓への一括更新                            | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMと旧通知拒否を通常Appの同一mountで確認  | 完了・PR #12マージ済み       |
+| P3b 製品transport     | Hostと画面の配送経路・接続設定                                    | transportと認証境界を明示設計し、Host sessionと画面deliveryを対応付けて実接続を検証      | 境界設計済み・製品実装は保留 |
+| P4 Tag Browser        | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
+| P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
+| H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 実装・ローカル検証済み       |
+| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | 未着手                       |
 
 ## P1の実装契約
 
@@ -129,3 +131,15 @@ P4は[全体CI 41241713088](https://github.com/tyaro/temp-scada/actions/runs/412
 - 上流Issue #725／#726への責務整理と共通層の還元はSOAK後の作業へ記録した。今回はread-onlyで、IssueやIndustrialを変更していない。
 
 次は契約のH1（共通fixtureと保存方式の比較・transaction／recovery設計）。SCADA内の純粋な契約とモックを進め、製品transport・認証・実機接続を保留する。H2以降は既存crate拡張と新しい層の両方を比較し、ChronoGazerへの還元を後続工程とする。
+
+## H1の実装（2026-11-01）
+
+P5は[全体CI 41250024135](https://github.com/tyaro/temp-scada/actions/runs/41250024135)の全7job成功後、[PR #14](https://github.com/tyaro/temp-scada/pull/14)でマージ済み（`b49349424365462c21e399fc2fbfd1afa611eb57`）。ユーザーのAstra設計指示を継続し、[版付き契約と共通fixture](../design/runtime/historian-contract-fixtures.md)と[保存方式・復旧契約](../design/runtime/historian-storage-decision.md)をAstraが具体化した。
+
+`scada-historian`の純粋validatorとTSのhistory-contract moduleを追加し、同じcanonical Schemaと110件のfixtureでschema／semantic／acceptedの判定を揃える。query、sampleBatch、raw／minmax結果、coverage、identity、時刻・record ID、commit位置を対象にする。検証はdocument内の整合であり、実commit、真の系列継続、min/maxの元データ一致や全変化記録を保証しない。
+
+保存は新SQLite層・単一DB／writerをH2の暫定案とし、同時刻の非破壊保存、同IDの冪等性、値・metadata・coverage・commit位置の原子性、保持／snapshot／crash回復を設計した。H1はDB接続・保存・recorder・service・UIを追加しない。Project形式・SDK・Banto・既存依存versionを維持する。
+
+次はH2の隔離一時DBによる保存・検索契約の実装と障害注入。上流の共有crate切出し、ChronoGazer移行、製品transport・認証・S7環境への接続は別工程とする。
+
+H1の最終ローカル検証: Rust workspace77件（H1は2 test関数で110 fixtureとJSON整数表記を確認）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,379件、型検査0エラー・0警告、build、Chromiumで共通110 fixtureを確認するPlaywright1件が成功。buildの既知chunkサイズ警告は残る。全体CIはPRで確認し、H2のDB試験と読み替えない。

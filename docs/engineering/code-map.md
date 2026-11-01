@@ -355,3 +355,9 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 ## Historian／Trendの設計入口（P5、未実装）
 
 [Historian／Trend契約](../design/runtime/historian-trend-contract.md)と[ChronoGazer固定版の共通利用調査](../reviews/chronogazer-historian-reuse.md)を後続実装の入口にする。現行の`ReadHost`／`ReadDisplayStream`とSDK watchは最新snapshotの表示用であり、全変化の永続記録には使わない。記録設定・系列identity・History API・liveとの接続・障害分離は新契約の実装を必要とする。共有crateの切出しやアプリの取込みはこの文書工程に含めない。
+
+## Historianの純粋契約（H1）
+
+`crates/scada-historian/schema/history-contract.schema.json`が版付きquery／sampleBatch／resultの構造を規定する。`scada-historian::validate_history_contract`と`lib/history-contract.ts`は同じSchemaの検査後、期間・点数・identity・record／segment参照・Quality／sourceと値・順序・coverage・watermarkの関係を検査する。JSON整数の1／1.0を同じ意味で扱い、unsafe整数は構造検査で拒否する。
+
+`examples/history-contract-cases.json`の110 fixtureをRust／TS／実ブラウザで共有する。`crates/scada-historian/tests/contracts.rs`、`history-contract.test.ts`、`e2e/history-contract.spec.ts`が検証入口。通常Appはこのmoduleをimportせず、UI／ネットワーク／DBへ接続しない。[H1の保証範囲](../design/runtime/historian-contract-fixtures.md)と[H2の保存設計](../design/runtime/historian-storage-decision.md)を混同しない。

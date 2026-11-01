@@ -26,7 +26,11 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 ## Historian／Trend契約（P5、2026-11-01）
 
-ユーザー指定によりAstraが[契約](../design/runtime/historian-trend-contract.md)と[固定版ChronoGazerの共通利用調査](../reviews/chronogazer-historian-reuse.md)を設計した。Historianの論理分離、記録設定と系列identity、周期記録・Quality／SIM・時刻、History APIと長期検索、ライブとの接続、保持・障害分離を具体化した。不足機能は新設して後日還元する経路を許容する。P5は設計のみで、履歴サービス・Trend widget・共有crateは未実装。次はH1の契約fixtureと保存方式の比較。
+ユーザー指定によりAstraが[契約](../design/runtime/historian-trend-contract.md)と[固定版ChronoGazerの共通利用調査](../reviews/chronogazer-historian-reuse.md)を設計した。Historianの論理分離、記録設定と系列identity、周期記録・Quality／SIM・時刻、History APIと長期検索、ライブとの接続、保持・障害分離を具体化した。不足機能は新設して後日還元する経路を許容する。P5は設計のみで、履歴サービス・Trend widget・共有crateは未実装。[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41250024135)の全7job成功後、PR #14でマージ済み。
+
+## Historianの純粋契約（H1、2026-11-01）
+
+Astra主設計の[版付きJSON契約](../design/runtime/historian-contract-fixtures.md)と[保存方式・復旧契約](../design/runtime/historian-storage-decision.md)を追加した。新crate `scada-historian`とTSの純粋validatorが同じSchema／110 fixtureを使い、query・sampleBatch・raw／minmax・coverage・identity・時刻の構造と意味を検査する。Rust workspace77件・TS1,379件・型検査・build・ブラウザ契約試験が成功した。H2は新SQLite層を暫定採用。H1にはDB・常時recorder・API・UI接続はなく、永続化や真のidentityの検証は後続。
 
 ## 保存契約と基盤
 
