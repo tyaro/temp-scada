@@ -45,6 +45,7 @@ pub enum RecordingPhase {
     Joined,
     Faulted,
     NoStore,
+    Retaining,
 }
 
 #[derive(Clone, Debug)]
@@ -141,4 +142,9 @@ pub enum RecordingHostError {
     Clock(ClockError),
     Source(ErrorKind),
     WorkerFailed,
+    UncleanPause,
+    RetentionPending,
+    RetentionRearmRequired,
+    ClockEpochReuse,
+    SessionReuse,
 }

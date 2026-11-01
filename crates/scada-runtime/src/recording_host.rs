@@ -1,7 +1,11 @@
 //! Explicit in-process lifecycle for one fixed recording group and one writer.
 //! SDK work stays on Tokio; synchronous recorder/SQLite work stays off it.
+mod retention;
 mod types;
 mod worker;
+pub use retention::{
+    RetentionGuardSnapshot, RetentionTurnCompletion, RetentionTurnInput, RetentionTurnRun,
+};
 pub use types::*;
 
 use std::sync::Arc;
@@ -23,6 +27,8 @@ pub struct RecordingHost {
     running: Option<Running>,
     status: watch::Sender<Arc<RecordingHostStatus>>,
     completion: Option<Arc<RecordingCompletion>>,
+    retention: retention::RetentionOwner,
+    last_clock_epoch: Option<String>,
 }
 struct Running {
     cancel: CancellationToken,
@@ -46,6 +52,8 @@ impl RecordingHost {
             running: None,
             status,
             completion: None,
+            retention: retention::RetentionOwner::default(),
+            last_clock_epoch: None,
         }
     }
 
@@ -59,13 +67,15 @@ impl RecordingHost {
     /// Acceptance only: database/clock startup is reported by the worker.
     /// Replacement is explicitly request_stop -> join -> start with a new session.
     /// A finished but unjoined worker remains Busy.
+    /// Joined resumes require a clean pause, a different clock epoch, and no
+    /// outstanding retention job/uncertainty or explicit-rearm requirement.
     pub fn start(
         &mut self,
         plan: SdkRecorderPlan,
         options: RecordingOptions,
         client: RestClient,
     ) -> Result<RecordingRun, RecordingHostError> {
-        if self.running.is_some() {
+        if self.running.is_some() || self.retention.running.is_some() {
             return Err(RecordingHostError::Busy);
         }
         if self.state().phase == RecordingPhase::Faulted {
@@ -73,6 +83,23 @@ impl RecordingHost {
         }
         if self.store.is_none() {
             return Err(RecordingHostError::NoStore);
+        }
+        if self.completion.is_some() && !self.clean_pause() {
+            return Err(RecordingHostError::UncleanPause);
+        }
+        if self.completion.is_some()
+            && self.state().session_id.as_deref() == Some(&plan.session().session_id)
+        {
+            return Err(RecordingHostError::SessionReuse);
+        }
+        if self.retention.job_pending {
+            return Err(RecordingHostError::RetentionPending);
+        }
+        if self.retention.rearm_required {
+            return Err(RecordingHostError::RetentionRearmRequired);
+        }
+        if self.last_clock_epoch.as_ref() == Some(&options.clock_epoch) {
+            return Err(RecordingHostError::ClockEpochReuse);
         }
         let runtime = Handle::try_current().map_err(|_| RecordingHostError::NoRuntime)?;
         let config = RecorderConfig {
@@ -83,8 +110,8 @@ impl RecordingHost {
             max_clock_skew_ms: options.max_clock_skew_ms,
         };
         config.validate().map_err(RecordingHostError::Config)?;
-        let clock =
-            SystemRecorderClock::new(options.clock_epoch).map_err(RecordingHostError::Clock)?;
+        let clock = SystemRecorderClock::new(options.clock_epoch.clone())
+            .map_err(RecordingHostError::Clock)?;
         let source = SdkRecorderSource::start(plan, client).map_err(RecordingHostError::Source)?;
         let run = RecordingRun(Arc::new(()));
         self.status.send_replace(Arc::new(RecordingHostStatus {
@@ -99,6 +126,8 @@ impl RecordingHost {
         }));
         let cancel = CancellationToken::default();
         self.completion = None;
+        self.retention.clear_completion();
+        self.last_clock_epoch = Some(options.clock_epoch);
         let store = self.store.take().expect("idle writer checked above");
         let status = self.status.clone();
         let worker_run = run.clone();
@@ -140,6 +169,9 @@ impl RecordingHost {
     /// Ok confirms worker joining; inspect start_error/report/source_shutdown
     /// separately for startup, storage cleanup and SDK failure.
     pub async fn join(&mut self) -> Result<Arc<RecordingCompletion>, RecordingHostError> {
+        if self.retention.running.is_some() {
+            return Err(RecordingHostError::Busy);
+        }
         let Some(running) = self.running.as_mut() else {
             return match self.state().phase {
                 RecordingPhase::Joined => Ok(self.completion.clone().expect("joined completion")),
@@ -168,7 +200,7 @@ impl RecordingHost {
     /// Caller may now run retention or transfer/drop the writer. No implicit
     /// stop, join, reopen, policy application, or retry takes place here.
     pub fn take_store(&mut self) -> Result<SqliteStore, RecordingHostError> {
-        if self.running.is_some() {
+        if self.running.is_some() || self.retention.running.is_some() {
             return Err(RecordingHostError::Busy);
         }
         if self.state().phase == RecordingPhase::Faulted {
@@ -183,6 +215,7 @@ impl RecordingHost {
 impl Drop for RecordingHost {
     fn drop(&mut self) {
         self.request_stop();
+        self.cancel_retention_turn();
     }
 }
 

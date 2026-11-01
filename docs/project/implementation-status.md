@@ -507,3 +507,13 @@ H3bは[PR #32](https://github.com/tyaro/temp-scada/pull/32)でマージ済み（
 Rust workspace360件（新規6単体・7統合）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。有限記録→raw照会、SDK稼働、取消・旧通知・最新receipt、static／開始時失敗、Unauthorized／SDK終了失敗、Drop中lockとpanic後Faultedを確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 DB format 5・H1・外部依存・SDK・Project・Banto・通常Appを維持する。単一groupのlibrary Hostであり、製品計画の配布、複数group／queue、保持協調・時計domain再開、History／Trend・正式サービス、実媒体I/O・GC／timezoneは後続。上流・S7・実Hub・実環境へ接続していない。
+
+## Historianの記録pause・保持turn・明示再開（H3d、2026-11-01）
+
+H3cは[PR #33](https://github.com/tyaro/temp-scada/pull/33)でマージ済み（`12ba61ae67ae36f904504329a8266c00dcce8161`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41307592962)成功。Astra主設計の[H3d](../design/runtime/historian-recording-retention.md)を実装し、Hostがwriterを手放さずに記録停止／joinから保持操作へ移れるようにした。
+
+正常ClosedとSDK終了成功のjoin済み記録だけをclean pauseとする。保持workerは最大一回の既存coordinatorを実行し、Hostがguardのnext_stateと失敗停止状態を引き継ぐ。job未完了／不明、未join、異常終了中の再開を拒否する。明示rearmはjob状態を消さず、必要な再照会後に新session・直前と異なるclock epochで再開する。自動rearm・削除ループ・再開は追加しない。
+
+Rust workspace372件（新規7単体・5統合）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。実appliedとの照合、分割削除とexact step再送、clock停止中の既存job完了、rearm／Observe後再開、raw／expiredとpause区間、取消・writer所有・異常時拒否を確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+DB format 5・H1・外部依存・SDK・Project・Banto・通常Appを維持する。単一groupの明示library操作であり、製品計画配布・複数group／queue、History／Trend、保持scheduler・信頼時計adapter・実媒体運用等は後続。上流・S7・実環境には接続していない。

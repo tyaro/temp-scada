@@ -503,3 +503,11 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 `scada-historian/src/recorder/types.rs`のRecorderConfig検証と`store/evidence.rs`のPlanRef検証を公開し、既存start／TimedStartでも同じ検証を共用する。保存形式と位相固定周期は変更しない。
 
 `recording_host/tests.rs`の6単体が制御gate、取消・Drop中writer所有、panic／Faulted、開始前取消、旧run／phase、receiptと診断を担当する。`crates/scada-runtime/tests/recording_host.rs`の7統合がcurrent-thread SDK→Host→実SQLite、有限終了／raw照会、再join／差替え、開始／SDK終了失敗を検証する。既存source統合と共有するloopback fixtureは`tests/support/recorder_hub.rs`。実FULL／時計異常はH3aから継承し、Host固有試験の範囲と[後続](../design/runtime/historian-recording-host.md)を区別する。
+
+## Historianの記録pauseと保持協調（H3d）
+
+`crates/scada-runtime/src/recording_host/retention.rs`がturn入力／token／completion、Host所有guard snapshot、保持workerと取消安全joinを所有する。既存coordinate_retention_onceを一回呼ぶだけに限定し、予算・applied照合・exact step再送は既存store契約へ委ねる。
+
+`recording_host.rs`が記録workerとの相互Busy、clean pause、新session／直前epoch差、job_pending／rearm_requiredによる再開拒否を適用する。保持中も元のclean completionを維持し、join時にwriter・next_stateを必ず回収する。Dropは両workerの取消を要求し、完了前のlock解放を偽称しない。新recording開始で過去turn completionを無効化し、guard／停止状態は消さない。
+
+`recording_host/retention/tests.rs`の7単体がguard／失敗停止状態、全clean拒否条件、保持join取消・Drop／panicを担当する。`crates/scada-runtime/tests/recording_retention.rs`の5統合がmock Hub→記録→実applied保持job→step再送／expired→明示再開、異常・未適用／再利用拒否を検証する。既存Host差替え試験もfresh epochへ揃えた。[設計・状態の意味・試験範囲](../design/runtime/historian-recording-retention.md)を参照する。

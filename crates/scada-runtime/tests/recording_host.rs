@@ -247,8 +247,10 @@ async fn cancelled_join_keeps_owner_busy_then_allows_explicit_new_session() {
         StopCause::Cancelled
     ));
     closed(&mut socket).await;
+    let mut resumed_options = options(Some(1));
+    resumed_options.clock_epoch = "host-epoch-next".into();
     let new = host
-        .start(new_session("second"), options(Some(1)), hub.client())
+        .start(new_session("second"), resumed_options, hub.client())
         .unwrap();
     assert_ne!(new, old);
     assert_eq!(old_frame.run.as_ref(), Some(&old));
