@@ -372,4 +372,10 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 
 `crates/scada-historian/src/store/query/mod.rs`の`HistoryReader`が専用READ_ONLY接続、同一snapshot内のmetadata／raw／watermark投影、H1 result検査、typed error、transaction終了を所有する。`query/control.rs`は共有取消token・単調deadline・VM／decode行／結果bytesの有限予算を所有し、SQLごとの端数も保守的に計上する。公開factoryは`SqliteStore::reader()`で、最大2個のidleを含むreader leaseがwriter lockを共有し、全接続の終了まで排他を維持する。
 
-`query/tests.rs`が競合・取消・処理量・cleanupのunit試験、`store/test_support.rs`がH2a／H2b共通の一時DB・型付き入力fixtureを担当する。`tests/query_fixtures.rs`が`examples/history-query-cases.json`の実SQLite出力を照合し、TS `history-contract.test.ts`と実ブラウザ `e2e/history-contract.spec.ts`も同じ期待resultを検証する。通常Appからの利用・UIのDB直読・minmax・確定coverage・保持は[次工程](../design/runtime/historian-query-snapshot.md)へ残す。
+`query/tests.rs`が競合・取消・処理量・cleanupのunit試験、`store/test_support.rs`がH2a／H2b共通の一時DB・型付き入力fixtureを担当する。`tests/query_fixtures.rs`が`examples/history-query-cases.json`の実SQLite出力を照合し、TS `history-contract.test.ts`と実ブラウザ `e2e/history-contract.spec.ts`も同じ期待resultを検証する。通常Appからの利用・UIのDB直読・確定coverage・保持は[次工程](../design/runtime/historian-query-snapshot.md)へ残す。
+
+## Historianのmin/max集約（H2b2）
+
+`store/query/mod.rs`の`query_minmax`はrawとsnapshot・metadata・watermark・予算・cleanupを共有し、`query/minmax.rs`が整数共通grid・SQL要約の検査・bin状態・空binのmetadata根拠を所有する。`query/minmax.sql`はbound parameterの有限descriptor対応表と既存時刻索引を使い、SQL内で値／無値／破損・domain混在・極値・件数をbinへ集約する。Rustへ全rawを展開しない。
+
+`query/minmax/tests.rs`が具体的な境界・ピーク・件数、混在・破損・NUL・取消、9,001tickの集約とH1 sample理由の一致を確認する。`tests/query_fixtures.rs`が新しい`examples/history-minmax-cases.json`の6成功／1失敗を実SQLiteと比較し、成功resultは既存TS／ブラウザ契約テストでも共有する。公開JSON SchemaやDB formatを緩めて通さない。[H2b2設計・残り](../design/runtime/historian-minmax-query.md)を参照する。

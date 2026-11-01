@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import cases from "../../../../examples/history-contract-cases.json";
 import queryCases from "../../../../examples/history-query-cases.json";
+import minmaxCases from "../../../../examples/history-minmax-cases.json";
 import {
   parseHistoryContract,
   validateHistoryContract,
@@ -25,6 +26,14 @@ it.each(queryCases)("SQLite query result fixture: $name", (fixture) => {
   expect(validateHistoryContract(fixture.expected)).toBe("accepted");
   expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
 });
+
+it.each(minmaxCases.filter((fixture) => fixture.expected))(
+  "SQLite minmax result fixture: $name",
+  (fixture) => {
+    expect(validateHistoryContract(fixture.expected)).toBe("accepted");
+    expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
+  },
+);
 
 it("rejects non-finite numeric samples that JSON cannot represent", () => {
   const fixture = cases.find((row) => row.name === "sample-good-zero")!;

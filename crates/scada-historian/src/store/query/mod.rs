@@ -1,5 +1,6 @@
-//! H2b1 bounded raw queries. This module does not infer recording coverage.
+//! Bounded raw and min/max snapshot queries without inferred recording coverage.
 mod control;
+mod minmax;
 pub use control::{CancellationToken, QueryControl, QueryLimits};
 
 use std::fmt;
@@ -25,6 +26,7 @@ pub enum QueryError {
     ByteLimit,
     TooManyPoints,
     MetadataLimit,
+    MetadataAmbiguous,
     CorruptData,
     Database,
     ReaderUnusable,
@@ -44,6 +46,7 @@ impl fmt::Display for QueryError {
                 Self::ByteLimit => "result byte limit exceeded",
                 Self::TooManyPoints => "raw point limit exceeded",
                 Self::MetadataLimit => "metadata limit exceeded",
+                Self::MetadataAmbiguous => "empty bin metadata cannot be determined",
                 Self::CorruptData => "inconsistent stored data",
                 Self::Database => "database failure",
                 Self::ReaderUnusable => "reader must be reopened",
@@ -145,10 +148,29 @@ impl HistoryReader {
         self.query_with_hook(query, control, &mut |_| Ok(()))
     }
 
+    /// Returns common-grid min/max bins, without fetching raw rows into Rust.
+    pub fn query_minmax(
+        &mut self,
+        query: &Value,
+        control: &QueryControl,
+    ) -> Result<Value, QueryError> {
+        self.query_with_mode(query, control, "minmax", &mut |_| Ok(()))
+    }
+
     fn query_with_hook(
         &mut self,
         query: &Value,
         control: &QueryControl,
+        hook: &mut impl FnMut(Boundary) -> Result<(), QueryError>,
+    ) -> Result<Value, QueryError> {
+        self.query_with_mode(query, control, "raw", hook)
+    }
+
+    fn query_with_mode(
+        &mut self,
+        query: &Value,
+        control: &QueryControl,
+        mode: &str,
         hook: &mut impl FnMut(Boundary) -> Result<(), QueryError>,
     ) -> Result<Value, QueryError> {
         control.validate()?;
@@ -159,7 +181,7 @@ impl HistoryReader {
         if query["kind"] != "query" {
             return Err(QueryError::InvalidRequest(crate::ContractError::Schema));
         }
-        if query["mode"] != "raw" {
+        if query["mode"] != mode {
             return Err(QueryError::UnsupportedMode);
         }
         budget.work.check()?;
@@ -272,6 +294,44 @@ fn series_result(
     if segments.is_empty() {
         return Err(QueryError::CorruptData);
     }
+    let (raw, bins) = if query["mode"] == "raw" {
+        (raw_values(connection, id, query, budget)?, Vec::new())
+    } else {
+        (
+            Vec::new(),
+            minmax::bins(connection, id, query, &segments, budget)?,
+        )
+    };
+    budget.work.statement()?;
+    let latest: Option<(String, i64)> = connection.query_row(
+        "SELECT s.session_id, s.last_sequence FROM sessions AS s JOIN session_members AS m ON m.session_id = s.session_id
+         WHERE m.series_id = ?1 ORDER BY s.begin_commit DESC LIMIT 1", [id], |r| Ok((r.get(0)?, r.get(1)?))).optional()?;
+    let watermark = if let Some((session, sequence)) = latest {
+        budget.row()?;
+        if sequence < 0 {
+            return Err(QueryError::CorruptData);
+        }
+        if sequence == 0 {
+            Value::Null
+        } else {
+            json!({"sessionId": session, "committedThrough": sequence})
+        }
+    } else {
+        return Err(QueryError::CorruptData);
+    };
+    Ok(json!({
+        "seriesId": id, "status": "ready", "segments": segments, "raw": raw, "bins": bins,
+        "coverage": [{"fromMs": query["fromMs"], "toMs": query["toMs"], "reason": "unknownCoverage"}],
+        "watermark": watermark
+    }))
+}
+
+fn raw_values(
+    connection: &Connection,
+    id: &str,
+    query: &Value,
+    budget: &mut Budget,
+) -> Result<Vec<Value>, QueryError> {
     let limit = crate::integer(&query["maxPointsPerSeries"]);
     budget.work.statement()?;
     let mut statement = connection.prepare(
@@ -309,28 +369,7 @@ fn series_result(
         budget.value(&sample)?;
         raw.push(sample);
     }
-    budget.work.statement()?;
-    let latest: Option<(String, i64)> = connection.query_row(
-        "SELECT s.session_id, s.last_sequence FROM sessions AS s JOIN session_members AS m ON m.session_id = s.session_id
-         WHERE m.series_id = ?1 ORDER BY s.begin_commit DESC LIMIT 1", [id], |r| Ok((r.get(0)?, r.get(1)?))).optional()?;
-    let watermark = if let Some((session, sequence)) = latest {
-        budget.row()?;
-        if sequence < 0 {
-            return Err(QueryError::CorruptData);
-        }
-        if sequence == 0 {
-            Value::Null
-        } else {
-            json!({"sessionId": session, "committedThrough": sequence})
-        }
-    } else {
-        return Err(QueryError::CorruptData);
-    };
-    Ok(json!({
-        "seriesId": id, "status": "ready", "segments": segments, "raw": raw, "bins": [],
-        "coverage": [{"fromMs": query["fromMs"], "toMs": query["toMs"], "reason": "unknownCoverage"}],
-        "watermark": watermark
-    }))
+    Ok(raw)
 }
 
 #[cfg(test)]
