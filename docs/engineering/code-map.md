@@ -437,3 +437,11 @@ format 4のretention_jobs／retention_job_steps／retention_job_pending／job_ex
 `clock_guard/validate.rs`はpolicy／保存guard／recovery DTO／safe cutoffの構造・相互関係を検証する。jobの直近receiptを差し引いた過去tick・観測数の範囲もu128で検査する。新sampleの不正はInvalidInputへ逃がさず停止状態に残す。proposalは判断時点の説明で、実行tokenではない。
 
 `clock_guard/tests.rs`は状態・優先順位・算術境界、`tests/invalid.rs`は不正入力と累積件数、`tests/integration.rs`は隔離DBの無変更性・明示job実行・記録close・stale拒否を担当する。新規22単体のうちDB統合4件、既存ブラウザ契約6件を回帰する。自動host・製品policy／信頼時計・recorder調停は[後続](../design/runtime/historian-retention-clock-guard.md)。
+
+## Historianの一回分の保持coordinator（H2c7）
+
+`store/retention/coordinator.rs`がCoordinatorInput／Intent／Report／Outcome／Errorと`SqliteStore::coordinate_retention_once`を所有する。recoveryを一回、assessを一回、明示beginまたはstepを最大一回呼び、観測と適用を別transactionのまま接続する。Beginはproposalとのcutoff／fence一致、ContinueExistingはactive job ID一致を確認し、正確なrequestを既存APIへ渡す。
+
+reportは評価済みのnext_state／assessment／recoveryを操作エラーでも保持する。InvalidInput時だけrearm_required=true。既存job／maintenanceの予算・cleanup・poisonを再利用し、同controlのdeadline／tokenを渡す。自前loop・retry・ID生成・次step選択・session終了は追加しない。
+
+`coordinator/tests.rs`の9単体がread-only観測、開始条件、再送・発見、時計停止と明示継続を、`tests/failures.rs`の7単体が取消・予算・入力不正・競合・SQL／実FULLとreport保持を担当する。既存ブラウザ契約6件を回帰する。製品scheduler／信頼時計／recorder協調は[後続](../design/runtime/historian-retention-coordinator.md)。

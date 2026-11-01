@@ -1,5 +1,6 @@
 //! Explicit, quiescent maintenance of query observations, not physical erasure.
 pub mod clock_guard;
+pub mod coordinator;
 pub mod jobs;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};

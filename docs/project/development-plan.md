@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜5はPR #10〜#25で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H2c6 明示保持候補の時刻安全判定](../design/runtime/historian-retention-clock-guard.md)を実装・ローカル検証した。callerのpolicy／clock sample／復旧状態から候補を評価し、時計異常は明示rearmまで停止を保持する。既存job発見と記録停止待ちを返し、DBを変更しない。DB format 4・H1・依存は維持する。次は製品の保持設定・timezoneと信頼時計adapter、実行host・active recorder協調・receipt GC、実filesystemの容量／I/O／checkpoint障害を段階設計する。自動実行・物理縮小・H2全体・常時recorder・製品Historyサービス・通常Designerの実Hub接続・認証は未完了。
+2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜6はPR #10〜#26で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H2c7 一回分の保持coordinator](../design/runtime/historian-retention-coordinator.md)を実装・ローカル検証した。復旧照会・時計判定と明示Begin／ContinueExistingをつなぎ、最大一操作だけを実行する。正確なstep再送を保ち、実行失敗でも判定済みの停止状態を返す。DB format 4・H1・依存は維持する。次は製品の保持設定・timezoneと信頼時計adapter、実行scheduler・active recorder協調・receipt GC、実filesystemの容量／I/O／checkpoint障害を段階設計する。自動運転・物理縮小・H2全体・常時recorder・製品Historyサービス・通常Designerの実Hub接続・認証は未完了。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 
