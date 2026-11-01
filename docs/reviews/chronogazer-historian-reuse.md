@@ -70,3 +70,9 @@ banto-collectの`external.rs`は2026-10-11の決定として、HubからのGood�
 5. 上流[#725](https://github.com/tyaro/banto-industrial/issues/725)の警報／ACK責務と[#726](https://github.com/tyaro/banto-industrial/issues/726)のHub History API案を現行責務決定へ整合する。今回は読み取りのみでIssueを変更しない。
 
 共有部品の切出し、アプリの移行、実Hub／Windows／本番性能の検証は未実施。[採用契約の次工程と受入](../design/runtime/historian-trend-contract.md#historian-next-steps)に従って別の区切りで実装する。
+
+## H4b1で先行した共通表示基盤（2026-11-02）
+
+[History配送と共通Trend表示](../design/runtime/historian-history-presentation.md)をSCADA側で新設した。カテゴリ等間隔やmin/max中点線へ変換せず、実UTC軸のraw点とbin範囲、boolの0／1離散、無値／coverage、segment別laneを保つ。内部SourceEpochはH1で非公開なのでraw連結線を作らない。Banto6.9.0 theme tokenと小さいSVG rendererを使い、上流app sourceや--cg設定をコピーしていない。
+
+汎用package切出し／ChronoGazer adapterへの還元は未実施。通常Appへの正式Trend統合や実History transportも後続であり、受入fixtureを本番接続済みとは扱わない。

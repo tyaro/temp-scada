@@ -527,3 +527,13 @@ H3dは[PR #34](https://github.com/tyaro/temp-scada/pull/34)でマージ済み（
 Rust workspace384件（新規7単体・5統合）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。記録中の検索、保持後の同readerでのexpired、raw／minmax・無値・unknownSeries、上限・取消・lease・token／旧結果の保護を確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 DB format 5・H1・外部依存バージョン・SDK・Project・Banto・通常Appは維持する。既存serde_jsonだけをruntime通常依存へ移した。プロセス内library入口であり、製品History transport／認証、画面側配送・共通Trend、計画配布・複数group等は後続。上流・S7・実環境へ接続していない。
+
+## History配送と共通Trend表示（H4b1、2026-11-02）
+
+H4aは[PR #35](https://github.com/tyaro/temp-scada/pull/35)でマージ済み（`3d9db5e931dc73aeff3cec025c465de5114a8992`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41327155603)成功。Astra主設計の[H4b1](../design/runtime/historian-history-presentation.md)を実装し、画面側の要求制御と再利用するTrendViewを追加した。
+
+controllerは一実行＋最新一待機に限定し、旧応答、source変更、取消／dispose、query全文不一致を拒否する。入力は有限plain JSONへ所有を移してH1検証し、結果を凍結する。raw点、minmax範囲、bool離散、無値、coverageを別に保ち、旧値や補間線・bin中点を作らない。
+
+TypeScript全体1,443件（新規36件）・型検査0error／0warning・build・関連Chromium12件（新規6件）が成功。両テーマ、点／無値／未知系列、包絡・混在・expired、旧応答と取消待ち、極端値をfixtureで確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+通常App／Project／main、H1 schema、Rust、DB format 5、依存バージョンは維持する。受入fixtureだけで表示し、通常Appの画面入口・実source接続は追加していない。H4b2以降の正式呼出し／Trend定義・adapter、ChronoGazer還元等は後続。上流・S7・実環境には接続していない。
