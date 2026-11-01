@@ -1,5 +1,5 @@
 //! Synchronous atomic append core and bounded raw snapshot reader.
-//! No recorder or product History API is connected.
+//! The recorder uses this core; no product History API is connected.
 mod types;
 pub use types::*;
 pub mod evidence;
@@ -571,7 +571,7 @@ fn status(connection: &Connection, session_id: &str) -> StoreResult<Option<Sessi
 }
 
 #[cfg(test)]
-mod test_support;
+pub(crate) mod test_support;
 #[cfg(test)]
 mod tests;
 #[cfg(test)]

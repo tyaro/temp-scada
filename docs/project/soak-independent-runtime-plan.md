@@ -27,7 +27,8 @@
 | P4 Tag Browser        | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
 | P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
-| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c10実装済み・後続未着手    |
+| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c10実装済み・運用受入残り  |
+| H3a 位相固定recorder  | 単一groupをabsolute deadlineで周期保存                            | 仮想1時間3600枠と実SQLite commit、欠測・停止を検証                                       | 実装済み・専用SDK接続は後続  |
 
 ## P1の実装契約
 
@@ -335,3 +336,15 @@ H2c9は[PR #29](https://github.com/tyaro/temp-scada/pull/29)でマージ済み�
 DB format 5へ更新、旧1〜4は非変更拒否で自動移行しない。H1・依存・SDK・Project・Banto・TS／通常Appは維持する。Rust314件（新規16単体、child worker含む）・Clippy／rustfmt・関連Chromium6件が成功。CAS・raw削除後再送・race・実FULL・取消／panic・SQLpoison・process5境界・破損を確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 製品desired配布／管理認証、ローカル暦日／timezone、信頼時計adapter、scheduler／recorder、receipt GC・実媒体保守は後続。H2全体や自動運転・常時recorder・製品History API／Trend画面の完成とはしない。上流・S7・実環境には接続していない。
+
+## H3aの実装と残り（2026-11-01）
+
+H2c10は[PR #30](https://github.com/tyaro/temp-scada/pull/30)でマージ済み（`5c9fa8445c7d81877ad67247457beca53bfcc097`）、[全体CI 41300113647](https://github.com/tyaro/temp-scada/actions/runs/41300113647)成功。S7の周期誤差累積による時間当たり点数不足の経験を受け、Astra主設計の[位相固定recorder](../design/runtime/historian-periodic-recorder.md)を実装した。
+
+- monotonic anchor＋n×periodの絶対deadlineを守り、mock latest sourceから実SQLiteへ周期保存する。capture後の実UTCと予定slot／sourceTimeを分離する。
+- 過去slotを最新値で埋めず、missed件数と安全な観測間samplingMissedを残す。gapとtickは別commitで、その境界の失敗をreportへ保持する。
+- 仮想1時間ではwake／capture／処理相当時間を加えても3600予定・3600観測・各系列3600点保存・missed0。相対sleepの対照モデルでは点数不足を再現する。
+
+Rust330件（新規16単体）・Clippy／rustfmt・関連Chromium6件が成功。時計／source異常、horizon、取消、gap後実FULLとcleanup失敗を確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。DB format 5・H1・依存・固定SDK・Project・Banto・TS／通常Appは維持する。
+
+専用SDK購読、計画配布・複数group／queue、永続slot台帳、保持との停止再開、製品History／Trend・正式hostは後続。H2の媒体I/O運用受入も残る。仮想試験を実S7の精度測定や任意UTC正時の常時3600実測保証とは扱わず、上流・S7・実環境には接続していない。

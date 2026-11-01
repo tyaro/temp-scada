@@ -144,6 +144,7 @@ docs/
 - [Historianの明示duration policyとUTC cutoff計算（H2c8）](design/runtime/historian-retention-duration.md)
 - [Historianの保持policy変更の実データ影響プレビュー（H2c9）](design/runtime/historian-retention-preview.md)
 - [Historianの保持policy原子適用・実applied比較（H2c10）](design/runtime/historian-retention-policy-application.md)
+- [Historianの位相を累積させない周期recorder（H3a）](design/runtime/historian-periodic-recorder.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)

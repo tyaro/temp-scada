@@ -1,5 +1,6 @@
 //! Pure history contracts and an isolated synchronous SQLite append adapter.
-//! No recorder, network service, system clock or UI is connected.
+//! A synchronous anchored recorder is available; no product service or UI is connected.
+pub mod recorder;
 pub mod store;
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;

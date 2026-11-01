@@ -1,9 +1,9 @@
 use super::*;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-pub(super) struct TempStore(pub(super) PathBuf);
+pub(crate) struct TempStore(pub(crate) PathBuf);
 impl TempStore {
-    pub(super) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         static NEXT: AtomicU64 = AtomicU64::new(0);
         let directory = std::env::temp_dir().join(format!(
             "scada-h2-{}-{}",
@@ -14,16 +14,16 @@ impl TempStore {
         assert!(!directory.exists());
         Self(directory)
     }
-    pub(super) fn create(&self) -> SqliteStore {
+    pub(crate) fn create(&self) -> SqliteStore {
         SqliteStore::create(&self.0, identity()).unwrap()
     }
-    pub(super) fn open(&self) -> SqliteStore {
+    pub(crate) fn open(&self) -> SqliteStore {
         reopen_unowned(&self.0, &identity()).unwrap()
     }
 }
 /// Fixture opens with no intended owner, including format/identity error checks.
 /// Immediate Busy/ownership assertions must call the production API directly.
-pub(super) fn reopen_unowned(
+pub(crate) fn reopen_unowned(
     directory: impl AsRef<Path>,
     expected: &StoreIdentity,
 ) -> StoreResult<SqliteStore> {
@@ -45,13 +45,13 @@ impl Drop for TempStore {
         let _ = fs::remove_dir_all(&self.0);
     }
 }
-pub(super) fn identity() -> StoreIdentity {
+pub(crate) fn identity() -> StoreIdentity {
     StoreIdentity {
         store_id: "store-a".into(),
         deployment_id: "deployment-a".into(),
     }
 }
-pub(super) fn spec(session: &str) -> SessionSpec {
+pub(crate) fn spec(session: &str) -> SessionSpec {
     SessionSpec {
         session_id: session.into(),
         members: vec![
@@ -80,7 +80,7 @@ pub(super) fn spec(session: &str) -> SessionSpec {
         ],
     }
 }
-pub(super) fn tick(session: &str, sequence: u64, time: i64) -> Tick {
+pub(crate) fn tick(session: &str, sequence: u64, time: i64) -> Tick {
     let observations = spec(session)
         .members
         .into_iter()
@@ -111,7 +111,7 @@ pub(super) fn tick(session: &str, sequence: u64, time: i64) -> Tick {
         observations,
     }
 }
-pub(super) fn count(store: &SqliteStore, table: &str) -> i64 {
+pub(crate) fn count(store: &SqliteStore, table: &str) -> i64 {
     assert!([
         "series",
         "segments",
@@ -127,14 +127,21 @@ pub(super) fn count(store: &SqliteStore, table: &str) -> i64 {
         .query_row(&format!("SELECT count(*) FROM {table}"), [], |r| r.get(0))
         .unwrap()
 }
-pub(super) fn counter(store: &SqliteStore) -> i64 {
+pub(crate) fn counter(store: &SqliteStore) -> i64 {
     store
         .connection
         .query_row("SELECT last_commit FROM store_meta", [], |r| r.get(0))
         .unwrap()
 }
 
-pub(super) fn apply_test_policy(
+pub(crate) fn connection(store: &SqliteStore) -> &Connection {
+    &store.connection
+}
+pub(crate) fn connection_mut(store: &mut SqliteStore) -> &mut Connection {
+    &mut store.connection
+}
+
+pub(crate) fn apply_test_policy(
     store: &mut SqliteStore,
     policy: retention::clock_guard::RetentionClockPolicy,
 ) {
