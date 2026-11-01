@@ -591,3 +591,65 @@ fn passive_checkpoint_preserves_a_pinned_history_snapshot_and_reports_incomplete
     drop(reader);
     drop(directory.open());
 }
+
+#[test]
+fn retention_step_keeps_an_old_snapshot_consistent_while_new_expiry_is_published() {
+    use crate::store::retention::jobs::{JobRequest, JobStepRequest};
+    let directory = TempStore::new();
+    let mut store = directory.create();
+    store.begin_session(spec("a")).unwrap();
+    for (n, t) in [(1, 1000), (2, 1000), (3, 1500)] {
+        store.append_tick(tick("a", n, t)).unwrap();
+    }
+    store.close_session("a").unwrap();
+    store
+        .begin_retention_job(
+            JobRequest {
+                job_id: "job".into(),
+                cutoff_ms: 2000,
+                expected_cutoff_ms: None,
+            },
+            &control(),
+        )
+        .unwrap();
+    store
+        .step_retention_job(
+            JobStepRequest {
+                job_id: "job".into(),
+                step: 1,
+                max_ticks: 1,
+            },
+            &control(),
+        )
+        .unwrap();
+    let mut reader = store.reader().unwrap();
+    let q = request(&["number"], 0, 3000, 10);
+    let old = reader
+        .query_with_hook(&q, &control(), &mut |at| {
+            if at == Boundary::Snapshot {
+                store
+                    .step_retention_job(
+                        JobStepRequest {
+                            job_id: "job".into(),
+                            step: 2,
+                            max_ticks: 1,
+                        },
+                        &control(),
+                    )
+                    .unwrap();
+            }
+            Ok(())
+        })
+        .unwrap();
+    assert_eq!(old["series"][0]["raw"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        old["series"][0]["coverage"],
+        json!([{"fromMs":0,"toMs":3000,"reason":"unknownCoverage"}])
+    );
+    let new = reader.query_raw(&q, &control()).unwrap();
+    assert_eq!(new["series"][0]["raw"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        new["series"][0]["coverage"][1],
+        json!({"fromMs":1000,"toMs":1001,"reason":"expired"})
+    );
+}

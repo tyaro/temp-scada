@@ -1,8 +1,8 @@
 PRAGMA application_id = 1396918337;
-PRAGMA user_version = 3;
+PRAGMA user_version = 4;
 CREATE TABLE store_meta (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-    format_version INTEGER NOT NULL CHECK (format_version = 3),
+    format_version INTEGER NOT NULL CHECK (format_version = 4),
     store_id TEXT NOT NULL,
     deployment_id TEXT NOT NULL,
     last_commit INTEGER NOT NULL CHECK (last_commit >= 0)
@@ -143,4 +143,45 @@ CREATE TABLE expired_samples (
     operation_id TEXT NOT NULL REFERENCES retention_operations (request_id),
     deleted_records INTEGER NOT NULL CHECK (deleted_records > 0),
     PRIMARY KEY (series_id, sample_time_ms)
+) STRICT;
+
+CREATE TABLE retention_jobs (
+    job_id TEXT PRIMARY KEY NOT NULL,
+    payload_json TEXT NOT NULL,
+    cutoff_ms INTEGER NOT NULL CHECK (cutoff_ms BETWEEN -9007199254740991 AND 9007199254740991),
+    expected_cutoff_ms INTEGER,
+    state TEXT NOT NULL CHECK (state IN ('active', 'complete')),
+    begin_commit INTEGER UNIQUE NOT NULL CHECK (begin_commit > 0),
+    last_step INTEGER NOT NULL CHECK (last_step BETWEEN 0 AND 9007199254740991),
+    deleted_ticks INTEGER NOT NULL CHECK (deleted_ticks BETWEEN 0 AND 9007199254740991),
+    deleted_observations INTEGER NOT NULL CHECK (deleted_observations BETWEEN 0 AND 9007199254740991),
+    completion_commit INTEGER UNIQUE CHECK (completion_commit > begin_commit),
+    CHECK ((state = 'complete') = (completion_commit IS NOT NULL))
+) STRICT;
+CREATE UNIQUE INDEX one_active_retention_job ON retention_jobs ((1)) WHERE state = 'active';
+CREATE TABLE retention_job_steps (
+    job_id TEXT NOT NULL REFERENCES retention_jobs,
+    step INTEGER NOT NULL CHECK (step BETWEEN 1 AND 9007199254740991),
+    payload_json TEXT NOT NULL,
+    commit_version INTEGER UNIQUE NOT NULL CHECK (commit_version > 0),
+    deleted_ticks INTEGER NOT NULL CHECK (deleted_ticks BETWEEN 0 AND 1024),
+    deleted_observations INTEGER NOT NULL CHECK (deleted_observations BETWEEN 0 AND 8192),
+    completed INTEGER NOT NULL CHECK (completed IN (0, 1)),
+    PRIMARY KEY (job_id, step)
+) STRICT;
+CREATE TABLE retention_job_pending (
+    job_id TEXT NOT NULL REFERENCES retention_jobs,
+    series_id TEXT NOT NULL REFERENCES series,
+    sample_time_ms INTEGER NOT NULL CHECK (sample_time_ms BETWEEN -9007199254740991 AND 9007199254740990),
+    deleted_records INTEGER NOT NULL CHECK (deleted_records BETWEEN 1 AND 9007199254740991),
+    PRIMARY KEY (job_id, series_id, sample_time_ms)
+) STRICT;
+CREATE TABLE job_expired_samples (
+    series_id TEXT NOT NULL REFERENCES series,
+    sample_time_ms INTEGER NOT NULL CHECK (sample_time_ms BETWEEN -9007199254740991 AND 9007199254740990),
+    job_id TEXT NOT NULL,
+    published_step INTEGER NOT NULL,
+    deleted_records INTEGER NOT NULL CHECK (deleted_records BETWEEN 1 AND 9007199254740991),
+    PRIMARY KEY (series_id, sample_time_ms),
+    FOREIGN KEY (job_id, published_step) REFERENCES retention_job_steps
 ) STRICT;

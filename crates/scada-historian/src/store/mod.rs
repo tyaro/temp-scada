@@ -16,7 +16,7 @@ use std::time::Duration;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 
 pub type StoreResult<T> = Result<T, StoreError>;
-pub const STORE_FORMAT_VERSION: i64 = 3;
+pub const STORE_FORMAT_VERSION: i64 = 4;
 
 #[derive(Debug)]
 pub enum StoreError {
@@ -252,6 +252,7 @@ impl SqliteStore {
                 Err(StoreError::Conflict)
             };
         }
+        retention::jobs::ensure_idle(&tx)?;
         if tx.query_row(
             "SELECT EXISTS(SELECT 1 FROM sessions WHERE state = 'active')",
             [],
@@ -417,6 +418,7 @@ impl SqliteStore {
                 Err(StoreError::Conflict)
             };
         }
+        retention::jobs::ensure_idle(&tx)?;
         if session.state != SessionState::Active {
             return Err(StoreError::SessionInactive);
         }

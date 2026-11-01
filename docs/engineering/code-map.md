@@ -366,7 +366,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 
 `crates/scada-historian/src/store/mod.rs`の`SqliteStore`が専用directoryのOS writer lock、format／deployment照合、固定session開始・終了・interrupted検出、1tickのtransactionとreceipt再送を所有する。`store/types.rs`がRust入力型、全member・同周期・H1意味規則・同Hub世代の照合、型付きlogical payloadの正規化を所有し、source世代のu64は内部canonicalで10進文字列として保持する。
 
-`store/schema.sql`は独立DB format 3のDDLとidentity／record FK・値CHECK・時刻索引を規定する。`lib.rs`のprivate identity検査はH1 canonical定義を再利用し、空のsampleBatchへ変更しない。`store/tests.rs`は使い捨てDBとprivate fault hook／child processで原子性・冪等性・型・世代・排他・再openを確認する。H2a自体は保存コアに限定し、検索・coverage生成・保持は下記H2b／H2c1が担当する。UIのDB直読は追加せず、容量運用・常時recorderは後続へ残す。
+`store/schema.sql`は独立DB format 4のDDLとidentity／record FK・値CHECK・時刻索引を規定する。`lib.rs`のprivate identity検査はH1 canonical定義を再利用し、空のsampleBatchへ変更しない。`store/tests.rs`は使い捨てDBとprivate fault hook／child processで原子性・冪等性・型・世代・排他・再openを確認する。H2a自体は保存コアに限定し、検索・coverage生成・保持は下記H2b／H2c1が担当する。UIのDB直読は追加せず、容量運用・常時recorderは後続へ残す。
 
 ## Historianのraw snapshot検索（H2b1）
 
@@ -413,3 +413,11 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 `store/maintenance.rs::sqlite_failure`がSQL原因と協調取消の境界を所有し、retention／maintenanceが共用する。primary OperationInterruptedかつ対応control失敗の場合だけControlへ変換する。FULL／I/O等を隠さず既存after_writeでwriterをNeedsReopenにする。公開error型とformat 3は維持する。
 
 `store/write_failure_tests.rs`の6単体が、通常append自然増大のFULL、TEMP triggerでのappend／plan／gap／close／trimの実FULL、rollbackとreceipt／session／fenceの復旧を担当する。pressure table／trigger／max_page_countはprivateな使い捨てDBだけへ適用する。`maintenance/tests.rs`が同writerのFULL＋取消と期限切れでの分類、`retention/tests.rs`がaux SQLiteの実FULLをhookから渡す取消併発を検証する。両者を本writer trimのFULL試験と混同しない。既存process終了とブラウザ契約5件を回帰し、[H2c3設計](../design/runtime/historian-write-failure-recovery.md)の未検証境界を維持する。
+
+## Historianの永続保持job（H2c4）
+
+`store/retention/jobs.rs`がJobRequest／JobStepRequest、begin／step／status、連番とstable receipt、quiescent gate、pendingから公開証拠への移動、完了fenceを所有する。`retention.rs::validate_ticks`は単発trimとjobで対象member／receiptの照合を共有する。begin／appendはreceipt再送を先に判定し、active jobがあれば新規操作を拒否する。共通run_maintenance／Operationで有限予算・取消・rollback・NeedsReopenを維持する。
+
+format 4のretention_jobs／retention_job_steps／retention_job_pending／job_expired_samplesが進捗を保存する。`query/coverage/expired.sql`は単発／job両sourceの参照・最新step／累積件数・重複を検証し、連続msを最大256 islandへ集約する。`expired.rs`は有限行の検査とoverlayを担当し、最終coverage256区間と残存rawの拒否は既存coverage.rsへ残す。
+
+`retention/jobs/tests.rs`の17単体（child worker含む）が1025集中／連続、入場・再送・破損・FULL・process終了・取消とcleanupを確認する。`query/tests.rs`の追加1単体が途中stepとsnapshotを確認し、`tests/query_fixtures.rs`が`examples/history-retention-job-cases.json`の6ケースを実SQLiteと照合する。TS／ブラウザも同じ期待resultを共有する。[H2c4設計](../design/runtime/historian-retention-jobs.md)の後続範囲を維持する。

@@ -136,3 +136,7 @@ Astraの実装レビューで、panic中のcleanup失敗でもwriterを直接poi
 ## H2c2の容量診断への接続
 
 次の[H2c2](historian-maintenance.md)でDB/WAL診断と明示PASSIVE checkpointを追加した。trim後のfree pageと実file長、reader pinによる未完了を確認できる。保持規則・format 3・receipt本文残存の意味は維持し、物理縮小・自動保持・disk-full運用は後続とする。
+
+## H2c4の段階削除
+
+[H2c4 永続保持job](historian-retention-jobs.md)で同timestamp1025 tick超を分割できるようにした。単発trimの全件原子性と1024 tick上限は維持し、jobのstepとreceiptは別APIで扱う。現在はformat 4で、旧1／2／3は自動変更しない。expiredの1024入力点上限はSQL island集約へ置き換えた。

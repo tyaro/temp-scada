@@ -641,7 +641,7 @@ fn create_open_format_and_identity_failures_do_not_initialize_existing_data() {
     ));
     assert_eq!(fs::read(&path).unwrap(), before);
     let raw = Connection::open(&path).unwrap();
-    raw.execute_batch("PRAGMA user_version = 3; PRAGMA application_id = 0")
+    raw.execute_batch("PRAGMA user_version = 4; PRAGMA application_id = 0")
         .unwrap();
     drop(raw);
     let before = fs::read(&path).unwrap();

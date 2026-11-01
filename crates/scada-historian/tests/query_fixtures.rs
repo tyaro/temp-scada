@@ -48,6 +48,14 @@ fn sqlite_retention_results_match_the_shared_browser_fixtures() {
     );
 }
 
+#[test]
+fn sqlite_retention_job_results_match_the_shared_browser_fixtures() {
+    check_cases(
+        include_str!("../../../examples/history-retention-job-cases.json"),
+        "retention-jobs",
+    );
+}
+
 fn check_cases(source: &str, mode: &str) {
     let cases: Vec<Value> = serde_json::from_str(source).unwrap();
     for (index, case) in cases.into_iter().enumerate() {
@@ -111,6 +119,22 @@ fn check_cases(source: &str, mode: &str) {
                 store
                     .trim(
                         serde_json::from_value(request.clone()).unwrap(),
+                        &QueryControl::with_timeout(Duration::from_secs(10)).unwrap(),
+                    )
+                    .unwrap();
+            }
+        }
+        if !case["job"].is_null() {
+            store
+                .begin_retention_job(
+                    serde_json::from_value(case["job"]["request"].clone()).unwrap(),
+                    &QueryControl::with_timeout(Duration::from_secs(10)).unwrap(),
+                )
+                .unwrap();
+            for step in case["job"]["steps"].as_array().unwrap() {
+                store
+                    .step_retention_job(
+                        serde_json::from_value(step.clone()).unwrap(),
                         &QueryControl::with_timeout(Duration::from_secs(10)).unwrap(),
                     )
                     .unwrap();
