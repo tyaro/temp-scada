@@ -66,54 +66,64 @@ impl SqliteStore {
         self.run_maintenance(control, true, |connection, budget| {
             budget.work.statement()?;
             connection.execute_batch("BEGIN DEFERRED")?;
-            budget.work.statement()?;
-            let snapshot: i64 = connection
-                .query_row(
-                    "SELECT last_commit FROM store_meta WHERE singleton=1",
-                    [],
-                    |r| r.get(0),
-                )
-                .optional()?
-                .ok_or(StoreError::CorruptData)?;
-            budget.row()?;
-            if snapshot < 0 {
-                return Err(StoreError::CorruptData);
-            }
-            hook()?;
-            for _ in 0..3 {
-                budget.work.statement()?;
-                budget.row()?;
-            }
-            let (cutoff, revision) = retention::fence(connection)?;
-            if revision > snapshot {
-                return Err(StoreError::CorruptData);
-            }
-            let source = fence_source(connection, cutoff, revision, budget)?;
-            let active_session_id = active_session(connection, snapshot, budget)?;
-            let ids = active_job_ids(connection, budget)?;
-            if active_session_id.is_some() && !ids.is_empty() {
-                return Err(StoreError::CorruptData);
-            }
-            let active_job = ids
-                .first()
-                .map(|id| jobs::recover_active(connection, id, cutoff, revision, snapshot, budget))
-                .transpose()?;
-            let result = StoreRecoveryState {
-                snapshot_commit: snapshot as u64,
-                retention_fence: RetentionFence {
-                    cutoff_ms: cutoff,
-                    revision_commit: revision as u64,
-                    source,
-                },
-                active_session_id,
-                active_job,
-            };
+            let result = read_snapshot(connection, budget, hook)?;
             budget.result(&serde_json::to_value(&result)?)?;
             budget.work.statement()?;
             connection.execute_batch("ROLLBACK")?;
             Ok(result)
         })
     }
+}
+
+/// Reuses the caller's read transaction and budget. Its first read pins the
+/// snapshot; this helper never starts or ends a transaction itself.
+pub(super) fn read_snapshot(
+    connection: &Connection,
+    budget: &mut Budget,
+    hook: &mut impl FnMut() -> StoreResult<()>,
+) -> StoreResult<StoreRecoveryState> {
+    budget.work.statement()?;
+    let snapshot: i64 = connection
+        .query_row(
+            "SELECT last_commit FROM store_meta WHERE singleton=1",
+            [],
+            |r| r.get(0),
+        )
+        .optional()?
+        .ok_or(StoreError::CorruptData)?;
+    budget.row()?;
+    if snapshot < 0 {
+        return Err(StoreError::CorruptData);
+    }
+    hook()?;
+    for _ in 0..3 {
+        budget.work.statement()?;
+        budget.row()?;
+    }
+    let (cutoff, revision) = retention::fence(connection)?;
+    if revision > snapshot {
+        return Err(StoreError::CorruptData);
+    }
+    let source = fence_source(connection, cutoff, revision, budget)?;
+    let active_session_id = active_session(connection, snapshot, budget)?;
+    let ids = active_job_ids(connection, budget)?;
+    if active_session_id.is_some() && !ids.is_empty() {
+        return Err(StoreError::CorruptData);
+    }
+    let active_job = ids
+        .first()
+        .map(|id| jobs::recover_active(connection, id, cutoff, revision, snapshot, budget))
+        .transpose()?;
+    Ok(StoreRecoveryState {
+        snapshot_commit: snapshot as u64,
+        retention_fence: RetentionFence {
+            cutoff_ms: cutoff,
+            revision_commit: revision as u64,
+            source,
+        },
+        active_session_id,
+        active_job,
+    })
 }
 
 fn active_job_ids(connection: &Connection, budget: &mut Budget) -> StoreResult<Vec<String>> {

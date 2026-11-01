@@ -27,7 +27,7 @@
 | P4 Tag Browser        | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
 | P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
-| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c8実装済み・後続未着手     |
+| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c9実装済み・後続未着手     |
 
 ## P1の実装契約
 
@@ -311,3 +311,15 @@ H2c7は[PR #27](https://github.com/tyaro/temp-scada/pull/27)でマージ済み�
 Rust284件（新規12単体、DB統合5件）・Clippy／rustfmt・関連Chromium6件が成功。cutoff前だけを削除して同値／後を残し、実削除のexpiredを確認した。Astra実装レビューに必須修正はない。全体CIはPRで確認する。DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持、Rust policy／candidate入力のみ明示変更した。
 
 ローカル暦日／timezone、製品policy適用／短縮プレビュー、信頼時計adapter、scheduler／recorder協調、receipt GC・実媒体保守は後続。H2全体・自動運転・常時recorder・製品History API／Trend画面は未完了。上流・S7・実環境には接続していない。
+
+## H2c9の実装と残り（2026-11-01）
+
+H2c8は[PR #28](https://github.com/tyaro/temp-scada/pull/28)でマージ済み（`89c46c75486f3601cc0fd5603d239d17f2cd3feb`）、[全体CI 41295809874](https://github.com/tyaro/temp-scada/actions/runs/41295809874)成功。Astra主設計の[保持変更の実データ影響preview](../design/runtime/historian-retention-preview.md)を実装した。
+
+- 同referenceの提案／任意比較policyを計算し、同snapshotの残存tick／observation／seriesと追加／対象外化の半開区間・件数を返す。
+- 固定member全体の構造・参照を検査し、SQL内で集約する。無値／同timestamp別tickを含み、deleted／pendingを再計上しない。
+- active session／jobを同snapshotの復旧情報へ添える。previewはreadonlyで、比較policyを永続appliedや実行tokenとして扱わない。
+
+Rust298件（新規14単体）・Clippy／rustfmt・関連Chromium6件が成功。snapshot競合・破損／NUL・1025tick・有限予算・取消／panic／cleanupを確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。
+
+policy永続適用と期待revision、製品管理口、ローカル暦日／timezone、信頼時計、scheduler／recorder協調、receipt GC・実媒体保守は後続。previewは全JSON監査や後続削除の成功保証ではない。上流・S7・実環境には接続していない。

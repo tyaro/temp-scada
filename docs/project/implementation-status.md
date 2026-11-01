@@ -455,3 +455,13 @@ RetentionClockPolicyに必須cutoff_ruleを追加し、durationとmodeも全snap
 Rust workspace284件（新規12単体、うち隔離DB統合5件）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。整数境界・不正入力、mode迂回、policy変更、計算停止／rearm、記録停止→明示close→一致Begin→step、cutoff前／同値／後のrawとexpired、既存上限・job継続を確認した。Astra実装レビューに必須修正はない。全体CIはPRで確認する。
 
 DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。Rust libraryのpolicy／candidate入力は明示変更した。elapsedの24hは暦日保持の置換ではない。ローカル暦日／timezone、製品policy適用と短縮プレビュー、信頼時計、scheduler／recorder、receipt GC・実媒体保守は後続。上流・S7・実環境には接続していない。
+
+## Historianの保持変更の実データ影響プレビュー（H2c9、2026-11-01）
+
+H2c8は[PR #28](https://github.com/tyaro/temp-scada/pull/28)でマージ済み（`89c46c75486f3601cc0fd5603d239d17f2cd3feb`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41295809874)成功。Astra主設計の[H2c9](../design/runtime/historian-retention-preview.md)に従い、明示elapsed policyの対象件数と変更差分を同snapshotで返す`preview_retention_change`を追加した。
+
+同じ参考UTC時刻で提案・任意比較policyのcutoffを計算し、現存tick／observation／series数と時刻両端、追加対象／対象外化の半開区間をSQL集約する。無値member・同timestamp別tickを含み、既に削除済みのrawやpendingを再計上しない。active session／jobは同snapshotの復旧情報として返す。比較policyはcallerの指定値であり、永続appliedとは扱わない。
+
+Rust workspace298件（新規14単体）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。read-only性、全member構造・参照破損、snapshot競合、境界・差分・active／途中job、1025tick／有限SQL予算、取消・panic・SQLfailure／cleanupを確認した。AstraレビューのNUL検査を補強し、最終レビューに必須修正はない。全体CIはPRで確認する。
+
+DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。previewは削除・適用・対象予約を行わず、全JSON内容や実行成功を保証しない。policy永続適用と期待revision、ローカル暦日／timezone、信頼時計、scheduler／recorder、receipt GC・実媒体保守は後続。上流・S7・実環境には接続していない。
