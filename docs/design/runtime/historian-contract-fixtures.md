@@ -136,6 +136,8 @@ binは`fromMs,toMs,min,max,validCount,invalidCount,state,segmentId,source`を持
 
 complete／partialはvalidCount=1ならmin=maxを必須にする。1観測から異なる極値は作れないため、元データなしでも検査できる。complete／partialのsourceは実値記録を許可する4分類。gapもsegment参照とsource一致を検査する。bool descriptorの包絡は0／1だけを許し、0.5を実状態にしない。mixedSegmentにはclockEpoch境界も含むので、descriptorが1個でも合法。countsは有効／無効の保存済み周期観測数であり、Hubの全変化件数ではない。
 
+stateにかかわらず、`expired`／`unrecorded` coverageの区間和がbin全体を覆う場合は`validCount > 0`をsemantic拒否する。異なる理由の隣接区間も連続と扱う。部分重複、1msの穴、pendingFlush等による中断は全体を覆わないため、この規則では拒否しない。`validCount = 0`のgap／mixedSegmentは既存の条件で検査する。
+
 この純粋検査だけではmin/maxが元の全recordの真の極値か、countが真の件数かは証明できない。H2の実query fixtureで検証する。包絡rendererとピークが消えないブラウザ受入はH4へ残す。
 
 ### coverage
@@ -164,9 +166,9 @@ H2は[新しいSQLite保存・検索層の暫定採用](historian-storage-decisi
 
 `scada-historian::validate_history_contract`と`lib/history-contract.ts`を実装した。canonical Schemaの後に同じ意味規則を検査し、通常AppやDBへ接続しない。Astraによる実装と契約の静的整合レビューでは具体的な不一致は見つからなかった。
 
-- 共通fixture97件がRust／TypeScript／実Chromiumで一致した。
-- Rust workspace77件成功。H1の2 test関数は共通97 fixtureと、JSON整数が1.0表記でもpanic・丸めを起こさないことを含む。Clippy `-D warnings`／rustfmt成功。
-- TS114ファイル・1,366件成功。非有限値と入力accessorの例外も検査し、parseは入力を所有コピーにする。型検査0エラー・0警告、build成功。
+- 共通fixture110件がRust／TypeScript／実Chromiumで一致した。
+- Rust workspace77件成功。H1の2 test関数は共通110 fixtureと、JSON整数が1.0表記でもpanic・丸めを起こさないことを含む。Clippy `-D warnings`／rustfmt成功。
+- TS114ファイル・1,379件成功。非有限値と入力accessorの例外も検査し、parseは入力を所有コピーにする。型検査0エラー・0警告、build成功。
 - `e2e/history-contract.spec.ts`の1件がブラウザで全fixtureと所有コピーを確認した。既知のbuild chunkサイズ警告は残る。全体CIの確定結果はPRに記録する。
 
 実store・原子commit・crash recovery・実Hubの継続記録は検証していない。この受入はH1のJSON契約の一致であり、H2の永続化保証ではない。
@@ -174,3 +176,5 @@ H2は[新しいSQLite保存・検索層の暫定採用](historian-storage-decisi
 ### PR #15のレビュー修正
 
 [P2コメント](https://github.com/tyaro/temp-scada/pull/15#issuecomment-6550528324)で、raw recordとexpired／unrecorded coverageの重複を受理する矛盾が見つかった。両言語で4件の新しい負例が修正前に失敗することを確認し、同じ半開区間条件で拒否するよう修正した。無値record・別clockEpochも対象とし、toMs上の点、Bad／Stale recordを説明するcoverage、同時刻のpendingFlushは受理する。追加10件により共通fixtureは97件となった。これは既存v1契約の矛盾検査を補う修正であり、schema／contract版は変更していない。
+
+[追加P2コメント](https://github.com/tyaro/temp-scada/pull/15#issuecomment-6550983508)とinline reviewが指摘したminmaxの同種の矛盾も修正した。全体を覆うexpired／unrecordedの区間和をstate分岐前に検査し、partial／mixedSegmentのvalidCount > 0を拒否する。両言語で修正前に6件の負例が失敗し、修正後は隣接理由・部分重複・1msの穴・pendingFlush・無値mixedSegment等の13件を含む共通110 fixtureが一致した。Astraも既存v1契約内の修正と確認した。

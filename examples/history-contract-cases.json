@@ -4830,5 +4830,862 @@
       ]
     },
     "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-partial-fully-expired",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "partial",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "reason": "expired"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-partial-fully-unrecorded",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "partial",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "reason": "unrecorded"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-partial-fully-adjacent-no-record",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "partial",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 2000,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 3000,
+              "reason": "unrecorded"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-mixedSegment-fully-expired",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": null,
+              "max": null,
+              "validCount": 3,
+              "invalidCount": 0,
+              "state": "mixedSegment",
+              "segmentId": null,
+              "source": null
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "reason": "expired"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-mixedSegment-fully-unrecorded",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": null,
+              "max": null,
+              "validCount": 3,
+              "invalidCount": 0,
+              "state": "mixedSegment",
+              "segmentId": null,
+              "source": null
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "reason": "unrecorded"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-mixedSegment-fully-adjacent-no-record",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": null,
+              "max": null,
+              "validCount": 3,
+              "invalidCount": 0,
+              "state": "mixedSegment",
+              "segmentId": null,
+              "source": null
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 2000,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 3000,
+              "reason": "unrecorded"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "semantic"
+  },
+  {
+    "name": "result-minmax-partial-expired-prefix",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "partial",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 2000,
+              "reason": "expired"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-partial-unrecorded-suffix",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "partial",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 2000,
+              "toMs": 3000,
+              "reason": "unrecorded"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-partial-one-ms-coverage-hole",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "partial",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 2000,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 2001,
+              "toMs": 3000,
+              "reason": "unrecorded"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-partial-pending-flush-bridge",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "partial",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 1500,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1500,
+              "toMs": 2000,
+              "reason": "pendingFlush"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 3000,
+              "reason": "unrecorded"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-partial-bad-full-coverage",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": 0,
+              "max": 10,
+              "validCount": 2,
+              "invalidCount": 0,
+              "state": "partial",
+              "segmentId": "seg-a",
+              "source": "real"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "reason": "bad"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-mixed-partial-expired",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": null,
+              "max": null,
+              "validCount": 3,
+              "invalidCount": 0,
+              "state": "mixedSegment",
+              "segmentId": null,
+              "source": null
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 2000,
+              "reason": "expired"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
+  },
+  {
+    "name": "result-minmax-mixed-no-valid-fully-expired",
+    "input": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "request-a",
+        "seriesIds": ["series-a"],
+        "fromMs": 1000,
+        "toMs": 3000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 20
+      },
+      "status": "ready",
+      "snapshotId": "snapshot-a",
+      "series": [
+        {
+          "seriesId": "series-a",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "series-a",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "tag-life-a",
+              "externalName": "Plant.Temp",
+              "segmentId": "seg-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "state": "mixedSegment",
+              "segmentId": null,
+              "source": null
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 1000,
+              "toMs": 3000,
+              "reason": "expired"
+            }
+          ],
+          "watermark": {
+            "sessionId": "session-a",
+            "committedThrough": 1
+          }
+        }
+      ]
+    },
+    "expected": "accepted"
   }
 ]

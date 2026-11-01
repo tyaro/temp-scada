@@ -298,6 +298,17 @@ function seriesResult(value: SeriesResult, request: Query) {
       return false;
     end = bin.toMs;
     const empty = bin.min === null && bin.max === null;
+    if (bin.validCount > 0) {
+      let coveredThrough = bin.fromMs;
+      for (const range of coverage) {
+        if (
+          (range.reason === "expired" || range.reason === "unrecorded") &&
+          range.fromMs <= coveredThrough
+        )
+          coveredThrough = Math.max(coveredThrough, range.toMs);
+      }
+      if (coveredThrough >= bin.toMs) return false;
+    }
     if (bin.state === "mixedSegment") {
       if (!empty || bin.segmentId !== null || bin.source !== null) return false;
       continue;

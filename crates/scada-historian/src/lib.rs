@@ -253,6 +253,19 @@ fn series_result(value: &Value, request: &Value) -> bool {
         let valid = integer(&bin["validCount"]);
         let invalid = integer(&bin["invalidCount"]);
         let empty = bin["min"].is_null() && bin["max"].is_null();
+        if valid > 0 {
+            let mut covered_through = integer(&bin["fromMs"]);
+            for range in coverage {
+                if matches!(range["reason"].as_str(), Some("expired" | "unrecorded"))
+                    && integer(&range["fromMs"]) <= covered_through
+                {
+                    covered_through = covered_through.max(integer(&range["toMs"]));
+                }
+            }
+            if covered_through >= end {
+                return false;
+            }
+        }
         if state == "mixedSegment" {
             if !empty || !bin["segmentId"].is_null() || !bin["source"].is_null() {
                 return false;
