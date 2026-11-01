@@ -384,4 +384,10 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 
 `store/evidence.rs`がPlanRef／TimedStart／ClockStamp／GapEvidenceと、timed begin／close・interrupt・gap保存・session_evidence照会を所有する。`store/mod.rs`は既存begin／closeと原子transactionを共有し、新tickのreceipt再送判定後に証拠frontierを同transactionで進める。SQL／I/O失敗のNeedsReopenとwriter／reader所有を維持する。
 
-`store/schema.sql`のDB format 2はimmutable plan snapshot、sessionの時刻根拠、局所gap ledgerと索引・FKを追加する。format 1や版不一致はopenで拒否し、自動migrationしない。`evidence/tests.rs`は一時DBとエラー／process終了で、根拠・状態・counterの原子性、再送、clock規則と区間矛盾、非変更拒否を確認する。公開queryは従来のunknownCoverageのままで、[同snapshotのcoverage投影](../design/runtime/historian-recording-evidence.md)は次工程。
+`store/schema.sql`のDB format 2はimmutable plan snapshot、sessionの時刻根拠、局所gap ledgerと索引・FKを追加する。format 1や版不一致はopenで拒否し、自動migrationしない。`evidence/tests.rs`は一時DBとエラー／process終了で、根拠・状態・counterの原子性、再送、clock規則と区間矛盾、非変更拒否を確認する。証拠保存と公開coverage投影を分け、後者は以下のH2b4で同snapshotから検証する。
+
+## Historianの証拠からのcoverage投影（H2b4）
+
+`store/query/coverage.rs`がsession／plan／永久descriptor／gapの参照・状態検証、他domainの可能期間を除く区間演算、残存欠測内recordのSQL EXISTS確認、結合・unknown補集合・最大256区間を所有する。`query/mod.rs`はraw／minmaxから同じ関数をsnapshot内で呼び、EvidenceLimit／CoverageLimitを公開する。`query/control.rs`は既存予算に加えて証拠JSON本文64 KiB／要求入力合計8 MiBをparse前に検査する。入力合計は利用者が下げられる出力bytesとは独立し、全系列で共有する。
+
+`query/coverage/tests.rs`が他session・未確定終了・untimed、snapshot競合、端点、上限、破損参照・永久descriptor照合と取消後cleanupの14単体試験を担当する。`tests/query_fixtures.rs`はtimed開始／gap／終了を組み立て、`examples/history-coverage-cases.json`の6成功出力を実SQLiteと比較する。TS `history-contract.test.ts`とブラウザ `e2e/history-contract.spec.ts`も同じ期待resultを共有する。[H2b4設計](../design/runtime/historian-coverage-projection.md)を参照。保持・容量・復旧・recorder・製品API／画面接続は後続。

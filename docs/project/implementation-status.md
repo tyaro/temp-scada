@@ -361,3 +361,11 @@ I1比率固定・I2兄弟内挿入・I3静的Text折返し・I4単色paintα一�
 | <a id="i5d進捗単一行text計測の切分けと候補評価2026-10-21"></a>I5d進捗：単一行Text計測の切分けと候補評価（2026-10-21） | [当時の記録](../history/implementation-history.md#status-note-08) |
 
 </details>
+
+## Historianの証拠からのcoverage投影（H2b4、2026-11-01）
+
+H2b3は[PR #19](https://github.com/tyaro/temp-scada/pull/19)でマージ済み（`b804257ac4f655aeab25bb50a1f0233245ca3af8`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41272492900)全7job成功。Astra主設計の[H2b4](../design/runtime/historian-coverage-projection.md)に従い、raw／minmaxと同一snapshotからsamplingMissed／storageLossを投影する。別のclosed sessionの記録可能期間、active／interruptedの開始以降を除き、untimed sessionがあれば全域unknownCoverageとする。残存欠測内にGood／無値recordがあればCorruptData。根拠のない期間はunknownCoverageを維持し、complete binや停止・expiredは生成しない。
+
+最大256 session／1024候補gap、最終coverage256区間を制限し、超過をEvidenceLimit／CoverageLimitとして拒否する。証拠本文はparse前64 KiB、要求合計入力8 MiBを制限し、既存VM・期限・decode行・出力bytes・取消・cleanupを共有する。参照欠落をLEFT JOINで検出し、session／planと永久descriptorを型付きで照合する。
+
+Rust workspace155件（新規単体14件・共有fixtureの統合1関数）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,395件、型検査0エラー・0警告、build、関連Chromium4件が成功。実SQLiteの6成功ケースをRust／TS／ブラウザで共有し、snapshot競合、端点、上限、破損・取消後cleanupを検証した。Astraレビューで見つかった参照欠落を回帰テストで再現・修正済み。全体CIはPRで確認する。DB format 2・H1 JSON v1・依存・SDK・Project・Bantoは変更していない。H2cの保持・容量・復旧、recorder・Historyサービス・通常App接続は後続で、H2全体は継続中。

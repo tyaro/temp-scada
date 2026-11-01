@@ -32,6 +32,14 @@ fn sqlite_minmax_results_match_the_shared_browser_fixtures() {
     );
 }
 
+#[test]
+fn sqlite_coverage_results_match_the_shared_browser_fixtures() {
+    check_cases(
+        include_str!("../../../examples/history-coverage-cases.json"),
+        "coverage",
+    );
+}
+
 fn check_cases(source: &str, mode: &str) {
     let cases: Vec<Value> = serde_json::from_str(source).unwrap();
     for (index, case) in cases.into_iter().enumerate() {
@@ -51,13 +59,40 @@ fn check_cases(source: &str, mode: &str) {
         .unwrap();
         for session in case["sessions"].as_array().unwrap() {
             let plan = serde_json::from_value(session["spec"].clone()).unwrap();
-            store.begin_session(plan).unwrap();
+            if session["start"].is_null() {
+                store.begin_session(plan).unwrap();
+            } else {
+                store
+                    .begin_timed_session(
+                        plan,
+                        serde_json::from_value(session["start"].clone()).unwrap(),
+                    )
+                    .unwrap();
+            }
             for tick in session["ticks"].as_array().unwrap() {
                 store
                     .append_tick(serde_json::from_value(tick.clone()).unwrap())
                     .unwrap();
             }
-            if session["close"] == true {
+            if let Some(gaps) = session["gaps"].as_array() {
+                for gap in gaps {
+                    store
+                        .record_gap(serde_json::from_value(gap.clone()).unwrap())
+                        .unwrap();
+                }
+            }
+            if !session["end"].is_null() {
+                store
+                    .close_timed_session(
+                        session["spec"]["sessionId"].as_str().unwrap(),
+                        serde_json::from_value(session["end"].clone()).unwrap(),
+                    )
+                    .unwrap();
+            } else if session["interrupt"] == true {
+                store
+                    .interrupt_session(session["spec"]["sessionId"].as_str().unwrap())
+                    .unwrap();
+            } else if session["close"] == true {
                 store
                     .close_session(session["spec"]["sessionId"].as_str().unwrap())
                     .unwrap();
@@ -65,7 +100,7 @@ fn check_cases(source: &str, mode: &str) {
         }
         let mut reader = store.reader().unwrap();
         let control = QueryControl::with_timeout(Duration::from_secs(10)).unwrap();
-        let result = if mode == "raw" {
+        let result = if case["query"]["mode"] == "raw" {
             reader.query_raw(&case["query"], &control)
         } else {
             reader.query_minmax(&case["query"], &control)

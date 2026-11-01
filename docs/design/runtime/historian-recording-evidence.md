@@ -146,3 +146,7 @@ Rust workspace140件（H2b3新規14 test関数、child worker含む）、Clippy 
 新規試験は通常lifecycle／再送、immutable plan、untimedからの後付け拒否、時刻・clock・frontier、gapとGood／無値record、gap同士の区間矛盾、別domainの同UTC、safe整数全域、SQL失敗による全rollbackとNeedsReopen、format1／版不一致の非変更拒否を確認した。子プロセスをbegin・gap・closeのCOMMIT前後とtickのCOMMIT前に終了し、根拠の原子性と終了後の同ID照会を検証した。interrupt／復旧ではend時刻を付けない。
 
 Astraのread-only実装整合レビューでは必須修正は見つからなかった。これらは使い捨てDBの受入であり、媒体I/O・電源断・Windows運用や、実scheduler／正式plan配布・認証の保証ではない。全体CIの確定結果はPR本文へ記録する。
+
+## H2b4での公開queryへの接続
+
+後続の[H2b4 coverage投影](historian-coverage-projection.md)を実装・ローカル検証した。上記の「全域unknownCoverage」はH2b3の段階を示す。現在は別domainが記録し得る期間を除き、明示samplingMissed／storageLossのうち証明できる部分だけをraw／minmaxへ公開する。停止・expired・完全性の推測は追加していない。

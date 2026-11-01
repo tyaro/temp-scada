@@ -111,6 +111,7 @@ pub(super) struct Budget {
     limits: QueryLimits,
     rows: u32,
     bytes: usize,
+    input_bytes: usize,
 }
 impl Budget {
     pub fn new(control: &QueryControl) -> Self {
@@ -119,6 +120,7 @@ impl Budget {
             limits: control.limits,
             rows: 0,
             bytes: 0,
+            input_bytes: 0,
         }
     }
     pub fn row(&mut self) -> Result<(), QueryError> {
@@ -131,6 +133,17 @@ impl Budget {
     }
     pub fn value(&mut self, value: &serde_json::Value) -> Result<(), QueryError> {
         self.bytes += serialized_size(value, self.limits.max_output_bytes - self.bytes)?;
+        self.work.check()
+    }
+    pub fn evidence_text(&mut self, text: &str) -> Result<(), QueryError> {
+        if text.len() > 64 * 1024 {
+            return Err(QueryError::EvidenceLimit);
+        }
+        self.input_bytes += text.len();
+        // Input parsing has its own hard cap, independent of caller output caps.
+        if self.input_bytes > 8 * 1024 * 1024 {
+            return Err(QueryError::ByteLimit);
+        }
         self.work.check()
     }
     pub fn result(&self, value: &serde_json::Value) -> Result<(), QueryError> {
