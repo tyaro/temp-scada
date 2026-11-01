@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-02の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜dはPR #10〜#34で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H4a 非同期History読取Host](../design/runtime/historian-history-host.md)をローカル実装・検証した。既存HistoryReaderを一つ所有し、raw／minmaxの一要求をblocking workerで実行する。取消安全join・opaque要求token・入力8KiB/H1共有検証・最大2reader leaseを維持し、記録中の検索と保持後のexpired再検索を接続した。製品認証・transportを伴わないプロセス内入口であり、次は画面側の要求／応答配送と共通Trendの接続を進める。製品計画配布・複数group／queue、保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、H2／H3／H4全体・正式Runtimeは未完了。
+2026-11-02の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4aはPR #10〜#35で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H4b1 History配送と共通Trend表示](../design/runtime/historian-history-presentation.md)をローカル実装・検証した。sourceを差し替え可能なTS controllerで一実行＋最新一待機、全query照合、有限plain JSON所有、取消／旧応答拒否を実装した。共通TrendViewはraw観測点・segment別lane・minmax範囲・bool離散・coverage別帯を表示し、補間や中点線を作らない。通常App／Project／製品transportは変更せず、受入fixtureだけで両テーマと状態遷移を確認した。次はH4b2以降で通常Appの呼出し境界と正式Trend定義／HistorySource adapterを接続する。製品計画配布・複数group／queue、保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、H2／H3／H4全体・正式Runtimeは未完了。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 

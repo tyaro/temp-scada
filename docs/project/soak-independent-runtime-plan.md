@@ -32,7 +32,8 @@
 | H3b 専用SDK入力       | UIと独立した固定SDK ownerから同世代snapshotを取り込む             | mock Hub→SDK→recorder→実SQLite、無値・再接続・identity変更停止を検証                     | PR #32マージ・全体CI成功     |
 | H3c 単一group Host    | 一つのwriterと専用SDK入力をblocking workerで実行                  | 開始・停止・取消安全join、差替え、writer所有・Drop／panicを検証                          | PR #33マージ・全体CI成功     |
 | H3d 記録と保持の協調  | clean pause後に最大一回の保持操作、明示new-session再開            | guard／job状態・writer所有を保持し、異常時再開を拒否                                     | PR #34マージ・全体CI成功     |
-| H4a History読取Host   | 一要求ごとに既存readerでraw／minmax検索                           | 取消安全join、exact token、reader leaseと記録／保持独立を検証                            | ローカル実装・受入済み       |
+| H4a History読取Host   | 一要求ごとに既存readerでraw／minmax検索                           | 取消安全join、exact token、reader leaseと記録／保持独立を検証                            | PR #35マージ・全体CI成功     |
+| H4b1 History表示基盤  | TS要求配送・純粋Trend model・共通renderer                         | raw点／包絡／無値・coverage、取消／旧応答と両テーマをfixture検証                         | ローカル実装・受入済み       |
 
 ## P1の実装契約
 
@@ -400,3 +401,15 @@ H3dは[PR #34](https://github.com/tyaro/temp-scada/pull/34)でマージ済み（
 Rust384件（新規7単体・5統合）・Clippy／rustfmt・関連Chromium6件が成功し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。DB format 5・H1・依存バージョン・SDK・Project・Banto・通常Appは維持し、serde_jsonだけをruntime通常依存へ移した。
 
 画面側の要求／応答配送と共通Trendを次に接続する。製品transport／認証、計画配布・永続CAS、複数group／queue、自動保持・信頼時計adapter、実媒体I/O／GC／timezoneは残る。上流・S7・実環境へ接続していない。
+
+## H4b1の実装と残り（2026-11-02）
+
+H4aは[PR #35](https://github.com/tyaro/temp-scada/pull/35)でマージ済み（`3d9db5e931dc73aeff3cec025c465de5114a8992`）、[全体CI 41327155603](https://github.com/tyaro/temp-scada/actions/runs/41327155603)成功。Astra主設計の[画面側History配送と共通Trend](../design/runtime/historian-history-presentation.md)を実装した。
+
+- active1＋pendinglatest1、下位read終了確認待ち、全query照合、所有／凍結と有限JSON入力で要求差替え・取消・旧応答を扱う。自動real transportや補間を追加しない。
+- raw点・segment別lane・minmax範囲・bool離散を使い、無値とcoverageを別に示す。unknownCoverageでも観測を消さず、混在binへ値を捏造しない。
+- entry差替えの受入fixtureでライト／ダークと状態遷移を検証し、通常Appにsample hookを追加しない。
+
+TS1,443件（新規36件）・型検査・build・関連Chromium12件が成功し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。H1／Rust／DB／Project／SDK／Banto・外部依存は維持する。
+
+次は通常App呼出し・正式Trend定義とHistorySource adapterの接続。製品transport／認証、計画配布・複数group、自動保持・媒体I/O等は保留／後続である。fixtureは実SQLite接続ではなく、上流・S7・実環境へ接続していない。

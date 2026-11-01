@@ -519,3 +519,11 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 `history_host/types.rs`がopaque要求token、軽いphase、H1結果またはQueryErrorを持つcompletionを所有する。coreの`store/query/mod.rs`に共有validate_query_request／HistoryQueryModeを抽出し、受理前8KiB／H1検証と既存readerのmode一致検査を共用する。QueryControlは同じdeadline／token／予算をworkerへ渡す。
 
 `history_host/tests.rs`の7単体が拒否・token・取消join・待機中deadline・reader再利用・Drop／panic分類を担当する。`crates/scada-runtime/tests/history_host.rs`の5統合がraw／minmax・無値・unknownSeries、2lease、結果不変性、mock Hubの記録中検索から保持後expiredまでを検証する。製品transport／画面接続とは分けて[設計と試験境界](../design/runtime/historian-history-host.md)を参照する。
+
+## History配送と共通Trend表示（H4b1）
+
+`apps/banto-scada/src/lib/history/presentation.ts`が差替え可能なHistorySourceとcontrollerを所有する。一実行＋最新一待機、opaque token、query全文照合、Abort後のquiescence待ち、旧結果／sourceの拒否、状態通知の再入を扱う。`owned-json.ts`がaccessorを評価しないplain JSON所有とbyte／depth／node制限・凍結を担当する。H1 moduleは公開type aliasだけを追加し、validatorを複製しない。
+
+`history/trend-model.ts`がvalidated H1から観測／bin／coverageを変えずにsegment別laneへ投影し、有限値scaleとUTCms fallbackを提供する。`TrendView.svelte`はraw点、numeric range、bool離散、無値／混在とcoverage別帯を描画する。raw線やbin中点は生成しない。
+
+2単体fileの新規36件が配送・所有・再入・budgetと既存SQL結果projectionを担当する。`history/__fixtures__/HistoryPresentation.svelte`はe2e entry差替えだけでmountし、`e2e/history-presentation.spec.ts`の6件で両テーマと表示・取消・旧応答を受け入れる。既存H1 browser6件も回帰した。通常main／App／Projectは変更せず、[次の接続と限界](../design/runtime/historian-history-presentation.md)を分ける。
