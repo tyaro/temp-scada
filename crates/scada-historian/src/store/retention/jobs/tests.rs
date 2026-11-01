@@ -660,3 +660,16 @@ fn narrow_expiry_queries_validate_latest_and_past_step_counts() {
         );
     }
 }
+
+#[test]
+fn small_step_discovers_only_a_time_index_prefix_in_a_large_history() {
+    let (_directory, mut store) = setup(1..=4096);
+    let mut request = begin_request();
+    request.cutoff_ms = 5000;
+    store.begin_retention_job(request, &control()).unwrap();
+    let mut bounded = control();
+    bounded.limits.max_vm_steps = 80_000;
+    let receipt = store.step_retention_job(step(1, 1), &bounded).unwrap();
+    assert_eq!(receipt.deleted_ticks, 1);
+    assert!(!receipt.completed);
+}

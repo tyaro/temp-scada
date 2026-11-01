@@ -260,6 +260,6 @@ H2c3は[PR #23](https://github.com/tyaro/temp-scada/pull/23)でマージ済み�
 - stepの原子commit、対象とpendingの消滅を条件とする完了fence、同step再送と故障後再openを検証する。job途中をcancelで解放するAPIは追加しない。
 - queryは両sourceの参照・件数をSQLで検証し連続timestampをisland化する。1024入力点制限をSQL集約に置き換え、最大256 expired islandと最終coverage256区間／有限SQL仕事量を維持する。
 
-format 4へ明示更新、旧format 1／2／3は非変更拒否。H1・依存・SDK・Project・Bantoは維持。Rust218件・TS1,407件・型検査・build・Clippy／rustfmt・関連Chromium6件が成功。6共有fixture、1025集中／連続、部分公開、FULL・process5境界・予算／取消／panic、snapshot競合と破損参照を確認し、Astra最終レビューを完了した。全体CIはPRで確認する。
+format 4へ明示更新、旧format 1／2／3は非変更拒否。H1・依存・SDK・Project・Bantoは維持。Rust219件・TS1,407件・型検査・build・Clippy／rustfmt・関連Chromium6件が成功。6共有fixture、1025集中／連続、部分公開、FULL・process5境界・予算／取消／panic、snapshot競合と破損参照を確認し、Astra最終レビューを完了した。全体CIはPRで確認する。
 
 自動保持の設定・timezone・信頼時刻、active recorderの停止／再開調停、receipt／metadata GC、実媒体の容量／I/Oと物理縮小は後続。H2全体・常時recorder・History API／Trend画面の完成とはしない。

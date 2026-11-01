@@ -412,6 +412,6 @@ H2c3は[PR #23](https://github.com/tyaro/temp-scada/pull/23)でマージ済み�
 
 job開始は記録停止中に限り、未完了の間は新begin／新tick／単発trimを拒否する。既存receipt再送・query・診断は許可する。削除数をseries／timestampごとにstagingし、残存rawがなくなった時刻だけexpiredへ公開する。完了時に残存対象とpendingがないことを確認し、fence・job状態・step receiptを同transactionで保存する。queryは旧単発trimとjobの証拠をSQLで検証し、連続msを最大256 islandへ集約して読む。従来の1024入力点上限はこのSQL集約へ置き換え、最終coverage256区間は維持する。
 
-format 4へ明示更新し、旧format 1／2／3は非変更拒否。H1 JSON v1・依存・SDK・Project・Bantoは維持。Rust workspace218件（job17単体・query snapshot1単体・共通fixture統合1関数を追加）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,407件、型検査0エラー・0警告、build、関連Chromium6件が成功。実SQLiteの6ケースをRust／TS／ブラウザで共有し、同時刻／連続1025、部分公開、cutoff端点、FULL、予算・取消・panic、COMMIT前後5境界のprocess終了と再送、旧snapshot維持を確認した。
+format 4へ明示更新し、旧format 1／2／3は非変更拒否。H1 JSON v1・依存・SDK・Project・Bantoは維持。Rust workspace219件（job18単体・query snapshot1単体・共通fixture統合1関数を追加）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,407件、型検査0エラー・0警告、build、関連Chromium6件が成功。実SQLiteの6ケースをRust／TS／ブラウザで共有し、同時刻／連続1025、部分公開、cutoff端点、FULL、予算・取消・panic、COMMIT前後5境界のprocess終了と再送、旧snapshot維持を確認した。
 
 Astraレビューで見つかった最新step参照と過去receiptの上限検査不足を修正し、検索範囲外の最新stepも検証する回帰を追加した。最終レビューに必須修正はない。全体CIはPRで確認する。job取消による途中解放は提供せず、完了まで再開する契約である。自動保持・信頼時刻・recorder調停・receipt GC・物理容量運用は後続。通常App・上流・S7・実環境へ接続していない。

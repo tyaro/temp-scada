@@ -292,12 +292,12 @@ fn candidates(
     budget: &mut Budget,
 ) -> StoreResult<Vec<(String, i64)>> {
     budget.work.statement()?;
-    let mut statement=connection.prepare("SELECT session_id,sequence FROM observations WHERE sample_time_ms<?1 GROUP BY session_id,sequence ORDER BY MIN(sample_time_ms),session_id,sequence LIMIT ?2")?;
+    let mut statement=connection.prepare("SELECT DISTINCT sample_time_ms,session_id,sequence FROM observations INDEXED BY observation_retention_time WHERE sample_time_ms<?1 ORDER BY sample_time_ms,session_id,sequence LIMIT ?2")?;
     let mut rows = statement.query(params![cutoff, max])?;
     let mut result = Vec::new();
     while let Some(row) = rows.next()? {
         budget.row()?;
-        result.push((row.get(0)?, row.get(1)?));
+        result.push((row.get(1)?, row.get(2)?));
     }
     Ok(result)
 }

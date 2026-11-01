@@ -125,6 +125,8 @@ H2c4の完了は、同timestamp集中を含む大きな保持対象をbounded st
 
 `store::retention::jobs`のJobRequest／JobStepRequestとSqliteStoreのbegin_retention_job／step_retention_job／retention_job_statusへ実装した。JobStatus.next_stepはOptionで、完了またはsafe連番上限ではNone。format 4、旧format 1／2／3は非変更拒否。H1・依存・SDK・Project・Bantoは変更していない。
 
-Rust workspace218件（新規job17単体・query snapshot1単体・fixture統合1関数）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,407件、型検査0エラー・0警告、build、関連Chromium6件が成功。6共有fixture、1025同timestampと連続timestamp、部分expired、FULL／取消・panicとprocess5境界、再openとreceipt、cutoff・safe端点、残存rawと旧snapshotを確認した。SQL集約は1024入力点上限を置換するが、VM／deadline／row／byteと256 island／最終coverageの有限上限は維持する。
+Rust workspace219件（新規job18単体・query snapshot1単体・fixture統合1関数）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,407件、型検査0エラー・0警告、build、関連Chromium6件が成功。6共有fixture、1025同timestampと連続timestamp、部分expired、FULL／取消・panicとprocess5境界、再openとreceipt、cutoff・safe端点、残存rawと旧snapshotを確認した。SQL集約は1024入力点上限を置換するが、VM／deadline／row／byteと256 island／最終coverageの有限上限は維持する。
 
 Astraの複数回レビューで、最新stepの欠落・commit／件数・完了状態、過去stepの再送上限、scalar予算課金を補強した。検索範囲外の最新step欠落や不正件数を見逃す経路は回帰でreadyを再現して修正した。最終レビューに必須修正はない。job途中のmax_ticksが大きすぎて予算を超える場合は、未commit stepを小さく指定し直せる。全体CIはPRで確認する。
+
+step候補は`observation_retention_time`の索引順にDISTINCT `(sample_time_ms,session_id,sequence)`をLIMITで取得する。全対象をGROUP BYしてから先頭を選ぶ方式では、max_ticksが小さくても履歴全体の走査で予算を使い切り得るため採用しない。4,096 tickの履歴からmax_ticks=1／80,000 VMのstepを実行する回帰で、旧候補SQLのWorkLimitを再現し、索引prefixへ変更後の成功を確認した。tickの全memberは別途共通validatorで照合する。
