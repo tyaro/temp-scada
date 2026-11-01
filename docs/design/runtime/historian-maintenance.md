@@ -118,3 +118,7 @@ Astraレビューで、固定main DBの事前確認不足を指摘した。全SQ
 ## CIの成功再open fixture修正
 
 同一headのpush CIだけがstore drop後の成功再openでBusyとなり、PR CIは成功した。64並列の反復でも既存の別試験から同じ失敗を再現した。複製したUnix lock FDの短時間保持で同じ寿命を再現する回帰を追加し、所有者不在を前提とする再open helper（成功・形式／identity拒否の検証）だけをBusy限定の最大1秒retryへ変更した。これは実際のfork継承をCIで直接観測した試験ではない。製品の即時Busy、writer／reader ownershipとcleanupの意味は変更していない。
+
+## H2c3でのSQLエラー分類
+
+[H2c3](historian-write-failure-recovery.md)でretentionと共用のsqlite_failureを追加した。協調取消への変換はSQLite primary OperationInterruptedに限定し、実FULLと取消／期限切れが併発してもSQL原因とwriterのNeedsReopenを維持する。実filesystemやcheckpoint内部の容量障害の受入完了を意味しない。

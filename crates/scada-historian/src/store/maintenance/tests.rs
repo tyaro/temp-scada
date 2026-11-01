@@ -471,3 +471,47 @@ fn maintenance_process_worker() {
         .unwrap();
     panic!("checkpoint callback was not reached");
 }
+
+#[test]
+fn actual_sqlite_full_is_not_reclassified_as_a_late_cancellation() {
+    let directory = TempStore::new();
+    let mut store = directory.create();
+    let before = counter(&store);
+    let c = control();
+    let result: StoreResult<()> = store.run_maintenance(&c, true, |connection, _| {
+        let pages: i64 = connection.query_row("PRAGMA page_count", [], |r| r.get(0))?;
+        connection.pragma_update(None, "max_page_count", pages)?;
+        connection.execute_batch("BEGIN IMMEDIATE")?;
+        let error = connection
+            .execute_batch("CREATE TABLE capacity_probe (value BLOB)")
+            .unwrap_err();
+        assert_eq!(
+            error.sqlite_error_code(),
+            Some(rusqlite::ErrorCode::DiskFull)
+        );
+        c.cancellation.cancel();
+        Err(StoreError::Sqlite(error))
+    });
+    assert!(
+        matches!(&result, Err(StoreError::Sqlite(error)) if error.sqlite_error_code() == Some(rusqlite::ErrorCode::DiskFull)),
+        "{result:?}"
+    );
+    assert!(store.needs_reopen);
+    assert!(store.connection.is_autocommit());
+    assert_eq!(counter(&store), before);
+    assert!(matches!(
+        store.begin_session(spec("a")),
+        Err(StoreError::NeedsReopen)
+    ));
+    // The same primary storage cause also survives an expired control budget.
+    let auxiliary = Connection::open_in_memory().unwrap();
+    auxiliary.pragma_update(None, "max_page_count", 1).unwrap();
+    let error = auxiliary
+        .execute_batch("CREATE TABLE capacity_probe (value BLOB)")
+        .unwrap_err();
+    let expired = QueryControl::with_timeout(Duration::ZERO).unwrap();
+    let classified = sqlite_failure(error, &Budget::new(&expired));
+    assert!(
+        matches!(classified, StoreError::Sqlite(error) if error.sqlite_error_code() == Some(rusqlite::ErrorCode::DiskFull))
+    );
+}

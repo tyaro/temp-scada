@@ -395,3 +395,13 @@ DB format 3・H1 JSON v1・依存・SDK・Project・Banto・TS・通常Appは変
 同じhead `4ac4740` の[push CI](https://github.com/tyaro/temp-scada/actions/runs/41283679980)では、Rustの保守SQL障害テストがstore drop後のテスト用再openでBusyとなった。一方、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41283706313)は全job成功。64並列の反復4回目に既存の時刻付きsession試験でも同じhelperのBusyを再現したため、H2c2のcheckpoint処理だけの問題ではない。
 
 Unixの複製lock handleを短時間保持する回帰でも即時再openの失敗を再現した。このFD寿命は並列fork→exec中のflock継承と整合するが、CIでfork起因を直接観測したとは断定しない。所有者不在を前提とする再open fixture（成功・形式／identity拒否の検証）だけをBusy限定・最大1秒の有限retryに変更した。製品のopen／排他・reader ownershipの即時拒否試験は維持する。Astraの差分レビューで必須修正はない。修正後は64並列の全Historian単体試験を10回連続で成功し、Rust workspace191件・Clippy・rustfmt・全体Prettierも成功した。修正後CIはPRで確認する。
+
+## HistorianのSQLite容量不足と復旧（H2c3、2026-11-01）
+
+H2c2は[PR #22](https://github.com/tyaro/temp-scada/pull/22)でマージ済み（`1295c7c0bcdb2e4d97d43cd449cbb91ac1165411`）、CI競合修正後の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41284638650)全7job成功。Astra主設計の[H2c3](../design/runtime/historian-write-failure-recovery.md)に従い、隔離DBのmax_page_countで実SQLite FULLを発生させ、保存・保持の原子性と復旧境界を検証した。
+
+retention／maintenanceで、SQLiteエラー時に取消が立っていればFULLまでControlへ変換する不具合を再現・修正した。共通sqlite_failureはprimary OperationInterruptedだけを取消・期限・仕事量のControlへ変換し、実FULL等は元のSQL原因とNeedsReopenを維持する。新しい公開API・DB format・H1・依存は追加していない。
+
+Rust workspace199件（新規通常書込み／証拠／trim6単体・FULLと取消併発2単体）、Clippy `-D warnings`／rustfmt、関連Chromium5件が成功。通常appendの自然増大によるFULLと、TEMP triggerによる各transaction段階の実FULLを区別し、全member・epoch・frontier・counter・ledger・fenceのrollback、既存readerのraw／minmax不変、再open後のreceiptと新session再開を確認した。trimは同requestで再試行・再送できる。retentionの取消併発はaux SQLiteの実FULLをprivate hookから注入し、本writer trimの実FULL原子性は別に検証した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+これはSQLite論理page制限の試験で、実filesystemのENOSPC・WAL／checkpointの容量障害・I/O／媒体・電源断を保証するものではない。自動保持・信頼時刻・recorder協調・大量削除・receipt GCも後続。上流・S7・実Hub／PLC／DB・通常Appには接続していない。

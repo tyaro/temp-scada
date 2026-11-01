@@ -571,3 +571,5 @@ fn status(connection: &Connection, session_id: &str) -> StoreResult<Option<Sessi
 mod test_support;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod write_failure_tests;

@@ -493,3 +493,41 @@ fn cleanup_failure_during_unwind_persistently_poison_the_writer() {
     let store = directory.open();
     assert_eq!(count(&store, "observations"), 2);
 }
+
+#[test]
+fn sqlite_full_from_a_fault_hook_survives_concurrent_cancellation() {
+    let auxiliary = Connection::open_in_memory().unwrap();
+    auxiliary.pragma_update(None, "max_page_count", 1).unwrap();
+    let error = auxiliary
+        .execute_batch("CREATE TABLE capacity_probe (value BLOB)")
+        .unwrap_err();
+    assert_eq!(
+        error.sqlite_error_code(),
+        Some(rusqlite::ErrorCode::DiskFull)
+    );
+    let mut error = Some(error);
+    let directory = TempStore::new();
+    let mut store = directory.create();
+    store.begin_session(spec("a")).unwrap();
+    store.append_tick(tick("a", 1, 0)).unwrap();
+    store.close_session("a").unwrap();
+    let before = counter(&store);
+    let c = control();
+    let result = store.trim_with_hook(request("trim", 1, None), &c, &mut |boundary| {
+        if boundary == Boundary::Metadata {
+            c.cancellation.cancel();
+            return Err(StoreError::Sqlite(error.take().unwrap()));
+        }
+        Ok(())
+    });
+    let result = store.after_write(result);
+    assert!(
+        matches!(&result, Err(StoreError::Sqlite(error)) if error.sqlite_error_code() == Some(rusqlite::ErrorCode::DiskFull)),
+        "{result:?}"
+    );
+    assert!(store.needs_reopen);
+    assert!(store.connection.is_autocommit());
+    assert_eq!(counter(&store), before);
+    assert_eq!(count(&store, "observations"), 2);
+    assert_eq!(rows(&store, "expired_samples"), 0);
+}

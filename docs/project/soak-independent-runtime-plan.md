@@ -1,6 +1,6 @@
 # S7 SOAK中のSCADA読取開発計画
 
-2026-11-01（日本時間）。状態: **採用・P1／P2／P3a／P4マージ済み、P5マージ済み、H1マージ済み、H2aマージ済み、H2b1マージ済み、H2b2マージ済み、H2b3マージ済み、H2b4マージ済み、H2c1マージ済み、H2c2容量診断・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
+2026-11-01（日本時間）。状態: **採用・P1／P2／P3a／P4マージ済み、P5マージ済み、H1マージ済み、H2aマージ済み、H2b1マージ済み、H2b2マージ済み、H2b3マージ済み、H2b4マージ済み、H2c1マージ済み、H2c2マージ済み、H2c3容量不足と復旧・ローカル検証済み**。ユーザー指示により、IndustrialのS7 SOAK中は上流を変更せず、固定SDKとloopbackのモックHubで開発する。文書作成は実装完了を意味しない。
 
 ## 前提と責務
 
@@ -27,7 +27,7 @@
 | P4 Tag Browser        | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
 | P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
-| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c2実装済み・後続未着手     |
+| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c3実装済み・後続未着手     |
 
 ## P1の実装契約
 
@@ -151,8 +151,8 @@ H1は[全体CI 41255744026](https://github.com/tyaro/temp-scada/actions/runs/412
 | 区切り               | 内容と受入                                                                                                                                                                       | 状態                     |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
 | H2a 原子append       | 同周期の固定session全memberを1tickで保存。identity・source世代・型付き値・receipt・sequenceの原子性、冪等再送、プロセス排他、終了後の再送、途中終了後のinterruptedを一時DBで確認 | 完了・PR #16マージ済み   |
-| H2b 検索snapshot     | 同一snapshotからmetadata・raw／minmax・coverage・watermarkを投影しH1へ適合。未記録／中断の説明、検索の仕事量・取消・資源寿命を検証                                               | H2c2実装済み・後続未着手 |
-| H2c 保持・容量・復旧 | expired根拠と削除の原子性、再送での復活防止、異常時刻、容量・WAL・checkpoint、障害回復の残りを検証                                                                               | H2c2実装済み・後続未着手 |
+| H2b 検索snapshot     | 同一snapshotからmetadata・raw／minmax・coverage・watermarkを投影しH1へ適合。未記録／中断の説明、検索の仕事量・取消・資源寿命を検証                                               | H2c3実装済み・後続未着手 |
+| H2c 保持・容量・復旧 | expired根拠と削除の原子性、再送での復活防止、異常時刻、容量・WAL・checkpoint、障害回復の残りを検証                                                                               | H2c3実装済み・後続未着手 |
 
 H2aは専用directoryへ固定DBとwriter lockを作る同期ライブラリで、通常Appからは呼ばない。既存directoryを初期化せず、既存format／store・deployment IDを照合する。query・retention・常時recorderや製品transportへ同時接続しない。全memberの観測（無値理由も含む）が揃った連続tickだけをcommitし、入力watermarkは受け取らない。未終了sessionは再openでinterruptedにするが、失われた時刻・件数やcoverageを捏造しない。
 
@@ -171,7 +171,7 @@ H2aには時刻付き計画、停止／保持削除や未commitキューの永�
 | H2b1 raw検索         | snapshot内で型・metadata・安定順・直近commitを維持。2reader上限、VM／decode／bytes／期限と取消・終了までの資源所有。SQLite出力の共有fixture | 完了・PR #17マージ済み       |
 | H2b2 minmax          | 共通grid、count・包絡、型／source／clockEpoch混在、空binに適用できるmetadataの根拠を設計・試験                                              | 完了・PR #18マージ済み       |
 | 確定coverage         | 時刻付き計画と停止・中断・未commit等の根拠を永続化し、raw／binと矛盾しないcoverageを生成。現unknownCoverageからの移行を明示                 | H2b3証拠保存済み・投影未着手 |
-| H2c 保持・容量・復旧 | expired根拠と削除の原子性、復活防止、異常時刻、容量・WAL・checkpoint、障害回復の残り                                                        | H2c2実装済み・後続未着手     |
+| H2c 保持・容量・復旧 | expired根拠と削除の原子性、復活防止、異常時刻、容量・WAL・checkpoint、障害回復の残り                                                        | H2c3実装済み・後続未着手     |
 
 ローカル検証: Rust workspace112件、Clippy `-D warnings`／rustfmt、TS114ファイル・1,383件、型検査0エラー・0警告、build、関連Chromium2件が成功。新しい15単体試験でsnapshot中のappend／session切替、未commit非公開、同時刻・時計逆行、metadataと点数上限、VM／行／bytes、取消・deadline、cleanup失敗とpanic、2readerとwriter lock寿命を確認した。実SQLite出力4ケースをRustの1統合test関数とTS／ブラウザで共有し、H1の110 fixtureも維持する。buildの既知chunkサイズ警告は残る。全体CIはPRで確認する。
 
@@ -238,3 +238,15 @@ H2c1は[PR #21](https://github.com/tyaro/temp-scada/pull/21)でマージ済み�
 Rust190件、Clippy／rustfmt、関連Chromium5件が成功。reader pin中の旧query保持と解放後Complete、trim後のfree page、64 MiB境界、SQL/FS測定の差、main/WAL参照、取消・SQL failure・panic、checkpoint前後のprocess終了後のreceipt／raw／expiredを確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。TS・通常App・実環境は未変更。
 
 自動保持と時刻異常検査、active recorderとの協調、大量削除の進行、receipt／metadata GC、空き容量・disk-full・物理保守の運用は後続。H2c2はH2全体、常時recorder、History APIやTrend画面の完成ではない。
+
+## H2c3の実装と残り（2026-11-01）
+
+H2c2は[PR #22](https://github.com/tyaro/temp-scada/pull/22)でマージ済み（`1295c7c0bcdb2e4d97d43cd449cbb91ac1165411`）、[全体CI 41284638650](https://github.com/tyaro/temp-scada/actions/runs/41284638650)全7job成功。Astra主設計の[SQLite容量不足と原子的復旧](../design/runtime/historian-write-failure-recovery.md)を隔離DBだけで検証した。
+
+- max_page_countによる実FULLで、通常append・全member／epoch・timed begin／plan・gap・close・trim各段階を検証する。TEMP triggerの圧力注入と通常appendの自然増大は区別する。
+- FULLと取消が併発した際のControlへの誤変換を修正し、primary OperationInterruptedだけをControlへ変換する。FULLの元原因とNeedsReopenを維持する。
+- 容量回復後の再openは旧activeをinterruptedにする。既commit receiptは再取得でき、未保存tick／gapを旧sessionで再開しない。未commit begin／trimは既存の同ID契約で再試行する。
+
+Rust199件、Clippy／rustfmt、関連Chromium5件が成功。reader raw／minmax、counter／frontier／epoch／expired／fenceの一貫性を確認し、Astra最終レビューを完了した。全体CIはPRで確認する。DB format 3・H1・依存・SDK・Project・Banto・TS／通常Appは変更しない。
+
+実filesystemのENOSPC・WAL／checkpoint容量・I/O・媒体／電源断は未検証。自動保持の設定・信頼時刻・active recorder協調・大量削除進行・receipt GC・物理保守とともに後続へ残す。H2c全体／recorder／History API・Trend画面の完成とはしない。

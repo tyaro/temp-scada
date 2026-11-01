@@ -94,10 +94,9 @@ impl SqliteStore {
             })();
             // Translate interruption before cleanup removes the progress handler.
             match result {
-                Err(StoreError::Sqlite(error)) => match budget.work.check() {
-                    Err(reason) => Err(StoreError::Control(reason)),
-                    Ok(()) => Err(StoreError::Sqlite(error)),
-                },
+                Err(StoreError::Sqlite(error)) => {
+                    Err(super::maintenance::sqlite_failure(error, &budget))
+                }
                 other => other,
             }
         };

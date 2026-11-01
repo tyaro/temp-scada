@@ -407,3 +407,9 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 同moduleの`Operation`がprogress handler解除→rollbackと直接needs_reopen保持を共通化し、retentionもこのguardを使う。`maintenance/tests.rs`の15単体（child worker含む）が診断・free page・上限・各失敗とprocess終了後の整合を担当する。`query/tests.rs`の追加1単体がreader snapshot pin中のIncompleteと旧query維持、解放後Completeと所有を確認する。既存ブラウザ契約5件も回帰する。公開History JSONやTS/UIへ新DTOを接続せず、[H2c2設計](../design/runtime/historian-maintenance.md)のlibrary境界を維持する。
 
 所有者不在を前提とする`store/test_support.rs::reopen_unowned`は、並列process試験のFD寿命と整合する一時的なlock競合に備え、Busyだけを最大1秒retryする。TempStore::openと、形式／identityなどの非Busy結果を検証するfixtureで共用する。他のエラーは即失敗する。Unixの複製FD回帰で待機と製品の即時Busy拒否を確認し、所有競合の試験は製品APIを直接使い続ける。
+
+## HistorianのSQLite FULLと復旧（H2c3）
+
+`store/maintenance.rs::sqlite_failure`がSQL原因と協調取消の境界を所有し、retention／maintenanceが共用する。primary OperationInterruptedかつ対応control失敗の場合だけControlへ変換する。FULL／I/O等を隠さず既存after_writeでwriterをNeedsReopenにする。公開error型とformat 3は維持する。
+
+`store/write_failure_tests.rs`の6単体が、通常append自然増大のFULL、TEMP triggerでのappend／plan／gap／close／trimの実FULL、rollbackとreceipt／session／fenceの復旧を担当する。pressure table／trigger／max_page_countはprivateな使い捨てDBだけへ適用する。`maintenance/tests.rs`が同writerのFULL＋取消と期限切れでの分類、`retention/tests.rs`がaux SQLiteの実FULLをhookから渡す取消併発を検証する。両者を本writer trimのFULL試験と混同しない。既存process終了とブラウザ契約5件を回帰し、[H2c3設計](../design/runtime/historian-write-failure-recovery.md)の未検証境界を維持する。

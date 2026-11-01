@@ -173,10 +173,7 @@ impl SqliteStore {
                 .progress_handler(1000, Some(move || progress.progress()))?;
             let result = action(guard.connection, &mut budget);
             match result {
-                Err(StoreError::Sqlite(error)) => match budget.work.check() {
-                    Err(reason) => Err(StoreError::Control(reason)),
-                    Ok(()) => Err(StoreError::Sqlite(error)),
-                },
+                Err(StoreError::Sqlite(error)) => Err(sqlite_failure(error, &budget)),
                 Ok(value) if finish_check => budget
                     .work
                     .check()
@@ -234,6 +231,18 @@ fn checkpoint_report(busy: i64, log: i64, done: i64) -> StoreResult<CheckpointRe
         checkpointed_frames: (done >= 0).then_some(done as u64),
     })
 }
+// Only SQLite's interrupt code can stand for cooperative cancellation. A real
+// storage failure must retain its cause and poison the writer even if a control
+// flag changes before we inspect it.
+pub(super) fn sqlite_failure(error: rusqlite::Error, budget: &Budget) -> StoreError {
+    if error.sqlite_error_code() == Some(rusqlite::ErrorCode::OperationInterrupted) {
+        if let Err(reason) = budget.work.check() {
+            return StoreError::Control(reason);
+        }
+    }
+    StoreError::Sqlite(error)
+}
+
 // Remove cancellation before rollback, including during unwinding. The writer
 // remains poisoned if cleanup fails; it never releases ownership mid-operation.
 pub(super) struct Operation<'a> {
