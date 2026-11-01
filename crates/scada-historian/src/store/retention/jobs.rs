@@ -8,6 +8,14 @@ pub struct JobRequest {
     pub cutoff_ms: i64,
     pub expected_cutoff_ms: Option<i64>,
 }
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct StoredJobRequest {
+    job_id: String,
+    cutoff_ms: i64,
+    expected_cutoff_ms: Option<i64>,
+    policy_applied_revision: Option<u64>,
+}
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct JobStepRequest {
@@ -15,14 +23,14 @@ pub struct JobStepRequest {
     pub step: u64,
     pub max_ticks: u32,
 }
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct JobBeginReceipt {
     pub job_id: String,
     pub cutoff_ms: i64,
     pub begin_commit: u64,
 }
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct JobStepReceipt {
     pub job_id: String,
@@ -32,13 +40,13 @@ pub struct JobStepReceipt {
     pub deleted_observations: usize,
     pub completed: bool,
 }
-#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub enum JobState {
     Active,
     Complete,
 }
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct JobStatus {
     pub job_id: String,
@@ -50,6 +58,7 @@ pub struct JobStatus {
     pub deleted_observations: u64,
     pub begin_commit: u64,
     pub completion_commit: Option<u64>,
+    pub policy_applied_revision: Option<u64>,
 }
 struct Job {
     request: JobRequest,
@@ -60,12 +69,31 @@ struct Job {
     observations: u64,
     completion: Option<i64>,
     latest_commit: u64,
+    policy_applied_revision: Option<u64>,
 }
 
 impl SqliteStore {
     pub fn begin_retention_job(
         &mut self,
         request: JobRequest,
+        control: &QueryControl,
+    ) -> StoreResult<JobBeginReceipt> {
+        self.begin_job(request, None, control)
+    }
+
+    pub(super) fn begin_retention_job_bound(
+        &mut self,
+        request: JobRequest,
+        applied: &super::application::AppliedRetentionPolicy,
+        control: &QueryControl,
+    ) -> StoreResult<JobBeginReceipt> {
+        self.begin_job(request, Some(applied), control)
+    }
+
+    fn begin_job(
+        &mut self,
+        request: JobRequest,
+        applied: Option<&super::application::AppliedRetentionPolicy>,
         control: &QueryControl,
     ) -> StoreResult<JobBeginReceipt> {
         if !id(&request.job_id)
@@ -77,7 +105,10 @@ impl SqliteStore {
         self.run_maintenance(control, false, |connection, budget| {
             statement(connection, budget, "BEGIN IMMEDIATE")?;
             if let Some(job) = load(connection, &request.job_id, budget)? {
-                if job.request != request {
+                if job.request != request
+                    || applied
+                        .is_some_and(|p| job.policy_applied_revision != Some(p.applied_revision))
+                {
                     return Err(StoreError::Conflict);
                 }
                 let receipt = JobBeginReceipt {
@@ -93,6 +124,22 @@ impl SqliteStore {
             ensure_idle(connection)?;
             budget.row()?;
             check_quiescent(connection, budget)?;
+            if let Some(expected) = applied {
+                budget.work.statement()?;
+                let snapshot: i64 = connection.query_row(
+                    "SELECT last_commit FROM store_meta WHERE singleton=1",
+                    [],
+                    |r| r.get(0),
+                )?;
+                budget.row()?;
+                if snapshot < 0
+                    || super::application::load_current(connection, budget, snapshot as u64)?
+                        .as_ref()
+                        != Some(expected)
+                {
+                    return Err(StoreError::Conflict);
+                }
+            }
             let (cutoff, _) = checked_fence(connection, budget)?;
             if cutoff != request.expected_cutoff_ms
                 || cutoff.is_some_and(|t| request.cutoff_ms <= t)
@@ -102,13 +149,19 @@ impl SqliteStore {
             let commit = commit(connection, budget)?;
             budget.work.statement()?;
             connection.execute(
-                "INSERT INTO retention_jobs VALUES (?1,?2,?3,?4,'active',?5,0,0,0,NULL)",
+                "INSERT INTO retention_jobs VALUES (?1,?2,?3,?4,'active',?5,0,0,0,NULL,?6)",
                 params![
                     request.job_id,
-                    serde_json::to_string(&request)?,
+                    serde_json::to_string(&StoredJobRequest {
+                        job_id: request.job_id.clone(),
+                        cutoff_ms: request.cutoff_ms,
+                        expected_cutoff_ms: request.expected_cutoff_ms,
+                        policy_applied_revision: applied.map(|p| p.applied_revision)
+                    })?,
                     request.cutoff_ms,
                     request.expected_cutoff_ms,
-                    commit
+                    commit,
+                    applied.map(|p| p.applied_revision as i64)
                 ],
             )?;
             let receipt = JobBeginReceipt {
@@ -241,6 +294,7 @@ impl Job {
             deleted_observations: self.observations,
             begin_commit: self.begin as u64,
             completion_commit: self.completion.map(|c| c as u64),
+            policy_applied_revision: self.policy_applied_revision,
         }
     }
 }
@@ -389,18 +443,38 @@ type JobRow = (
     i64,
     i64,
     Option<i64>,
+    Option<i64>,
 );
 fn load(connection: &Connection, id: &str, budget: &mut Budget) -> StoreResult<Option<Job>> {
     budget.work.statement()?;
-    let row:Option<JobRow>=connection.query_row("SELECT payload_json,cutoff_ms,expected_cutoff_ms,state,begin_commit,last_step,deleted_ticks,deleted_observations,completion_commit FROM retention_jobs WHERE job_id=?1",[id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?,r.get(8)?))).optional()?;
-    let Some((payload, cutoff, expected, state, begin, last, ticks, observations, end)) = row
+    let row:Option<JobRow>=connection.query_row("SELECT payload_json,cutoff_ms,expected_cutoff_ms,state,begin_commit,last_step,deleted_ticks,deleted_observations,completion_commit,policy_applied_revision FROM retention_jobs WHERE job_id=?1",[id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?,r.get(8)?,r.get(9)?))).optional()?;
+    let Some((
+        payload,
+        cutoff,
+        expected,
+        state,
+        begin,
+        last,
+        ticks,
+        observations,
+        end,
+        policy_revision,
+    )) = row
     else {
         return Ok(None);
     };
     budget.row()?;
     budget.evidence_text(&payload)?;
-    let request: JobRequest =
+    let stored: StoredJobRequest =
         serde_json::from_str(&payload).map_err(|_| StoreError::CorruptData)?;
+    if stored.policy_applied_revision != policy_revision.map(|n| n as u64) {
+        return Err(StoreError::CorruptData);
+    }
+    let request = JobRequest {
+        job_id: stored.job_id,
+        cutoff_ms: stored.cutoff_ms,
+        expected_cutoff_ms: stored.expected_cutoff_ms,
+    };
     budget.work.statement()?;
     let snapshot: i64 = connection.query_row(
         "SELECT last_commit FROM store_meta WHERE singleton=1",
@@ -431,6 +505,12 @@ fn load(connection: &Connection, id: &str, budget: &mut Budget) -> StoreResult<O
     {
         return Err(StoreError::CorruptData);
     }
+    if let Some(revision) = policy_revision {
+        if !(1..=MAX_SAFE as i64).contains(&revision) {
+            return Err(StoreError::CorruptData);
+        }
+        super::application::validate_binding(connection, budget, revision as u64, begin as u64)?;
+    }
     let mut latest_commit = begin as u64;
     if last > 0 {
         let (_, receipt) =
@@ -455,6 +535,7 @@ fn load(connection: &Connection, id: &str, budget: &mut Budget) -> StoreResult<O
         observations: observations as u64,
         completion: end,
         latest_commit,
+        policy_applied_revision: policy_revision.map(|n| n as u64),
     }))
 }
 type StepRow = (String, i64, i64, i64, i64);

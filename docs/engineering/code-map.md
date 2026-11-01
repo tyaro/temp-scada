@@ -463,3 +463,13 @@ reportは評価済みのnext_state／assessment／recoveryを操作エラーで�
 `recovery.rs::read_snapshot`へ既存復旧照会のtransaction内部読取を抽出した。既存`recovery_state`とpreviewが同じhelperを使い、各callerがBEGIN／ROLLBACKを所有する。last_commit初回readのsnapshot pinと既存hook／予算・cleanup・poisonを維持する。
 
 `preview/tests.rs`の6単体が件数・差分・境界・active／partialを、`tests/failures.rs`の8単体がreadonly、同snapshot、破損／NUL、1025tick／有限予算、取消・panic・SQLfailure／rollback poisonを担当する。既存recovery15単体とブラウザ契約6件を回帰する。永続policy適用・製品管理口は[後続](../design/runtime/historian-retention-preview.md)。
+
+## Historianの保持policy原子適用（H2c10）
+
+`retention/application.rs`がAppliedRetentionPolicy／PolicyPreparationRequest／Preparation／PolicyApplyRequest／Receiptと実applied比較preview・原子適用を所有する。同request再送を先に照合し、新規要求ではapplied revisionとpreview snapshotをCAS、active job拒否、同transactionのfresh preview、immutable定義／operation／current pointerを保存する。削除やguard rearmは行わない。
+
+`application/read.rs`がdefinition起点、current pointerと最新世代／commit、型付きrequest／receipt／保存previewを検証する。直前世代はmetadataだけで比較し、前receiptを再帰decodeしない。`recovery::read_snapshot`は実appliedを同snapshotで返す。`preview::build_preview`と`validate_saved_preview`は新規集約と保存結果の意味検証を共有する。
+
+format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続根拠を所有する。`jobs.rs`はcoordinator専用bound beginのwrite transaction内で現在appliedの世代・全文を再照合し、内部StoredJobRequestと列のoriginを一致させる。`coordinator.rs`は新Beginの未適用／不一致をNoWriteとし、Observe／固定job継続と直接保守APIを維持する。policy／preview／recovery保存DTOのDeserializeを追加し、GuardState復元は増やさない。
+
+`application/tests.rs`の5単体が適用・実比較・CAS・記録／job・再送・bound source、`tests/failures.rs`の10単体（child worker含む）が容量不足・取消／fault・破損・旧format・origin・非再帰・SQLpoison・process5境界を確認する。coordinatorの新1単体が判定とbegin間のpolicy変更を検証する。既存coordinatorの正常Begin試験は適用済みElapsedへ移行し、counterは適用commitを含める。ブラウザ契約6件を回帰し、[製品統合](../design/runtime/historian-retention-policy-application.md)は後続とする。

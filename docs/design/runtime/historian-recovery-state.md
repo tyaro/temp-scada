@@ -8,6 +8,8 @@
 
 H2c5 は **同一 snapshot の副作用のない保存復旧状態照会**を追加し、この運用上の穴を閉じる。自動 driver が新 job ID を生成したり、保持 cutoff を推測したり、発見直後に削除を開始したりする機能は追加しない。呼出側は永続状態を確認してから既存 API を明示的に呼ぶ。
 
+[H2c10](historian-retention-policy-application.md)で現行format 5のapplied_retention_policyを同snapshotへ追加した。適用世代・commit・要求ID・policy全文を復元し、current pointer／最新head／definition／receiptを検証する。job statusのpolicy_applied_revisionはcoordinator経由の掃除出典であり、直接保守jobはNone。以下のformat 4という記録はH2c5時点を示す。
+
 DB format 4、H1 JSON、固定 SDK／Project／Banto／依存は維持する。新表や schema変更は不要。通常 App、製品設定、上流、実 Hub／PLC／DBへ接続せず、隔離一時 DB の library だけを対象とする。
 
 ## API と結果

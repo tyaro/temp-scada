@@ -40,6 +40,8 @@ pub enum NoWriteReason {
     BeginRequestMismatch,
     NoActiveJob,
     DifferentActiveJob,
+    PolicyNotApplied,
+    AppliedPolicyMismatch,
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq, Eq)]
@@ -162,13 +164,19 @@ impl SqliteStore {
                 else {
                     return no_write(NoWriteReason::NotProposed);
                 };
+                let Some(applied) = &recovery.applied_retention_policy else {
+                    return no_write(NoWriteReason::PolicyNotApplied);
+                };
+                if applied.policy != input.policy {
+                    return no_write(NoWriteReason::AppliedPolicyMismatch);
+                }
                 if request.cutoff_ms != *cutoff_ms
                     || request.expected_cutoff_ms != *expected_cutoff_ms
                 {
                     return no_write(NoWriteReason::BeginRequestMismatch);
                 }
                 hook(self)?;
-                self.begin_retention_job(request.clone(), control)
+                self.begin_retention_job_bound(request.clone(), applied, control)
                     .map(CoordinatorOutcome::Begun)
             }
             CoordinatorIntent::ContinueExisting(request) => {

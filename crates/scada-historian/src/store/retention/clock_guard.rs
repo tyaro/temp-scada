@@ -4,11 +4,11 @@ pub(super) mod validate;
 use super::policy::derive_cutoff;
 pub use super::policy::CutoffRule;
 use crate::store::recovery::StoreRecoveryState;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RetentionClockPolicy {
     pub policy_id: String,
     pub revision: u64,

@@ -134,6 +134,35 @@ pub(super) fn counter(store: &SqliteStore) -> i64 {
         .unwrap()
 }
 
+pub(super) fn apply_test_policy(
+    store: &mut SqliteStore,
+    policy: retention::clock_guard::RetentionClockPolicy,
+) {
+    use retention::application::{PolicyApplyRequest, PolicyPreparationRequest};
+    let control = query::QueryControl::with_timeout(Duration::from_secs(10)).unwrap();
+    let prepared = store
+        .preview_retention_policy_application(
+            &PolicyPreparationRequest {
+                proposed_policy: policy.clone(),
+                reference_wall_ms: 1_000_000,
+            },
+            &control,
+        )
+        .unwrap();
+    store
+        .apply_retention_policy(
+            &PolicyApplyRequest {
+                request_id: format!("fixture-apply-{}", prepared.snapshot_commit),
+                expected_applied_revision: prepared.expected_applied_revision,
+                expected_preview_snapshot_commit: prepared.snapshot_commit,
+                proposed_policy: policy,
+                reference_wall_ms: 1_000_000,
+            },
+            &control,
+        )
+        .unwrap();
+}
+
 #[cfg(unix)]
 #[test]
 fn successful_fixture_reopen_waits_for_a_transient_inherited_lock_handle() {
