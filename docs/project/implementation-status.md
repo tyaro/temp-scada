@@ -50,6 +50,12 @@ H2b1は[PR #17](https://github.com/tyaro/temp-scada/pull/17)でマージ済み�
 
 Rust workspace126件（新規単体13件・共通minmax fixtureの統合1関数）、TS114ファイル・1,389件、型検査0エラー・0警告、build、Clippy・rustfmt、関連Chromium3件成功。9,001tickをdecode上限20行で集約し短い山を保持した。SQLが破損recordをinvalidCount／混在へ隠さないこと、H1の正常sample理由の一致、NUL入り時計ID拒否、集約SQL処理中の取消・writer継続を確認した。実SQLiteの6成功resultとmetadata曖昧1失敗を共通fixtureに追加し、正常resultはRust／TS／実ブラウザで照合した。時刻付き計画・確定coverage・保持・容量・常時recorder・公開Historyサービス／UI接続は後続で、H2全体は継続中。
 
+## Historianの記録期間と欠測証拠（H2b3、2026-11-01）
+
+H2b2は[PR #18](https://github.com/tyaro/temp-scada/pull/18)でマージ済み（`bd24c5d29db74c2eb59b8c8af24bf1634ab3026b`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41270705728)全7job成功。Astra主設計の[H2b3](../design/runtime/historian-recording-evidence.md)に従い、固定計画snapshot、sessionの開始・終了時刻、明示的なsamplingMissed／storageLoss区間を原子的に保存する。時計世代と観測frontierを照合し、時刻逆行はinterruptと新sessionで扱う。gapは保存tickのsequenceを進めず、Good／無値を含む既存観測との重複を拒否する。
+
+DB format 2へ明示更新し、format 1や版不一致は自動変更せず拒否する。依存・SDK・H1 JSON v1・Project0.35.0・Banto6.9.0は維持。Rust workspace140件（新規14 test関数、child worker含む）、Clippy・rustfmt、関連Chromium3件が成功。COMMIT前後のprocess終了、再送、SQL障害時の全rollbackとNeedsReopen、旧DB非変更を確認した。公開queryは全域unknownCoverageを維持し、証拠のcoverage投影・保持・容量・recorder・Historyサービス／通常App接続は後続。H2全体は継続中。
+
 ## 保存契約と基盤
 
 | 項目       | 現在の契約                                                                                                                              |

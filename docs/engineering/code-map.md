@@ -366,7 +366,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 
 `crates/scada-historian/src/store/mod.rs`の`SqliteStore`が専用directoryのOS writer lock、format／deployment照合、固定session開始・終了・interrupted検出、1tickのtransactionとreceipt再送を所有する。`store/types.rs`がRust入力型、全member・同周期・H1意味規則・同Hub世代の照合、型付きlogical payloadの正規化を所有し、source世代のu64は内部canonicalで10進文字列として保持する。
 
-`store/schema.sql`は独立DB format 1のDDLとidentity／record FK・値CHECK・時刻索引を規定する。`lib.rs`のprivate identity検査はH1 canonical定義を再利用し、空のsampleBatchへ変更しない。`store/tests.rs`は使い捨てDBとprivate fault hook／child processで原子性・冪等性・型・世代・排他・再openを確認する。公開History queryとUIのDB直読は追加しない。検索・coverage生成・保持・容量・常時recorderは[H2a設計の後続](../design/runtime/historian-atomic-store.md)へ残す。
+`store/schema.sql`は独立DB format 2のDDLとidentity／record FK・値CHECK・時刻索引を規定する。`lib.rs`のprivate identity検査はH1 canonical定義を再利用し、空のsampleBatchへ変更しない。`store/tests.rs`は使い捨てDBとprivate fault hook／child processで原子性・冪等性・型・世代・排他・再openを確認する。公開History queryとUIのDB直読は追加しない。検索・coverage生成・保持・容量・常時recorderは[H2a設計の後続](../design/runtime/historian-atomic-store.md)へ残す。
 
 ## Historianのraw snapshot検索（H2b1）
 
@@ -379,3 +379,9 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 `store/query/mod.rs`の`query_minmax`はrawとsnapshot・metadata・watermark・予算・cleanupを共有し、`query/minmax.rs`が整数共通grid・SQL要約の検査・bin状態・空binのmetadata根拠を所有する。`query/minmax.sql`はbound parameterの有限descriptor対応表と既存時刻索引を使い、SQL内で値／無値／破損・domain混在・極値・件数をbinへ集約する。Rustへ全rawを展開しない。
 
 `query/minmax/tests.rs`が具体的な境界・ピーク・件数、混在・破損・NUL・取消、9,001tickの集約とH1 sample理由の一致を確認する。`tests/query_fixtures.rs`が新しい`examples/history-minmax-cases.json`の6成功／1失敗を実SQLiteと比較し、成功resultは既存TS／ブラウザ契約テストでも共有する。公開JSON SchemaやDB formatを緩めて通さない。[H2b2設計・残り](../design/runtime/historian-minmax-query.md)を参照する。
+
+## Historianの記録期間と欠測証拠（H2b3）
+
+`store/evidence.rs`がPlanRef／TimedStart／ClockStamp／GapEvidenceと、timed begin／close・interrupt・gap保存・session_evidence照会を所有する。`store/mod.rs`は既存begin／closeと原子transactionを共有し、新tickのreceipt再送判定後に証拠frontierを同transactionで進める。SQL／I/O失敗のNeedsReopenとwriter／reader所有を維持する。
+
+`store/schema.sql`のDB format 2はimmutable plan snapshot、sessionの時刻根拠、局所gap ledgerと索引・FKを追加する。format 1や版不一致はopenで拒否し、自動migrationしない。`evidence/tests.rs`は一時DBとエラー／process終了で、根拠・状態・counterの原子性、再送、clock規則と区間矛盾、非変更拒否を確認する。公開queryは従来のunknownCoverageのままで、[同snapshotのcoverage投影](../design/runtime/historian-recording-evidence.md)は次工程。

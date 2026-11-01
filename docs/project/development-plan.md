@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1はPR #10〜#17で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H2b2 min/max集約](../design/runtime/historian-minmax-query.md)を実装・ローカル検証した。整数共通gridでピークと件数を保持し、意味の混在や空binのmetadata不明を推測で補わない。次は時刻付き計画・確定coverageの保存根拠、その後に保持・容量・復旧を検証する。H2全体・常時recorder・履歴サービス・通常Designerの実Hub接続・認証は未完了。
+2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1／H2b2はPR #10〜#18で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H2b3 記録期間と欠測証拠](../design/runtime/historian-recording-evidence.md)を実装・ローカル検証した。DB format 2へ明示更新し、旧版は自動変更しない。次は保存した根拠を同一snapshotからcoverageへ投影し、別clock domainの同UTC観測との整合を検証する。その後は保持・容量・復旧。H2全体・常時recorder・履歴サービス・通常Designerの実Hub接続・認証は未完了。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 
