@@ -361,3 +361,9 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 `crates/scada-historian/schema/history-contract.schema.json`が版付きquery／sampleBatch／resultの構造を規定する。`scada-historian::validate_history_contract`と`lib/history-contract.ts`は同じSchemaの検査後、期間・点数・identity・record／segment参照・Quality／sourceと値・順序・coverage・watermarkの関係を検査する。JSON整数の1／1.0を同じ意味で扱い、unsafe整数は構造検査で拒否する。
 
 `examples/history-contract-cases.json`の110 fixtureをRust／TS／実ブラウザで共有する。`crates/scada-historian/tests/contracts.rs`、`history-contract.test.ts`、`e2e/history-contract.spec.ts`が検証入口。通常Appはこのmoduleをimportせず、UI／ネットワーク／DBへ接続しない。[H1の保証範囲](../design/runtime/historian-contract-fixtures.md)と[H2の保存設計](../design/runtime/historian-storage-decision.md)を混同しない。
+
+## Historianの原子append adapter（H2a）
+
+`crates/scada-historian/src/store/mod.rs`の`SqliteStore`が専用directoryのOS writer lock、format／deployment照合、固定session開始・終了・interrupted検出、1tickのtransactionとreceipt再送を所有する。`store/types.rs`がRust入力型、全member・同周期・H1意味規則・同Hub世代の照合、型付きlogical payloadの正規化を所有し、source世代のu64は内部canonicalで10進文字列として保持する。
+
+`store/schema.sql`は独立DB format 1のDDLとidentity／record FK・値CHECK・時刻索引を規定する。`lib.rs`のprivate identity検査はH1 canonical定義を再利用し、空のsampleBatchへ変更しない。`store/tests.rs`は使い捨てDBとprivate fault hook／child processで原子性・冪等性・型・世代・排他・再openを確認する。公開History queryとUIのDB直読は追加しない。検索・coverage生成・保持・容量・常時recorderは[H2a設計の後続](../design/runtime/historian-atomic-store.md)へ残す。

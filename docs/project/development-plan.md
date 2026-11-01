@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1／P2／P3a／P4／P5はPR #10〜#14で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H1契約・fixture](../design/runtime/historian-contract-fixtures.md)と[保存方式・復旧契約](../design/runtime/historian-storage-decision.md)を基に、Rust／TSの純粋validatorを実装・ローカル検証済み。次はH2の隔離一時DBでの新保存層・検索・障害注入。通常Designerの実Hub接続・認証・履歴サービスは未実装。
+2026-11-01の進捗: P1／P2／P3a／P4／P5／H1はPR #10〜#15で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H2a原子保存コア](../design/runtime/historian-atomic-store.md)を実装し、固定sessionの全系列を1tickで保存するSQLite adapterを隔離一時DB・子プロセス終了で検証した。次はH2bの検索snapshot・coverage投影、その後に保持・容量・復旧を検証する。H2全体・常時recorder・履歴サービス・通常Designerの実Hub接続・認証は未完了。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 
