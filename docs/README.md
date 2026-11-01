@@ -129,6 +129,7 @@ docs/
 - [Historian／Trendの契約設計（P5、実装は後続）](design/runtime/historian-trend-contract.md)
 - [Historianの版付きJSON契約と共通fixture（H1）](design/runtime/historian-contract-fixtures.md)
 - [Historianの保存方式・transaction／recovery（H1、DB実装はH2）](design/runtime/historian-storage-decision.md)
+- [Historianの固定session・SQLite原子appendコア（H2a）](design/runtime/historian-atomic-store.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)

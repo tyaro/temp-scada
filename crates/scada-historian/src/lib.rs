@@ -1,4 +1,6 @@
-//! H1 pure JSON contracts only: no recorder, store, network, clock or UI.
+//! Pure history contracts and an isolated synchronous SQLite append adapter.
+//! No recorder, network service, system clock or UI is connected.
+pub mod store;
 use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 
@@ -40,6 +42,28 @@ pub fn validate_history_contract(document: &Value) -> Result<(), ContractError> 
         _ => false,
     };
     valid.then_some(()).ok_or(ContractError::Semantic)
+}
+
+// H2 session metadata has no observations yet. Reuse the canonical identity
+// definition without weakening sampleBatch's requirement for real samples.
+pub(crate) fn validate_history_identities(document: &Value) -> Result<(), ContractError> {
+    static SCHEMA: OnceLock<jsonschema::Validator> = OnceLock::new();
+    let schema = SCHEMA.get_or_init(|| {
+        let source: Value =
+            serde_json::from_str(HISTORY_CONTRACT_SCHEMA).expect("bundled schema JSON");
+        let group = serde_json::json!({
+            "$defs": source["$defs"], "type": "array", "minItems": 1, "maxItems": 8,
+            "items": {"$ref": "#/$defs/identity"}
+        });
+        jsonschema::validator_for(&group).expect("canonical identity definition")
+    });
+    if !schema.is_valid(document) {
+        return Err(ContractError::Schema);
+    }
+    identities(rows(document))
+        .is_some()
+        .then_some(())
+        .ok_or(ContractError::Semantic)
 }
 
 // All helpers below run only after the complete shared schema has validated.

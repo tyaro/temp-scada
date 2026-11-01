@@ -32,6 +32,12 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 Astra主設計の[版付きJSON契約](../design/runtime/historian-contract-fixtures.md)と[保存方式・復旧契約](../design/runtime/historian-storage-decision.md)を追加した。新crate `scada-historian`とTSの純粋validatorが同じSchema／110 fixtureを使い、query・sampleBatch・raw／minmax・coverage・identity・時刻の構造と意味を検査する。Rust workspace77件・TS1,379件・型検査・build・ブラウザ契約試験が成功した。H2は新SQLite層を暫定採用。H1にはDB・常時recorder・API・UI接続はなく、永続化や真のidentityの検証は後続。
 
+## Historianの原子保存コア（H2a、2026-11-01）
+
+H1は[PR #15](https://github.com/tyaro/temp-scada/pull/15)でマージ済み（`3ae2675e2054928f93911b833ebd64f7dc06f5e3`）。レビュー修正後の[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41255744026)は全7job成功。Astraが[H2a](../design/runtime/historian-atomic-store.md)を主設計し、`scada_historian::store::SqliteStore`を追加した。固定同周期sessionの全memberを1tickで保存し、連続sequence・型付き値・source世代・receiptを同一transactionへ確定する。再送の冪等性、同時刻非破壊、時計逆行、プロセス排他、interrupted検出を一時DBで検証した。
+
+SQLite driverはrusqlite 0.41.1（bundled、既定feature無効）、libsqlite3-sys 0.39.1をlockへ追加。既存依存version・SDK・Project・Bantoは維持。Rust workspace96件（保存コア19 test関数、child worker含む）、Clippy・rustfmt成功。子プロセスをCOMMIT前4境界／COMMIT直後に終了し、全rollback／receipt再取得を確認した。媒体I/O障害・停電・Windows運用を保証する試験ではない。通常App・実Hub・Industrialには未接続。検索snapshot・coverage生成・保持・容量・常時記録は未実装で、H2全体は継続中。
+
 ## 保存契約と基盤
 
 | 項目       | 現在の契約                                                                                                                              |
