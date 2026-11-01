@@ -543,3 +543,51 @@ fn unwinding_query_code_also_releases_the_transaction_before_reuse() {
     assert_finished(&reader);
     assert!(reader.query_raw(&query, &control()).is_ok());
 }
+
+#[test]
+fn passive_checkpoint_preserves_a_pinned_history_snapshot_and_reports_incomplete() {
+    use crate::store::maintenance::CheckpointStatus;
+    let directory = TempStore::new();
+    let mut store = directory.create();
+    store.begin_session(spec("a")).unwrap();
+    store.append_tick(tick("a", 1, 1000)).unwrap();
+    store.checkpoint_passive(&control()).unwrap();
+    let mut reader = store.reader().unwrap();
+    let query = request(&["number"], 0, 3000, 10);
+    let result = reader
+        .query_with_hook(&query, &control(), &mut |boundary| {
+            if boundary == Boundary::Snapshot {
+                store.append_tick(tick("a", 2, 2000)).unwrap();
+                let report = store.checkpoint_passive(&control()).unwrap();
+                assert_eq!(report.status, CheckpointStatus::Incomplete);
+                assert!(report.checkpointed_frames.unwrap() < report.log_frames.unwrap());
+                assert_eq!(
+                    store
+                        .storage_diagnostics(&control())
+                        .unwrap()
+                        .live_reader_leases,
+                    1
+                );
+            }
+            Ok(())
+        })
+        .unwrap();
+    assert_eq!(result["series"][0]["raw"].as_array().unwrap().len(), 1);
+    assert_finished(&reader);
+    let report = store.checkpoint_passive(&control()).unwrap();
+    assert_eq!(report.status, CheckpointStatus::Complete);
+    assert_eq!(
+        reader.query_raw(&query, &control()).unwrap()["series"][0]["raw"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+    drop(store);
+    assert!(matches!(
+        SqliteStore::open_existing(&directory.0, &identity()),
+        Err(StoreError::Busy)
+    ));
+    drop(reader);
+    drop(directory.open());
+}

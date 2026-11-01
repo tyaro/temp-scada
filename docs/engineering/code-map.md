@@ -394,8 +394,14 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 
 ## Historianの原子trimとexpired（H2c1）
 
-`store/retention.rs`がTrimRequest／TrimReceipt、記録停止中のCAS付きcutoff、全member tick単位の候補・receipt照合、ledger／削除／fenceの原子commit、有限予算とhandler解除→rollbackを所有する。cleanup失敗はpanic中もwriterをNeedsReopenへ固定する。同moduleのfence検証をappend／trim／queryで共有し、`store/mod.rs`は既存tick receipt再送の後で新tickのcutoffを検査する。`next_commit`は同transaction内のConnectionを受け、呼出側がSQLごとの予算を課金する。
+`store/retention.rs`がTrimRequest／TrimReceipt、記録停止中のCAS付きcutoff、全member tick単位の候補・receipt照合、ledger／削除／fenceの原子commit、有限予算を所有する。cleanupは以下のmaintenance共通guardで、失敗時はpanic中もwriterをNeedsReopenへ固定する。同moduleのfence検証をappend／trim／queryで共有し、`store/mod.rs`は既存tick receipt再送の後で新tickのcutoffを検査する。`next_commit`は同transaction内のConnectionを受け、呼出側がSQLごとの予算を課金する。
 
 `schema.sql`のformat 3はretention_state／retention_operations／expired_samplesと全store時刻・tick member検索の索引を追加する。`query/coverage/expired.rs`が同snapshotの実削除timestampの検証と優先overlay、`coverage.rs`が全証拠の最終coalesce／256区間・残存record確認を所有する。`query/control.rs`のBudgetはstore内部で共用し、公開APIを増やさない。
 
 `retention/tests.rs`の13単体は原子性・receipt再送・fence・上限・異常時刻・SQL failure・process終了・取消／panic cleanupを担当する。`query/coverage/expired/tests.rs`の5単体がsnapshot競合とcoverage・上限・破損を検証する。`tests/query_fixtures.rs`は`examples/history-retention-cases.json`の6ケースを実SQLiteから照合し、TS／ブラウザも期待resultを共有する。自動保持・物理消去・receipt GC・容量運用は[後続](../design/runtime/historian-retention.md)。
+
+## Historianの容量診断と明示checkpoint（H2c2）
+
+`store/maintenance.rs`のStorageDiagnostics／CheckpointReportとSqliteStoreの2 APIが、SQL page snapshot・filesystemの別sample・reader lease数、64 MiB事前guard、一度だけのPASSIVE結果分類を所有する。DB fileは両APIのSQL開始前に検査し、diagnosticsは後段でもfile長をsampleする。Complete／Incomplete／Busy／NoWalを区別し、成功後のlate cancellationではreportを捨てない。内部I/Oのhard deadlineは保証しない。
+
+同moduleの`Operation`がprogress handler解除→rollbackと直接needs_reopen保持を共通化し、retentionもこのguardを使う。`maintenance/tests.rs`の15単体（child worker含む）が診断・free page・上限・各失敗とprocess終了後の整合を担当する。`query/tests.rs`の追加1単体がreader snapshot pin中のIncompleteと旧query維持、解放後Completeと所有を確認する。既存ブラウザ契約5件も回帰する。公開History JSONやTS/UIへ新DTOを接続せず、[H2c2設計](../design/runtime/historian-maintenance.md)のlibrary境界を維持する。

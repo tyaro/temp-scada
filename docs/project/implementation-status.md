@@ -379,3 +379,13 @@ raw／minmaxは同じsnapshotの実削除時刻`[t,t+1)`だけをexpiredとし�
 Rust workspace174件（新規writer13単体・expired5単体・共有fixture統合1関数）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,401件、型検査0エラー・0警告、build、関連Chromium5件が成功。6共有fixtureに加え、snapshot中のtrim、上限、同timestamp／無値、safe整数端点、COMMIT前後5境界のprocess終了、破損・予算・取消・panic cleanupを検証。Astraの実装整合レビューを完了した。全体CIはPRで確認する。
 
 これはHistory query用observationsの期限除去で、再送比較用の`commits.payload_json`には値が残る。物理消去や容量問題の解決ではない。自動日次掃除・時刻跳躍検査・active recorderとの協調・大量削除の進行・receipt GC・WAL／checkpoint／disk-full運用は後続。通常App・上流・S7・実環境には接続していない。
+
+## Historianの容量診断と明示checkpoint（H2c2、2026-11-01）
+
+H2c1は[PR #21](https://github.com/tyaro/temp-scada/pull/21)でマージ済み（`5fe91b593d44e725b4749063c105041844a8eb37`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41282390503)全7job成功。Astra主設計の[H2c2](../design/runtime/historian-maintenance.md)に従い、Rust libraryにDB/WAL診断と明示PASSIVE checkpointを追加した。page数・再利用可能page・論理bytes・実file長・idleを含むreader lease数を区別して返す。SQL page値はread snapshotから取得し、filesystem値は別sampleとして扱う。
+
+checkpointは一度だけ実行し、Complete／Incomplete／Busy／NoWalを返す。busy=0でもreader pinにより未完了となる。WAL物理長64 MiB超はMaintenanceLimitでSQL前に拒否し、診断は可能。協調取消を使うが内部I/Oの硬い期限は保証せず、成功後のlate cancellationだけで成功reportを落とさない。共通cleanup guardをmaintenanceへ集約し、取消解除→rollbackとpanic中の直接NeedsReopenをretentionでも維持する。
+
+Rust workspace190件（新規保守15単体・snapshot競合1単体、child worker含む）、Clippy `-D warnings`／rustfmt、関連Chromium5件が成功。固定DBの事前検査、64 MiB境界、reader pinと再checkpoint、trim後のfree page、SQL/FS別sample、取消・予算・SQL failure・panic cleanup、checkpoint前後のprocess終了と再open後のreceipt／履歴を確認した。Astraレビューで見つかったmain file事前検査不足を回帰で再現・修正済み。全体CIはPRで確認する。
+
+DB format 3・H1 JSON v1・依存・SDK・Project・Banto・TS・通常Appは変更していない。診断値はvolume空き容量や物理消去を意味せず、PASSIVEはファイル縮小を保証しない。自動保持・時刻異常・recorder協調・receipt GC・disk-full運用は後続。上流・S7・実環境には接続していない。

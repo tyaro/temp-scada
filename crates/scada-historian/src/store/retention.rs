@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 
 use super::{
-    id, invalid, next_commit,
+    id, invalid,
+    maintenance::Operation as Maintenance,
+    next_commit,
     query::{control::Budget, QueryControl},
     Boundary, SessionSpec, SqliteStore, StoreError, StoreResult, MAX_SAFE,
 };
@@ -103,30 +105,6 @@ impl SqliteStore {
             return Err(StoreError::NeedsReopen);
         }
         result
-    }
-}
-
-// Remove cancellation before rollback, including during unwinding. The writer
-// remains poisoned if cleanup fails; it never releases ownership mid-operation.
-struct Maintenance<'a> {
-    connection: &'a mut Connection,
-    needs_reopen: &'a mut bool,
-}
-impl Drop for Maintenance<'_> {
-    fn drop(&mut self) {
-        if self
-            .connection
-            .progress_handler(0, None::<fn() -> bool>)
-            .is_err()
-        {
-            *self.needs_reopen = true;
-        }
-        if !self.connection.is_autocommit() && self.connection.execute_batch("ROLLBACK").is_err() {
-            *self.needs_reopen = true;
-        }
-        if !self.connection.is_autocommit() {
-            *self.needs_reopen = true;
-        }
     }
 }
 

@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4はPR #10〜#20で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H2c1 原子trimとexpired](../design/runtime/historian-retention.md)を実装・ローカル検証した。記録停止中の明示cutoffによる全memberの原子削除、実削除時刻のexpired、単調fenceと再送復活防止をformat 3で提供する。旧format 1／2は自動変更しない。次はH2cの自動保持・時刻跳躍検査・常時記録との協調、receipt GC、容量・WAL／checkpoint・復旧を段階設計する。H2全体・常時recorder・製品Historyサービス・通常Designerの実Hub接続・認証は未完了。
+2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1はPR #10〜#21で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H2c2 容量診断と明示PASSIVE checkpoint](../design/runtime/historian-maintenance.md)を実装・ローカル検証した。DB/WALの観測値、reader pinによるcheckpoint未完了、再呼出しによる進捗を説明する。DB format 3・H1 JSON v1・依存は維持する。次は自動保持の設定・時刻信頼、active recorderとの協調、大量削除の進行、receipt GC、空き容量・disk-fullと復旧を段階設計する。物理縮小・H2全体・常時recorder・製品Historyサービス・通常Designerの実Hub接続・認証は未完了。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 
