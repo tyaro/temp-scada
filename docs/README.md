@@ -148,6 +148,7 @@ docs/
 - [Historianの専用SDK所有者とsnapshot入力（H3b）](design/runtime/historian-sdk-source.md)
 - [Historianの単一group実行Hostと開始・停止・join（H3c）](design/runtime/historian-recording-host.md)
 - [Historianの記録pause・保持turn・明示再開（H3d）](design/runtime/historian-recording-retention.md)
+- [Historianの非同期History読取Host（H4a）](design/runtime/historian-history-host.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)

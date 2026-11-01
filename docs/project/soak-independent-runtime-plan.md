@@ -31,7 +31,8 @@
 | H3a 位相固定recorder  | 単一groupをabsolute deadlineで周期保存                            | 仮想1時間3600枠と実SQLite commit、欠測・停止を検証                                       | PR #31マージ・全体CI成功     |
 | H3b 専用SDK入力       | UIと独立した固定SDK ownerから同世代snapshotを取り込む             | mock Hub→SDK→recorder→実SQLite、無値・再接続・identity変更停止を検証                     | PR #32マージ・全体CI成功     |
 | H3c 単一group Host    | 一つのwriterと専用SDK入力をblocking workerで実行                  | 開始・停止・取消安全join、差替え、writer所有・Drop／panicを検証                          | PR #33マージ・全体CI成功     |
-| H3d 記録と保持の協調  | clean pause後に最大一回の保持操作、明示new-session再開            | guard／job状態・writer所有を保持し、異常時再開を拒否                                     | ローカル実装・受入済み       |
+| H3d 記録と保持の協調  | clean pause後に最大一回の保持操作、明示new-session再開            | guard／job状態・writer所有を保持し、異常時再開を拒否                                     | PR #34マージ・全体CI成功     |
+| H4a History読取Host   | 一要求ごとに既存readerでraw／minmax検索                           | 取消安全join、exact token、reader leaseと記録／保持独立を検証                            | ローカル実装・受入済み       |
 
 ## P1の実装契約
 
@@ -387,3 +388,15 @@ H3cは[PR #33](https://github.com/tyaro/temp-scada/pull/33)でマージ済み（
 Rust372件（新規7単体・5統合）・Clippy／rustfmt・関連Chromium6件が成功し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。DB format 5・H1・外部依存・SDK・Project・Banto・通常Appは維持する。
 
 製品計画配布・永続CAS、複数group／queue、History／共通Trend、保持schedulerと信頼時計adapter、実媒体I/O・receipt GC・暦日timezoneは残る。単一active sessionの制約や任意UTC正時の別実測3600点保証は変更せず、上流・S7・実環境へ接続していない。
+
+## H4aの実装と残り（2026-11-01）
+
+H3dは[PR #34](https://github.com/tyaro/temp-scada/pull/34)でマージ済み（`38551495fd67680a639f3e5b848d4921530ab6ea`）、[全体CI 41309473589](https://github.com/tyaro/temp-scada/actions/runs/41309473589)成功。Astra主設計の[非同期History読取Host](../design/runtime/historian-history-host.md)を実装した。
+
+- 一つの発行済みHistoryReaderでraw／minmaxを一要求ずつ実行し、SQL処理をasync executorから分離する。最大2readerの既存上限と有限QueryControlを維持する。
+- opaque token、取消安全join、未join Busy、ReaderUnusableの再利用拒否を設ける。新queryで旧要求を上書きせず、保存済み結果を取消で書き換えない。
+- 記録中query→clean pause保持job→同readerでexpiredという経路と、過去結果の不変性・reader処分までのownershipを検証した。
+
+Rust384件（新規7単体・5統合）・Clippy／rustfmt・関連Chromium6件が成功し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。DB format 5・H1・依存バージョン・SDK・Project・Banto・通常Appは維持し、serde_jsonだけをruntime通常依存へ移した。
+
+画面側の要求／応答配送と共通Trendを次に接続する。製品transport／認証、計画配布・永続CAS、複数group／queue、自動保持・信頼時計adapter、実媒体I/O／GC／timezoneは残る。上流・S7・実環境へ接続していない。

@@ -2,6 +2,7 @@
 //! 接続・再試行・Stale 判定は共通SDKへ委ね、書込み API を公開しない。
 mod catalog;
 mod display;
+pub mod history_host;
 mod host;
 mod projection;
 pub mod recorder_source;
