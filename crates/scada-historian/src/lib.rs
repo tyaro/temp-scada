@@ -223,6 +223,11 @@ fn series_result(value: &Value, request: &Value) -> bool {
                 || !sample(row, descriptor)
                 || time < from
                 || time >= to
+                || coverage.iter().any(|range| {
+                    matches!(range["reason"].as_str(), Some("expired" | "unrecorded"))
+                        && integer(&range["fromMs"]) <= time
+                        && time < integer(&range["toMs"])
+                })
                 || !seen.insert((session, sequence))
                 || previous.is_some_and(|old| old >= order)
                 || (!value["watermark"].is_null()

@@ -30,7 +30,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 ## Historianの純粋契約（H1、2026-11-01）
 
-Astra主設計の[版付きJSON契約](../design/runtime/historian-contract-fixtures.md)と[保存方式・復旧契約](../design/runtime/historian-storage-decision.md)を追加した。新crate `scada-historian`とTSの純粋validatorが同じSchema／87 fixtureを使い、query・sampleBatch・raw／minmax・coverage・identity・時刻の構造と意味を検査する。Rust workspace77件・TS1,356件・型検査・build・ブラウザ契約試験が成功した。H2は新SQLite層を暫定採用。H1にはDB・常時recorder・API・UI接続はなく、永続化や真のidentityの検証は後続。
+Astra主設計の[版付きJSON契約](../design/runtime/historian-contract-fixtures.md)と[保存方式・復旧契約](../design/runtime/historian-storage-decision.md)を追加した。新crate `scada-historian`とTSの純粋validatorが同じSchema／97 fixtureを使い、query・sampleBatch・raw／minmax・coverage・identity・時刻の構造と意味を検査する。Rust workspace77件・TS1,366件・型検査・build・ブラウザ契約試験が成功した。H2は新SQLite層を暫定採用。H1にはDB・常時recorder・API・UI接続はなく、永続化や真のidentityの検証は後続。
 
 ## 保存契約と基盤
 

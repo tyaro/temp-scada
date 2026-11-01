@@ -117,6 +117,8 @@ P5のinvalidRequest／busy／cancelled等はサービス操作の結末であり
 
 raw modeではbinsが空。sampleの検査は同じdescriptor規則を使うが、batchと異なり複数sessionを含められる。`(sampleTimeMs,sessionId,sequence)`の昇順で安定整列し、同系列のrecordId重複を拒否する。clock逆行でsequence順と時刻順が異なっても合法。すべての点は`[from,to)`内で、系列点数と全体点数はqueryの予算以内。
 
+同系列の`expired`／`unrecorded` coverage内（`fromMs <= sampleTimeMs < toMs`）にraw recordがあれば、値がnullでもsemantic拒否する。coverageはclockEpochで限定されないため、別epochのrecordも例外にしない。coverageのtoMs上の点は重複ではない。Bad／Stale等のcoverageは無値recordそのものを説明でき、pendingFlushは同時刻の別の未commit recordを表し得るので、一律に重複を禁止しない。
+
 watermarkはnullまたは`{sessionId,committedThrough}`。同sessionのrawがあればsequenceはcommit位置以下。別sessionの過去rawのcommitはquery snapshotの構築責務で、v1の単一watermarkから各sessionのcommitを捏造しない。このwatermarkは直近sessionのflush進行を表示するための値であり、全期間が連続記録されたという証拠ではない。H6で複数sessionのcursorを公開する際は別版または別resultを設計する。
 
 ### minmax
@@ -162,9 +164,13 @@ H2は[新しいSQLite保存・検索層の暫定採用](historian-storage-decisi
 
 `scada-historian::validate_history_contract`と`lib/history-contract.ts`を実装した。canonical Schemaの後に同じ意味規則を検査し、通常AppやDBへ接続しない。Astraによる実装と契約の静的整合レビューでは具体的な不一致は見つからなかった。
 
-- 共通fixture87件がRust／TypeScript／実Chromiumで一致した。
-- Rust workspace77件成功。H1の2 test関数は共通87 fixtureと、JSON整数が1.0表記でもpanic・丸めを起こさないことを含む。Clippy `-D warnings`／rustfmt成功。
-- TS114ファイル・1,356件成功。非有限値と入力accessorの例外も検査し、parseは入力を所有コピーにする。型検査0エラー・0警告、build成功。
+- 共通fixture97件がRust／TypeScript／実Chromiumで一致した。
+- Rust workspace77件成功。H1の2 test関数は共通97 fixtureと、JSON整数が1.0表記でもpanic・丸めを起こさないことを含む。Clippy `-D warnings`／rustfmt成功。
+- TS114ファイル・1,366件成功。非有限値と入力accessorの例外も検査し、parseは入力を所有コピーにする。型検査0エラー・0警告、build成功。
 - `e2e/history-contract.spec.ts`の1件がブラウザで全fixtureと所有コピーを確認した。既知のbuild chunkサイズ警告は残る。全体CIの確定結果はPRに記録する。
 
 実store・原子commit・crash recovery・実Hubの継続記録は検証していない。この受入はH1のJSON契約の一致であり、H2の永続化保証ではない。
+
+### PR #15のレビュー修正
+
+[P2コメント](https://github.com/tyaro/temp-scada/pull/15#issuecomment-6550528324)で、raw recordとexpired／unrecorded coverageの重複を受理する矛盾が見つかった。両言語で4件の新しい負例が修正前に失敗することを確認し、同じ半開区間条件で拒否するよう修正した。無値record・別clockEpochも対象とし、toMs上の点、Bad／Stale recordを説明するcoverage、同時刻のpendingFlushは受理する。追加10件により共通fixtureは97件となった。これは既存v1契約の矛盾検査を補う修正であり、schema／contract版は変更していない。

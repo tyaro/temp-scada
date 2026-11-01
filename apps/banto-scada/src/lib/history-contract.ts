@@ -273,6 +273,12 @@ function seriesResult(value: SeriesResult, request: Query) {
         !sample(row, descriptor) ||
         row.sampleTimeMs < request.fromMs ||
         row.sampleTimeMs >= request.toMs ||
+        coverage.some(
+          (range) =>
+            (range.reason === "expired" || range.reason === "unrecorded") &&
+            range.fromMs <= row.sampleTimeMs &&
+            row.sampleTimeMs < range.toMs,
+        ) ||
         seen.has(id) ||
         !sorted ||
         (watermark !== null &&
