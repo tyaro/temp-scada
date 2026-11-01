@@ -483,3 +483,13 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 `store/types.rs`の既存ID／SessionSpec／Tick検証をcrate内で共用し、検査を複製・弱体化しない。test_supportのcrate内可視性とconnection accessorはcfg(test)のfixtureだけに限定する。製品のwriter lock／再open規律は維持する。
 
 `recorder/tests.rs`の5単体が仮想1h／各系列3600点・相対sleep対照、overrun／gap／raw・minmax、capture境界／horizon、無値・固定source・sourceTime、early wakeを担当する。`tests/failures.rs`の11単体が取消・clock／epoch／source異常・overflow・実FULL／gap成功後失敗・std時計待機を担当する。ブラウザ契約6件を回帰する。専用SDK所有・永続slot台帳・複数group／queue・保持協調は[後続](../design/runtime/historian-periodic-recorder.md)。
+
+## Historianの専用SDK入力（H3b）
+
+`crates/scada-runtime/src/recorder_source.rs`がUIに依存しないSDK handleとSnapshotSource実装、sticky error、世代の前進、shutdown／取消／再呼出しの結果保持を所有する。SDK状態を一度cloneし、別pumpや表示watch cacheを挟まない。正常joinが未確認なら終了再呼出しでも成功へ変えない。
+
+`recorder_source/plan.rs`がSessionSpecと選択時catalog／binding pinを検証し、固定groupの要求を生成する。`projection.rs`が件数上限、同世代metadata、identity／値側source、Quality／無値・sourceTime／SourceEpochを検査する。catalog収集周期をHistorian記録周期へ読み替えず、identity変更時はwholegroup停止する。
+
+`scada-historian/src/store/types.rs`の公開`SessionSpec::validate`が既存内部検証へ委譲する。SDKの依存方向はruntime→historianとし、HistorianコアにSDK／tokioを持ち込まない。DB format 5・H1・周期計算は維持する。
+
+`recorder_source/tests.rs`の8単体がpin・epoch・Quality／source・値の境界とsnapshot上限を担当する。`crates/scada-runtime/tests/recorder_source.rs`の9統合がloopback Hub→SDK→spawn_blocking上のH3a→実SQLite、exact replayによるepoch保存、raw／minmax、未解決／切断／再接続、source変更、UI寿命独立、Unauthorized・shutdown取消／再呼出し・Dropを検証する。[設計・SDKの限界・後続](../design/runtime/historian-sdk-source.md)を参照する。

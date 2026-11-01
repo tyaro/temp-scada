@@ -28,7 +28,8 @@
 | P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
 | H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c10実装済み・運用受入残り  |
-| H3a 位相固定recorder  | 単一groupをabsolute deadlineで周期保存                            | 仮想1時間3600枠と実SQLite commit、欠測・停止を検証                                       | 実装済み・専用SDK接続は後続  |
+| H3a 位相固定recorder  | 単一groupをabsolute deadlineで周期保存                            | 仮想1時間3600枠と実SQLite commit、欠測・停止を検証                                       | PR #31マージ・全体CI成功     |
+| H3b 専用SDK入力       | UIと独立した固定SDK ownerから同世代snapshotを取り込む             | mock Hub→SDK→recorder→実SQLite、無値・再接続・identity変更停止を検証                     | ローカル実装・受入済み       |
 
 ## P1の実装契約
 
@@ -348,3 +349,15 @@ H2c10は[PR #30](https://github.com/tyaro/temp-scada/pull/30)でマージ済み�
 Rust330件（新規16単体）・Clippy／rustfmt・関連Chromium6件が成功。時計／source異常、horizon、取消、gap後実FULLとcleanup失敗を確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。DB format 5・H1・依存・固定SDK・Project・Banto・TS／通常Appは維持する。
 
 専用SDK購読、計画配布・複数group／queue、永続slot台帳、保持との停止再開、製品History／Trend・正式hostは後続。H2の媒体I/O運用受入も残る。仮想試験を実S7の精度測定や任意UTC正時の常時3600実測保証とは扱わず、上流・S7・実環境には接続していない。
+
+## H3bの実装と残り（2026-11-01）
+
+H3aは[PR #31](https://github.com/tyaro/temp-scada/pull/31)でマージ済み（`41d5a2872294cd168d35a2eb77e8af40bd885b42`）、[全体CI 41302448259](https://github.com/tyaro/temp-scada/actions/runs/41302448259)成功。Astra主設計の[専用SDK入力](../design/runtime/historian-sdk-source.md)を実装した。
+
+- UIと別にSDK handleを所有し、capture時に一度取得した同世代snapshotだけをH3aへ渡す。表示DTOや画面の購読需要へ依存しない。
+- 固定groupと選択時pinを検査し、一時切断はsourceUnavailable、未解決はunresolvedとする。catalog／run／identity／source変更はsticky停止し、旧値で継続しない。
+- mock Hub→固定SDK→spawn_blocking上のrecorder→実SQLite→raw／minmaxを接続し、epochを含むexact replay、UI寿命の双方向独立と停止結果を検証した。
+
+Rust347件（新規8単体・9統合）・Clippy／rustfmt・関連Chromium6件が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。DB format 5・H1・外部依存・SDK・Project・Banto・通常Appを維持し、workspace依存だけをruntime→historianへ追加した。
+
+次は記録計画の配布・複数group／queue、保持協調と時計domain再開、製品History／Trendへの接続。catalog変更時の安全な再承認・segment遷移、永続slot台帳、正式host、実媒体I/O・receipt GC・暦日timezoneも残る。SDKのlatest取得やREST由来sourceの限界を維持し、全通知・実S7で異なる実測3600件を保証しない。上流・S7・実環境への接続はない。

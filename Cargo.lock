@@ -1387,6 +1387,7 @@ dependencies = [
  "banto-tagclient",
  "futures-util",
  "jsonschema",
+ "scada-historian",
  "scada-model",
  "serde",
  "serde_json",
