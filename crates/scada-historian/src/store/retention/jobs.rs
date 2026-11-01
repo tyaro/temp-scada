@@ -218,24 +218,101 @@ impl SqliteStore {
         }
         self.run_maintenance(control, true, |connection, budget| {
             statement(connection, budget, "BEGIN DEFERRED")?;
-            let result = load(connection, job_id, budget)?.map(|job| JobStatus {
-                job_id: job.request.job_id,
-                cutoff_ms: job.request.cutoff_ms,
-                state: job.state,
-                next_step: if job.state == JobState::Complete {
-                    None
-                } else {
-                    job.last.checked_add(1).filter(|n| *n <= MAX_SAFE)
-                },
-                deleted_ticks: job.ticks,
-                deleted_observations: job.observations,
-                begin_commit: job.begin as u64,
-                completion_commit: job.completion.map(|c| c as u64),
-            });
+            let result = load(connection, job_id, budget)?.map(Job::into_status);
             budget.result(&serde_json::to_value(&result)?)?;
             statement(connection, budget, "ROLLBACK")?;
             Ok(result)
         })
+    }
+}
+
+impl Job {
+    fn into_status(self) -> JobStatus {
+        JobStatus {
+            job_id: self.request.job_id,
+            cutoff_ms: self.request.cutoff_ms,
+            state: self.state,
+            next_step: if self.state == JobState::Complete {
+                None
+            } else {
+                self.last.checked_add(1).filter(|n| *n <= MAX_SAFE)
+            },
+            deleted_ticks: self.ticks,
+            deleted_observations: self.observations,
+            begin_commit: self.begin as u64,
+            completion_commit: self.completion.map(|c| c as u64),
+        }
+    }
+}
+
+pub(in crate::store) fn recover_active(
+    connection: &Connection,
+    job_id: &str,
+    cutoff: Option<i64>,
+    revision: i64,
+    snapshot: i64,
+    budget: &mut Budget,
+) -> StoreResult<crate::store::recovery::ActiveJobRecovery> {
+    let job = load(connection, job_id, budget)?.ok_or(StoreError::CorruptData)?;
+    check_head(connection, &job, budget)?;
+    if job.state != JobState::Active
+        || job.request.expected_cutoff_ms != cutoff
+        || job.begin <= revision
+        || job.begin > snapshot
+        || job.latest_commit > snapshot as u64
+    {
+        return Err(StoreError::CorruptData);
+    }
+    let last_step = if job.last == 0 {
+        None
+    } else {
+        let (request, receipt) =
+            saved_step(connection, job_id, job.last, budget)?.ok_or(StoreError::CorruptData)?;
+        if receipt.completed || receipt.commit_version != job.latest_commit {
+            return Err(StoreError::CorruptData);
+        }
+        Some(crate::store::recovery::StepRecovery { request, receipt })
+    };
+    Ok(crate::store::recovery::ActiveJobRecovery {
+        status: job.into_status(),
+        last_step,
+    })
+}
+
+pub(in crate::store) fn validate_completed_source(
+    connection: &Connection,
+    job_id: &str,
+    cutoff: i64,
+    revision: i64,
+    budget: &mut Budget,
+) -> StoreResult<()> {
+    let job = load(connection, job_id, budget)?.ok_or(StoreError::CorruptData)?;
+    check_head(connection, &job, budget)?;
+    if job.state != JobState::Complete
+        || job.request.cutoff_ms != cutoff
+        || job.completion != Some(revision)
+    {
+        return Err(StoreError::CorruptData);
+    }
+    Ok(())
+}
+
+fn check_head(connection: &Connection, job: &Job, budget: &mut Budget) -> StoreResult<()> {
+    budget.work.statement()?;
+    let latest: Option<i64> = connection
+        .query_row(
+            "SELECT step FROM retention_job_steps WHERE job_id=?1 ORDER BY step DESC LIMIT 1",
+            [&job.request.job_id],
+            |r| r.get(0),
+        )
+        .optional()?;
+    if latest.is_some() {
+        budget.row()?;
+    }
+    match latest {
+        None if job.last == 0 => Ok(()),
+        Some(step) if job.last > 0 && step == job.last as i64 => Ok(()),
+        _ => Err(StoreError::CorruptData),
     }
 }
 

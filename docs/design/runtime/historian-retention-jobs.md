@@ -130,3 +130,7 @@ Rust workspace219件（新規job18単体・query snapshot1単体・fixture統合
 Astraの複数回レビューで、最新stepの欠落・commit／件数・完了状態、過去stepの再送上限、scalar予算課金を補強した。検索範囲外の最新step欠落や不正件数を見逃す経路は回帰でreadyを再現して修正した。最終レビューに必須修正はない。job途中のmax_ticksが大きすぎて予算を超える場合は、未commit stepを小さく指定し直せる。全体CIはPRで確認する。
 
 step候補は`observation_retention_time`の索引順にDISTINCT `(sample_time_ms,session_id,sequence)`をLIMITで取得する。全対象をGROUP BYしてから先頭を選ぶ方式では、max_ticksが小さくても履歴全体の走査で予算を使い切り得るため採用しない。4,096 tickの履歴からmax_ticks=1／80,000 VMのstepを実行する回帰で、旧候補SQLのWorkLimitを再現し、索引prefixへ変更後の成功を確認した。tickの全memberは別途共通validatorで照合する。
+
+## H2c5の復旧入口
+
+[H2c5 recovery_state](historian-recovery-state.md)を追加し、job IDを保持していないhostでも未完了jobと直近stepの正確なrequest／receiptを同snapshotから発見できる。既存の明示step・再送契約とformat 4を維持し、発見時に自動削除しない。

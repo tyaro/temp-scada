@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜3はPR #10〜#23で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H2c4 永続保持job](../design/runtime/historian-retention-jobs.md)を実装・ローカル検証した。同時刻1,025 tick超も小さいstepで削除でき、再open後は安定receiptで進捗を再開する。job途中の新規記録を止め、残存rawがない時刻だけexpiredを公開する。format 4へ明示更新し旧format 1／2／3は自動変更しない。H1・依存は維持する。次は自動保持の設定・信頼時刻・active recorder協調・receipt GCと、実filesystemの容量／I/O／checkpoint障害を段階設計する。物理縮小・H2全体・常時recorder・製品Historyサービス・通常Designerの実Hub接続・認証は未完了。
+2026-11-01の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜4はPR #10〜#24で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H2c5 復旧状態とjob発見](../design/runtime/historian-recovery-state.md)を実装・ローカル検証した。再起動でjob IDを失っても、同snapshotのfence出典・未完了job・直近request／receiptを読み、既存APIで明示再開できる。DB format 4・H1・依存は維持する。次は自動保持の設定・信頼時刻・active recorder協調・receipt GCと、実filesystemの容量／I/O／checkpoint障害を段階設計する。物理縮小・H2全体・常時recorder・製品Historyサービス・通常Designerの実Hub接続・認証は未完了。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 

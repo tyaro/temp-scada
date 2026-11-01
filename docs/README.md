@@ -138,6 +138,7 @@ docs/
 - [HistorianのDB/WAL診断と明示PASSIVE checkpoint（H2c2）](design/runtime/historian-maintenance.md)
 - [HistorianのSQLite容量不足と原子的復旧（H2c3）](design/runtime/historian-write-failure-recovery.md)
 - [Historianの永続保持jobと段階削除（H2c4）](design/runtime/historian-retention-jobs.md)
+- [Historianの同snapshot復旧状態とjob発見（H2c5）](design/runtime/historian-recovery-state.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)
