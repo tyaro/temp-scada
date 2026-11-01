@@ -429,3 +429,11 @@ format 4のretention_jobs／retention_job_steps／retention_job_pending／job_ex
 `retention/jobs.rs`はJob::into_statusを既存statusと共用し、recover_active／validate_completed_source／check_headで型付きjob・最新step・実MAX stepとfenceの整合を検証する。共通run_maintenance／Operationで予算・read transaction cleanup・poison規律を維持する。
 
 `recovery/tests.rs`の15単体（child worker含む）が初期状態・active session・IDなし再起動発見・途中／完了・正確な再送・出典更新・stale値・同snapshot・読取専用性・破損・失敗とcleanupを確認する。既存ブラウザ契約6件も回帰する。新APIはRust library内に限定し、自動driver・製品transportは[後続](../design/runtime/historian-recovery-state.md)。
+
+## Historianの保持候補の時刻安全判定（H2c6）
+
+`store/retention/clock_guard.rs`がRetentionClockPolicy／ClockSample／GuardStateと純粋関数`assess_retention`を所有する。full policy snapshot、2 sampleのwarmup、wall／monotonic連続性、sticky Suspendedと明示rearmを扱い、候補上限・既存job・記録停止待ちからactionを返す。OS時計やtimezoneを読まず、job ID生成・DB操作をしない。
+
+`clock_guard/validate.rs`はpolicy／保存guard／recovery DTO／safe cutoffの構造・相互関係を検証する。jobの直近receiptを差し引いた過去tick・観測数の範囲もu128で検査する。新sampleの不正はInvalidInputへ逃がさず停止状態に残す。proposalは判断時点の説明で、実行tokenではない。
+
+`clock_guard/tests.rs`は状態・優先順位・算術境界、`tests/invalid.rs`は不正入力と累積件数、`tests/integration.rs`は隔離DBの無変更性・明示job実行・記録close・stale拒否を担当する。新規22単体のうちDB統合4件、既存ブラウザ契約6件を回帰する。自動host・製品policy／信頼時計・recorder調停は[後続](../design/runtime/historian-retention-clock-guard.md)。

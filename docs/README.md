@@ -139,6 +139,7 @@ docs/
 - [HistorianのSQLite容量不足と原子的復旧（H2c3）](design/runtime/historian-write-failure-recovery.md)
 - [Historianの永続保持jobと段階削除（H2c4）](design/runtime/historian-retention-jobs.md)
 - [Historianの同snapshot復旧状態とjob発見（H2c5）](design/runtime/historian-recovery-state.md)
+- [Historianの明示保持候補の時刻安全判定（H2c6）](design/runtime/historian-retention-clock-guard.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)
