@@ -1,8 +1,8 @@
 PRAGMA application_id = 1396918337;
-PRAGMA user_version = 2;
+PRAGMA user_version = 3;
 CREATE TABLE store_meta (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-    format_version INTEGER NOT NULL CHECK (format_version = 2),
+    format_version INTEGER NOT NULL CHECK (format_version = 3),
     store_id TEXT NOT NULL,
     deployment_id TEXT NOT NULL,
     last_commit INTEGER NOT NULL CHECK (last_commit >= 0)
@@ -119,3 +119,28 @@ CREATE TABLE recording_gaps (
     CHECK (from_ms < to_ms AND to_ms <= observed_at_ms AND observed_at_ms <= 9007199254740991)
 ) STRICT;
 CREATE INDEX recording_gap_time ON recording_gaps (session_id, from_ms);
+
+CREATE INDEX observation_tick ON observations (session_id, sequence, series_id);
+CREATE INDEX observation_retention_time ON observations (sample_time_ms, session_id, sequence);
+CREATE TABLE retention_state (
+    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+    cutoff_ms INTEGER CHECK (cutoff_ms BETWEEN -9007199254740991 AND 9007199254740991),
+    revision_commit INTEGER NOT NULL CHECK (revision_commit >= 0),
+    CHECK ((cutoff_ms IS NULL) = (revision_commit = 0))
+) STRICT;
+INSERT INTO retention_state VALUES (1, NULL, 0);
+CREATE TABLE retention_operations (
+    request_id TEXT PRIMARY KEY NOT NULL,
+    payload_json TEXT NOT NULL,
+    cutoff_ms INTEGER NOT NULL CHECK (cutoff_ms BETWEEN -9007199254740991 AND 9007199254740991),
+    commit_version INTEGER UNIQUE NOT NULL CHECK (commit_version > 0),
+    deleted_ticks INTEGER NOT NULL CHECK (deleted_ticks BETWEEN 0 AND 1024),
+    deleted_observations INTEGER NOT NULL CHECK (deleted_observations BETWEEN 0 AND 8192)
+) STRICT;
+CREATE TABLE expired_samples (
+    series_id TEXT NOT NULL REFERENCES series,
+    sample_time_ms INTEGER NOT NULL CHECK (sample_time_ms BETWEEN -9007199254740991 AND 9007199254740990),
+    operation_id TEXT NOT NULL REFERENCES retention_operations (request_id),
+    deleted_records INTEGER NOT NULL CHECK (deleted_records > 0),
+    PRIMARY KEY (series_id, sample_time_ms)
+) STRICT;

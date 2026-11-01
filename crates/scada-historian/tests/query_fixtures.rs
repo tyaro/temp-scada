@@ -40,6 +40,14 @@ fn sqlite_coverage_results_match_the_shared_browser_fixtures() {
     );
 }
 
+#[test]
+fn sqlite_retention_results_match_the_shared_browser_fixtures() {
+    check_cases(
+        include_str!("../../../examples/history-retention-cases.json"),
+        "retention",
+    );
+}
+
 fn check_cases(source: &str, mode: &str) {
     let cases: Vec<Value> = serde_json::from_str(source).unwrap();
     for (index, case) in cases.into_iter().enumerate() {
@@ -95,6 +103,16 @@ fn check_cases(source: &str, mode: &str) {
             } else if session["close"] == true {
                 store
                     .close_session(session["spec"]["sessionId"].as_str().unwrap())
+                    .unwrap();
+            }
+        }
+        if let Some(trims) = case["trims"].as_array() {
+            for request in trims {
+                store
+                    .trim(
+                        serde_json::from_value(request.clone()).unwrap(),
+                        &QueryControl::with_timeout(Duration::from_secs(10)).unwrap(),
+                    )
                     .unwrap();
             }
         }

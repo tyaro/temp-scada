@@ -1,5 +1,5 @@
 //! Bounded raw and min/max snapshot queries without inferred recording coverage.
-mod control;
+pub(super) mod control;
 mod coverage;
 mod minmax;
 pub use control::{CancellationToken, QueryControl, QueryLimits};

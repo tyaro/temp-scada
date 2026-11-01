@@ -4,6 +4,7 @@ mod types;
 pub use types::*;
 pub mod evidence;
 pub mod query;
+pub mod retention;
 
 use std::fmt;
 use std::fs::{self, File, OpenOptions};
@@ -11,10 +12,10 @@ use std::path::{Path, PathBuf};
 use std::sync::{atomic::AtomicUsize, Arc};
 use std::time::Duration;
 
-use rusqlite::{params, Connection, OpenFlags, OptionalExtension, Transaction};
+use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 
 pub type StoreResult<T> = Result<T, StoreError>;
-pub const STORE_FORMAT_VERSION: i64 = 2;
+pub const STORE_FORMAT_VERSION: i64 = 3;
 
 #[derive(Debug)]
 pub enum StoreError {
@@ -28,6 +29,10 @@ pub enum StoreError {
     Conflict,
     SessionInactive,
     NeedsReopen,
+    RetentionLimit,
+    RetentionCutoff,
+    CorruptData,
+    Control(query::QueryError),
     Sequence { expected: u64 },
     Invalid(&'static str),
 }
@@ -49,6 +54,10 @@ impl fmt::Display for StoreError {
                 Self::Conflict => "immutable payload conflict",
                 Self::SessionInactive => "session inactive",
                 Self::Sequence { .. } => "non-contiguous sequence",
+                Self::RetentionLimit => "retention tick limit exceeded",
+                Self::RetentionCutoff => "sample precedes retention cutoff",
+                Self::CorruptData => "inconsistent stored data",
+                Self::Control(error) => return write!(f, "{error}"),
                 Self::NeedsReopen => "reopen required after database failure",
                 Self::Invalid(message) => message,
             }
@@ -415,6 +424,7 @@ impl SqliteStore {
         if tick.sequence != expected {
             return Err(StoreError::Sequence { expected });
         }
+        retention::check_tick(&tx, tick.sample_time_ms)?;
         evidence::advance_tick(&tx, &tick)?;
         let commit = next_commit(&tx)?;
         tx.execute(
@@ -515,7 +525,7 @@ fn configure(connection: &Connection) -> StoreResult<()> {
     connection.execute_batch("PRAGMA foreign_keys = ON; PRAGMA trusted_schema = OFF; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; PRAGMA wal_autocheckpoint = 1000;")?;
     Ok(())
 }
-fn next_commit(tx: &Transaction<'_>) -> StoreResult<i64> {
+fn next_commit(tx: &Connection) -> StoreResult<i64> {
     let current: i64 = tx.query_row(
         "SELECT last_commit FROM store_meta WHERE singleton = 1",
         [],

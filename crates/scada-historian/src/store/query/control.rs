@@ -54,7 +54,7 @@ impl QueryControl {
         })
     }
 
-    pub(super) fn validate(&self) -> Result<(), QueryError> {
+    pub(in crate::store) fn validate(&self) -> Result<(), QueryError> {
         let caps = QueryLimits::default();
         if self.deadline.saturating_duration_since(Instant::now()) > Duration::from_secs(10)
             || self.limits.max_decoded_rows == 0
@@ -70,7 +70,7 @@ impl QueryControl {
     }
 }
 
-pub(super) struct Work {
+pub(in crate::store) struct Work {
     control: QueryControl,
     vm_steps: AtomicU64,
 }
@@ -106,7 +106,7 @@ impl Work {
     }
 }
 
-pub(super) struct Budget {
+pub(in crate::store) struct Budget {
     pub work: Arc<Work>,
     limits: QueryLimits,
     rows: u32,
