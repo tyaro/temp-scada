@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import cases from "../../../../examples/history-contract-cases.json";
 import queryCases from "../../../../examples/history-query-cases.json";
 import minmaxCases from "../../../../examples/history-minmax-cases.json";
+import retentionJobCases from "../../../../examples/history-retention-job-cases.json";
 import retentionCases from "../../../../examples/history-retention-cases.json";
 import coverageCases from "../../../../examples/history-coverage-cases.json";
 import {
@@ -65,3 +66,11 @@ it.each(retentionCases)("SQLite retention result fixture: $name", (fixture) => {
   expect(validateHistoryContract(fixture.expected)).toBe("accepted");
   expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
 });
+
+it.each(retentionJobCases)(
+  "SQLite retention job result fixture: $name",
+  (fixture) => {
+    expect(validateHistoryContract(fixture.expected)).toBe("accepted");
+    expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
+  },
+);

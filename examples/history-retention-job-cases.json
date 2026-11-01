@@ -1,0 +1,1909 @@
+[
+  {
+    "name": "raw-job-pending-same-timestamp-stays-unknown",
+    "sessions": [
+      {
+        "spec": {
+          "sessionId": "owner",
+          "members": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            },
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ]
+        },
+        "ticks": [
+          {
+            "sessionId": "owner",
+            "sequence": 1,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 2,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 3,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          }
+        ],
+        "close": true
+      }
+    ],
+    "query": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "coverage-fixture",
+      "seriesIds": ["number", "unknown", "bool"],
+      "fromMs": 0,
+      "toMs": 4000,
+      "mode": "raw",
+      "maxPointsPerSeries": 4
+    },
+    "expected": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "coverage-fixture",
+        "seriesIds": ["number", "unknown", "bool"],
+        "fromMs": 0,
+        "toMs": 4000,
+        "mode": "raw",
+        "maxPointsPerSeries": 4
+      },
+      "status": "ready",
+      "snapshotId": "fixture-snapshot",
+      "series": [
+        {
+          "seriesId": "number",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "number",
+              "segmentId": "segment-a",
+              "recordId": {
+                "sessionId": "owner",
+                "sequence": 3
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 990,
+              "ingestedAtMs": 1020,
+              "quality": "good",
+              "source": "real",
+              "value": 0.0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        },
+        {
+          "seriesId": "unknown",
+          "status": "unknownSeries",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        },
+        {
+          "seriesId": "bool",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "bool",
+              "segmentId": "segment-a",
+              "recordId": {
+                "sessionId": "owner",
+                "sequence": 3
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1000,
+              "sourceTimeMs": 990,
+              "ingestedAtMs": 1020,
+              "quality": "good",
+              "source": "real",
+              "value": false,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        }
+      ]
+    },
+    "job": {
+      "request": {
+        "jobId": "job",
+        "cutoffMs": 2000,
+        "expectedCutoffMs": null
+      },
+      "steps": [
+        {
+          "jobId": "job",
+          "step": 1,
+          "maxTicks": 2
+        }
+      ]
+    }
+  },
+  {
+    "name": "minmax-job-pending-same-timestamp-preserves-one-record",
+    "sessions": [
+      {
+        "spec": {
+          "sessionId": "owner",
+          "members": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            },
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ]
+        },
+        "ticks": [
+          {
+            "sessionId": "owner",
+            "sequence": 1,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 2,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 3,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          }
+        ],
+        "close": true
+      }
+    ],
+    "query": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "coverage-fixture",
+      "seriesIds": ["number", "unknown", "bool"],
+      "fromMs": 0,
+      "toMs": 4000,
+      "mode": "minmax",
+      "maxPointsPerSeries": 2
+    },
+    "expected": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "coverage-fixture",
+        "seriesIds": ["number", "unknown", "bool"],
+        "fromMs": 0,
+        "toMs": 4000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 2
+      },
+      "status": "ready",
+      "snapshotId": "fixture-snapshot",
+      "series": [
+        {
+          "seriesId": "number",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 0,
+              "toMs": 2000,
+              "min": 0.0,
+              "max": 0.0,
+              "validCount": 1,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "partial"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 4000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "gap"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        },
+        {
+          "seriesId": "unknown",
+          "status": "unknownSeries",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        },
+        {
+          "seriesId": "bool",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 0,
+              "toMs": 2000,
+              "min": 0.0,
+              "max": 0.0,
+              "validCount": 1,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "partial"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 4000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "gap"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        }
+      ]
+    },
+    "job": {
+      "request": {
+        "jobId": "job",
+        "cutoffMs": 2000,
+        "expectedCutoffMs": null
+      },
+      "steps": [
+        {
+          "jobId": "job",
+          "step": 1,
+          "maxTicks": 2
+        }
+      ]
+    }
+  },
+  {
+    "name": "raw-job-last-same-timestamp-step-publishes-expired",
+    "sessions": [
+      {
+        "spec": {
+          "sessionId": "owner",
+          "members": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            },
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ]
+        },
+        "ticks": [
+          {
+            "sessionId": "owner",
+            "sequence": 1,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 2,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 3,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          }
+        ],
+        "close": true
+      }
+    ],
+    "query": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "coverage-fixture",
+      "seriesIds": ["number", "unknown", "bool"],
+      "fromMs": 0,
+      "toMs": 4000,
+      "mode": "raw",
+      "maxPointsPerSeries": 4
+    },
+    "expected": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "coverage-fixture",
+        "seriesIds": ["number", "unknown", "bool"],
+        "fromMs": 0,
+        "toMs": 4000,
+        "mode": "raw",
+        "maxPointsPerSeries": 4
+      },
+      "status": "ready",
+      "snapshotId": "fixture-snapshot",
+      "series": [
+        {
+          "seriesId": "number",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 1000,
+              "reason": "unknownCoverage"
+            },
+            {
+              "fromMs": 1000,
+              "toMs": 1001,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1001,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        },
+        {
+          "seriesId": "unknown",
+          "status": "unknownSeries",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        },
+        {
+          "seriesId": "bool",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 1000,
+              "reason": "unknownCoverage"
+            },
+            {
+              "fromMs": 1000,
+              "toMs": 1001,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1001,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        }
+      ]
+    },
+    "job": {
+      "request": {
+        "jobId": "job",
+        "cutoffMs": 2000,
+        "expectedCutoffMs": null
+      },
+      "steps": [
+        {
+          "jobId": "job",
+          "step": 1,
+          "maxTicks": 2
+        },
+        {
+          "jobId": "job",
+          "step": 2,
+          "maxTicks": 2
+        }
+      ]
+    }
+  },
+  {
+    "name": "minmax-complete-job-coverage-matches-raw",
+    "sessions": [
+      {
+        "spec": {
+          "sessionId": "owner",
+          "members": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            },
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ]
+        },
+        "ticks": [
+          {
+            "sessionId": "owner",
+            "sequence": 1,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 2,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 3,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          }
+        ],
+        "close": true
+      }
+    ],
+    "query": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "coverage-fixture",
+      "seriesIds": ["number", "unknown", "bool"],
+      "fromMs": 0,
+      "toMs": 4000,
+      "mode": "minmax",
+      "maxPointsPerSeries": 2
+    },
+    "expected": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "coverage-fixture",
+        "seriesIds": ["number", "unknown", "bool"],
+        "fromMs": 0,
+        "toMs": 4000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 2
+      },
+      "status": "ready",
+      "snapshotId": "fixture-snapshot",
+      "series": [
+        {
+          "seriesId": "number",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 0,
+              "toMs": 2000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "gap"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 4000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "gap"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 1000,
+              "reason": "unknownCoverage"
+            },
+            {
+              "fromMs": 1000,
+              "toMs": 1001,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1001,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        },
+        {
+          "seriesId": "unknown",
+          "status": "unknownSeries",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        },
+        {
+          "seriesId": "bool",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 0,
+              "toMs": 2000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "gap"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 4000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "gap"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 1000,
+              "reason": "unknownCoverage"
+            },
+            {
+              "fromMs": 1000,
+              "toMs": 1001,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1001,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        }
+      ]
+    },
+    "job": {
+      "request": {
+        "jobId": "job",
+        "cutoffMs": 2000,
+        "expectedCutoffMs": null
+      },
+      "steps": [
+        {
+          "jobId": "job",
+          "step": 1,
+          "maxTicks": 2
+        },
+        {
+          "jobId": "job",
+          "step": 2,
+          "maxTicks": 2
+        }
+      ]
+    }
+  },
+  {
+    "name": "raw-active-job-publishes-only-finished-timestamps",
+    "sessions": [
+      {
+        "spec": {
+          "sessionId": "owner",
+          "members": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            },
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ]
+        },
+        "ticks": [
+          {
+            "sessionId": "owner",
+            "sequence": 1,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 2,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1500,
+            "ingestedAtMs": 1520,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 1490,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 1490,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 3,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 2500,
+            "ingestedAtMs": 2520,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 2490,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 2490,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          }
+        ],
+        "close": true
+      }
+    ],
+    "query": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "coverage-fixture",
+      "seriesIds": ["number", "unknown", "bool"],
+      "fromMs": 0,
+      "toMs": 4000,
+      "mode": "raw",
+      "maxPointsPerSeries": 4
+    },
+    "expected": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "coverage-fixture",
+        "seriesIds": ["number", "unknown", "bool"],
+        "fromMs": 0,
+        "toMs": 4000,
+        "mode": "raw",
+        "maxPointsPerSeries": 4
+      },
+      "status": "ready",
+      "snapshotId": "fixture-snapshot",
+      "series": [
+        {
+          "seriesId": "number",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "number",
+              "segmentId": "segment-a",
+              "recordId": {
+                "sessionId": "owner",
+                "sequence": 2
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1500,
+              "sourceTimeMs": 1490,
+              "ingestedAtMs": 1520,
+              "quality": "good",
+              "source": "real",
+              "value": 0.0,
+              "reason": null
+            },
+            {
+              "seriesId": "number",
+              "segmentId": "segment-a",
+              "recordId": {
+                "sessionId": "owner",
+                "sequence": 3
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 2500,
+              "sourceTimeMs": 2490,
+              "ingestedAtMs": 2520,
+              "quality": "good",
+              "source": "real",
+              "value": 0.0,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 1000,
+              "reason": "unknownCoverage"
+            },
+            {
+              "fromMs": 1000,
+              "toMs": 1001,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1001,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        },
+        {
+          "seriesId": "unknown",
+          "status": "unknownSeries",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        },
+        {
+          "seriesId": "bool",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [
+            {
+              "seriesId": "bool",
+              "segmentId": "segment-a",
+              "recordId": {
+                "sessionId": "owner",
+                "sequence": 2
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 1500,
+              "sourceTimeMs": 1490,
+              "ingestedAtMs": 1520,
+              "quality": "good",
+              "source": "real",
+              "value": false,
+              "reason": null
+            },
+            {
+              "seriesId": "bool",
+              "segmentId": "segment-a",
+              "recordId": {
+                "sessionId": "owner",
+                "sequence": 3
+              },
+              "clockEpoch": "clock-a",
+              "sampleTimeMs": 2500,
+              "sourceTimeMs": 2490,
+              "ingestedAtMs": 2520,
+              "quality": "good",
+              "source": "real",
+              "value": false,
+              "reason": null
+            }
+          ],
+          "bins": [],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 1000,
+              "reason": "unknownCoverage"
+            },
+            {
+              "fromMs": 1000,
+              "toMs": 1001,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1001,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        }
+      ]
+    },
+    "job": {
+      "request": {
+        "jobId": "job",
+        "cutoffMs": 2000,
+        "expectedCutoffMs": null
+      },
+      "steps": [
+        {
+          "jobId": "job",
+          "step": 1,
+          "maxTicks": 1
+        }
+      ]
+    }
+  },
+  {
+    "name": "minmax-finished-job-retains-later-values",
+    "sessions": [
+      {
+        "spec": {
+          "sessionId": "owner",
+          "members": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            },
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ]
+        },
+        "ticks": [
+          {
+            "sessionId": "owner",
+            "sequence": 1,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1000,
+            "ingestedAtMs": 1020,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 990,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 2,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 1500,
+            "ingestedAtMs": 1520,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 1490,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 1490,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          },
+          {
+            "sessionId": "owner",
+            "sequence": 3,
+            "clockEpoch": "clock-a",
+            "sampleTimeMs": 2500,
+            "ingestedAtMs": 2520,
+            "observations": [
+              {
+                "seriesId": "number",
+                "sourceTimeMs": 2490,
+                "quality": "good",
+                "source": "real",
+                "value": 0.0,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              },
+              {
+                "seriesId": "bool",
+                "sourceTimeMs": 2490,
+                "quality": "good",
+                "source": "real",
+                "value": false,
+                "reason": null,
+                "sourceEpoch": {
+                  "hubInstanceId": "hub-a",
+                  "runId": 1,
+                  "catalogRevision": 1,
+                  "sdkGeneration": 1
+                }
+              }
+            ]
+          }
+        ],
+        "close": true
+      }
+    ],
+    "query": {
+      "version": 1,
+      "kind": "query",
+      "requestId": "coverage-fixture",
+      "seriesIds": ["number", "unknown", "bool"],
+      "fromMs": 0,
+      "toMs": 4000,
+      "mode": "minmax",
+      "maxPointsPerSeries": 2
+    },
+    "expected": {
+      "version": 1,
+      "kind": "result",
+      "query": {
+        "version": 1,
+        "kind": "query",
+        "requestId": "coverage-fixture",
+        "seriesIds": ["number", "unknown", "bool"],
+        "fromMs": 0,
+        "toMs": 4000,
+        "mode": "minmax",
+        "maxPointsPerSeries": 2
+      },
+      "status": "ready",
+      "snapshotId": "fixture-snapshot",
+      "series": [
+        {
+          "seriesId": "number",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "number",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-number",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "number",
+              "unit": "C",
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 0,
+              "toMs": 2000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "gap"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 4000,
+              "min": 0.0,
+              "max": 0.0,
+              "validCount": 1,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "partial"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 1000,
+              "reason": "unknownCoverage"
+            },
+            {
+              "fromMs": 1000,
+              "toMs": 1001,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1001,
+              "toMs": 1500,
+              "reason": "unknownCoverage"
+            },
+            {
+              "fromMs": 1500,
+              "toMs": 1501,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1501,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        },
+        {
+          "seriesId": "unknown",
+          "status": "unknownSeries",
+          "segments": [],
+          "raw": [],
+          "bins": [],
+          "coverage": [],
+          "watermark": null
+        },
+        {
+          "seriesId": "bool",
+          "status": "ready",
+          "segments": [
+            {
+              "seriesId": "bool",
+              "hubInstanceId": "hub-a",
+              "incarnationId": "life-bool",
+              "externalName": "Plant.Value",
+              "segmentId": "segment-a",
+              "valueType": "bool",
+              "unit": null,
+              "periodMs": 1000,
+              "source": "real"
+            }
+          ],
+          "raw": [],
+          "bins": [
+            {
+              "fromMs": 0,
+              "toMs": 2000,
+              "min": null,
+              "max": null,
+              "validCount": 0,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "gap"
+            },
+            {
+              "fromMs": 2000,
+              "toMs": 4000,
+              "min": 0.0,
+              "max": 0.0,
+              "validCount": 1,
+              "invalidCount": 0,
+              "segmentId": "segment-a",
+              "source": "real",
+              "state": "partial"
+            }
+          ],
+          "coverage": [
+            {
+              "fromMs": 0,
+              "toMs": 1000,
+              "reason": "unknownCoverage"
+            },
+            {
+              "fromMs": 1000,
+              "toMs": 1001,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1001,
+              "toMs": 1500,
+              "reason": "unknownCoverage"
+            },
+            {
+              "fromMs": 1500,
+              "toMs": 1501,
+              "reason": "expired"
+            },
+            {
+              "fromMs": 1501,
+              "toMs": 4000,
+              "reason": "unknownCoverage"
+            }
+          ],
+          "watermark": {
+            "sessionId": "owner",
+            "committedThrough": 3
+          }
+        }
+      ]
+    },
+    "job": {
+      "request": {
+        "jobId": "job",
+        "cutoffMs": 2000,
+        "expectedCutoffMs": null
+      },
+      "steps": [
+        {
+          "jobId": "job",
+          "step": 1,
+          "maxTicks": 1
+        },
+        {
+          "jobId": "job",
+          "step": 2,
+          "maxTicks": 1
+        }
+      ]
+    }
+  }
+]

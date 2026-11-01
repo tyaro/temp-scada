@@ -1,4 +1,5 @@
 //! Explicit, quiescent maintenance of query observations, not physical erasure.
+pub mod jobs;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
@@ -137,7 +138,7 @@ pub(super) fn fence(connection: &Connection) -> StoreResult<(Option<i64>, i64)> 
         return Err(StoreError::CorruptData);
     }
     let latest: Option<(i64, i64)> = connection.query_row(
-        "SELECT cutoff_ms, commit_version FROM retention_operations ORDER BY commit_version DESC LIMIT 1", [], |r| Ok((r.get(0)?, r.get(1)?)),
+        "SELECT cutoff_ms, commit_version FROM retention_operations UNION ALL SELECT cutoff_ms, completion_commit AS commit_version FROM retention_jobs WHERE state = 'complete' ORDER BY commit_version DESC LIMIT 1", [], |r| Ok((r.get(0)?, r.get(1)?)),
     ).optional()?;
     match cutoff {
         None if revision == 0 && latest.is_none() => {}
@@ -194,6 +195,9 @@ fn trim_inner(
         });
     }
     budget.work.statement()?;
+    jobs::ensure_idle(connection)?;
+    budget.row()?;
+    budget.work.statement()?;
     budget.work.statement()?;
     budget.work.statement()?;
     let (cutoff, _) = fence(connection)?;
@@ -225,76 +229,7 @@ fn trim_inner(
     }
     drop(rows);
     drop(statement);
-    let mut removed = BTreeMap::<(String, i64), usize>::new();
-    let mut observations = 0;
-    for (session_id, sequence) in &ticks {
-        budget.work.statement()?;
-        let (text, state, last_sequence, receipt_commit, payload, begin, end, snapshot): TargetRow = connection.query_row(
-            "SELECT s.spec_json, s.state, s.last_sequence, c.commit_version, c.payload_json, s.begin_commit, s.end_commit, m.last_commit FROM sessions s LEFT JOIN commits c ON c.session_id = s.session_id AND c.sequence = ?2 CROSS JOIN store_meta m WHERE s.session_id = ?1 AND m.singleton = 1",
-            params![session_id, sequence], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?)),
-        ).optional()?.ok_or(StoreError::CorruptData)?;
-        budget.row()?;
-        budget.evidence_text(&text)?;
-        let spec: SessionSpec = serde_json::from_str(&text).map_err(|_| StoreError::CorruptData)?;
-        let spec = spec.validated().map_err(|_| StoreError::CorruptData)?;
-        let payload = payload.ok_or(StoreError::CorruptData)?;
-        budget.evidence_text(&payload)?;
-        let payload: serde_json::Value =
-            serde_json::from_str(&payload).map_err(|_| StoreError::CorruptData)?;
-        if !matches!(state.as_str(), "closed" | "interrupted")
-            || spec.session_id != *session_id
-            || *sequence <= 0
-            || *sequence > last_sequence
-            || last_sequence > MAX_SAFE as i64
-            || begin <= 0
-            || end.is_none_or(|e| e <= begin || e > snapshot)
-            || receipt_commit
-                .is_none_or(|c| c <= begin || c > snapshot || end.is_some_and(|e| c >= e))
-            || payload["sessionId"].as_str() != Some(session_id)
-            || payload["sequence"].as_i64() != Some(*sequence)
-            || payload["observations"]
-                .as_array()
-                .is_none_or(|a| a.len() != spec.members.len())
-        {
-            return Err(StoreError::CorruptData);
-        }
-        budget.work.statement()?;
-        let mut statement = connection.prepare("SELECT series_id, segment_id, sample_time_ms, clock_epoch, commit_version FROM observations WHERE session_id = ?1 AND sequence = ?2 ORDER BY series_id")?;
-        let mut rows = statement.query(params![session_id, sequence])?;
-        let mut seen = 0;
-        let mut stamp = None;
-        while let Some(row) = rows.next()? {
-            budget.row()?;
-            let series: String = row.get(0)?;
-            let segment: String = row.get(1)?;
-            let time: i64 = row.get(2)?;
-            let clock: String = row.get(3)?;
-            let commit: i64 = row.get(4)?;
-            let member = spec.members.get(seen).ok_or(StoreError::CorruptData)?;
-            if member.series_id != series
-                || member.segment_id != segment
-                || !safe(time)
-                || time >= request.cutoff_ms
-                || !id(&clock)
-                || Some(commit) != receipt_commit
-                || payload["sampleTimeMs"].as_i64() != Some(time)
-                || payload["clockEpoch"].as_str() != Some(&clock)
-                || payload["observations"][seen]["seriesId"].as_str() != Some(&series)
-                || stamp
-                    .as_ref()
-                    .is_some_and(|old| old != &(time, clock.clone(), commit))
-            {
-                return Err(StoreError::CorruptData);
-            }
-            stamp = Some((time, clock, commit));
-            *removed.entry((series, time)).or_default() += 1;
-            seen += 1;
-        }
-        if seen != spec.members.len() {
-            return Err(StoreError::CorruptData);
-        }
-        observations += seen;
-    }
+    let (removed, observations) = validate_ticks(connection, &ticks, request.cutoff_ms, budget)?;
     budget.work.statement()?;
     budget.work.statement()?;
     budget.work.statement()?;
@@ -341,6 +276,87 @@ fn trim_inner(
         deleted_ticks: ticks.len(),
         deleted_observations: observations,
     })
+}
+
+type DeletionCounts = (BTreeMap<(String, i64), usize>, usize);
+
+fn validate_ticks(
+    connection: &Connection,
+    ticks: &[(String, i64)],
+    cutoff_ms: i64,
+    budget: &mut Budget,
+) -> StoreResult<DeletionCounts> {
+    let mut removed = BTreeMap::<(String, i64), usize>::new();
+    let mut observations = 0;
+    for (session_id, sequence) in ticks {
+        budget.work.statement()?;
+        let (text, state, last_sequence, receipt_commit, payload, begin, end, snapshot): TargetRow = connection.query_row(
+            "SELECT s.spec_json, s.state, s.last_sequence, c.commit_version, c.payload_json, s.begin_commit, s.end_commit, m.last_commit FROM sessions s LEFT JOIN commits c ON c.session_id = s.session_id AND c.sequence = ?2 CROSS JOIN store_meta m WHERE s.session_id = ?1 AND m.singleton = 1",
+            params![session_id, sequence], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?, r.get(4)?, r.get(5)?, r.get(6)?, r.get(7)?)),
+        ).optional()?.ok_or(StoreError::CorruptData)?;
+        budget.row()?;
+        budget.evidence_text(&text)?;
+        let spec: SessionSpec = serde_json::from_str(&text).map_err(|_| StoreError::CorruptData)?;
+        let spec = spec.validated().map_err(|_| StoreError::CorruptData)?;
+        let payload = payload.ok_or(StoreError::CorruptData)?;
+        budget.evidence_text(&payload)?;
+        let payload: serde_json::Value =
+            serde_json::from_str(&payload).map_err(|_| StoreError::CorruptData)?;
+        if !matches!(state.as_str(), "closed" | "interrupted")
+            || spec.session_id != *session_id
+            || *sequence <= 0
+            || *sequence > last_sequence
+            || last_sequence > MAX_SAFE as i64
+            || begin <= 0
+            || end.is_none_or(|e| e <= begin || e > snapshot)
+            || receipt_commit
+                .is_none_or(|c| c <= begin || c > snapshot || end.is_some_and(|e| c >= e))
+            || payload["sessionId"].as_str() != Some(session_id)
+            || payload["sequence"].as_i64() != Some(*sequence)
+            || payload["observations"]
+                .as_array()
+                .is_none_or(|a| a.len() != spec.members.len())
+        {
+            return Err(StoreError::CorruptData);
+        }
+        budget.work.statement()?;
+        let mut statement = connection.prepare("SELECT series_id, segment_id, sample_time_ms, clock_epoch, commit_version FROM observations WHERE session_id = ?1 AND sequence = ?2 ORDER BY series_id")?;
+        let mut rows = statement.query(params![session_id, sequence])?;
+        let mut seen = 0;
+        let mut stamp = None;
+        while let Some(row) = rows.next()? {
+            budget.row()?;
+            let series: String = row.get(0)?;
+            let segment: String = row.get(1)?;
+            let time: i64 = row.get(2)?;
+            let clock: String = row.get(3)?;
+            let commit: i64 = row.get(4)?;
+            let member = spec.members.get(seen).ok_or(StoreError::CorruptData)?;
+            if member.series_id != series
+                || member.segment_id != segment
+                || !safe(time)
+                || time >= cutoff_ms
+                || !id(&clock)
+                || Some(commit) != receipt_commit
+                || payload["sampleTimeMs"].as_i64() != Some(time)
+                || payload["clockEpoch"].as_str() != Some(&clock)
+                || payload["observations"][seen]["seriesId"].as_str() != Some(&series)
+                || stamp
+                    .as_ref()
+                    .is_some_and(|old| old != &(time, clock.clone(), commit))
+            {
+                return Err(StoreError::CorruptData);
+            }
+            stamp = Some((time, clock, commit));
+            *removed.entry((series, time)).or_default() += 1;
+            seen += 1;
+        }
+        if seen != spec.members.len() {
+            return Err(StoreError::CorruptData);
+        }
+        observations += seen;
+    }
+    Ok((removed, observations))
 }
 
 #[cfg(test)]

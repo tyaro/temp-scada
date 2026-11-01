@@ -448,7 +448,7 @@ fn format_one_and_mismatched_metadata_are_refused_without_rewriting_the_database
     ));
     assert_eq!(std::fs::read(&path).unwrap(), bytes);
     let connection = Connection::open(&path).unwrap();
-    connection.execute_batch("PRAGMA user_version=3; PRAGMA ignore_check_constraints=ON; UPDATE store_meta SET format_version=1").unwrap();
+    connection.execute_batch("PRAGMA user_version=4; PRAGMA ignore_check_constraints=ON; UPDATE store_meta SET format_version=1").unwrap();
     drop(connection);
     let bytes = std::fs::read(&path).unwrap();
     assert!(matches!(

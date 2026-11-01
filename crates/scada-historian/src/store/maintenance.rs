@@ -145,7 +145,7 @@ impl SqliteStore {
         })
     }
 
-    fn run_maintenance<T>(
+    pub(super) fn run_maintenance<T>(
         &mut self,
         control: &QueryControl,
         finish_check: bool,

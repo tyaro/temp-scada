@@ -19,57 +19,25 @@ pub(super) fn overlay(
         _ => QueryError::CorruptData,
     })?;
     budget.work.statement()?;
-    let mut statement = connection.prepare(
-        "SELECT e.sample_time_ms, e.deleted_records, e.operation_id, o.cutoff_ms, o.commit_version,
-         o.deleted_observations, o.deleted_ticks
-         FROM expired_samples AS e
-         LEFT JOIN retention_operations AS o ON o.request_id = e.operation_id
-         WHERE e.series_id = ?1 AND e.sample_time_ms >= ?2 AND e.sample_time_ms < ?3
-         ORDER BY e.sample_time_ms LIMIT 1025",
-    )?;
-    let mut rows = statement.query(params![series, from, to])?;
+    let mut statement = connection.prepare(include_str!("expired.sql"))?;
+    let mut rows = statement.query(params![series, from, to, fence, revision])?;
     let mut expired = Vec::new();
-    let mut count = 0;
     while let Some(row) = rows.next()? {
         budget.row()?;
-        count += 1;
-        if count > GAP_LIMIT {
-            return Err(QueryError::EvidenceLimit);
-        }
-        let time: i64 = required(row, "sample_time_ms")?;
-        let records: i64 = required(row, "deleted_records")?;
-        let operation: String = required(row, "operation_id")?;
-        // Column positions distinguish the operation's cutoff from current state.
-        let cutoff: i64 = row.get(3).map_err(|_| QueryError::CorruptData)?;
-        let commit: i64 = row.get(4).map_err(|_| QueryError::CorruptData)?;
-        let removed: i64 = row.get(5).map_err(|_| QueryError::CorruptData)?;
-        let ticks: i64 = row.get(6).map_err(|_| QueryError::CorruptData)?;
-        let fence = fence.ok_or(QueryError::CorruptData)?;
-        if !id(&operation)
-            || time < -(MAX_SAFE as i64)
-            || time >= cutoff
-            || cutoff > MAX_SAFE as i64
-            || cutoff > fence
-            || fence > MAX_SAFE as i64
-            || records <= 0
-            || records > removed
-            || ticks <= 0
-            || ticks > 1024
-            || removed < ticks
-            || removed > ticks * 8
-            || commit <= 0
-            || commit > revision
-        {
+        let start: i64 = required(row, "from_ms")?;
+        let end: i64 = required(row, "to_ms")?;
+        let corrupt: i64 = required(row, "corrupt")?;
+        if corrupt != 0 || start < from || end > to || start >= end {
             return Err(QueryError::CorruptData);
         }
-        append(
-            &mut expired,
-            Span {
-                from: time,
-                to: time + 1,
-                reason: Reason::Expired,
-            },
-        )?;
+        if expired.len() == COVERAGE_LIMIT {
+            return Err(QueryError::CoverageLimit);
+        }
+        expired.push(Span {
+            from: start,
+            to: end,
+            reason: Reason::Expired,
+        });
     }
     let mut result = Vec::new();
     for span in base {

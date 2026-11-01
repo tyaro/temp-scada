@@ -192,7 +192,7 @@ fn final_interval_limit_and_input_evidence_limit_are_separate() {
     );
     assert!(reader.connection.as_ref().unwrap().is_autocommit());
     drop(reader);
-    // Dense adjacent evidence coalesces to one interval; 1025 inputs still fail.
+    // Dense adjacent evidence is aggregated in SQL, including over 1024 points.
     let directory = TempStore::new();
     let mut store = directory.create();
     store.begin_session(spec("a")).unwrap();
@@ -213,8 +213,8 @@ fn final_interval_limit_and_input_evidence_limit_are_separate() {
         json!([range(1, 1025, "expired")])
     );
     assert_eq!(
-        query(&mut reader, &request(1, 1026, "raw", 1)),
-        Err(QueryError::EvidenceLimit)
+        query(&mut reader, &request(1, 1026, "raw", 1)).unwrap()["series"][0]["coverage"],
+        json!([range(1, 1026, "expired")])
     );
 }
 
