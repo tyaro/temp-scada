@@ -10,6 +10,7 @@ fn policy() -> RetentionClockPolicy {
     RetentionClockPolicy {
         policy_id: "policy".into(),
         revision: 1,
+        cutoff_rule: super::super::policy::CutoffRule::ExplicitCandidate,
         tolerance_ms: 10,
         max_observation_gap_ms: 1000,
         max_cutoff_advance_ms: 500,
@@ -55,7 +56,7 @@ fn input(state: GuardState, mono: u64, intent: CoordinatorIntent) -> Coordinator
         policy: policy(),
         guard_state: state,
         sample: sample(2000 + mono as i64, mono),
-        candidate_cutoff_ms: 1000,
+        candidate_cutoff_ms: Some(1000),
         intent,
     }
 }
@@ -187,7 +188,7 @@ fn deferred_suspended_and_recording_states_do_not_begin_or_close_a_session() {
     let mut store = directory.create();
     let state = prime(&mut store);
     let mut future = input(state.clone(), 100, CoordinatorIntent::Begin(begin()));
-    future.candidate_cutoff_ms = 2101;
+    future.candidate_cutoff_ms = Some(2101);
     future.intent = CoordinatorIntent::Begin(JobRequest {
         cutoff_ms: 2101,
         ..begin()

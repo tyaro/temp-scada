@@ -27,7 +27,7 @@
 | P4 Tag Browser        | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
 | P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
-| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c7実装済み・後続未着手     |
+| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c8実装済み・後続未着手     |
 
 ## P1の実装契約
 
@@ -299,3 +299,15 @@ H2c6は[PR #26](https://github.com/tyaro/temp-scada/pull/26)でマージ済み�
 Rust272件（新規16単体）・Clippy／rustfmt・関連Chromium6件が成功。Astra実装レビューに必須修正はない。全体CIはPRで確認する。DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。deadline／tokenは共通、各APIの予算カウンタは独立で最悪二回分に限定する。
 
 製品policy・timezone／保持日数・信頼時計adapter、scheduler・recorder協調、receipt GC・実媒体保守は後続。H2全体や自動運転、常時recorder、製品History API／Trend画面の完成とはしない。上流・S7・実環境には接続していない。
+
+## H2c8の実装と残り（2026-11-01）
+
+H2c7は[PR #27](https://github.com/tyaro/temp-scada/pull/27)でマージ済み（`4fe56db877c3f43197d24df50c313a8225a907bc`）、[全体CI 41294166759](https://github.com/tyaro/temp-scada/actions/runs/41294166759)成功。Astra主設計の[明示duration policy](../design/runtime/historian-retention-duration.md)をguard／coordinatorへ接続した。
+
+- 明示elapsed msから同呼出しsampleのUTC cutoffを計算する。24hを暦日保持へ読み替えず、暗黙default・丸め・clampを持たない。
+- 必須CutoffRuleを全policy snapshotへ含め、同revisionのduration／mode変更も停止する。Explicit Some／Elapsed Noneを厳密検査する。
+- malformed時計の停止理由を維持し、安定sampleからの導出不能はCutoffComputationFailedへ保持する。既存jobの固定cutoffと最大一操作を維持する。
+
+Rust284件（新規12単体、DB統合5件）・Clippy／rustfmt・関連Chromium6件が成功。cutoff前だけを削除して同値／後を残し、実削除のexpiredを確認した。Astra実装レビューに必須修正はない。全体CIはPRで確認する。DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持、Rust policy／candidate入力のみ明示変更した。
+
+ローカル暦日／timezone、製品policy適用／短縮プレビュー、信頼時計adapter、scheduler／recorder協調、receipt GC・実媒体保守は後続。H2全体・自動運転・常時recorder・製品History API／Trend画面は未完了。上流・S7・実環境には接続していない。

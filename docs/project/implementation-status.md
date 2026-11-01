@@ -445,3 +445,13 @@ Observeは照会・判定だけで、Beginは今回のproposalとcanonical reque
 Rust workspace272件（新規16単体）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。read-only Observe、warmup／duplicate、最大一操作、記録停止待ち、ID／cutoff／fence照合、部分再送と完了発見、取消・競合・実FULL／poison時の状態保持を確認した。Astra実装レビューに必須修正はない。全体CIはPRで確認する。
 
 DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。deadline／tokenは共通、予算カウンタは既存各API独立で最大二回分。製品policy・信頼時計・timezone／保持日数、scheduler、recorder停止／再開、receipt GC・実媒体保守は後続。通常App・上流・S7・実環境へ接続していない。
+
+## Historianの明示duration policyとUTC cutoff（H2c8、2026-11-01）
+
+H2c7は[PR #27](https://github.com/tyaro/temp-scada/pull/27)でマージ済み（`4fe56db877c3f43197d24df50c313a8225a907bc`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41294166759)成功。Astra主設計の[H2c8](../design/runtime/historian-retention-duration.md)に従い、明示elapsed durationからUTC cutoffを導出し、guard／coordinatorへ接続した。
+
+RetentionClockPolicyに必須cutoff_ruleを追加し、durationとmodeも全snapshot比較へ含める。同revisionの短縮・延長・mode変更もPolicyChangedへ停止する。candidateはOptionとし、ExplicitCandidateはSome、ElapsedはNoneだけを受ける。安定sampleから内部計算し、範囲外ならCutoffComputationFailedを保持する。Malformed／Untrusted等の時計理由と、既存jobの固定cutoffを維持する。
+
+Rust workspace284件（新規12単体、うち隔離DB統合5件）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。整数境界・不正入力、mode迂回、policy変更、計算停止／rearm、記録停止→明示close→一致Begin→step、cutoff前／同値／後のrawとexpired、既存上限・job継続を確認した。Astra実装レビューに必須修正はない。全体CIはPRで確認する。
+
+DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。Rust libraryのpolicy／candidate入力は明示変更した。elapsedの24hは暦日保持の置換ではない。ローカル暦日／timezone、製品policy適用と短縮プレビュー、信頼時計、scheduler／recorder、receipt GC・実媒体保守は後続。上流・S7・実環境には接続していない。

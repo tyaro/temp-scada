@@ -12,13 +12,16 @@ pub(super) fn safe(t: i64) -> bool {
 pub(super) fn sample(sample: &ClockSample) -> bool {
     id(&sample.clock_epoch) && safe(sample.wall_time_ms)
 }
-pub(super) fn policy(policy: &RetentionClockPolicy) -> Result<(), InvalidInput> {
+pub(in crate::store::retention) fn policy(
+    policy: &RetentionClockPolicy,
+) -> Result<(), InvalidInput> {
     if !id(&policy.policy_id)
         || !(1..=MAX_SAFE).contains(&policy.revision)
         || !(1..=MAX_SAFE).contains(&policy.max_observation_gap_ms)
         || policy.tolerance_ms > policy.max_observation_gap_ms
         || !(1..=MAX_SAFE).contains(&policy.max_cutoff_advance_ms)
         || policy.initial_cutoff_ceiling_ms.is_some_and(|t| !safe(t))
+        || matches!(policy.cutoff_rule, CutoffRule::Elapsed { retain_for_ms } if !(1..=MAX_SAFE).contains(&retain_for_ms))
     {
         return Err(InvalidInput::Policy);
     }

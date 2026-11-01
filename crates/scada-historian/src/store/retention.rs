@@ -2,6 +2,7 @@
 pub mod clock_guard;
 pub mod coordinator;
 pub mod jobs;
+pub mod policy;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};

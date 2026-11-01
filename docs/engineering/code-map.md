@@ -445,3 +445,11 @@ format 4のretention_jobs／retention_job_steps／retention_job_pending／job_ex
 reportは評価済みのnext_state／assessment／recoveryを操作エラーでも保持する。InvalidInput時だけrearm_required=true。既存job／maintenanceの予算・cleanup・poisonを再利用し、同controlのdeadline／tokenを渡す。自前loop・retry・ID生成・次step選択・session終了は追加しない。
 
 `coordinator/tests.rs`の9単体がread-only観測、開始条件、再送・発見、時計停止と明示継続を、`tests/failures.rs`の7単体が取消・予算・入力不正・競合・SQL／実FULLとreport保持を担当する。既存ブラウザ契約6件を回帰する。製品scheduler／信頼時計／recorder協調は[後続](../design/runtime/historian-retention-coordinator.md)。
+
+## Historianの明示duration policy（H2c8）
+
+`store/retention/policy.rs`がCutoffRule／DerivedCutoff／CutoffErrorと純粋`derive_cutoff`を所有する。elapsed msをreference UTC msから広い整数で引き、safe範囲を検査する。policy検証は`clock_guard/validate.rs`を共用し、default・丸め・timezone・DB操作を持たない。
+
+`clock_guard.rs`はcutoff_ruleを全policy snapshotに含め、ExplicitCandidate／SomeとElapsed／Noneのmodeを検査する。clock評価・active job・非stable待機の後、安定した新候補だけを内部導出し、失敗はCutoffComputationFailedへ停止を保持する。`coordinator.rs`はOptionをそのまま渡し、従来のproposal一致とreport保持を使う。
+
+`policy/tests.rs`の7単体が整数・policy／mode・時計停止・rearmを、`tests/integration.rs`の5単体が実DBの停止待ち・canonical Begin・削除境界とraw／expired・上限・既存job継続を担当する。既存Explicit guard／coordinator試験は明示mode／Someへ移行し、ブラウザ契約6件を回帰する。暦日保持・製品policy／短縮プレビューは[後続](../design/runtime/historian-retention-duration.md)。
