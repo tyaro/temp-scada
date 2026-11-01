@@ -5,6 +5,7 @@ pub use types::*;
 pub mod evidence;
 pub mod maintenance;
 pub mod query;
+pub mod recovery;
 pub mod retention;
 
 use std::fmt;

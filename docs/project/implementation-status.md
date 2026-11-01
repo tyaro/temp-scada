@@ -415,3 +415,13 @@ job開始は記録停止中に限り、未完了の間は新begin／新tick／�
 format 4へ明示更新し、旧format 1／2／3は非変更拒否。H1 JSON v1・依存・SDK・Project・Bantoは維持。Rust workspace219件（job18単体・query snapshot1単体・共通fixture統合1関数を追加）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,407件、型検査0エラー・0警告、build、関連Chromium6件が成功。実SQLiteの6ケースをRust／TS／ブラウザで共有し、同時刻／連続1025、部分公開、cutoff端点、FULL、予算・取消・panic、COMMIT前後5境界のprocess終了と再送、旧snapshot維持を確認した。
 
 Astraレビューで見つかった最新step参照と過去receiptの上限検査不足を修正し、検索範囲外の最新stepも検証する回帰を追加した。最終レビューに必須修正はない。全体CIはPRで確認する。job取消による途中解放は提供せず、完了まで再開する契約である。自動保持・信頼時刻・recorder調停・receipt GC・物理容量運用は後続。通常App・上流・S7・実環境へ接続していない。
+
+## Historianの同snapshot復旧状態とjob発見（H2c5、2026-11-01）
+
+H2c4は[PR #24](https://github.com/tyaro/temp-scada/pull/24)でマージ済み（`4bd75d08d22880d8e30eace537df7fd84bcb3677`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41289139590)全7job成功。Astra主設計の[H2c5](../design/runtime/historian-recovery-state.md)に従い、Rust libraryへ`recovery_state`を追加した。job IDを保持していない再起動hostでも、同一read snapshotから現在fenceとInitial／SingleTrim／CompletedJobの出典、active記録session ID、未完了jobと直近stepの元request／receiptを取得できる。
+
+全履歴を列挙せず、出典・active候補を小さいLIMITで取得する。jobの型付き検証と実際の最新stepを照合し、active sessionのmetadata／sequence／最新receipt header、出典重複・欠落、jobとの併存をCorruptDataとして拒否する。照会はcounter・fence・jobを変更せず、再送・新stepは既存APIで明示実行する。古い照会結果にも既存のreceipt／Conflict／Sequence規律が働く。
+
+Rust workspace234件（新規15単体、child worker含む）、Clippy `-D warnings`／rustfmt、関連Chromium6件が成功。begin／partial／complete後のprocess終了からIDなし発見、同時刻pending、元request再送、最新出典、stale next_step、同snapshot、全write拒否下の読取、破損参照、予算・取消・SQL failure・panic cleanupを確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+DB format 4・H1 JSON v1・依存・SDK・Project・Banto・TS・通常Appは変更していない。snapshot位置は内部観測値で、書込みの予約やcapacity／recorder健全性の保証ではない。自動driver・自動保持・信頼時計・recorder調停・receipt GC・実媒体の容量運用は後続。上流・S7・実環境には接続していない。

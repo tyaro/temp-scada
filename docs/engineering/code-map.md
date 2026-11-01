@@ -421,3 +421,11 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 format 4のretention_jobs／retention_job_steps／retention_job_pending／job_expired_samplesが進捗を保存する。`query/coverage/expired.sql`は単発／job両sourceの参照・最新step／累積件数・重複を検証し、連続msを最大256 islandへ集約する。`expired.rs`は有限行の検査とoverlayを担当し、最終coverage256区間と残存rawの拒否は既存coverage.rsへ残す。
 
 `retention/jobs/tests.rs`の18単体（child worker含む）が1025集中／連続、入場・再送・破損・FULL・process終了・取消とcleanupを確認する。`query/tests.rs`の追加1単体が途中stepとsnapshotを確認し、`tests/query_fixtures.rs`が`examples/history-retention-job-cases.json`の6ケースを実SQLiteと照合する。TS／ブラウザも同じ期待resultを共有する。[H2c4設計](../design/runtime/historian-retention-jobs.md)の後続範囲を維持する。
+
+## Historianの復旧状態照会（H2c5）
+
+`store/recovery.rs`がStoreRecoveryState／RetentionFence／FenceSource／ActiveJobRecovery／StepRecoveryと`SqliteStore::recovery_state`を所有する。最初のlast_commit readでsnapshotを固定し、fenceの最新出典と同率重複、active session／jobの小件数照会、active sessionの型付きspec・sequence・最新receipt headerを検査する。論理状態を更新せず、内部commit位置をH1 snapshotIdへ混ぜない。
+
+`retention/jobs.rs`はJob::into_statusを既存statusと共用し、recover_active／validate_completed_source／check_headで型付きjob・最新step・実MAX stepとfenceの整合を検証する。共通run_maintenance／Operationで予算・read transaction cleanup・poison規律を維持する。
+
+`recovery/tests.rs`の15単体（child worker含む）が初期状態・active session・IDなし再起動発見・途中／完了・正確な再送・出典更新・stale値・同snapshot・読取専用性・破損・失敗とcleanupを確認する。既存ブラウザ契約6件も回帰する。新APIはRust library内に限定し、自動driver・製品transportは[後続](../design/runtime/historian-recovery-state.md)。
