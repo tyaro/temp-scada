@@ -5,6 +5,7 @@ mod display;
 mod host;
 mod projection;
 pub mod recorder_source;
+pub mod recording_host;
 mod slots;
 pub use catalog::*;
 pub use display::*;

@@ -146,6 +146,7 @@ docs/
 - [Historianの保持policy原子適用・実applied比較（H2c10）](design/runtime/historian-retention-policy-application.md)
 - [Historianの位相を累積させない周期recorder（H3a）](design/runtime/historian-periodic-recorder.md)
 - [Historianの専用SDK所有者とsnapshot入力（H3b）](design/runtime/historian-sdk-source.md)
+- [Historianの単一group実行Hostと開始・停止・join（H3c）](design/runtime/historian-recording-host.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)

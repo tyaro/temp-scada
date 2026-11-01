@@ -497,3 +497,13 @@ H3aは[PR #31](https://github.com/tyaro/temp-scada/pull/31)でマージ済み（
 Rust workspace347件（新規8単体・9統合）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。Good0／false、部分／全未解決、Bad／Stale、切断／再接続、SIM／未知source、固定identity、epoch保存、UI寿命の双方向独立、Unauthorized・shutdown取消・再呼出し・Dropを確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 DB format 5・H1・外部依存・固定SDK・Project・Banto・TS／通常Appを維持し、runtime→historianのworkspace依存を追加した。無関係catalog変更でも初期は停止する。計画配布・複数group／queue・保持との停止再開、製品History／Trend・正式host、実媒体運用受入は後続。上流・S7・実環境には接続していない。
+
+## Historianの単一group実行Host（H3c、2026-11-01）
+
+H3bは[PR #32](https://github.com/tyaro/temp-scada/pull/32)でマージ済み（`7a7e45cb74de93f078a669f52189ad1ed0635969`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41304864071)成功。Astra主設計の[H3c](../design/runtime/historian-recording-host.md)を実装し、呼出し側にあった記録反復と所有管理を再利用可能なRecordingHostへ移した。
+
+一つのblocking workerに専用source／recorder／writerを渡し、SDK executorを同期wait・SQLite処理で塞がない。開始受理とDB開始成功、停止要求と終了確認を分ける。joinの取消後も所有を保持し、終了済みでも未joinなら次開始とwriter返却をBusyで拒否する。join後の明示新sessionで差し替え、take_storeで保持処理等へwriterを渡せる。自動再開や削除は行わない。
+
+Rust workspace360件（新規6単体・7統合）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。有限記録→raw照会、SDK稼働、取消・旧通知・最新receipt、static／開始時失敗、Unauthorized／SDK終了失敗、Drop中lockとpanic後Faultedを確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+DB format 5・H1・外部依存・SDK・Project・Banto・通常Appを維持する。単一groupのlibrary Hostであり、製品計画の配布、複数group／queue、保持協調・時計domain再開、History／Trend・正式サービス、実媒体I/O・GC／timezoneは後続。上流・S7・実Hub・実環境へ接続していない。
