@@ -27,7 +27,7 @@
 | P4 Tag Browser        | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
 | P5 Historian／Trend   | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
 | H1 純粋契約・保存設計 | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
-| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c6実装済み・後続未着手     |
+| H2 保存・検索層       | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c7実装済み・後続未着手     |
 
 ## P1の実装契約
 
@@ -287,3 +287,15 @@ H2c5は[PR #25](https://github.com/tyaro/temp-scada/pull/25)でマージ済み�
 Rust256件（新規22単体、うち隔離DB統合4件）・Clippy／rustfmt・関連Chromium6件が成功。Astra実装レビューの累積件数検査を補強し、最終レビューに必須修正はない。全体CIはPRで確認する。DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。
 
 trustedの根拠となる時計adapter、timezone／保持日数と製品policy管理、実行host・recorder停止／再開、receipt GC・実媒体保守は後続。二つの安定sampleは絶対時刻の正しさを証明せず、proposalは実行権限やleaseではない。通常App・上流・S7・実環境へ接続していない。
+
+## H2c7の実装と残り（2026-11-01）
+
+H2c6は[PR #26](https://github.com/tyaro/temp-scada/pull/26)でマージ済み（`7a8b5ee8cb8bfa7948289707b85bea9dc0da2530`）、[全体CI 41292835540](https://github.com/tyaro/temp-scada/actions/runs/41292835540)成功。Astra主設計の[一回分の保持coordinator](../design/runtime/historian-retention-coordinator.md)で、復旧照会・時刻判定と明示操作を接続した。
+
+- Observe／Begin／ContinueExistingを区別し、最大一操作だけを実行する。job ID・step番号・cutoffを自動生成・補正しない。
+- DB実行が取消・競合・容量不足で失敗しても、評価済みの時計停止状態と復旧snapshotをreportへ残す。InvalidInputではrearm_requiredと操作停止を返す。
+- 正確な部分step再送は追加削除せず、完了済みjobのreceipt取得は従来APIを使う。sessionを勝手に終了・再開しない。
+
+Rust272件（新規16単体）・Clippy／rustfmt・関連Chromium6件が成功。Astra実装レビューに必須修正はない。全体CIはPRで確認する。DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。deadline／tokenは共通、各APIの予算カウンタは独立で最悪二回分に限定する。
+
+製品policy・timezone／保持日数・信頼時計adapter、scheduler・recorder協調、receipt GC・実媒体保守は後続。H2全体や自動運転、常時recorder、製品History API／Trend画面の完成とはしない。上流・S7・実環境には接続していない。

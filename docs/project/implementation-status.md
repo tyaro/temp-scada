@@ -435,3 +435,13 @@ H2c5は[PR #25](https://github.com/tyaro/temp-scada/pull/25)でマージ済み�
 Rust workspace256件（新規22単体、隔離DB統合4件を含む）、Clippy `-D warnings`／rustfmt、関連Chromium6件が成功。全停止理由、境界・広い算術・u64 wrap、full policy比較、不正DTO、無変更性、明示job実行と既存CAS／Busyによるstale拒否を確認した。Astra実装レビューによる累積件数検査を補強し、最終レビューに必須修正はない。全体CIはPRで確認する。
 
 DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。proposalは実行権限・leaseではなく、実行直前の再評価が必要。信頼時計adapter、timezone／保持日数、製品policy管理、自動hostとrecorder協調、receipt GC・実媒体保守は後続。上流・S7・実環境へ接続していない。
+
+## Historianの一回分の保持coordinator（H2c7、2026-11-01）
+
+H2c6は[PR #26](https://github.com/tyaro/temp-scada/pull/26)でマージ済み（`7a8b5ee8cb8bfa7948289707b85bea9dc0da2530`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41292835540)成功。Astra主設計の[H2c7](../design/runtime/historian-retention-coordinator.md)に従い、`coordinate_retention_once`で復旧照会・時計判定と明示操作を接続した。
+
+Observeは照会・判定だけで、Beginは今回のproposalとcanonical requestが一致した場合だけjobを開始する。ContinueExistingは同じactive jobへの正確なstep requestを一回渡し、次番号を自動選択しない。DB操作が失敗しても判定済みのnext_state／assessment／復旧snapshotを返す。InvalidInputは自動経路を止めるrearm_requiredを伴う。完了済みjobの正確なreceipt再取得は従来APIへ明示的に戻す。
+
+Rust workspace272件（新規16単体）・Clippy `-D warnings`／rustfmt・関連Chromium6件が成功。read-only Observe、warmup／duplicate、最大一操作、記録停止待ち、ID／cutoff／fence照合、部分再送と完了発見、取消・競合・実FULL／poison時の状態保持を確認した。Astra実装レビューに必須修正はない。全体CIはPRで確認する。
+
+DB format 4・H1・依存・SDK・Project・Banto・TS／通常Appは維持する。deadline／tokenは共通、予算カウンタは既存各API独立で最大二回分。製品policy・信頼時計・timezone／保持日数、scheduler、recorder停止／再開、receipt GC・実媒体保守は後続。通常App・上流・S7・実環境へ接続していない。
