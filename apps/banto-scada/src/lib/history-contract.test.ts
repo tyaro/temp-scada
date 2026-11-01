@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import cases from "../../../../examples/history-contract-cases.json";
 import queryCases from "../../../../examples/history-query-cases.json";
 import minmaxCases from "../../../../examples/history-minmax-cases.json";
+import retentionCases from "../../../../examples/history-retention-cases.json";
 import coverageCases from "../../../../examples/history-coverage-cases.json";
 import {
   parseHistoryContract,
@@ -58,4 +59,9 @@ it("classifies uncloneable input without forwarding an input accessor's error", 
   };
   expect(validateHistoryContract(input)).toBe("schema");
   expect(() => parseHistoryContract(input)).toThrow("History contract: schema");
+});
+
+it.each(retentionCases)("SQLite retention result fixture: $name", (fixture) => {
+  expect(validateHistoryContract(fixture.expected)).toBe("accepted");
+  expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
 });

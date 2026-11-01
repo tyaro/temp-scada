@@ -1,5 +1,6 @@
 //! Conservative projection of domain-scoped no-record evidence into UTC coverage.
 use rusqlite::{params, types::FromSql, Connection, Row};
+mod expired;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -28,6 +29,7 @@ enum Reason {
     SamplingMissed,
     StorageLoss,
     Unknown,
+    Expired,
 }
 impl Reason {
     fn text(self) -> &'static str {
@@ -35,6 +37,7 @@ impl Reason {
             Self::SamplingMissed => "samplingMissed",
             Self::StorageLoss => "storageLoss",
             Self::Unknown => "unknownCoverage",
+            Self::Expired => "expired",
         }
     }
 }
@@ -50,22 +53,31 @@ pub(super) fn project(
     query: &Value,
     budget: &mut Budget,
 ) -> Result<Vec<Value>, QueryError> {
+    let base = base(connection, series, query, budget)?;
+    let spans = expired::overlay(connection, series, query, base, budget)?;
+    if spans.len() > COVERAGE_LIMIT {
+        return Err(QueryError::CoverageLimit);
+    }
+    publish(connection, series, spans, query, budget)
+}
+
+fn base(
+    connection: &Connection,
+    series: &str,
+    query: &Value,
+    budget: &mut Budget,
+) -> Result<Vec<Span>, QueryError> {
     let from = crate::integer(&query["fromMs"]);
     let to = crate::integer(&query["toMs"]);
     let (domains, untimed) = domains(connection, series, budget)?;
     if untimed {
-        return publish(
-            connection,
-            series,
-            vec![Span {
-                from,
-                to,
-                reason: Reason::Unknown,
-            }],
-            query,
-            budget,
-        );
+        return Ok(vec![Span {
+            from,
+            to,
+            reason: Reason::Unknown,
+        }]);
     }
+
     let gaps = gaps(connection, series, from, to, &domains, budget)?;
     let mut fragments = Vec::new();
     for gap in gaps {
@@ -140,7 +152,7 @@ pub(super) fn project(
             },
         )?;
     }
-    publish(connection, series, result, query, budget)
+    Ok(result)
 }
 
 fn append(result: &mut Vec<Span>, span: Span) -> Result<(), QueryError> {
@@ -151,9 +163,6 @@ fn append(result: &mut Vec<Span>, span: Span) -> Result<(), QueryError> {
         }
     }
     result.push(span);
-    if result.len() > COVERAGE_LIMIT {
-        return Err(QueryError::CoverageLimit);
-    }
     Ok(())
 }
 

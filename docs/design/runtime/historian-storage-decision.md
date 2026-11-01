@@ -127,3 +127,5 @@ H1のpure fixtureはこの検証の入力を揃える。H2は新保存層をSCAD
 H2の最初の実装区切りは[Astra主設計のH2a原子appendコア](historian-atomic-store.md)へ具体化した。固定sessionと1tick保存を隔離一時DBで検証し、検索snapshot・coverage生成・保持・容量・復旧の残りはH2b／H2cへ継続する。H2aをH2全体の完了とは扱わない。
 
 [H2b3の証拠保存](historian-recording-evidence.md)でDB format 2へ進めた。旧format 1を自動migrationせず拒否する。timed sessionと明示gapを原子的に保存するが、公開coverageへの投影と保持・容量・復旧は後続である。
+
+[H2b4](historian-coverage-projection.md)で明示欠測の同snapshot投影を追加し、[H2c1](historian-retention.md)で記録停止中の原子trim・実削除時刻のexpired・単調fenceを実装した。現在はformat 3で旧format 1／2を自動変更しない。自動保持・時刻異常判定・常時記録との協調・容量運用は未完了である。再送比較用のcommits本文に値が残るため、H2c1は物理消去を意味しない。

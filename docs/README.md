@@ -134,6 +134,7 @@ docs/
 - [Historianの共通grid・min/max集約（H2b2）](design/runtime/historian-minmax-query.md)
 - [Historianの時刻付き記録計画と欠測の証拠保存（H2b3）](design/runtime/historian-recording-evidence.md)
 - [Historianの証拠からの保守的なcoverage投影（H2b4）](design/runtime/historian-coverage-projection.md)
+- [Historianの原子trim・expiredと保持／容量の段階設計（H2c）](design/runtime/historian-retention.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)

@@ -366,13 +366,13 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 
 `crates/scada-historian/src/store/mod.rs`の`SqliteStore`が専用directoryのOS writer lock、format／deployment照合、固定session開始・終了・interrupted検出、1tickのtransactionとreceipt再送を所有する。`store/types.rs`がRust入力型、全member・同周期・H1意味規則・同Hub世代の照合、型付きlogical payloadの正規化を所有し、source世代のu64は内部canonicalで10進文字列として保持する。
 
-`store/schema.sql`は独立DB format 2のDDLとidentity／record FK・値CHECK・時刻索引を規定する。`lib.rs`のprivate identity検査はH1 canonical定義を再利用し、空のsampleBatchへ変更しない。`store/tests.rs`は使い捨てDBとprivate fault hook／child processで原子性・冪等性・型・世代・排他・再openを確認する。公開History queryとUIのDB直読は追加しない。検索・coverage生成・保持・容量・常時recorderは[H2a設計の後続](../design/runtime/historian-atomic-store.md)へ残す。
+`store/schema.sql`は独立DB format 3のDDLとidentity／record FK・値CHECK・時刻索引を規定する。`lib.rs`のprivate identity検査はH1 canonical定義を再利用し、空のsampleBatchへ変更しない。`store/tests.rs`は使い捨てDBとprivate fault hook／child processで原子性・冪等性・型・世代・排他・再openを確認する。H2a自体は保存コアに限定し、検索・coverage生成・保持は下記H2b／H2c1が担当する。UIのDB直読は追加せず、容量運用・常時recorderは後続へ残す。
 
 ## Historianのraw snapshot検索（H2b1）
 
 `crates/scada-historian/src/store/query/mod.rs`の`HistoryReader`が専用READ_ONLY接続、同一snapshot内のmetadata／raw／watermark投影、H1 result検査、typed error、transaction終了を所有する。`query/control.rs`は共有取消token・単調deadline・VM／decode行／結果bytesの有限予算を所有し、SQLごとの端数も保守的に計上する。公開factoryは`SqliteStore::reader()`で、最大2個のidleを含むreader leaseがwriter lockを共有し、全接続の終了まで排他を維持する。
 
-`query/tests.rs`が競合・取消・処理量・cleanupのunit試験、`store/test_support.rs`がH2a／H2b共通の一時DB・型付き入力fixtureを担当する。`tests/query_fixtures.rs`が`examples/history-query-cases.json`の実SQLite出力を照合し、TS `history-contract.test.ts`と実ブラウザ `e2e/history-contract.spec.ts`も同じ期待resultを検証する。通常Appからの利用・UIのDB直読・確定coverage・保持は[次工程](../design/runtime/historian-query-snapshot.md)へ残す。
+`query/tests.rs`が競合・取消・処理量・cleanupのunit試験、`store/test_support.rs`がH2a／H2b共通の一時DB・型付き入力fixtureを担当する。`tests/query_fixtures.rs`が`examples/history-query-cases.json`の実SQLite出力を照合し、TS `history-contract.test.ts`と実ブラウザ `e2e/history-contract.spec.ts`も同じ期待resultを検証する。coverageと期限除去は下記H2b4／H2c1で追加した。通常Appからの利用・容量運用は後続へ残し、UIのDB直読は追加しない。
 
 ## Historianのmin/max集約（H2b2）
 
@@ -391,3 +391,11 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 `store/query/coverage.rs`がsession／plan／永久descriptor／gapの参照・状態検証、他domainの可能期間を除く区間演算、残存欠測内recordのSQL EXISTS確認、結合・unknown補集合・最大256区間を所有する。`query/mod.rs`はraw／minmaxから同じ関数をsnapshot内で呼び、EvidenceLimit／CoverageLimitを公開する。`query/control.rs`は既存予算に加えて証拠JSON本文64 KiB／要求入力合計8 MiBをparse前に検査する。入力合計は利用者が下げられる出力bytesとは独立し、全系列で共有する。
 
 `query/coverage/tests.rs`が他session・未確定終了・untimed、snapshot競合、端点、上限、破損参照・永久descriptor照合と取消後cleanupの14単体試験を担当する。`tests/query_fixtures.rs`はtimed開始／gap／終了を組み立て、`examples/history-coverage-cases.json`の6成功出力を実SQLiteと比較する。TS `history-contract.test.ts`とブラウザ `e2e/history-contract.spec.ts`も同じ期待resultを共有する。[H2b4設計](../design/runtime/historian-coverage-projection.md)を参照。保持・容量・復旧・recorder・製品API／画面接続は後続。
+
+## Historianの原子trimとexpired（H2c1）
+
+`store/retention.rs`がTrimRequest／TrimReceipt、記録停止中のCAS付きcutoff、全member tick単位の候補・receipt照合、ledger／削除／fenceの原子commit、有限予算とhandler解除→rollbackを所有する。cleanup失敗はpanic中もwriterをNeedsReopenへ固定する。同moduleのfence検証をappend／trim／queryで共有し、`store/mod.rs`は既存tick receipt再送の後で新tickのcutoffを検査する。`next_commit`は同transaction内のConnectionを受け、呼出側がSQLごとの予算を課金する。
+
+`schema.sql`のformat 3はretention_state／retention_operations／expired_samplesと全store時刻・tick member検索の索引を追加する。`query/coverage/expired.rs`が同snapshotの実削除timestampの検証と優先overlay、`coverage.rs`が全証拠の最終coalesce／256区間・残存record確認を所有する。`query/control.rs`のBudgetはstore内部で共用し、公開APIを増やさない。
+
+`retention/tests.rs`の13単体は原子性・receipt再送・fence・上限・異常時刻・SQL failure・process終了・取消／panic cleanupを担当する。`query/coverage/expired/tests.rs`の5単体がsnapshot競合とcoverage・上限・破損を検証する。`tests/query_fixtures.rs`は`examples/history-retention-cases.json`の6ケースを実SQLiteから照合し、TS／ブラウザも期待resultを共有する。自動保持・物理消去・receipt GC・容量運用は[後続](../design/runtime/historian-retention.md)。

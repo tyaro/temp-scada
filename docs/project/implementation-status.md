@@ -369,3 +369,13 @@ H2b3は[PR #19](https://github.com/tyaro/temp-scada/pull/19)でマージ済み�
 最大256 session／1024候補gap、最終coverage256区間を制限し、超過をEvidenceLimit／CoverageLimitとして拒否する。証拠本文はparse前64 KiB、要求合計入力8 MiBを制限し、既存VM・期限・decode行・出力bytes・取消・cleanupを共有する。参照欠落をLEFT JOINで検出し、session／planと永久descriptorを型付きで照合する。
 
 Rust workspace155件（新規単体14件・共有fixtureの統合1関数）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,395件、型検査0エラー・0警告、build、関連Chromium4件が成功。実SQLiteの6成功ケースをRust／TS／ブラウザで共有し、snapshot競合、端点、上限、破損・取消後cleanupを検証した。Astraレビューで見つかった参照欠落を回帰テストで再現・修正済み。全体CIはPRで確認する。DB format 2・H1 JSON v1・依存・SDK・Project・Bantoは変更していない。H2cの保持・容量・復旧、recorder・Historyサービス・通常App接続は後続で、H2全体は継続中。
+
+## Historianの原子trimとexpired（H2c1、2026-11-01）
+
+H2b4は[PR #20](https://github.com/tyaro/temp-scada/pull/20)でマージ済み（`b7ee2a078357ca00000188f8845417d4e90c4754`）、[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41277217468)全7job成功。Astra主設計の[H2c1](../design/runtime/historian-retention.md)に従い、active sessionがない保守時点で、明示UTC cutoff未満の全tick memberを同transactionから除去する。最大1024 tickを超えれば無変更で拒否し、CAS付きcutoff fence・実削除timestampのledger・安定receiptを原子的に保存する。削除済みtick再送は元receiptを返し、期限前の未保存tickはRetentionCutoffで拒否してsequence／frontierを進めない。
+
+raw／minmaxは同じsnapshotの実削除時刻`[t,t+1)`だけをexpiredとして投影する。別domain／untimedがあっても、全storeの原子削除の証拠は有効。空白期間をexpiredへ補間せず、最終coverage256件と既存予算・取消・cleanupを維持する。format 3へ明示更新し、旧format 1／2は非変更で拒否する。H1 JSON v1・依存・SDK・Project・Bantoは維持。
+
+Rust workspace174件（新規writer13単体・expired5単体・共有fixture統合1関数）、Clippy `-D warnings`／rustfmt、TS114ファイル・1,401件、型検査0エラー・0警告、build、関連Chromium5件が成功。6共有fixtureに加え、snapshot中のtrim、上限、同timestamp／無値、safe整数端点、COMMIT前後5境界のprocess終了、破損・予算・取消・panic cleanupを検証。Astraの実装整合レビューを完了した。全体CIはPRで確認する。
+
+これはHistory query用observationsの期限除去で、再送比較用の`commits.payload_json`には値が残る。物理消去や容量問題の解決ではない。自動日次掃除・時刻跳躍検査・active recorderとの協調・大量削除の進行・receipt GC・WAL／checkpoint／disk-full運用は後続。通常App・上流・S7・実環境には接続していない。
