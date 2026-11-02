@@ -89,6 +89,8 @@ export function objectFormCommand(
   }
   if (selected.shape.type === "screenView")
     patch.sourceScreenId = String(data.get("sourceScreenId"));
+  if (selected.shape.type === "trend")
+    patch.trendId = String(data.get("trendId"));
   if (selected.shape.type === "polyline") {
     patch.lineStyle = parseLineStyle(data.get("lineStyle"));
     patch.points = parsePoints(String(data.get("points")));

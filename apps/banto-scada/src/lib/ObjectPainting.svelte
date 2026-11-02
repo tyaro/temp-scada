@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { TrendDefinition } from "./trend-definitions";
   import { resolveEquipmentProperty } from "./equipment-property";
   import { resolveStateColor } from "./state-color";
   import { resolveSymbolSlot, type EquipmentContext } from "./symbol-slots";
@@ -8,9 +9,11 @@
   import { compositedOpacity } from "./opacity";
   import ImagePainting from "./ImagePainting.svelte";
   import Primitive from "./Primitive.svelte";
+  import TrendPainting from "./TrendPainting.svelte";
   let {
     object,
     symbols = [],
+    trends = [],
     equipmentContext,
     ownerDefinition,
     images,
@@ -19,6 +22,7 @@
   }: {
     object: ScreenObject;
     symbols?: SymbolDefinition[];
+    trends?: readonly TrendDefinition[];
     equipmentContext?: EquipmentContext;
     ownerDefinition?: SymbolDefinition;
     images?: ReadonlyMap<
@@ -88,6 +92,14 @@
       >
     {/each}
   </svg>
+{:else if "width" in object && object.shape.type === "trend"}
+  <TrendPainting
+    width={object.width}
+    height={object.height}
+    definition={trends.find(
+      (row) => object.shape.type === "trend" && row.id === object.shape.trendId,
+    )}
+  />
 {:else if "width" in object && object.shape.type === "image"}
   {#if images?.get(object.shape.assetId)}
     <ImagePainting

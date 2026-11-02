@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { TrendDefinition } from "./trend-definitions";
   import { resolveConnectionObjects, connectedVertex } from "./connections";
   import type { EquipmentContext } from "./symbol-slots";
   import { untrack } from "svelte";
@@ -37,6 +38,7 @@
   let {
     screen,
     symbols = [],
+    trends = [],
     screens = [],
     equipmentContext,
     images,
@@ -54,6 +56,7 @@
   }: {
     screen: Screen | SymbolDefinition;
     symbols?: SymbolDefinition[];
+    trends?: readonly TrendDefinition[];
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
@@ -651,6 +654,7 @@
               {images}
               {readings}
               {equipmentContext}
+              {trends}
             />{/if}
         {:else}
           <ObjectPainting
@@ -663,6 +667,7 @@
             onsummary={(value) => {
               textDescriptions[object.id] = value;
             }}
+            {trends}
           />
         {/if}
       </g>

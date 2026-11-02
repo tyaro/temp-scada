@@ -15,6 +15,7 @@
 </script>
 
 <script lang="ts">
+  import type { TrendDefinition } from "../trend-definitions";
   import type { TagReadings } from "../tag-presentation";
   import type { EquipmentContext } from "../symbol-slots";
   import { tick, untrack, flushSync } from "svelte";
@@ -38,6 +39,7 @@
   let {
     screen,
     symbols,
+    trends = [],
     screens = [],
     equipmentContext,
     readings,
@@ -66,6 +68,7 @@
   }: {
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
+    trends?: readonly TrendDefinition[];
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     readings?: TagReadings;
@@ -949,6 +952,7 @@
             {onvertexmove}
             {equipmentContext}
             {readings}
+            {trends}
           />
         {/key}
         {#if rangeBox && editable}

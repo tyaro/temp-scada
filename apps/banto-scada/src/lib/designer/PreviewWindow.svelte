@@ -244,6 +244,7 @@
         symbols={project.symbols}
         {images}
         {readings}
+        trends={project.trends}
       />
     </div>
   {/if}

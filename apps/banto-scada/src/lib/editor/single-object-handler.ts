@@ -39,6 +39,21 @@ export function applySingleObjectCommand(
     if (connections.start || connections.end)
       object.shape.connections = connections;
     else delete object.shape.connections;
+  } else if (command.type === "make-trend-unique") {
+    const object = screen.objects[index];
+    if (definitionId || object.shape.type !== "trend")
+      throw Error("画面上のトレンドだけ独立できます");
+    const row = next.trends?.find(
+      (row) => object.shape.type === "trend" && row.id === object.shape.trendId,
+    );
+    if (!row) throw Error("トレンド定義が見つかりません");
+    const copy = {
+      ...row,
+      id: newId(),
+      pens: row.pens.map((pen) => ({ ...pen, id: newId() })),
+    };
+    next.trends = [...(next.trends ?? []), copy];
+    object.shape.trendId = copy.id;
   } else if (command.type === "make-symbol-unique") {
     const object = screen.objects[index];
     if (definitionId || object.shape.type !== "symbol")
@@ -97,6 +112,7 @@ export function applySingleObjectCommand(
       symbolId,
       equipmentId,
       sourceScreenId,
+      trendId,
       colorMode,
       paint,
       rotation,
@@ -114,6 +130,7 @@ export function applySingleObjectCommand(
     if (
       (object.shape.type === "image" ||
         object.shape.type === "screenView" ||
+        object.shape.type === "trend" ||
         object.shape.type === "rectangle" ||
         object.shape.type === "ellipse") &&
       (geometry.fill !== undefined || colorAlpha !== undefined)
@@ -158,6 +175,11 @@ export function applySingleObjectCommand(
       if (definitionId || object.shape.type !== "screenView")
         throw new Error("参照画面は埋込配置にだけ設定できます。");
       object.shape.screenId = sourceScreenId;
+    }
+    if (trendId !== undefined) {
+      if (definitionId || object.shape.type !== "trend")
+        throw Error("画面上のトレンドだけ参照を変更できます");
+      object.shape.trendId = trendId;
     }
     if (equipmentId !== undefined) {
       if (definitionId || object.shape.type !== "symbol")

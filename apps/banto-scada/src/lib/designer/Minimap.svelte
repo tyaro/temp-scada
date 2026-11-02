@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { TrendDefinition } from "../trend-definitions";
   import type { TagReadings } from "../tag-presentation";
   import type { EquipmentContext } from "../symbol-slots";
   import { onDestroy } from "svelte";
@@ -8,6 +9,7 @@
   let {
     screen,
     symbols,
+    trends = [],
     screens = [],
     equipmentContext,
     readings,
@@ -18,6 +20,7 @@
   }: {
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
+    trends?: readonly TrendDefinition[];
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     readings?: TagReadings;
@@ -144,6 +147,7 @@
         {screens}
         {equipmentContext}
         {readings}
+        {trends}
       />
     </div>
     <svg

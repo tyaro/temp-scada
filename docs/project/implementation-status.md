@@ -1,10 +1,10 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-10-22（日本時間）、Project 0.35.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-11-02（日本時間）、Project 0.36.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)を参照。[H4c1](../design/runtime/historian-trend-definition.md)の独立定義契約は実装・受入済み。Projectへの保存・配置機能は未実装。
+提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)を参照。[H4c1](../design/runtime/historian-trend-definition.md)の独立定義契約は実装・受入済み。[H4c2](../design/runtime/historian-trend-definition.md)でProject 0.36.0への保存・静的参照配置を提供する。保存定義からの履歴取得はH4c3。
 
 最新の作図改善の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（全体CI成功）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
@@ -63,7 +63,7 @@ DB format 2へ明示更新し、format 1や版不一致は自動変更せず拒�
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | アプリ基盤 | Banto v6.9.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
-| Project    | `schemaVersion`／`minRuntimeVersion`は**0.35.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
+| Project    | `schemaVersion`／`minRuntimeVersion`は**0.36.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
 | 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.34.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
 | IDと変更   | lowercase UUID v7、有限座標、明示order。編集失敗は原子的拒否、同値はno-op、Undo／Redoでもrevisionは巻き戻さない                         |
@@ -567,3 +567,15 @@ Project 0.35.0・SDK固定版・Banto 6.9.0・H1・Rust・DB format 5・依存�
 共通85fixtureがRust／TS／browserで一致し、1MiB境界・1byte超過、nativeのfloat表記、Unicode／ID末尾改行、重複と点数予算、namespace分離を確認した。Rust workspace388件（新規4）・TS全体1,578件（新規96）・型検査0error／0warning・build・Clippy／rustfmt・関連Chromium16件（新規2）が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 Project 0.35.0・App／main・DB format 5・H1・SDK／Banto依存は維持する。保存・配置・context v2は未実装。次はH4c2でProject側にも同じresourceと意味検査・予算を使い、参照整合性とSymbol配置禁止を加える。上流・S7・実Hub／DB／設定・資格情報へ接続していない。
+
+## ProjectのTrend保存と静的参照配置（H4c2、2026-11-02）
+
+[PR #39](https://github.com/tyaro/temp-scada/pull/39)はマージ済み（`abff1ec8097630bbd300ebfe78747842685003b8`）、[全体CI 41429814220](https://github.com/tyaro/temp-scada/actions/runs/41429814220)成功。Astra主設計の[H4c2](../design/runtime/historian-trend-definition.md)を実装し、Project 0.36.0へ任意trends配列とtrendId参照shapeを追加した。共通H4c1 resourceと意味検査・独立wrapperの1MiB予算を再利用し、参照存在・Symbol禁止をnative／TSで検査する。旧0.35.0は明示拒否し、現行examplesと既存legacy変換の出力を揃えた。
+
+「挿入→トレンド定義・配置」で定義・ペンを編集し、定義だけ保存／定義と配置の原子保存、共有原本の更新、参照切替、原本の独立コピー、未使用定義削除を提供する。失敗時はProject／Undo不変、管理ModalはProject object／世代／画面の一致を確認し、未保存入力を保護する。静的SVGカードは主画面・埋込み・ミニマップ・独立小窓へ定義名を反映する。カードは「履歴表示は準備中」と示し、検索actionは作らない。
+
+同ownerの配置／配列／画面複製は参照を維持する。system clipboardは依存画面内のTrendも含めてコピー／切り取り／貼付を全拒否する。originやProject ID一致を許可の根拠にしない。参照配置が残る定義の削除を拒否し、配置削除で定義を自動削除しない。汎用の塗り設定をペン色として扱わない。
+
+共通Project fixture18件がnative／TSで一致した。Rust全389件（新規1）・TS全1,604件（新規26）・型検査0error／0warning・build・Clippy／rustfmtが成功。関連Chromium47件（新規6件）が成功。新規6件で両テーマの保存／再読込・一括Undo／Redo・色／別名／順序、draft・shortcut・Project置換、共有編集／独立化／参照切替／削除、clipboard拒否、全SVG表示先を受け入れる。関連回帰も確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+H1／DB format 5／SDK固定版／Banto 6.9.0と外部依存は維持する。通常mainは未接続で、保存したnamespaceや系列の実在確認はまだ行わない。次のH4c3でcontext v2とpresetを既存単一HistoryWorkspaceへ接続し、読取active1を維持する。実adapter・transport／認証・inline chart・ChronoGazer還元は後続。上流・S7・実Hub／DB／設定・資格情報へ接続していない。

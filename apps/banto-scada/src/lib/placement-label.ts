@@ -15,6 +15,8 @@ export function placementLabel(
         )?.name ?? "Symbol")
       : object.shape.type === "screenView"
         ? "埋込画面"
-        : object.shape.type;
+        : object.shape.type === "trend"
+          ? "トレンド"
+          : object.shape.type;
   return `${kind} · ${object.order}`;
 }

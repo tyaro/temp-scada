@@ -75,6 +75,7 @@ export interface DesignerActionsHost {
     openSymbolSample(): void;
     openPaintSample(): void;
     openScreenViewDialog(): void;
+    openTrendDefinitions(): void;
     add(kind: AddKind): void;
   };
   view: {
@@ -883,6 +884,11 @@ export function createDesignerActions(host: DesignerActionsHost) {
       {
         label: "挿入",
         items: [
+          {
+            label: "トレンド定義・配置",
+            disabled: host.editing.editBlocked || host.selection.definition,
+            run: host.files.openTrendDefinitions,
+          },
           {
             label: "画面を埋め込む",
             disabled: host.editing.editBlocked || !!host.selection.definition,

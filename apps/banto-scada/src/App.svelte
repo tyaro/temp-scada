@@ -8,6 +8,8 @@
     type CatalogSource,
   } from "./lib/designer/controllers/catalog.svelte";
   import HistoryWorkspace from "./lib/history/HistoryWorkspace.svelte";
+  import TrendDefinitionsDialog from "./lib/designer/TrendDefinitionsDialog.svelte";
+  import type { TrendDefinition } from "./lib/trend-definitions";
   import type { HistoryService } from "./lib/history/workspace-model";
   let {
     readSource,
@@ -822,7 +824,7 @@
     }
   }
   function shortcut(event: KeyboardEvent) {
-    if (historyOpen) return;
+    if (historyOpen || trendRequest) return;
     if (
       event.key.toLowerCase() === "f" &&
       !event.ctrlKey &&
@@ -1771,6 +1773,7 @@
         command.type === "place-symbol" ||
         command.type === "add-image" ||
         command.type === "add-screen-view" ||
+        (command.type === "save-trend" && !!command.placement) ||
         command.type === "duplicate" ||
         command.type === "duplicate-many" ||
         command.type === "duplicate-array" ||
@@ -1939,6 +1942,90 @@
     generation: number;
     ownerId: string;
   } | null>(null);
+  let trendRequest = $state.raw<{
+    project: Project;
+    generation: number;
+    screenId: string;
+    definitionId?: string;
+  } | null>(null);
+  let trendError = $state("");
+  function openTrendDefinitions(definitionId?: string) {
+    if (
+      mode !== "edit" ||
+      activeDefinition ||
+      busy ||
+      replacement ||
+      historyOpen
+    )
+      return;
+    const id = screen.id,
+      generation = workspaceGeneration;
+    withScreen(id, () => {
+      if (
+        generation !== workspaceGeneration ||
+        activeDefinition ||
+        mode !== "edit"
+      )
+        return;
+      stopPlacement();
+      trendError = "";
+      trendRequest = { project, generation, screenId: id, definitionId };
+    });
+  }
+  const currentTrendRequest = $derived(
+    trendRequest &&
+      trendRequest.project === project &&
+      trendRequest.generation === workspaceGeneration &&
+      trendRequest.screenId === screen.id &&
+      mode === "edit" &&
+      !activeDefinition
+      ? trendRequest
+      : null,
+  );
+  function saveTrend(
+    definition: TrendDefinition,
+    create: boolean,
+    place: boolean,
+  ) {
+    const request = currentTrendRequest;
+    if (!request) return;
+    trendError = "";
+    const frame = initialImageFrame(
+      { width: 320, height: 120 },
+      screen,
+      canvasView.bounds,
+    );
+    if (
+      edit(
+        {
+          type: "save-trend",
+          definition,
+          create,
+          ...(place
+            ? { placement: { screenId: request.screenId, frame } }
+            : {}),
+        },
+        undefined,
+        (message) => (trendError = message),
+      )
+    )
+      trendRequest = null;
+  }
+  function removeTrend(trendId: string) {
+    if (!currentTrendRequest) return;
+    trendError = "";
+    if (
+      edit(
+        { type: "remove-trend", trendId },
+        undefined,
+        (message) => (trendError = message),
+      )
+    )
+      trendRequest = null;
+  }
+  $effect(() => {
+    if (trendRequest && !currentTrendRequest) trendRequest = null;
+  });
   function openScreenViewDialog() {
     if (mode !== "edit" || activeDefinition || busy || replacement) return;
     const ownerId = screen.id,
@@ -2715,7 +2802,8 @@
       !!drafts.pending ||
       !!replacement ||
       floatingPanels.gesturing ||
-      historyOpen,
+      historyOpen ||
+      !!trendRequest,
   );
   const editBlocked = $derived(menuBlocked || mode !== "edit");
   const selectionViewTarget = $derived(selectionTarget(screen, selectedIds));
@@ -2865,6 +2953,7 @@
           "sample",
         ),
       openScreenViewDialog,
+      openTrendDefinitions,
       add,
     },
     view: {
@@ -3589,6 +3678,7 @@
               dx,
               dy,
             })}
+          trends={project.trends}
         />
       {/key}
       {#if mode === "preview"}
@@ -3644,6 +3734,7 @@
                 view={canvasView}
                 oncenter={(point) => canvasWorkspace?.centerOn(point)}
                 onfit={() => canvasWorkspace?.zoom(null)}
+                trends={project.trends}
               />
             {/key}
           {/if}
@@ -3731,6 +3822,7 @@
       onselectsource={(id) => selectObjects(id)}
       onopenequipment={openSelectedEquipment}
       onopenequipmentsettings={(id) => openSelectedEquipment(id, "settings")}
+      onmanagetrend={openTrendDefinitions}
       {openScreen}
       images={assetImages}
       onreplaceimage={imageImport.openReplacement}
@@ -3815,6 +3907,16 @@
   {/key}
 {/if}
 <DraftPrompt guard={drafts} />
+{#if currentTrendRequest}
+  <TrendDefinitionsDialog
+    {project}
+    initialId={currentTrendRequest.definitionId}
+    error={trendError}
+    onsave={saveTrend}
+    onremove={removeTrend}
+    onclose={() => (trendRequest = null)}
+  />
+{/if}
 <HistoryWorkspace
   open={historyOpen}
   {project}
@@ -3829,7 +3931,7 @@
   title="操作ガイド・アプリ情報"
   onclose={() => (helpOpen = false)}
 >
-  <p>SCADA Designer 0.35.0 · Banto 基盤のローカル工程図エディタ</p>
+  <p>SCADA Designer 0.36.0 · Banto 基盤のローカル工程図エディタ</p>
   <p>
     左で画面・部品を選び、図形をクリックして右のプロパティで編集します。未適用の入力は「変更を適用」で確定し、Project
     JSON を保存してください。

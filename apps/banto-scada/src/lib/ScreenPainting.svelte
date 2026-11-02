@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { TrendDefinition } from "./trend-definitions";
   import type { EquipmentContext } from "./symbol-slots";
   import type { Screen, SymbolDefinition } from "./project";
   import type { TagReadings } from "./tag-presentation";
@@ -11,6 +12,7 @@
     screen,
     screens,
     symbols,
+    trends = [],
     equipmentContext,
     images,
     readings,
@@ -18,6 +20,7 @@
     screen: Screen;
     screens: Screen[];
     symbols: SymbolDefinition[];
+    trends?: readonly TrendDefinition[];
     equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
       string,
@@ -66,6 +69,7 @@
               {images}
               {readings}
               {equipmentContext}
+              {trends}
             />{/if}
         {:else}<ObjectPainting
             {object}
@@ -73,6 +77,7 @@
             {images}
             {readings}
             {equipmentContext}
+            {trends}
           />{/if}
       </g>
     {/each}

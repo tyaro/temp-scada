@@ -20,6 +20,12 @@ import { rotatedBounds, rotationPivot } from "./rotation";
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-model/schema/project.schema.json";
 import legacySchema from "../../../../crates/scada-model/schema/legacy.project.schema.json";
+import trendSchema from "../../../../crates/scada-model/schema/trend-definition.schema.json";
+import historySchema from "../../../../crates/scada-historian/schema/history-contract.schema.json";
+import {
+  validateTrendDefinitions,
+  type TrendDefinition,
+} from "./trend-definitions";
 export interface Point {
   x: number;
   y: number;
@@ -117,7 +123,8 @@ export interface LayoutObject extends BaseObject {
         colorMode: SymbolColorMode;
       }
     | { type: "image"; assetId: string; fit: ImageFit; crop?: ImageCrop }
-    | { type: "screenView"; screenId: string; fit: "contain" };
+    | { type: "screenView"; screenId: string; fit: "contain" }
+    | { type: "trend"; trendId: string };
 }
 export interface PolylineObject extends BaseObject {
   shape: {
@@ -174,21 +181,28 @@ export interface SymbolDefinition {
   objects: ScreenObject[];
 }
 export interface Project {
+  trends?: TrendDefinition[];
   equipmentTypes?: EquipmentType[];
   equipment?: EquipmentInstance[];
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.35.0";
+    schemaVersion: "0.36.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.35.0";
+    minRuntimeVersion: "0.36.0";
     name: string;
   };
   screens: Screen[];
   symbols: SymbolDefinition[];
 }
-const ajv = new Ajv2020({ allErrors: true, strictNumbers: true });
+const ajv = new Ajv2020({
+  allErrors: true,
+  strictNumbers: true,
+  allowUnionTypes: true,
+})
+  .addSchema(historySchema)
+  .addSchema(trendSchema);
 const validate = ajv.compile<Project>(schema);
 const legacy = ajv.compile(legacySchema);
 export function parseProject(json: string): Project {
@@ -206,8 +220,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.35.0",
-        minRuntimeVersion: "0.35.0",
+        schemaVersion: "0.36.0",
+        minRuntimeVersion: "0.36.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -264,6 +278,24 @@ export function parseProject(json: string): Project {
         .join(" / "),
     );
   const project = value;
+  if (
+    !validateTrendDefinitions({
+      version: 1,
+      kind: "trendDefinitions",
+      definitions: project.trends ?? [],
+    })
+  )
+    throw new Error("トレンド定義の形式・重複・予算を確認してください");
+  const trendIds = new Set((project.trends ?? []).map((row) => row.id));
+  for (const owner of [...project.screens, ...project.symbols]) {
+    for (const object of owner.objects) {
+      if (object.shape.type !== "trend") continue;
+      if (!("background" in owner))
+        throw new Error("Symbol定義にはトレンドを配置できません");
+      if (!trendIds.has(object.shape.trendId))
+        throw new Error("トレンドの参照先が見つかりません");
+    }
+  }
   const ids = new Set([project.manifest.projectId]);
   const symbolIds = new Set(project.symbols.map((s) => s.id));
   const hashes = new Set<string>(),

@@ -1,6 +1,8 @@
 import { expect, it } from "vitest";
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-model/schema/project.schema.json";
+import trendSchema from "../../../../crates/scada-model/schema/trend-definition.schema.json";
+import historySchema from "../../../../crates/scada-historian/schema/history-contract.schema.json";
 import sample from "../../../../examples/minimal.project.json";
 import equipment from "../../../../examples/equipment-property.project.json";
 import legacy from "../../../../examples/legacy.project.json";
@@ -75,7 +77,11 @@ it("keeps the shared storage schema LF-only while public import canonicalizes in
   const validate = new Ajv2020({
     allErrors: true,
     strictNumbers: true,
-  }).compile(schema);
+    allowUnionTypes: true,
+  })
+    .addSchema(historySchema)
+    .addSchema(trendSchema)
+    .compile(schema);
   expect(validate(raw)).toBe(false);
   const canonical = parseProject(JSON.stringify(raw));
   expect(validate(canonical)).toBe(true);
@@ -124,7 +130,7 @@ it("migrates legacy text into the current canonical contract and rejects the pre
     object = raw.screens[0].objects.find((o) => o.shape.type === "text")!;
   object.shape.text = "先頭\r\n末尾\r";
   const p = parseProject(JSON.stringify(raw));
-  expect(p.manifest.schemaVersion).toBe("0.35.0");
+  expect(p.manifest.schemaVersion).toBe("0.36.0");
   expect(
     p.screens[0].objects.find((o) => o.id === object.id)!.shape,
   ).toMatchObject({ text: "先頭\n末尾\n" });

@@ -14,6 +14,24 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## PR #40の画像同梱サンプル版更新漏れ（2026-11-02）
+
+[初回CI](https://github.com/tyaro/temp-scada/actions/runs/41438128625)はRust／frontendとE2Eの3分割が成功し、E2E 4/4でSymbol画像関連8件が失敗した。`symbol-image.project.json`は0.36.0へ更新済みだったが、圧縮済み`symbol-image.bantoscada`のmanifestだけ0.35.0に残っており、版不一致で読込を拒否していた。
+
+同梱manifestと対応checksumを0.36.0へ揃え、Project本体とPNG原本のbytesは維持した。配布packageを実際に読み込んで現行JSON定義・PNG原本との一致を確認する単体を追加し、package単体5件と関連Chromium13件が成功した。読込側の旧版許可や自動移行は追加しない。修正後の全体CIは同PRの最新commitで確認する。
+
+## ProjectのTrend保存と静的参照配置（H4c2、2026-11-02）
+
+[PR #39](https://github.com/tyaro/temp-scada/pull/39)はマージ済み（`abff1ec8097630bbd300ebfe78747842685003b8`）、[全体CI 41429814220](https://github.com/tyaro/temp-scada/actions/runs/41429814220)成功。Astra主設計の[H4c2](../design/runtime/historian-trend-definition.md)を実装し、Project 0.36.0へ任意trends配列とtrendId参照shapeを追加した。共通H4c1 resourceと意味検査・独立wrapperの1MiB予算を再利用し、参照存在・Symbol禁止をnative／TSで検査する。旧0.35.0は明示拒否し、現行examplesと既存legacy変換の出力を揃えた。
+
+「挿入→トレンド定義・配置」で定義・ペンを編集し、定義だけ保存／定義と配置の原子保存、共有原本の更新、参照切替、原本の独立コピー、未使用定義削除を提供する。失敗時はProject／Undo不変、管理ModalはProject object／世代／画面の一致を確認し、未保存入力を保護する。静的SVGカードは主画面・埋込み・ミニマップ・独立小窓へ定義名を反映する。カードは「履歴表示は準備中」と示し、検索actionは作らない。
+
+同ownerの配置／配列／画面複製は参照を維持する。system clipboardは依存画面内のTrendも含めてコピー／切り取り／貼付を全拒否する。originやProject ID一致を許可の根拠にしない。参照配置が残る定義の削除を拒否し、配置削除で定義を自動削除しない。汎用の塗り設定をペン色として扱わない。
+
+共通Project fixture18件がnative／TSで一致した。Rust全389件（新規1）・TS全1,604件（新規26）・型検査0error／0warning・build・Clippy／rustfmtが成功。関連Chromium47件（新規6件）が成功。新規6件で両テーマの保存／再読込・一括Undo／Redo・色／別名／順序、draft・shortcut・Project置換、共有編集／独立化／参照切替／削除、clipboard拒否、全SVG表示先を受け入れる。関連回帰も確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+H1／DB format 5／SDK固定版／Banto 6.9.0と外部依存は維持する。通常mainは未接続で、保存したnamespaceや系列の実在確認はまだ行わない。次のH4c3でcontext v2とpresetを既存単一HistoryWorkspaceへ接続し、読取active1を維持する。実adapter・transport／認証・inline chart・ChronoGazer還元は後続。上流・S7・実Hub／DB／設定・資格情報へ接続していない。
+
 ## 独立Trend定義の共通検証契約（H4c1、2026-11-02）
 
 [PR #38](https://github.com/tyaro/temp-scada/pull/38)の採用設計はマージ済み（`4203d6d2e7caecd699f7a1f2c900d585aa33b07b`）、[全体CI 41422420597](https://github.com/tyaro/temp-scada/actions/runs/41422420597)成功。Astra主設計の[H4c1](../design/runtime/historian-trend-definition.md)として、独立TrendDefinitions文書の共通Schema、Rust／TS validator、共通fixtureを追加した。

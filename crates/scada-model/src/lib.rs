@@ -4,6 +4,8 @@ use serde_json::Value;
 mod connections;
 mod equipment;
 pub mod trend_definitions;
+#[cfg(test)]
+mod trend_project_tests;
 pub use equipment::{EquipmentReadBinding, EquipmentReadType};
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
@@ -11,7 +13,8 @@ use std::sync::LazyLock;
 pub const SCHEMA: &str = include_str!("../schema/project.schema.json");
 pub const MAX_FOLDER_DEPTH: usize = 16;
 static VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
-    jsonschema::validator_for(&serde_json::from_str(SCHEMA).expect("bundled schema JSON"))
+    trend_definitions::schema_options()
+        .build(&serde_json::from_str(SCHEMA).expect("bundled schema JSON"))
         .expect("bundled schema is valid")
 });
 
@@ -144,8 +147,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.35.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.35.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.36.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.36.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -168,6 +171,38 @@ impl Project {
         }
         normalize_project_text(&mut value);
         VALIDATOR.validate(&value).map_err(|e| e.to_string())?;
+        let definitions = value
+            .get("trends")
+            .cloned()
+            .unwrap_or_else(|| serde_json::json!([]));
+        trend_definitions::validate_trend_definitions(
+            &serde_json::json!({"version":1,"kind":"trendDefinitions","definitions":definitions}),
+        )
+        .map_err(|_| "トレンド定義の形式・重複・予算を確認してください".to_string())?;
+        let trend_ids: HashSet<&str> = value["trends"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .map(|row| row["id"].as_str().unwrap())
+            .collect();
+        for owner in value["screens"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .chain(value["symbols"].as_array().unwrap())
+        {
+            for object in owner["objects"].as_array().unwrap() {
+                if object["shape"]["type"] != "trend" {
+                    continue;
+                }
+                if owner.get("background").is_none() {
+                    return Err("Symbol定義にはトレンドを配置できません".into());
+                }
+                if !trend_ids.contains(object["shape"]["trendId"].as_str().unwrap()) {
+                    return Err("トレンドの参照先が見つかりません".into());
+                }
+            }
+        }
         let mut ids = HashSet::new();
         ids.insert(value["manifest"]["projectId"].as_str().unwrap());
         let used_assets = referenced_assets(&value);
@@ -1538,8 +1573,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.35.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.35.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.36.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.36.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]
