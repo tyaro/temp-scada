@@ -570,7 +570,7 @@ nativeの`validate_trend_definitions(&Value)`／`TrendDefinitions::from_value`�
 
 ## 記録計画の管理・適用の設計入口（H5）
 
-[記録計画管理の設計](../design/runtime/historian-recording-plan.md)は、P5のdesired／deployment／applied分離、有限な独立JSON契約、永続適用のCAS／receipt、単一group supervisorと復元・失敗境界を定める。設計PR #42は文書のみの変更で、以下H5aから工程ごとに実装・検証責務を追加する。applied台帳／supervisorは後続である。
+[記録計画管理の設計](../design/runtime/historian-recording-plan.md)は、P5のdesired／deployment／applied分離、有限な独立JSON契約、永続適用のCAS／receipt、単一group supervisorと復元・失敗境界を定める。設計PR #42は文書のみの変更で、以下H5aから工程ごとに実装・検証責務を追加する。H5b1の台帳は下記で担当し、activation／supervisorは後続である。
 
 現行の`scada-historian/src/store/evidence.rs::PlanRef`はID／revisionのsession根拠で、計画本体・hash・配布台帳ではない。`scada-runtime/src/recorder_source/plan.rs::SdkRecorderPlan`が一つのHub・周期と固定member／SDK pinを検証する。`recording_host.rs::RecordingHost`はwriterとworkerを所有し、startの受理とRunning、停止要求とjoin完了を区別する。新しい管理層はこれらの契約とH3d保持gateを迂回しない。
 
@@ -581,3 +581,11 @@ nativeの`validate_trend_definitions(&Value)`／`TrendDefinitions::from_value`�
 native `json_contract.rs`がTrendと記録計画のcompact JSON byte・node・depth walkとblank定義、TS `json-text.ts`がbounded owned JSONのscalar／blankを共有する。`history/owned-json.ts`はH5a用node上限引数を受け、従来callerの既定250,000を維持する。予算計数や名前の判定を各契約に再実装しない。
 
 `examples/recording-plan-cases.json`139件をnative `recording_plan/tests.rs`、TS `recording-plan.test.ts`、`e2e/recording-plan-contract.spec.ts`で共用する。TSの`__fixtures__/recording-plan-cases.ts`とnative test helperが大きな不正入力のrecipeを同じ値へ展開する。browserは通常Appを保ちmoduleを評価し、remote schema取得なし、所有／member順、Project書出し不変、未知Project fieldの拒否を確認する。通常mainへテスト用serviceやvalidator画面を追加しない。
+
+## 記録計画の永続台帳（H5b1）
+
+`scada-historian/src/store/recording_plan/types.rs`は管理APIのowned型、`canonical.rs`はH5a再利用・mapping検証・member順／整数表記の正規化・SHA-256・完全な解決照合を持つ。`mod.rs`はQueryControlを保持する同期API、`write.rs`はreceipt先行のCASと一つのapply transactionを担当する。
+
+`read.rs`は必須singleton／head／count、直前commit、canonical request・receipt、desiredの初利用、過去mapping／保持版の有限検証を行う。`reservations.rs`は恒久metadataと検索非公開の予約を照合し、first-use applicationのenabledな解決内容を非再帰で検証する。first revision単位の局所cacheで過去全receiptへの再帰を避ける。format6の`schema.sql`は台帳・予約・適用member索引を所有し、`store/mod.rs`の共通begin入口が過去session再送後にmanagedな新規開始を拒否する。
+
+`query/control.rs`の`bounded_text`は新管理本文128KiBまでの共有8MiB計数を持ち、既存`evidence_text`は64KiBを維持する。新APIはdecoded rowsを最大256に絞り、既存maintenanceの取消・VM・rollback・poison／writer所有を共有する。`recording_plan/tests.rs`と`tests/validation.rs`／`failures.rs`がCAS／再送・8member・identity・job・容量・破損・FULL・各境界のprocess exitを一時DBで検証する。H1出力と通常Appの既存browser契約を回帰し、SDK／supervisor／UI／製品transportは追加しない。

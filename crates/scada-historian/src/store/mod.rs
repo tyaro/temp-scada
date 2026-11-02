@@ -5,6 +5,7 @@ pub use types::*;
 pub mod evidence;
 pub mod maintenance;
 pub mod query;
+pub mod recording_plan;
 pub mod recovery;
 pub mod retention;
 
@@ -17,7 +18,7 @@ use std::time::Duration;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 
 pub type StoreResult<T> = Result<T, StoreError>;
-pub const STORE_FORMAT_VERSION: i64 = 5;
+pub const STORE_FORMAT_VERSION: i64 = 6;
 
 #[derive(Debug)]
 pub enum StoreError {
@@ -29,6 +30,8 @@ pub enum StoreError {
     UnsupportedStore,
     IdentityMismatch,
     Conflict,
+    RecordingPlanCapacity,
+    ManagedRecordingRequired,
     SessionInactive,
     NeedsReopen,
     RetentionLimit,
@@ -54,6 +57,8 @@ impl fmt::Display for StoreError {
                 Self::Busy => "writer busy",
                 Self::UnsupportedStore => "unsupported store",
                 Self::IdentityMismatch => "store identity mismatch",
+                Self::RecordingPlanCapacity => "recording plan ledger capacity reached",
+                Self::ManagedRecordingRequired => "managed recording activation required",
                 Self::Conflict => "immutable payload conflict",
                 Self::SessionInactive => "session inactive",
                 Self::Sequence { .. } => "non-contiguous sequence",
@@ -253,6 +258,7 @@ impl SqliteStore {
                 Err(StoreError::Conflict)
             };
         }
+        recording_plan::ensure_unmanaged_start(&tx)?;
         retention::jobs::ensure_idle(&tx)?;
         if tx.query_row(
             "SELECT EXISTS(SELECT 1 FROM sessions WHERE state = 'active')",

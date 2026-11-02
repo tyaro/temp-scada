@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。desiredのProject保存・applied台帳・supervisorは後続実装である。
+提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。activation／session binding、supervisor、desiredのProject保存は後続である。
 
 最新の作図改善の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（全体CI成功）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
@@ -595,3 +595,13 @@ TS全1,623件（新規18）・型検査0error／0warning・buildが成功。関�
 Astra主設計のH5aとして、単一group・1〜8memberのDesiredRecordingPlan v1 Schema、Rust owned wrapper／validator、TS owned／frozen parserとboolean validatorを追加した。group／plan／memberのID poolを分け、H1 IDの正規grammarを再利用する。disabledでも完全設定を要求し、秘密・deployment設定・永久identity fieldは未知fieldとして拒否する。構造受理はidentity解決やimmutableな配布済み版の証明ではない。
 
 共通fixture139件、所有・非JSON・予算の単体、browser module評価で検証した。Rust全393／TS全1,778、型検査0error／0warning、build、Clippy／fmt、全体Prettier、関連Chromium31件が成功し、Astraレビューに必須修正はない。文字列／compact JSON walkerは既存Trendと共用し、旧入力制限の既定値を維持した。Project 0.36.0・H1・DB format 5・記録Host／SDK・通常Appと依存は変更しない。編集・配布操作はまだ提供せず、次はH5bの永続applied台帳／CAS・receiptを実装する。
+
+## 記録計画の永続台帳（H5b1、2026-11-03）
+
+Astra主設計の[H5b1](../design/runtime/historian-recording-plan-ledger.md)として、native `SqliteStore`へ明示mapping登録、計画の原子的apply、現在状態・request別receipt照会を追加した。mapping／applied／保持版のCAS、同ID再送の結果固定、desired版の不変性、予約系列のHub／incarnation／segment衝突を検査する。計画・予約・receipt・head・commitは同時確定し、未記録の予約系列は履歴検索へ公開しない。
+
+DB formatは6へ更新し、旧5と未知版は移行せず拒否する。`scada-model`へのpath依存と`sha2 = "=0.10.9"`を追加した。Project 0.36.0・H1・固定SDK／Bantoは維持する。managed storeはdisabled計画でも新規手動／時刻付きsessionを共通入口で拒否する。既存session／tickの完全一致再送は維持する。
+
+受入は隔離した一時SQLiteのみ。CAS／再送、8member、active記録／保持job、破損head・hash・first-use、4096版上限、FULL／取消／panic／cleanup失敗、各COMMIT境界のプロセス終了と再起動を検証する。管理照会は同期のidle store APIで、Running中の別readerやSDK activationは追加しない。次はH5b2のsession binding、H5cのsupervisor、H5dのProject編集である。
+
+ローカル受入はRust workspace414件（新規21、process worker含む）、TS1778件／121ファイル、型検査0error／0warning、build、Clippy／rustfmt、関連Chromium27件が成功。Astraの最終read-onlyレビューに追加の必須修正はない。browserは既存契約・検索の回帰で、管理UIや実接続は未追加。全体CIはReady for ReviewのPRで確認する。

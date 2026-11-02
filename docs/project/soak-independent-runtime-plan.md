@@ -470,3 +470,9 @@ PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/
 ## 独立desired JSON契約（H5a、2026-11-03）
 
 H5aとして共通Schema・Rust／TS純粋検証・139共通fixtureとbrowser module評価を追加した。[現行状況](implementation-status.md#独立した記録計画の純粋契約h5a2026-11-03)、[契約と受入](../design/runtime/historian-recording-plan.md#h5aの実装と受入2026-11-03)を参照。計画はdisabledでも完全設定を保持し、JSON上限は64KiB／depth32／node4096。構造受理だけでSDK解決や適用済み版との照合が完了したとはしない。Project 0.36.0・DB5・H1・実Host／通常App・固定依存は維持し、次のH5bへ永続台帳を分ける。
+
+## 記録計画台帳と再送結果（H5b1、2026-11-03）
+
+H5aは[PR #43](https://github.com/tyaro/temp-scada/pull/43)でマージ済み、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41477917969)と[push CI](https://github.com/tyaro/temp-scada/actions/runs/41477765904)は全7job成功。[H5b1の設計と受入](../design/runtime/historian-recording-plan-ledger.md)に沿い、DB6のnative台帳・mapping／applied CAS・再送receipt・管理状態・系列予約とmanaged begin gateを実装した。原子的保存とSDK activationは別で、現在の新規記録開始はmanaged storeでは拒否する。
+
+次はH5b2のactivation/session binding、その後H5cのpreflight／stop／join／apply／activateと再起動復元。H5dのProject保存・編集、実source adapter、製品transport／認証、複数group／queue、信頼時計・自動保持、媒体I/O／GC等は後続である。上流・S7・実Hub・本番DB・設定・資格情報へアクセスしていない。

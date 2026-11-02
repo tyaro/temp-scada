@@ -136,7 +136,10 @@ impl Budget {
         self.work.check()
     }
     pub fn evidence_text(&mut self, text: &str) -> Result<(), QueryError> {
-        if text.len() > 64 * 1024 {
+        self.bounded_text(text, 64 * 1024)
+    }
+    pub fn bounded_text(&mut self, text: &str, max_bytes: usize) -> Result<(), QueryError> {
+        if max_bytes > 128 * 1024 || text.len() > max_bytes {
             return Err(QueryError::EvidenceLimit);
         }
         self.input_bytes += text.len();
@@ -152,8 +155,8 @@ impl Budget {
     }
 }
 
-pub(super) fn serialized_size(
-    value: &serde_json::Value,
+pub(in crate::store) fn serialized_size<T: serde::Serialize + ?Sized>(
+    value: &T,
     limit: usize,
 ) -> Result<usize, QueryError> {
     struct Counter {

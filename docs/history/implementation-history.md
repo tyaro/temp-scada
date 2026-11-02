@@ -14,6 +14,12 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## 記録計画の永続台帳（H5b1、2026-11-03）
+
+H5aの[PR #43](https://github.com/tyaro/temp-scada/pull/43)はマージ済みで、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41477917969)と[push CI](https://github.com/tyaro/temp-scada/actions/runs/41477765904)は全7job成功。Astraの詳細設計に従い、native管理台帳・mapping登録・原子的apply・receipt照会と新規sessionのmanaged gateを追加した。DB6へ進め、5は自動移行せず拒否する。SHA-256固定依存とmodel validatorへのpath依存を追加した。
+
+再送は旧結果を返して再適用せず、mapping／applied／保持版のCASとdesired不変性を確認する。予約identityは検索用metadataから分離し、同じseries／incarnation／segmentの再割当を拒否する。Astraレビューのfirst-use根拠とmapping receipt時のhead検査を強化し、過去receipt本文へ再帰しない有限検証を維持した。隔離SQLiteで障害と復旧を検証し、記録開始とのbindingとsupervisorは次工程へ残す。Rust workspace414件（新規21）・Clippy／fmt、TS1778件・型検査0error／0warning・build、関連Chromium27件と全体Prettierを受け入れた。全体CIはReady for ReviewのPRで確認する。
+
 ## 独立した記録計画の純粋契約（H5a、2026-11-03）
 
 [設計PR #42](https://github.com/tyaro/temp-scada/pull/42)はマージ済みで、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41469698781)と[push CI](https://github.com/tyaro/temp-scada/actions/runs/41469603179)は全7ジョブ成功。H5aはDesiredRecordingPlan v1の共通Schema、Rust owned wrapper、TS owned／frozen parserとboolean validator、139共通fixtureを追加した。Budget／文字列判定は既存Trendと共用し、既存の受理とHistoryの既定node上限を維持した。

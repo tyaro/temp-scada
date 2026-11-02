@@ -1,8 +1,8 @@
 PRAGMA application_id = 1396918337;
-PRAGMA user_version = 5;
+PRAGMA user_version = 6;
 CREATE TABLE store_meta (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-    format_version INTEGER NOT NULL CHECK (format_version = 5),
+    format_version INTEGER NOT NULL CHECK (format_version = 6),
     store_id TEXT NOT NULL,
     deployment_id TEXT NOT NULL,
     last_commit INTEGER NOT NULL CHECK (last_commit >= 0)
@@ -213,3 +213,65 @@ CREATE TABLE job_expired_samples (
     PRIMARY KEY (series_id, sample_time_ms),
     FOREIGN KEY (job_id, published_step) REFERENCES retention_job_steps
 ) STRICT;
+
+-- H5b1 managed configuration; commit numbers share store_meta, not tick commits.
+CREATE TABLE recording_mapping_revisions (
+ mapping_revision INTEGER PRIMARY KEY CHECK (mapping_revision BETWEEN 1 AND 4096),
+ request_id TEXT UNIQUE NOT NULL,
+ expected_revision INTEGER REFERENCES recording_mapping_revisions(mapping_revision),
+ request_json TEXT NOT NULL, mapping_hash TEXT NOT NULL CHECK(length(mapping_hash)=64 AND mapping_hash NOT GLOB '*[^0-9a-f]*'),
+ commit_version INTEGER UNIQUE NOT NULL CHECK(commit_version>0), receipt_json TEXT NOT NULL,
+ CHECK ((mapping_revision=1)=(expected_revision IS NULL)),
+ CHECK ((mapping_revision=1 AND expected_revision IS NULL) OR expected_revision=mapping_revision-1)
+) STRICT;
+CREATE TABLE recording_mapping_state (
+ singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+ mapping_revision INTEGER REFERENCES recording_mapping_revisions(mapping_revision),
+ revision_count INTEGER NOT NULL CHECK(revision_count BETWEEN 0 AND 4096)
+) STRICT;
+INSERT INTO recording_mapping_state VALUES(1,NULL,0);
+CREATE TABLE recording_desired_definitions (
+ plan_id TEXT NOT NULL, revision INTEGER NOT NULL CHECK(revision BETWEEN 1 AND 9007199254740991),
+ desired_json TEXT NOT NULL, desired_hash TEXT NOT NULL CHECK(length(desired_hash)=64 AND desired_hash NOT GLOB '*[^0-9a-f]*'),
+ created_commit INTEGER NOT NULL CHECK(created_commit>0), PRIMARY KEY(plan_id,revision)
+) STRICT;
+CREATE TABLE recording_plan_applications (
+ applied_revision INTEGER PRIMARY KEY CHECK(applied_revision BETWEEN 1 AND 4096),
+ request_id TEXT UNIQUE NOT NULL, expected_revision INTEGER REFERENCES recording_plan_applications(applied_revision),
+ request_json TEXT NOT NULL, plan_id TEXT NOT NULL, desired_revision INTEGER NOT NULL,
+ mapping_revision INTEGER REFERENCES recording_mapping_revisions(mapping_revision),
+ retention_revision INTEGER REFERENCES retention_policy_applications(applied_revision),
+ resolved_json TEXT NOT NULL, resolved_hash TEXT NOT NULL CHECK(length(resolved_hash)=64 AND resolved_hash NOT GLOB '*[^0-9a-f]*'),
+ commit_version INTEGER UNIQUE NOT NULL CHECK(commit_version>0), receipt_json TEXT NOT NULL,
+ FOREIGN KEY(plan_id,desired_revision) REFERENCES recording_desired_definitions,
+ CHECK((applied_revision=1)=(expected_revision IS NULL)),
+ CHECK((applied_revision=1 AND expected_revision IS NULL) OR expected_revision=applied_revision-1)
+) STRICT;
+CREATE TABLE recording_plan_state (
+ singleton INTEGER PRIMARY KEY CHECK(singleton=1), ledger_plan_id TEXT,
+ applied_revision INTEGER REFERENCES recording_plan_applications(applied_revision),
+ application_count INTEGER NOT NULL CHECK(application_count BETWEEN 0 AND 4096),
+ definition_count INTEGER NOT NULL CHECK(definition_count BETWEEN 0 AND 4096),
+ CHECK((applied_revision IS NULL)=(ledger_plan_id IS NULL))
+) STRICT;
+INSERT INTO recording_plan_state VALUES(1,NULL,NULL,0,0);
+CREATE TABLE recording_series_reservations (
+ series_id TEXT PRIMARY KEY, hub_id TEXT NOT NULL, incarnation_id TEXT NOT NULL,
+ first_revision INTEGER NOT NULL REFERENCES recording_plan_applications(applied_revision),
+ UNIQUE(hub_id,incarnation_id)
+) STRICT;
+CREATE TABLE recording_segment_reservations (
+ series_id TEXT NOT NULL REFERENCES recording_series_reservations(series_id), segment_id TEXT NOT NULL,
+ descriptor_json TEXT NOT NULL, descriptor_hash TEXT NOT NULL CHECK(length(descriptor_hash)=64 AND descriptor_hash NOT GLOB '*[^0-9a-f]*'), first_revision INTEGER NOT NULL REFERENCES recording_plan_applications(applied_revision),
+ PRIMARY KEY(series_id,segment_id)
+) STRICT;
+
+CREATE INDEX recording_application_definition ON recording_plan_applications(plan_id,desired_revision,commit_version);
+CREATE TABLE recording_application_members (
+ applied_revision INTEGER NOT NULL REFERENCES recording_plan_applications(applied_revision),
+ series_id TEXT NOT NULL, segment_id TEXT NOT NULL,
+ PRIMARY KEY(applied_revision,series_id,segment_id),
+ FOREIGN KEY(series_id,segment_id) REFERENCES recording_segment_reservations
+) STRICT;
+CREATE INDEX recording_reserved_first_use ON recording_application_members(series_id,segment_id,applied_revision);
+CREATE INDEX recording_series_first_use ON recording_application_members(series_id,applied_revision);
