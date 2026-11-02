@@ -118,7 +118,11 @@ async function openPopup(page: Page, screenId: string) {
   await chooser
     .getByRole("button", { name: "小窓を表示", exact: true })
     .click();
-  return page.locator(`[data-preview-popup="${screenId}"]`);
+  const popup = page.locator(`[data-preview-popup="${screenId}"]`);
+  // Opening a Popup schedules its header focus after the chooser closes.
+  // Let that transition finish before sending keyboard input to a card.
+  await expect(popup.locator("[data-popup-move]")).toBeFocused();
+  return popup;
 }
 for (const theme of ["light", "dark"] as const)
   test(`saved raw preset opens explicitly, uses ID presentation and stays separate from historic identity in ${theme}`, async ({
