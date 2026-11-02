@@ -57,7 +57,7 @@ for (const theme of ["light", "dark"] as const)
     await expect(card(page).locator("[data-trend-name]")).toHaveText(
       " 記録温度 ",
     );
-    await expect(card(page)).toContainText("履歴表示は準備中");
+    await expect(card(page)).toContainText("履歴トレンド");
     const before = await saved(page);
     expect(before.manifest.schemaVersion).toBe("0.36.0");
     expect(before.trends[0].pens.map((p: any) => p.seriesId)).toEqual([
@@ -240,9 +240,15 @@ test("static card metadata reaches embedded, minimap and independent Popup witho
   await expect(
     minimap.locator("[data-trend-card] [data-trend-name]"),
   ).toHaveText(sample.trends[0].name);
+  await expect(
+    minimap.getByRole("button", { name: /の履歴を開く/ }),
+  ).toHaveCount(0);
   await page
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
+  await expect(
+    mainCanvas(page).getByRole("button", { name: /の履歴を開く/ }),
+  ).toHaveCount(0);
   // Embedded screens are deliberately pointer-inert. Click their screen point.
   const bounds = (await card(page).boundingBox())!;
   await page.mouse.click(
@@ -312,4 +318,59 @@ test("Project replacement retires a pending Trend draft", async ({ page }) => {
   await expect(dialog(page)).toHaveCount(0);
   await expect(card(page)).toHaveCount(1);
   expect((await saved(page)).trends).toEqual(sample.trends);
+});
+
+test("only a visible interactive Trend changes preview semantics; static and edit screens remain images", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(mainCanvas(page)).toHaveAttribute("role", "img");
+  await openProject(page, {
+    name: "trend-accessibility.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(sample)),
+  });
+  await expect(mainCanvas(page)).toHaveAttribute("role", "group");
+  const action = mainCanvas(page).getByRole("button", {
+    name: "工程温度の履歴を開く",
+    exact: true,
+  });
+  await action.focus();
+  await page.keyboard.press("Enter");
+  const history = page.getByRole("dialog", {
+    name: "履歴トレンド",
+    exact: true,
+  });
+  await expect(history).toContainText("履歴サービスは未接続です");
+  await history
+    .getByRole("button", { name: "閉じる", exact: true })
+    .last()
+    .click();
+  await expect(action).toBeFocused();
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await expect(mainCanvas(page)).toHaveAttribute("role", "img");
+  await expect(
+    mainCanvas(page).getByRole("button", { name: /の履歴を開く/ }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "表示プレビュー", exact: true })
+    .click();
+  const hidden = {
+    ...sample,
+    screens: sample.screens.map((screen) => ({
+      ...screen,
+      objects: screen.objects.map((object) =>
+        object.shape.type === "trend" ? { ...object, visible: false } : object,
+      ),
+    })),
+  };
+  await openProject(page, {
+    name: "hidden-trend.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(hidden)),
+  });
+  await expect(mainCanvas(page)).toHaveAttribute("role", "img");
+  await expect(
+    mainCanvas(page).getByRole("button", { name: /の履歴を開く/ }),
+  ).toHaveCount(0);
 });

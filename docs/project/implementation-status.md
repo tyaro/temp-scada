@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)を参照。[H4c1](../design/runtime/historian-trend-definition.md)の独立定義契約は実装・受入済み。[H4c2](../design/runtime/historian-trend-definition.md)でProject 0.36.0への保存・静的参照配置を提供する。保存定義からの履歴取得はH4c3。
+提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。
 
 最新の作図改善の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（全体CI成功）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
@@ -579,3 +579,13 @@ Project 0.35.0・App／main・DB format 5・H1・SDK／Banto依存は維持す�
 共通Project fixture18件がnative／TSで一致した。Rust全389件（新規1）・TS全1,604件（新規26）・型検査0error／0warning・build・Clippy／rustfmtが成功。関連Chromium47件（新規6件）が成功。新規6件で両テーマの保存／再読込・一括Undo／Redo・色／別名／順序、draft・shortcut・Project置換、共有編集／独立化／参照切替／削除、clipboard拒否、全SVG表示先を受け入れる。関連回帰も確認し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 H1／DB format 5／SDK固定版／Banto 6.9.0と外部依存は維持する。通常mainは未接続で、保存したnamespaceや系列の実在確認はまだ行わない。次のH4c3でcontext v2とpresetを既存単一HistoryWorkspaceへ接続し、読取active1を維持する。実adapter・transport／認証・inline chart・ChronoGazer還元は後続。上流・S7・実Hub／DB／設定・資格情報へ接続していない。
+
+## 保存Trendからの明示履歴検索（H4c3、2026-11-02）
+
+[PR #40](https://github.com/tyaro/temp-scada/pull/40)はマージ済み。[修正後の全体CI](https://github.com/tyaro/temp-scada/actions/runs/41453590820)は全7ジョブ成功。H4c3は保存済みTrendを、主画面の表示プレビュー・独立小窓のカードまたは編集Inspectorの「履歴を開く」から既存HistoryWorkspaceへ渡す。終了UTCは毎回空欄から明示入力し、開始は保存期間から計算する。期間・mode・点数・ペン順は定義に従い、手動検索へ移る時は明示解除して結果を消す。
+
+HistoryContext v2は必須namespaceを持ち、Project ID／revisionに加えて定義のnamespaceと全penの系列IDを照合する。v1手動検索を維持し、v1の保存preset利用・別namespace・系列不足は理由を表示して取得しない。alias／色は系列IDへ対応付け、応答segmentの元名称・単位・型・sourceを隠さず、未知系列も既存の部分結果で説明する。
+
+Project object／workspace世代／service／openごとのpresetと起点画面・Popup instanceで結果を所有する。変更・close・起点終了でclearし、Abort非協力の旧Promiseが終わるまで物理一枠を保持する。埋込みとミニマップは静的描画で取得actionを持たない。SVGのキーボード操作とclose後のフォーカス復帰も受け入れる。
+
+TS全1,623件（新規18）・型検査0error／0warning・buildが成功。関連Chromium47件（新規11）が成功し、Astraのread-only実装レビューに通常経路の必須修正はない。全体Prettier検査も成功した。詳細は採用設計のH4c3節を参照。全体CIはPRで確認する。Project 0.36.0／H1／DB format 5／固定SDK／Banto依存を維持し、nativeコードは変更しない。namespaceはcaller宣言の照合で実DB identityや記録済みの証明ではなく、通常mainは未接続である。実adapter・transport／認証、inline常時表示、長期検索、ChronoGazer還元は後続である。

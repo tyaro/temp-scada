@@ -14,6 +14,20 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## PR #41の通常プレビューSVG role回帰（2026-11-02）
+
+[失敗したCI](https://github.com/tyaro/temp-scada/actions/runs/41459100679)はfrontend／Rustが成功し、E2Eの4分割で計17件が失敗した。Trend actionを渡すと通常プレビュー全体のSVG roleをimgからgroupへ変えていたため、トレンドのないサンプル画面も既存のアクセシブルな画像名で見つからなくなった。描画・ファイル読込の失敗ではなく、検索対象となる画面のrole変更が共通原因だった。
+
+Rendererのgroupは「previewでcallbackがあり、直下に可視Trendがある」場合だけに限定し、静的画面・非表示Trendだけの画面・editでは既存imgを維持する。既存テストの期待を緩めず、通常画像の検出、可視Trendのkeyboard起動とfocus復帰、編集時と非表示時の静的roleを通常Appで検証する回帰を追加した。失敗17件を含む関連71件とTrend配置7件のChromium計78件、型検査0error／0warning、build、全体Prettier検査が成功した。修正後の全体CIは同PRの最新commitで確認する。
+
+role修正後の[push CI](https://github.com/tyaro/temp-scada/actions/runs/41462642766)は全7ジョブ成功した。[PR側](https://github.com/tyaro/temp-scada/actions/runs/41462651520)だけ小窓再表示直後のSpace操作が1件失敗した。trace／画面では初期移動先の小窓headerへfocusが移っており、headerへの遅延focusとテストのcard focusが競合していた。テストhelperで初期header focusを確認してからcardを操作するようにし、固定sleepや期待値の緩和を加えず、該当試験の連続10回を成功させた。
+
+## 保存Trendからの明示履歴検索（H4c3、2026-11-02）
+
+[PR #40](https://github.com/tyaro/temp-scada/pull/40)はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41453590820)全7ジョブ成功。H4c3はAstra主設計に従い、v2 namespace照合・全pen解決と保存presetから既存単一workspaceへの明示検索を追加した。定義順のraw／minmax、終了UTCからの安全な開始計算、ID対応のalias／colorを提供する。main preview／独立Popup／Inspectorから開き、起点画面・Popup instance・Project／serviceの寿命で退役する。v1手動検索とAbort非協力時の物理一枠を維持した。
+
+TS全1,623件（新規18）、check 0error／0warning、build、全体Prettier検査、関連Chromium47件（新規11）が成功。browserで見つかったedit選択のテストtargetを既存のobject hit領域へ修正し、SVG openerのfocus復帰はBanto公開Modal fallbackで対応した。Astraのread-only実装レビューに通常経路の必須修正はない。[採用設計の受入記録](../design/runtime/historian-trend-definition.md#h4c3の実装と受入2026-11-02)へ最終結果を記載する。実source／transport／認証、Project版・H1・DB5・native・固定SDK／Bantoと上流環境は変更しない。
+
 ## PR #40の画像同梱サンプル版更新漏れ（2026-11-02）
 
 [初回CI](https://github.com/tyaro/temp-scada/actions/runs/41438128625)はRust／frontendとE2Eの3分割が成功し、E2E 4/4でSymbol画像関連8件が失敗した。`symbol-image.project.json`は0.36.0へ更新済みだったが、圧縮済み`symbol-image.bantoscada`のmanifestだけ0.35.0に残っており、版不一致で読込を拒否していた。

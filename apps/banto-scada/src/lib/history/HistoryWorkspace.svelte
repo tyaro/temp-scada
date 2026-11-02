@@ -5,6 +5,9 @@
   import {
     historyContext,
     historyFormQuery,
+    historyPresetDefinition,
+    historyPresetQuery,
+    type HistoryPreset,
     newHistoryForm,
     type HistoryService,
     type HistoryContextState,
@@ -23,11 +26,15 @@
     service,
     onclose,
     focusFallback,
+    preset,
+    onrelease,
   }: {
     open: boolean;
     project: Project;
     generation: number;
     service?: HistoryService;
+    preset?: HistoryPreset;
+    onrelease?: () => void;
     onclose: () => void;
     focusFallback?: () => HTMLElement | null | undefined;
   } = $props();
@@ -45,13 +52,14 @@
     generation: number;
     service?: HistoryService;
     open: boolean;
+    preset?: HistoryPreset;
     selection: HistoryContextState;
   }>();
   let form = $state<HistoryForm>(newHistoryForm());
   let filter = $state("");
   let sequence = 0;
   $effect(() => {
-    const next = { project, generation, service, open };
+    const next = { project, generation, service, open, preset };
     untrack(() => {
       controller.setSource(undefined);
       const selection = historyContext(next.service, next.project);
@@ -69,16 +77,46 @@
       owner?.open &&
       owner.project === project &&
       owner.generation === generation &&
-      owner.service === service,
+      owner.service === service &&
+      owner.preset === preset,
   );
   const context = $derived(
     current && owner?.selection.phase === "ready"
       ? owner.selection.context
       : undefined,
   );
-  const draft = $derived(
-    context ? historyFormQuery(context, form, "history-preview") : undefined,
+  const definition = $derived(
+    preset
+      ? project.trends?.find((row) => row.id === preset.definitionId)
+      : undefined,
   );
+  const resolved = $derived(
+    context && preset
+      ? historyPresetDefinition(project, context, preset.definitionId)
+      : undefined,
+  );
+  const draft = $derived(
+    context
+      ? preset
+        ? resolved?.definition
+          ? historyPresetQuery(
+              context,
+              resolved.definition,
+              form.to,
+              "history-preview",
+            )
+          : { issue: resolved?.issue ?? "保存トレンドを確認できません" }
+        : historyFormQuery(context, form, "history-preview")
+      : undefined,
+  );
+  const from = $derived(
+    preset
+      ? draft?.query
+        ? new Date(draft.query.fromMs).toISOString()
+        : ""
+      : form.from,
+  );
+
   const visible = $derived(
     current
       ? presentation
@@ -120,8 +158,16 @@
   function load(event: SubmitEvent) {
     event.preventDefault();
     if (!current || !context) return;
-    const input = historyFormQuery(context, form, `history:${++sequence}`);
-    if (input.query) controller.load(input.query);
+    const requestId = `history:${++sequence}`;
+    const latest = preset
+      ? historyPresetDefinition(project, context, preset.definitionId)
+      : undefined;
+    const input = preset
+      ? latest?.definition
+        ? historyPresetQuery(context, latest.definition, form.to, requestId)
+        : undefined
+      : historyFormQuery(context, form, requestId);
+    if (input?.query) controller.load(input.query);
   }
   function close() {
     // Retire synchronously; don't wait for the parent's open prop/effect.
@@ -139,35 +185,63 @@
 >
   <div class="history-workspace">
     <p role="status">{connection}</p>
+    {#if preset}
+      <section aria-label="保存トレンドの設定">
+        <strong>{definition?.name ?? "保存トレンド"}</strong>
+        <p>namespace: {definition?.historianNamespace ?? "不明"}</p>
+        {#each definition?.pens ?? [] as pen (pen.id)}<p>
+            {pen.label !== undefined
+              ? `別名: ${pen.label} · `
+              : ""}{pen.seriesId} · {pen.color}
+          </p>{/each}
+        <p>
+          期間 {definition?.windowMs} ms · {definition?.mode} · 系列ごとの点数上限
+          {definition?.maxPointsPerSeries}
+        </p>
+        <p>系列一覧の一致は記録済み・保持中であることを保証しません。</p>
+        {#if resolved?.issue}<p role="status">{resolved.issue}</p>{/if}
+        <button
+          type="button"
+          onclick={() => {
+            controller.setSource(undefined);
+            onrelease?.();
+          }}>保存トレンドを解除して手動検索</button
+        >
+      </section>
+    {/if}
     <form onsubmit={load}>
       <fieldset disabled={!context}>
         <legend>検索条件</legend>
-        <label>系列の絞り込み <input type="search" bind:value={filter} /></label
-        >
-        <div class="series-list" role="group" aria-label="検索する履歴系列">
-          {#each rows as row (row.seriesId)}
-            <label class="series-row">
-              <input
-                type="checkbox"
-                checked={form.selected.includes(row.seriesId)}
-                disabled={!form.selected.includes(row.seriesId) &&
-                  form.selected.length >= 8}
-                onchange={(event) =>
-                  toggle(row.seriesId, event.currentTarget.checked)}
-              />
-              <span>{row.label} <small>{row.seriesId}</small></span>
-            </label>
-          {/each}
-          {#if context?.series.length && !rows.length}<p>
-              一致する系列はありません
-            </p>{/if}
-        </div>
-        <p>選択 {form.selected.length} / 8系列</p>
+        {#if !preset}
+          <label
+            >系列の絞り込み <input type="search" bind:value={filter} /></label
+          >
+          <div class="series-list" role="group" aria-label="検索する履歴系列">
+            {#each rows as row (row.seriesId)}
+              <label class="series-row">
+                <input
+                  type="checkbox"
+                  checked={form.selected.includes(row.seriesId)}
+                  disabled={!form.selected.includes(row.seriesId) &&
+                    form.selected.length >= 8}
+                  onchange={(event) =>
+                    toggle(row.seriesId, event.currentTarget.checked)}
+                />
+                <span>{row.label} <small>{row.seriesId}</small></span>
+              </label>
+            {/each}
+            {#if context?.series.length && !rows.length}<p>
+                一致する系列はありません
+              </p>{/if}
+          </div>
+          <p>選択 {form.selected.length} / 8系列</p>
+        {/if}
         <div class="conditions">
           <label
             >開始UTC <input
               type="text"
-              value={form.from}
+              value={from}
+              readonly={!!preset}
               placeholder="2026-11-02T00:00:00.000Z"
               spellcheck="false"
               oninput={(event) => change({ from: event.currentTarget.value })}
@@ -184,7 +258,8 @@
           >
           <label
             >取得モード <select
-              value={form.mode}
+              value={definition?.mode ?? form.mode}
+              disabled={!!preset}
               onchange={(event) => change({ mode: event.currentTarget.value })}
               ><option value="raw">raw（観測点）</option><option value="minmax"
                 >minmax（区間の最小・最大）</option
@@ -195,7 +270,8 @@
             >系列ごとの点数上限 <input
               type="text"
               inputmode="numeric"
-              value={form.points}
+              value={definition?.maxPointsPerSeries ?? form.points}
+              readonly={!!preset}
               oninput={(event) => change({ points: event.currentTarget.value })}
             /></label
           >
@@ -217,7 +293,10 @@
         <button type="button" onclick={close}>閉じる</button>
       </div>
     </form>
-    <TrendView state={visible} />
+    <TrendView
+      state={visible}
+      pens={current && preset ? resolved?.definition?.pens : undefined}
+    />
   </div>
 </Modal>
 

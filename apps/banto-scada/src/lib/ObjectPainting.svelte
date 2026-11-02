@@ -19,6 +19,7 @@
     images,
     readings,
     onsummary,
+    onopentrend,
   }: {
     object: ScreenObject;
     symbols?: SymbolDefinition[];
@@ -31,6 +32,7 @@
     >;
     readings?: TagReadings;
     onsummary?: (value: string) => void;
+    onopentrend?: (objectId: string) => void;
   } = $props();
 </script>
 
@@ -94,6 +96,7 @@
   </svg>
 {:else if "width" in object && object.shape.type === "trend"}
   <TrendPainting
+    onopen={onopentrend ? () => onopentrend?.(object.id) : undefined}
     width={object.width}
     height={object.height}
     definition={trends.find(

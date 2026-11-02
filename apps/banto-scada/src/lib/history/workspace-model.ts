@@ -4,19 +4,29 @@ import { parseHistoryContract, type HistoryQuery } from "../history-contract";
 import type { Project } from "../project";
 import type { HistorySource } from "./presentation";
 import { ownHistoryJson, freezeHistory } from "./owned-json";
+import {
+  parseTrendDefinitions,
+  type TrendDefinition,
+} from "../trend-definitions";
 
 /** In-process selection snapshot. Replace the service object to renew it. */
 export interface HistoryService {
   source: HistorySource;
   context: unknown;
 }
-export interface HistoryContext {
-  version: 1;
+interface HistoryContextFields {
   kind: "historyContext";
   contextId: string;
   projectId: string;
   projectRevision: number;
   series: { seriesId: string; label: string }[];
+}
+export type HistoryContext = HistoryContextFields &
+  ({ version: 1 } | { version: 2; historianNamespace: string });
+/** Fresh identity for every explicit open, including the same definition. */
+export interface HistoryPreset {
+  definitionId: string;
+  token: object;
 }
 const validateContext = new Ajv2020({
   strictNumbers: true,
@@ -32,7 +42,8 @@ const validateContext = new Ajv2020({
     "series",
   ],
   properties: {
-    version: { const: 1 },
+    version: { enum: [1, 2] },
+    historianNamespace: { $ref: "#/$defs/id" },
     kind: { const: "historyContext" },
     contextId: { $ref: "#/$defs/id" },
     projectId: { type: "string" },
@@ -55,6 +66,13 @@ const validateContext = new Ajv2020({
       },
     },
   },
+  oneOf: [
+    {
+      properties: { version: { const: 1 } },
+      not: { required: ["historianNamespace"] },
+    },
+    { properties: { version: { const: 2 } }, required: ["historianNamespace"] },
+  ],
   $defs: { id: historySchema.$defs.id },
 });
 export type HistoryContextState =
@@ -100,7 +118,7 @@ export const newHistoryForm = (): HistoryForm => ({
   mode: "raw",
   points: "100",
 });
-function utcMs(text: string): number | undefined {
+export function utcMs(text: string): number | undefined {
   if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(text)) return;
   const value = Date.parse(text);
   if (Number.isFinite(value) && new Date(value).toISOString() === text)
@@ -147,6 +165,79 @@ export function historyFormQuery(
       toMs,
       mode: form.mode,
       maxPointsPerSeries,
+    });
+    if (query.kind !== "query") throw Error("query kind");
+    return { query };
+  } catch {
+    return { issue: "検索条件を確認してください" };
+  }
+}
+
+/** Resolve a fresh, owned definition; a listing is not proof of retained data. */
+export function historyPresetDefinition(
+  project: Pick<Project, "trends">,
+  context: HistoryContext,
+  definitionId: string,
+):
+  | { definition: TrendDefinition; issue?: never }
+  | { issue: string; definition?: never } {
+  const input = project.trends?.find((row) => row.id === definitionId);
+  if (!input) return { issue: "保存トレンド定義が見つかりません" };
+  let definition: TrendDefinition;
+  try {
+    definition = parseTrendDefinitions({
+      version: 1,
+      kind: "trendDefinitions",
+      definitions: [input],
+    }).definitions[0];
+  } catch {
+    return { issue: "保存トレンド定義を確認できません" };
+  }
+  if (context.version !== 2)
+    return { issue: "この接続は保存Trendの系列対応を提供していません" };
+  if (context.historianNamespace !== definition.historianNamespace)
+    return { issue: "保存トレンドと接続先のnamespaceが一致しません" };
+  const ids = new Set(context.series.map((row) => row.seriesId));
+  if (definition.pens.some((pen) => !ids.has(pen.seriesId)))
+    return { issue: "保存トレンドの全系列が接続先の一覧にありません" };
+  return { definition };
+}
+export function historyPresetQuery(
+  context: HistoryContext,
+  definition: TrendDefinition,
+  to: string,
+  requestId: string,
+): { query: HistoryQuery; issue?: never } | { issue: string; query?: never } {
+  // Revalidate the declaration and settings at the final query boundary too.
+  const resolved = historyPresetDefinition(
+    { trends: [definition] },
+    context,
+    definition.id,
+  );
+  if (!resolved.definition) return { issue: resolved.issue };
+  definition = resolved.definition;
+  const toMs = utcMs(to);
+  if (toMs === undefined)
+    return {
+      issue:
+        "終了は実在するUTC時刻を YYYY-MM-DDTHH:mm:ss.SSSZ で入力してください",
+    };
+  const fromMs = toMs - definition.windowMs;
+  if (!Number.isSafeInteger(fromMs) || !Number.isSafeInteger(toMs))
+    return { issue: "検索期間を安全に計算できません" };
+  const from = new Date(fromMs);
+  if (!Number.isFinite(from.getTime()) || utcMs(from.toISOString()) !== fromMs)
+    return { issue: "計算した開始UTCが4桁年の範囲を超えています" };
+  try {
+    const query = parseHistoryContract({
+      version: 1,
+      kind: "query",
+      requestId,
+      seriesIds: definition.pens.map((pen) => pen.seriesId),
+      fromMs,
+      toMs,
+      mode: definition.mode,
+      maxPointsPerSeries: definition.maxPointsPerSeries,
     });
     if (query.kind !== "query") throw Error("query kind");
     return { query };

@@ -136,6 +136,7 @@
   let projectFileInput = $state<HTMLInputElement>();
   let helpOpen = $state(false);
   let historyOpen = $state(false);
+  let historySvgOpener: SVGElement | null = null;
   function toggleMenubar() {
     showMenubar = !showMenubar;
     void setMenubarVisible(showMenubar);
@@ -1949,6 +1950,92 @@
     definitionId?: string;
   } | null>(null);
   let trendError = $state("");
+  // Each explicit open is a new owner, even for the same saved definition.
+  let historyPreset = $state.raw<
+    | {
+        project: Project;
+        generation: number;
+        definitionId: string;
+        token: object;
+        screenId: string;
+        sourceScreenId: string;
+        objectId: string;
+        mode: string;
+        popupToken?: object;
+      }
+    | undefined
+  >();
+  const currentHistoryPreset = $derived(
+    historyPreset &&
+      historyPreset.project === project &&
+      historyPreset.generation === workspaceGeneration &&
+      historyPreset.screenId === screen.id &&
+      historyPreset.mode === mode &&
+      !activeDefinition
+      ? historyPreset
+      : undefined,
+  );
+  $effect(() => {
+    if (historyPreset && !currentHistoryPreset) {
+      historyOpen = false;
+      historyPreset = undefined;
+    }
+  });
+  function openTrendHistory(
+    sourceScreenId: string,
+    objectId: string,
+    popupToken?: object,
+  ) {
+    if (busy || replacement || trendRequest || activeDefinition) return;
+    const originId = screen.id,
+      generation = workspaceGeneration,
+      sourceMode = mode;
+    withScreen(originId, () => {
+      if (
+        generation !== workspaceGeneration ||
+        screen.id !== originId ||
+        mode !== sourceMode ||
+        activeDefinition
+      )
+        return;
+      // Resolve against the current Project after any pending form was applied.
+      const object = project.screens
+        .find((row) => row.id === sourceScreenId)
+        ?.objects.find((row) => row.id === objectId);
+      if (
+        !object ||
+        object.shape.type !== "trend" ||
+        !project.trends?.some(
+          (row) =>
+            object.shape.type === "trend" && row.id === object.shape.trendId,
+        )
+      )
+        return;
+      stopPlacement();
+      historySvgOpener =
+        document.activeElement instanceof SVGElement
+          ? document.activeElement
+          : null;
+      historyPreset = {
+        project,
+        generation,
+        definitionId: object.shape.trendId,
+        token: {},
+        screenId: originId,
+        sourceScreenId,
+        objectId,
+        mode: sourceMode,
+        popupToken,
+      };
+      historyOpen = true;
+    });
+  }
+  function retirePopupTrend(token: object) {
+    if (historyPreset?.popupToken === token) {
+      historyOpen = false;
+      historyPreset = undefined;
+    }
+  }
   function openTrendDefinitions(definitionId?: string) {
     if (
       mode !== "edit" ||
@@ -3023,7 +3110,11 @@
       changeMode,
       chooseTheme,
       openHistory: () => {
-        if (!menuBlocked) historyOpen = true;
+        if (!menuBlocked) {
+          historySvgOpener = null;
+          historyPreset = undefined;
+          historyOpen = true;
+        }
       },
     },
   });
@@ -3630,6 +3721,7 @@
     <div class="canvas-stack" bind:clientHeight={canvasStackHeight}>
       {#key workspaceGeneration}
         <CanvasWorkspace
+          onopentrend={(objectId) => openTrendHistory(screen.id, objectId)}
           equipmentContext={readContext.equipmentContext}
           readings={readContext.readings}
           bind:this={canvasWorkspace}
@@ -3684,6 +3776,8 @@
       {#if mode === "preview"}
         {#key `${workspaceGeneration}:${screen.id}:${mode}`}
           <PreviewPopups
+            onopentrend={openTrendHistory}
+            onretiretrend={retirePopupTrend}
             bind:this={previewPopups}
             equipmentContext={readContext.equipmentContext}
             readings={readContext.readings}
@@ -3823,6 +3917,7 @@
       onopenequipment={openSelectedEquipment}
       onopenequipmentsettings={(id) => openSelectedEquipment(id, "settings")}
       onmanagetrend={openTrendDefinitions}
+      onopentrend={(objectId) => openTrendHistory(screen.id, objectId)}
       {openScreen}
       images={assetImages}
       onreplaceimage={imageImport.openReplacement}
@@ -3918,13 +4013,27 @@
   />
 {/if}
 <HistoryWorkspace
-  open={historyOpen}
+  open={historyOpen && (!historyPreset || !!currentHistoryPreset)}
+  preset={currentHistoryPreset}
+  onrelease={() => (historyPreset = undefined)}
   {project}
   generation={workspaceGeneration}
   service={historyService}
   onclose={() => (historyOpen = false)}
-  focusFallback={() =>
-    document.querySelector<HTMLButtonElement>("[data-permanent-menu]")}
+  focusFallback={() => {
+    // Banto captures HTML openers. Its public fallback may restore SVG focus.
+    const opener = historySvgOpener;
+    historySvgOpener = null;
+    if (
+      opener?.isConnected &&
+      !opener.closest("[inert]") &&
+      opener.getClientRects().length
+    ) {
+      opener.focus();
+      return;
+    }
+    return document.querySelector<HTMLButtonElement>("[data-permanent-menu]");
+  }}
 />
 <Modal
   open={helpOpen}

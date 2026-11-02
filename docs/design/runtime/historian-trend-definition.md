@@ -1,6 +1,6 @@
 # Historian H4c: 永続Trend定義と画面からの履歴表示
 
-2026-11-02（日本時間）。**Astra主設計の採用契約。H4c1とH4c2の独立契約・Project 0.36.0保存・静的参照shapeはローカル実装・受入済み。context v2・保存presetからの履歴取得は未実装。** H4b2まではProject 0.35.0の通常Appから明示検索できる。[現在のworkspace](historian-history-workspace.md)、[配送と描画](historian-history-presentation.md)、[P5](historian-trend-contract.md)を前提とする。
+2026-11-02（日本時間）。**Astra主設計の採用契約。H4c1〜3の独立契約・Project 0.36.0保存・参照shape・context v2・保存presetからの明示履歴検索を実装。常時inline表示と実adapterは後続。** H4b2まではProject 0.35.0の通常Appから明示検索できる。[現在のworkspace](historian-history-workspace.md)、[配送と描画](historian-history-presentation.md)、[P5](historian-trend-contract.md)を前提とする。
 
 ## 採用する最初の利用経路
 
@@ -136,7 +136,7 @@ source v1/v2、namespace、選択context、定義snapshotとquery全体の一致
 | 設計（PR #38）           | この採用契約と工程表                                                       | 現行実装との区別、未接続／意味／寿命／version境界をレビュー                                                                                                                              |
 | H4c1（ローカル受入済み） | 独立TrendDefinitions schema、native／TS純粋validator、共通fixtures         | 0/128定義、8pen、重複ID/series、同series別namespace、文字数、色、1h/8000点、unsafe値、未知field、JSON上限、Rust/TS一致。Project0.35.0へまだ組み込まない                                  |
 | H4c2（ローカル受入済み） | Project0.36.0、参照shape、原子的編集、SVGカード、保存／Undo／同Project複製 | 全言語parse/roundtrip、欠落参照・Symbol配置・外部clipboard拒否、未接続でも正当な保存、画像/接続線/埋込/Popup/回転/選択の既存回帰。カードは「履歴表示は準備中」と表示して検索を発行しない |
-| H4c3                     | context v2、namespace照合、定義preset→既存workspace、色と凡例、画面action  | 通常Appで保存定義からraw/minmaxを明示取得。v1手動維持、別namespace同ID拒否、部分未解決拒否、unknownSeries応答、UTC算術端、service/定義/画面/Popup寿命、複数配置でもactive1、両theme      |
+| H4c3（ローカル受入済み） | context v2、namespace照合、定義preset→既存workspace、色と凡例、画面action  | 通常Appで保存定義からraw/minmaxを明示取得。v1手動維持、別namespace同ID拒否、部分未解決拒否、unknownSeries応答、UTC算術端、service/定義/画面/Popup寿命、複数配置でもactive1、両theme      |
 
 H4c2で「Trend表示完成」とはしない。H4c3で保存定義からの履歴表示までが完成し、画面内常時グラフは別工程である。inline化を再開する時は、同時可視instance数、全体points/bytes、要求fairness、取消中資源、hidden/embedded/Popupの需要集約を先に決める。今回の単一workspace予算を無条件に各shapeへ複製しない。
 
@@ -163,3 +163,15 @@ Project 0.36.0のtrends／参照shape、同じH4c1 resourceと意味検査・wra
 共通Project18ケース・新規TS26件／native1件・関連Chromium47件（通常Appの新規6件）で、原子保存と失敗時不変、一括Undo／Redo、旧版拒否、参照整合／Symbol禁止、予算、共有更新／独立化、clipboard、所有者変更、全SVG表示先・両テーマを確認した。Rust全389件、TS全1,604件、型検査／build／Clippy／rustfmt成功。Astra最終レビューに必須修正はない。モード変更で既存Popupを閉じる振る舞いは維持し、再openで新定義名を反映する。全体CIはPRで確認する。
 
 0.35.0自動移行は追加していない。通常mainの実接続、H1・DB format 5・SDK／Banto固定依存は維持する。H4c3でnamespace付きcontext v2と保存presetを接続し、単一workspaceとactive一枠の寿命を維持する。保存と配置の受入は、実データ集合や系列の解決・記録・認証の保証ではない。
+
+## H4c3の実装と受入（2026-11-02）
+
+HistoryContext v2の必須namespaceを同じH1 ID grammar／1MiB所有予算で受け入れ、v1の手動検索を維持した。保存presetはv2のnamespace完全一致と全penの系列ID存在を要求する。現在Projectから定義を再取得し、共通Trend validatorで所有したsnapshotから定義順のH1 queryを生成する。namespace・alias・colorをH1へ混入させない。
+
+終了UTCだけを明示入力し、保存windowの差引をsafe integer・Date範囲・canonical四桁年UTC roundtripで検査する。preset中の定義設定はreadonly、明示解除は入力と結果をclearする。TrendViewはseriesIdでalias／colorを適用し、segmentの元情報、raw点・独立包絡・unknownSeriesの意味を維持する。
+
+主画面preview／独立PopupのSVGカード、edit Inspectorから同じApp workspaceを開く。openごとの要求identity、Project object／世代、service、起点画面／Popup instanceの変更で即時guardとsource unbindを使って旧表示を退役する。controllerのactive Promise最大1・pending最新1は維持する。Popupを閉じて同じtargetを開き直してもtokenを再利用しない。ScreenView／Minimapへactionは渡さない。SVGのEnter／Spaceとclose後のfocusはBantoの公開Modal fallbackを使用する。
+
+TS全1,623件（新規18）・型検査0error／0warning・buildが成功。新規純粋検証はv2所有と不正入力、v1 gate、別namespace／部分未解決、定義順、negative epoch、四桁年の上下端・不正UTC、最終query再検証を担当する。関連Chromium47件（新規11件）が成功した。新規11件で両テーマのraw、minmax、v1／namespace不一致／系列不足の拒否、unknownSeries、色／alias、readonly preset／解除、Project保存不変、SVG keyboard／focus、別定義／service／Project差替え、起点画面／Popup終了とAbort非協力時active1を受け入れた。既存手動検索・純粋描画・共通応答fixture・定義編集・Popupの36件も回帰した。全体Prettier検査が成功し、Astraのread-only設計・実装レビューに通常経路の必須修正はない。全体CIはPRで確認する。
+
+Project 0.36.0、H1、DB format 5、native、固定SDK、Banto 6.9.0は変更しない。namespaceはcaller宣言の照合に限り、正式wire契約／実DB identity検証ではない。通常mainは未接続で、実source adapter・transport／認証、inline常時chart、長期検索とChronoGazer還元は後続とする。

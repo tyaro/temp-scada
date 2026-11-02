@@ -7,7 +7,21 @@
     historyTime,
     historyReason,
   } from "./trend-model";
-  let { state: presentation }: { state: HistoryPresentation } = $props();
+  import type { TrendPen } from "../trend-definitions";
+  let {
+    state: presentation,
+    pens = [],
+  }: {
+    state: HistoryPresentation;
+    pens?: readonly Pick<TrendPen, "seriesId" | "label" | "color">[];
+  } = $props();
+  // Only identity matches receive presentation overrides; no positional mapping.
+  const pen = $derived(pens.find((pen) => pen.seriesId === series?.seriesId));
+  const color = $derived(
+    pen && /^#[0-9a-fA-F]{6}$/.test(pen.color)
+      ? pen.color
+      : "var(--banto-primary)",
+  );
   const model = $derived(
     presentation.result ? projectHistoryTrend(presentation.result) : undefined,
   );
@@ -46,6 +60,7 @@
   class="history-trend"
   aria-label="履歴トレンド"
   data-history-phase={presentation.phase}
+  style:--history-pen-color={color}
 >
   <header>
     <strong>履歴トレンド</strong><span role="status">{phaseText}</span>
@@ -58,10 +73,17 @@
         aria-label="表示する履歴系列"
       >
         {#each model.series as row}<option value={row.seriesId}
-            >{row.lanes[0]?.identity.externalName ?? row.seriesId}</option
+            >{pens.find((pen) => pen.seriesId === row.seriesId)?.label ??
+              row.lanes[0]?.identity.externalName ??
+              row.seriesId}</option
           >{/each}
       </select></label
     >
+    <p class="pen-identity">
+      <span class="pen-marker" aria-hidden="true"
+      ></span>{#if pen?.label !== undefined}別名: {pen.label} ·
+      {/if}系列ID: {series.seriesId}
+    </p>
     <p class="range">
       {historyTime(model.query.fromMs)} 〜 {historyTime(model.query.toMs)} · UTC・終了時刻を含まない
     </p>
@@ -306,18 +328,25 @@
   .axis {
     stroke: var(--banto-border);
   }
+  .pen-marker {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin-right: 0.4rem;
+    background: var(--history-pen-color);
+  }
   circle {
-    fill: var(--banto-primary);
+    fill: var(--history-pen-color);
   }
   .envelope {
-    fill: color-mix(in srgb, var(--banto-primary) 28%, transparent);
-    stroke: var(--banto-primary);
+    fill: color-mix(in srgb, var(--history-pen-color) 28%, transparent);
+    stroke: var(--history-pen-color);
   }
   [data-bin-state="partial"] {
     stroke-dasharray: 3 2;
   }
   .boolean-range {
-    stroke: var(--banto-primary);
+    stroke: var(--history-pen-color);
     stroke-width: 3;
   }
   .missing {
