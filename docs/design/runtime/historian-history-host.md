@@ -104,3 +104,7 @@ Rust workspace384件（新規7単体・5統合）・Clippy `-D warnings`／rustf
 統合ではraw／minmax・Bad無値・unknownSeries、TooManyPoints後の明示minmax、2lease上限、同H1 requestIdでも別token、無効な次要求による旧結果維持を確認した。mock Hub→記録中query→clean pause保持job→同readerでexpired照会まで接続し、過去結果Arcの不変性とreader処分まで残るwriter ownershipも検証した。Astra最終レビューに必須修正はない。
 
 製品HTTP／IPC、認証、画面側HistorySource／Trend、外部JSON parse境界は後続。同期I/Oのhard timeoutや実媒体性能・実S7測定を追加保証せず、上流・S7・実環境へ接続していない。
+
+## H4b1の画面側基盤
+
+[History配送と共通Trend表示](historian-history-presentation.md)に、TS source／controllerとraw点・minmax範囲の表示を追加した。H4aとの製品transport adapterはまだ接続せず、browser受入は明示fixtureを使用する。controllerのAbortは下位read終了確認とは区別し、Source Promiseのsettleを待ってから次要求を開始する。

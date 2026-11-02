@@ -111,6 +111,13 @@ interface Result {
   series: SeriesResult[];
 }
 export type HistoryContract = Query | Batch | Result;
+export type HistoryQuery = Query;
+export type HistoryResult = Result;
+export type HistorySeriesResult = SeriesResult;
+export type HistoryIdentity = Identity;
+export type HistorySample = Sample;
+export type HistoryBin = Bin;
+export type HistoryCoverage = Coverage;
 
 // The schema is shared with Rust. Finiteness is an explicit semantic check;
 // non-finite JS inputs cannot occur in a parsed JSON document.
