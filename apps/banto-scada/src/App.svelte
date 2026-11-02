@@ -4022,12 +4022,14 @@
   onclose={() => (historyOpen = false)}
   focusFallback={() => {
     // Banto captures HTML openers. Its public fallback may restore SVG focus.
+    const opener = historySvgOpener;
+    historySvgOpener = null;
     if (
-      historySvgOpener?.isConnected &&
-      !historySvgOpener.closest("[inert]") &&
-      historySvgOpener.getClientRects().length
+      opener?.isConnected &&
+      !opener.closest("[inert]") &&
+      opener.getClientRects().length
     ) {
-      historySvgOpener.focus();
+      opener.focus();
       return;
     }
     return document.querySelector<HTMLButtonElement>("[data-permanent-menu]");
