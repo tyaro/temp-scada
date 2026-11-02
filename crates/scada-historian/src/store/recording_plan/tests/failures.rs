@@ -222,8 +222,8 @@ fn recording_process_worker() {
     panic!("recording apply boundary was not reached");
 }
 #[test]
-fn format_five_and_unknown_formats_are_rejected_without_migration() {
-    for version in [5, 7] {
+fn format_five_six_and_unknown_formats_are_rejected_without_migration() {
+    for version in [5, 6, 8] {
         let directory = TempStore::new();
         drop(directory.create());
         let path = directory.0.join("store.sqlite3");

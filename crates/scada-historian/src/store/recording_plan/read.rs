@@ -7,6 +7,7 @@ pub(super) struct Heads {
     pub mapping: Option<u64>,
     pub applied: Option<u64>,
     pub definitions: u64,
+    pub activation: Option<u64>,
 }
 pub(super) fn snapshot(c: &Connection, b: &mut Budget) -> StoreResult<u64> {
     b.work.statement()?;
@@ -50,7 +51,10 @@ pub(super) fn heads(c: &Connection, b: &mut Budget) -> StoreResult<Heads> {
     {
         return Err(StoreError::CorruptData);
     }
+    let activation =
+        activation::head(c, b, applied.map(|n| n as u64), snapshot, ledger.as_deref())?;
     Ok(Heads {
+        activation,
         snapshot,
         ledger,
         mapping: mapping.map(|n| n as u64),
@@ -358,6 +362,6 @@ pub(super) fn state(c: &Connection, b: &mut Budget) -> StoreResult<RecordingPlan
         ledger_plan_id: h.ledger,
         mapping,
         applied,
-        activation_supported: false,
+        activation_supported: true,
     })
 }

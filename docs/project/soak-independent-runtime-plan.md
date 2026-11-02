@@ -476,3 +476,9 @@ H5aとして共通Schema・Rust／TS純粋検証・139共通fixtureとbrowser mo
 H5aは[PR #43](https://github.com/tyaro/temp-scada/pull/43)でマージ済み、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41477917969)と[push CI](https://github.com/tyaro/temp-scada/actions/runs/41477765904)は全7job成功。[H5b1の設計と受入](../design/runtime/historian-recording-plan-ledger.md)に沿い、DB6のnative台帳・mapping／applied CAS・再送receipt・管理状態・系列予約とmanaged begin gateを実装した。原子的保存とSDK activationは別で、現在の新規記録開始はmanaged storeでは拒否する。
 
 次はH5b2のactivation/session binding、その後H5cのpreflight／stop／join／apply／activateと再起動復元。H5dのProject保存・編集、実source adapter、製品transport／認証、複数group／queue、信頼時計・自動保持、媒体I/O／GC等は後続である。上流・S7・実Hub・本番DB・設定・資格情報へアクセスしていない。
+
+## 適用計画と記録開始の原子binding（H5b2、2026-11-03）
+
+PR #44のP2（異なる8applicationで予約された8memberの再適用が重複検証で予算超過）を修正し、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41540624840)／[push CI](https://github.com/tyaro/temp-scada/actions/runs/41540619120)とも全7job成功。[H5b2詳細](../design/runtime/historian-recording-activation.md)に従い、native activation専用入口で計画と固定session／timed evidence／receiptを一つのcommitへ結合する。現在状態と安定receiptを分離し、旧再送で再開しない。
+
+DB7／6拒否・migrationなし。Project0.36・H1・SDK／Bantoと依存は維持する。次はH5cのsupervisor／preflight／stop／joinと実clock開始点への結合、H5dのProject編集である。今回はSDK/worker起動、実環境接続、上流変更を含めない。

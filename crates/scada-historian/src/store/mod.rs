@@ -18,7 +18,7 @@ use std::time::Duration;
 use rusqlite::{params, Connection, OpenFlags, OptionalExtension};
 
 pub type StoreResult<T> = Result<T, StoreError>;
-pub const STORE_FORMAT_VERSION: i64 = 6;
+pub const STORE_FORMAT_VERSION: i64 = 7;
 
 #[derive(Debug)]
 pub enum StoreError {
@@ -328,7 +328,7 @@ impl SqliteStore {
             )?;
         }
         if let Some(start) = &start {
-            evidence::save_start(&tx, &spec, start, commit)?;
+            evidence::save_start(&tx, &spec, start, commit, None)?;
         }
         hook(Boundary::Metadata)?;
         hook(Boundary::BeforeCommit)?;

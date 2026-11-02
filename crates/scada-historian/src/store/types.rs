@@ -129,14 +129,16 @@ pub struct Tick {
     pub observations: Vec<TickObservation>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub enum SessionState {
     Active,
     Closed,
     Interrupted,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct SessionStatus {
     pub spec: SessionSpec,
     pub state: SessionState,

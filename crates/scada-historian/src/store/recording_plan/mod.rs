@@ -1,4 +1,5 @@
-//! H5b1: durable desired/mapping ledger. Applying configuration never starts SDK work.
+//! H5b1/2: durable configuration and atomic session binding. No SDK/worker startup.
+mod activation;
 mod canonical;
 mod read;
 mod reservations;
@@ -8,6 +9,7 @@ use super::{
     evidence, id, invalid, next_commit, query, recovery, retention, Boundary, IdentityDescriptor,
     SessionSpec, SqliteStore, StoreError, StoreResult, MAX_SAFE,
 };
+pub use activation::*;
 use query::{control::Budget, QueryControl};
 use rusqlite::{params, Connection, OptionalExtension};
 pub use types::*;

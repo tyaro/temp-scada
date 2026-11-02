@@ -14,6 +14,12 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## 記録計画とtimed sessionの原子binding（H5b2、2026-11-03）
+
+Astra主設計のnative専用activation、ID別／latest照会を追加した。現在applied・mapping・保持版とfence、新session/clock epochを照合し、固定spec・PlanRef・永久metadata・開始証拠・receipt・headを同時保存する。旧要求再送はterminal sessionでも元receiptを返し、再実行しない。DB7へ進め、旧6を含む自動migrationは追加しない。Project0.36・H1・SDK／Bantoと依存は維持した。
+
+native20件を追加し、全437件・Clippy／rustfmtが成功。8memberの異なる8予約元・容量・腐敗・FULL＋取消・panic/cleanup失敗・各COMMIT境界のprocess終了とrestartを受け入れる。Astraレビューで指摘された永久metadata欠落を回帰し、再生成による隠蔽を拒否した。SDK/worker起動、supervisorとProject/UIは後続へ残す。
+
 ## PR #44の別8member群切替レビュー修正（2026-11-03）
 
 追加P2として異なる16 originsの8member群の往復切替を再現し、32個のseries／segment初利用・各別保持revisionを持つ構成まで回帰を追加した。identity pairの同一transaction内再利用と、関連する台帳／定義／mapping／previous commitのJOIN取得で重複読取を減らした。共通validatorによる本文・hash・receipt・初利用・commit順序の検査とbytes／SQL／VM課金、256行上限は維持する。Astraのread-onlyレビューに必須修正はない。
