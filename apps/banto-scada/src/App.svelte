@@ -7,10 +7,17 @@
     createCatalogController,
     type CatalogSource,
   } from "./lib/designer/controllers/catalog.svelte";
+  import HistoryWorkspace from "./lib/history/HistoryWorkspace.svelte";
+  import type { HistoryService } from "./lib/history/workspace-model";
   let {
     readSource,
     catalogSource,
-  }: { readSource?: ReadSource; catalogSource?: CatalogSource } = $props();
+    historyService,
+  }: {
+    readSource?: ReadSource;
+    catalogSource?: CatalogSource;
+    historyService?: HistoryService;
+  } = $props();
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
     selectionPaintAlphaCommand,
@@ -126,6 +133,7 @@
   let showMenubar = $state(getMenubarVisible());
   let projectFileInput = $state<HTMLInputElement>();
   let helpOpen = $state(false);
+  let historyOpen = $state(false);
   function toggleMenubar() {
     showMenubar = !showMenubar;
     void setMenubarVisible(showMenubar);
@@ -814,6 +822,7 @@
     }
   }
   function shortcut(event: KeyboardEvent) {
+    if (historyOpen) return;
     if (
       event.key.toLowerCase() === "f" &&
       !event.ctrlKey &&
@@ -1540,6 +1549,7 @@
     assetStore = store;
     previousStore.dispose();
     project = next;
+    historyOpen = false;
     projectFiles.adopted(next, source);
     history = emptyHistory();
     referencesExpanded = false;
@@ -2701,7 +2711,11 @@
     }
   }
   const menuBlocked = $derived(
-    busy || !!drafts.pending || !!replacement || floatingPanels.gesturing,
+    busy ||
+      !!drafts.pending ||
+      !!replacement ||
+      floatingPanels.gesturing ||
+      historyOpen,
   );
   const editBlocked = $derived(menuBlocked || mode !== "edit");
   const selectionViewTarget = $derived(selectionTarget(screen, selectedIds));
@@ -2919,6 +2933,9 @@
       toggleMenubar,
       changeMode,
       chooseTheme,
+      openHistory: () => {
+        if (!menuBlocked) historyOpen = true;
+      },
     },
   });
   const folderContextItems = $derived(designerActions.folderContext());
@@ -3798,6 +3815,15 @@
   {/key}
 {/if}
 <DraftPrompt guard={drafts} />
+<HistoryWorkspace
+  open={historyOpen}
+  {project}
+  generation={workspaceGeneration}
+  service={historyService}
+  onclose={() => (historyOpen = false)}
+  focusFallback={() =>
+    document.querySelector<HTMLButtonElement>("[data-permanent-menu]")}
+/>
 <Modal
   open={helpOpen}
   title="操作ガイド・アプリ情報"

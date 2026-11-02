@@ -33,7 +33,8 @@
 | H3c 単一group Host    | 一つのwriterと専用SDK入力をblocking workerで実行                  | 開始・停止・取消安全join、差替え、writer所有・Drop／panicを検証                          | PR #33マージ・全体CI成功     |
 | H3d 記録と保持の協調  | clean pause後に最大一回の保持操作、明示new-session再開            | guard／job状態・writer所有を保持し、異常時再開を拒否                                     | PR #34マージ・全体CI成功     |
 | H4a History読取Host   | 一要求ごとに既存readerでraw／minmax検索                           | 取消安全join、exact token、reader leaseと記録／保持独立を検証                            | PR #35マージ・全体CI成功     |
-| H4b1 History表示基盤  | TS要求配送・純粋Trend model・共通renderer                         | raw点／包絡／無値・coverage、取消／旧応答と両テーマをfixture検証                         | ローカル実装・受入済み       |
+| H4b1 History表示基盤  | TS要求配送・純粋Trend model・共通renderer                         | raw点／包絡／無値・coverage、取消／旧応答と両テーマをfixture検証                         | PR #36マージ・全体CI成功     |
+| H4b2 App履歴検索      | 通常Appの明示検索Modalとoptional HistoryService                   | context／UTC検証、寿命退役・物理一枠、Project保存不変を通常Appで検証                     | ローカル実装・受入済み       |
 
 ## P1の実装契約
 
@@ -413,3 +414,13 @@ H4aは[PR #35](https://github.com/tyaro/temp-scada/pull/35)でマージ済み（
 TS1,443件（新規36件）・型検査・build・関連Chromium12件が成功し、Astra最終レビューに必須修正はない。全体CIはPRで確認する。H1／Rust／DB／Project／SDK／Banto・外部依存は維持する。
 
 次は通常App呼出し・正式Trend定義とHistorySource adapterの接続。製品transport／認証、計画配布・複数group、自動保持・媒体I/O等は保留／後続である。fixtureは実SQLite接続ではなく、上流・S7・実環境へ接続していない。
+
+## H4b2の実装と残り（2026-11-02）
+
+H4b1は[PR #36](https://github.com/tyaro/temp-scada/pull/36)でマージ済み（`9d273aead1814088b34d7149d9d0e72bc3ab9332`）、[全体CI 41362821595](https://github.com/tyaro/temp-scada/actions/runs/41362821595)成功。Astra主設計の[H4b2](../design/runtime/historian-history-workspace.md)を実装した。通常Appの「表示→履歴トレンド」からBanto Modalで系列・UTC範囲・raw／minmax・点数を指定して明示検索できる。既定は未接続を説明し、sample系列や自動検索を作らない。
+
+任意HistoryServiceのcontextは1MiB以下のowned／frozen plain JSONとして検証し、最大256件の一意なopaque系列IDとlabelを受け取る。現在ProjectのID／revision一致に加え、Project object・workspace世代・service identityで表示と取得を守る。form編集・close・Project／service変更で結果を退役し、同じcontrollerをModal開閉の外で保持して、Abort無視のread終了まで物理一枠を空けない。履歴Modal中は背後の編集shortcutを遮断する。H1のID grammar・最終query検証を共用し、UTCはcanonical文字列のround tripで検査する。
+
+TS全体1,482件（新規39件）・型検査0error／0warning・build・関連Chromium32件（新規8件）が成功。通常Appへのservice注入だけで、未接続／不正・不一致・空context、両テーマraw／minmax、条件変更clear、tooManyPoints／partial、取消、close-reopen物理一枠、同source新service、同ID／revisionのファイル置換、Project編集とshortcut遮断、Project書出し不変を確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+Project 0.35.0・SDK固定版・Banto 6.9.0・H1・Rust・DB format 5・依存は維持する。通常mainは未接続で、実SQLite／HistoryHostへのbrowser adapter・transport／認証は未追加。次は永続Trend定義・shape接続を設計し、opaque参照の保存と接続先での解決を分ける。ChronoGazer還元・実媒体受入等も後続。上流・S7・実環境へ接続していない。

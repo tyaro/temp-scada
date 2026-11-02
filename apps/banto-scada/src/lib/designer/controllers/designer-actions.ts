@@ -109,6 +109,7 @@ export interface DesignerActionsHost {
     restorePanelLayout(): void;
     resetReferenceHeight(): void;
     toggleMenubar(): void;
+    openHistory(): void;
     changeMode(value: "edit" | "preview"): void;
     chooseTheme(value: "light" | "dark" | "system"): void;
   };
@@ -862,6 +863,11 @@ export function createDesignerActions(host: DesignerActionsHost) {
             label: "表示プレビュー",
             disabled: host.view.menuBlocked,
             run: () => host.view.changeMode("preview"),
+          },
+          {
+            label: "履歴トレンド",
+            disabled: host.view.menuBlocked,
+            run: host.view.openHistory,
           },
           {
             label: "テーマ：ライト",

@@ -527,3 +527,11 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 `history/trend-model.ts`がvalidated H1から観測／bin／coverageを変えずにsegment別laneへ投影し、有限値scaleとUTCms fallbackを提供する。`TrendView.svelte`はraw点、numeric range、bool離散、無値／混在とcoverage別帯を描画する。raw線やbin中点は生成しない。
 
 2単体fileの新規36件が配送・所有・再入・budgetと既存SQL結果projectionを担当する。`history/__fixtures__/HistoryPresentation.svelte`はe2e entry差替えだけでmountし、`e2e/history-presentation.spec.ts`の6件で両テーマと表示・取消・旧応答を受け入れる。既存H1 browser6件も回帰した。通常main／App／Projectは変更せず、[次の接続と限界](../design/runtime/historian-history-presentation.md)を分ける。
+
+## 通常Appの履歴検索workspace（H4b2）
+
+`lib/history/workspace-model.ts`がinprocess HistoryService／context契約、1MiBのplain JSON所有、H1 ID grammarを共用するAJV検証、Project ID／revision照合、canonical UTCとform予算からのH1 query生成を担当する。Hub tag名や最新metadataから系列IDを推測しない。
+
+`lib/history/HistoryWorkspace.svelte`がModalの外に一つのcontrollerを保持し、Project object／workspaceGeneration／service identity／openのtupleと即時derived guardで表示・取得の寿命を扱う。form編集・close・差替えはsourceを一度undefinedにして旧結果を退役するが、未終了Promiseの物理slotは維持する。Appはoptional historyService、open flag、Project採用時closeと編集shortcut遮断を所有する。`designer-actions.ts`の表示menuに共通actionを追加し、常設menuも同じ入口を使う。
+
+`workspace-model.test.ts`の新規39件がcontext所有・制限・UTC・選択とquery予算を検証する。`e2e/history-workspace.spec.ts`の新規8件は通常Appを保ちテストentryでserviceだけを注入し、両テーマ・未接続・寿命・検索・Project書出し不変を受け入れる。既存History／menu／Projectの24件も回帰した。正式wire API／adapter、永続Trend shape、Project schemaはこの工程で変更しない。[設計と限界](../design/runtime/historian-history-workspace.md)を参照する。
