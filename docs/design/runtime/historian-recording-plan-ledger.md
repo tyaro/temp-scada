@@ -146,7 +146,7 @@ state/receipt読取は同じBEGIN DEFERRED snapshotで最初にstore_meta.last_c
 - desired本文がH5aに適合し、key/hash/最初の利用commitと一致。過去desiredに再適用した場合も新commitをfirstとしない。
 - applicationのmappingがその期待版と一致し、enabled時のmember/type/name/period/hub対応が完全。disabledはmapping/retentionがNULL、resolved mappingもnull。
 - 参照する保持policy applicationは過去版として構造/commitを検証し、現在headとの一致は**新規apply時だけ**要求する。過去previewのrawを再走査しない。
-- applicationが予約したseries/segmentが存在し、descriptor/本文/hashが一致。`recording_application_members`の索引から最初の利用revisionを検査し、そのapplicationのrequest・desired定義・参照mapping・保持版・commit順序とenabledな解決内容を非再帰で確認する。同じfirst revisionは一回の予約検証内でcacheし、過去receipt本文や過去予約へ再帰しない。後の同予約再利用を許す。
+- applicationが予約したseries/segmentが存在し、descriptor/本文/hashが一致。`recording_application_members`の索引から最初の利用revisionを検査し、そのapplicationのrequest・desired定義・参照mapping・保持版・commit順序とenabledな解決内容を非再帰で確認する。同じfirst revisionは同一apply transactionの書込み前でcacheを共有し、過去receipt本文や過去予約へ再帰しない。後の同予約再利用を許す。
 
 古いrequest receiptの読取では最新の設定が別でも元結果を返す。最新headを返したり、旧planを再適用したりしない。未知requestIdはNone。不正requestIdはInvalid。破損したreceiptをNoneへ変換しない。
 
@@ -191,3 +191,13 @@ H5b2ではactivation/sessionの同transaction bindingを追加し、managed gate
 新規native 21件（process workerを含む）で、CAS・再送・immutable・8memberの既存metadata再適用、予約の非公開・系列衝突・新segment、active session/job、4096版上限、head/hash/first-use破損、cancel・panic・rollback失敗、実SQLite FULL、各COMMIT境界のprocess exitと再開を確認した。Astraのread-only実装レビューで指摘されたhead検査とfirst-use根拠を修正し、追加の必須修正はない。
 
 Rust workspace414件、TS1778件／121ファイル、型検査0error／0warning、build、Clippy／rustfmt、関連Chromium27件が成功した。browserは既存H1／desired／通常App検索の回帰で、DB管理用UIや実adapterの試験ではない。全体Prettierと文書リンクも確認し、全体CIはReady for ReviewのPRで確認する。
+
+## PR #44レビュー修正（2026-11-03）
+
+[P2指摘](https://github.com/tyaro/temp-scada/pull/44#discussion_r4445238600)を再現した。既存永久metadataを持つ8memberの予約がそれぞれ異なる8applicationで作られた場合、旧appliedと新mappingの検証がfirst-use根拠を重複decodeし、同じ計画の再適用でも256行上限を超えていた。
+
+`EvidenceCache`を一つのapply transactionのread区間で共有する。SQL／row／bytesは実際の初回読取で課金し、cache hit時にも参照commit上限・enabled・対象descriptorを照合する。予約列／hash／MIN first-useと恒久metadataの検証は維持し、256行上限を引き上げない。別operationへcacheを持ち越さず、台帳・予約への書込み後に使わない。
+
+8つの独立した初回予約を作り、結合計画の適用→同設定の再適用→状態／receipt照会を受け入れる回帰を追加した。低予算では書込みなしでControlを返し、次のoperationで参照mappingを破損させるとCorruptDataを検出する。Astraのread-onlyレビューに必須修正はない。
+
+修正後はRust workspace415件、Clippy／rustfmt、既存契約のChromium8件、全体Prettierを受け入れた。Rust以外の製品コード・DB形式・依存は変更していない。

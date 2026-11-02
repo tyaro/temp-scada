@@ -14,6 +14,10 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## PR #44の記録計画再適用レビュー修正（2026-11-03）
+
+8memberのfirst-useが異なる8applicationに分かれると、旧appliedと新mappingの二重検証で256行上限に達するP2を再現・修正した。first-use根拠のcacheを一apply transaction内で共有し、使用時のcommit上限とdescriptor検証、予約metadata/hash検査、SQL／row／bytes課金を維持する。上限変更はない。結合後の再適用とreceipt、低予算rollback、operationをまたぐ破損再検出を回帰し、Astraのread-onlyレビューに必須修正はない。
+
 ## 記録計画の永続台帳（H5b1、2026-11-03）
 
 H5aの[PR #43](https://github.com/tyaro/temp-scada/pull/43)はマージ済みで、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41477917969)と[push CI](https://github.com/tyaro/temp-scada/actions/runs/41477765904)は全7job成功。Astraの詳細設計に従い、native管理台帳・mapping登録・原子的apply・receipt照会と新規sessionのmanaged gateを追加した。DB6へ進め、5は自動移行せず拒否する。SHA-256固定依存とmodel validatorへのpath依存を追加した。

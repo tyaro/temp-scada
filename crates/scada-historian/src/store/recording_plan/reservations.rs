@@ -85,13 +85,27 @@ fn permanent(c: &Connection, b: &mut Budget, d: &IdentityDescriptor) -> StoreRes
     }
     Ok(())
 }
+/// Valid only inside one management transaction, before reservation writes.
+#[derive(Default)]
+pub(super) struct EvidenceCache {
+    first_uses: std::collections::HashMap<u64, AppliedRecordingPlan>,
+}
 pub(super) fn check(
     c: &Connection,
     b: &mut Budget,
     mapping: &RecordingMapping,
     application: Option<u64>,
 ) -> StoreResult<()> {
-    let result = check_inner(c, b, mapping, application);
+    check_with_cache(c, b, mapping, application, &mut EvidenceCache::default())
+}
+pub(super) fn check_with_cache(
+    c: &Connection,
+    b: &mut Budget,
+    mapping: &RecordingMapping,
+    application: Option<u64>,
+    cache: &mut EvidenceCache,
+) -> StoreResult<()> {
+    let result = check_inner(c, b, mapping, application, cache);
     if application.is_some() && matches!(result, Err(StoreError::Conflict)) {
         return Err(StoreError::CorruptData);
     }
@@ -134,6 +148,7 @@ fn check_inner(
     b: &mut Budget,
     mapping: &RecordingMapping,
     application: Option<u64>,
+    cache: &mut EvidenceCache,
 ) -> StoreResult<()> {
     let snapshot = read::snapshot(c, b)?;
     let bound = if let Some(revision) = application {
@@ -151,7 +166,6 @@ fn check_inner(
     } else {
         snapshot
     };
-    let mut cache = std::collections::HashMap::new();
     if let Some(revision) = application {
         b.work.statement()?;
         b.row()?;
@@ -175,7 +189,7 @@ fn check_inner(
             if first <= 0 || actual != Some(first) {
                 return Err(StoreError::CorruptData);
             }
-            first_member(c, b, &mut cache, first, bound, d, false)?;
+            first_member(c, b, &mut cache.first_uses, first, bound, d, false)?;
         }
         b.work.statement()?;
         let saved:Option<(String,String,i64,Option<i64>)>=c.query_row("SELECT descriptor_json,descriptor_hash,first_revision,(SELECT min(applied_revision) FROM recording_application_members WHERE series_id=?1 AND segment_id=?2) FROM recording_segment_reservations WHERE series_id=?1 AND segment_id=?2",params![d.series_id,d.segment_id],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional()?;
@@ -202,7 +216,7 @@ fn check_inner(
             {
                 return Err(StoreError::CorruptData);
             }
-            first_member(c, b, &mut cache, first, bound, &old, true)?;
+            first_member(c, b, &mut cache.first_uses, first, bound, &old, true)?;
             if old != *d {
                 return Err(StoreError::Conflict);
             }

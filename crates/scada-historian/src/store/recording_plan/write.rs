@@ -117,13 +117,15 @@ pub(super) fn apply(
     if h.applied != request.expected_applied_revision {
         return Err(StoreError::Conflict);
     }
+    let mut evidence_cache = reservations::EvidenceCache::default();
     if let Some(revision) = h.applied {
-        read::application(
+        read::application_with_cache(
             c,
             b,
             revision,
             h.snapshot,
             h.ledger.as_deref().ok_or(StoreError::CorruptData)?,
+            &mut evidence_cache,
         )?;
     }
     let recovery = idle(c, b)?;
@@ -146,7 +148,7 @@ pub(super) fn apply(
     };
     let resolution = canonical::resolution(request, mapping)?;
     if let Some(mapping) = &resolution {
-        reservations::check(c, b, mapping, None)?;
+        reservations::check_with_cache(c, b, mapping, None, &mut evidence_cache)?;
     }
     let plan_id = request.desired["planId"]
         .as_str()

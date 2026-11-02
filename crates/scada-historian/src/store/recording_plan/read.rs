@@ -290,9 +290,26 @@ pub(super) fn application(
     snapshot: u64,
     ledger: &str,
 ) -> StoreResult<AppliedRecordingPlan> {
+    application_with_cache(
+        c,
+        b,
+        revision,
+        snapshot,
+        ledger,
+        &mut reservations::EvidenceCache::default(),
+    )
+}
+pub(super) fn application_with_cache(
+    c: &Connection,
+    b: &mut Budget,
+    revision: u64,
+    snapshot: u64,
+    ledger: &str,
+    cache: &mut reservations::EvidenceCache,
+) -> StoreResult<AppliedRecordingPlan> {
     let result = application_evidence(c, b, revision, snapshot, ledger, true)?;
     if let Some(mapping) = &result.resolution {
-        reservations::check(c, b, mapping, Some(revision))?;
+        reservations::check_with_cache(c, b, mapping, Some(revision), cache)?;
     }
     Ok(result)
 }

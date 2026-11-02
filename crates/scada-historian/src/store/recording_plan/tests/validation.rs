@@ -263,3 +263,90 @@ fn bounded_ledger_capacity_keeps_existing_receipts_available() {
         1
     );
 }
+
+#[test]
+fn eight_distinct_first_use_applications_fit_one_default_apply_budget() {
+    let directory = TempStore::new();
+    let mut store = directory.create();
+    let mut all = mapping();
+    all.members = (0..8)
+        .map(|n| {
+            let mut m = mapping().members[0].clone();
+            m.member_id = format!("m:{n}");
+            m.identity.series_id = format!("s:{n}");
+            m.identity.incarnation_id = format!("inc:{n}");
+            m.identity.external_name = format!("Plant.Value{n}");
+            m
+        })
+        .collect();
+    store
+        .begin_session(SessionSpec {
+            session_id: "permanent".into(),
+            members: all.members.iter().map(|m| m.identity.clone()).collect(),
+        })
+        .unwrap();
+    store.close_session("permanent").unwrap();
+    retention(&mut store);
+    for n in 1..=8 {
+        let mut r = register(&format!("map:{n}"), (n > 1).then_some(n - 1));
+        r.mapping = all.clone();
+        r.mapping.members = vec![all.members[n as usize - 1].clone()];
+        store.register_recording_mapping(&r, &control()).unwrap();
+        let mut a = apply(&format!("apply:{n}"), (n > 1).then_some(n - 1), true);
+        a.expected_mapping_revision = Some(n);
+        a.desired = desired_for(&r.mapping);
+        a.desired["revision"] = json!(n);
+        store.apply_recording_plan(&a, &control()).unwrap();
+    }
+    let mut r = register("combined", Some(8));
+    r.mapping = all;
+    store.register_recording_mapping(&r, &control()).unwrap();
+    let mut a = apply("combined", Some(8), true);
+    a.expected_mapping_revision = Some(9);
+    a.desired = desired_for(&r.mapping);
+    a.desired["revision"] = json!(9);
+    let combined = store.apply_recording_plan(&a, &control()).unwrap();
+    assert_eq!(combined.applied_revision, 9);
+    a.request_id = "repeat-combined".into();
+    a.expected_applied_revision = Some(9);
+    let before = counter(&store);
+    let mut low = control();
+    low.limits.max_decoded_rows = 32;
+    assert!(matches!(
+        store.apply_recording_plan(&a, &low),
+        Err(StoreError::Control(_))
+    ));
+    assert_eq!(counter(&store), before);
+    let repeated = store.apply_recording_plan(&a, &control()).unwrap();
+    assert_eq!(repeated.applied_revision, 10);
+    assert_eq!(repeated.resolved_config_hash, combined.resolved_config_hash);
+    assert_eq!(
+        store
+            .recording_plan_state(&control())
+            .unwrap()
+            .applied
+            .unwrap()
+            .receipt,
+        repeated
+    );
+    assert_eq!(
+        store.apply_recording_plan(&a, &control()).unwrap(),
+        repeated
+    );
+    // Evidence is scoped to this transaction, never reused across operations.
+    let before = counter(&store);
+    store
+        .connection
+        .execute(
+            "UPDATE recording_mapping_revisions SET request_json='{}' WHERE mapping_revision=1",
+            [],
+        )
+        .unwrap();
+    a.request_id = "after-corruption".into();
+    a.expected_applied_revision = Some(10);
+    assert!(matches!(
+        store.apply_recording_plan(&a, &control()),
+        Err(StoreError::CorruptData)
+    ));
+    assert_eq!(counter(&store), before);
+}
