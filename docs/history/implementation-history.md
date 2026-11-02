@@ -14,6 +14,16 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## 通常Appの履歴検索workspace（H4b2、2026-11-02）
+
+H4b1は[PR #36](https://github.com/tyaro/temp-scada/pull/36)でマージ済み（`9d273aead1814088b34d7149d9d0e72bc3ab9332`）、[全体CI 41362821595](https://github.com/tyaro/temp-scada/actions/runs/41362821595)成功。Astra主設計の[H4b2](../design/runtime/historian-history-workspace.md)を実装した。通常Appの「表示→履歴トレンド」からBanto Modalで系列・UTC範囲・raw／minmax・点数を指定して明示検索できる。既定は未接続を説明し、sample系列や自動検索を作らない。
+
+任意HistoryServiceのcontextは1MiB以下のowned／frozen plain JSONとして検証し、最大256件の一意なopaque系列IDとlabelを受け取る。現在ProjectのID／revision一致に加え、Project object・workspace世代・service identityで表示と取得を守る。form編集・close・Project／service変更で結果を退役し、同じcontrollerをModal開閉の外で保持して、Abort無視のread終了まで物理一枠を空けない。履歴Modal中は背後の編集shortcutを遮断する。H1のID grammar・最終query検証を共用し、UTCはcanonical文字列のround tripで検査する。
+
+TS全体1,482件（新規39件）・型検査0error／0warning・build・関連Chromium32件（新規8件）が成功。通常Appへのservice注入だけで、未接続／不正・不一致・空context、両テーマraw／minmax、条件変更clear、tooManyPoints／partial、取消、close-reopen物理一枠、同source新service、同ID／revisionのファイル置換、Project編集とshortcut遮断、Project書出し不変を確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+Project 0.35.0・SDK固定版・Banto 6.9.0・H1・Rust・DB format 5・依存は維持する。通常mainは未接続で、実SQLite／HistoryHostへのbrowser adapter・transport／認証は未追加。次は永続Trend定義・shape接続を設計し、opaque参照の保存と接続先での解決を分ける。ChronoGazer還元・実媒体受入等も後続。上流・S7・実環境へ接続していない。
+
 ここから下の順序は移動元の並びを保持し、厳密な時系列に再構成していない。機能別の採用仕様は[文書索引](../README.md)を参照する。
 
 <a id="menu-review-phase-b"></a>
