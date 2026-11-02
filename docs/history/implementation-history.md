@@ -14,6 +14,14 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## 独立した記録計画の純粋契約（H5a、2026-11-03）
+
+[設計PR #42](https://github.com/tyaro/temp-scada/pull/42)はマージ済みで、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41469698781)と[push CI](https://github.com/tyaro/temp-scada/actions/runs/41469603179)は全7ジョブ成功。H5aはDesiredRecordingPlan v1の共通Schema、Rust owned wrapper、TS owned／frozen parserとboolean validator、139共通fixtureを追加した。Budget／文字列判定は既存Trendと共用し、既存の受理とHistoryの既定node上限を維持した。
+
+単一group／1〜8member、ID・period・MAX_SAFE、disabled、完全一致名、Unicode blank/scalar、未知／秘密field、構造予算、非JSON所有境界を確認する。native／TSで共有fixtureが一致し、Astraのread-onlyレビューに必須修正はない。browser初回のNode JSON import属性不足と、書出し操作後の保存状態のテスト期待を修正した。製品側の拒否条件や期待を緩和していない。Rust全393件（新規4関数）、TS全1,778件（新規155）、check 0error／0warning、build、Clippy／fmt、全体Prettier、関連Chromium31件（新規2）が成功した。全体CIは同PRの最新commitで確認する。
+
+Project 0.36.0・DB5・H1・Host／SDK・通常Appと固定依存は維持する。記録計画の編集・配布・原子適用・起動復元は後続H5b〜dとし、構造受理をidentity／権限／配布済み版の証明にしない。[採用設計](../design/runtime/historian-recording-plan.md#h5aの実装と受入2026-11-03)に結果を残す。
+
 ## 記録計画の管理・適用の詳細設計（H5、2026-11-03）
 
 PR #41のマージ後、ユーザーは残件一覧を確認し、次の「記録計画管理・適用」への着手を指示した。Astraが[H5の詳細契約](../design/runtime/historian-recording-plan.md)を主設計する。現行のPlanRefはplan ID／revisionだけを保持し、固定SessionSpecとSDK pinは実行入力の検証であって、desired／appliedの永続管理ではない。保持policyのCAS／receiptとは別に、記録計画の台帳と復元を必要とする。

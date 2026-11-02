@@ -1,6 +1,6 @@
 # Historian H5: 記録計画の保存・適用・稼働管理
 
-2026-11-03（日本時間）。**Astra主設計の採用契約。今回はdesign-only。以下のdesired JSON、台帳、supervisor、Project fieldは未実装。** [P5 §3](historian-trend-contract.md#3-記録設定の所有と配布)の責務を、現行の単一group実装へ段階的に接続する。実環境、Industrial/S7、実Hub、実DB、設定、資格情報にはアクセスしない。認証・製品transport・通常Appの実接続は引き続き保留する。
+2026-11-03（日本時間）。**Astra主設計の採用契約。H5aの独立desired JSON契約は実装・ローカル受入済み。台帳、supervisor、Project fieldは未実装。** [P5 §3](historian-trend-contract.md#3-記録設定の所有と配布)の責務を、現行の単一group実装へ段階的に接続する。実環境、Industrial/S7、実Hub、実DB、設定、資格情報にはアクセスしない。認証・製品transport・通常Appの実接続は引き続き保留する。
 
 ## 採用範囲と現行との違い
 
@@ -10,7 +10,7 @@
 
 現行SQLite format5、[保持policy適用](historian-retention-policy-application.md)のCAS/receipt、[記録と保持の協調](historian-recording-retention.md)は利用できる基盤である。ただし保持policyのapplied revisionを記録計画のrevisionとして使わない。SDK taskとSQLite transactionを一つのcommitにするAPIも現在存在しない。
 
-今回をdesign-only PRとし、次にH5aの独立した純粋契約を実装する。Project 0.36.0、SDK、Banto、DBformat、H1は今回とH5aで維持する。
+設計PR #42は文書だけの変更としてマージ済み。続くH5aで独立した純粋契約を実装した。Project 0.36.0、SDK、Banto、DBformat、H1は設計区切りとH5aで維持する。
 
 ## desiredの意味と独立JSON（H5a）
 
@@ -183,12 +183,24 @@ sourceのcatalog/valuesは既存上限4096、bindings最大8。SDK/stop/joinの�
 
 ## 実装PR順と受入
 
-| 工程            | 完了範囲                                                                                       | 主な受入                                                                                                                                                                                      |
-| --------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 今回design-only | この具体契約・決定点・工程                                                                     | P5と現行APIの保証差を明示                                                                                                                                                                     |
-| H5a（次の推奨） | 独立desired JSONのSchema、Rust/TS validator、共通fixture、browser module評価                   | 1/8 members、100ms/1h、同名別member拒否、disabledでも設定保持、Unicode/ID/64KiB境界、秘密field拒否、Project未変更                                                                             |
-| H5b             | format6管理台帳、明示mapping登録、CAS、stable receipt、復旧照会                                | 同ID同内容再送/別内容Conflict、別Project競合、immutable版、保持CAS、全8member原子性、未記録予約がqueryへ漏れない、FULL/process crash/commit後応答喪失。必要ならb1台帳/b2session bindingへ分割 |
-| H5c             | 単一group supervisor、stop/join/apply、明示activation、activation/session原子binding、起動復旧 | 旧停止後apply失敗、新適用後source失敗、取消join所有、latch保持、active保持jobでBusy、mockHub→SQLite、仮想absolute周期既存受入、再起動新session/epoch、同名再作成拒否                          |
-| H5d             | Project desired保存/編集と管理状態表示、明示apply操作                                          | 別途Project versionを更新、保存で運転不変、desiredとappliedとRunningの差を表示、UI closeでrecorder継続、権限/製品transportは再開条件を満たすまでlocal injectionのみ                           |
+| 工程                    | 完了範囲                                                                                       | 主な受入                                                                                                                                                                                      |
+| ----------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 今回design-only         | この具体契約・決定点・工程                                                                     | P5と現行APIの保証差を明示                                                                                                                                                                     |
+| H5a（ローカル受入済み） | 独立desired JSONのSchema、Rust/TS validator、共通fixture、browser module評価                   | 1/8 members、100ms/1h、同名別member拒否、disabledでも設定保持、Unicode/ID/64KiB境界、秘密field拒否、Project未変更                                                                             |
+| H5b                     | format6管理台帳、明示mapping登録、CAS、stable receipt、復旧照会                                | 同ID同内容再送/別内容Conflict、別Project競合、immutable版、保持CAS、全8member原子性、未記録予約がqueryへ漏れない、FULL/process crash/commit後応答喪失。必要ならb1台帳/b2session bindingへ分割 |
+| H5c                     | 単一group supervisor、stop/join/apply、明示activation、activation/session原子binding、起動復旧 | 旧停止後apply失敗、新適用後source失敗、取消join所有、latch保持、active保持jobでBusy、mockHub→SQLite、仮想absolute周期既存受入、再起動新session/epoch、同名再作成拒否                          |
+| H5d                     | Project desired保存/編集と管理状態表示、明示apply操作                                          | 別途Project versionを更新、保存で運転不変、desiredとappliedとRunningの差を表示、UI closeでrecorder継続、権限/製品transportは再開条件を満たすまでlocal injectionのみ                           |
 
 H5aだけで記録計画の配布・実接続・原子適用が完成したとはしない。H5bの成功receiptとH5cの稼働確認を分けることで、再送や障害時に「保存された」と「記録している」を取り違えない。複数group、正式deployment設定、暦日保持、自動容量管理、認証/transport、実運用接続は後続である。
+
+## H5aの実装と受入（2026-11-03）
+
+共通Schema、`scada_model::recording_plan::{DesiredRecordingPlan, validate_recording_plan}`、TSの`parseRecordingPlan`／`validateRecordingPlan`を追加した。SchemaはH1のID resourceをローカル登録し、外部取得を禁止する。未知fieldはroot／group／memberの全階層で拒否する。owned wrapperはmember順序と文字列を保持し、TSは全体をfreezeする。名前の重複は完全一致だけで検査し、trim・case変換・Unicode正規化は行わない。
+
+共通fixture `examples/recording-plan-cases.json`139件で、1／8memberと上下限、disabledの完全形、別pool ID、同名・同member ID拒否、Unicode codepoint／明示空白集合、孤立surrogate、MAX_SAFE整数／指数表記、未知・秘密field、過大入力をRust／TS／browserで照合する。合法な最大8member文書は64KiBに達しないため、byte上限ぴったりの検証は共通walkerのunitで行い、fixtureでは大きな不正入力の最終拒否を確認する。wireの空白・escape・数値表記の入力byte数は測らない。
+
+nativeの`json_contract.rs`へ既存Trendと共通のcompact JSON byte／node／depth walkerとblank判定を分離した。TSは既存`ownHistoryJson`へ省略可能なnode上限を追加し、H5aでは4096を所有コピー開始時から適用する。既存History／Trendは既定250,000を維持し、文字列のscalar／blank判定は`json-text.ts`で共用する。既存Trend fixtureとbyte正規化の受入を維持した。
+
+構造受理はHub参照・タグidentityの解決、配布済み版の不変性、記録設定の適用成功の証明ではない。Project schema／editor／main・記録Host・DB format 5・H1・SDK／Banto・依存versionは変更していない。次はH5bの永続台帳と適用／再送・復旧照会へ進む。
+
+受入結果: Rust workspace全393件（新規4関数）、TS全1,778件（新規155、121 files）、check 0error／0warning、build、Clippy／rustfmt、全体Prettierが成功した。関連Chromium31件（新規2）が成功し、共通fixtureの一致、remote schema取得なし、member所有とdisabled保持、通常AppのProject書出し不変・未知Project field拒否を確認した。Astraのread-onlyレビューに必須修正はない。全体CIは同PRの最新commitで確認する。

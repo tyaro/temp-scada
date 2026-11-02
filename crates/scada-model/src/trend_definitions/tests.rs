@@ -121,14 +121,22 @@ fn depth_and_node_budgets_bound_invalid_structured_data_before_schema() {
     for _ in 0..32 {
         value = json!([value]);
     }
-    assert!(Budget { bytes: 0, nodes: 0 }.visit(&value, 0).is_ok());
+    assert!(JsonBudget::new(MAX_TREND_JSON_BYTES, 250_000)
+        .visit(&value, 0)
+        .is_ok());
     value = json!([value]);
-    assert!(Budget { bytes: 0, nodes: 0 }.visit(&value, 0).is_err());
+    assert!(JsonBudget::new(MAX_TREND_JSON_BYTES, 250_000)
+        .visit(&value, 0)
+        .is_err());
     assert!(validate_trend_definitions(&value).is_err());
     let below = Value::Array(vec![json!(0); 249_999]);
-    assert!(Budget { bytes: 0, nodes: 0 }.visit(&below, 0).is_ok());
+    assert!(JsonBudget::new(MAX_TREND_JSON_BYTES, 250_000)
+        .visit(&below, 0)
+        .is_ok());
     let above = Value::Array(vec![json!(0); 250_000]);
-    assert!(Budget { bytes: 0, nodes: 0 }.visit(&above, 0).is_err());
+    assert!(JsonBudget::new(MAX_TREND_JSON_BYTES, 250_000)
+        .visit(&above, 0)
+        .is_err());
 }
 #[test]
 fn compact_bytes_match_json_escaping_and_integer_numeric_semantics() {
@@ -137,10 +145,10 @@ fn compact_bytes_match_json_escaping_and_integer_numeric_semantics() {
         1,
         1000
     ]);
-    let mut budget = Budget { bytes: 0, nodes: 0 };
+    let mut budget = JsonBudget::new(MAX_TREND_JSON_BYTES, 250_000);
     budget.visit(&value, 0).unwrap();
     assert_eq!(budget.bytes, serde_json::to_vec(&value).unwrap().len());
-    let mut budget = Budget { bytes: 0, nodes: 0 };
+    let mut budget = JsonBudget::new(MAX_TREND_JSON_BYTES, 250_000);
     budget.visit(&json!([1.0, 1e3, -0.0]), 0).unwrap();
     assert_eq!(budget.bytes, "[1,1000,0]".len());
 }

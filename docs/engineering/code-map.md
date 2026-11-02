@@ -570,6 +570,14 @@ nativeの`validate_trend_definitions(&Value)`／`TrendDefinitions::from_value`�
 
 ## 記録計画の管理・適用の設計入口（H5）
 
-[記録計画管理の設計](../design/runtime/historian-recording-plan.md)は、P5のdesired／deployment／applied分離、有限な独立JSON契約、永続適用のCAS／receipt、単一group supervisorと復元・失敗境界を定める。今回の変更は文書のみで、新しいvalidator／台帳／supervisorを実装したものではない。実装時は同文書の工程ごとにコードと検証責務を追加する。
+[記録計画管理の設計](../design/runtime/historian-recording-plan.md)は、P5のdesired／deployment／applied分離、有限な独立JSON契約、永続適用のCAS／receipt、単一group supervisorと復元・失敗境界を定める。設計PR #42は文書のみの変更で、以下H5aから工程ごとに実装・検証責務を追加する。applied台帳／supervisorは後続である。
 
 現行の`scada-historian/src/store/evidence.rs::PlanRef`はID／revisionのsession根拠で、計画本体・hash・配布台帳ではない。`scada-runtime/src/recorder_source/plan.rs::SdkRecorderPlan`が一つのHub・周期と固定member／SDK pinを検証する。`recording_host.rs::RecordingHost`はwriterとworkerを所有し、startの受理とRunning、停止要求とjoin完了を区別する。新しい管理層はこれらの契約とH3d保持gateを迂回しない。
+
+## 独立desired記録計画の共通検証（H5a）
+
+`crates/scada-model/schema/recording-plan.schema.json`が版付きDesiredRecordingPlanの構造とcanonical H1 ID参照を持つ。native `recording_plan.rs`とTS `recording-plan.ts`が予算・member/name一意性・blank/scalarを含む受理、owned wrapper／frozen snapshotを所有する。未知fieldを全階層で拒否し、順序・文字列・disabled設定を保持する。ProjectのSchemaへはまだ組み込まない。
+
+native `json_contract.rs`がTrendと記録計画のcompact JSON byte・node・depth walkとblank定義、TS `json-text.ts`がbounded owned JSONのscalar／blankを共有する。`history/owned-json.ts`はH5a用node上限引数を受け、従来callerの既定250,000を維持する。予算計数や名前の判定を各契約に再実装しない。
+
+`examples/recording-plan-cases.json`139件をnative `recording_plan/tests.rs`、TS `recording-plan.test.ts`、`e2e/recording-plan-contract.spec.ts`で共用する。TSの`__fixtures__/recording-plan-cases.ts`とnative test helperが大きな不正入力のrecipeを同じ値へ展開する。browserは通常Appを保ちmoduleを評価し、remote schema取得なし、所有／member順、Project書出し不変、未知Project fieldの拒否を確認する。通常mainへテスト用serviceやvalidator画面を追加しない。
