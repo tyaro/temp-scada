@@ -658,7 +658,7 @@ Textだけを複数選択すると、プロパティの「文字の書式」で�
 
 ## 画像を含む共有Symbolの作成・編集
 
-Project0.35.0では共有Symbol内のPNG／JPEGを含むProjectを読み込み、表示・保存・Symbol配置のコピー／貼付ができます。[原本同梱サンプル](../../examples/symbol-image.bantoscada)を開いて確認できます。画像は原色を保ち、配置の単色RGBでは染め直しません。単色モードの色αと配置opacityは画像を含むSymbol全体へ作用します。
+Project0.36.0では共有Symbol内のPNG／JPEGを含むProjectを読み込み、表示・保存・Symbol配置のコピー／貼付ができます。[原本同梱サンプル](../../examples/symbol-image.bantoscada)を開いて確認できます。画像は原色を保ち、配置の単色RGBでは染め直しません。単色モードの色αと配置opacityは画像を含むSymbol全体へ作用します。
 
 Symbolの「定義を編集」でも、ファイルメニュー「画像を配置」やOS画像貼付を利用できます。画像を選択すると、プロパティから表示方式・切出し・差替えを操作できます。定義の変更はすべての参照配置へ反映されます。画像単体のコピー／切取／貼付にも対応しますが、Symbol入れ子・埋込画面・group・タグ付きTextの定義内貼付は対象外です。背景画像は画面専用です。[仕様と実画面](../design/images/symbol-image-design.md#i7c定義内の取込編集ui2026-10-21)を参照してください。画像を含むProjectの移動には原本同梱`.bantoscada`を使い、JSON単体では開かないでください。
 

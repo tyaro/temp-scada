@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import symbolImage from "../../../../examples/symbol-image.project.json";
 import { zipSync, unzipSync } from "fflate";
 import { AssetStore, sha256 } from "./image-assets";
 import { createProject } from "./new-project";
@@ -17,6 +18,33 @@ beforeEach(() =>
   ),
 );
 afterEach(() => vi.unstubAllGlobals());
+it("keeps the portable Symbol image example aligned with its current Project and original PNG", async () => {
+  // Node-only fixture IO; keep the application's browser-only type environment.
+  const { readFileSync } = await vi.importActual<{
+    readFileSync(path: URL): Uint8Array;
+  }>("node:fs");
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn(async () => ({ width: 2, height: 1, close() {} })),
+  );
+  const bytes = readFileSync(
+    new URL("../../../../examples/symbol-image.bantoscada", import.meta.url),
+  );
+  const original = readFileSync(
+    new URL("../../../../examples/assets/symbol-image.png", import.meta.url),
+  );
+  const result = await readProjectFile(new Blob([new Uint8Array(bytes)]));
+  try {
+    expect(result.project).toEqual(symbolImage);
+    expect(
+      new Uint8Array(
+        await result.store.blob(symbolImage.assets[0].sha256).arrayBuffer(),
+      ),
+    ).toEqual(new Uint8Array(original));
+  } finally {
+    result.store.dispose();
+  }
+});
 async function fixture() {
   const project = createProject(),
     store = new AssetStore(),

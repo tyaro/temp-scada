@@ -14,6 +14,12 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## PR #40の画像同梱サンプル版更新漏れ（2026-11-02）
+
+[初回CI](https://github.com/tyaro/temp-scada/actions/runs/41438128625)はRust／frontendとE2Eの3分割が成功し、E2E 4/4でSymbol画像関連8件が失敗した。`symbol-image.project.json`は0.36.0へ更新済みだったが、圧縮済み`symbol-image.bantoscada`のmanifestだけ0.35.0に残っており、版不一致で読込を拒否していた。
+
+同梱manifestと対応checksumを0.36.0へ揃え、Project本体とPNG原本のbytesは維持した。配布packageを実際に読み込んで現行JSON定義・PNG原本との一致を確認する単体を追加し、package単体5件と関連Chromium13件が成功した。読込側の旧版許可や自動移行は追加しない。修正後の全体CIは同PRの最新commitで確認する。
+
 ## ProjectのTrend保存と静的参照配置（H4c2、2026-11-02）
 
 [PR #39](https://github.com/tyaro/temp-scada/pull/39)はマージ済み（`abff1ec8097630bbd300ebfe78747842685003b8`）、[全体CI 41429814220](https://github.com/tyaro/temp-scada/actions/runs/41429814220)成功。Astra主設計の[H4c2](../design/runtime/historian-trend-definition.md)を実装し、Project 0.36.0へ任意trends配列とtrendId参照shapeを追加した。共通H4c1 resourceと意味検査・独立wrapperの1MiB予算を再利用し、参照存在・Symbol禁止をnative／TSで検査する。旧0.35.0は明示拒否し、現行examplesと既存legacy変換の出力を揃えた。
