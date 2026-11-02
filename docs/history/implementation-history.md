@@ -14,6 +14,14 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## 記録計画の管理・適用の詳細設計（H5、2026-11-03）
+
+PR #41のマージ後、ユーザーは残件一覧を確認し、次の「記録計画管理・適用」への着手を指示した。Astraが[H5の詳細契約](../design/runtime/historian-recording-plan.md)を主設計する。現行のPlanRefはplan ID／revisionだけを保持し、固定SessionSpecとSDK pinは実行入力の検証であって、desired／appliedの永続管理ではない。保持policyのCAS／receiptとは別に、記録計画の台帳と復元を必要とする。
+
+今回の区切りは設計文書と小工程・受入条件の確定であり、実装を提供したものではない。計画の永続commitとSDK activationを分け、commit前の失敗は旧applied維持、commit後の起動失敗は新appliedと停止／失敗状態を維持する。成功応答をRunningの証明にせず、旧計画へ暗黙に戻さない。実装は独立desired契約→永続台帳→単一group supervisorへ進める。
+
+Project 0.36.0・H1・DB format 5・Rust／TS・通常App・固定SDK／Banto依存は変更しない。実接続・認証・上流／S7環境への変更は保留する。PR #41の最終[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)と[push CI](https://github.com/tyaro/temp-scada/actions/runs/41464214034)はともに全7ジョブ成功した。文書整形・参照と現行コードの境界照合をこの設計区切りの検証とし、実行コード向けの新規テストは追加しない。
+
 ## PR #41の通常プレビューSVG role回帰（2026-11-02）
 
 [失敗したCI](https://github.com/tyaro/temp-scada/actions/runs/41459100679)はfrontend／Rustが成功し、E2Eの4分割で計17件が失敗した。Trend actionを渡すと通常プレビュー全体のSVG roleをimgからgroupへ変えていたため、トレンドのないサンプル画面も既存のアクセシブルな画像名で見つからなくなった。描画・ファイル読込の失敗ではなく、検索対象となる画面のrole変更が共通原因だった。

@@ -34,7 +34,9 @@ Historianはserver起動時に最後の適用済み計画から起動する。�
 | endpoint・資格情報参照、論理Hubと実接続の対応、保存先、容量上限、保持日数、writer所有権 | deployment／Historian管理設定      | Projectへ秘密・絶対パスを入れない。保持は初期にはstore単位。タグ別保持は後続             |
 | 有効な系列ID対応表、計画hash／revision、適用時刻、記録状態                              | Historianの永続管理情報（applied） | Projectファイル名・revisionだけを同一性の根拠にしない。再起動で復元する                  |
 
-保存と配布を分離する。Projectを開く／保存するだけでは適用しない。管理側が対象deploymentと期待するapplied revisionを付けて計画を配布し、Historianが型、identity、上限、保存先、権限を検証する。競合は拒否し、同じ要求IDと内容の再送は同じ結果にする。新計画の永続化と切替点を記録してからappliedを進める。失敗時は旧appliedを維持し、desiredとの差と安全な理由を表示する。切替時の記録休止があればcoverageに残し、成功応答を偽らない。
+保存と配布を分離する。Projectを開く／保存するだけでは適用しない。管理側が対象deploymentと期待するapplied revisionを付けて計画を配布し、Historianが型、identity、上限、保存先、権限を検証する。競合は拒否し、同じ要求IDと内容の再送は同じ結果にする。新計画の永続化と切替点を記録してからappliedを進める。永続commit前の失敗では旧appliedを維持し、desiredとの差と安全な理由を表示する。切替時の記録休止があればcoverageに残し、成功応答を偽らない。
+
+[H5の詳細契約](historian-recording-plan.md)では、計画の永続適用とSDK接続・記録開始を別operationにする。旧workerを停止・joinした後の新appliedと切替根拠のcommitが適用の確定点であり、適用receiptはRunningの証明ではない。commit後のactivation失敗は新appliedと停止／失敗状態を維持し、旧計画へ暗黙rollbackしない。H5の設計区切りは管理機能の実装完了ではない。
 
 初期は計画全体を原子的に適用し、不明identityを含む計画を部分的に成功させない。運転中のタグ消失などは系列ごとの状態に局所化する。停止は明示的な管理要求であり、停止後も既存履歴を検索できる。停止／削除した計画の過去系列と適用履歴を直ちに消さない。
 

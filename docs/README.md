@@ -152,6 +152,7 @@ docs/
 - [History応答の配送制御と共通Trend表示（H4b1）](design/runtime/historian-history-presentation.md)
 - [通常Appの履歴トレンド入口と明示検索（H4b2）](design/runtime/historian-history-workspace.md)
 - [永続Trend定義・画面参照と明示履歴検索（H4c3実装）](design/runtime/historian-trend-definition.md)
+- [記録計画の管理・適用と再起動復元（H5設計、実装は後続）](design/runtime/historian-recording-plan.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)

@@ -567,3 +567,9 @@ nativeの`validate_trend_definitions(&Value)`／`TrendDefinitions::from_value`�
 `TrendPainting.svelte`の任意SVG actionを`ObjectPainting`→`Renderer`／`CanvasWorkspace`ではpreviewだけ、`ScreenPainting`／`PreviewWindow`では独立Popupだけに接続する。`ScreenView`と`Minimap`へcallbackを流さない。`PreviewPopups.svelte`は画面targetと別にinstance tokenを持ち、close／destroyでAppの当該presetを退役する。Inspectorは編集時の同じ入口を呼ぶ。SVG focusはBanto公開Modal fallbackで戻す。Rendererのroleは操作可能な可視Trendがあるpreviewだけgroupとし、通常画像・非表示Trend・editのimgを維持する。`project-trends.spec.ts`でroleとkeyboard／focusの切替を受け入れる。
 
 `e2e/saved-trend-history.spec.ts`は通常Appにテストentryだけからserviceを注入し、両テーマ・raw／minmax・namespace／系列不足・v1 gate・unknownSeries・保存不変・起点寿命・別preset／service差替え・Abort非協力時active1・色／別名・keyboard／focusを検証する。実adapter、Project版、H1、native、記録Hostはこの工程で変更しない。
+
+## 記録計画の管理・適用の設計入口（H5）
+
+[記録計画管理の設計](../design/runtime/historian-recording-plan.md)は、P5のdesired／deployment／applied分離、有限な独立JSON契約、永続適用のCAS／receipt、単一group supervisorと復元・失敗境界を定める。今回の変更は文書のみで、新しいvalidator／台帳／supervisorを実装したものではない。実装時は同文書の工程ごとにコードと検証責務を追加する。
+
+現行の`scada-historian/src/store/evidence.rs::PlanRef`はID／revisionのsession根拠で、計画本体・hash・配布台帳ではない。`scada-runtime/src/recorder_source/plan.rs::SdkRecorderPlan`が一つのHub・周期と固定member／SDK pinを検証する。`recording_host.rs::RecordingHost`はwriterとworkerを所有し、startの受理とRunning、停止要求とjoin完了を区別する。新しい管理層はこれらの契約とH3d保持gateを迂回しない。
