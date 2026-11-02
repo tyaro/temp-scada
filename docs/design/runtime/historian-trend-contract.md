@@ -224,3 +224,9 @@ P5自体の検証は固定sourceとの照合、文書整形、参照リンク、
 ## H4aの実装境界
 
 [非同期History読取Host](historian-history-host.md)が既存H1 raw／minmaxをプロセス内の要求／応答へ接続した。一つのHistoryReaderで一要求ずつ実行し、取消安全joinとreader leaseを維持する。製品History transport／認証、画面側HistorySourceと共通Trendの提供は後続であり、この読取Hostだけで正式サービス完成とはしない。
+
+## H4b2の到達点とH4cの採用設計（2026-11-02）
+
+[H4b2](historian-history-workspace.md)はPR #37でマージ・全体CI成功となり、通常Appから任意HistoryServiceへ明示検索する入口を提供する。通常mainは未接続で、実接続・正式サービス・ライブとのmergeの完成ではない。
+
+次の[H4c](historian-trend-definition.md)はAstra主設計の採用契約のみで、永続Trend定義・参照shape・namespace付きcontext v2は未実装である。初回は主画面／独立Popupから単一workspaceを開く経路とし、常時inline graphを後続に分ける。保存するペンや色の編集が記録計画を変更しない責務を維持する。

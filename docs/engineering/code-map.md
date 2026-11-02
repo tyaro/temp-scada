@@ -535,3 +535,7 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 `lib/history/HistoryWorkspace.svelte`がModalの外に一つのcontrollerを保持し、Project object／workspaceGeneration／service identity／openのtupleと即時derived guardで表示・取得の寿命を扱う。form編集・close・差替えはsourceを一度undefinedにして旧結果を退役するが、未終了Promiseの物理slotは維持する。Appはoptional historyService、open flag、Project採用時closeと編集shortcut遮断を所有する。`designer-actions.ts`の表示menuに共通actionを追加し、常設menuも同じ入口を使う。
 
 `workspace-model.test.ts`の新規39件がcontext所有・制限・UTC・選択とquery予算を検証する。`e2e/history-workspace.spec.ts`の新規8件は通常Appを保ちテストentryでserviceだけを注入し、両テーマ・未接続・寿命・検索・Project書出し不変を受け入れる。既存History／menu／Projectの24件も回帰した。正式wire API／adapter、永続Trend shape、Project schemaはこの工程で変更しない。[設計と限界](../design/runtime/historian-history-workspace.md)を参照する。
+
+## 永続Trend定義・画面参照の設計入口（H4c、未実装）
+
+[採用設計](../design/runtime/historian-trend-definition.md)が、独立した共通SchemaとRust／TS validator、ProjectのTrend原本とscreen参照shape、描画actionから既存HistoryWorkspaceへ渡す境界、接続namespaceの照合と寿命、copy／Undo／Symbol制限、受入・PR分割を定める。今回はコード責務を移していない。Project 0.35.0と既存H4b2を維持し、永続モデルやshapeの実装完了とはしない。
