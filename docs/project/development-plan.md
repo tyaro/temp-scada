@@ -1,10 +1,10 @@
 # SCADA の独立開発と industrial への統合
 
-状態: **現在の計画・統合方針**。2026-10-22（日本時間）更新。[文書索引](../README.md)、[実装状況](implementation-status.md)、[操作ガイド](../guides/user-guide.md)、[実装履歴](../history/implementation-history.md)を使い分ける。機能仕様の基準は[統合設計](../design/scada-integrated-design.md)。
+状態: **現在の計画・統合方針**。2026-11-03（日本時間）更新。[文書索引](../README.md)、[実装状況](implementation-status.md)、[操作ガイド](../guides/user-guide.md)、[実装履歴](../history/implementation-history.md)を使い分ける。機能仕様の基準は[統合設計](../design/scada-integrated-design.md)。
 
 ## 次の実装順
 
-2026-11-02の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4a／H4b1〜2とH4c採用設計・H4c1〜2はPR #10〜#40で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H4c3](../design/runtime/historian-trend-definition.md)を実装し、Project 0.36.0の保存Trendから既存単一HistoryWorkspaceへ明示検索を接続した。context v2のnamespaceと全系列を照合し、終了UTCだけを入力して定義順のraw／minmaxを取得する。主画面preview・独立小窓・編集Inspectorから開き、alias／色と応答segmentの元情報を区別する。v1手動検索、active Promise一枠・pending最新一件を維持し、起点画面／小窓・Project／service変更で旧結果を退役する。通常mainは未接続のままで、実source adapter・製品transport／認証の再開は次の判断事項。常時inline chartは可視instanceと全体予算の設計後に別工程とし、各shapeへqueryを複製しない。製品計画配布・複数group／queue、保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、H2／H3／H4全体・正式Runtimeは未完了。
+2026-11-03の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4a／H4b1〜2／H4c1〜3はPR #10〜#41で全体CI成功・マージ済み。保存Trendからの明示検索、context v2のnamespaceと全系列照合、alias／色、単一workspaceの寿命とactive Promise一枠を提供する。次はAstra主設計の[H5 記録計画管理](../design/runtime/historian-recording-plan.md)へ進む。今回の区切りは設計・工程と受入条件の確定で、H5a以降の実装完了ではない。独立したdesired JSON契約→永続applied台帳／期待revisionと再送receipt→単一groupのstop／join／apply／activateの順に分ける。計画の永続commit成功と記録のRunningを同一視せず、commit後の起動失敗を旧計画への暗黙rollbackで隠さない。Projectの保存と配布・適用は別操作とする。P3bの[製品transport・接続設定](../design/runtime/transport-boundary.md)、実接続・認証の保留は維持する。常時inline chart、複数group／queue、自動保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、正式Runtimeは後続である。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 
