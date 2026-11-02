@@ -3,6 +3,7 @@
 use serde_json::Value;
 mod connections;
 mod equipment;
+pub mod trend_definitions;
 pub use equipment::{EquipmentReadBinding, EquipmentReadType};
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;

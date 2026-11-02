@@ -1,6 +1,6 @@
 # Historian H4c: 永続Trend定義と画面からの履歴表示
 
-2026-11-02（日本時間）。**Astra主設計の採用契約。今回は設計のみで、以下の型・Project変更・shape・context v2は未実装。** H4b2まではProject 0.35.0の通常Appから明示検索できる。[現在のworkspace](historian-history-workspace.md)、[配送と描画](historian-history-presentation.md)、[P5](historian-trend-contract.md)を前提とする。
+2026-11-02（日本時間）。**Astra主設計の採用契約。H4c1の独立型・Schema・validatorはローカル実装・受入済み。Project変更・shape・context v2は未実装。** H4b2まではProject 0.35.0の通常Appから明示検索できる。[現在のworkspace](historian-history-workspace.md)、[配送と描画](historian-history-presentation.md)、[P5](historian-trend-contract.md)を前提とする。
 
 ## 採用する最初の利用経路
 
@@ -62,6 +62,8 @@ definition.idの一意性poolはそのProjectのtrends配列（独立契約で�
 name／labelの「空白だけ」は両言語で同一の明示集合を使う。集合はU+0009..U+000D、U+0020、U+0085、U+00A0、U+1680、U+2000..U+200A、U+2028、U+2029、U+202F、U+205F、U+3000、U+FEFFとする。全codepointがこの集合に属する文字列を拒否し、JS trim／Rust trimの結果へ依存しない。受理した文字列の前後空白は保存時に除去しない。すべてのJSON文字列で孤立surrogate（U+D800..U+DFFFの非対）を禁止し、正しいsurrogate pairは1 Unicode codepointとして数える。H4c1の共通fixtureにFEFF／0085だけ、両者と可視文字の混在、512個の補助平面文字、孤立high／low surrogateを含める。nativeでJSON decode時に拒否する場合とTSで意味検査時に拒否する場合は内部段階が異なってよいが、公開契約の受理／不受理を一致させる。
 
 定義内で同じseriesを二つのペンにしない。一つのseriesを別Trendから参照すること、同じlabel／色を使うことは許す。ペン削除・並べ替え後も残るpen.idは維持する。外部名や配列indexからseriesIdを生成しない。
+
+独立文書の1MiBは、有効な値のnumberを整数JSON表記へ正規化したcompact UTF-8 JSONのbyte数とする。`1.0`／`1e0`は`1`、`-0`は`0`としてサイズを数える。受理したValue自体は書き換えない。これは構造化入力の値予算であり、元wireの空白・escape・数字の綴りを含む入力byte数を測るAPIではない。無効payloadの内部拒否段階の一致は要求せず、最終の受理／不受理を言語間で揃える。
 
 定義は描画と要求の設定だけである。記録周期／保持日数／SIM記録方針／収集source／credential／DB pathを含めない。Trendの作成・削除・非表示・window変更では記録計画も保持設定も変わらない。
 
@@ -127,13 +129,25 @@ source v1/v2、namespace、選択context、定義snapshotとquery全体の一致
 
 ## 実装PRの順序と受入
 
-| 区切り             | 完了対象                                                                   | 受入                                                                                                                                                                                     |
-| ------------------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 今回design-only    | この採用契約と工程表                                                       | 現行実装との区別、未接続／意味／寿命／version境界をレビュー                                                                                                                              |
-| H4c1（次の推奨PR） | 独立TrendDefinitions schema、native／TS純粋validator、共通fixtures         | 0/128定義、8pen、重複ID/series、同series別namespace、文字数、色、1h/8000点、unsafe値、未知field、JSON上限、Rust/TS一致。Project0.35.0へまだ組み込まない                                  |
-| H4c2               | Project0.36.0、参照shape、原子的編集、SVGカード、保存／Undo／同Project複製 | 全言語parse/roundtrip、欠落参照・Symbol配置・外部clipboard拒否、未接続でも正当な保存、画像/接続線/埋込/Popup/回転/選択の既存回帰。カードは「履歴表示は準備中」と表示して検索を発行しない |
-| H4c3               | context v2、namespace照合、定義preset→既存workspace、色と凡例、画面action  | 通常Appで保存定義からraw/minmaxを明示取得。v1手動維持、別namespace同ID拒否、部分未解決拒否、unknownSeries応答、UTC算術端、service/定義/画面/Popup寿命、複数配置でもactive1、両theme      |
+| 区切り                   | 完了対象                                                                   | 受入                                                                                                                                                                                     |
+| ------------------------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 設計（PR #38）           | この採用契約と工程表                                                       | 現行実装との区別、未接続／意味／寿命／version境界をレビュー                                                                                                                              |
+| H4c1（ローカル受入済み） | 独立TrendDefinitions schema、native／TS純粋validator、共通fixtures         | 0/128定義、8pen、重複ID/series、同series別namespace、文字数、色、1h/8000点、unsafe値、未知field、JSON上限、Rust/TS一致。Project0.35.0へまだ組み込まない                                  |
+| H4c2                     | Project0.36.0、参照shape、原子的編集、SVGカード、保存／Undo／同Project複製 | 全言語parse/roundtrip、欠落参照・Symbol配置・外部clipboard拒否、未接続でも正当な保存、画像/接続線/埋込/Popup/回転/選択の既存回帰。カードは「履歴表示は準備中」と表示して検索を発行しない |
+| H4c3                     | context v2、namespace照合、定義preset→既存workspace、色と凡例、画面action  | 通常Appで保存定義からraw/minmaxを明示取得。v1手動維持、別namespace同ID拒否、部分未解決拒否、unknownSeries応答、UTC算術端、service/定義/画面/Popup寿命、複数配置でもactive1、両theme      |
 
 H4c2で「Trend表示完成」とはしない。H4c3で保存定義からの履歴表示までが完成し、画面内常時グラフは別工程である。inline化を再開する時は、同時可視instance数、全体points/bytes、要求fairness、取消中資源、hidden/embedded/Popupの需要集約を先に決める。今回の単一workspace予算を無条件に各shapeへ複製しない。
 
 次の上流接続工程は、namespaceを実Historianへ結び付けるadapterと製品transport／認証の再開条件を満たした後である。保存Trendを導入しても製品接続・常時収集・長期検索・認証が完成したとはしない。
+
+## H4c1の実装と受入（2026-11-02）
+
+[共通Schema](../../../crates/scada-model/schema/trend-definition.schema.json)にH1 canonical resourceへの外部参照を置き、Rust／TSとも同梱resourceをローカル登録する。nativeは未登録resourceの取得を拒否し、TSは同期compileでネットワークloaderを持たない。H1のID正規表現を複製せず、modelへの新しいSDK／DB依存も追加していない。
+
+Rustの`scada_model::trend_definitions::validate_trend_definitions(&Value)`は構造化値を有限走査・Schema・意味検査へ通し、`TrendDefinitions::from_value`は検証した値を所有する。`as_value`は共有参照だけを返す。TSの`validateTrendDefinitions`は受理bool、`parseTrendDefinitions`は所有・凍結したsnapshotを返す。名前・色の表記・ペン順は保存し、余白除去やID生成・系列解決を行わない。TSは既存`ownHistoryJson`を使い、不正scalarの検査を新validator内に限定した。
+
+[共通fixture](../../../examples/trend-definition-cases.json)85件でRust／TS／browserの受理結果が一致した。大きい定義は小さいrecipeから展開し、1MiBちょうど／1byte超過、nativeのfloat表記でも同じ境界、128定義・8pen、重複・別namespace、ID末尾改行、FEFF／0085、512補助平面文字、孤立surrogateの境界を含む。raw JSON文字列fixtureによりnativeのdecode拒否とTSのscalar拒否を比較する。
+
+Rust workspace388件（新規4単体）、TS全体1,578件（新規96件）、型検査0error／0warning、build、Clippy `-D warnings`／rustfmt、関連Chromium16件（新規2件）が成功。browserはremote schema取得なし・所有／凍結・Project0.35で未導入trendsを拒否することも確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+H4c1は独立した表示定義契約だけで、Project 0.35.0・App／main・DB format 5・H1・SDK／Banto依存は維持する。新APIの受理はnamespaceやseriesの実在・記録・権限の証明ではない。元inputの確保済みメモリやProxy trapのhard実行予算も保証しない。次のH4c2ではProject側へTrend／H1 resourceを登録し、Schema参照だけで完了とせず、`trends`を同じ独立文書wrapperで意味検査・1MiB予算へ通す。参照存在・Symbol禁止はProject全体の追加検査とする。

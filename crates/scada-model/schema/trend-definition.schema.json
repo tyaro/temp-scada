@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://temp-scada.invalid/schema/trend-definition-v1.json",
+  "title": "Independent Trend definitions v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "kind", "definitions"],
+  "properties": {
+    "version": { "const": 1 },
+    "kind": { "const": "trendDefinitions" },
+    "definitions": { "$ref": "#/$defs/definitions" }
+  },
+  "$defs": {
+    "id": {
+      "$ref": "https://temp-scada.invalid/schema/history-contract-v1.json#/$defs/id"
+    },
+    "label": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "definitions": {
+      "type": "array",
+      "maxItems": 128,
+      "items": { "$ref": "#/$defs/definition" }
+    },
+    "definition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "historianNamespace",
+        "pens",
+        "windowMs",
+        "mode",
+        "maxPointsPerSeries"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "$ref": "#/$defs/label" },
+        "historianNamespace": { "$ref": "#/$defs/id" },
+        "pens": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/pen" }
+        },
+        "windowMs": { "type": "integer", "minimum": 1, "maximum": 3600000 },
+        "mode": { "enum": ["raw", "minmax"] },
+        "maxPointsPerSeries": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2000
+        }
+      }
+    },
+    "pen": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "seriesId", "color"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "seriesId": { "$ref": "#/$defs/id" },
+        "label": { "$ref": "#/$defs/label" },
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9A-Fa-f]{6}$",
+          "minLength": 7,
+          "maxLength": 7
+        }
+      }
+    }
+  }
+}
