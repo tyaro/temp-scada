@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)を参照。次の[H4c](../design/runtime/historian-trend-definition.md)は採用設計のみで、保存・配置機能は未実装。
+提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)を参照。[H4c1](../design/runtime/historian-trend-definition.md)の独立定義契約は実装・受入済み。Projectへの保存・配置機能は未実装。
 
 最新の作図改善の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（全体CI成功）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
@@ -556,4 +556,14 @@ Project 0.35.0・SDK固定版・Banto 6.9.0・H1・Rust・DB format 5・依存�
 
 採用する最初の経路は「ProjectへTrend定義を保存→画面の参照shapeから単一の履歴workspaceを開く」である。ペン・色・表示期間・mode・点数を記録設定から分け、保存したnamespace／opaque系列IDと接続元の明示宣言が一致する場合だけ適用する。namespaceは実DBの検証済みidentityや認証の代わりにはならない。単位・型・由来は過去segment metadataを使い、同名系列や別namespaceへ自動で置き換えない。
 
-今回は設計のみで、Schema、Rust／TS、Project 0.35.0、通常App、DB format 5、SDK／Banto依存は変更していない。Trend保存・配置・色の適用は未実装。H4c1の独立契約、H4c2のProject 0.36.0／静的参照shape、H4c3のcontext v2／preset／画面actionの順に小さいPRで実装する。常時inline chart・liveとのmerge、実History adapter・transport／認証、ChronoGazer還元は後続である。検証は現行コードとの責務照合・文書整形・参照確認で、今回実行テストの追加や実Hub／S7／DB接続はない。
+設計PR #38は文書だけの変更で、Schema、Rust／TS、Project 0.35.0、通常App、DB format 5、SDK／Banto依存を変更しなかった。Trend保存・配置・色の適用は未実装。H4c1の独立契約、H4c2のProject 0.36.0／静的参照shape、H4c3のcontext v2／preset／画面actionの順に小さいPRで実装する。常時inline chart・liveとのmerge、実History adapter・transport／認証、ChronoGazer還元は後続である。同PRの検証は現行コードとの責務照合・文書整形・参照確認で、実行テストの追加や実Hub／S7／DB接続はない。
+
+## 独立Trend定義の共通検証契約（H4c1、2026-11-02）
+
+[PR #38](https://github.com/tyaro/temp-scada/pull/38)の採用設計はマージ済み（`4203d6d2e7caecd699f7a1f2c900d585aa33b07b`）、[全体CI 41422420597](https://github.com/tyaro/temp-scada/actions/runs/41422420597)成功。Astra主設計の[H4c1](../design/runtime/historian-trend-definition.md)として、独立TrendDefinitions文書の共通Schema、Rust／TS validator、共通fixtureを追加した。
+
+最大128定義・各1〜8pen、namespaceとopaque seriesId、色・期間・mode・点数の有限契約を検証する。IDは同梱H1 resourceを参照し、文字列は明示Unicode空白集合とscalar条件、JSONは整数表記へ正規化したcompact UTF-8値で1MiB／depth32／node250,000に制限する。名前・色の綴り・順序を変えずに所有し、TSの返却snapshotは凍結する。系列実在や接続認証の証明は行わない。
+
+共通85fixtureがRust／TS／browserで一致し、1MiB境界・1byte超過、nativeのfloat表記、Unicode／ID末尾改行、重複と点数予算、namespace分離を確認した。Rust workspace388件（新規4）・TS全体1,578件（新規96）・型検査0error／0warning・build・Clippy／rustfmt・関連Chromium16件（新規2）が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+Project 0.35.0・App／main・DB format 5・H1・SDK／Banto依存は維持する。保存・配置・context v2は未実装。次はH4c2でProject側にも同じresourceと意味検査・予算を使い、参照整合性とSymbol配置禁止を加える。上流・S7・実Hub／DB／設定・資格情報へ接続していない。

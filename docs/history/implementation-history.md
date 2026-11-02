@@ -14,13 +14,23 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## 独立Trend定義の共通検証契約（H4c1、2026-11-02）
+
+[PR #38](https://github.com/tyaro/temp-scada/pull/38)の採用設計はマージ済み（`4203d6d2e7caecd699f7a1f2c900d585aa33b07b`）、[全体CI 41422420597](https://github.com/tyaro/temp-scada/actions/runs/41422420597)成功。Astra主設計の[H4c1](../design/runtime/historian-trend-definition.md)として、独立TrendDefinitions文書の共通Schema、Rust／TS validator、共通fixtureを追加した。
+
+最大128定義・各1〜8pen、namespaceとopaque seriesId、色・期間・mode・点数の有限契約を検証する。IDは同梱H1 resourceを参照し、文字列は明示Unicode空白集合とscalar条件、JSONは整数表記へ正規化したcompact UTF-8値で1MiB／depth32／node250,000に制限する。名前・色の綴り・順序を変えずに所有し、TSの返却snapshotは凍結する。系列実在や接続認証の証明は行わない。
+
+共通85fixtureがRust／TS／browserで一致し、1MiB境界・1byte超過、nativeのfloat表記、Unicode／ID末尾改行、重複と点数予算、namespace分離を確認した。Rust workspace388件（新規4）・TS全体1,578件（新規96）・型検査0error／0warning・build・Clippy／rustfmt・関連Chromium16件（新規2）が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+Project 0.35.0・App／main・DB format 5・H1・SDK／Banto依存は維持する。保存・配置・context v2は未実装。次はH4c2でProject側にも同じresourceと意味検査・予算を使い、参照整合性とSymbol配置禁止を加える。上流・S7・実Hub／DB／設定・資格情報へ接続していない。
+
 ## 永続Trend定義と画面参照の採用設計（H4c、2026-11-02）
 
 [PR #37](https://github.com/tyaro/temp-scada/pull/37)はマージ済み（`00d860e8293dc31d269fb11a0a1f144f62901253`）、[全体CI 41416523675](https://github.com/tyaro/temp-scada/actions/runs/41416523675)成功。通常Appの明示履歴検索は提供済みである。次工程の[H4c](../design/runtime/historian-trend-definition.md)をAstra主設計で文書化した。
 
 採用する最初の経路は「ProjectへTrend定義を保存→画面の参照shapeから単一の履歴workspaceを開く」である。ペン・色・表示期間・mode・点数を記録設定から分け、保存したnamespace／opaque系列IDと接続元の明示宣言が一致する場合だけ適用する。namespaceは実DBの検証済みidentityや認証の代わりにはならない。単位・型・由来は過去segment metadataを使い、同名系列や別namespaceへ自動で置き換えない。
 
-今回は設計のみで、Schema、Rust／TS、Project 0.35.0、通常App、DB format 5、SDK／Banto依存は変更していない。Trend保存・配置・色の適用は未実装。H4c1の独立契約、H4c2のProject 0.36.0／静的参照shape、H4c3のcontext v2／preset／画面actionの順に小さいPRで実装する。常時inline chart・liveとのmerge、実History adapter・transport／認証、ChronoGazer還元は後続である。検証は現行コードとの責務照合・文書整形・参照確認で、今回実行テストの追加や実Hub／S7／DB接続はない。
+設計PR #38は文書だけの変更で、Schema、Rust／TS、Project 0.35.0、通常App、DB format 5、SDK／Banto依存を変更しなかった。Trend保存・配置・色の適用は未実装。H4c1の独立契約、H4c2のProject 0.36.0／静的参照shape、H4c3のcontext v2／preset／画面actionの順に小さいPRで実装する。常時inline chart・liveとのmerge、実History adapter・transport／認証、ChronoGazer還元は後続である。同PRの検証は現行コードとの責務照合・文書整形・参照確認で、実行テストの追加や実Hub／S7／DB接続はない。
 
 ## 通常Appの履歴検索workspace（H4b2、2026-11-02）
 

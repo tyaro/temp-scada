@@ -18,24 +18,24 @@
 
 各工程は詳細契約→実装→受入→保存の順に進める。P1から順に着手し、後続の未実装を提供済みと記載しない。
 
-| 工程                     | 内容                                                              | 完了条件                                                                                 | 状態                         |
-| ------------------------ | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------- |
-| P1 固定SDKと投影         | rev更新、同一世代snapshot、部分解決、Unbound、値側source          | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                     | 完了・PR #10マージ済み       |
-| P2 読取Host              | Projectごとにhandle1つ。Textと機器slotの要求を集約                | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認       | 完了・PR #11マージ済み       |
-| P3a 表示DTO・session     | 数値Text・Symbol・機器小窓への一括更新                            | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMと旧通知拒否を通常Appの同一mountで確認  | 完了・PR #12マージ済み       |
-| P3b 製品transport        | Hostと画面の配送経路・接続設定                                    | transportと認証境界を明示設計し、Host sessionと画面deliveryを対応付けて実接続を検証      | 境界設計済み・製品実装は保留 |
-| P4 Tag Browser           | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み       |
-| P5 Historian／Trend      | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み   |
-| H1 純粋契約・保存設計    | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み       |
-| H2 保存・検索層          | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c10実装済み・運用受入残り  |
-| H3a 位相固定recorder     | 単一groupをabsolute deadlineで周期保存                            | 仮想1時間3600枠と実SQLite commit、欠測・停止を検証                                       | PR #31マージ・全体CI成功     |
-| H3b 専用SDK入力          | UIと独立した固定SDK ownerから同世代snapshotを取り込む             | mock Hub→SDK→recorder→実SQLite、無値・再接続・identity変更停止を検証                     | PR #32マージ・全体CI成功     |
-| H3c 単一group Host       | 一つのwriterと専用SDK入力をblocking workerで実行                  | 開始・停止・取消安全join、差替え、writer所有・Drop／panicを検証                          | PR #33マージ・全体CI成功     |
-| H3d 記録と保持の協調     | clean pause後に最大一回の保持操作、明示new-session再開            | guard／job状態・writer所有を保持し、異常時再開を拒否                                     | PR #34マージ・全体CI成功     |
-| H4a History読取Host      | 一要求ごとに既存readerでraw／minmax検索                           | 取消安全join、exact token、reader leaseと記録／保持独立を検証                            | PR #35マージ・全体CI成功     |
-| H4b1 History表示基盤     | TS要求配送・純粋Trend model・共通renderer                         | raw点／包絡／無値・coverage、取消／旧応答と両テーマをfixture検証                         | PR #36マージ・全体CI成功     |
-| H4b2 App履歴検索         | 通常Appの明示検索Modalとoptional HistoryService                   | context／UTC検証、寿命退役・物理一枠、Project保存不変を通常Appで検証                     | PR #37マージ・全体CI成功     |
-| H4c 永続Trend・参照shape | namespace付き系列参照・表示定義と単一workspaceへの配置action      | 純粋契約→Project／shape→UI／受入。実transportとinline常時chartは後続                     | 採用設計のみ・実装未着手     |
+| 工程                     | 内容                                                              | 完了条件                                                                                 | 状態                           |
+| ------------------------ | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------ |
+| P1 固定SDKと投影         | rev更新、同一世代snapshot、部分解決、Unbound、値側source          | Rust契約試験、共通DTO fixture、ブラウザのUnbound受入と旧値消去が成功                     | 完了・PR #10マージ済み         |
+| P2 読取Host              | Projectごとにhandle1つ。Textと機器slotの要求を集約                | 開始／停止、要求集合変更、接続先変更、旧task通知拒否、空要求の非接続をモックで確認       | 完了・PR #11マージ済み         |
+| P3a 表示DTO・session     | 数値Text・Symbol・機器小窓への一括更新                            | 正常／部分未解決／タグ待ち／Bad・Stale／切断／SIMと旧通知拒否を通常Appの同一mountで確認  | 完了・PR #12マージ済み         |
+| P3b 製品transport        | Hostと画面の配送経路・接続設定                                    | transportと認証境界を明示設計し、Host sessionと画面deliveryを対応付けて実接続を検証      | 境界設計済み・製品実装は保留   |
+| P4 Tag Browser           | catalog表示DTOと既存選択UIの接続準備                              | 検索・型絞込み・明示確定・古い結果の拒否。Projectにcatalog全件・資格情報を保存しない     | 完了・PR #13マージ済み         |
+| P5 Historian／Trend      | 共通利用とAPI境界の設計                                           | 下記の未決とSOAK後の上流作業を文書化。共有部品の切出しや履歴サービスの実装完了とはしない | 設計完了・PR #14マージ済み     |
+| H1 純粋契約・保存設計    | 版付きSchema／共通fixture／Rust・TS validator、保存方式と復旧契約 | 110 fixtureがRust／TS／ブラウザで一致。DBや永続化保証は追加しない                        | 完了・PR #15マージ済み         |
+| H2 保存・検索層          | 新SQLite層を隔離一時DBで実装し障害注入                            | 原子commit・冪等性・snapshot・保持とcoverage・復旧を検証。上流と実環境は変更しない       | H2c10実装済み・運用受入残り    |
+| H3a 位相固定recorder     | 単一groupをabsolute deadlineで周期保存                            | 仮想1時間3600枠と実SQLite commit、欠測・停止を検証                                       | PR #31マージ・全体CI成功       |
+| H3b 専用SDK入力          | UIと独立した固定SDK ownerから同世代snapshotを取り込む             | mock Hub→SDK→recorder→実SQLite、無値・再接続・identity変更停止を検証                     | PR #32マージ・全体CI成功       |
+| H3c 単一group Host       | 一つのwriterと専用SDK入力をblocking workerで実行                  | 開始・停止・取消安全join、差替え、writer所有・Drop／panicを検証                          | PR #33マージ・全体CI成功       |
+| H3d 記録と保持の協調     | clean pause後に最大一回の保持操作、明示new-session再開            | guard／job状態・writer所有を保持し、異常時再開を拒否                                     | PR #34マージ・全体CI成功       |
+| H4a History読取Host      | 一要求ごとに既存readerでraw／minmax検索                           | 取消安全join、exact token、reader leaseと記録／保持独立を検証                            | PR #35マージ・全体CI成功       |
+| H4b1 History表示基盤     | TS要求配送・純粋Trend model・共通renderer                         | raw点／包絡／無値・coverage、取消／旧応答と両テーマをfixture検証                         | PR #36マージ・全体CI成功       |
+| H4b2 App履歴検索         | 通常Appの明示検索Modalとoptional HistoryService                   | context／UTC検証、寿命退役・物理一枠、Project保存不変を通常Appで検証                     | PR #37マージ・全体CI成功       |
+| H4c 永続Trend・参照shape | namespace付き系列参照・表示定義と単一workspaceへの配置action      | 純粋契約→Project／shape→UI／受入。実transportとinline常時chartは後続                     | H4c1契約受入済み・保存配置残り |
 
 ## P1の実装契約
 
@@ -432,4 +432,14 @@ Project 0.35.0・SDK固定版・Banto 6.9.0・H1・Rust・DB format 5・依存�
 
 採用する最初の経路は「ProjectへTrend定義を保存→画面の参照shapeから単一の履歴workspaceを開く」である。ペン・色・表示期間・mode・点数を記録設定から分け、保存したnamespace／opaque系列IDと接続元の明示宣言が一致する場合だけ適用する。namespaceは実DBの検証済みidentityや認証の代わりにはならない。単位・型・由来は過去segment metadataを使い、同名系列や別namespaceへ自動で置き換えない。
 
-今回は設計のみで、Schema、Rust／TS、Project 0.35.0、通常App、DB format 5、SDK／Banto依存は変更していない。Trend保存・配置・色の適用は未実装。H4c1の独立契約、H4c2のProject 0.36.0／静的参照shape、H4c3のcontext v2／preset／画面actionの順に小さいPRで実装する。常時inline chart・liveとのmerge、実History adapter・transport／認証、ChronoGazer還元は後続である。検証は現行コードとの責務照合・文書整形・参照確認で、今回実行テストの追加や実Hub／S7／DB接続はない。
+設計PR #38は文書だけの変更で、Schema、Rust／TS、Project 0.35.0、通常App、DB format 5、SDK／Banto依存を変更しなかった。Trend保存・配置・色の適用は未実装。H4c1の独立契約、H4c2のProject 0.36.0／静的参照shape、H4c3のcontext v2／preset／画面actionの順に小さいPRで実装する。常時inline chart・liveとのmerge、実History adapter・transport／認証、ChronoGazer還元は後続である。同PRの検証は現行コードとの責務照合・文書整形・参照確認で、実行テストの追加や実Hub／S7／DB接続はない。
+
+## 独立Trend定義の共通検証契約（H4c1、2026-11-02）
+
+[PR #38](https://github.com/tyaro/temp-scada/pull/38)の採用設計はマージ済み（`4203d6d2e7caecd699f7a1f2c900d585aa33b07b`）、[全体CI 41422420597](https://github.com/tyaro/temp-scada/actions/runs/41422420597)成功。Astra主設計の[H4c1](../design/runtime/historian-trend-definition.md)として、独立TrendDefinitions文書の共通Schema、Rust／TS validator、共通fixtureを追加した。
+
+最大128定義・各1〜8pen、namespaceとopaque seriesId、色・期間・mode・点数の有限契約を検証する。IDは同梱H1 resourceを参照し、文字列は明示Unicode空白集合とscalar条件、JSONは整数表記へ正規化したcompact UTF-8値で1MiB／depth32／node250,000に制限する。名前・色の綴り・順序を変えずに所有し、TSの返却snapshotは凍結する。系列実在や接続認証の証明は行わない。
+
+共通85fixtureがRust／TS／browserで一致し、1MiB境界・1byte超過、nativeのfloat表記、Unicode／ID末尾改行、重複と点数予算、namespace分離を確認した。Rust workspace388件（新規4）・TS全体1,578件（新規96）・型検査0error／0warning・build・Clippy／rustfmt・関連Chromium16件（新規2）が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+
+Project 0.35.0・App／main・DB format 5・H1・SDK／Banto依存は維持する。保存・配置・context v2は未実装。次はH4c2でProject側にも同じresourceと意味検査・予算を使い、参照整合性とSymbol配置禁止を加える。上流・S7・実Hub／DB／設定・資格情報へ接続していない。

@@ -1,0 +1,2020 @@
+[
+  {
+    "name": "one-definition-strings-order-and-color-preserved",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "empty-definitions",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": []
+    }
+  },
+  {
+    "name": "min-window-and-points",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 1,
+          "mode": "raw",
+          "maxPointsPerSeries": 1
+        }
+      ]
+    }
+  },
+  {
+    "name": "minmax-eight-pens-exact-total-budget",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:0",
+              "seriesId": "series:0",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:2",
+              "seriesId": "series:2",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:3",
+              "seriesId": "series:3",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:4",
+              "seriesId": "series:4",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:5",
+              "seriesId": "series:5",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:6",
+              "seriesId": "series:6",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:7",
+              "seriesId": "series:7",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "minmax",
+          "maxPointsPerSeries": 1000
+        }
+      ]
+    }
+  },
+  {
+    "name": "two-definitions-same-series-different-namespace",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        },
+        {
+          "id": "trend:2",
+          "name": "工程温度",
+          "historianNamespace": "archive:b",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "two-definitions-reuse-pen-id",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        },
+        {
+          "id": "trend:2",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "definition-pen-and-series-id-pools-are-separate",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "shared",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "shared",
+              "seriesId": "shared",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "no-optional-label",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "duplicate-labels-and-colors-allowed",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:2",
+              "seriesId": "series:2",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "h1-id-all-punctuation-and-64-characters",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "A._:-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "512-supplementary-codepoints",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "explicit-whitespace-with-visible-character-is-preserved",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "﻿温度　",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "zero-width-space-is-visible-by-contract",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "​",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "wrong-version",
+    "accepted": false,
+    "input": {
+      "version": 2,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "wrong-kind",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "query",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "unknown-root-field",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ],
+      "path": "local-file"
+    }
+  },
+  {
+    "name": "unknown-definition-field",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100,
+          "retentionDays": 30
+        }
+      ]
+    }
+  },
+  {
+    "name": "unknown-pen-field",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef",
+              "periodMs": 1000
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "definition-id-at-sign",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "id@bad",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "definition-id-leading-punctuation",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": ":id",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "definition-id-final-newline",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "id\n",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "definition-id-final-CRLF",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "id\r\n",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "definition-id-65-characters",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "namespace-is-not-url",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "https://example.invalid",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "namespace-empty",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "series-id-nonascii",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "温度",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "pen-id-empty",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "empty-name",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-513-codepoints",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "empty-label",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": "",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "label-513-codepoints",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "label-null",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": null,
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "color-short",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#abc"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "color-alpha",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#12345678"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "color-css-variable",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "var(--color)"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "color-final-newline",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef\n"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "color-invalid-digit",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#12345g"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "zero-window",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 0,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "too-wide-window",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600001,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "fractional-window",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 1.5,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "unsafe-integer-window",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 9007199254740992,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "unknown-mode",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "auto",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "zero-points",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 0
+        }
+      ]
+    }
+  },
+  {
+    "name": "too-many-points",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 2001
+        }
+      ]
+    }
+  },
+  {
+    "name": "fractional-points",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 1.5
+        }
+      ]
+    }
+  },
+  {
+    "name": "string-points",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": "100"
+        }
+      ]
+    }
+  },
+  {
+    "name": "empty-pens",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "duplicate-definition-id",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        },
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "duplicate-pen-id",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:1",
+              "seriesId": "series:2",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "duplicate-series-id",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:2",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "total-point-budget-exceeded",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:0",
+              "seriesId": "series:0",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:2",
+              "seriesId": "series:2",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:3",
+              "seriesId": "series:3",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            },
+            {
+              "id": "pen:4",
+              "seriesId": "series:4",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 2000
+        }
+      ]
+    }
+  },
+  {
+    "name": "missing-required-property",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "wrong-container-type",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": {}
+    }
+  },
+  {
+    "name": "name-whitespace-U+0009",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "\t",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+000A",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "\n",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+000B",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "\u000b",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+000C",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "\f",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+000D",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "\r",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+0020",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": " ",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+0085",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+00A0",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": " ",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+1680",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": " ",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+2000",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": " ",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+200A",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": " ",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+2028",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": " ",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+2029",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": " ",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+202F",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": " ",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+205F",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": " ",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+3000",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "　",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "name-whitespace-U+FEFF",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "﻿",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": " 温度 ",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "label-whitespace-FEFF-and-0085",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "trendDefinitions",
+      "definitions": [
+        {
+          "id": "trend:1",
+          "name": "工程温度",
+          "historianNamespace": "archive:a",
+          "pens": [
+            {
+              "id": "pen:1",
+              "seriesId": "series:1",
+              "label": "﻿",
+              "color": "#aB12Ef"
+            }
+          ],
+          "windowMs": 3600000,
+          "mode": "raw",
+          "maxPointsPerSeries": 100
+        }
+      ]
+    }
+  },
+  {
+    "name": "128-definitions",
+    "accepted": true,
+    "build": "definitions",
+    "count": 128
+  },
+  {
+    "name": "129-definitions",
+    "accepted": false,
+    "build": "definitions",
+    "count": 129
+  },
+  {
+    "name": "eight-pens",
+    "accepted": true,
+    "build": "pens",
+    "count": 8
+  },
+  {
+    "name": "nine-pens",
+    "accepted": false,
+    "build": "pens",
+    "count": 9
+  },
+  {
+    "name": "compact-byte-boundary-1048576-floats-False",
+    "accepted": true,
+    "build": "byteBudget",
+    "bytes": 1048576,
+    "floatNumbers": false
+  },
+  {
+    "name": "compact-byte-boundary-1048577-floats-False",
+    "accepted": false,
+    "build": "byteBudget",
+    "bytes": 1048577,
+    "floatNumbers": false
+  },
+  {
+    "name": "compact-byte-boundary-1048576-floats-True",
+    "accepted": true,
+    "build": "byteBudget",
+    "bytes": 1048576,
+    "floatNumbers": true
+  },
+  {
+    "name": "integer-decimal-and-exponent-notation",
+    "accepted": true,
+    "json": "{\"version\": 1.0, \"kind\": \"trendDefinitions\", \"definitions\": [{\"id\": \"trend:1\", \"name\": \"\\u5de5\\u7a0b\\u6e29\\u5ea6\", \"historianNamespace\": \"archive:a\", \"pens\": [{\"id\": \"pen:1\", \"seriesId\": \"series:1\", \"label\": \" \\u6e29\\u5ea6 \", \"color\": \"#aB12Ef\"}], \"windowMs\": 3.6e6, \"mode\": \"raw\", \"maxPointsPerSeries\": 100}]}"
+  },
+  {
+    "name": "lone-high-surrogate",
+    "accepted": false,
+    "json": "{\"version\": 1, \"kind\": \"trendDefinitions\", \"definitions\": [{\"id\": \"trend:1\", \"name\": \"\\ud800\", \"historianNamespace\": \"archive:a\", \"pens\": [{\"id\": \"pen:1\", \"seriesId\": \"series:1\", \"label\": \" \\u6e29\\u5ea6 \", \"color\": \"#aB12Ef\"}], \"windowMs\": 3600000, \"mode\": \"raw\", \"maxPointsPerSeries\": 100}]}"
+  },
+  {
+    "name": "lone-low-surrogate",
+    "accepted": false,
+    "json": "{\"version\": 1, \"kind\": \"trendDefinitions\", \"definitions\": [{\"id\": \"trend:1\", \"name\": \"\\udfff\", \"historianNamespace\": \"archive:a\", \"pens\": [{\"id\": \"pen:1\", \"seriesId\": \"series:1\", \"label\": \" \\u6e29\\u5ea6 \", \"color\": \"#aB12Ef\"}], \"windowMs\": 3600000, \"mode\": \"raw\", \"maxPointsPerSeries\": 100}]}"
+  },
+  {
+    "name": "lone-surrogate-key",
+    "accepted": false,
+    "json": "{\"version\": 1, \"kind\": \"trendDefinitions\", \"definitions\": [{\"id\": \"trend:1\", \"\\ud800\": \"\\u5de5\\u7a0b\\u6e29\\u5ea6\", \"historianNamespace\": \"archive:a\", \"pens\": [{\"id\": \"pen:1\", \"seriesId\": \"series:1\", \"label\": \" \\u6e29\\u5ea6 \", \"color\": \"#aB12Ef\"}], \"windowMs\": 3600000, \"mode\": \"raw\", \"maxPointsPerSeries\": 100}]}"
+  },
+  {
+    "name": "non-finite-exponent",
+    "accepted": false,
+    "json": "{\"version\": 1, \"kind\": \"trendDefinitions\", \"definitions\": [{\"id\": \"trend:1\", \"name\": \"\\u5de5\\u7a0b\\u6e29\\u5ea6\", \"historianNamespace\": \"archive:a\", \"pens\": [{\"id\": \"pen:1\", \"seriesId\": \"series:1\", \"label\": \" \\u6e29\\u5ea6 \", \"color\": \"#aB12Ef\"}], \"windowMs\": 1e309, \"mode\": \"raw\", \"maxPointsPerSeries\": 100}]}"
+  },
+  {
+    "name": "negative-zero-window",
+    "accepted": false,
+    "json": "{\"version\": 1, \"kind\": \"trendDefinitions\", \"definitions\": [{\"id\": \"trend:1\", \"name\": \"\\u5de5\\u7a0b\\u6e29\\u5ea6\", \"historianNamespace\": \"archive:a\", \"pens\": [{\"id\": \"pen:1\", \"seriesId\": \"series:1\", \"label\": \" \\u6e29\\u5ea6 \", \"color\": \"#aB12Ef\"}], \"windowMs\": -0.0, \"mode\": \"raw\", \"maxPointsPerSeries\": 100}]}"
+  },
+  {
+    "name": "invalid-json",
+    "accepted": false,
+    "json": "{\"version\":"
+  }
+]

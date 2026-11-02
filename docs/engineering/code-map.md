@@ -536,6 +536,14 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 
 `workspace-model.test.ts`の新規39件がcontext所有・制限・UTC・選択とquery予算を検証する。`e2e/history-workspace.spec.ts`の新規8件は通常Appを保ちテストentryでserviceだけを注入し、両テーマ・未接続・寿命・検索・Project書出し不変を受け入れる。既存History／menu／Projectの24件も回帰した。正式wire API／adapter、永続Trend shape、Project schemaはこの工程で変更しない。[設計と限界](../design/runtime/historian-history-workspace.md)を参照する。
 
-## 永続Trend定義・画面参照の設計入口（H4c、未実装）
+## 永続Trend定義・画面参照の設計入口（H4c）
 
-[採用設計](../design/runtime/historian-trend-definition.md)が、独立した共通SchemaとRust／TS validator、ProjectのTrend原本とscreen参照shape、描画actionから既存HistoryWorkspaceへ渡す境界、接続namespaceの照合と寿命、copy／Undo／Symbol制限、受入・PR分割を定める。今回はコード責務を移していない。Project 0.35.0と既存H4b2を維持し、永続モデルやshapeの実装完了とはしない。
+[採用設計](../design/runtime/historian-trend-definition.md)が、独立した共通SchemaとRust／TS validator、ProjectのTrend原本とscreen参照shape、描画actionから既存HistoryWorkspaceへ渡す境界、接続namespaceの照合と寿命、copy／Undo／Symbol制限、受入・PR分割を定める。H4c1の独立契約だけを以下に実装し、Project 0.35.0と既存H4b2を維持する。Project保存・shapeの実装完了とはしない。
+
+## 独立Trend定義の共通契約（H4c1）
+
+`crates/scada-model/schema/trend-definition.schema.json`はstandalone文書と再利用するdefinition／penを所有する。H1のcanonical ID resourceへ外部参照し、Rust `scada-model/src/trend_definitions.rs`とTS `lib/trend-definitions.ts`が同梱schemaをローカル登録する。nativeは未登録retrieverを拒否し、ネットワーク取得へfallbackしない。crate依存を増やさない。
+
+nativeの`validate_trend_definitions(&Value)`／`TrendDefinitions::from_value`／`as_value`と、TSの`validateTrendDefinitions`／`parseTrendDefinitions`が有限走査・Schema・意味検査・owned snapshotを担当する。JSON byte計数では有効な整数値の表記を揃え、TSだけに存在するaccessor／prototype／cycle等は既存`history/owned-json.ts`で拒否する。新しいscalar検査はTrend側に閉じ、H1や既存HistoryContextの受理を変えない。
+
+`examples/trend-definition-cases.json`85件をnative `trend_definitions/tests.rs`、TS単体、`e2e/trend-definitions.spec.ts`で受け入れる。大きい入力はTS `lib/__fixtures__/trend-definition-cases.ts`とnative test helperの同じrecipeで生成し、fixture本体へ1MiBの値を重複保存しない。新規native4単体・TS96件・Chromium2件が所有／Unicode／予算／H1参照を担当し、既存History browser14件も回帰する。通常mainはfixtureも新validatorもimportせず、[H4c2への組込み条件](../design/runtime/historian-trend-definition.md)を残す。
