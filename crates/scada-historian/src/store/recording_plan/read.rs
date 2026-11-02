@@ -69,33 +69,25 @@ pub(super) fn decode<T: DeserializeOwned + Serialize>(
     }
     Ok(result)
 }
-fn previous(
-    c: &Connection,
-    b: &mut Budget,
-    table: &str,
-    key: &str,
-    revision: u64,
-    commit: u64,
-) -> StoreResult<()> {
-    if !(1..=MAX_LEDGER_ENTRIES).contains(&revision) || commit == 0 {
+fn previous_saved(revision: u64, commit: i64, previous: Option<i64>) -> StoreResult<()> {
+    if !(1..=MAX_LEDGER_ENTRIES).contains(&revision)
+        || commit <= 0
+        || (revision > 1 && previous.is_none_or(|n| n <= 0 || n >= commit))
+    {
         return Err(StoreError::CorruptData);
-    }
-    if revision > 1 {
-        b.work.statement()?;
-        b.row()?;
-        let n: Option<i64> = c
-            .query_row(
-                &format!("SELECT commit_version FROM {table} WHERE {key}=?1"),
-                [revision as i64 - 1],
-                |r| r.get(0),
-            )
-            .optional()?;
-        if n.is_none_or(|n| n <= 0 || n as u64 >= commit) {
-            return Err(StoreError::CorruptData);
-        }
     }
     Ok(())
 }
+type MappingRow = (
+    String,
+    Option<i64>,
+    String,
+    String,
+    i64,
+    String,
+    Option<i64>,
+);
+type DefinitionRow = (String, String, i64, Option<i64>);
 pub(super) fn mapping(
     c: &Connection,
     b: &mut Budget,
@@ -104,19 +96,20 @@ pub(super) fn mapping(
 ) -> StoreResult<RegisteredRecordingMapping> {
     b.work.statement()?;
     b.row()?;
-    type Row = (String, Option<i64>, String, String, i64, String);
-    let (key,expected,payload,hash,commit,receipt):Row=c.query_row("SELECT request_id,expected_revision,request_json,mapping_hash,commit_version,receipt_json FROM recording_mapping_revisions WHERE mapping_revision=?1",[revision as i64],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?))).optional()?.ok_or(StoreError::CorruptData)?;
+    let row:MappingRow=c.query_row("SELECT m.request_id,m.expected_revision,m.request_json,m.mapping_hash,m.commit_version,m.receipt_json,(SELECT commit_version FROM recording_mapping_revisions WHERE mapping_revision=m.expected_revision) FROM recording_mapping_revisions m WHERE m.mapping_revision=?1",[revision as i64],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?))).optional()?.ok_or(StoreError::CorruptData)?;
+    mapping_evidence(row, revision, snapshot, b)
+}
+fn mapping_evidence(
+    row: MappingRow,
+    revision: u64,
+    snapshot: u64,
+    b: &mut Budget,
+) -> StoreResult<RegisteredRecordingMapping> {
+    let (key, expected, payload, hash, commit, receipt, previous) = row;
     let request: RegisterMappingRequest = decode(&payload, b)?;
     canonical::validate_mapping(&request).map_err(|_| StoreError::CorruptData)?;
     let result: MappingReceipt = decode(&receipt, b)?;
-    previous(
-        c,
-        b,
-        "recording_mapping_revisions",
-        "mapping_revision",
-        revision,
-        commit as u64,
-    )?;
+    previous_saved(revision, commit, previous)?;
     if key != request.request_id
         || expected != request.expected_mapping_revision.map(|n| n as i64)
         || expected
@@ -150,11 +143,20 @@ pub(super) fn definition(
     revision: u64,
 ) -> StoreResult<Option<(serde_json::Value, String, u64)>> {
     b.work.statement()?;
-    let row:Option<(String,String,i64,Option<i64>)>=c.query_row("SELECT desired_json,desired_hash,created_commit,(SELECT min(commit_version) FROM recording_plan_applications WHERE plan_id=?1 AND desired_revision=?2) FROM recording_desired_definitions WHERE plan_id=?1 AND revision=?2",params![plan_id,revision as i64],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional()?;
-    let Some((text, hash, created, first)) = row else {
-        return Ok(None);
-    };
-    b.row()?;
+    let row:Option<DefinitionRow>=c.query_row("SELECT desired_json,desired_hash,created_commit,(SELECT min(commit_version) FROM recording_plan_applications WHERE plan_id=?1 AND desired_revision=?2) FROM recording_desired_definitions WHERE plan_id=?1 AND revision=?2",params![plan_id,revision as i64],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional()?;
+    row.map(|row| {
+        b.row()?;
+        definition_evidence(row, plan_id, revision, b)
+    })
+    .transpose()
+}
+fn definition_evidence(
+    row: DefinitionRow,
+    plan_id: &str,
+    revision: u64,
+    b: &mut Budget,
+) -> StoreResult<(serde_json::Value, String, u64)> {
+    let (text, hash, created, first) = row;
     let desired: serde_json::Value = decode(&text, b)?;
     if scada_model::recording_plan::validate_recording_plan(&desired).is_err()
         || desired["planId"] != plan_id
@@ -165,7 +167,7 @@ pub(super) fn definition(
     {
         return Err(StoreError::CorruptData);
     }
-    Ok(Some((desired, hash, created as u64)))
+    Ok((desired, hash, created as u64))
 }
 fn application_evidence(
     c: &Connection,
@@ -177,7 +179,7 @@ fn application_evidence(
 ) -> StoreResult<AppliedRecordingPlan> {
     b.work.statement()?;
     b.row()?;
-    type Row = (
+    type ApplicationRow = (
         String,
         Option<i64>,
         String,
@@ -190,7 +192,28 @@ fn application_evidence(
         i64,
         String,
     );
-    let (key,expected,payload,desired_id,desired_revision,mapping_rev,retention_rev,resolved,hash,commit,receipt):Row=c.query_row("SELECT request_id,expected_revision,request_json,plan_id,desired_revision,mapping_revision,retention_revision,resolved_json,resolved_hash,commit_version,CASE WHEN ?2 THEN receipt_json ELSE 'null' END FROM recording_plan_applications WHERE applied_revision=?1",params![revision as i64, verify_receipt],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?,r.get(8)?,r.get(9)?,r.get(10)?))).optional()?.ok_or(StoreError::CorruptData)?;
+    let (row,previous,definition_row,mapping_row):(ApplicationRow,Option<i64>,Option<DefinitionRow>,Option<MappingRow>)=c.query_row(
+        "SELECT a.request_id,a.expected_revision,a.request_json,a.plan_id,a.desired_revision,a.mapping_revision,a.retention_revision,a.resolved_json,a.resolved_hash,a.commit_version,CASE WHEN ?2 THEN a.receipt_json ELSE 'null' END,(SELECT commit_version FROM recording_plan_applications WHERE applied_revision=a.expected_revision),d.desired_json,d.desired_hash,d.created_commit,(SELECT min(commit_version) FROM recording_plan_applications WHERE plan_id=a.plan_id AND desired_revision=a.desired_revision),m.request_id,m.expected_revision,m.request_json,m.mapping_hash,m.commit_version,m.receipt_json,(SELECT commit_version FROM recording_mapping_revisions WHERE mapping_revision=m.expected_revision) FROM recording_plan_applications a LEFT JOIN recording_desired_definitions d ON d.plan_id=a.plan_id AND d.revision=a.desired_revision LEFT JOIN recording_mapping_revisions m ON m.mapping_revision=a.mapping_revision WHERE a.applied_revision=?1",
+        params![revision as i64,verify_receipt],|r| {
+            let application=(r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?,r.get(8)?,r.get(9)?,r.get(10)?);
+            let definition=match r.get::<_,Option<String>>(12)? {None=>None,Some(text)=>Some((text,r.get(13)?,r.get(14)?,r.get(15)?))};
+            let mapping=match r.get::<_,Option<String>>(16)? {None=>None,Some(key)=>Some((key,r.get(17)?,r.get(18)?,r.get(19)?,r.get(20)?,r.get(21)?,r.get(22)?))};
+            Ok((application,r.get(11)?,definition,mapping))
+        },
+    ).optional()?.ok_or(StoreError::CorruptData)?;
+    let (
+        key,
+        expected,
+        payload,
+        desired_id,
+        desired_revision,
+        mapping_rev,
+        retention_rev,
+        resolved,
+        hash,
+        commit,
+        receipt,
+    ) = row;
     let request: ApplyRecordingPlanRequest = decode(&payload, b)?;
     canonical::validate_apply(&request).map_err(|_| StoreError::CorruptData)?;
     let result: Option<RecordingPlanReceipt> = if verify_receipt {
@@ -199,14 +222,7 @@ fn application_evidence(
         None
     };
     let resolution: Option<RecordingMapping> = decode(&resolved, b)?;
-    previous(
-        c,
-        b,
-        "recording_plan_applications",
-        "applied_revision",
-        revision,
-        commit as u64,
-    )?;
+    previous_saved(revision, commit, previous)?;
     if key != request.request_id
         || expected != request.expected_applied_revision.map(|n| n as i64)
         || expected
@@ -225,14 +241,20 @@ fn application_evidence(
     {
         return Err(StoreError::CorruptData);
     }
-    let (desired, desired_hash, first) =
-        definition(c, b, &desired_id, desired_revision as u64)?.ok_or(StoreError::CorruptData)?;
+    let (desired, desired_hash, first) = definition_evidence(
+        definition_row.ok_or(StoreError::CorruptData)?,
+        &desired_id,
+        desired_revision as u64,
+        b,
+    )?;
     if desired != request.desired || first > commit as u64 {
         return Err(StoreError::CorruptData);
     }
-    let saved_mapping = mapping_rev
-        .map(|r| mapping(c, b, r as u64, snapshot))
-        .transpose()?;
+    let saved_mapping = match (mapping_rev, mapping_row) {
+        (None, None) => None,
+        (Some(rev), Some(row)) => Some(mapping_evidence(row, rev as u64, snapshot, b)?),
+        _ => return Err(StoreError::CorruptData),
+    };
     if saved_mapping
         .as_ref()
         .is_some_and(|m| m.receipt.commit_version >= commit as u64)

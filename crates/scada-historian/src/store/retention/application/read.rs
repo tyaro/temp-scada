@@ -23,13 +23,23 @@ pub(super) fn definition(
         "SELECT d.payload_json,d.created_commit,(SELECT min(a.commit_version) FROM retention_policy_applications a WHERE a.policy_id=d.policy_id AND a.policy_revision=d.policy_revision) FROM retention_policy_definitions d WHERE d.policy_id=?1 AND d.policy_revision=?2",
         params![key,revision as i64], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?)),
     ).optional()?;
-    let Some((payload, created, first)) = row else {
-        return Ok(None);
-    };
-    budget.row()?;
-    budget.evidence_text(&payload)?;
+    row.map(|(payload, created, first)| {
+        budget.row()?;
+        definition_evidence(&payload, created, first, key, revision, budget)
+    })
+    .transpose()
+}
+fn definition_evidence(
+    payload: &str,
+    created: i64,
+    first: Option<i64>,
+    key: &str,
+    revision: u64,
+    budget: &mut Budget,
+) -> StoreResult<(RetentionClockPolicy, u64)> {
+    budget.evidence_text(payload)?;
     let policy: RetentionClockPolicy =
-        serde_json::from_str(&payload).map_err(|_| StoreError::CorruptData)?;
+        serde_json::from_str(payload).map_err(|_| StoreError::CorruptData)?;
     if policy.policy_id != key
         || policy.revision != revision
         || created <= 0
@@ -38,7 +48,7 @@ pub(super) fn definition(
     {
         return Err(StoreError::CorruptData);
     }
-    Ok(Some((policy, created as u64)))
+    Ok((policy, created as u64))
 }
 
 struct Record {
@@ -46,7 +56,20 @@ struct Record {
     request: PolicyApplyRequest,
     receipt: String,
 }
-type Row = (String, String, i64, Option<i64>, i64, String, i64, String);
+type Row = (
+    String,
+    String,
+    i64,
+    Option<i64>,
+    i64,
+    String,
+    i64,
+    String,
+    Option<String>,
+    Option<i64>,
+    Option<i64>,
+    Option<i64>,
+);
 fn record(
     connection: &Connection,
     budget: &mut Budget,
@@ -55,9 +78,9 @@ fn record(
     include_receipt: bool,
 ) -> StoreResult<Record> {
     budget.work.statement()?;
-    let (key,payload,rev,expected,commit,policy_id,policy_revision,receipt):Row=connection.query_row(
-        "SELECT request_id,payload_json,applied_revision,expected_applied_revision,commit_version,policy_id,policy_revision,CASE WHEN ?2 THEN receipt_json ELSE '' END FROM retention_policy_applications WHERE applied_revision=?1",
-        params![revision,include_receipt],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?)),
+    let (key,payload,rev,expected,commit,policy_id,policy_revision,receipt,definition_text,definition_created,first,previous_commit):Row=connection.query_row(
+        "SELECT a.request_id,a.payload_json,a.applied_revision,a.expected_applied_revision,a.commit_version,a.policy_id,a.policy_revision,CASE WHEN ?2 THEN a.receipt_json ELSE '' END,d.payload_json,d.created_commit,(SELECT min(commit_version) FROM retention_policy_applications WHERE policy_id=a.policy_id AND policy_revision=a.policy_revision),(SELECT commit_version FROM retention_policy_applications WHERE applied_revision=a.expected_applied_revision) FROM retention_policy_applications a LEFT JOIN retention_policy_definitions d ON d.policy_id=a.policy_id AND d.policy_revision=a.policy_revision WHERE a.applied_revision=?1",
+        params![revision,include_receipt],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?,r.get(6)?,r.get(7)?,r.get(8)?,r.get(9)?,r.get(10)?,r.get(11)?)),
     ).optional()?.ok_or(StoreError::CorruptData)?;
     budget.row()?;
     budget.evidence_text(&payload)?;
@@ -80,20 +103,23 @@ fn record(
     {
         return Err(StoreError::CorruptData);
     }
-    let (policy, created) = definition(connection, budget, &policy_id, policy_revision as u64)?
-        .ok_or(StoreError::CorruptData)?;
+    let (policy, created) = definition_evidence(
+        &definition_text.ok_or(StoreError::CorruptData)?,
+        definition_created.ok_or(StoreError::CorruptData)?,
+        first,
+        &policy_id,
+        policy_revision as u64,
+        budget,
+    )?;
     if policy != request.proposed_policy || created > commit as u64 {
         return Err(StoreError::CorruptData);
     }
-    if let Some(previous) = expected {
-        budget.work.statement()?;
-        let previous_commit:Option<i64>=connection.query_row("SELECT commit_version FROM retention_policy_applications WHERE applied_revision=?1",[previous],|r|r.get(0)).optional()?;
-        budget.row()?;
-        if previous_commit.is_none_or(|c| {
+    if expected.is_some()
+        && previous_commit.is_none_or(|c| {
             c <= 0 || c >= commit || c as u64 > request.expected_preview_snapshot_commit
-        }) {
-            return Err(StoreError::CorruptData);
-        }
+        })
+    {
+        return Err(StoreError::CorruptData);
     }
     Ok(Record {
         applied: AppliedRetentionPolicy {

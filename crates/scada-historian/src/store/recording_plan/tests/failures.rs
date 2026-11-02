@@ -9,6 +9,8 @@ fn corrupted_heads_payloads_hashes_and_reservations_are_never_unapplied_defaults
         "UPDATE recording_mapping_revisions SET request_json='{}'",
         "UPDATE recording_mapping_revisions SET mapping_hash=printf('%064d',0)",
         "UPDATE recording_desired_definitions SET desired_hash=printf('%064d',0)",
+        "PRAGMA foreign_keys=OFF; DELETE FROM recording_desired_definitions",
+        "PRAGMA foreign_keys=OFF; DELETE FROM retention_policy_definitions",
         "UPDATE recording_desired_definitions SET created_commit=created_commit+1",
         "UPDATE recording_plan_applications SET receipt_json='{}'",
         "UPDATE recording_plan_applications SET resolved_hash=printf('%064d',0)",

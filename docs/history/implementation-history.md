@@ -14,6 +14,10 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## PR #44の別8member群切替レビュー修正（2026-11-03）
+
+追加P2として異なる16 originsの8member群の往復切替を再現し、32個のseries／segment初利用・各別保持revisionを持つ構成まで回帰を追加した。identity pairの同一transaction内再利用と、関連する台帳／定義／mapping／previous commitのJOIN取得で重複読取を減らした。共通validatorによる本文・hash・receipt・初利用・commit順序の検査とbytes／SQL／VM課金、256行上限は維持する。Astraのread-onlyレビューに必須修正はない。
+
 ## PR #44の記録計画再適用レビュー修正（2026-11-03）
 
 8memberのfirst-useが異なる8applicationに分かれると、旧appliedと新mappingの二重検証で256行上限に達するP2を再現・修正した。first-use根拠のcacheを一apply transaction内で共有し、使用時のcommit上限とdescriptor検証、予約metadata/hash検査、SQL／row／bytes課金を維持する。上限変更はない。結合後の再適用とreceipt、低予算rollback、operationをまたぐ破損再検出を回帰し、Astraのread-onlyレビューに必須修正はない。

@@ -201,3 +201,13 @@ Rust workspace414件、TS1778件／121ファイル、型検査0error／0warning�
 8つの独立した初回予約を作り、結合計画の適用→同設定の再適用→状態／receipt照会を受け入れる回帰を追加した。低予算では書込みなしでControlを返し、次のoperationで参照mappingを破損させるとCorruptDataを検出する。Astraのread-onlyレビューに必須修正はない。
 
 修正後はRust workspace415件、Clippy／rustfmt、既存契約のChromium8件、全体Prettierを受け入れた。Rust以外の製品コード・DB形式・依存は変更していない。
+
+## PR #44追加レビュー: 別8member群への切替（2026-11-03）
+
+[追加P2](https://github.com/tyaro/temp-scada/pull/44#discussion_r4448754854)として、永久metadataを持つ別々の8member群を切り替えるとfirst-use cacheが共有できず、256行を超えるケースも再現した。さらに16seriesのseries予約とsegment予約が分かれる32 originsを作り、各originが異なる保持revisionを参照する構成まで受け入れる。
+
+同一transactionで正方向のhub/incarnation一致を検証できた場合は、既存UNIQUE制約を根拠に逆検索を省き、取得したpairをdescriptor照合へ再利用する。未存在のseriesIdでは逆向きの衝突検索を維持する。applied・desired定義・mapping・直前commitを索引付きJOINで取得し、保持applicationも定義／first-created／previous commitと一緒に読む。純粋validatorを共用し、canonical本文・hash・列・receipt・commit順序・初利用と保持previewの検証は省略しない。
+
+SQLの取得rowは減らすが、全JSON本文のbytes、SQL statement／VM課金と256行上限は維持する。低予算rollback、16 originsの往復切替、32 origins＋別保持版での切替／再送、過去保持receiptやJOIN参照先欠落の破損検出を回帰する。Astraのread-onlyレビューに追加の必須修正はない。
+
+追加修正後はRust workspace417件（H5b1新規24）、Clippy／rustfmt、既存契約のChromium8件、全体Prettierが成功。DB6・H1・依存と通常Appは維持する。

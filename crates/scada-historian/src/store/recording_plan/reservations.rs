@@ -26,11 +26,13 @@ fn check_pair(
     b: &mut Budget,
     table: &str,
     d: &IdentityDescriptor,
-) -> StoreResult<()> {
+) -> StoreResult<Option<(String, String)>> {
     if let Some((hub, inc)) = pair(c, b, table, d)? {
         if hub != d.hub_instance_id || inc != d.incarnation_id {
             return Err(StoreError::Conflict);
         }
+        // UNIQUE(hub_id,incarnation_id) already proves the reverse binding.
+        return Ok(Some((hub, inc)));
     }
     b.work.statement()?;
     let other: Option<String> = c
@@ -49,10 +51,10 @@ fn check_pair(
             return Err(StoreError::Conflict);
         }
     }
-    Ok(())
+    Ok(None)
 }
 fn permanent(c: &Connection, b: &mut Budget, d: &IdentityDescriptor) -> StoreResult<()> {
-    check_pair(c, b, "series", d)?;
+    let actual_pair = check_pair(c, b, "series", d)?;
     b.work.statement()?;
     let text: Option<String> = c
         .query_row(
@@ -75,8 +77,8 @@ fn permanent(c: &Connection, b: &mut Budget, d: &IdentityDescriptor) -> StoreRes
         if old.series_id != d.series_id || old.segment_id != d.segment_id {
             return Err(StoreError::CorruptData);
         }
-        let pair = pair(c, b, "series", &old)?.ok_or(StoreError::CorruptData)?;
-        if pair != (old.hub_instance_id.clone(), old.incarnation_id.clone()) {
+        if actual_pair.as_ref() != Some(&(old.hub_instance_id.clone(), old.incarnation_id.clone()))
+        {
             return Err(StoreError::CorruptData);
         }
         if old != *d {
@@ -181,7 +183,7 @@ fn check_inner(
     for member in &mapping.members {
         let d = &member.identity;
         permanent(c, b, d)?;
-        check_pair(c, b, "recording_series_reservations", d)?;
+        let reserved_pair = check_pair(c, b, "recording_series_reservations", d)?;
         b.work.statement()?;
         let series_first:Option<(i64,Option<i64>)>=c.query_row("SELECT first_revision,(SELECT min(applied_revision) FROM recording_application_members WHERE series_id=?1) FROM recording_series_reservations WHERE series_id=?1",[&d.series_id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
         if let Some((first, actual)) = series_first {
@@ -211,8 +213,8 @@ fn check_inner(
             }
             .validate()
             .map_err(|_| StoreError::CorruptData)?;
-            if pair(c, b, "recording_series_reservations", &old)?
-                != Some((old.hub_instance_id.clone(), old.incarnation_id.clone()))
+            if reserved_pair.as_ref()
+                != Some(&(old.hub_instance_id.clone(), old.incarnation_id.clone()))
             {
                 return Err(StoreError::CorruptData);
             }

@@ -604,6 +604,8 @@ DB formatは6へ更新し、旧5と未知版は移行せず拒否する。`scada
 
 受入は隔離した一時SQLiteのみ。CAS／再送、8member、active記録／保持job、破損head・hash・first-use、4096版上限、FULL／取消／panic／cleanup失敗、各COMMIT境界のプロセス終了と再起動を検証する。管理照会は同期のidle store APIで、Running中の別readerやSDK activationは追加しない。次はH5b2のsession binding、H5cのsupervisor、H5dのProject編集である。
 
-ローカル受入はRust workspace415件（新規22、process worker含む）、TS1778件／121ファイル、型検査0error／0warning、build、Clippy／rustfmt、関連Chromium27件が成功。Astraの最終read-onlyレビューに追加の必須修正はない。browserは既存契約・検索の回帰で、管理UIや実接続は未追加。全体CIはReady for ReviewのPRで確認する。
+ローカル受入はRust workspace417件（新規24、process worker含む）、TS1778件／121ファイル、型検査0error／0warning、build、Clippy／rustfmt、関連Chromium27件が成功。Astraの最終read-onlyレビューに追加の必須修正はない。browserは既存契約・検索の回帰で、管理UIや実接続は未追加。全体CIはReady for ReviewのPRで確認する。
 
 PR #44レビューのP2を修正した。異なる8applicationから予約された8memberの同設定再適用を再現し、同一transaction内だけでfirst-use検証根拠を共有する。256行上限と破損検査を維持し、低予算時のrollbackと次operationの再検証も確認する。この修正はPR #44へ反映し、H5b2のactivation bindingとは別の区切りで受け入れる。
+
+追加P2の、重ならない8member群の切替も修正した。さらにseries／segment first-useが異なる32 originsと別々の保持版の正常切替まで回帰し、関連根拠のindexed JOIN取得と共通validatorによって256行上限内へ収めた。検証・bytes／SQL／VM課金は維持し、Astra再レビューに必須修正はない。

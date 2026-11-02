@@ -350,3 +350,227 @@ fn eight_distinct_first_use_applications_fit_one_default_apply_budget() {
     ));
     assert_eq!(counter(&store), before);
 }
+
+#[test]
+fn disjoint_eight_member_switches_fit_default_budget_with_sixteen_first_use_origins() {
+    let directory = TempStore::new();
+    let mut store = directory.create();
+    let mut pool = mapping();
+    pool.members = (0..16)
+        .map(|n| {
+            let mut m = mapping().members[0].clone();
+            m.member_id = format!("m:{n}");
+            m.identity.series_id = format!("s:{n}");
+            m.identity.incarnation_id = format!("inc:{n}");
+            m.identity.external_name = format!("Plant.Value{n}");
+            m
+        })
+        .collect();
+    for n in 0..2 {
+        let id = format!("manual:{n}");
+        store
+            .begin_session(SessionSpec {
+                session_id: id.clone(),
+                members: pool.members[n * 8..(n + 1) * 8]
+                    .iter()
+                    .map(|m| m.identity.clone())
+                    .collect(),
+            })
+            .unwrap();
+        store.close_session(&id).unwrap();
+    }
+    retention(&mut store);
+    for n in 1..=16 {
+        let mut r = register(&format!("map:{n}"), (n > 1).then_some(n - 1));
+        r.mapping = pool.clone();
+        r.mapping.members = vec![pool.members[n as usize - 1].clone()];
+        store.register_recording_mapping(&r, &control()).unwrap();
+        let mut a = apply(&format!("apply:{n}"), (n > 1).then_some(n - 1), true);
+        a.expected_mapping_revision = Some(n);
+        a.desired = desired_for(&r.mapping);
+        a.desired["revision"] = json!(n);
+        store.apply_recording_plan(&a, &control()).unwrap();
+    }
+    let mut receipts = Vec::new();
+    for (n, offset) in [(17, 0), (18, 8), (19, 0)] {
+        let mut r = register(&format!("map:{n}"), Some(n - 1));
+        r.mapping = pool.clone();
+        r.mapping.members = pool.members[offset..offset + 8].to_vec();
+        store.register_recording_mapping(&r, &control()).unwrap();
+        let mut a = apply(&format!("apply:{n}"), Some(n - 1), true);
+        a.expected_mapping_revision = Some(n);
+        a.desired = desired_for(&r.mapping);
+        a.desired["revision"] = json!(if offset == 0 { 17 } else { 18 });
+        let before = counter(&store);
+        let mut low = control();
+        low.limits.max_decoded_rows = 32;
+        assert!(matches!(
+            store.apply_recording_plan(&a, &low),
+            Err(StoreError::Control(_))
+        ));
+        assert_eq!(counter(&store), before);
+        let receipt = store.apply_recording_plan(&a, &control()).unwrap();
+        assert_eq!(receipt.applied_revision, n);
+        assert_eq!(
+            store
+                .recording_plan_state(&control())
+                .unwrap()
+                .applied
+                .unwrap()
+                .receipt,
+            receipt
+        );
+        assert_eq!(store.apply_recording_plan(&a, &control()).unwrap(), receipt);
+        receipts.push(receipt);
+    }
+    assert_eq!(
+        store
+            .recording_plan_receipt("apply:17", &control())
+            .unwrap(),
+        Some(receipts[0].clone())
+    );
+    let before = counter(&store);
+    for kind in 0..3 {
+        let mut r = register("conflict", Some(19));
+        r.mapping.members = vec![pool.members[0].clone()];
+        match kind {
+            0 => r.mapping.members[0].identity.series_id = "different-series".into(),
+            1 => r.mapping.members[0].identity.incarnation_id = "different-life".into(),
+            _ => r.mapping.members[0].identity.unit = Some("F".into()),
+        }
+        assert!(matches!(
+            store.register_recording_mapping(&r, &control()),
+            Err(StoreError::Conflict)
+        ));
+        assert_eq!(counter(&store), before);
+    }
+}
+
+#[test]
+fn thirty_two_series_and_segment_origins_with_distinct_retention_versions_fit_default_budget() {
+    use crate::store::retention::application::{PolicyApplyRequest, PolicyPreparationRequest};
+    let directory = TempStore::new();
+    let mut store = directory.create();
+    let mut pool = mapping();
+    pool.members = (0..16)
+        .map(|n| {
+            let mut m = mapping().members[0].clone();
+            m.member_id = format!("m:{n}");
+            m.identity.series_id = format!("s:{n}");
+            m.identity.incarnation_id = format!("inc:{n}");
+            m.identity.external_name = format!("Plant.Value{n}");
+            m
+        })
+        .collect();
+    for segment in ["segment-a", "segment-b"] {
+        for half in 0..2 {
+            let id = format!("manual:{segment}:{half}");
+            let members = pool.members[half * 8..(half + 1) * 8]
+                .iter()
+                .map(|m| {
+                    let mut d = m.identity.clone();
+                    d.segment_id = segment.into();
+                    d
+                })
+                .collect();
+            store
+                .begin_session(SessionSpec {
+                    session_id: id.clone(),
+                    members,
+                })
+                .unwrap();
+            store.close_session(&id).unwrap();
+        }
+    }
+    retention(&mut store);
+    for n in 1..=32 {
+        if n > 1 {
+            let mut policy = store
+                .recovery_state(&control())
+                .unwrap()
+                .applied_retention_policy
+                .unwrap()
+                .policy;
+            policy.revision = n;
+            let preview = store
+                .preview_retention_policy_application(
+                    &PolicyPreparationRequest {
+                        proposed_policy: policy.clone(),
+                        reference_wall_ms: 3000,
+                    },
+                    &control(),
+                )
+                .unwrap();
+            store
+                .apply_retention_policy(
+                    &PolicyApplyRequest {
+                        request_id: format!("retention:{n}"),
+                        expected_applied_revision: Some(n - 1),
+                        expected_preview_snapshot_commit: preview.snapshot_commit,
+                        reference_wall_ms: 3000,
+                        proposed_policy: policy,
+                    },
+                    &control(),
+                )
+                .unwrap();
+        }
+        let mut r = register(&format!("map:{n}"), (n > 1).then_some(n - 1));
+        r.mapping = pool.clone();
+        r.mapping.members = vec![pool.members[(n as usize - 1) % 16].clone()];
+        if n > 16 {
+            r.mapping.members[0].identity.segment_id = "segment-b".into();
+        }
+        store.register_recording_mapping(&r, &control()).unwrap();
+        let mut a = apply(&format!("apply:{n}"), (n > 1).then_some(n - 1), true);
+        a.expected_mapping_revision = Some(n);
+        a.expected_retention_applied_revision = Some(n);
+        a.desired = desired_for(&r.mapping);
+        a.desired["revision"] = json!(n);
+        store.apply_recording_plan(&a, &control()).unwrap();
+    }
+    let mut last_apply = None;
+    for (n, offset) in [(33, 0), (34, 8)] {
+        let mut r = register(&format!("map:{n}"), Some(n - 1));
+        r.mapping = pool.clone();
+        r.mapping.members = pool.members[offset..offset + 8].to_vec();
+        for m in &mut r.mapping.members {
+            m.identity.segment_id = "segment-b".into();
+        }
+        store.register_recording_mapping(&r, &control()).unwrap();
+        let mut a = apply(&format!("apply:{n}"), Some(n - 1), true);
+        a.expected_mapping_revision = Some(n);
+        a.expected_retention_applied_revision = Some(32);
+        a.desired = desired_for(&r.mapping);
+        a.desired["revision"] = json!(n);
+        let receipt = store.apply_recording_plan(&a, &control()).unwrap();
+        assert_eq!(receipt.applied_revision, n);
+        assert_eq!(
+            store
+                .recording_plan_state(&control())
+                .unwrap()
+                .applied
+                .unwrap()
+                .receipt,
+            receipt
+        );
+        assert_eq!(store.apply_recording_plan(&a, &control()).unwrap(), receipt);
+        last_apply = Some(a);
+    }
+    // Joined reads must still validate historical desired/mapping/policy bodies.
+    let before = counter(&store);
+    store
+        .connection
+        .execute(
+            "UPDATE retention_policy_applications SET receipt_json='{}' WHERE applied_revision=9",
+            [],
+        )
+        .unwrap();
+    let mut a = last_apply.unwrap();
+    a.request_id = "corrupt-proof".into();
+    a.expected_applied_revision = Some(34);
+    assert!(matches!(
+        store.apply_recording_plan(&a, &control()),
+        Err(StoreError::CorruptData)
+    ));
+    assert_eq!(counter(&store), before);
+}
