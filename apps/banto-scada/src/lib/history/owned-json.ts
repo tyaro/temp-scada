@@ -1,6 +1,12 @@
 /** Copy bounded plain JSON without evaluating accessors or retaining source
  * ownership. This is a structured-data boundary, not a wire parser/sandbox. */
-export function ownHistoryJson(input: unknown, maxBytes: number): unknown {
+export function ownHistoryJson(
+  input: unknown,
+  maxBytes: number,
+  maxNodes = 250_000,
+): unknown {
+  if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 250_000)
+    throw Error("History data limit");
   let bytes = 0;
   let nodes = 0;
   const ancestors = new Set<object>();
@@ -28,7 +34,7 @@ export function ownHistoryJson(input: unknown, maxBytes: number): unknown {
     }
   }
   function visit(value: unknown, depth: number): unknown {
-    if (++nodes > 250_000 || depth > 32) throw Error("History data limit");
+    if (++nodes > maxNodes || depth > 32) throw Error("History data limit");
     if (value === null) {
       add(4);
       return null;
@@ -57,7 +63,7 @@ export function ownHistoryJson(input: unknown, maxBytes: number): unknown {
       throw Error("History data shape");
     const keys = Reflect.ownKeys(value);
     if (
-      keys.length > 250_000 - nodes ||
+      keys.length > maxNodes - nodes ||
       keys.some((key) => typeof key !== "string")
     )
       throw Error("History data shape");
@@ -75,7 +81,7 @@ export function ownHistoryJson(input: unknown, maxBytes: number): unknown {
       if (
         !Number.isSafeInteger(size) ||
         size < 0 ||
-        size > 250_000 - nodes ||
+        size > maxNodes - nodes ||
         keys.length !== size + 1
       )
         throw Error("History data shape");

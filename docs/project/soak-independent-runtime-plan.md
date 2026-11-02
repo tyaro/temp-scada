@@ -36,7 +36,7 @@
 | H4b1 History表示基盤     | TS要求配送・純粋Trend model・共通renderer                            | raw点／包絡／無値・coverage、取消／旧応答と両テーマをfixture検証                         | PR #36マージ・全体CI成功                    |
 | H4b2 App履歴検索         | 通常Appの明示検索Modalとoptional HistoryService                      | context／UTC検証、寿命退役・物理一枠、Project保存不変を通常Appで検証                     | PR #37マージ・全体CI成功                    |
 | H4c 永続Trend・参照shape | namespace付き系列参照・表示定義と単一workspaceへの配置action         | 純粋契約→Project／shape→UI／受入。実transportとinline常時chartは後続                     | PR #41マージ・全体CI成功                    |
-| H5 記録計画管理          | desiredとdeployment／appliedを分け、原子的な永続適用と起動状態を管理 | 独立契約→台帳→単一group supervisor。認証・製品transportは保留                            | Astra主設計・工程／受入を文書化、実装は後続 |
+| H5 記録計画管理          | desiredとdeployment／appliedを分け、原子的な永続適用と起動状態を管理 | 独立契約→台帳→単一group supervisor。認証・製品transportは保留                            | 設計PR #42マージ、H5a純粋契約をローカル受入 |
 
 ## P1の実装契約
 
@@ -466,3 +466,7 @@ PR #40はマージ・全体CI成功。保存定義・参照配置に続き、con
 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。次の[H5設計](../design/runtime/historian-recording-plan.md)はP5のdesired／deployment／applied分離を詳細化する。現行PlanRefはplan_idとrevisionを持つsession根拠で、永続計画台帳やhash検証は提供しない。RecordingHostのstart受理と実Runningも分かれている。既存の停止／join・保持保護を維持し、永続適用とactivation、再送、再起動復元を小さい実装工程へ分ける。
 
 今回は文書だけの設計区切りで、Project 0.36.0・DB format 5・H1・Rust／TS・通常App・固定SDK／Banto依存を変更しない。実装時に変更が必要な保存版と検証を対応工程で揃える。認証／製品transportの再開、実Hub／S7／本番DB／設定／資格情報、上流への書込みは含めない。
+
+## 独立desired JSON契約（H5a、2026-11-03）
+
+H5aとして共通Schema・Rust／TS純粋検証・139共通fixtureとbrowser module評価を追加した。[現行状況](implementation-status.md#独立した記録計画の純粋契約h5a2026-11-03)、[契約と受入](../design/runtime/historian-recording-plan.md#h5aの実装と受入2026-11-03)を参照。計画はdisabledでも完全設定を保持し、JSON上限は64KiB／depth32／node4096。構造受理だけでSDK解決や適用済み版との照合が完了したとはしない。Project 0.36.0・DB5・H1・実Host／通常App・固定依存は維持し、次のH5bへ永続台帳を分ける。

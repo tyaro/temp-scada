@@ -3,6 +3,8 @@
 use serde_json::Value;
 mod connections;
 mod equipment;
+mod json_contract;
+pub mod recording_plan;
 pub mod trend_definitions;
 #[cfg(test)]
 mod trend_project_tests;

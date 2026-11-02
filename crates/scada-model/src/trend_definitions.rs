@@ -1,4 +1,5 @@
 //! Independent display definitions. Does not resolve a Historian or alter recording.
+use crate::json_contract::{blank, JsonBudget};
 use serde_json::Value;
 use std::collections::HashSet;
 use std::sync::LazyLock;
@@ -62,79 +63,13 @@ impl TrendDefinitions {
     }
 }
 
-struct Budget {
-    bytes: usize,
-    nodes: usize,
-}
-impl Budget {
-    fn add(&mut self, count: usize) -> Result<(), TrendDefinitionError> {
-        self.bytes = self.bytes.checked_add(count).ok_or(TrendDefinitionError)?;
-        if self.bytes > MAX_TREND_JSON_BYTES {
-            return Err(TrendDefinitionError);
-        }
-        Ok(())
-    }
-    // Compact JSON UTF-8 bytes, with the same escaping as JSON.stringify.
-    fn string(&mut self, text: &str) -> Result<(), TrendDefinitionError> {
-        self.add(text.len())?;
-        self.add(2)?;
-        for c in text.chars() {
-            self.add(match c {
-                '"' | '\\' | '\u{0008}' | '\u{0009}' | '\u{000a}' | '\u{000c}' | '\u{000d}' => 1,
-                '\u{0000}'..='\u{001f}' => 5,
-                _ => 0,
-            })?;
-        }
-        Ok(())
-    }
-    fn visit(&mut self, value: &Value, depth: usize) -> Result<(), TrendDefinitionError> {
-        self.nodes += 1;
-        if self.nodes > 250_000 || depth > 32 {
-            return Err(TrendDefinitionError);
-        }
-        match value {
-            Value::Null => self.add(4),
-            Value::Bool(b) => self.add(if *b { 4 } else { 5 }),
-            Value::String(s) => self.string(s),
-            Value::Number(n) => {
-                let f = n.as_f64().ok_or(TrendDefinitionError)?;
-                // All accepted number fields are small nonnegative integers.
-                // Normalize 1.0/1e0/-0 for size, without rewriting caller data.
-                let length =
-                    if f.is_finite() && f.fract() == 0.0 && f.abs() <= 9_007_199_254_740_991.0 {
-                        (f as i64).to_string().len()
-                    } else {
-                        n.to_string().len()
-                    };
-                self.add(length)
-            }
-            Value::Array(rows) => {
-                self.add(2 + rows.len().saturating_sub(1))?;
-                for row in rows {
-                    self.visit(row, depth + 1)?;
-                }
-                Ok(())
-            }
-            Value::Object(rows) => {
-                self.add(2 + rows.len().saturating_sub(1))?;
-                for (key, row) in rows {
-                    self.string(key)?;
-                    self.add(1)?;
-                    self.visit(row, depth + 1)?;
-                }
-                Ok(())
-            }
-        }
-    }
-}
-fn blank(text: &str) -> bool {
-    text.chars().all(|c| matches!(c, '\u{0009}'..='\u{000d}' | '\u{0020}' | '\u{0085}' | '\u{00a0}' | '\u{1680}' | '\u{2000}'..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}'))
-}
 /// Validate a structured JSON value with bounded traversal before schema/semantics.
 /// Byte budget is compact JSON after integer numeric spelling normalization;
 /// input wire whitespace/escapes and number spellings are not measured here.
 pub fn validate_trend_definitions(document: &Value) -> Result<(), TrendDefinitionError> {
-    Budget { bytes: 0, nodes: 0 }.visit(document, 0)?;
+    JsonBudget::new(MAX_TREND_JSON_BYTES, 250_000)
+        .visit(document, 0)
+        .map_err(|_| TrendDefinitionError)?;
     if !VALIDATOR.is_valid(document) {
         return Err(TrendDefinitionError);
     }

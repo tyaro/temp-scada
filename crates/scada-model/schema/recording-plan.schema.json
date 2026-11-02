@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://temp-scada.invalid/schema/recording-plan-v1.json",
+  "title": "Independent desired recording plan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "kind", "planId", "revision", "enabled", "group"],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "kind": {
+      "const": "recordingPlan"
+    },
+    "planId": {
+      "$ref": "#/$defs/id"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["groupId", "hubRef", "periodMs", "members"],
+      "properties": {
+        "groupId": {
+          "$ref": "#/$defs/id"
+        },
+        "hubRef": {
+          "$ref": "#/$defs/id"
+        },
+        "periodMs": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 3600000
+        },
+        "members": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/member"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "$ref": "https://temp-scada.invalid/schema/history-contract-v1.json#/$defs/id"
+    },
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["memberId", "externalName", "valueType"],
+      "properties": {
+        "memberId": {
+          "$ref": "#/$defs/id"
+        },
+        "externalName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "valueType": {
+          "enum": ["number", "bool"]
+        }
+      }
+    }
+  }
+}

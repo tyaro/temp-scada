@@ -1,0 +1,3661 @@
+[
+  {
+    "name": "ordered mixed number and bool",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "disabled preserves full settings",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": false,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "member count 0",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": []
+      }
+    }
+  },
+  {
+    "name": "member count 1",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:0",
+            "externalName": " Tag 0 ",
+            "valueType": "number"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "member count 8",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:0",
+            "externalName": " Tag 0 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:1",
+            "externalName": " Tag 1 ",
+            "valueType": "bool"
+          },
+          {
+            "memberId": "member:2",
+            "externalName": " Tag 2 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:3",
+            "externalName": " Tag 3 ",
+            "valueType": "bool"
+          },
+          {
+            "memberId": "member:4",
+            "externalName": " Tag 4 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:5",
+            "externalName": " Tag 5 ",
+            "valueType": "bool"
+          },
+          {
+            "memberId": "member:6",
+            "externalName": " Tag 6 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:7",
+            "externalName": " Tag 7 ",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "member count 9",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:0",
+            "externalName": " Tag 0 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:1",
+            "externalName": " Tag 1 ",
+            "valueType": "bool"
+          },
+          {
+            "memberId": "member:2",
+            "externalName": " Tag 2 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:3",
+            "externalName": " Tag 3 ",
+            "valueType": "bool"
+          },
+          {
+            "memberId": "member:4",
+            "externalName": " Tag 4 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:5",
+            "externalName": " Tag 5 ",
+            "valueType": "bool"
+          },
+          {
+            "memberId": "member:6",
+            "externalName": " Tag 6 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:7",
+            "externalName": " Tag 7 ",
+            "valueType": "bool"
+          },
+          {
+            "memberId": "member:8",
+            "externalName": " Tag 8 ",
+            "valueType": "number"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "duplicate member ID",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:b",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "duplicate exact external name",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": " 温度 ",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "names are not trimmed",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "温度",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "case is distinct",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "Temp",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "temp",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "Unicode normalization is distinct",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "é",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "é",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "cross pool ID equality",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "same",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "same",
+        "hubRef": "same",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "same",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "period 99",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 99,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "period 100",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 100,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "period 3600000",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 3600000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "period 3600001",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 3600001,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "period 100.5",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 100.5,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "period -1",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": -1,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "period None",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": null,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "period '100'",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": "100",
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "period True",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": true,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "revision 0",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 0,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "revision 1",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "revision 9007199254740991",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 9007199254740991,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "revision 9007199254740992",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 9007199254740992,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "revision -1",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": -1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "revision 1.5",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1.5,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "revision None",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": null,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "revision '1'",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": "1",
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "revision True",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": true,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "planId one char",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "planId 64 chars",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "A...............................................................",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "planId 65 chars",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "planId trailing newline",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "id\n",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "planId leading punctuation",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": ".id",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "planId slash",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "hub/path",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.groupId one char",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.groupId 64 chars",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "A...............................................................",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.groupId 65 chars",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.groupId trailing newline",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "id\n",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.groupId leading punctuation",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": ".id",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.groupId slash",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "hub/path",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.hubRef one char",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.hubRef 64 chars",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "A...............................................................",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.hubRef 65 chars",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.hubRef trailing newline",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "id\n",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.hubRef leading punctuation",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": ".id",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.hubRef slash",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub/path",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.members.0.memberId one char",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "1",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.members.0.memberId 64 chars",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "A...............................................................",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.members.0.memberId 65 chars",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.members.0.memberId trailing newline",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "id\n",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.members.0.memberId leading punctuation",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": ".id",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "group.members.0.memberId slash",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "hub/path",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "astral name 0",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "astral name 1",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "😀",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "astral name 512",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "astral name 513",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+0009",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "\t",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+000A",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "\n",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+000B",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "\u000b",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+000C",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "\f",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+000D",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "\r",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+0020",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+0085",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+00A0",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+1680",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2000",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2001",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2002",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2003",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2004",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2005",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2006",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2007",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2008",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2009",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+200A",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2028",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+2029",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+202F",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+205F",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+3000",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "　",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank U+FEFF",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "﻿",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "blank Unicode mix",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "\t\n\u000b\f\r                  　﻿",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "non blank zero width is preserved",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "​",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "escaped scalar text is preserved",
+    "accepted": true,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": "x\u0000\n\t\"\\",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing version",
+    "accepted": false,
+    "input": {
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing kind",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing planId",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing revision",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing enabled",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing group",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true
+    }
+  },
+  {
+    "name": "missing group.groupId",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing group.hubRef",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing group.periodMs",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing group.members",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000
+      }
+    }
+  },
+  {
+    "name": "missing group.members.0.memberId",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing group.members.0.externalName",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "missing group.members.0.valueType",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 "
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "forbid root seriesId",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      },
+      "seriesId": "secret-or-identity"
+    }
+  },
+  {
+    "name": "forbid root incarnationId",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      },
+      "incarnationId": "secret-or-identity"
+    }
+  },
+  {
+    "name": "forbid root segmentId",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      },
+      "segmentId": "secret-or-identity"
+    }
+  },
+  {
+    "name": "forbid root sessionId",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      },
+      "sessionId": "secret-or-identity"
+    }
+  },
+  {
+    "name": "forbid root clockEpoch",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      },
+      "clockEpoch": "secret-or-identity"
+    }
+  },
+  {
+    "name": "forbid root endpoint",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      },
+      "endpoint": "secret-or-identity"
+    }
+  },
+  {
+    "name": "forbid root credentials",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      },
+      "credentials": "secret-or-identity"
+    }
+  },
+  {
+    "name": "forbid root storagePath",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      },
+      "storagePath": "secret-or-identity"
+    }
+  },
+  {
+    "name": "forbid root retentionPolicy",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      },
+      "retentionPolicy": "secret-or-identity"
+    }
+  },
+  {
+    "name": "forbid root hash",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      },
+      "hash": "secret-or-identity"
+    }
+  },
+  {
+    "name": "forbid group hubInstanceId",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ],
+        "hubInstanceId": "not-desired"
+      }
+    }
+  },
+  {
+    "name": "forbid group runId",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ],
+        "runId": "not-desired"
+      }
+    }
+  },
+  {
+    "name": "forbid group url",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ],
+        "url": "not-desired"
+      }
+    }
+  },
+  {
+    "name": "forbid member stableId",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number",
+            "stableId": "not-desired"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "forbid member unit",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number",
+            "unit": "not-desired"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "forbid member periodMs",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number",
+            "periodMs": "not-desired"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "unknown version",
+    "accepted": false,
+    "input": {
+      "version": 2,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "wrong kind",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlans",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "unknown value type",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "i16"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "disabled still requires members",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": false,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": []
+      }
+    }
+  },
+  {
+    "name": "disabled still validates period",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": false,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 0,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "members must be array",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": {}
+      }
+    }
+  },
+  {
+    "name": "group must be object",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": null
+    }
+  },
+  {
+    "name": "float number spellings",
+    "accepted": true,
+    "json": "{\"version\": 1, \"kind\": \"recordingPlan\", \"planId\": \"recording:1\", \"revision\": 1.0, \"enabled\": true, \"group\": {\"groupId\": \"group:1\", \"hubRef\": \"hub:1\", \"periodMs\": 1e3, \"members\": [{\"memberId\": \"member:b\", \"externalName\": \" \\u6e29\\u5ea6 \", \"valueType\": \"number\"}, {\"memberId\": \"member:a\", \"externalName\": \"\\u8a2d\\u5099.\\u904b\\u8ee2\", \"valueType\": \"bool\"}]}}"
+  },
+  {
+    "name": "MAX_SAFE exponent",
+    "accepted": true,
+    "json": "{\"version\": 1, \"kind\": \"recordingPlan\", \"planId\": \"recording:1\", \"revision\": 9.007199254740991e15, \"enabled\": true, \"group\": {\"groupId\": \"group:1\", \"hubRef\": \"hub:1\", \"periodMs\": 1000, \"members\": [{\"memberId\": \"member:b\", \"externalName\": \" \\u6e29\\u5ea6 \", \"valueType\": \"number\"}, {\"memberId\": \"member:a\", \"externalName\": \"\\u8a2d\\u5099.\\u904b\\u8ee2\", \"valueType\": \"bool\"}]}}"
+  },
+  {
+    "name": "overflow number",
+    "accepted": false,
+    "json": "{\"version\": 1, \"kind\": \"recordingPlan\", \"planId\": \"recording:1\", \"revision\": 1e309, \"enabled\": true, \"group\": {\"groupId\": \"group:1\", \"hubRef\": \"hub:1\", \"periodMs\": 1000, \"members\": [{\"memberId\": \"member:b\", \"externalName\": \" \\u6e29\\u5ea6 \", \"valueType\": \"number\"}, {\"memberId\": \"member:a\", \"externalName\": \"\\u8a2d\\u5099.\\u904b\\u8ee2\", \"valueType\": \"bool\"}]}}"
+  },
+  {
+    "name": "lone high surrogate",
+    "accepted": false,
+    "json": "{\"version\": 1, \"kind\": \"recordingPlan\", \"planId\": \"recording:1\", \"revision\": 1, \"enabled\": true, \"group\": {\"groupId\": \"group:1\", \"hubRef\": \"hub:1\", \"periodMs\": 1000, \"members\": [{\"memberId\": \"member:b\", \"externalName\": \"\\ud800\", \"valueType\": \"number\"}, {\"memberId\": \"member:a\", \"externalName\": \"設備.運転\", \"valueType\": \"bool\"}]}}"
+  },
+  {
+    "name": "invalid scalar \\udfff",
+    "accepted": false,
+    "json": "{\"version\": 1, \"kind\": \"recordingPlan\", \"planId\": \"recording:1\", \"revision\": 1, \"enabled\": true, \"group\": {\"groupId\": \"group:1\", \"hubRef\": \"hub:1\", \"periodMs\": 1000, \"members\": [{\"memberId\": \"member:b\", \"externalName\": \"\\udfff\", \"valueType\": \"number\"}, {\"memberId\": \"member:a\", \"externalName\": \"設備.運転\", \"valueType\": \"bool\"}]}}"
+  },
+  {
+    "name": "invalid scalar x\\ud800y",
+    "accepted": false,
+    "json": "{\"version\": 1, \"kind\": \"recordingPlan\", \"planId\": \"recording:1\", \"revision\": 1, \"enabled\": true, \"group\": {\"groupId\": \"group:1\", \"hubRef\": \"hub:1\", \"periodMs\": 1000, \"members\": [{\"memberId\": \"member:b\", \"externalName\": \"x\\ud800y\", \"valueType\": \"number\"}, {\"memberId\": \"member:a\", \"externalName\": \"設備.運転\", \"valueType\": \"bool\"}]}}"
+  },
+  {
+    "name": "bounded invalid bytes 65536",
+    "accepted": false,
+    "build": "bytes",
+    "count": 65536
+  },
+  {
+    "name": "bounded invalid bytes 65537",
+    "accepted": false,
+    "build": "bytes",
+    "count": 65537
+  },
+  {
+    "name": "bounded invalid depth 33",
+    "accepted": false,
+    "build": "depth",
+    "count": 33
+  },
+  {
+    "name": "bounded invalid nodes 4096",
+    "accepted": false,
+    "build": "nodes",
+    "count": 4096
+  },
+  {
+    "name": "group endpoint forbidden enabled=True",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ],
+        "endpoint": "forbidden"
+      }
+    }
+  },
+  {
+    "name": "group endpoint forbidden enabled=False",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": false,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ],
+        "endpoint": "forbidden"
+      }
+    }
+  },
+  {
+    "name": "group credentials forbidden enabled=True",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ],
+        "credentials": "forbidden"
+      }
+    }
+  },
+  {
+    "name": "group credentials forbidden enabled=False",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": false,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ],
+        "credentials": "forbidden"
+      }
+    }
+  },
+  {
+    "name": "group seriesId forbidden enabled=True",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": true,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ],
+        "seriesId": "forbidden"
+      }
+    }
+  },
+  {
+    "name": "group seriesId forbidden enabled=False",
+    "accepted": false,
+    "input": {
+      "version": 1,
+      "kind": "recordingPlan",
+      "planId": "recording:1",
+      "revision": 1,
+      "enabled": false,
+      "group": {
+        "groupId": "group:1",
+        "hubRef": "hub:1",
+        "periodMs": 1000,
+        "members": [
+          {
+            "memberId": "member:b",
+            "externalName": " 温度 ",
+            "valueType": "number"
+          },
+          {
+            "memberId": "member:a",
+            "externalName": "設備.運転",
+            "valueType": "bool"
+          }
+        ],
+        "seriesId": "forbidden"
+      }
+    }
+  }
+]
