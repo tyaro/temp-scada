@@ -564,6 +564,6 @@ nativeの`validate_trend_definitions(&Value)`／`TrendDefinitions::from_value`�
 
 `App.svelte`がProject／世代／起点画面・配置／openごとのtokenを持つpreset要求を所有し、現在Projectから配置・定義を再取得する。`HistoryWorkspace.svelte`は既存のcontroller一つを維持し、preset identityも即時guardへ含め、未完了Promiseを残したまま条件・結果をclearする。preset中は終了UTCだけを編集でき、明示解除で手動formへ戻る。`TrendView.svelte`は検証済みpen presentationをseriesIdで対応させ、aliasとsegment metadataを区別する。
 
-`TrendPainting.svelte`の任意SVG actionを`ObjectPainting`→`Renderer`／`CanvasWorkspace`ではpreviewだけ、`ScreenPainting`／`PreviewWindow`では独立Popupだけに接続する。`ScreenView`と`Minimap`へcallbackを流さない。`PreviewPopups.svelte`は画面targetと別にinstance tokenを持ち、close／destroyでAppの当該presetを退役する。Inspectorは編集時の同じ入口を呼ぶ。SVG focusはBanto公開Modal fallbackで戻す。
+`TrendPainting.svelte`の任意SVG actionを`ObjectPainting`→`Renderer`／`CanvasWorkspace`ではpreviewだけ、`ScreenPainting`／`PreviewWindow`では独立Popupだけに接続する。`ScreenView`と`Minimap`へcallbackを流さない。`PreviewPopups.svelte`は画面targetと別にinstance tokenを持ち、close／destroyでAppの当該presetを退役する。Inspectorは編集時の同じ入口を呼ぶ。SVG focusはBanto公開Modal fallbackで戻す。Rendererのroleは操作可能な可視Trendがあるpreviewだけgroupとし、通常画像・非表示Trend・editのimgを維持する。`project-trends.spec.ts`でroleとkeyboard／focusの切替を受け入れる。
 
 `e2e/saved-trend-history.spec.ts`は通常Appにテストentryだけからserviceを注入し、両テーマ・raw／minmax・namespace／系列不足・v1 gate・unknownSeries・保存不変・起点寿命・別preset／service差替え・Abort非協力時active1・色／別名・keyboard／focusを検証する。実adapter、Project版、H1、native、記録Hostはこの工程で変更しない。

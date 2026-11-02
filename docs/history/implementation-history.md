@@ -14,6 +14,12 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## PR #41の通常プレビューSVG role回帰（2026-11-02）
+
+[失敗したCI](https://github.com/tyaro/temp-scada/actions/runs/41459100679)はfrontend／Rustが成功し、E2Eの4分割で計17件が失敗した。Trend actionを渡すと通常プレビュー全体のSVG roleをimgからgroupへ変えていたため、トレンドのないサンプル画面も既存のアクセシブルな画像名で見つからなくなった。描画・ファイル読込の失敗ではなく、検索対象となる画面のrole変更が共通原因だった。
+
+Rendererのgroupは「previewでcallbackがあり、直下に可視Trendがある」場合だけに限定し、静的画面・非表示Trendだけの画面・editでは既存imgを維持する。既存テストの期待を緩めず、通常画像の検出、可視Trendのkeyboard起動とfocus復帰、編集時と非表示時の静的roleを通常Appで検証する回帰を追加した。失敗17件を含む関連71件とTrend配置7件のChromium計78件、型検査0error／0warning、build、全体Prettier検査が成功した。修正後の全体CIは同PRの最新commitで確認する。
+
 ## 保存Trendからの明示履歴検索（H4c3、2026-11-02）
 
 [PR #40](https://github.com/tyaro/temp-scada/pull/40)はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41453590820)全7ジョブ成功。H4c3はAstra主設計に従い、v2 namespace照合・全pen解決と保存presetから既存単一workspaceへの明示検索を追加した。定義順のraw／minmax、終了UTCからの安全な開始計算、ID対応のalias／colorを提供する。main preview／独立Popup／Inspectorから開き、起点画面・Popup instance・Project／serviceの寿命で退役する。v1手動検索とAbort非協力時の物理一枠を維持した。

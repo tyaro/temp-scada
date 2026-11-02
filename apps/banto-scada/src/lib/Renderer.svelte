@@ -585,7 +585,13 @@
 <svg
   bind:this={svgElement}
   style:--canvas-accent={colors.selection}
-  role={onopentrend && !editable ? "group" : "img"}
+  role={onopentrend &&
+  !editable &&
+  screen.objects.some(
+    (object) => object.visible !== false && object.shape.type === "trend",
+  )
+    ? "group"
+    : "img"}
   aria-label={screen.name}
   viewBox={`0 0 ${screen.width} ${screen.height}`}
   preserveAspectRatio="xMidYMid meet"
