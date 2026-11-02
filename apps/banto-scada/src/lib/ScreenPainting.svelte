@@ -13,6 +13,7 @@
     screens,
     symbols,
     trends = [],
+    onopentrend,
     equipmentContext,
     images,
     readings,
@@ -21,6 +22,7 @@
     screens: Screen[];
     symbols: SymbolDefinition[];
     trends?: readonly TrendDefinition[];
+    onopentrend?: (objectId: string) => void;
     equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
       string,
@@ -72,6 +74,7 @@
               {trends}
             />{/if}
         {:else}<ObjectPainting
+            {onopentrend}
             {object}
             {symbols}
             {images}

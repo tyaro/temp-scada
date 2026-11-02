@@ -39,6 +39,7 @@
     screen,
     symbols = [],
     trends = [],
+    onopentrend,
     screens = [],
     equipmentContext,
     images,
@@ -57,6 +58,7 @@
     screen: Screen | SymbolDefinition;
     symbols?: SymbolDefinition[];
     trends?: readonly TrendDefinition[];
+    onopentrend?: (objectId: string) => void;
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
@@ -583,7 +585,7 @@
 <svg
   bind:this={svgElement}
   style:--canvas-accent={colors.selection}
-  role="img"
+  role={onopentrend && !editable ? "group" : "img"}
   aria-label={screen.name}
   viewBox={`0 0 ${screen.width} ${screen.height}`}
   preserveAspectRatio="xMidYMid meet"
@@ -658,6 +660,7 @@
             />{/if}
         {:else}
           <ObjectPainting
+            onopentrend={!editable ? onopentrend : undefined}
             object={visual}
             ownerDefinition={"background" in screen ? undefined : screen}
             {symbols}

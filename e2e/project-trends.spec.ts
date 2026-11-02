@@ -57,7 +57,7 @@ for (const theme of ["light", "dark"] as const)
     await expect(card(page).locator("[data-trend-name]")).toHaveText(
       " 記録温度 ",
     );
-    await expect(card(page)).toContainText("履歴表示は準備中");
+    await expect(card(page)).toContainText("履歴トレンド");
     const before = await saved(page);
     expect(before.manifest.schemaVersion).toBe("0.36.0");
     expect(before.trends[0].pens.map((p: any) => p.seriesId)).toEqual([
@@ -240,9 +240,15 @@ test("static card metadata reaches embedded, minimap and independent Popup witho
   await expect(
     minimap.locator("[data-trend-card] [data-trend-name]"),
   ).toHaveText(sample.trends[0].name);
+  await expect(
+    minimap.getByRole("button", { name: /の履歴を開く/ }),
+  ).toHaveCount(0);
   await page
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
+  await expect(
+    mainCanvas(page).getByRole("button", { name: /の履歴を開く/ }),
+  ).toHaveCount(0);
   // Embedded screens are deliberately pointer-inert. Click their screen point.
   const bounds = (await card(page).boundingBox())!;
   await page.mouse.click(

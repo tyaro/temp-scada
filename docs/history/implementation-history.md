@@ -14,6 +14,12 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## 保存Trendからの明示履歴検索（H4c3、2026-11-02）
+
+[PR #40](https://github.com/tyaro/temp-scada/pull/40)はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41453590820)全7ジョブ成功。H4c3はAstra主設計に従い、v2 namespace照合・全pen解決と保存presetから既存単一workspaceへの明示検索を追加した。定義順のraw／minmax、終了UTCからの安全な開始計算、ID対応のalias／colorを提供する。main preview／独立Popup／Inspectorから開き、起点画面・Popup instance・Project／serviceの寿命で退役する。v1手動検索とAbort非協力時の物理一枠を維持した。
+
+TS全1,623件（新規18）、check 0error／0warning、build、全体Prettier検査、関連Chromium47件（新規11）が成功。browserで見つかったedit選択のテストtargetを既存のobject hit領域へ修正し、SVG openerのfocus復帰はBanto公開Modal fallbackで対応した。Astraのread-only実装レビューに通常経路の必須修正はない。[採用設計の受入記録](../design/runtime/historian-trend-definition.md#h4c3の実装と受入2026-11-02)へ最終結果を記載する。実source／transport／認証、Project版・H1・DB5・native・固定SDK／Bantoと上流環境は変更しない。
+
 ## PR #40の画像同梱サンプル版更新漏れ（2026-11-02）
 
 [初回CI](https://github.com/tyaro/temp-scada/actions/runs/41438128625)はRust／frontendとE2Eの3分割が成功し、E2E 4/4でSymbol画像関連8件が失敗した。`symbol-image.project.json`は0.36.0へ更新済みだったが、圧縮済み`symbol-image.bantoscada`のmanifestだけ0.35.0に残っており、版不一致で読込を拒否していた。

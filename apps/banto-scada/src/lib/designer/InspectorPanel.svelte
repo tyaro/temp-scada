@@ -65,6 +65,7 @@
     onopenequipment,
     onopenequipmentsettings,
     onmanagetrend,
+    onopentrend,
     openScreen,
     onreplaceimage,
     imageBusy,
@@ -85,6 +86,7 @@
     onclose: () => void;
     project: Project;
     onmanagetrend?: (id: string) => void;
+    onopentrend?: (objectId: string) => void;
     selectedIds: string[];
     selected: ScreenObject | undefined;
     selectionLocked: boolean;
@@ -1123,8 +1125,13 @@
               >
             {/if}
             {#if selected.shape.type === "trend"}
+              <button
+                type="button"
+                onclick={() => selected && onopentrend?.(selected.id)}
+                >履歴を開く</button
+              >
               <p>
-                定義の変更は参照する全配置へ反映されます。履歴表示は準備中です。
+                定義の変更は参照する全配置へ反映されます。履歴は終了UTCを指定して取得します。
               </p>
               <button
                 type="button"

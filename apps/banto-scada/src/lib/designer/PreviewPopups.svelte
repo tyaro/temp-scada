@@ -27,7 +27,11 @@
     readings,
     onmessage,
     onopenusage,
+    onopentrend,
+    onretiretrend,
   }: {
+    onopentrend?: (screenId: string, objectId: string, token: object) => void;
+    onretiretrend?: (token: object) => void;
     project: Project;
     equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
@@ -49,6 +53,7 @@
   let active = true,
     opener: HTMLElement | null = null;
   const origins = new Map<string, HTMLElement>();
+  const trendTokens = new Map<string, object>();
   const controllers = $state<
     Record<string, { cancel: () => void } | undefined>
   >({});
@@ -123,6 +128,8 @@
   });
   onDestroy(() => {
     active = false;
+    for (const token of trendTokens.values()) onretiretrend?.(token);
+    trendTokens.clear();
   });
   export function showPicker(origin: HTMLElement, kind: PopupKind = "screen") {
     if (!active) return;
@@ -150,6 +157,7 @@
     const key = popupKey({ targetId: id, kind });
     try {
       windows = openPopup(windows, id, cost, area, kind);
+      if (!trendTokens.has(key)) trendTokens.set(key, {});
       if (opener && !origins.has(key)) origins.set(key, opener);
       picker = false;
       focusWindow(id, kind);
@@ -180,6 +188,10 @@
       ),
       restore = !!panel?.contains(document.activeElement),
       origin = origins.get(popupKey({ targetId: id, kind }));
+    const key = popupKey({ targetId: id, kind });
+    const token = trendTokens.get(key);
+    if (token) onretiretrend?.(token);
+    trendTokens.delete(key);
     windows = closePopup(windows, id, kind);
     origins.delete(popupKey({ targetId: id, kind }));
     if (restore)
@@ -196,6 +208,17 @@
         ? project.screens.find((s) => s.id === entry.targetId)
         : undefined}
     <PreviewWindow
+      onopentrend={entry.kind === "screen"
+        ? (objectId) => {
+            const token = trendTokens.get(popupKey(entry));
+            if (
+              active &&
+              token &&
+              windows.some((w) => popupKey(w) === popupKey(entry))
+            )
+              onopentrend?.(entry.targetId, objectId, token);
+          }
+        : undefined}
       bind:this={controllers[popupKey(entry)]}
       {entry}
       {screen}

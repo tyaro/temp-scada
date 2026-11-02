@@ -40,6 +40,7 @@
     screen,
     symbols,
     trends = [],
+    onopentrend,
     screens = [],
     equipmentContext,
     readings,
@@ -69,6 +70,7 @@
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
     trends?: readonly TrendDefinition[];
+    onopentrend?: (objectId: string) => void;
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     readings?: TagReadings;
@@ -935,6 +937,7 @@
       >
         {#key screen.id}
           <Renderer
+            {onopentrend}
             bind:this={renderer}
             {screen}
             {symbols}

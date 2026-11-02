@@ -19,10 +19,12 @@
     readings,
     equipmentContext,
     onopenusage,
+    onopentrend,
     onfront,
     onframe,
     onclose,
   }: {
+    onopentrend?: (objectId: string) => void;
     entry: PreviewPopup;
     screen?: Screen;
     project: Project;
@@ -238,6 +240,7 @@
     />
     <div class="content">
       <ScreenPainting
+        {onopentrend}
         equipmentContext={equipmentContext ?? project}
         {screen}
         screens={project.screens}

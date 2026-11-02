@@ -538,7 +538,7 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 
 ## 永続Trend定義・画面参照の設計入口（H4c）
 
-[採用設計](../design/runtime/historian-trend-definition.md)が、独立した共通SchemaとRust／TS validator、ProjectのTrend原本とscreen参照shape、描画actionから既存HistoryWorkspaceへ渡す境界、接続namespaceの照合と寿命、copy／Undo／Symbol制限、受入・PR分割を定める。H4c1の独立契約とH4c2のProject 0.36.0保存・静的参照shapeを以下に実装する。保存定義からの履歴取得はH4c3へ分ける。
+[採用設計](../design/runtime/historian-trend-definition.md)が、独立した共通SchemaとRust／TS validator、ProjectのTrend原本とscreen参照shape、描画actionから既存HistoryWorkspaceへ渡す境界、接続namespaceの照合と寿命、copy／Undo／Symbol制限、受入・PR分割を定める。H4c1の独立契約とH4c2のProject 0.36.0保存・静的参照shapeを以下に実装する。保存定義からの履歴取得は下記H4c3へ分ける。
 
 ## 独立Trend定義の共通契約（H4c1）
 
@@ -556,4 +556,14 @@ nativeの`validate_trend_definitions(&Value)`／`TrendDefinitions::from_value`�
 
 `TrendPainting.svelte`は値・queryを持たないSVGカード。metadataをApp→CanvasWorkspace／Minimap→Renderer→ObjectPainting／ScreenViewと、PreviewWindow→ScreenPaintingへ渡す。`clipboard.ts`はTrendを含むsystem clipboardを依存screenまで含めて拒否する。通常のduplicate／array／screen duplicateは原本参照を維持する。
 
-`examples/trend.project.json`と`trend-placement-cases.json`18件をTS `__fixtures__/trend-placement-cases.ts`・`project-trends.test.ts`、native `trend_project_tests.rs`で受け入れる。新規TS26／native1が原子性・意味検査・参照・共有／独立化・拒否経路を検証する。`e2e/project-trends.spec.ts`の新規6件は通常Appの保存・再読込・Undo・draft・全投影とsystem clipboard拒否を担当する。H4c3の[検索接続と寿命](../design/runtime/historian-trend-definition.md)はまだ実装していない。
+`examples/trend.project.json`と`trend-placement-cases.json`18件をTS `__fixtures__/trend-placement-cases.ts`・`project-trends.test.ts`、native `trend_project_tests.rs`で受け入れる。新規TS26／native1が原子性・意味検査・参照・共有／独立化・拒否経路を検証する。`e2e/project-trends.spec.ts`の新規6件は通常Appの保存・再読込・Undo・draft・全投影とsystem clipboard拒否を担当する。H4c3の[検索接続と寿命](../design/runtime/historian-trend-definition.md)は下記の単一workspace側で担当する。
+
+## 保存Trendの検索と接続宣言（H4c3）
+
+`history/workspace-model.ts`がcontext v1／v2の同じ所有・予算検証、v2必須namespaceと全pen解決、共通Trend validatorによる定義snapshot、明示終了UTCからの安全な差引・四桁年roundtrip、定義順H1 query生成を担当する。namespaceはH1へ追加せず、このservice宣言の照合に限る。`saved-preset.test.ts`18件と既存context39件が純粋境界を検証する。
+
+`App.svelte`がProject／世代／起点画面・配置／openごとのtokenを持つpreset要求を所有し、現在Projectから配置・定義を再取得する。`HistoryWorkspace.svelte`は既存のcontroller一つを維持し、preset identityも即時guardへ含め、未完了Promiseを残したまま条件・結果をclearする。preset中は終了UTCだけを編集でき、明示解除で手動formへ戻る。`TrendView.svelte`は検証済みpen presentationをseriesIdで対応させ、aliasとsegment metadataを区別する。
+
+`TrendPainting.svelte`の任意SVG actionを`ObjectPainting`→`Renderer`／`CanvasWorkspace`ではpreviewだけ、`ScreenPainting`／`PreviewWindow`では独立Popupだけに接続する。`ScreenView`と`Minimap`へcallbackを流さない。`PreviewPopups.svelte`は画面targetと別にinstance tokenを持ち、close／destroyでAppの当該presetを退役する。Inspectorは編集時の同じ入口を呼ぶ。SVG focusはBanto公開Modal fallbackで戻す。
+
+`e2e/saved-trend-history.spec.ts`は通常Appにテストentryだけからserviceを注入し、両テーマ・raw／minmax・namespace／系列不足・v1 gate・unknownSeries・保存不変・起点寿命・別preset／service差替え・Abort非協力時active1・色／別名・keyboard／focusを検証する。実adapter、Project版、H1、native、記録Hostはこの工程で変更しない。
