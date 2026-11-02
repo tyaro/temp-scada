@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-02の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4a／H4b1はPR #10〜#36で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H4b2 通常Appの履歴検索workspace](../design/runtime/historian-history-workspace.md)を実装した。「表示→履歴トレンド」でBanto Modalを開き、callerが明示した系列一覧・UTC範囲・raw／minmax・点数から取得する。任意HistoryServiceのcontextを有限JSONとして所有・検証し、Project object／世代／serviceの変更とform編集・closeで旧結果を退役する。controllerはModal開閉で作り直さず、未終了readの物理一枠を維持する。通常mainは未接続で、実transport・DB接続やHub名からの系列推測は追加しない。次はH4cで永続Trend定義と既存形状／表示への組込みを設計し、HistorySource adapterと製品接続の再開条件を分離する。製品計画配布・複数group／queue、保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、H2／H3／H4全体・正式Runtimeは未完了。
+2026-11-02の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4a／H4b1〜2はPR #10〜#37で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。[H4b2](../design/runtime/historian-history-workspace.md)の通常App履歴検索を基盤に、Astra主設計の[H4c 永続Trend定義と画面参照shape](../design/runtime/historian-trend-definition.md)を採用した。今回は設計だけを確定し、Trend保存・配置機能はまだ実装していない。最初の実用経路は画面上の参照から既存の単一workspaceを開く明示検索とし、各shapeの常時queryやinline chartは後続に分ける。保存参照はcallerが宣言するHistorian namespaceとopaque seriesIdの組で扱い、現在の接続contextで一致を確認する。ペン追加は記録計画へ影響しない。次はH4c1で共通Schema／Rust・TSの純粋契約・共通fixture、H4c2でProject 0.36.0・静的参照shapeと保存／編集、H4c3でnamespace付きcontext v2・preset・画面からの明示検索と受入を進める。通常mainの未接続、製品transport・認証・実source adapterの保留は維持する。製品計画配布・複数group／queue、保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、H2／H3／H4全体・正式Runtimeは未完了。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 

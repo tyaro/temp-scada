@@ -14,6 +14,14 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## 永続Trend定義と画面参照の採用設計（H4c、2026-11-02）
+
+[PR #37](https://github.com/tyaro/temp-scada/pull/37)はマージ済み（`00d860e8293dc31d269fb11a0a1f144f62901253`）、[全体CI 41416523675](https://github.com/tyaro/temp-scada/actions/runs/41416523675)成功。通常Appの明示履歴検索は提供済みである。次工程の[H4c](../design/runtime/historian-trend-definition.md)をAstra主設計で文書化した。
+
+採用する最初の経路は「ProjectへTrend定義を保存→画面の参照shapeから単一の履歴workspaceを開く」である。ペン・色・表示期間・mode・点数を記録設定から分け、保存したnamespace／opaque系列IDと接続元の明示宣言が一致する場合だけ適用する。namespaceは実DBの検証済みidentityや認証の代わりにはならない。単位・型・由来は過去segment metadataを使い、同名系列や別namespaceへ自動で置き換えない。
+
+今回は設計のみで、Schema、Rust／TS、Project 0.35.0、通常App、DB format 5、SDK／Banto依存は変更していない。Trend保存・配置・色の適用は未実装。H4c1の独立契約、H4c2のProject 0.36.0／静的参照shape、H4c3のcontext v2／preset／画面actionの順に小さいPRで実装する。常時inline chart・liveとのmerge、実History adapter・transport／認証、ChronoGazer還元は後続である。検証は現行コードとの責務照合・文書整形・参照確認で、今回実行テストの追加や実Hub／S7／DB接続はない。
+
 ## 通常Appの履歴検索workspace（H4b2、2026-11-02）
 
 H4b1は[PR #36](https://github.com/tyaro/temp-scada/pull/36)でマージ済み（`9d273aead1814088b34d7149d9d0e72bc3ab9332`）、[全体CI 41362821595](https://github.com/tyaro/temp-scada/actions/runs/41362821595)成功。Astra主設計の[H4b2](../design/runtime/historian-history-workspace.md)を実装した。通常Appの「表示→履歴トレンド」からBanto Modalで系列・UTC範囲・raw／minmax・点数を指定して明示検索できる。既定は未接続を説明し、sample系列や自動検索を作らない。
