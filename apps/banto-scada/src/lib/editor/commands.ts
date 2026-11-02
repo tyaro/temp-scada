@@ -2,6 +2,7 @@ import type { EndpointConnection, ConnectionEnd } from "../connections";
 import type { BindingReplacementRequest } from "../binding-replacement";
 import type { PaintAlphaPatch } from "../selection-paint-alpha";
 import type { EquipmentSlot, EquipmentBinding } from "../equipment";
+import type { TrendDefinition } from "../trend-definitions";
 import type { ImageFit } from "../image-fit";
 import type { ImageCrop } from "../image-crop";
 import type {
@@ -39,6 +40,7 @@ export interface ObjectPatch {
   symbolId?: string;
   equipmentId?: string | null;
   sourceScreenId?: string;
+  trendId?: string;
   colorMode?: "monochrome" | "definition";
   points?: Point[];
   strokeWidth?: number;
@@ -293,6 +295,7 @@ export type ObjectCommand = (
     }
   | { type: "update"; screenId: string; objectId: string; patch: ObjectPatch }
   | { type: "make-symbol-unique"; screenId: string; objectId: string }
+  | { type: "make-trend-unique"; screenId: string; objectId: string }
   | { type: "duplicate"; screenId: string; objectId: string }
   | {
       type: "reorder";
@@ -328,6 +331,16 @@ export type EquipmentCommand =
     }
   | { type: "remove-equipment"; equipmentId: string };
 export type ProjectCommand =
+  | {
+      type: "save-trend";
+      definition: TrendDefinition;
+      create: boolean;
+      placement?: {
+        screenId: string;
+        frame: { x: number; y: number; width: number; height: number };
+      };
+    }
+  | { type: "remove-trend"; trendId: string }
   | { type: "update-project"; name: string }
   | ({ type: "replace-binding-reference" } & BindingReplacementRequest)
   | EquipmentCommand;
@@ -435,6 +448,9 @@ const commandScopes = {
   "add-symbol": "object",
   update: "object",
   "make-symbol-unique": "object",
+  "make-trend-unique": "object",
+  "save-trend": "project",
+  "remove-trend": "project",
   duplicate: "object",
   reorder: "object",
   remove: "object",

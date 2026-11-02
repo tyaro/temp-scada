@@ -1,0 +1,263 @@
+[
+  {
+    "name": "valid-placement-with-unresolved-external-namespace",
+    "accepted": true
+  },
+  {
+    "name": "unused-definition",
+    "accepted": true,
+    "ops": [
+      {
+        "path": "/screens/0/objects/3/shape",
+        "value": {
+          "type": "trend",
+          "trendId": "trend:1"
+        }
+      }
+    ],
+    "removeCard": true
+  },
+  {
+    "name": "optional-trends-omitted",
+    "accepted": true,
+    "omitTrends": true,
+    "removeCard": true
+  },
+  {
+    "name": "empty-trends",
+    "accepted": true,
+    "ops": [
+      {
+        "path": "/trends",
+        "value": []
+      }
+    ],
+    "removeCard": true
+  },
+  {
+    "name": "opaque-id-pool-crosses-screen-uuid",
+    "accepted": true,
+    "ops": [
+      {
+        "path": "/trends/0/id",
+        "value": "0199f000-0000-7000-8000-000000000002"
+      },
+      {
+        "path": "/screens/0/objects/3/shape/trendId",
+        "value": "0199f000-0000-7000-8000-000000000002"
+      }
+    ]
+  },
+  {
+    "name": "dangling-trend-reference",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/screens/0/objects/3/shape/trendId",
+        "value": "missing"
+      }
+    ]
+  },
+  {
+    "name": "missing-definitions",
+    "accepted": false,
+    "omitTrends": true
+  },
+  {
+    "name": "duplicate-definition-id",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/trends",
+        "value": [
+          {
+            "id": "trend:1",
+            "name": "工程温度",
+            "historianNamespace": "archive:a",
+            "pens": [
+              {
+                "id": "pen:1",
+                "seriesId": "series:1",
+                "label": " 温度 ",
+                "color": "#aB12Ef"
+              }
+            ],
+            "windowMs": 3600000,
+            "mode": "raw",
+            "maxPointsPerSeries": 100
+          },
+          {
+            "id": "trend:1",
+            "name": "工程温度",
+            "historianNamespace": "archive:a",
+            "pens": [
+              {
+                "id": "pen:1",
+                "seriesId": "series:1",
+                "label": " 温度 ",
+                "color": "#aB12Ef"
+              }
+            ],
+            "windowMs": 3600000,
+            "mode": "raw",
+            "maxPointsPerSeries": 100
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "duplicate-series",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/trends/0/pens",
+        "value": [
+          {
+            "id": "pen:1",
+            "seriesId": "series:1",
+            "label": " 温度 ",
+            "color": "#aB12Ef"
+          },
+          {
+            "id": "pen:2",
+            "seriesId": "series:1",
+            "label": " 温度 ",
+            "color": "#aB12Ef"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "blank-name-uses-independent-semantics",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/trends/0/name",
+        "value": "﻿"
+      }
+    ]
+  },
+  {
+    "name": "point-product-uses-independent-semantics",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/trends/0/maxPointsPerSeries",
+        "value": 2000
+      },
+      {
+        "path": "/trends/0/pens",
+        "value": [
+          {
+            "id": "pen:0",
+            "seriesId": "series:0",
+            "label": " 温度 ",
+            "color": "#aB12Ef"
+          },
+          {
+            "id": "pen:1",
+            "seriesId": "series:1",
+            "label": " 温度 ",
+            "color": "#aB12Ef"
+          },
+          {
+            "id": "pen:2",
+            "seriesId": "series:2",
+            "label": " 温度 ",
+            "color": "#aB12Ef"
+          },
+          {
+            "id": "pen:3",
+            "seriesId": "series:3",
+            "label": " 温度 ",
+            "color": "#aB12Ef"
+          },
+          {
+            "id": "pen:4",
+            "seriesId": "series:4",
+            "label": " 温度 ",
+            "color": "#aB12Ef"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "trend-geometry-keeps-rotation-opacity-hidden-locked",
+    "accepted": true,
+    "ops": [
+      {
+        "path": "/screens/0/objects/3/rotation",
+        "value": 45
+      },
+      {
+        "path": "/screens/0/objects/3/opacity",
+        "value": 0.5
+      },
+      {
+        "path": "/screens/0/objects/3/visible",
+        "value": false
+      },
+      {
+        "path": "/screens/0/objects/3/locked",
+        "value": true
+      }
+    ]
+  },
+  {
+    "name": "no-generic-fill-on-trend",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/screens/0/objects/3/fill",
+        "value": "#ffffff"
+      }
+    ]
+  },
+  {
+    "name": "no-pen-copy-inside-shape",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/screens/0/objects/3/shape/pens",
+        "value": []
+      }
+    ]
+  },
+  {
+    "name": "trend-in-symbol-rejected",
+    "accepted": false,
+    "symbolTrend": true
+  },
+  {
+    "name": "previous-project-version-rejected",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/manifest/schemaVersion",
+        "value": "0.35.0"
+      },
+      {
+        "path": "/manifest/minRuntimeVersion",
+        "value": "0.35.0"
+      }
+    ]
+  },
+  {
+    "name": "new-min-runtime-required",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/manifest/minRuntimeVersion",
+        "value": "0.35.0"
+      }
+    ]
+  },
+  {
+    "name": "trend-budget-applies-to-project",
+    "accepted": false,
+    "oversize": true
+  }
+]

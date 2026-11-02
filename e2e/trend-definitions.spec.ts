@@ -59,7 +59,7 @@ test("shared native/TS Trend definition cases agree in the browser without remot
   expect(remoteSchemas).toEqual([]);
 });
 
-test("Trend validation preserves names and colors and does not extend Project 0.35", async ({
+test("Trend validation preserves names and colors and Project rejects invalid definitions", async ({
   page,
 }) => {
   await page.goto("/");
@@ -80,7 +80,12 @@ test("Trend validation preserves names and colors and does not extend Project 0.
     const current = parseProject(JSON.stringify(project));
     let rejected = false;
     try {
-      parseProject(JSON.stringify({ ...project, trends: owned.definitions }));
+      parseProject(
+        JSON.stringify({
+          ...project,
+          trends: [{ ...owned.definitions[0], pens: [] }],
+        }),
+      );
     } catch {
       rejected = true;
     }
@@ -99,7 +104,7 @@ test("Trend validation preserves names and colors and does not extend Project 0.
     color: "#aB12Ef",
     label: " 温度 ",
     frozen: true,
-    version: "0.35.0",
+    version: "0.36.0",
     rejected: true,
     validAgain: true,
   });

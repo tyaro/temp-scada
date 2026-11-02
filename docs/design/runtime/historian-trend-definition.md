@@ -1,6 +1,6 @@
 # Historian H4c: 永続Trend定義と画面からの履歴表示
 
-2026-11-02（日本時間）。**Astra主設計の採用契約。H4c1の独立型・Schema・validatorはローカル実装・受入済み。Project変更・shape・context v2は未実装。** H4b2まではProject 0.35.0の通常Appから明示検索できる。[現在のworkspace](historian-history-workspace.md)、[配送と描画](historian-history-presentation.md)、[P5](historian-trend-contract.md)を前提とする。
+2026-11-02（日本時間）。**Astra主設計の採用契約。H4c1とH4c2の独立契約・Project 0.36.0保存・静的参照shapeはローカル実装・受入済み。context v2・保存presetからの履歴取得は未実装。** H4b2まではProject 0.35.0の通常Appから明示検索できる。[現在のworkspace](historian-history-workspace.md)、[配送と描画](historian-history-presentation.md)、[P5](historian-trend-contract.md)を前提とする。
 
 ## 採用する最初の利用経路
 
@@ -113,6 +113,8 @@ H4c2の段階では定義名と静的カードを見て配置・編集・保存�
 
 同Project内の配置複製は新object.idを採番し、trendIdは共有参照として保持する。ここで同Projectとは現在の編集owner内での操作であり、外部clipboardに書かれたprojectId／revision一致だけでは判定しない。画面複製・幾何group化でも参照を変えない。定義作成と最初の配置追加、定義複製と参照付替えは一つの編集transaction／Undo単位にする。途中だけを保存可能にせず、失敗したcommandでは旧ProjectとUndoを維持する。
 
+H4c2ではTrendを含むsystem clipboardのcopy／cut／pasteを、同じ編集ownerからの操作を含めて一律に明示拒否する。直選択だけでなく、埋込参照の依存screen内にTrendがある場合も操作全体を拒否する。cutはコピー成功前に配置を削除せず、pasteは資産取込やProject変更の前に拒否する。同Project内のCtrl+D／配列複製／画面複製はclipboardを経由しない編集commandとして許し、trendIdを維持する。既存clipboardのorigin／projectId一致だけで許可しない。これらは外部payloadにも載るため、現ownerで発行したことの証明にはならない。
+
 外部clipboard／他Projectからの貼付は、定義原本付き搬送と衝突remapを実装するまでTrendを含む操作全体を明示拒否する。同じtrendIdがたまたま宛先にあることを同一定義の証拠にしない。既存clipboardに原本を追加する時は、持ち込んだ全定義の検証→ID衝突の新ID割当→配置参照付替えを原子的に行う。この高度なimportは初回H4c2の完了条件にせず、拒否の回帰を必須とする。Project全体の保存／読込は定義を含めて往復できる。
 
 editorのdefault作成時に架空seriesを作らない。最初の定義は利用者の明示namespace／seriesId入力、またはv2 contextからの選択でのみ完成できる。未完成draftはProjectへ入れず、確定時に共通validatorを通す。
@@ -133,7 +135,7 @@ source v1/v2、namespace、選択context、定義snapshotとquery全体の一致
 | ------------------------ | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 設計（PR #38）           | この採用契約と工程表                                                       | 現行実装との区別、未接続／意味／寿命／version境界をレビュー                                                                                                                              |
 | H4c1（ローカル受入済み） | 独立TrendDefinitions schema、native／TS純粋validator、共通fixtures         | 0/128定義、8pen、重複ID/series、同series別namespace、文字数、色、1h/8000点、unsafe値、未知field、JSON上限、Rust/TS一致。Project0.35.0へまだ組み込まない                                  |
-| H4c2                     | Project0.36.0、参照shape、原子的編集、SVGカード、保存／Undo／同Project複製 | 全言語parse/roundtrip、欠落参照・Symbol配置・外部clipboard拒否、未接続でも正当な保存、画像/接続線/埋込/Popup/回転/選択の既存回帰。カードは「履歴表示は準備中」と表示して検索を発行しない |
+| H4c2（ローカル受入済み） | Project0.36.0、参照shape、原子的編集、SVGカード、保存／Undo／同Project複製 | 全言語parse/roundtrip、欠落参照・Symbol配置・外部clipboard拒否、未接続でも正当な保存、画像/接続線/埋込/Popup/回転/選択の既存回帰。カードは「履歴表示は準備中」と表示して検索を発行しない |
 | H4c3                     | context v2、namespace照合、定義preset→既存workspace、色と凡例、画面action  | 通常Appで保存定義からraw/minmaxを明示取得。v1手動維持、別namespace同ID拒否、部分未解決拒否、unknownSeries応答、UTC算術端、service/定義/画面/Popup寿命、複数配置でもactive1、両theme      |
 
 H4c2で「Trend表示完成」とはしない。H4c3で保存定義からの履歴表示までが完成し、画面内常時グラフは別工程である。inline化を再開する時は、同時可視instance数、全体points/bytes、要求fairness、取消中資源、hidden/embedded/Popupの需要集約を先に決める。今回の単一workspace予算を無条件に各shapeへ複製しない。
@@ -151,3 +153,13 @@ Rustの`scada_model::trend_definitions::validate_trend_definitions(&Value)`は�
 Rust workspace388件（新規4単体）、TS全体1,578件（新規96件）、型検査0error／0warning、build、Clippy `-D warnings`／rustfmt、関連Chromium16件（新規2件）が成功。browserはremote schema取得なし・所有／凍結・Project0.35で未導入trendsを拒否することも確認した。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 H4c1は独立した表示定義契約だけで、Project 0.35.0・App／main・DB format 5・H1・SDK／Banto依存は維持する。新APIの受理はnamespaceやseriesの実在・記録・権限の証明ではない。元inputの確保済みメモリやProxy trapのhard実行予算も保証しない。次のH4c2ではProject側へTrend／H1 resourceを登録し、Schema参照だけで完了とせず、`trends`を同じ独立文書wrapperで意味検査・1MiB予算へ通す。参照存在・Symbol禁止はProject全体の追加検査とする。
+
+## H4c2の実装と受入（2026-11-02）
+
+Project 0.36.0のtrends／参照shape、同じH4c1 resourceと意味検査・wrapper予算、native／TS参照整合性を実装した。通常AppでBanto Modalの定義管理、save-trend原子的編集、参照切替・独立コピー・未使用削除を提供する。全SVG投影へreadonly metadataだけを渡し、静的カードにquery／source／controllerを持たせない。system clipboardはTrend依存を含む全操作を拒否し、Ctrl+D／配列／画面複製を使う。
+
+管理ModalはProject ownerと世代・画面を捕捉し、入替後のcallbackを受理しない。definition.name／pen.label／色の表記と順序を維持する。InspectorはtrendIdのmodel baselineを登録し、配置直後の未変更formがdirtyにならない。未保存draftでのEscapeと背後shortcutを遮断する。
+
+共通Project18ケース・新規TS26件／native1件・関連Chromium47件（通常Appの新規6件）で、原子保存と失敗時不変、一括Undo／Redo、旧版拒否、参照整合／Symbol禁止、予算、共有更新／独立化、clipboard、所有者変更、全SVG表示先・両テーマを確認した。Rust全389件、TS全1,604件、型検査／build／Clippy／rustfmt成功。Astra最終レビューに必須修正はない。モード変更で既存Popupを閉じる振る舞いは維持し、再openで新定義名を反映する。全体CIはPRで確認する。
+
+0.35.0自動移行は追加していない。通常mainの実接続、H1・DB format 5・SDK／Banto固定依存は維持する。H4c3でnamespace付きcontext v2と保存presetを接続し、単一workspaceとactive一枠の寿命を維持する。保存と配置の受入は、実データ集合や系列の解決・記録・認証の保証ではない。

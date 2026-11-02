@@ -1,5 +1,6 @@
 import { applyBindingReplacement } from "../binding-replacement";
 import { applyEquipmentCommand } from "./equipment-handler";
+import { applyTrendCommand } from "./trend-handler";
 import type { Project } from "../project";
 import type { ProjectCommand } from "./commands";
 
@@ -9,6 +10,10 @@ export function applyProjectCommand(
   command: ProjectCommand,
 ): void {
   switch (command.type) {
+    case "save-trend":
+    case "remove-trend":
+      applyTrendCommand(next, command);
+      return;
     case "replace-binding-reference":
       applyBindingReplacement(next, command);
       return;

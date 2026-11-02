@@ -229,4 +229,4 @@ P5自体の検証は固定sourceとの照合、文書整形、参照リンク、
 
 [H4b2](historian-history-workspace.md)はPR #37でマージ・全体CI成功となり、通常Appから任意HistoryServiceへ明示検索する入口を提供する。通常mainは未接続で、実接続・正式サービス・ライブとのmergeの完成ではない。
 
-[H4c](historian-trend-definition.md)はAstra主設計の採用契約で、H4c1の独立Trend定義Schema・Rust／TS検証は実装・ローカル受入済みである。Projectへの永続化・参照shape・namespace付きcontext v2は未実装である。初回は主画面／独立Popupから単一workspaceを開く経路とし、常時inline graphを後続に分ける。保存するペンや色の編集が記録計画を変更しない責務を維持する。
+[H4c](historian-trend-definition.md)はAstra主設計の採用契約で、H4c1の独立Trend定義Schema・Rust／TS検証は実装・ローカル受入済みである。H4c2でProject 0.36.0への保存と静的参照shapeも実装・ローカル受入した。namespace付きcontext v2と保存presetの検索接続はH4c3で実装する。初回は主画面／独立Popupから単一workspaceを開く経路とし、常時inline graphを後続に分ける。保存するペンや色の編集が記録計画を変更しない責務を維持する。

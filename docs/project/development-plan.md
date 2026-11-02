@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-02の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4a／H4b1〜2とH4c採用設計はPR #10〜#38で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H4c1 独立Trend定義契約](../design/runtime/historian-trend-definition.md)をローカル実装・受入した。共有Schema、Rust／TSの有限・owned validator、共通85fixtureでnamespace付き系列参照・ペン／色・期間・mode・点数を検証する。Project 0.35.0と通常Appは維持し、保存・配置機能はまだ追加していない。次はH4c2でProject 0.36.0・静的参照shapeと保存／編集、H4c3でnamespace付きcontext v2・preset・画面からの明示検索を実装する。H4c2のProject検証にも独立契約の意味検査・1MiB予算を再利用し、参照存在／Symbol禁止を別途検査する。初回は単一workspaceへの明示検索とし、各shapeの常時query・inline chartは後続に分ける。通常mainの未接続、製品transport・認証・実source adapterの保留は維持する。製品計画配布・複数group／queue、保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、H2／H3／H4全体・正式Runtimeは未完了。
+2026-11-02の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4a／H4b1〜2とH4c採用設計・H4c1はPR #10〜#39で全体CI成功・マージ済み。P3bは[製品transport・接続設定の再開条件](../design/runtime/transport-boundary.md)に従い保留。Astra主設計の[H4c2](../design/runtime/historian-trend-definition.md)をローカル実装・受入した。Project 0.36.0へ任意trends配列とtrend参照shapeを追加し、共通契約の意味検査／1MiB予算・参照整合性をnative／TSで検証する。通常Appの管理Modalで定義・ペンを編集し、定義と配置を一回のUndo単位で保存する。共通SVGの静的カードを全表示先へ渡す。次はH4c3でnamespace付きcontext v2・保存preset・色・画面からの明示履歴検索を接続する。system clipboardのTrendは初回全拒否、同ownerの配置／配列／画面複製は参照を維持する。Symbol内は禁止。0.35.0の移行は追加せず、現行examplesとlegacy出力を0.36.0へ揃えた。通常mainの未接続、製品transport・認証・実source adapterの保留は維持する。各shapeの常時query・inline chart、製品計画配布・複数group／queue、保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、H2／H3／H4全体・正式Runtimeは未完了。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 

@@ -538,7 +538,7 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 
 ## 永続Trend定義・画面参照の設計入口（H4c）
 
-[採用設計](../design/runtime/historian-trend-definition.md)が、独立した共通SchemaとRust／TS validator、ProjectのTrend原本とscreen参照shape、描画actionから既存HistoryWorkspaceへ渡す境界、接続namespaceの照合と寿命、copy／Undo／Symbol制限、受入・PR分割を定める。H4c1の独立契約だけを以下に実装し、Project 0.35.0と既存H4b2を維持する。Project保存・shapeの実装完了とはしない。
+[採用設計](../design/runtime/historian-trend-definition.md)が、独立した共通SchemaとRust／TS validator、ProjectのTrend原本とscreen参照shape、描画actionから既存HistoryWorkspaceへ渡す境界、接続namespaceの照合と寿命、copy／Undo／Symbol制限、受入・PR分割を定める。H4c1の独立契約とH4c2のProject 0.36.0保存・静的参照shapeを以下に実装する。保存定義からの履歴取得はH4c3へ分ける。
 
 ## 独立Trend定義の共通契約（H4c1）
 
@@ -546,4 +546,14 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 
 nativeの`validate_trend_definitions(&Value)`／`TrendDefinitions::from_value`／`as_value`と、TSの`validateTrendDefinitions`／`parseTrendDefinitions`が有限走査・Schema・意味検査・owned snapshotを担当する。JSON byte計数では有効な整数値の表記を揃え、TSだけに存在するaccessor／prototype／cycle等は既存`history/owned-json.ts`で拒否する。新しいscalar検査はTrend側に閉じ、H1や既存HistoryContextの受理を変えない。
 
-`examples/trend-definition-cases.json`85件をnative `trend_definitions/tests.rs`、TS単体、`e2e/trend-definitions.spec.ts`で受け入れる。大きい入力はTS `lib/__fixtures__/trend-definition-cases.ts`とnative test helperの同じrecipeで生成し、fixture本体へ1MiBの値を重複保存しない。新規native4単体・TS96件・Chromium2件が所有／Unicode／予算／H1参照を担当し、既存History browser14件も回帰する。通常mainはfixtureも新validatorもimportせず、[H4c2への組込み条件](../design/runtime/historian-trend-definition.md)を残す。
+`examples/trend-definition-cases.json`85件をnative `trend_definitions/tests.rs`、TS単体、`e2e/trend-definitions.spec.ts`で受け入れる。大きい入力はTS `lib/__fixtures__/trend-definition-cases.ts`とnative test helperの同じrecipeで生成し、fixture本体へ1MiBの値を重複保存しない。新規native4単体・TS96件・Chromium2件が所有／Unicode／予算／H1参照を担当し、既存History browser14件も回帰する。fixtureはテスト専用であり、validatorはH4c2のProject経路から呼び出す。[Projectへの組込み条件](../design/runtime/historian-trend-definition.md)を残す。
+
+## ProjectのTrend定義と静的参照配置（H4c2）
+
+`project.schema.json`のoptional trendsとtrendInstance、TS `project.ts`とnative `lib.rs`がProject 0.36.0を所有する。Trend／H1 resourceのローカル登録、H4c1 wrapperによる意味検査／予算再利用、内部参照存在・Symbol禁止を担当する。`trend_definitions::schema_options`がnativeの同梱resourceと外部取得拒否を共用する。global UUIDとTrend原本のID poolは分ける。
+
+`editor/trend-handler.ts`がsave-trend／remove-trend、`single-object-handler.ts`がmake-trend-uniqueと参照変更を扱う。finish／recordEditが候補検証・no-op・revision・Undoを維持する。`TrendDefinitionsDialog.svelte`はlocal draftと有限pen編集、AppはProject object／generation／screenを捕捉したownerとcallback、Inspectorは参照とdraft baselineを所有する。メニューは既存action生成を共用する。
+
+`TrendPainting.svelte`は値・queryを持たないSVGカード。metadataをApp→CanvasWorkspace／Minimap→Renderer→ObjectPainting／ScreenViewと、PreviewWindow→ScreenPaintingへ渡す。`clipboard.ts`はTrendを含むsystem clipboardを依存screenまで含めて拒否する。通常のduplicate／array／screen duplicateは原本参照を維持する。
+
+`examples/trend.project.json`と`trend-placement-cases.json`18件をTS `__fixtures__/trend-placement-cases.ts`・`project-trends.test.ts`、native `trend_project_tests.rs`で受け入れる。新規TS26／native1が原子性・意味検査・参照・共有／独立化・拒否経路を検証する。`e2e/project-trends.spec.ts`の新規6件は通常Appの保存・再読込・Undo・draft・全投影とsystem clipboard拒否を担当する。H4c3の[検索接続と寿命](../design/runtime/historian-trend-definition.md)はまだ実装していない。

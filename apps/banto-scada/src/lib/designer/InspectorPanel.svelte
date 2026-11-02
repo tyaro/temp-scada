@@ -64,6 +64,7 @@
     onselectsource,
     onopenequipment,
     onopenequipmentsettings,
+    onmanagetrend,
     openScreen,
     onreplaceimage,
     imageBusy,
@@ -83,6 +84,7 @@
     ) => string | null;
     onclose: () => void;
     project: Project;
+    onmanagetrend?: (id: string) => void;
     selectedIds: string[];
     selected: ScreenObject | undefined;
     selectionLocked: boolean;
@@ -140,7 +142,8 @@
                 : []),
             ];
           return object.shape.type === "image" ||
-            object.shape.type === "screenView"
+            object.shape.type === "screenView" ||
+            object.shape.type === "trend"
             ? []
             : [object.fill!.toLowerCase()];
         }),
@@ -550,7 +553,9 @@
             imageCount={screen.objects.filter(
               (o) =>
                 selectedIds.includes(o.id) &&
-                (o.shape.type === "image" || o.shape.type === "screenView"),
+                (o.shape.type === "image" ||
+                  o.shape.type === "screenView" ||
+                  o.shape.type === "trend"),
             ).length}
             {paintDisabledCount}
             count={selectedIds.length}
@@ -828,7 +833,7 @@
                     >{/if}</label
                 >
               {/each}
-              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
+              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "trend" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
                 <label
                   >{selected.shape.type === "symbol" &&
                   selected.shape.colorMode === "definition"
@@ -1034,6 +1039,20 @@
                   </p>
                 {/if}
               {/if}
+              {#if selected.shape.type === "trend"}
+                <label class="full-width"
+                  >参照するトレンド<select
+                    name="trendId"
+                    aria-label="参照するトレンド"
+                  >
+                    {#each project.trends ?? [] as row}<option
+                        value={row.id}
+                        selected={row.id === selected.shape.trendId}
+                        >{row.name}</option
+                      >{/each}
+                  </select></label
+                >
+              {/if}
               {#if selected.shape.type === "screenView"}
                 <label class="full-width"
                   >参照する画面<select
@@ -1101,6 +1120,29 @@
                   if (selected?.shape.type === "screenView")
                     openScreen(selected.shape.screenId);
                 }}>参照する画面を開く</button
+              >
+            {/if}
+            {#if selected.shape.type === "trend"}
+              <p>
+                定義の変更は参照する全配置へ反映されます。履歴表示は準備中です。
+              </p>
+              <button
+                type="button"
+                onclick={() =>
+                  selected?.shape.type === "trend" &&
+                  onmanagetrend?.(selected.shape.trendId)}
+                >参照するトレンド定義を編集</button
+              >
+              <button
+                type="button"
+                disabled={(project.trends?.length ?? 0) >= 128}
+                onclick={() =>
+                  selected &&
+                  edit({
+                    type: "make-trend-unique",
+                    screenId: screen.id,
+                    objectId: selected.id,
+                  })}>トレンド定義を複製してこの配置に適用</button
               >
             {/if}
             {#if selected.shape.type === "symbol"}

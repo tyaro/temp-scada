@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { TrendDefinition } from "./trend-definitions";
   import type { EquipmentContext } from "./symbol-slots";
   import type { Screen, SymbolDefinition } from "./project";
   import type { TagReadings } from "./tag-presentation";
@@ -11,6 +12,7 @@
     width,
     height,
     symbols,
+    trends = [],
     equipmentContext,
     images,
     readings,
@@ -19,6 +21,7 @@
     width: number;
     height: number;
     symbols: SymbolDefinition[];
+    trends?: readonly TrendDefinition[];
     equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
       string,
@@ -59,6 +62,7 @@
           {images}
           {readings}
           {equipmentContext}
+          {trends}
         />
       </g>
     {/each}

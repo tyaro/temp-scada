@@ -62,6 +62,13 @@ export function parseClipboard(text: string): ObjectClipboard {
     throw new Error("clipboardの図形・宣言は4MiB以下にしてください。");
   const project = parseProject(JSON.stringify(data.project));
   if (
+    project.trends?.length ||
+    project.screens.some((s) => s.objects.some((o) => o.shape.type === "trend"))
+  )
+    throw new Error(
+      "トレンドを含む貼り付けは未対応です。配置の複製または画面の複製を使ってください。",
+    );
+  if (
     project.equipment?.length ||
     project.equipmentTypes?.length ||
     project.screens.some((screen) =>
@@ -186,6 +193,14 @@ export function copyObjectSnapshot(
   const dependencyScreens = project.screens.filter((screen) =>
     dependencies.screens.has(screen.id),
   );
+  if (
+    [...objects, ...dependencyScreens.flatMap((s) => s.objects)].some(
+      (o) => o.shape.type === "trend",
+    )
+  )
+    throw new Error(
+      "トレンドを含むコピー・切り取りは未対応です。配置の複製または画面の複製を使ってください。",
+    );
   if (
     [...objects, ...dependencyScreens.flatMap((screen) => screen.objects)].some(
       (object) => object.shape.type === "symbol" && object.shape.equipmentId,

@@ -18,17 +18,27 @@ impl jsonschema::Retrieve for BundledOnly {
     }
 }
 static VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
-    let history: Value = serde_json::from_str(HISTORY_SCHEMA).expect("bundled H1 JSON");
     let root: Value = serde_json::from_str(TREND_DEFINITION_SCHEMA).expect("bundled Trend JSON");
+    schema_options()
+        .build(&root)
+        .expect("bundled Trend schema and H1 resource")
+});
+
+/// Shared local resources for Project and the independent contract. Never fetch.
+pub(crate) fn schema_options() -> jsonschema::ValidationOptions {
+    let history: Value = serde_json::from_str(HISTORY_SCHEMA).expect("bundled H1 JSON");
+    let trend: Value = serde_json::from_str(TREND_DEFINITION_SCHEMA).expect("bundled Trend JSON");
     jsonschema::options()
         .with_retriever(BundledOnly)
         .with_resource(
             history["$id"].as_str().expect("H1 schema ID"),
             jsonschema::Resource::from_contents(history.clone()).expect("H1 resource"),
         )
-        .build(&root)
-        .expect("bundled Trend schema and H1 resource")
-});
+        .with_resource(
+            "https://temp-scada.invalid/schema/trend-definition-v1.json",
+            jsonschema::Resource::from_contents(trend).expect("Trend resource"),
+        )
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TrendDefinitionError;

@@ -277,11 +277,13 @@ export function applySelectionCommand(
     if (
       objects.some(
         (object) =>
-          object.shape.type === "image" || object.shape.type === "screenView",
+          object.shape.type === "image" ||
+          object.shape.type === "screenView" ||
+          object.shape.type === "trend",
       )
     )
       throw new Error(
-        "画像や埋込画面を含む選択には色を適用できません。対象を除いて選択してください。",
+        "画像・埋込画面・トレンドを含む選択には色を適用できません。対象を除いて選択してください。",
       );
     const fill = command.fill.trim().toLowerCase();
     if (!/^#[0-9a-f]{6}$/.test(fill))

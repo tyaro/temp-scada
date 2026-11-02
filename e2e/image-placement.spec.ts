@@ -227,7 +227,7 @@ test("image mixed colors are disabled without partially coloring other objects",
   await button(page, "image · 0").click({ modifiers: ["Shift"] });
   const colors = page.locator('form[data-editor-form="selection-color"]');
   await expect(colors).toContainText(
-    "画像・埋込画面を含む選択には色を適用できません",
+    "画像・埋込画面・トレンドを含む選択には色を適用できません",
   );
   await expect(colors.getByLabel("適用する色", { exact: true })).toBeDisabled();
   await expect(

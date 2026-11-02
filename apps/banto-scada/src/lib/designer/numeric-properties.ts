@@ -39,7 +39,7 @@ export function objectFormValues(
     x: String(object.x),
     y: String(object.y),
     rotation: String(object.rotation),
-    ...(object.shape.type === "screenView"
+    ...(object.shape.type === "screenView" || object.shape.type === "trend"
       ? {}
       : { fill: placementColor(object) }),
   };
@@ -66,6 +66,7 @@ export function objectFormValues(
   }
   if (object.shape.type === "screenView")
     values.sourceScreenId = object.shape.screenId;
+  if (object.shape.type === "trend") values.trendId = object.shape.trendId;
   if (object.shape.type === "polyline") {
     values.points = object.shape.points
       .map((point) => `${point.x},${point.y}`)
