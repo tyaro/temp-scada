@@ -273,12 +273,17 @@ pub(super) fn load(connection: &Connection, session: &str) -> StoreResult<Option
 }
 
 pub(super) fn save_start(
-    tx: &Transaction<'_>,
+    tx: &Connection,
     spec: &SessionSpec,
     start: &TimedStart,
     commit: i64,
+    mut budget: Option<&mut super::query::control::Budget>,
 ) -> StoreResult<()> {
     let members = serde_json::to_string(&spec.members)?;
+    if let Some(b) = budget.as_mut() {
+        b.bounded_text(&members, 128 * 1024)?;
+        b.work.statement()?;
+    }
     let old: Option<String> = tx
         .query_row(
             "SELECT members_json FROM recording_plans WHERE plan_id = ?1 AND revision = ?2",
@@ -286,10 +291,17 @@ pub(super) fn save_start(
             |r| r.get(0),
         )
         .optional()?;
+    if let (Some(old), Some(b)) = (&old, budget.as_mut()) {
+        b.row()?;
+        b.bounded_text(old, 128 * 1024)?;
+    }
     match old {
         Some(old) if old != members => return Err(StoreError::Conflict),
         Some(_) => {}
         None => {
+            if let Some(b) = budget.as_mut() {
+                b.work.statement()?;
+            }
             tx.execute(
                 "INSERT INTO recording_plans VALUES (?1, ?2, ?3, ?4)",
                 params![
@@ -300,6 +312,9 @@ pub(super) fn save_start(
                 ],
             )?;
         }
+    }
+    if let Some(b) = budget.as_mut() {
+        b.work.statement()?;
     }
     tx.execute(
         "INSERT INTO session_evidence VALUES (?1, ?2, ?3, ?4, ?5, ?5, NULL)",
