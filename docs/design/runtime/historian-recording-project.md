@@ -13,7 +13,7 @@
 | H5d3                 | 新しい管理表示DTO/optional service/有限controllerと通常Appの診断表示        | injected serviceの観測状態をdesiredと比較できる。操作はしない                    |
 | H5d4                 | 既存mappingを用いた明示preflight/pause/join/applyと操作結果表示             | serviceが提供する限定操作を明示実行できる。新mapping自動解決や自動resumeはしない |
 
-d3前にDTO/ownershipだけの詳細契約PRを切ってよい。表のservice概形は採用する責務と上限を定めるものであり、nativeのSerialize型をそのままbrowser公開した既存契約ではない。各段階をReady for Reviewで受け入れてから次へ進む。
+d1／d2はPR #53／#54でworkへ統合済み。d3は[読取DTOとserviceの詳細契約](historian-recording-management.md)を先に採用し、共通JSON検証とcontroller／表示を後続へ分割する。以下のd3節は概要であり、正確なshape・制限・照合規則は詳細契約に従う。表のservice概形は採用する責務と上限を定めるものであり、nativeのSerialize型をそのままbrowser公開した既存契約ではない。各段階をReady for Reviewで受け入れてから次へ進む。
 
 ## H5d1: 保存契約
 
@@ -80,7 +80,10 @@ optional injected RecordingManagementServiceをAppへ渡す。通常起動はund
 ```ts
 interface RecordingManagementService {
   readonly context: unknown; // 版付きのbounded contextを検証
-  inspect(request: InspectionRequest, signal: AbortSignal): Promise<unknown>;
+  inspect(
+    request: InspectionRequest,
+    control: { signal: AbortSignal; deadlineMonotonicMs: number },
+  ): Promise<unknown>;
   // d4で明示操作capabilityを追加
 }
 ```
@@ -103,9 +106,9 @@ DB viewとHost stateは別時点の観測であり、一つのDB snapshotで両�
 
 desired canonical比較はH5bのmemberId順・object key順・安全整数正規化に合わせ、文字列をtrim/Unicode normalizeしない。順序保存は保持するがmember表示順だけの差を稼働意味の変更としない。browser独自hashを権威にせず、必要なら新DTOのschema/共通fixtureで比較規則を固定する。
 
-1context最大単一plan/単一group、1..8member、単一最新activation/session、各種最新receipt最大1、blocker有限enumを基本とする。context128KiB、response1MiB、depth32/node16384等の新境界をd3詳細契約で確定し、native viewの全過去情報やraw errorsを無制限に公開しない。field数/文字列長/enum/未知fieldをstrict検証する。getter/非JSON/unsafe整数/lone surrogateを拒否し、owned/frozen結果を使う。
+1context最大単一plan/単一group、1..8member、単一最新activation/session、blocker有限enumを基本とし、過去の操作receiptはd4へ分ける。詳細契約でcontext/request各128KiB・4096node、response1MiB・16384node、depth32を確定した。native viewの全過去情報やraw errorsを無制限に公開しない。field数/文字列長/enum/未知fieldをstrict検証する。getter/非JSON/unsafe整数/lone surrogateを拒否し、owned/frozen結果を使う。
 
-App内のcontrollerはworkspace開閉で再作成しない。readはactive1+pending latest1、Abortは要求のみ。sourceがAbortを無視しても古いPromiseがcleanup後settleするまで次を発行しない。Project置換/service変更/closeでは論理tokenをretireして古い表示を即時隠すが、物理枠は保持する。待機をtimeoutで完了扱いにしない。新ownerのreadも旧物理read終了まで待つ。
+App内のcontrollerはworkspace開閉で再作成しない。readはactive1+pending latest1、Abortは要求のみ。sourceがAbortを無視しても古いPromiseがcleanup後settleするまで次を発行しない。Project置換/service変更/closeでは論理tokenをretireして古い表示を即時隠すが、物理枠は保持する。待機をtimeoutで物理完了扱いにしない。load時に一度作った単調時計の絶対期限へpending待機も含め、期限切れで結果を採用せず、cleanup終了まで枠を保持する。新ownerのreadも旧物理read終了まで待つ。
 
 UI closeはread購読/表示寿命だけを終え、RecordingHost/source/writerをshutdownしない。service context変更で旧結果を新Projectへ投影しない。requestIdと要求contextをexact照合し、stale/invalid/unavailable/errorを正常データへ変換しない。自動pollは初回不要、明示更新で取得する。
 

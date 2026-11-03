@@ -2054,3 +2054,11 @@ PR #53をworkへ統合（ccffa46）し、Astraの[H5d2](../design/runtime/histor
 TS全1,961件（新規27）・型検査0error／0warning・build、関連Chromium31件（新規7）が成功した。Astra最終実装レビューに必須修正はない。既存Rust実装・schemaは変更せず、全体CIで回帰する。
 
 追加のfocus試験で保存後の復帰漏れを検出し、Modalの論理資格と保持view一枠を分離してBantoの開閉遷移を通すよう修正した。新規7件を再受入し、sidebarのopenerへの復帰も確認した。Astraの修正レビューにも必須所見はない。
+
+## 記録管理状態の読取契約設計（H5d3、2026-11-03）
+
+PR #54をworkへ統合（d003e90）し、Astra主設計の[H5d3詳細契約](../design/runtime/historian-recording-management.md)を採用した。Project対象宣言・DBの同snapshot状態・別時点のHost／SDK観測、要求照合・有限なJSON予算・エラーと非同期所有を分離する。まず共通検証とfixture、その後controller／管理表示を実装する。
+
+今回は設計文書のみで、Project0.37.0／DB7／H1／固定SDK・Banto・依存・通常Appを変更していない。管理操作はd4以降、実接続・製品transport／認証の保留を維持する。
+
+Astra主設計とrootのnative照合で、旧版activationのterminal/commit順、初期snapshotの全null、Project版の下限を修正した。7文書の最終整合レビューに必須所見はない。整形・変更文書リンクと差分を確認した。コード変更のない設計区切りのためローカル全体試験は再実行せず、Ready for Review PRの全体CIを確認する。
