@@ -1,6 +1,8 @@
 //! H5b1/2: durable configuration and atomic session binding. No SDK/worker startup.
 mod activation;
 mod canonical;
+mod preflight;
+mod prepare;
 mod read;
 mod reservations;
 mod types;
@@ -175,4 +177,4 @@ impl SqliteStore {
     }
 }
 #[cfg(test)]
-mod tests;
+pub(in crate::store) mod tests;

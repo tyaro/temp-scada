@@ -236,6 +236,24 @@ fn bounded_ledger_capacity_keeps_existing_receipts_available() {
     )
     .unwrap();
     tx.commit().unwrap();
+    let mut reader = store.reader().unwrap();
+    assert!(matches!(
+        reader.preflight_recording_mapping(
+            &register("overflow", Some(MAX_LEDGER_ENTRIES)),
+            &control()
+        ),
+        Err(StoreError::RecordingPlanCapacity)
+    ));
+    assert!(matches!(
+        reader
+            .preflight_recording_mapping(&register("map:1", None), &control())
+            .unwrap()
+            .outcome,
+        MappingPreflightOutcome::Replay(MappingReceipt {
+            mapping_revision: 1,
+            ..
+        })
+    ));
     let before = counter(&store);
     assert!(matches!(
         store.register_recording_mapping(
@@ -446,6 +464,69 @@ fn disjoint_eight_member_switches_fit_default_budget_with_sixteen_first_use_orig
     }
 }
 
+fn assert_running_preflight_budget(
+    store: &mut SqliteStore,
+    request: &ApplyRecordingPlanRequest,
+    other: &RecordingMapping,
+) {
+    let n = request.expected_mapping_revision.unwrap();
+    let session_id = format!("preflight:session:{n}");
+    let clock_epoch = format!("preflight:clock:{n}");
+    store
+        .activate_recording_plan(
+            &ActivateRecordingPlanRequest {
+                activation_id: format!("preflight:activation:{n}"),
+                expected_applied_revision: n,
+                expected_mapping_revision: n,
+                expected_retention_applied_revision: 32,
+                session_id: session_id.clone(),
+                start: evidence::ClockStamp {
+                    clock_epoch: clock_epoch.clone(),
+                    at_ms: 3000,
+                },
+            },
+            &control(),
+        )
+        .unwrap();
+    let mut reader = store.reader().unwrap();
+    let mut next = request.clone();
+    next.request_id = format!("preflight:apply:{n}");
+    next.expected_applied_revision = Some(n);
+    assert!(matches!(
+        reader
+            .preflight_recording_plan(&next, &control())
+            .unwrap()
+            .outcome,
+        PlanPreflightOutcome::Candidate {
+            active_session_id: Some(_)
+        }
+    ));
+    let mut map = register(&format!("preflight:mapping:{n}"), Some(n));
+    map.mapping = other.clone();
+    map.mapping.members.truncate(8);
+    for m in &mut map.mapping.members {
+        m.identity.segment_id = "segment-b".into();
+    }
+    assert!(matches!(
+        reader
+            .preflight_recording_mapping(&map, &control())
+            .unwrap()
+            .outcome,
+        MappingPreflightOutcome::Candidate {
+            active_session_id: Some(_)
+        }
+    ));
+    store
+        .close_timed_session(
+            &session_id,
+            evidence::ClockStamp {
+                clock_epoch,
+                at_ms: 4000,
+            },
+        )
+        .unwrap();
+}
+
 #[test]
 fn thirty_two_series_and_segment_origins_with_distinct_retention_versions_fit_default_budget() {
     use crate::store::retention::application::{PolicyApplyRequest, PolicyPreparationRequest};
@@ -542,6 +623,17 @@ fn thirty_two_series_and_segment_origins_with_distinct_retention_versions_fit_de
         a.expected_retention_applied_revision = Some(32);
         a.desired = desired_for(&r.mapping);
         a.desired["revision"] = json!(n);
+        let mut reader = store.reader().unwrap();
+        assert!(matches!(
+            reader
+                .preflight_recording_plan(&a, &control())
+                .unwrap()
+                .outcome,
+            PlanPreflightOutcome::Candidate {
+                active_session_id: None
+            }
+        ));
+        drop(reader);
         let receipt = store.apply_recording_plan(&a, &control()).unwrap();
         assert_eq!(receipt.applied_revision, n);
         assert_eq!(
@@ -554,6 +646,7 @@ fn thirty_two_series_and_segment_origins_with_distinct_retention_versions_fit_de
             receipt
         );
         assert_eq!(store.apply_recording_plan(&a, &control()).unwrap(), receipt);
+        assert_running_preflight_budget(&mut store, &a, &pool);
         last_apply = Some(a);
     }
     // Joined reads must still validate historical desired/mapping/policy bodies.

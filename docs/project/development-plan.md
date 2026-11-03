@@ -23,6 +23,12 @@
 
 次機能の候補調査は採用・着手完了を意味しない。新しい機能は詳細仕様→基盤→UI→受入の区切りで進める。
 
+## H5c2の実装順
+
+[Astra主設計](../design/runtime/historian-recording-supervisor.md)に沿い、c2aの停止前read-only preflight、c2bの正常pause後の一回の管理turn、c2cのpreflight／stop／join／fresh SDK解決／明示resumeの順に分割する。c2aはworkのH5b2にだけ依存し、[PR #47](https://github.com/tyaro/temp-scada/pull/47)のmanaged Recorder／Host開始とは独立に実装・受入できる。c2b/cへ進む前に同PRをworkへ統合する。
+
+c2aは既存HistoryReaderから保存済みmappingに対するapplyとmapping登録の候補を検査する。Candidateは予約や停止許可ではなく、既知receiptのReplayでは停止しない。mapping登録とapplyは別commitで、登録後にapplyへ失敗してもmapping成功を黙って戻さない。通常App／Project編集・配布はH5dへ分け、製品接続・認証・transportの保留を維持する。
+
 ## Core v1と後続工程
 
 S0／S1のDesign Domain・正式Project layout・型／参照整合性・revision／contentHashを固め、S2の編集を接続する。S3は共有SDKによる実Hub接続・Quality・再接続、S4は正式directory／ZIPとimport previewを整える。Equipment／Symbol・Tag Browser・基本Actionとmode分離を段階追加する。

@@ -75,3 +75,39 @@ pub struct RecordingPlanState {
     pub applied: Option<AppliedRecordingPlan>,
     pub activation_supported: bool,
 }
+
+/// Advisory result from one read-only snapshot, never a reservation or stop token.
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingMappingPreflight {
+    pub snapshot_commit: u64,
+    pub outcome: MappingPreflightOutcome,
+}
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(
+    tag = "kind",
+    content = "detail",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum MappingPreflightOutcome {
+    Replay(MappingReceipt),
+    Candidate { active_session_id: Option<String> },
+}
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingPlanPreflight {
+    pub snapshot_commit: u64,
+    pub outcome: PlanPreflightOutcome,
+}
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+#[serde(
+    tag = "kind",
+    content = "detail",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum PlanPreflightOutcome {
+    Replay(RecordingPlanReceipt),
+    Candidate { active_session_id: Option<String> },
+}

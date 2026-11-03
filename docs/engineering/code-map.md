@@ -590,6 +590,14 @@ native `json_contract.rs`がTrendと記録計画のcompact JSON byte・node・de
 
 `query/control.rs`の`bounded_text`は新管理本文128KiBまでの共有8MiB計数を持ち、既存`evidence_text`は64KiBを維持する。新APIはdecoded rowsを最大256に絞り、既存maintenanceの取消・VM・rollback・poison／writer所有を共有する。`recording_plan/tests.rs`と`tests/validation.rs`／`failures.rs`がCAS／再送・8member・identity・job・容量・破損・FULL・各境界のprocess exitを一時DBで検証する。H1出力と通常Appの既存browser契約を回帰し、SDK／supervisor／UI／製品transportは追加しない。
 
+## 停止前の記録計画チェック（H5c2a）
+
+[採用設計](../design/runtime/historian-recording-supervisor.md)に従い、`store/recording_plan/preflight.rs`が既存HistoryReader上のmapping／apply候補検査を公開する。`prepare.rs`はwriteとread-only snapshotで共有するReplay／候補判定、CAS、immutable本文、容量、解決、予約identity検査を所有する。writerはactive session／jobを引き続き拒否し、preflightだけがactive sessionを候補に含める。
+
+`query/management.rs`は管理StoreErrorを保つread-only snapshot実行と既存guardの共有を担当する。HistoryReaderのhealthy fieldはpanic時のcleanup失敗も保持し、Historyと管理の双方で再利用を拒否する。新connection／lease枠／writer転送は作らず、2reader上限、元deadline/token、256行・文書128KiB・入力8MiB・VM/出力上限を維持する。
+
+`preflight/tests.rs`と`query/management.rs`の14新規テストが、稼働中の検査、writerとのsnapshot一貫性、Replay／競合、予算、readonly authorizer、取消／panic／cleanup失敗、SQL障害、2leaseとlockを確認する。既存validationへ4,096mapping版と32 origins／異なる保持版／8memberの稼働中・停止後チェックを追加した。Host停止・管理turn・SDK再解決・再開supervisorはc2b/cである。
+
 ## 記録開始の原子的bindingと復元照会（H5b2）
 
 `store/recording_plan/activation/types.rs`は専用要求、immutable receipt、mutable SessionStatusとlatest snapshotを所有する。`mod.rs`はQueryControl付きAPI・必須head/countと索引によるmanaged session/evidence/永久metadataの関係検査、`write.rs`は現在版CAS／fence／新session・epochと同commit保存、`read.rs`は過去applied・開始receipt・session member・最新tick receipt・timed evidence・recording_plans初利用の有限照合を担当する。

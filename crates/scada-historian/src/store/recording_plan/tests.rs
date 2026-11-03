@@ -9,7 +9,7 @@ use crate::store::{
 };
 use serde_json::json;
 use std::time::Duration;
-pub(super) fn control() -> QueryControl {
+pub(in crate::store) fn control() -> QueryControl {
     QueryControl::with_timeout(Duration::from_secs(10)).unwrap()
 }
 pub(super) fn mapping() -> RecordingMapping {
@@ -27,7 +27,7 @@ pub(super) fn mapping() -> RecordingMapping {
             .collect(),
     }
 }
-pub(super) fn register(key: &str, expected: Option<u64>) -> RegisterMappingRequest {
+pub(in crate::store) fn register(key: &str, expected: Option<u64>) -> RegisterMappingRequest {
     RegisterMappingRequest {
         request_id: key.into(),
         expected_mapping_revision: expected,
@@ -37,7 +37,11 @@ pub(super) fn register(key: &str, expected: Option<u64>) -> RegisterMappingReque
 pub(super) fn desired(enabled: bool) -> serde_json::Value {
     json!({"version":1,"kind":"recordingPlan","planId":"desired:1","revision":1,"enabled":enabled,"group":{"groupId":"group:1","hubRef":"hub:1","periodMs":1000,"members":mapping().members.into_iter().map(|m|json!({"memberId":m.member_id,"externalName":m.identity.external_name,"valueType":m.identity.value_type})).collect::<Vec<_>>()}})
 }
-pub(super) fn apply(key: &str, previous: Option<u64>, enabled: bool) -> ApplyRecordingPlanRequest {
+pub(in crate::store) fn apply(
+    key: &str,
+    previous: Option<u64>,
+    enabled: bool,
+) -> ApplyRecordingPlanRequest {
     ApplyRecordingPlanRequest {
         request_id: key.into(),
         expected_applied_revision: previous,
@@ -87,7 +91,7 @@ pub(super) fn counter(store: &SqliteStore) -> i64 {
         .query_row("SELECT last_commit FROM store_meta", [], |r| r.get(0))
         .unwrap()
 }
-pub(super) fn enabled_store() -> (TempStore, SqliteStore) {
+pub(in crate::store) fn enabled_store() -> (TempStore, SqliteStore) {
     let dir = TempStore::new();
     let mut store = dir.create();
     store

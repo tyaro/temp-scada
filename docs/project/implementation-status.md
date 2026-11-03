@@ -10,6 +10,16 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 記録計画の停止前チェック（H5c2a、2026-11-03）
+
+[AstraのH5c2採用設計](../design/runtime/historian-recording-supervisor.md)の最初の段階として、HistoryReaderへmapping／applyのread-only preflightを追加した。記録中のwriterを移さず、同snapshotで再送、CAS、immutable本文、解決、予約identity、容量を検査する。既知要求は元receiptのReplay、新規候補はactive session ID付きCandidateとして返す。active保持jobは新規候補をBusyにする。Candidateで将来のapply成功や停止許可を保証しない。
+
+writeと候補検査はprivate prepareを共有する。実writeのactive session／job拒否は維持し、初回ledger UUIDもwriteだけで発行する。既存2reader leaseとsnapshot guardを共有し、取消・panic・cleanup失敗でも所有を保持する。DB7・Project0.36・H1・SDK/Banto・依存は変更しない。
+
+新規native14件を含むRust workspace451件、Clippy／rustfmt、既存H1／desired契約のChromium8件と全体Prettier・文書リンクが成功した。記録中の同snapshot、replay／競合／容量、32 origins／別保持版／8memberの256行予算、取消／SQL失敗／panic／cleanup拒否、2leaseとwriter lockを確認し、Astraの最終レビューに必須修正はない。全体CIはwork向けReady for Review PRで確認する。
+
+workのH5b2から独立実装したため、本工程の基準はRust437件である。[PR #47](https://github.com/tyaro/temp-scada/pull/47)のH5c1は別PRで、専用開始と本preflightの両方の統合後にc2b/cの停止・管理turn・再解決・明示再開へ進む。通常App／実Hub／S7／本番DB／認証・製品transportには接続しない。
+
 ## 固定SDKへの追従（2026-11-01）
 
 [S7 SOAK中の計画](soak-independent-runtime-plan.md)のP1をローカル検証した。Industrial `v0.3.0-alpha.1`の完全revを固定し、Rust投影はSDKの同一世代snapshotを使用する。部分未解決・Unbound・値側source優先をSchema／TSと揃え、共通fixtureと両テーマのブラウザで確認した。[全体CI](https://github.com/tyaro/temp-scada/actions/runs/41225435243)が成功し、PR #10でマージ済み。通常Designerの実Hub接続・認証・正式Runtimeの完成ではない。
