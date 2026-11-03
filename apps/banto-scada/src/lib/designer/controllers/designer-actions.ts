@@ -76,6 +76,7 @@ export interface DesignerActionsHost {
     openPaintSample(): void;
     openScreenViewDialog(): void;
     openTrendDefinitions(): void;
+    openRecordingPlan(): void;
     add(kind: AddKind): void;
   };
   view: {
@@ -661,6 +662,11 @@ export function createDesignerActions(host: DesignerActionsHost) {
             label: "プロジェクト名を変更",
             disabled: host.editing.editBlocked,
             run: host.files.focusProjectName,
+          },
+          {
+            label: "記録希望設定",
+            disabled: host.editing.editBlocked || host.selection.definition,
+            run: host.files.openRecordingPlan,
           },
           {
             label: "工程図サンプルを開く",

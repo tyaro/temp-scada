@@ -1,6 +1,7 @@
 import { applyBindingReplacement } from "../binding-replacement";
 import { applyEquipmentCommand } from "./equipment-handler";
 import { applyTrendCommand } from "./trend-handler";
+import { applyRecordingPlanCommand } from "./recording-plan-handler";
 import type { Project } from "../project";
 import type { ProjectCommand } from "./commands";
 
@@ -10,6 +11,10 @@ export function applyProjectCommand(
   command: ProjectCommand,
 ): void {
   switch (command.type) {
+    case "save-recording-plan":
+    case "remove-recording-plan":
+      applyRecordingPlanCommand(next, command);
+      return;
     case "save-trend":
     case "remove-trend":
       applyTrendCommand(next, command);

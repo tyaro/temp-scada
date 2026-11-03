@@ -4,11 +4,21 @@
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。H5b2のnative activation／session原子bindingはPR #46でworkへ統合済み。H5c1で適用済み計画からRecorder／Hostの専用開始まで接続した。PR #47／#48をworkへ統合し、H5c2aの停止前検査に続いてH5c2bの正常pause後の管理turnを追加した。PR #49もworkへ統合し、c2c1で単一supervisorの停止前検査・明示pause/join・同一候補の一回適用を追加した。c2c1はPR #50でworkへ統合済み。c2c2で同snapshot診断とcaller提供SDK snapshotに束縛した明示resumeを追加した。c2c2もPR #51でworkへ統合済み。[H5d詳細設計](../design/runtime/historian-recording-project.md)を採用し、設計PR #52はworkへ統合済み。d1でProject0.37.0の任意記録希望設定を保存・読込できる。次はd2の編集UIで、管理表示・操作と製品接続も後続である。
+提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。H5b2のnative activation／session原子bindingはPR #46でworkへ統合済み。H5c1で適用済み計画からRecorder／Hostの専用開始まで接続した。PR #47／#48をworkへ統合し、H5c2aの停止前検査に続いてH5c2bの正常pause後の管理turnを追加した。PR #49もworkへ統合し、c2c1で単一supervisorの停止前検査・明示pause/join・同一候補の一回適用を追加した。c2c1はPR #50でworkへ統合済み。c2c2で同snapshot診断とcaller提供SDK snapshotに束縛した明示resumeを追加した。c2c2もPR #51でworkへ統合済み。[H5d詳細設計](../design/runtime/historian-recording-project.md)を採用し、設計PR #52はworkへ統合済み。d1でProject0.37.0の任意記録希望設定を保存・読込できる。d1はPR #53でworkへ統合済み。d2で編集・除去とUndo／Redoを追加した。次はd3の管理表示契約で、製品接続は引き続き保留する。
 
 最新の作図改善の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（全体CI成功）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
+
+## 記録希望設定の編集（H5d2、2026-11-03）
+
+[Astra設計](../design/runtime/historian-recording-project.md)に沿い、「ファイル→記録希望設定」とProject設定からBanto Modalを開き、単一planの作成・変更・除去と1〜8memberの編集・順序変更を提供する。保存・除去は既存editor commandとUndo／Redoへ一括接続する。完全no-opでProject revisionと履歴を増やさず、表示順だけの変更はdesired版を維持する。
+
+元設定の全文・順・版をcommand側で照合し、同計画IDの内容変更は大きい版を要求する。数値はraw整数文字列から安全な範囲だけを受理し、無操作の外部名の改行・空白・Unicodeを保持する。Project object・世代・画面・modeとrequestを捕捉し、置換後の古い保存／除去を拒否する。未保存入力のEsc・背後shortcutを保護し、既存Projectフォームの未適用入力も解決してから開く。
+
+Project0.37.0／DB7／H1／固定SDK・Banto・依存は維持する。保存・無効化・除去でHistorianの運転を変更せず、管理service・製品transport／認証は未接続である。
+
+TS全1,961件（新規27）・型検査0error／0warning・build、関連Chromium31件（新規7）が成功した。Astra最終実装レビューに必須修正はない。
 
 ## Project記録希望設定の保存（H5d1、2026-11-03）
 
@@ -16,7 +26,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 d1でProject0.37.0へoptional単一`recordingPlan`を追加した。TS／Rust／schemaに同じH5a resourceと意味・64KiB予算検査を接続し、サンプル・新規作成・既存0.1.0変換出力を揃えた。0.36.0は自動移行せず拒否する。設定の省略、無効計画、nullを区別し、タグ名の空白・改行とmember順を保持する。
 
-全体JSON／画像同梱packageはdesiredを保存し、部分clipboardへ持ち出さない。描画編集でdesired revisionを自動更新しない。DB7／H1／SDK・Bantoの依存は維持する。設定の編集UI、管理表示・明示操作はd2以降で、通常Appの実接続は保留している。
+全体JSON／画像同梱packageはdesiredを保存し、部分clipboardへ持ち出さない。描画編集でdesired revisionを自動更新しない。DB7／H1／SDK・Bantoの依存は維持する。設定の編集UIはH5d2で追加し、管理表示・明示操作はd3以降へ分ける。通常Appの実接続は保留している。
 
 Rust workspace531件（新規2）、TS1,934件（新規156）、関連Chromium25件（新規3）、型検査0error／0warning・build・Clippy／rustfmtが成功した。Astraの最終実装レビューに重大な指摘はない。
 

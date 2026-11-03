@@ -3,6 +3,7 @@ import type { BindingReplacementRequest } from "../binding-replacement";
 import type { PaintAlphaPatch } from "../selection-paint-alpha";
 import type { EquipmentSlot, EquipmentBinding } from "../equipment";
 import type { TrendDefinition } from "../trend-definitions";
+import type { DesiredRecordingPlan } from "../recording-plan";
 import type { ImageFit } from "../image-fit";
 import type { ImageCrop } from "../image-crop";
 import type {
@@ -332,6 +333,12 @@ export type EquipmentCommand =
   | { type: "remove-equipment"; equipmentId: string };
 export type ProjectCommand =
   | {
+      type: "save-recording-plan";
+      plan: DesiredRecordingPlan;
+      expected: DesiredRecordingPlan | null;
+    }
+  | { type: "remove-recording-plan"; expected: DesiredRecordingPlan }
+  | {
       type: "save-trend";
       definition: TrendDefinition;
       create: boolean;
@@ -450,6 +457,8 @@ const commandScopes = {
   "make-symbol-unique": "object",
   "make-trend-unique": "object",
   "save-trend": "project",
+  "save-recording-plan": "project",
+  "remove-recording-plan": "project",
   "remove-trend": "project",
   duplicate: "object",
   reorder: "object",
