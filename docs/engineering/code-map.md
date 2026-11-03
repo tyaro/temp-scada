@@ -619,3 +619,9 @@ native `json_contract.rs`がTrendと記録計画のcompact JSON byte・node・de
 `recording_host/plan_turn.rs`がprocess-local操作token、元RecordingRun照合、mapping/applyの一回turn、borrowed join、Drop時取消、結果と各種最新成功record、sticky recovery要求を所有する。`RecordingHost::writer_busy`でrecording／retention／planの実worker所有を共通に検査し、正常pauseと保持latchの検査を共有する。`types.rs`へManagingPlanと安全な入口error分類を追加した。詳細StoreErrorはcompletionに限定する。
 
 `recording_plan/types.rs`のrequest.validateは既存canonical／pure validatorのwrapperで、runtimeへ型・文書予算規則を複製しない。新しいDB transaction、schema／依存は追加しない。`plan_turn/tests.rs`の12unitと`tests/recording_host/plan_turn.rs`の3integrationで、exact token、gate、元control、join取消、Drop/reader lease、latecancel／応答喪失／I/O注入、成功receipt保持、同HostのmockHub→SQLite→raw/minmaxを受け入れる。actual FULL／rollback拒否は既存native回帰で確認する。
+
+## 単一supervisorの候補検査・明示停止・適用（H5c2c1）
+
+`recording_host/supervisor.rs`が同storeのHost/reader factory、記録開始と安全停止の委譲、検査候補のrun/session束縛、pause/join確認、同一intentの一回実行・consume、回復時のstore返却を所有する。公開host_mut/任意callbackを設けない。`supervisor/preflight.rs`が専用readerの物理一枠、元QueryControl、borrowed join、exact token、終了後結果とreader障害を保持する。`supervisor/types.rs`は操作token、typed report、有限stateとstoreを失わないInitErrorを担当する。
+
+`supervisor/tests.rs`と`supervisor/preflight/tests.rs`の15unitで、factory/2lease、古いtoken、同期拒否、元control、join取消、consumeの復活拒否、CAS再検査、reader障害とDrop lock、候補破棄・開始時の結果無効化を確認する。`tests/recording_host/supervisor.rs`の3integrationはmockHub録画継続、Replay/Conflictのno-stop、自然完了、pause/join/map/applyとcaller-confirmed再録画・raw/minmaxを受け入れる。nativeのread APIやDB schema、SDKfresh解決を追加したことにはしない。
