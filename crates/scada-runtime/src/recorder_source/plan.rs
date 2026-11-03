@@ -108,7 +108,7 @@ impl SdkRecorderPlan {
     }
 }
 
-fn compatible(expected: ValueType, data_type: &str) -> bool {
+pub(super) fn compatible(expected: ValueType, data_type: &str) -> bool {
     match expected {
         ValueType::Bool => data_type == "bit",
         ValueType::Number => matches!(

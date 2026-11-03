@@ -4,7 +4,8 @@ mod plan_turn;
 mod supervisor;
 pub use supervisor::{
     CandidatePhase, PreflightCompletion, PreflightPhase, PreflightReport, PreflightRun,
-    RecordingSupervisor, SupervisorError, SupervisorInitError, SupervisorState,
+    RecordingSupervisor, ResumeInspectionCompletion, ResumeInspectionPhase, ResumeInspectionRun,
+    ResumeResolution, ResumeTicket, SupervisorError, SupervisorInitError, SupervisorState,
 };
 mod retention;
 pub use plan_turn::{

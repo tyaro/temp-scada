@@ -153,3 +153,15 @@ impl SqliteStore {
 }
 #[cfg(test)]
 mod tests;
+
+pub(super) fn latest_with_cache(
+    c: &Connection,
+    b: &mut Budget,
+    h: &plan_read::Heads,
+    cache: &mut reservations::EvidenceCache,
+) -> StoreResult<Option<RecordingActivation>> {
+    h.activation
+        .map(|n| read::load_with_cache(c, b, n, h, cache))
+        .transpose()
+        .map(|v| v.map(|r| r.1))
+}

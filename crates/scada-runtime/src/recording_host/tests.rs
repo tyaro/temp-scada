@@ -338,7 +338,7 @@ async fn worker_panic_faults_host_and_requires_external_store_reopen() {
 }
 
 #[path = "../../tests/support/managed_recording.rs"]
-mod managed_support;
+pub(in crate::recording_host) mod managed_support;
 #[test]
 fn managed_stop_before_worker_starts_shares_cancellation_and_skips_activation() {
     let runtime = tokio::runtime::Builder::new_current_thread()

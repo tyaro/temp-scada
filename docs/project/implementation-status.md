@@ -4,11 +4,21 @@
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。H5b2のnative activation／session原子bindingはPR #46でworkへ統合済み。H5c1で適用済み計画からRecorder／Hostの専用開始まで接続した。PR #47／#48をworkへ統合し、H5c2aの停止前検査に続いてH5c2bの正常pause後の管理turnを追加した。PR #49もworkへ統合し、c2c1で単一supervisorの停止前検査・明示pause/join・同一候補の一回適用を追加した。fresh解決・回復snapshotとdesiredのProject保存は後続である。
+提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。H5b2のnative activation／session原子bindingはPR #46でworkへ統合済み。H5c1で適用済み計画からRecorder／Hostの専用開始まで接続した。PR #47／#48をworkへ統合し、H5c2aの停止前検査に続いてH5c2bの正常pause後の管理turnを追加した。PR #49もworkへ統合し、c2c1で単一supervisorの停止前検査・明示pause/join・同一候補の一回適用を追加した。c2c1はPR #50でworkへ統合済み。c2c2で同snapshot診断とcaller提供SDK snapshotに束縛した明示resumeを追加した。desiredのProject保存・編集と製品接続は後続である。
 
 最新の作図改善の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（全体CI成功）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
+
+## 同snapshotの復旧診断と明示再開（H5c2c2、2026-11-03）
+
+[Astraのc2c2採用詳細](../design/runtime/historian-recording-supervisor.md)に従い、HistoryReaderが現在のapplied/mapping、最新activation/session、保持fence/job/policyを同じsnapshotで返す。既存helperとoperation限定cacheを共有し、完全なreceipt検証とfirst-use証拠のcacheを分離する。複合照会だけ最大768行とし、既存個別256行・元VM/8MiB/出力/期限を維持する。
+
+RecordingSupervisorのinspectionはpreflightと同じ専用reader一枠を使い、異常Joinedやlatch中でも診断できる。成功照会を回復許可にせず、正常Idle/Joinedと全guardが一致する場合だけ再開を準備する。caller提供の一個のSDK GenerationSnapshotに全保存descriptor・型・unit・source・resolved bindingを照合してpinsを作り、opaque ticketに固定する。resume受理時だけ消費し、再使用や同期拒否での結果喪失を防ぐ。
+
+callerが現在のsnapshotを取得する責任を持つ。SDK世代番号から実取得時刻、endpoint同一性やHub/incarnationの永久identityを証明したとは扱わない。異常latchの自動解除、旧session再装着や自動retryは追加しない。DB7・H1・Project0.36・SDK/Banto・依存と通常Appは維持し、上流/S7/本番環境には接続しない。次はH5dのProject保存・編集である。
+
+新規24件を含むRust workspace529件と、既存H1／desired契約のChromium8件を受け入れた。Astraの最終レビューに必須修正はない。全体Prettierと変更文書のローカルリンクも確認した。
 
 ## 単一supervisorの候補検査・明示停止・適用（H5c2c1、2026-11-03）
 

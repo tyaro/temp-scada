@@ -625,3 +625,11 @@ native `json_contract.rs`がTrendと記録計画のcompact JSON byte・node・de
 `recording_host/supervisor.rs`が同storeのHost/reader factory、記録開始と安全停止の委譲、検査候補のrun/session束縛、pause/join確認、同一intentの一回実行・consume、回復時のstore返却を所有する。公開host_mut/任意callbackを設けない。`supervisor/preflight.rs`が専用readerの物理一枠、元QueryControl、borrowed join、exact token、終了後結果とreader障害を保持する。`supervisor/types.rs`は操作token、typed report、有限stateとstoreを失わないInitErrorを担当する。
 
 `supervisor/tests.rs`と`supervisor/preflight/tests.rs`の15unitで、factory/2lease、古いtoken、同期拒否、元control、join取消、consumeの復活拒否、CAS再検査、reader障害とDrop lock、候補破棄・開始時の結果無効化を確認する。`tests/recording_host/supervisor.rs`の3integrationはmockHub録画継続、Replay/Conflictのno-stop、自然完了、pause/join/map/applyとcaller-confirmed再録画・raw/minmaxを受け入れる。nativeのread APIやDB schema、SDKfresh解決を追加したことにはしない。
+
+## 同snapshotの復旧診断と明示再開（H5c2c2）
+
+`store/recording_plan/resume.rs`が専用複合readとRecordingResumeStateを所有する。`read::state_from_heads`と`activation::latest_with_cache/load_with_cache`は同snapshot/Budgetで再利用する。`EvidenceCache`はfull applicationとfirst-use証拠を分け、cache hitでもledger/revision/snapshot条件を保つ。新APIだけ768行、既存API256行・VM・8MiB・期限は不変である。
+
+`recorder_source/resolution.rs`のSdkRecorderPlan::from_generationはSDK行数と文字列総8MiBを先に検査し、最大8pinsの抽出と既存projectionを再利用する。大きなsnapshot全体をコピーせず、提供snapshotの値を記録しない。`recording_host/supervisor/resume.rs`は既存readerをloanするinspection worker、diagnosticとresume gateの分離、inspection/prepare/resume token、owned plan/options/bindingと受理時consumeを担当する。
+
+native7新規（`recording_plan/resume/tests.rs`）・SDK4新規（`recorder_source/resolution/tests.rs`）・resume単体10新規・mockHub統合3新規を追加する。実SDK handleで取得したsnapshot→別ownerの新記録→raw/minmax、reopen/interrupted、新SDK世代変更停止、元control/lease/Drop/latch、32 origins disjointの複合768行境界と古いreceipt破損を検証する。readerのactual cleanup拒否とSQL FULLは既存native回帰を維持する。

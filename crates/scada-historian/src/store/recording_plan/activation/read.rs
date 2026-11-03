@@ -6,6 +6,21 @@ pub(super) fn load(
     sequence: u64,
     h: &plan_read::Heads,
 ) -> StoreResult<(ActivateRecordingPlanRequest, RecordingActivation)> {
+    load_with_cache(
+        c,
+        b,
+        sequence,
+        h,
+        &mut reservations::EvidenceCache::default(),
+    )
+}
+pub(super) fn load_with_cache(
+    c: &Connection,
+    b: &mut Budget,
+    sequence: u64,
+    h: &plan_read::Heads,
+    cache: &mut reservations::EvidenceCache,
+) -> StoreResult<(ActivateRecordingPlanRequest, RecordingActivation)> {
     if !(1..=MAX_LEDGER_ENTRIES).contains(&sequence) || h.activation.is_none_or(|n| sequence > n) {
         return Err(StoreError::CorruptData);
     }
@@ -56,12 +71,13 @@ pub(super) fn load(
             return Err(StoreError::CorruptData);
         }
     }
-    let applied = plan_read::application(
+    let applied = plan_read::application_with_cache(
         c,
         b,
         applied_rev as u64,
         h.snapshot,
         h.ledger.as_deref().ok_or(StoreError::CorruptData)?,
+        cache,
     )?;
     if !applied.receipt.enabled
         || applied.receipt.mapping_revision != Some(mapping_rev as u64)
