@@ -4,6 +4,14 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録操作・結果照会の共通検証（H5d4a、2026-11-03）
+
+設計PR #58はworkへマージ済み（`100d99b`）。実行環境の復旧後、Astra詳細設計のContext／Change／OperationRequest・Result／ReconciliationRequest・Resultをpure schemaとTS／Rust validator、所有済みDTO・全文一致へ実装した。受理925・一致102・H5aネスト695・d3 target447を共有する。
+
+期待版+1とPlanRef、disabledのnull、MAX_SAFE要求と増版不能の区別、stage／outcome、unknown／recovery／effectの整合を検証する。結果照会でreceiptが判明しても回復要求や物理未確認と併存できる形を保持する。memberの表示順を全文照合に含め、native canonical意味比較とは分けた。Project0.37.0／DB7／H1／SDK・Banto・依存と通常Appは変更しない。操作service／UI／native adapterと状態付きownerの検査は後続である。
+
+Rust workspace544件（新規7）、TS全4,785件（新規2,173）、関連Chromium14件（新規3）、型検査0error／0warning・build・Clippy `-D warnings`／rustfmtが成功。Astraの最終実装レビューに必須修正はない。全体CIはReady for Review PRで確認する。
+
 ## 記録計画の明示操作契約（H5d4、設計、2026-11-03）
 
 H5d3bはPR #57でworkへマージ済み（`7a3b5b8`）。Astra主設計で、登録済みmappingの希望設定を検査し、元runの明示pause／join後に同じ候補だけを適用する境界を詳細化した。操作serviceをreadonly inspectionから分け、UI外のownerに要求・native ticket・実行handle・receiptを帰属させる。

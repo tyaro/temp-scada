@@ -660,8 +660,12 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 
 `App.svelte`はoptional `recordingManagementService`、明示openの新ownerとProject採用時のclose、背後shortcut保護を接続する。`designer-actions.ts`の表示menuが入口。`main.ts`には注入やmockを追加しない。応答でProject・Undo・writer ownerを変更しない。`controller.test.ts`が再入・期限・cleanup／物理枠を、`e2e/recording-management-workspace.spec.ts`が通常Appの両theme・寿命・保存不変を検証する。既存Historyとは別controllerで、別App間の物理制限は将来adapterのgate責務である。
 
-## 記録計画の明示操作契約（H5d4、設計のみ）
+## 記録計画の明示操作契約（H5d4a共通検証実装）
 
 [Astra詳細契約](../design/runtime/historian-recording-operations.md)が登録済みmappingのapply workflowと、d3 read serviceから分離するoptional操作capabilityの基準である。現在あるnative実装は`recording_host/supervisor.rs`の`start_preflight`／`request_pause`／`join_pause`／`execute_candidate`と、`plan_turn.rs`のcancel／join／guard。opaque run／candidateはnative所有で、文字列IDから再構築しない。
 
-`scada-historian/src/store/recording_plan/mod.rs`の`recording_plan_receipt`はstoreのread-only照会であり、同APIのbrowser serviceやlatch下のsupervisor経由reconciliationが既に完成しているとは扱わない。d4aの共通DTO・fixture、d4bの外部owner／monitorと通常App注入操作UI、d4cのnative投影・結果照会は未実装である。新契約をProject保存やd3 inspectionへ組み込まず、設計の受入から順に実装する。
+`scada-historian/src/store/recording_plan/mod.rs`の`recording_plan_receipt`はstoreのread-only照会であり、同APIのbrowser serviceやlatch下のsupervisor経由reconciliationが既に完成しているとは扱わない。d4aのpure DTO検証は実装済み。d4bの外部owner／monitorと通常App注入操作UI、d4cのnative投影・結果照会は未実装であり、新契約をProject保存やd3 inspectionへ組み込まない。
+
+共有schemaは`crates/scada-model/schema/recording-operations.schema.json`。Rust公開入口は`recording_operations`、`semantic.rs`は検証後のreceipt・stage・回復整合、`equality.rs`はprivate wrapper同士の数値表記を無視する全文一致を担当する。TS公開入口は`lib/recording-operations-contract.ts`で、`recording-operations/types.ts`と`semantic.ts`に分ける。種類別のrootとnested envelopeの128KiB／4096node、resultの256KiB／8192node、H5a desiredの64KiBを維持する。
+
+`examples/recording-operations-cases.json`の受理925・全文一致102と、H5aネスト695・d3 target447をRust `recording_operations/tests.rs`、TS `recording-operations-contract.test.ts`／`__fixtures__/recording-operations-cases.ts`、`e2e/recording-operations-contract.spec.ts`で共有する。pure検証は過去receipt／latchの記憶やnative実行の証拠を持たない。通常Appの保存不変と既存d3管理表示もbrowserで確認する。
