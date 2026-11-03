@@ -94,8 +94,8 @@ impl RecordingHost {
         })
     }
 
-    fn require_paused_store(&self) -> Result<(), RecordingHostError> {
-        if self.running.is_some() || self.retention.running.is_some() {
+    pub(super) fn require_paused_store(&self) -> Result<(), RecordingHostError> {
+        if self.writer_busy() {
             return Err(RecordingHostError::Busy);
         }
         if self.state().phase == RecordingPhase::Faulted {
@@ -103,6 +103,9 @@ impl RecordingHost {
         }
         if self.store.is_none() {
             return Err(RecordingHostError::NoStore);
+        }
+        if self.plan_turn.recovery_required {
+            return Err(RecordingHostError::PlanRecoveryRequired);
         }
         if !self.clean_pause() {
             return Err(RecordingHostError::UncleanPause);
@@ -178,7 +181,7 @@ impl RecordingHost {
     pub async fn join_retention_turn(
         &mut self,
     ) -> Result<Arc<RetentionTurnCompletion>, RecordingHostError> {
-        if self.running.is_some() {
+        if self.running.is_some() || self.plan_turn.running.is_some() {
             return Err(RecordingHostError::Busy);
         }
         let Some(running) = self.retention.running.as_mut() else {
@@ -228,4 +231,4 @@ impl RecordingHost {
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;

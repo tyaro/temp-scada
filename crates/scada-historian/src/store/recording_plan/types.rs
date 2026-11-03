@@ -111,3 +111,18 @@ pub enum PlanPreflightOutcome {
     Replay(RecordingPlanReceipt),
     Candidate { active_session_id: Option<String> },
 }
+
+impl RegisterMappingRequest {
+    /// Pure request/canonical budget checks; no identity resolution or DB access.
+    pub fn validate(&self) -> super::StoreResult<()> {
+        super::canonical::validate_mapping(self)?;
+        super::canonical::encode(self).map(|_| ())
+    }
+}
+impl ApplyRecordingPlanRequest {
+    /// Pure request/canonical budget checks; no CAS, receipt or DB access.
+    pub fn validate(&self) -> super::StoreResult<()> {
+        super::canonical::validate_apply(self)?;
+        super::canonical::encode(self).map(|_| ())
+    }
+}

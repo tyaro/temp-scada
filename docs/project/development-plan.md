@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-03の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4a／H4b1〜2／H4c1〜3はPR #10〜#41で全体CI成功・マージ済み。保存Trendからの明示検索、context v2のnamespaceと全系列照合、alias／色、単一workspaceの寿命とactive Promise一枠を提供する。Astra主設計の[H5 記録計画管理](../design/runtime/historian-recording-plan.md)は設計PR #42がマージ済み。H5aはPR #43でマージ済み（PR／push CI全7job成功）。[H5b1](../design/runtime/historian-recording-plan-ledger.md)としてDB6の永続applied台帳、mapping登録／CAS、再送receipt、予約identity検証とmanaged session gateを実装した。保存成功は記録開始を意味しない。[H5b2](../design/runtime/historian-recording-activation.md)のnative activation／timed session原子bindingと再起動照会も実装した。DBは7へ更新し、旧6を含む移行は行わない。H5b2はPR #46でworkへ統合済み。[H5c1](../design/runtime/historian-managed-recorder.md)で実clock開始点の専用Recorder／Hostを実装した。次はH5c2として、Running中のread-only preflightと停止後のCAS再照合、stop／join／apply／activateを単一group supervisorへまとめる。fresh SDK解決の調整もH5c2で扱う。独立したdesired JSON契約→永続applied台帳／期待revisionと再送receipt→単一groupのstop／join／apply／activateの順に分ける。計画の永続commit成功と記録のRunningを同一視せず、commit後の起動失敗を旧計画への暗黙rollbackで隠さない。Projectの保存と配布・適用は別操作とする。P3bの[製品transport・接続設定](../design/runtime/transport-boundary.md)、実接続・認証の保留は維持する。常時inline chart、複数group／queue、自動保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、正式Runtimeは後続である。
+2026-11-03の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4a／H4b1〜2／H4c1〜3はPR #10〜#41で全体CI成功・マージ済み。保存Trendからの明示検索、context v2のnamespaceと全系列照合、alias／色、単一workspaceの寿命とactive Promise一枠を提供する。Astra主設計の[H5 記録計画管理](../design/runtime/historian-recording-plan.md)は設計PR #42がマージ済み。H5aはPR #43でマージ済み（PR／push CI全7job成功）。[H5b1](../design/runtime/historian-recording-plan-ledger.md)としてDB6の永続applied台帳、mapping登録／CAS、再送receipt、予約identity検証とmanaged session gateを実装した。保存成功は記録開始を意味しない。[H5b2](../design/runtime/historian-recording-activation.md)のnative activation／timed session原子bindingと再起動照会も実装した。DBは7へ更新し、旧6を含む移行は行わない。H5b2はPR #46でworkへ統合済み。[H5c1](../design/runtime/historian-managed-recorder.md)で実clock開始点の専用Recorder／Hostを実装した。H5c1とH5c2aはPR #47／#48でworkへ統合済み。H5c2bは正常pause後の一回のmapping／apply管理turnを実装した。次はc2cでRunning中preflight、stop／join／管理turn／fresh SDK解決・明示resumeを単一group supervisorへまとめる。独立したdesired JSON契約→永続applied台帳／期待revisionと再送receipt→単一groupのstop／join／apply／activateの順に分ける。計画の永続commit成功と記録のRunningを同一視せず、commit後の起動失敗を旧計画への暗黙rollbackで隠さない。Projectの保存と配布・適用は別操作とする。P3bの[製品transport・接続設定](../design/runtime/transport-boundary.md)、実接続・認証の保留は維持する。常時inline chart、複数group／queue、自動保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、正式Runtimeは後続である。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 
@@ -25,9 +25,11 @@
 
 ## H5c2の実装順
 
-[Astra主設計](../design/runtime/historian-recording-supervisor.md)に沿い、c2aの停止前read-only preflight、c2bの正常pause後の一回の管理turn、c2cのpreflight／stop／join／fresh SDK解決／明示resumeの順に分割する。c2aはworkのH5b2にだけ依存し、[PR #47](https://github.com/tyaro/temp-scada/pull/47)のmanaged Recorder／Host開始とは独立に実装・受入できる。c2b/cへ進む前に同PRをworkへ統合する。
+[Astra主設計](../design/runtime/historian-recording-supervisor.md)に沿い、c2aの停止前read-only preflight、c2bの正常pause後の一回の管理turn、c2cのpreflight／stop／join／fresh SDK解決／明示resumeの順に分割する。c2aはworkのH5b2にだけ依存し、[PR #47](https://github.com/tyaro/temp-scada/pull/47)のmanaged Recorder／Host開始とは独立に実装・受入できる。PR #47と#48はworkへ統合済み（6c26ea6）。同workの全体CIも成功した。
 
 c2aは既存HistoryReaderから保存済みmappingに対するapplyとmapping登録の候補を検査する。Candidateは予約や停止許可ではなく、既知receiptのReplayでは停止しない。mapping登録とapplyは別commitで、登録後にapplyへ失敗してもmapping成功を黙って戻さない。通常App／Project編集・配布はH5dへ分け、製品接続・認証・transportの保留を維持する。
+
+c2bは同じHostが正常join後のwriterを保持し、元RecordingRunと管理操作tokenを照合する。一回のnative書込と結果joinを分け、mapping／apply各最新成功receiptを元run/token付きで保持する。native errorは回復要求をstickyにし、記録再開・次の管理turn・保持操作を停止する。新規Hostの初回設定は既存SqliteStore API、異常時の回復はjoin後の明示照会／必要な再openで扱う。supervisorと回復状態機械はc2cへ残す。
 
 ## Core v1と後続工程
 
