@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-2026-11-03の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4a／H4b1〜2／H4c1〜3はPR #10〜#41で全体CI成功・マージ済み。保存Trendからの明示検索、context v2のnamespaceと全系列照合、alias／色、単一workspaceの寿命とactive Promise一枠を提供する。Astra主設計の[H5 記録計画管理](../design/runtime/historian-recording-plan.md)は設計PR #42がマージ済み。H5aはPR #43でマージ済み（PR／push CI全7job成功）。[H5b1](../design/runtime/historian-recording-plan-ledger.md)としてDB6の永続applied台帳、mapping登録／CAS、再送receipt、予約identity検証とmanaged session gateを実装した。保存成功は記録開始を意味しない。[H5b2](../design/runtime/historian-recording-activation.md)のnative activation／timed session原子bindingと再起動照会も実装した。DBは7へ更新し、旧6を含む移行は行わない。H5b2はPR #46でworkへ統合済み。[H5c1](../design/runtime/historian-managed-recorder.md)で実clock開始点の専用Recorder／Hostを実装した。H5c1とH5c2aはPR #47／#48でworkへ統合済み。H5c2bは正常pause後の一回のmapping／apply管理turnを実装した。H5c2bもPR #49でworkへ統合済み。c2c1でRunning中preflight、明示pause／join、保存した候補の一回適用を単一group supervisorへまとめた。c2c1はPR #50でworkへ統合済み。c2c2で同snapshot診断とcaller提供coherent SDK snapshotに束縛した明示resumeを実装した。次はH5dとしてdesiredのProject保存・編集と管理状態表示を設計する。独立したdesired JSON契約→永続applied台帳／期待revisionと再送receipt→単一groupのstop／join／apply／activateの順に分ける。計画の永続commit成功と記録のRunningを同一視せず、commit後の起動失敗を旧計画への暗黙rollbackで隠さない。Projectの保存と配布・適用は別操作とする。P3bの[製品transport・接続設定](../design/runtime/transport-boundary.md)、実接続・認証の保留は維持する。常時inline chart、複数group／queue、自動保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、正式Runtimeは後続である。
+2026-11-03の進捗: P1／P2／P3a／P4／P5／H1／H2a／H2b1〜4／H2c1〜10／H3a〜d／H4a／H4b1〜2／H4c1〜3はPR #10〜#41で全体CI成功・マージ済み。保存Trendからの明示検索、context v2のnamespaceと全系列照合、alias／色、単一workspaceの寿命とactive Promise一枠を提供する。Astra主設計の[H5 記録計画管理](../design/runtime/historian-recording-plan.md)は設計PR #42がマージ済み。H5aはPR #43でマージ済み（PR／push CI全7job成功）。[H5b1](../design/runtime/historian-recording-plan-ledger.md)としてDB6の永続applied台帳、mapping登録／CAS、再送receipt、予約identity検証とmanaged session gateを実装した。保存成功は記録開始を意味しない。[H5b2](../design/runtime/historian-recording-activation.md)のnative activation／timed session原子bindingと再起動照会も実装した。DBは7へ更新し、旧6を含む移行は行わない。H5b2はPR #46でworkへ統合済み。[H5c1](../design/runtime/historian-managed-recorder.md)で実clock開始点の専用Recorder／Hostを実装した。H5c1とH5c2aはPR #47／#48でworkへ統合済み。H5c2bは正常pause後の一回のmapping／apply管理turnを実装した。H5c2bもPR #49でworkへ統合済み。c2c1でRunning中preflight、明示pause／join、保存した候補の一回適用を単一group supervisorへまとめた。c2c1はPR #50でworkへ統合済み。c2c2で同snapshot診断とcaller提供coherent SDK snapshotに束縛した明示resumeを実装した。c2c2もPR #51でworkへ統合済み。次の[H5d詳細設計](../design/runtime/historian-recording-project.md)を、d1 Project保存契約、d2ローカル編集、d3管理状態の読取表示、d4明示管理操作に分けて採用する。今回は設計だけで、Project0.36.0と通常Appは変更していない。独立したdesired JSON契約→永続applied台帳／期待revisionと再送receipt→単一groupのstop／join／apply／activateの順に分ける。計画の永続commit成功と記録のRunningを同一視せず、commit後の起動失敗を旧計画への暗黙rollbackで隠さない。Projectの保存と配布・適用は別操作とする。P3bの[製品transport・接続設定](../design/runtime/transport-boundary.md)、実接続・認証の保留は維持する。常時inline chart、複数group／queue、自動保持scheduler・信頼時計adapter、暦日timezone、receipt GC・実媒体I/O、正式Runtimeは後続である。
 
 2026-11-01のユーザー指示により、次の工程は[S7 SOAK中のSCADA読取開発計画](soak-independent-runtime-plan.md)のP1→P2→P3→P4→P5とする。Industrialの`v0.3.0-alpha.1`を固定参照し、上流とS7環境を変更せずモックHubで検証する。以下の一括保留は、SDK更新・投影・読取Hostのローカル検証について解除する。認証・正式運用・上流の共有部品切出しは引き続き保留する。
 
@@ -22,6 +22,14 @@
 | 実Hub／catalog・正式Faceplate・認証 | Industrialの契約変更中につき保留                                                                          | [保留と再開条件](upstream-independent-plan.md#今は保留するもの)            |
 
 次機能の候補調査は採用・着手完了を意味しない。新しい機能は詳細仕様→基盤→UI→受入の区切りで進める。
+
+## H5dの実装順
+
+[Astra主設計](../design/runtime/historian-recording-project.md)に沿い、まずd1でProject0.37.0のoptional単一`recordingPlan`とH5a共通検証を導入する。TS／Rust／schema／examples／新規作成／既存legacy変換の出力版と契約試験を同じPRで更新する。0.36.0の自動移行は必須にせず、旧版を明示拒否する。今回の設計文書は0.37.0の実装完了を意味しない。
+
+続くd2は原子的な編集・Undo／Redoと入力保護を提供する。未設定・無効計画・削除を区別し、Project保存をHistorian停止や適用の命令にしない。d3は外部ownerが供給する管理serviceを任意注入して状態だけを読み、d4で登録済みmappingによる明示検査・停止／join・管理turnを接続する。fresh SDK解決・再開とinitialIdle bootstrapは後続capabilityに分ける。各段階の詳細受入を完了してから次へ進み、製品transport・認証・実接続の保留を維持する。
+
+desired版はProject版・applied版と独立して扱う。Undoや旧ファイルの読込でDBのimmutable制約を回避せず、競合時に黙って採番・再送しない。管理ownerはUIより長く生存し、画面を閉じる・Projectを切り替える操作で記録を停止しない。
 
 ## H5c2の実装順
 
