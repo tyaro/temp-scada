@@ -34,7 +34,9 @@ pnpm dev
 
 Project 0.37.0は単一の記録希望設定`recordingPlan`も保存・読込できます。[保存例](examples/recording.project.json)は未適用の設定です。編集モードの「ファイル→記録希望設定」またはProject設定から作成・変更・除去し、Undo／Redoで戻せます。Historianへの適用は後続で、ファイル保存だけでは記録を開始・停止しません。0.36.0の自動移行は行いません。
 
-「表示→記録管理状態」では希望設定と接続元のDB・Host・SDKの観測状態を明示照会できます。通常起動は管理サービス未接続です。照会結果をProjectへ保存せず、適用・記録開始／停止は後続です。
+「表示→記録管理状態」では希望設定と接続元のDB・Host・SDKの観測状態を明示照会できます。通常起動は管理サービス未接続です。照会結果をProjectへ保存しません。「表示→記録計画の操作」は別の任意注入serviceで検査・元runの停止／join・同候補の適用・手動結果照会を扱います。通常起動は未接続で、実native ownerの接続は後続です。
+
+[H5d4c1のnative receipt読取](docs/design/runtime/historian-recording-receipt-reader.md)は、既存HistoryReaderで元apply全文に照合した同snapshotのcommit証拠を取得します。不在から未実行や再適用を許可せず、workerの物理完了や回復要求は別に扱います。
 
 ## 検証
 

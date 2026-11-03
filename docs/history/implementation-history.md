@@ -4,6 +4,16 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 元apply全文に対するnative receipt読取（H5d4c1、2026-11-03）
+
+PR #60はworkへマージ済み（`bbc13b9`）。Astra設計でnative接続をc1の独立receipt読取、c2の共有native owner・受理前registry・三段階投影、c3の同owner内reconciliationに分割した。今回c1としてHistoryReaderへ`recording_plan_receipt_for_request`とsnapshot結果型を追加した。
+
+保存request・receipt・mapping／保持版・first-use等を同snapshotで検証し、元applyのcanonical全文を照合する。同ID別内容はConflict、未登録はNone、破損・予算失敗を不在へ変換しない。現在CASや記録中の条件は再評価せず、古いreceiptを取得できる。writer移管やlatch解除を伴わず、None／Foundは物理完了・非commit確定・再送許可を表さない。
+
+実SQLite FULLのrollback後も既存readerで不在を取得し、commit後応答喪失からreceiptを確認する。snapshot固定後の並行commit、canonical同値、元本文差、保存証拠破損、readonly authorizer、予算・取消・panic・cleanup失敗とlease寿命、8member／32originsの256行上限を検証した。Rust workspace560件（新規16）、既存共通Chromium3件、Clippy `-D warnings`／rustfmt・Markdown整形が成功。Astraの設計・実装レビューに必須修正はない。全体CIはReady for Review PRで確認する。
+
+Project0.37.0／DB7／H1／SDK・Banto・依存と通常Appは変更しない。native owner・registryとd4b serviceへの実配送はc2/c3へ残す。実Hub／S7／本番DB、認証・製品transportの保留を維持する。
+
 ## 記録計画の操作workspace（H5d4b、2026-11-03）
 
 PR #59はworkへマージ済み（`5c7f375`）。環境復旧後、d3と別の操作service、外部ownerを監視するApp常設monitor、通常Appの三段階UIと明示reconcileを追加した。期待版とdesired全文を固定し、検査・元run停止／join・同候補適用を独立させる。Replay／検査失敗では停止せず、適用後も自動再開しない。通常起動にはproviderを注入しない。

@@ -4,6 +4,8 @@ mod canonical;
 mod preflight;
 mod prepare;
 mod read;
+mod receipt;
+pub use receipt::RecordingPlanReceiptSnapshot;
 mod reservations;
 mod resume;
 mod types;

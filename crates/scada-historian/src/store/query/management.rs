@@ -64,7 +64,7 @@ mod tests {
 
     #[test]
     fn management_uses_a_read_only_connection_and_only_read_statements() {
-        let (_dir, store) = enabled_store();
+        let (_dir, mut store) = enabled_store();
         let mut reader = store.reader().unwrap();
         assert!(reader
             .connection
@@ -93,6 +93,20 @@ mod tests {
             .preflight_recording_plan(&apply("next", None, true), &control())
             .unwrap();
         reader.recording_resume_state(&control()).unwrap();
+        let original = apply("original", None, true);
+        assert!(reader
+            .recording_plan_receipt_for_request(&original, &control())
+            .unwrap()
+            .receipt
+            .is_none());
+        let receipt = store.apply_recording_plan(&original, &control()).unwrap();
+        assert_eq!(
+            reader
+                .recording_plan_receipt_for_request(&original, &control())
+                .unwrap()
+                .receipt,
+            Some(receipt)
+        );
         assert!(reader.connection.as_ref().unwrap().is_autocommit());
     }
     #[test]
@@ -161,12 +175,17 @@ mod tests {
                     .unwrap();
             } else {
                 assert!(matches!(
-                    reader.preflight_recording_plan(&apply("next", None, true), &control()),
+                    reader
+                        .recording_plan_receipt_for_request(&apply("next", None, true), &control()),
                     Err(StoreError::Control(QueryError::ReaderUnusable))
                 ));
             }
             assert!(matches!(
                 reader.preflight_recording_mapping(&register("next", Some(1)), &control()),
+                Err(StoreError::Control(QueryError::ReaderUnusable))
+            ));
+            assert!(matches!(
+                reader.recording_plan_receipt_for_request(&apply("next", None, true), &control()),
                 Err(StoreError::Control(QueryError::ReaderUnusable))
             ));
             let q = json!({"version":1,"kind":"query","requestId":"query","seriesIds":["number"],"fromMs":0,"toMs":2000,"mode":"raw","maxPointsPerSeries":10});
