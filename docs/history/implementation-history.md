@@ -2044,3 +2044,13 @@ PR #52をworkへ統合（7384f31）し、[Astra設計](../design/runtime/histori
 独立139ケースとProject16ケースを共通受入へ追加した。画像同梱サンプルはmanifest版・checksumだけを更新し、他entry bytesを保持した。編集UI・管理service・Historian運転への接続はd2以降で、DB7／H1／固定SDK・Banto依存を維持する。
 
 Rust workspace531件（新規2）、TS1,934件（新規156）、関連Chromium25件（新規3）、型検査0error／0warning・build・Clippy／rustfmtが成功した。Astraの最終実装レビューに重大な指摘はない。全体Prettier・文書リンクを確認し、Ready for Review PRの全体CIを確認する。
+
+## 記録希望設定の編集（H5d2、2026-11-03）
+
+PR #53をworkへ統合（ccffa46）し、Astraの[H5d2](../design/runtime/historian-recording-project.md)に沿って単一記録希望設定の編集Modalと原子的なsave/removeを実装した。同じ計画IDの意味変更だけに増版を要求し、表示順だけの変更や完全no-op、Undoでの旧desired版復元を区別する。元全文とProject owner/requestの照合で古い編集を拒否し、raw数値・無操作の外部名・未保存入力を保持する。
+
+今回もProject0.37.0／DB7／H1／固定SDK・Banto・依存を維持する。保存・無効化・除去を実運転へ接続せず、次はd3の管理表示契約を詳細化する。
+
+TS全1,961件（新規27）・型検査0error／0warning・build、関連Chromium31件（新規7）が成功した。Astra最終実装レビューに必須修正はない。既存Rust実装・schemaは変更せず、全体CIで回帰する。
+
+追加のfocus試験で保存後の復帰漏れを検出し、Modalの論理資格と保持view一枠を分離してBantoの開閉遷移を通すよう修正した。新規7件を再受入し、sidebarのopenerへの復帰も確認した。Astraの修正レビューにも必須所見はない。

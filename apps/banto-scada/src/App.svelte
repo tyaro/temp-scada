@@ -9,6 +9,8 @@
   } from "./lib/designer/controllers/catalog.svelte";
   import HistoryWorkspace from "./lib/history/HistoryWorkspace.svelte";
   import TrendDefinitionsDialog from "./lib/designer/TrendDefinitionsDialog.svelte";
+  import RecordingPlanDialog from "./lib/designer/RecordingPlanDialog.svelte";
+  import type { DesiredRecordingPlan } from "./lib/recording-plan";
   import type { TrendDefinition } from "./lib/trend-definitions";
   import type { HistoryService } from "./lib/history/workspace-model";
   let {
@@ -825,7 +827,7 @@
     }
   }
   function shortcut(event: KeyboardEvent) {
-    if (historyOpen || trendRequest) return;
+    if (historyOpen || trendRequest || recordingRequest) return;
     if (
       event.key.toLowerCase() === "f" &&
       !event.ctrlKey &&
@@ -1553,6 +1555,8 @@
     previousStore.dispose();
     project = next;
     historyOpen = false;
+    recordingRequest = null;
+    recordingView = null;
     projectFiles.adopted(next, source);
     history = emptyHistory();
     referencesExpanded = false;
@@ -1950,6 +1954,86 @@
     definitionId?: string;
   } | null>(null);
   let trendError = $state("");
+  type RecordingEditRequest = {
+    project: Project;
+    generation: number;
+    screenId: string;
+  };
+  let recordingRequest = $state.raw<RecordingEditRequest | null>(null);
+  // Keep one closed view for Banto's open -> closed focus transition. A new
+  // request keys a fresh draft; adopting another Project drops the old view.
+  let recordingView = $state.raw<RecordingEditRequest | null>(null);
+  let recordingError = $state("");
+  function openRecordingPlan() {
+    if (menuBlocked || mode !== "edit" || activeDefinition) return;
+    const generation = workspaceGeneration,
+      id = screen.id;
+    withScreen(id, () => {
+      if (
+        generation !== workspaceGeneration ||
+        mode !== "edit" ||
+        activeDefinition
+      )
+        return;
+      stopPlacement();
+      recordingError = "";
+      recordingRequest = { project, generation, screenId: id };
+      recordingView = recordingRequest;
+    });
+  }
+  const currentRecordingRequest = $derived(
+    recordingRequest &&
+      recordingRequest.project === project &&
+      recordingRequest.generation === workspaceGeneration &&
+      recordingRequest.screenId === screen.id &&
+      mode === "edit" &&
+      !activeDefinition
+      ? recordingRequest
+      : null,
+  );
+  function saveRecordingPlan(
+    request: RecordingEditRequest,
+    plan: DesiredRecordingPlan,
+  ) {
+    if (currentRecordingRequest !== request || busy || replacement) return;
+    recordingError = "";
+    if (
+      edit(
+        {
+          type: "save-recording-plan",
+          plan,
+          expected: request.project.recordingPlan ?? null,
+        },
+        undefined,
+        (message) => (recordingError = message),
+      )
+    )
+      recordingRequest = null;
+  }
+  function removeRecordingPlan(request: RecordingEditRequest) {
+    if (
+      currentRecordingRequest !== request ||
+      !request.project.recordingPlan ||
+      busy ||
+      replacement
+    )
+      return;
+    recordingError = "";
+    if (
+      edit(
+        {
+          type: "remove-recording-plan",
+          expected: request.project.recordingPlan,
+        },
+        undefined,
+        (message) => (recordingError = message),
+      )
+    )
+      recordingRequest = null;
+  }
+  $effect(() => {
+    if (recordingRequest && !currentRecordingRequest) recordingRequest = null;
+  });
   // Each explicit open is a new owner, even for the same saved definition.
   let historyPreset = $state.raw<
     | {
@@ -2890,7 +2974,8 @@
       !!replacement ||
       floatingPanels.gesturing ||
       historyOpen ||
-      !!trendRequest,
+      !!trendRequest ||
+      !!recordingRequest,
   );
   const editBlocked = $derived(menuBlocked || mode !== "edit");
   const selectionViewTarget = $derived(selectionTarget(screen, selectedIds));
@@ -3041,6 +3126,7 @@
         ),
       openScreenViewDialog,
       openTrendDefinitions,
+      openRecordingPlan,
       add,
     },
     view: {
@@ -3472,6 +3558,10 @@
               />{/key}
           </TreeSection>
           <TreeSection label="プロジェクト設定">
+            <button
+              disabled={editBlocked || !!activeDefinition}
+              onclick={openRecordingPlan}>記録希望設定</button
+            >
             {#key `${workspaceGeneration}:${project.manifest.projectId}`}
               <form
                 use:drafts.track={{ name: project.manifest.name }}
@@ -4002,6 +4092,21 @@
   {/key}
 {/if}
 <DraftPrompt guard={drafts} />
+{#if recordingView}
+  {@const request = recordingView}
+  {#key request}
+    <RecordingPlanDialog
+      open={currentRecordingRequest === request}
+      project={request.project}
+      error={recordingError}
+      onsave={(plan) => saveRecordingPlan(request, plan)}
+      onremove={() => removeRecordingPlan(request)}
+      onclose={() => {
+        if (recordingRequest === request) recordingRequest = null;
+      }}
+    />
+  {/key}
+{/if}
 {#if currentTrendRequest}
   <TrendDefinitionsDialog
     {project}

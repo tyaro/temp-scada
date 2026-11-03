@@ -1,6 +1,6 @@
 # Historian H5d: Projectの記録希望設定と管理workspace
 
-状態: 採用設計（Astra主設計）。2026-11-03（日本時間）。設計PR #52はworkへ統合済み。H5d1のProject0.37.0保存契約を実装した。以下の編集UI・in-process管理serviceは未実装。
+状態: 採用設計（Astra主設計）。2026-11-03（日本時間）。設計PR #52はworkへ統合済み。H5d1のProject0.37.0保存契約を実装した。H5d2の原子的な編集UIも実装した。in-process管理serviceは未実装。
 
 [H5記録計画](historian-recording-plan.md)、[独立desired契約](../../../crates/scada-model/schema/recording-plan.schema.json)、[supervisor](historian-recording-supervisor.md)を基準とする。H5cのnative/runtimeと、これから作るbrowserへの境界を区別する。DB7/H1/固定SDK/Banto/依存を維持し、実Hub/S7/本番DB/上流/認証/製品transportへ接続しない。
 
@@ -9,7 +9,7 @@
 | 段階                 | 実装するもの                                                                | 完了の意味                                                                       |
 | -------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | H5d1（保存実装済み） | Project 0.37.0へoptional単一recordingPlan、TS/Rust/schema/サンプル/共通受入 | desiredを保存・読込・書出しできる。編集UI/適用はまだ無い                         |
-| H5d2                 | 通常Appの希望設定編集Modal、原子的editor command、Undo/Redo                 | 保存する設定を明示編集できる。運転は変えない                                     |
+| H5d2（編集実装済み） | 通常Appの希望設定編集Modal、原子的editor command、Undo/Redo                 | 保存する設定を明示編集できる。運転は変えない                                     |
 | H5d3                 | 新しい管理表示DTO/optional service/有限controllerと通常Appの診断表示        | injected serviceの観測状態をdesiredと比較できる。操作はしない                    |
 | H5d4                 | 既存mappingを用いた明示preflight/pause/join/applyと操作結果表示             | serviceが提供する限定操作を明示実行できる。新mapping自動解決や自動resumeはしない |
 
@@ -151,3 +151,11 @@ Projectのoptional単一`recordingPlan`とH5a/H1のローカルschema登録、�
 独立H5aの139ケースをProject内へ包み、追加のProject共通16ケースで省略/null/有効/無効・旧版・別ID pool・秘密field・legacy・64KiBを超える図面を検証する。画像同梱サンプルはmanifest版と対応checksumを更新し、Project内容と画像原本bytesを維持した。d2以降のUI・管理serviceやrecorderの動作は追加していない。
 
 Rust workspace531件（新規2）、TS1,934件（新規156）、関連Chromium25件（新規3）、型検査0error／0warning・build・Clippy／rustfmtが成功した。Astraの最終実装レビューに重大な指摘はない。全体Prettier・文書リンクを確認し、Ready for Review PRの全体CIを確認する。
+
+## H5d2の実装と受入（2026-11-03）
+
+通常Appの「ファイル→記録希望設定」とProject設定へ編集Modalを追加した。owned draftのraw整数入力と外部名の無操作保持、1〜8member、同IDの増版・別IDの明示編集、Bantoのdirty入力保護を提供する。commandはsaveの`expected: DesiredRecordingPlan | null`（nullは未設定作成）、removeの`expected: DesiredRecordingPlan`で元の全文・順・版を照合し、H5a検証と増版をUI外でも強制する。memberのcode-unit順比較で意味を判定し、完全no-opは順を含む固定field比較とする。
+
+AppはProject object/generation/screen/modeに加えて開いたrequestをcallbackへ捕捉し、古いsave/remove/closeが新ownerへ作用しないようにする。Bantoのopen→closed遷移でfocusを戻すため、論理資格と最後の表示view一枠を分離する。再openは新しいkeyでdraftを作り直し、Project置換時はviewも破棄する。保存・除去は単一のUndo単位で、Undoは当時のdesired版を復元する。新しいnative API・DB変更・schema更新・service接続は導入していない。次はd3の管理状態表示用DTOとservice境界を詳細化する。
+
+TS全1,961件（新規27）・型検査0error／0warning・build、関連Chromium31件（新規7）が成功した。Astra最終実装レビューに必須修正はない。既存Rust実装・schemaは変更せず、全体CIで回帰する。

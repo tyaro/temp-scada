@@ -1,6 +1,6 @@
 # Historian H5: 記録計画の保存・適用・稼働管理
 
-2026-11-03（日本時間）。**Astra主設計の採用契約。H5aの独立desired JSON契約、H5b1の永続台帳、H5b2のnative activation binding、H5cの単一group supervisor／同snapshot診断／明示resumeはworkへ統合済み。H5d1のProject0.37.0保存fieldを実装した。編集・管理画面は未実装。H5dの詳細は[Project保存・編集・管理設計](historian-recording-project.md)へ分割した。** [P5 §3](historian-trend-contract.md#3-記録設定の所有と配布)の責務を、現行の単一group実装へ段階的に接続する。実環境、Industrial/S7、実Hub、実DB、設定、資格情報にはアクセスしない。認証・製品transport・通常Appの実接続は引き続き保留する。
+2026-11-03（日本時間）。**Astra主設計の採用契約。H5aの独立desired JSON契約、H5b1の永続台帳、H5b2のnative activation binding、H5cの単一group supervisor／同snapshot診断／明示resumeはworkへ統合済み。H5d1のProject0.37.0保存fieldを実装した。H5d2の希望設定編集UIも実装した。管理状態表示・操作は未実装。H5dの詳細は[Project保存・編集・管理設計](historian-recording-project.md)へ分割した。** [P5 §3](historian-trend-contract.md#3-記録設定の所有と配布)の責務を、現行の単一group実装へ段階的に接続する。実環境、Industrial/S7、実Hub、実DB、設定、資格情報にはアクセスしない。認証・製品transport・通常Appの実接続は引き続き保留する。
 
 ## 採用範囲と現行との違い
 

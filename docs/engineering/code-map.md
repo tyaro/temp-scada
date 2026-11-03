@@ -638,4 +638,10 @@ native7新規（`recording_plan/resume/tests.rs`）・SDK4新規（`recorder_sou
 
 [Astra詳細設計](../design/runtime/historian-recording-project.md)に従い、`project.ts`と`scada-model/src/lib.rs`がProject0.37.0のoptional単一`recordingPlan`を受け入れる。Project schemaは同梱H5a resourceを参照し、両parserはH5a semantic validatorを呼ぶ。独立64KiB/4096node/depth32予算と文字列判定を複製せず、省略とnullを区別する。既存text本文だけの正規化は維持し、externalNameへ作用させない。
 
-`recording_project_tests.rs`／`project-recording.test.ts`／`__fixtures__/project-recording-cases.ts`は独立H5a139とProject共通16ケースを扱う。`e2e/project-recording.spec.ts`はbrowserの共通受入・通常App保存再読込と不正replacement時不変を担当する。`project-package.test.ts`はwhole packageでのdesired保持を含み、部分clipboardの非同伴もTSで検証する。0.37へ揃えたJSONと画像同梱サンプルの原本整合を維持する。編集commandと管理serviceはd2以降へ分ける。
+`recording_project_tests.rs`／`project-recording.test.ts`／`__fixtures__/project-recording-cases.ts`は独立H5a139とProject共通16ケースを扱う。`e2e/project-recording.spec.ts`はbrowserの共通受入・通常App保存再読込と不正replacement時不変を担当する。`project-package.test.ts`はwhole packageでのdesired保持を含み、部分clipboardの非同伴もTSで検証する。0.37へ揃えたJSONと画像同梱サンプルの原本整合を維持する。編集commandはH5d2で追加し、管理serviceはd3以降へ分ける。
+
+## 記録希望設定のローカル編集（H5d2）
+
+`recording-plan-edit.ts`はH5aの再利用、raw整数文字列の検査、固定fieldの全比較とmemberId順の意味比較、同IDのdesired増版、編集対象全文照合を担当する。`editor/recording-plan-handler.ts`と`commands.ts`がsave/removeをProject commandへ登録し、`project-handler.ts`から一回の既存editor transactionへ委譲する。Project revision／Undo／Redoの責務は既存editor/historyから移していない。
+
+`designer/RecordingPlanDialog.svelte`はowned draftとdirty保護、最大8member、数値の明示入力と外部名の無操作保持を持つ。AppはrequestにProject object/世代/画面/modeを束縛し、各callbackの元requestを照合する。論理資格を閉じた後もfocus復帰用viewを一枠だけ保持し、Bantoのopen→closed遷移を通す。次のopenで新しいdraftを作り、Project置換でviewも破棄する。`designer-actions.ts`がFile menuと常設メニュー、AppのProject設定がsidebar入口を提供する。`recording-plan-edit.test.ts`の27件は増版/no-op/対象/Undo/数値・文字列を、`e2e/recording-plan-editor.spec.ts`は通常Appの編集寿命・両theme・原子保存と入力保護を検証する。
