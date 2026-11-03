@@ -652,4 +652,10 @@ native7新規（`recording_plan/resume/tests.rs`）・SDK4新規（`recorder_sou
 
 TSの公開入口は`lib/recording-management-contract.ts`。`recording-management/types.ts`はreadonly DTO、`semantic.ts`はschema検査後のDB整合、`recording-plan-comparison.ts`は編集とも共用する固定field本文比較。`history/owned-json.ts`が有限JSONを所有し、root／nested request・contextとH5a desiredへ独立予算を使う。Host／SDKは別時点であり、DBとのsession一致やRunningから接続状態を導出しない。
 
-`examples/recording-management-cases.json`は受理447・比較18・全文request9を共有する。Rust `recording_management/tests.rs`、TS `recording-management-contract.test.ts`と`__fixtures__/recording-management-cases.ts`、`e2e/recording-management-contract.spec.ts`で同じ期待値、H5a139のネスト、予算端点・所有権を確認する。TS比較はunknownを再検証し、Rust比較は検証済みwrapperのみ。service／controller／通常App管理表示／native projectionはd3b以降であり、このmoduleから副作用を呼ばない。
+`examples/recording-management-cases.json`は受理447・比較18・全文request9を共有する。Rust `recording_management/tests.rs`、TS `recording-management-contract.test.ts`と`__fixtures__/recording-management-cases.ts`、`e2e/recording-management-contract.spec.ts`で同じ期待値、H5a139のネスト、予算端点・所有権を確認する。TS比較はunknownを再検証し、Rust比較は検証済みwrapperのみ。このpure moduleから副作用を呼ばない。service／controller／通常App管理表示はd3bで追加し、native projectionは後続。
+
+## 記録管理状態のworkspace（H5d3b）
+
+`lib/recording-management/service.ts`はreadonly `RecordingManagementService`とProject対象照合、context／desiredのsnapshotとinspect関数の捕捉を所有する。`controller.ts`は一実行・最新一待機の物理枠、論理token／取消、絶対単調deadline、応答のowned検証と要求全文一致を担当する。`RecordingManagementWorkspace.svelte`はApp常設で、openOwner／Project object／generation／service identityによるeffect前のrender／action資格を守る。`RecordingPlanView.svelte`は希望／適用設定のreadonly表示、`labels.ts`は有限状態の表示文言である。
+
+`App.svelte`はoptional `recordingManagementService`、明示openの新ownerとProject採用時のclose、背後shortcut保護を接続する。`designer-actions.ts`の表示menuが入口。`main.ts`には注入やmockを追加しない。応答でProject・Undo・writer ownerを変更しない。`controller.test.ts`が再入・期限・cleanup／物理枠を、`e2e/recording-management-workspace.spec.ts`が通常Appの両theme・寿命・保存不変を検証する。既存Historyとは別controllerで、別App間の物理制限は将来adapterのgate責務である。

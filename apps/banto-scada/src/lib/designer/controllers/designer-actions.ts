@@ -112,6 +112,7 @@ export interface DesignerActionsHost {
     resetReferenceHeight(): void;
     toggleMenubar(): void;
     openHistory(): void;
+    openRecordingManagement(): void;
     changeMode(value: "edit" | "preview"): void;
     chooseTheme(value: "light" | "dark" | "system"): void;
   };
@@ -870,6 +871,11 @@ export function createDesignerActions(host: DesignerActionsHost) {
             label: "表示プレビュー",
             disabled: host.view.menuBlocked,
             run: () => host.view.changeMode("preview"),
+          },
+          {
+            label: "記録管理状態",
+            disabled: host.view.menuBlocked,
+            run: host.view.openRecordingManagement,
           },
           {
             label: "履歴トレンド",

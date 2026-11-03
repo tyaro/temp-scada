@@ -1,0 +1,77 @@
+import type { Project } from "../project";
+import {
+  parseRecordingPlan,
+  type DesiredRecordingPlan,
+} from "../recording-plan";
+import {
+  parseRecordingManagementContext,
+  type RecordingManagementContext,
+  type RecordingInspectionRequest,
+} from "../recording-management-contract";
+export interface InspectionControl {
+  readonly signal: AbortSignal;
+  /** Absolute deadline in the same JS realm's performance.now() clock. */
+  readonly deadlineMonotonicMs: number;
+}
+/** Replace the whole service for context changes. Settle only after read/cleanup
+ * is quiescent, even on abort. Sync throw means nothing was dispatched. Native
+ * adapters must also enforce a physical gate across different Apps/controllers. */
+export interface RecordingManagementService {
+  readonly context: unknown;
+  readonly inspect: (
+    request: RecordingInspectionRequest,
+    control: InspectionControl,
+  ) => Promise<unknown>;
+}
+export interface RecordingManagementOwner {
+  readonly project: Project;
+  readonly generation: number;
+  readonly openOwner: object;
+  readonly service: RecordingManagementService;
+  readonly inspect: RecordingManagementService["inspect"];
+  readonly context: RecordingManagementContext;
+  readonly desired: DesiredRecordingPlan | undefined;
+}
+export type RecordingManagementSelection = Readonly<
+  | { phase: "idle"; owner: RecordingManagementOwner }
+  | { phase: "offline" | "invalidContext" | "contextMismatch" }
+>;
+/** Capture a context, function and desired snapshot once per owner. Declarations
+ * are compared with Project, not treated as proof of authorization/store identity. */
+export function recordingManagementSelection(
+  service: RecordingManagementService | undefined,
+  project: Project,
+  generation: number,
+  openOwner: object,
+): RecordingManagementSelection {
+  if (!service) return Object.freeze({ phase: "offline" });
+  try {
+    const context = parseRecordingManagementContext(service.context),
+      inspect = service.inspect;
+    if (typeof inspect !== "function")
+      return Object.freeze({ phase: "invalidContext" });
+    if (
+      context.projectId !== project.manifest.projectId ||
+      context.projectRevision !== project.manifest.projectRevision
+    )
+      return Object.freeze({ phase: "contextMismatch" });
+    const desired =
+      project.recordingPlan === undefined
+        ? undefined
+        : parseRecordingPlan(project.recordingPlan);
+    return Object.freeze({
+      phase: "idle",
+      owner: Object.freeze({
+        project,
+        generation,
+        openOwner,
+        service,
+        inspect,
+        context,
+        desired,
+      }),
+    });
+  } catch {
+    return Object.freeze({ phase: "invalidContext" });
+  }
+}

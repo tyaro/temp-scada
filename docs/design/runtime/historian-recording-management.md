@@ -1,6 +1,6 @@
 # 記録管理状態の表示契約
 
-状態: **H5d3aの共通契約を実装、H5d3bは未実装**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。Context／Request／Responseのschema、Rust／TypeScript validator、owned DTO、比較関数を提供する。service・controller・管理UI・native projectionは後続。
+状態: **H5d3a共通契約・H5d3b注入serviceによる読取表示を実装**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。通常Appの管理workspaceと有限controller、optional serviceを提供する。native projection・実接続・製品transport／認証・管理操作は後続。
 
 ## 1. 対象と工程
 
@@ -282,3 +282,13 @@ TSの公開入口は`recording-management-contract.ts`。`parseRecordingManageme
 Rustの`recording_management`は`validate_recording_management(&Value)`と、private Valueを保持する同名Context／Request／Response wrapperの`from_value`／`as_value`を提供する。比較は検証済みwrapperだけを受け、`compare_desired_applied`のenumは`to_value()`で共有JSON形へ変換できる。全文request比較と本文比較は整数の1／1.0／指数表記を同じ値として扱う。
 
 共有fixtureは`examples/recording-management-cases.json`の受理447件、比較18件、全文request9件。既存H5a139件のネストと、getter・非JSON・所有権／freeze・byte／node／depth端点を別途検証する。`e2e/recording-management-contract.spec.ts`は通常App内のmodule評価とProject書出し不変を確認し、管理画面や実native接続の検証とは扱わない。
+
+## 12. H5d3bの実装入口
+
+`recording-management/service.ts`の`RecordingManagementService`はreadonly context／inspectを持ち、`recordingManagementSelection`がProject対象照合とcontext・desiredのowned snapshot、inspect関数・service receiverの一回捕捉を行う。変更はservice全体を交換して伝える。通常の`main.ts`はserviceを注入せず、テストだけが通常Appのoptional propへ供給する。
+
+`controller.ts`の`createRecordingManagementController()`は`setOwner(selection)`、明示`load(timeoutMs)`、`cancel(expectedToken?)`、`subscribe`、`dispose`を提供する。open／Project／generation／serviceの新しい組合せは別ownerで、交換は状態を即時退役させる。期限はload時のperformance.nowから一回だけ作り、待機時間も含む。timer・dispatch・応答検査後に同じ絶対期限を確認する。requestIdはcontroller内の単調safe counterで発行し、owner交換でresetせず、上限ではwrapせず発行を拒否する。別App共通の重複排除キーとしてrequestId単独を使わない。Promise brandのない値や任意thenable、同期throw／rejectionは有限serviceFailureへ分類し、raw本文を表示しない。
+
+常設`RecordingManagementWorkspace.svelte`がModalの外でcontrollerを保持し、effect前のrender／action資格検査で旧応答を隠す。「表示→記録管理状態」の明示openと「状態を照会」を分け、再照会で最新一待機を置換できる。DB・activation・別観測Host・保持／回復gate・SDK・desired比較を独立表示する。閉じる／Project交換／App破棄はreadへのabort要求だけである。別Appへ移る場合の物理上限は将来adapter自身のgateで保証する。
+
+`controller.test.ts`は制御Promiseと単調時計で、取消後のcleanup・期限切れ・全文要求不一致・subscriber／abort再入・owner交換を直接検証する。`e2e/recording-management-workspace.spec.ts`は通常Appの両theme、未接続、注入service、寿命・部分観測、保存不変を確認する。native adapterや実DBを管理画面へ接続した受入ではない。次のd4は操作capability／receipt／不確定commitの詳細設計から進める。
