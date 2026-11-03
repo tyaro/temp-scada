@@ -4,6 +4,14 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録計画の明示操作契約（H5d4、設計、2026-11-03）
+
+H5d3bはPR #57でworkへマージ済み（`7a3b5b8`）。Astra主設計で、登録済みmappingの希望設定を検査し、元runの明示pause／join後に同じ候補だけを適用する境界を詳細化した。操作serviceをreadonly inspectionから分け、UI外のownerに要求・native ticket・実行handle・receiptを帰属させる。
+
+結果不明を未実行と扱わず、物理処理終了の証拠とcommitの証拠を分離する。初回設定／新mapping／SDK再解決・resumeは別capabilityへ分け、共通純粋契約・注入UI・native adapterの順で受け入れる。今回は設計文書と進捗・索引の同期だけで、実行コード・Project0.37.0／DB7／H1／依存と通常Appを変更していない。
+
+検証は現native APIとの責務照合、Astra／rootの設計整合レビュー、Markdown整形とローカル文書リンク確認。実行コードを変更せず、追加の機能テストは作成していない。全体CIはReady for Review PRで確認する。
+
 ## 記録管理状態の明示照会（H5d3b、2026-11-03）
 
 PR #56の共通契約はworkへマージ済み（`02f7273`）。AstraのH5d3契約に沿い、optional serviceを通常Appへ接続し、明示照会のreadonly管理workspaceを追加した。context／desiredとinspectをownerごとに捕捉し、一実行・最新一待機、待機を含む絶対期限、要求全文一致、Project／generation／service／open ownerの資格を維持する。

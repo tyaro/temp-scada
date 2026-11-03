@@ -1,6 +1,6 @@
 # Historian H5d: Projectの記録希望設定と管理workspace
 
-状態: 採用設計（Astra主設計）。2026-11-03（日本時間）。設計PR #52はworkへ統合済み。H5d1のProject0.37.0保存契約を実装した。H5d2の原子的な編集UIも実装した。in-process管理serviceは未実装。
+状態: 採用設計（Astra主設計）。2026-11-03（日本時間）。設計PR #52はworkへ統合済み。H5d1のProject0.37.0保存契約を実装した。H5d2の原子的な編集UI、H5d3a〜bの共通契約と任意注入serviceによる読取表示も実装した。H5d4の明示操作は詳細設計段階で、操作serviceは未実装。
 
 [H5記録計画](historian-recording-plan.md)、[独立desired契約](../../../crates/scada-model/schema/recording-plan.schema.json)、[supervisor](historian-recording-supervisor.md)を基準とする。H5cのnative/runtimeと、これから作るbrowserへの境界を区別する。DB7/H1/固定SDK/Banto/依存を維持し、実Hub/S7/本番DB/上流/認証/製品transportへ接続しない。
 
@@ -10,10 +10,10 @@
 | -------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | H5d1（保存実装済み） | Project 0.37.0へoptional単一recordingPlan、TS/Rust/schema/サンプル/共通受入 | desiredを保存・読込・書出しできる。編集UI/適用はまだ無い                         |
 | H5d2（編集実装済み） | 通常Appの希望設定編集Modal、原子的editor command、Undo/Redo                 | 保存する設定を明示編集できる。運転は変えない                                     |
-| H5d3                 | 新しい管理表示DTO/optional service/有限controllerと通常Appの診断表示        | injected serviceの観測状態をdesiredと比較できる。操作はしない                    |
+| H5d3（読取実装済み） | 新しい管理表示DTO/optional service/有限controllerと通常Appの診断表示        | injected serviceの観測状態をdesiredと比較できる。操作はしない                    |
 | H5d4                 | 既存mappingを用いた明示preflight/pause/join/applyと操作結果表示             | serviceが提供する限定操作を明示実行できる。新mapping自動解決や自動resumeはしない |
 
-d1／d2はPR #53／#54でworkへ統合済み。d3は[読取DTOとserviceの詳細契約](historian-recording-management.md)を先に採用し、共通JSON検証とcontroller／表示を後続へ分割する。以下のd3節は概要であり、正確なshape・制限・照合規則は詳細契約に従う。表のservice概形は採用する責務と上限を定めるものであり、nativeのSerialize型をそのままbrowser公開した既存契約ではない。各段階をReady for Reviewで受け入れてから次へ進む。
+d1／d2はPR #53／#54でworkへ統合済み。d3は[読取DTOとserviceの詳細契約](historian-recording-management.md)に従い、d3aの共通JSON検証とd3bのcontroller／表示をPR #56／#57でworkへ統合した。d4は[明示操作の詳細契約](historian-recording-operations.md)を採用し、共通契約・注入UI・native adapterを分けて受け入れる。以下のd3節は概要であり、正確なshape・制限・照合規則は詳細契約に従う。表のservice概形は採用する責務と上限を定めるものであり、nativeのSerialize型をそのままbrowser公開した既存契約ではない。各段階をReady for Reviewで受け入れてから次へ進む。
 
 ## H5d1: 保存契約
 
@@ -114,13 +114,15 @@ UI closeはread購読/表示寿命だけを終え、RecordingHost/source/writer�
 
 ## H5d4: 明示操作と継続するowner
 
+具体的なDTO・capability・handleと結果照会の契約、実装分割は[H5d4詳細設計](historian-recording-operations.md)に従う。この節は責務と初回範囲の概要であり、明示操作はまだ未実装である。
+
 初回は**登録済みmappingを使うdesired apply**を対象とする。新mapping生成/自動登録、identity発行、fresh SDK解決や自動resumeは提供しない。 対象は既存RecordingRunの設定変更であり、preflight時点はRunningまたは正常Joined、apply時点はその元runを正常join済みであることを要求する。initialIdleや新規storeの初回applyはd4初回capabilityに含めない。現c2b/c2c1のclean pause gateをadapterが直接store操作で迂回してbootstrapを実装しない。初期設定は現nativeのHost構築前手順に留め、browserからのbootstrapは別capabilityと詳細契約・受入を後続で追加する。serviceのcapabilityが無ければ操作を非提供と表示し、ボタンを有効にして架空成功を返さない。通常Appは未接続のまま、受入はin-process injectionだけで行う。
 
 新操作境界はd3 read契約から分離し、UIが行うのは同一desired/期待版/元runに束縛したpreflight、明示pause/join、同一候補apply。 これらを一回のexecuteで自動連続実行しない。利用者がpreflightを要求し、Candidateを確認して別の明示pause操作を行い、正常joinの完了後にさらに別の明示apply操作で同候補を実行する。pause操作は停止要求とjoin完了待ちまでを担当できるが、join成功からapplyへ自動遷移しない。Replay/errorには候補pause/apply操作を提供しない。安全停止用の独立操作が将来ある場合も、候補applyの資格とは区別する。c2c1のcandidate/token消費をadapterが保持し、ブラウザの文字列tokenを署名認可やDB予約と称さない。Replay/拒否では旧workerを停止しない。enabled=falseも設定applyであり、UI上の一時pauseと区別する。
 
-serviceの操作ownerはModalやProject objectから独立させる。操作開始前にoperationId、対象context、元Project id/revisionとgenerationの表示用binding、desired全文、期待版、native requestIdをowned保存する。受理後はそれを変更せず、同じoperationの再照会へ同じIDを用いる。Project保存/閉じる/別Project読込で別内容へ差し替えない。
+serviceの操作ownerはModalやProject objectから独立させる。操作開始前にoperationId、対象context、元Project id/revision、desired全文、期待版、native requestIdをowned保存する。App側monitorはProject object/generationの表示・送信資格を別に保持する。受理後は要求を変更せず、同じoperationの再照会へ同じIDを用いる。Project保存/閉じる/別Project読込で別内容へ差し替えない。
 
-in-processのAPI概形は `execute(request): OperationHandle` とし、handleはoperationId、completion Promise、安全な取消要求methodを持つ。serviceはdispatch前にoperationを登録する。同期throwを「未dispatchの明確な拒否」に限定し、dispatch後の通信/応答喪失はcompletionでOutcomeUnknownとして返す。native stable receipt/state照会を行うadapter責務を明示し、結果不明を未適用/失敗確定へ変換しない。具体schema/型はd4前の契約PRで固定する。
+in-processのAPIは詳細契約のpreflight／pauseJoin／applyとopaque handleを使う。serviceはdispatch前にoperationを登録し、handleの元要求とcompletionへ結果を集約する。同期拒否は未dispatchを証明できる場合に限定する。結果不明は元operationを対象にread-only reconciliationで確認し、receiptの確認・物理処理の終了・回復要求を別々に保持する。schema／validatorとserviceは後続PRで実装する。
 
 操作はactive1、pending mutation queue無し。実行中に別操作を自動予約せずBusy。取消は既存cooperative requestであり、応答/cleanup前に物理枠を解放しない。成功commit後latecancelは成功receiptを維持する。UI close/Project/service切替だけではmutationをcancelしない。利用者の明示取消だけを元operation ownerへ送る。
 
@@ -134,9 +136,9 @@ serviceの差替え時も旧ownerのoperationを捨てない。Appのbounded操�
 - apply成功: 設定commit済み。再開は別操作/後続capability。Runningに自動遷移させない。
 - apply error: safe errorとrecovery requiredを表示。自動再試行/版上げ/自動rearmしない。
 - 結果不明: request/operationIdを保持し元ownerへ照会する。新IDで同操作をやり直さない。
-- mapping成功後apply失敗: service由来の途中成功receiptがある場合、mapping成功とapply未成功を別々に表示する。旧appliedは残ってもcurrent mappingが進んだため再開がblockedになり得る。UI初回にmapping操作を提供しなくてもこの診断を隠さない。
+- 将来mapping登録を追加した場合の途中成功: mapping成功とapply未成功を別々のreceiptで表示する。旧appliedが残ってもcurrent mappingが進んだため再開がblockedになり得る。初回のread表示もcurrent mappingとapplied bound版の差を保持する。
 
-bounded monitorはmapping/applyの各最新成功receiptと現在operation結果を分けて保持する。次の失敗で前段成功を消さない。古いreceiptのrevisionが現在headより小さい場合も、元成功を現在appliedへ上書きしない。
+初回bounded monitorは元request付きの最新apply成功receipt一つと、現在operation結果を分けて保持する。次の失敗で元成功を消さず、古いreceiptを現在appliedへ上書きしない。将来mapping登録capabilityを追加する段階で、最新mapping成功receiptも別の一枠として扱う。
 
 ## 各段階のUI受入と制約
 
