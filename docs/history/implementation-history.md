@@ -4,6 +4,12 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録計画の停止前チェック（H5c2a、2026-11-03）
+
+Astra主設計の[preflight／supervisor分割](../design/runtime/historian-recording-supervisor.md)に従い、work H5b2を基準にnative read-only検査を実装した。保存済みmappingとapplyを別APIで扱い、共有prepareがwriteと同じ再送／版／本文／予約／容量を検査する。稼働中sessionだけを候補として許容し、writerを止めたり成功commitを生成したりしない。既存reader lease上限とsnapshot cleanupを維持し、停止・設定変更・再開の制御は後続へ分けた。
+
+新規native14件を含むRust workspace451件、Clippy／rustfmt、既存H1／desired契約のChromium8件と全体Prettier・文書リンクが成功した。記録中の同snapshot、replay／競合／容量、32 origins／別保持版／8memberの256行予算、取消／SQL失敗／panic／cleanup拒否、2leaseとwriter lockを確認し、Astraの最終レビューに必須修正はない。全体CIはwork向けReady for Review PRで確認する。
+
 ## 記録の入口
 
 | 確認する記録                 | 入口                                                                        |

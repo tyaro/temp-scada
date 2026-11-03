@@ -194,6 +194,10 @@ sourceのcatalog/valuesは既存上限4096、bindings最大8。SDK/stop/joinの�
 
 H5aだけで記録計画の配布・実接続・原子適用が完成したとはしない。H5bの成功receiptとH5cの稼働確認を分けることで、再送や障害時に「保存された」と「記録している」を取り違えない。複数group、正式deployment設定、暦日保持、自動容量管理、認証/transport、実運用接続は後続である。
 
+## H5cの詳細分割
+
+[H5c2採用設計](historian-recording-supervisor.md)で、c2a（既存HistoryReaderによる停止前mapping/apply preflight）、c2b（正常pause後の明示管理turn）、c2c（単一supervisorとfresh解決・明示resume）へ分けた。c2aはH5b2から独立実装し、[H5c1の専用Recorder／Host開始](https://github.com/tyaro/temp-scada/pull/47)と別PRで受け入れる。保存済みmappingに対するapply検査とmapping候補検査は別操作で、架空revisionや複合原子適用を作らない。
+
 ## H5aの実装と受入（2026-11-03）
 
 共通Schema、`scada_model::recording_plan::{DesiredRecordingPlan, validate_recording_plan}`、TSの`parseRecordingPlan`／`validateRecordingPlan`を追加した。SchemaはH1のID resourceをローカル登録し、外部取得を禁止する。未知fieldはroot／group／memberの全階層で拒否する。owned wrapperはmember順序と文字列を保持し、TSは全体をfreezeする。名前の重複は完全一致だけで検査し、trim・case変換・Unicode正規化は行わない。

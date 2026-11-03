@@ -1,6 +1,7 @@
 //! Bounded raw and min/max snapshot queries without inferred recording coverage.
 pub(super) mod control;
 mod coverage;
+mod management;
 mod minmax;
 pub use control::{CancellationToken, QueryControl, QueryLimits};
 
@@ -113,6 +114,7 @@ impl Drop for ReaderLease {
 pub struct HistoryReader {
     // Close connection before releasing its ownership lease, including on panic.
     connection: Option<Connection>,
+    healthy: bool,
     _lease: ReaderLease,
 }
 
@@ -137,6 +139,7 @@ impl SqliteStore {
         )?;
         Ok(HistoryReader {
             connection: Some(connection),
+            healthy: true,
             _lease: lease,
         })
     }
@@ -215,12 +218,15 @@ impl HistoryReader {
             return Err(QueryError::UnsupportedMode);
         }
         budget.work.check()?;
+        if !self.healthy {
+            self.connection.take();
+            return Err(QueryError::ReaderUnusable);
+        }
         let connection = self.connection.as_mut().ok_or(QueryError::ReaderUnusable)?;
-        let mut healthy = true;
         let result = {
             let snapshot = Snapshot {
                 connection,
-                healthy: &mut healthy,
+                healthy: &mut self.healthy,
             };
             (|| {
                 let progress = Arc::clone(&budget.work);
@@ -264,7 +270,7 @@ impl HistoryReader {
             })()
             // snapshot drops here, after all SQL statements/rows in the closure.
         };
-        if !healthy {
+        if !self.healthy {
             self.connection.take();
             return Err(QueryError::ReaderUnusable);
         }
