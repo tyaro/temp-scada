@@ -738,3 +738,6 @@ async fn managed_drop_cancels_sdk_and_reader_keeps_writer_lease_until_released()
 
 #[path = "recording_host/plan_turn.rs"]
 mod plan_turn;
+
+#[path = "recording_host/supervisor.rs"]
+mod supervisor;

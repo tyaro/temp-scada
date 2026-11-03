@@ -8,7 +8,7 @@ use scada_historian::{
 };
 use scada_runtime::recording_host::{RecordingPlanTurnIntent, RecordingPlanTurnReceipt};
 
-fn map_request(key: &str, previous: u64) -> RegisterMappingRequest {
+pub(super) fn map_request(key: &str, previous: u64) -> RegisterMappingRequest {
     let sdk = plan(Some(7), Source::Real, false);
     RegisterMappingRequest {
         request_id: key.into(),
@@ -29,7 +29,7 @@ fn map_request(key: &str, previous: u64) -> RegisterMappingRequest {
         },
     }
 }
-fn apply_request(key: &str, map_revision: u64) -> ApplyRecordingPlanRequest {
+pub(super) fn apply_request(key: &str, map_revision: u64) -> ApplyRecordingPlanRequest {
     ApplyRecordingPlanRequest {
         request_id: key.into(),
         expected_applied_revision: Some(1),

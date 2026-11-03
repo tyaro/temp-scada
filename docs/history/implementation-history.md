@@ -2016,3 +2016,9 @@ Issue本文を作成結果と照合し、文書整形・リンク・差分を確
 PR #47／#48をworkへ統合（6c26ea6）し、統合後の全体CI成功を確認した。[Astra主設計](../design/runtime/historian-recording-supervisor.md)のc2bとして、正常join済みHostでの一回mapping/apply、元run/操作token照合、共有writer枠、成功recordの有限保持、native失敗後の回復要求を追加した。通常成功pathでHostを作り直さず、mappingとapplyを別commitとして保持する。単一supervisor／fresh SDK解決の調整・製品接続はc2c以降である。
 
 新規runtime単体12件・mockHub統合3件を含むRust workspace487件、Clippy／rustfmt、既存H1／desired契約のChromium8件、全体Prettier・文書リンクが成功した。native既存試験でactual FULL／rollback拒否を回帰し、Hostでは制御workerによるI/O・応答喪失・panic・latecancelと所有保持を確認した。Astra最終レビューに必須修正はない。全体CIはwork向けReady for Review PRで確認する。
+
+## 単一supervisorの候補検査・明示停止・適用（H5c2c1、2026-11-03）
+
+PR #49をworkへ統合（2f10622）し、Astra主設計の[H5c2c1](../design/runtime/historian-recording-supervisor.md)を実装した。初期化時の同store/reader所有を構造で保ち、一つの検査workerがrecordingと並行する。元run/sessionとowned intentを保存し、候補成功後も自動停止せず、明示pause/join後に同じ要求をc2bへ一度だけ渡す。fresh解決・回復snapshotの統合はc2c2へ分けた。
+
+新規runtime単体15件・mockHub統合3件を含むRust workspace505件、Clippy／rustfmt、既存H1／desired契約のChromium8件、全体Prettier・文書リンクが成功した。Astraの最終read-onlyレビューに必須修正はない。元control・2lease・取消安全性・reader障害時の停止回収、Replay/errorでの録画継続、自然完了、候補の一回実行、caller-confirmed再録画とraw/minmaxを確認した。全体CIはwork向けReady for Review PRで確認する。

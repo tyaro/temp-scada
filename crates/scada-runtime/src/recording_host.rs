@@ -1,6 +1,11 @@
 //! Explicit in-process lifecycle for one fixed recording group and one writer.
 //! SDK work stays on Tokio; synchronous recorder/SQLite work stays off it.
 mod plan_turn;
+mod supervisor;
+pub use supervisor::{
+    CandidatePhase, PreflightCompletion, PreflightPhase, PreflightReport, PreflightRun,
+    RecordingSupervisor, SupervisorError, SupervisorInitError, SupervisorState,
+};
 mod retention;
 pub use plan_turn::{
     RecordingPlanGuardSnapshot, RecordingPlanTurnCompletion, RecordingPlanTurnIntent,

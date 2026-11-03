@@ -1,6 +1,6 @@
 # Historian H5c2: 記録計画のpreflightと明示的な置換
 
-状態: 採用設計（Astra主設計）。2026-11-03（日本時間）。H5c1 managed Recorder／HostとH5c2a preflightは[PR #47](https://github.com/tyaro/temp-scada/pull/47)／[PR #48](https://github.com/tyaro/temp-scada/pull/48)でworkへ統合済み。H5c2bは実装・ローカル受入済み。単一supervisorはc2cの後続設計である。
+状態: 採用設計（Astra主設計）。2026-11-03（日本時間）。H5c1 managed Recorder／HostとH5c2a preflightは[PR #47](https://github.com/tyaro/temp-scada/pull/47)／[PR #48](https://github.com/tyaro/temp-scada/pull/48)でworkへ統合済み。H5c2bも[PR #49](https://github.com/tyaro/temp-scada/pull/49)でworkへ統合済み。H5c2c1は単一supervisorの検査・明示pause・一回適用を実装・ローカル受入済み。fresh解決・回復snapshotの統合はc2c2である。
 
 [記録計画](historian-recording-plan.md)、[台帳](historian-recording-plan-ledger.md)、[activation](historian-recording-activation.md)、[所有者](historian-recording-host.md)、[保持協調](historian-recording-retention.md)を継承する。DB7、H1、Project 0.36.0、SDK/Banto/依存を維持する。実Hub/S7/設定/資格情報/本番DBへ接続しない。
 
@@ -245,3 +245,111 @@ workerからstoreとcompletionを回収しphaseをJoinedへ戻す。元Recording
 新規runtime単体12件・mockHub統合3件を含むRust workspace487件、Clippy／rustfmt、既存H1／desired契約のChromium8件、全体Prettier・文書リンクが成功した。native既存試験でactual FULL／rollback拒否を回帰し、Hostでは制御workerによるI/O・応答喪失・panic・latecancelと所有保持を確認した。Astra最終レビューに必須修正はない。全体CIはwork向けReady for Review PRで確認する。
 
 同じHostのmanaged録画からmapping/apply、新activation/session/epochでの再録画、raw/minmaxまでを確認した。mappingだけのcommit成功、旧applied維持、recovery latchでの再開拒否も確認した。通常App・自動supervisor・fresh解決調整・製品transportは本工程に含めない。
+
+## H5c2c1: 単一supervisorの候補検査・明示pause・一回実行
+
+採用詳細、2026-11-03。PR #49統合後の次工程。c2c全体をさらに分け、今回c2c1はpreflightから元候補の一回実行までを実装する。c2c2はfresh解決/resumeと回復snapshotの統合へ残す。既存manual/managed開始の明示委譲は提供するが、SDK解決をsupervisorが新たに行う意味ではない。
+
+### 所有とfactory
+
+RecordingSupervisorはRecordingHostと専用HistoryReaderを所有する。構築時に同じSqliteStoreからreaderを一つ取得してからHost::newへstoreを移し、別storeのHost/readerを組み合わせる入口は作らない。
+
+```rust
+RecordingSupervisor::try_new(store: SqliteStore)
+    -> Result<RecordingSupervisor, Box<SupervisorInitError>>;
+
+pub struct SupervisorInitError {
+    pub error: StoreError,
+    pub store: SqliteStore,
+}
+```
+
+既存2reader枠を共用し、factory時点で枠が埋まっていればBusyと元storeを返す。専用leaseがidleでも1枠を占有する。通常Historyに使える残りは1枠。専用reader/hostの可変参照をpublicにせず、host_mutや任意callbackでticketの検査を迂回させない。
+
+recording workerとpreflight reader workerは並行できる。writer枠は引き続きrecording/retention/plan turnの一つだけ。preflightは一つの物理worker、保留queue無し。結果はrequest/responseでありlatest watchによる配送にしない。
+
+### APIとticket
+
+```rust
+start_preflight(intent: RecordingPlanTurnIntent, control: QueryControl)
+    -> Result<PreflightRun, SupervisorError>;
+cancel_preflight(run: &PreflightRun) -> Result<(), SupervisorError>;
+join_preflight(run: &PreflightRun)
+    -> Result<Arc<PreflightCompletion>, SupervisorError>; // async
+
+request_pause(run: &PreflightRun) -> Result<(), SupervisorError>;
+join_pause(run: &PreflightRun)
+    -> Result<Arc<RecordingCompletion>, SupervisorError>; // async
+execute_candidate(run: &PreflightRun, control: QueryControl)
+    -> Result<RecordingPlanTurnRun, SupervisorError>;
+discard_candidate(run: &PreflightRun) -> Result<(), SupervisorError>;
+```
+
+PreflightRunはprocess-local exact tokenで、RecordingRunやRecordingPlanTurnRunと別型。PreflightCompletionにはpreflight token、元RecordingRun、mapping/planのどちらかのtyped preflight reportまたはStoreErrorを持つ。要求は外から書き換えられないowned intentとしてsupervisor内部に保存する。結果を改造して戻すAPIや外部生成ticketを受け付けない。
+
+start_preflightはHostがRunningまたはJoinedで、元RecordingRun/sessionIdを取得できる時だけ受理する。初期Idle、Starting、FinishedUnjoinedは拒否する。FinishedUnjoinedでは録画joinを先に行う。plan/retentionの実行中も拒否する。guard/latch、候補要求の純粋検証を共有し、すでに回復が必要なownerを新候補で正常扱いにしない。
+
+物理preflight workerが存在すれば完了未joinもBusy。未消費Candidate ticketが残る場合も新preflightはBusyとし、明示discardが必要。Replay/errorの完了結果は新preflight受理時に置換できる。同期拒否では現ticket/receiptを失わない。
+
+### preflight worker
+
+専用readerをspawn_blockingへ移し、intentに対応するnative preflightを一回だけ呼ぶ。元QueryControlのdeadline/token/limitsをそのまま使用する。CPU待機やpool待ちを含めdeadlineを延長しない。writerにstopを送らず、snapshotのactive session IDをreportへ保存する。
+
+joinはborrowed JoinHandleをawaitし、future取消後もreader/taskを所有し続ける。exact token以外のjoin/cancelは拒否する。成功join後だけreaderを回収し、最新completionのArcを保持する。再joinは同じArc、latecancelは結果を変更しない。cancel→即新queryという物理要求増殖は許さない。
+
+ReaderUnusableはstickyで、そのreaderの新preflightを拒否する。panic/join failureではreaderを偽って復元しない。いずれもrecording workerへ自動stopを送らない。通常のsource/recording障害は引き続きRecordingHost側が判断する。
+
+### Candidateからの明示pause
+
+request_pauseはjoin済みCandidateだけを受け付ける。Replay/errorなら拒否し、旧workerに触れない。元RecordingRunが現在Host runとpointer等値で、reportのactive_session_idがSomeなら開始時に保存したsessionIdと完全一致することを要求する。別sessionを停止対象へ推測しない。
+
+一致した場合にだけHost.request_stopを呼び、ticketへpause要求済みを記録する。preflight後に自然終了した場合も、明示pauseを受理してからjoinする。Candidateのactive_session_id=Noneは現在writer停止の証明ではなく、Hostの実join/cleanupを省略しない。
+
+join_pauseはpause要求済みticketと同じrunを再確認し、Host.joinをborrowed awaitする。外側timeout後も同ticketで再joinでき、未joinのwriter枠を解放しない。結果を返すことと正常pause成立を区別し、cleanup/start/source failureならcandidate実行へ進まない。正常pauseかどうかはc2bのHost gateが最終権威である。
+
+### 同一候補の一回実行
+
+execute_candidateは物理preflightがjoin済み、元run等値、pause要求とjoin完了済み、Candidate未消費を要求する。保存した同一intentをHost.start_recording_plan_turnへ渡す。callerから新requestやrevisionを差し込ませない。
+
+c2bに受理された時点でticketを消費する。外側timeout/取消後にexecuteを再実行して別mutationを作らない。plan turnのexact join/cancelを委譲し、元tokenで結果を回収する。c2bの同期拒否ならcandidateは消費しないが、gateを解除したとは扱わない。native Errなら既存plan recovery latchを維持する。
+
+preflightのsnapshot commit一致をwrite CAS条件には追加しない。recording tickでcommitが増えても正常であり、write transactionが実際のrevision/immutable条件を再検査する。候補照会からstop/joinまでの間にcurrent headが変われば、writeがConflictになる。preflight tokenはDB予約や認可の証明ではない。
+
+mapping turn完了をjoinした後、同じ元RecordingRunに対し次applyのpreflight→明示pause/join（すでにJoinedなら確認）→executeを行える。mapping/applyは別commitで、間の成功receiptはc2bの各1件保存を維持する。disabled applyや古いreceipt Replayを新運転許可へ変換しない。
+
+### 開始委譲・破棄・安全停止
+
+既存manual startとmanaged startを明示委譲する。managedの引数はcaller-confirmed SdkRecorderPlan/options/binding/control/clientであり、H5c1の全descriptor/current版/新activation/session/epoch検証を省略しない。
+
+物理preflightが実行中または完了未joinならstartはBusy。未消費Candidateが残る場合もBusy。discard_candidateは最新exact token、物理worker無し、未実行Candidateを明示破棄する操作であり、recordingを再開/停止したりDBを変更したりしない。worker中の破棄は拒否し、cancel→joinが必要。plan turn実行中にも破棄しない。
+
+新recording startが受理された時点で旧preflight completion/ticketを無効化する。同期start拒否では候補を失わない。古いpreflight結果、元run、pause完了を新runへ流用しない。c2bの成功receipt各1件は引き続き保持する。
+
+利用者の安全停止のため、preflightの有無にかかわらずrequest_stop_recording/join_recording相当の明示委譲も提供する。この操作だけでcandidate実行条件が成立したとはせず、executeにはticket固有のpause/join確認を要求する。preflightのReaderUnusable/panicでもrecording停止・joinを妨げない。
+
+### 回復とc2c2境界
+
+c2c1に新native read APIは不要。既存c2a preflightとc2b transactionの再検証だけで正常pathを閉じる。回復用latest applied/activation/保持状態をreaderから統合照会する機能、SDK解決のfreshness調整はc2c2で設計する。
+
+回復用take_storeはpreflight/taskと全writer workerがjoin済みの場合だけ許す。Host.take_store成功後に専用readerをdropし、supervisorをNoStore相当へ移す。Host側拒否ならreaderを先に失わない。外部のHistory leaseが残るならその解放も必要。reader panicで専用readerが失われても録画join後のstore回収は可能にする。plan recovery latchを消して通常resumeへ戻すAPIは作らない。
+
+Dropはpreflightとrecording/plan workerへ取消要求を送り、blocking taskをabortしない。それぞれのworker/leaseが実処理を終えるまでlockを保持する。外側timeoutをcleanup完了とは表示しない。
+
+### c2c1受入
+
+- factoryが同storeのHost/readerを作る。既存2lease時にはBusyと同storeを返し、所有喪失なし。専用readerを含め合計2枠。
+- mockHub録画中にpreflight成功してもtickが続く。Replay/errorではstopされない。Candidate後も明示pause前は録画継続。
+- pause/join→同一intent一回実行→receipt、mapping後applyの新preflight。変更した外部requestや古いtokenを使えず、duplicate executeでcommitが増えない。
+- 取消非協力的な制御worker、join timeout、完了未join、stale cancel、低予算/期限で物理1枠と元deadlineを維持。
+- 自然終了・source障害・別run・不一致session・native Conflictを検査。正常pause以外でexecuteせず、snapshotが古くてもwrite CASが権威。
+- Candidate保持中の新start拒否、明示discard、成功start時だけ旧結果無効化。失敗startでは候補不変。
+- reader cleanup失敗/panicでも旧録画を自動停止せず、安全停止/join/take_store可能。Dropでreader/writer lockの寿命を守る。
+- 正常停止後のcaller-confirmed managed開始委譲は既存H5c1の契約を維持するが、supervisor独自のfresh SDK解決・自動resume実装とは記録しない。
+
+## H5c2c1の実装と受入（2026-11-03）
+
+`RecordingSupervisor`のfactoryが同storeのHost/readerを作り、失敗時はBox付きInitErrorで元storeを返す。公開APIは元run/sessionとowned要求を保存し、検査workerのjoin後にだけ候補を形成する。明示pause/joinの正常確認後、同じintentをc2bへ一度渡し、受付済み候補の再joinで消費状態を復活させない。正常開始時だけ旧結果を無効化し、reader障害でも安全停止とwriter回収の入口を維持する。
+
+新規runtime単体15件・mockHub統合3件を含むRust workspace505件、Clippy／rustfmt、既存H1／desired契約のChromium8件、全体Prettier・文書リンクが成功した。Astraの最終read-onlyレビューに必須修正はない。元control・2lease・取消安全性・reader障害時の停止回収、Replay/errorでの録画継続、自然完了、候補の一回実行、caller-confirmed再録画とraw/minmaxを確認した。全体CIはwork向けReady for Review PRで確認する。
+
+検査readerの障害注入は所有・停止回収の受入で、actual snapshot cleanup拒否は既存native回帰に含める。c2c2のfresh SDK解決・明示resumeと回復snapshotの調整は未実装。既存開始の委譲だけでfreshnessを証明したとは扱わない。

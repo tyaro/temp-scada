@@ -31,7 +31,7 @@ pub enum RecordingPlanTurnIntent {
     Apply(ApplyRecordingPlanRequest),
 }
 impl RecordingPlanTurnIntent {
-    fn validate(&self) -> StoreResult<()> {
+    pub(super) fn validate(&self) -> StoreResult<()> {
         match self {
             Self::RegisterMapping(r) => r.validate(),
             Self::Apply(r) => r.validate(),
