@@ -7,6 +7,8 @@
     createCatalogController,
     type CatalogSource,
   } from "./lib/designer/controllers/catalog.svelte";
+  import RecordingOperationsWorkspace from "./lib/recording-operations/RecordingOperationsWorkspace.svelte";
+  import type { RecordingOperationsService } from "./lib/recording-operations/service";
   import RecordingManagementWorkspace from "./lib/recording-management/RecordingManagementWorkspace.svelte";
   import type { RecordingManagementService } from "./lib/recording-management/service";
   import HistoryWorkspace from "./lib/history/HistoryWorkspace.svelte";
@@ -20,11 +22,13 @@
     catalogSource,
     historyService,
     recordingManagementService,
+    recordingOperationsService,
   }: {
     readSource?: ReadSource;
     catalogSource?: CatalogSource;
     historyService?: HistoryService;
     recordingManagementService?: RecordingManagementService;
+    recordingOperationsService?: RecordingOperationsService;
   } = $props();
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
@@ -142,6 +146,10 @@
   let projectFileInput = $state<HTMLInputElement>();
   let helpOpen = $state(false);
   let historyOpen = $state(false);
+  let recordingOperationsOpen = $state.raw<object | null>(null);
+  function openRecordingOperations() {
+    if (!menuBlocked) recordingOperationsOpen = Object.freeze({});
+  }
   let recordingManagementOpen = $state.raw<object | null>(null);
   function openRecordingManagement() {
     if (!menuBlocked) recordingManagementOpen = Object.freeze({});
@@ -838,6 +846,7 @@
     if (
       historyOpen ||
       recordingManagementOpen ||
+      recordingOperationsOpen ||
       trendRequest ||
       recordingRequest
     )
@@ -1570,6 +1579,7 @@
     project = next;
     historyOpen = false;
     recordingManagementOpen = null;
+    recordingOperationsOpen = null;
     recordingRequest = null;
     recordingView = null;
     projectFiles.adopted(next, source);
@@ -2990,6 +3000,7 @@
       floatingPanels.gesturing ||
       historyOpen ||
       !!recordingManagementOpen ||
+      !!recordingOperationsOpen ||
       !!trendRequest ||
       !!recordingRequest,
   );
@@ -3212,6 +3223,7 @@
       changeMode,
       chooseTheme,
       openRecordingManagement,
+      openRecordingOperations,
       openHistory: () => {
         if (!menuBlocked) {
           historySvgOpener = null;
@@ -4134,6 +4146,13 @@
     onclose={() => (trendRequest = null)}
   />
 {/if}
+<RecordingOperationsWorkspace
+  openOwner={recordingOperationsOpen}
+  {project}
+  generation={workspaceGeneration}
+  service={recordingOperationsService}
+  onclose={() => (recordingOperationsOpen = null)}
+/>
 <RecordingManagementWorkspace
   openOwner={recordingManagementOpen}
   {project}

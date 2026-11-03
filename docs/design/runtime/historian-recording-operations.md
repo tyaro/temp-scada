@@ -1,6 +1,6 @@
 # 記録計画の明示管理操作契約
 
-状態: **H5d4aの純粋JSON契約を実装、d4b/cは未実装**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。操作・結果照会のschema、Rust／TypeScript validatorと全文一致を提供する。操作service・controller・UI・native adapter・製品transportは後続。
+状態: **H5d4aの純粋契約とd4bの注入service・App操作monitor／UIを実装、d4cのnative接続は未実装**。2026-11-03（日本時間）。主設計・実装レビューはユーザー指定のAstra。通常起動は未接続で、操作はtest-only外部ownerで受け入れる。製品transportは後続。
 
 ## 1. 初回scopeとPR分割
 
@@ -12,7 +12,7 @@
 | H5d4b | 外部ownerを前提とするoptional操作capability、有限なApp操作monitor、三段階UI、test-only service注入による通常App受入 | 実native接続、製品transport、結果不明の自動解消 |
 | H5d4c | supervisorへのprojection／opaque handle対応、所有・join・receipt再照合のnative adapterを別途実装・隔離環境で受入    | 認証・製品transport・実Hub/S7/本番DB            |
 
-d4aで独立contractを実装し、Project 0.37.0／DB7／H1／SDK／依存版を変えず、同期拒否・受付・commit・不明の意味を共通検証できる。次はd4bの外部owner・注入service・操作表示へ進む。d4bのmock受入をnative mutationの完成と称さない。d4cで必要なread-only reconciliationやowner公開面は実装前レビューし、既存APIに存在するかのように先行記載しない。
+d4aで独立contractを実装し、Project 0.37.0／DB7／H1／SDK／依存版を変えず、同期拒否・受付・commit・不明の意味を共通検証できる。d4bで外部owner・注入service・操作表示を実装した。d4bのmock受入をnative mutationの完成と称さない。d4cで必要なread-only reconciliationやowner公開面は実装前レビューし、既存APIに存在するかのように先行記載しない。
 
 新mapping発行・自動登録、Hub identity解決、fresh SDK解決／resume、initialIdle／新規store bootstrap、複数group・自動schedulerは初回capabilityに含めない。初期設定は現nativeのHost構築前手順に留め、browser bootstrapは別capabilityと受入を要する。apply成功後はpause済みのままで、Runningへ自動遷移しない。
 
@@ -296,3 +296,19 @@ d4cでは隔離SQLite＋mockHubで実supervisorへ接続する。Running中prefl
 Rustの公開入口は`scada_model::recording_operations`。`validate_recording_operations(&Value)`と6種類のprivate Value wrapperの`from_value`／`as_value`を提供する。`semantic.rs`で意味検査、`equality.rs`の`same_recording_*`で検証済みwrapper同士の全文一致を行う。targetへ既存d3検証、desiredへH5a検証を再適用し、resourceはローカル登録する。
 
 `examples/recording-operations-cases.json`の受理925件と全文一致102件を共有する。H5a139件を5種類のenvelopeへ包む695件、d3の全447件をtargetへ包むContext以外拒否の検査、byte／node／depthと非JSON・所有権／freezeも両言語／browserで確認する。重複照会ID、既知receipt保持、latchのOR、物理owner gateなどの状態付き規則はd4b/cの責務であり、このpure validatorが実行済みの証拠を与えるとは扱わない。
+
+## 11. H5d4bのservice・monitorと通常App
+
+`recording-operations/service.ts`のoptional `RecordingOperationsService`をAppへ別propで注入する。d3読取serviceと独立し、通常の`main.ts`には接続・mockを追加しない。`current()`と即時最新通知の`subscribe()`はcached viewのみで、DB照会・mutationを開始しない。providerは受理前登録・元native ownerの存続・全App共通の物理gateを保証する。d4bのmonitorはその保証を代行しない。
+
+OwnerViewの`active`は現在または最後に受理したstageのhandleであり、settle後も次stage・明示discard・新workflowまで保持する。非nullだけで物理処理中とは判断しない。`request`があるviewには同じchangeの`active`を必須とする。`reconciling`も最後のread handleを保持してよい。Promiseのsettle前にはclientの枠を解放せず、settle後もunknown／recoveryのmutation gateを保持する。`RecordingOperationRejected`だけが未dispatchを保証する同期拒否で、有限codeと検証可能なowner viewを返す。他の例外・malformed handle/viewはuncertainとして送信を止める。
+
+`view.ts`はJSON部分だけを所有・freezeし、opaque handle、Promise、functionのidentityを保持する。同requestのreceipt一致、quiescenceの単調更新、recoveryのORを検査し、immutable completionと新しいcached viewを統合する。object key順は無視し、member配列順は維持する。同read結果のsubscribe／completion二重到着は冪等に扱い、別本文への変更は拒否する。providerの明示blocked／uncertainを古い成功でcompletedへ変換しない。
+
+`monitor.ts`は最後の一workflowの最大3stage handle、一read handle、最後の成功pairだけを保持する。発行前に同期gateを閉じ、返却handleを捕捉してから通知を処理する。mutationの待機queueは持たず、reconcileも一readだけ。close／Project・service交換／App破棄では取消を送らない。期限は同realmの絶対`performance.now()`をproviderへ渡し、UIでは期限超過・結果待ちだけを表示する。明示取消はcooperative要求で、pause/joinは非対応。新Appは同じ外部ownerへ再接続できる。reconcileの枠はPromise自身の正常結果検証後だけ解放し、subscribeの正常結果が先着してもPromiseがreject／不正値なら保持する。
+
+旧対象の正常settled candidate／pausedには「以前の候補を破棄」を提供する。現在Projectのpause／apply資格を復活させず、元entryの捕捉済みservice/changeだけへ送る。物理処理中・不明・回復必要・不正応答では破棄不可。旧ownerがidleまたは正常completedになった後の「現在の対象を確認」は新bindingのcached viewへ明示再接続する。完了済みの旧結果はラベル付きで最大一件保持し、次のworkflowを受理した時に置き換える。
+
+通常Appの「表示→記録計画の操作」で、期待適用版／mapping版／保持適用版を利用者が明示入力する。空欄はnullであり最新headを推測しない。有効な希望設定にはmapping・保持期待版が必要で、disabledでは両方nullに固定する。128bitの`crypto.getRandomValues()`によるworkflow IDを使い、secure-context専用のrandomUUIDには依存しない。IDは認可情報ではない。検査・pause/join・同候補applyを別clickとし、元requestの結果照会は手動のみ。Project保存・Undo・記録再開を変更しない。
+
+単体では外部ownerの存続、通知とcompletionの逆順、同期再入、閉じる／対象交換、未知のdispatch、既知receipt・latch保持を検証する。通常Appはtest-only providerを注入し、両theme・期限・取消・手動照会・旧候補破棄・remountと保存不変を検証する。native supervisorへのhandle対応、受理前registry、物理完了・実receipt readと隔離DBの受入はd4cへ残す。

@@ -1,0 +1,36 @@
+import type { OperationError } from "../recording-operations-contract";
+import type { OperationOwnerPhase } from "./service";
+export const phaseLabels: Record<OperationOwnerPhase, string> = {
+  idle: "未操作です",
+  preflighting: "変更候補を検査中です",
+  candidate: "検査済み・元runは停止していません",
+  pausing: "元runの停止・join待ちです",
+  paused: "元runの停止・joinを確認しました",
+  applying: "同じ変更候補を適用中です",
+  completed: "操作結果を受信しました",
+  blocked: "回復確認が必要です。再適用できません",
+  uncertain: "結果または静止を確認できません。再適用できません",
+};
+export const errorLabels: Record<OperationError, string> = {
+  invalidRequest: "要求不正",
+  busy: "使用中",
+  wrongOwner: "操作元不一致",
+  staleRun: "元runが無効",
+  conflict: "版または内容の競合",
+  noCandidate: "変更候補なし",
+  pauseRequired: "停止・joinが必要",
+  consumed: "候補は使用済み",
+  uncleanPause: "停止後の整合性未確認",
+  retentionBlocked: "保持処理による停止",
+  planRecoveryRequired: "計画回復が必要",
+  cancelled: "取消",
+  deadlineExceeded: "期限超過",
+  budgetExceeded: "処理上限超過",
+  corruptData: "整合性エラー",
+  needsReopen: "再openが必要",
+  readerUnusable: "reader使用不能",
+  sourceFailure: "取得元エラー",
+  workerFailure: "workerエラー",
+  projectionFailed: "表示への変換失敗",
+  internal: "内部エラー",
+};
