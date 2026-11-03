@@ -645,3 +645,9 @@ native7新規（`recording_plan/resume/tests.rs`）・SDK4新規（`recorder_sou
 `recording-plan-edit.ts`はH5aの再利用、raw整数文字列の検査、固定fieldの全比較とmemberId順の意味比較、同IDのdesired増版、編集対象全文照合を担当する。`editor/recording-plan-handler.ts`と`commands.ts`がsave/removeをProject commandへ登録し、`project-handler.ts`から一回の既存editor transactionへ委譲する。Project revision／Undo／Redoの責務は既存editor/historyから移していない。
 
 `designer/RecordingPlanDialog.svelte`はowned draftとdirty保護、最大8member、数値の明示入力と外部名の無操作保持を持つ。AppはrequestにProject object/世代/画面/modeを束縛し、各callbackの元requestを照合する。論理資格を閉じた後もfocus復帰用viewを一枠だけ保持し、Bantoのopen→closed遷移を通す。次のopenで新しいdraftを作り、Project置換でviewも破棄する。`designer-actions.ts`がFile menuと常設メニュー、AppのProject設定がsidebar入口を提供する。`recording-plan-edit.test.ts`の27件は増版/no-op/対象/Undo/数値・文字列を、`e2e/recording-plan-editor.spec.ts`は通常Appの編集寿命・両theme・原子保存と入力保護を検証する。
+
+## 記録管理状態の読取契約設計（H5d3、未実装）
+
+[Astra詳細契約](../design/runtime/historian-recording-management.md)は新しい管理表示DTO、要求対象照合、安全なerrorと有限controller／serviceの責務を定める。現`RecordingResumeState`、`RecordingHostStatus`、両guard snapshotはnative in-process型であり、この設計のbrowser向け契約を実装済みと扱わない。後続の共通JSON validatorとfixtureは既存H5a/H1 resourceを再利用し、runtime→表示DTOの投影はnative根拠と未提供項目を明示して接続する。
+
+現Historyの`HistoryWorkspace.svelte`／`history/presentation.ts`はApp常設controller・Abort非協力時の物理枠保持の参考であり、今回変更しない。記録管理controller・通常Appの管理表示は後続で、`RecordingPlanDialog`は引き続き希望設定のローカル編集だけを担当する。
