@@ -7,6 +7,8 @@
     createCatalogController,
     type CatalogSource,
   } from "./lib/designer/controllers/catalog.svelte";
+  import RecordingManagementWorkspace from "./lib/recording-management/RecordingManagementWorkspace.svelte";
+  import type { RecordingManagementService } from "./lib/recording-management/service";
   import HistoryWorkspace from "./lib/history/HistoryWorkspace.svelte";
   import TrendDefinitionsDialog from "./lib/designer/TrendDefinitionsDialog.svelte";
   import RecordingPlanDialog from "./lib/designer/RecordingPlanDialog.svelte";
@@ -17,10 +19,12 @@
     readSource,
     catalogSource,
     historyService,
+    recordingManagementService,
   }: {
     readSource?: ReadSource;
     catalogSource?: CatalogSource;
     historyService?: HistoryService;
+    recordingManagementService?: RecordingManagementService;
   } = $props();
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
@@ -138,6 +142,10 @@
   let projectFileInput = $state<HTMLInputElement>();
   let helpOpen = $state(false);
   let historyOpen = $state(false);
+  let recordingManagementOpen = $state.raw<object | null>(null);
+  function openRecordingManagement() {
+    if (!menuBlocked) recordingManagementOpen = Object.freeze({});
+  }
   let historySvgOpener: SVGElement | null = null;
   function toggleMenubar() {
     showMenubar = !showMenubar;
@@ -827,7 +835,13 @@
     }
   }
   function shortcut(event: KeyboardEvent) {
-    if (historyOpen || trendRequest || recordingRequest) return;
+    if (
+      historyOpen ||
+      recordingManagementOpen ||
+      trendRequest ||
+      recordingRequest
+    )
+      return;
     if (
       event.key.toLowerCase() === "f" &&
       !event.ctrlKey &&
@@ -1555,6 +1569,7 @@
     previousStore.dispose();
     project = next;
     historyOpen = false;
+    recordingManagementOpen = null;
     recordingRequest = null;
     recordingView = null;
     projectFiles.adopted(next, source);
@@ -2974,6 +2989,7 @@
       !!replacement ||
       floatingPanels.gesturing ||
       historyOpen ||
+      !!recordingManagementOpen ||
       !!trendRequest ||
       !!recordingRequest,
   );
@@ -3195,6 +3211,7 @@
       toggleMenubar,
       changeMode,
       chooseTheme,
+      openRecordingManagement,
       openHistory: () => {
         if (!menuBlocked) {
           historySvgOpener = null;
@@ -4117,6 +4134,13 @@
     onclose={() => (trendRequest = null)}
   />
 {/if}
+<RecordingManagementWorkspace
+  openOwner={recordingManagementOpen}
+  {project}
+  generation={workspaceGeneration}
+  service={recordingManagementService}
+  onclose={() => (recordingManagementOpen = null)}
+/>
 <HistoryWorkspace
   open={historyOpen && (!historyPreset || !!currentHistoryPreset)}
   preset={currentHistoryPreset}

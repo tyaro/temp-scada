@@ -4,6 +4,14 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録管理状態の明示照会（H5d3b、2026-11-03）
+
+PR #56の共通契約はworkへマージ済み（`02f7273`）。AstraのH5d3契約に沿い、optional serviceを通常Appへ接続し、明示照会のreadonly管理workspaceを追加した。context／desiredとinspectをownerごとに捕捉し、一実行・最新一待機、待機を含む絶対期限、要求全文一致、Project／generation／service／open ownerの資格を維持する。
+
+取消・期限切れ・画面／Project／service交換でも、物理readをPromise終了まで保持する。subscriber／abort再入、遅延成功、非Promiseとraw error拒否、未接続・不正context・DB部分観測を検証する。Project保存やwriter操作を増やさず、通常mainは未接続。Project0.37.0／DB7／H1／SDK・Banto・依存は変更していない。実native projection・製品接続とd4のmutable操作は後続である。
+
+TS全2,612件（新規34）、型検査0error／0warning・build、関連Chromium24件（新規9）が成功。Astraの最終実装レビューに必須修正はない。全体CIはReady for Review PRで確認する。
+
 ## 記録管理状態の共通契約（H5d3a、2026-11-03）
 
 設計PR #55はworkへマージ済み（`8ffe5ac`）、統合後push CIの全7ジョブ成功。Astra詳細設計のContext／Request／Responseを独立schemaとRust／TSのpure境界へ実装した。受理447・H5aネスト139・比較18・全文request9の共有期待値で、DB内整合・必須null・閉集合error・負UTC／safe整数・文字列保存・member順非依存を確認する。比較はowned入力または入口での再検証を要求し、ProjectやDBを変更しない。
