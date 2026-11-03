@@ -4,6 +4,14 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録計画の操作workspace（H5d4b、2026-11-03）
+
+PR #59はworkへマージ済み（`5c7f375`）。環境復旧後、d3と別の操作service、外部ownerを監視するApp常設monitor、通常Appの三段階UIと明示reconcileを追加した。期待版とdesired全文を固定し、検査・元run停止／join・同候補適用を独立させる。Replay／検査失敗では停止せず、適用後も自動再開しない。通常起動にはproviderを注入しない。
+
+close／Project・service交換／disposeで取消を送らず、期限は結果待ちとして遅いreceiptを保持する。同期再入の発行gate、typed未dispatch拒否と未知の例外、immutable completionとcached最新結果、receipt／quiescence／recoveryの単調統合、正常な旧候補の元ownerへの明示discardと対象再接続を受け入れた。readのPromise異常は、正常なsubscribe結果が先着した場合も枠を解放しない。旧結果は元要求ラベルで一枠保持する。
+
+Astraの複数回実装レビューで、通知順序・Project交換・旧候補解放・read枠の所見を修正し、最終の必須指摘はない。TS全4,834件（新規49）、関連Chromium25件（新規13）、型検査0error／0warning・build・整形が成功した。native projection、全App物理gate、受理前registryと実receipt照会はd4cへ残す。Project0.37.0／DB7／H1／SDK・Banto・依存は変更しない。全体CIはReady for Review PRで確認する。
+
 ## 記録操作・結果照会の共通検証（H5d4a、2026-11-03）
 
 設計PR #58はworkへマージ済み（`100d99b`）。実行環境の復旧後、Astra詳細設計のContext／Change／OperationRequest・Result／ReconciliationRequest・Resultをpure schemaとTS／Rust validator、所有済みDTO・全文一致へ実装した。受理925・一致102・H5aネスト695・d3 target447を共有する。

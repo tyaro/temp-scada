@@ -664,8 +664,14 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 
 [Astra詳細契約](../design/runtime/historian-recording-operations.md)が登録済みmappingのapply workflowと、d3 read serviceから分離するoptional操作capabilityの基準である。現在あるnative実装は`recording_host/supervisor.rs`の`start_preflight`／`request_pause`／`join_pause`／`execute_candidate`と、`plan_turn.rs`のcancel／join／guard。opaque run／candidateはnative所有で、文字列IDから再構築しない。
 
-`scada-historian/src/store/recording_plan/mod.rs`の`recording_plan_receipt`はstoreのread-only照会であり、同APIのbrowser serviceやlatch下のsupervisor経由reconciliationが既に完成しているとは扱わない。d4aのpure DTO検証は実装済み。d4bの外部owner／monitorと通常App注入操作UI、d4cのnative投影・結果照会は未実装であり、新契約をProject保存やd3 inspectionへ組み込まない。
+`scada-historian/src/store/recording_plan/mod.rs`の`recording_plan_receipt`はstoreのread-only照会であり、同APIのbrowser serviceやlatch下のsupervisor経由reconciliationが既に完成しているとは扱わない。d4aのpure DTO検証は実装済み。d4bの外部owner／monitorと通常App注入操作UIは実装済み、d4cのnative投影・結果照会は未実装であり、新契約をProject保存やd3 inspectionへ組み込まない。
 
 共有schemaは`crates/scada-model/schema/recording-operations.schema.json`。Rust公開入口は`recording_operations`、`semantic.rs`は検証後のreceipt・stage・回復整合、`equality.rs`はprivate wrapper同士の数値表記を無視する全文一致を担当する。TS公開入口は`lib/recording-operations-contract.ts`で、`recording-operations/types.ts`と`semantic.ts`に分ける。種類別のrootとnested envelopeの128KiB／4096node、resultの256KiB／8192node、H5a desiredの64KiBを維持する。
 
 `examples/recording-operations-cases.json`の受理925・全文一致102と、H5aネスト695・d3 target447をRust `recording_operations/tests.rs`、TS `recording-operations-contract.test.ts`／`__fixtures__/recording-operations-cases.ts`、`e2e/recording-operations-contract.spec.ts`で共有する。pure検証は過去receipt／latchの記憶やnative実行の証拠を持たない。通常Appの保存不変と既存d3管理表示もbrowserで確認する。
+
+## 記録計画の操作workspace（H5d4b）
+
+`lib/recording-operations/service.ts`はd3と独立したoptional操作service、opaque handle／cached owner view、未dispatch同期拒否とProject対象bindingを定義する。`view.ts`はbounded JSONだけの所有検証、元request／receiptの一致、単調な結果統合を担当する。`monitor.ts`はApp寿命の一workflow（最大3stage）と一read、発行前の同期gate、期限表示、明示取消、旧ownerの保持と安全な明示discard／再接続を担当する。nativeの物理gate・run所有とregistryはproviderの責務であり、ここで実装しない。
+
+`RecordingOperationsWorkspace.svelte`は即時render／action資格、期待版入力、三段階の独立button、元対象ラベルと手動reconcileを所有する。`labels.ts`は有限error／phaseの表示文言である。`App.svelte`の別prop・常設workspaceと`designer-actions.ts`の表示menuだけに接続し、通常`main.ts`は未接続のまま。`__fixtures__/recording-operations-service.ts`はUIから独立して受理handleとcompletionを保持するtest-only provider。`monitor.test.ts`と`e2e/recording-operations-workspace.spec.ts`で再入、逆順通知、旧対象、安全な破棄、期限後結果、手動照会とremountを検証する。d4aのpure validator、d3 inspection、Project保存を拡張解釈しない。

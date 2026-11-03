@@ -41,9 +41,9 @@ d3aの共通DTO／schema／Rust・TS validator／比較／fixtureを実装した
 
 [Astra詳細契約](../design/runtime/historian-recording-operations.md)に従い、最初は登録済みmappingを使う単一desired applyに絞る。preflight、元RecordingRunの明示pause／join、同じ候補のapplyを別の操作にし、Replay／拒否では記録を停止しない。initialIdle bootstrap・新mapping登録・fresh SDK解決／resumeは別capabilityとして後続へ分ける。
 
-d4aで版付きの操作・結果照会DTO／validator・全文一致と共有fixtureを実装した。受理925・一致102・H5aネスト695・d3 target447を共通検証する。次はd4bで外部ownerと有限monitorを持つ注入service・通常App操作UIと手動結果照会を受け入れる。d4cのnative adapterは既存supervisorとreceipt照会の不足境界を実装・検証してから接続する。d3のread serviceをmutation操作へ拡張解釈しない。画面やProjectを離れても受理済み操作は元ownerに帰属し、結果不明を未実行やrollbackに変換しない。
+d4aで版付きの操作・結果照会DTO／validator・全文一致と共有fixtureを実装した。受理925・一致102・H5aネスト695・d3 target447を共通検証する。d4bで外部ownerと有限monitorを持つ注入service・通常App操作UIと手動結果照会をtest-only providerで受け入れた。次はd4c。d4cのnative adapterは既存supervisorとreceipt照会の不足境界を実装・検証してから接続する。d3のread serviceをmutation操作へ拡張解釈しない。画面やProjectを離れても受理済み操作は元ownerに帰属し、結果不明を未実行やrollbackに変換しない。
 
-d4aのpure DTO検証は実装済みであり、操作service・UI・native adapterや状態付きの照会ID／receipt保持を実装済みとは扱わない。Project0.37.0・DB7・H1・固定SDK／Banto／依存と、上流・実Hub・S7・本番DB・認証／製品transportの保留を維持する。
+d4aのpure DTO検証、d4bの操作service・monitor／UIとclientのreceipt／latch保持は実装済み。d4cのnative adapter、受理前registry・物理完了根拠・実receipt照会は未実装である。Project0.37.0・DB7・H1・固定SDK／Banto／依存と、上流・実Hub・S7・本番DB・認証／製品transportの保留を維持する。
 
 ## H5c2の実装順
 
