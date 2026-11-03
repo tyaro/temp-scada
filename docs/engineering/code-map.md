@@ -570,7 +570,7 @@ nativeの`validate_trend_definitions(&Value)`／`TrendDefinitions::from_value`�
 
 ## 記録計画の管理・適用の設計入口（H5）
 
-[記録計画管理の設計](../design/runtime/historian-recording-plan.md)は、P5のdesired／deployment／applied分離、有限な独立JSON契約、永続適用のCAS／receipt、単一group supervisorと復元・失敗境界を定める。設計PR #42は文書のみの変更で、以下H5aから工程ごとに実装・検証責務を追加する。H5a〜H5cの台帳・activation・supervisorの実装責務は下記へ分離している。Project fieldと編集・管理画面は[H5d詳細設計](../design/runtime/historian-recording-project.md)で後続d1〜d4に分け、まだ実装していない。
+[記録計画管理の設計](../design/runtime/historian-recording-plan.md)は、P5のdesired／deployment／applied分離、有限な独立JSON契約、永続適用のCAS／receipt、単一group supervisorと復元・失敗境界を定める。設計PR #42は文書のみの変更で、以下H5aから工程ごとに実装・検証責務を追加する。H5a〜H5cの台帳・activation・supervisorの実装責務は下記へ分離している。[H5d詳細設計](../design/runtime/historian-recording-project.md)のd1でProject保存を実装し、編集・管理画面はd2〜d4へ分ける。
 
 現行の`scada-historian/src/store/evidence.rs::PlanRef`はID／revisionのsession根拠で、計画本体・hash・配布台帳ではない。`scada-runtime/src/recorder_source/plan.rs::SdkRecorderPlan`が一つのHub・周期と固定member／SDK pinを検証する。`recording_host.rs::RecordingHost`はwriterとworkerを所有し、startの受理とRunning、停止要求とjoin完了を区別する。新しい管理層はこれらの契約とH3d保持gateを迂回しない。
 
@@ -634,6 +634,8 @@ native `json_contract.rs`がTrendと記録計画のcompact JSON byte・node・de
 
 native7新規（`recording_plan/resume/tests.rs`）・SDK4新規（`recorder_source/resolution/tests.rs`）・resume単体10新規・mockHub統合3新規を追加する。実SDK handleで取得したsnapshot→別ownerの新記録→raw/minmax、reopen/interrupted、新SDK世代変更停止、元control/lease/Drop/latch、32 origins disjointの複合768行境界と古いreceipt破損を検証する。readerのactual cleanup拒否とSQL FULLは既存native回帰を維持する。
 
-## Project記録計画の設計入口（H5d、未実装）
+## Project記録希望設定の保存（H5d1）
 
-[Astra詳細設計](../design/runtime/historian-recording-project.md)はd1 Project保存契約、d2編集／Undo、d3任意注入serviceの診断表示、d4明示管理操作の分割と受入を定める。現行`project.ts`／`scada-model/src/lib.rs`／Project schemaにはまだ`recordingPlan`を導入していない。d1で同梱H5a／H1 resourceと独立validatorを再利用し、Project0.37.0への変更と共通fixtureを揃える。編集command・Appのservice境界は後続PRで責務を追記する。
+[Astra詳細設計](../design/runtime/historian-recording-project.md)に従い、`project.ts`と`scada-model/src/lib.rs`がProject0.37.0のoptional単一`recordingPlan`を受け入れる。Project schemaは同梱H5a resourceを参照し、両parserはH5a semantic validatorを呼ぶ。独立64KiB/4096node/depth32予算と文字列判定を複製せず、省略とnullを区別する。既存text本文だけの正規化は維持し、externalNameへ作用させない。
+
+`recording_project_tests.rs`／`project-recording.test.ts`／`__fixtures__/project-recording-cases.ts`は独立H5a139とProject共通16ケースを扱う。`e2e/project-recording.spec.ts`はbrowserの共通受入・通常App保存再読込と不正replacement時不変を担当する。`project-package.test.ts`はwhole packageでのdesired保持を含み、部分clipboardの非同伴もTSで検証する。0.37へ揃えたJSONと画像同梱サンプルの原本整合を維持する。編集commandと管理serviceはd2以降へ分ける。

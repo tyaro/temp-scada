@@ -2036,3 +2036,11 @@ PR #51をworkへ統合（565fc44）し、Astra主設計の[H5d詳細設計](../d
 今回は設計文書だけで、Project0.36.0・DB7・H1・SDK／Banto・依存・通常Appを変更していない。次はd1でProject0.37.0とTS／Rust／schema／サンプルの保存契約を揃える。
 
 文書整形・変更文書のローカルリンクと差分を確認した。Astra最終レビューのd4範囲表記を揃え、初回は既存runの明示applyまで、再開とinitialIdle bootstrapは後続とした。コード変更を含まないためローカルの全体試験は再実行せず、Ready for Review PRの全体CIを確認する。
+
+## Project記録希望設定の保存（H5d1、2026-11-03）
+
+PR #52をworkへ統合（7384f31）し、[Astra設計](../design/runtime/historian-recording-project.md)のd1を実装した。Project0.37.0へoptional単一recordingPlanとH5a共通検証を導入し、TS／Rust／schema／サンプル／packageと既存legacy変換出力の版を揃えた。未設定・null・disabledを区別し、タグ名・member順を保持する。図形編集ではdesired版を変えず、部分clipboardには設定を同伴させない。
+
+独立139ケースとProject16ケースを共通受入へ追加した。画像同梱サンプルはmanifest版・checksumだけを更新し、他entry bytesを保持した。編集UI・管理service・Historian運転への接続はd2以降で、DB7／H1／固定SDK・Banto依存を維持する。
+
+Rust workspace531件（新規2）、TS1,934件（新規156）、関連Chromium25件（新規3）、型検査0error／0warning・build・Clippy／rustfmtが成功した。Astraの最終実装レビューに重大な指摘はない。全体Prettier・文書リンクを確認し、Ready for Review PRの全体CIを確認する。

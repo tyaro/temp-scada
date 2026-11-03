@@ -1,12 +1,12 @@
 use super::*;
 use serde_json::json;
-fn cases() -> Value {
+pub(crate) fn cases() -> Value {
     serde_json::from_str(include_str!(
         "../../../../examples/recording-plan-cases.json"
     ))
     .unwrap()
 }
-fn input(case: &Value) -> Result<Value, serde_json::Error> {
+pub(crate) fn input(case: &Value) -> Result<Value, serde_json::Error> {
     if let Some(raw) = case["json"].as_str() {
         return serde_json::from_str(raw);
     }

@@ -154,7 +154,7 @@ docs/
 - [永続Trend定義・画面参照と明示履歴検索（H4c3実装）](design/runtime/historian-trend-definition.md)
 - [記録計画管理・適用と復元（H5a・H5b1〜2実装）](design/runtime/historian-recording-plan.md)
 - [記録計画の検査・適用・明示再開と復旧診断（H5c2）](design/runtime/historian-recording-supervisor.md)
-- [Projectへの記録計画保存・編集・管理状態の段階設計（H5d、未実装）](design/runtime/historian-recording-project.md)
+- [Projectへの記録計画保存・編集・管理状態の段階設計（H5d、d1保存対応・編集管理UIは後続）](design/runtime/historian-recording-project.md)
 - [記録計画の永続台帳・mapping登録・原子的apply（H5b1）](design/runtime/historian-recording-plan-ledger.md)
 - [記録開始と適用計画の原子的結合（H5b2）](design/runtime/historian-recording-activation.md)
 - [適用済み計画からのRecorder／Host開始（H5c1）](design/runtime/historian-managed-recorder.md)

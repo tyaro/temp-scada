@@ -59,7 +59,7 @@ for (const theme of ["light", "dark"] as const)
     );
     await expect(card(page)).toContainText("履歴トレンド");
     const before = await saved(page);
-    expect(before.manifest.schemaVersion).toBe("0.36.0");
+    expect(before.manifest.schemaVersion).toBe("0.37.0");
     expect(before.trends[0].pens.map((p: any) => p.seriesId)).toEqual([
       "series:pressure",
       "series:temperature",

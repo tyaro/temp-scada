@@ -22,6 +22,11 @@ import schema from "../../../../crates/scada-model/schema/project.schema.json";
 import legacySchema from "../../../../crates/scada-model/schema/legacy.project.schema.json";
 import trendSchema from "../../../../crates/scada-model/schema/trend-definition.schema.json";
 import historySchema from "../../../../crates/scada-historian/schema/history-contract.schema.json";
+import recordingSchema from "../../../../crates/scada-model/schema/recording-plan.schema.json";
+import {
+  validateRecordingPlan,
+  type DesiredRecordingPlan,
+} from "./recording-plan";
 import {
   validateTrendDefinitions,
   type TrendDefinition,
@@ -181,16 +186,17 @@ export interface SymbolDefinition {
   objects: ScreenObject[];
 }
 export interface Project {
+  recordingPlan?: DesiredRecordingPlan;
   trends?: TrendDefinition[];
   equipmentTypes?: EquipmentType[];
   equipment?: EquipmentInstance[];
   assets: ImageAsset[];
   manifest: {
     product: "banto-scada";
-    schemaVersion: "0.36.0";
+    schemaVersion: "0.37.0";
     projectId: string;
     projectRevision: number;
-    minRuntimeVersion: "0.36.0";
+    minRuntimeVersion: "0.37.0";
     name: string;
   };
   screens: Screen[];
@@ -202,6 +208,7 @@ const ajv = new Ajv2020({
   allowUnionTypes: true,
 })
   .addSchema(historySchema)
+  .addSchema(recordingSchema)
   .addSchema(trendSchema);
 const validate = ajv.compile<Project>(schema);
 const legacy = ajv.compile(legacySchema);
@@ -220,8 +227,8 @@ export function parseProject(json: string): Project {
       assets: [],
       manifest: {
         ...old.manifest,
-        schemaVersion: "0.36.0",
-        minRuntimeVersion: "0.36.0",
+        schemaVersion: "0.37.0",
+        minRuntimeVersion: "0.37.0",
       },
       screens: old.screens.map((screen) => ({
         ...screen,
@@ -278,6 +285,11 @@ export function parseProject(json: string): Project {
         .join(" / "),
     );
   const project = value;
+  if (
+    "recordingPlan" in project &&
+    !validateRecordingPlan(project.recordingPlan)
+  )
+    throw new Error("記録希望設定の形式・重複・予算を確認してください");
   if (
     !validateTrendDefinitions({
       version: 1,

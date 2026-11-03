@@ -5,6 +5,8 @@ mod connections;
 mod equipment;
 mod json_contract;
 pub mod recording_plan;
+#[cfg(test)]
+mod recording_project_tests;
 pub mod trend_definitions;
 #[cfg(test)]
 mod trend_project_tests;
@@ -15,7 +17,14 @@ use std::sync::LazyLock;
 pub const SCHEMA: &str = include_str!("../schema/project.schema.json");
 pub const MAX_FOLDER_DEPTH: usize = 16;
 static VALIDATOR: LazyLock<jsonschema::Validator> = LazyLock::new(|| {
+    let recording: Value = serde_json::from_str(recording_plan::RECORDING_PLAN_SCHEMA)
+        .expect("bundled recording plan JSON");
     trend_definitions::schema_options()
+        .with_resource(
+            recording["$id"].as_str().expect("recording plan schema ID"),
+            jsonschema::Resource::from_contents(recording.clone())
+                .expect("recording plan resource"),
+        )
         .build(&serde_json::from_str(SCHEMA).expect("bundled schema JSON"))
         .expect("bundled schema is valid")
 });
@@ -149,8 +158,8 @@ impl Project {
             LEGACY_VALIDATOR
                 .validate(&value)
                 .map_err(|e| e.to_string())?;
-            value["manifest"]["schemaVersion"] = Value::String("0.36.0".into());
-            value["manifest"]["minRuntimeVersion"] = Value::String("0.36.0".into());
+            value["manifest"]["schemaVersion"] = Value::String("0.37.0".into());
+            value["manifest"]["minRuntimeVersion"] = Value::String("0.37.0".into());
             for screen in value["screens"].as_array_mut().unwrap() {
                 screen["background"] = Value::String("#0b1220".into());
                 screen["folders"] = serde_json::json!([]);
@@ -173,6 +182,10 @@ impl Project {
         }
         normalize_project_text(&mut value);
         VALIDATOR.validate(&value).map_err(|e| e.to_string())?;
+        if let Some(plan) = value.get("recordingPlan") {
+            recording_plan::validate_recording_plan(plan)
+                .map_err(|_| "記録希望設定の形式・重複・予算を確認してください".to_string())?;
+        }
         let definitions = value
             .get("trends")
             .cloned()
@@ -1575,8 +1588,8 @@ mod tests {
         let input = include_str!("../../../examples/legacy.project.json");
         let old: Value = serde_json::from_str(input).unwrap();
         let project = Project::from_json(input).unwrap();
-        assert_eq!(project.0["manifest"]["schemaVersion"], "0.36.0");
-        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.36.0");
+        assert_eq!(project.0["manifest"]["schemaVersion"], "0.37.0");
+        assert_eq!(project.0["manifest"]["minRuntimeVersion"], "0.37.0");
         assert_eq!(
             project.0["manifest"]["projectId"],
             old["manifest"]["projectId"]
