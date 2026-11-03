@@ -48,7 +48,7 @@ impl JsonBudget {
             Value::String(s) => self.string(s),
             Value::Number(n) => {
                 let f = n.as_f64().ok_or(JsonContractError)?;
-                // All accepted number fields are small nonnegative integers.
+                // Contract integer fields may include signed safe UTC milliseconds.
                 // Normalize 1.0/1e0/-0 for size, without rewriting caller data.
                 let length =
                     if f.is_finite() && f.fract() == 0.0 && f.abs() <= 9_007_199_254_740_991.0 {

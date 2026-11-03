@@ -1,6 +1,6 @@
 # 記録管理状態の表示契約
 
-状態: **H5d3の採用設計・未実装**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。H5d1のProject保存、H5d2の希望設定編集は実装済み。本書では管理状態の読取境界を確定し、schema・validator・controller・UIを実装したとは扱わない。
+状態: **H5d3aの共通契約を実装、H5d3bは未実装**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。Context／Request／Responseのschema、Rust／TypeScript validator、owned DTO、比較関数を提供する。service・controller・管理UI・native projectionは後続。
 
 ## 1. 対象と工程
 
@@ -262,7 +262,7 @@ desired編集・Undo/Redo後はProject/generation境界で古い比較を隠す�
 
 ## 10. 後続PRの受入
 
-H5d3aはschema、TS owned parser、Rust純粋validatorを同じfixtureで検証する。新schema候補は`crates/scada-model/schema/recording-management.schema.json`、公開pure moduleは`recording_management`、TSは`recording-management-contract.ts`とする。native runtime/historianへmodelの依存を追加する必要はなく、adapterは後続。Project validatorにこのschemaを組み込まない。
+H5d3aはschema、TS owned parser、Rust純粋validatorを同じfixtureで検証する。schemaは`crates/scada-model/schema/recording-management.schema.json`、公開pure moduleは`recording_management`、TSは`recording-management-contract.ts`とする。native runtime/historianへmodelの依存を追加する必要はなく、adapterは後続。Project validatorにこのschemaを組み込まない。
 
 - 全union、必須null、省略／未知field、H1 ID、scalar/blank、safe整数・byte/node/depth境界、getter/非JSON拒否、owned/freezeを検証する。
 - full desiredのH5a fixtureをネストして受理一致を確認し、disabled bound=null/current mappingあり、manual active、旧activation/新applied、snapshot境界、active job排他、terminal endcommitを確認する。
@@ -272,3 +272,13 @@ H5d3aはschema、TS owned parser、Rust純粋validatorを同じfixtureで検証�
 H5d3bは通常Appへtest-only注入したserviceで、両theme、未接続、明示照会、readonly表示、Project保存不変を確認する。sync throw、reject、invalid response、request/context取り違え、subscriber再入、Abort無視、timeout後遅延成功、pending置換、close/reopen、service交換、同ID版Project置換、dispose中cleanupを制御Promiseで検証する。最大active1/pending1と古いownerへの非表示を直接assertする。native read実接続・SDK状態watch・認証・製品transportを完成条件に含めない。
 
 本設計の受入は表示用契約の確定であり、service実装・managed操作の完成ではない。d4のmutable操作結果・receipt・不確定commitの表示は別の厳密契約を経て追加する。
+
+## 11. H5d3aの実装入口
+
+TSの公開入口は`recording-management-contract.ts`。`parseRecordingManagementContext`／`parseRecordingInspectionRequest`／`parseRecordingInspectionResponse`とunion用の`parseRecordingManagementDocument`はunknownからowned／deep frozen snapshotを返し、不正入力は有限の`Recording management: invalid`へまとめる。`validateRecordingManagement`はboolean検証である。初回copyの予算はgetterを実行しないkindのdata descriptorで選び、nested request／contextとH5a desiredにも独立上限を再適用する。Proxyの実行隔離は保証しない。
+
+`sameRecordingInspectionRequest`は両入力を再検証してrequestIdと全contextを比較する。`compareDesiredApplied(local, response)`も再検証し、localのundefinedだけを設定なしとする。nullや不正入力をabsentへ落とさない。結果はfreezeする。本文の固定field比較はpureな`recording-plan-comparison.ts`を希望設定編集と共用し、表示順を変更しない。
+
+Rustの`recording_management`は`validate_recording_management(&Value)`と、private Valueを保持する同名Context／Request／Response wrapperの`from_value`／`as_value`を提供する。比較は検証済みwrapperだけを受け、`compare_desired_applied`のenumは`to_value()`で共有JSON形へ変換できる。全文request比較と本文比較は整数の1／1.0／指数表記を同じ値として扱う。
+
+共有fixtureは`examples/recording-management-cases.json`の受理447件、比較18件、全文request9件。既存H5a139件のネストと、getter・非JSON・所有権／freeze・byte／node／depth端点を別途検証する。`e2e/recording-management-contract.spec.ts`は通常App内のmodule評価とProject書出し不変を確認し、管理画面や実native接続の検証とは扱わない。

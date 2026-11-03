@@ -63,7 +63,7 @@ export function ownHistoryJson(
       throw Error("History data shape");
     const keys = Reflect.ownKeys(value);
     if (
-      keys.length > maxNodes - nodes ||
+      keys.length - (array ? 1 : 0) > maxNodes - nodes ||
       keys.some((key) => typeof key !== "string")
     )
       throw Error("History data shape");

@@ -1,0 +1,5994 @@
+{
+  "bases": {
+    "context": {
+      "version": 1,
+      "kind": "recordingManagementContext",
+      "contextId": "context:1",
+      "projectId": " プロジェクト\r\nA ",
+      "projectRevision": 2,
+      "deploymentId": "deployment:1",
+      "storeId": "store:1",
+      "historianNamespace": null
+    },
+    "request": {
+      "version": 1,
+      "kind": "recordingInspectionRequest",
+      "requestId": "request:1",
+      "context": {
+        "version": 1,
+        "kind": "recordingManagementContext",
+        "contextId": "context:1",
+        "projectId": " プロジェクト\r\nA ",
+        "projectRevision": 2,
+        "deploymentId": "deployment:1",
+        "storeId": "store:1",
+        "historianNamespace": null
+      }
+    },
+    "response": {
+      "version": 1,
+      "kind": "recordingInspectionResponse",
+      "request": {
+        "version": 1,
+        "kind": "recordingInspectionRequest",
+        "requestId": "request:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        }
+      },
+      "database": {
+        "state": "available",
+        "snapshotCommit": 0,
+        "currentMappingRevision": null,
+        "currentRetentionAppliedRevision": null,
+        "applied": null,
+        "latestActivation": null,
+        "activeSessionId": null,
+        "activeRetentionJobId": null,
+        "retentionFence": {
+          "cutoffMs": null,
+          "commitVersion": 0
+        }
+      },
+      "host": {
+        "state": "unknown"
+      },
+      "sdk": {
+        "state": "unknown"
+      }
+    },
+    "active": {
+      "version": 1,
+      "kind": "recordingInspectionResponse",
+      "request": {
+        "version": 1,
+        "kind": "recordingInspectionRequest",
+        "requestId": "request:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        }
+      },
+      "database": {
+        "state": "available",
+        "snapshotCommit": 12,
+        "currentMappingRevision": 4,
+        "currentRetentionAppliedRevision": 3,
+        "applied": {
+          "appliedRevision": 2,
+          "commitVersion": 5,
+          "desired": {
+            "version": 1,
+            "kind": "recordingPlan",
+            "planId": "recording:1",
+            "revision": 7,
+            "enabled": true,
+            "group": {
+              "groupId": "group:1",
+              "hubRef": "hub:1",
+              "periodMs": 1000,
+              "members": [
+                {
+                  "memberId": "member:b",
+                  "externalName": " 温度 ",
+                  "valueType": "number"
+                },
+                {
+                  "memberId": "member:a",
+                  "externalName": "設備.運転",
+                  "valueType": "bool"
+                }
+              ]
+            }
+          },
+          "mappingRevision": 2,
+          "retentionAppliedRevision": 1
+        },
+        "latestActivation": {
+          "activationId": "activation:1",
+          "appliedRevision": 2,
+          "commitVersion": 7,
+          "sessionId": "session:1",
+          "state": "active",
+          "committedThrough": 0,
+          "endCommitVersion": null
+        },
+        "activeSessionId": "session:1",
+        "activeRetentionJobId": null,
+        "retentionFence": {
+          "cutoffMs": -100,
+          "commitVersion": 4
+        }
+      },
+      "host": {
+        "state": "unknown"
+      },
+      "sdk": {
+        "state": "unknown"
+      }
+    },
+    "observed": {
+      "version": 1,
+      "kind": "recordingInspectionResponse",
+      "request": {
+        "version": 1,
+        "kind": "recordingInspectionRequest",
+        "requestId": "request:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        }
+      },
+      "database": {
+        "state": "available",
+        "snapshotCommit": 12,
+        "currentMappingRevision": 4,
+        "currentRetentionAppliedRevision": 3,
+        "applied": {
+          "appliedRevision": 2,
+          "commitVersion": 5,
+          "desired": {
+            "version": 1,
+            "kind": "recordingPlan",
+            "planId": "recording:1",
+            "revision": 7,
+            "enabled": true,
+            "group": {
+              "groupId": "group:1",
+              "hubRef": "hub:1",
+              "periodMs": 1000,
+              "members": [
+                {
+                  "memberId": "member:b",
+                  "externalName": " 温度 ",
+                  "valueType": "number"
+                },
+                {
+                  "memberId": "member:a",
+                  "externalName": "設備.運転",
+                  "valueType": "bool"
+                }
+              ]
+            }
+          },
+          "mappingRevision": 2,
+          "retentionAppliedRevision": 1
+        },
+        "latestActivation": {
+          "activationId": "activation:1",
+          "appliedRevision": 2,
+          "commitVersion": 7,
+          "sessionId": "session:1",
+          "state": "active",
+          "committedThrough": 0,
+          "endCommitVersion": null
+        },
+        "activeSessionId": "session:1",
+        "activeRetentionJobId": null,
+        "retentionFence": {
+          "cutoffMs": -100,
+          "commitVersion": 4
+        }
+      },
+      "host": {
+        "state": "observed",
+        "observedAtMs": null,
+        "runRef": null,
+        "sessionId": "session:other",
+        "phase": "running",
+        "stopRequested": false,
+        "issue": "none",
+        "cleanup": "unknown",
+        "sourceShutdown": "unknown",
+        "planRecoveryRequired": null,
+        "retentionRearmRequired": null,
+        "retentionJobPending": null
+      },
+      "sdk": {
+        "state": "observed",
+        "observedAtMs": null,
+        "connection": "backoff"
+      }
+    },
+    "unavailable": {
+      "version": 1,
+      "kind": "recordingInspectionResponse",
+      "request": {
+        "version": 1,
+        "kind": "recordingInspectionRequest",
+        "requestId": "request:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        }
+      },
+      "database": {
+        "state": "unavailable",
+        "error": "unavailable"
+      },
+      "host": {
+        "state": "observed",
+        "observedAtMs": null,
+        "runRef": null,
+        "sessionId": "session:other",
+        "phase": "running",
+        "stopRequested": false,
+        "issue": "none",
+        "cleanup": "unknown",
+        "sourceShutdown": "unknown",
+        "planRecoveryRequired": null,
+        "retentionRearmRequired": null,
+        "retentionJobPending": null
+      },
+      "sdk": {
+        "state": "observed",
+        "observedAtMs": null,
+        "connection": "backoff"
+      }
+    },
+    "disabled": {
+      "version": 1,
+      "kind": "recordingInspectionResponse",
+      "request": {
+        "version": 1,
+        "kind": "recordingInspectionRequest",
+        "requestId": "request:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        }
+      },
+      "database": {
+        "state": "available",
+        "snapshotCommit": 12,
+        "currentMappingRevision": 4,
+        "currentRetentionAppliedRevision": 3,
+        "applied": {
+          "appliedRevision": 2,
+          "commitVersion": 5,
+          "desired": {
+            "version": 1,
+            "kind": "recordingPlan",
+            "planId": "recording:1",
+            "revision": 7,
+            "enabled": false,
+            "group": {
+              "groupId": "group:1",
+              "hubRef": "hub:1",
+              "periodMs": 1000,
+              "members": [
+                {
+                  "memberId": "member:b",
+                  "externalName": " 温度 ",
+                  "valueType": "number"
+                },
+                {
+                  "memberId": "member:a",
+                  "externalName": "設備.運転",
+                  "valueType": "bool"
+                }
+              ]
+            }
+          },
+          "mappingRevision": null,
+          "retentionAppliedRevision": null
+        },
+        "latestActivation": null,
+        "activeSessionId": null,
+        "activeRetentionJobId": null,
+        "retentionFence": {
+          "cutoffMs": -100,
+          "commitVersion": 4
+        }
+      },
+      "host": {
+        "state": "unknown"
+      },
+      "sdk": {
+        "state": "unknown"
+      }
+    },
+    "terminal": {
+      "version": 1,
+      "kind": "recordingInspectionResponse",
+      "request": {
+        "version": 1,
+        "kind": "recordingInspectionRequest",
+        "requestId": "request:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        }
+      },
+      "database": {
+        "state": "available",
+        "snapshotCommit": 12,
+        "currentMappingRevision": 4,
+        "currentRetentionAppliedRevision": 3,
+        "applied": {
+          "appliedRevision": 2,
+          "commitVersion": 5,
+          "desired": {
+            "version": 1,
+            "kind": "recordingPlan",
+            "planId": "recording:1",
+            "revision": 7,
+            "enabled": true,
+            "group": {
+              "groupId": "group:1",
+              "hubRef": "hub:1",
+              "periodMs": 1000,
+              "members": [
+                {
+                  "memberId": "member:b",
+                  "externalName": " 温度 ",
+                  "valueType": "number"
+                },
+                {
+                  "memberId": "member:a",
+                  "externalName": "設備.運転",
+                  "valueType": "bool"
+                }
+              ]
+            }
+          },
+          "mappingRevision": 2,
+          "retentionAppliedRevision": 1
+        },
+        "latestActivation": {
+          "activationId": "activation:1",
+          "appliedRevision": 2,
+          "commitVersion": 7,
+          "sessionId": "session:1",
+          "state": "closed",
+          "committedThrough": 0,
+          "endCommitVersion": 10
+        },
+        "activeSessionId": null,
+        "activeRetentionJobId": null,
+        "retentionFence": {
+          "cutoffMs": -100,
+          "commitVersion": 4
+        }
+      },
+      "host": {
+        "state": "unknown"
+      },
+      "sdk": {
+        "state": "unknown"
+      }
+    },
+    "old": {
+      "version": 1,
+      "kind": "recordingInspectionResponse",
+      "request": {
+        "version": 1,
+        "kind": "recordingInspectionRequest",
+        "requestId": "request:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        }
+      },
+      "database": {
+        "state": "available",
+        "snapshotCommit": 12,
+        "currentMappingRevision": 4,
+        "currentRetentionAppliedRevision": 3,
+        "applied": {
+          "appliedRevision": 2,
+          "commitVersion": 5,
+          "desired": {
+            "version": 1,
+            "kind": "recordingPlan",
+            "planId": "recording:1",
+            "revision": 7,
+            "enabled": true,
+            "group": {
+              "groupId": "group:1",
+              "hubRef": "hub:1",
+              "periodMs": 1000,
+              "members": [
+                {
+                  "memberId": "member:b",
+                  "externalName": " 温度 ",
+                  "valueType": "number"
+                },
+                {
+                  "memberId": "member:a",
+                  "externalName": "設備.運転",
+                  "valueType": "bool"
+                }
+              ]
+            }
+          },
+          "mappingRevision": 2,
+          "retentionAppliedRevision": 1
+        },
+        "latestActivation": {
+          "activationId": "activation:1",
+          "appliedRevision": 1,
+          "commitVersion": 2,
+          "sessionId": "session:1",
+          "state": "closed",
+          "committedThrough": 0,
+          "endCommitVersion": 3
+        },
+        "activeSessionId": null,
+        "activeRetentionJobId": null,
+        "retentionFence": {
+          "cutoffMs": -100,
+          "commitVersion": 4
+        }
+      },
+      "host": {
+        "state": "unknown"
+      },
+      "sdk": {
+        "state": "unknown"
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "context",
+      "base": "context",
+      "accepted": true
+    },
+    {
+      "name": "request",
+      "base": "request",
+      "accepted": true
+    },
+    {
+      "name": "response",
+      "base": "response",
+      "accepted": true
+    },
+    {
+      "name": "active",
+      "base": "active",
+      "accepted": true
+    },
+    {
+      "name": "observed",
+      "base": "observed",
+      "accepted": true
+    },
+    {
+      "name": "unavailable",
+      "base": "unavailable",
+      "accepted": true
+    },
+    {
+      "name": "disabled",
+      "base": "disabled",
+      "accepted": true
+    },
+    {
+      "name": "terminal",
+      "base": "terminal",
+      "accepted": true
+    },
+    {
+      "name": "old",
+      "base": "old",
+      "accepted": true
+    },
+    {
+      "name": "manual-active",
+      "base": "response",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database",
+          "value": {
+            "state": "available",
+            "snapshotCommit": 1,
+            "currentMappingRevision": null,
+            "currentRetentionAppliedRevision": null,
+            "applied": null,
+            "latestActivation": null,
+            "activeSessionId": "manual:1",
+            "activeRetentionJobId": null,
+            "retentionFence": {
+              "cutoffMs": null,
+              "commitVersion": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ended-manual-no-public-heads",
+      "base": "response",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/snapshotCommit",
+          "value": 100
+        }
+      ]
+    },
+    {
+      "name": "old-terminal-with-new-disabled",
+      "base": "old",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/applied",
+          "value": {
+            "appliedRevision": 2,
+            "commitVersion": 5,
+            "desired": {
+              "version": 1,
+              "kind": "recordingPlan",
+              "planId": "recording:1",
+              "revision": 7,
+              "enabled": false,
+              "group": {
+                "groupId": "group:1",
+                "hubRef": "hub:1",
+                "periodMs": 1000,
+                "members": [
+                  {
+                    "memberId": "member:b",
+                    "externalName": " 温度 ",
+                    "valueType": "number"
+                  },
+                  {
+                    "memberId": "member:a",
+                    "externalName": "設備.運転",
+                    "valueType": "bool"
+                  }
+                ]
+              }
+            },
+            "mappingRevision": null,
+            "retentionAppliedRevision": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "old-terminal-with-different-plan",
+      "base": "old",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/applied/desired/planId",
+          "value": "other"
+        }
+      ]
+    },
+    {
+      "name": "context/extra",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "context/missing-version",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "context/missing-kind",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "context/missing-contextId",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/contextId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "context/missing-projectId",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "context/missing-projectRevision",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "context/missing-deploymentId",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/deploymentId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "context/missing-storeId",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/storeId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "context/missing-historianNamespace",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/historianNamespace",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/extra",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "request/missing-version",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/missing-kind",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/missing-requestId",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/requestId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/missing-context",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/context",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/context/extra",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/context/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "request/context/missing-version",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/context/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/context/missing-kind",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/context/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/context/missing-contextId",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/context/contextId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/context/missing-projectId",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/context/projectId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/context/missing-projectRevision",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/context/projectRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/context/missing-deploymentId",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/context/deploymentId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/context/missing-storeId",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/context/storeId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "request/context/missing-historianNamespace",
+      "base": "request",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/context/historianNamespace",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/extra",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "response/missing-version",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/missing-kind",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/missing-request",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/missing-database",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/missing-host",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/missing-sdk",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/extra",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "response/request/missing-version",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/missing-kind",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/missing-requestId",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/requestId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/missing-context",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/context/extra",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "response/request/context/missing-version",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/context/missing-kind",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/context/missing-contextId",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/contextId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/context/missing-projectId",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/projectId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/context/missing-projectRevision",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/projectRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/context/missing-deploymentId",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/deploymentId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/context/missing-storeId",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/storeId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/request/context/missing-historianNamespace",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/historianNamespace",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/extra",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "response/database/missing-state",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/missing-snapshotCommit",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/snapshotCommit",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/missing-currentMappingRevision",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentMappingRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/missing-currentRetentionAppliedRevision",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentRetentionAppliedRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/missing-applied",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/missing-latestActivation",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/missing-activeSessionId",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeSessionId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/missing-activeRetentionJobId",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeRetentionJobId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/missing-retentionFence",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/retentionFence/extra",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "response/database/retentionFence/missing-cutoffMs",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/cutoffMs",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/database/retentionFence/missing-commitVersion",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/commitVersion",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/host/extra",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "response/host/missing-state",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "response/sdk/extra",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "response/sdk/missing-state",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/missing-version",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/missing-kind",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/missing-request",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/missing-database",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/missing-host",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/missing-sdk",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/request/missing-version",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/missing-kind",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/missing-requestId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/requestId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/missing-context",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/context/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/request/context/missing-version",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/context/missing-kind",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/context/missing-contextId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/contextId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/context/missing-projectId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/projectId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/context/missing-projectRevision",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/projectRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/context/missing-deploymentId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/deploymentId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/context/missing-storeId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/storeId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/request/context/missing-historianNamespace",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/historianNamespace",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/database/missing-state",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/missing-snapshotCommit",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/snapshotCommit",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/missing-currentMappingRevision",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentMappingRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/missing-currentRetentionAppliedRevision",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentRetentionAppliedRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/missing-applied",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/missing-latestActivation",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/missing-activeSessionId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeSessionId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/missing-activeRetentionJobId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeRetentionJobId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/missing-retentionFence",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/missing-appliedRevision",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/appliedRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/missing-commitVersion",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/commitVersion",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/missing-desired",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/missing-mappingRevision",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/mappingRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/missing-retentionAppliedRevision",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/retentionAppliedRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/missing-version",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/missing-kind",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/missing-planId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/planId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/missing-revision",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/revision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/missing-enabled",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/enabled",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/missing-group",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/missing-groupId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/groupId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/missing-hubRef",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/hubRef",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/missing-periodMs",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/periodMs",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/missing-members",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/members/0/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/0/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/members/0/missing-memberId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/0/memberId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/members/0/missing-externalName",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/0/externalName",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/members/0/missing-valueType",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/0/valueType",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/members/1/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/1/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/members/1/missing-memberId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/1/memberId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/members/1/missing-externalName",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/1/externalName",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/applied/desired/group/members/1/missing-valueType",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/1/valueType",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/latestActivation/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/database/latestActivation/missing-activationId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/activationId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/latestActivation/missing-appliedRevision",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/appliedRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/latestActivation/missing-commitVersion",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/commitVersion",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/latestActivation/missing-sessionId",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/sessionId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/latestActivation/missing-state",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/latestActivation/missing-committedThrough",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/committedThrough",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/latestActivation/missing-endCommitVersion",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/endCommitVersion",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/retentionFence/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/database/retentionFence/missing-cutoffMs",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/cutoffMs",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/database/retentionFence/missing-commitVersion",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/commitVersion",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/host/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/host/missing-state",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "active/sdk/extra",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "active/sdk/missing-state",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/missing-version",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/missing-kind",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/missing-request",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/missing-database",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/missing-host",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/missing-sdk",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/request/missing-version",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/missing-kind",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/missing-requestId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/requestId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/missing-context",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/context/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/request/context/missing-version",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/context/missing-kind",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/context/missing-contextId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/contextId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/context/missing-projectId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/projectId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/context/missing-projectRevision",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/projectRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/context/missing-deploymentId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/deploymentId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/context/missing-storeId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/storeId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/request/context/missing-historianNamespace",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/historianNamespace",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/database/missing-state",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/missing-snapshotCommit",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/snapshotCommit",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/missing-currentMappingRevision",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentMappingRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/missing-currentRetentionAppliedRevision",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentRetentionAppliedRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/missing-applied",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/missing-latestActivation",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/missing-activeSessionId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeSessionId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/missing-activeRetentionJobId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeRetentionJobId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/missing-retentionFence",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/missing-appliedRevision",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/appliedRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/missing-commitVersion",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/commitVersion",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/missing-desired",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/missing-mappingRevision",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/mappingRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/missing-retentionAppliedRevision",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/retentionAppliedRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/missing-version",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/missing-kind",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/missing-planId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/planId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/missing-revision",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/revision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/missing-enabled",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/enabled",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/missing-group",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/missing-groupId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/groupId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/missing-hubRef",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/hubRef",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/missing-periodMs",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/periodMs",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/missing-members",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/members/0/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/0/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/members/0/missing-memberId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/0/memberId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/members/0/missing-externalName",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/0/externalName",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/members/0/missing-valueType",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/0/valueType",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/members/1/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/1/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/members/1/missing-memberId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/1/memberId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/members/1/missing-externalName",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/1/externalName",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/applied/desired/group/members/1/missing-valueType",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/desired/group/members/1/valueType",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/latestActivation/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/database/latestActivation/missing-activationId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/activationId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/latestActivation/missing-appliedRevision",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/appliedRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/latestActivation/missing-commitVersion",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/commitVersion",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/latestActivation/missing-sessionId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/sessionId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/latestActivation/missing-state",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/latestActivation/missing-committedThrough",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/committedThrough",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/latestActivation/missing-endCommitVersion",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/endCommitVersion",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/retentionFence/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/database/retentionFence/missing-cutoffMs",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/cutoffMs",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/database/retentionFence/missing-commitVersion",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/commitVersion",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-state",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-observedAtMs",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/observedAtMs",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-runRef",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/runRef",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-sessionId",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/sessionId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-phase",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-stopRequested",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/stopRequested",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-issue",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/issue",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-cleanup",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/cleanup",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-sourceShutdown",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/sourceShutdown",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-planRecoveryRequired",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/planRecoveryRequired",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-retentionRearmRequired",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/retentionRearmRequired",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/host/missing-retentionJobPending",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/retentionJobPending",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/sdk/extra",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "observed/sdk/missing-state",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/sdk/missing-observedAtMs",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/observedAtMs",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "observed/sdk/missing-connection",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/connection",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/extra",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "unavailable/missing-version",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/missing-kind",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/missing-request",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/missing-database",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/missing-host",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/missing-sdk",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/extra",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/missing-version",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/missing-kind",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/missing-requestId",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/requestId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/missing-context",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/context/extra",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/context/missing-version",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/version",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/context/missing-kind",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/kind",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/context/missing-contextId",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/contextId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/context/missing-projectId",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/projectId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/context/missing-projectRevision",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/projectRevision",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/context/missing-deploymentId",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/deploymentId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/context/missing-storeId",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/storeId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/request/context/missing-historianNamespace",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/request/context/historianNamespace",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/database/extra",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "unavailable/database/missing-state",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/database/missing-error",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/error",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/extra",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-state",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-observedAtMs",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/observedAtMs",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-runRef",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/runRef",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-sessionId",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/sessionId",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-phase",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-stopRequested",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/stopRequested",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-issue",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/issue",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-cleanup",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/cleanup",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-sourceShutdown",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/sourceShutdown",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-planRecoveryRequired",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/planRecoveryRequired",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-retentionRearmRequired",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/retentionRearmRequired",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/host/missing-retentionJobPending",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/retentionJobPending",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/sdk/extra",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/extra",
+          "value": "private diagnostic"
+        }
+      ]
+    },
+    {
+      "name": "unavailable/sdk/missing-state",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/state",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/sdk/missing-observedAtMs",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/observedAtMs",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unavailable/sdk/missing-connection",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/connection",
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "project-text-''",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectId",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "project-text-' '",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectId",
+          "value": " "
+        }
+      ]
+    },
+    {
+      "name": "project-text-'\\x85\\ufeff'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectId",
+          "value": "﻿"
+        }
+      ]
+    },
+    {
+      "name": "project-text-'\\u3000'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectId",
+          "value": "　"
+        }
+      ]
+    },
+    {
+      "name": "project-text-'aaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectId",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "project-scalar-'\\u200b'",
+      "base": "context",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/projectId",
+          "value": "​"
+        }
+      ]
+    },
+    {
+      "name": "project-scalar-'😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+      "base": "context",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/projectId",
+          "value": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+        }
+      ]
+    },
+    {
+      "name": "project-scalar-' é\\r\\n'",
+      "base": "context",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/projectId",
+          "value": " é\r\n"
+        }
+      ]
+    },
+    {
+      "name": "project-scalar-'\\x00x'",
+      "base": "context",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/projectId",
+          "value": "\u0000x"
+        }
+      ]
+    },
+    {
+      "name": "contextId-''",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/contextId",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "contextId-'-id'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/contextId",
+          "value": "-id"
+        }
+      ]
+    },
+    {
+      "name": "contextId-'bad\\n'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/contextId",
+          "value": "bad\n"
+        }
+      ]
+    },
+    {
+      "name": "contextId-'日本'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/contextId",
+          "value": "日本"
+        }
+      ]
+    },
+    {
+      "name": "contextId-'aaaaaaaaaaaaaaa",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/contextId",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "contextId-' leading'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/contextId",
+          "value": " leading"
+        }
+      ]
+    },
+    {
+      "name": "contextId-'x/y'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/contextId",
+          "value": "x/y"
+        }
+      ]
+    },
+    {
+      "name": "contextId-max",
+      "base": "context",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/contextId",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "deploymentId-''",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/deploymentId",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "deploymentId-'-id'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/deploymentId",
+          "value": "-id"
+        }
+      ]
+    },
+    {
+      "name": "deploymentId-'bad\\n'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/deploymentId",
+          "value": "bad\n"
+        }
+      ]
+    },
+    {
+      "name": "deploymentId-'日本'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/deploymentId",
+          "value": "日本"
+        }
+      ]
+    },
+    {
+      "name": "deploymentId-'aaaaaaaaaaaaaaa",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/deploymentId",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "deploymentId-' leading'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/deploymentId",
+          "value": " leading"
+        }
+      ]
+    },
+    {
+      "name": "deploymentId-'x/y'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/deploymentId",
+          "value": "x/y"
+        }
+      ]
+    },
+    {
+      "name": "deploymentId-max",
+      "base": "context",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/deploymentId",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "storeId-''",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/storeId",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "storeId-'-id'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/storeId",
+          "value": "-id"
+        }
+      ]
+    },
+    {
+      "name": "storeId-'bad\\n'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/storeId",
+          "value": "bad\n"
+        }
+      ]
+    },
+    {
+      "name": "storeId-'日本'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/storeId",
+          "value": "日本"
+        }
+      ]
+    },
+    {
+      "name": "storeId-'aaaaaaaaaaaaaaa",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/storeId",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "storeId-' leading'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/storeId",
+          "value": " leading"
+        }
+      ]
+    },
+    {
+      "name": "storeId-'x/y'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/storeId",
+          "value": "x/y"
+        }
+      ]
+    },
+    {
+      "name": "storeId-max",
+      "base": "context",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/storeId",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "historianNamespace-''",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/historianNamespace",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "historianNamespace-'-id'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/historianNamespace",
+          "value": "-id"
+        }
+      ]
+    },
+    {
+      "name": "historianNamespace-'bad\\n'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/historianNamespace",
+          "value": "bad\n"
+        }
+      ]
+    },
+    {
+      "name": "historianNamespace-'日本'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/historianNamespace",
+          "value": "日本"
+        }
+      ]
+    },
+    {
+      "name": "historianNamespace-'aaaaaaaaaaaaaaa",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/historianNamespace",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "historianNamespace-' leading'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/historianNamespace",
+          "value": " leading"
+        }
+      ]
+    },
+    {
+      "name": "historianNamespace-'x/y'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/historianNamespace",
+          "value": "x/y"
+        }
+      ]
+    },
+    {
+      "name": "historianNamespace-max",
+      "base": "context",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/historianNamespace",
+          "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    {
+      "name": "namespace-present",
+      "base": "context",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/historianNamespace",
+          "value": "history:1"
+        }
+      ]
+    },
+    {
+      "name": "project-rev-0",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectRevision",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "project-rev--1",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectRevision",
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "project-rev-9007199254740992",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectRevision",
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "project-rev-1.5",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectRevision",
+          "value": 1.5
+        }
+      ]
+    },
+    {
+      "name": "project-rev-'1'",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectRevision",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "project-rev-None",
+      "base": "context",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/projectRevision",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "project-max-revision",
+      "base": "context",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/projectRevision",
+          "value": 9007199254740991
+        }
+      ]
+    },
+    {
+      "name": "snapshotCommit--1",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/snapshotCommit",
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "snapshotCommit-9007199254740992",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/snapshotCommit",
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "snapshotCommit-1.5",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/snapshotCommit",
+          "value": 1.5
+        }
+      ]
+    },
+    {
+      "name": "snapshotCommit-'1'",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/snapshotCommit",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "currentMappingRevision--1",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentMappingRevision",
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "currentMappingRevision-9007199254740992",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentMappingRevision",
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "currentMappingRevision-1.5",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentMappingRevision",
+          "value": 1.5
+        }
+      ]
+    },
+    {
+      "name": "currentMappingRevision-'1'",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentMappingRevision",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "currentRetentionAppliedRevision--1",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentRetentionAppliedRevision",
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "currentRetentionAppliedRevision-9007199254740992",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentRetentionAppliedRevision",
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "currentRetentionAppliedRevision-1.5",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentRetentionAppliedRevision",
+          "value": 1.5
+        }
+      ]
+    },
+    {
+      "name": "currentRetentionAppliedRevision-'1'",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentRetentionAppliedRevision",
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "error-unavailable",
+      "base": "unavailable",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "unavailable"
+        }
+      ]
+    },
+    {
+      "name": "error-busy",
+      "base": "unavailable",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "busy"
+        }
+      ]
+    },
+    {
+      "name": "error-cancelled",
+      "base": "unavailable",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "cancelled"
+        }
+      ]
+    },
+    {
+      "name": "error-deadlineExceeded",
+      "base": "unavailable",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "deadlineExceeded"
+        }
+      ]
+    },
+    {
+      "name": "error-budgetExceeded",
+      "base": "unavailable",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "budgetExceeded"
+        }
+      ]
+    },
+    {
+      "name": "error-corruptData",
+      "base": "unavailable",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "corruptData"
+        }
+      ]
+    },
+    {
+      "name": "error-needsReopen",
+      "base": "unavailable",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "needsReopen"
+        }
+      ]
+    },
+    {
+      "name": "error-readerUnusable",
+      "base": "unavailable",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "readerUnusable"
+        }
+      ]
+    },
+    {
+      "name": "error-projectionFailed",
+      "base": "unavailable",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "projectionFailed"
+        }
+      ]
+    },
+    {
+      "name": "error-internal",
+      "base": "unavailable",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "internal"
+        }
+      ]
+    },
+    {
+      "name": "raw-error-rejected",
+      "base": "unavailable",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/error",
+          "value": "SQLite secret failure"
+        }
+      ]
+    },
+    {
+      "name": "host-idle",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "value": "idle"
+        }
+      ]
+    },
+    {
+      "name": "host-starting",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "value": "starting"
+        }
+      ]
+    },
+    {
+      "name": "host-running",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "value": "running"
+        }
+      ]
+    },
+    {
+      "name": "host-stopping",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "value": "stopping"
+        }
+      ]
+    },
+    {
+      "name": "host-finishedUnjoined",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "value": "finishedUnjoined"
+        }
+      ]
+    },
+    {
+      "name": "host-joined",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "value": "joined"
+        }
+      ]
+    },
+    {
+      "name": "host-faulted",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "value": "faulted"
+        }
+      ]
+    },
+    {
+      "name": "host-noStore",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "value": "noStore"
+        }
+      ]
+    },
+    {
+      "name": "host-retaining",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "value": "retaining"
+        }
+      ]
+    },
+    {
+      "name": "host-managingPlan",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/phase",
+          "value": "managingPlan"
+        }
+      ]
+    },
+    {
+      "name": "issue-none",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/issue",
+          "value": "none"
+        }
+      ]
+    },
+    {
+      "name": "issue-clock",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/issue",
+          "value": "clock"
+        }
+      ]
+    },
+    {
+      "name": "issue-source",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/issue",
+          "value": "source"
+        }
+      ]
+    },
+    {
+      "name": "issue-store",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/issue",
+          "value": "store"
+        }
+      ]
+    },
+    {
+      "name": "issue-invalidObservation",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/issue",
+          "value": "invalidObservation"
+        }
+      ]
+    },
+    {
+      "name": "issue-arithmeticOverflow",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/issue",
+          "value": "arithmeticOverflow"
+        }
+      ]
+    },
+    {
+      "name": "issue-unclassified",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/issue",
+          "value": "unclassified"
+        }
+      ]
+    },
+    {
+      "name": "sdk-connecting",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/sdk/connection",
+          "value": "connecting"
+        }
+      ]
+    },
+    {
+      "name": "sdk-live",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/sdk/connection",
+          "value": "live"
+        }
+      ]
+    },
+    {
+      "name": "sdk-backoff",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/sdk/connection",
+          "value": "backoff"
+        }
+      ]
+    },
+    {
+      "name": "sdk-stopped",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/sdk/connection",
+          "value": "stopped"
+        }
+      ]
+    },
+    {
+      "name": "sdk-failed",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/sdk/connection",
+          "value": "failed"
+        }
+      ]
+    },
+    {
+      "name": "cleanup-unknown",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/cleanup",
+          "value": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "cleanup-closed",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/cleanup",
+          "value": "closed"
+        }
+      ]
+    },
+    {
+      "name": "cleanup-interrupted",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/cleanup",
+          "value": "interrupted"
+        }
+      ]
+    },
+    {
+      "name": "cleanup-failed",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/cleanup",
+          "value": "failed"
+        }
+      ]
+    },
+    {
+      "name": "sourceShutdown-unknown",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/sourceShutdown",
+          "value": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "sourceShutdown-succeeded",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/sourceShutdown",
+          "value": "succeeded"
+        }
+      ]
+    },
+    {
+      "name": "sourceShutdown-failed",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/sourceShutdown",
+          "value": "failed"
+        }
+      ]
+    },
+    {
+      "name": "planRecoveryRequired-None",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/planRecoveryRequired",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "planRecoveryRequired-False",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/planRecoveryRequired",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "planRecoveryRequired-True",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/planRecoveryRequired",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "retentionRearmRequired-None",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/retentionRearmRequired",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "retentionRearmRequired-False",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/retentionRearmRequired",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "retentionRearmRequired-True",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/retentionRearmRequired",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "retentionJobPending-None",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/retentionJobPending",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "retentionJobPending-False",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/retentionJobPending",
+          "value": false
+        }
+      ]
+    },
+    {
+      "name": "retentionJobPending-True",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/retentionJobPending",
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "host-time--9007199254740991",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/observedAtMs",
+          "value": -9007199254740991
+        }
+      ]
+    },
+    {
+      "name": "host-time-0",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/observedAtMs",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "host-time-9007199254740991",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/observedAtMs",
+          "value": 9007199254740991
+        }
+      ]
+    },
+    {
+      "name": "host-time-None",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/host/observedAtMs",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "host-bad-time--9007199254740992",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/observedAtMs",
+          "value": -9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "host-bad-time-9007199254740992",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/observedAtMs",
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "host-bad-time-0.5",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/observedAtMs",
+          "value": 0.5
+        }
+      ]
+    },
+    {
+      "name": "host-bad-time-now",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/host/observedAtMs",
+          "value": "now"
+        }
+      ]
+    },
+    {
+      "name": "sdk-time--9007199254740991",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/sdk/observedAtMs",
+          "value": -9007199254740991
+        }
+      ]
+    },
+    {
+      "name": "sdk-time-0",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/sdk/observedAtMs",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "sdk-time-9007199254740991",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/sdk/observedAtMs",
+          "value": 9007199254740991
+        }
+      ]
+    },
+    {
+      "name": "sdk-time-None",
+      "base": "observed",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/sdk/observedAtMs",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "sdk-bad-time--9007199254740992",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/observedAtMs",
+          "value": -9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "sdk-bad-time-9007199254740992",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/observedAtMs",
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "sdk-bad-time-0.5",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/observedAtMs",
+          "value": 0.5
+        }
+      ]
+    },
+    {
+      "name": "sdk-bad-time-now",
+      "base": "observed",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/sdk/observedAtMs",
+          "value": "now"
+        }
+      ]
+    },
+    {
+      "name": "applied-future",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/commitVersion",
+          "value": 13
+        }
+      ]
+    },
+    {
+      "name": "activation-future",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/commitVersion",
+          "value": 13
+        }
+      ]
+    },
+    {
+      "name": "fence-future",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/commitVersion",
+          "value": 13
+        }
+      ]
+    },
+    {
+      "name": "enabled-null-mapping",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/mappingRevision",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "enabled-null-policy",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/retentionAppliedRevision",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "bound-mapping-ahead",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/mappingRevision",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "name": "bound-policy-ahead",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/retentionAppliedRevision",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "name": "current-mapping-null",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentMappingRevision",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "current-policy-null",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentRetentionAppliedRevision",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "activation-no-applied",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "activation-newer-than-applied",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/appliedRevision",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "same-activation-before-apply",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/commitVersion",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "name": "same-activation-at-apply",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/commitVersion",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "name": "active-with-end",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/endCommitVersion",
+          "value": 9
+        }
+      ]
+    },
+    {
+      "name": "active-wrong-session",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeSessionId",
+          "value": "wrong"
+        }
+      ]
+    },
+    {
+      "name": "active-no-session",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeSessionId",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "managed-session-without-activation",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "job-and-session",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeRetentionJobId",
+          "value": "job:1"
+        }
+      ]
+    },
+    {
+      "name": "null-cutoff-nonzero-commit",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/cutoffMs",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "cutoff-zero-commit",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/retentionFence/commitVersion",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "initial-snapshot-with-data",
+      "base": "active",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/snapshotCommit",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "disabled-bound-mapping",
+      "base": "disabled",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/mappingRevision",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "disabled-bound-policy",
+      "base": "disabled",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied/retentionAppliedRevision",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "disabled-current-activation",
+      "base": "disabled",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation",
+          "value": {
+            "activationId": "activation:1",
+            "appliedRevision": 2,
+            "commitVersion": 7,
+            "sessionId": "session:1",
+            "state": "closed",
+            "committedThrough": 0,
+            "endCommitVersion": 10
+          }
+        }
+      ]
+    },
+    {
+      "name": "terminal-no-end",
+      "base": "terminal",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/endCommitVersion",
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "terminal-equal-begin",
+      "base": "terminal",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/endCommitVersion",
+          "value": 7
+        }
+      ]
+    },
+    {
+      "name": "terminal-before-begin",
+      "base": "terminal",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/endCommitVersion",
+          "value": 6
+        }
+      ]
+    },
+    {
+      "name": "terminal-future",
+      "base": "terminal",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/endCommitVersion",
+          "value": 13
+        }
+      ]
+    },
+    {
+      "name": "terminal-active-session",
+      "base": "terminal",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeSessionId",
+          "value": "session:1"
+        }
+      ]
+    },
+    {
+      "name": "old-end-at-apply",
+      "base": "old",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/endCommitVersion",
+          "value": 5
+        }
+      ]
+    },
+    {
+      "name": "old-end-after-apply",
+      "base": "old",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/endCommitVersion",
+          "value": 6
+        }
+      ]
+    },
+    {
+      "name": "old-activation-active",
+      "base": "old",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation/state",
+          "value": "active"
+        }
+      ]
+    },
+    {
+      "name": "terminal-interrupted",
+      "base": "terminal",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/latestActivation/state",
+          "value": "interrupted"
+        }
+      ]
+    },
+    {
+      "name": "retention-job-without-active-session",
+      "base": "terminal",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/activeRetentionJobId",
+          "value": "job:1"
+        }
+      ]
+    },
+    {
+      "name": "fence-negative-max-time",
+      "base": "active",
+      "accepted": true,
+      "patch": [
+        {
+          "path": "/database/retentionFence/cutoffMs",
+          "value": -9007199254740991
+        }
+      ]
+    },
+    {
+      "name": "initial-currentMappingRevision",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentMappingRevision",
+          "value": 4
+        }
+      ]
+    },
+    {
+      "name": "initial-currentRetentionAppliedRevision",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/currentRetentionAppliedRevision",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "initial-activeSessionId",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeSessionId",
+          "value": "session:1"
+        }
+      ]
+    },
+    {
+      "name": "initial-activeRetentionJobId",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/activeRetentionJobId",
+          "value": "job:1"
+        }
+      ]
+    },
+    {
+      "name": "initial-applied",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/applied",
+          "value": {
+            "appliedRevision": 2,
+            "commitVersion": 5,
+            "desired": {
+              "version": 1,
+              "kind": "recordingPlan",
+              "planId": "recording:1",
+              "revision": 7,
+              "enabled": true,
+              "group": {
+                "groupId": "group:1",
+                "hubRef": "hub:1",
+                "periodMs": 1000,
+                "members": [
+                  {
+                    "memberId": "member:b",
+                    "externalName": " 温度 ",
+                    "valueType": "number"
+                  },
+                  {
+                    "memberId": "member:a",
+                    "externalName": "設備.運転",
+                    "valueType": "bool"
+                  }
+                ]
+              }
+            },
+            "mappingRevision": 2,
+            "retentionAppliedRevision": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "initial-latestActivation",
+      "base": "response",
+      "accepted": false,
+      "patch": [
+        {
+          "path": "/database/latestActivation",
+          "value": {
+            "activationId": "activation:1",
+            "appliedRevision": 2,
+            "commitVersion": 7,
+            "sessionId": "session:1",
+            "state": "active",
+            "committedThrough": 0,
+            "endCommitVersion": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "normalized-request-number",
+      "base": "request",
+      "accepted": true,
+      "json": "{\"version\": 1e0, \"kind\": \"recordingInspectionRequest\", \"requestId\": \"request:1\", \"context\": {\"version\": 1e0, \"kind\": \"recordingManagementContext\", \"contextId\": \"context:1\", \"projectId\": \" プロジェクト\\r\\nA \", \"projectRevision\": 2.0, \"deploymentId\": \"deployment:1\", \"storeId\": \"store:1\", \"historianNamespace\": null}}"
+    },
+    {
+      "name": "normalized-response-number",
+      "base": "observed",
+      "accepted": true,
+      "json": "{\"version\": 1.0, \"kind\": \"recordingInspectionResponse\", \"request\": {\"version\": 1.0, \"kind\": \"recordingInspectionRequest\", \"requestId\": \"request:1\", \"context\": {\"version\": 1.0, \"kind\": \"recordingManagementContext\", \"contextId\": \"context:1\", \"projectId\": \" プロジェクト\\r\\nA \", \"projectRevision\": 2, \"deploymentId\": \"deployment:1\", \"storeId\": \"store:1\", \"historianNamespace\": null}}, \"database\": {\"state\": \"available\", \"snapshotCommit\": 12, \"currentMappingRevision\": 4, \"currentRetentionAppliedRevision\": 3, \"applied\": {\"appliedRevision\": 2, \"commitVersion\": 5, \"desired\": {\"version\": 1.0, \"kind\": \"recordingPlan\", \"planId\": \"recording:1\", \"revision\": 7, \"enabled\": true, \"group\": {\"groupId\": \"group:1\", \"hubRef\": \"hub:1\", \"periodMs\": 1000, \"members\": [{\"memberId\": \"member:b\", \"externalName\": \" 温度 \", \"valueType\": \"number\"}, {\"memberId\": \"member:a\", \"externalName\": \"設備.運転\", \"valueType\": \"bool\"}]}}, \"mappingRevision\": 2, \"retentionAppliedRevision\": 1}, \"latestActivation\": {\"activationId\": \"activation:1\", \"appliedRevision\": 2, \"commitVersion\": 7, \"sessionId\": \"session:1\", \"state\": \"active\", \"committedThrough\": -0.0, \"endCommitVersion\": null}, \"activeSessionId\": \"session:1\", \"activeRetentionJobId\": null, \"retentionFence\": {\"cutoffMs\": -100, \"commitVersion\": 4}}, \"host\": {\"state\": \"observed\", \"observedAtMs\": -9.007199254740991e15, \"runRef\": null, \"sessionId\": \"session:other\", \"phase\": \"running\", \"stopRequested\": false, \"issue\": \"none\", \"cleanup\": \"unknown\", \"sourceShutdown\": \"unknown\", \"planRecoveryRequired\": null, \"retentionRearmRequired\": null, \"retentionJobPending\": null}, \"sdk\": {\"state\": \"observed\", \"observedAtMs\": -9.007199254740991e15, \"connection\": \"backoff\"}}"
+    },
+    {
+      "name": "lone-surrogate",
+      "base": "context",
+      "accepted": false,
+      "json": "{\"version\": 1, \"kind\": \"recordingManagementContext\", \"contextId\": \"context:1\", \"projectId\": \"\\ud800\", \"projectRevision\": 2, \"deploymentId\": \"deployment:1\", \"storeId\": \"store:1\", \"historianNamespace\": null}"
+    },
+    {
+      "name": "over-byte-131072",
+      "base": "response",
+      "accepted": false,
+      "build": "bytes",
+      "count": 131073
+    },
+    {
+      "name": "over-byte-1048576",
+      "base": "response",
+      "accepted": false,
+      "build": "bytes",
+      "count": 1048577
+    },
+    {
+      "name": "over-node-4096",
+      "base": "response",
+      "accepted": false,
+      "build": "nodes",
+      "count": 4096
+    },
+    {
+      "name": "over-node-16384",
+      "base": "response",
+      "accepted": false,
+      "build": "nodes",
+      "count": 16384
+    },
+    {
+      "name": "over-depth",
+      "base": "response",
+      "accepted": false,
+      "build": "depth",
+      "count": 33
+    }
+  ],
+  "comparisons": [
+    {
+      "name": "unavailable-with-local",
+      "base": "unavailable",
+      "expected": {
+        "kind": "unavailable"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 7,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "unavailable-without-local",
+      "base": "unavailable",
+      "expected": {
+        "kind": "unavailable"
+      }
+    },
+    {
+      "name": "both-absent",
+      "base": "response",
+      "expected": {
+        "kind": "absent"
+      }
+    },
+    {
+      "name": "local-absent",
+      "base": "active",
+      "expected": {
+        "kind": "localAbsent"
+      }
+    },
+    {
+      "name": "not-applied",
+      "base": "response",
+      "expected": {
+        "kind": "notApplied"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 7,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "matches",
+      "base": "active",
+      "expected": {
+        "kind": "matches"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 7,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "different-plan",
+      "base": "active",
+      "expected": {
+        "kind": "differentPlan"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "other",
+        "revision": 7,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "content-conflict",
+      "base": "active",
+      "expected": {
+        "kind": "sameRevisionConflict"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 7,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "other",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "CRLF-conflict",
+      "base": "active",
+      "expected": {
+        "kind": "sameRevisionConflict"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 7,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度\r\n",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "unicode-conflict",
+      "base": "active",
+      "expected": {
+        "kind": "sameRevisionConflict"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 7,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": "é",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "member-order",
+      "base": "active",
+      "expected": {
+        "kind": "matches"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 7,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            },
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "newerTrue",
+      "base": "active",
+      "expected": {
+        "kind": "localNewer",
+        "sameContent": true
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 8,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "newerFalse",
+      "base": "active",
+      "expected": {
+        "kind": "localNewer",
+        "sameContent": false
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 8,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1100,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "olderTrue",
+      "base": "active",
+      "expected": {
+        "kind": "localOlder",
+        "sameContent": true
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 6,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "olderFalse",
+      "base": "active",
+      "expected": {
+        "kind": "localOlder",
+        "sameContent": false
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 6,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1100,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "disabled-matches",
+      "base": "disabled",
+      "expected": {
+        "kind": "matches"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 7,
+        "enabled": false,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "enabled-disabled-conflict",
+      "base": "disabled",
+      "expected": {
+        "kind": "sameRevisionConflict"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 7,
+        "enabled": true,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "disabled-not-stop",
+      "base": "response",
+      "expected": {
+        "kind": "notApplied"
+      },
+      "local": {
+        "version": 1,
+        "kind": "recordingPlan",
+        "planId": "recording:1",
+        "revision": 7,
+        "enabled": false,
+        "group": {
+          "groupId": "group:1",
+          "hubRef": "hub:1",
+          "periodMs": 1000,
+          "members": [
+            {
+              "memberId": "member:b",
+              "externalName": " 温度 ",
+              "valueType": "number"
+            },
+            {
+              "memberId": "member:a",
+              "externalName": "設備.運転",
+              "valueType": "bool"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "requests": [
+    {
+      "name": "same",
+      "base": "request",
+      "expected": true
+    },
+    {
+      "name": "reordered-numeric",
+      "base": "request",
+      "json": "{\"context\": {\"version\": 1, \"kind\": \"recordingManagementContext\", \"contextId\": \"context:1\", \"projectId\": \" プロジェクト\\r\\nA \", \"projectRevision\": 2e0, \"deploymentId\": \"deployment:1\", \"storeId\": \"store:1\", \"historianNamespace\": null}, \"requestId\": \"request:1\", \"kind\": \"recordingInspectionRequest\", \"version\": 1}",
+      "expected": true
+    },
+    {
+      "name": "/requestId",
+      "base": "request",
+      "patch": [
+        {
+          "path": "/requestId",
+          "value": "request:2"
+        }
+      ],
+      "expected": false
+    },
+    {
+      "name": "/context/contextId",
+      "base": "request",
+      "patch": [
+        {
+          "path": "/context/contextId",
+          "value": "context:2"
+        }
+      ],
+      "expected": false
+    },
+    {
+      "name": "/context/projectId",
+      "base": "request",
+      "patch": [
+        {
+          "path": "/context/projectId",
+          "value": "other"
+        }
+      ],
+      "expected": false
+    },
+    {
+      "name": "/context/projectRevision",
+      "base": "request",
+      "patch": [
+        {
+          "path": "/context/projectRevision",
+          "value": 3
+        }
+      ],
+      "expected": false
+    },
+    {
+      "name": "/context/deploymentId",
+      "base": "request",
+      "patch": [
+        {
+          "path": "/context/deploymentId",
+          "value": "other"
+        }
+      ],
+      "expected": false
+    },
+    {
+      "name": "/context/storeId",
+      "base": "request",
+      "patch": [
+        {
+          "path": "/context/storeId",
+          "value": "other"
+        }
+      ],
+      "expected": false
+    },
+    {
+      "name": "/context/historianNamespace",
+      "base": "request",
+      "patch": [
+        {
+          "path": "/context/historianNamespace",
+          "value": "history:1"
+        }
+      ],
+      "expected": false
+    }
+  ]
+}

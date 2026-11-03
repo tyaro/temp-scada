@@ -646,8 +646,10 @@ native7新規（`recording_plan/resume/tests.rs`）・SDK4新規（`recorder_sou
 
 `designer/RecordingPlanDialog.svelte`はowned draftとdirty保護、最大8member、数値の明示入力と外部名の無操作保持を持つ。AppはrequestにProject object/世代/画面/modeを束縛し、各callbackの元requestを照合する。論理資格を閉じた後もfocus復帰用viewを一枠だけ保持し、Bantoのopen→closed遷移を通す。次のopenで新しいdraftを作り、Project置換でviewも破棄する。`designer-actions.ts`がFile menuと常設メニュー、AppのProject設定がsidebar入口を提供する。`recording-plan-edit.test.ts`の27件は増版/no-op/対象/Undo/数値・文字列を、`e2e/recording-plan-editor.spec.ts`は通常Appの編集寿命・両theme・原子保存と入力保護を検証する。
 
-## 記録管理状態の読取契約設計（H5d3、未実装）
+## 記録管理状態の共通契約（H5d3a）
 
-[Astra詳細契約](../design/runtime/historian-recording-management.md)は新しい管理表示DTO、要求対象照合、安全なerrorと有限controller／serviceの責務を定める。現`RecordingResumeState`、`RecordingHostStatus`、両guard snapshotはnative in-process型であり、この設計のbrowser向け契約を実装済みと扱わない。後続の共通JSON validatorとfixtureは既存H5a/H1 resourceを再利用し、runtime→表示DTOの投影はnative根拠と未提供項目を明示して接続する。
+設計は[管理状態の読取契約](../design/runtime/historian-recording-management.md)。共有schemaは`crates/scada-model/schema/recording-management.schema.json`で、H1 ID／H5a desired resourceをローカル登録する。Project schemaとは独立している。Rustの公開入口は`recording_management`で、private Value wrapperとpure validator、`semantic.rs`のDB内整合、`comparison.rs`のdesired比較・全文request一致に分ける。
 
-現Historyの`HistoryWorkspace.svelte`／`history/presentation.ts`はApp常設controller・Abort非協力時の物理枠保持の参考であり、今回変更しない。記録管理controller・通常Appの管理表示は後続で、`RecordingPlanDialog`は引き続き希望設定のローカル編集だけを担当する。
+TSの公開入口は`lib/recording-management-contract.ts`。`recording-management/types.ts`はreadonly DTO、`semantic.ts`はschema検査後のDB整合、`recording-plan-comparison.ts`は編集とも共用する固定field本文比較。`history/owned-json.ts`が有限JSONを所有し、root／nested request・contextとH5a desiredへ独立予算を使う。Host／SDKは別時点であり、DBとのsession一致やRunningから接続状態を導出しない。
+
+`examples/recording-management-cases.json`は受理447・比較18・全文request9を共有する。Rust `recording_management/tests.rs`、TS `recording-management-contract.test.ts`と`__fixtures__/recording-management-cases.ts`、`e2e/recording-management-contract.spec.ts`で同じ期待値、H5a139のネスト、予算端点・所有権を確認する。TS比較はunknownを再検証し、Rust比較は検証済みwrapperのみ。service／controller／通常App管理表示／native projectionはd3b以降であり、このmoduleから副作用を呼ばない。
