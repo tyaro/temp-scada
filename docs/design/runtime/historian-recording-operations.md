@@ -1,6 +1,6 @@
 # 記録計画の明示管理操作契約
 
-状態: **H5d4の採用設計・未実装**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。H5d3a/bの読取DTO・optional service・通常Appの管理状態表示は実装済み。本書は操作境界の設計であり、操作serviceや製品transportを実装済みとは扱わない。
+状態: **H5d4aの純粋JSON契約を実装、d4b/cは未実装**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。操作・結果照会のschema、Rust／TypeScript validatorと全文一致を提供する。操作service・controller・UI・native adapter・製品transportは後続。
 
 ## 1. 初回scopeとPR分割
 
@@ -12,7 +12,7 @@
 | H5d4b | 外部ownerを前提とするoptional操作capability、有限なApp操作monitor、三段階UI、test-only service注入による通常App受入 | 実native接続、製品transport、結果不明の自動解消 |
 | H5d4c | supervisorへのprojection／opaque handle対応、所有・join・receipt再照合のnative adapterを別途実装・隔離環境で受入    | 認証・製品transport・実Hub/S7/本番DB            |
 
-直近はd4aを推奨する。独立contractだけならProject 0.37.0／DB7／H1／SDK／依存版を変えず、同期拒否・受付・commit・不明の意味を実装前に固定できる。d4bのmock受入をnative mutationの完成と称さない。d4cで必要なread-only reconciliationやowner公開面は実装前レビューし、既存APIに存在するかのように先行記載しない。
+d4aで独立contractを実装し、Project 0.37.0／DB7／H1／SDK／依存版を変えず、同期拒否・受付・commit・不明の意味を共通検証できる。次はd4bの外部owner・注入service・操作表示へ進む。d4bのmock受入をnative mutationの完成と称さない。d4cで必要なread-only reconciliationやowner公開面は実装前レビューし、既存APIに存在するかのように先行記載しない。
 
 新mapping発行・自動登録、Hub identity解決、fresh SDK解決／resume、initialIdle／新規store bootstrap、複数group・自動schedulerは初回capabilityに含めない。初期設定は現nativeのHost構築前手順に留め、browser bootstrapは別capabilityと受入を要する。apply成功後はpause済みのままで、Runningへ自動遷移しない。
 
@@ -279,10 +279,20 @@ UIは「検査」「この元runを停止してjoin」「同候補を適用」�
 
 ## 9. 予算・検証・受入
 
-d4aのschema候補は`crates/scada-model/schema/recording-operations.schema.json`。Context/Change/OperationRequest/ReconciliationRequestは各128KiB・4096node、OperationResult/ReconciliationResultは各256KiB・8192node、depth32、nested desiredはH5aの64KiB/4096nodeを独立適用する。これは新JS/JSON境界の予算であり、現native ApplyRecordingPlanRequestの128KiB/node8192と同一の制限とは扱わない。adapterは両境界を順に満たす必要がある。d3 ContextとH5a/H1 schemaをローカルresource登録し、network fetchしない。全objectは記載fieldをすべて必須とし、nullable fieldの省略とunionの別branchのfieldを拒否する。scalar／blank／safe整数／非JSON／未知field拒否、owned/frozen、compact integer byte計数はd3aと共通化する。opaque handleやPromiseはこのJSON validatorの対象外である。
+d4aのschemaは`crates/scada-model/schema/recording-operations.schema.json`。Context/Change/OperationRequest/ReconciliationRequestは各128KiB・4096node、OperationResult/ReconciliationResultは各256KiB・8192node、depth32、nested desiredはH5aの64KiB/4096nodeを独立適用する。これは新JS/JSON境界の予算であり、現native ApplyRecordingPlanRequestの128KiB/node8192と同一の制限とは扱わない。adapterは両境界を順に満たす必要がある。d3 ContextとH5a/H1 schemaをローカルresource登録し、network fetchしない。全objectは記載fieldをすべて必須とし、nullable fieldの省略とunionの別branchのfieldを拒否する。scalar／blank／safe整数／非JSON／未知field拒否、owned/frozen、compact integer byte計数はd3aと共通化する。opaque handleやPromiseはこのJSON validatorの対象外である。
 
 d4aにReconciliationRequest/Resultも含め、元apply全文echo、receiptFound＋unknown/true、receiptFound＋confirmed/true、notFoundが再送許可でないこと、異なるrequest/receipt、二重照会ID、late結果統合をfixture／後続state testで分担する。共有fixtureでは全stage/result組合せ、null期待版、disabled、MAX_SAFE増版境界、receipt各field取り違え、台帳PlanRefとdesired版の混同、別run/session/context、Replay旧receipt、quiescence/recovery/effectの不整合、秘密field、Unicode・予算を検証する。JS/nativeのrequest全文比較ではobject key順と1/1.0等の数値表記差を無視するが、member表示順は保持して一致を要求する。serviceは保存した元owned requestをechoし、native canonical出力から表示順を再構築しない。native canonical同値を根拠にUIの固定候補を別本文へ差し替えない。
 
 d4bの通常App受入は制御可能なtest serviceで行う。Candidate後も録画継続を示す独立mock状態、Replay/errorでpause未呼出し、別操作の明示clickが必要なこと、旧handle・別service拒否、no queue、同期待版本文の固定、pause待機timeout、取消後late success、apply結果不明→明示reconcile→receipt確認でもlatch保持、notFound後も新apply拒否、照会timeout後late結果と元completion不変、旧Project/service monitor、close/reopen/unmount中のowner保持、両themeとProject保存不変を確認する。異常Promiseを早期settleする不正adapterを物理安全にできるとは主張しない。
 
 d4cでは隔離SQLite＋mockHubで実supervisorへ接続する。Running中preflight→pause正常join→apply commit、既存receipt Replayで記録継続、検査後CAS競合、source shutdown不良、FULL/rollback/commit後応答喪失、join取消・Dropとwriter lock、異常時recovery latch、旧receiptと現在headの相違を受け入れる。reconciliation専用readのrow/bytes/VM/deadline・reader二枠を測定し、未知にした項目を推測で正常へ変換しない。実環境・SDK更新・認証・transportの保留を維持する。
+
+## 10. H5d4aの実装入口
+
+`recording-operations-contract.ts`がTSの公開入口で、`parseRecordingOperationsDocument`／`validateRecordingOperations`と、Context／ChangeRequest／OperationRequest／OperationResult／ReconciliationRequest／ReconciliationResultの各`parseRecording…`を提供する。unknownから所有・deep freezeし、不正入力は有限の`Recording operations: invalid`へまとめる。種類ごとのroot予算と、nested request／change／context／H5a desiredの独立予算を適用し、targetはd3のContextだけを受け入れる。
+
+`recording-operations/types.ts`がreadonly DTO、`semantic.ts`がschema後の版・receipt・stage・quiescence／recovery／effect整合を所有する。`sameRecordingOperationsContext`／`sameRecordingChangeRequest`／`sameRecordingOperationRequest`／`sameRecordingReconciliationRequest`は両入力を再検証し、object key順と整数表記差だけを無視して、member表示順を含む全文を比較する。H5aの意味比較とは使い分ける。
+
+Rustの公開入口は`scada_model::recording_operations`。`validate_recording_operations(&Value)`と6種類のprivate Value wrapperの`from_value`／`as_value`を提供する。`semantic.rs`で意味検査、`equality.rs`の`same_recording_*`で検証済みwrapper同士の全文一致を行う。targetへ既存d3検証、desiredへH5a検証を再適用し、resourceはローカル登録する。
+
+`examples/recording-operations-cases.json`の受理925件と全文一致102件を共有する。H5a139件を5種類のenvelopeへ包む695件、d3の全447件をtargetへ包むContext以外拒否の検査、byte／node／depthと非JSON・所有権／freezeも両言語／browserで確認する。重複照会ID、既知receipt保持、latchのOR、物理owner gateなどの状態付き規則はd4b/cの責務であり、このpure validatorが実行済みの証拠を与えるとは扱わない。

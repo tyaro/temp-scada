@@ -1,0 +1,477 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://temp-scada.invalid/schema/recording-operations-v1.json",
+  "title": "Pure recording operations contract v1",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/context"
+    },
+    {
+      "$ref": "#/$defs/change"
+    },
+    {
+      "$ref": "#/$defs/operationRequest"
+    },
+    {
+      "$ref": "#/$defs/operationResult"
+    },
+    {
+      "$ref": "#/$defs/reconciliationRequest"
+    },
+    {
+      "$ref": "#/$defs/reconciliationResult"
+    }
+  ],
+  "$defs": {
+    "id": {
+      "$ref": "https://temp-scada.invalid/schema/history-contract-v1.json#/$defs/id"
+    },
+    "u0": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "u1": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "hex64": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "kind",
+        "target",
+        "capabilityId",
+        "recordingRunRef",
+        "sessionId"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingOperationsContext"
+        },
+        "target": {
+          "$ref": "https://temp-scada.invalid/schema/recording-management-v1.json#/$defs/context"
+        },
+        "capabilityId": {
+          "$ref": "#/$defs/id"
+        },
+        "recordingRunRef": {
+          "$ref": "#/$defs/id"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/id"
+        }
+      }
+    },
+    "apply": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId",
+        "desired",
+        "expectedAppliedRevision",
+        "expectedMappingRevision",
+        "expectedRetentionAppliedRevision"
+      ],
+      "properties": {
+        "requestId": {
+          "$ref": "#/$defs/id"
+        },
+        "desired": {
+          "$ref": "https://temp-scada.invalid/schema/recording-plan-v1.json"
+        },
+        "expectedAppliedRevision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/u1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expectedMappingRevision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/u1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expectedRetentionAppliedRevision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/u1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "changeId", "context", "apply"],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingChangeRequest"
+        },
+        "changeId": {
+          "$ref": "#/$defs/id"
+        },
+        "context": {
+          "$ref": "#/$defs/context"
+        },
+        "apply": {
+          "$ref": "#/$defs/apply"
+        }
+      }
+    },
+    "operationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "operationId", "stage", "change"],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingOperationRequest"
+        },
+        "operationId": {
+          "$ref": "#/$defs/id"
+        },
+        "stage": {
+          "enum": ["preflight", "pauseJoin", "apply"]
+        },
+        "change": {
+          "$ref": "#/$defs/change"
+        }
+      }
+    },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId",
+        "appliedRevision",
+        "commitVersion",
+        "desiredPlanId",
+        "desiredRevision",
+        "desiredHash",
+        "resolvedConfigHash",
+        "plan",
+        "mappingRevision",
+        "retentionAppliedRevision",
+        "enabled"
+      ],
+      "properties": {
+        "requestId": {
+          "$ref": "#/$defs/id"
+        },
+        "appliedRevision": {
+          "$ref": "#/$defs/u1"
+        },
+        "commitVersion": {
+          "$ref": "#/$defs/u1"
+        },
+        "desiredPlanId": {
+          "$ref": "#/$defs/id"
+        },
+        "desiredRevision": {
+          "$ref": "#/$defs/u1"
+        },
+        "desiredHash": {
+          "$ref": "#/$defs/hex64"
+        },
+        "resolvedConfigHash": {
+          "$ref": "#/$defs/hex64"
+        },
+        "plan": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["planId", "revision"],
+          "properties": {
+            "planId": {
+              "$ref": "#/$defs/id"
+            },
+            "revision": {
+              "$ref": "#/$defs/u1"
+            }
+          }
+        },
+        "mappingRevision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/u1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retentionAppliedRevision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/u1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "error": {
+      "enum": [
+        "invalidRequest",
+        "busy",
+        "wrongOwner",
+        "staleRun",
+        "conflict",
+        "noCandidate",
+        "pauseRequired",
+        "consumed",
+        "uncleanPause",
+        "retentionBlocked",
+        "planRecoveryRequired",
+        "cancelled",
+        "deadlineExceeded",
+        "budgetExceeded",
+        "corruptData",
+        "needsReopen",
+        "readerUnusable",
+        "sourceFailure",
+        "workerFailure",
+        "projectionFailed",
+        "internal"
+      ]
+    },
+    "outcome": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "snapshotCommit", "activeSessionId"],
+          "properties": {
+            "kind": {
+              "const": "candidate"
+            },
+            "snapshotCommit": {
+              "$ref": "#/$defs/u0"
+            },
+            "activeSessionId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "snapshotCommit", "receipt"],
+          "properties": {
+            "kind": {
+              "const": "replay"
+            },
+            "snapshotCommit": {
+              "$ref": "#/$defs/u0"
+            },
+            "receipt": {
+              "$ref": "#/$defs/receipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "sessionId"],
+          "properties": {
+            "kind": {
+              "const": "paused"
+            },
+            "sessionId": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "receipt"],
+          "properties": {
+            "kind": {
+              "const": "applied"
+            },
+            "receipt": {
+              "$ref": "#/$defs/receipt"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "error", "effect"],
+          "properties": {
+            "kind": {
+              "const": "failed"
+            },
+            "error": {
+              "$ref": "#/$defs/error"
+            },
+            "effect": {
+              "enum": ["notDispatched", "notCommitted", "unconfirmed"]
+            }
+          }
+        }
+      ]
+    },
+    "operationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "kind",
+        "request",
+        "outcome",
+        "quiescence",
+        "recoveryRequired"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingOperationResult"
+        },
+        "request": {
+          "$ref": "#/$defs/operationRequest"
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "quiescence": {
+          "enum": ["confirmed", "unknown"]
+        },
+        "recoveryRequired": {
+          "type": "boolean"
+        }
+      }
+    },
+    "reconciliationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "reconciliationId", "operation"],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingReconciliationRequest"
+        },
+        "reconciliationId": {
+          "$ref": "#/$defs/id"
+        },
+        "operation": {
+          "$ref": "#/$defs/operationRequest"
+        }
+      }
+    },
+    "reconciliationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "kind",
+        "request",
+        "outcome",
+        "quiescence",
+        "recoveryRequired"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingReconciliationResult"
+        },
+        "request": {
+          "$ref": "#/$defs/reconciliationRequest"
+        },
+        "outcome": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "receipt"],
+              "properties": {
+                "kind": {
+                  "const": "receiptFound"
+                },
+                "receipt": {
+                  "$ref": "#/$defs/receipt"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind"],
+              "properties": {
+                "kind": {
+                  "const": "notFound"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "error"],
+              "properties": {
+                "kind": {
+                  "const": "failed"
+                },
+                "error": {
+                  "$ref": "#/$defs/error"
+                }
+              }
+            }
+          ]
+        },
+        "quiescence": {
+          "enum": ["confirmed", "unknown"]
+        },
+        "recoveryRequired": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
