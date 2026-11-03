@@ -76,6 +76,10 @@ pub trait SnapshotSource {
 #[derive(Debug)]
 pub enum RecorderStartError {
     InvalidConfig,
+    AlreadyActivated,
+    ManagedBindingMismatch,
+    /// Activation may have committed. Recover its receipt before any explicit restart.
+    ActivationUnconfirmed(StoreError),
     Clock(ClockError),
     Store(StoreError),
 }

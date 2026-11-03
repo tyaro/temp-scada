@@ -155,6 +155,7 @@ docs/
 - [記録計画管理・適用と復元（H5a・H5b1〜2実装）](design/runtime/historian-recording-plan.md)
 - [記録計画の永続台帳・mapping登録・原子的apply（H5b1）](design/runtime/historian-recording-plan-ledger.md)
 - [記録開始と適用計画の原子的結合（H5b2）](design/runtime/historian-recording-activation.md)
+- [適用済み計画からのRecorder／Host開始（H5c1）](design/runtime/historian-managed-recorder.md)
 - [ChronoGazer資産の共通利用調査](reviews/chronogazer-historian-reuse.md)
 - [図面外の読取状態表示](design/equipment/slot-status-summary.md)
 - [共有Symbolの図形・配管の状態色追従](design/equipment/state-color-following.md)

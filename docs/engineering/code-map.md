@@ -597,3 +597,11 @@ native `json_contract.rs`がTrendと記録計画のcompact JSON byte・node・de
 `evidence::save_start`はconnectionと任意Budgetを受ける共通helperへ一般化し、独自transactionや採番を行わない。manual beginは従来のgateと検証順を維持し、activationは同transactionで予約／恒久metadataを照合後に未存在metadataと全member/sessionを保存する。`types.rs`のSessionState／SessionStatusへSerializeを追加したが、H1や製品transportの契約は変更しない。schema.sqlはDB7のactivation ledger/stateとepoch／first-use索引を所有する。
 
 `activation/tests.rs`と`tests/failures.rs`はnative20件（process worker含む）。通常開始・再apply・旧再送・restart、異なる8予約元の8member、4,096件上限、metadata欠落、FULL＋取消、cleanup拒否、各COMMIT境界を一時DBで検証する。既存query/manual/保持/hostを回帰し、browserはH1／desired契約を維持する。worker開始とSDK fresh pin、Runningの管理はH5cに残す。
+
+## managed計画からのRecorder開始（H5c1）
+
+`scada-historian/src/recorder/managed.rs`がManagedRecorderStartの純粋検証、既存activation拒否、同writer上の保存spec/PlanRef照合、clock anchorとnative activationを担当する。`recorder.rs`のmanual/managedは有限horizonとfrom_anchorを共用し、stepの絶対deadline・実測時刻・欠測／close／interruptを変更しない。新RecorderStartErrorはAlreadyActivated／ManagedBindingMismatch／ActivationUnconfirmedを区別する。
+
+`recording_host.rs::start_with`は両開始戦略で同じ所有・latch・clean-pause guardを使い、DB処理をblocking Workerへ渡す。`worker.rs::Start`が専用開始を選び、managed controlの取消tokenをrun全体へ共有する。成功receiptはRecordingCompletionへだけ保持し、watchの開始診断は有限固定文字列とする。SDK shutdown/join、取消中の所有とFaulted経路は共通である。
+
+`recorder/tests/managed.rs`の12件と、activation側の`tests/managed_recorder.rs`の実FULL1件がnative境界を受け入れる。32 originsの既存回帰は最大8memberの専用開始も確認する。runtime unit2件が開始前取消とlatch/純粋検証、integration6件がmockHub/実値保存・executor・shutdown・join取消/Busy・新domain・Drop/reader leaseを検証する。`tests/support/managed_recording.rs`は両runtime試験で使うnative計画fixtureだけを持ち、製品初期化へ流用しない。

@@ -4,7 +4,7 @@
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。H5b2でnativeのactivation／session原子bindingを実装し、supervisorとdesiredのProject保存を後続へ分ける。
+提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。H5b2のnative activation／session原子bindingはPR #46でworkへ統合済み。H5c1で適用済み計画からRecorder／Hostの専用開始まで接続し、設定変更supervisorとdesiredのProject保存を後続へ分ける。
 
 最新の作図改善の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（全体CI成功）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
@@ -619,3 +619,11 @@ managedな新規manual beginのgateは維持し、専用入口だけでbinding�
 新規20native（process worker含む）で、8memberの同一／異なる8予約元、CAS・再apply・旧再送・保持fence、4,096件容量、破損、FULL＋取消、panic／rollback拒否、COMMIT境界のprocess exit／再起動を受け入れる。開始commitはSDK/workerのRunningを意味しない。次のH5cで、実clock取得点の専用開始戦略、停止前preflight・stop／join・fresh SDK pin・明示activateと再起動制御を接続する。Project/UIはH5dである。
 
 H5b1の追加レビュー修正を取り込んだ最終ローカル受入はRust workspace437件・Clippy／rustfmtが成功。既存契約のChromium8件と整形・文書リンクを確認し、全体CIは後続Ready for Review PRで確認する。Astraの最終read-onlyレビューに必須修正はない。
+
+## 適用済み計画からのRecorder／Host開始（H5c1、2026-11-03）
+
+[H5c1採用契約](../design/runtime/historian-managed-recorder.md)に従い、`Recorder::start_managed`と`RecordingHost::start_managed`を追加した。既存activation IDの流用を拒否し、保存済みの全descriptorとPlanRef、期待版を照合する。同じwriterを保持したまま実clockからanchorを一度だけ取得し、その開始点でnative activationを確定する。activation遅延は既存slot処理で欠測へ投影し、anchorを動かさない。
+
+開始成否が不確かなerrorはActivationUnconfirmedとして区別し、capture/appendや推測cleanupを開始しない。正常開始後はcompletionにreceiptを保持する。manual/managedは同じHostのowner/retention latch/clean-pause gate、SDK shutdown・join処理を使い、callerの取消tokenはrunの停止にも共有する。deadlineは開始専用で、稼働中timerへ転用しない。
+
+新規native13・runtime unit2／integration6でRust全458件、Clippy／fmt、既存契約Chromium8件が成功した。SDK mockの実値保存、join取消/Busy、正常停止後の新domain、Drop/reader lease、実FULL・応答喪失・時計・予定3600slotを受け入れ、Astraレビューに必須修正はない。DB7・Project0.36・H1・SDK/Banto・依存を維持する。通常Appの実接続は追加しない。次はH5c2のRunning中preflight、stop/join/apply/activate supervisorとfresh SDK解決の調整である。

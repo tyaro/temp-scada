@@ -219,3 +219,9 @@ DB formatを6へ進め、5と未知版は自動移行せず拒否する。`scada
 [activation詳細](historian-recording-activation.md)に従い、現在appliedとmapping／保持版を照合する専用開始入口を追加した。固定sessionとtimed evidence、開始receiptは同一transactionへ確定する。mutableなsession statusをreceiptと分け、再起動後もlatestを取得できる。旧要求の再送は元結果の照会であり、終了／中断sessionを再開しない。
 
 DB7へ進め、旧6も自動移行しない。既存manual beginのmanaged gateは維持する。nativeの`activation_supported=true`はbinding対応を示し、SDK/workerのRunningや製品接続を保証しない。次はH5cで、実clock取得時に専用開始を行うrecorder戦略と、停止前preflight／stop／join／fresh SDK pinを含むownerへ接続する。
+
+## H5c1の実装と受入（2026-11-03）
+
+[managed Recorder契約](historian-managed-recorder.md)に従い、nativeとHostへ専用開始を追加した。既存activationを拒否した後、同じwriterの保持下で固定spec/PlanRefを比較し、一度のclock anchorから専用activationとRecorderを構築する。開始成否不明のerrorは自動再送せず、正常成功receiptはcompletionに保持する。既存所有/保持gateとSDK shutdown/joinは共用する。
+
+H5cはc1専用開始とc2設定変更supervisorに分割する。c1のmock受入は完了し、Running中read-only preflight、stop/join後のCAS、applyとactivate失敗の分離、fresh SDK解決の調整はc2へ残す。DB7・Project/H1/依存は維持する。

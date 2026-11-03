@@ -1,8 +1,13 @@
 use std::sync::Arc;
 
 use scada_historian::{
-    recorder::{Recorder, RecorderConfig, RecorderState, SystemRecorderClock},
-    store::{query::CancellationToken, SqliteStore},
+    recorder::{
+        ManagedRecorderStart, Recorder, RecorderConfig, RecorderState, SystemRecorderClock,
+    },
+    store::{
+        query::{CancellationToken, QueryControl},
+        SqliteStore,
+    },
 };
 use tokio::{runtime::Handle, sync::watch};
 
@@ -11,7 +16,15 @@ use super::{
 };
 use crate::recorder_source::SdkRecorderSource;
 
+pub(super) enum Start {
+    Manual,
+    Managed {
+        binding: ManagedRecorderStart,
+        control: QueryControl,
+    },
+}
 pub(super) struct Worker {
+    pub start: Start,
     pub store: SqliteStore,
     pub config: RecorderConfig,
     pub clock: SystemRecorderClock,
@@ -28,6 +41,7 @@ pub(super) struct WorkerResult {
 impl Worker {
     pub fn run(self) -> WorkerResult {
         let Self {
+            start,
             mut store,
             config,
             mut clock,
@@ -39,31 +53,32 @@ impl Worker {
         } = self;
         let mut last_report = None;
         let mut start_error = None;
+        let mut activation_receipt = None;
         // A stop before this worker starts need not create a database session.
         if !cancel.is_cancelled() {
-            match Recorder::start(&mut store, config, &mut clock) {
-                Ok(mut recorder) => loop {
-                    let report = recorder.step(&mut store, &mut source, &mut clock, &cancel);
-                    let finished = report.state == RecorderState::Stopped;
-                    publish_report(&status, &run, &report);
-                    last_report = Some(report);
-                    if finished {
-                        break;
+            let started = match start {
+                Start::Manual => Recorder::start(&mut store, config, &mut clock).map(|r| (r, None)),
+                Start::Managed { binding, control } => {
+                    Recorder::start_managed(&mut store, config, binding, &mut clock, &control)
+                        .map(|(r, a)| (r, Some(a)))
+                }
+            };
+            match started {
+                Ok((mut recorder, receipt)) => {
+                    activation_receipt = receipt;
+                    loop {
+                        let report = recorder.step(&mut store, &mut source, &mut clock, &cancel);
+                        let finished = report.state == RecorderState::Stopped;
+                        publish_report(&status, &run, &report);
+                        last_report = Some(report);
+                        if finished {
+                            break;
+                        }
                     }
-                },
+                }
                 Err(error) => {
                     publish(&status, &run, |frame| {
-                        frame.start_error = Some(match &error {
-                            scada_historian::recorder::RecorderStartError::InvalidConfig => {
-                                "invalid recorder configuration".into()
-                            }
-                            scada_historian::recorder::RecorderStartError::Clock(_) => {
-                                "recorder clock failed".into()
-                            }
-                            scada_historian::recorder::RecorderStartError::Store(error) => {
-                                error.to_string()
-                            }
-                        });
+                        frame.start_error = Some(start_diagnostic(&error));
                         frame.phase = RecordingPhase::Stopping;
                     });
                     start_error = Some(error);
@@ -79,6 +94,7 @@ impl Worker {
         WorkerResult {
             store,
             completion: RecordingCompletion {
+                activation_receipt,
                 run,
                 progress,
                 report: last_report,
@@ -86,6 +102,22 @@ impl Worker {
                 source_shutdown: shutdown,
             },
         }
+    }
+}
+
+fn start_diagnostic(error: &scada_historian::recorder::RecorderStartError) -> String {
+    use scada_historian::recorder::RecorderStartError;
+    match error {
+        RecorderStartError::InvalidConfig => "invalid recorder configuration".into(),
+        RecorderStartError::AlreadyActivated => "recording activation already exists".into(),
+        RecorderStartError::ManagedBindingMismatch => {
+            "managed recording configuration mismatch".into()
+        }
+        RecorderStartError::ActivationUnconfirmed(_) => {
+            "recording activation unconfirmed; recovery required".into()
+        }
+        RecorderStartError::Clock(_) => "recorder clock failed".into(),
+        RecorderStartError::Store(error) => error.to_string(),
     }
 }
 

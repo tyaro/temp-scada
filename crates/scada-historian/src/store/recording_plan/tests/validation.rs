@@ -556,6 +556,61 @@ fn thirty_two_series_and_segment_origins_with_distinct_retention_versions_fit_de
         assert_eq!(store.apply_recording_plan(&a, &control()).unwrap(), receipt);
         last_apply = Some(a);
     }
+    // The recorder's preflight and activation also fit with these persisted origins.
+    struct Clock;
+    impl crate::recorder::RecorderClock for Clock {
+        fn read(&mut self) -> Result<crate::recorder::ClockReading, crate::recorder::ClockError> {
+            Ok(crate::recorder::ClockReading {
+                monotonic_ms: 0,
+                wall_time_ms: 10000,
+                clock_epoch: "managed-worst".into(),
+            })
+        }
+        fn wait_until(
+            &mut self,
+            _: u64,
+            _: &crate::store::query::CancellationToken,
+        ) -> Result<(), crate::recorder::ClockError> {
+            unreachable!()
+        }
+    }
+    let applied = store
+        .recording_plan_state(&control())
+        .unwrap()
+        .applied
+        .unwrap();
+    let config = crate::recorder::RecorderConfig {
+        session: SessionSpec {
+            session_id: "managed-worst".into(),
+            members: applied
+                .resolution
+                .unwrap()
+                .members
+                .into_iter()
+                .map(|m| m.identity)
+                .collect(),
+        },
+        plan: applied.receipt.plan,
+        period_ms: 1000,
+        slot_count: Some(1),
+        max_clock_skew_ms: 5,
+    };
+    let binding = crate::recorder::ManagedRecorderStart {
+        activation_id: "managed-worst".into(),
+        expected_applied_revision: 34,
+        expected_mapping_revision: 34,
+        expected_retention_applied_revision: 32,
+    };
+    let (_recorder, receipt) = crate::recorder::Recorder::start_managed(
+        &mut store,
+        config,
+        binding,
+        &mut Clock,
+        &control(),
+    )
+    .unwrap();
+    assert_eq!(receipt.spec.members.len(), 8);
+    store.interrupt_session("managed-worst").unwrap();
     // Joined reads must still validate historical desired/mapping/policy bodies.
     let before = counter(&store);
     store

@@ -437,6 +437,7 @@ fn prior_manual_clock_epochs_are_never_reused_by_managed_activation() {
     ));
 }
 mod failures;
+mod managed_recorder;
 
 #[test]
 fn eight_members_with_one_or_eight_first_use_origins_fit_activation_and_read_budgets() {

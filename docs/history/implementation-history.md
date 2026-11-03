@@ -14,6 +14,12 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## 適用済み計画からのRecorder／Host開始（H5c1、2026-11-03）
+
+PR #46はworkへマージ済み（f8364affec009e27f802df0018f87f510752cabb）。Astra主設計のnative/Host専用managed開始を実装した。保存済みactivationの流用を拒否し、同writerを保持して固定descriptor/PlanRefを照合、一度のclock anchorからnative activationとRecorderを構築する。曖昧commit失敗は記録を開始せず、成功receiptはjoin completionへ保持する。manualと同じlatch/所有/SDK shutdownを使う。
+
+native13・runtime unit2／integration6の新規21を含むRust458件、Clippy／fmtと契約Chromium8件が成功した。仮想1時間3600slot、activation遅延、応答喪失・取消・actual FULL、mock SDK実値・join/Dropを受け入れ、Astraのread-onlyレビューに必須修正はない。DB7/H1/Project/固定依存は維持し、設定変更supervisorはH5c2へ分けた。
+
 ## 記録計画とtimed sessionの原子binding（H5b2、2026-11-03）
 
 Astra主設計のnative専用activation、ID別／latest照会を追加した。現在applied・mapping・保持版とfence、新session/clock epochを照合し、固定spec・PlanRef・永久metadata・開始証拠・receipt・headを同時保存する。旧要求再送はterminal sessionでも元receiptを返し、再実行しない。DB7へ進め、旧6を含む自動migrationは追加しない。Project0.36・H1・SDK／Bantoと依存は維持した。
