@@ -1,6 +1,6 @@
 # Historian H5: 記録計画の保存・適用・稼働管理
 
-2026-11-03（日本時間）。**Astra主設計の採用契約。H5aの独立desired JSON契約は実装・ローカル受入済み。H5b1の永続台帳も実装・ローカル受入の対象。H5b2のnative activation bindingも実装した。supervisor、Project fieldは未実装。** [P5 §3](historian-trend-contract.md#3-記録設定の所有と配布)の責務を、現行の単一group実装へ段階的に接続する。実環境、Industrial/S7、実Hub、実DB、設定、資格情報にはアクセスしない。認証・製品transport・通常Appの実接続は引き続き保留する。
+2026-11-03（日本時間）。**Astra主設計の採用契約。H5aの独立desired JSON契約、H5b1の永続台帳、H5b2のnative activation binding、H5cの単一group supervisor／同snapshot診断／明示resumeはworkへ統合済み。Project fieldと編集・管理画面は未実装。H5dの詳細は[Project保存・編集・管理設計](historian-recording-project.md)へ分割した。** [P5 §3](historian-trend-contract.md#3-記録設定の所有と配布)の責務を、現行の単一group実装へ段階的に接続する。実環境、Industrial/S7、実Hub、実DB、設定、資格情報にはアクセスしない。認証・製品transport・通常Appの実接続は引き続き保留する。
 
 ## 採用範囲と現行との違い
 
@@ -189,8 +189,8 @@ sourceのcatalog/valuesは既存上限4096、bindings最大8。SDK/stop/joinの�
 | H5a（ローカル受入済み）  | 独立desired JSONのSchema、Rust/TS validator、共通fixture、browser module評価                   | 1/8 members、100ms/1h、同名別member拒否、disabledでも設定保持、Unicode/ID/64KiB境界、秘密field拒否、Project未変更                                                                             |
 | H5b1（ローカル受入済み） | format6管理台帳、明示mapping登録、CAS、stable receipt、復旧照会                                | 同ID同内容再送/別内容Conflict、別Project競合、immutable版、保持CAS、全8member原子性、未記録予約がqueryへ漏れない、FULL/process crash/commit後応答喪失。必要ならb1台帳/b2session bindingへ分割 |
 | H5b2（ローカル受入済み） | activation／timed sessionの原子binding、ID別／latest照会                                       | native20、CAS／再送／restart、新epoch、8member、永久metadata欠落拒否、FULL＋取消・process exit                                                                                                |
-| H5c                      | 単一group supervisor、stop/join/apply、明示activation、activation/session原子binding、起動復旧 | 旧停止後apply失敗、新適用後source失敗、取消join所有、latch保持、active保持jobでBusy、mockHub→SQLite、仮想absolute周期既存受入、再起動新session/epoch、同名再作成拒否                          |
-| H5d                      | Project desired保存/編集と管理状態表示、明示apply操作                                          | 別途Project versionを更新、保存で運転不変、desiredとappliedとRunningの差を表示、UI closeでrecorder継続、権限/製品transportは再開条件を満たすまでlocal injectionのみ                           |
+| H5c（work統合済み）      | 単一group supervisor、stop/join/apply、明示activation、activation/session原子binding、起動復旧 | 旧停止後apply失敗、新適用後source失敗、取消join所有、latch保持、active保持jobでBusy、mockHub→SQLite、仮想absolute周期既存受入、再起動新session/epoch、同名再作成拒否                          |
+| H5d（詳細設計採用）      | Project desired保存/編集と管理状態表示、明示apply操作                                          | 別途Project versionを更新、保存で運転不変、desiredとappliedとRunningの差を表示、UI closeでrecorder継続、権限/製品transportは再開条件を満たすまでlocal injectionのみ                           |
 
 H5aだけで記録計画の配布・実接続・原子適用が完成したとはしない。H5bの成功receiptとH5cの稼働確認を分けることで、再送や障害時に「保存された」と「記録している」を取り違えない。複数group、正式deployment設定、暦日保持、自動容量管理、認証/transport、実運用接続は後続である。
 

@@ -2028,3 +2028,11 @@ PR #49をworkへ統合（2f10622）し、Astra主設計の[H5c2c1](../design/run
 PR #50をworkへ統合（de1363c）し、Astra主設計の[c2c2](../design/runtime/historian-recording-supervisor.md)を実装した。plan/activation/recoveryを一つのread snapshotで照会し、既存reader一枠のinspectionと、caller提供coherent SDK解決に固定した明示resumeを追加した。診断で異常latchを解除せず、旧sessionやpinを再装着しない。複合照会の768行上限は、異なる8member群・32 originsで256行不足を再現した上で採用した。
 
 新規native7件・SDK解決4件・runtime単体10件・mockHub統合3件を含むRust workspace529件、既存H1／desired契約のChromium8件、全体Prettier・変更文書のローカルリンク768件を確認した。Clippyの未使用import／mutを除去し、warnings拒否とrustfmtも成功した。Astraの最終レビューに必須修正はない。caller提供snapshotの値を記録せず、新SDK ownerからの新値だけを保存する。全体CIはwork向けReady for Review PRで確認する。
+
+## Project記録計画の段階設計（H5d、2026-11-03）
+
+PR #51をworkへ統合（565fc44）し、Astra主設計の[H5d詳細設計](../design/runtime/historian-recording-project.md)を採用した。Projectの単一optional desired保存、原子的なローカル編集、管理状態読取、明示管理操作をd1〜d4へ分ける。Project保存・applied・RunningとUI／recorderの寿命を分離し、Undoや別Projectによるimmutable版競合を隠さない。
+
+今回は設計文書だけで、Project0.36.0・DB7・H1・SDK／Banto・依存・通常Appを変更していない。次はd1でProject0.37.0とTS／Rust／schema／サンプルの保存契約を揃える。
+
+文書整形・変更文書のローカルリンクと差分を確認した。Astra最終レビューのd4範囲表記を揃え、初回は既存runの明示applyまで、再開とinitialIdle bootstrapは後続とした。コード変更を含まないためローカルの全体試験は再実行せず、Ready for Review PRの全体CIを確認する。
