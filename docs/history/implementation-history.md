@@ -4,6 +4,14 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録管理状態の共通契約（H5d3a、2026-11-03）
+
+設計PR #55はworkへマージ済み（`8ffe5ac`）、統合後push CIの全7ジョブ成功。Astra詳細設計のContext／Request／Responseを独立schemaとRust／TSのpure境界へ実装した。受理447・H5aネスト139・比較18・全文request9の共有期待値で、DB内整合・必須null・閉集合error・負UTC／safe整数・文字列保存・member順非依存を確認する。比較はowned入力または入口での再検証を要求し、ProjectやDBを変更しない。
+
+共通JSONコピーのノード端点試験で、配列lengthを余分に数えていた判定を修正した。表示順・版・既存上限を保ち、編集と管理比較はpureな固定field比較を共用する。Project0.37.0／DB7／H1／固定SDK・Banto・依存は変更していない。管理UI／service／native projectionと製品接続は後続である。
+
+Rust workspace537件（新規6）、TS全2,578件（新規617）、型検査0error／0warning・build、関連Chromium20件（新規2）が成功した。Astraの最終実装レビューに必須修正はない。全体CIはReady for Review PRで確認する。
+
 ## 記録計画の停止前チェック（H5c2a、2026-11-03）
 
 Astra主設計の[preflight／supervisor分割](../design/runtime/historian-recording-supervisor.md)に従い、work H5b2を基準にnative read-only検査を実装した。保存済みmappingとapplyを別APIで扱い、共有prepareがwriteと同じ再送／版／本文／予約／容量を検査する。稼働中sessionだけを候補として許容し、writerを止めたり成功commitを生成したりしない。既存reader lease上限とsnapshot cleanupを維持し、停止・設定変更・再開の制御は後続へ分けた。

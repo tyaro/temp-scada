@@ -4,6 +4,7 @@ use serde_json::Value;
 mod connections;
 mod equipment;
 mod json_contract;
+pub mod recording_management;
 pub mod recording_plan;
 #[cfg(test)]
 mod recording_project_tests;

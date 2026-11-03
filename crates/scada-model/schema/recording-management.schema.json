@@ -1,0 +1,516 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://temp-scada.invalid/schema/recording-management-v1.json",
+  "title": "Read-only recording management contract v1",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/context"
+    },
+    {
+      "$ref": "#/$defs/request"
+    },
+    {
+      "$ref": "#/$defs/response"
+    }
+  ],
+  "$defs": {
+    "id": {
+      "$ref": "https://temp-scada.invalid/schema/history-contract-v1.json#/$defs/id"
+    },
+    "u0": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "u1": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "utcMs": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "kind",
+        "contextId",
+        "projectId",
+        "projectRevision",
+        "deploymentId",
+        "storeId",
+        "historianNamespace"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingManagementContext"
+        },
+        "contextId": {
+          "$ref": "#/$defs/id"
+        },
+        "projectId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "projectRevision": {
+          "$ref": "#/$defs/u1"
+        },
+        "deploymentId": {
+          "$ref": "#/$defs/id"
+        },
+        "storeId": {
+          "$ref": "#/$defs/id"
+        },
+        "historianNamespace": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "requestId", "context"],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingInspectionRequest"
+        },
+        "requestId": {
+          "$ref": "#/$defs/id"
+        },
+        "context": {
+          "$ref": "#/$defs/context"
+        }
+      }
+    },
+    "inspectionError": {
+      "enum": [
+        "unavailable",
+        "busy",
+        "cancelled",
+        "deadlineExceeded",
+        "budgetExceeded",
+        "corruptData",
+        "needsReopen",
+        "readerUnusable",
+        "projectionFailed",
+        "internal"
+      ]
+    },
+    "applied": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "appliedRevision",
+        "commitVersion",
+        "desired",
+        "mappingRevision",
+        "retentionAppliedRevision"
+      ],
+      "properties": {
+        "appliedRevision": {
+          "$ref": "#/$defs/u1"
+        },
+        "commitVersion": {
+          "$ref": "#/$defs/u1"
+        },
+        "desired": {
+          "$ref": "https://temp-scada.invalid/schema/recording-plan-v1.json"
+        },
+        "mappingRevision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/u1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retentionAppliedRevision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/u1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "activationId",
+        "appliedRevision",
+        "commitVersion",
+        "sessionId",
+        "state",
+        "committedThrough",
+        "endCommitVersion"
+      ],
+      "properties": {
+        "activationId": {
+          "$ref": "#/$defs/id"
+        },
+        "appliedRevision": {
+          "$ref": "#/$defs/u1"
+        },
+        "commitVersion": {
+          "$ref": "#/$defs/u1"
+        },
+        "sessionId": {
+          "$ref": "#/$defs/id"
+        },
+        "state": {
+          "enum": ["active", "closed", "interrupted"]
+        },
+        "committedThrough": {
+          "$ref": "#/$defs/u0"
+        },
+        "endCommitVersion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/u1"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "database": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "error"],
+          "properties": {
+            "state": {
+              "const": "unavailable"
+            },
+            "error": {
+              "$ref": "#/$defs/inspectionError"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "snapshotCommit",
+            "currentMappingRevision",
+            "currentRetentionAppliedRevision",
+            "applied",
+            "latestActivation",
+            "activeSessionId",
+            "activeRetentionJobId",
+            "retentionFence"
+          ],
+          "properties": {
+            "state": {
+              "const": "available"
+            },
+            "snapshotCommit": {
+              "$ref": "#/$defs/u0"
+            },
+            "currentMappingRevision": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/u1"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "currentRetentionAppliedRevision": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/u1"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "applied": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/applied"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "latestActivation": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/activation"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "activeSessionId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "activeRetentionJobId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "retentionFence": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["cutoffMs", "commitVersion"],
+              "properties": {
+                "cutoffMs": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/$defs/utcMs"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "commitVersion": {
+                  "$ref": "#/$defs/u0"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "host": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state"],
+          "properties": {
+            "state": {
+              "const": "unknown"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "observedAtMs",
+            "runRef",
+            "sessionId",
+            "phase",
+            "stopRequested",
+            "issue",
+            "cleanup",
+            "sourceShutdown",
+            "planRecoveryRequired",
+            "retentionRearmRequired",
+            "retentionJobPending"
+          ],
+          "properties": {
+            "state": {
+              "const": "observed"
+            },
+            "observedAtMs": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/utcMs"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "runRef": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "sessionId": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/id"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "phase": {
+              "enum": [
+                "idle",
+                "starting",
+                "running",
+                "stopping",
+                "finishedUnjoined",
+                "joined",
+                "faulted",
+                "noStore",
+                "retaining",
+                "managingPlan"
+              ]
+            },
+            "stopRequested": {
+              "type": "boolean"
+            },
+            "issue": {
+              "enum": [
+                "none",
+                "clock",
+                "source",
+                "store",
+                "invalidObservation",
+                "arithmeticOverflow",
+                "unclassified"
+              ]
+            },
+            "cleanup": {
+              "enum": ["unknown", "closed", "interrupted", "failed"]
+            },
+            "sourceShutdown": {
+              "enum": ["unknown", "succeeded", "failed"]
+            },
+            "planRecoveryRequired": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "retentionRearmRequired": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "retentionJobPending": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "sdk": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state"],
+          "properties": {
+            "state": {
+              "const": "unknown"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["state", "observedAtMs", "connection"],
+          "properties": {
+            "state": {
+              "const": "observed"
+            },
+            "observedAtMs": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/utcMs"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "connection": {
+              "enum": ["connecting", "live", "backoff", "stopped", "failed"]
+            }
+          }
+        }
+      ]
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "request", "database", "host", "sdk"],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingInspectionResponse"
+        },
+        "request": {
+          "$ref": "#/$defs/request"
+        },
+        "database": {
+          "$ref": "#/$defs/database"
+        },
+        "host": {
+          "$ref": "#/$defs/host"
+        },
+        "sdk": {
+          "$ref": "#/$defs/sdk"
+        }
+      }
+    }
+  }
+}
