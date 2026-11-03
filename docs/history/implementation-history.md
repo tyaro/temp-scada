@@ -4,6 +4,16 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録操作の共有native owner実装（H5d4c2、2026-11-04）
+
+設計PR #62はworkへマージ済み（`35290a1`）。Astra設計に沿い、共有native owner・受理前registry・preflight／明示pause/join／同候補applyとd4a投影をRust libraryへ実装した。管理ownerとclient寿命を分け、四枠credit予約、一実行／queueなし、Supervisor返却後の終端公開、同期discardと回復gateを伝えるhandoffを提供する。
+
+Runtime未pollでの終了やpanic、owner終了、source shutdown異常、投影不能時にも元handleと有限evidenceを保持し、新mutationを止める。Replayはapply成功へ昇格させず、整数表記をnative変換しても元Value／member順のechoを保持する。30件の単体と公開API／mock SDK2件を追加し、実記録継続・明示停止／join・apply後の非再開と履歴不変まで検証した。
+
+Rust workspace592件（新規32）、Clippy `-D warnings`／rustfmt、既存共通Chromium3件が成功。Astraの最終read-onlyレビューに必須修正はない。実SQLite FULLの原子性はHistorian既存試験、owner側のFULL伝播／latchは型付きprivate worker注入で担保する。runtime dev-dependencyとして既存pin rusqlite0.41.1を再利用し、production依存・各format／依存版を変えていない。
+
+c3の同owner内reconciliation、JS bridge、製品transportは後続。通常Appと実Hub／S7／本番DB、認証には接続していない。全体CIはReady for Review PRで確認する。
+
 ## 記録操作の共有native owner詳細設計（H5d4c2、2026-11-04）
 
 PR #61はworkへマージ済み（`b9f9d26`）。Astra主設計で、c2の管理owner／共有client、同期受付とnative実行開始の区別、単一dispatcher、元run/contextとopaque handle、有限registryと三段階投影を具体化した。今回は設計PRを先行し、共有ownerからapply receiptまでを一つの実装PRで受け入れる。c3の結果照会は別に残す。

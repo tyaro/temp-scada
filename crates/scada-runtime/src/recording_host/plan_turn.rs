@@ -125,7 +125,7 @@ impl RecordingHost {
         )
     }
 
-    fn start_plan_turn_with(
+    pub(super) fn start_plan_turn_with(
         &mut self,
         recording_run: &RecordingRun,
         intent: RecordingPlanTurnIntent,

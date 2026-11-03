@@ -54,7 +54,9 @@ impl QueryControl {
         })
     }
 
-    pub(in crate::store) fn validate(&self) -> Result<(), QueryError> {
+    /// Check caller limits without executing a query or changing its deadline.
+    /// Elapsed deadlines and cancellation are checked separately by the executor.
+    pub fn validate(&self) -> Result<(), QueryError> {
         let caps = QueryLimits::default();
         if self.deadline.saturating_duration_since(Instant::now()) > Duration::from_secs(10)
             || self.limits.max_decoded_rows == 0

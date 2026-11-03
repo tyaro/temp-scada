@@ -682,6 +682,10 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 
 `receipt/tests.rs`と`receipt/tests/failures.rs`は過去receipt、現在CASとの分離、並行commit、実FULL／応答喪失、保存証拠の破損、予算・取消・panicと既存leaseを検証する。`query/management.rs`の既存authorizer／cleanup試験でreadonlyとpoisoned readerを確認し、`recording_plan/tests/validation.rs`の8member／32origins試験で同じ256行上限を確認する。共有native ownerとregistryはc2、owner内read統合はc3に残し、browserへDB照会を直接公開しない。
 
-## 記録操作の共有native owner（H5d4c2、設計・未実装）
+## 記録操作の共有native owner（H5d4c2）
 
-[Astra詳細設計](../design/runtime/historian-recording-native-owner.md)で、予定module `scada_runtime::recording_operations`の管理owner／共有client、受理前registry、三段階dispatcher、d4a投影、回復gateを保つhandoffとc3読取の接点を定めた。新moduleとnative helperはまだ追加していない。既存`recording_host/supervisor.rs`／`plan_turn.rs`の所有・borrowed joinと、c1の独立readerを根拠とし、実装時に最小のgate helperを共有する。今回は設計・索引・計画の変更だけで、Rust／TS／schema／依存と通常Appを変更しない。
+公開入口は`scada_runtime::recording_operations`、実体は`recording_host/supervisor/operations`。`mod.rs`が共有gateとcached state、四枠予約後の受付、同期discard／handoffを担当し、`types.rs`がopaque token・immutable完了watch・有限errorとevidenceを定義する。`registry.rs`は役割付きID4096件と未使用credit、`projection.rs`はU1/nullのchecked変換・全文echo・d4a結果検証・typed error対応、`driver.rs`は一stageだけのSupervisor loan・native start/join・返却後の結果確定とDrop guardを所有する。
+
+`supervisor.rs`はinitとstart_preflightの純粋gateを`recording_operations_context`へ共有し、true方向だけの`latch_recording_operations_recovery`でowner-only blockをnativeへ伝える。Historianの`QueryControl::validate`を公開し、元予算の検査をruntimeへ複製しない。JS clockとのbridgeとc3 read統合は後続。
+
+`operations/tests.rs`と`registry.rs`の単体30件、`tests/recording_host/operations.rs`の公開API／SDK loopback2件で所有・期限・競合・失敗と履歴保持を確認する。既存native候補／worker起動のprivate seamを試験で共有し、runtime dev-dependencyだけで既存pinのrusqliteを使う。Historianの実FULL／rollback試験とownerの型付きFULL注入は区別する。公開test-support featureやproduction fault APIを設けない。

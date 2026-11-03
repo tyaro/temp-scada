@@ -14,6 +14,8 @@ serde_json.workspace = true
 tokio.workspace = true
 
 [dev-dependencies]
+# Reuse Historian's pinned SQLite types for private native-error injection only.
+rusqlite = { version = "=0.41.1", default-features = false, features = ["bundled", "hooks"] }
 jsonschema.workspace = true
 futures-util = { version = "0.3", features = ["sink"] }
 tokio-tungstenite = "0.29"

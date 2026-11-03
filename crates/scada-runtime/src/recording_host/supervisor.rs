@@ -1,4 +1,5 @@
 //! Owns one recording Host and one same-store preflight lease. Every step is explicit.
+pub mod operations;
 mod preflight;
 mod resume;
 pub use resume::{
@@ -115,11 +116,10 @@ impl RecordingSupervisor {
         self.check_run(run)?;
         Ok(self.host.join().await?)
     }
-    pub fn start_preflight(
-        &mut self,
-        intent: RecordingPlanTurnIntent,
-        control: QueryControl,
-    ) -> Result<PreflightRun, SupervisorError> {
+    /// Pure same-run management eligibility; no reader dispatch or SDK activity.
+    pub(crate) fn recording_operations_context(
+        &self,
+    ) -> Result<(RecordingRun, String), SupervisorError> {
         if self.resume.running.is_some() || self.resume.pending() {
             return Err(SupervisorError::Busy);
         }
@@ -154,6 +154,18 @@ impl RecordingSupervisor {
             .session_id
             .clone()
             .ok_or(SupervisorError::NoRecording)?;
+        Ok((recording_run, session_id))
+    }
+    /// Administrative handoff must not erase an owner-only recovery requirement.
+    pub(crate) fn latch_recording_operations_recovery(&mut self) {
+        self.host.plan_turn.recovery_required = true;
+    }
+    pub fn start_preflight(
+        &mut self,
+        intent: RecordingPlanTurnIntent,
+        control: QueryControl,
+    ) -> Result<PreflightRun, SupervisorError> {
+        let (recording_run, session_id) = self.recording_operations_context()?;
         intent.validate().map_err(SupervisorError::Request)?;
         let run = self.preflight.start(
             BoundRequest {
@@ -234,15 +246,26 @@ impl RecordingSupervisor {
         run: &PreflightRun,
         control: QueryControl,
     ) -> Result<RecordingPlanTurnRun, SupervisorError> {
+        self.execute_candidate_with(run, control, RecordingHost::start_recording_plan_turn)
+    }
+    fn execute_candidate_with(
+        &mut self,
+        run: &PreflightRun,
+        control: QueryControl,
+        start: impl FnOnce(
+            &mut RecordingHost,
+            &RecordingRun,
+            RecordingPlanTurnIntent,
+            QueryControl,
+        ) -> Result<RecordingPlanTurnRun, RecordingHostError>,
+    ) -> Result<RecordingPlanTurnRun, SupervisorError> {
         let bound = self.candidate(run)?.clone();
         match self.preflight.candidate {
             Some(CandidatePhase::Paused) => {}
             Some(CandidatePhase::Submitted) => return Err(SupervisorError::CandidateConsumed),
             _ => return Err(SupervisorError::PauseRequired),
         }
-        let turn =
-            self.host
-                .start_recording_plan_turn(&bound.recording_run, bound.intent, control)?;
+        let turn = start(&mut self.host, &bound.recording_run, bound.intent, control)?;
         self.preflight.candidate = Some(CandidatePhase::Submitted);
         Ok(turn)
     }

@@ -1389,6 +1389,7 @@ dependencies = [
  "banto-tagclient",
  "futures-util",
  "jsonschema",
+ "rusqlite",
  "scada-historian",
  "scada-model",
  "serde",
