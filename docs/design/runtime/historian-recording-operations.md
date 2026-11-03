@@ -317,4 +317,4 @@ OwnerViewの`active`は現在または最後に受理したstageのhandleであ�
 
 [元apply要求に対するreceipt読取の設計](historian-recording-receipt-reader.md)に沿い、c1で既存HistoryReaderの同snapshot・要求全文照合付きreceipt読取を実装した。writerを移管せず、保存証拠を検証してから元applyのcanonical全文を照合する。独立readのFound／Noneは物理完了・非commit確定・回復解除を表さない。
 
-c2で単一共有native owner・受理前registry・三段階操作と共通DTO投影、c3で同owner内の明示reconciliationと物理完了根拠の統合を行う。各詳細APIを実装前にAstraと設計・レビューする。c1だけでd4bの通常Appがnativeへ接続されたとは扱わない。認証・transport・実Hub／S7／本番DBの保留と各format／依存版を維持する。
+c2の[共有native owner詳細設計](historian-recording-native-owner.md)を確定した。設計PRに続く実装PRで、単一共有owner・受理前registry・三段階操作と共通DTO投影を受け入れる。c3の同owner内明示reconciliationと物理完了根拠の統合は別PRとする。各詳細APIを実装前にAstraと設計・レビューする。c1だけでd4bの通常Appがnativeへ接続されたとは扱わない。認証・transport・実Hub／S7／本番DBの保留と各format／依存版を維持する。

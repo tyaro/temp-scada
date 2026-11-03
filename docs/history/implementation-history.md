@@ -4,6 +4,14 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録操作の共有native owner詳細設計（H5d4c2、2026-11-04）
+
+PR #61はworkへマージ済み（`b9f9d26`）。Astra主設計で、c2の管理owner／共有client、同期受付とnative実行開始の区別、単一dispatcher、元run/contextとopaque handle、有限registryと三段階投影を具体化した。今回は設計PRを先行し、共有ownerからapply receiptまでを一つの実装PRで受け入れる。c3の結果照会は別に残す。
+
+root／Astraレビューで、新workflow受理時の四枠credit予約、owner受付後のnative拒否による旧候補残存、返却済みSupervisorでの同期discard、移管前のowner-only回復要求のnative gateへの反映と有限evidenceを整理した。client／waitのDropで操作を取消さず、外部ownerの終了とは区別する。c3 readのborrowed joinとの接点、資源を失った場合の限界、別clockの境界も記録した。
+
+文書・索引・計画のみを更新し、native owner実装・JS bridge・製品transportは追加していない。各format／依存と通常Appは維持する。検証は既存native API／d4a DTO／d4b serviceとの責務照合、Astraとrootの設計レビュー、Markdown整形とローカル参照先の確認。機能コードを変更しないため新しい機能テストは作成していない。全体CIはReady for Review PRで確認する。
+
 ## 元apply全文に対するnative receipt読取（H5d4c1、2026-11-03）
 
 PR #60はworkへマージ済み（`bbc13b9`）。Astra設計でnative接続をc1の独立receipt読取、c2の共有native owner・受理前registry・三段階投影、c3の同owner内reconciliationに分割した。今回c1としてHistoryReaderへ`recording_plan_receipt_for_request`とsnapshot結果型を追加した。
