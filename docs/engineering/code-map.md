@@ -613,3 +613,9 @@ native `json_contract.rs`がTrendと記録計画のcompact JSON byte・node・de
 `recording_host.rs::start_with`は両開始戦略で同じ所有・latch・clean-pause guardを使い、DB処理をblocking Workerへ渡す。`worker.rs::Start`が専用開始を選び、managed controlの取消tokenをrun全体へ共有する。成功receiptはRecordingCompletionへだけ保持し、watchの開始診断は有限固定文字列とする。SDK shutdown/join、取消中の所有とFaulted経路は共通である。
 
 `recorder/tests/managed.rs`の12件と、activation側の`tests/managed_recorder.rs`の実FULL1件がnative境界を受け入れる。32 originsの既存回帰は最大8memberの専用開始も確認する。runtime unit2件が開始前取消とlatch/純粋検証、integration6件がmockHub/実値保存・executor・shutdown・join取消/Busy・新domain・Drop/reader leaseを検証する。`tests/support/managed_recording.rs`は両runtime試験で使うnative計画fixtureだけを持ち、製品初期化へ流用しない。
+
+## 正常pause後の計画適用（H5c2b）
+
+`recording_host/plan_turn.rs`がprocess-local操作token、元RecordingRun照合、mapping/applyの一回turn、borrowed join、Drop時取消、結果と各種最新成功record、sticky recovery要求を所有する。`RecordingHost::writer_busy`でrecording／retention／planの実worker所有を共通に検査し、正常pauseと保持latchの検査を共有する。`types.rs`へManagingPlanと安全な入口error分類を追加した。詳細StoreErrorはcompletionに限定する。
+
+`recording_plan/types.rs`のrequest.validateは既存canonical／pure validatorのwrapperで、runtimeへ型・文書予算規則を複製しない。新しいDB transaction、schema／依存は追加しない。`plan_turn/tests.rs`の12unitと`tests/recording_host/plan_turn.rs`の3integrationで、exact token、gate、元control、join取消、Drop/reader lease、latecancel／応答喪失／I/O注入、成功receipt保持、同HostのmockHub→SQLite→raw/minmaxを受け入れる。actual FULL／rollback拒否は既存native回帰で確認する。

@@ -2010,3 +2010,9 @@ Issue本文を作成結果と照合し、文書整形・リンク・差分を確
 [読込・再読込の計測](../performance/mixed-editor-quality.md#load-diagnostics-i5h)を追加。通常100／500／1,000配置と別CPU採取を行い、driverのラベル検索負荷と、アプリの文字寸法・font ready取得を切り分けた。driver検索を絞っただけでは全体短縮を確認できず、アプリ改善は未採用。JSON検証の省略やcacheは導入しない。
 
 7runで文字投影・4画像原本のSHA／bytes、再読込時の旧URL解放と一時host解放、pageerrorなしを確認。runner2本の構文・整形、source map既知fixture、文書リンク・差分を確認した。raw report・CPU集計・source／buildのSHAを保存。アプリ／Rust／schema／依存は変更せず、全体試験の再実行や性能改善完了とは扱わない。
+
+## 正常pause後の計画適用（H5c2b、2026-11-03）
+
+PR #47／#48をworkへ統合（6c26ea6）し、統合後の全体CI成功を確認した。[Astra主設計](../design/runtime/historian-recording-supervisor.md)のc2bとして、正常join済みHostでの一回mapping/apply、元run/操作token照合、共有writer枠、成功recordの有限保持、native失敗後の回復要求を追加した。通常成功pathでHostを作り直さず、mappingとapplyを別commitとして保持する。単一supervisor／fresh SDK解決の調整・製品接続はc2c以降である。
+
+新規runtime単体12件・mockHub統合3件を含むRust workspace487件、Clippy／rustfmt、既存H1／desired契約のChromium8件、全体Prettier・文書リンクが成功した。native既存試験でactual FULL／rollback拒否を回帰し、Hostでは制御workerによるI/O・応答喪失・panic・latecancelと所有保持を確認した。Astra最終レビューに必須修正はない。全体CIはwork向けReady for Review PRで確認する。

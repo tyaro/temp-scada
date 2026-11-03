@@ -4,11 +4,21 @@
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。H5b2のnative activation／session原子bindingはPR #46でworkへ統合済み。H5c1で適用済み計画からRecorder／Hostの専用開始まで接続し、設定変更supervisorとdesiredのProject保存を後続へ分ける。
+提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。H5b2のnative activation／session原子bindingはPR #46でworkへ統合済み。H5c1で適用済み計画からRecorder／Hostの専用開始まで接続した。PR #47／#48をworkへ統合し、H5c2aの停止前検査に続いてH5c2bの正常pause後の管理turnを追加した。単一supervisorとdesiredのProject保存は後続である。
 
 最新の作図改善の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（全体CI成功）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
+
+## 正常pause後の計画適用（H5c2b、2026-11-03）
+
+[Astraのc2b詳細契約](../design/runtime/historian-recording-supervisor.md)に従い、RecordingHostへmapping登録または計画applyを一回ずつ実行する管理turnを追加した。正常join済みの元RecordingRunとprocess-local操作tokenを照合し、同じwriterをblocking workerで保持する。初期Idle／異常終了では受け付けず、記録・保持・管理の未join workerは共通でBusyを維持する。
+
+成功mapping／applyの各最新receiptを元run／操作tokenとともに保持する。mappingだけ成功して後続applyが失敗した状態を失わず、native errorは計画の回復要求をstickyにする。この間は次の記録・管理・保持turnとrearmを拒否する。join後take_storeでの明示回復を残し、自動retry／resumeは行わない。要求の純粋検証はnative共通helperを再利用する。
+
+新規runtime単体12件・mockHub統合3件を含むRust workspace487件、Clippy／rustfmt、既存H1／desired契約のChromium8件、全体Prettier・文書リンクが成功した。native既存試験でactual FULL／rollback拒否を回帰し、Hostでは制御workerによるI/O・応答喪失・panic・latecancelと所有保持を確認した。Astra最終レビューに必須修正はない。全体CIはwork向けReady for Review PRで確認する。
+
+DB7・H1・Project0.36・固定SDK／Banto・依存は維持し、通常App／実Hub／S7／本番DB／認証・transportへ接続しない。c2cのpreflight／停止／管理turn／fresh SDK解決・明示resumeのsupervisorは未実装である。
 
 ## 記録計画の停止前チェック（H5c2a、2026-11-03）
 
@@ -18,7 +28,7 @@ writeと候補検査はprivate prepareを共有する。実writeのactive sessio
 
 新規native14件を含むRust workspace451件、Clippy／rustfmt、既存H1／desired契約のChromium8件と全体Prettier・文書リンクが成功した。記録中の同snapshot、replay／競合／容量、32 origins／別保持版／8memberの256行予算、取消／SQL失敗／panic／cleanup拒否、2leaseとwriter lockを確認し、Astraの最終レビューに必須修正はない。全体CIはwork向けReady for Review PRで確認する。
 
-workのH5b2から独立実装したため、本工程の基準はRust437件である。[PR #47](https://github.com/tyaro/temp-scada/pull/47)のH5c1は別PRで、専用開始と本preflightの両方の統合後にc2b/cの停止・管理turn・再解決・明示再開へ進む。通常App／実Hub／S7／本番DB／認証・製品transportには接続しない。
+workのH5b2から独立実装したため、本工程の基準はRust437件である。[PR #47](https://github.com/tyaro/temp-scada/pull/47)のH5c1は別PRで、専用開始と本preflightは両方workへ統合済み。c2bの管理turnを追加し、再解決・明示再開の統合はc2cへ進む。通常App／実Hub／S7／本番DB／認証・製品transportには接続しない。
 
 ## 固定SDKへの追従（2026-11-01）
 

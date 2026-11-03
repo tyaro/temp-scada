@@ -735,3 +735,6 @@ async fn managed_drop_cancels_sdk_and_reader_keeps_writer_lease_until_released()
         scada_historian::store::SessionState::Active
     );
 }
+
+#[path = "recording_host/plan_turn.rs"]
+mod plan_turn;

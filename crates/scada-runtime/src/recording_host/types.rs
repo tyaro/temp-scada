@@ -46,6 +46,7 @@ pub enum RecordingPhase {
     Faulted,
     NoStore,
     Retaining,
+    ManagingPlan,
 }
 
 #[derive(Clone, Debug)]
@@ -150,4 +151,8 @@ pub enum RecordingHostError {
     RetentionRearmRequired,
     ClockEpochReuse,
     SessionReuse,
+    RecordingRunMismatch,
+    PlanTurnMismatch,
+    PlanRequest(scada_historian::store::StoreError),
+    PlanRecoveryRequired,
 }

@@ -23,19 +23,19 @@ use std::{
     time::{Duration, Instant},
 };
 
-struct Directory(PathBuf);
+pub(in crate::recording_host) struct Directory(pub(in crate::recording_host) PathBuf);
 impl Drop for Directory {
     fn drop(&mut self) {
         let _ = fs::remove_dir_all(&self.0);
     }
 }
-fn identity() -> StoreIdentity {
+pub(in crate::recording_host) fn identity() -> StoreIdentity {
     StoreIdentity {
         store_id: "retention-host".into(),
         deployment_id: "test".into(),
     }
 }
-fn plan() -> SdkRecorderPlan {
+pub(in crate::recording_host) fn plan() -> SdkRecorderPlan {
     let catalog = crate::tests::catalog();
     let tag = &catalog.tags[0];
     SdkRecorderPlan::new(
@@ -67,7 +67,7 @@ fn plan() -> SdkRecorderPlan {
     )
     .unwrap()
 }
-fn clean_host() -> (RecordingHost, Directory) {
+pub(in crate::recording_host) fn clean_host() -> (RecordingHost, Directory) {
     static NEXT: AtomicU64 = AtomicU64::new(0);
     let directory = Directory(std::env::temp_dir().join(format!(
         "scada-retention-host-unit-{}-{}",
@@ -127,7 +127,7 @@ fn clean_host() -> (RecordingHost, Directory) {
     host.last_clock_epoch = Some("record-epoch".into());
     (host, directory)
 }
-fn input(mono: u64) -> RetentionTurnInput {
+pub(in crate::recording_host) fn input(mono: u64) -> RetentionTurnInput {
     RetentionTurnInput {
         policy: RetentionClockPolicy {
             policy_id: "policy".into(),
@@ -150,7 +150,7 @@ fn input(mono: u64) -> RetentionTurnInput {
         intent: CoordinatorIntent::Observe,
     }
 }
-fn control() -> QueryControl {
+pub(in crate::recording_host) fn control() -> QueryControl {
     QueryControl::with_timeout(Duration::from_secs(5)).unwrap()
 }
 async fn turn(host: &mut RecordingHost, input: RetentionTurnInput) -> Arc<RetentionTurnCompletion> {
