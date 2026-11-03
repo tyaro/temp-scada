@@ -681,3 +681,7 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 `scada-historian/src/store/recording_plan/receipt.rs`は`HistoryReader::recording_plan_receipt_for_request`と`RecordingPlanReceiptSnapshot`を公開する。元QueryControlの検証後に既存256行capと`query/management.rs`のsnapshot guardを使い、`read::heads`／`find`／`read::application`で同snapshotの保存証拠を検証してからcanonical要求全文を照合する。native member順の意味同値と、d4a元owned要求の表示順echoは別の責務である。writer API・latch・supervisorの所有を変更しない。
 
 `receipt/tests.rs`と`receipt/tests/failures.rs`は過去receipt、現在CASとの分離、並行commit、実FULL／応答喪失、保存証拠の破損、予算・取消・panicと既存leaseを検証する。`query/management.rs`の既存authorizer／cleanup試験でreadonlyとpoisoned readerを確認し、`recording_plan/tests/validation.rs`の8member／32origins試験で同じ256行上限を確認する。共有native ownerとregistryはc2、owner内read統合はc3に残し、browserへDB照会を直接公開しない。
+
+## 記録操作の共有native owner（H5d4c2、設計・未実装）
+
+[Astra詳細設計](../design/runtime/historian-recording-native-owner.md)で、予定module `scada_runtime::recording_operations`の管理owner／共有client、受理前registry、三段階dispatcher、d4a投影、回復gateを保つhandoffとc3読取の接点を定めた。新moduleとnative helperはまだ追加していない。既存`recording_host/supervisor.rs`／`plan_turn.rs`の所有・borrowed joinと、c1の独立readerを根拠とし、実装時に最小のgate helperを共有する。今回は設計・索引・計画の変更だけで、Rust／TS／schema／依存と通常Appを変更しない。
