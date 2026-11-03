@@ -1,4 +1,4 @@
-/** H5a desired settings only; no Project field, identity resolution or apply. */
+/** Desired settings shared by standalone inputs and Project validation; no resolution or apply. */
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-model/schema/recording-plan.schema.json";
 import historySchema from "../../../../crates/scada-historian/schema/history-contract.schema.json";

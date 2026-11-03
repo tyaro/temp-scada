@@ -1,4 +1,4 @@
-//! Independent desired settings. No Project insertion, binding or durable apply.
+//! Desired settings shared by standalone inputs and Project validation. No binding or apply.
 use crate::json_contract::{blank, JsonBudget};
 use serde_json::Value;
 use std::collections::HashSet;
@@ -76,4 +76,4 @@ pub fn validate_recording_plan(document: &Value) -> Result<(), RecordingPlanErro
     Ok(())
 }
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

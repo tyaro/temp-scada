@@ -8,7 +8,7 @@
           "const": "banto-scada"
         },
         "schemaVersion": {
-          "const": "0.36.0"
+          "const": "0.37.0"
         },
         "projectId": {
           "$ref": "#/$defs/id"
@@ -19,7 +19,7 @@
           "maximum": 9007199254740991
         },
         "minRuntimeVersion": {
-          "const": "0.36.0"
+          "const": "0.37.0"
         },
         "name": {
           "type": "string",
@@ -191,6 +191,9 @@
       "items": {
         "$ref": "#/$defs/equipmentInstance"
       }
+    },
+    "recordingPlan": {
+      "$ref": "https://temp-scada.invalid/schema/recording-plan-v1.json"
     },
     "trends": {
       "$ref": "https://temp-scada.invalid/schema/trend-definition-v1.json#/$defs/definitions"

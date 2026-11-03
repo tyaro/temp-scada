@@ -104,7 +104,7 @@ test("Trend validation preserves names and colors and Project rejects invalid de
     color: "#aB12Ef",
     label: " 温度 ",
     frozen: true,
-    version: "0.36.0",
+    version: "0.37.0",
     rejected: true,
     validAgain: true,
   });

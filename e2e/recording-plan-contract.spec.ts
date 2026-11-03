@@ -64,12 +64,9 @@ test("desired ownership keeps member order and disabled settings without changin
     const owned = parseRecordingPlan(input);
     input.group.members[0].externalName = "changed";
     input.group.members.reverse();
-    let refused = false;
-    try {
-      parseProject(JSON.stringify({ ...project, recordingPlan: owned }));
-    } catch {
-      refused = true;
-    }
+    const embedded = parseProject(
+      JSON.stringify({ ...project, recordingPlan: owned }),
+    );
     return {
       name: owned.group.members[0].externalName,
       ids: owned.group.members.map((m: any) => m.memberId),
@@ -77,7 +74,7 @@ test("desired ownership keeps member order and disabled settings without changin
       frozen: Object.isFrozen(owned.group),
       validAgain: validateRecordingPlan(owned),
       version: parseProject(JSON.stringify(project)).manifest.schemaVersion,
-      refused,
+      embedded: embedded.recordingPlan,
     };
   }, sample);
   expect(result).toEqual({
@@ -86,8 +83,10 @@ test("desired ownership keeps member order and disabled settings without changin
     enabled: false,
     frozen: true,
     validAgain: true,
-    version: "0.36.0",
-    refused: true,
+    version: "0.37.0",
+    embedded: cases[0].input
+      ? { ...cases[0].input, enabled: false }
+      : undefined,
   });
   expect(await downloadBytes(await downloadProject(page))).toEqual(before);
   await expect(page.locator(".history-workspace")).toHaveCount(0);

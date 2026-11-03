@@ -1,0 +1,177 @@
+[
+  {
+    "name": "omitted-is-not-disabled",
+    "accepted": true,
+    "omit": true
+  },
+  {
+    "name": "disabled-complete-settings",
+    "accepted": true
+  },
+  {
+    "name": "enabled-settings",
+    "accepted": true,
+    "ops": [
+      {
+        "path": "/recordingPlan/enabled",
+        "value": true
+      }
+    ]
+  },
+  {
+    "name": "null-is-not-omitted",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/recordingPlan",
+        "value": null
+      }
+    ]
+  },
+  {
+    "name": "empty-object",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/recordingPlan",
+        "value": {}
+      }
+    ]
+  },
+  {
+    "name": "single-plan-not-array",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/recordingPlan",
+        "value": []
+      }
+    ]
+  },
+  {
+    "name": "previous-version-rejected",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/manifest/schemaVersion",
+        "value": "0.36.0"
+      },
+      {
+        "path": "/manifest/minRuntimeVersion",
+        "value": "0.36.0"
+      }
+    ]
+  },
+  {
+    "name": "previous-min-runtime-rejected",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/manifest/minRuntimeVersion",
+        "value": "0.36.0"
+      }
+    ]
+  },
+  {
+    "name": "different-id-pools",
+    "accepted": true,
+    "ops": [
+      {
+        "path": "/recordingPlan/planId",
+        "value": "0199f000-0000-7000-8000-000000000001"
+      },
+      {
+        "path": "/recordingPlan/group/groupId",
+        "value": "0199f000-0000-7000-8000-000000000001"
+      },
+      {
+        "path": "/recordingPlan/group/members/0/memberId",
+        "value": "0199f000-0000-7000-8000-000000000001"
+      }
+    ]
+  },
+  {
+    "name": "external-name-is-not-normalized",
+    "accepted": true,
+    "ops": [
+      {
+        "path": "/recordingPlan/group/members/0/externalName",
+        "value": " \r\n温度  é "
+      }
+    ]
+  },
+  {
+    "name": "applied-receipt-not-project-data",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/recordingPlan/receipt",
+        "value": {}
+      }
+    ]
+  },
+  {
+    "name": "mapping-not-project-data",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/recordingPlan/group/members/0/seriesId",
+        "value": "series:1"
+      }
+    ]
+  },
+  {
+    "name": "credentials-not-project-data",
+    "accepted": false,
+    "ops": [
+      {
+        "path": "/recordingPlan/credentials",
+        "value": "fake"
+      }
+    ]
+  },
+  {
+    "name": "legacy-produces-current-without-plan",
+    "accepted": true,
+    "legacy": true
+  },
+  {
+    "name": "legacy-cannot-smuggle-plan",
+    "accepted": false,
+    "legacy": true,
+    "ops": [
+      {
+        "path": "/recordingPlan",
+        "value": {
+          "version": 1,
+          "kind": "recordingPlan",
+          "planId": "recording:1",
+          "revision": 1,
+          "enabled": false,
+          "group": {
+            "groupId": "group:1",
+            "hubRef": "hub:1",
+            "periodMs": 1000,
+            "members": [
+              {
+                "memberId": "member:b",
+                "externalName": " 温度 ",
+                "valueType": "number"
+              },
+              {
+                "memberId": "member:a",
+                "externalName": "設備.運転",
+                "valueType": "bool"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "whole-project-may-exceed-plan-budget",
+    "accepted": true,
+    "largeCanvas": true
+  }
+]

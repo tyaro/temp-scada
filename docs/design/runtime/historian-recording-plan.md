@@ -1,6 +1,6 @@
 # Historian H5: 記録計画の保存・適用・稼働管理
 
-2026-11-03（日本時間）。**Astra主設計の採用契約。H5aの独立desired JSON契約、H5b1の永続台帳、H5b2のnative activation binding、H5cの単一group supervisor／同snapshot診断／明示resumeはworkへ統合済み。Project fieldと編集・管理画面は未実装。H5dの詳細は[Project保存・編集・管理設計](historian-recording-project.md)へ分割した。** [P5 §3](historian-trend-contract.md#3-記録設定の所有と配布)の責務を、現行の単一group実装へ段階的に接続する。実環境、Industrial/S7、実Hub、実DB、設定、資格情報にはアクセスしない。認証・製品transport・通常Appの実接続は引き続き保留する。
+2026-11-03（日本時間）。**Astra主設計の採用契約。H5aの独立desired JSON契約、H5b1の永続台帳、H5b2のnative activation binding、H5cの単一group supervisor／同snapshot診断／明示resumeはworkへ統合済み。H5d1のProject0.37.0保存fieldを実装した。編集・管理画面は未実装。H5dの詳細は[Project保存・編集・管理設計](historian-recording-project.md)へ分割した。** [P5 §3](historian-trend-contract.md#3-記録設定の所有と配布)の責務を、現行の単一group実装へ段階的に接続する。実環境、Industrial/S7、実Hub、実DB、設定、資格情報にはアクセスしない。認証・製品transport・通常Appの実接続は引き続き保留する。
 
 ## 採用範囲と現行との違い
 
@@ -34,7 +34,7 @@ interface DesiredRecordingPlan {
 }
 ```
 
-これは独立JSONの採用shapeであり、現行Projectのfieldではない。UIが保持するdraftと明示保存したdesiredを分け、Projectへの組込みはH5dに行う。planIdは計画の論理ID、revisionはその内容版で1..MAX_SAFE_INTEGER。Project revisionとは別で、無関係な図形編集では上げない。planId/revisionの組は一度配布したらimmutableである。
+これは独立JSONの採用shapeであり、[H5d1](historian-recording-project.md)では同じshapeをProject.recordingPlanへ保存する。UIが保持するdraftと明示保存したdesiredを分け、Projectへの組込みはH5d1で実装した。planIdは計画の論理ID、revisionはその内容版で1..MAX_SAFE_INTEGER。Project revisionとは別で、無関係な図形編集では上げない。planId/revisionの組は一度配布したらimmutableである。
 
 hubRefはdeploymentが解決する論理参照。memberIdは計画内の管理キーで、タグの永久identityではない。externalNameはSDK Bindingの要求名であり、同名再作成やHub移設の継続性を証明しない。desiredにはseriesId、incarnationId、segmentId、SDK run_id、URL、資格情報、保存先、保持設定、sessionId、clockEpochを持たせない。
 

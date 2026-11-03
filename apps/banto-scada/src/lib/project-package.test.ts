@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import symbolImage from "../../../../examples/symbol-image.project.json";
+import recordingExample from "../../../../examples/recording.project.json";
+import { parseRecordingPlan } from "./recording-plan";
 import { zipSync, unzipSync } from "fflate";
 import { AssetStore, sha256 } from "./image-assets";
 import { createProject } from "./new-project";
@@ -85,8 +87,9 @@ async function alter(
   return new Blob([zipSync(files, { level: 0 }) as Uint8Array<ArrayBuffer>]);
 }
 it("round trips original assets with a fresh Store and still opens asset-free JSON", async () => {
-  const { project, store } = await fixture(),
-    archive = await writeProjectPackage(project, store),
+  const { project, store } = await fixture();
+  project.recordingPlan = parseRecordingPlan(recordingExample.recordingPlan);
+  const archive = await writeProjectPackage(project, store),
     result = await readProjectFile(archive);
   expect(result.project).toEqual(project);
   expect(result.store).not.toBe(store);

@@ -1363,7 +1363,7 @@ dependencies = [
 
 [[package]]
 name = "scada-historian"
-version = "0.36.0"
+version = "0.37.0"
 dependencies = [
  "jsonschema",
  "rusqlite",
@@ -1376,7 +1376,7 @@ dependencies = [
 
 [[package]]
 name = "scada-model"
-version = "0.36.0"
+version = "0.37.0"
 dependencies = [
  "jsonschema",
  "serde_json",
@@ -1384,7 +1384,7 @@ dependencies = [
 
 [[package]]
 name = "scada-runtime"
-version = "0.36.0"
+version = "0.37.0"
 dependencies = [
  "banto-tagclient",
  "futures-util",
