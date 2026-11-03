@@ -639,6 +639,13 @@ fn thirty_two_series_and_segment_origins_with_distinct_retention_versions_fit_de
         // Current applied may differ from the latest (closed) activation's group.
         let mut composite_reader = store.reader().unwrap();
         composite_reader.recording_resume_state(&control()).unwrap();
+        assert_eq!(
+            composite_reader
+                .recording_plan_receipt_for_request(&a, &control())
+                .unwrap()
+                .receipt,
+            Some(receipt.clone())
+        );
         if n == 34 {
             let mut small = control();
             small.limits.max_decoded_rows = 256;

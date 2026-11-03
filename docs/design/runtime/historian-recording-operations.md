@@ -1,6 +1,6 @@
 # 記録計画の明示管理操作契約
 
-状態: **H5d4aの純粋契約とd4bの注入service・App操作monitor／UIを実装、d4cのnative接続は未実装**。2026-11-03（日本時間）。主設計・実装レビューはユーザー指定のAstra。通常起動は未接続で、操作はtest-only外部ownerで受け入れる。製品transportは後続。
+状態: **H5d4aの純粋契約とd4bの注入service・App操作monitor／UIを実装、d4c1の独立receipt読取を実装、native owner接続は後続**。2026-11-03（日本時間）。主設計・実装レビューはユーザー指定のAstra。通常起動は未接続で、操作はtest-only外部ownerで受け入れる。製品transportは後続。
 
 ## 1. 初回scopeとPR分割
 
@@ -312,3 +312,9 @@ OwnerViewの`active`は現在または最後に受理したstageのhandleであ�
 通常Appの「表示→記録計画の操作」で、期待適用版／mapping版／保持適用版を利用者が明示入力する。空欄はnullであり最新headを推測しない。有効な希望設定にはmapping・保持期待版が必要で、disabledでは両方nullに固定する。128bitの`crypto.getRandomValues()`によるworkflow IDを使い、secure-context専用のrandomUUIDには依存しない。IDは認可情報ではない。検査・pause/join・同候補applyを別clickとし、元requestの結果照会は手動のみ。Project保存・Undo・記録再開を変更しない。
 
 単体では外部ownerの存続、通知とcompletionの逆順、同期再入、閉じる／対象交換、未知のdispatch、既知receipt・latch保持を検証する。通常Appはtest-only providerを注入し、両theme・期限・取消・手動照会・旧候補破棄・remountと保存不変を検証する。native supervisorへのhandle対応、受理前registry、物理完了・実receipt readと隔離DBの受入はd4cへ残す。
+
+## 12. native接続の実装順（H5d4c）
+
+[元apply要求に対するreceipt読取の設計](historian-recording-receipt-reader.md)に沿い、c1で既存HistoryReaderの同snapshot・要求全文照合付きreceipt読取を実装した。writerを移管せず、保存証拠を検証してから元applyのcanonical全文を照合する。独立readのFound／Noneは物理完了・非commit確定・回復解除を表さない。
+
+c2で単一共有native owner・受理前registry・三段階操作と共通DTO投影、c3で同owner内の明示reconciliationと物理完了根拠の統合を行う。各詳細APIを実装前にAstraと設計・レビューする。c1だけでd4bの通常Appがnativeへ接続されたとは扱わない。認証・transport・実Hub／S7／本番DBの保留と各format／依存版を維持する。

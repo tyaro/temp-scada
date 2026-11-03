@@ -675,3 +675,9 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 `lib/recording-operations/service.ts`はd3と独立したoptional操作service、opaque handle／cached owner view、未dispatch同期拒否とProject対象bindingを定義する。`view.ts`はbounded JSONだけの所有検証、元request／receiptの一致、単調な結果統合を担当する。`monitor.ts`はApp寿命の一workflow（最大3stage）と一read、発行前の同期gate、期限表示、明示取消、旧ownerの保持と安全な明示discard／再接続を担当する。nativeの物理gate・run所有とregistryはproviderの責務であり、ここで実装しない。
 
 `RecordingOperationsWorkspace.svelte`は即時render／action資格、期待版入力、三段階の独立button、元対象ラベルと手動reconcileを所有する。`labels.ts`は有限error／phaseの表示文言である。`App.svelte`の別prop・常設workspaceと`designer-actions.ts`の表示menuだけに接続し、通常`main.ts`は未接続のまま。`__fixtures__/recording-operations-service.ts`はUIから独立して受理handleとcompletionを保持するtest-only provider。`monitor.test.ts`と`e2e/recording-operations-workspace.spec.ts`で再入、逆順通知、旧対象、安全な破棄、期限後結果、手動照会とremountを検証する。d4aのpure validator、d3 inspection、Project保存を拡張解釈しない。
+
+## 元apply全文に対するnative receipt読取（H5d4c1）
+
+`scada-historian/src/store/recording_plan/receipt.rs`は`HistoryReader::recording_plan_receipt_for_request`と`RecordingPlanReceiptSnapshot`を公開する。元QueryControlの検証後に既存256行capと`query/management.rs`のsnapshot guardを使い、`read::heads`／`find`／`read::application`で同snapshotの保存証拠を検証してからcanonical要求全文を照合する。native member順の意味同値と、d4a元owned要求の表示順echoは別の責務である。writer API・latch・supervisorの所有を変更しない。
+
+`receipt/tests.rs`と`receipt/tests/failures.rs`は過去receipt、現在CASとの分離、並行commit、実FULL／応答喪失、保存証拠の破損、予算・取消・panicと既存leaseを検証する。`query/management.rs`の既存authorizer／cleanup試験でreadonlyとpoisoned readerを確認し、`recording_plan/tests/validation.rs`の8member／32origins試験で同じ256行上限を確認する。共有native ownerとregistryはc2、owner内read統合はc3に残し、browserへDB照会を直接公開しない。
