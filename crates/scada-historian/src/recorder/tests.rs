@@ -5,6 +5,7 @@ use crate::store::{
 };
 use std::{cell::RefCell, rc::Rc, time::Duration};
 mod failures;
+mod managed;
 
 #[derive(Default)]
 struct Time {

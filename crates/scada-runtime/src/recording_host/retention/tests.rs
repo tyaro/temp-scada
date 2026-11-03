@@ -100,6 +100,7 @@ fn clean_host() -> (RecordingHost, Directory) {
     let mut host = RecordingHost::new(store);
     let token = RecordingRun(Arc::new(()));
     host.completion = Some(Arc::new(RecordingCompletion {
+        activation_receipt: None,
         run: token.clone(),
         progress: None,
         report: Some(RecorderReport {

@@ -111,6 +111,9 @@ impl From<&RecorderReport> for RecordingProgress {
 /// status. No raw observations, endpoint or credentials are included.
 #[derive(Debug)]
 pub struct RecordingCompletion {
+    /// Commit evidence, not proof of SDK Live. None on uncertain activation errors proves nothing.
+    pub activation_receipt:
+        Option<scada_historian::store::recording_plan::RecordingActivationReceipt>,
     pub run: RecordingRun,
     pub progress: Option<RecordingProgress>,
     pub report: Option<RecorderReport>,

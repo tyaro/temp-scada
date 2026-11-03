@@ -231,6 +231,7 @@ fn controlled_worker(
         worker::WorkerResult {
             store,
             completion: RecordingCompletion {
+                activation_receipt: None,
                 run: token,
                 progress: None,
                 report: None,
@@ -333,5 +334,119 @@ async fn worker_panic_faults_host_and_requires_external_store_reopen() {
                 break;
             }
         }
+    }
+}
+
+#[path = "../../tests/support/managed_recording.rs"]
+mod managed_support;
+#[test]
+fn managed_stop_before_worker_starts_shares_cancellation_and_skips_activation() {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .max_blocking_threads(1)
+        .build()
+        .unwrap();
+    runtime.block_on(async {
+        let (mut host, _directory) = host();
+        let sdk = recording_plan();
+        let (plan, binding) = managed_support::apply(host.store.as_mut().unwrap(), sdk.session());
+        let (release, receive) = std::sync::mpsc::sync_channel(0);
+        let (entered, ready) = tokio::sync::oneshot::channel();
+        let blocker = tokio::task::spawn_blocking(move || {
+            let _ = entered.send(());
+            receive.recv().unwrap();
+        });
+        ready.await.unwrap();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let client = banto_tagclient::RestClient::new(
+            banto_tagclient::Endpoint::new(format!("http://{}", listener.local_addr().unwrap()))
+                .unwrap(),
+            banto_tagclient::SecretApiKey::new("managed-test-only-key".into()).unwrap(),
+        )
+        .unwrap();
+        let ctl = scada_historian::store::query::QueryControl::with_timeout(Duration::from_secs(5))
+            .unwrap();
+        let token = ctl.cancellation.clone();
+        host.start_managed(
+            sdk,
+            RecordingOptions {
+                plan,
+                slot_count: None,
+                max_clock_skew_ms: 1000,
+                clock_epoch: "queued-epoch".into(),
+            },
+            binding,
+            ctl,
+            client,
+        )
+        .unwrap();
+        host.request_stop();
+        assert!(token.is_cancelled());
+        release.send(()).unwrap();
+        blocker.await.unwrap();
+        let completed = host.join().await.unwrap();
+        assert!(completed.activation_receipt.is_none());
+        assert!(completed.report.is_none());
+        assert!(completed.start_error.is_none());
+        assert_eq!(completed.source_shutdown, Ok(()));
+        let mut store = host.take_store().unwrap();
+        let ctl = scada_historian::store::query::QueryControl::with_timeout(Duration::from_secs(5))
+            .unwrap();
+        assert!(store
+            .recording_activation_state(&ctl)
+            .unwrap()
+            .latest
+            .is_none());
+    });
+}
+#[tokio::test]
+async fn managed_start_keeps_all_latches_and_pure_validation_ahead_of_sdk_creation() {
+    for kind in 0..6 {
+        let (mut host, _d) = host();
+        let sdk = recording_plan();
+        let (plan, mut binding) =
+            managed_support::apply(host.store.as_mut().unwrap(), sdk.session());
+        let opts = RecordingOptions {
+            plan,
+            slot_count: Some(1),
+            max_clock_skew_ms: 1000,
+            clock_epoch: "latch-epoch".into(),
+        };
+        match kind {
+            0 => host.retention.rearm_required = true,
+            1 => host.retention.job_pending = true,
+            2 => host.last_clock_epoch = Some(opts.clock_epoch.clone()),
+            3 => {
+                host.store.take();
+            }
+            4 => host
+                .status
+                .send_modify(|s| Arc::make_mut(s).phase = RecordingPhase::Faulted),
+            _ => binding.expected_applied_revision = 0,
+        };
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let client = banto_tagclient::RestClient::new(
+            banto_tagclient::Endpoint::new(format!("http://{}", listener.local_addr().unwrap()))
+                .unwrap(),
+            banto_tagclient::SecretApiKey::new("managed-test-only-key".into()).unwrap(),
+        )
+        .unwrap();
+        let ctl = scada_historian::store::query::QueryControl::with_timeout(Duration::from_secs(5))
+            .unwrap();
+        let result = host.start_managed(sdk, opts, binding, ctl, client);
+        assert!(matches!(
+            (kind, result),
+            (0, Err(RecordingHostError::RetentionRearmRequired))
+                | (1, Err(RecordingHostError::RetentionPending))
+                | (2, Err(RecordingHostError::ClockEpochReuse))
+                | (3, Err(RecordingHostError::NoStore))
+                | (4, Err(RecordingHostError::WorkerFailed))
+                | (5, Err(RecordingHostError::Config(_)))
+        ));
+        assert!(
+            tokio::time::timeout(Duration::from_millis(20), listener.accept())
+                .await
+                .is_err()
+        );
     }
 }

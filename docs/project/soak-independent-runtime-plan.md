@@ -482,3 +482,9 @@ H5aは[PR #43](https://github.com/tyaro/temp-scada/pull/43)でマージ済み、
 PR #44のP2（異なる8applicationで予約された8memberの再適用が重複検証で予算超過）を修正し、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41540624840)／[push CI](https://github.com/tyaro/temp-scada/actions/runs/41540619120)とも全7job成功。[H5b2詳細](../design/runtime/historian-recording-activation.md)に従い、native activation専用入口で計画と固定session／timed evidence／receiptを一つのcommitへ結合する。現在状態と安定receiptを分離し、旧再送で再開しない。
 
 DB7／6拒否・migrationなし。Project0.36・H1・SDK／Bantoと依存は維持する。次はH5cのsupervisor／preflight／stop／joinと実clock開始点への結合、H5dのProject編集である。今回はSDK/worker起動、実環境接続、上流変更を含めない。
+
+## managed Recorder／Hostの専用開始（H5c1、2026-11-03）
+
+PR #46をworkへ統合し、H5b2が正式に取り込まれた。[H5c1](../design/runtime/historian-managed-recorder.md)は適用済み計画から、一度の実clock readingを開始点としてnative activationとRecorderを接続する。旧activation receiptの新worker流用、metadata/PlanRef差、再openした旧sessionの再装着を拒否する。曖昧commit失敗では記録を開始せず、receipt照会による明示復旧へ残す。
+
+mockHub／一時SQLite／仮想時計で、新規21件を含むRust458件・Clippy／fmtと既存契約Chromium8件を受け入れた。SDK pinはcaller-confirmedの現契約で、実Hubからのfresh解決を証明するものではない。次はH5c2のpreflight/stop/join/apply/activate supervisor、H5dのProject編集である。DB7・H1・Project0.36・固定依存を維持し、上流/S7/実環境/認証・transportを変更していない。

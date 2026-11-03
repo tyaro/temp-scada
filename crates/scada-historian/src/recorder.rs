@@ -1,5 +1,6 @@
 //! One fixed recording group driven by absolute monotonic deadlines.
 mod clock;
+mod managed;
 mod types;
 use crate::store::{
     self,
@@ -8,6 +9,7 @@ use crate::store::{
     SqliteStore, StoreError, Tick, MAX_SAFE,
 };
 pub use clock::SystemRecorderClock;
+pub use managed::ManagedRecorderStart;
 pub use types::*;
 
 pub struct Recorder {
@@ -36,13 +38,7 @@ impl Recorder {
         }
         let anchor = clock.read().map_err(RecorderStartError::Clock)?;
         valid_reading(&anchor).map_err(RecorderStartError::Clock)?;
-        if config.slot_count.is_some_and(|n| {
-            n.checked_mul(config.period_ms)
-                .and_then(|d| anchor.monotonic_ms.checked_add(d))
-                .is_none()
-        }) {
-            return Err(RecorderStartError::InvalidConfig);
-        }
+        check_horizon(&config, &anchor)?;
         store
             .begin_timed_session(
                 config.session.clone(),
@@ -53,7 +49,11 @@ impl Recorder {
                 },
             )
             .map_err(RecorderStartError::Store)?;
-        Ok(Self {
+        Ok(Self::from_anchor(config, anchor))
+    }
+
+    fn from_anchor(config: RecorderConfig, anchor: ClockReading) -> Self {
+        Self {
             counters: RecorderCounters {
                 planned_slots: config.slot_count,
                 ..RecorderCounters::default()
@@ -64,7 +64,7 @@ impl Recorder {
             last_sample_ms: None,
             next_slot: 0,
             stopped: false,
-        })
+        }
     }
 
     pub fn counters(&self) -> RecorderCounters {
@@ -349,6 +349,17 @@ impl Recorder {
             terminal: None,
         }
     }
+}
+
+fn check_horizon(config: &RecorderConfig, anchor: &ClockReading) -> Result<(), RecorderStartError> {
+    if config.slot_count.is_some_and(|n| {
+        n.checked_mul(config.period_ms)
+            .and_then(|d| anchor.monotonic_ms.checked_add(d))
+            .is_none()
+    }) {
+        return Err(RecorderStartError::InvalidConfig);
+    }
+    Ok(())
 }
 
 fn valid_reading(now: &ClockReading) -> Result<(), ClockError> {

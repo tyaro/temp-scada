@@ -12,8 +12,11 @@ use std::sync::Arc;
 
 use banto_tagclient::RestClient;
 use scada_historian::{
-    recorder::{RecorderConfig, SystemRecorderClock},
-    store::{query::CancellationToken, SqliteStore},
+    recorder::{ManagedRecorderStart, RecorderConfig, SystemRecorderClock},
+    store::{
+        query::{CancellationToken, QueryControl},
+        SqliteStore,
+    },
 };
 use tokio::{runtime::Handle, sync::watch, task::JoinHandle};
 
@@ -75,6 +78,34 @@ impl RecordingHost {
         options: RecordingOptions,
         client: RestClient,
     ) -> Result<RecordingRun, RecordingHostError> {
+        self.start_with(plan, options, worker::Start::Manual, client)
+    }
+
+    /// Accept a managed start. Activation and store validation run on the owned blocking worker.
+    /// The supplied cancellation token also becomes this run's stop token.
+    pub fn start_managed(
+        &mut self,
+        plan: SdkRecorderPlan,
+        options: RecordingOptions,
+        binding: ManagedRecorderStart,
+        control: QueryControl,
+        client: RestClient,
+    ) -> Result<RecordingRun, RecordingHostError> {
+        self.start_with(
+            plan,
+            options,
+            worker::Start::Managed { binding, control },
+            client,
+        )
+    }
+
+    fn start_with(
+        &mut self,
+        plan: SdkRecorderPlan,
+        options: RecordingOptions,
+        start: worker::Start,
+        client: RestClient,
+    ) -> Result<RecordingRun, RecordingHostError> {
         if self.running.is_some() || self.retention.running.is_some() {
             return Err(RecordingHostError::Busy);
         }
@@ -101,6 +132,9 @@ impl RecordingHost {
         if self.last_clock_epoch.as_ref() == Some(&options.clock_epoch) {
             return Err(RecordingHostError::ClockEpochReuse);
         }
+        if let worker::Start::Managed { binding, .. } = &start {
+            binding.validate().map_err(RecordingHostError::Config)?;
+        }
         let runtime = Handle::try_current().map_err(|_| RecordingHostError::NoRuntime)?;
         let config = RecorderConfig {
             session: plan.session().clone(),
@@ -124,7 +158,10 @@ impl RecordingHost {
             stop_requested: false,
             source_shutdown: None,
         }));
-        let cancel = CancellationToken::default();
+        let cancel = match &start {
+            worker::Start::Manual => CancellationToken::default(),
+            worker::Start::Managed { control, .. } => control.cancellation.clone(),
+        };
         self.completion = None;
         self.retention.clear_completion();
         self.last_clock_epoch = Some(options.clock_epoch);
@@ -133,6 +170,7 @@ impl RecordingHost {
         let worker_run = run.clone();
         let worker_cancel = cancel.clone();
         let worker = worker::Worker {
+            start,
             store,
             config,
             clock,

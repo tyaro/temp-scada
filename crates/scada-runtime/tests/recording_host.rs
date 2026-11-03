@@ -386,3 +386,352 @@ async fn dropping_host_requests_stop_and_worker_eventually_releases_writer() {
     // waits for ownership release. Production locks are never relaxed.
     drop(reopen_unowned(&directory));
 }
+
+#[path = "support/managed_recording.rs"]
+mod managed_support;
+fn prepare_managed(
+    store: &mut SqliteStore,
+    plan: &SdkRecorderPlan,
+    slots: Option<u64>,
+) -> (
+    RecordingOptions,
+    scada_historian::recorder::ManagedRecorderStart,
+) {
+    let (plan, binding) = managed_support::apply(store, plan.session());
+    let mut opts = options(slots);
+    opts.plan = plan;
+    opts.clock_epoch = "managed-epoch".into();
+    (opts, binding)
+}
+#[tokio::test]
+async fn managed_host_binds_sdk_samples_to_atomic_activation_and_keeps_executor_live() {
+    let hub = Hub::new().await;
+    let (mut host, _directory) = host();
+    let sdk_plan = plan(Some(7), Source::Real, false);
+    let mut store = host.take_store().unwrap();
+    let (options, binding) = prepare_managed(&mut store, &sdk_plan, Some(2));
+    let mut host = RecordingHost::new(store);
+    let mut states = host.state_watch();
+    host.start_managed(sdk_plan, options, binding, control(), hub.client())
+        .unwrap();
+    let mut socket = hub.serve(false, Some(7), "real", 3).await;
+    socket
+        .send(Message::Text(
+            json!({"op":"data","id":1,"t":200,"values":[{"tag":NUMBER,"v":42,"q":"good","t":200}]})
+                .to_string()
+                .into(),
+        ))
+        .await
+        .unwrap();
+    let before = std::time::Instant::now();
+    sleep(Duration::from_millis(250)).await;
+    assert!(
+        before.elapsed() < Duration::from_secs(1),
+        "SDK executor blocked by synchronous recorder"
+    );
+    wait_status(&mut states, |s| s.phase == RecordingPhase::FinishedUnjoined).await;
+    assert!(matches!(host.take_store(), Err(RecordingHostError::Busy)));
+    let completion = host.join().await.unwrap();
+    assert_eq!(
+        completion.report.as_ref().unwrap().counters.committed_ticks,
+        2
+    );
+    assert!(completion.start_error.is_none());
+    assert_eq!(completion.source_shutdown, Ok(()));
+    let receipt = completion.activation_receipt.as_ref().unwrap();
+    assert_eq!(receipt.activation_id, "managed-first");
+    assert_eq!(receipt.spec.members.len(), 1);
+    let mut store = host.take_store().unwrap();
+    let current = store
+        .recording_activation("managed-first", &control())
+        .unwrap()
+        .unwrap();
+    assert_eq!(&current.receipt, receipt);
+    assert!(current.session.committed_through >= 1);
+    let query = json!({"version":1,"kind":"query","requestId":"managed-read","seriesIds":["series-0"],"fromMs":receipt.start.at_ms,"toMs":receipt.start.at_ms+10000,"mode":"raw","maxPointsPerSeries":100});
+    let mut reader = store.reader().unwrap();
+    let raw = reader.query_raw(&query, &control()).unwrap();
+    assert!(!raw["series"][0]["raw"].as_array().unwrap().is_empty());
+    assert_eq!(raw["series"][0]["raw"][1]["value"], 42.0);
+    assert_eq!(raw["series"][0]["raw"][1]["sourceTimeMs"], 200);
+    let mut minmax = query;
+    minmax["mode"] = json!("minmax");
+    assert_eq!(
+        reader.query_minmax(&minmax, &control()).unwrap()["status"],
+        "ready"
+    );
+}
+#[tokio::test]
+async fn managed_binding_failure_shuts_down_sdk_and_does_not_create_activation() {
+    let hub = Hub::new().await;
+    let (mut host, _directory) = host();
+    let sdk_plan = plan(Some(7), Source::Real, false);
+    let mut store = host.take_store().unwrap();
+    let (mut managed_options, binding) = prepare_managed(&mut store, &sdk_plan, Some(2));
+    managed_options.plan.revision = 2;
+    let mut host = RecordingHost::new(store);
+    host.start_managed(sdk_plan, managed_options, binding, control(), hub.client())
+        .unwrap();
+    let completion = timeout(Duration::from_secs(5), host.join())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(matches!(
+        completion.start_error,
+        Some(RecorderStartError::ManagedBindingMismatch)
+    ));
+    assert!(completion.activation_receipt.is_none());
+    assert!(completion.report.is_none());
+    assert_eq!(completion.source_shutdown, Ok(()));
+    assert!(matches!(
+        host.start_managed(
+            new_session("retry"),
+            options(Some(1)),
+            scada_historian::recorder::ManagedRecorderStart {
+                activation_id: "retry".into(),
+                expected_applied_revision: 1,
+                expected_mapping_revision: 1,
+                expected_retention_applied_revision: 1
+            },
+            control(),
+            hub.client()
+        ),
+        Err(RecordingHostError::UncleanPause)
+    ));
+    let mut store = host.take_store().unwrap();
+    assert!(store
+        .recording_activation_state(&control())
+        .unwrap()
+        .latest
+        .is_none());
+}
+#[tokio::test]
+async fn supplied_managed_cancellation_token_stops_run_and_preserves_receipt() {
+    let hub = Hub::new().await;
+    let (mut host, _directory) = host();
+    let sdk_plan = plan(Some(7), Source::Real, false);
+    let mut store = host.take_store().unwrap();
+    let (options, binding) = prepare_managed(&mut store, &sdk_plan, None);
+    let mut host = RecordingHost::new(store);
+    let mut status = host.state_watch();
+    let ctl = control();
+    let cancel = ctl.cancellation.clone();
+    host.start_managed(sdk_plan, options, binding, ctl, hub.client())
+        .unwrap();
+    let _socket = hub.serve(false, Some(7), "real", 3).await;
+    wait_status(&mut status, |s| s.phase == RecordingPhase::Running).await;
+    cancel.cancel();
+    let completion = timeout(Duration::from_secs(5), host.join())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(completion.activation_receipt.is_some());
+    assert_eq!(completion.source_shutdown, Ok(()));
+    assert!(matches!(
+        completion
+            .report
+            .as_ref()
+            .unwrap()
+            .terminal
+            .as_ref()
+            .unwrap()
+            .cause,
+        StopCause::Cancelled
+    ));
+}
+
+#[tokio::test]
+async fn managed_join_cancellation_keeps_owner_busy_then_resumes_with_fresh_activation() {
+    let hub = Hub::new().await;
+    let (mut host, _directory) = host();
+    let sdk_plan = plan(Some(7), Source::Real, false);
+    let mut store = host.take_store().unwrap();
+    let (opts, binding) = prepare_managed(&mut store, &sdk_plan, None);
+    let mut host = RecordingHost::new(store);
+    let mut states = host.state_watch();
+    host.start_managed(
+        sdk_plan,
+        opts.clone(),
+        binding.clone(),
+        control(),
+        hub.client(),
+    )
+    .unwrap();
+    let mut socket = hub.serve(false, Some(7), "real", 3).await;
+    wait_status(&mut states, |s| {
+        s.progress
+            .as_ref()
+            .is_some_and(|p| p.counters.committed_ticks >= 1)
+    })
+    .await;
+    assert!(timeout(Duration::from_millis(20), host.join())
+        .await
+        .is_err());
+    assert!(matches!(host.take_store(), Err(RecordingHostError::Busy)));
+    assert!(matches!(
+        host.start_managed(
+            new_session("second"),
+            opts.clone(),
+            binding.clone(),
+            control(),
+            hub.client()
+        ),
+        Err(RecordingHostError::Busy)
+    ));
+    host.request_stop();
+    let first = host.join().await.unwrap();
+    let first_receipt = first.activation_receipt.as_ref().unwrap().clone();
+    closed(&mut socket).await;
+    assert!(matches!(
+        first
+            .report
+            .as_ref()
+            .unwrap()
+            .terminal
+            .as_ref()
+            .unwrap()
+            .cleanup,
+        scada_historian::recorder::CleanupOutcome::Closed(_)
+    ));
+    let mut next_opts = opts.clone();
+    next_opts.clock_epoch = "second-epoch".into();
+    next_opts.slot_count = Some(1);
+    assert!(matches!(
+        host.start_managed(
+            new_session("recording"),
+            next_opts.clone(),
+            binding.clone(),
+            control(),
+            hub.client()
+        ),
+        Err(RecordingHostError::SessionReuse)
+    ));
+    assert!(matches!(
+        host.start_managed(
+            new_session("second"),
+            opts,
+            binding.clone(),
+            control(),
+            hub.client()
+        ),
+        Err(RecordingHostError::ClockEpochReuse)
+    ));
+    let mut next_binding = binding;
+    next_binding.activation_id = "managed-second".into();
+    host.start_managed(
+        new_session("second"),
+        next_opts,
+        next_binding,
+        control(),
+        hub.client(),
+    )
+    .unwrap();
+    let mut socket = hub.serve(false, Some(7), "real", 3).await;
+    let second = timeout(Duration::from_secs(5), host.join())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(second.start_error.is_none());
+    let second_receipt = second.activation_receipt.as_ref().unwrap();
+    assert_eq!(second_receipt.sequence, 2);
+    assert_eq!(second_receipt.spec.session_id, "second");
+    closed(&mut socket).await;
+    let mut store = host.take_store().unwrap();
+    assert_eq!(
+        store
+            .recording_activation("managed-first", &control())
+            .unwrap()
+            .unwrap()
+            .receipt,
+        first_receipt
+    );
+}
+#[tokio::test]
+async fn activation_error_remains_unconfirmed_and_never_starts_capture() {
+    let hub = Hub::new().await;
+    let (mut host, _directory) = host();
+    let sdk_plan = plan(Some(7), Source::Real, false);
+    let mut store = host.take_store().unwrap();
+    let (opts, binding) = prepare_managed(&mut store, &sdk_plan, None);
+    store
+        .begin_retention_job(
+            scada_historian::store::retention::jobs::JobRequest {
+                job_id: "active-job".into(),
+                cutoff_ms: 1000,
+                expected_cutoff_ms: None,
+            },
+            &control(),
+        )
+        .unwrap();
+    let mut host = RecordingHost::new(store);
+    host.start_managed(sdk_plan, opts, binding, control(), hub.client())
+        .unwrap();
+    let completion = timeout(Duration::from_secs(5), host.join())
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(matches!(
+        completion.start_error,
+        Some(RecorderStartError::ActivationUnconfirmed(StoreError::Busy))
+    ));
+    assert!(completion.activation_receipt.is_none());
+    assert!(completion.report.is_none());
+    assert_eq!(completion.source_shutdown, Ok(()));
+    assert_eq!(
+        host.state().start_error.as_deref(),
+        Some("recording activation unconfirmed; recovery required")
+    );
+    let mut store = host.take_store().unwrap();
+    assert!(store
+        .recording_activation_state(&control())
+        .unwrap()
+        .latest
+        .is_none());
+    assert!(store
+        .recovery_state(&control())
+        .unwrap()
+        .active_job
+        .is_some());
+}
+#[tokio::test]
+async fn managed_drop_cancels_sdk_and_reader_keeps_writer_lease_until_released() {
+    let hub = Hub::new().await;
+    let (mut host, directory) = host();
+    let sdk_plan = plan(Some(7), Source::Real, false);
+    let mut store = host.take_store().unwrap();
+    let (opts, binding) = prepare_managed(&mut store, &sdk_plan, None);
+    let reader = store.reader().unwrap();
+    let mut host = RecordingHost::new(store);
+    let mut states = host.state_watch();
+    host.start_managed(sdk_plan, opts, binding, control(), hub.client())
+        .unwrap();
+    let mut socket = hub.serve(false, Some(7), "real", 3).await;
+    wait_status(&mut states, |s| s.phase == RecordingPhase::Running).await;
+    drop(host);
+    closed(&mut socket).await;
+    assert!(matches!(
+        SqliteStore::open_existing(&directory.0, &identity()),
+        Err(StoreError::Busy)
+    ));
+    drop(reader);
+    // Keep the Tokio executor available while SDK shutdown finishes on the worker.
+    let deadline = std::time::Instant::now() + Duration::from_secs(2);
+    let mut reopened = loop {
+        match SqliteStore::open_existing(&directory.0, &identity()) {
+            Err(StoreError::Busy) if std::time::Instant::now() < deadline => {
+                sleep(Duration::from_millis(5)).await
+            }
+            result => break result.unwrap(),
+        }
+    };
+    let latest = reopened
+        .recording_activation_state(&control())
+        .unwrap()
+        .latest
+        .unwrap();
+    assert_eq!(latest.receipt.activation_id, "managed-first");
+    assert_ne!(
+        latest.session.state,
+        scada_historian::store::SessionState::Active
+    );
+}
