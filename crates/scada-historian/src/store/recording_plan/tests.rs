@@ -9,10 +9,10 @@ use crate::store::{
 };
 use serde_json::json;
 use std::time::Duration;
-fn control() -> QueryControl {
+pub(super) fn control() -> QueryControl {
     QueryControl::with_timeout(Duration::from_secs(10)).unwrap()
 }
-fn mapping() -> RecordingMapping {
+pub(super) fn mapping() -> RecordingMapping {
     let mut members = spec("validation").members;
     members[1].external_name = "Plant.Run".into();
     RecordingMapping {
@@ -27,17 +27,17 @@ fn mapping() -> RecordingMapping {
             .collect(),
     }
 }
-fn register(key: &str, expected: Option<u64>) -> RegisterMappingRequest {
+pub(super) fn register(key: &str, expected: Option<u64>) -> RegisterMappingRequest {
     RegisterMappingRequest {
         request_id: key.into(),
         expected_mapping_revision: expected,
         mapping: mapping(),
     }
 }
-fn desired(enabled: bool) -> serde_json::Value {
+pub(super) fn desired(enabled: bool) -> serde_json::Value {
     json!({"version":1,"kind":"recordingPlan","planId":"desired:1","revision":1,"enabled":enabled,"group":{"groupId":"group:1","hubRef":"hub:1","periodMs":1000,"members":mapping().members.into_iter().map(|m|json!({"memberId":m.member_id,"externalName":m.identity.external_name,"valueType":m.identity.value_type})).collect::<Vec<_>>()}})
 }
-fn apply(key: &str, previous: Option<u64>, enabled: bool) -> ApplyRecordingPlanRequest {
+pub(super) fn apply(key: &str, previous: Option<u64>, enabled: bool) -> ApplyRecordingPlanRequest {
     ApplyRecordingPlanRequest {
         request_id: key.into(),
         expected_applied_revision: previous,
@@ -46,7 +46,7 @@ fn apply(key: &str, previous: Option<u64>, enabled: bool) -> ApplyRecordingPlanR
         expected_retention_applied_revision: enabled.then_some(1),
     }
 }
-fn retention(store: &mut SqliteStore) -> u64 {
+pub(super) fn retention(store: &mut SqliteStore) -> u64 {
     let policy = RetentionClockPolicy {
         policy_id: "retention".into(),
         revision: 1,
@@ -81,13 +81,13 @@ fn retention(store: &mut SqliteStore) -> u64 {
         .unwrap()
         .applied_revision
 }
-fn counter(store: &SqliteStore) -> i64 {
+pub(super) fn counter(store: &SqliteStore) -> i64 {
     store
         .connection
         .query_row("SELECT last_commit FROM store_meta", [], |r| r.get(0))
         .unwrap()
 }
-fn enabled_store() -> (TempStore, SqliteStore) {
+pub(super) fn enabled_store() -> (TempStore, SqliteStore) {
     let dir = TempStore::new();
     let mut store = dir.create();
     store
@@ -102,7 +102,7 @@ fn mapping_receipts_cas_order_and_request_pools_are_independent() {
     let mut store = dir.create();
     let initial = store.recording_plan_state(&control()).unwrap();
     assert_eq!(initial.snapshot_commit, 0);
-    assert!(!initial.activation_supported);
+    assert!(initial.activation_supported);
     let r = register("shared", None);
     let first = store.register_recording_mapping(&r, &control()).unwrap();
     let count = counter(&store);

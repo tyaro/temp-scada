@@ -589,3 +589,11 @@ native `json_contract.rs`がTrendと記録計画のcompact JSON byte・node・de
 `read.rs`は必須singleton／head／count、直前commit、canonical request・receipt、desiredの初利用、過去mapping／保持版の有限検証を行う。applied／desired／mapping／previous commitはindexed JOINで取得し、standalone readと共通の純粋validatorへ渡す。保持applicationのreadも定義／previousを同様に結合し、本文bytesとSQL／VM課金を維持する。`reservations.rs`は恒久metadataと検索非公開の予約を照合し、first-use applicationのenabledな解決内容を非再帰で検証する。同一apply transactionのread区間でfirst revision単位のEvidenceCacheを旧applied／新mappingの両検証へ共有し、過去全receiptへの再帰と重複decodeを避ける。256行上限・予約検証・使用時のcommit境界は維持する。format6の`schema.sql`は台帳・予約・適用member索引を所有し、`store/mod.rs`の共通begin入口が過去session再送後にmanagedな新規開始を拒否する。
 
 `query/control.rs`の`bounded_text`は新管理本文128KiBまでの共有8MiB計数を持ち、既存`evidence_text`は64KiBを維持する。新APIはdecoded rowsを最大256に絞り、既存maintenanceの取消・VM・rollback・poison／writer所有を共有する。`recording_plan/tests.rs`と`tests/validation.rs`／`failures.rs`がCAS／再送・8member・identity・job・容量・破損・FULL・各境界のprocess exitを一時DBで検証する。H1出力と通常Appの既存browser契約を回帰し、SDK／supervisor／UI／製品transportは追加しない。
+
+## 記録開始の原子的bindingと復元照会（H5b2）
+
+`store/recording_plan/activation/types.rs`は専用要求、immutable receipt、mutable SessionStatusとlatest snapshotを所有する。`mod.rs`はQueryControl付きAPI・必須head/countと索引によるmanaged session/evidence/永久metadataの関係検査、`write.rs`は現在版CAS／fence／新session・epochと同commit保存、`read.rs`は過去applied・開始receipt・session member・最新tick receipt・timed evidence・recording_plans初利用の有限照合を担当する。
+
+`evidence::save_start`はconnectionと任意Budgetを受ける共通helperへ一般化し、独自transactionや採番を行わない。manual beginは従来のgateと検証順を維持し、activationは同transactionで予約／恒久metadataを照合後に未存在metadataと全member/sessionを保存する。`types.rs`のSessionState／SessionStatusへSerializeを追加したが、H1や製品transportの契約は変更しない。schema.sqlはDB7のactivation ledger/stateとepoch／first-use索引を所有する。
+
+`activation/tests.rs`と`tests/failures.rs`はnative20件（process worker含む）。通常開始・再apply・旧再送・restart、異なる8予約元の8member、4,096件上限、metadata欠落、FULL＋取消、cleanup拒否、各COMMIT境界を一時DBで検証する。既存query/manual/保持/hostを回帰し、browserはH1／desired契約を維持する。worker開始とSDK fresh pin、Runningの管理はH5cに残す。

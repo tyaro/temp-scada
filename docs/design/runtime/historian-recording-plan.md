@@ -1,6 +1,6 @@
 # Historian H5: 記録計画の保存・適用・稼働管理
 
-2026-11-03（日本時間）。**Astra主設計の採用契約。H5aの独立desired JSON契約は実装・ローカル受入済み。H5b1の永続台帳も実装・ローカル受入の対象。activation binding、supervisor、Project fieldは未実装。** [P5 §3](historian-trend-contract.md#3-記録設定の所有と配布)の責務を、現行の単一group実装へ段階的に接続する。実環境、Industrial/S7、実Hub、実DB、設定、資格情報にはアクセスしない。認証・製品transport・通常Appの実接続は引き続き保留する。
+2026-11-03（日本時間）。**Astra主設計の採用契約。H5aの独立desired JSON契約は実装・ローカル受入済み。H5b1の永続台帳も実装・ローカル受入の対象。H5b2のnative activation bindingも実装した。supervisor、Project fieldは未実装。** [P5 §3](historian-trend-contract.md#3-記録設定の所有と配布)の責務を、現行の単一group実装へ段階的に接続する。実環境、Industrial/S7、実Hub、実DB、設定、資格情報にはアクセスしない。認証・製品transport・通常Appの実接続は引き続き保留する。
 
 ## 採用範囲と現行との違い
 
@@ -187,7 +187,8 @@ sourceのcatalog/valuesは既存上限4096、bindings最大8。SDK/stop/joinの�
 | ------------------------ | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 今回design-only          | この具体契約・決定点・工程                                                                     | P5と現行APIの保証差を明示                                                                                                                                                                     |
 | H5a（ローカル受入済み）  | 独立desired JSONのSchema、Rust/TS validator、共通fixture、browser module評価                   | 1/8 members、100ms/1h、同名別member拒否、disabledでも設定保持、Unicode/ID/64KiB境界、秘密field拒否、Project未変更                                                                             |
-| H5b1（ローカル受入対象） | format6管理台帳、明示mapping登録、CAS、stable receipt、復旧照会                                | 同ID同内容再送/別内容Conflict、別Project競合、immutable版、保持CAS、全8member原子性、未記録予約がqueryへ漏れない、FULL/process crash/commit後応答喪失。必要ならb1台帳/b2session bindingへ分割 |
+| H5b1（ローカル受入済み） | format6管理台帳、明示mapping登録、CAS、stable receipt、復旧照会                                | 同ID同内容再送/別内容Conflict、別Project競合、immutable版、保持CAS、全8member原子性、未記録予約がqueryへ漏れない、FULL/process crash/commit後応答喪失。必要ならb1台帳/b2session bindingへ分割 |
+| H5b2（ローカル受入済み） | activation／timed sessionの原子binding、ID別／latest照会                                       | native20、CAS／再送／restart、新epoch、8member、永久metadata欠落拒否、FULL＋取消・process exit                                                                                                |
 | H5c                      | 単一group supervisor、stop/join/apply、明示activation、activation/session原子binding、起動復旧 | 旧停止後apply失敗、新適用後source失敗、取消join所有、latch保持、active保持jobでBusy、mockHub→SQLite、仮想absolute周期既存受入、再起動新session/epoch、同名再作成拒否                          |
 | H5d                      | Project desired保存/編集と管理状態表示、明示apply操作                                          | 別途Project versionを更新、保存で運転不変、desiredとappliedとRunningの差を表示、UI closeでrecorder継続、権限/製品transportは再開条件を満たすまでlocal injectionのみ                           |
 
@@ -212,3 +213,9 @@ nativeの`json_contract.rs`へ既存Trendと共通のcompact JSON byte／node／
 DB formatを6へ進め、5と未知版は自動移行せず拒否する。`scada-model`へのpath依存と`sha2 = "=0.10.9"`を追加した。管理台帳は各4096版、member最大8、要求／保存本文各128KiB、decoded rows最大256、元のQueryControlと既存8MiB上限を共有する。検証負荷が上限を超える場合は全操作をerrorで戻す。
 
 一度applyしたstoreではdisabledでもmanagedとなる。過去のsession／tick再送を維持し、新規の手動／時刻付きsession開始は共通入口で拒否する。保存commitはSDK起動やRunningを意味しない。次はH5b2でactivationとsessionの原子bindingを設計・実装し、H5cで停止前preflight、stop／joinと明示activate、再起動復元を接続する。Project編集／保存はH5dへ分ける。
+
+## H5b2の実装と受入（2026-11-03）
+
+[activation詳細](historian-recording-activation.md)に従い、現在appliedとmapping／保持版を照合する専用開始入口を追加した。固定sessionとtimed evidence、開始receiptは同一transactionへ確定する。mutableなsession statusをreceiptと分け、再起動後もlatestを取得できる。旧要求の再送は元結果の照会であり、終了／中断sessionを再開しない。
+
+DB7へ進め、旧6も自動移行しない。既存manual beginのmanaged gateは維持する。nativeの`activation_supported=true`はbinding対応を示し、SDK/workerのRunningや製品接続を保証しない。次はH5cで、実clock取得時に専用開始を行うrecorder戦略と、停止前preflight／stop／join／fresh SDK pinを含むownerへ接続する。

@@ -1,8 +1,8 @@
 PRAGMA application_id = 1396918337;
-PRAGMA user_version = 6;
+PRAGMA user_version = 7;
 CREATE TABLE store_meta (
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
-    format_version INTEGER NOT NULL CHECK (format_version = 6),
+    format_version INTEGER NOT NULL CHECK (format_version = 7),
     store_id TEXT NOT NULL,
     deployment_id TEXT NOT NULL,
     last_commit INTEGER NOT NULL CHECK (last_commit >= 0)
@@ -275,3 +275,28 @@ CREATE TABLE recording_application_members (
 ) STRICT;
 CREATE INDEX recording_reserved_first_use ON recording_application_members(series_id,segment_id,applied_revision);
 CREATE INDEX recording_series_first_use ON recording_application_members(series_id,applied_revision);
+
+-- H5b2: immutable activation receipts and their timed session share one commit.
+CREATE INDEX session_clock_epoch ON session_evidence(clock_epoch);
+CREATE TABLE recording_activations (
+ sequence INTEGER PRIMARY KEY CHECK(sequence BETWEEN 1 AND 4096),
+ activation_id TEXT UNIQUE NOT NULL,
+ applied_revision INTEGER NOT NULL REFERENCES recording_plan_applications(applied_revision),
+ mapping_revision INTEGER NOT NULL REFERENCES recording_mapping_revisions(mapping_revision),
+ retention_revision INTEGER NOT NULL REFERENCES retention_policy_applications(applied_revision),
+ session_id TEXT UNIQUE NOT NULL REFERENCES sessions(session_id),
+ clock_epoch TEXT UNIQUE NOT NULL,
+ request_json TEXT NOT NULL,
+ request_hash TEXT NOT NULL CHECK(length(request_hash)=64 AND request_hash NOT GLOB '*[^0-9a-f]*'),
+ commit_version INTEGER UNIQUE NOT NULL CHECK(commit_version>0),
+ receipt_json TEXT NOT NULL
+) STRICT;
+CREATE TABLE recording_activation_state (
+ singleton INTEGER PRIMARY KEY CHECK(singleton=1),
+ last_sequence INTEGER REFERENCES recording_activations(sequence),
+ activation_count INTEGER NOT NULL CHECK(activation_count BETWEEN 0 AND 4096)
+) STRICT;
+INSERT INTO recording_activation_state VALUES(1,NULL,0);
+
+CREATE INDEX recording_activation_origin ON recording_activations(applied_revision,commit_version);
+CREATE INDEX managed_plan_session ON session_evidence(plan_id,plan_revision,session_id);
