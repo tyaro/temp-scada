@@ -14,6 +14,20 @@
 | R5〜幾何グループ期の検証     | [当時の件数・CI](#status-validation-archive)                                |
 | 実装状況から移したI1〜I5検証 | [当時の記録](#status-independent-archive)                                   |
 
+## PR #44の別8member群切替レビュー修正（2026-11-03）
+
+追加P2として異なる16 originsの8member群の往復切替を再現し、32個のseries／segment初利用・各別保持revisionを持つ構成まで回帰を追加した。identity pairの同一transaction内再利用と、関連する台帳／定義／mapping／previous commitのJOIN取得で重複読取を減らした。共通validatorによる本文・hash・receipt・初利用・commit順序の検査とbytes／SQL／VM課金、256行上限は維持する。Astraのread-onlyレビューに必須修正はない。
+
+## PR #44の記録計画再適用レビュー修正（2026-11-03）
+
+8memberのfirst-useが異なる8applicationに分かれると、旧appliedと新mappingの二重検証で256行上限に達するP2を再現・修正した。first-use根拠のcacheを一apply transaction内で共有し、使用時のcommit上限とdescriptor検証、予約metadata/hash検査、SQL／row／bytes課金を維持する。上限変更はない。結合後の再適用とreceipt、低予算rollback、operationをまたぐ破損再検出を回帰し、Astraのread-onlyレビューに必須修正はない。
+
+## 記録計画の永続台帳（H5b1、2026-11-03）
+
+H5aの[PR #43](https://github.com/tyaro/temp-scada/pull/43)はマージ済みで、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41477917969)と[push CI](https://github.com/tyaro/temp-scada/actions/runs/41477765904)は全7job成功。Astraの詳細設計に従い、native管理台帳・mapping登録・原子的apply・receipt照会と新規sessionのmanaged gateを追加した。DB6へ進め、5は自動移行せず拒否する。SHA-256固定依存とmodel validatorへのpath依存を追加した。
+
+再送は旧結果を返して再適用せず、mapping／applied／保持版のCASとdesired不変性を確認する。予約identityは検索用metadataから分離し、同じseries／incarnation／segmentの再割当を拒否する。Astraレビューのfirst-use根拠とmapping receipt時のhead検査を強化し、過去receipt本文へ再帰しない有限検証を維持した。隔離SQLiteで障害と復旧を検証し、記録開始とのbindingとsupervisorは次工程へ残す。Rust workspace414件（新規21）・Clippy／fmt、TS1778件・型検査0error／0warning・build、関連Chromium27件と全体Prettierを受け入れた。全体CIはReady for ReviewのPRで確認する。
+
 ## 独立した記録計画の純粋契約（H5a、2026-11-03）
 
 [設計PR #42](https://github.com/tyaro/temp-scada/pull/42)はマージ済みで、[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41469698781)と[push CI](https://github.com/tyaro/temp-scada/actions/runs/41469603179)は全7ジョブ成功。H5aはDesiredRecordingPlan v1の共通Schema、Rust owned wrapper、TS owned／frozen parserとboolean validator、139共通fixtureを追加した。Budget／文字列判定は既存Trendと共用し、既存の受理とHistoryの既定node上限を維持した。
