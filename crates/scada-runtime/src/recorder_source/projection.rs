@@ -10,7 +10,7 @@ use super::SdkRecorderPlan;
 
 // binding() performs linear SDK lookups. Check sizes before scanning so the
 // synchronous adapter has an explicit finite work bound, independent of UI.
-const MAX_ROWS: usize = 4096;
+pub(super) const MAX_ROWS: usize = 4096;
 const MAX_SAFE: i64 = 9_007_199_254_740_991;
 
 pub(super) fn capture(

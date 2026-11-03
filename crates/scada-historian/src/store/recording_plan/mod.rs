@@ -5,6 +5,7 @@ mod preflight;
 mod prepare;
 mod read;
 mod reservations;
+mod resume;
 mod types;
 mod write;
 use super::{
@@ -13,6 +14,7 @@ use super::{
 };
 pub use activation::*;
 use query::{control::Budget, QueryControl};
+pub use resume::{RecordingResumeState, MAX_RESUME_DECODED_ROWS};
 use rusqlite::{params, Connection, OptionalExtension};
 pub use types::*;
 pub const MAX_DOCUMENT_BYTES: usize = 128 * 1024;

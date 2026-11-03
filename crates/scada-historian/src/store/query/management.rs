@@ -92,6 +92,7 @@ mod tests {
         reader
             .preflight_recording_plan(&apply("next", None, true), &control())
             .unwrap();
+        reader.recording_resume_state(&control()).unwrap();
         assert!(reader.connection.as_ref().unwrap().is_autocommit());
     }
     #[test]

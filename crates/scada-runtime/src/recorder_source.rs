@@ -2,6 +2,7 @@
 //! Capture copies one SDK state, without networking, async work, or a second cache.
 mod plan;
 mod projection;
+mod resolution;
 pub use plan::*;
 
 use banto_tagclient::{ErrorKind, RestClient, TagClientConnectionState, TagClientHandle};
@@ -119,4 +120,4 @@ impl SnapshotSource for SdkRecorderSource {
 }
 
 #[cfg(test)]
-mod tests;
+pub(super) mod tests;

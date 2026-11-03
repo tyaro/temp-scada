@@ -13,6 +13,7 @@ pub(super) fn setup() -> (
         RecordingSupervisor {
             host,
             preflight: PreflightOwner::new(reader),
+            resume: resume::ResumeOwner::default(),
         },
         dir,
     )

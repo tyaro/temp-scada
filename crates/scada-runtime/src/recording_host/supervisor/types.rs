@@ -69,6 +69,9 @@ pub struct SupervisorState {
     pub preflight_phase: PreflightPhase,
     pub preflight_run: Option<PreflightRun>,
     pub candidate_phase: Option<CandidatePhase>,
+    pub resume_inspection_phase: super::ResumeInspectionPhase,
+    pub resume_inspection_run: Option<super::ResumeInspectionRun>,
+    pub resume_prepared: bool,
 }
 /// The original writer is returned intact if its bounded reader lease cannot be obtained.
 pub struct SupervisorInitError {
@@ -98,6 +101,11 @@ pub enum SupervisorError {
     NoReader,
     Request(StoreError),
     Host(RecordingHostError),
+    WrongInspection,
+    WrongResume,
+    ResumeConsumed,
+    ResumeBlocked(&'static str),
+    Resolution(scada_historian::recorder::SourceError),
 }
 impl From<RecordingHostError> for SupervisorError {
     fn from(error: RecordingHostError) -> Self {

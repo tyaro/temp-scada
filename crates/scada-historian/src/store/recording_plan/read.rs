@@ -333,14 +333,32 @@ pub(super) fn application_with_cache(
     ledger: &str,
     cache: &mut reservations::EvidenceCache,
 ) -> StoreResult<AppliedRecordingPlan> {
+    if let Some(saved) = cache.applications.get(&revision) {
+        if saved.receipt.applied_revision != revision
+            || saved.receipt.plan.plan_id != ledger
+            || saved.receipt.commit_version > snapshot
+        {
+            return Err(StoreError::CorruptData);
+        }
+        return Ok(saved.clone());
+    }
     let result = application_evidence(c, b, revision, snapshot, ledger, true)?;
     if let Some(mapping) = &result.resolution {
         reservations::check_with_cache(c, b, mapping, Some(revision), cache)?;
     }
+    cache.applications.insert(revision, result.clone());
     Ok(result)
 }
 pub(super) fn state(c: &Connection, b: &mut Budget) -> StoreResult<RecordingPlanState> {
     let h = heads(c, b)?;
+    state_from_heads(c, b, &h, &mut reservations::EvidenceCache::default())
+}
+pub(super) fn state_from_heads(
+    c: &Connection,
+    b: &mut Budget,
+    h: &Heads,
+    cache: &mut reservations::EvidenceCache,
+) -> StoreResult<RecordingPlanState> {
     let mapping = h
         .mapping
         .map(|rev| mapping(c, b, rev, h.snapshot))
@@ -348,18 +366,19 @@ pub(super) fn state(c: &Connection, b: &mut Budget) -> StoreResult<RecordingPlan
     let applied = h
         .applied
         .map(|rev| {
-            application(
+            application_with_cache(
                 c,
                 b,
                 rev,
                 h.snapshot,
                 h.ledger.as_deref().ok_or(StoreError::CorruptData)?,
+                cache,
             )
         })
         .transpose()?;
     Ok(RecordingPlanState {
         snapshot_commit: h.snapshot,
-        ledger_plan_id: h.ledger,
+        ledger_plan_id: h.ledger.clone(),
         mapping,
         applied,
         activation_supported: true,

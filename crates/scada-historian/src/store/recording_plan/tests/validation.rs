@@ -489,6 +489,7 @@ fn assert_running_preflight_budget(
         )
         .unwrap();
     let mut reader = store.reader().unwrap();
+    reader.recording_resume_state(&control()).unwrap();
     let mut next = request.clone();
     next.request_id = format!("preflight:apply:{n}");
     next.expected_applied_revision = Some(n);
@@ -635,6 +636,18 @@ fn thirty_two_series_and_segment_origins_with_distinct_retention_versions_fit_de
         ));
         drop(reader);
         let receipt = store.apply_recording_plan(&a, &control()).unwrap();
+        // Current applied may differ from the latest (closed) activation's group.
+        let mut composite_reader = store.reader().unwrap();
+        composite_reader.recording_resume_state(&control()).unwrap();
+        if n == 34 {
+            let mut small = control();
+            small.limits.max_decoded_rows = 256;
+            assert!(matches!(
+                composite_reader.recording_resume_state(&small),
+                Err(StoreError::Control(_))
+            ));
+        }
+        drop(composite_reader);
         assert_eq!(receipt.applied_revision, n);
         assert_eq!(
             store
@@ -649,6 +662,9 @@ fn thirty_two_series_and_segment_origins_with_distinct_retention_versions_fit_de
         assert_running_preflight_budget(&mut store, &a, &pool);
         last_apply = Some(a);
     }
+    let mut composite_reader = store.reader().unwrap();
+    composite_reader.recording_resume_state(&control()).unwrap();
+    drop(composite_reader);
     // The recorder's preflight and activation also fit with these persisted origins.
     struct Clock;
     impl crate::recorder::RecorderClock for Clock {

@@ -8,7 +8,7 @@ use scada_historian::store::{
 };
 use std::sync::Arc;
 
-fn plan() -> SdkRecorderPlan {
+pub(in crate::recorder_source) fn plan() -> SdkRecorderPlan {
     SdkRecorderPlan::new(
         SessionSpec {
             session_id: "recording".into(),
@@ -39,7 +39,7 @@ fn plan() -> SdkRecorderPlan {
     .unwrap()
 }
 
-fn generation(plan: &SdkRecorderPlan) -> GenerationSnapshot {
+pub(in crate::recorder_source) fn generation(plan: &SdkRecorderPlan) -> GenerationSnapshot {
     let catalog = crate::tests::catalog();
     GenerationSnapshot {
         generation: u64::MAX,

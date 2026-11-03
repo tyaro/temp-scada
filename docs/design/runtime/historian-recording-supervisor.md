@@ -1,6 +1,6 @@
 # Historian H5c2: 記録計画のpreflightと明示的な置換
 
-状態: 採用設計（Astra主設計）。2026-11-03（日本時間）。H5c1 managed Recorder／HostとH5c2a preflightは[PR #47](https://github.com/tyaro/temp-scada/pull/47)／[PR #48](https://github.com/tyaro/temp-scada/pull/48)でworkへ統合済み。H5c2bも[PR #49](https://github.com/tyaro/temp-scada/pull/49)でworkへ統合済み。H5c2c1は単一supervisorの検査・明示pause・一回適用を実装・ローカル受入済み。fresh解決・回復snapshotの統合はc2c2である。
+状態: 採用設計（Astra主設計）。2026-11-03（日本時間）。H5c1 managed Recorder／HostとH5c2a preflightは[PR #47](https://github.com/tyaro/temp-scada/pull/47)／[PR #48](https://github.com/tyaro/temp-scada/pull/48)でworkへ統合済み。H5c2bも[PR #49](https://github.com/tyaro/temp-scada/pull/49)でworkへ統合済み。H5c2c1も[PR #50](https://github.com/tyaro/temp-scada/pull/50)でworkへ統合済み。c2c2で同snapshotの診断とcaller提供SDK解決に束縛した明示resumeを実装した。実取得時刻や永久identityの証明は含めない。
 
 [記録計画](historian-recording-plan.md)、[台帳](historian-recording-plan-ledger.md)、[activation](historian-recording-activation.md)、[所有者](historian-recording-host.md)、[保持協調](historian-recording-retention.md)を継承する。DB7、H1、Project 0.36.0、SDK/Banto/依存を維持する。実Hub/S7/設定/資格情報/本番DBへ接続しない。
 
@@ -353,3 +353,103 @@ Dropはpreflightとrecording/plan workerへ取消要求を送り、blocking task
 新規runtime単体15件・mockHub統合3件を含むRust workspace505件、Clippy／rustfmt、既存H1／desired契約のChromium8件、全体Prettier・文書リンクが成功した。Astraの最終read-onlyレビューに必須修正はない。元control・2lease・取消安全性・reader障害時の停止回収、Replay/errorでの録画継続、自然完了、候補の一回実行、caller-confirmed再録画とraw/minmaxを確認した。全体CIはwork向けReady for Review PRで確認する。
 
 検査readerの障害注入は所有・停止回収の受入で、actual snapshot cleanup拒否は既存native回帰に含める。c2c2のfresh SDK解決・明示resumeと回復snapshotの調整は未実装。既存開始の委譲だけでfreshnessを証明したとは扱わない。
+
+## H5c2c2: 同snapshot診断とcaller解決に束縛した明示resume
+
+採用詳細、2026-11-03。c2c1統合後に実装する契約。DB7/H1/Project/SDK/依存を維持し、今回は管理snapshotと明示resume準備/開始を一工程で閉じる。自動再接続、接続設定配布、時計trustの発行、認証、異常latchの自動解除は含めない。
+
+### native同snapshot view
+
+```rust
+HistoryReader::recording_resume_state(&mut self, control: &QueryControl)
+    -> StoreResult<RecordingResumeState>;
+
+pub struct RecordingResumeState {
+    pub snapshot_commit: u64,
+    pub plan: RecordingPlanState,
+    pub latest_activation: Option<RecordingActivation>,
+    pub recovery: StoreRecoveryState,
+}
+```
+
+既存readerのstore_snapshot runnerで一度だけBEGINし、最初のlast_commitでpinする。plan stateのcurrent mapping/applied、latest activationと可変session状態、保持fence/job/policy/active sessionを同connection/同Budgetから取得する。内包するsnapshot_commitは外枠と一致する。個別public APIを順に呼んで結果を結合しない。未知をNoneとして正常に返すのは証拠が本当に無い場合だけで、head/参照破損はCorruptData。
+
+read::state_from_headsとactivation::read::load_with_cache相当の内部helperを共有する。operation/snapshot内だけでEvidenceCacheを共有し、full application検証済みcacheとfirst-use用のreceipt本文未検査cacheを分離する。first-use hitをfull receipt検証の代わりにしない。同じcurrent/latest revisionはfull検証を共有できるが、別revisionの予約・恒久metadata・元receipt照合を省かない。cacheの参照snapshot/ledger/commit条件は維持する。
+
+最新appliedとlatest activationが別8member群で、series/segment別32 origins・異保持版を持つ正常例は、cache共有後も256行を越えることを実測した。この複合read専用上限は768 decoded rows（3つの既存管理読取各256行に相当）とする。既存個別APIの256上限は変えず、callerがより小さい限度を指定すればそれを優先する。同fixtureは既定上限で成功し、明示256行ではWorkLimitになることを回帰する。VM、8MiB合計入力bytes、出力、絶対deadline/tokenは一つで、3回分へ延長しない。
+
+### runtime inspection owner
+
+```rust
+start_resume_inspection(control: QueryControl)
+    -> Result<ResumeInspectionRun, SupervisorError>;
+cancel_resume_inspection(run: &ResumeInspectionRun) -> Result<(), SupervisorError>;
+join_resume_inspection(run: &ResumeInspectionRun)
+    -> Result<Arc<ResumeInspectionCompletion>, SupervisorError>; // async
+```
+
+既存専用readerの物理1枠をpreflightと共有する。新connection/leaseを追加しない。exact token、borrowed join、完了未join Busy、元deadline/token、ReaderUnusable/panic、Dropの規則も共有する。preflight型とinspection型は混同できないtokenとする。
+
+inspectionは診断なのでInitialIdle、Running、正常/異常Joined、plan/retention latch中にも読める。管理write中、未消費Candidate、未消費resume ticket、別reader worker中はBusy。進行中recordingを停止しない。新しいinspection受理で古いinspectionを無効化するが、同期拒否では結果を保持する。
+
+completionはrequest token、取得開始時のOption<RecordingRun>、native viewまたはStoreErrorを保持する。初期Idleはrun無しというowner contextを束縛する。Hostのguard snapshotも別のプロセス内診断として示せるが、DB snapshotの一部と偽称しない。inspection成功/errorでplan/retention latch、clock guard、session状態を変更しない。
+
+### SDK coherent解決の意味
+
+固定SDKのGenerationSnapshotはcatalog/resolution/valuesを一つのgenerationとして公開し、既存SdkRecorderSourceは一回のhandle.state()から得たArcを使う。SdkGenerationPinのrun_id/catalog revisionやStableTagIdは、Hub instance/incarnationの永久性・認証・取得時刻の証明ではない。
+
+新入口ではcallerが現在のcoherent GenerationSnapshotを明示的に提供する。DB inspection後にfresh取得したという責任はcallerに残る。API呼出順、generation番号、callerのUTC申告だけでは、渡されたArcが実際にinspection後fetchされたことを証明できない。本実装は「caller提供の一個のsnapshotとの整合」を保証し、ネットワーク鮮度やendpoint同一性を保証しない。saved pinの自動再利用や同名別tagへの自動追随はしない。
+
+```rust
+pub struct ResumeResolution {
+    pub sdk_snapshot: Arc<GenerationSnapshot>,
+    pub session_id: String,
+    pub clock_epoch: String,
+    pub activation_id: String,
+    pub slot_count: Option<u64>,
+    pub max_clock_skew_ms: u64,
+}
+
+prepare_resume(inspection: &ResumeInspectionRun, resolution: ResumeResolution)
+    -> Result<ResumeTicket, SupervisorError>;
+resume(ticket: &ResumeTicket, control: QueryControl, client: RestClient)
+    -> Result<RecordingRun, SupervisorError>;
+discard_resume(ticket: &ResumeTicket) -> Result<(), SupervisorError>;
+```
+
+ResumeTicketはprocess-local exact token。prepared plan/options/bindingはsupervisor内部のowned値として保持し、resumeで別plan/期待版を差し込ませない。prepareはSQL/ネットワークを実行せず、snapshot全体をclone/serializeせずArcを借用して最大8pinsを抽出する。
+
+prepare条件は以下のとおり。
+
+- 最新の成功inspection、取得時と現在の同じRecordingRun（または同じ初期Idle context）。reader workerなし、未消費変更候補なし、管理workerなし。
+- HostがInitialIdleまたはclean Joined。plan recovery_required、retention job_pending/rearm_requiredはいずれも無し。異常Joinedをinspection成功で初期状態へ戻さない。
+- view内active session/job無し、現在appliedがenabled。current mapping/current保持policy版がapplied参照版と一致する。保存済みresolution全descriptorをSessionSpecへ使い、PlanRef/期待版もviewから取得する。
+- caller指定の新session/clockEpoch/activationIdと周期/slot/skewを既存純粋規則で検査する。DB内の全過去ID/epochとの衝突判定はH5c1/H5b2が最終権威である。
+- 全memberについてSDK bindingがresolvedであること。seriesIdをbinding keyとしてexternalName/tag_key/StableTagId/data_type/unit/enabledとValueEntry.value_sourceを照合し、そのsnapshotからpinsを作る。DBのhub_instance/incarnationをSDK番号から生成しない。
+- 既存projectionのgeneration整合・型・source・有限予算規則を再利用する。Bad/Stale品質そのものはidentity不一致ではなく、既存の無値記録規則を維持する。unresolvedやresolved value欠落はこのresume準備では拒否し、旧pinsで補完しない。通常の既存source captureが切断時にnullを返す契約は変更しない。
+
+SDK入力には既存4096 catalog/values・最大8resolutionの上限を適用する。新しい純粋入口で走査/hashする文字列にも合計8MiBの有限budgetを設け、巨大caller構築snapshotを無制限に処理しない。超過時はprepared ticketを作らない。projection検証のために作る一時observationは保存しない。
+
+### resumeと失敗
+
+resumeはticket/context/Host guardを再検査し、保存したplan/options/bindingをH5c1 managed開始へ渡す。受理時だけticket/inspectionを消費・無効化する。同期拒否では保持する。新しいpreflight/inspection/通常startへ切り替えるには未消費resume ticketの明示discardが必要。discardはDBを変更せず、runを停止/開始しない。
+
+start受理、native activation成功、SDK Live、初回tick、Runningを区別する。専用SDK ownerはresume時に新しく作るため、提供snapshotとの間に変化があれば既存run/catalog/source gateが停止する。接続待ちのnull、Bad/Stale、capture異常は既存source契約に従う。prepared snapshotがあることを将来の全sample品質保証とはしない。
+
+H5c1はworker開始時に現在DB版/固定specを再検査し、実clock anchorで専用activationを行う。inspectionのsnapshot_commitそのものをCASにせず、tickや無関係な管理commit増加だけでは拒否しない。applied/mapping/保持版変化は実revision照合で拒否する。ActivationUnconfirmed、成功後latecancel、receipt保持、SDK shutdown、clean pause gateを変更しない。
+
+初期Idleでの明示resumeは既存Hostの初回開始と同じ許可範囲であり、自動復旧ではない。再openが旧activeをinterruptedへ確定した後でも、旧activation/session/clockやpinを再装着しない。異常Joinedまたは既存latchがあるownerからはresume不可のまま。inspectionを表示し、join/take_store/reopen等の明示回復へ戻す。
+
+### c2c2受入
+
+- native: 同snapshotのcurrent applied/mapping、別版latest activation、保持policy/fence/job/active session。途中writer commitでも混合世代を返さず、次inspectionで新状態が見える。
+- native: 全write authorizer拒否、32 origins/異保持版の最悪正常構成、corrupt head/旧receipt/metadata、容量/bytes/VM/取消/cleanup/panicを検査。cache hitで本文検証が消えない。
+- runtime: preflight/inspectionで物理1枠・合計2lease、取消safe join、stale token、完了未join、ReaderUnusable、Drop/回復store取得。
+- runtime: 異常Joined/plan latch/保持jobでも診断は取得できるがprepare/resumeは拒否。inspectionがlatchをclearしない。
+- pure SDK: 全resolvedのnumber/bool/Bad/Stale/SIM/UnknownSource、tag/type/unit/source/run/catalog差、重複/未解決/上限、別namespace相当のDB identity差を検査。sourceの正常無値規則を変更しない。
+- mockHub: inspection→caller提供のcoherent snapshot→prepare→明示resume→activation receipt/tick/raw/minmax。candidate/inspection/request tokenの差替え、同期拒否後ticket保持、受理後再使用拒否を確認。
+- race: inspection後に版が変わる、SDK source世代が変わる、時計が変わる場合に、古い証拠で記録を継続せず既存gateで停止する。旧receiptを新workerへ流用しない。
+
+c2c2完了の表現は「同snapshotの復旧診断と、callerが提供したcoherent SDK解決に束縛した明示resume」。実Hubからのfresh取得証明、永久identity発行、自動リカバリ、製品認証/transportの完成とは記録しない。
+
+受入結果: native7件・SDK解決4件・runtime単体10件・mockHub統合3件を追加し、Rust workspace529件と既存契約のChromium8件が成功した。Astraの最終レビューに必須修正はない。次のH5dはProject desired保存・編集と管理状態表示を設計する。

@@ -2022,3 +2022,9 @@ PR #47／#48をworkへ統合（6c26ea6）し、統合後の全体CI成功を確�
 PR #49をworkへ統合（2f10622）し、Astra主設計の[H5c2c1](../design/runtime/historian-recording-supervisor.md)を実装した。初期化時の同store/reader所有を構造で保ち、一つの検査workerがrecordingと並行する。元run/sessionとowned intentを保存し、候補成功後も自動停止せず、明示pause/join後に同じ要求をc2bへ一度だけ渡す。fresh解決・回復snapshotの統合はc2c2へ分けた。
 
 新規runtime単体15件・mockHub統合3件を含むRust workspace505件、Clippy／rustfmt、既存H1／desired契約のChromium8件、全体Prettier・文書リンクが成功した。Astraの最終read-onlyレビューに必須修正はない。元control・2lease・取消安全性・reader障害時の停止回収、Replay/errorでの録画継続、自然完了、候補の一回実行、caller-confirmed再録画とraw/minmaxを確認した。全体CIはwork向けReady for Review PRで確認する。
+
+## 同snapshotの復旧診断と明示再開（H5c2c2、2026-11-03）
+
+PR #50をworkへ統合（de1363c）し、Astra主設計の[c2c2](../design/runtime/historian-recording-supervisor.md)を実装した。plan/activation/recoveryを一つのread snapshotで照会し、既存reader一枠のinspectionと、caller提供coherent SDK解決に固定した明示resumeを追加した。診断で異常latchを解除せず、旧sessionやpinを再装着しない。複合照会の768行上限は、異なる8member群・32 originsで256行不足を再現した上で採用した。
+
+新規native7件・SDK解決4件・runtime単体10件・mockHub統合3件を含むRust workspace529件、既存H1／desired契約のChromium8件、全体Prettier・変更文書のローカルリンク768件を確認した。Clippyの未使用import／mutを除去し、warnings拒否とrustfmtも成功した。Astraの最終レビューに必須修正はない。caller提供snapshotの値を記録せず、新SDK ownerからの新値だけを保存する。全体CIはwork向けReady for Review PRで確認する。

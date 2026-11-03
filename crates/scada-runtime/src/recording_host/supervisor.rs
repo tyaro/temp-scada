@@ -1,5 +1,10 @@
 //! Owns one recording Host and one same-store preflight lease. Every step is explicit.
 mod preflight;
+mod resume;
+pub use resume::{
+    ResumeInspectionCompletion, ResumeInspectionPhase, ResumeInspectionRun, ResumeResolution,
+    ResumeTicket,
+};
 mod types;
 use super::{
     RecordingCompletion, RecordingHost, RecordingHostError, RecordingHostStatus, RecordingOptions,
@@ -20,6 +25,7 @@ pub use types::*;
 pub struct RecordingSupervisor {
     host: RecordingHost,
     preflight: PreflightOwner,
+    resume: resume::ResumeOwner,
 }
 impl RecordingSupervisor {
     pub fn try_new(store: SqliteStore) -> Result<Self, Box<SupervisorInitError>> {
@@ -27,6 +33,7 @@ impl RecordingSupervisor {
             Ok(reader) => Ok(Self {
                 host: RecordingHost::new(store),
                 preflight: PreflightOwner::new(reader),
+                resume: resume::ResumeOwner::default(),
             }),
             Err(error) => Err(Box::new(SupervisorInitError { error, store })),
         }
@@ -37,6 +44,9 @@ impl RecordingSupervisor {
             preflight_phase: self.preflight.phase(),
             preflight_run: self.preflight.run(),
             candidate_phase: self.preflight.candidate,
+            resume_inspection_phase: self.resume.phase(),
+            resume_inspection_run: self.resume.run(),
+            resume_prepared: self.resume.pending(),
         }
     }
     pub fn recording_watch(&self) -> watch::Receiver<Arc<RecordingHostStatus>> {
@@ -49,6 +59,9 @@ impl RecordingSupervisor {
         self.host.retention_guard_state()
     }
     fn require_start(&self) -> Result<(), SupervisorError> {
+        if self.resume.running.is_some() || self.resume.pending() {
+            return Err(SupervisorError::Busy);
+        }
         self.preflight.require_idle()?;
         if self.preflight.pending_candidate() {
             return Err(SupervisorError::Busy);
@@ -64,6 +77,7 @@ impl RecordingSupervisor {
         self.require_start()?;
         let run = self.host.start(plan, options, client)?;
         self.preflight.clear_result();
+        self.resume.clear();
         Ok(run)
     }
     pub fn start_managed(
@@ -79,6 +93,7 @@ impl RecordingSupervisor {
             .host
             .start_managed(plan, options, binding, control, client)?;
         self.preflight.clear_result();
+        self.resume.clear();
         Ok(run)
     }
     fn check_run(&self, run: &RecordingRun) -> Result<(), SupervisorError> {
@@ -105,6 +120,9 @@ impl RecordingSupervisor {
         intent: RecordingPlanTurnIntent,
         control: QueryControl,
     ) -> Result<PreflightRun, SupervisorError> {
+        if self.resume.running.is_some() || self.resume.pending() {
+            return Err(SupervisorError::Busy);
+        }
         self.preflight.require_idle()?;
         if self.preflight.pending_candidate()
             || self.host.retention.running.is_some()
@@ -137,14 +155,16 @@ impl RecordingSupervisor {
             .clone()
             .ok_or(SupervisorError::NoRecording)?;
         intent.validate().map_err(SupervisorError::Request)?;
-        self.preflight.start(
+        let run = self.preflight.start(
             BoundRequest {
                 recording_run,
                 session_id,
                 intent,
             },
             control,
-        )
+        )?;
+        self.resume.clear();
+        Ok(run)
     }
     pub fn cancel_preflight(&mut self, run: &PreflightRun) -> Result<(), SupervisorError> {
         self.preflight.cancel(run)
@@ -254,12 +274,13 @@ impl RecordingSupervisor {
     }
     /// Explicit recovery transfer. Retire the dedicated lease only after writer recovery succeeds.
     pub fn take_store(&mut self) -> Result<SqliteStore, SupervisorError> {
-        if self.preflight.running.is_some() {
+        if self.preflight.running.is_some() || self.resume.running.is_some() {
             return Err(SupervisorError::Busy);
         }
         let store = self.host.take_store()?;
         self.preflight.reader.take();
         self.preflight.clear_result();
+        self.resume.clear();
         Ok(store)
     }
 }

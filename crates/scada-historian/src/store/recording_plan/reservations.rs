@@ -91,6 +91,7 @@ fn permanent(c: &Connection, b: &mut Budget, d: &IdentityDescriptor) -> StoreRes
 #[derive(Default)]
 pub(super) struct EvidenceCache {
     first_uses: std::collections::HashMap<u64, AppliedRecordingPlan>,
+    pub(super) applications: std::collections::HashMap<u64, AppliedRecordingPlan>,
 }
 pub(super) fn check(
     c: &Connection,

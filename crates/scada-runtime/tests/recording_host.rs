@@ -741,3 +741,6 @@ mod plan_turn;
 
 #[path = "recording_host/supervisor.rs"]
 mod supervisor;
+
+#[path = "recording_host/resume.rs"]
+mod resume;
