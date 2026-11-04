@@ -768,10 +768,14 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 
 [次workflow受入](../design/runtime/historian-recording-registry-workflow-renewal.md)の`workflow/renewal.rs`は初回／専用次予約API、creationとpredecessorの再送束縛、履歴台帳の累積予約と各1024bytes管理費用、全静止gate、current accepted apply限定の新read検査を担当する。`workflow/mod.rs`はrecordsとcurrentを分離し、旧ticketによる新操作を防ぎ、proofを元recordへ保存する。caller／native IDのcollisionは全履歴attemptへ検査する。`state.rs`／`escrow.rs`は累積used／reservedと正常終了時の未発行枠だけの返却を維持する。`handle.rs`は正常paused保存時のsticky ever_clean_joinedを更新する。
 
-`examples/recording-workflow-renewal-cases.json`の50シナリオ947ステップと`tests/renewal_boundaries.rs`の10境界試験を共通Rust driverで実行する。test-only `__fixtures__/recording-workflow-renewal-cases.ts`、`recording-workflow-renewal-contract.test.ts`、`e2e/recording-workflow-renewal-contract.spec.ts`は154期待DTO・全入力の契約、累積保持会計、App保存不変を検査する。既存47workflow fixtureへ初回管理費用だけを加算した。複数scope allocator、受信frame順序／矛盾と実接続は後続である。
+`examples/recording-workflow-renewal-cases.json`の50シナリオ947ステップと`tests/renewal_boundaries.rs`の10境界試験を共通Rust driverで実行する。test-only `__fixtures__/recording-workflow-renewal-cases.ts`、`recording-workflow-renewal-contract.test.ts`、`e2e/recording-workflow-renewal-contract.spec.ts`は154期待DTO・全入力の契約、累積保持会計、App保存不変を検査する。既存47workflow fixtureへ初回管理費用だけを加算した。複数scopeの全量予約は次節のdomainへ追加済み。受信frame順序／矛盾の検査はprep2cの詳細設計へ分離し、実接続は後続である。
 
 ## 記録registryの複数scope資源（H5d4c4c-prep2b5a）
 
 [複数scope資源のAstra設計](../design/runtime/historian-recording-registry-global-budget.md)に沿い、`recording_registry_model/domain/mod.rs`は有限登録・resource／ownerRefの寿命中一意束縛・容量と購読枠の全量予約・opaque ticket・共通仮想時計・seal・予約統計を担当する。`domain/facade.rs`は25の既存typed APIを転送する。独立advance／DerefMut／modelの持ち出しを提供せず、既存scopeの各gate・結果保持を再利用する。
 
 `domain/tests.rs`の14境界試験とcompile-fail2件は予約と実使用の区別、32scope／購読と16MiBの上限、回復read・将来completion、再送・帰属・clock・Dropを検証する。`tests.rs`の共通driverは既存289シナリオを単独／domain両経路で実行し、全domainケース後の登録再送も照合する。TS／browserの既存wire契約試験を再利用し、新しいwire／schemaや第二のTS registryを追加しない。実adapter／hostの共有native gateと物理資源の保証、受信frame検査は別工程である。
+
+## 記録wireの受信frame（H5d4c4c-prep2c設計）
+
+[Astraの受信器設計](../design/runtime/historian-recording-wire-receiver.md)は採用詳細設計であり、実行コードはまだない。既存`recording-wire-contract.ts`のowned validator／既知文書一致helperと`json-equality.ts`を使い、scope・ローカル世代・ACK前slot・revision履歴・再attachのstateを持つpure TS receiverを後続実装とする。公開入口は`recording-wire-receiver.ts`を予定する。callback／Promise終端／I/Oやnative registryの複製は含めない。`recording-async/port.ts`とcoordinatorは同realm test-only契約のままで、wireのownerEpoch／closed／ControlFrameを捨てた透過接続を作らない。通常Appへの投影契約と実host・P3bは別工程である。

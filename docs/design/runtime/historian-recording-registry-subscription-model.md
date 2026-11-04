@@ -8,7 +8,7 @@
 
 既存14 wire rootのうちAttachRequest/Reply、ControlRequest/Reply、StateFrame、ControlFrameをモデルで扱う。
 採用するのは単一owner内の原子的snapshot登録、revision、最新一件slot、明示detach／reconnect、元callの不変返信である。
-prep2b3ではasync task、実socket、認証失効処理、global32購読allocator、workflow credit解禁、実native dispatchを追加しない。モデルは単調なframeを生成する側であり、受信frameの並べ替え／同revision矛盾を検出する第二のclient modelは作らない。対応付けのfixtureは既存pure helperで検証し、実clientでの受信安全性とは区別する。
+prep2b3ではasync task、実socket、認証失効処理、global32購読allocator、workflow credit解禁、実native dispatchを追加しない。本モデルは単調なframeを生成する側であり、受信frameの並べ替え／同revision矛盾検出を含めない。受信側は[prep2cの詳細設計](historian-recording-wire-receiver.md)へ分離し、pure TS receiverの実装は後続とする。対応付けのfixtureは既存pure helperで検証し、実clientでの受信安全性とは区別する。
 
 構造は `scada_runtime::recording_registry_model` の拡張とし、TS側に第二のregistryを実装しない。
 Rust scenarioが遷移を実行し、browserは出力DTOの既存validator検証だけを行う。

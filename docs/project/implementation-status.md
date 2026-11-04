@@ -10,6 +10,15 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 記録wireの受信frame設計（H5d4c4c-prep2c、2026-11-05）
+
+prep2b5aの[PR #82](https://github.com/tyaro/temp-scada/pull/82)はworkへ統合済み（`cc2bed9`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41871519106)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41871618502)全7job成功、head `212a8d2` のレビュー指摘なし）。[Astraの受信器設計](../design/runtime/historian-recording-wire-receiver.md)で、固定scopeとローカル世代ticketに束縛した純粋TypeScript receiverの境界を定めた。
+
+attach ACK前のstate／control、同revisionの全文一致と矛盾、既知の古い重複、明示再attachと旧世代の後着を扱う。未知の低revisionは正当な配送順逆転でもresyncを要求する保守的な方針とし、nativeの巻戻しや未実行とは断定しない。履歴は有限予算で保持し、容量不足やprotocol faultで既知の証拠を消さない。
+
+receiverはcallback・I/O・Promiseの完了処理を持たないpoll型のprojectionで、記録操作registryをTSへ複製しない。closed／native ownerBlocked／認可喪失／配送切断と受信器faultを別に扱う。今回は詳細設計のみで、receiver実装と共有fixtureは後続。現local portにはownerEpoch・closed・ControlFrame等がないため、通常App／coordinatorへそのまま接続しない。Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存、実接続とP3bの保留を維持する。
+Astraの最終read-only整合レビューに必須所見はない。今回は文書変更のみのためローカル全体試験は再実行せず、全体Prettier・相対リンク・差分を確認し、Ready for Review PRの全体CIで回帰を確認する。
+
 ## 記録registryの複数scope資源モデル（H5d4c4c-prep2b5a、2026-11-05）
 
 [Astra設計](../design/runtime/historian-recording-registry-global-budget.md)に沿い、scope登録時に容量と購読枠を全量予約する純粋Rust domainを実装した。全体16MiB・購読32・scope32、scope最大8MiBを縮小設定でき、既定scopeは2件まで。既存RegistryModelを内部所有し、25のtyped APIを借用facadeから転送する。可変modelの持ち出しや独立時計、貸借・closeでのdomain予約返却は提供しない。
@@ -18,9 +27,9 @@ resource／ownerRefの二重照合とprincipal束縛、初期mode／全limitsの
 
 境界14件と型の持ち出し・独立時計を拒否するcompile-fail2件を追加した。既存289シナリオは単独／domain両経路で実行し、各domainケース後の登録exact再送も元ticket／初期資格／現在stateを変えない。TS／browserは既存DTOの契約とApp保存不変を確認する。
 
-Rust workspace703件（新規unit14＋compile-fail2、child workerの再実行2件は別）、TS全9,839件、型検査0error／0warning・build、関連Chromium12件、Clippy全target `-D warnings`／rustfmtが成功した。Astraの最終read-only整合レビューに必須所見はない。全体Prettier・変更文書の相対リンクと差分を確認し、Ready for Review PRで全体CIを確認する。
+Rust workspace703件（新規unit14＋compile-fail2、child workerの再実行2件は別）、TS全9,839件、型検査0error／0warning・build、関連Chromium12件、Clippy全target `-D warnings`／rustfmtが成功した。Astraの最終read-only整合レビューに必須所見はない。全体Prettier・変更文書の相対リンクと差分を確認した。PR #82は上記のとおりworkへ統合済みで、PR／push全体CIは全7job成功。
 
-次は受信frameの順序・同revision矛盾検出の詳細設計。domainは純粋simulationで、実host全体の資源やnative排他の実装とはしない。実adapter／hostとP3bは保留し、Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持する。
+受信frameの詳細設計は上記prep2cへ分離した。domainは純粋simulationで、実host全体の資源やnative排他の実装とはしない。実adapter／hostとP3bは保留し、Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持する。
 
 ## 記録registryの明示的な次workflow受入（H5d4c4c-prep2b4b、2026-11-05）
 
@@ -32,7 +41,7 @@ Rust workspace703件（新規unit14＋compile-fail2、child workerの再実行2�
 
 Rust workspace687件（新規11、child workerの再実行2件は別）、TS全9,839件（新規205）、型検査0error／0warning・build、関連Chromium12件（新規1）、Clippy全target `-D warnings`／rustfmtが成功した。Astraの最終read-onlyレビューに残る必須所見はない。全体Prettier・変更文書の相対リンクと差分を確認した。PR #80は上記のとおりworkへ統合済みで、PR／push全体CIは全7job成功。
 
-複数scope allocatorと受信frameの順序・同revision矛盾検出は後続。実native／host接続とP3bは保留し、Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持する。
+複数scopeの全体予約は上記prep2b5aで実装済み。受信frameの順序・同revision矛盾検出は上記prep2cの設計へ分離した。実native／host接続とP3bは保留し、Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持する。
 
 ## 記録registryのworkflow予約と段階進行（H5d4c4c-prep2b4a、2026-11-04）
 
