@@ -4,6 +4,15 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録wireの受信frame設計（H5d4c4c-prep2c、2026-11-05）
+
+prep2b5aの[PR #82](https://github.com/tyaro/temp-scada/pull/82)はworkへ統合済み（`cc2bed9`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41871519106)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41871618502)全7job成功、head `212a8d2` のレビュー指摘なし）。[Astraの受信器設計](../design/runtime/historian-recording-wire-receiver.md)で、固定scopeとローカル世代ticketに束縛した純粋TypeScript receiverの境界を定めた。
+
+attach ACK前のstate／control、同revisionの全文一致と矛盾、既知の古い重複、明示再attachと旧世代の後着を扱う。未知の低revisionは正当な配送順逆転でもresyncを要求する保守的な方針とし、nativeの巻戻しや未実行とは断定しない。履歴は有限予算で保持し、容量不足やprotocol faultで既知の証拠を消さない。
+
+receiverはcallback・I/O・Promiseの完了処理を持たないpoll型のprojectionで、記録操作registryをTSへ複製しない。closed／native ownerBlocked／認可喪失／配送切断と受信器faultを別に扱う。今回は詳細設計のみで、receiver実装と共有fixtureは後続。現local portにはownerEpoch・closed・ControlFrame等がないため、通常App／coordinatorへそのまま接続しない。Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存、実接続とP3bの保留を維持する。
+Astraの最終read-only整合レビューに必須所見はない。今回は文書変更のみのためローカル全体試験は再実行せず、全体Prettier・相対リンク・差分を確認し、Ready for Review PRの全体CIで回帰を確認する。
+
 ## 記録registryの複数scope資源モデル（H5d4c4c-prep2b5a、2026-11-05）
 
 [Astra設計](../design/runtime/historian-recording-registry-global-budget.md)に沿い、scope登録時に容量と購読枠を全量予約する純粋Rust domainを実装した。全体16MiB・購読32・scope32、scope最大8MiBを縮小設定でき、既定scopeは2件まで。既存RegistryModelを内部所有し、25のtyped APIを借用facadeから転送する。可変modelの持ち出しや独立時計、貸借・closeでのdomain予約返却は提供しない。
