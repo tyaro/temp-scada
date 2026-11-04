@@ -69,6 +69,7 @@ const methodNames = [
 interface View {
   identity: object;
   active: boolean;
+  qualifies: () => boolean;
 }
 interface OperationTrack {
   ref: string;
@@ -156,7 +157,8 @@ export function createAsyncRecordingOperationsCoordinator(
     lastApplied: AppliedSuccess | undefined,
     refusal: AsyncOperationsState["refusal"];
   let state: AsyncOperationsState,
-    notifying = false;
+    notifying = false,
+    qualifying = false;
   function intact(): boolean {
     try {
       if (
@@ -204,13 +206,13 @@ export function createAsyncRecordingOperationsCoordinator(
         workflow.read.delivery?.outcome.kind === "result")
     );
   }
-  function common() {
+  function common(ownPending?: "inspection" | "cancel") {
     return (
       !closed &&
       !invalid &&
       connected &&
-      inspectCall === "idle" &&
-      cancelCall === "idle" &&
+      inspectCall === (ownPending === "inspection" ? "pending" : "idle") &&
+      cancelCall === (ownPending === "cancel" ? "pending" : "idle") &&
       readPhase !== "readUncertain" &&
       readPhase !== "deliveryUnknown"
     );
@@ -336,9 +338,25 @@ export function createAsyncRecordingOperationsCoordinator(
       notifying = false;
     }
   }
+  function eligible(view: View) {
+    if (!view.active || qualifying) return false;
+    qualifying = true;
+    try {
+      if (view.qualifies() !== true) {
+        view.active = false;
+        return false;
+      }
+    } catch {
+      view.active = false;
+      return false;
+    } finally {
+      qualifying = false;
+    }
+    return view.active;
+  }
   function gate(view: View, allowBlocked = false) {
     return (
-      view.active && intact() && common() && (allowBlocked || !ownerBlocked)
+      eligible(view) && intact() && common() && (allowBlocked || !ownerBlocked)
     );
   }
   function time(end: number) {
@@ -949,11 +967,11 @@ export function createAsyncRecordingOperationsCoordinator(
       });
       publish();
       if (
-        !view.active ||
-        closed ||
+        !eligible(view) ||
         !intact() ||
-        !connected ||
-        invalid ||
+        !common("inspection") ||
+        admission !== "unknown" ||
+        call?.phase === "uncertain" ||
         !time(end)
       ) {
         inspectCall = "idle";
@@ -1012,7 +1030,7 @@ export function createAsyncRecordingOperationsCoordinator(
     cancelCall = "pending";
     cancel = undefined;
     publish();
-    if (!view.active || closed || !intact() || !connected || invalid) {
+    if (!eligible(view) || !intact() || !common("cancel")) {
       cancelCall = "idle";
       publish();
       return true;
@@ -1060,10 +1078,18 @@ export function createAsyncRecordingOperationsCoordinator(
         listeners.delete(listener);
       };
     },
-    bindView(identity: object): ViewLease {
-      if (closed || !identity || typeof identity !== "object")
+    bindView(
+      identity: object,
+      qualifies: () => boolean = () => true,
+    ): ViewLease {
+      if (
+        closed ||
+        !identity ||
+        typeof identity !== "object" ||
+        typeof qualifies !== "function"
+      )
         throw Error("Recording async owner closed");
-      const view: View = { identity, active: true };
+      const view: View = { identity, active: true, qualifies };
       return Object.freeze({
         preflight: (change: RecordingChangeRequest, c: IntentControl) =>
           accept(view, "preflight", change, c),

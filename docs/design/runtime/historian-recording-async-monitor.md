@@ -18,7 +18,7 @@ App内の操作modeは、最初の有効な単独注入でsyncまたはasyncへ�
 
 既存 `recordingOperationsService` と新propが両方非undefinedなら `configurationConflict` とし、どちらの新送信も許さない。既に発行された操作は元ownerが継続保持する。切替えを暗黙優先順位や自動fallbackで解決しない。既存同期経路のみの注入は従来挙動を維持する。
 
-AppのProject object／generation／openOwner／注入client objectを束縛したview tokenを発行し、render前の即時owner guardを維持する。閉じる／Project読込／service交換でtokenを退役させる。旧結果は「以前の対象」の監視として有限に保持できるが、新Projectの送信資格にはしない。
+AppのProject object／generation／openOwner／注入client objectを束縛したview tokenを発行し、render前の即時owner guardを維持する。閉じる／Project読込／service交換でtokenを退役させる。監視中の旧clientとrawな選択clientを別に比較し、撤去・不正client・A→B→Aでも旧送信用viewを永久退役させる。旧結果は「以前の対象」の監視として有限に保持できるが、新Projectの送信資格にはしない。
 
 ## 3. local portの仮定と型
 
@@ -104,7 +104,7 @@ interface AsyncOperationsClient {
   readonly ownerRef: string;
   current(): AsyncOperationsState;
   subscribe(listener: (state: AsyncOperationsState) => void): () => void;
-  bindView(identity: object): ViewLease;
+  bindView(identity: object, qualifies?: () => boolean): ViewLease;
 }
 interface ViewLease {
   preflight(change: RecordingChangeRequest, control: IntentControl): boolean;
@@ -123,6 +123,8 @@ type IntentControl = {
   requestedNativeBudgetMs: number; // 1..10000、別の意味
 };
 ```
+
+UI経路は `qualifies` にWorkspaceの現在propsを直接読むcallbackを必ず渡す。captured Project object／generation／openOwner／raw client／blockedと比較し、Svelte effectがselectを更新する前の同一turnでも新送信を拒否する。非UI callerでcallbackを省略した場合は明示retire責務を維持する。coordinatorは新規送信の各直前にstrict trueを要求し、false・非boolean・throwで当該viewを永久退役させる。callback評価中はroot全体で再入したaction／inspection／cancel受付を拒否し、評価後もclose／view.active／immutable owner／connected・sticky gate・物理枠・期限を再検査する。既受理refの観測にはこの送信資格を適用しない。
 
 booleanはcoordinatorがローカル意図を受け付けたかだけを返し、native受理／handle／未dispatch証明ではない。falseはportへ当該意図を発行していないローカル拒否。stateで理由を閉集合表示する。ViewLeaseはProjectそのものをportへ渡さず、Appが正しいcurrent ownerにだけ発行・保持する。
 
@@ -223,7 +225,7 @@ UIは「受付準備中」「native受付待ち」「受付不明」「候補」
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 選択       | 未注入、同期のみ、asyncのみ、同時注入拒否、sync↔async prop交換はmode固定で旧監視維持、既存同期挙動不変                                           |
 | 一枠       | 二client同期再入、lease待ち中追加操作拒否、非協力Promiseで次送信なし、元意図への一回admit                                                        |
-| 未送信     | lease待ちのclose／期限／Project交換／late leaseでadmit未呼出し、root枠はsettleまで保持                                                           |
+| 未送信     | lease待ちのclose／期限／Project・client交換／同一turnのprop交換／late leaseでadmit未呼出し、root枠はsettleまで保持                               |
 | 受付不明   | admit throw／reject／timeout、不正reply、notFound後着可能で非解除、late accepted／rejectedと矛盾reply                                            |
 | 三段階     | candidateまで録画継続するmock、明示pause、正常join後apply、Replay/errorで停止なし、discard ackまで候補保持                                       |
 | native結果 | accepted前のframe先着、元request/ref照合、既知receipt／quiescence／recovery単調保持                                                              |
@@ -241,3 +243,5 @@ browserは通常Appへのtest-only注入で両theme、三操作と照会、保�
 正常な元Promiseのsettle、独立したnative quiescence／recovery、受付照会のFoundを別条件として受け入れる。mutation枠満杯でもreadAdmissionを使い、未送信pause試行で将来のapply／discard予約を消さない。ID上限は試験用に縮小せず実4096で確認する。leaseの期限挙動はmock providerの仮定であり、実native leaseを提供したとの主張ではない。
 
 実wireのlease／frame／cancel ack、認証・製品host・native adapterの接続はc4c前の設計・再開条件へ残す。
+
+PR #69の自動レビューで、監視中clientを保つためraw選択clientの交換を見落とすview退役漏れを修正した。さらにlease resolve→prop交換を同じturnで行うブラウザ再現でeffect前送信を確認し、live qualificationを追加した。送信資格だけを閉じ、元ownerの観測と証拠を保つ。

@@ -87,5 +87,5 @@ export interface AsyncOperationsClient {
   readonly ownerRef: string;
   current(): AsyncOperationsState;
   subscribe(listener: (state: AsyncOperationsState) => void): () => void;
-  bindView(identity: object): ViewLease;
+  bindView(identity: object, qualifies?: () => boolean): ViewLease;
 }

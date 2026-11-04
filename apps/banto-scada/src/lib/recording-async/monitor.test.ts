@@ -208,3 +208,63 @@ it("does not submit a reordered desired array in place of the current Project bo
   expect(s.m.preflight(reordered, ctl())).toBe(false);
   expect(s.h.leases).toHaveLength(0);
 });
+it.each(["preflight", "pause", "apply"])(
+  "client replacement retires a %s waiting issuance while retaining old observation",
+  async (stage) => {
+    const s = setup(),
+      next = createAsyncPortHarness(),
+      nextRoot = createAsyncRecordingOperationsCoordinator(
+        next.port,
+        () => 100,
+      );
+    if (stage !== "preflight") await candidate(s);
+    if (stage === "apply") {
+      expect(s.m.pause(ctl())).toBe(true);
+      await flush();
+      s.h.finish(1);
+      await flush();
+    }
+    s.h.configure({ autoLease: false });
+    const before = s.h.admissions.length;
+    expect(
+      stage === "preflight"
+        ? s.m.preflight(change(s), ctl())
+        : stage === "pause"
+          ? s.m.pause(ctl())
+          : s.m.apply(ctl()),
+    ).toBe(true);
+    s.m.select({ ...s.selected, client: nextRoot.client });
+    expect(s.m.current().oldOwner).toBe(true);
+    expect(s.m.current().canSwitch).toBe(false);
+    s.h.issueLease(s.h.leases.length - 1);
+    await flush();
+    expect(s.h.admissions).toHaveLength(before);
+    expect(next.leases).toHaveLength(0);
+    expect(s.root.client.current().call).toBe("idle");
+    if (stage !== "preflight") {
+      expect(s.m.current().state?.latest).toBeDefined();
+      expect(s.m.current().canDiscardOriginal).toBe(true);
+    }
+  },
+);
+it.each(["removed", "invalid", "return"])(
+  "raw selected client %s permanently retires the old pending view",
+  async (kind) => {
+    const s = setup();
+    s.h.configure({ autoLease: false });
+    s.m.preflight(change(s), ctl());
+    if (kind === "removed") s.m.select({ ...s.selected, client: undefined });
+    else if (kind === "invalid")
+      s.m.select({ ...s.selected, client: {} as any });
+    else {
+      const next = createAsyncPortHarness(),
+        r = createAsyncRecordingOperationsCoordinator(next.port, () => 100);
+      s.m.select({ ...s.selected, client: r.client });
+      s.m.select(s.selected);
+    }
+    s.h.issueLease(0);
+    await flush();
+    expect(s.h.admissions).toHaveLength(0);
+    expect(s.root.client.current().invalid).toBe(false);
+  },
+);

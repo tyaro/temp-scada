@@ -50,7 +50,17 @@
       mapping = "";
       retention = "";
       draftError = false;
-      monitor.select(next);
+      monitor.select({
+        ...next,
+        // Read live props at each send, including before Svelte flushes effects.
+        qualifies: () =>
+          openOwner === next.openOwner &&
+          project === next.project &&
+          generation === next.generation &&
+          client === next.client &&
+          blocked === next.blocked &&
+          !blocked,
+      });
     });
   });
   const current = $derived(

@@ -267,3 +267,70 @@ test("malformed transport response blocks sends and never displays provider payl
   await expect(button(page, "元要求の受付を照会")).toBeDisabled();
   await expect(button(page, "この元runを停止してjoin")).toBeDisabled();
 });
+for (const stage of ["pause", "apply"])
+  test(`client swap retires a ${stage} lease wait without losing old evidence`, async ({
+    page,
+  }) => {
+    await prepare(page);
+    await preflight(page);
+    await finish(page, 0);
+    if (stage === "apply") {
+      await button(page, "この元runを停止してjoin").click();
+      await finish(page, 1);
+      await expect(button(page, "同候補を適用")).toBeEnabled();
+    }
+    await page.evaluate(() =>
+      (window as any).__asyncHarness.h.configure({ autoLease: false }),
+    );
+    await button(
+      page,
+      stage === "pause" ? "この元runを停止してjoin" : "同候補を適用",
+    ).click();
+    await expect(dialog(page)).toContainText("受付準備中");
+    const before = await page.evaluate(
+      () => (window as any).__asyncHarness.h.admissions.length,
+    );
+    await page.evaluate(() => (window as any).__asyncHarness.replace());
+    await expect(dialog(page)).toContainText("以前の対象の操作を監視");
+    await page.evaluate(() => {
+      const h = (window as any).__asyncHarness.h;
+      h.issueLease(h.leases.length - 1);
+    });
+    await expect(button(page, "以前の候補を破棄")).toBeEnabled();
+    expect(
+      await page.evaluate(
+        () => (window as any).__asyncHarness.h.admissions.length,
+      ),
+    ).toBe(before);
+    expect(
+      await page.evaluate(
+        () => (window as any).__asyncHarness.next.leases.length,
+      ),
+    ).toBe(0);
+    await expect(dialog(page)).toContainText(
+      stage === "pause"
+        ? "検査済み・元runは停止していません"
+        : "元runの停止・joinを確認しました",
+    );
+  });
+test("same-turn lease settlement before client prop replacement cannot dispatch to retired selection", async ({
+  page,
+}) => {
+  await prepare(page);
+  await preflight(page);
+  await finish(page, 0);
+  await page.evaluate(() =>
+    (window as any).__asyncHarness.h.configure({ autoLease: false }),
+  );
+  await button(page, "この元runを停止してjoin").click();
+  await expect(dialog(page)).toContainText("受付準備中");
+  await page.evaluate(() => {
+    const a = (window as any).__asyncHarness;
+    a.h.issueLease(a.h.leases.length - 1);
+    a.replace();
+  });
+  await expect(dialog(page)).toContainText("以前の対象の操作を監視");
+  expect(
+    await page.evaluate(() => (window as any).__asyncHarness.h.stops),
+  ).toBe(0);
+});

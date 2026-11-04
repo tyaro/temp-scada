@@ -961,3 +961,102 @@ it("a new stage cannot reuse an earlier native operation ref", async () => {
   expect(root.client.current().invalid).toBe(true);
   expect(root.client.current().canApply).toBe(false);
 });
+it.each([false, undefined, "true", "throw"])(
+  "live qualification %j prevents all new dispatch and retires the view",
+  async (value) => {
+    const s = setup();
+    let allowed = false;
+    const view = s.client.bindView({}, (() => {
+      if (allowed) return true;
+      if (value === "throw") throw Error("private");
+      return value;
+    }) as any);
+    expect(view.preflight(change(s.h), control())).toBe(false);
+    allowed = true;
+    expect(view.preflight(change(s.h), control())).toBe(false);
+    expect(s.h.leases).toHaveLength(0);
+    expect(s.client.current().invalid).toBe(false);
+  },
+);
+it("qualifier reentry cannot dispatch through another client view", async () => {
+  const s = setup(),
+    other = s.client.bindView({}),
+    attempts: boolean[] = [];
+  const view = s.client.bindView({}, () => {
+    attempts.push(other.preflight(change(s.h, 2), control()));
+    return true;
+  });
+  expect(view.preflight(change(s.h), control())).toBe(true);
+  await flush();
+  expect(attempts.length).toBeGreaterThan(1);
+  expect(attempts.every((v) => v === false)).toBe(true);
+  expect(s.h.leases).toHaveLength(1);
+  expect(s.h.admissions).toHaveLength(1);
+});
+it("live qualifier cannot reopen a gate it closes synchronously", () => {
+  const s = setup(),
+    view = s.client.bindView({}, () => {
+      s.root.close();
+      return true;
+    });
+  expect(view.preflight(change(s.h), control())).toBe(false);
+  expect(s.h.leases).toHaveLength(0);
+  expect(s.client.current().closed).toBe(true);
+});
+it("live prop qualification stops a settled lease before any reactive selection effect", async () => {
+  const s = setup();
+  s.h.configure({ autoLease: false });
+  let current = true;
+  const view = s.client.bindView({}, () => current);
+  view.preflight(change(s.h), control());
+  s.h.issueLease(0);
+  current = false;
+  await flush();
+  expect(s.h.admissions).toHaveLength(0);
+  current = true;
+  expect(view.preflight(change(s.h, 2), control())).toBe(false);
+});
+it("readUncertain delivered during cancellation notification stops the unsent cancel", async () => {
+  const s = setup();
+  await appliedUnknown(s);
+  s.view.reconcile(control());
+  await flush();
+  let delivered = false;
+  s.client.subscribe((v) => {
+    if (v.cancelCall === "pending" && !delivered) {
+      delivered = true;
+      s.h.finishRead(0, "readUncertain");
+    }
+  });
+  expect(s.view.cancelReconciliation()).toBe(true);
+  expect(s.h.cancels).toHaveLength(0);
+  await flush();
+  expect(s.client.current().read).toBe("readUncertain");
+  expect(s.client.current().invalid).toBe(false);
+  expect(s.client.current().cancelCall).toBe("idle");
+});
+it("readUncertain delivered during inspection notification stops the unsent inspection", async () => {
+  const s = setup();
+  await appliedUnknown(s);
+  s.h.configure({ autoAck: false });
+  s.view.reconcile(control());
+  await flush();
+  s.h.ack(3, "unknown");
+  await flush();
+  let delivered = false;
+  s.client.subscribe((v) => {
+    if (v.inspectionCall === "pending" && !delivered) {
+      delivered = true;
+      s.h.emit({ admission: s.h.admissions[3].accepted! });
+      s.h.finishRead(0, "readUncertain");
+    }
+  });
+  expect(s.view.inspectAdmission({ deadlineMonotonicMs: now + 500 })).toBe(
+    true,
+  );
+  expect(s.h.inspections).toHaveLength(0);
+  await flush();
+  expect(s.client.current().read).toBe("readUncertain");
+  expect(s.client.current().invalid).toBe(false);
+  expect(s.client.current().inspectionCall).toBe("idle");
+});

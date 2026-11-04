@@ -8,7 +8,9 @@
 
 設計PR #68はworkへマージ済み（`e23bea9`、PR／push CI全7job成功）。Astra設計に沿い、Appより長寿命の外部共有root、test-only port、任意注入client・通常Appの三段階操作／受付照会／結果照会を追加した。同期経路を保ち、二重注入・異mode交換でも旧監視を常設保持する。
 
-正常unknownからの明示照会による復帰と、未完了／reject／不正応答での有限停止を分ける。Astraレビューでlocal IDの末尾改行と、lease拒否後のretryが後続apply／discardの予約を消費する点を修正した。五role各4096、stage初回予約とretry追加枠、mutation満杯での独立readを受け入れる。新規単体77件、TS全6,814件、型検査0/0・build、新規Chromium11件／同期回帰13件、全体整形・変更文書9件リンク・差分を確認。Astra最終レビューに必須未決なし。実lease発行／native接続／製品transport・認証は追加しない。
+正常unknownからの明示照会による復帰と、未完了／reject／不正応答での有限停止を分ける。Astraレビューでlocal IDの末尾改行と、lease拒否後のretryが後続apply／discardの予約を消費する点を修正した。五role各4096、stage初回予約とretry追加枠、mutation満杯での独立readを受け入れる。新規単体92件、TS全6,829件、型検査0/0・build、新規Chromium14件／同期回帰13件、全体整形・変更文書9件リンク・差分を確認。Astra最終レビューに必須未決なし。実lease発行／native接続／製品transport・認証は追加しない。
+
+PR #69の自動レビューで選択client交換時の旧view退役漏れを修正し、検査・pause・applyの回帰を追加した。lease解決とprop交換の同一turn再現からlive props qualificationを追加し、effect前送信も止める。照会・取消の通知中にreadUncertainへ変化した場合も送信直前に再検査する。callbackの再入・throw／非booleanは送信資格へ変換せず、元owner観測を継続する。
 
 ## 非同期monitor／UIの詳細設計（H5d4c4b、2026-11-04）
 

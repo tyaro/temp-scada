@@ -20,6 +20,7 @@ interface Selection {
   generation: number;
   openOwner: object | null;
   blocked: boolean;
+  qualifies?: () => boolean;
 }
 export interface AsyncMonitorState {
   readonly state?: AsyncOperationsState;
@@ -53,6 +54,7 @@ export function createAsyncOperationsMonitor() {
   let lease: ViewLease | undefined,
     leaseOpen: object | null = null,
     leaseIdentity: object | undefined,
+    leaseSelectedClient: AsyncOperationsClient | undefined,
     disposed = false;
   const listeners = new Set<(s: AsyncMonitorState) => void>();
   let view: AsyncMonitorState = Object.freeze({
@@ -97,6 +99,7 @@ export function createAsyncOperationsMonitor() {
     lease = undefined;
     leaseOpen = null;
     leaseIdentity = undefined;
+    leaseSelectedClient = undefined;
   }
   function publish() {
     if (disposed) return;
@@ -175,12 +178,27 @@ export function createAsyncOperationsMonitor() {
       retire();
       return;
     }
-    if (leaseOpen !== s.openOwner || leaseIdentity !== target.identity) {
+    if (
+      leaseOpen !== s.openOwner ||
+      leaseIdentity !== target.identity ||
+      leaseSelectedClient !== s.client
+    ) {
       retire();
       try {
-        lease = client.bindView(target.identity);
+        lease = client.bindView(
+          target.identity,
+          () =>
+            !!selection &&
+            selection.project === s.project &&
+            selection.generation === s.generation &&
+            selection.openOwner === s.openOwner &&
+            selection.client === s.client &&
+            !selection.blocked &&
+            (s.qualifies === undefined || s.qualifies() === true),
+        );
         leaseOpen = s.openOwner;
         leaseIdentity = target.identity;
+        leaseSelectedClient = s.client;
       } catch {
         /* closed root */
       }
