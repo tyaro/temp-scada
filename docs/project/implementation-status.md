@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-11-04（日本時間）、Project 0.37.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-11-05（日本時間）、Project 0.37.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
@@ -10,13 +10,17 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
-## 記録registryの次workflow受入設計（H5d4c4c-prep2b4b、2026-11-04）
+## 記録registryの明示的な次workflow受入（H5d4c4c-prep2b4b、2026-11-05）
 
-[Astraの詳細設計](../design/runtime/historian-recording-registry-workflow-renewal.md)で、正常終端した現在workflowのticketと、同runの管理資格宣言を使う明示的な次workflow予約を定めた。Running／clean Joinedの同run・同contextを対象とし、操作結果だけから現在のrun状態や自動resumeを合成しない。
+[Astraの詳細設計](../design/runtime/historian-recording-registry-workflow-renewal.md)に沿い、正常終端した現在predecessor ticketと同run資格の明示宣言による次workflow予約をRust純粋モデルへ追加した。設計[PR #79](https://github.com/tyaro/temp-scada/pull/79)はworkへ統合済み（`0f00a77`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41853212194)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41853281324)全7job成功、同headレビュー指摘なし）。
 
-旧workflow・ID・元要求・結果・使用済み保持容量とprojection high-waterを保存し、新予約は累積使用量を含めて原子的に検査する。未終端call、未知受付、read／観測／取消の未回収、unknown静止・recoveryを残したまま更新しない。旧ticketの照会・正確な再送は保持し、新操作への転用やchangeRefの別候補への再束縛を防ぐ。
+旧record・ID・元要求・結果・使用済みbytesとprojection high-water／未消費revisionを保持する。creation種別・predecessor・資格・全文が同じ再送はcurrentを動かさず、旧ticketの新操作や旧applyへの新readを拒否する。正常pauseまたはCleanJoined宣言を履歴全体で保持し、同runを宣言だけでRunningへ戻せない。未終端call・未知knowledge・未回収の観測／取消・readUncertain・recoveryの停止も維持する。
 
-prep2b4aの[PR #78](https://github.com/tyaro/temp-scada/pull/78)はworkへ統合済み（`238d82c`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41850010205)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41850078838)全7job成功、同head自動レビュー指摘なし）。今回は設計のみで、現行実装は最初の単一workflowまでである。実native／host接続とP3b、Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持する。
+各workflowへ初回を含む1024bytesの管理費用と四段階の将来枠を累積予約する。caller／native IDは別会計を保ちつつ、拒否・期限切れattemptを含む全履歴で衝突を防ぐ。新50シナリオ947ステップ・10境界試験と既存239シナリオを確認し、154期待DTO・全入力をTS／browserの既存validatorへ照合する。
+
+Rust workspace687件（新規11、child workerの再実行2件は別）、TS全9,839件（新規205）、型検査0error／0warning・build、関連Chromium12件（新規1）、Clippy全target `-D warnings`／rustfmtが成功した。Astraの最終read-onlyレビューに残る必須所見はない。全体Prettier・変更文書の相対リンクと差分を確認し、Ready for Review PRで全体CIを確認する。
+
+複数scope allocatorと受信frameの順序・同revision矛盾検出は後続。実native／host接続とP3bは保留し、Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持する。
 
 ## 記録registryのworkflow予約と段階進行（H5d4c4c-prep2b4a、2026-11-04）
 
@@ -28,7 +32,7 @@ prep2b4aの[PR #78](https://github.com/tyaro/temp-scada/pull/78)はworkへ統合
 
 新47シナリオ597ステップ、10境界試験、既存192シナリオを確認した。92期待DTOと全入力をTS／browserの既存validatorへ照合し、第二のworkflow権威を作らない。設計[PR #77](https://github.com/tyaro/temp-scada/pull/77)はworkへ統合済み（`84b325b`、PR／push CI全7job成功、同headレビュー指摘なし）。
 
-Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持し、実native／host接続とP3bは保留する。次はb4bの正常終端後の次workflowである。
+Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持し、実native／host接続とP3bは保留する。b4bの正常終端後の次workflowは上記の専用APIで実装済みである。
 
 Rust workspace676件（新規11、child workerの再実行2件は別）、TS全9,634件（新規140）、型検査0error／0warning・build、関連Chromium8件（新規1）、Clippy全target `-D warnings`／rustfmtが成功した。Astraの最終read-onlyレビューに必須所見はない。全体Prettier・変更文書の相対リンクと差分を検査し、Ready for Review PRで全体CIを確認する。
 

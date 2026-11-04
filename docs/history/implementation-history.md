@@ -4,6 +4,18 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録registryの明示的な次workflow受入（H5d4c4c-prep2b4b、2026-11-05）
+
+[Astraの詳細設計](../design/runtime/historian-recording-registry-workflow-renewal.md)に沿い、正常終端した現在predecessor ticketと同run資格の明示宣言による次workflow予約をRust純粋モデルへ追加した。設計[PR #79](https://github.com/tyaro/temp-scada/pull/79)はworkへ統合済み（`0f00a77`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41853212194)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41853281324)全7job成功、同headレビュー指摘なし）。
+
+旧record・ID・元要求・結果・使用済みbytesとprojection high-water／未消費revisionを保持する。creation種別・predecessor・資格・全文が同じ再送はcurrentを動かさず、旧ticketの新操作や旧applyへの新readを拒否する。正常pauseまたはCleanJoined宣言を履歴全体で保持し、同runを宣言だけでRunningへ戻せない。未終端call・未知knowledge・未回収の観測／取消・readUncertain・recoveryの停止も維持する。
+
+各workflowへ初回を含む1024bytesの管理費用と四段階の将来枠を累積予約する。caller／native IDは別会計を保ちつつ、拒否・期限切れattemptを含む全履歴で衝突を防ぐ。新50シナリオ947ステップ・10境界試験と既存239シナリオを確認し、154期待DTO・全入力をTS／browserの既存validatorへ照合する。
+
+Rust workspace687件（新規11、child workerの再実行2件は別）、TS全9,839件（新規205）、型検査0error／0warning・build、関連Chromium12件（新規1）、Clippy全target `-D warnings`／rustfmtが成功した。Astraの最終read-onlyレビューに残る必須所見はない。全体Prettier・変更文書の相対リンクと差分を確認し、Ready for Review PRで全体CIを確認する。
+
+複数scope allocatorと受信frameの順序・同revision矛盾検出は後続。実native／host接続とP3bは保留し、Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持する。
+
 ## 記録registryの次workflow受入設計（H5d4c4c-prep2b4b、2026-11-04）
 
 prep2b4aのPR #78をworkへ統合（`238d82c`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[次workflow受入](../design/runtime/historian-recording-registry-workflow-renewal.md)で、正常な現在predecessor ticketと、毎回の同run資格宣言による明示更新を具体化した。nativeのIdle／CompletedとsupervisorのRunning／clean Joined管理資格を照合し、DTOの正常終了だけで物理run状態を確定しない。

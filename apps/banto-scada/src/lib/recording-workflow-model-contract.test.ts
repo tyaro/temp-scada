@@ -47,7 +47,7 @@ for (const s of f.scenarios)
   });
 it("whole workflow escrow accounts independently for all four retained records and leases", () => {
   const max = "r".repeat(64);
-  let total = modelBytes(f.bases.change);
+  let total = modelBytes(f.bases.change) + 1024;
   for (const k of ["p", "s", "a", "d"]) {
     const q = structuredClone(f.bases[k + "Admit"]);
     q.admissionId = max;

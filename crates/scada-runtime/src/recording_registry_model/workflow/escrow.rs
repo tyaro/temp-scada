@@ -63,7 +63,11 @@ impl RegistryModel {
         ) {
             return;
         }
-        let Some(w) = self.workflow.as_mut().and_then(|m| m.record.as_mut()) else {
+        let Some(w) = self
+            .workflow
+            .as_mut()
+            .and_then(WorkflowMode::current_record_mut)
+        else {
             return;
         };
         if w.released {
