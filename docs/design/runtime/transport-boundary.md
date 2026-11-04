@@ -1,6 +1,6 @@
 # P3b: 製品transportと接続設定の再開条件
 
-2026-11-01（日本時間）。状態: **境界を採用、製品transportは保留**。P3aはPR #12でマージ済み。認証延期はユーザーの既存指示であり、今回の調査で解除しない。
+2026-11-04（日本時間）更新。状態: **境界を採用、製品transportは保留**。P3aはPR #12でマージ済み。認証延期はユーザーの既存指示であり、今回の調査で解除しない。
 
 現行はViteのローカル編集アプリとRustライブラリで、Tauri hostもSCADA serverもない。P3aの`ReadSource`は配送の差込み口であり、利用可能な製品transportではない。現在の段階で無認証HTTP待受やブラウザからHubへの接続を追加しない。
 
@@ -14,7 +14,7 @@
 
 ## 再開時に確定する項目
 
-1. 最初の製品hostをTauri／SCADA serverのどちらに置くかと、Bantoの既存API・認証の最新契約を確認する。
+1. 採用済みのSCADA server core＋アプリ埋込host 1に沿って、具体的なshell・runtime／IPCと既存サービス検出・終了の責任を確定し、Bantoの既存API・認証の最新契約を確認する。Tauriはshell候補でありserver coreの所有とは別の層。headless／Windowsサービスは後続hostとして扱う。
 2. 接続設定の保存先・配布・切替、資格情報の提供と破棄、匿名閲覧の接続範囲を決める。既存の[アクセス方針](access-policy.md)に従う。
 3. transportの購読開始／終了・取消・サイズ制限・timeout・backpressureと、配送sessionの対応を実装する。任意の遅延イベントで新sessionを開始できる経路を作らない。
 4. 実Hubへの接続はS7 SOAKの終了と接続対象の確認後に行う。実PLC・Windows・本番運用の結果をモック試験から推定しない。
@@ -26,3 +26,5 @@
 [H5d4c4の非同期bridge設計](historian-recording-bridge-boundary.md)は、Rust ownerとJS serviceの契約差分を明示する。c4aのpure admission契約とc4bのtest-only portでのmonitor受入は独立に進められるが、製品hostを選定したことやP3bの再開を意味しない。Tauri／server／無認証HTTP待受を先行追加せず、実native接続は本書の再開条件と新しいadmission・期限・所有契約を満たしてから実装する。
 
 [c4bのmonitor／UI詳細](historian-recording-async-monitor.md)も非JSONのtest-only portによる受入を定める。lease発行／取消ack／owner snapshot／結果観測のlocal Promise契約を、利用可能な実wireとして扱わない。通常起動の未接続を維持し、c4b設計・実装をP3b解除の根拠にしない。
+
+[c4c接続前のwire・host詳細](historian-recording-wire-host.md)は、この構成と未実装の実配送を分ける。c4c-prep1の純粋JSON契約・容量検証は保留中も独立に進められるが、実registry adapter／native配送・製品hostの実装や認証の再開を許可したことにはしない。

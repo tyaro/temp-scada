@@ -4,6 +4,12 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録操作wire・hostの接続前設計（H5d4c4c、2026-11-04）
+
+c4b実装のPR #69をworkへ統合（`2643726`）。PR／push CI全7job成功、最終headの自動再レビュー指摘なしを確認した。Astra主設計でlease／結果観測／取消／完全frameと再同期、有限registryとhostの所有境界を文書化する。
+
+上流固定snapshotと採用済み統合設計に合わせ、SCADA server coreの独立とアプリ埋込host 1を実host／shellの選定から分離する。次の独立区切りは純粋wire JSON検証c4c-prep1であり、今回の文書をschema実装、製品hostの提供やP3b解除とは扱わない。
+
 ## 非同期coordinator／monitor／UIのlocal実装（H5d4c4b、2026-11-04）
 
 設計PR #68はworkへマージ済み（`e23bea9`、PR／push CI全7job成功）。Astra設計に沿い、Appより長寿命の外部共有root、test-only port、任意注入client・通常Appの三段階操作／受付照会／結果照会を追加した。同期経路を保ち、二重注入・異mode交換でも旧監視を常設保持する。

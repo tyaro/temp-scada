@@ -10,6 +10,14 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 記録操作wire・hostの接続前設計（H5d4c4c、2026-11-04）
+
+[Astraの詳細設計](../design/runtime/historian-recording-wire-host.md)で、非同期受付を実hostへつなぐ前のlease／結果観測／取消／state再同期と有限registryを定める。SCADA server coreとアプリ埋込host 1を設計の土台とし、UIの寿命とnative owner、元callの完了とframeの証拠を分ける。
+
+今回は設計文書のみ。新wire schema／validator、実lease発行・registry adapter・native配送・製品hostは未実装で、通常Appの未接続とP3b保留を維持する。次はtransportを持たないc4c-prep1の純粋JSON契約・共通検証に限定する。
+
+c4b実装のPR #69はworkへマージ済み（`2643726`）。PR／push CIとも全7job成功、最終headの自動再レビューに追加指摘はない。
+
 ## 非同期monitor／UI（H5d4c4b、2026-11-04）
 
 [Astraの詳細設計](../design/runtime/historian-recording-async-monitor.md)に沿い、Appの外部rootが保持する共有coordinator、同realmのtest-only非JSON port、通常Appの任意注入 `recordingAsyncOperations` と表示monitorを実装した。同portの二重root作成を拒否し、画面のclose／Project・service交換／App unmount後も元ownerが受理済み処理と証拠を保持する。
