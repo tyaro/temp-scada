@@ -10,13 +10,19 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
-## 非同期monitor／UIの詳細設計（H5d4c4b、2026-11-04）
+## 非同期monitor／UI（H5d4c4b、2026-11-04）
 
-[Astraの詳細設計](../design/runtime/historian-recording-async-monitor.md)で、Appより長寿命の外部共有coordinator、lease準備と送信の受付状態、native結果とreadUncertain、呼出Promise自身の終了を分ける。受付不明・notFound・不正応答で新mutationを許さず、close／Project・service交換・unmount後も元ownerの進行と証拠を保持する。
+[Astraの詳細設計](../design/runtime/historian-recording-async-monitor.md)に沿い、Appの外部rootが保持する共有coordinator、同realmのtest-only非JSON port、通常Appの任意注入 `recordingAsyncOperations` と表示monitorを実装した。同portの二重root作成を拒否し、画面のclose／Project・service交換／App unmount後も元ownerが受理済み処理と証拠を保持する。
 
-既存同期serviceと非同期clientは別契約で、二重注入や安全でない切替を送信可能へ変換しない。今回は設計文書のみ。次の実装PRではtest-onlyの非JSON portとcoordinator／monitor／UIを検証し、実lease発行、native adapter、stateframe等の実wireはc4c以降へ分ける。通常Appは未接続のままで、各format／依存版とP3b保留を維持する。
+受付状態、native操作結果、readUncertain、元Promiseの正常終了を分ける。正常unknown受付は明示照会で確認後に次段階を再評価するが、notFoundや未完了・reject／不正応答では新mutationを許さない。検査→明示停止join→同候補applyを別操作とし、commit済み表示から記録再開を推論しない。元applyの結果照会でreceiptを保持しても、元completionと回復要求は変更しない。
 
-c4a実装のPR #67はworkへマージ済み（`1370d4c`）。PR／push CIとも全7job成功、同headの自動レビューに指摘はない。
+rawな選択clientの変化で旧送信用viewを退役させ、live propsの資格を各送信直前に検査する。同一turnのlease解決→prop交換でも旧要求を送信せず、旧ownerの観測は維持する。
+
+同期serviceは独立契約のまま維持し、最初の有効な単独注入でAppのmodeを固定する。二重注入／異modeへのprop交換は新送信を拒否し、旧監視を継続する。五roleそれぞれ4096のID枠を持ち、初回workflowのmutation4／callerOperation2予約と、再試行用追加枠を分離する。mutation枯渇でも予約済みdiscardと独立readAdmissionによる結果照会を保つ。local metadata／frameは専用予算でowned検証し、既存c4a／compact profileを変えない。
+
+新規単体100件を含むTS全6,837件、型検査0error／0warning・build、新規Chromium16件と同期回帰13件、全体Prettier・変更文書9件の相対リンク・差分検査を確認した。Astra最終レビューに必須未決はない。
+
+設計PR #68はworkへマージ済み（`e23bea9`、PR／push CIとも全7job成功）。実lease発行・native adapter・stateframe等の実wireと製品hostは未実装。通常entryは未注入・未接続のまま、Project0.37.0／DB7／H1／SDK／Banto・依存版とP3b保留を維持する。
 
 ## 非同期admissionの共通JSON検証（H5d4c4a、2026-11-04）
 
@@ -32,7 +38,7 @@ Rust workspace626件（新規8）、TS全6,737件（新規1,903）、関連Chrom
 
 [Astraの詳細設計](../design/runtime/historian-recording-bridge-boundary.md)で、同期のd4b serviceを一般IPCへそのまま適合させられない点を明記した。非同期admissionの受理／拒否／不明、nativeが発行する期限付きlease、元ownerへの照合と有限保持、結果・通知・切断時の扱いを定める。既存同期serviceをPromiseへ暗黙変更せず、新しい接続契約として段階化する。
 
-c4aの共通DTO／schema／Rust・TS pure validatorとfixtureを実装した。c4bのtest-only portを使うmonitor／UIへの接続、実lease発行・native adapter・製品host／transportは未実装である。現在のViteとRust libraryにTauri hostやSCADA serverはなく、通常Appは未接続。P3bの認証・製品接続の保留は維持する。
+c4aの共通DTO／schema／Rust・TS pure validatorとfixtureを実装した。c4bのtest-only portを使うmonitor／UIは実装済み。実lease発行・native adapter・製品host／transportは未実装である。現在のViteとRust libraryにTauri hostやSCADA serverはなく、通常Appは未接続。P3bの認証・製品接続の保留は維持する。
 
 c3実装のPR #65はworkへ統合済み（`658bb5b`）。PR／push CIとも全7job成功、同headの自動レビューに指摘はない。
 
@@ -722,7 +728,7 @@ Project 0.35.0・SDK固定版・Banto 6.9.0・H1・Rust・DB format 5・依存�
 
 最大128定義・各1〜8pen、namespaceとopaque seriesId、色・期間・mode・点数の有限契約を検証する。IDは同梱H1 resourceを参照し、文字列は明示Unicode空白集合とscalar条件、JSONは整数表記へ正規化したcompact UTF-8値で1MiB／depth32／node250,000に制限する。名前・色の綴り・順序を変えずに所有し、TSの返却snapshotは凍結する。系列実在や接続認証の証明は行わない。
 
-共通85fixtureがRust／TS／browserで一致し、1MiB境界・1byte超過、nativeのfloat表記、Unicode／ID末尾改行、重複と点数予算、namespace分離を確認した。Rust workspace388件（新規4）・TS全体1,578件（新規96）・型検査0error／0warning・build・Clippy／rustfmt・関連Chromium16件（新規2）が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+共通85fixtureがRust／TS／browserで一致し、1MiB境界・1byte超過、nativeのfloat表記、Unicode／ID末尾改行、重複と点数予算、namespace分離を確認した。Rust workspace388件（新規4）・TS全体1,578件（新規100）・型検査0error／0warning・build・Clippy／rustfmt・関連Chromium16件（新規2）が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 Project 0.35.0・App／main・DB format 5・H1・SDK／Banto依存は維持する。保存・配置・context v2は未実装。次はH4c2でProject側にも同じresourceと意味検査・予算を使い、参照整合性とSymbol配置禁止を加える。上流・S7・実Hub／DB／設定・資格情報へ接続していない。
 

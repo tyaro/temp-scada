@@ -201,12 +201,12 @@ TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,ca
 
 現行schemaでは8member、文字列scalar長、H1 IDなどの上限により、有効な要求は外側512KiB／16384nodeより十分小さい。外側予算自体の厳密な境界は構造JSONの共有vectorで検証し、最大reply検査は同じwalkerへ試験用の小予算を与え、要求単体と前段replyは通るが最大found InspectionReplyが超過することを確認する。本番上限を変更したり、schema-validな巨大要求を存在するように扱ったりしない。全九分岐の固定byte／node期待値を両言語で一致させる。
 
-pure検証は未dispatch、owner所有、lease失効、registryの一意性や再送資格の証明ではない。c4bの非同期monitor／UIは次の設計・実装境界で、実接続とP3bの保留は維持する。
+pure検証は未dispatch、owner所有、lease失効、registryの一意性や再送資格の証明ではない。c4bの非同期monitor／UIはtest-only portで実装済みで、実接続とP3bの保留は維持する。
 
 Rust workspace626件（新規8）、TS全6,737件（新規1,903）、関連Chromium6件（新規3）、型検査0error／0warning・build、Clippy全target `-D warnings`／rustfmtが成功した。Astra最終read-onlyレビューに残る必須指摘はない。
 
-## 11. c4bの詳細設計と次の実装
+## 11. c4bの詳細設計とlocal実装
 
 c4a実装はPR #67でworkへ統合済み（`1370d4c`）。[c4bの非同期monitor／UI設計](historian-recording-async-monitor.md)は、外部root-owned coordinator、同期serviceとの排他的選択、受付状態・native結果・read静止・呼出終了の独立管理と、旧対象の保持／復帰条件を具体化する。
 
-次の実装はtest-onlyの非JSON portを使うlocal client／monitor／UIの受入である。c4aの五rootをlease発行・cancel ack・snapshot frameへ拡張したことや、native adapter／製品hostを接続したことを意味しない。実wireとP3bの再開条件は引き続き別工程で確定する。
+c4bはtest-onlyの非JSON portを使うlocal client／monitor／UIまで実装した。c4aの五rootをlease発行・cancel ack・snapshot frameへ拡張したことや、native adapter／製品hostを接続したことを意味しない。実wireとP3bの再開条件は引き続き別工程で確定する。

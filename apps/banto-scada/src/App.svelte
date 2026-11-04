@@ -7,7 +7,8 @@
     createCatalogController,
     type CatalogSource,
   } from "./lib/designer/controllers/catalog.svelte";
-  import RecordingOperationsWorkspace from "./lib/recording-operations/RecordingOperationsWorkspace.svelte";
+  import RecordingOperationsEntry from "./lib/recording-operations/RecordingOperationsEntry.svelte";
+  import type { AsyncOperationsClient } from "./lib/recording-async/state";
   import type { RecordingOperationsService } from "./lib/recording-operations/service";
   import RecordingManagementWorkspace from "./lib/recording-management/RecordingManagementWorkspace.svelte";
   import type { RecordingManagementService } from "./lib/recording-management/service";
@@ -23,12 +24,14 @@
     historyService,
     recordingManagementService,
     recordingOperationsService,
+    recordingAsyncOperations,
   }: {
     readSource?: ReadSource;
     catalogSource?: CatalogSource;
     historyService?: HistoryService;
     recordingManagementService?: RecordingManagementService;
     recordingOperationsService?: RecordingOperationsService;
+    recordingAsyncOperations?: AsyncOperationsClient;
   } = $props();
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
@@ -4146,11 +4149,12 @@
     onclose={() => (trendRequest = null)}
   />
 {/if}
-<RecordingOperationsWorkspace
+<RecordingOperationsEntry
   openOwner={recordingOperationsOpen}
   {project}
   generation={workspaceGeneration}
   service={recordingOperationsService}
+  asyncClient={recordingAsyncOperations}
   onclose={() => (recordingOperationsOpen = null)}
 />
 <RecordingManagementWorkspace

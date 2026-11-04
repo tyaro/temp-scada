@@ -702,10 +702,16 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 
 TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,capacity}.ts`は同じ境界を持つ。`history/owned-json.ts`へadmission opt-inを追加し、既定のcompact／depth32を変えない。`json-equality.ts`は既存d4aと共有するowned JSON比較で、配列順を保持する。
 
-`examples/recording-admission-cases.json`とtest-only `__fixtures__/recording-admission-cases.ts`をRust `recording_admission/tests.rs`、TS `recording-admission-contract.test.ts`、`e2e/recording-admission-contract.spec.ts`で共有する。予算境界、最大reply、再帰closure回避、nested契約、所有・Unicode・外部取得なしと通常App保存不変を確認する。c4bのasync monitor／UI、実lease／registry／IPC／製品hostは未実装で、pure JSON受理をnative実行の証拠にしない。
+`examples/recording-admission-cases.json`とtest-only `__fixtures__/recording-admission-cases.ts`をRust `recording_admission/tests.rs`、TS `recording-admission-contract.test.ts`、`e2e/recording-admission-contract.spec.ts`で共有する。予算境界、最大reply、再帰closure回避、nested契約、所有・Unicode・外部取得なしと通常App保存不変を確認する。c4bのasync monitor／UIは下節、実lease／registry／IPC／製品hostは未実装で、pure JSON受理をnative実行の証拠にしない。
 
-## 非同期の記録操作monitor／UI（H5d4c4b、設計のみ）
+## 非同期の記録操作monitor／UI（H5d4c4b）
 
-[詳細設計](../design/runtime/historian-recording-async-monitor.md)は、外部root-owned coordinator、UIの選択／表示monitor、test-only非JSON portの責務を定める。受付状態、native操作結果、readUncertainと呼出Promiseの終了を分け、旧ownerの証拠を保ったまま新送信を制限する。
+[詳細設計](../design/runtime/historian-recording-async-monitor.md)に沿い、`recording-async/port.ts`は同realm test-only port、`state.ts`はclient／ViewLeaseと独立した受付・native・read・呼出状態を定める。`coordinator.ts`はAppより長寿命の外部管理root、一枠のlease→admit、元要求照合、既受理refの観測、sticky recoveryと証拠保持を担当する。closeは新送信を閉じるだけでnative取消ではない。
 
-現行`recording-operations/monitor.ts`と`RecordingOperationsWorkspace.svelte`は同期serviceの実装で、c4bの実体ではない。今回の文書更新は新coordinatorや非同期workspaceの追加を意味しない。次の実装PRで実際の配置、同期／非同期の選択と寿命、単体／ブラウザ受入を更新する。c4a純粋契約と既存native ownerは維持する。
+`ids.ts`は五role各4096のchecked counter、初回workflowのmutation4／callerOperation2予約、retryの追加予約とread独立枠を持つ。`local-validation.ts`はlease／cancel metadataと完全frameを安全にowned検証する。`history/owned-json.ts`のlocalMetadata（128KiB・4096node・depth32）とlocalFrame（1MiB・32768node・depth64）は保守計数を使い、c4a admission（depth48）と既定compact（depth32）は維持する。
+
+`recording-async/monitor.ts`は一つの旧clientと現在選択を保持し、Project object／generation／openOwner／raw選択clientが変わったviewを退役させる。Workspaceからlive propsのqualificationを渡し、effect前のlease後着もcoordinatorの送信直前gateで拒否する。旧clientが正常終端になるまで自動切替せず、App disposeでもrootをcloseしない。`AsyncRecordingOperationsWorkspace.svelte`は三段階操作・受付照会・元apply結果照会・切断／不明の閉集合表示を担当する。
+
+`recording-operations/RecordingOperationsEntry.svelte`は最初の有効な単独注入でsync／async modeを固定し、二重注入と異mode交換を拒否する。両Workspaceは常設し、旧monitorをunmountしない。既存同期`RecordingOperationsWorkspace.svelte`のblocked guardは新送信だけを制限する。`App.svelte`の `recordingAsyncOperations` は任意注入で、通常entryは未注入のまま。
+
+`__fixtures__/recording-async-port.ts`は制御Promiseとmock native lease期限を持つtest-only provider。`recording-async/{coordinator,monitor}.test.ts`は正常unknown復帰／fault停止、通知再入、frameと元Promiseの順序、close／再読込／service交換／unmount、実4096上限・後続予約・read独立性を検証する。`e2e/recording-async-workspace.spec.ts`は両theme、三段階操作・照会・寿命・mode固定・安全なerror表示・Project保存不変を通常Appで確認し、`recording-operations-workspace.spec.ts`で同期回帰を維持する。実native／wire／認証・製品transportは後続。

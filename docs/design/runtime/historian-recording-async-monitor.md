@@ -1,10 +1,10 @@
 # 記録操作の非同期受付coordinatorと通常App表示
 
-状態: **H5d4c4bの採用詳細設計・未実装**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。[c4接続境界](historian-recording-bridge-boundary.md)と実装済みc4aの五rootを使い、次の一実装PRを定める。今回の文書はコードを変更しない。Project 0.37.0、DB7、H1、SDK／Banto／依存と五root schemaを維持する。
+状態: **H5d4c4bの採用詳細設計・test-only portでlocal実装済み**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。[c4接続境界](historian-recording-bridge-boundary.md)と実装済みc4aの五rootを使う。設計PR #68はworkへ統合済み（`e23bea9`）。Project 0.37.0、DB7、H1、SDK／Banto／依存と五root schemaを維持する。
 
 ## 1. 提供するものと保留
 
-次PRは外部rootが所有する共有JS coordinator、同realmの非同期test port契約、通常Appへの任意注入と表示、制御Promiseによる受入を実装する。実lease／host registry／native adapter／Tauri／server／認証／製品transportは提供しない。実Hub／S7／本番DB／上流へ接続しない。
+外部rootが所有する共有JS coordinator、同realmの非同期test port契約、通常Appへの任意注入と表示、制御Promiseによる受入を実装した。実lease／host registry／native adapter／Tauri／server／認証／製品transportは提供しない。実Hub／S7／本番DB／上流へ接続しない。
 
 既存[d4b service](../../../apps/banto-scada/src/lib/recording-operations/service.ts)は同期handle受付、[monitor](../../../apps/banto-scada/src/lib/recording-operations/monitor.ts)はApp内の寿命である。新非同期経路は別interfaceとcoordinatorを持ち、同期serviceをPromise wrapperで偽装しない。c4a [validator](../../../apps/banto-scada/src/lib/recording-admission-contract.ts)のshape／nested予算／全文照合／最大reply closureはそのまま使う。
 
@@ -12,13 +12,13 @@
 
 composition rootが `createAsyncRecordingOperationsCoordinator(port)` を一回呼び、返された非Clone相当の管理rootをAppより長く保持する。全App／全callerはそのrootから得たclientを共有する。同portに複数coordinatorを作って独立gateにすることは禁止し、factoryは同realmのWeakMapでport objectに対する二重管理root作成を同期拒否する。これは別realm／processの上限を保証せず、実hostの共通native gateが最終権威となる。
 
-Appの新prop候補は `recordingAsyncOperations?: AsyncOperationsClient`。App自身はfactoryを呼ばず、unmountで管理rootを閉じない。通常entryは未注入のまま、テストだけ外部rootとportを注入する。
+Appの新propは `recordingAsyncOperations?: AsyncOperationsClient`。App自身はfactoryを呼ばず、unmountで管理rootを閉じない。通常entryは未注入のまま、テストだけ外部rootとportを注入する。
 
 App内の操作modeは、最初の有効な単独注入でsyncまたはasyncへ固定する。現在App寿命中のsync→async／async→syncは、旧prop撤去と新prop追加が同時でもmodeConflictで新送信を拒否する。旧Workspaceを条件付きunmountせず、元ownerの監視を常設保持する。同mode内のservice交換は後述の安全な明示切替を使う。別modeへの移行は本PRの操作対象にせず、composition rootで旧処理の終端／安全な管理移管を確認してからAppを再構成する。Appを再mountしただけで別native ownerまで安全になるとは主張しない。
 
 既存 `recordingOperationsService` と新propが両方非undefinedなら `configurationConflict` とし、どちらの新送信も許さない。既に発行された操作は元ownerが継続保持する。切替えを暗黙優先順位や自動fallbackで解決しない。既存同期経路のみの注入は従来挙動を維持する。
 
-AppのProject object／generation／openOwner／注入client objectを束縛したview tokenを発行し、render前の即時owner guardを維持する。閉じる／Project読込／service交換でtokenを退役させる。旧結果は「以前の対象」の監視として有限に保持できるが、新Projectの送信資格にはしない。
+AppのProject object／generation／openOwner／注入client objectを束縛したview tokenを発行し、render前の即時owner guardを維持する。閉じる／Project読込／service交換でtokenを退役させる。監視中の旧clientとrawな選択clientを別に比較し、撤去・不正client・A→B→Aでも旧送信用viewを永久退役させる。旧結果は「以前の対象」の監視として有限に保持できるが、新Projectの送信資格にはしない。
 
 ## 3. local portの仮定と型
 
@@ -94,7 +94,7 @@ observeOperation／observeReconciliationは既登録refのcache観測を返す�
 
 接続再開時も同owner完全frameを再取得し、失った通知を推測で補わない。異ownerRef／contextへの自動rebindはない。実wireでこのhandshakeをどう保証するか、frame revisionの発行／保持／認証はc4c前に別途設計する。connected=falseは通信状態だけでnative停止／不受理の証拠ではない。
 
-local lease／cancel metadataは128KiB・4096nodes・depth32、frameは1MiB・32768nodes・depth64を上限に安全owned化する。nested五root／d4aは各独立validatorにも通す。未知field、getter、非JSON、lone surrogateを拒否する。c4a保守JSON計数をframeにも使い、immutable snapshotとして返す。次実装でlocal frame専用の1MiB／32768nodes／depth64検査profileを追加する。現c4aの512KiB／16384nodes／depth48や既存compact profileの既定を変更せず、そのまま流用して64階層を受理済みとしない。新wire rootをschemaへ追加しない。
+local lease／cancel metadataは128KiB・4096nodes・depth32、frameは1MiB・32768nodes・depth64を上限に安全owned化する。nested五root／d4aは各独立validatorにも通す。未知field、getter、非JSON、lone surrogateを拒否する。c4a保守JSON計数をframeにも使い、immutable snapshotとして返す。local frame専用の1MiB／32768nodes／depth64検査profileを追加した。現c4aの512KiB／16384nodes／depth48や既存compact profileの既定を変更せず、そのまま流用して64階層を受理済みとしない。新wire rootをschemaへ追加しない。
 
 ## 4. coordinator APIとローカル原子gate
 
@@ -104,7 +104,7 @@ interface AsyncOperationsClient {
   readonly ownerRef: string;
   current(): AsyncOperationsState;
   subscribe(listener: (state: AsyncOperationsState) => void): () => void;
-  bindView(identity: object): ViewLease;
+  bindView(identity: object, qualifies?: () => boolean): ViewLease;
 }
 interface ViewLease {
   preflight(change: RecordingChangeRequest, control: IntentControl): boolean;
@@ -123,6 +123,8 @@ type IntentControl = {
   requestedNativeBudgetMs: number; // 1..10000、別の意味
 };
 ```
+
+UI経路は `qualifies` にWorkspaceの現在propsを直接読むcallbackを必ず渡す。captured Project object／generation／openOwner／raw client／blockedと比較し、Svelte effectがselectを更新する前の同一turnでも新送信を拒否する。非UI callerでcallbackを省略した場合は明示retire責務を維持する。coordinatorは新規送信の各直前にstrict trueを要求し、false・非boolean・throwで当該viewを永久退役させる。callback評価中はroot全体で再入したaction／inspection／cancel受付を拒否し、評価後もclose／view.active／immutable owner／connected・sticky gate・物理枠・期限を再検査する。既受理refの観測にはこの送信資格を適用しない。
 
 booleanはcoordinatorがローカル意図を受け付けたかだけを返し、native受理／handle／未dispatch証明ではない。falseはportへ当該意図を発行していないローカル拒否。stateで理由を閉集合表示する。ViewLeaseはProjectそのものをportへ渡さず、Appが正しいcurrent ownerにだけ発行・保持する。
 
@@ -187,9 +189,9 @@ reject／malformedからのtransport再確立や枠移管での解除は今回�
 
 native apply reconciliationは別のactionであり、元applyがfailed/unconfirmed、またはappliedでもunknown／recoveryありの時だけ許す。preflight／pause失敗やfailed/notDispatched／notCommittedを対象にしない。元operationRef／changeRef／元OperationRequestを保有してprepare→admitを実行し、accepted readRefに一致するReconciliationDeliveryだけを統合する。
 
-resultは既存d4a単調規則を使う。Foundは元completionを上書きせずlatestとlastAppliedを更新し、recoveryはOR、元quiescenceは読取完了から推測しない。notFoundで既知receiptを消さない。readUncertainは有限errorを保持し、新read／mutation／owner切替を止める。配送Promise reject／subscribe切断はnative readUncertainの証拠ではなくdeliveryUnknownとして区別する。
+resultは既存d4a単調規則を使う。Foundは元completionを上書きせずlatestとlastAppliedを更新し、recoveryはOR、元quiescenceは読取完了から推測しない。同一deliveryの重複は検証後に冪等に扱い、後から届いた元operationのconfirmedを古いreadのunknownで取り消さない。初回でも時間的に古いread結果のunknownは既知confirmedを消さず、元要求・receipt矛盾の検査は維持する。notFoundで既知receiptを消さない。readUncertainは有限errorを保持し、新read／mutation／owner切替を止める。配送Promise reject／subscribe切断はnative readUncertainの証拠ではなくdeliveryUnknownとして区別する。
 
-取消は現在のoperationRefまたはreadRefに対する一回のLocalCancelRequestとする。ackは元要求に照合し、requestedでも未実行／停止完了とは表示しない。取消送信中は二重取消を拒否し、ack喪失で勝手に再送しない。pause stopは撤回しない。lease待ちの未送信意図をretireする処理と、native取消要求を分離する。
+取消は現在のoperationRefまたはreadRefに対する一回のLocalCancelRequestとする。ackは元要求に照合し、requestedでも未実行／停止完了とは表示しない。取消送信中は二重取消を拒否し、ack喪失で勝手に再送しない。通知・資格検査の間にview退役／切断等で呼出前に中止した取消は未送信であり、対象のcancel送信済み枠を消費しない。正常な再open・再接続後の明示要求は許す。pause stopは撤回しない。lease待ちの未送信意図をretireする処理と、native取消要求を分離する。
 
 ## 7. App寿命、復帰、外部root終了
 
@@ -209,13 +211,13 @@ IDは同coordinator世代でchecked単調counter＋有限opaque prefixを使い�
 
 wire上のadmissionIdは共通namespaceなのでmutationAdmissionとreadAdmissionは固定の異なるprefixを使い、counterが同じでも同文字列にならない。
 
-新workflowを受けるとき、mutationAdmission poolへpreflight／pause／apply／discardの4credit、callerOperation poolへpause／applyの2creditを同一ローカル判定で予約する。どちらか不足ならprepare前に拒否する。各callを発行する際に予約を消費してusedへ移し、正常終端／明示discard時に未使用creditだけを解放する。結果不明のworkflowでは消費済みIDを戻さない。prepareだけで退役した場合も発行済みadmissionIdは再利用しない。別の元workflowへcreditを流用しない。
+新workflowを受けるとき、mutationAdmission poolへpreflight／pause／apply／discardの4credit、callerOperation poolへpause／applyの2creditを同一ローカル判定で予約する。どちらか不足ならprepare前に拒否する。各callを発行する際に予約を消費してusedへ移し、正常終端／明示discard時に未使用creditだけを解放する。結果不明のworkflowでは消費済みIDを戻さない。prepareだけで退役した場合も発行済みadmissionIdは再利用しない。別の元workflowへcreditを流用しない。各stageの初回予約はその用途を保持し、lease正常拒否・view退役等から同stageを明示再試行する場合は追加のmutationAdmission1と必要なcallerOperation1を原子的に確保する。使用済みIDは戻さず、retry枠の不足で後続apply／discard用予約を消費しない。
 
 reconcileを受ける際はreadAdmission poolの1枠とreconciliation poolの1枠を同時確認・確保する。inspectionは独立inspection poolだけを使い、mutation pool枯渇でも元受付照会を妨げない。mutationAdmission poolが満杯でもreadAdmission枠があれば元applyのreconcileを受理できる。readAdmission自体が枯渇した場合は明示的に停止し、無限の回復回数を保証しない。cancelは対象refに結び付く一callで新operation IDを発行しない。pool枯渇は有限停止で、自動root再作成／unknown要求再送をしない。これらは実native registryの代用ではない。
 
 UIは「受付準備中」「native受付待ち」「受付不明」「候補」「停止join中」「設定commit済み」「結果照会中」「読取完了未確認」「接続切断」「別対象の操作」を区別する。未注入は未接続、二service注入は設定競合。lease ID、内部clock数値など接続判断に不要な実装情報を操作画面に出さない。現在値、SDK Live、録画Runningをこの操作UIの受付だけから表示しない。任意provider error文字列、stack、URL、資格情報を表示せず、既存閉集合またはlocal protocolViolationで表現する。
 
-## 9. 次の一実装PRと受入
+## 9. local実装と受入
 
 実装対象は新async service型／factory／coordinator／App選択と表示component／test-only port fixture。同期monitorの回帰は維持し、内部のpure比較や表示componentは意味を変えず共用できる。Rust／schema／native ownerは変更しない。
 
@@ -223,7 +225,7 @@ UIは「受付準備中」「native受付待ち」「受付不明」「候補」
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 選択       | 未注入、同期のみ、asyncのみ、同時注入拒否、sync↔async prop交換はmode固定で旧監視維持、既存同期挙動不変                                           |
 | 一枠       | 二client同期再入、lease待ち中追加操作拒否、非協力Promiseで次送信なし、元意図への一回admit                                                        |
-| 未送信     | lease待ちのclose／期限／Project交換／late leaseでadmit未呼出し、root枠はsettleまで保持                                                           |
+| 未送信     | lease待ちのclose／期限／Project・client交換／同一turnのprop交換／late leaseでadmit未呼出し、root枠はsettleまで保持                               |
 | 受付不明   | admit throw／reject／timeout、不正reply、notFound後着可能で非解除、late accepted／rejectedと矛盾reply                                            |
 | 三段階     | candidateまで録画継続するmock、明示pause、正常join後apply、Replay/errorで停止なし、discard ackまで候補保持                                       |
 | native結果 | accepted前のframe先着、元request/ref照合、既知receipt／quiescence／recovery単調保持                                                              |
@@ -233,3 +235,13 @@ UIは「受付準備中」「native受付待ち」「受付不明」「候補」
 | 予算       | mutationAdmission満杯でもreconcile受付可能、五pool枯渇／credit／異prefix、metadata予算／getter／nonJSON、元数値表記・member順、error文字列非公開 |
 
 browserは通常Appへのtest-only注入で両theme、三操作と照会、保存Project不変、同期経路回帰を確認する。実lease発行・wire frame・cancel ackの実transport仕様はc4c前に別詳細レビューを行う。[P3b再開条件](transport-boundary.md)とhost選定を満たさず実adapterへ進まない。
+
+## 10. 実装配置と確認範囲
+
+`recording-async/{coordinator,monitor,port,state,local-validation,ids}.ts`と`AsyncRecordingOperationsWorkspace.svelte`へ責務を分けた。[コード対応表](../../engineering/code-map.md)を入口にする。clientはfactoryが発行した同realmの凍結objectだけをApp選択で受け付け、未知clientのgetterを呼ばない。ViewLease自体のactive tokenと、Project object／generationごとのopaque identityを分け、同対象再openでは新lease、別対象では旧candidate転用を拒否する。App再mountで以前のidentityを失った場合は証拠監視と明示旧候補discardだけを提供する。
+
+正常な元Promiseのsettle、独立したnative quiescence／recovery、受付照会のFoundを別条件として受け入れる。mutation枠満杯でもreadAdmissionを使い、未送信pause試行で将来のapply／discard予約を消さない。ID上限は試験用に縮小せず実4096で確認する。leaseの期限挙動はmock providerの仮定であり、実native leaseを提供したとの主張ではない。
+
+実wireのlease／frame／cancel ack、認証・製品host・native adapterの接続はc4c前の設計・再開条件へ残す。
+
+PR #69の自動レビューで、監視中clientを保つためraw選択clientの交換を見落とすview退役漏れを修正した。さらにlease resolve→prop交換を同じturnで行うブラウザ再現でeffect前送信を確認し、live qualificationを追加した。送信資格だけを閉じ、元ownerの観測と証拠を保つ。
