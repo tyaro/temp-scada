@@ -4,11 +4,14 @@ export function ownHistoryJson(
   input: unknown,
   maxBytes: number,
   maxNodes = 250_000,
-  accounting: "compact" | "admission" = "compact",
+  accounting:
+    "compact" | "admission" | "localMetadata" | "localFrame" = "compact",
 ): unknown {
   if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 250_000)
     throw Error("History data limit");
-  const conservative = accounting === "admission";
+  const conservative = accounting !== "compact";
+  const maxDepth =
+    accounting === "localFrame" ? 64 : accounting === "admission" ? 48 : 32;
   let bytes = 0;
   let nodes = 0;
   const ancestors = new Set<object>();
@@ -42,7 +45,7 @@ export function ownHistoryJson(
     }
   }
   function visit(value: unknown, depth: number): unknown {
-    if (++nodes > maxNodes || depth > (conservative ? 48 : 32))
+    if (++nodes > maxNodes || depth > maxDepth)
       throw Error("History data limit");
     if (value === null) {
       add(4);

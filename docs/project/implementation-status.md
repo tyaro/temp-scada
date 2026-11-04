@@ -10,13 +10,17 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
-## 非同期monitor／UIの詳細設計（H5d4c4b、2026-11-04）
+## 非同期monitor／UI（H5d4c4b、2026-11-04）
 
-[Astraの詳細設計](../design/runtime/historian-recording-async-monitor.md)で、Appより長寿命の外部共有coordinator、lease準備と送信の受付状態、native結果とreadUncertain、呼出Promise自身の終了を分ける。受付不明・notFound・不正応答で新mutationを許さず、close／Project・service交換・unmount後も元ownerの進行と証拠を保持する。
+[Astraの詳細設計](../design/runtime/historian-recording-async-monitor.md)に沿い、Appの外部rootが保持する共有coordinator、同realmのtest-only非JSON port、通常Appの任意注入 `recordingAsyncOperations` と表示monitorを実装した。同portの二重root作成を拒否し、画面のclose／Project・service交換／App unmount後も元ownerが受理済み処理と証拠を保持する。
 
-既存同期serviceと非同期clientは別契約で、二重注入や安全でない切替を送信可能へ変換しない。今回は設計文書のみ。次の実装PRではtest-onlyの非JSON portとcoordinator／monitor／UIを検証し、実lease発行、native adapter、stateframe等の実wireはc4c以降へ分ける。通常Appは未接続のままで、各format／依存版とP3b保留を維持する。
+受付状態、native操作結果、readUncertain、元Promiseの正常終了を分ける。正常unknown受付は明示照会で確認後に次段階を再評価するが、notFoundや未完了・reject／不正応答では新mutationを許さない。検査→明示停止join→同候補applyを別操作とし、commit済み表示から記録再開を推論しない。元applyの結果照会でreceiptを保持しても、元completionと回復要求は変更しない。
 
-c4a実装のPR #67はworkへマージ済み（`1370d4c`）。PR／push CIとも全7job成功、同headの自動レビューに指摘はない。
+同期serviceは独立契約のまま維持し、最初の有効な単独注入でAppのmodeを固定する。二重注入／異modeへのprop交換は新送信を拒否し、旧監視を継続する。五roleそれぞれ4096のID枠を持ち、初回workflowのmutation4／callerOperation2予約と、再試行用追加枠を分離する。mutation枯渇でも予約済みdiscardと独立readAdmissionによる結果照会を保つ。local metadata／frameは専用予算でowned検証し、既存c4a／compact profileを変えない。
+
+新規単体77件を含むTS全6,814件、型検査0error／0warning・build、新規Chromium11件と同期回帰13件、全体Prettier・変更文書9件の相対リンク・差分検査を確認した。Astra最終レビューに必須未決はない。
+
+設計PR #68はworkへマージ済み（`e23bea9`、PR／push CIとも全7job成功）。実lease発行・native adapter・stateframe等の実wireと製品hostは未実装。通常entryは未注入・未接続のまま、Project0.37.0／DB7／H1／SDK／Banto・依存版とP3b保留を維持する。
 
 ## 非同期admissionの共通JSON検証（H5d4c4a、2026-11-04）
 
@@ -32,7 +36,7 @@ Rust workspace626件（新規8）、TS全6,737件（新規1,903）、関連Chrom
 
 [Astraの詳細設計](../design/runtime/historian-recording-bridge-boundary.md)で、同期のd4b serviceを一般IPCへそのまま適合させられない点を明記した。非同期admissionの受理／拒否／不明、nativeが発行する期限付きlease、元ownerへの照合と有限保持、結果・通知・切断時の扱いを定める。既存同期serviceをPromiseへ暗黙変更せず、新しい接続契約として段階化する。
 
-c4aの共通DTO／schema／Rust・TS pure validatorとfixtureを実装した。c4bのtest-only portを使うmonitor／UIへの接続、実lease発行・native adapter・製品host／transportは未実装である。現在のViteとRust libraryにTauri hostやSCADA serverはなく、通常Appは未接続。P3bの認証・製品接続の保留は維持する。
+c4aの共通DTO／schema／Rust・TS pure validatorとfixtureを実装した。c4bのtest-only portを使うmonitor／UIは実装済み。実lease発行・native adapter・製品host／transportは未実装である。現在のViteとRust libraryにTauri hostやSCADA serverはなく、通常Appは未接続。P3bの認証・製品接続の保留は維持する。
 
 c3実装のPR #65はworkへ統合済み（`658bb5b`）。PR／push CIとも全7job成功、同headの自動レビューに指摘はない。
 

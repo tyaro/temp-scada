@@ -16,12 +16,16 @@
     project,
     generation,
     service,
+    blocked = false,
+    conflict,
     onclose,
   }: {
     openOwner: object | null;
     project: Project;
     generation: number;
     service?: RecordingOperationsService;
+    blocked?: boolean;
+    conflict?: string;
     onclose: () => void;
   } = $props();
   const monitor = createRecordingOperationsMonitor();
@@ -82,7 +86,13 @@
     return value;
   }
   function preflight() {
-    if (!current || !binding || !visible?.canPreflight || !binding.desired)
+    if (
+      blocked ||
+      !current ||
+      !binding ||
+      !visible?.canPreflight ||
+      !binding.desired
+    )
       return;
     try {
       // getRandomValues is available in HTTP contexts too. IDs are not authority.
@@ -132,6 +142,7 @@
     class="operations"
     data-recording-operations-phase={visible?.phase ?? "checking"}
   >
+    {#if conflict}<p role="alert">{conflict}</p>{/if}
     <p role="status">
       {!visible
         ? "対象を確認中です"
@@ -190,7 +201,7 @@
           aria-label="期待適用版"
           inputmode="numeric"
           bind:value={applied}
-          disabled={!visible?.canPreflight}
+          disabled={blocked || !visible?.canPreflight}
         /></label
       >
       <label
@@ -198,7 +209,9 @@
           aria-label="期待mapping版"
           inputmode="numeric"
           bind:value={mapping}
-          disabled={!visible?.canPreflight || !binding?.desired?.enabled}
+          disabled={blocked ||
+            !visible?.canPreflight ||
+            !binding?.desired?.enabled}
         /></label
       >
       <label
@@ -206,7 +219,9 @@
           aria-label="期待保持適用版"
           inputmode="numeric"
           bind:value={retention}
-          disabled={!visible?.canPreflight || !binding?.desired?.enabled}
+          disabled={blocked ||
+            !visible?.canPreflight ||
+            !binding?.desired?.enabled}
         /></label
       >
       {#if draftError}<p role="alert">
@@ -214,7 +229,7 @@
         </p>{/if}
       <button
         type="button"
-        disabled={!binding || !visible?.canPreflight}
+        disabled={blocked || !binding || !visible?.canPreflight}
         onclick={preflight}>新しい変更を検査</button
       >
     </section>
@@ -238,58 +253,58 @@
     <div class="actions">
       <button
         type="button"
-        disabled={!visible?.canDiscardOriginal}
+        disabled={blocked || !visible?.canDiscardOriginal}
         onclick={() => {
-          if (current) monitor.discardOriginal();
+          if (current && !blocked) monitor.discardOriginal();
         }}>以前の候補を破棄</button
       >
       <button
         type="button"
-        disabled={!binding || !visible?.canPause}
+        disabled={blocked || !binding || !visible?.canPause}
         onclick={() => {
-          if (current && binding) monitor.pauseJoin(binding, 10000);
+          if (current && !blocked && binding) monitor.pauseJoin(binding, 10000);
         }}>この元runを停止してjoin</button
       >
       <button
         type="button"
-        disabled={!binding || !visible?.canApply}
+        disabled={blocked || !binding || !visible?.canApply}
         onclick={() => {
-          if (current && binding) monitor.apply(binding, 10000);
+          if (current && !blocked && binding) monitor.apply(binding, 10000);
         }}>同候補を適用</button
       >
       <button
         type="button"
-        disabled={!binding || !visible?.canDiscard}
+        disabled={blocked || !binding || !visible?.canDiscard}
         onclick={() => {
-          if (current && binding) monitor.discard(binding);
+          if (current && !blocked && binding) monitor.discard(binding);
         }}>変更候補を破棄</button
       >
       <button
         type="button"
-        disabled={!visible?.canReconcile}
+        disabled={blocked || !visible?.canReconcile}
         onclick={() => {
-          if (current) monitor.reconcile(10000);
+          if (current && !blocked) monitor.reconcile(10000);
         }}>元要求の結果を照会</button
       >
       <button
         type="button"
-        disabled={!visible?.canCancel}
+        disabled={blocked || !visible?.canCancel}
         onclick={() => {
-          if (current) monitor.requestCancel();
+          if (current && !blocked) monitor.requestCancel();
         }}>操作の取消を要求</button
       >
       <button
         type="button"
-        disabled={!visible?.canCancelRead}
+        disabled={blocked || !visible?.canCancelRead}
         onclick={() => {
-          if (current) monitor.requestCancel(true);
+          if (current && !blocked) monitor.requestCancel(true);
         }}>照会の取消を要求</button
       >
       <button
         type="button"
-        disabled={!visible?.canSwitch}
+        disabled={blocked || !visible?.canSwitch}
         onclick={() => {
-          if (current) monitor.switchToSelected();
+          if (current && !blocked) monitor.switchToSelected();
         }}>現在の対象を確認</button
       >
     </div>
