@@ -10,6 +10,14 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 記録操作の非同期bridge境界（H5d4c4、2026-11-04）
+
+[Astraの詳細設計](../design/runtime/historian-recording-bridge-boundary.md)で、同期のd4b serviceを一般IPCへそのまま適合させられない点を明記した。非同期admissionの受理／拒否／不明、nativeが発行する期限付きlease、元ownerへの照合と有限保持、結果・通知・切断時の扱いを定める。既存同期serviceをPromiseへ暗黙変更せず、新しい接続契約として段階化する。
+
+今回は文書のみ。次のc4aは共通DTO／schema／Rust・TS pure validatorとfixture、c4bはtest-only portを使うmonitor／UIへの接続で、実lease発行・native adapter・製品host／transportは未実装である。現在のViteとRust libraryにTauri hostやSCADA serverはなく、通常Appは未接続。P3bの認証・製品接続の保留は維持する。
+
+c3実装のPR #65はworkへ統合済み（`658bb5b`）。PR／push CIとも全7job成功、同headの自動レビューに指摘はない。
+
 ## 同owner内の明示結果照会（H5d4c3、2026-11-04）
 
 [Astra設計](../design/runtime/historian-recording-owner-reconciliation.md)に沿い、c2の元apply handleを使う明示reconcile、独立4096 ID、既存Supervisor readerのloan／joinと結果統合をRustへ実装した。元completionは不変で、Foundは同じ元requestのlatest／lastAppliedへ反映する。notFoundでも再送を許さず、元apply静止とread自身の静止を分離して回復gateを維持する。

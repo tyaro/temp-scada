@@ -4,6 +4,12 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録操作の非同期bridge境界設計（H5d4c4、2026-11-04）
+
+c3実装のPR #65はworkへマージ済み（`658bb5b`、PR／push CIとも全7job成功、同head自動レビュー指摘なし）。Astra主設計で、一般IPCの非同期受理を既存同期serviceへ偽装しない接続契約を文書化した。admission応答喪失と未dispatch拒否、native期限leaseとJSの論理timeout、元ownerの寿命・結果照会・有限保持を分離する。
+
+今回は設計文書のみ。次のc4aで共通DTO／schema／Rust・TS pure検証を実装し、c4bのmonitor／UI受入を経て、host選定とP3b再開条件に沿った接続を進める。通常Appのnative接続・実lease発行・製品transport／認証は未実装。各format／依存版、実Hub／S7／本番DB・上流と資格情報の保留は維持する。
+
 ## 同owner内の明示結果照会のRust実装（H5d4c3、2026-11-04）
 
 設計PR #64はworkへ統合済み（`cd6257a`）。Astra設計に沿い、元apply opaque handleへのreconcile、独立した有限read registry、同Supervisorの既存reader loan／join、d4a DTO投影とlatest／lastAppliedの単調統合を実装した。元completionと元quiescenceは変えず、notFoundでも再送を許可しない。

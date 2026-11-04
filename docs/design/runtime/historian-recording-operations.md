@@ -318,3 +318,9 @@ OwnerViewの`active`は現在または最後に受理したstageのhandleであ�
 [元apply要求に対するreceipt読取の設計](historian-recording-receipt-reader.md)に沿い、c1で既存HistoryReaderの同snapshot・要求全文照合付きreceipt読取を実装した。writerを移管せず、保存証拠を検証してから元applyのcanonical全文を照合する。独立readのFound／Noneは物理完了・非commit確定・回復解除を表さない。
 
 c2の[共有native owner](historian-recording-native-owner.md)をRust libraryへ実装し、単一共有owner・受理前registry・三段階操作と共通DTO投影を受け入れた。[c3の同owner内明示reconciliation](historian-recording-owner-reconciliation.md)と物理完了根拠の統合もRustへ実装した。JS bridgeは後続である。各詳細APIを実装前にAstraと設計・レビューする。c1だけでd4bの通常Appがnativeへ接続されたとは扱わない。認証・transport・実Hub／S7／本番DBの保留と各format／依存版を維持する。
+
+## 13. 後続の非同期bridge境界
+
+現行d4b serviceは同realmでの同期受付・同期discard・同期取消応答を持つ。[c4の採用詳細設計](historian-recording-bridge-boundary.md)では、一般IPCに必要な非同期admissionを別契約として設計し、現serviceの返り値を暗黙にPromiseへ変えない。応答喪失は未dispatch拒否と区別し、元ownerへの確認を伴わず再実行しない。native期限はnative側の期限付きleaseで確定し、JSの表示timeoutを物理完了や取消の証明へ変換しない。
+
+c4aの共通契約とc4bのmonitor受入は後続実装であり、この設計文書によって通常AppへRust ownerが接続されたとはしない。host選定と製品transport／認証の再開条件は[P3b](transport-boundary.md)を維持する。
