@@ -763,3 +763,5 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 `workflow/mod.rs`はprivate instance ticket、元changeへの束縛、reserve／lease／beginの明示入口とnative identity登録planを担当する。`workflow/escrow.rs`は4stageの将来request／lease上界、projection high-water、11revision＋close1の予約・移管と未発行stageだけの返却を担当する。`workflow/state.rs`は元call／knowledge／immutable completionに基づくphaseとread gateを判定し、sourceを実行しない。通常mutation入口からWorkflow modeの予約を迂回できない。
 
 `examples/recording-workflow-model-cases.json`の47シナリオ597ステップと`tests/workflow_boundaries.rs`の10境界試験をRustの共通driverで実行する。test-only `recording-model-budget.ts`は独立した要求由来の会計oracle、`__fixtures__/recording-workflow-model-cases.ts`、`recording-workflow-model-contract.test.ts`、`e2e/recording-workflow-model-contract.spec.ts`は92期待DTO・全入力の既存validator受入とApp保存不変を確認する。既存四fixtureの会計を同期した。TS registry／workflow実行機構やnative接続は追加しない。
+
+[prep2b4bの次workflow受入](../design/runtime/historian-recording-registry-workflow-renewal.md)は採用実装設計であり、現在の単一workflowモデルへの追加はまだない。nativeの管理資格・current applyだけのreconciliation制約を参照し、旧record保持・全scope資源・旧ticketの退役条件を閉じてから実装する。

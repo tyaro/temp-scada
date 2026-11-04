@@ -4,6 +4,14 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録registryの次workflow受入設計（H5d4c4c-prep2b4b、2026-11-04）
+
+prep2b4aのPR #78をworkへ統合（`238d82c`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[次workflow受入](../design/runtime/historian-recording-registry-workflow-renewal.md)で、正常な現在predecessor ticketと、毎回の同run資格宣言による明示更新を具体化した。nativeのIdle／CompletedとsupervisorのRunning／clean Joined管理資格を照合し、DTOの正常終了だけで物理run状態を確定しない。
+
+旧workflowを有限台帳へ保持してcurrentだけを移し、全ID・使用済み保持容量・未消費revision creditとprojection high-waterを引き継ぐ。旧ticketの読取・exact再送と新送信を分け、別predecessorからの分岐や旧changeRefの再束縛、旧workflowへの新reconcileを拒否する。自動resume／rearm／epoch交換による未知・recoveryの消去は追加しない。
+
+今回は設計文書のみで、実行コード・通常App・wire／schema・Project0.37.0／DB7／H1／SDK／Banto・依存を変更していない。実接続とP3bは保留する。Astra設計とrootのnative／既存モデル照合を経て、整形・相対リンク・差分を確認し、Ready for Review PRの全体CIで回帰を確認する。
+
 ## 記録registryの単一workflow予約と段階進行（H5d4c4c-prep2b4a、2026-11-04）
 
 設計PR #77をworkへ統合（`84b325b`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra設計の[prep2b4a](../design/runtime/historian-recording-registry-workflow-model.md)として、単一候補の全段階予約、lease時のattempt ID束縛、明示preflight／pause／apply／discardを実装した。元call未終端とcompletionを分離し、typed RejectedとAccepted後failed/notDispatchedのphaseを区別する。

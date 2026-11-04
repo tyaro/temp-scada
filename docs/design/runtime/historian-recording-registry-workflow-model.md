@@ -149,7 +149,7 @@ reserve_workflowは将来stageのrequestを最大64 ASCIIの未知ID/refで構�
 | projection                    | 全将来stageのhigh-water boundを先に合成し1MiB等を確認                    |
 | revision                      | preflight3＋pause3＋apply3＋discard2の計11credit。close1は既存別予約     |
 
-現行モデルにはreadAdmissionとは別のreconciliation ID台帳がない。b4aでModelLimits.reconciliation_ids（最大4096・縮小のみ）を追加し、Standalone／Workflow両modeの新read admission登録時にreadAdmission ID・bytes・revisionと原子的に確認／登録する。mutation escrowやcaller operation枠へ依存させない。
+prep2b4aでreadAdmissionとは別のreconciliation ID台帳を実装した。ModelLimits.reconciliation_ids（最大4096・縮小のみ）を追加し、Standalone／Workflow両modeの新read admission登録時にreadAdmission ID・bytes・revisionと原子的に確認／登録する。mutation escrowやcaller operation枠へ依存させない。
 reconciliationIdは元ReconciliationRequest全文とadmissionIdへ束縛し、同admissionIdのexact Pending／Replayは既存入口で返して再登録しない。異なるadmissionIdで同reconciliationIdを使う要求は、本文同値でもProtocolViolationとする。このモデルでは同readの複数admission共有を実装しない。新たなreadを明示する場合は新reconciliationIdを必要とし、元不明readの自動再dispatchを許可しない。
 台帳は元本文を既存AdmissionRecordへ不変参照し、JSONを重複保管しない。ID／参照の管理overheadは1件256bytesの固定上界をread予算へ原子課金し、最大4096件をmodel終了まで保持する。read自身のpool／bytes枯渇は有限停止であり、native c3の実4096枠を予約した証拠ではない。未知／拒否／完了という結果でIDを再使用可能にしない。
 
@@ -208,7 +208,7 @@ ReservedからCompleted／Discardedまでを模擬できるが、正常終端後
 
 ### prep2b4b
 
-正常終端後の新workflow予約、同runがCleanJoinedのまま次計画を検査する場合と新run/contextが必要な場合の境界を別設計で確定する。
+[次workflow受入のAstra設計](historian-recording-registry-workflow-renewal.md)で、正常な現在predecessor ticket・毎回の同run資格宣言・全静止gateによる明示更新を定めた。Running／clean Joinedの同run継続と、新run/contextが必要な場合を分ける。設計済みだが実装は後続である。
 旧receipt／ID／終端callを保持したまま残予算を検査し、未知またはrecoveryをnew owner作成で消さない。
 resume／fresh SDK／初期bootstrap／実native接続はこの工程からも自動許可しない。
 
