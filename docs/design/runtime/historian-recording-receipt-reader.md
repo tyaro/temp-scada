@@ -1,14 +1,14 @@
 # 元apply要求に対するreceiptの独立読取
 
-状態: **H5d4c1のnative読取実装済み・owner接続は後続**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。[明示操作契約](historian-recording-operations.md)のnative接続に必要な最初の読取境界を定める。 c2の[共有native owner](historian-recording-native-owner.md)はRust実装済みで、[c3の同owner read統合](historian-recording-owner-reconciliation.md)は詳細設計済み・未実装である。
+状態: **H5d4c1のnative読取・c3 owner接続はRust実装済み**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。[明示操作契約](historian-recording-operations.md)のnative接続に必要な最初の読取境界を定める。 c2の[共有native owner](historian-recording-native-owner.md)はRust実装済みで、[c3の同owner read統合](historian-recording-owner-reconciliation.md)もRust実装済みである。
 
 ## 工程と責務
 
-| 工程   | 内容                                                                   | 今回の範囲                          |
-| ------ | ---------------------------------------------------------------------- | ----------------------------------- |
-| H5d4c1 | 既存HistoryReaderで元apply全文と保存receiptを同snapshot照合する有限API | 実装・隔離SQLiteで受入              |
-| H5d4c2 | 単一共有native owner、受理前registry、三段階操作と共通DTOへの投影      | Rust実装済み・UI接続は後続          |
-| H5d4c3 | 同ownerからの明示reconciliation、物理完了根拠との統合                  | 後続。c1のDB証拠を使い、latchを維持 |
+| 工程   | 内容                                                                   | 今回の範囲                                  |
+| ------ | ---------------------------------------------------------------------- | ------------------------------------------- |
+| H5d4c1 | 既存HistoryReaderで元apply全文と保存receiptを同snapshot照合する有限API | 実装・隔離SQLiteで受入                      |
+| H5d4c2 | 単一共有native owner、受理前registry、三段階操作と共通DTOへの投影      | Rust実装済み・UI接続は後続                  |
+| H5d4c3 | 同ownerからの明示reconciliation、物理完了根拠との統合                  | Rust実装済み。c1のDB証拠を使い、latchを維持 |
 
 既存`SqliteStore::recording_plan_receipt`はwriterへの可変参照とrequest IDを取る。supervisorから`take_store`して読む方法ではowner移管やwriter回復のgateを伴う。c1では既存の独立read leaseを使い、稼働中やwriterのNeedsReopen時もreader自身の健康状態と保存証拠に従って照会する。既存writer APIの意味は変えない。
 

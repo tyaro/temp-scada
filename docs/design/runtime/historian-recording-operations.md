@@ -1,6 +1,6 @@
 # 記録計画の明示管理操作契約
 
-状態: **H5d4aの純粋契約とd4bの注入service・App操作monitor／UIを実装、d4c1の独立receipt読取を実装、c2のnative owner実装済み、c3／JS bridgeは後続**。2026-11-03（日本時間）。主設計・実装レビューはユーザー指定のAstra。通常起動は未接続で、操作はtest-only外部ownerで受け入れる。製品transportは後続。
+状態: **H5d4aの純粋契約とd4bの注入service・App操作monitor／UIを実装、d4c1の独立receipt読取を実装、c2のnative ownerとc3の同owner結果照会はRust実装済み、JS bridgeは後続**。2026-11-03（日本時間）。主設計・実装レビューはユーザー指定のAstra。通常起動は未接続で、操作はtest-only外部ownerで受け入れる。製品transportは後続。
 
 ## 1. 初回scopeとPR分割
 
@@ -317,4 +317,4 @@ OwnerViewの`active`は現在または最後に受理したstageのhandleであ�
 
 [元apply要求に対するreceipt読取の設計](historian-recording-receipt-reader.md)に沿い、c1で既存HistoryReaderの同snapshot・要求全文照合付きreceipt読取を実装した。writerを移管せず、保存証拠を検証してから元applyのcanonical全文を照合する。独立readのFound／Noneは物理完了・非commit確定・回復解除を表さない。
 
-c2の[共有native owner](historian-recording-native-owner.md)をRust libraryへ実装し、単一共有owner・受理前registry・三段階操作と共通DTO投影を受け入れた。[c3の同owner内明示reconciliation](historian-recording-owner-reconciliation.md)と物理完了根拠の統合は、詳細設計を先行し別の実装PRで受け入れる。各詳細APIを実装前にAstraと設計・レビューする。c1だけでd4bの通常Appがnativeへ接続されたとは扱わない。認証・transport・実Hub／S7／本番DBの保留と各format／依存版を維持する。
+c2の[共有native owner](historian-recording-native-owner.md)をRust libraryへ実装し、単一共有owner・受理前registry・三段階操作と共通DTO投影を受け入れた。[c3の同owner内明示reconciliation](historian-recording-owner-reconciliation.md)と物理完了根拠の統合もRustへ実装した。JS bridgeは後続である。各詳細APIを実装前にAstraと設計・レビューする。c1だけでd4bの通常Appがnativeへ接続されたとは扱わない。認証・transport・実Hub／S7／本番DBの保留と各format／依存版を維持する。

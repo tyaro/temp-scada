@@ -146,3 +146,52 @@ async fn replay_and_conflict_do_not_stop_a_live_run_and_client_drop_does_not_sto
     handoff.supervisor.join_recording(&run).await.unwrap();
     closed(&mut socket).await;
 }
+#[tokio::test]
+async fn public_owner_reconciles_a_real_budget_rollback_without_restarting_capture() {
+    let hub = Hub::new().await;
+    let (s, run, _options, mut history, _dir, mut socket) =
+        super::supervisor::setup(&hub, None).await;
+    let native = s.recording_watch();
+    let mut ctx = context().as_value().clone();
+    ctx["sessionId"] = json!(s.state().recording.session_id.as_ref().unwrap());
+    let ctx = RecordingOperationsContext::from_value(ctx).unwrap();
+    let mut owner = RecordingOperationsOwner::try_new(s, ctx.clone(), run).unwrap();
+    let client = owner.client();
+    let a = client
+        .preflight(request("rollback", &ctx), control())
+        .unwrap();
+    a.operation.wait().await.unwrap();
+    client
+        .pause_join(&a.change, "rollback:pause", control())
+        .unwrap()
+        .wait()
+        .await
+        .unwrap();
+    closed(&mut socket).await;
+    let before = raw(&mut history);
+    let mut limited = control();
+    limited.limits.max_output_bytes = 1;
+    let op = client.apply(&a.change, "rollback:apply", limited).unwrap();
+    let failed = op.wait().await.unwrap();
+    assert_eq!(failed.as_value()["outcome"]["effect"], "unconfirmed");
+    assert_eq!(failed.as_value()["outcome"]["error"], "budgetExceeded");
+    let h = client
+        .reconcile(&a.change, &op, "rollback:read", control())
+        .unwrap();
+    let r = h.wait().await.unwrap();
+    assert_eq!(r.as_value()["outcome"]["kind"], "notFound");
+    assert_eq!(r.as_value()["quiescence"], "confirmed");
+    assert_eq!(r.as_value()["recoveryRequired"], true);
+    assert_eq!(op.wait().await.unwrap(), failed);
+    assert_eq!(native.borrow().phase, RecordingPhase::Joined);
+    assert_eq!(raw(&mut history)["series"], before["series"]);
+    assert_eq!(client.state().phase, OperationsPhase::Blocked);
+    assert!(
+        owner
+            .try_handoff()
+            .unwrap()
+            .supervisor
+            .recording_plan_guard_state()
+            .recovery_required
+    );
+}

@@ -4,17 +4,23 @@
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
-提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。H5b2のnative activation／session原子bindingはPR #46でworkへ統合済み。H5c1で適用済み計画からRecorder／Hostの専用開始まで接続した。PR #47／#48をworkへ統合し、H5c2aの停止前検査に続いてH5c2bの正常pause後の管理turnを追加した。PR #49もworkへ統合し、c2c1で単一supervisorの停止前検査・明示pause/join・同一候補の一回適用を追加した。c2c1はPR #50でworkへ統合済み。c2c2で同snapshot診断とcaller提供SDK snapshotに束縛した明示resumeを追加した。c2c2もPR #51でworkへ統合済み。[H5d詳細設計](../design/runtime/historian-recording-project.md)を採用し、設計PR #52はworkへ統合済み。d1でProject0.37.0の任意記録希望設定を保存・読込できる。d1はPR #53でworkへ統合済み。d2で編集・除去とUndo／Redoを追加した。d2もPR #54でworkへ統合済み。[d3の管理表示契約](../design/runtime/historian-recording-management.md)を採用した。d3aの共通DTO／JSON検証／比較を実装した。d3bで任意注入service・有限controller・通常Appの管理状態読取表示を追加した。d3bもPR #57でworkへ統合済み。[d4の明示操作詳細](../design/runtime/historian-recording-operations.md)を採用し、d4aの純粋契約・共通検証を実装した。d4bの外部owner・任意注入操作serviceと通常App表示も実装した。c1の独立receipt読取も実装した。c2の共有native ownerもRustで実装した。c3の同owner内結果照会は詳細設計を定め、Rust実装は次の区切りとする。製品接続は引き続き保留する。
+提供済みの履歴機能は[H4b2 通常App検索](#通常appの履歴検索workspaceh4b22026-11-02)と[H4c3 保存Trend検索](#保存trendからの明示履歴検索h4c32026-11-02)を参照。[H4c1〜3](../design/runtime/historian-trend-definition.md)の独立定義契約、Project 0.36.0保存・参照配置、namespace照合付きの単一workspace検索を提供する。実source adapterと画面内常時グラフは後続である。 PR #41はマージ済みで、[修正後CI](https://github.com/tyaro/temp-scada/actions/runs/41464223430)全7ジョブ成功。[H5 記録計画管理](../design/runtime/historian-recording-plan.md)の設計PR #42はマージ済み。H5aの独立desired JSON契約とRust／TS共通検証を実装し、139 fixtureを受け入れた。H5aはPR #43でマージ済み（PR／push CI全7ジョブ成功）。H5b1として永続applied台帳・mapping登録・CASと再送結果の照会を実装した。H5b2のnative activation／session原子bindingはPR #46でworkへ統合済み。H5c1で適用済み計画からRecorder／Hostの専用開始まで接続した。PR #47／#48をworkへ統合し、H5c2aの停止前検査に続いてH5c2bの正常pause後の管理turnを追加した。PR #49もworkへ統合し、c2c1で単一supervisorの停止前検査・明示pause/join・同一候補の一回適用を追加した。c2c1はPR #50でworkへ統合済み。c2c2で同snapshot診断とcaller提供SDK snapshotに束縛した明示resumeを追加した。c2c2もPR #51でworkへ統合済み。[H5d詳細設計](../design/runtime/historian-recording-project.md)を採用し、設計PR #52はworkへ統合済み。d1でProject0.37.0の任意記録希望設定を保存・読込できる。d1はPR #53でworkへ統合済み。d2で編集・除去とUndo／Redoを追加した。d2もPR #54でworkへ統合済み。[d3の管理表示契約](../design/runtime/historian-recording-management.md)を採用した。d3aの共通DTO／JSON検証／比較を実装した。d3bで任意注入service・有限controller・通常Appの管理状態読取表示を追加した。d3bもPR #57でworkへ統合済み。[d4の明示操作詳細](../design/runtime/historian-recording-operations.md)を採用し、d4aの純粋契約・共通検証を実装した。d4bの外部owner・任意注入操作serviceと通常App表示も実装した。c1の独立receipt読取も実装した。c2の共有native ownerもRustで実装した。c3の同owner内結果照会もRustへ実装した。製品接続は引き続き保留する。
 
 最新の作図改善の区切り: I0〜I4の作図改善と[I6の参照名一括置換](../design/equipment/text-reference-replacement-design.md)は提供済み・全体CI成功。I5は現行版を再計測し、I5f候補を見送り、I5gで保持履歴の資産hash再抽出を限定削減した（全体CI成功）。大図面の読込・キー操作遅延は残る。[工程表と保留条件](upstream-independent-plan.md)を次の判断に使う。
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
-## 同owner内の明示結果照会の詳細設計（H5d4c3、2026-11-04）
+## 同owner内の明示結果照会（H5d4c3、2026-11-04）
 
-[Astraの詳細設計](../design/runtime/historian-recording-owner-reconciliation.md)で、同ownerが保持する元apply handleへの明示照会、既存Supervisorのreader loan／join、有限な照会IDと結果保持を定めた。receiptの存在、元applyの静止、照会read自身の静止を別々に扱い、元completionを変更せずlatestへ結果を統合する。notFoundから再送を許さず、回復latchは維持する。
+[Astra設計](../design/runtime/historian-recording-owner-reconciliation.md)に沿い、c2の元apply handleを使う明示reconcile、独立4096 ID、既存Supervisor readerのloan／joinと結果統合をRustへ実装した。元completionは不変で、Foundは同じ元requestのlatest／lastAppliedへ反映する。notFoundでも再送を許さず、元apply静止とread自身の静止を分離して回復gateを維持する。
 
-今回は設計文書のみで、c3のRust API・読取driver・DTO投影と状態統合は未実装。JS bridge／通常Appのnative接続も後続である。c2の実装はPR #63でworkへ統合済み（`7a6eca5`）。PR／push CIとも全7job成功、Astra最終レビューと同headの自動レビューに指摘はない。
+worker panic／Runtime終了でreadの物理完了が不明なら有限Errとread Uncertainを保持し、新照会とhandoffを拒否する。Core poisonはownerを閉鎖し、取得済みnative receiptを元要求付きで保持する。clientやwaitのDropは取消ではなく、管理owner Dropはreadへcooperative cancelを送って実worker終了まで資源を保持する。
+
+新規単体25件と公開API／実SDK loopback結合1件を追加した。実commit後の応答喪失／panicからのFound、出力予算による実rollback後のnotFound、保存証拠破損、元要求の表示順／数値表記、取消・期限・競合・ID・lock寿命を検証する。FULLの原子性は既存Historian、ownerの型付きFULL注入は別の検証範囲として記録する。
+
+Rust workspace618件（新規26）、Clippy全target `-D warnings`／rustfmt、既存の共通契約・操作workspaceのChromium16件が成功した。Astraの最終read-onlyレビューに必須指摘はない。
+
+設計PR #64はworkへマージ済み（`cd6257a`）。c3はRust libraryであり、JS bridge／通常Appのnative接続と製品transportは後続。Project0.37.0／DB7／H1／固定SDK／Bantoと各依存版、実Hub／S7／本番DB・認証の保留を維持する。
 
 ## 記録操作の共有native owner（H5d4c2、2026-11-04）
 
@@ -24,7 +30,7 @@ client／waitのDropで操作を取消さず、管理ownerの終了は別に扱�
 
 単体30件・公開API／loopback SDK結合2件を追加し、Rust workspace592件、Clippy `-D warnings`／rustfmt、既存共通Chromium3件が成功。実SQLite FULLの原子性はHistorian既存試験、ownerのFULL伝播は型付きprivate故障注入として範囲を区別する。runtime dev-dependencyで既存rusqlite0.41.1を再利用し、production依存と各版を維持する。Astra最終レビューに必須指摘はない。
 
-c3の同owner結果照会、JS bridge、製品transportは未実装。通常App・TS／schema・Project0.37.0／DB7／H1／SDK・Bantoと、実Hub／S7／本番DB・認証／transportの保留は維持する。全体CIはReady for Review PRで確認する。
+c3の同owner結果照会は実装済み。JS bridge、製品transportは未実装。通常App・TS／schema・Project0.37.0／DB7／H1／SDK・Bantoと、実Hub／S7／本番DB・認証／transportの保留は維持する。全体CIはReady for Review PRで確認する。
 
 ## 元apply全文に照合するnative receipt読取（H5d4c1、2026-11-03）
 

@@ -14,6 +14,7 @@ pub(super) fn setup() -> (
             host,
             preflight: PreflightOwner::new(reader),
             resume: resume::ResumeOwner::default(),
+            receipt_read: None,
         },
         dir,
     )

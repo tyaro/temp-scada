@@ -1,10 +1,10 @@
 # 記録操作の共有native owner
 
-状態: **H5d4c2のnative owner実装済み、c3／JS bridgeは後続**。2026-11-04（日本時間）。主設計・実装レビューはユーザー指定のAstra。共有ownerから三段階操作・結果投影までをRust libraryで提供する。
+状態: **H5d4c2のnative owner実装済み、c3結果照会も実装済み、JS bridgeは後続**。2026-11-04（日本時間）。主設計・実装レビューはユーザー指定のAstra。共有ownerから三段階操作・結果投影までをRust libraryで提供する。
 
 ## 1. 範囲と工程
 
-[明示操作契約](historian-recording-operations.md)のd4a純粋JSON、d4b optional service／App monitor、[c1 receipt reader](historian-recording-receipt-reader.md)は実装済み。c2は単一supervisorを全callerで共有するnative ownerと受理前registry、preflight→明示pause/join→明示apply、d4aへの結果投影を実装した。c3でc1 readを同ownerの明示reconciliationへ接続する。[c3詳細設計](historian-recording-owner-reconciliation.md)を定め、実装は後続に分ける。
+[明示操作契約](historian-recording-operations.md)のd4a純粋JSON、d4b optional service／App monitor、[c1 receipt reader](historian-recording-receipt-reader.md)は実装済み。c2は単一supervisorを全callerで共有するnative ownerと受理前registry、preflight→明示pause/join→明示apply、d4aへの結果投影を実装した。c3でc1 readを同ownerの明示reconciliationへ接続する。[c3詳細設計](historian-recording-owner-reconciliation.md)を定め、Rustのread統合も実装した。
 
 薄いpreflight wrapperだけを先に公開すると、受付ID・apply結果・owner寿命の責務が未完のままになる。c2では三段階を一貫して受け入れ、HTTP／IPC／Tauri commandやJS serviceの実接続は追加しない。Rust ownerを作っただけで通常Appのin-process serviceが接続済みとは扱わない。
 
@@ -162,7 +162,7 @@ native要求への変換では、検証済みU1／nullを数値の整数同値�
 
 preflightのnotCommittedは当該read操作がwriteを実行していないという意味で、照会対象applyが過去または並行にcommitしていない証明ではない。Conflictや入力不整合などreaderが健全な確定拒否もcompleted/falseとし、typedなReaderUnusable/ReaderFailed/CorruptDataや不明な内部障害を正常化しない。join自体が失敗してread cleanupを確認できない場合は表のunknown/true経路へ進む。
 
-native正常joinは物理完了根拠でありcommitの証明ではない。一方、c3でreceiptが見つかっても物理完了は別に確認する。既知receiptを後のnotFoundで消さず、quiescence confirmedをunknownへ戻さず、recoveryはORで維持する。元OperationHandleのcompletionは一回だけ確定し、後日のreconciliationはowner.latestを更新する。c2ではreconciliation未提供である。
+native正常joinは物理完了根拠でありcommitの証明ではない。一方、c3でreceiptが見つかっても物理完了は別に確認する。既知receiptを後のnotFoundで消さず、quiescence confirmedをunknownへ戻さず、recoveryはORで維持する。元OperationHandleのcompletionは一回だけ確定し、後日のreconciliationはowner.latestを更新する。c3のread統合でreconciliationを提供する。
 
 正常結果の後でもnative／ownerの新しいblocked状態を古い成功でclearしない。owner stateに独立のsticky blockを持ち、追加診断・UI再mount・current読取で解除しない。自動rearm、旧appliedへのrollback、失敗後の新ID再試行は行わない。
 
@@ -186,9 +186,9 @@ Tokio runtime shutdownは正常owner shutdownの代替ではない。SDK runtime
 
 c2は元ApplyRecordingPlanRequest、元RecordingPlanTurnRun、元RecordingRun、確認済みquiescence、immutable completionと最新結果を最大一件ずつ保持する。c3はこのregistryからc1のHistoryReader readを発行する。JSの任意requestIdだけを受けて別要求へ照会しない。
 
-現supervisorのresume inspectionはplan turn実行中やpending candidateでBusyになるため、c3は専用の同reader loan／join経路を設計する必要がある。借用中の`join_*(&mut self).await`と同時に別の`&mut Supervisor`を作らない。元operation completionが確定してSupervisorが返却された後、registryの元要求を照合して専用readをloanし、その後にread joinをawaitする。native子workerのJoinError等でHostがFaultedでもSupervisorとread leaseが健全ならreadだけを許す。dispatcher自体のpanic等でSupervisor／readerを失った場合は読取不可を返してuncertainを保持し、receiptを必ず回収できるとは主張しない。native joinがまだ未完了なのにownerが結果不明を先行公開してreadも並行開始する拡張はc2に入れない。その機能が必要ならread leaseをawait前に独立ownerへ移す設計・受入を追加してから行う。c2で新しい無制限connectionを先行追加しない。既存preflight/resumeと共有する一read枠、全store二reader lease、同deadline/token・row予算を維持する。
+現supervisorのresume inspectionはplan turn実行中やpending candidateでBusyになるため、c3は専用の同reader loan／join経路を実装した。借用中の`join_*(&mut self).await`と同時に別の`&mut Supervisor`を作らない。元operation completionが確定してSupervisorが返却された後、registryの元要求を照合して専用readをloanし、その後にread joinをawaitする。native子workerのJoinError等でHostがFaultedでもSupervisorとread leaseが健全ならreadだけを許す。dispatcher自体のpanic等でSupervisor／readerを失った場合は読取不可を返してuncertainを保持し、receiptを必ず回収できるとは主張しない。native joinがまだ未完了なのにownerが結果不明を先行公開してreadも並行開始する拡張はc2に入れない。その機能が必要ならread leaseをawait前に独立ownerへ移す設計・受入を追加してから行う。c2で新しい無制限connectionを先行追加しない。既存preflight/resumeと共有する一read枠、全store二reader lease、同deadline/token・row予算を維持する。
 
-結果不明／recovery-required内でreadだけを許し、writer gateを解放しない。c2のmutation ID上限到達を理由にc3の回復readを拒否しない。c3は独立した有限read採番／登録予算を設計し、mutationの未使用creditに依存させない。元applyがunknownへ確定した後でもreadは最大1、queueなし。receiptFound/Noneと物理完了根拠を分離する。Noneから再dispatch許可は出さず、旧completionを再resolveしない。c3の公開read handle・reconciliation DTO投影・元resultとの単調統合は別実装PRで受け入れる。
+結果不明／recovery-required内でreadだけを許し、writer gateを解放しない。c2のmutation ID上限到達を理由にc3の回復readを拒否しない。c3は独立した4096件の有限read ID登録を実装し、mutationの未使用creditに依存させない。元applyがunknownへ確定した後でもreadは最大1、queueなし。receiptFound/Noneと物理完了根拠を分離する。Noneから再dispatch許可は出さず、旧completionを再resolveしない。c3の公開read handle・reconciliation DTO投影・元resultとの単調統合は[c3実装](historian-recording-owner-reconciliation.md)で提供する。
 
 ## 10. c2実装の受入matrix
 
@@ -218,4 +218,4 @@ Loanはspawn前に構築する。未pollのfutureがruntime終了でDropされ�
 
 新規単体30件と公開API／loopback SDKの結合2件で、全caller競合、ID上限と予約、受付後の取消・期限、Runtime終了、panic、source shutdown不良、CAS競合、owner終了時のwriter lock、handoff、Replay非昇格、整数表記と元member順、投影不能時のnative証拠を確認する。実SQLite FULLの原子rollback／receipt不在は既存Historian試験で検証し、owner層は型付きSQLite FULL故障注入でエラー伝播・native／owner latch・後続拒否を検証する。ownerを通した実媒体FULLのend-to-end試験とは称さない。commit後の応答喪失はprivate native worker seamで実commit後にreceipt応答を落として確認する。
 
-Rust workspace592件（新規32）、Clippy `-D warnings`／rustfmt、既存共通Chromium3件が成功。通常Appは引き続き未接続で、JSのclock bridgeとc3の同owner結果照会は後続である。
+Rust workspace592件（新規32）、Clippy `-D warnings`／rustfmt、既存共通Chromium3件が成功。通常Appは引き続き未接続で、c3の同owner結果照会は実装済みで、JSのclock bridgeは後続である。

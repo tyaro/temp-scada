@@ -3,7 +3,7 @@ use crate::recording_host::retention::tests::control;
 use crate::recording_host::{RecordingPhase, RecordingPlanTurnIntent};
 use serde_json::{json, Value};
 use std::time::Duration;
-fn context() -> RecordingOperationsContext {
+pub(super) fn context() -> RecordingOperationsContext {
     let fixtures: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../examples/recording-operations-cases.json"
@@ -13,14 +13,14 @@ fn context() -> RecordingOperationsContext {
     c["sessionId"] = json!("recording");
     RecordingOperationsContext::from_value(c).unwrap()
 }
-fn change(id: &str) -> RecordingChangeRequest {
+pub(super) fn change(id: &str) -> RecordingChangeRequest {
     let RecordingPlanTurnIntent::Apply(r) = super::super::tests::apply(&format!("apply:{id}"))
     else {
         unreachable!()
     };
     RecordingChangeRequest::from_value(json!({"version":1,"kind":"recordingChangeRequest","changeId":id,"context":context().as_value(),"apply":r})).unwrap()
 }
-fn setup() -> (
+pub(super) fn setup() -> (
     RecordingOperationsOwner,
     crate::recording_host::retention::tests::Directory,
 ) {
@@ -31,13 +31,13 @@ fn setup() -> (
         dir,
     )
 }
-async fn candidate(c: &RecordingOperationsClient, id: &str) -> AcceptedRecordingChange {
+pub(super) async fn candidate(c: &RecordingOperationsClient, id: &str) -> AcceptedRecordingChange {
     let a = c.preflight(change(id), control()).unwrap();
     let r = a.operation.wait().await.unwrap();
     assert_eq!(r.as_value()["outcome"]["kind"], "candidate");
     a
 }
-async fn paused(c: &RecordingOperationsClient, id: &str) -> AcceptedRecordingChange {
+pub(super) async fn paused(c: &RecordingOperationsClient, id: &str) -> AcceptedRecordingChange {
     let a = candidate(c, id).await;
     let h = c
         .pause_join(&a.change, &format!("pause:{id}"), control())
