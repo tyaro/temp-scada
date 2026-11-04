@@ -8,6 +8,7 @@ pub(crate) struct JsonBudget {
     max_nodes: usize,
     nodes: usize,
     max_depth: usize,
+    observed_depth: usize,
     conservative: bool,
 }
 impl JsonBudget {
@@ -16,6 +17,7 @@ impl JsonBudget {
             bytes: 0,
             nodes: 0,
             max_depth: 32,
+            observed_depth: 0,
             conservative: false,
             max_bytes,
             max_nodes,
@@ -29,6 +31,15 @@ impl JsonBudget {
         budget.max_depth = 48;
         budget.conservative = true;
         budget
+    }
+    pub(crate) fn conservative_with_limits(bytes: usize, nodes: usize, depth: usize) -> Self {
+        let mut b = Self::new(bytes, nodes);
+        b.conservative = true;
+        b.max_depth = depth;
+        b
+    }
+    pub(crate) fn metrics(&self) -> (usize, usize, usize) {
+        (self.bytes, self.nodes, self.observed_depth)
     }
     fn add(&mut self, count: usize) -> Result<(), JsonContractError> {
         self.bytes = self.bytes.checked_add(count).ok_or(JsonContractError)?;
@@ -53,6 +64,7 @@ impl JsonBudget {
     }
     pub(crate) fn visit(&mut self, value: &Value, depth: usize) -> Result<(), JsonContractError> {
         self.nodes += 1;
+        self.observed_depth = self.observed_depth.max(depth);
         if self.nodes > self.max_nodes || depth > self.max_depth {
             return Err(JsonContractError);
         }

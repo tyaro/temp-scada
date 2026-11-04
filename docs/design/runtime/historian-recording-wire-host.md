@@ -1,9 +1,9 @@
 # 記録操作wire契約とserver core／host境界
 
-状態: **採用詳細設計・未実装**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **採用詳細設計・prep1純粋契約を実装**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
 本書は[c4接続境界](historian-recording-bridge-boundary.md)と[c4b非同期monitor設計](historian-recording-async-monitor.md)の後続である。
 PR #69はwork `26437260a43c9691e1dc568df7b3e5495c6e4f8e` へマージ済み。c4bコードを実装照合の根拠とした。
-この文書PRでwire実装・host・認証・通信待受を追加しない。c4bはtest-only portによる通常App受入までで、native product接続ではない。
+設計PR #70はwork `e0ab72b`へ統合済み。prep1は14rootの純粋JSON契約だけを実装し、host・認証・通信待受は後続とする。c4bはtest-only portによる通常App受入までで、native product接続ではない。
 
 ## 1. server coreと最初のhost
 
@@ -364,6 +364,10 @@ Lease／Observation／Cancel／Attach／Control／CallInspection request受理�
 未知refは64 ASCII、WireErrorは最長文字列を使い、未知snapshotは全合法snapshotに共通の上界1MiB／32768nodes／depth64を代入する。実registry本文を純粋closureの入力や前提にしない。操作結果は元requestに対応する最大branchを用いる。
 元receipt等が確定しない場合は許容field上限から保守的に予約し、適合しない要求をnative dispatch後に初めて発見しない。
 prep1の純粋closureは実registryを読まない。元要求の実計数へ、未知snapshotなら上記1MiB／32768nodes／depth64、未知OperationResult／ReconciliationDeliveryなら各nested契約の上限、固定envelope記号と最大IDを加算する上界検査と、既知の有限最大branch構築を併用する。純粋型で表現できない実recordの保存余力は後続registryが別に検査する。schema-validという理由だけで巨大なreplyが収まると仮定しない。raw bytesとowned保守計数は独立に制限し、一方の合格で他方を免除しない。
+OperationResultの既存256KiBはcompact計数であり、そのまま保守bytes上界に流用しない。controlのescape拡大は最大3倍、numberはcompact最小1byteから24bytesなので、`3 × 256KiB + 21 × 8192 = 958464bytes`を保守上界とする（node8192／depth32は維持）。ReconciliationDeliveryの512KiB／16384nodes／depth48は既に保守計数である。
+
+閉じたreplyのrequest／payload以外のfieldは、最大ID／errorを含め1KiB／32nodes未満であり、共通の64KiB／4096nodes／depth3を固定envelope上界として予約する。requestの実計数、payloadの独立上界、固定envelopeを加算し、depthはrequest＋1／payload＋2を比較する。未知snapshotを擬似的な有効JSONとして作らず、有限branchを包含する数値上界を使う。
+
 CallInspectionRequestだけは1MiB／32768nodes／depth64、CallInspectionReplyだけは4MiB／196608nodes／depth96の独立profileとする。既存rootの上限は変更しない。originalはその元rootの独立予算も満たす。
 CallInspectionReplyの純粋上界は、request全体上限1MiB／32768nodesと、元reply最大2MiB／65536nodesと、最大envelope64KiB／4096nodesを加算して4MiB／196608nodes内で検査する。depthは各nested rootの最大depth＋実際の固定nesting段数を加算し96以下を検査する。originalがAdmissionRequestなら元c4aの512KiB上限も別に適用する。この上界計算は未知の将来snapshotを作る／registryを参照する必要がなく、仮想上界値のexact／1不足試験が可能である。
 元request受付時にも対応replyの上界とCallInspection包絡上界を確認し、後から元replyが照会用profileに入らない事態を許さない。実保存bytes予約はこの構造上界とは別のstateful gateである。
@@ -375,9 +379,9 @@ pure validatorはscope/request/refの既知文書間一致、branch、数値、�
 
 ## 13. 次の実装順とgate
 
-**直近PRはc4c-prep1: 新wire純粋契約だけ**とする。
-新resourceのLeaseRequest/Reply、ObservationRequest/Reply、CancelRequest/Reply、AttachRequest/Reply、StateFrame、ControlRequest/Reply、ControlFrame、CallInspectionRequest/Replyの14rootを実装する。
-Rust／TS owned validator、既知request/replyの一致helper、最大reply closure、共有fixture、browser module評価を対象にする。
+**c4c-prep1: 新wire純粋契約だけを実装した**。
+新resourceのLeaseRequest/Reply、ObservationRequest/Reply、CancelRequest/Reply、AttachRequest/Reply、StateFrame、ControlRequest/Reply、ControlFrame、CallInspectionRequest/Replyの14rootを提供する。
+Rust／TS owned validator、既知request/reply／subscription frameの一致helper、最大reply closure、共有fixture、browser module評価を提供する。
 既存c4aの五rootを改版せず、local schema resourceとして参照する。App／native owner／listener／認証／transportは変更しない。
 
 c4c-prep2を追加するならregistryのpure state modelと仮handle／制御clock試験だけとし、実native operationをdispatchしない。

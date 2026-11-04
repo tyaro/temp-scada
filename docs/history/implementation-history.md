@@ -4,6 +4,14 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録操作wireの純粋JSON契約（H5d4c4c-prep1、2026-11-04）
+
+設計PR #70をworkへ統合（`e0ab72b`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra設計に沿い独立wire v1の14root、Rust／TS owned検証と全文／scope／subscription照合、最大replyの純粋容量検査を実装した。元call照会の対象を有限にし、従来c4a／d4a／H5a／d3の独立検査を維持する。
+
+未知OperationResultのcompact→保守上界を958464bytes、snapshotを1MiBとして加算し、照会replyの上界3211264bytes／102400nodes／depth82を独立4MiB profile内で確認する。closureは公開validator・実registry・架空snapshotを使わない。共通受理406、全文一致6・相互照合12・会計境界40・容量10と、既存c4a924／H5a139／d3 target447を受け入れる。
+
+Rust workspace632件（新規6）、TS全8,828件（新規1,991）、型検査0error／0warning・build、関連Chromium9件（新規3、拡張fixture後も新規3を再確認）、Clippy全target `-D warnings`／rustfmt、全体Prettier・変更文書6件の相対リンク796箇所・差分検査が成功した。Astra最終read-onlyレビューに必須指摘はない。通常App・既存local port・native owner・Project0.37.0／DB7／H1／固定SDK／Banto／依存版は維持し、実lease発行・registry adapter・native配送・製品hostとP3b保留を分離する。
+
 ## 記録操作wire・hostの接続前設計（H5d4c4c、2026-11-04）
 
 c4b実装のPR #69をworkへ統合（`2643726`）。PR／push CI全7job成功、最終headの自動再レビュー指摘なしを確認した。Astra主設計でlease／結果観測／取消／完全frameと再同期、有限registryとhostの所有境界を文書化する。
