@@ -24,3 +24,5 @@
 ## 記録操作bridgeとの関係
 
 [H5d4c4の非同期bridge設計](historian-recording-bridge-boundary.md)は、Rust ownerとJS serviceの契約差分を明示する。c4aのpure admission契約とc4bのtest-only portでのmonitor受入は独立に進められるが、製品hostを選定したことやP3bの再開を意味しない。Tauri／server／無認証HTTP待受を先行追加せず、実native接続は本書の再開条件と新しいadmission・期限・所有契約を満たしてから実装する。
+
+[c4bのmonitor／UI詳細](historian-recording-async-monitor.md)も非JSONのtest-only portによる受入を定める。lease発行／取消ack／owner snapshot／結果観測のlocal Promise契約を、利用可能な実wireとして扱わない。通常起動の未接続を維持し、c4b設計・実装をP3b解除の根拠にしない。

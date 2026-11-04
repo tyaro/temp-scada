@@ -10,6 +10,14 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 非同期monitor／UIの詳細設計（H5d4c4b、2026-11-04）
+
+[Astraの詳細設計](../design/runtime/historian-recording-async-monitor.md)で、Appより長寿命の外部共有coordinator、lease準備と送信の受付状態、native結果とreadUncertain、呼出Promise自身の終了を分ける。受付不明・notFound・不正応答で新mutationを許さず、close／Project・service交換・unmount後も元ownerの進行と証拠を保持する。
+
+既存同期serviceと非同期clientは別契約で、二重注入や安全でない切替を送信可能へ変換しない。今回は設計文書のみ。次の実装PRではtest-onlyの非JSON portとcoordinator／monitor／UIを検証し、実lease発行、native adapter、stateframe等の実wireはc4c以降へ分ける。通常Appは未接続のままで、各format／依存版とP3b保留を維持する。
+
+c4a実装のPR #67はworkへマージ済み（`1370d4c`）。PR／push CIとも全7job成功、同headの自動レビューに指摘はない。
+
 ## 非同期admissionの共通JSON検証（H5d4c4a、2026-11-04）
 
 [Astra設計](../design/runtime/historian-recording-bridge-boundary.md)に従い、受付要求／reply・受付照会要求／reply・reconciliation deliveryの五つを独立schemaとRust／TS owned validatorで提供する。context・stage・ref・元要求全文を照合し、d4a／H5a／d3の独立予算と意味検査を再適用する。typed rejectedとunknown、readUncertainと元apply結果を構造上分離し、pure検証から物理状態を推測しない。

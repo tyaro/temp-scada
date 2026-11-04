@@ -175,7 +175,7 @@ subscribe／reconnectの実protocolはc4cで定めるが、次の要件は固定
 
 ## 8. 有限registry、取消、破棄
 
-adapter admission IDはowner内4096件、既登録IDは再使用不可。新workflowでpreflight／pause／applyの三admission分を予約し、unused creditだけ終端／明示discardで解放する。discardの一枠を別途同workflowに予約し、容量上限で候補を破棄できない状態を避ける。reconcile admissionと受付照会はmutationとは別の有限枠とし、具体pool上限／回復時の枯渇終端はc4c着手前に確定する。native c2/c3の4096枠とは別に上限を持ち、両方を通過できる範囲だけ受理する。
+adapterのmutation admission IDはowner内4096件、既登録IDは再使用不可。新workflowでpreflight／pause／applyの三admission分を予約し、unused creditだけ終端／明示discardで解放する。discardの一枠を別途同workflowに予約し、容量上限で候補を破棄できない状態を避ける。reconcile admissionと受付照会はmutationとは別の有限枠とし、具体pool上限／回復時の枯渇終端はc4c着手前に確定する。native c2/c3の4096枠とは別に上限を持ち、両方を通過できる範囲だけ受理する。
 
 c4aはregistryや予約処理を実装していない。c4b mockは最大一workflow／一admission／一inspectionを保持し、非協力Promiseでも物理完了を偽って次を送らない。close／Project／service交換は送信資格を退役し、旧ownerの進行・receipt監視を保持する。new serviceのcontextを旧operationへ付け替えない。
 
@@ -204,3 +204,9 @@ TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,ca
 pure検証は未dispatch、owner所有、lease失効、registryの一意性や再送資格の証明ではない。c4bの非同期monitor／UIは次の設計・実装境界で、実接続とP3bの保留は維持する。
 
 Rust workspace626件（新規8）、TS全6,737件（新規1,903）、関連Chromium6件（新規3）、型検査0error／0warning・build、Clippy全target `-D warnings`／rustfmtが成功した。Astra最終read-onlyレビューに残る必須指摘はない。
+
+## 11. c4bの詳細設計と次の実装
+
+c4a実装はPR #67でworkへ統合済み（`1370d4c`）。[c4bの非同期monitor／UI設計](historian-recording-async-monitor.md)は、外部root-owned coordinator、同期serviceとの排他的選択、受付状態・native結果・read静止・呼出終了の独立管理と、旧対象の保持／復帰条件を具体化する。
+
+次の実装はtest-onlyの非JSON portを使うlocal client／monitor／UIの受入である。c4aの五rootをlease発行・cancel ack・snapshot frameへ拡張したことや、native adapter／製品hostを接続したことを意味しない。実wireとP3bの再開条件は引き続き別工程で確定する。
