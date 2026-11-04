@@ -4,6 +4,7 @@ use serde_json::Value;
 mod connections;
 mod equipment;
 mod json_contract;
+pub mod recording_admission;
 pub mod recording_management;
 pub mod recording_operations;
 pub mod recording_plan;

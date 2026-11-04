@@ -5,7 +5,7 @@ use super::{
 use serde_json::Value;
 // Only schema-validated owned JSON. Numeric spellings and object order are ignored;
 // member display order is part of the immutable echoed operation request.
-fn same_json(a: &Value, b: &Value) -> bool {
+pub(crate) fn same_json(a: &Value, b: &Value) -> bool {
     match (a, b) {
         (Value::Number(a), Value::Number(b)) => a.as_f64() == b.as_f64(),
         (Value::Array(a), Value::Array(b)) => {

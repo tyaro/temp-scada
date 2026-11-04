@@ -161,10 +161,11 @@ owned_document!(
     "recordingReconciliationResult"
 );
 mod equality;
+pub(crate) use equality::same_json;
 mod semantic;
 pub use equality::{
     same_recording_change_request, same_recording_operation_request,
     same_recording_operations_context, same_recording_reconciliation_request,
 };
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

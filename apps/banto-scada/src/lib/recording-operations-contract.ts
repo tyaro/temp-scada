@@ -1,3 +1,4 @@
+import { sameOwnedJson } from "./json-equality";
 /** Pure operation JSON only. No owner registry, service, transport or mutation. */
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-model/schema/recording-operations.schema.json";
@@ -153,47 +154,24 @@ export function parseRecordingReconciliationResult(
 }
 /** Validated owned JSON: ignore key order and number spelling, preserve array order.
  * This is full request equality, not H5a's member-order-independent meaning comparison. */
-function sameJson(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (
-    a === null ||
-    b === null ||
-    typeof a !== "object" ||
-    typeof b !== "object"
-  )
-    return false;
-  if (Array.isArray(a))
-    return (
-      Array.isArray(b) &&
-      a.length === b.length &&
-      a.every((v, i) => sameJson(v, b[i]))
-    );
-  const left = a as Record<string, unknown>,
-    right = b as Record<string, unknown>;
-  const keys = Object.keys(left);
-  return (
-    keys.length === Object.keys(right).length &&
-    keys.every((k) => Object.hasOwn(right, k) && sameJson(left[k], right[k]))
-  );
-}
 /** Both inputs are validated; malformed input throws, never compares as an empty request. */
 export function sameRecordingOperationsContext(
   a: unknown,
   b: unknown,
 ): boolean {
-  return sameJson(
+  return sameOwnedJson(
     parseRecordingOperationsContext(a),
     parseRecordingOperationsContext(b),
   );
 }
 export function sameRecordingChangeRequest(a: unknown, b: unknown): boolean {
-  return sameJson(
+  return sameOwnedJson(
     parseRecordingChangeRequest(a),
     parseRecordingChangeRequest(b),
   );
 }
 export function sameRecordingOperationRequest(a: unknown, b: unknown): boolean {
-  return sameJson(
+  return sameOwnedJson(
     parseRecordingOperationRequest(a),
     parseRecordingOperationRequest(b),
   );
@@ -202,7 +180,7 @@ export function sameRecordingReconciliationRequest(
   a: unknown,
   b: unknown,
 ): boolean {
-  return sameJson(
+  return sameOwnedJson(
     parseRecordingReconciliationRequest(a),
     parseRecordingReconciliationRequest(b),
   );

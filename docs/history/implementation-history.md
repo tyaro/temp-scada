@@ -4,6 +4,16 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 非同期admissionの共通JSON検証（H5d4c4a、2026-11-04）
+
+設計PR #66はworkへ統合済み（`eef9316`）。Astra設計に沿い、受付と受付照会、read障害の五rootを独立schema・Rust／TS owned検証へ実装した。全文echo・stage／ref一致、既存nested契約と、各要求から最大返信を構築できる容量を検査する。受理924・一致15・既知照合6・会計境界12・容量5を共有し、H5a139・d3 target447・対象d4a353も内包した。
+
+AstraレビューでRustの小予算検査がInspectionReplyを迂回していた点を修正し、全九分岐と最大found返信のbyte／node境界を確認した。外側512KiBの有効巨大要求を捏造せず、構造JSONの外側境界と、同経路への試験用小予算によるclosure検証を区別する。
+
+Rust workspace626件（新規8）、TS全6,737件（新規1,903）、関連Chromium6件（新規3）、型検査0error／0warning・build、Clippy全target `-D warnings`／rustfmtが成功した。Astra最終read-onlyレビューに残る必須指摘はない。
+
+c4b monitor／UI・native adapter・実lease／transportは後続。各format／依存版と既存同期service・通常Appを維持し、実Hub／S7／本番DB・認証／上流の保留も変えていない。
+
 ## 記録操作の非同期bridge境界設計（H5d4c4、2026-11-04）
 
 c3実装のPR #65はworkへマージ済み（`658bb5b`、PR／push CIとも全7job成功、同head自動レビュー指摘なし）。Astra主設計で、一般IPCの非同期受理を既存同期serviceへ偽装しない接続契約を文書化した。admission応答喪失と未dispatch拒否、native期限leaseとJSの論理timeout、元ownerの寿命・結果照会・有限保持を分離する。

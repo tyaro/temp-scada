@@ -10,11 +10,21 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 非同期admissionの共通JSON検証（H5d4c4a、2026-11-04）
+
+[Astra設計](../design/runtime/historian-recording-bridge-boundary.md)に従い、受付要求／reply・受付照会要求／reply・reconciliation deliveryの五つを独立schemaとRust／TS owned validatorで提供する。context・stage・ref・元要求全文を照合し、d4a／H5a／d3の独立予算と意味検査を再適用する。typed rejectedとunknown、readUncertainと元apply結果を構造上分離し、pure検証から物理状態を推測しない。
+
+各要求で最大返信九分岐の容量を必須検査する。外側は保守byte512KiB・16384node・depth48で、数字24bytes・control6bytesを予約し、既存compact計数を変更しない。共有fixtureは受理924・全文一致15・既知document照合6・会計境界12・容量5、既存H5a139・d3 target447・対象d4a353をRust／TS／ブラウザで確認する。
+
+Rust workspace626件（新規8）、TS全6,737件（新規1,903）、関連Chromium6件（新規3）、型検査0error／0warning・build、Clippy全target `-D warnings`／rustfmtが成功した。Astra最終read-onlyレビューに残る必須指摘はない。
+
+設計PR #66はworkへマージ済み（`eef9316`）。c4b monitor／UIとnative adapter、実lease発行・transportは後続。既存同期service・通常App・Rust ownerとProject0.37.0／DB7／H1／SDK／Banto・依存版は維持する。
+
 ## 記録操作の非同期bridge境界（H5d4c4、2026-11-04）
 
 [Astraの詳細設計](../design/runtime/historian-recording-bridge-boundary.md)で、同期のd4b serviceを一般IPCへそのまま適合させられない点を明記した。非同期admissionの受理／拒否／不明、nativeが発行する期限付きlease、元ownerへの照合と有限保持、結果・通知・切断時の扱いを定める。既存同期serviceをPromiseへ暗黙変更せず、新しい接続契約として段階化する。
 
-今回は文書のみ。次のc4aは共通DTO／schema／Rust・TS pure validatorとfixture、c4bはtest-only portを使うmonitor／UIへの接続で、実lease発行・native adapter・製品host／transportは未実装である。現在のViteとRust libraryにTauri hostやSCADA serverはなく、通常Appは未接続。P3bの認証・製品接続の保留は維持する。
+c4aの共通DTO／schema／Rust・TS pure validatorとfixtureを実装した。c4bのtest-only portを使うmonitor／UIへの接続、実lease発行・native adapter・製品host／transportは未実装である。現在のViteとRust libraryにTauri hostやSCADA serverはなく、通常Appは未接続。P3bの認証・製品接続の保留は維持する。
 
 c3実装のPR #65はworkへ統合済み（`658bb5b`）。PR／push CIとも全7job成功、同headの自動レビューに指摘はない。
 

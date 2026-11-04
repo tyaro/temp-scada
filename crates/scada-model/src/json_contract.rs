@@ -7,15 +7,28 @@ pub(crate) struct JsonBudget {
     max_bytes: usize,
     max_nodes: usize,
     nodes: usize,
+    max_depth: usize,
+    conservative: bool,
 }
 impl JsonBudget {
     pub(crate) fn new(max_bytes: usize, max_nodes: usize) -> Self {
         Self {
             bytes: 0,
             nodes: 0,
+            max_depth: 32,
+            conservative: false,
             max_bytes,
             max_nodes,
         }
+    }
+    pub(crate) fn admission() -> Self {
+        Self::admission_with_limits(512 * 1024, 16384)
+    }
+    pub(crate) fn admission_with_limits(bytes: usize, nodes: usize) -> Self {
+        let mut budget = Self::new(bytes, nodes);
+        budget.max_depth = 48;
+        budget.conservative = true;
+        budget
     }
     fn add(&mut self, count: usize) -> Result<(), JsonContractError> {
         self.bytes = self.bytes.checked_add(count).ok_or(JsonContractError)?;
@@ -30,6 +43,7 @@ impl JsonBudget {
         self.add(2)?;
         for c in text.chars() {
             self.add(match c {
+                c if self.conservative && c <= '\u{001f}' => 5,
                 '"' | '\\' | '\u{0008}' | '\u{0009}' | '\u{000a}' | '\u{000c}' | '\u{000d}' => 1,
                 '\u{0000}'..='\u{001f}' => 5,
                 _ => 0,
@@ -39,13 +53,14 @@ impl JsonBudget {
     }
     pub(crate) fn visit(&mut self, value: &Value, depth: usize) -> Result<(), JsonContractError> {
         self.nodes += 1;
-        if self.nodes > self.max_nodes || depth > 32 {
+        if self.nodes > self.max_nodes || depth > self.max_depth {
             return Err(JsonContractError);
         }
         match value {
             Value::Null => self.add(4),
             Value::Bool(b) => self.add(if *b { 4 } else { 5 }),
             Value::String(s) => self.string(s),
+            Value::Number(_) if self.conservative => self.add(24),
             Value::Number(n) => {
                 let f = n.as_f64().ok_or(JsonContractError)?;
                 // Contract integer fields may include signed safe UTC milliseconds.
