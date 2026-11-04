@@ -1,6 +1,6 @@
 # 記録registryモデルの結果観測
 
-状態: **prep2b1・2モデル実装済み、workflow予約・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2b1・2モデル実装済み、次workflow・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
 [prep2a](historian-recording-registry-model.md)はPR #72で統合済み。本書はその決定的Rustモデルへ不変completionと結果観測を追加する。
 実native owner／DB／SDK／認証／transport／製品hostへ接続しない。Project 0.37.0、DB7、H1、全schema・依存版を維持する。
 
@@ -119,20 +119,12 @@ prep2aの単一scope retained 8MiB、mutation6MiB／read2MiB分割を維持す�
 ModelLimitsへoperation_observations／read_observations（各最大4096）、pending_operation_observations／pending_read_observations（各最大2）を追加する。
 縮小した上限による境界試験を許す。元admission/lease/inspectionの上限は変更しない。
 
-begin_admissionの原子予約を次へ拡張する。
+prep2b4aで[要求由来のlifetime予約](historian-recording-registry-workflow-model.md#6-tight-lifetime上界)へ両modeを統一した。元requestと二つの独立reply上界、operation／read completion上界を受付前に確保し、discardにはcompletion枠を加算しない。
+Acceptedやcompletion到着時に追加の容量不足で証拠を失わず、使用済みrecordの予約はモデル終了まで保持する。reconciliation ID台帳はAdmissionRecordへの不変参照とし、管理用256bytesだけをread枠へ追加する。
 
-| admission role | 元予約へ加算するcompletion固定予約                          |
-| -------------- | ----------------------------------------------------------- |
-| mutation       | 958464bytes（OperationResultのcompact上限を保守計数へ変換） |
-| reconciliation | 512KiB（既存Deliveryの保守上限）                            |
-
-元予約はrequest実測＋512KiB×2のknowledge／terminal用である。
-mutation actionがdiscardで最終handleを持たない場合も初回実装は同じ上界を予約し、返却しない。
-Acceptedやcompletion到着時に新たな容量不足で証拠を失う設計にしない。ID/ref表の管理overheadは件数上限で有限化する。
-固定payload予約はRust allocator使用量そのものではないことを引き続き明記する。
-
-958464は `3 × 256KiB + 21 × 8192` の採用済み上界で、legacy compact validatorの予算を変更しない。
-complete_handleは予約に収まる既存validated payloadだけを保存し、範囲違反なら変更前に拒否する。
+958464はOperationResultのlegacy compact上限を保守計数へ変換した `3 × 256KiB + 21 × 8192` の独立検査上界として維持する。要求由来の保持予約はlegacy validatorの予算を変更しない。
+complete_handleは両方の上界に収まる既存validated payloadだけを保存し、範囲違反なら変更前に拒否する。
+保持payload予約はRust allocator使用量そのものではない。
 
 新Observation IDには元requestの保守bytesだけをread枠から課金する。operation観測もread-onlyなのでmutation枠を使わない。
 返却replyの一時構築はprep1の2MiB上限で独立に制限し、retained bytesへterminal全体をIDごとに重複課金しない。

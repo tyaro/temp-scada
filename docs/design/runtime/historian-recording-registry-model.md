@@ -1,6 +1,6 @@
 # 記録操作registryの決定的状態モデル
 
-状態: **prep2a／prep2b1〜3モデル実装済み、workflow予約・実adapterは後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2a／prep2b1〜4aモデル実装済み、次workflow・実adapterは後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
 [wire／host設計](historian-recording-wire-host.md)のprep1はPR #71で統合済み。本書はそのJSONを使うprep2を具体化する。
 実registry adapter、native dispatch、lease実発行、時計・認証・通信待受・製品hostを追加する許可ではない。
 Project 0.37.0／DB7／H1／SDK／Banto／依存とP3b保留を維持する。
@@ -12,7 +12,7 @@ Project 0.37.0／DB7／H1／SDK／Banto／依存とP3b保留を維持する。
 Tokio、Instant、SystemTime、DB、ファイル、network、SDK、callbackの呼出しをmoduleに入れない。
 全操作は `&mut self` の決定的遷移である。Rustの逐次呼出しで全caller gateを模擬し、実process間排他や認可の実装とは称さない。
 
-[prep2b1](historian-recording-registry-observation-model.md)でmodel-bound handleと不変completion／結果観測を追加した。[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)も追加した。[prep2b3のsnapshot・subscription](historian-recording-registry-subscription-model.md)も追加した。workflow全段階の予約と元runのpause／apply適格性は後続で詳細化する。
+[prep2b1](historian-recording-registry-observation-model.md)でmodel-bound handleと不変completion／結果観測を追加した。[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)も追加した。[prep2b3のsnapshot・subscription](historian-recording-registry-subscription-model.md)も追加した。[prep2b4a](historian-recording-registry-workflow-model.md)で単一候補の全段階予約と元run／候補の明示pause／apply適格性を実装した。正常終端後の次workflowは後続で詳細化する。
 prep2aは既存c4a全actionの受付台帳を扱えるが、nativeがそのactionを許可すべきかは実装しない。fake決定を明示入力する。
 この限定によって、単一callの曖昧さを検証するためにrecording／retention／native ownerを二重実装しない。
 
@@ -163,14 +163,14 @@ read専用はread admission／read lease／両inspectionに使用し、mutation�
 
 会計は既存scada-model::recording_wireで提供する `conservative_recording_json_bound(&Value, WireBound) -> Result<WireBound, RecordingWireError>` を使う。既存measure／JsonBudgetを再利用し、caller limitが4MiB／196608nodes／depth96以下であることをwalker開始前に検査する。これは構造metricsだけでありschema・native資格の検証ではない。既存validatorの予算・意味は変更しない。
 
-admissionは元request実測＋512KiB×2をmodel終了まで固定予約する。prep2b1ではcompletion保管用としてmutation全actionへ958464bytes、readへ512KiBを追加予約する。独立したcurrent knowledgeとimmutable terminal replyを両方保管でき、unknown返信後のlate proofも予約を取り直さず保存できる。未確定枠も早期解放しない。余剰返却／retire／GCはprep2aでは実装しない。
+prep2b4aでadmissionの保持予約を[要求由来のlifetime上界](historian-recording-registry-workflow-model.md#6-tight-lifetime上界)へ統一した。元request、knowledge／terminalの各保守上界とcompletionを個別に予約し、discardにcompletion枠を加算しない。独立したcurrent knowledgeとimmutable terminal replyを両方保管でき、unknown返信後のlate proofも予約を取り直さず保存できる。未確定枠も早期解放しない。余剰返却／retire／GCはprep2aでは実装しない。
 leaseは既知issued reply＋元requestの実測を原子登録前に計数する。inspect_admissionもその時点で構築したsnapshot reply＋元requestの実測を計数し、後のknowledge更新でその元replyを変更しない。
 CallInspectionはrequestのID binding実測だけを保存し、既存terminalを参照して返す。毎回4MiBのreplyコピーを永久保存しない。一時返却値はwire上限4MiBで別に有限化し、retained 8MiBと同じ会計だと主張しない。
-同値再送／二重proof／二重終端でID・bytesを二重課金しない。新proofが矛盾する場合は元証拠と会計を変えず拒否する。小さい要求でも2×512KiB固定予約を使うため、4096件は件数上限であって全件収容保証ではない。
+同値再送／二重proof／二重終端でID・bytesを二重課金しない。新proofが矛盾する場合は元証拠と会計を変えず拒否する。4096件は件数上限であって全件収容保証ではない。
 byte計数は構造JSON payloadの上界でありBTreeMap／Arc等のallocator実消費と同一ではない。件数capで固定管理overheadも有限化する。
 最大reply予約がread専用枠へ収まらない要求はCapacityで停止する。最大profileサイズを実要求サイズと混同せず、使用可能なhelperの保守上界を採用する。
 
-後続の[prep2b4設計](historian-recording-registry-workflow-model.md)で4admissionと2caller operation、将来lease／保持bytes／projection／revisionの予約を具体化した。現行固定予約の単純4倍ではmutation6MiBを超えるため、既知要求に基づく保持上界へ変更する計画である。設計段階であり、下記の現行制限はまだ解除していない。
+後続の[prep2b4設計](historian-recording-registry-workflow-model.md)で4admissionと2caller operation、将来lease／保持bytes／projection／revisionの予約を具体化した。旧固定予約の単純4倍ではmutation6MiBを超えるため、既知要求に基づく保持上界へ変更した。Workflow modeの最初の一候補は全段階予約と明示pause／apply／discardを提供する。下記の保守停止はStandalone modeに維持する。
 
 **workflow3stage分のID／bytesの事前credit予約はprep2aで実装しない。** 単一callの原子予約を試験し、Accepted後の継続を止めることで未実装の予約保証を必要としない。
 prep2bでphase進行を解禁する前に、preflight／pause／apply／discard credit、callerOperation pool、reconcile poolとnative c2別cap拒否を追加設計・受入する。

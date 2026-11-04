@@ -1,6 +1,6 @@
 # 記録registryモデルのsnapshotと購読
 
-状態: **prep2b3モデル実装済み、workflow予約・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2b3モデル実装済み、次workflow・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
 [取消モデル](historian-recording-registry-cancel-model.md)はPR #74で統合済み。本書は決定的モデルにsnapshot／attach／controlと仮想配送slotを追加する。
 実native、SDK、DB、認証、時計、transport、hostへの接続はない。Project 0.37.0、DB7、H1、wire schema、依存は変更しない。
 
@@ -190,6 +190,6 @@ closeや証拠更新には既存予約を使い、現在read枠が満杯とい�
 | 非接続           | native/DB/SDK/auth/network不変、TSは既存wire fixture評価のみ                                             |
 
 設計と実装はこのモデルまでであり、実subscription dispatcher／socket backpressure／host起動の保証へ拡張しない。
-workflow解禁と全段階creditは次工程で具体化し、今回もAccepted後の新mutation保守blockを維持する。
+prep2b4aのWorkflow modeでは全段階creditと単一候補の進行を実装した。StandaloneはAccepted後の新mutation保守blockを維持する。
 
-次のworkflow credit・段階進行は[prep2b4の詳細設計](historian-recording-registry-workflow-model.md)で扱う。今回の購読実装だけで新mutationを解禁しない。
+workflow credit・単一候補の段階進行は[prep2b4a](historian-recording-registry-workflow-model.md)で実装した。購読やframe配送だけで新mutationを解禁しない。

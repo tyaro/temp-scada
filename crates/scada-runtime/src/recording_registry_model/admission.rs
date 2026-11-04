@@ -5,6 +5,14 @@ impl RegistryModel {
         session: &ModelSession,
         request: RecordingAdmissionRequest,
     ) -> Result<AdmissionStart, ModelError> {
+        self.begin_admission_inner(session, request, false)
+    }
+    pub(super) fn begin_admission_inner(
+        &mut self,
+        session: &ModelSession,
+        request: RecordingAdmissionRequest,
+        prepaid: bool,
+    ) -> Result<AdmissionStart, ModelError> {
         self.qualify(session)?;
         let q = request.as_value();
         require(self.admission_matches_scope(q), ModelError::Forbidden)?;
@@ -44,7 +52,13 @@ impl RegistryModel {
             !self.admissions.values().any(|r| r.terminal.is_none()),
             ModelError::Busy,
         )?;
-        if role == Role::Mutation {
+        let reserved = if role == Role::Mutation && self.workflow.is_some() {
+            require(prepaid, ModelError::Forbidden)?;
+            Some(self.workflow_admission_plan(&request)?)
+        } else {
+            None
+        };
+        if role == Role::Mutation && reserved.is_none() {
             require(
                 !self.admissions.values().any(|r| {
                     r.proof
@@ -61,15 +75,42 @@ impl RegistryModel {
             self.limits.read_admissions
         };
         require(count < max, ModelError::Capacity)?;
-        // Independent current knowledge + immutable original reply, no early release.
-        let cost = sum(
-            bytes(q)?,
-            2 * scada_model::recording_admission::MAX_RECORDING_ADMISSION_JSON_BYTES,
-        )?;
-        let cost = sum(cost, completion_reservation(role))?;
+        let read_id = if role == Role::Read {
+            let rid = q["action"]["reconciliation"]["reconciliationId"]
+                .as_str()
+                .expect("validated reconciliation ID");
+            require(
+                !self.reconciliation_ids.contains_key(rid),
+                ModelError::ProtocolViolation,
+            )?;
+            require(
+                self.reconciliation_ids.len() < self.limits.reconciliation_ids,
+                ModelError::Capacity,
+            )?;
+            Some(rid.to_owned())
+        } else {
+            None
+        };
+        let (storage, credits) = if let Some(r) = reserved {
+            r
+        } else {
+            (LifetimeBudget::for_request(&request)?, 3)
+        };
+        let cost = if reserved.is_some() {
+            0
+        } else {
+            sum(
+                storage.bytes()?,
+                if role == Role::Read { READ_ID_BYTES } else { 0 },
+            )?
+        };
         self.can_charge(role, cost)?;
         let sequence = self.sequence.checked_add(1).ok_or(ModelError::Capacity)?;
-        let projection = self.admission_projection(&request)?;
+        let projection = if reserved.is_some() {
+            self.projection_for(&request, self.projection.budget)?
+        } else {
+            self.admission_projection(&request)?
+        };
         let publication = self.prepare_publication(
             &ProjectionEvent::Admission {
                 id,
@@ -95,11 +136,18 @@ impl RegistryModel {
                 sequence,
                 proof: None,
                 terminal: None,
-                projection_credits: 3,
+                projection_credits: credits,
+                storage,
             },
         );
         self.projection.budget = projection;
-        self.projection.reserved += 3;
+        if reserved.is_none() {
+            self.projection.reserved += credits as u64;
+        }
+        if let Some(rid) = read_id {
+            self.reconciliation_ids
+                .insert(rid, ticket.admission_id.clone());
+        }
         self.commit_publication(publication, Some(&ticket.admission_id));
         Ok(AdmissionStart::Registered { ticket })
     }
@@ -126,6 +174,8 @@ impl RegistryModel {
                 ModelError::ProtocolViolation,
             );
         }
+        r.storage.check_reply(reply.as_value())?;
+        let native_keys = self.workflow_proof_plan(ticket, &reply)?;
         let handle = if kind == "accepted" {
             Some(self.plan_handle(ticket, &reply)?)
         } else {
@@ -146,7 +196,9 @@ impl RegistryModel {
             .get_mut(&ticket.admission_id)
             .expect("existing ticket")
             .proof = Some(reply);
+        self.commit_workflow_proof(native_keys);
         self.commit_publication(publication, Some(&ticket.admission_id));
+        self.refresh_workflow();
         Ok(())
     }
     pub fn finish_admission_call(
@@ -165,6 +217,7 @@ impl RegistryModel {
                 ModelError::ProtocolViolation,
             );
         }
+        r.storage.check_reply(reply.as_value())?;
         if reply.as_value()["outcome"]["kind"] != "unknown" {
             require(
                 r.proof
@@ -177,6 +230,7 @@ impl RegistryModel {
             .get_mut(&ticket.admission_id)
             .expect("existing ticket")
             .terminal = Some(reply);
+        self.refresh_workflow();
         Ok(())
     }
 }

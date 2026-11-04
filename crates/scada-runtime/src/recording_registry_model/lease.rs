@@ -5,6 +5,14 @@ impl RegistryModel {
         session: &ModelSession,
         request: RecordingWireLeaseRequest,
     ) -> Result<RecordingWireLeaseReply, ModelError> {
+        self.issue_lease_inner(session, request, false)
+    }
+    pub(super) fn issue_lease_inner(
+        &mut self,
+        session: &ModelSession,
+        request: RecordingWireLeaseRequest,
+        prepaid: bool,
+    ) -> Result<RecordingWireLeaseReply, ModelError> {
         self.qualify(session)?;
         let q = request.as_value();
         require(self.scope_matches(&q["scope"]), ModelError::Forbidden)?;
@@ -16,6 +24,10 @@ impl RegistryModel {
             )?;
             return Ok(r.reply.clone());
         }
+        require(
+            prepaid || self.workflow.is_none() || q["role"] != "mutation",
+            ModelError::Forbidden,
+        )?;
         self.new_effect()?;
         require(
             !self
@@ -56,9 +68,13 @@ impl RegistryModel {
         let sequence = self.sequence.checked_add(1).ok_or(ModelError::Capacity)?;
         let reply=RecordingWireLeaseReply::from_value(json!({"version":1,"kind":"recordingWireLeaseReply","request":q,"outcome":{"kind":"issued","deadlineLeaseRef":format!("model-lease:{sequence}"),"grantedBudgetMs":budget}})).map_err(|_|ModelError::InvalidInput)?;
         let cost = sum(bytes(q)?, bytes(reply.as_value())?)?;
-        self.can_charge(role, cost)?;
+        if !prepaid {
+            self.can_charge(role, cost)?;
+        }
         let id = id.to_owned();
-        self.charge(role, cost);
+        if !prepaid {
+            self.charge(role, cost);
+        }
         self.sequence = sequence;
         self.leases.insert(
             id,

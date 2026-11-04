@@ -19,13 +19,6 @@ pub(super) fn ref_key(handle: &Value) -> HandleKey {
         )
     }
 }
-pub(super) fn completion_reservation(role: Role) -> usize {
-    if role == Role::Mutation {
-        WIRE_OPERATION_RESULT_UPPER.bytes
-    } else {
-        MAX_RECORDING_ADMISSION_JSON_BYTES
-    }
-}
 impl RegistryModel {
     /// Validates prospective metadata. Caller commits it with the proof and projection.
     pub(super) fn plan_handle(
@@ -188,6 +181,10 @@ impl RegistryModel {
                 ModelError::ProtocolViolation,
             );
         }
+        self.admissions[&record.admission_id]
+            .storage
+            .check_completion(value)?;
+        self.workflow_completion_plan(&record.admission_id, value)?;
         let publication = self.prepare_publication(
             &ProjectionEvent::Completion {
                 key: &handle.key,
@@ -202,6 +199,7 @@ impl RegistryModel {
             .completion = Some(completion);
         self.recovery_required |= recovery;
         self.commit_publication(publication, Some(&handle.admission_id));
+        self.refresh_workflow();
         Ok(())
     }
 }

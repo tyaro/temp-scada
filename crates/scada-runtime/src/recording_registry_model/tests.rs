@@ -3,6 +3,7 @@ mod boundaries;
 mod cancel_boundaries;
 mod observation_boundaries;
 mod subscription_boundaries;
+mod workflow_boundaries;
 fn fixtures() -> Value {
     serde_json::from_str(include_str!(
         "../../../../examples/recording-registry-model-cases.json"
@@ -50,6 +51,10 @@ fn limits(v: &Value) -> ModelLimits {
     for (key, value) in v.as_object().into_iter().flatten() {
         let n = value.as_u64().unwrap() as usize;
         match key.as_str() {
+            "workflow_changes" => l.workflow_changes = n,
+            "caller_operation_ids" => l.caller_operation_ids = n,
+            "simulated_native_identities" => l.simulated_native_identities = n,
+            "reconciliation_ids" => l.reconciliation_ids = n,
             "mutation_admissions" => l.mutation_admissions = n,
             "read_admissions" => l.read_admissions = n,
             "mutation_leases" => l.mutation_leases = n,
@@ -105,10 +110,32 @@ fn subscription_scenarios_match_immutable_wire_transcripts() {
     .unwrap();
     assert_scenarios(&all);
 }
+#[test]
+fn workflow_scenarios_match_immutable_wire_transcripts() {
+    let all: Value = serde_json::from_str(include_str!(
+        "../../../../examples/recording-workflow-model-cases.json"
+    ))
+    .unwrap();
+    assert_scenarios(&all);
+}
 fn assert_scenarios(all: &Value) {
     for scenario in all["scenarios"].as_array().unwrap() {
-        let mut model =
-            RegistryModel::new(session(all, &Value::Null), limits(&scenario["limits"])).unwrap();
+        let s = session(all, &Value::Null);
+        let mut model = if scenario["workflow"] == true {
+            RegistryModel::new_workflow(
+                s,
+                limits(&scenario["limits"]),
+                match scenario["qualification"].as_str() {
+                    Some("unqualified") => SimulatedRunQualification::Unqualified,
+                    Some("cleanJoined") => SimulatedRunQualification::CleanJoined,
+                    _ => SimulatedRunQualification::Running,
+                },
+            )
+            .unwrap()
+        } else {
+            RegistryModel::new(s, limits(&scenario["limits"])).unwrap()
+        };
+        let mut workflow = None;
         let mut tickets = BTreeMap::new();
         let mut handles = BTreeMap::new();
         let mut cancel_tickets = BTreeMap::new();
@@ -124,6 +151,39 @@ fn assert_scenarios(all: &Value) {
             let label = format!("{} step {} {}", scenario["name"], index, step["op"]);
             let result: Result<(&str, Option<Value>), ModelError> = (|| {
                 Ok(match step["op"].as_str().unwrap() {
+                    "reserve" => {
+                        workflow=Some(model.reserve_workflow(&s,scada_model::recording_operations::RecordingChangeRequest::from_value(input).unwrap_or_else(|e|panic!("{label}: {e}")))?);
+                        ("reserved", None)
+                    }
+                    "workflow_issue" => {
+                        let r = model.issue_workflow_lease(
+                            workflow.as_ref().unwrap(),
+                            WorkflowAction::from_value(&step["stage"])?,
+                            WorkflowAttemptIds {
+                                operation_id: step["operationId"].as_str().map(str::to_owned),
+                            },
+                            RecordingWireLeaseRequest::from_value(input)
+                                .unwrap_or_else(|e| panic!("{label}: {e}")),
+                        )?;
+                        ("reply", Some(r.as_value().clone()))
+                    }
+                    "workflow_begin" => match model.begin_workflow_admission(
+                        workflow.as_ref().unwrap(),
+                        RecordingAdmissionRequest::from_value(input)
+                            .unwrap_or_else(|e| panic!("{label}: {e}")),
+                    )? {
+                        AdmissionStart::Registered { ticket } => {
+                            tickets.insert(alias.to_owned(), ticket);
+                            ("Registered", None)
+                        }
+                        AdmissionStart::Pending { ticket } => {
+                            tickets.insert(alias.to_owned(), ticket);
+                            ("Pending", None)
+                        }
+                        AdmissionStart::Replay { reply } => {
+                            ("Replay", Some(reply.as_value().clone()))
+                        }
+                    },
                     "issue" => {
                         let r = model.issue_lease(
                             &s,

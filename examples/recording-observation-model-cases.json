@@ -11739,7 +11739,7 @@
     {
       "name": "completion reservation fits exact mutation budget",
       "limits": {
-        "total_bytes": 2011486,
+        "total_bytes": 208505,
         "read_bytes": 1024
       },
       "steps": [
@@ -11801,7 +11801,7 @@
             "kind": "ok"
           },
           "fields": {
-            "mutationBytes": 2010462,
+            "mutationBytes": 207481,
             "completedHandles": 1
           }
         }
@@ -11810,7 +11810,7 @@
     {
       "name": "one byte below completion reservation leaves lease unused",
       "limits": {
-        "total_bytes": 2011485,
+        "total_bytes": 208504,
         "read_bytes": 1024
       },
       "steps": [
@@ -11853,8 +11853,8 @@
     {
       "name": "read completion reservation fits exact read budget",
       "limits": {
-        "total_bytes": 3587962,
-        "read_bytes": 1577500
+        "total_bytes": 418481,
+        "read_bytes": 211000
       },
       "steps": [
         {
@@ -11966,7 +11966,7 @@
             "kind": "ok"
           },
           "fields": {
-            "readBytes": 1577500
+            "readBytes": 211000
           }
         }
       ]
@@ -11974,8 +11974,8 @@
     {
       "name": "one byte below read completion reservation is atomic",
       "limits": {
-        "total_bytes": 3587961,
-        "read_bytes": 1577499
+        "total_bytes": 418480,
+        "read_bytes": 210999
       },
       "steps": [
         {
@@ -12056,7 +12056,7 @@
     {
       "name": "observation charges exact retained request only",
       "limits": {
-        "total_bytes": 2013378,
+        "total_bytes": 210397,
         "read_bytes": 2916
       },
       "steps": [
@@ -12171,7 +12171,7 @@
     {
       "name": "one byte below observation request budget is atomic",
       "limits": {
-        "total_bytes": 2013377,
+        "total_bytes": 210396,
         "read_bytes": 2915
       },
       "steps": [

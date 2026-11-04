@@ -12383,7 +12383,7 @@
     {
       "name": "reserved publication survives full read budget and final revision",
       "limits": {
-        "total_bytes": 2014135,
+        "total_bytes": 211154,
         "read_bytes": 3673,
         "revision_ceiling": 5
       },

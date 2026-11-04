@@ -5830,7 +5830,7 @@
     {
       "name": "exact retained mutation budget accepts",
       "limits": {
-        "total_bytes": 2011345,
+        "total_bytes": 208245,
         "read_bytes": 1024
       },
       "steps": [
@@ -5862,7 +5862,7 @@
             "kind": "ok"
           },
           "fields": {
-            "mutationBytes": 2010321
+            "mutationBytes": 207221
           }
         }
       ]
@@ -5870,7 +5870,7 @@
     {
       "name": "one byte below reservation preserves unconsumed lease",
       "limits": {
-        "total_bytes": 2011344,
+        "total_bytes": 208244,
         "read_bytes": 1024
       },
       "steps": [
@@ -5992,7 +5992,7 @@
     {
       "name": "mutation budget exhaustion preserves recovery read",
       "limits": {
-        "total_bytes": 2013688,
+        "total_bytes": 210588,
         "read_bytes": 3367
       },
       "steps": [
@@ -6084,7 +6084,7 @@
     {
       "name": "read budget exhaustion does not consume mutation capacity",
       "limits": {
-        "total_bytes": 2011345,
+        "total_bytes": 208245,
         "read_bytes": 1024
       },
       "steps": [
@@ -6194,7 +6194,7 @@
             "kind": "ok"
           },
           "fields": {
-            "mutationBytes": 2010321
+            "mutationBytes": 207221
           }
         }
       ]

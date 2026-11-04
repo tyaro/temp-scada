@@ -98,6 +98,10 @@ impl std::fmt::Display for ModelError {
 impl std::error::Error for ModelError {}
 #[derive(Clone, Copy, Debug)]
 pub struct ModelLimits {
+    pub workflow_changes: usize,
+    pub caller_operation_ids: usize,
+    pub simulated_native_identities: usize,
+    pub reconciliation_ids: usize,
     pub mutation_admissions: usize,
     pub read_admissions: usize,
     pub mutation_leases: usize,
@@ -122,6 +126,10 @@ pub struct ModelLimits {
 impl Default for ModelLimits {
     fn default() -> Self {
         Self {
+            workflow_changes: 4096,
+            caller_operation_ids: 4096,
+            simulated_native_identities: 4096,
+            reconciliation_ids: 4096,
             mutation_admissions: 4096,
             read_admissions: 4096,
             mutation_leases: 4096,
@@ -149,6 +157,10 @@ impl ModelLimits {
     pub(super) fn validate(&self) -> Result<(), ModelError> {
         require(
             [
+                self.workflow_changes,
+                self.caller_operation_ids,
+                self.simulated_native_identities,
+                self.reconciliation_ids,
                 self.mutation_admissions,
                 self.read_admissions,
                 self.mutation_leases,
@@ -202,6 +214,16 @@ pub struct ModelStats {
     pub cancel_requests: usize,
     pub pending_cancel_calls: usize,
     pub cancel_notified_handles: usize,
+    pub reconciliation_ids: usize,
+    pub workflow_phase: Option<WorkflowPhase>,
+    pub workflow_changes: usize,
+    pub used_mutation_admission_ids: usize,
+    pub reserved_mutation_admission_ids: usize,
+    pub reserved_mutation_lease_ids: usize,
+    pub caller_operation_ids: usize,
+    pub reserved_caller_operation_ids: usize,
+    pub simulated_native_identities: usize,
+    pub reserved_simulated_native_identities: usize,
     pub published_revision: u64,
     pub reserved_revisions: u64,
     pub live_subscriptions: usize,
@@ -218,4 +240,81 @@ pub(super) fn valid_id(id: &str) -> bool {
         && id
             .bytes()
             .all(|c| c.is_ascii_alphanumeric() || b"._:-".contains(&c))
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SimulatedRunQualification {
+    Running,
+    CleanJoined,
+    Unqualified,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum WorkflowAction {
+    Preflight,
+    PauseJoin,
+    Apply,
+    Discard,
+}
+impl WorkflowAction {
+    pub(super) fn index(self) -> usize {
+        match self {
+            Self::Preflight => 0,
+            Self::PauseJoin => 1,
+            Self::Apply => 2,
+            Self::Discard => 3,
+        }
+    }
+    pub(super) fn name(self) -> &'static str {
+        match self {
+            Self::Preflight => "preflight",
+            Self::PauseJoin => "pauseJoin",
+            Self::Apply => "apply",
+            Self::Discard => "discard",
+        }
+    }
+    pub(super) fn credits(self) -> u8 {
+        if self == Self::Discard {
+            2
+        } else {
+            3
+        }
+    }
+    pub(super) fn caller(self) -> bool {
+        matches!(self, Self::PauseJoin | Self::Apply)
+    }
+    pub(super) fn from_value(v: &Value) -> Result<Self, ModelError> {
+        match v.as_str() {
+            Some("preflight") => Ok(Self::Preflight),
+            Some("pauseJoin") => Ok(Self::PauseJoin),
+            Some("apply") => Ok(Self::Apply),
+            Some("discard") => Ok(Self::Discard),
+            _ => Err(ModelError::InvalidInput),
+        }
+    }
+}
+/// Model-instance capability, never a serialized native change handle.
+#[derive(Clone, Debug)]
+pub struct WorkflowTicket {
+    pub(super) identity: Arc<()>,
+    pub(super) sequence: u64,
+    pub(super) change_id: String,
+}
+#[derive(Clone, Debug, Default)]
+pub struct WorkflowAttemptIds {
+    pub operation_id: Option<String>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WorkflowPhase {
+    Reserved,
+    Preflighting,
+    Candidate,
+    Pausing,
+    Paused,
+    Applying,
+    Discarding,
+    Completed,
+    Discarded,
+    Blocked,
+    Uncertain,
 }
