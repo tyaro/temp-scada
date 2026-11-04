@@ -744,3 +744,6 @@ mod supervisor;
 
 #[path = "recording_host/resume.rs"]
 mod resume;
+
+#[path = "recording_host/operations.rs"]
+mod operations;

@@ -9,7 +9,7 @@ use scada_runtime::recording_host::{
     RecordingSupervisor, SupervisorError,
 };
 
-async fn setup(
+pub(super) async fn setup(
     hub: &Hub,
     slots: Option<u64>,
 ) -> (

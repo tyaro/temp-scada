@@ -36,7 +36,7 @@ Project 0.37.0は単一の記録希望設定`recordingPlan`も保存・読込で
 
 「表示→記録管理状態」では希望設定と接続元のDB・Host・SDKの観測状態を明示照会できます。通常起動は管理サービス未接続です。照会結果をProjectへ保存しません。「表示→記録計画の操作」は別の任意注入serviceで検査・元runの停止／join・同候補の適用・手動結果照会を扱います。通常起動は未接続で、実native ownerの接続は後続です。
 
-[H5d4c1のnative receipt読取](docs/design/runtime/historian-recording-receipt-reader.md)は、既存HistoryReaderで元apply全文に照合した同snapshotのcommit証拠を取得します。不在から未実行や再適用を許可せず、workerの物理完了や回復要求は別に扱います。
+[H5d4c1のnative receipt読取](docs/design/runtime/historian-recording-receipt-reader.md)は、既存HistoryReaderで元apply全文に照合した同snapshotのcommit証拠を取得します。不在から未実行や再適用を許可せず、workerの物理完了や回復要求は別に扱います。 [c2の共有native owner](docs/design/runtime/historian-recording-native-owner.md)はRustで三段階操作と完了watchを提供します。通常AppへのJS bridgeと同owner内の結果照会は後続です。
 
 ## 検証
 

@@ -1,10 +1,10 @@
 # 記録操作の共有native owner
 
-状態: **H5d4c2の採用設計・実装未着手**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。今回は設計だけをReady PRにし、その後、共有ownerから三段階操作・結果投影までを一つの実装PRとして受け入れる。
+状態: **H5d4c2のnative owner実装済み、c3／JS bridgeは後続**。2026-11-04（日本時間）。主設計・実装レビューはユーザー指定のAstra。共有ownerから三段階操作・結果投影までをRust libraryで提供する。
 
 ## 1. 範囲と工程
 
-[明示操作契約](historian-recording-operations.md)のd4a純粋JSON、d4b optional service／App monitor、[c1 receipt reader](historian-recording-receipt-reader.md)は実装済み。c2は単一supervisorを全callerで共有するnative ownerと受理前registry、preflight→明示pause/join→明示apply、d4aへの結果投影を実装する。c3でc1 readを同ownerの明示reconciliationへ接続する。
+[明示操作契約](historian-recording-operations.md)のd4a純粋JSON、d4b optional service／App monitor、[c1 receipt reader](historian-recording-receipt-reader.md)は実装済み。c2は単一supervisorを全callerで共有するnative ownerと受理前registry、preflight→明示pause/join→明示apply、d4aへの結果投影を実装した。c3でc1 readを同ownerの明示reconciliationへ接続する。
 
 薄いpreflight wrapperだけを先に公開すると、受付ID・apply結果・owner寿命の責務が未完のままになる。c2では三段階を一貫して受け入れ、HTTP／IPC／Tauri commandやJS serviceの実接続は追加しない。Rust ownerを作っただけで通常Appのin-process serviceが接続済みとは扱わない。
 
@@ -14,7 +14,7 @@
 
 [RecordingSupervisor](../../../crates/scada-runtime/src/recording_host/supervisor.rs)はHostと同storeのHistoryReader一個を所有する。preflight、resume inspectionはこのreaderを貸し出してspawn_blockingし、borrowed joinで回収する。[plan turn](../../../crates/scada-runtime/src/recording_host/plan_turn.rs)もwriterをblocking workerへ移し、join後に戻す。現行は`&mut self`のcallerが正しく生存することが前提であり、複数のUI callerへそのまま可変参照を配らない。
 
-新module候補は`scada_runtime::recording_operations`。単一の非Clone管理ownerとClone可能なclientを分ける。内部は共有stateの短い排他区間と単一dispatcherを持ち、全clientが同じregistry・Busy gate・native supervisorを使う。supervisorの可変参照、writer、native runの再構成入口はclientへ公開しない。
+公開入口は`scada_runtime::recording_operations`。実体は既存native所有のprivate境界を共有する`recording_host/supervisor/operations`で、rootから再exportする。単一の非Clone管理ownerとClone可能なclientを分ける。内部は共有stateの短い排他区間と単一dispatcherを持ち、全clientが同じregistry・Busy gate・native supervisorを使う。supervisorの可変参照、writer、native runの再構成入口はclientへ公開しない。
 
 ```rust
 pub struct RecordingOperationsOwner { /* administrative root */ }
@@ -60,7 +60,7 @@ impl RecordingOperationHandle {
 }
 ```
 
-この節のowner／client／handleは公開API案であり、まだ実装していない。上記ChangeRequest／OperationRequest／Result／Contextはd4aの検証済みprivate Value wrapperを指す。AcceptedRecordingChangeは`{change,operation}`の二field。init errorは入力supervisorを返して所有を失わず、safe errorを持つ（Debugで内部path/error本文を漏らさない）。OwnerError／OperationRejectionは閉じたcodeで、native StoreErrorのDisplayをbrowser用DTOへ流さない。具体実装のenum名はこの責務に沿って整理し、公開前に整合確認する。
+この節のowner／client／handleを実装済み。上記ChangeRequest／OperationRequest／Result／Contextはd4aの検証済みprivate Value wrapperを指す。AcceptedRecordingChangeは`{change,operation}`の二field。init errorは入力supervisorを返して所有を失わず、safe errorを持つ（Debugで内部path/error本文を漏らさない）。OwnerError／OperationRejectionは閉じたcodeで、native StoreErrorのDisplayをbrowser用DTOへ流さない。具体的な有限codeは`OwnerError`と`OperationErrorCode`で定義する。
 
 ## 3. initと対象の束縛
 
@@ -135,24 +135,24 @@ d4bのperformance.now()とRust Instantは別のclock領域である。c2のRust 
 
 各段階は利用者が渡した一個の絶対deadlineを引き継ぎ、dispatcher schedulingやblocking pool待機で延長しない。stageごとの新しい明示呼出で新deadlineを渡すのはよい。既存native VM・rows・byte予算は増やさず、callerの不正な上限を縮小で隠さない。
 
-現行QueryControl::validateはstore内可視であり、runtimeから呼べる公開APIではない。c2実装時にHistorian側のpure予算validatorを公開する最小変更（例: validateの公開化）を予定する。runtimeへ検査規則を複製せず、このhelperは実行・deadline更新・DBアクセスを行わない。cancelled／既到来deadlineは、これとは別に同じnative clockとtokenで受付前・dispatch直前に確認する。helperは本設計時点では未追加である。
+Historian側の`QueryControl::validate`を公開し、runtimeが元のcaller上限を縮小前に検証する。runtimeへ検査規則を複製せず、このhelperはquery実行・deadline更新・DBアクセスを行わない。cancelled／既到来deadlineは、これとは別に同じnative clockとtokenで受付前・dispatch直前に確認する。
 
 ## 7. DTO投影・失敗・単調性
 
 RecordingOperationsStateは非JSONのowned Rust stateで、context、phase、現在change/operation handle、latest結果、lastAppliedの元request付きpair、closed flagを持つ。browser向けはd4aの検証済みJSON envelopeだけをprojectionする。run token、JoinHandle、SqliteStore、任意error文字列をSerializeしない。`active`は現在または最後の受理stageとしてsettle後も保持し、非nullだけを物理Busyの証拠にしない。
 
-| native／ownerの根拠                         | d4a結果                                                                     | gate                                                                                                                                |
-| ------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| owner受付前の拒否                           | 同期有限OperationRejection                                                  | 元状態維持、dispatchなし                                                                                                            |
-| native startがtyped拒否、何も開始していない | failed/notDispatched/confirmed                                              | preflightは再検査可。pause/applyはowner recovery=true/blockedとして元候補を再使用しない                                             |
-| preflight Candidate／Replayの正常join       | candidate／replay、confirmed/false                                          | Candidate以外でstopしない                                                                                                           |
-| preflight正常join、outcome Err              | failed/notCommitted/confirmed。read worker開始後なのでnotDispatchedにしない | 健全readerの取消・期限・予算超過等はcompleted/false。ReaderUnusable・reader fault・保存証拠破損等はblocked/trueとし、新検査を止める |
-| pauseの正常join・正常cleanup                | paused、confirmed/false                                                     | 明示apply待ち                                                                                                                       |
-| pause要求後のjoin／cleanup異常              | failed/unconfirmed、証明できなければunknown/true                            | blockedまたはuncertain。apply不可                                                                                                   |
-| plan turn正常join、outcome Applied          | applied、confirmed/false                                                    | 設定commit済み、resumeしない                                                                                                        |
-| plan turn正常join、outcome Err              | failed/unconfirmed、confirmed/true                                          | native plan recovery latch維持。Errからrollback完了を推論しない                                                                     |
-| stage panic、join結果喪失、壊れた出力       | failed/unconfirmed、unknown/true                                            | uncertain。新mutation禁止                                                                                                           |
-| native receiptはあるがDTOへsafe投影不能     | failed/projectionFailed/unconfirmed、証明済みquiescenceだけ保持             | commitなしと表示せずblocked/uncertain                                                                                               |
+| native／ownerの根拠                              | d4a結果                                                                     | gate                                                                                                                                |
+| ------------------------------------------------ | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| owner受付前の拒否                                | 同期有限OperationRejection                                                  | 元状態維持、dispatchなし                                                                                                            |
+| native startがtyped拒否、何も開始していない      | failed/notDispatched/confirmed                                              | preflightは再検査可。pause/applyはowner recovery=true/blockedとして元候補を再使用しない                                             |
+| preflight Candidate／Replayの正常join            | candidate／replay、confirmed/false                                          | Candidate以外でstopしない                                                                                                           |
+| preflight正常join、outcome Err                   | failed/notCommitted/confirmed。read worker開始後なのでnotDispatchedにしない | 健全readerの取消・期限・予算超過等はcompleted/false。ReaderUnusable・reader fault・保存証拠破損等はblocked/trueとし、新検査を止める |
+| pauseの正常join・正常cleanup                     | paused、confirmed/false                                                     | 明示apply待ち                                                                                                                       |
+| pause要求後のjoin／cleanup異常                   | failed/unconfirmed、証明できなければunknown/true                            | blockedまたはuncertain。apply不可                                                                                                   |
+| plan turn正常join、outcome Applied・回復gateなし | applied、confirmed/false                                                    | 設定commit済み、resumeしない                                                                                                        |
+| plan turn正常join、outcome Err                   | failed/unconfirmed、confirmed/true                                          | native plan recovery latch維持。Errからrollback完了を推論しない                                                                     |
+| stage panic、join結果喪失                        | failed/unconfirmed、unknown/true                                            | uncertain。新mutation禁止                                                                                                           |
+| native receiptはあるがDTOへsafe投影不能          | failed/projectionFailed/unconfirmed、証明済みquiescenceだけ保持             | commitなしと表示せずblocked/uncertain                                                                                               |
 
 native u64がMAX_SAFEを超えた場合は丸めない。完了watchへ有限projectionFailedを出すため、元requestは先に検証して保持する。receipt自体の公開に失敗しても元native evidenceをboundedに保持し、成功commitを未送信へ変換しない。typed原因だけを閉集合へmapし、StoreError／HostのStringをparseしない。
 
@@ -174,7 +174,7 @@ Clientのcloneは同gateを共有する。client／watch／wait FutureのDropは
 
 `try_handoff`は管理ownerだけの明示移管APIであり、clientには渡さない。返却するRecordingOperationsHandoffはSupervisorと有限のRecordingOperationsRecoveryEvidenceを一緒に保持する。evidenceは元context、最後のOperationRequest／Result各最大1、lastAppliedの元request付きpair最大1、DTO投影不能時も丸めないnative receipt最大1、owner_recovery_requiredを持つ。任意error本文や全履歴は含めない。物理operation/readが未join、または正常candidate/pausedが進行中の場合はBusy。元handleを捨てて通さない。全stageの物理完了が確認できて候補がない場合は、recovery latch付きsupervisorも**回復用として**返せる。ownerがblocked終端で旧native候補を残している場合も、管理権による回復移管としてその候補とlatchを保持したまま返せる。候補の自動discardや正常化はせず、移管先が既存native tokenで明示回復する。
 
-owner-onlyのblocked／invalid／投影失敗がある場合、移管前に実装で追加するcrate内専用helper `RecordingSupervisor::latch_recording_operations_recovery()` を必ず呼び、既存`host.plan_turn.recovery_required`をtrueにする。このhelperはtrueへの設定だけで解除入口を持たず、DBを書き換えない。これによりnative側のlatchが元々falseでも、返却Supervisorを別ownerへ渡す、start/preflightへ直接使うといった経路で既存gateを回避できない。evidenceにもowner recoveryを保持する。
+owner-onlyのblocked／invalid／投影失敗がある場合、結果分類時と移管前にcrate内専用helper `RecordingSupervisor::latch_recording_operations_recovery()` を必ず呼び、既存`host.plan_turn.recovery_required`をtrueにする。このhelperはtrueへの設定だけで解除入口を持たず、DBを書き換えない。これによりnative側のlatchが元々falseでも、返却Supervisorを別ownerへ渡す、start/preflightへ直接使うといった経路で既存gateを回避できない。evidenceにもowner recoveryを保持する。
 
 latchをclearせず、残存clientへclosedを公開して永久拒否にする。新しい操作資格の発行や自動resumeを含めない。supervisorを失ったpanicやunknown物理状態では移管を成功扱いにしない。
 
@@ -206,4 +206,16 @@ c2は元ApplyRecordingPlanRequest、元RecordingPlanTurnRun、元RecordingRun、
 | 投影            | d4a受理、expected_*の1.0／整数同値と元member順echoの組合せ、context同値helper、MAX_SAFE超過を丸めない、有限error、join成功とoutcome成功の区別                                          |
 | 有限保持        | 最大3stage＋最新成功一件、履歴queueなし、古いhandle waitは当時結果を返し現在appliedと偽称しない                                                                                        |
 
-テストは制御clock／隔離SQLite／mockHubのみ。native sourceへの接続を含むローカルlibrary試験と通常Appへの製品接続を区別する。実装時に最小共有helperを既存supervisorへ足してよいが、既存manual／managed start、読取、保持gateを弱めない。コード完成後にAstra read-onlyレビューを行い、既存workspace・Clippy・共通DTO/browser回帰を通してReady PRとする。
+テストは制御clock／隔離SQLite／mockHubのみ。native sourceへの接続を含むローカルlibrary試験と通常Appへの製品接続を区別する。実装時に最小共有helperを既存supervisorへ足してよいが、既存manual／managed start、読取、保持gateを弱めない。Astra read-onlyレビューで必須修正がないことを確認し、既存workspace・Clippy・共通DTO/browser回帰を通した。
+
+## 11. 実装入口と検証範囲
+
+`recording_host/supervisor/operations/mod.rs`は管理owner／共有client、短い排他による同期受付とcached state、同期discard／handoffを担当する。`types.rs`はopaque handleと完了watch、有限errorと回復evidence、`registry.rs`は4096件の役割付きIDと未使用creditを保持する。`projection.rs`は検証済みDTOからのchecked整数変換と有限errorの対応、`driver.rs`はSupervisor loan・三段階native実行・返却後の結果確定を担当する。
+
+Loanはspawn前に構築する。未pollのfutureがruntime終了でDropされても元handleへunknown／recoveryを残す。stage監視とDrop guardの二重失敗報告は冪等にし、確定済みcompletionを変更しない。Mutex poisonは新受付を止め、実行中に検出した場合はownerをcloseする。既知native receiptは元request付きで保持する。watchはreceiver不在でも最新値を保存する。Tokioの`watch::Ref`はframeをcloneして解放してからowner APIを呼び、awaitを跨いで保持しない。
+
+既存supervisorの純粋gateは`recording_operations_context`へ共有し、true方向だけの`latch_recording_operations_recovery`を追加した。既存候補の一回実行・borrowed join・保持gateは維持する。private worker起動seamを試験で共有し、公開fault APIやtest-support featureは追加しない。runtimeのdev-dependencyだけで既存pinのrusqlite0.41.1を再利用し、production依存と各依存版は変えない。
+
+新規単体30件と公開API／loopback SDKの結合2件で、全caller競合、ID上限と予約、受付後の取消・期限、Runtime終了、panic、source shutdown不良、CAS競合、owner終了時のwriter lock、handoff、Replay非昇格、整数表記と元member順、投影不能時のnative証拠を確認する。実SQLite FULLの原子rollback／receipt不在は既存Historian試験で検証し、owner層は型付きSQLite FULL故障注入でエラー伝播・native／owner latch・後続拒否を検証する。ownerを通した実媒体FULLのend-to-end試験とは称さない。commit後の応答喪失はprivate native worker seamで実commit後にreceipt応答を落として確認する。
+
+Rust workspace592件（新規32）、Clippy `-D warnings`／rustfmt、既存共通Chromium3件が成功。通常Appは引き続き未接続で、JSのclock bridgeとc3の同owner結果照会は後続である。
