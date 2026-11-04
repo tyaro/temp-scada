@@ -210,3 +210,9 @@ Rust workspace626件（新規8）、TS全6,737件（新規1,903）、関連Chrom
 c4a実装はPR #67でworkへ統合済み（`1370d4c`）。[c4bの非同期monitor／UI設計](historian-recording-async-monitor.md)は、外部root-owned coordinator、同期serviceとの排他的選択、受付状態・native結果・read静止・呼出終了の独立管理と、旧対象の保持／復帰条件を具体化する。
 
 c4bはtest-onlyの非JSON portを使うlocal client／monitor／UIまで実装した。c4aの五rootをlease発行・cancel ack・snapshot frameへ拡張したことや、native adapter／製品hostを接続したことを意味しない。実wireとP3bの再開条件は引き続き別工程で確定する。
+
+## 12. c4cの接続前詳細設計
+
+c4b実装はPR #69でworkへ統合済み（`2643726`）。[wire・host詳細設計](historian-recording-wire-host.md)で、local Promise契約から実配送へ進むための期限・call完了証拠・取消・frameと再同期、registryの有限性を定める。既存c4a五rootを変更せず、新しいwire契約は独立resource／versionで扱う。
+
+設計後のc4c-prep1は純粋JSON／validator／fixtureに限定し、実native registry adapter・配送を先行追加しない。採用済みserver core＋アプリ埋込host 1という構成と、具体shell／IPC・認証・接続設定の選定・P3b再開を区別する。本節の追加は§2の実接続gateを解除しない。

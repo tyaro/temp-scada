@@ -162,6 +162,7 @@ docs/
 - [同owner内の明示結果照会（H5d4c3、Rust実装）](design/runtime/historian-recording-owner-reconciliation.md)
 - [記録操作の非同期bridge境界（H5d4c4、c4a共通契約実装）](design/runtime/historian-recording-bridge-boundary.md)
 - [非同期の記録操作monitor／UI（H5d4c4b、test-only portで実装）](design/runtime/historian-recording-async-monitor.md)
+- [記録操作のwire・host詳細設計（H5d4c4c接続前、設計のみ）](design/runtime/historian-recording-wire-host.md)
 - [記録計画の永続台帳・mapping登録・原子的apply（H5b1）](design/runtime/historian-recording-plan-ledger.md)
 - [記録開始と適用計画の原子的結合（H5b2）](design/runtime/historian-recording-activation.md)
 - [適用済み計画からのRecorder／Host開始（H5c1）](design/runtime/historian-managed-recorder.md)
