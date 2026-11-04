@@ -217,6 +217,8 @@ pub struct ModelStats {
     pub reconciliation_ids: usize,
     pub workflow_phase: Option<WorkflowPhase>,
     pub workflow_changes: usize,
+    pub current_workflow: Option<String>,
+    pub ever_clean_joined: bool,
     pub used_mutation_admission_ids: usize,
     pub reserved_mutation_admission_ids: usize,
     pub reserved_mutation_lease_ids: usize,

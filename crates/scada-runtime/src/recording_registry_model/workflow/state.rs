@@ -24,11 +24,14 @@ fn progress(a: WorkflowAction) -> WorkflowPhase {
 impl RegistryModel {
     pub fn workflow_phase(&self) -> Option<WorkflowPhase> {
         let mode = self.workflow.as_ref()?;
-        let Some(w) = &mode.record else {
+        let Some(w) = mode.current_record() else {
             return Some(WorkflowPhase::Reserved);
         };
-        let attempt = w.current.as_ref().and_then(|id| w.attempts.get(id));
-        let record = w.current.as_ref().and_then(|id| self.admissions.get(id));
+        let attempt = w.current_attempt.as_ref().and_then(|id| w.attempts.get(id));
+        let record = w
+            .current_attempt
+            .as_ref()
+            .and_then(|id| self.admissions.get(id));
         let completion = record
             .and_then(|r| r.proof.as_ref())
             .filter(|p| p.as_value()["outcome"]["kind"] == "accepted")
@@ -115,7 +118,10 @@ impl RegistryModel {
         )
     }
     pub(in super::super) fn workflow_change_ref(&self) -> Option<String> {
-        let w = self.workflow.as_ref()?.record.as_ref()?;
+        let w = self.workflow.as_ref()?.current_record()?;
+        self.workflow_record_change_ref(w)
+    }
+    pub(super) fn workflow_record_change_ref(&self, w: &WorkflowRecord) -> Option<String> {
         w.attempts
             .iter()
             .filter(|(_, a)| a.stage == WorkflowAction::Preflight)
@@ -132,58 +138,59 @@ impl RegistryModel {
             })
     }
     pub(in super::super) fn workflow_used_ids(&self) -> usize {
-        self.workflow
-            .as_ref()
-            .and_then(|m| m.record.as_ref())
-            .map_or_else(
-                || {
-                    self.admissions
-                        .values()
-                        .filter(|r| r.role == Role::Mutation)
-                        .count()
-                },
-                |w| w.attempts.len(),
-            )
+        self.workflow.as_ref().map_or_else(
+            || {
+                self.admissions
+                    .values()
+                    .filter(|r| r.role == Role::Mutation)
+                    .count()
+            },
+            |m| m.records.values().map(|w| w.attempts.len()).sum(),
+        )
     }
     pub(in super::super) fn workflow_reserved_ids(&self) -> usize {
-        self.workflow
-            .as_ref()
-            .and_then(|m| m.record.as_ref())
-            .map_or(0, |w| w.slots.iter().flatten().count())
+        self.workflow.as_ref().map_or(0, |m| {
+            m.records
+                .values()
+                .map(|w| w.slots.iter().flatten().count())
+                .sum()
+        })
     }
     pub(in super::super) fn workflow_caller_ids(&self) -> usize {
-        self.workflow
-            .as_ref()
-            .and_then(|m| m.record.as_ref())
-            .map_or(0, |w| {
-                w.attempts
-                    .values()
-                    .filter(|a| a.operation_id.is_some())
-                    .count()
-            })
+        self.workflow.as_ref().map_or(0, |m| {
+            m.records
+                .values()
+                .map(|w| {
+                    w.attempts
+                        .values()
+                        .filter(|a| a.operation_id.is_some())
+                        .count()
+                })
+                .sum()
+        })
     }
     pub(in super::super) fn workflow_reserved_caller_ids(&self) -> usize {
-        self.workflow
-            .as_ref()
-            .and_then(|m| m.record.as_ref())
-            .map_or(0, |w| {
-                w.slots
-                    .iter()
-                    .flatten()
-                    .filter(|r| r.stage.caller())
-                    .count()
-            })
+        self.workflow.as_ref().map_or(0, |m| {
+            m.records
+                .values()
+                .map(|w| {
+                    w.slots
+                        .iter()
+                        .flatten()
+                        .filter(|r| r.stage.caller())
+                        .count()
+                })
+                .sum()
+        })
     }
     pub(in super::super) fn workflow_native_ids(&self) -> usize {
         self.workflow
             .as_ref()
-            .and_then(|m| m.record.as_ref())
-            .map_or(0, |w| w.native.len())
+            .map_or(0, |m| m.records.values().map(|w| w.native.len()).sum())
     }
     pub(in super::super) fn workflow_reserved_native_ids(&self) -> usize {
         self.workflow
             .as_ref()
-            .and_then(|m| m.record.as_ref())
-            .map_or(0, |w| w.native_reserved)
+            .map_or(0, |m| m.records.values().map(|w| w.native_reserved).sum())
     }
 }

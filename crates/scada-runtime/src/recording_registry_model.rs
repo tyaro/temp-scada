@@ -237,9 +237,9 @@ impl RegistryModel {
             cancel_notified_handles: self.handles.values().filter(|h| h.cancel_notified).count(),
             reconciliation_ids: self.reconciliation_ids.len(),
             workflow_phase: self.workflow_phase(),
-            workflow_changes: usize::from(
-                self.workflow.as_ref().is_some_and(|m| m.record.is_some()),
-            ),
+            workflow_changes: self.workflow.as_ref().map_or(0, |m| m.records.len()),
+            current_workflow: self.workflow.as_ref().and_then(|m| m.current.clone()),
+            ever_clean_joined: self.workflow.as_ref().is_some_and(|m| m.ever_clean_joined),
             used_mutation_admission_ids: self.workflow_used_ids(),
             reserved_mutation_admission_ids: self.workflow_reserved_ids(),
             reserved_mutation_lease_ids: self.workflow_reserved_ids(),

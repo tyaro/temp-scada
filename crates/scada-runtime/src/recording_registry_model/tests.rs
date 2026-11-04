@@ -2,6 +2,7 @@ use super::*;
 mod boundaries;
 mod cancel_boundaries;
 mod observation_boundaries;
+mod renewal_boundaries;
 mod subscription_boundaries;
 mod workflow_boundaries;
 fn fixtures() -> Value {
@@ -118,6 +119,14 @@ fn workflow_scenarios_match_immutable_wire_transcripts() {
     .unwrap();
     assert_scenarios(&all);
 }
+#[test]
+fn renewal_scenarios_match_immutable_wire_transcripts() {
+    let all: Value = serde_json::from_str(include_str!(
+        "../../../../examples/recording-workflow-renewal-cases.json"
+    ))
+    .unwrap();
+    assert_scenarios(&all);
+}
 fn assert_scenarios(all: &Value) {
     for scenario in all["scenarios"].as_array().unwrap() {
         let s = session(all, &Value::Null);
@@ -136,6 +145,7 @@ fn assert_scenarios(all: &Value) {
             RegistryModel::new(s, limits(&scenario["limits"])).unwrap()
         };
         let mut workflow = None;
+        let mut workflows = BTreeMap::new();
         let mut tickets = BTreeMap::new();
         let mut handles = BTreeMap::new();
         let mut cancel_tickets = BTreeMap::new();
@@ -152,12 +162,54 @@ fn assert_scenarios(all: &Value) {
             let result: Result<(&str, Option<Value>), ModelError> = (|| {
                 Ok(match step["op"].as_str().unwrap() {
                     "reserve" => {
-                        workflow=Some(model.reserve_workflow(&s,scada_model::recording_operations::RecordingChangeRequest::from_value(input).unwrap_or_else(|e|panic!("{label}: {e}")))?);
+                        let t = model.reserve_workflow(
+                            &s,
+                            scada_model::recording_operations::RecordingChangeRequest::from_value(
+                                input,
+                            )
+                            .unwrap_or_else(|e| panic!("{label}: {e}")),
+                        )?;
+                        workflows.insert(
+                            step["workflowTicket"]
+                                .as_str()
+                                .unwrap_or("current")
+                                .to_owned(),
+                            t.clone(),
+                        );
+                        workflow = Some(t);
+                        ("reserved", None)
+                    }
+                    "renew" => {
+                        let predecessor = &workflows[step["predecessor"].as_str().unwrap()];
+                        let qualification = match step["qualification"].as_str() {
+                            Some("cleanJoined") => SimulatedRunQualification::CleanJoined,
+                            Some("unqualified") => SimulatedRunQualification::Unqualified,
+                            _ => SimulatedRunQualification::Running,
+                        };
+                        let t = model.reserve_next_workflow(
+                            &s,
+                            predecessor,
+                            qualification,
+                            scada_model::recording_operations::RecordingChangeRequest::from_value(
+                                input,
+                            )
+                            .unwrap_or_else(|e| panic!("{label}: {e}")),
+                        )?;
+                        workflows.insert(
+                            step["workflowTicket"]
+                                .as_str()
+                                .unwrap_or("current")
+                                .to_owned(),
+                            t.clone(),
+                        );
+                        workflow = Some(t);
                         ("reserved", None)
                     }
                     "workflow_issue" => {
                         let r = model.issue_workflow_lease(
-                            workflow.as_ref().unwrap(),
+                            step["workflowTicket"]
+                                .as_str()
+                                .map_or_else(|| workflow.as_ref().unwrap(), |id| &workflows[id]),
                             WorkflowAction::from_value(&step["stage"])?,
                             WorkflowAttemptIds {
                                 operation_id: step["operationId"].as_str().map(str::to_owned),
@@ -168,7 +220,9 @@ fn assert_scenarios(all: &Value) {
                         ("reply", Some(r.as_value().clone()))
                     }
                     "workflow_begin" => match model.begin_workflow_admission(
-                        workflow.as_ref().unwrap(),
+                        step["workflowTicket"]
+                            .as_str()
+                            .map_or_else(|| workflow.as_ref().unwrap(), |id| &workflows[id]),
                         RecordingAdmissionRequest::from_value(input)
                             .unwrap_or_else(|e| panic!("{label}: {e}")),
                     )? {

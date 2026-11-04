@@ -193,10 +193,18 @@ impl RegistryModel {
             },
             self.projection.budget,
         )?;
+        let joined = self.workflow.is_some()
+            && handle.key.0 == Role::Mutation
+            && value["outcome"]["kind"] == "paused"
+            && value["quiescence"] == "confirmed"
+            && value["recoveryRequired"] == false;
         self.handles
             .get_mut(&handle.key)
             .expect("validated handle")
             .completion = Some(completion);
+        if joined {
+            self.workflow.as_mut().expect("mode").ever_clean_joined = true;
+        }
         self.recovery_required |= recovery;
         self.commit_publication(publication, Some(&handle.admission_id));
         self.refresh_workflow();

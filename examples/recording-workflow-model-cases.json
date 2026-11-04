@@ -9055,7 +9055,7 @@
       "name": "exact whole workflow retained budget survives all reserved stages",
       "workflow": true,
       "limits": {
-        "total_bytes": 765665,
+        "total_bytes": 766689,
         "read_bytes": 1024
       },
       "steps": [
@@ -9074,7 +9074,7 @@
             "kind": "ok"
           },
           "fields": {
-            "mutationBytes": 764641
+            "mutationBytes": 765665
           }
         },
         {
@@ -9274,7 +9274,7 @@
             "kind": "ok"
           },
           "fields": {
-            "mutationBytes": 626016
+            "mutationBytes": 627040
           }
         }
       ]
@@ -9283,7 +9283,7 @@
       "name": "one byte below whole workflow reservation is atomic",
       "workflow": true,
       "limits": {
-        "total_bytes": 765664,
+        "total_bytes": 766688,
         "read_bytes": 1024
       },
       "steps": [
@@ -9313,7 +9313,7 @@
       "name": "read budget is never borrowed for workflow escrow",
       "workflow": true,
       "limits": {
-        "total_bytes": 765665,
+        "total_bytes": 766689,
         "read_bytes": 1025
       },
       "steps": [

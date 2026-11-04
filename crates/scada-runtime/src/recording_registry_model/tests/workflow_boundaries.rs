@@ -1,12 +1,12 @@
 use super::*;
 use scada_model::recording_operations::RecordingChangeRequest;
-fn data() -> Value {
+pub(super) fn data() -> Value {
     serde_json::from_str(include_str!(
         "../../../../../examples/recording-workflow-model-cases.json"
     ))
     .unwrap()
 }
-fn model(limits: ModelLimits) -> (RegistryModel, ModelSession, Value) {
+pub(super) fn model(limits: ModelLimits) -> (RegistryModel, ModelSession, Value) {
     let f = data();
     let s = session(&f, &Value::Null);
     (
@@ -15,14 +15,19 @@ fn model(limits: ModelLimits) -> (RegistryModel, ModelSession, Value) {
         f,
     )
 }
-fn reserve(m: &mut RegistryModel, s: &ModelSession, f: &Value) -> WorkflowTicket {
+pub(super) fn reserve(m: &mut RegistryModel, s: &ModelSession, f: &Value) -> WorkflowTicket {
     m.reserve_workflow(
         s,
         RecordingChangeRequest::from_value(f["bases"]["change"].clone()).unwrap(),
     )
     .unwrap()
 }
-fn issue(m: &mut RegistryModel, t: &WorkflowTicket, f: &Value, k: &str) -> RecordingWireLeaseReply {
+pub(super) fn issue(
+    m: &mut RegistryModel,
+    t: &WorkflowTicket,
+    f: &Value,
+    k: &str,
+) -> RecordingWireLeaseReply {
     let q = &f["bases"][format!("{k}Admit")];
     let a = WorkflowAction::from_value(&q["action"]["kind"]).unwrap();
     m.issue_workflow_lease(
@@ -37,7 +42,12 @@ fn issue(m: &mut RegistryModel, t: &WorkflowTicket, f: &Value, k: &str) -> Recor
     )
     .unwrap()
 }
-fn begin(m: &mut RegistryModel, t: &WorkflowTicket, f: &Value, k: &str) -> SimulationTicket {
+pub(super) fn begin(
+    m: &mut RegistryModel,
+    t: &WorkflowTicket,
+    f: &Value,
+    k: &str,
+) -> SimulationTicket {
     match m
         .begin_workflow_admission(
             t,
@@ -49,7 +59,7 @@ fn begin(m: &mut RegistryModel, t: &WorkflowTicket, f: &Value, k: &str) -> Simul
         _ => panic!("registered"),
     }
 }
-fn finish_stage(m: &mut RegistryModel, t: &WorkflowTicket, f: &Value, k: &str) {
+pub(super) fn finish_stage(m: &mut RegistryModel, t: &WorkflowTicket, f: &Value, k: &str) {
     issue(m, t, f, k);
     let a = begin(m, t, f, k);
     let p =

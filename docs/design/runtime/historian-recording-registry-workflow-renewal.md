@@ -1,7 +1,7 @@
 # Historian registry workflow renewal model
 
 - 設計日: 2026-11-04 JST
-- 段階: H5d4c4c-prep2b4b。詳細設計先行、実装は後続PR。
+- 段階: H5d4c4c-prep2b4b。純粋Rustモデル実装済み（2026-11-05 JST）。実接続は後続。
 - 前提: [workflow model](historian-recording-registry-workflow-model.md) のprep2b4aを維持する。
 - 対象: Rustの決定的な純粋simulation modelのみ。native dispatch、実時計、SDK、DB、host、認証、transportは追加しない。
 - Project 0.37.0、DB7、H1、wire/schema、固定依存を変更しない。P3b保留は解除しない。
@@ -212,3 +212,9 @@ b4aの「正常終端後も次workflow禁止」fixtureは、初回reserve APIに
 新専用APIを用いた正常renewalは別caseにする。Standaloneの直接apply等をstrict workflow試験へ偽装しない。
 固定管理chargeによる既存会計期待値の変更は、schema変更や記録保証の変更と混同しない。
 Rust scenarioが唯一のstate権威であり、TS/browserは同じ出力を既存wire validatorで検査するだけとする。
+
+## 12. 実装と検証の区切り
+
+`recording_registry_model/workflow/renewal.rs`へ初回・次workflow予約、有限履歴台帳の累積予約、全静止gateとcurrent apply限定の新read検査を実装した。`workflow/mod.rs`は旧ticketの正確な再送と新規操作を分け、proof／completionは元recordへ保存する。初回を含む各workflowへ管理費用1024bytesを追加し、旧recordと使用済みcaller／native IDの衝突をmodel寿命全体で拒否する。
+
+共有50シナリオ947ステップ・10境界試験を追加した。既存239シナリオは初回管理費用の期待だけを反映して維持する。154期待DTOと全入力をTS／browserの既存validatorへ照合し、累積escrowの独立会計と通常App保存不変を確認する。実行権威はRustだけであり、TSに第二のregistryは追加しない。Astraの最終read-onlyレビューに残る必須所見はない。複数scope allocatorと受信frameの順序・矛盾検出、実adapter／host接続とP3bは後続である。

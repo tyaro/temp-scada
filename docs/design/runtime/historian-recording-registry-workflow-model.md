@@ -1,6 +1,6 @@
 # 記録registryモデルのworkflowと全段階予約
 
-状態: **prep2b4a実装済み、次workflowの受理・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2b4a／b4b純粋モデル実装済み、実接続は後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
 [subscriptionモデル](historian-recording-registry-subscription-model.md)までがPR #76で統合済み。本書はその後の段階進行を設計する。
 Project 0.37.0、DB7、H1、wire schema、SDK／Banto／依存は維持する。実native、host、DB、auth、transport、P3bへの接続は行わない。
 
@@ -58,13 +58,13 @@ impl RegistryModel {
 
 既存observe_native／finish_admission_call／complete_handleを使って試験の証拠を入力し、同じ原子publicationを通す。
 WorkflowTicketはDeserializeなし、別modelや異なるchangeへ転用できない。
-workflow modeの通常begin_admission／issue_leaseでmutationを発行する迂回を拒否する。read用入口は従来どおり別poolを使う。
+workflow modeの通常begin_admission／issue_leaseでmutationを発行する迂回を拒否する。read用入口は別poolを使う。b4bのWorkflow modeでは新readをcurrentのaccepted applyへ限定し、旧readの正確な再送・回収は保持する。Standaloneの低レベルread制約は維持する。
 reserve_workflowは純粋モデルの予約で、native受付・preflight開始・停止・書込ではない。
 同sessionの同changeId・全文同値の再呼出しは同じWorkflowTicketを返し、追加課金しない。異本文はProtocolViolation、別modelのticketはForbidden。別changeIdはb4aでは既存予約がある限りBusy。
 予約放棄／clear APIは初回に設けない。Reservedで資格や容量を失った場合は有限停止し、証拠照会だけを残す。modelを破棄できてもnative解除や製品上の復旧を証明したとは扱わない。
 
 b4aは最初のworkflowを一つだけ受け入れる。Completed／Discarded後も新workflowは未対応として拒否する。
-b4bで終端根拠・ID／bytesの残量・run資格を再検証して次workflowを許す。旧recordのGCを暗黙前提にしない。
+実装済みb4bの専用APIで終端根拠・ID／bytesの残量・run資格を再検証して次workflowを許す。旧recordのGCを暗黙前提にしない。
 
 ## 4. 固定する元意図
 
@@ -130,7 +130,7 @@ OperationResultのlegacy compact予算とwireの独立予算は引き続き検�
 
 この変更は既存prep2a固定2MiB方式からのモデル会計変更として明示する。Standaloneも同helperへ統一し、既存exact byte fixtureの期待値を更新する。
 reply／completion保存は受付時L以内で行い、Accepted後に容量不足で証拠を捨てない。
-モデル寿命中、使用済みrecordのLを返却しない。GC／retireによる再受付は未実装である。
+モデル寿命中、使用済みrecordのLを返却しない。GC／retireによる返却は未実装である。
 
 ## 7. 4stage escrow
 
@@ -138,16 +138,16 @@ reserve_workflowは将来stageのrequestを最大64 ASCIIの未知ID/refで構�
 未知admissionId、deadlineLeaseRef、operationId、changeRef、leaseRequestIdを最大長で予約し、実値の短さに依存しない。
 4件すべてを別に保管できる予約であり、applyとdiscardをmaxにまとめない。
 
-| 資源                          | 最初の予約                                                               |
-| ----------------------------- | ------------------------------------------------------------------------ |
-| mutation admission ID         | 4credit（各初回stage）                                                   |
-| mutation lease request ID     | 4credit（各初回stage）                                                   |
-| caller operation ID           | pause/apply用2credit、preflight生成IDは別扱い                            |
-| change ID                     | 1credit、同ID別本文不可                                                  |
-| fake native identity capacity | change＋generated preflight＋pause＋applyの計4credit                     |
-| mutation bytes                | 全4stage L＋全4leaseの元request/issued reply上界＋workflow元change保持分 |
-| projection                    | 全将来stageのhigh-water boundを先に合成し1MiB等を確認                    |
-| revision                      | preflight3＋pause3＋apply3＋discard2の計11credit。close1は既存別予約     |
+| 資源                          | 最初の予約                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------- |
+| mutation admission ID         | 4credit（各初回stage）                                                                      |
+| mutation lease request ID     | 4credit（各初回stage）                                                                      |
+| caller operation ID           | pause/apply用2credit、preflight生成IDは別扱い                                               |
+| change ID                     | 1credit、同ID別本文不可                                                                     |
+| fake native identity capacity | change＋generated preflight＋pause＋applyの計4credit                                        |
+| mutation bytes                | 全4stage L＋全4leaseの元request/issued reply上界＋workflow元change保持分＋管理費用1024bytes |
+| projection                    | 全将来stageのhigh-water boundを先に合成し1MiB等を確認                                       |
+| revision                      | preflight3＋pause3＋apply3＋discard2の計11credit。close1は既存別予約                        |
 
 prep2b4aでreadAdmissionとは別のreconciliation ID台帳を実装した。ModelLimits.reconciliation_ids（最大4096・縮小のみ）を追加し、Standalone／Workflow両modeの新read admission登録時にreadAdmission ID・bytes・revisionと原子的に確認／登録する。mutation escrowやcaller operation枠へ依存させない。
 reconciliationIdは元ReconciliationRequest全文とadmissionIdへ束縛し、同admissionIdのexact Pending／Replayは既存入口で返して再登録しない。異なるadmissionIdで同reconciliationIdを使う要求は、本文同値でもProtocolViolationとする。このモデルでは同readの複数admission共有を実装しない。新たなreadを明示する場合は新reconciliationIdを必要とし、元不明readの自動再dispatchを許可しない。
@@ -203,12 +203,12 @@ WorkflowPhase／escrowの統計はモデル固有Rust stateとして公開し、
 ### prep2b4a
 
 最初の一workflowだけを対象に、tight lifetime meter、4stage escrow、private ticket、明示三段階／discardを実装する。
-ReservedからCompleted／Discardedまでを模擬できるが、正常終端後も次workflow受理は未実装として拒否する。
+b4aの初回APIは最初の一workflowだけを扱う。正常終端後も同APIによる暗黙更新はBusyとし、b4bの明示更新へ分離する。
 既存Standaloneの保守phaseと低レベル試験を維持し、会計と独立reconciliation ID制約の期待値を更新する。同reconciliationIdを別admissionで使う旧fixtureは新IDへ明示変更するか、再使用拒否の回帰試験へ変更する。applyを直接開始する既存144scenarioはStandaloneの有限低レベルsimulation試験として残す。strict workflowへ移したと偽らず、Workflow modeにpredecessor省略・seed・force phaseを公開しない。新workflow scenarioは必ずreserveとpreflightから始める。native／UI／wire schemaを変更しない。
 
 ### prep2b4b
 
-[次workflow受入のAstra設計](historian-recording-registry-workflow-renewal.md)で、正常な現在predecessor ticket・毎回の同run資格宣言・全静止gateによる明示更新を定めた。Running／clean Joinedの同run継続と、新run/contextが必要な場合を分ける。設計済みだが実装は後続である。
+[次workflow受入のAstra設計](historian-recording-registry-workflow-renewal.md)で、正常な現在predecessor ticket・毎回の同run資格宣言・全静止gateによる明示更新を定めた。Running／clean Joinedの同run継続と、新run/contextが必要な場合を分ける。純粋Rustモデルへ実装済みである。
 旧receipt／ID／終端callを保持したまま残予算を検査し、未知またはrecoveryをnew owner作成で消さない。
 resume／fresh SDK／初期bootstrap／実native接続はこの工程からも自動許可しない。
 
@@ -226,4 +226,4 @@ resume／fresh SDK／初期bootstrap／実native接続はこの工程からも�
 | projection/revision | 将来全stageの受付前予約、未使用credit返却と使用済み不変、close credit保持                                |
 | 未接続              | fake qualificationはnative資格でない、wire／DB／SDK／認証／transport不変                                 |
 
-設計PR #77はworkへ統合済み（`84b325b`）。prep2b4aでは新47シナリオ597ステップと10境界試験を実装し、既存192シナリオも要求由来の会計で維持する。92期待DTOと全入力をTS／browserの既存validatorへ照合し、TS側に第二のworkflow権威を作らない。b4bの正常終端後の次workflow受理と実接続は未実装である。
+設計PR #77はworkへ統合済み（`84b325b`）。prep2b4aでは新47シナリオ597ステップと10境界試験を実装し、既存192シナリオも要求由来の会計で維持する。92期待DTOと全入力をTS／browserの既存validatorへ照合し、TS側に第二のworkflow権威を作らない。b4bでは共有50シナリオ947ステップと10境界試験を追加し、旧239シナリオを維持した。実接続は未実装である。

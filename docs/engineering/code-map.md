@@ -760,8 +760,12 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 
 `recording_registry_model/reservation.rs`は既知requestから独立reply二個とcompletionのlifetime上界を算出し、保存前の実測も検査する。Standalone／Workflowで共有し、既存rootやlegacy compact予算を変更しない。`admission.rs`は独立reconciliation IDと256bytesをread admissionの予約へ原子的に含める。
 
-`workflow/mod.rs`はprivate instance ticket、元changeへの束縛、reserve／lease／beginの明示入口とnative identity登録planを担当する。`workflow/escrow.rs`は4stageの将来request／lease上界、projection high-water、11revision＋close1の予約・移管と未発行stageだけの返却を担当する。`workflow/state.rs`は元call／knowledge／immutable completionに基づくphaseとread gateを判定し、sourceを実行しない。通常mutation入口からWorkflow modeの予約を迂回できない。
+`workflow/mod.rs`はprivate instance ticket、元changeへの束縛、lease／beginの明示入口とnative identity登録planを担当する。`workflow/escrow.rs`は4stageの将来request／lease上界、projection high-water、11revision＋close1の予約・移管と未発行stageだけの返却を担当する。`workflow/state.rs`は元call／knowledge／immutable completionに基づくphaseとread gateを判定し、sourceを実行しない。通常mutation入口からWorkflow modeの予約を迂回できない。
 
 `examples/recording-workflow-model-cases.json`の47シナリオ597ステップと`tests/workflow_boundaries.rs`の10境界試験をRustの共通driverで実行する。test-only `recording-model-budget.ts`は独立した要求由来の会計oracle、`__fixtures__/recording-workflow-model-cases.ts`、`recording-workflow-model-contract.test.ts`、`e2e/recording-workflow-model-contract.spec.ts`は92期待DTO・全入力の既存validator受入とApp保存不変を確認する。既存四fixtureの会計を同期した。TS registry／workflow実行機構やnative接続は追加しない。
 
-[prep2b4bの次workflow受入](../design/runtime/historian-recording-registry-workflow-renewal.md)は採用実装設計であり、現在の単一workflowモデルへの追加はまだない。nativeの管理資格・current applyだけのreconciliation制約を参照し、旧record保持・全scope資源・旧ticketの退役条件を閉じてから実装する。
+## 記録registryの次workflow受入（H5d4c4c-prep2b4b）
+
+[次workflow受入](../design/runtime/historian-recording-registry-workflow-renewal.md)の`workflow/renewal.rs`は初回／専用次予約API、creationとpredecessorの再送束縛、履歴台帳の累積予約と各1024bytes管理費用、全静止gate、current accepted apply限定の新read検査を担当する。`workflow/mod.rs`はrecordsとcurrentを分離し、旧ticketによる新操作を防ぎ、proofを元recordへ保存する。caller／native IDのcollisionは全履歴attemptへ検査する。`state.rs`／`escrow.rs`は累積used／reservedと正常終了時の未発行枠だけの返却を維持する。`handle.rs`は正常paused保存時のsticky ever_clean_joinedを更新する。
+
+`examples/recording-workflow-renewal-cases.json`の50シナリオ947ステップと`tests/renewal_boundaries.rs`の10境界試験を共通Rust driverで実行する。test-only `__fixtures__/recording-workflow-renewal-cases.ts`、`recording-workflow-renewal-contract.test.ts`、`e2e/recording-workflow-renewal-contract.spec.ts`は154期待DTO・全入力の契約、累積保持会計、App保存不変を検査する。既存47workflow fixtureへ初回管理費用だけを加算した。複数scope allocator、受信frame順序／矛盾と実接続は後続である。

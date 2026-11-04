@@ -75,6 +75,9 @@ impl RegistryModel {
             self.limits.read_admissions
         };
         require(count < max, ModelError::Capacity)?;
+        if role == Role::Read {
+            self.workflow_read_plan(&request)?;
+        }
         let read_id = if role == Role::Read {
             let rid = q["action"]["reconciliation"]["reconciliationId"]
                 .as_str()
@@ -196,7 +199,7 @@ impl RegistryModel {
             .get_mut(&ticket.admission_id)
             .expect("existing ticket")
             .proof = Some(reply);
-        self.commit_workflow_proof(native_keys);
+        self.commit_workflow_proof(ticket, native_keys);
         self.commit_publication(publication, Some(&ticket.admission_id));
         self.refresh_workflow();
         Ok(())
