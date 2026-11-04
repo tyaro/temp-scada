@@ -769,3 +769,7 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 [次workflow受入](../design/runtime/historian-recording-registry-workflow-renewal.md)の`workflow/renewal.rs`は初回／専用次予約API、creationとpredecessorの再送束縛、履歴台帳の累積予約と各1024bytes管理費用、全静止gate、current accepted apply限定の新read検査を担当する。`workflow/mod.rs`はrecordsとcurrentを分離し、旧ticketによる新操作を防ぎ、proofを元recordへ保存する。caller／native IDのcollisionは全履歴attemptへ検査する。`state.rs`／`escrow.rs`は累積used／reservedと正常終了時の未発行枠だけの返却を維持する。`handle.rs`は正常paused保存時のsticky ever_clean_joinedを更新する。
 
 `examples/recording-workflow-renewal-cases.json`の50シナリオ947ステップと`tests/renewal_boundaries.rs`の10境界試験を共通Rust driverで実行する。test-only `__fixtures__/recording-workflow-renewal-cases.ts`、`recording-workflow-renewal-contract.test.ts`、`e2e/recording-workflow-renewal-contract.spec.ts`は154期待DTO・全入力の契約、累積保持会計、App保存不変を検査する。既存47workflow fixtureへ初回管理費用だけを加算した。複数scope allocator、受信frame順序／矛盾と実接続は後続である。
+
+## 記録registryの複数scope資源（H5d4c4c-prep2b5設計）
+
+[複数scope資源のAstra設計](../design/runtime/historian-recording-registry-global-budget.md)は採用詳細設計であり、domainの実行コードはまだない。既存`recording_registry_model`を内部所有するRust容器と借用facade、scope登録時の全体16MiB／購読32枠の先取り、resource／ownerRefの寿命中一意束縛を後続実装の責務とする。既存single-scopeのworkflow・lease・proof・completion・projectionを再実装せず、可変modelの持ち出しを認めない。実adapter／hostの共有native gateと物理資源の保証、受信frame検査は別工程である。

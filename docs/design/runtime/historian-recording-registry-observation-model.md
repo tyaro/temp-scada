@@ -1,6 +1,6 @@
 # 記録registryモデルの結果観測
 
-状態: **prep2b1・2モデル実装済み、次workflow・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2b1・2モデル実装済み、複数scope・実接続は後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
 [prep2a](historian-recording-registry-model.md)はPR #72で統合済み。本書はその決定的Rustモデルへ不変completionと結果観測を追加する。
 実native owner／DB／SDK／認証／transport／製品hostへ接続しない。Project 0.37.0、DB7、H1、全schema・依存版を維持する。
 
@@ -12,8 +12,8 @@ prep2b1は三つの不足を閉じる。
 - operation結果／reconciliation deliveryを元handleに対応する不変completionとして保存する。
 - 既存WireObservationRequest/Replyをread-only状態遷移として扱う。
 
-[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)を追加した。[prep2b3のsnapshot／subscription](historian-recording-registry-subscription-model.md)も追加した。全workflowのcredit、正常completion後の新mutation解禁、複数owner allocatorは後続である。
-特にAccepted結果が成功／confirmedであってもprep2aの新mutation保守blockを解除しない。
+[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)を追加した。[prep2b3のsnapshot／subscription](historian-recording-registry-subscription-model.md)も追加した。[prep2b4](historian-recording-registry-workflow-model.md)で全workflowのcreditと正常completion後の明示的な次workflow予約も実装した。複数owner allocatorは[prep2b5の詳細設計](historian-recording-registry-global-budget.md)に沿う後続実装である。
+本結果観測の追加だけでは、Accepted結果が成功／confirmedであってもStandaloneの新mutation保守blockを解除しない。
 reconciliation登録はdispatcher slotが空けば独立read枠で可能だが、実nativeのread適格性を保証するものではない。
 
 既存 `scada_runtime::recording_registry_model` だけを拡張する。async task、実時計、callback、generic native backendは追加しない。
@@ -115,7 +115,7 @@ UI disposeやlogical timeoutはモデル入力に存在しない。それらでs
 
 ## 6. 予約と有限性
 
-prep2aの単一scope retained 8MiB、mutation6MiB／read2MiB分割を維持する。host全体allocatorは未実装のままである。
+prep2aの単一scope retained 8MiB、mutation6MiB／read2MiB分割を維持する。host全体allocatorは[prep2b5で詳細設計済み](historian-recording-registry-global-budget.md)だが、未実装である。
 ModelLimitsへoperation_observations／read_observations（各最大4096）、pending_operation_observations／pending_read_observations（各最大2）を追加する。
 縮小した上限による境界試験を許す。元admission/lease/inspectionの上限は変更しない。
 

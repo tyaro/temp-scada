@@ -4,6 +4,15 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録registryの複数scope資源設計（H5d4c4c-prep2b5、2026-11-05）
+
+prep2b4bの[PR #80](https://github.com/tyaro/temp-scada/pull/80)はworkへ統合済み（`64efdee`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41859800728)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41859869176)全7job成功、head `5f99cf9` の自動レビュー指摘なし）。[Astraの複数scope設計](../design/runtime/historian-recording-registry-global-budget.md)で、単一scopeモデルの外に全体16MiB・購読32枠を持つ純粋Rust domainを置く境界を定めた。
+
+scope登録時に設定容量と購読枠を先取りし、各scopeの回復read専用枠と受付済み処理の将来保存を守る。既定8MiBのscopeは2件までで、縮小設定なら増やせる。未使用容量の貸借とcloseによる枠の再利用は行わない。同じ模擬resource／ownerRefを別principalやepochで登録し直して旧不明状態を迂回させない。
+
+既存RegistryModelを内部所有し、段階遷移は借用facadeから再利用する。domainは実native ownerの共有や物理dispatcherの排他を保証しない。今回は詳細設計のみで、複数scopeの実行コードは後続PR。Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持し、実adapter／host接続とP3bは保留する。受信frameの順序・同revision矛盾検出は別工程である。
+Astraの最終read-only整合レビューに必須所見はない。今回は文書変更のみのためローカル全体試験は再実行せず、全体Prettier・相対リンク・差分を確認し、Ready for Review PRの全体CIで回帰を確認する。
+
 ## 記録registryの明示的な次workflow受入（H5d4c4c-prep2b4b、2026-11-05）
 
 [Astraの詳細設計](../design/runtime/historian-recording-registry-workflow-renewal.md)に沿い、正常終端した現在predecessor ticketと同run資格の明示宣言による次workflow予約をRust純粋モデルへ追加した。設計[PR #79](https://github.com/tyaro/temp-scada/pull/79)はworkへ統合済み（`0f00a77`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41853212194)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41853281324)全7job成功、同headレビュー指摘なし）。
