@@ -4,6 +4,12 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 非同期monitor／UIの詳細設計（H5d4c4b、2026-11-04）
+
+c4a実装のPR #67はworkへマージ済み（`1370d4c`、PR／push CIとも全7job成功、同head自動レビュー指摘なし）。Astra主設計で、外部共有coordinatorと非JSON test-only port、受付中／不明・native結果・read静止・呼出終了の分離、旧対象保持と安全な切替を文書化した。
+
+今回は設計文書のみ。既存同期serviceと通常Appを変更せず、次の実装PRでc4aのJSONを使うlocal coordinator／monitor／UIを受け入れる。実lease発行・native adapter・製品transport／認証は後続。各format／依存版と、実Hub／S7／本番DB・上流・資格情報の保留を維持する。
+
 ## 非同期admissionの共通JSON検証（H5d4c4a、2026-11-04）
 
 設計PR #66はworkへ統合済み（`eef9316`）。Astra設計に沿い、受付と受付照会、read障害の五rootを独立schema・Rust／TS owned検証へ実装した。全文echo・stage／ref一致、既存nested契約と、各要求から最大返信を構築できる容量を検査する。受理924・一致15・既知照合6・会計境界12・容量5を共有し、H5a139・d3 target447・対象d4a353も内包した。

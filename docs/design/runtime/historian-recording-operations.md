@@ -323,4 +323,4 @@ c2の[共有native owner](historian-recording-native-owner.md)をRust libraryへ
 
 現行d4b serviceは同realmでの同期受付・同期discard・同期取消応答を持つ。[c4の採用詳細設計](historian-recording-bridge-boundary.md)では、一般IPCに必要な非同期admissionを別契約として設計し、現serviceの返り値を暗黙にPromiseへ変えない。応答喪失は未dispatch拒否と区別し、元ownerへの確認を伴わず再実行しない。native期限はnative側の期限付きleaseで確定し、JSの表示timeoutを物理完了や取消の証明へ変換しない。
 
-c4aの共通契約とc4bのmonitor受入は後続実装であり、この設計文書によって通常AppへRust ownerが接続されたとはしない。host選定と製品transport／認証の再開条件は[P3b](transport-boundary.md)を維持する。
+c4aの共通JSON検証は実装済み。[c4bのmonitor／UI詳細設計](historian-recording-async-monitor.md)は外部共有coordinatorと非同期受付を別契約として定め、実装は後続である。既存同期serviceを暗黙にasync化せず、この設計文書によって通常AppへRust ownerが接続されたとはしない。host選定と製品transport／認証の再開条件は[P3b](transport-boundary.md)を維持する。

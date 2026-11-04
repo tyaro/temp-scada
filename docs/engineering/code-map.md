@@ -703,3 +703,9 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,capacity}.ts`は同じ境界を持つ。`history/owned-json.ts`へadmission opt-inを追加し、既定のcompact／depth32を変えない。`json-equality.ts`は既存d4aと共有するowned JSON比較で、配列順を保持する。
 
 `examples/recording-admission-cases.json`とtest-only `__fixtures__/recording-admission-cases.ts`をRust `recording_admission/tests.rs`、TS `recording-admission-contract.test.ts`、`e2e/recording-admission-contract.spec.ts`で共有する。予算境界、最大reply、再帰closure回避、nested契約、所有・Unicode・外部取得なしと通常App保存不変を確認する。c4bのasync monitor／UI、実lease／registry／IPC／製品hostは未実装で、pure JSON受理をnative実行の証拠にしない。
+
+## 非同期の記録操作monitor／UI（H5d4c4b、設計のみ）
+
+[詳細設計](../design/runtime/historian-recording-async-monitor.md)は、外部root-owned coordinator、UIの選択／表示monitor、test-only非JSON portの責務を定める。受付状態、native操作結果、readUncertainと呼出Promiseの終了を分け、旧ownerの証拠を保ったまま新送信を制限する。
+
+現行`recording-operations/monitor.ts`と`RecordingOperationsWorkspace.svelte`は同期serviceの実装で、c4bの実体ではない。今回の文書更新は新coordinatorや非同期workspaceの追加を意味しない。次の実装PRで実際の配置、同期／非同期の選択と寿命、単体／ブラウザ受入を更新する。c4a純粋契約と既存native ownerは維持する。
