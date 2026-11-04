@@ -20,7 +20,7 @@ rawな選択clientの変化で旧送信用viewを退役させ、live propsの資
 
 同期serviceは独立契約のまま維持し、最初の有効な単独注入でAppのmodeを固定する。二重注入／異modeへのprop交換は新送信を拒否し、旧監視を継続する。五roleそれぞれ4096のID枠を持ち、初回workflowのmutation4／callerOperation2予約と、再試行用追加枠を分離する。mutation枯渇でも予約済みdiscardと独立readAdmissionによる結果照会を保つ。local metadata／frameは専用予算でowned検証し、既存c4a／compact profileを変えない。
 
-新規単体96件を含むTS全6,833件、型検査0error／0warning・build、新規Chromium15件と同期回帰13件、全体Prettier・変更文書9件の相対リンク・差分検査を確認した。Astra最終レビューに必須未決はない。
+新規単体100件を含むTS全6,837件、型検査0error／0warning・build、新規Chromium16件と同期回帰13件、全体Prettier・変更文書9件の相対リンク・差分検査を確認した。Astra最終レビューに必須未決はない。
 
 設計PR #68はworkへマージ済み（`e23bea9`、PR／push CIとも全7job成功）。実lease発行・native adapter・stateframe等の実wireと製品hostは未実装。通常entryは未注入・未接続のまま、Project0.37.0／DB7／H1／SDK／Banto・依存版とP3b保留を維持する。
 
@@ -728,7 +728,7 @@ Project 0.35.0・SDK固定版・Banto 6.9.0・H1・Rust・DB format 5・依存�
 
 最大128定義・各1〜8pen、namespaceとopaque seriesId、色・期間・mode・点数の有限契約を検証する。IDは同梱H1 resourceを参照し、文字列は明示Unicode空白集合とscalar条件、JSONは整数表記へ正規化したcompact UTF-8値で1MiB／depth32／node250,000に制限する。名前・色の綴り・順序を変えずに所有し、TSの返却snapshotは凍結する。系列実在や接続認証の証明は行わない。
 
-共通85fixtureがRust／TS／browserで一致し、1MiB境界・1byte超過、nativeのfloat表記、Unicode／ID末尾改行、重複と点数予算、namespace分離を確認した。Rust workspace388件（新規4）・TS全体1,578件（新規96）・型検査0error／0warning・build・Clippy／rustfmt・関連Chromium16件（新規2）が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+共通85fixtureがRust／TS／browserで一致し、1MiB境界・1byte超過、nativeのfloat表記、Unicode／ID末尾改行、重複と点数予算、namespace分離を確認した。Rust workspace388件（新規4）・TS全体1,578件（新規100）・型検査0error／0warning・build・Clippy／rustfmt・関連Chromium16件（新規2）が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 Project 0.35.0・App／main・DB format 5・H1・SDK／Banto依存は維持する。保存・配置・context v2は未実装。次はH4c2でProject側にも同じresourceと意味検査・予算を使い、参照整合性とSymbol配置禁止を加える。上流・S7・実Hub／DB／設定・資格情報へ接続していない。
 

@@ -1106,3 +1106,90 @@ it.each([
     );
   },
 );
+it.each(["notFound", "receiptFound"])(
+  "cached %s with historical unknown quiescence is idempotent after native confirmation",
+  async (kind) => {
+    const s = setup();
+    await appliedUnknown(s);
+    s.view.reconcile(control());
+    await flush();
+    const d = s.h.finishRead(0, kind, { quiescence: "unknown" });
+    await flush();
+    expect(s.client.current().latest?.quiescence).toBe("unknown");
+    const original = s.client.current().completion;
+    s.h.emit({
+      operation: {
+        operationRef: s.h.operations[2].handle.operationRef,
+        result: { ...s.h.result(2, "workerFailure"), quiescence: "confirmed" },
+      },
+    });
+    await flush();
+    expect(s.client.current().invalid).toBe(false);
+    expect(s.client.current().latest?.quiescence).toBe("confirmed");
+    expect(s.client.current().completion).toBe(original);
+    expect(s.client.current().delivery).toEqual(d);
+    expect(s.client.current().canReconcile).toBe(true);
+  },
+);
+it("first late historical read delivery cannot erase confirmed original quiescence", async () => {
+  const s = setup();
+  await appliedUnknown(s);
+  s.view.reconcile(control());
+  await flush();
+  const r = s.h.reads[0],
+    request = r.handle.request;
+  const delivery = {
+    version: 1,
+    kind: "recordingReconciliationDelivery",
+    ownerRef: s.h.ownerRef,
+    readRef: r.handle.readRef,
+    request,
+    outcome: {
+      kind: "result",
+      result: {
+        version: 1,
+        kind: "recordingReconciliationResult",
+        request,
+        outcome: {
+          kind: "receiptFound",
+          receipt: s.h.receipt(request.operation),
+        },
+        quiescence: "unknown",
+        recoveryRequired: true,
+      },
+    },
+  } as const;
+  s.h.emit({
+    operation: {
+      operationRef: s.h.operations[2].handle.operationRef,
+      result: { ...s.h.result(2, "workerFailure"), quiescence: "confirmed" },
+    },
+    reconciliation: delivery,
+  });
+  expect(s.client.current().invalid).toBe(false);
+  expect(s.client.current().latest?.quiescence).toBe("confirmed");
+  expect(s.client.current().lastApplied).toBeDefined();
+  expect(s.client.current().canReconcile).toBe(false);
+  r.resolve(delivery);
+  await flush();
+  expect(s.client.current().canReconcile).toBe(true);
+  expect(s.client.current().latest?.quiescence).toBe("confirmed");
+});
+it("changed immutable reconciliation delivery stays invalid without losing receipt evidence", async () => {
+  const s = setup();
+  await appliedUnknown(s);
+  s.view.reconcile(control());
+  await flush();
+  const d = s.h.finishRead(0);
+  await flush();
+  const known = s.client.current().delivery;
+  s.h.emit({
+    reconciliation: {
+      ...d,
+      outcome: { kind: "readUncertain", error: "workerFailure" },
+    },
+  });
+  expect(s.client.current().invalid).toBe(true);
+  expect(s.client.current().delivery).toBe(known);
+  expect(s.client.current().lastApplied).toBeDefined();
+});

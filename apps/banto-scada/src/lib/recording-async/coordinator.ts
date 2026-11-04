@@ -416,8 +416,10 @@ export function createAsyncRecordingOperationsCoordinator(
       !sameOwnedJson(d.request, t.request)
     )
       throw Error("wrong read");
-    if (t.delivery && !sameOwnedJson(t.delivery, d))
-      throw Error("changed read");
+    if (t.delivery) {
+      if (!sameOwnedJson(t.delivery, d)) throw Error("changed read");
+      return;
+    }
     t.delivery = d;
     if (d.outcome.kind === "readUncertain") {
       readPhase = "readUncertain";
@@ -428,8 +430,6 @@ export function createAsyncRecordingOperationsCoordinator(
     if (!op || !sameOwnedJson(op.request, next.request.operation))
       throw Error("wrong original");
     const old = op.latest;
-    if (old?.quiescence === "confirmed" && next.quiescence !== "confirmed")
-      throw Error("quiescence rollback");
     if (next.outcome.kind === "receiptFound")
       opResult(op, {
         version: 1,

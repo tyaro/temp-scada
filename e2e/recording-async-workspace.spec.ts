@@ -363,3 +363,29 @@ test("cancel interrupted before dispatch can be explicitly requested after recon
     await page.evaluate(() => (window as any).__asyncHarness.h.cancels.length),
   ).toBe(1);
 });
+test("cached reconciliation unknown stays valid after later original-operation quiescence confirmation", async ({
+  page,
+}) => {
+  await prepare(page);
+  await applying(page);
+  await finish(page, 2, "workerFailure");
+  await button(page, "元要求の結果を照会").click();
+  await page.evaluate(() =>
+    (window as any).__asyncHarness.h.finishRead(0, "receiptFound", {
+      quiescence: "unknown",
+    }),
+  );
+  await expect(dialog(page)).toContainText("設定commit済み");
+  await page.evaluate(() => {
+    const h = (window as any).__asyncHarness.h;
+    h.emit({
+      operation: {
+        operationRef: h.operations[2].handle.operationRef,
+        result: { ...h.result(2, "workerFailure"), quiescence: "confirmed" },
+      },
+    });
+  });
+  await expect(dialog(page)).toContainText("静止確認: 確認済み");
+  await expect(dialog(page).getByRole("alert")).toHaveCount(0);
+  await expect(button(page, "元要求の結果を照会")).toBeEnabled();
+});

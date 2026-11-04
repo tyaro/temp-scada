@@ -8,9 +8,9 @@
 
 設計PR #68はworkへマージ済み（`e23bea9`、PR／push CI全7job成功）。Astra設計に沿い、Appより長寿命の外部共有root、test-only port、任意注入client・通常Appの三段階操作／受付照会／結果照会を追加した。同期経路を保ち、二重注入・異mode交換でも旧監視を常設保持する。
 
-正常unknownからの明示照会による復帰と、未完了／reject／不正応答での有限停止を分ける。Astraレビューでlocal IDの末尾改行と、lease拒否後のretryが後続apply／discardの予約を消費する点を修正した。五role各4096、stage初回予約とretry追加枠、mutation満杯での独立readを受け入れる。新規単体96件、TS全6,833件、型検査0/0・build、新規Chromium15件／同期回帰13件、全体整形・変更文書9件リンク・差分を確認。Astra最終レビューに必須未決なし。実lease発行／native接続／製品transport・認証は追加しない。
+正常unknownからの明示照会による復帰と、未完了／reject／不正応答での有限停止を分ける。Astraレビューでlocal IDの末尾改行と、lease拒否後のretryが後続apply／discardの予約を消費する点を修正した。五role各4096、stage初回予約とretry追加枠、mutation満杯での独立readを受け入れる。新規単体100件、TS全6,837件、型検査0/0・build、新規Chromium16件／同期回帰13件、全体整形・変更文書9件リンク・差分を確認。Astra最終レビューに必須未決なし。実lease発行／native接続／製品transport・認証は追加しない。
 
-PR #69の自動レビューで選択client交換時の旧view退役漏れを修正し、検査・pause・applyの回帰を追加した。lease解決とprop交換の同一turn再現からlive props qualificationを追加し、effect前送信も止める。照会・取消の通知中にreadUncertainへ変化した場合も送信直前に再検査する。未送信の取消中止で送信済み枠を消費しないよう修正し、再open／再接続後の明示取消も受け入れる。callbackの再入・throw／非booleanは送信資格へ変換せず、元owner観測を継続する。
+PR #69の自動レビューで選択client交換時の旧view退役漏れを修正し、検査・pause・applyの回帰を追加した。lease解決とprop交換の同一turn再現からlive props qualificationを追加し、effect前送信も止める。照会・取消の通知中にreadUncertainへ変化した場合も送信直前に再検査する。未送信の取消中止で送信済み枠を消費しないよう修正し、再open／再接続後の明示取消も受け入れる。結果照会cacheの重複と古いunknownを冪等・単調に統合し、後着の元operation静止確認を保持する。callbackの再入・throw／非booleanは送信資格へ変換せず、元owner観測を継続する。
 
 ## 非同期monitor／UIの詳細設計（H5d4c4b、2026-11-04）
 
@@ -214,7 +214,7 @@ H1／DB format 5／SDK固定版／Banto 6.9.0と外部依存は維持する。�
 
 最大128定義・各1〜8pen、namespaceとopaque seriesId、色・期間・mode・点数の有限契約を検証する。IDは同梱H1 resourceを参照し、文字列は明示Unicode空白集合とscalar条件、JSONは整数表記へ正規化したcompact UTF-8値で1MiB／depth32／node250,000に制限する。名前・色の綴り・順序を変えずに所有し、TSの返却snapshotは凍結する。系列実在や接続認証の証明は行わない。
 
-共通85fixtureがRust／TS／browserで一致し、1MiB境界・1byte超過、nativeのfloat表記、Unicode／ID末尾改行、重複と点数予算、namespace分離を確認した。Rust workspace388件（新規4）・TS全体1,578件（新規96）・型検査0error／0warning・build・Clippy／rustfmt・関連Chromium16件（新規2）が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
+共通85fixtureがRust／TS／browserで一致し、1MiB境界・1byte超過、nativeのfloat表記、Unicode／ID末尾改行、重複と点数予算、namespace分離を確認した。Rust workspace388件（新規4）・TS全体1,578件（新規100）・型検査0error／0warning・build・Clippy／rustfmt・関連Chromium16件（新規2）が成功。Astra最終レビューに必須修正はない。全体CIはPRで確認する。
 
 Project 0.35.0・App／main・DB format 5・H1・SDK／Banto依存は維持する。保存・配置・context v2は未実装。次はH4c2でProject側にも同じresourceと意味検査・予算を使い、参照整合性とSymbol配置禁止を加える。上流・S7・実Hub／DB／設定・資格情報へ接続していない。
 
