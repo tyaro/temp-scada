@@ -159,6 +159,7 @@ docs/
 - [記録計画の明示操作・結果照会とowner境界（H5d4a〜b実装）](design/runtime/historian-recording-operations.md)
 - [元apply全文に対するnative receipt読取（H5d4c1）](design/runtime/historian-recording-receipt-reader.md)
 - [記録操作の共有native owner（H5d4c2、Rust実装）](design/runtime/historian-recording-native-owner.md)
+- [同owner内の明示結果照会（H5d4c3、詳細設計・未実装）](design/runtime/historian-recording-owner-reconciliation.md)
 - [記録計画の永続台帳・mapping登録・原子的apply（H5b1）](design/runtime/historian-recording-plan-ledger.md)
 - [記録開始と適用計画の原子的結合（H5b2）](design/runtime/historian-recording-activation.md)
 - [適用済み計画からのRecorder／Host開始（H5c1）](design/runtime/historian-managed-recorder.md)

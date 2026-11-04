@@ -4,7 +4,7 @@
 
 ## 1. 範囲と工程
 
-[明示操作契約](historian-recording-operations.md)のd4a純粋JSON、d4b optional service／App monitor、[c1 receipt reader](historian-recording-receipt-reader.md)は実装済み。c2は単一supervisorを全callerで共有するnative ownerと受理前registry、preflight→明示pause/join→明示apply、d4aへの結果投影を実装した。c3でc1 readを同ownerの明示reconciliationへ接続する。
+[明示操作契約](historian-recording-operations.md)のd4a純粋JSON、d4b optional service／App monitor、[c1 receipt reader](historian-recording-receipt-reader.md)は実装済み。c2は単一supervisorを全callerで共有するnative ownerと受理前registry、preflight→明示pause/join→明示apply、d4aへの結果投影を実装した。c3でc1 readを同ownerの明示reconciliationへ接続する。[c3詳細設計](historian-recording-owner-reconciliation.md)を定め、実装は後続に分ける。
 
 薄いpreflight wrapperだけを先に公開すると、受付ID・apply結果・owner寿命の責務が未完のままになる。c2では三段階を一貫して受け入れ、HTTP／IPC／Tauri commandやJS serviceの実接続は追加しない。Rust ownerを作っただけで通常Appのin-process serviceが接続済みとは扱わない。
 
