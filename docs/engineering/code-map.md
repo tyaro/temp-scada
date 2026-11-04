@@ -770,6 +770,8 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 
 `examples/recording-workflow-renewal-cases.json`の50シナリオ947ステップと`tests/renewal_boundaries.rs`の10境界試験を共通Rust driverで実行する。test-only `__fixtures__/recording-workflow-renewal-cases.ts`、`recording-workflow-renewal-contract.test.ts`、`e2e/recording-workflow-renewal-contract.spec.ts`は154期待DTO・全入力の契約、累積保持会計、App保存不変を検査する。既存47workflow fixtureへ初回管理費用だけを加算した。複数scope allocator、受信frame順序／矛盾と実接続は後続である。
 
-## 記録registryの複数scope資源（H5d4c4c-prep2b5設計）
+## 記録registryの複数scope資源（H5d4c4c-prep2b5a）
 
-[複数scope資源のAstra設計](../design/runtime/historian-recording-registry-global-budget.md)は採用詳細設計であり、domainの実行コードはまだない。既存`recording_registry_model`を内部所有するRust容器と借用facade、scope登録時の全体16MiB／購読32枠の先取り、resource／ownerRefの寿命中一意束縛を後続実装の責務とする。既存single-scopeのworkflow・lease・proof・completion・projectionを再実装せず、可変modelの持ち出しを認めない。実adapter／hostの共有native gateと物理資源の保証、受信frame検査は別工程である。
+[複数scope資源のAstra設計](../design/runtime/historian-recording-registry-global-budget.md)に沿い、`recording_registry_model/domain/mod.rs`は有限登録・resource／ownerRefの寿命中一意束縛・容量と購読枠の全量予約・opaque ticket・共通仮想時計・seal・予約統計を担当する。`domain/facade.rs`は25の既存typed APIを転送する。独立advance／DerefMut／modelの持ち出しを提供せず、既存scopeの各gate・結果保持を再利用する。
+
+`domain/tests.rs`の14境界試験とcompile-fail2件は予約と実使用の区別、32scope／購読と16MiBの上限、回復read・将来completion、再送・帰属・clock・Dropを検証する。`tests.rs`の共通driverは既存289シナリオを単独／domain両経路で実行し、全domainケース後の登録再送も照合する。TS／browserの既存wire契約試験を再利用し、新しいwire／schemaや第二のTS registryを追加しない。実adapter／hostの共有native gateと物理資源の保証、受信frame検査は別工程である。

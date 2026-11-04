@@ -1,6 +1,6 @@
 use super::*;
 use serde::Serialize;
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub struct ModelInstant(pub u64);
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SimulatedPrincipal(String);
@@ -96,7 +96,7 @@ impl std::fmt::Display for ModelError {
     }
 }
 impl std::error::Error for ModelError {}
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ModelLimits {
     pub workflow_changes: usize,
     pub caller_operation_ids: usize,

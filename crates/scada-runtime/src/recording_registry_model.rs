@@ -2,6 +2,8 @@
 //! No native owner, clock, executor, callbacks, persistence or transport is used.
 mod admission;
 mod cancel;
+mod domain;
+pub use domain::*;
 mod handle;
 mod inspection;
 mod lease;
