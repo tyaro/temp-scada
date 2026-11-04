@@ -739,3 +739,11 @@ TSの`recording-wire-contract.ts`と`recording-wire/{types,budget,semantic,capac
 `admission.rs`は従来のknowledge／元terminal予約へ958464bytesまたは512KiBを固定追加し、Accepted保存とhandle登録を原子的に行う。rootのModelStatsはhandle数・観測数・未回収slot・模擬native recoveryのsticky ORを表示する。実時計／native owner／DB／SDK／transportは引き続き参照しない。
 
 `examples/recording-observation-model-cases.json`の48シナリオ480ステップを既存Rust scenario driverへ追加し、`tests/observation_boundaries.rs`でinstance固有ticket・ref競合・上限・二重回収の境界を確認する。test-only `__fixtures__/recording-observation-model-cases.ts`、`recording-observation-model-contract.test.ts`、`e2e/recording-observation-model-contract.spec.ts`は期待DTOの既存validator受入と通常App保存不変を確認する。既存prep2a fixtureの容量期待値は追加予約へ合わせる。schemaや第二のTS registryは追加しない。
+
+## 記録registryモデルの取消（H5d4c4c-prep2b2）
+
+`recording_registry_model/cancel.rs`は受理前のscope／ID／slot／最大reply予約、登録時target binding、handleごとの模擬通知一回性、不変decisionと元call終端を担当する。`types.rs`のModelCancelTicketはinstance＋sequence＋cancelIdに束縛する非Deserializeの型であり、native tokenではない。`inspection.rs`はCancel originalを未登録notFound／未終端pending／保存済みreplyへ照合し、notifyやfinishを呼ばない。
+
+rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedのfalse→trueだけを追加する。通知・ackは既存operation/read completion・admission・観測slot・recoveryを変更しない。JSONの論理completionから返すalreadyCompletedを実native task静止の証拠にしない。
+
+`examples/recording-cancel-model-cases.json`の41シナリオ415ステップをRustの共通driverで実行し、`tests/cancel_boundaries.rs`でticket所有・改変・counter overflow・受付拒否原子性・他軸不変を検証する。test-only `__fixtures__/recording-cancel-model-cases.ts`、`recording-cancel-model-contract.test.ts`、`e2e/recording-cancel-model-contract.spec.ts`は既存JSON契約と通常App保存不変だけを確認する。prep2aの未対応original fixtureはAttachへ更新し、取消の第二のTSモデルを作らない。

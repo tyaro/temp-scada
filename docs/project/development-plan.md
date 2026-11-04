@@ -57,7 +57,7 @@ c4c-prep1の純粋wire JSON契約14root・Rust／TS validator・共通fixture・
 
 [Astraの詳細設計](../design/runtime/historian-recording-registry-model.md)に沿い、prep2aの仮想lease・受付台帳・元call終端照会をRustの単一ownerモデルへ実装した。55シナリオで同一要求・期限・受付不明・late proof・容量とread独立枠を検証し、TS／browserは既存JSON契約への適合だけを検証する。prep1のPR #71はworkへ統合済み（`bbc5359`、PR／push CI全7job成功、同headレビュー指摘なし）。
 
-[prep2b1の詳細設計](../design/runtime/historian-recording-registry-observation-model.md)に沿い、model-bound handle、不変completionとread-only結果観測を実装した。prep2aのPR #72はworkへ統合済み（`d1ba233`、PR／push CI全7job成功、同headレビュー指摘なし）。次はprep2b2の取消通知／ackと元call照会を段階化し、その後に完全snapshot／subscription・再接続、workflow creditと複数scope資源を詳細化する。prep2aのAccepted／未確定recordから新mutationを解禁する前に、予約と正常completionの根拠を閉じる。実adapter・hostへの接続はP3b条件を満たす別工程とし、モデルの成功を認証・実Hub／S7・本番運用の受入へ置き換えない。
+[prep2b1の詳細設計](../design/runtime/historian-recording-registry-observation-model.md)に沿い、model-bound handle、不変completionとread-only結果観測を実装した。prep2aのPR #72はworkへ統合済み（`d1ba233`、PR／push CI全7job成功、同headレビュー指摘なし）。[prep2b2の取消設計](../design/runtime/historian-recording-registry-cancel-model.md)に沿い、模擬通知の高々一回性・不変ack・元call照会も実装した。prep2b1のPR #73はworkへ統合済み（`fb7bf08`、PR／push CI全7job成功、同headレビュー指摘なし）。次は完全snapshot／subscription・再接続の純粋モデルを詳細化し、その後にworkflow creditと複数scope資源を扱う。prep2aのAccepted／未確定recordから新mutationを解禁する前に、予約と正常completionの根拠を閉じる。実adapter・hostへの接続はP3b条件を満たす別工程とし、モデルの成功を認証・実Hub／S7・本番運用の受入へ置き換えない。
 
 ## H5c2の実装順
 

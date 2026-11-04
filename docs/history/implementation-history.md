@@ -4,6 +4,16 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録registryモデルの取消と不変ack（H5d4c4c-prep2b2、2026-11-04）
+
+prep2b1のPR #73をworkへ統合（`fb7bf08`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[prep2b2](../design/runtime/historian-recording-registry-cancel-model.md)として、受理前取消登録・模擬通知・元call終端を分離した。通知はhandleごと高々一回、未知refのbindingは不変、pauseJoinのstopは撤回しない。CallInspectionはfinishまでpendingで、後から元ackを回収する。
+
+alreadyCompletedは論理的な保存済みcompletionだけを表し、unknown静止やreadUncertainの物理終了を証明しない。取消によって元admission・操作結果・観測slot・sticky recoveryを変更しない。cancel ID4096・未終端1の上限と、read枠からrequest実測＋既存最大reply上界の固定予約を追加した。
+
+新41シナリオ415ステップと既存55＋48シナリオをRustで実行し、TS／browserは同じ期待DTOの独立validator適合・所有・App保存不変を検証する。既存prep2aの未対応original例は、今回対応したCancelから未対応Attachへ置き換えた。schema・Project0.37.0／DB7／H1／SDK／Banto／依存版と通常Appを変更しない。
+
+Rust workspace658件（新規6）、TS全9,303件（新規208）、型検査0error／0warning・build、関連Chromium6件（新規1）、Clippy全target `-D warnings`／rustfmt、全体Prettier・変更文書10件の相対リンク955箇所・差分検査が成功した。Astra最終read-onlyレビューに必須所見はない。snapshot／subscription・再接続、全workflow予約・複数scope allocatorと実native接続は後続で、P3b保留を維持する。
+
 ## 記録registryモデルの不変結果と観測（H5d4c4c-prep2b1、2026-11-04）
 
 prep2aのPR #72をworkへ統合（`d1ba233`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[prep2b1](../design/runtime/historian-recording-registry-observation-model.md)として、private model-bound handle ticket、不変operation／read completion、read-only観測を実装した。read Acceptedは既存apply handleと元全文に束縛し、元completionの証拠がないconfirmedや回復要求の後退を拒否する。

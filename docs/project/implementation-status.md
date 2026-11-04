@@ -10,6 +10,14 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 記録registryモデルの取消（H5d4c4c-prep2b2、2026-11-04）
+
+[Astraの詳細設計](../design/runtime/historian-recording-registry-cancel-model.md)に沿い、取消の受理前登録・模擬通知・元call終端を別遷移で実装した。handleごとの通知は高々一回で、異なるcancelIdの再要求でも再通知しない。未知refは登録時に固定し、後着Acceptedから別の処理へ取消を転送しない。
+
+元cancel ackを不変保持し、finishまではCallInspectionがpending、finish後は元返信を回収する。requested／alreadyCompletedを操作の物理静止・rollback・観測枠解放へ変換しない。pauseJoinのstopは撤回せずnotSupportedを返す。新規cancelのID／未終端1枠／最大返信容量をread専用予算から事前予約する。
+
+新41シナリオ415ステップと既存103シナリオをRustで実行し、TS／browserは期待DTOの既存validator受入・所有と通常App保存不変を確認する。prep2b1のPR #73はworkへ統合済み（`fb7bf08`、PR／push CI全7job成功、同head自動レビュー指摘なし）。snapshot／購読・再接続、workflow creditと実native／host接続は後続で、P3b保留とProject／DB／schema／依存版を維持する。
+
 ## 記録registryモデルの結果観測（H5d4c4c-prep2b1、2026-11-04）
 
 [Astraの詳細設計](../design/runtime/historian-recording-registry-observation-model.md)に沿い、model固有のopaque handle ticket、不変operation／read completion、read-onlyな結果観測をRustモデルへ追加した。元admission callの終端・受付知識・操作結果は独立に保持し、成功receiptを得ても新mutationの保守blockを解除しない。
@@ -18,7 +26,7 @@ read Acceptedは既存apply handleと元request全文に束縛する。元apply�
 
 operation／read観測は各ID4096・未回収pending各2の上限を持つ。completionがreadyになっただけでは枠を解放せず、同IDでterminalを回収した時に解放する。未知refは不変unavailableとして保持し、後着Acceptedから操作を勝手に開始しない。completion用の固定容量も受付前に予約する。
 
-新規48シナリオ・480ステップと既存55シナリオをRustで実行し、TS／browserで期待DTOの既存契約・所有・通常App保存不変を確認する。prep2aのPR #72はworkへ統合済み（`d1ba233`、PR／push CI全7job成功、同head自動レビュー指摘なし）。取消・購読／再接続、workflow creditと実native／host接続は後続で、P3b保留とProject／DB／schema／依存版を維持する。
+新規48シナリオ・480ステップと既存55シナリオをRustで実行し、TS／browserで期待DTOの既存契約・所有・通常App保存不変を確認する。prep2aのPR #72はworkへ統合済み（`d1ba233`、PR／push CI全7job成功、同head自動レビュー指摘なし）。取消は上節のprep2b2へ進み、購読／再接続、workflow creditと実native／host接続は後続で、P3b保留とProject／DB／schema／依存版を維持する。
 
 ## 記録操作registryの状態モデル（H5d4c4c-prep2a、2026-11-04）
 
@@ -28,7 +36,7 @@ operation／read観測は各ID4096・未回収pending各2の上限を持つ。co
 
 共通55シナリオ・201ステップをRustで実行し、期待DTO transcriptをTS／browserの既存validatorで確認する。browserに第二のregistryを作らない。raw scopeは複製前にbounded検査する。
 
-prep1のPR #71はworkへ統合済み（`bbc5359`、PR／push CIとも全7job成功、最終headの自動レビューに指摘なし）。prep2aは未解放workflow後の新mutationを保守停止する限定モデルであり、実lease発行・registry adapterを提供したとは扱わない。結果観測は上節のprep2b1へ進み、取消／購読・再接続、workflow credit、製品host・認証・P3bは後続である。
+prep1のPR #71はworkへ統合済み（`bbc5359`、PR／push CIとも全7job成功、最終headの自動レビューに指摘なし）。prep2aは未解放workflow後の新mutationを保守停止する限定モデルであり、実lease発行・registry adapterを提供したとは扱わない。結果観測・取消は上節のprep2b1・2へ進み、購読・再接続、workflow credit、製品host・認証・P3bは後続である。
 
 ## 記録操作wireの純粋契約（H5d4c4c-prep1、2026-11-04）
 

@@ -3575,36 +3575,6 @@
         "kind": "notFound"
       }
     },
-    "cancelOriginal": {
-      "version": 1,
-      "kind": "recordingWireCancelRequest",
-      "scope": {
-        "ownerRef": "owner",
-        "ownerEpoch": "epoch:1",
-        "context": {
-          "version": 1,
-          "kind": "recordingOperationsContext",
-          "target": {
-            "version": 1,
-            "kind": "recordingManagementContext",
-            "contextId": "context:1",
-            "projectId": " プロジェクト\r\nA ",
-            "projectRevision": 2,
-            "deploymentId": "deployment:1",
-            "storeId": "store:1",
-            "historianNamespace": null
-          },
-          "capabilityId": "capability:1",
-          "recordingRunRef": "run:1",
-          "sessionId": "session:1"
-        }
-      },
-      "cancelId": "cancel",
-      "target": {
-        "kind": "operation",
-        "ref": "operation-ref"
-      }
-    },
     "unsupported": {
       "version": 1,
       "kind": "recordingWireCallInspectionRequest",
@@ -3632,7 +3602,7 @@
       "callInspectionId": "unsupported",
       "original": {
         "version": 1,
-        "kind": "recordingWireCancelRequest",
+        "kind": "recordingWireAttachRequest",
         "scope": {
           "ownerRef": "owner",
           "ownerEpoch": "epoch:1",
@@ -3654,11 +3624,8 @@
             "sessionId": "session:1"
           }
         },
-        "cancelId": "cancel",
-        "target": {
-          "kind": "operation",
-          "ref": "operation-ref"
-        }
+        "attachId": "attach",
+        "afterRevision": 1
       }
     },
     "unsupportedReply": {
@@ -3691,7 +3658,7 @@
         "callInspectionId": "unsupported",
         "original": {
           "version": 1,
-          "kind": "recordingWireCancelRequest",
+          "kind": "recordingWireAttachRequest",
           "scope": {
             "ownerRef": "owner",
             "ownerEpoch": "epoch:1",
@@ -3713,11 +3680,8 @@
               "sessionId": "session:1"
             }
           },
-          "cancelId": "cancel",
-          "target": {
-            "kind": "operation",
-            "ref": "operation-ref"
-          }
+          "attachId": "attach",
+          "afterRevision": 1
         }
       },
       "outcome": {
@@ -3762,6 +3726,33 @@
         "deadlineLeaseRef": "model-lease:2",
         "grantedBudgetMs": 10
       }
+    },
+    "unsupportedOriginal": {
+      "version": 1,
+      "kind": "recordingWireAttachRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "attachId": "attach",
+      "afterRevision": 1
     }
   },
   "scenarios": [

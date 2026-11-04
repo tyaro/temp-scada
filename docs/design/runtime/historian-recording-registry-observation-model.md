@@ -1,6 +1,6 @@
 # 記録registryモデルの結果観測
 
-状態: **prep2b1モデル実装済み、取消・購読・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2b1・2モデル実装済み、購読・workflow予約・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
 [prep2a](historian-recording-registry-model.md)はPR #72で統合済み。本書はその決定的Rustモデルへ不変completionと結果観測を追加する。
 実native owner／DB／SDK／認証／transport／製品hostへ接続しない。Project 0.37.0、DB7、H1、全schema・依存版を維持する。
 
@@ -12,7 +12,7 @@ prep2b1は三つの不足を閉じる。
 - operation結果／reconciliation deliveryを元handleに対応する不変completionとして保存する。
 - 既存WireObservationRequest/Replyをread-only状態遷移として扱う。
 
-cancel、全workflowのcredit、正常completion後の新mutation解禁、snapshot／subscription、複数owner allocatorは後続である。
+[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)を追加した。全workflowのcredit、正常completion後の新mutation解禁、snapshot／subscription、複数owner allocatorは後続である。
 特にAccepted結果が成功／confirmedであってもprep2aの新mutation保守blockを解除しない。
 reconciliation登録はdispatcher slotが空けば独立read枠で可能だが、実nativeのread適格性を保証するものではない。
 
@@ -172,5 +172,5 @@ Rustが状態遷移を実行し、browserは生成・期待wire DTOを既存vali
 | 不変block        | 成功receipt後も新mutation拒否、clockFault／close後の既知証拠保持、native適格性非保証        |
 | 出力             | 既存wire／d4a／c4a validatorの独立予算、表示順・数値同値、schema／依存変更無し              |
 
-cancelはprep2b2へ分離し、cancel通知と不変ack、元call照会、late結果、未送信資格を次に設計する。
+cancelはprep2b2で通知と不変ack、元call照会、late結果、未送信資格を純粋モデルへ実装した。ackを物理終了・回復解除に変換しない。
 workflow解禁とsubscriptionの実装順はその受入後に判断し、今回の成功を実transport／native製品adapterの完了と呼ばない。

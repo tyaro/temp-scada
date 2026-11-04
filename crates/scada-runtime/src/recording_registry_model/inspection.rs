@@ -122,6 +122,26 @@ impl RegistryModel {
                     json!({"kind":"notFound"})
                 }
             }
+            "recordingWireCancelRequest" => {
+                if let Some(r) = self
+                    .cancels
+                    .get(original["cancelId"].as_str().expect("validated ID"))
+                {
+                    let current = RecordingWireCancelRequest::from_value(original.clone())
+                        .map_err(|_| ModelError::InvalidInput)?;
+                    require(
+                        same_recording_wire_request(r.request.as_document(), current.as_document()),
+                        ModelError::ProtocolViolation,
+                    )?;
+                    if r.terminal {
+                        json!({"kind":"terminal","reply":r.decision.as_ref().expect("terminal decision").as_value()})
+                    } else {
+                        json!({"kind":"pending"})
+                    }
+                } else {
+                    json!({"kind":"notFound"})
+                }
+            }
             _ => json!({"kind":"unavailable","error":"ownerUnavailable"}),
         };
         let reply=RecordingWireCallInspectionReply::from_value(json!({"version":1,"kind":"recordingWireCallInspectionReply","request":q,"outcome":outcome})).map_err(|_|ModelError::InvalidInput)?;

@@ -68,6 +68,7 @@ impl RegistryModel {
                 sequence: ticket.sequence,
                 original_operation,
                 completion: None,
+                cancel_notified: false,
             },
         );
         Ok(())

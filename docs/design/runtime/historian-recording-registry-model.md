@@ -1,6 +1,6 @@
 # 記録操作registryの決定的状態モデル
 
-状態: **prep2a／prep2b1モデル実装済み、残るprep2b・実adapterは未実装**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2a／prep2b1・2モデル実装済み、購読・workflow予約・実adapterは後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
 [wire／host設計](historian-recording-wire-host.md)のprep1はPR #71で統合済み。本書はそのJSONを使うprep2を具体化する。
 実registry adapter、native dispatch、lease実発行、時計・認証・通信待受・製品hostを追加する許可ではない。
 Project 0.37.0／DB7／H1／SDK／Banto／依存とP3b保留を維持する。
@@ -12,7 +12,7 @@ Project 0.37.0／DB7／H1／SDK／Banto／依存とP3b保留を維持する。
 Tokio、Instant、SystemTime、DB、ファイル、network、SDK、callbackの呼出しをmoduleに入れない。
 全操作は `&mut self` の決定的遷移である。Rustの逐次呼出しで全caller gateを模擬し、実process間排他や認可の実装とは称さない。
 
-[prep2b1](historian-recording-registry-observation-model.md)でmodel-bound handleと不変completion／結果観測を追加した。cancel／snapshot・subscriptionは後続である。workflow全段階の予約と元runのpause／apply適格性もその段階で詳細化する。
+[prep2b1](historian-recording-registry-observation-model.md)でmodel-bound handleと不変completion／結果観測を追加した。[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)も追加した。snapshot・subscriptionは後続である。workflow全段階の予約と元runのpause／apply適格性もその段階で詳細化する。
 prep2aは既存c4a全actionの受付台帳を扱えるが、nativeがそのactionを許可すべきかは実装しない。fake決定を明示入力する。
 この限定によって、単一callの曖昧さを検証するためにrecording／retention／native ownerを二重実装しない。
 
@@ -126,8 +126,7 @@ Registeredのunknownには既存閉じたOperationErrorのworkerFailure等、未
 既知Acceptedを過去のunknown元返信へ格下げしない。foundは元dispatcher終端の証明ではない。
 
 inspect_callは元callの保存terminalだけを返す。recordあり未終端ならpending、未登録ならnotFound。
-prep2aで扱うoriginalはLeaseRequest／AdmissionRequest／AdmissionInspectionRequestのみ。
-Cancel／Attach／Controlはschemaとして合法でもprep2a未対応であり、型付きCallInspectionReplyのunavailable／ownerUnavailableを返す。未対応をnotFoundへ偽装しない。
+prep2aで扱うoriginalはLeaseRequest／AdmissionRequest／AdmissionInspectionRequestで、prep2b2にCancelを追加した。Attach／Controlはschemaとして合法でも未対応であり、型付きCallInspectionReplyのunavailable／ownerUnavailableを返す。未対応をnotFoundへ偽装しない。
 inspect_admission自身は同期readとしてその時点のreplyを元call終端台帳へ保存する。同ID再照会は同じ元replyを返し、最新knowledgeが必要なら新inspectionIdを使う。
 CallInspection自体のIDは同originalへ束縛するが、そのread-only照会はpending→terminalを返せる。自己をoriginalにしない。
 
@@ -178,12 +177,12 @@ prep2bでphase進行を解禁する前に、preflight／pause／apply／discard 
 ## 9. prep2bの接続点（結果観測は実装済み、残りは後続）
 
 結果観測はprep2b1でfake operation／read handleごとの不変completionを保持し、元call terminalとは別のread-only protocolとして実装した。read Acceptedは既存apply handleに束縛し、read結果から元applyの静止・回復解除を推測しない。
-cancelはfake token通知を高々一回記録し、requestedを完了へ変換しない。元cancel replyはCallInspectionから取得できるようにする。
+cancelはprep2b2でfake通知をhandleごと高々一回記録し、requestedを完了へ変換しない。元cancel replyはfinish後にCallInspectionから取得できる。
 結果projectionではreceipt／quiescence／sticky recoveryを独立させ、receiptFoundでunknown静止をconfirmedへ変更しない。
 
 snapshot／subscriptionは同じ逐次gateで購読登録とrevision Rのsnapshotを原子取得する。
 購読slotはstate1＋control1、coalesceは完全snapshotだけ。snapshot返却前のframe、同revision矛盾、遅いsubscriber、detach／reconnectを仮想配送順で試験する。
-frameだけで元call terminalを埋めない。wireのObservation／Cancel／Attach／Controlをこの段階で初めて実model遷移へ接続する。
+frameだけで元call terminalを埋めない。Observation／Cancelはprep2b1・2で実装済み。残るAttach／Controlをこの段階で実model遷移へ接続する。
 新scopeを作って旧unknownを消す便法を置かず、closed／epoch交代／Unknownの表示根拠を保持する。
 
 ## 10. 直近PRと受入
