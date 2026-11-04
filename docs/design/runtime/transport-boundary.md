@@ -20,3 +20,7 @@
 4. 実Hubへの接続はS7 SOAKの終了と接続対象の確認後に行う。実PLC・Windows・本番運用の結果をモック試験から推定しない。
 
 この保留はRustのcatalog取得・表示DTO・選択session・fixtureでの受入を妨げない。次のP4を独立して進める。P3bを完了扱いしない。
+
+## 記録操作bridgeとの関係
+
+[H5d4c4の非同期bridge設計](historian-recording-bridge-boundary.md)は、Rust ownerとJS serviceの契約差分を明示する。c4aのpure admission契約とc4bのtest-only portでのmonitor受入は独立に進められるが、製品hostを選定したことやP3bの再開を意味しない。Tauri／server／無認証HTTP待受を先行追加せず、実native接続は本書の再開条件と新しいadmission・期限・所有契約を満たしてから実装する。

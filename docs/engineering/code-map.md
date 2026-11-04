@@ -695,3 +695,9 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 公開入口はc2と同じ`scada_runtime::recording_operations`。`supervisor/receipt_read.rs`が既存readerの限定read gate・spawn_blockingとborrowed join・返却を担当する。`operations/reconciliation/mod.rs`は元apply Arc照合、read用4096 IDと受付、`types.rs`は有限completion／read phase、`driver.rs`はSupervisor loan・read実行・元completionを変えないDTO投影／最新結果統合を所有する。mutation用gateは緩和せず、private helper以外へ回復時の読取例外を広げない。
 
 `reconciliation/tests/outcomes.rs`は実commit後の応答喪失／panicと同snapshotの元receipt、不在・破損・全文echo・投影失敗を扱う。`lifecycle.rs`は実blocking worker中の取消／期限／Drop・Runtime終了・poison、`gates.rs`は全caller・ID上限・opaque identity・既存leaseを扱う。`tests/recording_host/operations.rs`には実SDKで出力予算rollback→同owner notFound→非再開・履歴不変の公開API試験を追加した。通常AppのJS bridge、回復latch解除と製品transportは実装しない。
+
+## 記録操作の非同期bridge（H5d4c4、設計のみ）
+
+[詳細設計](../design/runtime/historian-recording-bridge-boundary.md)は、同期の`recording-operations/service.ts`とRust ownerの間に、非同期admission・native期限leaseと元ownerを保持する境界が必要なことを定める。c4aの共通DTO／pure validator／fixture、c4bのmonitor受入、host選定付きnative接続を別の区切りにする。
+
+本節は後続の実装責務を示す。bridge module、実lease発行、IPC／Tauri host／serverはまだ存在せず、既存d4b providerやc3 Rust試験を接続完了とはしない。実装PRで実際の配置と受入を更新する。

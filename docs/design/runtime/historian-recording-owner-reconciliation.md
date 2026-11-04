@@ -55,7 +55,7 @@ pub enum ReconciliationPhase {
 
 Request／Resultはd4aの既存検証済みowned wrapperを使う。新JSON rootや任意error文字列を追加しない。非JSON RecordingOperationsStateに `reconciliation_phase`、現在／最後に受理したhandleの `reconciling`、最新有効結果の `last_reconciliation` を追加する。reconcilingは完了後も最新handle一個を保持できるため、非nullだけでBusyと判定しない。物理状態はphaseで判定する。
 
-このreadの物理確認不能（worker／dispatcher喪失、Runtime終了）は `wait()` のOwnerError::Unavailableで通知し、Core poisonはOwnerError::Internalで通知する。内部completion channelは成功DTOまたは有限OwnerErrorの一回限りの結果を保持する。**DTOを返す正常completionはread自身のcleanup／join確認後だけ**とする。Runtime終了によるread確認不能を、通常のfailed DTO完了として物理枠を解放しない。watch／waitは上記専用Rust completion型を共用する。JS bridgeでのこの異常型の扱いは接続前に別途設計する。
+このreadの物理確認不能（worker／dispatcher喪失、Runtime終了）は `wait()` のOwnerError::Unavailableで通知し、Core poisonはOwnerError::Internalで通知する。内部completion channelは成功DTOまたは有限OwnerErrorの一回限りの結果を保持する。**DTOを返す正常completionはread自身のcleanup／join確認後だけ**とする。Runtime終了によるread確認不能を、通常のfailed DTO完了として物理枠を解放しない。watch／waitは上記専用Rust completion型を共用する。JS bridgeでのこの異常型の扱いは[c4の非同期境界](historian-recording-bridge-boundary.md)で定め、接続実装は後続へ分ける。
 
 元OperationHandleのcompletion API／値は一切変更しない。
 
