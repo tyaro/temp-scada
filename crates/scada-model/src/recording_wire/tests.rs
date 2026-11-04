@@ -291,3 +291,39 @@ fn compact_to_conservative_conversion() {
     .is_ok());
     assert!(RecordingWireCancelRequest::from_value(f["bases"]["lease"].clone()).is_err());
 }
+
+#[test]
+fn structural_meter_shares_profiles_and_cannot_raise_traversal_limits() {
+    let all = fixtures();
+    for row in all["accounting"].as_array().unwrap() {
+        let count = row["count"].as_u64().unwrap_or(0) as usize;
+        let v = match row["build"].as_str() {
+            Some("string") => json!("x".repeat(count)),
+            Some("array") => json!(vec![Value::Null; count]),
+            Some("depth") => (0..count).fold(Value::Null, |v, _| json!([v])),
+            _ => row["input"].clone(),
+        };
+        assert_eq!(
+            conservative_recording_json_bound(&v, bound(row)).is_ok(),
+            row["accepted"] == true,
+            "{}",
+            row["name"]
+        );
+    }
+    for limit in [
+        WireBound {
+            bytes: WIRE_INSPECTION_REPLY_LIMIT.bytes + 1,
+            ..WIRE_INSPECTION_REPLY_LIMIT
+        },
+        WireBound {
+            nodes: WIRE_INSPECTION_REPLY_LIMIT.nodes + 1,
+            ..WIRE_INSPECTION_REPLY_LIMIT
+        },
+        WireBound {
+            depth: 97,
+            ..WIRE_INSPECTION_REPLY_LIMIT
+        },
+    ] {
+        assert!(conservative_recording_json_bound(&Value::Null, limit).is_err());
+    }
+}

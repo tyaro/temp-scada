@@ -4,6 +4,16 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録操作registryの純粋状態モデル（H5d4c4c-prep2a、2026-11-04）
+
+prep1のPR #71をworkへ統合（`bbc5359`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[prep2a](../design/runtime/historian-recording-registry-model.md)として、仮想単調clockとlease、受付前の原子登録、模擬受付証拠、元callの不変終端とread-only照会をRustへ実装した。unknown元返信と後のaccepted知識を分離し、期限・principal／epoch・role・ID・bytesの境界を検証する。
+
+retained本文は単一scope8MiB以内、read専用2MiBとmutationを分ける。admissionはrequest実測＋512KiB×2を固定予約し、knowledgeと元terminalを双方保持する。同値再送／二重proof／二重終端で二重課金しない。独立の保守meterを既存walkerから公開し、入力limitが最大4MiB／196608nodes／depth96を超える前に拒否する。
+
+共通55シナリオ・201ステップの実遷移とDTO transcriptをRustで照合し、TS／browserは同じJSONの既存契約・不変所有・通常App保存不変を確認する。Astraレビューでraw scopeのbounded検査をjson!複製前へ移し、深さ・byte・nodeの回帰試験を追加した。最終レビューに必須所見はない。
+
+Rust workspace646件（新規14）、TS全8,911件（新規83）、型検査0error／0warning・build、関連Chromium4件（新規1）、Clippy全target `-D warnings`／rustfmt、全体Prettier・変更文書8件の相対リンク938箇所・差分検査が成功した。Accepted／未確定後の新mutationは保守blockし、結果観測／cancel／snapshot・subscriptionとworkflow全段階予約はprep2bへ残す。実native・製品host・認証は未接続。Project0.37.0／DB7／H1／SDK／Banto／依存版とP3b保留は維持する。
+
 ## 記録操作wireの純粋JSON契約（H5d4c4c-prep1、2026-11-04）
 
 設計PR #70をworkへ統合（`e0ab72b`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra設計に沿い独立wire v1の14root、Rust／TS owned検証と全文／scope／subscription照合、最大replyの純粋容量検査を実装した。元call照会の対象を有限にし、従来c4a／d4a／H5a／d3の独立検査を維持する。

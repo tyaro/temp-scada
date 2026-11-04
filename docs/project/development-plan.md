@@ -53,6 +53,12 @@ c4b実装は[PR #69](https://github.com/tyaro/temp-scada/pull/69)でworkへ統�
 
 c4c-prep1の純粋wire JSON契約14root・Rust／TS validator・共通fixture・最大返信容量の検証を実装した。設計PR #70はworkへ統合済み（`e0ab72b`、PR／push CI全7job成功、同headレビュー指摘なし）。既存c4aの五rootとc4bのlocal port、Project0.37.0／DB7／H1／SDK／Banto・依存版は維持する。実registry adapter・native配送・製品hostはhost／P3bの条件を満たした後に分け、認証・実Hub／S7・本番DBの保留を暗黙解除しない。
 
+## H5d4c4c-prep2の状態モデル
+
+[Astraの詳細設計](../design/runtime/historian-recording-registry-model.md)に沿い、prep2aの仮想lease・受付台帳・元call終端照会をRustの単一ownerモデルへ実装した。55シナリオで同一要求・期限・受付不明・late proof・容量とread独立枠を検証し、TS／browserは既存JSON契約への適合だけを検証する。prep1のPR #71はworkへ統合済み（`bbc5359`、PR／push CI全7job成功、同headレビュー指摘なし）。
+
+次はprep2bとして、結果観測と物理完了の模擬、取消、完全snapshot／subscription・再接続、workflow creditと複数scope資源を詳細化して段階実装する。prep2aのAccepted／未確定recordから新mutationを解禁する前に、予約と正常completionの根拠を閉じる。実adapter・hostへの接続はP3b条件を満たす別工程とし、モデルの成功を認証・実Hub／S7・本番運用の受入へ置き換えない。
+
 ## H5c2の実装順
 
 [Astra主設計](../design/runtime/historian-recording-supervisor.md)に沿い、c2aの停止前read-only preflight、c2bの正常pause後の一回の管理turn、c2cのpreflight／stop／join／fresh SDK解決／明示resumeの順に分割する。c2aはworkのH5b2にだけ依存し、[PR #47](https://github.com/tyaro/temp-scada/pull/47)のmanaged Recorder／Host開始とは独立に実装・受入できる。PR #47と#48はworkへ統合済み（6c26ea6）。同workの全体CIも成功した。

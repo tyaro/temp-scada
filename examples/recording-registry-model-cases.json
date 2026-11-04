@@ -1,0 +1,6333 @@
+{
+  "scope": {
+    "ownerRef": "owner",
+    "ownerEpoch": "epoch:1",
+    "context": {
+      "version": 1,
+      "kind": "recordingOperationsContext",
+      "target": {
+        "version": 1,
+        "kind": "recordingManagementContext",
+        "contextId": "context:1",
+        "projectId": " プロジェクト\r\nA ",
+        "projectRevision": 2,
+        "deploymentId": "deployment:1",
+        "storeId": "store:1",
+        "historianNamespace": null
+      },
+      "capabilityId": "capability:1",
+      "recordingRunRef": "run:1",
+      "sessionId": "session:1"
+    }
+  },
+  "principal": "principal:1",
+  "bases": {
+    "lease": {
+      "version": 1,
+      "kind": "recordingWireLeaseRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "leaseRequestId": "lease",
+      "admissionId": "admit:preflight",
+      "role": "mutation",
+      "requestedBudgetMs": 10
+    },
+    "issued": {
+      "version": 1,
+      "kind": "recordingWireLeaseReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireLeaseRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "leaseRequestId": "lease",
+        "admissionId": "admit:preflight",
+        "role": "mutation",
+        "requestedBudgetMs": 10
+      },
+      "outcome": {
+        "kind": "issued",
+        "deadlineLeaseRef": "model-lease:1",
+        "grantedBudgetMs": 10
+      }
+    },
+    "admit": {
+      "version": 1,
+      "kind": "recordingAdmissionRequest",
+      "ownerRef": "owner",
+      "admissionId": "admit:preflight",
+      "context": {
+        "version": 1,
+        "kind": "recordingOperationsContext",
+        "target": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        },
+        "capabilityId": "capability:1",
+        "recordingRunRef": "run:1",
+        "sessionId": "session:1"
+      },
+      "deadlineLeaseRef": "model-lease:1",
+      "action": {
+        "kind": "preflight",
+        "change": {
+          "version": 1,
+          "kind": "recordingChangeRequest",
+          "changeId": "change:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "apply": {
+            "requestId": "apply:1",
+            "desired": {
+              "version": 1,
+              "kind": "recordingPlan",
+              "planId": "recording:1",
+              "revision": 7,
+              "enabled": true,
+              "group": {
+                "groupId": "group:1",
+                "hubRef": "hub:1",
+                "periodMs": 1000,
+                "members": [
+                  {
+                    "memberId": "member:b",
+                    "externalName": " 温度 ",
+                    "valueType": "number"
+                  },
+                  {
+                    "memberId": "member:a",
+                    "externalName": "設備.運転",
+                    "valueType": "bool"
+                  }
+                ]
+              }
+            },
+            "expectedAppliedRevision": 41,
+            "expectedMappingRevision": 11,
+            "expectedRetentionAppliedRevision": 13
+          }
+        }
+      }
+    },
+    "accepted": {
+      "version": 1,
+      "kind": "recordingAdmissionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:preflight",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:1",
+        "action": {
+          "kind": "preflight",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "accepted",
+        "handle": {
+          "kind": "operation",
+          "changeRef": "change-ref",
+          "operationRef": "operation-ref",
+          "request": {
+            "version": 1,
+            "kind": "recordingOperationRequest",
+            "operationId": "operation:1",
+            "stage": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      }
+    },
+    "unknown": {
+      "version": 1,
+      "kind": "recordingAdmissionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:preflight",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:1",
+        "action": {
+          "kind": "preflight",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "unknown",
+        "error": "workerFailure"
+      }
+    },
+    "rejected": {
+      "version": 1,
+      "kind": "recordingAdmissionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:preflight",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:1",
+        "action": {
+          "kind": "preflight",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "rejected",
+        "error": "busy"
+      }
+    },
+    "inspect": {
+      "version": 1,
+      "kind": "recordingAdmissionInspectionRequest",
+      "inspectionId": "inspect",
+      "original": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:preflight",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:1",
+        "action": {
+          "kind": "preflight",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      }
+    },
+    "inspectLater": {
+      "version": 1,
+      "kind": "recordingAdmissionInspectionRequest",
+      "inspectionId": "inspectLater",
+      "original": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:preflight",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:1",
+        "action": {
+          "kind": "preflight",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      }
+    },
+    "foundUnknown": {
+      "version": 1,
+      "kind": "recordingAdmissionInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingAdmissionInspectionRequest",
+        "inspectionId": "inspect",
+        "original": {
+          "version": 1,
+          "kind": "recordingAdmissionRequest",
+          "ownerRef": "owner",
+          "admissionId": "admit:preflight",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "deadlineLeaseRef": "model-lease:1",
+          "action": {
+            "kind": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "found",
+        "reply": {
+          "version": 1,
+          "kind": "recordingAdmissionReply",
+          "request": {
+            "version": 1,
+            "kind": "recordingAdmissionRequest",
+            "ownerRef": "owner",
+            "admissionId": "admit:preflight",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "deadlineLeaseRef": "model-lease:1",
+            "action": {
+              "kind": "preflight",
+              "change": {
+                "version": 1,
+                "kind": "recordingChangeRequest",
+                "changeId": "change:1",
+                "context": {
+                  "version": 1,
+                  "kind": "recordingOperationsContext",
+                  "target": {
+                    "version": 1,
+                    "kind": "recordingManagementContext",
+                    "contextId": "context:1",
+                    "projectId": " プロジェクト\r\nA ",
+                    "projectRevision": 2,
+                    "deploymentId": "deployment:1",
+                    "storeId": "store:1",
+                    "historianNamespace": null
+                  },
+                  "capabilityId": "capability:1",
+                  "recordingRunRef": "run:1",
+                  "sessionId": "session:1"
+                },
+                "apply": {
+                  "requestId": "apply:1",
+                  "desired": {
+                    "version": 1,
+                    "kind": "recordingPlan",
+                    "planId": "recording:1",
+                    "revision": 7,
+                    "enabled": true,
+                    "group": {
+                      "groupId": "group:1",
+                      "hubRef": "hub:1",
+                      "periodMs": 1000,
+                      "members": [
+                        {
+                          "memberId": "member:b",
+                          "externalName": " 温度 ",
+                          "valueType": "number"
+                        },
+                        {
+                          "memberId": "member:a",
+                          "externalName": "設備.運転",
+                          "valueType": "bool"
+                        }
+                      ]
+                    }
+                  },
+                  "expectedAppliedRevision": 41,
+                  "expectedMappingRevision": 11,
+                  "expectedRetentionAppliedRevision": 13
+                }
+              }
+            }
+          },
+          "outcome": {
+            "kind": "unknown",
+            "error": "workerFailure"
+          }
+        }
+      }
+    },
+    "foundAccepted": {
+      "version": 1,
+      "kind": "recordingAdmissionInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingAdmissionInspectionRequest",
+        "inspectionId": "inspectLater",
+        "original": {
+          "version": 1,
+          "kind": "recordingAdmissionRequest",
+          "ownerRef": "owner",
+          "admissionId": "admit:preflight",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "deadlineLeaseRef": "model-lease:1",
+          "action": {
+            "kind": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "found",
+        "reply": {
+          "version": 1,
+          "kind": "recordingAdmissionReply",
+          "request": {
+            "version": 1,
+            "kind": "recordingAdmissionRequest",
+            "ownerRef": "owner",
+            "admissionId": "admit:preflight",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "deadlineLeaseRef": "model-lease:1",
+            "action": {
+              "kind": "preflight",
+              "change": {
+                "version": 1,
+                "kind": "recordingChangeRequest",
+                "changeId": "change:1",
+                "context": {
+                  "version": 1,
+                  "kind": "recordingOperationsContext",
+                  "target": {
+                    "version": 1,
+                    "kind": "recordingManagementContext",
+                    "contextId": "context:1",
+                    "projectId": " プロジェクト\r\nA ",
+                    "projectRevision": 2,
+                    "deploymentId": "deployment:1",
+                    "storeId": "store:1",
+                    "historianNamespace": null
+                  },
+                  "capabilityId": "capability:1",
+                  "recordingRunRef": "run:1",
+                  "sessionId": "session:1"
+                },
+                "apply": {
+                  "requestId": "apply:1",
+                  "desired": {
+                    "version": 1,
+                    "kind": "recordingPlan",
+                    "planId": "recording:1",
+                    "revision": 7,
+                    "enabled": true,
+                    "group": {
+                      "groupId": "group:1",
+                      "hubRef": "hub:1",
+                      "periodMs": 1000,
+                      "members": [
+                        {
+                          "memberId": "member:b",
+                          "externalName": " 温度 ",
+                          "valueType": "number"
+                        },
+                        {
+                          "memberId": "member:a",
+                          "externalName": "設備.運転",
+                          "valueType": "bool"
+                        }
+                      ]
+                    }
+                  },
+                  "expectedAppliedRevision": 41,
+                  "expectedMappingRevision": 11,
+                  "expectedRetentionAppliedRevision": 13
+                }
+              }
+            }
+          },
+          "outcome": {
+            "kind": "accepted",
+            "handle": {
+              "kind": "operation",
+              "changeRef": "change-ref",
+              "operationRef": "operation-ref",
+              "request": {
+                "version": 1,
+                "kind": "recordingOperationRequest",
+                "operationId": "operation:1",
+                "stage": "preflight",
+                "change": {
+                  "version": 1,
+                  "kind": "recordingChangeRequest",
+                  "changeId": "change:1",
+                  "context": {
+                    "version": 1,
+                    "kind": "recordingOperationsContext",
+                    "target": {
+                      "version": 1,
+                      "kind": "recordingManagementContext",
+                      "contextId": "context:1",
+                      "projectId": " プロジェクト\r\nA ",
+                      "projectRevision": 2,
+                      "deploymentId": "deployment:1",
+                      "storeId": "store:1",
+                      "historianNamespace": null
+                    },
+                    "capabilityId": "capability:1",
+                    "recordingRunRef": "run:1",
+                    "sessionId": "session:1"
+                  },
+                  "apply": {
+                    "requestId": "apply:1",
+                    "desired": {
+                      "version": 1,
+                      "kind": "recordingPlan",
+                      "planId": "recording:1",
+                      "revision": 7,
+                      "enabled": true,
+                      "group": {
+                        "groupId": "group:1",
+                        "hubRef": "hub:1",
+                        "periodMs": 1000,
+                        "members": [
+                          {
+                            "memberId": "member:b",
+                            "externalName": " 温度 ",
+                            "valueType": "number"
+                          },
+                          {
+                            "memberId": "member:a",
+                            "externalName": "設備.運転",
+                            "valueType": "bool"
+                          }
+                        ]
+                      }
+                    },
+                    "expectedAppliedRevision": 41,
+                    "expectedMappingRevision": 11,
+                    "expectedRetentionAppliedRevision": 13
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "notFound": {
+      "version": 1,
+      "kind": "recordingAdmissionInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingAdmissionInspectionRequest",
+        "inspectionId": "inspect",
+        "original": {
+          "version": 1,
+          "kind": "recordingAdmissionRequest",
+          "ownerRef": "owner",
+          "admissionId": "admit:preflight",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "deadlineLeaseRef": "model-lease:1",
+          "action": {
+            "kind": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "notFound"
+      }
+    },
+    "call": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "callInspectionId": "call",
+      "original": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:preflight",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:1",
+        "action": {
+          "kind": "preflight",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      }
+    },
+    "callPending": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireCallInspectionRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "callInspectionId": "call",
+        "original": {
+          "version": 1,
+          "kind": "recordingAdmissionRequest",
+          "ownerRef": "owner",
+          "admissionId": "admit:preflight",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "deadlineLeaseRef": "model-lease:1",
+          "action": {
+            "kind": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "pending"
+      }
+    },
+    "callTerminal": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireCallInspectionRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "callInspectionId": "call",
+        "original": {
+          "version": 1,
+          "kind": "recordingAdmissionRequest",
+          "ownerRef": "owner",
+          "admissionId": "admit:preflight",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "deadlineLeaseRef": "model-lease:1",
+          "action": {
+            "kind": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "terminal",
+        "reply": {
+          "version": 1,
+          "kind": "recordingAdmissionReply",
+          "request": {
+            "version": 1,
+            "kind": "recordingAdmissionRequest",
+            "ownerRef": "owner",
+            "admissionId": "admit:preflight",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "deadlineLeaseRef": "model-lease:1",
+            "action": {
+              "kind": "preflight",
+              "change": {
+                "version": 1,
+                "kind": "recordingChangeRequest",
+                "changeId": "change:1",
+                "context": {
+                  "version": 1,
+                  "kind": "recordingOperationsContext",
+                  "target": {
+                    "version": 1,
+                    "kind": "recordingManagementContext",
+                    "contextId": "context:1",
+                    "projectId": " プロジェクト\r\nA ",
+                    "projectRevision": 2,
+                    "deploymentId": "deployment:1",
+                    "storeId": "store:1",
+                    "historianNamespace": null
+                  },
+                  "capabilityId": "capability:1",
+                  "recordingRunRef": "run:1",
+                  "sessionId": "session:1"
+                },
+                "apply": {
+                  "requestId": "apply:1",
+                  "desired": {
+                    "version": 1,
+                    "kind": "recordingPlan",
+                    "planId": "recording:1",
+                    "revision": 7,
+                    "enabled": true,
+                    "group": {
+                      "groupId": "group:1",
+                      "hubRef": "hub:1",
+                      "periodMs": 1000,
+                      "members": [
+                        {
+                          "memberId": "member:b",
+                          "externalName": " 温度 ",
+                          "valueType": "number"
+                        },
+                        {
+                          "memberId": "member:a",
+                          "externalName": "設備.運転",
+                          "valueType": "bool"
+                        }
+                      ]
+                    }
+                  },
+                  "expectedAppliedRevision": 41,
+                  "expectedMappingRevision": 11,
+                  "expectedRetentionAppliedRevision": 13
+                }
+              }
+            }
+          },
+          "outcome": {
+            "kind": "unknown",
+            "error": "workerFailure"
+          }
+        }
+      }
+    },
+    "callNotFound": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireCallInspectionRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "callInspectionId": "call",
+        "original": {
+          "version": 1,
+          "kind": "recordingAdmissionRequest",
+          "ownerRef": "owner",
+          "admissionId": "admit:preflight",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "deadlineLeaseRef": "model-lease:1",
+          "action": {
+            "kind": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "notFound"
+      }
+    },
+    "leaseCall": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "callInspectionId": "leaseCall",
+      "original": {
+        "version": 1,
+        "kind": "recordingWireLeaseRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "leaseRequestId": "lease",
+        "admissionId": "admit:preflight",
+        "role": "mutation",
+        "requestedBudgetMs": 10
+      }
+    },
+    "leaseTerminal": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireCallInspectionRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "callInspectionId": "leaseCall",
+        "original": {
+          "version": 1,
+          "kind": "recordingWireLeaseRequest",
+          "scope": {
+            "ownerRef": "owner",
+            "ownerEpoch": "epoch:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            }
+          },
+          "leaseRequestId": "lease",
+          "admissionId": "admit:preflight",
+          "role": "mutation",
+          "requestedBudgetMs": 10
+        }
+      },
+      "outcome": {
+        "kind": "terminal",
+        "reply": {
+          "version": 1,
+          "kind": "recordingWireLeaseReply",
+          "request": {
+            "version": 1,
+            "kind": "recordingWireLeaseRequest",
+            "scope": {
+              "ownerRef": "owner",
+              "ownerEpoch": "epoch:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              }
+            },
+            "leaseRequestId": "lease",
+            "admissionId": "admit:preflight",
+            "role": "mutation",
+            "requestedBudgetMs": 10
+          },
+          "outcome": {
+            "kind": "issued",
+            "deadlineLeaseRef": "model-lease:1",
+            "grantedBudgetMs": 10
+          }
+        }
+      }
+    },
+    "inspectionCall": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "callInspectionId": "inspectionCall",
+      "original": {
+        "version": 1,
+        "kind": "recordingAdmissionInspectionRequest",
+        "inspectionId": "inspect",
+        "original": {
+          "version": 1,
+          "kind": "recordingAdmissionRequest",
+          "ownerRef": "owner",
+          "admissionId": "admit:preflight",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "deadlineLeaseRef": "model-lease:1",
+          "action": {
+            "kind": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      }
+    },
+    "inspectionTerminal": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireCallInspectionRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "callInspectionId": "inspectionCall",
+        "original": {
+          "version": 1,
+          "kind": "recordingAdmissionInspectionRequest",
+          "inspectionId": "inspect",
+          "original": {
+            "version": 1,
+            "kind": "recordingAdmissionRequest",
+            "ownerRef": "owner",
+            "admissionId": "admit:preflight",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "deadlineLeaseRef": "model-lease:1",
+            "action": {
+              "kind": "preflight",
+              "change": {
+                "version": 1,
+                "kind": "recordingChangeRequest",
+                "changeId": "change:1",
+                "context": {
+                  "version": 1,
+                  "kind": "recordingOperationsContext",
+                  "target": {
+                    "version": 1,
+                    "kind": "recordingManagementContext",
+                    "contextId": "context:1",
+                    "projectId": " プロジェクト\r\nA ",
+                    "projectRevision": 2,
+                    "deploymentId": "deployment:1",
+                    "storeId": "store:1",
+                    "historianNamespace": null
+                  },
+                  "capabilityId": "capability:1",
+                  "recordingRunRef": "run:1",
+                  "sessionId": "session:1"
+                },
+                "apply": {
+                  "requestId": "apply:1",
+                  "desired": {
+                    "version": 1,
+                    "kind": "recordingPlan",
+                    "planId": "recording:1",
+                    "revision": 7,
+                    "enabled": true,
+                    "group": {
+                      "groupId": "group:1",
+                      "hubRef": "hub:1",
+                      "periodMs": 1000,
+                      "members": [
+                        {
+                          "memberId": "member:b",
+                          "externalName": " 温度 ",
+                          "valueType": "number"
+                        },
+                        {
+                          "memberId": "member:a",
+                          "externalName": "設備.運転",
+                          "valueType": "bool"
+                        }
+                      ]
+                    }
+                  },
+                  "expectedAppliedRevision": 41,
+                  "expectedMappingRevision": 11,
+                  "expectedRetentionAppliedRevision": 13
+                }
+              }
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "terminal",
+        "reply": {
+          "version": 1,
+          "kind": "recordingAdmissionInspectionReply",
+          "request": {
+            "version": 1,
+            "kind": "recordingAdmissionInspectionRequest",
+            "inspectionId": "inspect",
+            "original": {
+              "version": 1,
+              "kind": "recordingAdmissionRequest",
+              "ownerRef": "owner",
+              "admissionId": "admit:preflight",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "deadlineLeaseRef": "model-lease:1",
+              "action": {
+                "kind": "preflight",
+                "change": {
+                  "version": 1,
+                  "kind": "recordingChangeRequest",
+                  "changeId": "change:1",
+                  "context": {
+                    "version": 1,
+                    "kind": "recordingOperationsContext",
+                    "target": {
+                      "version": 1,
+                      "kind": "recordingManagementContext",
+                      "contextId": "context:1",
+                      "projectId": " プロジェクト\r\nA ",
+                      "projectRevision": 2,
+                      "deploymentId": "deployment:1",
+                      "storeId": "store:1",
+                      "historianNamespace": null
+                    },
+                    "capabilityId": "capability:1",
+                    "recordingRunRef": "run:1",
+                    "sessionId": "session:1"
+                  },
+                  "apply": {
+                    "requestId": "apply:1",
+                    "desired": {
+                      "version": 1,
+                      "kind": "recordingPlan",
+                      "planId": "recording:1",
+                      "revision": 7,
+                      "enabled": true,
+                      "group": {
+                        "groupId": "group:1",
+                        "hubRef": "hub:1",
+                        "periodMs": 1000,
+                        "members": [
+                          {
+                            "memberId": "member:b",
+                            "externalName": " 温度 ",
+                            "valueType": "number"
+                          },
+                          {
+                            "memberId": "member:a",
+                            "externalName": "設備.運転",
+                            "valueType": "bool"
+                          }
+                        ]
+                      }
+                    },
+                    "expectedAppliedRevision": 41,
+                    "expectedMappingRevision": 11,
+                    "expectedRetentionAppliedRevision": 13
+                  }
+                }
+              }
+            }
+          },
+          "outcome": {
+            "kind": "found",
+            "reply": {
+              "version": 1,
+              "kind": "recordingAdmissionReply",
+              "request": {
+                "version": 1,
+                "kind": "recordingAdmissionRequest",
+                "ownerRef": "owner",
+                "admissionId": "admit:preflight",
+                "context": {
+                  "version": 1,
+                  "kind": "recordingOperationsContext",
+                  "target": {
+                    "version": 1,
+                    "kind": "recordingManagementContext",
+                    "contextId": "context:1",
+                    "projectId": " プロジェクト\r\nA ",
+                    "projectRevision": 2,
+                    "deploymentId": "deployment:1",
+                    "storeId": "store:1",
+                    "historianNamespace": null
+                  },
+                  "capabilityId": "capability:1",
+                  "recordingRunRef": "run:1",
+                  "sessionId": "session:1"
+                },
+                "deadlineLeaseRef": "model-lease:1",
+                "action": {
+                  "kind": "preflight",
+                  "change": {
+                    "version": 1,
+                    "kind": "recordingChangeRequest",
+                    "changeId": "change:1",
+                    "context": {
+                      "version": 1,
+                      "kind": "recordingOperationsContext",
+                      "target": {
+                        "version": 1,
+                        "kind": "recordingManagementContext",
+                        "contextId": "context:1",
+                        "projectId": " プロジェクト\r\nA ",
+                        "projectRevision": 2,
+                        "deploymentId": "deployment:1",
+                        "storeId": "store:1",
+                        "historianNamespace": null
+                      },
+                      "capabilityId": "capability:1",
+                      "recordingRunRef": "run:1",
+                      "sessionId": "session:1"
+                    },
+                    "apply": {
+                      "requestId": "apply:1",
+                      "desired": {
+                        "version": 1,
+                        "kind": "recordingPlan",
+                        "planId": "recording:1",
+                        "revision": 7,
+                        "enabled": true,
+                        "group": {
+                          "groupId": "group:1",
+                          "hubRef": "hub:1",
+                          "periodMs": 1000,
+                          "members": [
+                            {
+                              "memberId": "member:b",
+                              "externalName": " 温度 ",
+                              "valueType": "number"
+                            },
+                            {
+                              "memberId": "member:a",
+                              "externalName": "設備.運転",
+                              "valueType": "bool"
+                            }
+                          ]
+                        }
+                      },
+                      "expectedAppliedRevision": 41,
+                      "expectedMappingRevision": 11,
+                      "expectedRetentionAppliedRevision": 13
+                    }
+                  }
+                }
+              },
+              "outcome": {
+                "kind": "unknown",
+                "error": "workerFailure"
+              }
+            }
+          }
+        }
+      }
+    },
+    "nextLease": {
+      "version": 1,
+      "kind": "recordingWireLeaseRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "leaseRequestId": "nextLease",
+      "admissionId": "admit:next",
+      "role": "mutation",
+      "requestedBudgetMs": 10
+    },
+    "nextIssued": {
+      "version": 1,
+      "kind": "recordingWireLeaseReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireLeaseRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "leaseRequestId": "nextLease",
+        "admissionId": "admit:next",
+        "role": "mutation",
+        "requestedBudgetMs": 10
+      },
+      "outcome": {
+        "kind": "issued",
+        "deadlineLeaseRef": "model-lease:3",
+        "grantedBudgetMs": 10
+      }
+    },
+    "nextAdmit": {
+      "version": 1,
+      "kind": "recordingAdmissionRequest",
+      "ownerRef": "owner",
+      "admissionId": "admit:next",
+      "context": {
+        "version": 1,
+        "kind": "recordingOperationsContext",
+        "target": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        },
+        "capabilityId": "capability:1",
+        "recordingRunRef": "run:1",
+        "sessionId": "session:1"
+      },
+      "deadlineLeaseRef": "model-lease:3",
+      "action": {
+        "kind": "preflight",
+        "change": {
+          "version": 1,
+          "kind": "recordingChangeRequest",
+          "changeId": "change:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "apply": {
+            "requestId": "apply:1",
+            "desired": {
+              "version": 1,
+              "kind": "recordingPlan",
+              "planId": "recording:1",
+              "revision": 7,
+              "enabled": true,
+              "group": {
+                "groupId": "group:1",
+                "hubRef": "hub:1",
+                "periodMs": 1000,
+                "members": [
+                  {
+                    "memberId": "member:b",
+                    "externalName": " 温度 ",
+                    "valueType": "number"
+                  },
+                  {
+                    "memberId": "member:a",
+                    "externalName": "設備.運転",
+                    "valueType": "bool"
+                  }
+                ]
+              }
+            },
+            "expectedAppliedRevision": 41,
+            "expectedMappingRevision": 11,
+            "expectedRetentionAppliedRevision": 13
+          }
+        }
+      }
+    },
+    "readLease": {
+      "version": 1,
+      "kind": "recordingWireLeaseRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "leaseRequestId": "readLease",
+      "admissionId": "admit:reconcile",
+      "role": "reconciliation",
+      "requestedBudgetMs": 10
+    },
+    "readIssued": {
+      "version": 1,
+      "kind": "recordingWireLeaseReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireLeaseRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "leaseRequestId": "readLease",
+        "admissionId": "admit:reconcile",
+        "role": "reconciliation",
+        "requestedBudgetMs": 10
+      },
+      "outcome": {
+        "kind": "issued",
+        "deadlineLeaseRef": "model-lease:3",
+        "grantedBudgetMs": 10
+      }
+    },
+    "readAdmit": {
+      "version": 1,
+      "kind": "recordingAdmissionRequest",
+      "ownerRef": "owner",
+      "admissionId": "admit:reconcile",
+      "context": {
+        "version": 1,
+        "kind": "recordingOperationsContext",
+        "target": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        },
+        "capabilityId": "capability:1",
+        "recordingRunRef": "run:1",
+        "sessionId": "session:1"
+      },
+      "deadlineLeaseRef": "model-lease:3",
+      "action": {
+        "kind": "reconcile",
+        "changeRef": "change-ref",
+        "operationRef": "operation-ref",
+        "reconciliation": {
+          "version": 1,
+          "kind": "recordingReconciliationRequest",
+          "reconciliationId": "reconcile:1",
+          "operation": {
+            "version": 1,
+            "kind": "recordingOperationRequest",
+            "operationId": "operation:1",
+            "stage": "apply",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      }
+    },
+    "readAccepted": {
+      "version": 1,
+      "kind": "recordingAdmissionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:reconcile",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:3",
+        "action": {
+          "kind": "reconcile",
+          "changeRef": "change-ref",
+          "operationRef": "operation-ref",
+          "reconciliation": {
+            "version": 1,
+            "kind": "recordingReconciliationRequest",
+            "reconciliationId": "reconcile:1",
+            "operation": {
+              "version": 1,
+              "kind": "recordingOperationRequest",
+              "operationId": "operation:1",
+              "stage": "apply",
+              "change": {
+                "version": 1,
+                "kind": "recordingChangeRequest",
+                "changeId": "change:1",
+                "context": {
+                  "version": 1,
+                  "kind": "recordingOperationsContext",
+                  "target": {
+                    "version": 1,
+                    "kind": "recordingManagementContext",
+                    "contextId": "context:1",
+                    "projectId": " プロジェクト\r\nA ",
+                    "projectRevision": 2,
+                    "deploymentId": "deployment:1",
+                    "storeId": "store:1",
+                    "historianNamespace": null
+                  },
+                  "capabilityId": "capability:1",
+                  "recordingRunRef": "run:1",
+                  "sessionId": "session:1"
+                },
+                "apply": {
+                  "requestId": "apply:1",
+                  "desired": {
+                    "version": 1,
+                    "kind": "recordingPlan",
+                    "planId": "recording:1",
+                    "revision": 7,
+                    "enabled": true,
+                    "group": {
+                      "groupId": "group:1",
+                      "hubRef": "hub:1",
+                      "periodMs": 1000,
+                      "members": [
+                        {
+                          "memberId": "member:b",
+                          "externalName": " 温度 ",
+                          "valueType": "number"
+                        },
+                        {
+                          "memberId": "member:a",
+                          "externalName": "設備.運転",
+                          "valueType": "bool"
+                        }
+                      ]
+                    }
+                  },
+                  "expectedAppliedRevision": 41,
+                  "expectedMappingRevision": 11,
+                  "expectedRetentionAppliedRevision": 13
+                }
+              }
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "accepted",
+        "handle": {
+          "kind": "reconciliation",
+          "readRef": "read-ref",
+          "request": {
+            "version": 1,
+            "kind": "recordingReconciliationRequest",
+            "reconciliationId": "reconcile:1",
+            "operation": {
+              "version": 1,
+              "kind": "recordingOperationRequest",
+              "operationId": "operation:1",
+              "stage": "apply",
+              "change": {
+                "version": 1,
+                "kind": "recordingChangeRequest",
+                "changeId": "change:1",
+                "context": {
+                  "version": 1,
+                  "kind": "recordingOperationsContext",
+                  "target": {
+                    "version": 1,
+                    "kind": "recordingManagementContext",
+                    "contextId": "context:1",
+                    "projectId": " プロジェクト\r\nA ",
+                    "projectRevision": 2,
+                    "deploymentId": "deployment:1",
+                    "storeId": "store:1",
+                    "historianNamespace": null
+                  },
+                  "capabilityId": "capability:1",
+                  "recordingRunRef": "run:1",
+                  "sessionId": "session:1"
+                },
+                "apply": {
+                  "requestId": "apply:1",
+                  "desired": {
+                    "version": 1,
+                    "kind": "recordingPlan",
+                    "planId": "recording:1",
+                    "revision": 7,
+                    "enabled": true,
+                    "group": {
+                      "groupId": "group:1",
+                      "hubRef": "hub:1",
+                      "periodMs": 1000,
+                      "members": [
+                        {
+                          "memberId": "member:b",
+                          "externalName": " 温度 ",
+                          "valueType": "number"
+                        },
+                        {
+                          "memberId": "member:a",
+                          "externalName": "設備.運転",
+                          "valueType": "bool"
+                        }
+                      ]
+                    }
+                  },
+                  "expectedAppliedRevision": 41,
+                  "expectedMappingRevision": 11,
+                  "expectedRetentionAppliedRevision": 13
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "discardAdmit": {
+      "version": 1,
+      "kind": "recordingAdmissionRequest",
+      "ownerRef": "owner",
+      "admissionId": "admit:discard",
+      "context": {
+        "version": 1,
+        "kind": "recordingOperationsContext",
+        "target": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        },
+        "capabilityId": "capability:1",
+        "recordingRunRef": "run:1",
+        "sessionId": "session:1"
+      },
+      "deadlineLeaseRef": "model-lease:1",
+      "action": {
+        "kind": "discard",
+        "change": {
+          "version": 1,
+          "kind": "recordingChangeRequest",
+          "changeId": "change:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "apply": {
+            "requestId": "apply:1",
+            "desired": {
+              "version": 1,
+              "kind": "recordingPlan",
+              "planId": "recording:1",
+              "revision": 7,
+              "enabled": true,
+              "group": {
+                "groupId": "group:1",
+                "hubRef": "hub:1",
+                "periodMs": 1000,
+                "members": [
+                  {
+                    "memberId": "member:b",
+                    "externalName": " 温度 ",
+                    "valueType": "number"
+                  },
+                  {
+                    "memberId": "member:a",
+                    "externalName": "設備.運転",
+                    "valueType": "bool"
+                  }
+                ]
+              }
+            },
+            "expectedAppliedRevision": 41,
+            "expectedMappingRevision": 11,
+            "expectedRetentionAppliedRevision": 13
+          }
+        },
+        "changeRef": "change-ref"
+      }
+    },
+    "discardLease": {
+      "version": 1,
+      "kind": "recordingWireLeaseRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "leaseRequestId": "discardLease",
+      "admissionId": "admit:discard",
+      "role": "mutation",
+      "requestedBudgetMs": 10
+    },
+    "discardIssued": {
+      "version": 1,
+      "kind": "recordingWireLeaseReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireLeaseRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "leaseRequestId": "discardLease",
+        "admissionId": "admit:discard",
+        "role": "mutation",
+        "requestedBudgetMs": 10
+      },
+      "outcome": {
+        "kind": "issued",
+        "deadlineLeaseRef": "model-lease:1",
+        "grantedBudgetMs": 10
+      }
+    },
+    "discardReply": {
+      "version": 1,
+      "kind": "recordingAdmissionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:discard",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:1",
+        "action": {
+          "kind": "discard",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          },
+          "changeRef": "change-ref"
+        }
+      },
+      "outcome": {
+        "kind": "completedDiscard"
+      }
+    },
+    "readWrongRole": {
+      "version": 1,
+      "kind": "recordingAdmissionRequest",
+      "ownerRef": "owner",
+      "admissionId": "admit:preflight",
+      "context": {
+        "version": 1,
+        "kind": "recordingOperationsContext",
+        "target": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        },
+        "capabilityId": "capability:1",
+        "recordingRunRef": "run:1",
+        "sessionId": "session:1"
+      },
+      "deadlineLeaseRef": "model-lease:1",
+      "action": {
+        "kind": "reconcile",
+        "changeRef": "change-ref",
+        "operationRef": "operation-ref",
+        "reconciliation": {
+          "version": 1,
+          "kind": "recordingReconciliationRequest",
+          "reconciliationId": "reconcile:1",
+          "operation": {
+            "version": 1,
+            "kind": "recordingOperationRequest",
+            "operationId": "operation:1",
+            "stage": "apply",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      }
+    },
+    "readIssuedFirst": {
+      "version": 1,
+      "kind": "recordingWireLeaseReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireLeaseRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "leaseRequestId": "readLease",
+        "admissionId": "admit:reconcile",
+        "role": "reconciliation",
+        "requestedBudgetMs": 10
+      },
+      "outcome": {
+        "kind": "issued",
+        "deadlineLeaseRef": "model-lease:1",
+        "grantedBudgetMs": 10
+      }
+    },
+    "readAdmitFirst": {
+      "version": 1,
+      "kind": "recordingAdmissionRequest",
+      "ownerRef": "owner",
+      "admissionId": "admit:reconcile",
+      "context": {
+        "version": 1,
+        "kind": "recordingOperationsContext",
+        "target": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        },
+        "capabilityId": "capability:1",
+        "recordingRunRef": "run:1",
+        "sessionId": "session:1"
+      },
+      "deadlineLeaseRef": "model-lease:1",
+      "action": {
+        "kind": "reconcile",
+        "changeRef": "change-ref",
+        "operationRef": "operation-ref",
+        "reconciliation": {
+          "version": 1,
+          "kind": "recordingReconciliationRequest",
+          "reconciliationId": "reconcile:1",
+          "operation": {
+            "version": 1,
+            "kind": "recordingOperationRequest",
+            "operationId": "operation:1",
+            "stage": "apply",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      }
+    },
+    "inspectTwo": {
+      "version": 1,
+      "kind": "recordingAdmissionInspectionRequest",
+      "inspectionId": "inspectTwo",
+      "original": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:preflight",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:1",
+        "action": {
+          "kind": "preflight",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      }
+    },
+    "callTwo": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "callInspectionId": "callTwo",
+      "original": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:preflight",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:1",
+        "action": {
+          "kind": "preflight",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      }
+    },
+    "notFoundTwo": {
+      "version": 1,
+      "kind": "recordingAdmissionInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingAdmissionInspectionRequest",
+        "inspectionId": "inspectTwo",
+        "original": {
+          "version": 1,
+          "kind": "recordingAdmissionRequest",
+          "ownerRef": "owner",
+          "admissionId": "admit:preflight",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "deadlineLeaseRef": "model-lease:1",
+          "action": {
+            "kind": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "notFound"
+      }
+    },
+    "callNotFoundTwo": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireCallInspectionRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "callInspectionId": "callTwo",
+        "original": {
+          "version": 1,
+          "kind": "recordingAdmissionRequest",
+          "ownerRef": "owner",
+          "admissionId": "admit:preflight",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "deadlineLeaseRef": "model-lease:1",
+          "action": {
+            "kind": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      },
+      "outcome": {
+        "kind": "notFound"
+      }
+    },
+    "cancelOriginal": {
+      "version": 1,
+      "kind": "recordingWireCancelRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "cancelId": "cancel",
+      "target": {
+        "kind": "operation",
+        "ref": "operation-ref"
+      }
+    },
+    "unsupported": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "callInspectionId": "unsupported",
+      "original": {
+        "version": 1,
+        "kind": "recordingWireCancelRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "cancelId": "cancel",
+        "target": {
+          "kind": "operation",
+          "ref": "operation-ref"
+        }
+      }
+    },
+    "unsupportedReply": {
+      "version": 1,
+      "kind": "recordingWireCallInspectionReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireCallInspectionRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "callInspectionId": "unsupported",
+        "original": {
+          "version": 1,
+          "kind": "recordingWireCancelRequest",
+          "scope": {
+            "ownerRef": "owner",
+            "ownerEpoch": "epoch:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            }
+          },
+          "cancelId": "cancel",
+          "target": {
+            "kind": "operation",
+            "ref": "operation-ref"
+          }
+        }
+      },
+      "outcome": {
+        "kind": "unavailable",
+        "error": "ownerUnavailable"
+      }
+    },
+    "nextIssuedSecond": {
+      "version": 1,
+      "kind": "recordingWireLeaseReply",
+      "request": {
+        "version": 1,
+        "kind": "recordingWireLeaseRequest",
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "leaseRequestId": "nextLease",
+        "admissionId": "admit:next",
+        "role": "mutation",
+        "requestedBudgetMs": 10
+      },
+      "outcome": {
+        "kind": "issued",
+        "deadlineLeaseRef": "model-lease:2",
+        "grantedBudgetMs": 10
+      }
+    }
+  },
+  "scenarios": [
+    {
+      "name": "unknown original reply stays immutable after late accepted proof",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Pending"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callPending"
+            }
+          }
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "foundUnknown"
+            }
+          }
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callTerminal"
+            }
+          }
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspectLater"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "foundAccepted"
+            }
+          }
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "foundUnknown"
+            }
+          }
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callTerminal"
+            }
+          }
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "inspectionCall"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "inspectionTerminal"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Replay",
+            "document": {
+              "base": "unknown"
+            }
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "proof before original dispatcher return",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callPending"
+            }
+          }
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspectLater"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "foundAccepted"
+            }
+          }
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callTerminal"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "read-only notFound does not register original",
+      "steps": [
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callNotFound"
+            }
+          }
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "notFound"
+            }
+          }
+        },
+        {
+          "op": "stats",
+          "expect": {
+            "kind": "ok"
+          },
+          "fields": {
+            "mutationAdmissions": 0,
+            "mutationLeases": 0
+          }
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callPending"
+            }
+          }
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "notFound"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "lease replay never renews expired deadline",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "advance",
+          "expect": {
+            "kind": "ok"
+          },
+          "nowMs": "10"
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "leaseCall"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "leaseTerminal"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "error": "Expired"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "lease usable immediately before deadline",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "advance",
+          "expect": {
+            "kind": "ok"
+          },
+          "nowMs": "9"
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "expiry at exact deadline",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "advance",
+          "expect": {
+            "kind": "ok"
+          },
+          "nowMs": "10"
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "error": "Expired"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "new lease cannot extend same admission",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease",
+            "patch": [
+              {
+                "path": "/leaseRequestId",
+                "value": "another"
+              }
+            ]
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "same lease ID cannot change budget",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease",
+            "patch": [
+              {
+                "path": "/requestedBudgetMs",
+                "value": 9
+              }
+            ]
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          }
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "integer JSON spelling is semantically identical",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease",
+            "patch": [
+              {
+                "path": "/requestedBudgetMs",
+                "value": 10.0
+              }
+            ]
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit",
+            "patch": [
+              {
+                "path": "/context/target/projectRevision",
+                "value": 2.0
+              }
+            ]
+          },
+          "expect": {
+            "kind": "Pending"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "mutation lease cannot authorize recovery read",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "readAdmit",
+            "patch": [
+              {
+                "path": "/deadlineLeaseRef",
+                "value": "model-lease:1"
+              }
+            ]
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "role is explicit rather than admission ID prefix",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "readWrongRole"
+          },
+          "expect": {
+            "error": "Forbidden"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "one dispatcher slot with unchanged lease on Busy",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "readLease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "readIssued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "readAdmit"
+          },
+          "expect": {
+            "error": "Busy"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "readAdmit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "accepted workflow cannot silently start next mutation",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "nextLease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "nextIssued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "nextAdmit"
+          },
+          "expect": {
+            "error": "Busy"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "unknown workflow cannot silently start next mutation",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "nextLease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "nextIssued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "nextAdmit"
+          },
+          "expect": {
+            "error": "Busy"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "known rejection permits next simulated workflow",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "rejected"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Rejected"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "rejected"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "nextLease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "nextIssued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "nextAdmit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "discard is a definitive simulated result",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "discardLease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "discardIssued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "discardAdmit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "discardReply"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "CompletedDiscard"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "discardReply"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "discardAdmit"
+          },
+          "expect": {
+            "kind": "Replay",
+            "document": {
+              "base": "discardReply"
+            }
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "definitive terminal requires prior decision",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Replay",
+            "document": {
+              "base": "accepted"
+            }
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "proof enum and payload must agree",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "rejected"
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        }
+      ]
+    },
+    {
+      "name": "contradictory proof preserves evidence",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "rejected"
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          },
+          "ticket": "a",
+          "decision": "Rejected"
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspectLater"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "foundAccepted"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "original reply cannot change after terminal",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callTerminal"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "same admission ID different body is blocked",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit",
+            "patch": [
+              {
+                "path": "/deadlineLeaseRef",
+                "value": "other"
+              }
+            ]
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Pending"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "issue cannot cross principal binding",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "error": "Forbidden"
+          },
+          "session": {
+            "principal": "another"
+          }
+        },
+        {
+          "op": "stats",
+          "expect": {
+            "kind": "ok"
+          },
+          "fields": {
+            "mutationAdmissions": 0,
+            "readAdmissions": 0,
+            "mutationLeases": 0,
+            "admissionInspections": 0,
+            "callInspections": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "issue cannot cross owner epoch",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "error": "Forbidden"
+          },
+          "session": {
+            "epoch": "another"
+          }
+        }
+      ]
+    },
+    {
+      "name": "begin cannot cross principal binding",
+      "steps": [
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "error": "Forbidden"
+          },
+          "ticket": "a",
+          "session": {
+            "principal": "another"
+          }
+        },
+        {
+          "op": "stats",
+          "expect": {
+            "kind": "ok"
+          },
+          "fields": {
+            "mutationAdmissions": 0,
+            "readAdmissions": 0,
+            "mutationLeases": 0,
+            "admissionInspections": 0,
+            "callInspections": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "begin cannot cross owner epoch",
+      "steps": [
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "error": "Forbidden"
+          },
+          "ticket": "a",
+          "session": {
+            "epoch": "another"
+          }
+        }
+      ]
+    },
+    {
+      "name": "inspect cannot cross principal binding",
+      "steps": [
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect"
+          },
+          "expect": {
+            "error": "Forbidden"
+          },
+          "session": {
+            "principal": "another"
+          }
+        },
+        {
+          "op": "stats",
+          "expect": {
+            "kind": "ok"
+          },
+          "fields": {
+            "mutationAdmissions": 0,
+            "readAdmissions": 0,
+            "mutationLeases": 0,
+            "admissionInspections": 0,
+            "callInspections": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "inspect cannot cross owner epoch",
+      "steps": [
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect"
+          },
+          "expect": {
+            "error": "Forbidden"
+          },
+          "session": {
+            "epoch": "another"
+          }
+        }
+      ]
+    },
+    {
+      "name": "call cannot cross principal binding",
+      "steps": [
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "error": "Forbidden"
+          },
+          "session": {
+            "principal": "another"
+          }
+        },
+        {
+          "op": "stats",
+          "expect": {
+            "kind": "ok"
+          },
+          "fields": {
+            "mutationAdmissions": 0,
+            "readAdmissions": 0,
+            "mutationLeases": 0,
+            "admissionInspections": 0,
+            "callInspections": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "call cannot cross owner epoch",
+      "steps": [
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "error": "Forbidden"
+          },
+          "session": {
+            "epoch": "another"
+          }
+        }
+      ]
+    },
+    {
+      "name": "clock reversal is sticky but old proofs remain readable",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "advance",
+          "expect": {
+            "kind": "ok"
+          },
+          "nowMs": "5"
+        },
+        {
+          "op": "advance",
+          "expect": {
+            "error": "ClockFault"
+          },
+          "nowMs": "4"
+        },
+        {
+          "op": "advance",
+          "expect": {
+            "kind": "ok"
+          },
+          "nowMs": "5"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callTerminal"
+            }
+          }
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "nextLease"
+          },
+          "expect": {
+            "error": "ClockFault"
+          }
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspectLater"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "foundAccepted"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "deadline overflow is atomic",
+      "steps": [
+        {
+          "op": "advance",
+          "expect": {
+            "kind": "ok"
+          },
+          "nowMs": "18446744073709551615"
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "error": "InvalidInput"
+          }
+        },
+        {
+          "op": "stats",
+          "expect": {
+            "kind": "ok"
+          },
+          "fields": {
+            "mutationLeases": 0,
+            "mutationBytes": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "close keeps original tickets and observations",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "close",
+          "expect": {
+            "kind": "ok"
+          }
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callTerminal"
+            }
+          }
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspectLater"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "foundAccepted"
+            }
+          }
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "nextLease"
+          },
+          "expect": {
+            "error": "Closed"
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Replay",
+            "document": {
+              "base": "unknown"
+            }
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "zero mutation_admissions pool is atomic",
+      "limits": {
+        "mutation_admissions": 0
+      },
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "error": "Capacity"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "zero read_admissions pool is atomic",
+      "limits": {
+        "read_admissions": 0
+      },
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "readLease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "readIssuedFirst"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "readAdmitFirst"
+          },
+          "expect": {
+            "error": "Capacity"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "zero mutation_leases pool is atomic",
+      "limits": {
+        "mutation_leases": 0
+      },
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        }
+      ]
+    },
+    {
+      "name": "zero read_leases pool is atomic",
+      "limits": {
+        "read_leases": 0
+      },
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "readLease"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        }
+      ]
+    },
+    {
+      "name": "zero admission_inspections pool is atomic",
+      "limits": {
+        "admission_inspections": 0
+      },
+      "steps": [
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        }
+      ]
+    },
+    {
+      "name": "zero call_inspections pool is atomic",
+      "limits": {
+        "call_inspections": 0
+      },
+      "steps": [
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        }
+      ]
+    },
+    {
+      "name": "admission inspection ID exhaustion retains replay",
+      "limits": {
+        "admission_inspections": 1
+      },
+      "steps": [
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "notFound"
+            }
+          }
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspectTwo"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "notFound"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "call inspection ID exhaustion retains replay",
+      "limits": {
+        "call_inspections": 1
+      },
+      "steps": [
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callNotFound"
+            }
+          }
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "callTwo"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callNotFound"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "inspection ID cannot silently retarget",
+      "steps": [
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "notFound"
+            }
+          }
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect",
+            "patch": [
+              {
+                "path": "/original/admissionId",
+                "value": "another"
+              }
+            ]
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "call inspection ID cannot silently retarget",
+      "steps": [
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callNotFound"
+            }
+          }
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call",
+            "patch": [
+              {
+                "path": "/original/admissionId",
+                "value": "another"
+              }
+            ]
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unsupported original has no simulated side effect",
+      "steps": [
+        {
+          "op": "call",
+          "input": {
+            "base": "unsupported"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "unsupportedReply"
+            }
+          }
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "unsupported"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "unsupportedReply"
+            }
+          }
+        },
+        {
+          "op": "stats",
+          "expect": {
+            "kind": "ok"
+          },
+          "fields": {
+            "mutationAdmissions": 0,
+            "mutationLeases": 0,
+            "callInspections": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "exact retained mutation budget accepts",
+      "limits": {
+        "total_bytes": 1051857,
+        "read_bytes": 0
+      },
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "stats",
+          "expect": {
+            "kind": "ok"
+          },
+          "fields": {
+            "mutationBytes": 1051857
+          }
+        }
+      ]
+    },
+    {
+      "name": "one byte below reservation preserves unconsumed lease",
+      "limits": {
+        "total_bytes": 1051856,
+        "read_bytes": 0
+      },
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "error": "Capacity"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "error": "Capacity"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "one byte below lease allocation is atomic",
+      "limits": {
+        "total_bytes": 1543,
+        "read_bytes": 0
+      },
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        }
+      ]
+    },
+    {
+      "name": "exact read budget holds inspection binding",
+      "limits": {
+        "total_bytes": 2343,
+        "read_bytes": 2343
+      },
+      "steps": [
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callNotFound"
+            }
+          }
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callNotFound"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "one below read budget has no binding side effects",
+      "limits": {
+        "total_bytes": 2342,
+        "read_bytes": 2342
+      },
+      "steps": [
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        }
+      ]
+    },
+    {
+      "name": "mutation budget exhaustion preserves recovery read",
+      "limits": {
+        "total_bytes": 1054200,
+        "read_bytes": 2343
+      },
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "nextLease"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callTerminal"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "no borrowing of reserved read bytes by mutation",
+      "limits": {
+        "total_bytes": 2343,
+        "read_bytes": 2343
+      },
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "callNotFound"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "read budget exhaustion does not consume mutation capacity",
+      "limits": {
+        "total_bytes": 1051857,
+        "read_bytes": 0
+      },
+      "steps": [
+        {
+          "op": "call",
+          "input": {
+            "base": "call"
+          },
+          "expect": {
+            "error": "Capacity"
+          }
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        }
+      ]
+    },
+    {
+      "name": "proof and repeated finish preserve fixed reservations",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "proof",
+          "input": {
+            "base": "accepted"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a",
+          "decision": "Accepted"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "finish",
+          "input": {
+            "base": "unknown"
+          },
+          "expect": {
+            "kind": "ok"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "stats",
+          "expect": {
+            "kind": "ok"
+          },
+          "fields": {
+            "mutationBytes": 1051857
+          }
+        }
+      ]
+    },
+    {
+      "name": "inspection known admission checks full original body",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "inspect",
+          "input": {
+            "base": "inspect",
+            "patch": [
+              {
+                "path": "/original/deadlineLeaseRef",
+                "value": "other"
+              }
+            ]
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "call known admission checks full original body",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "begin",
+          "input": {
+            "base": "admit"
+          },
+          "expect": {
+            "kind": "Registered"
+          },
+          "ticket": "a"
+        },
+        {
+          "op": "call",
+          "input": {
+            "base": "call",
+            "patch": [
+              {
+                "path": "/original/deadlineLeaseRef",
+                "value": "other"
+              }
+            ]
+          },
+          "expect": {
+            "error": "ProtocolViolation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "lease4 cap excludes expired but not old IDs",
+      "steps": [
+        {
+          "op": "issue",
+          "input": {
+            "base": "lease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "issued"
+            }
+          }
+        },
+        {
+          "op": "advance",
+          "expect": {
+            "kind": "ok"
+          },
+          "nowMs": "10"
+        },
+        {
+          "op": "issue",
+          "input": {
+            "base": "nextLease"
+          },
+          "expect": {
+            "kind": "reply",
+            "document": {
+              "base": "nextIssuedSecond"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
