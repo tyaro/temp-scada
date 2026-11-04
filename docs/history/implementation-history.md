@@ -4,6 +4,20 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録wireの純粋receiver実装（H5d4c4c-prep2c、2026-11-05）
+
+設計[PR #83](https://github.com/tyaro/temp-scada/pull/83)はworkへ統合済み（`7400ab2`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41876216620)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41876301076)全7job成功、head `453e18a` のレビュー指摘なし）。[Astraの採用設計](../design/runtime/historian-recording-wire-receiver.md)に沿い、固定Scope・private世代token・poll型の純粋TypeScript receiverを実装した。
+
+元callの正常ACK保存とsnapshotの正式化を分け、表示側の矛盾・容量不足でも元terminalを保持する。ACK前のstateは全有限履歴を保持してrevision昇順で原子的に昇格し、controlは別slotで保持する。同revisionは全文比較し、未知低revisionはresync、既知低revisionの完全重複はHを戻さず許可する。Scope履歴は世代を跨ぎ、subscriptionRefを別世代へ再束縛しない。
+
+切断・退役・dispose後も元replyを回収でき、未回収attach/controlがある間は新attachを拒否する。closed／ownerBlocked／認可喪失／配送切断と受信faultを分け、全mutationをdescriptor検査前から再入guardで保護する。共有59シナリオをunitとChromiumで同じ実装へ流し、独立予算oracle・境界・ownership・全mutationへの再入も検査する。
+
+保持はsnapshot正式＋provisional合計64件/8MiB、requestと最大replyの先取りを含むcall合計8MiBで、返却/GCは行わない。通常例の4回目attachは容量拒否となり、長時間streamの無期限運用は保証しない。既知証拠を失わず有限停止する初回実装である。
+
+通常App／coordinator／local portと実native・transportは未接続。次はwire→local表示契約と元call配送の詳細設計を行い、接続可否を判断する。Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存、P3bの保留を維持する。
+
+検証: TS全9,952件（新規113）、型検査0error/0warning・build、関連Chromium13件（新規1）、全体Prettier・変更文書リンクと差分。Rust source/schema/依存は変更せず、Rust全体検証はPR全体CIで確認する。Astraの最終read-onlyレビューに修正必須の所見はない。Ready for Review PRで全体CIを確認する。
+
 ## 記録wireの受信frame設計（H5d4c4c-prep2c、2026-11-05）
 
 prep2b5aの[PR #82](https://github.com/tyaro/temp-scada/pull/82)はworkへ統合済み（`cc2bed9`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41871519106)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41871618502)全7job成功、head `212a8d2` のレビュー指摘なし）。[Astraの受信器設計](../design/runtime/historian-recording-wire-receiver.md)で、固定scopeとローカル世代ticketに束縛した純粋TypeScript receiverの境界を定めた。
