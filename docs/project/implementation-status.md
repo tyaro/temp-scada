@@ -10,6 +10,16 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 記録操作registryの状態モデル（H5d4c4c-prep2a、2026-11-04）
+
+[Astraの実装設計](../design/runtime/historian-recording-registry-model.md)に沿い、Rustだけで仮想lease、受付前登録、模擬受付知識と元callの不変返信、read-only照会を検証する単一ownerモデルを追加した。実時計・native owner・SDK・DB・通信を呼ばず、通常Appの接続も変更しない。
+
+同一IDの再送は期限を延長せず、unknown元返信の後で模擬Accepted証拠を得ても元返信を上書きしない。別principal／epoch、role不一致、本文変更、clock逆行・期限切れ・容量不足を拒否する。mutationとreadの予算を分離し、失敗した登録でleaseやIDを消費しない。
+
+共通55シナリオ・201ステップをRustで実行し、期待DTO transcriptをTS／browserの既存validatorで確認する。browserに第二のregistryを作らない。raw scopeは複製前にbounded検査する。
+
+prep1のPR #71はworkへ統合済み（`bbc5359`、PR／push CIとも全7job成功、最終headの自動レビューに指摘なし）。prep2aは未解放workflow後の新mutationを保守停止する限定モデルであり、実lease発行・registry adapterを提供したとは扱わない。結果観測／取消／購読・再接続、workflow credit、製品host・認証・P3bは後続である。
+
 ## 記録操作wireの純粋契約（H5d4c4c-prep1、2026-11-04）
 
 [Astraの詳細設計](../design/runtime/historian-recording-wire-host.md)に沿い、新wire v1の14root、Rust／TS owned validator、request全文・scope・subscriptionの照合と、受付前の最大reply容量検査を実装した。lease／結果観測／取消／完全snapshot・再同期制御／元call照会を閉じたJSONで表す。nested c4a／d4a／H5a／d3は従来の独立予算と意味検査を再適用する。

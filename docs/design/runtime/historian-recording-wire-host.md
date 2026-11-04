@@ -1,6 +1,6 @@
 # 記録操作wire契約とserver core／host境界
 
-状態: **採用詳細設計・prep1純粋契約を実装**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **採用詳細設計・prep1純粋契約とprep2a状態モデルを実装**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
 本書は[c4接続境界](historian-recording-bridge-boundary.md)と[c4b非同期monitor設計](historian-recording-async-monitor.md)の後続である。
 PR #69はwork `26437260a43c9691e1dc568df7b3e5495c6e4f8e` へマージ済み。c4bコードを実装照合の根拠とした。
 設計PR #70はwork `e0ab72b`へ統合済み。prep1は14rootの純粋JSON契約だけを実装し、host・認証・通信待受は後続とする。c4bはtest-only portによる通常App受入までで、native product接続ではない。
@@ -384,7 +384,7 @@ pure validatorはscope/request/refの既知文書間一致、branch、数値、�
 Rust／TS owned validator、既知request/reply／subscription frameの一致helper、最大reply closure、共有fixture、browser module評価を提供する。
 既存c4aの五rootを改版せず、local schema resourceとして参照する。App／native owner／listener／認証／transportは変更しない。
 
-c4c-prep2を追加するならregistryのpure state modelと仮handle／制御clock試験だけとし、実native operationをdispatchしない。
+[prep2詳細設計](historian-recording-registry-model.md)のprep2aとして、Rustの単一owner状態モデル、仮想lease／時計、受付台帳と元call終端照会を実装した。実native operationはdispatchしない。prep2bの結果観測／cancel／snapshot・subscription、workflow全段階の予約と複数scope allocatorは後続である。
 実adapter／server core hostへの接続はc4c実装工程であり、prepという名前でP3b gateを迂回しない。
 着手前に製品shell／embedded host起動、認証APIとprincipal binding、資格情報と設定配置、実配送とshutdownを別途確定・レビューする。
 現在の保留中でもprep1は独立してレビュー可能であり、実環境の許可を推測する必要がない。

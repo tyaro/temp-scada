@@ -100,6 +100,19 @@ fn measure(value: &Value, limit: WireBound) -> Result<WireBound, RecordingWireEr
         depth,
     })
 }
+/// Conservative structural JSON metrics only, not schema validity or execution authority.
+/// Caller limits may shrink the largest wire profile, never increase traversal bounds.
+pub fn conservative_recording_json_bound(
+    value: &Value,
+    limit: WireBound,
+) -> Result<WireBound, RecordingWireError> {
+    require(
+        limit.bytes <= WIRE_INSPECTION_REPLY_LIMIT.bytes
+            && limit.nodes <= WIRE_INSPECTION_REPLY_LIMIT.nodes
+            && limit.depth <= WIRE_INSPECTION_REPLY_LIMIT.depth,
+    )?;
+    measure(value, limit)
+}
 fn known(kind: &str) -> bool {
     matches!(
         kind,

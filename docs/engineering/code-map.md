@@ -723,3 +723,11 @@ TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,ca
 TSの`recording-wire-contract.ts`と`recording-wire/{types,budget,semantic,capacity}.ts`も同じ責務を持つ。`history/owned-json.ts`とRust `json_contract.rs`はopt-inの保守会計・node／depth計数を提供し、既存compact／admission／local profileの既定上限は変えない。raw bytes受信・registryの空き容量と認可はこの純粋境界に含まない。
 
 `examples/recording-wire-cases.json`とtest-only `__fixtures__/recording-wire-cases.ts`をRust `recording_wire/tests.rs`、TS `recording-wire-contract.test.ts`、`e2e/recording-wire-contract.spec.ts`で共有する。14root、最長ID、独立nested契約、自己照会排除、容量のexact／1不足byte・node・depth、会計上限、所有と通常App保存不変を検証する。実lease発行、registry adapter、native配送・認証・製品hostは後続で、c4b local portへ透過的に接続しない。
+
+## 記録操作registryの純粋状態モデル（H5d4c4c-prep2a）
+
+`scada_runtime::recording_registry_model`は仮想時計・単一scopeとprincipal binding・役割別有限資源を保持する決定的モデル。`types.rs`はcheckedなsession／limitsと非Deserializeのinstance-bound SimulationTicket、`lease.rs`は一admission一lease・仮想期限・exact replay、`admission.rs`は原子登録とproof／元terminalの独立保持を担当する。`inspection.rs`は現在知識のsnapshotと元call照会のID bindingを保持し、未登録の元callを実行しない。実clock・native owner／SDK・DB・executor・transportを参照しない。
+
+保守bytesは`scada-model::recording_wire::conservative_recording_json_bound`が既存JsonBudgetから計数する。最大profileより大きいcaller limitを拒否し、schema-validやnative実行資格の判定には使わない。raw session scopeも複製前に同walkerで打ち切る。admissionのrequest＋二返信固定予約とread別枠はモデル終了まで維持する。
+
+`recording_registry_model/tests.rs`は`examples/recording-registry-model-cases.json`の55シナリオを実行して期待DTOへ照合する。`tests/boundaries.rs`はraw scope・instance ticket・ID／lease4上限と原子性を検証する。TSのtest-only `__fixtures__/recording-registry-model-cases.ts`、`recording-registry-model-contract.test.ts`、`e2e/recording-registry-model-contract.spec.ts`は同じtranscriptの既存validator適合・所有・App保存不変を確認し、第二のregistryは実装しない。Accepted後の新mutation停止、後続prep2bとP3bのgateを維持する。
