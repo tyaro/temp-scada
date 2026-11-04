@@ -1,0 +1,386 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://temp-scada.invalid/schema/recording-admission-v1.json",
+  "title": "Pure asynchronous recording admission contract v1",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/admissionRequest"
+    },
+    {
+      "$ref": "#/$defs/admissionReply"
+    },
+    {
+      "$ref": "#/$defs/inspectionRequest"
+    },
+    {
+      "$ref": "#/$defs/inspectionReply"
+    },
+    {
+      "$ref": "#/$defs/delivery"
+    }
+  ],
+  "$defs": {
+    "action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "change"],
+          "properties": {
+            "kind": {
+              "const": "preflight"
+            },
+            "change": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/change"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "changeRef", "operation"],
+          "properties": {
+            "kind": {
+              "const": "pauseJoin"
+            },
+            "changeRef": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+            },
+            "operation": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/operationRequest"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "changeRef", "operation"],
+          "properties": {
+            "kind": {
+              "const": "apply"
+            },
+            "changeRef": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+            },
+            "operation": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/operationRequest"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "changeRef", "operationRef", "reconciliation"],
+          "properties": {
+            "kind": {
+              "const": "reconcile"
+            },
+            "changeRef": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+            },
+            "operationRef": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+            },
+            "reconciliation": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/reconciliationRequest"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "changeRef", "change"],
+          "properties": {
+            "kind": {
+              "const": "discard"
+            },
+            "changeRef": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+            },
+            "change": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/change"
+            }
+          }
+        }
+      ]
+    },
+    "acceptedRef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "changeRef", "operationRef", "request"],
+          "properties": {
+            "kind": {
+              "const": "operation"
+            },
+            "changeRef": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+            },
+            "operationRef": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+            },
+            "request": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/operationRequest"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "readRef", "request"],
+          "properties": {
+            "kind": {
+              "const": "reconciliation"
+            },
+            "readRef": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+            },
+            "request": {
+              "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/reconciliationRequest"
+            }
+          }
+        }
+      ]
+    },
+    "admissionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "kind",
+        "ownerRef",
+        "admissionId",
+        "context",
+        "deadlineLeaseRef",
+        "action"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingAdmissionRequest"
+        },
+        "ownerRef": {
+          "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+        },
+        "admissionId": {
+          "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+        },
+        "context": {
+          "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/context"
+        },
+        "deadlineLeaseRef": {
+          "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+        },
+        "action": {
+          "$ref": "#/$defs/action"
+        }
+      }
+    },
+    "admissionReply": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "request", "outcome"],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingAdmissionReply"
+        },
+        "request": {
+          "$ref": "#/$defs/admissionRequest"
+        },
+        "outcome": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "handle"],
+              "properties": {
+                "kind": {
+                  "const": "accepted"
+                },
+                "handle": {
+                  "$ref": "#/$defs/acceptedRef"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind"],
+              "properties": {
+                "kind": {
+                  "const": "completedDiscard"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "error"],
+              "properties": {
+                "kind": {
+                  "const": "rejected"
+                },
+                "error": {
+                  "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/error"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "error"],
+              "properties": {
+                "kind": {
+                  "const": "unknown"
+                },
+                "error": {
+                  "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/error"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "inspectionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "inspectionId", "original"],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingAdmissionInspectionRequest"
+        },
+        "inspectionId": {
+          "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+        },
+        "original": {
+          "$ref": "#/$defs/admissionRequest"
+        }
+      }
+    },
+    "inspectionReply": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "kind", "request", "outcome"],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingAdmissionInspectionReply"
+        },
+        "request": {
+          "$ref": "#/$defs/inspectionRequest"
+        },
+        "outcome": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "reply"],
+              "properties": {
+                "kind": {
+                  "const": "found"
+                },
+                "reply": {
+                  "$ref": "#/$defs/admissionReply"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind"],
+              "properties": {
+                "kind": {
+                  "const": "notFound"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "error"],
+              "properties": {
+                "kind": {
+                  "const": "unavailable"
+                },
+                "error": {
+                  "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/error"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "kind",
+        "ownerRef",
+        "readRef",
+        "request",
+        "outcome"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "kind": {
+          "const": "recordingReconciliationDelivery"
+        },
+        "ownerRef": {
+          "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+        },
+        "readRef": {
+          "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/id"
+        },
+        "request": {
+          "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/reconciliationRequest"
+        },
+        "outcome": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "result"],
+              "properties": {
+                "kind": {
+                  "const": "result"
+                },
+                "result": {
+                  "$ref": "https://temp-scada.invalid/schema/recording-operations-v1.json#/$defs/reconciliationResult"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "error"],
+              "properties": {
+                "kind": {
+                  "const": "readUncertain"
+                },
+                "error": {
+                  "enum": ["internal", "workerFailure"]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

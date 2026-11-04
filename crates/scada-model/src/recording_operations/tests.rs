@@ -7,7 +7,7 @@ fn fixtures() -> Value {
     ))
     .unwrap()
 }
-fn input(all: &Value, row: &Value) -> Result<Value, serde_json::Error> {
+pub(crate) fn input(all: &Value, row: &Value) -> Result<Value, serde_json::Error> {
     if row.get("json").is_some() || row.get("build").is_some() {
         return plan_cases::input(row);
     }

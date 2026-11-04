@@ -696,8 +696,10 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 
 `reconciliation/tests/outcomes.rs`は実commit後の応答喪失／panicと同snapshotの元receipt、不在・破損・全文echo・投影失敗を扱う。`lifecycle.rs`は実blocking worker中の取消／期限／Drop・Runtime終了・poison、`gates.rs`は全caller・ID上限・opaque identity・既存leaseを扱う。`tests/recording_host/operations.rs`には実SDKで出力予算rollback→同owner notFound→非再開・履歴不変の公開API試験を追加した。通常AppのJS bridge、回復latch解除と製品transportは実装しない。
 
-## 記録操作の非同期bridge（H5d4c4、設計のみ）
+## 非同期admissionの共通JSON（H5d4c4a）
 
-[詳細設計](../design/runtime/historian-recording-bridge-boundary.md)は、同期の`recording-operations/service.ts`とRust ownerの間に、非同期admission・native期限leaseと元ownerを保持する境界が必要なことを定める。c4aの共通DTO／pure validator／fixture、c4bのmonitor受入、host選定付きnative接続を別の区切りにする。
+`scada-model/schema/recording-admission.schema.json`は独立v1の五rootと閉じたfield／errorを定める。`recording_admission.rs`はowned wrapper・ローカルschema登録・既知document相互照合、`recording_admission/semantic.rs`は全nested d4aの独立検証とstage／ref／全文echo、`capacity.rs`は受付前の最大返信九分岐を担当する。native `json_contract.rs`のadmission profileだけが外側の保守計数を使用し、既存compact予算は維持する。
 
-本節は後続の実装責務を示す。bridge module、実lease発行、IPC／Tauri host／serverはまだ存在せず、既存d4b providerやc3 Rust試験を接続完了とはしない。実装PRで実際の配置と受入を更新する。
+TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,capacity}.ts`は同じ境界を持つ。`history/owned-json.ts`へadmission opt-inを追加し、既定のcompact／depth32を変えない。`json-equality.ts`は既存d4aと共有するowned JSON比較で、配列順を保持する。
+
+`examples/recording-admission-cases.json`とtest-only `__fixtures__/recording-admission-cases.ts`をRust `recording_admission/tests.rs`、TS `recording-admission-contract.test.ts`、`e2e/recording-admission-contract.spec.ts`で共有する。予算境界、最大reply、再帰closure回避、nested契約、所有・Unicode・外部取得なしと通常App保存不変を確認する。c4bのasync monitor／UI、実lease／registry／IPC／製品hostは未実装で、pure JSON受理をnative実行の証拠にしない。

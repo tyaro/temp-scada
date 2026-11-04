@@ -4,9 +4,11 @@ export function ownHistoryJson(
   input: unknown,
   maxBytes: number,
   maxNodes = 250_000,
+  accounting: "compact" | "admission" = "compact",
 ): unknown {
   if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 250_000)
     throw Error("History data limit");
+  const conservative = accounting === "admission";
   let bytes = 0;
   let nodes = 0;
   const ancestors = new Set<object>();
@@ -20,7 +22,8 @@ export function ownHistoryJson(
     for (let i = 0; i < text.length; i++) {
       const code = text.charCodeAt(i);
       if (code === 34 || code === 92) add(2);
-      else if (code < 32) add([8, 9, 10, 12, 13].includes(code) ? 2 : 6);
+      else if (code < 32)
+        add(!conservative && [8, 9, 10, 12, 13].includes(code) ? 2 : 6);
       else if (code < 128) add(1);
       else if (code < 2048) add(2);
       else if (code >= 0xd800 && code <= 0xdbff) {
@@ -28,13 +31,19 @@ export function ownHistoryJson(
         if (low >= 0xdc00 && low <= 0xdfff) {
           add(4);
           i++;
-        } else add(6);
-      } else if (code >= 0xdc00 && code <= 0xdfff) add(6);
-      else add(3);
+        } else {
+          if (conservative) throw Error("History data scalar");
+          add(6);
+        }
+      } else if (code >= 0xdc00 && code <= 0xdfff) {
+        if (conservative) throw Error("History data scalar");
+        add(6);
+      } else add(3);
     }
   }
   function visit(value: unknown, depth: number): unknown {
-    if (++nodes > maxNodes || depth > 32) throw Error("History data limit");
+    if (++nodes > maxNodes || depth > (conservative ? 48 : 32))
+      throw Error("History data limit");
     if (value === null) {
       add(4);
       return null;
@@ -44,7 +53,7 @@ export function ownHistoryJson(
       return value;
     }
     if (typeof value === "number" && Number.isFinite(value)) {
-      add(JSON.stringify(value).length);
+      add(conservative ? 24 : JSON.stringify(value).length);
       return value;
     }
     if (typeof value === "string") {

@@ -1,6 +1,6 @@
 # 記録操作のJS／native接続境界
 
-状態: **H5d4c4の採用詳細設計・未実装**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。c3はPR #65で統合済み。本書は次の純粋契約工程を定める設計文書であり、実transport、native provider、通常Appの接続を追加しない。
+状態: **H5d4c4aのpure契約実装済み・c4b／実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。c3はPR #65で統合済み。c4aの独立JSON契約・共通検証をRust／TSで提供する。実transport、native provider、通常Appの接続は追加しない。
 
 ## 1. 現行実装と接続上の差
 
@@ -18,7 +18,7 @@ ViteとRust libraryの間にはTauri host、SCADA server、同期FFI、IPCは存
 | c4b  | 常設monitorの非同期admission一枠、通常Appの受付中／受付不明／明示再照会表示。制御port注入試験 | 実Rust接続、製品host、資格情報                          |
 | c4c  | host選定・P3b再開条件を別途満たした後、native owner registry adapterと実配送                  | 認証や実Hub接続の暗黙解除                               |
 
-直近の実装PRはc4aだけとする。H5d4aの操作・結果JSON、Project 0.37.0、DB7、H1、SDK、Banto、依存版は変更しない。追加schemaは別resource／versionとしてローカル登録する。c4b着手前にはc4aに合わせたUI所有・操作復帰の詳細レビューを行う。
+設計PR #66はworkへ統合済み（`eef9316`）。今回実装した範囲はc4aだけである。H5d4aの操作・結果JSON、Project 0.37.0、DB7、H1、SDK、Banto、依存版は変更しない。追加schemaは別resource／versionとしてローカル登録する。c4b着手前にはc4aに合わせたUI所有・操作復帰の詳細レビューを行う。
 
 ## 3. 全callerのownerとopaque参照
 
@@ -177,16 +177,30 @@ subscribe／reconnectの実protocolはc4cで定めるが、次の要件は固定
 
 adapter admission IDはowner内4096件、既登録IDは再使用不可。新workflowでpreflight／pause／applyの三admission分を予約し、unused creditだけ終端／明示discardで解放する。discardの一枠を別途同workflowに予約し、容量上限で候補を破棄できない状態を避ける。reconcile admissionと受付照会はmutationとは別の有限枠とし、具体pool上限／回復時の枯渇終端はc4c着手前に確定する。native c2/c3の4096枠とは別に上限を持ち、両方を通過できる範囲だけ受理する。
 
-c4aはregistryや予約処理を実装しない。c4b mockは最大一workflow／一admission／一inspectionを保持し、非協力Promiseでも物理完了を偽って次を送らない。close／Project／service交換は送信資格を退役し、旧ownerの進行・receipt監視を保持する。new serviceのcontextを旧operationへ付け替えない。
+c4aはregistryや予約処理を実装していない。c4b mockは最大一workflow／一admission／一inspectionを保持し、非協力Promiseでも物理完了を偽って次を送らない。close／Project／service交換は送信資格を退役し、旧ownerの進行・receipt監視を保持する。new serviceのcontextを旧operationへ付け替えない。
 
 requestCancelも一般IPCでは同期CancelDispositionを確定できないため、c4b以降は非同期ackを別に設計する。取消要求送信は操作未実行／rollbackの証明ではない。pause stopを撤回しない。discardはcompletedDiscardの実完了ackまで候補を保持する。native read・writerが未joinならUI timeout／dispose／socket closeで枠を解放しない。
 
-## 9. 次PRの具体的受入
+## 9. c4aの実装と受入
 
-c4aが実装するrootはAdmissionRequest、AdmissionReply、AdmissionInspectionRequest、AdmissionInspectionReply、ReconciliationDeliveryの五つに限定する。lease発行request/ack、state再同期frame、cancel ack、実registryはこのschemaへ憶測で追加しない。
+c4aの実装rootはAdmissionRequest、AdmissionReply、AdmissionInspectionRequest、AdmissionInspectionReply、ReconciliationDeliveryの五つに限定する。lease発行request/ack、state再同期frame、cancel ack、実registryはこのschemaへ憶測で追加しない。
 
 c4aはscada-modelの独立schema／owned Rust validator、TS owned parser／意味検査、examples共通fixtureと通常browser module評価を実装する。UI/service/native ownerへの呼出を追加せず、既存同期serviceと既存d4a rootの互換性を維持する。
 
 受入は全action／reply組合せ、context/request全文一致、member順保持と数値整数同値、generated preflight operationId、単一reply内のref／元要求照合と既知二documentの全文相互検証、discard早期accepted禁止、readUncertainと元apply結果の分離、秘密field／未知field／nullable、Unicode scalar、予算境界と最大reply構築可能性、外部schema fetch無しを含む。pure validatorは実際の未dispatch・opaque所有・deadline lease・registryを証明しないと明記する。同refを過去と異なる元要求へ登録するstateful拒否は将来adapter registryの責務であり、単一documentのshape検査や既知二documentの比較だけで全履歴の一意性を保証しない。
 
 c4bは制御Promiseで受付応答喪失、rejectとtyped rejectedの区別、候補停止の三明示段階、discard遅延ack、受付不明→notFoundでもblock、readUncertain、subscribe切断、Project/service交換を受け入れる。c4cはhost選定とP3b再開条件が満たされるまで着手しない。native libraryとローカルmockの成功を、製品接続・認証・実S7での成功と呼ばない。
+
+## 10. c4aの実装入口と検証範囲
+
+`scada-model/schema/recording-admission.schema.json`は独立v1 resourceで、`recording_admission.rs`は五つのowned wrapper／validatorと既知document間の照合を提供する。`semantic.rs`がstage／ref／全文echoと全nested d4aの独立検証、`capacity.rs`が各要求に必須の最大返信九分岐の検査を担当する。preflightで生成するoperation requestも既存d4a予算を満たすことを確認する。公開validatorを再帰呼出ししてclosureを構築しない。
+
+TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,capacity}.ts`は同じ責務を持つ。`history/owned-json.ts`のadmission opt-inとnative `json_contract.rs`のadmission profileで保守計数を共有し、既存compact profileの上限・意味は維持する。TSの`json-equality.ts`はbounded owned JSONの比較を既存d4aと共有し、key順／整数表記差を無視して配列順を保持する。
+
+`examples/recording-admission-cases.json`の受理924・全文一致15・既知document照合6・会計境界12・返信容量5のvectorをRust／TSとChromiumで共有する。既存H5a139・d3 target447・対象d4a353件を内包して独立検証する。schemaは全てローカル登録し、外部取得を行わない。通常AppのProject保存も不変である。
+
+現行schemaでは8member、文字列scalar長、H1 IDなどの上限により、有効な要求は外側512KiB／16384nodeより十分小さい。外側予算自体の厳密な境界は構造JSONの共有vectorで検証し、最大reply検査は同じwalkerへ試験用の小予算を与え、要求単体と前段replyは通るが最大found InspectionReplyが超過することを確認する。本番上限を変更したり、schema-validな巨大要求を存在するように扱ったりしない。全九分岐の固定byte／node期待値を両言語で一致させる。
+
+pure検証は未dispatch、owner所有、lease失効、registryの一意性や再送資格の証明ではない。c4bの非同期monitor／UIは次の設計・実装境界で、実接続とP3bの保留は維持する。
+
+Rust workspace626件（新規8）、TS全6,737件（新規1,903）、関連Chromium6件（新規3）、型検査0error／0warning・build、Clippy全target `-D warnings`／rustfmtが成功した。Astra最終read-onlyレビューに残る必須指摘はない。
