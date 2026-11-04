@@ -4,6 +4,18 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録registryのworkflow予約・段階進行設計（H5d4c4c-prep2b4、2026-11-04）
+
+prep2b3のPR #76をworkへ統合（`0ffde65`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[workflowモデル](../design/runtime/historian-recording-registry-workflow-model.md)で、既存のAccepted後保守停止を段階的に置き換える条件を定めた。最初に単一候補の明示段階進行と全段階予約を実装し、正常終端後の次workflow解禁を別段階へ分ける。
+
+現行の固定予約では4admissionがmutation6MiBを超える問題を確認した。既知request由来の保持上界で4操作分を独立に予約し、applyの確定未受理後も初回discardを保持する。再試行は追加枠を使い、read専用予算を借りない。元call終端・受付知識・操作completionを独立に扱い、receiptや取消ackから物理静止・回復解除を合成しない。
+
+独立reconciliation ID台帳もb4aで両modeのread admissionへ原子登録する設計とした。同admissionのexact再送は再登録せず、別admissionでのID再使用を拒否する。
+
+今回は設計文書のみで、実行コード・wire／schema・Project0.37.0／DB7／H1／固定SDK／Banto・依存を変更していない。実native／host接続とP3bは保留する。
+
+Astraの最終レビューとrootのnative／coordinator照合を完了した。文書の整形・相対リンク・差分を確認し、コード変更のない設計区切りのためローカル全体試験は再実行せず、Ready for Review PRの全体CIで回帰を確認する。
+
 ## 記録registryモデルのsnapshotと購読（H5d4c4c-prep2b3、2026-11-04）
 
 prep2b2のPR #74をworkへ統合（`3c2c87b`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[prep2b3](../design/runtime/historian-recording-registry-subscription-model.md)として、完全snapshotの原子的attach、不変元返信、最新一件state slotと独立control slot、明示detach／reconnectを実装した。古いunknown／nullを後着証拠で変えず、遅いsubscriberには最新の完全snapshotだけを保持する。

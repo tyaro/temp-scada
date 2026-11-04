@@ -170,6 +170,8 @@ CallInspectionはrequestのID binding実測だけを保存し、既存terminal�
 byte計数は構造JSON payloadの上界でありBTreeMap／Arc等のallocator実消費と同一ではない。件数capで固定管理overheadも有限化する。
 最大reply予約がread専用枠へ収まらない要求はCapacityで停止する。最大profileサイズを実要求サイズと混同せず、使用可能なhelperの保守上界を採用する。
 
+後続の[prep2b4設計](historian-recording-registry-workflow-model.md)で4admissionと2caller operation、将来lease／保持bytes／projection／revisionの予約を具体化した。現行固定予約の単純4倍ではmutation6MiBを超えるため、既知要求に基づく保持上界へ変更する計画である。設計段階であり、下記の現行制限はまだ解除していない。
+
 **workflow3stage分のID／bytesの事前credit予約はprep2aで実装しない。** 単一callの原子予約を試験し、Accepted後の継続を止めることで未実装の予約保証を必要としない。
 prep2bでphase進行を解禁する前に、preflight／pause／apply／discard credit、callerOperation pool、reconcile poolとnative c2別cap拒否を追加設計・受入する。
 この違いは親wire設計のproduction要件を緩和したものではなく、モデルの提供段階の制限である。
