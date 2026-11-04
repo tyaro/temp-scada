@@ -47,11 +47,11 @@ d4aのpure DTO検証、d4bの操作service・monitor／UIとclientのreceipt／l
 
 ## H5d4c4c接続前のwire・host設計
 
-c4b実装は[PR #69](https://github.com/tyaro/temp-scada/pull/69)でworkへ統合済み（`2643726`、PR／push CIとも全7job成功、最終headの再レビューに追加指摘なし）。[Astraのwire・host詳細設計](../design/runtime/historian-recording-wire-host.md)で、native期限lease、元callの完了観測、取消ack、完全frameと再接続handshake、有限registryの所有・容量を具体化する。今回は文書のみで、実native接続は追加しない。
+c4b実装は[PR #69](https://github.com/tyaro/temp-scada/pull/69)でworkへ統合済み（`2643726`、PR／push CIとも全7job成功、最終headの再レビューに追加指摘なし）。[Astraのwire・host詳細設計](../design/runtime/historian-recording-wire-host.md)で、native期限lease、元callの完了観測、取消ack、完全frameと再接続handshake、有限registryの所有・容量を具体化する。c4c-prep1で新wire v1の純粋契約を実装した。実native接続は後続とする。
 
 採用済み構成はSCADA server coreを独立ライブラリとし、最初のhostをアプリへ埋め込むhost 1である。Tauri等のshell、実配送、接続設定とBantoの最新認証契約はP3b再開時に確定する。headless／Windowsサービスは後続hostとし、共有サービス接続失敗から別coreを自動起動しない。
 
-次の独立実装はc4c-prep1の純粋wire JSON契約・Rust／TS validator・共通fixture・最大返信容量の検証に限定する。既存c4aの五rootとc4bのlocal port、Project0.37.0／DB7／H1／SDK／Banto・依存版は維持する。実registry adapter・native配送・製品hostはhost／P3bの条件を満たした後に分け、認証・実Hub／S7・本番DBの保留を暗黙解除しない。
+c4c-prep1の純粋wire JSON契約14root・Rust／TS validator・共通fixture・最大返信容量の検証を実装した。設計PR #70はworkへ統合済み（`e0ab72b`、PR／push CI全7job成功、同headレビュー指摘なし）。既存c4aの五rootとc4bのlocal port、Project0.37.0／DB7／H1／SDK／Banto・依存版は維持する。実registry adapter・native配送・製品hostはhost／P3bの条件を満たした後に分け、認証・実Hub／S7・本番DBの保留を暗黙解除しない。
 
 ## H5c2の実装順
 

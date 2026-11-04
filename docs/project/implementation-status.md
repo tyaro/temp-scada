@@ -10,13 +10,15 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
-## 記録操作wire・hostの接続前設計（H5d4c4c、2026-11-04）
+## 記録操作wireの純粋契約（H5d4c4c-prep1、2026-11-04）
 
-[Astraの詳細設計](../design/runtime/historian-recording-wire-host.md)で、非同期受付を実hostへつなぐ前のlease／結果観測／取消／state再同期と有限registryを定める。SCADA server coreとアプリ埋込host 1を設計の土台とし、UIの寿命とnative owner、元callの完了とframeの証拠を分ける。
+[Astraの詳細設計](../design/runtime/historian-recording-wire-host.md)に沿い、新wire v1の14root、Rust／TS owned validator、request全文・scope・subscriptionの照合と、受付前の最大reply容量検査を実装した。lease／結果観測／取消／完全snapshot・再同期制御／元call照会を閉じたJSONで表す。nested c4a／d4a／H5a／d3は従来の独立予算と意味検査を再適用する。
 
-今回は設計文書のみ。新wire schema／validator、実lease発行・registry adapter・native配送・製品hostは未実装で、通常Appの未接続とP3b保留を維持する。次はtransportを持たないc4c-prep1の純粋JSON契約・共通検証に限定する。
+通常request 256KiB、reply／frame 2MiB、snapshot 1MiB、元call照会request 1MiB／reply 4MiBを別profileで検証する。元call照会は対象rootを限定し、自己照会の再帰を許さない。未知snapshotと操作結果の容量は保守上界で計算し、実registryや架空の有効snapshotを使わない。raw受信bytesの制限は後続transportの責務である。
 
-c4b実装のPR #69はworkへマージ済み（`2643726`）。PR／push CIとも全7job成功、最終headの自動再レビューに追加指摘はない。
+共通fixtureの406受理ケース、全文一致6・相互照合12・会計境界40・容量10と既存c4a924／H5a139／d3 target447を検証する。検証結果は[実装履歴](../history/implementation-history.md)に記録する。
+
+設計PR #70はworkへ統合済み（`e0ab72b`、PR／push CIとも全7job成功、同headの自動レビューに追加指摘なし）。実lease発行・registry adapter・native配送・製品hostは未実装。通常Appの未接続とP3b保留、既存local port・Project0.37.0／DB7／H1／SDK／Banto・依存版を維持する。
 
 ## 非同期monitor／UI（H5d4c4b、2026-11-04）
 

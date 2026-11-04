@@ -715,3 +715,11 @@ TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,ca
 `recording-operations/RecordingOperationsEntry.svelte`は最初の有効な単独注入でsync／async modeを固定し、二重注入と異mode交換を拒否する。両Workspaceは常設し、旧monitorをunmountしない。既存同期`RecordingOperationsWorkspace.svelte`のblocked guardは新送信だけを制限する。`App.svelte`の `recordingAsyncOperations` は任意注入で、通常entryは未注入のまま。
 
 `__fixtures__/recording-async-port.ts`は制御Promiseとmock native lease期限を持つtest-only provider。`recording-async/{coordinator,monitor}.test.ts`は正常unknown復帰／fault停止、通知再入、frameと元Promiseの順序、close／再読込／service交換／unmount、実4096上限・後続予約・read独立性を検証する。`e2e/recording-async-workspace.spec.ts`は両theme、三段階操作・照会・寿命・mode固定・安全なerror表示・Project保存不変を通常Appで確認し、`recording-operations-workspace.spec.ts`で同期回帰を維持する。実native／wire／認証・製品transportは後続。
+
+## 記録操作wireの純粋契約（H5d4c4c-prep1）
+
+`scada-model/schema/recording-wire.schema.json`は独立wire v1の14rootとscope／OwnerSnapshotを定め、c4a／d4aのlocal resourceを参照する。`recording_wire.rs`はローカルschema登録・有限のnested検証・owned wrapper・既知文書照合、`recording_wire/semantic.rs`は新旧scopeの区別、全文echo、branchとsnapshotの独立検査を担当する。`capacity.rs`は未知snapshot／結果の保守上界と固定envelopeから最大replyと元call照会包絡を計算し、公開validatorを呼ばない。
+
+TSの`recording-wire-contract.ts`と`recording-wire/{types,budget,semantic,capacity}.ts`も同じ責務を持つ。`history/owned-json.ts`とRust `json_contract.rs`はopt-inの保守会計・node／depth計数を提供し、既存compact／admission／local profileの既定上限は変えない。raw bytes受信・registryの空き容量と認可はこの純粋境界に含まない。
+
+`examples/recording-wire-cases.json`とtest-only `__fixtures__/recording-wire-cases.ts`をRust `recording_wire/tests.rs`、TS `recording-wire-contract.test.ts`、`e2e/recording-wire-contract.spec.ts`で共有する。14root、最長ID、独立nested契約、自己照会排除、容量のexact／1不足byte・node・depth、会計上限、所有と通常App保存不変を検証する。実lease発行、registry adapter、native配送・認証・製品hostは後続で、c4b local portへ透過的に接続しない。

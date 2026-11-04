@@ -1,19 +1,48 @@
 /** Copy bounded plain JSON without evaluating accessors or retaining source
  * ownership. This is a structured-data boundary, not a wire parser/sandbox. */
+export type HistoryJsonAccounting =
+  | "compact"
+  | "admission"
+  | "localMetadata"
+  | "localFrame"
+  | "wireRequest"
+  | "wireReply"
+  | "wireSnapshot"
+  | "wireInspectionRequest"
+  | "wireInspectionReply";
 export function ownHistoryJson(
   input: unknown,
   maxBytes: number,
   maxNodes = 250_000,
-  accounting:
-    "compact" | "admission" | "localMetadata" | "localFrame" = "compact",
+  accounting: HistoryJsonAccounting = "compact",
 ): unknown {
+  return ownMeasuredHistoryJson(input, maxBytes, maxNodes, accounting).value;
+}
+/** Same traversal/copy as ownHistoryJson; metrics count the owned structural JSON. */
+export function ownMeasuredHistoryJson(
+  input: unknown,
+  maxBytes: number,
+  maxNodes = 250_000,
+  accounting: HistoryJsonAccounting = "compact",
+) {
   if (!Number.isSafeInteger(maxNodes) || maxNodes < 1 || maxNodes > 250_000)
     throw Error("History data limit");
   const conservative = accounting !== "compact";
   const maxDepth =
-    accounting === "localFrame" ? 64 : accounting === "admission" ? 48 : 32;
+    accounting === "wireInspectionReply"
+      ? 96
+      : accounting === "wireReply"
+        ? 80
+        : ["localFrame", "wireSnapshot", "wireInspectionRequest"].includes(
+              accounting,
+            )
+          ? 64
+          : ["admission", "wireRequest"].includes(accounting)
+            ? 48
+            : 32;
   let bytes = 0;
   let nodes = 0;
+  let observedDepth = 0;
   const ancestors = new Set<object>();
   const add = (count: number) => {
     bytes += count;
@@ -45,6 +74,7 @@ export function ownHistoryJson(
     }
   }
   function visit(value: unknown, depth: number): unknown {
+    observedDepth = Math.max(observedDepth, depth);
     if (++nodes > maxNodes || depth > maxDepth)
       throw Error("History data limit");
     if (value === null) {
@@ -116,7 +146,8 @@ export function ownHistoryJson(
     ancestors.delete(value);
     return owned;
   }
-  return visit(input, 0);
+  const value = visit(input, 0);
+  return { value, bytes, nodes, depth: observedDepth };
 }
 
 /** Only call on owned plain JSON. */

@@ -10,6 +10,7 @@ pub mod recording_operations;
 pub mod recording_plan;
 #[cfg(test)]
 mod recording_project_tests;
+pub mod recording_wire;
 pub mod trend_definitions;
 #[cfg(test)]
 mod trend_project_tests;
