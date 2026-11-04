@@ -1,6 +1,6 @@
 //! Model-owned handle completion and bounded read-only observation, no native wait.
 use super::*;
-fn ref_key(handle: &Value) -> HandleKey {
+pub(super) fn ref_key(handle: &Value) -> HandleKey {
     if handle["kind"] == "operation" {
         (
             Role::Mutation,
@@ -27,12 +27,12 @@ pub(super) fn completion_reservation(role: Role) -> usize {
     }
 }
 impl RegistryModel {
-    /// Registers metadata only after all checks. Caller then stores the Accepted proof atomically.
-    pub(super) fn register_handle(
-        &mut self,
+    /// Validates prospective metadata. Caller commits it with the proof and projection.
+    pub(super) fn plan_handle(
+        &self,
         ticket: &SimulationTicket,
         reply: &RecordingAdmissionReply,
-    ) -> Result<(), ModelError> {
+    ) -> Result<(HandleKey, HandleRecord), ModelError> {
         let handle = &reply.as_value()["outcome"]["handle"];
         let key = ref_key(handle);
         require(
@@ -61,7 +61,7 @@ impl RegistryModel {
         } else {
             None
         };
-        self.handles.insert(
+        Ok((
             key,
             HandleRecord {
                 admission_id: ticket.admission_id.clone(),
@@ -70,8 +70,7 @@ impl RegistryModel {
                 completion: None,
                 cancel_notified: false,
             },
-        );
-        Ok(())
+        ))
     }
     pub(super) fn handle_request<'a>(&'a self, record: &HandleRecord) -> &'a Value {
         &self.admissions[&record.admission_id]
@@ -189,11 +188,20 @@ impl RegistryModel {
                 ModelError::ProtocolViolation,
             );
         }
+        let publication = self.prepare_publication(
+            &ProjectionEvent::Completion {
+                key: &handle.key,
+                value: &completion,
+                recovery,
+            },
+            self.projection.budget,
+        )?;
         self.handles
             .get_mut(&handle.key)
             .expect("validated handle")
             .completion = Some(completion);
         self.recovery_required |= recovery;
+        self.commit_publication(publication, Some(&handle.admission_id));
         Ok(())
     }
 }

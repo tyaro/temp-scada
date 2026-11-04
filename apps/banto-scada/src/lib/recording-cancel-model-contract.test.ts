@@ -50,9 +50,9 @@ it("cancel reservation accounts for echo and maximum reply before notification",
   const exact = f.scenarios.find(
     (s) => s.name === "exact reserved cancel bytes retain rejected outcome",
   )!;
-  expect(exact.limits!.read_bytes).toBe(cost);
+  expect(exact.limits!.read_bytes).toBe(cost + 1024);
   const smaller = f.scenarios.find(
     (s) => s.name === "one byte below cancel reservation is atomic",
   )!;
-  expect(smaller.limits!.read_bytes).toBe(cost - 1);
+  expect(smaller.limits!.read_bytes).toBe(cost + 1024 - 1);
 });

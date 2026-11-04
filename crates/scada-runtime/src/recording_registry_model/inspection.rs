@@ -142,6 +142,38 @@ impl RegistryModel {
                     json!({"kind":"notFound"})
                 }
             }
+            "recordingWireAttachRequest" => {
+                if let Some(record) = self
+                    .attaches
+                    .get(original["attachId"].as_str().expect("validated ID"))
+                {
+                    let q = RecordingWireAttachRequest::from_value(original.clone())
+                        .map_err(|_| ModelError::InvalidInput)?;
+                    require(
+                        same_recording_wire_request(record.request.as_document(), q.as_document()),
+                        ModelError::ProtocolViolation,
+                    )?;
+                    json!({"kind":"terminal","reply":self.attach_reply(record)?.as_value()})
+                } else {
+                    json!({"kind":"notFound"})
+                }
+            }
+            "recordingWireControlRequest" => {
+                if let Some(record) = self
+                    .controls
+                    .get(original["controlId"].as_str().expect("validated ID"))
+                {
+                    let q = RecordingWireControlRequest::from_value(original.clone())
+                        .map_err(|_| ModelError::InvalidInput)?;
+                    require(
+                        same_recording_wire_request(record.request.as_document(), q.as_document()),
+                        ModelError::ProtocolViolation,
+                    )?;
+                    json!({"kind":"terminal","reply":self.control_reply(record)?.as_value()})
+                } else {
+                    json!({"kind":"notFound"})
+                }
+            }
             _ => json!({"kind":"unavailable","error":"ownerUnavailable"}),
         };
         let reply=RecordingWireCallInspectionReply::from_value(json!({"version":1,"kind":"recordingWireCallInspectionReply","request":q,"outcome":outcome})).map_err(|_|ModelError::InvalidInput)?;

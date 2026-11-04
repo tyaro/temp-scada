@@ -1,6 +1,6 @@
 # 記録registryモデルの取消と不変ack
 
-状態: **prep2b2モデル実装済み、購読・workflow予約・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2b2モデル実装済み、workflow予約・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
 [結果観測モデル](historian-recording-registry-observation-model.md)はPR #73で統合済み。本書は同じ決定的Rustモデルへ取消の三つの時点を追加する。
 新しいwire schema、Project 0.37.0、DB7、H1、SDK、Banto、依存の変更はない。実native／clock／auth／transport／hostには接続しない。
 
@@ -152,5 +152,5 @@ Rustの既存scenario runnerへbegin_cancel／notify_cancel／finish_cancelを�
 
 追加の具体受入として、元operation pending＋readUncertain保存済み→read cancel alreadyCompletedでもrecovery=true／元operation pendingを維持する。applied／quiescence=unknownのoperation cancel alreadyCompletedでもunknownを維持し、未実行／rollback／物理静止を生成しない。
 
-次は完全snapshot／subscription・再接続の純粋モデルを詳細化する。全workflow予約と業務phase進行、複数scope allocatorはその後に分ける。
+完全snapshot／subscription・再接続は[prep2b3](historian-recording-registry-subscription-model.md)で実装した。次は全workflow予約と業務phase進行、続いて複数scope allocatorを分けて扱う。
 prep2b2で全stage運転や実取消を提供したとは主張せず、P3bと実adapterの再開条件を維持する。

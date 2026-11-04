@@ -8112,8 +8112,8 @@
     {
       "name": "exact reserved cancel bytes retain rejected outcome",
       "limits": {
-        "total_bytes": 66800,
-        "read_bytes": 66800
+        "total_bytes": 67824,
+        "read_bytes": 67824
       },
       "steps": [
         {
@@ -8165,7 +8165,7 @@
             "kind": "ok"
           },
           "fields": {
-            "readBytes": 66800
+            "readBytes": 67824
           }
         }
       ]
@@ -8173,8 +8173,8 @@
     {
       "name": "one byte below cancel reservation is atomic",
       "limits": {
-        "total_bytes": 66799,
-        "read_bytes": 66799
+        "total_bytes": 67823,
+        "read_bytes": 67823
       },
       "steps": [
         {
@@ -8194,7 +8194,7 @@
           },
           "fields": {
             "cancelRequests": 0,
-            "readBytes": 0
+            "readBytes": 1024
           }
         }
       ]
@@ -8202,8 +8202,8 @@
     {
       "name": "exact bytes recover saved ack through existing inspection binding",
       "limits": {
-        "total_bytes": 68044,
-        "read_bytes": 68044
+        "total_bytes": 69068,
+        "read_bytes": 69068
       },
       "steps": [
         {
@@ -8274,8 +8274,8 @@
     {
       "name": "mutation byte exhaustion preserves independent cancel reservation",
       "limits": {
-        "total_bytes": 2077262,
-        "read_bytes": 66800
+        "total_bytes": 2078286,
+        "read_bytes": 67824
       },
       "steps": [
         {
@@ -8365,7 +8365,7 @@
           },
           "fields": {
             "mutationBytes": 2010462,
-            "readBytes": 66800
+            "readBytes": 67824
           }
         }
       ]
@@ -8373,8 +8373,8 @@
     {
       "name": "known notification needs no new retained bytes",
       "limits": {
-        "total_bytes": 2077262,
-        "read_bytes": 66800
+        "total_bytes": 2078286,
+        "read_bytes": 67824
       },
       "steps": [
         {
@@ -8474,7 +8474,7 @@
             "kind": "ok"
           },
           "fields": {
-            "readBytes": 66800,
+            "readBytes": 67824,
             "cancelNotifiedHandles": 1
           }
         }

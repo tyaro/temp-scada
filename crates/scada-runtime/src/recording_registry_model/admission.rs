@@ -69,6 +69,15 @@ impl RegistryModel {
         let cost = sum(cost, completion_reservation(role))?;
         self.can_charge(role, cost)?;
         let sequence = self.sequence.checked_add(1).ok_or(ModelError::Capacity)?;
+        let projection = self.admission_projection(&request)?;
+        let publication = self.prepare_publication(
+            &ProjectionEvent::Admission {
+                id,
+                sequence,
+                request: &request,
+            },
+            projection,
+        )?;
         let id = id.to_owned();
         let lease_id = lease_id.clone();
         self.sequence = sequence;
@@ -86,8 +95,12 @@ impl RegistryModel {
                 sequence,
                 proof: None,
                 terminal: None,
+                projection_credits: 3,
             },
         );
+        self.projection.budget = projection;
+        self.projection.reserved += 3;
+        self.commit_publication(publication, Some(&ticket.admission_id));
         Ok(AdmissionStart::Registered { ticket })
     }
     /// Explicit simulation input, not a native opaque proof or a wire decoder.
@@ -113,13 +126,27 @@ impl RegistryModel {
                 ModelError::ProtocolViolation,
             );
         }
-        if kind == "accepted" {
-            self.register_handle(ticket, &reply)?;
+        let handle = if kind == "accepted" {
+            Some(self.plan_handle(ticket, &reply)?)
+        } else {
+            None
+        };
+        let publication = self.prepare_publication(
+            &ProjectionEvent::Knowledge {
+                id: &ticket.admission_id,
+                sequence: ticket.sequence,
+                reply: &reply,
+            },
+            self.projection.budget,
+        )?;
+        if let Some((key, record)) = handle {
+            self.handles.insert(key, record);
         }
         self.admissions
             .get_mut(&ticket.admission_id)
             .expect("existing ticket")
             .proof = Some(reply);
+        self.commit_publication(publication, Some(&ticket.admission_id));
         Ok(())
     }
     pub fn finish_admission_call(

@@ -6,7 +6,11 @@ mod handle;
 mod inspection;
 mod lease;
 mod observation;
+mod projection;
+mod subscription;
 use handle::completion_reservation;
+use projection::{ProjectionEvent, ProjectionState, SnapshotDescriptor, DESCRIPTOR_BYTES};
+use subscription::{AttachRecord, ControlRecord, SubscriptionRecord};
 mod types;
 use scada_model::recording_admission::*;
 use scada_model::recording_operations::{
@@ -41,6 +45,11 @@ pub struct RegistryModel {
     observations: BTreeMap<String, ObservationRecord>,
     recovery_required: bool,
     cancels: BTreeMap<String, CancelRecord>,
+    projection: ProjectionState,
+    subscriptions: BTreeMap<String, SubscriptionRecord>,
+    attaches: BTreeMap<String, AttachRecord>,
+    controls: BTreeMap<String, ControlRecord>,
+    subscription_sequence: u64,
 }
 #[derive(Debug)]
 struct LeaseRecord {
@@ -57,6 +66,7 @@ struct AdmissionRecord {
     sequence: u64,
     proof: Option<RecordingAdmissionReply>,
     terminal: Option<RecordingAdmissionReply>,
+    projection_credits: u8,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Role {
@@ -90,7 +100,7 @@ struct CancelRecord {
 impl RegistryModel {
     pub fn new(session: ModelSession, limits: ModelLimits) -> Result<Self, ModelError> {
         limits.validate()?;
-        Ok(Self {
+        let mut model = Self {
             session,
             limits,
             now: ModelInstant(0),
@@ -108,7 +118,26 @@ impl RegistryModel {
             observations: BTreeMap::new(),
             recovery_required: false,
             cancels: BTreeMap::new(),
-        })
+            projection: ProjectionState::new(),
+            subscriptions: BTreeMap::new(),
+            attaches: BTreeMap::new(),
+            controls: BTreeMap::new(),
+            subscription_sequence: 0,
+        };
+        require(
+            projection::fits_bound(
+                model.projection_bound(model.projection.budget)?,
+                model.limits.projection_limit,
+            ),
+            ModelError::Capacity,
+        )?;
+        model.can_charge(Role::Read, DESCRIPTOR_BYTES)?;
+        model.charge(Role::Read, DESCRIPTOR_BYTES);
+        model.validate_snapshot(
+            &model.snapshot_value(&model.projection.current, None)?,
+            model.projection.budget,
+        )?;
+        Ok(model)
     }
     pub fn advance_to(&mut self, now: ModelInstant) -> Result<(), ModelError> {
         if now.0 < self.now.0 {
@@ -121,8 +150,15 @@ impl RegistryModel {
     pub fn now(&self) -> ModelInstant {
         self.now
     }
-    pub fn close(&mut self) {
+    pub fn close(&mut self) -> Result<(), ModelError> {
+        if self.closed {
+            return Ok(());
+        }
+        let publication =
+            self.prepare_publication(&ProjectionEvent::Close, self.projection.budget)?;
         self.closed = true;
+        self.commit_publication(publication, None);
+        Ok(())
     }
     pub fn stats(&self) -> ModelStats {
         ModelStats {
@@ -192,6 +228,17 @@ impl RegistryModel {
             cancel_requests: self.cancels.len(),
             pending_cancel_calls: self.cancels.values().filter(|c| !c.terminal).count(),
             cancel_notified_handles: self.handles.values().filter(|h| h.cancel_notified).count(),
+            published_revision: self.projection.current.revision,
+            reserved_revisions: self.projection.reserved,
+            live_subscriptions: self.subscriptions.values().filter(|s| s.active).count(),
+            attach_requests: self.attaches.len(),
+            control_requests: self.controls.len(),
+            queued_state_frames: self
+                .subscriptions
+                .values()
+                .filter(|s| s.state.is_some())
+                .count(),
+            queued_control_frames: self.subscriptions.values().filter(|s| s.control).count(),
         }
     }
     fn qualify(&self, s: &ModelSession) -> Result<(), ModelError> {

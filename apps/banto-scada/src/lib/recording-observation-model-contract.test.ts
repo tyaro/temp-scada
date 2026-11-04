@@ -52,7 +52,7 @@ it("result reservations match the shared conservative budget", () => {
     f.scenarios.find(
       (s) => s.name === "completion reservation fits exact mutation budget",
     )!.limits!.total_bytes,
-  ).toBe(op);
+  ).toBe(op + 1024);
   const r =
     bytes(f.bases.readLease) +
     bytes(f.bases.readLeaseReply) +
@@ -62,11 +62,11 @@ it("result reservations match the shared conservative budget", () => {
     f.scenarios.find(
       (s) => s.name === "read completion reservation fits exact read budget",
     )!.limits!.read_bytes,
-  ).toBe(r);
+  ).toBe(r + 1024);
   const o = bytes(f.bases.observe);
   expect(
     f.scenarios.find(
       (s) => s.name === "observation charges exact retained request only",
     )!.limits!.read_bytes,
-  ).toBe(o);
+  ).toBe(o + 1024);
 });

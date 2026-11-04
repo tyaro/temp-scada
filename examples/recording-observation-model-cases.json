@@ -11739,8 +11739,8 @@
     {
       "name": "completion reservation fits exact mutation budget",
       "limits": {
-        "total_bytes": 2010462,
-        "read_bytes": 0
+        "total_bytes": 2011486,
+        "read_bytes": 1024
       },
       "steps": [
         {
@@ -11810,8 +11810,8 @@
     {
       "name": "one byte below completion reservation leaves lease unused",
       "limits": {
-        "total_bytes": 2010461,
-        "read_bytes": 0
+        "total_bytes": 2011485,
+        "read_bytes": 1024
       },
       "steps": [
         {
@@ -11853,8 +11853,8 @@
     {
       "name": "read completion reservation fits exact read budget",
       "limits": {
-        "total_bytes": 3586938,
-        "read_bytes": 1576476
+        "total_bytes": 3587962,
+        "read_bytes": 1577500
       },
       "steps": [
         {
@@ -11966,7 +11966,7 @@
             "kind": "ok"
           },
           "fields": {
-            "readBytes": 1576476
+            "readBytes": 1577500
           }
         }
       ]
@@ -11974,8 +11974,8 @@
     {
       "name": "one byte below read completion reservation is atomic",
       "limits": {
-        "total_bytes": 3586937,
-        "read_bytes": 1576475
+        "total_bytes": 3587961,
+        "read_bytes": 1577499
       },
       "steps": [
         {
@@ -12056,8 +12056,8 @@
     {
       "name": "observation charges exact retained request only",
       "limits": {
-        "total_bytes": 2012354,
-        "read_bytes": 1892
+        "total_bytes": 2013378,
+        "read_bytes": 2916
       },
       "steps": [
         {
@@ -12119,7 +12119,7 @@
             "kind": "ok"
           },
           "fields": {
-            "readBytes": 1892
+            "readBytes": 2916
           }
         },
         {
@@ -12163,7 +12163,7 @@
             "kind": "ok"
           },
           "fields": {
-            "readBytes": 1892
+            "readBytes": 2916
           }
         }
       ]
@@ -12171,8 +12171,8 @@
     {
       "name": "one byte below observation request budget is atomic",
       "limits": {
-        "total_bytes": 2012353,
-        "read_bytes": 1891
+        "total_bytes": 2013377,
+        "read_bytes": 2915
       },
       "steps": [
         {
