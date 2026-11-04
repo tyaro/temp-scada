@@ -1,7 +1,7 @@
 # 記録wireの純粋receiver
 
 - 設計日: 2026-11-05 JST。主設計: Astra。
-- 段階: H5d4c4c-prep2c。今回は詳細設計のみ、実装は後続PR。
+- 段階: H5d4c4c-prep2c。採用設計に沿ったpure TS receiver・共有fixture・browser module試験を実装済み。通常App接続は後続。
 - 前提: [wire/host契約](historian-recording-wire-host.md)、[snapshot/subscriptionモデル](historian-recording-registry-subscription-model.md)、prep2b5aまでの純粋Rust registry。
 - Project 0.37.0／DB7／H1／wire/schema／SDK／Banto／依存は変更しない。P3b、実host・認証・transport・native接続は保留。
 
@@ -38,7 +38,7 @@ transport切断、resync、容量不足をownerBlockedへ混ぜない。
 closed/ownerBlocked/authLostが立っても既知結果を消さない。
 receiverがreadyでもmutation権限を返さず、native適格性や元callの静止は別契約で検査する。
 
-## 3. API案
+## 3. 公開API
 
 `apps/banto-scada/src/lib/recording-wire-receiver.ts`を公開入口とし、内部は分割可能とする。
 
@@ -281,6 +281,14 @@ current()はcallbackを呼ばず、通常のpublic inputのaccessorも評価し�
 | scope      | ownerEpoch/context全文不一致、新epochへ自動切替しない                                                                                     |
 | 未接続     | App/local port/coordinator/native/schema/deps不変、pollのみ                                                                               |
 
-次の実装PRはpure TS receiver＋unit fixture＋既存wire validatorを使うbrowser module試験までとする。
+本工程の実装範囲はpure TS receiver＋unit fixture＋既存wire validatorを使うbrowser module試験までとする。
 Rust registryはframeの生成fixture根拠として使えるが、TSに第二のserverを作らない。
 現行coordinatorへの適用・wire/local mapping・元Promise配送・transport reconnect・認証更新は別設計とする。
+
+## 11. 実装と検証の入口
+
+公開入口は[`recording-wire-receiver.ts`](../../../apps/banto-scada/src/lib/recording-wire-receiver.ts)。内部の`types`はopaque tokenとpoll状態、`core`は固定Scope・有限台帳・予算・資格、`calls`は登録と二段階の元reply保存、`frames`は現行世代の通知、`snapshots`はprovisionalと原子的promotionを担当する。実装は既存owned wire validatorと全文同値helperを再利用する。
+
+[`recording-wire-receiver-cases.json`](../../../examples/recording-wire-receiver-cases.json)は59の受信シナリオを表すtest command DSLで、wire schemaやserver registryではない。test-only driverから本物のreceiverをVitestとChromiumの両方で実行し、正常DTOを既存validatorへも照合する。unitでは独立bytes/nodes/depth oracle、exact/1不足、64件・通常例の4回目attachの容量停止、全mutationへのProxy再入、入力ownershipと旧poll状態の不変を追加検査する。browserではApp保存bytesと外部送信無しも確認する。
+
+この有限モデルを長時間運用へ使う前に、履歴の保持/retirementとwire→local表示契約を別途設計する。通常App・coordinator・local port・元Promise配送・認証・実hostは本工程で接続しない。

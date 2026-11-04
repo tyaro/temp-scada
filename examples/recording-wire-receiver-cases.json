@@ -1,0 +1,2588 @@
+{
+  "description": "Pure receiver test command DSL; not a wire schema or server model.",
+  "scope": {
+    "ownerRef": "owner",
+    "ownerEpoch": "epoch:1",
+    "context": {
+      "version": 1,
+      "kind": "recordingOperationsContext",
+      "target": {
+        "version": 1,
+        "kind": "recordingManagementContext",
+        "contextId": "context:1",
+        "projectId": " プロジェクト\r\nA ",
+        "projectRevision": 2,
+        "deploymentId": "deployment:1",
+        "storeId": "store:1",
+        "historianNamespace": null
+      },
+      "capabilityId": "capability:1",
+      "recordingRunRef": "run:1",
+      "sessionId": "session:1"
+    }
+  },
+  "snapshots": {
+    "simple": {
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "revision": 1,
+      "closed": false,
+      "ownerBlocked": false,
+      "admission": null,
+      "operation": null,
+      "reconciliation": null
+    },
+    "complex": {
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "revision": 6,
+      "closed": false,
+      "ownerBlocked": false,
+      "admission": {
+        "version": 1,
+        "kind": "recordingAdmissionReply",
+        "request": {
+          "version": 1,
+          "kind": "recordingAdmissionRequest",
+          "ownerRef": "owner",
+          "admissionId": "admit-w0_d0",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "deadlineLeaseRef": "model-lease:4",
+          "action": {
+            "kind": "discard",
+            "changeRef": "change-ref-w0",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change-w0",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply-w0",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        },
+        "outcome": {
+          "kind": "completedDiscard"
+        }
+      },
+      "operation": {
+        "operationRef": "ref-w0_p0",
+        "result": {
+          "version": 1,
+          "kind": "recordingOperationResult",
+          "request": {
+            "version": 1,
+            "kind": "recordingOperationRequest",
+            "operationId": "native-w0_p0",
+            "stage": "preflight",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change-w0",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply-w0",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          },
+          "outcome": {
+            "kind": "candidate",
+            "snapshotCommit": 90,
+            "activeSessionId": "session:1"
+          },
+          "quiescence": "confirmed",
+          "recoveryRequired": false
+        }
+      },
+      "reconciliation": null
+    }
+  },
+  "scenarios": [
+    {
+      "name": "initial",
+      "steps": [
+        {
+          "op": "observe",
+          "state": {
+            "connected": false,
+            "generation": null,
+            "highwater": null,
+            "latest": null,
+            "status": "awaitingAttach",
+            "ownerClosed": false,
+            "ownerBlocked": false,
+            "authorizationLost": false,
+            "usage": {
+              "attachIds": 0,
+              "controlIds": 0,
+              "pendingAttach": 0,
+              "pendingControl": 0,
+              "callBytes": 0,
+              "snapshotBytes": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "disconnected registration has no effect",
+      "steps": [
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null,
+          "result": "busy",
+          "state": {
+            "usage": {
+              "attachIds": 0,
+              "callBytes": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "preACK revisions 3 then 2 promote sorted batch",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 3,
+          "ref": "s",
+          "state": {
+            "highwater": null,
+            "usage": {
+              "stateSlot": 1
+            }
+          }
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "state": {
+            "highwater": 3,
+            "latest": {
+              "revision": 3
+            },
+            "usage": {
+              "snapshotRevisions": 3,
+              "stateSlot": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "preACK same revision full duplicate",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s",
+          "result": "duplicate"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "state": {
+            "highwater": 2,
+            "usage": {
+              "snapshotRevisions": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "preACK replaced slot contradiction",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 3,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s",
+          "snapshot": {
+            "ownerBlocked": true
+          },
+          "result": "protocolViolation",
+          "state": {
+            "highwater": null,
+            "status": "stopped"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ACK equal revision contradiction retains terminal",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "snapshot": {
+            "ownerBlocked": true
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "protocolViolation",
+          "terminalStored": true,
+          "state": {
+            "highwater": null,
+            "usage": {
+              "pendingAttach": 0,
+              "snapshotRevisions": 1
+            }
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "duplicate",
+          "state": {
+            "highwater": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "ACK cannot exceed provisional lower revision",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 3,
+          "ref": "s",
+          "result": "protocolViolation",
+          "terminalStored": true,
+          "state": {
+            "highwater": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "mixed provisional subscription references",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s"
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "other",
+          "reason": "ownerClosed",
+          "result": "protocolViolation",
+          "state": {
+            "ownerClosed": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "control then state reference mismatch",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "ownerClosed"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "ref": "other",
+          "rev": 2,
+          "result": "protocolViolation"
+        }
+      ]
+    },
+    {
+      "name": "preACK control slot survives state coalescing",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "ownerClosed",
+          "state": {
+            "ownerClosed": false,
+            "usage": {
+              "controlSlot": 1
+            }
+          }
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 3,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "state": {
+            "highwater": 3,
+            "ownerClosed": true,
+            "generation": {
+              "phase": "retired"
+            },
+            "usage": {
+              "controlSlot": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "duplicate pending control",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "authorizationLost"
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "authorizationLost",
+          "result": "duplicate"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "state": {
+            "authorizationLost": true,
+            "ownerBlocked": false
+          }
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1,
+          "result": "busy"
+        }
+      ]
+    },
+    {
+      "name": "different pending control requires resync",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "ownerClosed"
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "authorizationLost",
+          "result": "resyncRequired",
+          "state": {
+            "ownerClosed": false,
+            "authorizationLost": false
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "ignoredRetired",
+          "state": {
+            "highwater": null,
+            "usage": {
+              "pendingAttach": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "known lower revision duplicate",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 3,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "duplicate",
+          "state": {
+            "highwater": 3
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown lower revision requires resync",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 3,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s",
+          "result": "resyncRequired",
+          "state": {
+            "highwater": 3,
+            "status": "resyncRequired",
+            "ownerBlocked": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "same attached revision contradiction",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "snapshot": {
+            "ownerBlocked": true
+          },
+          "result": "protocolViolation",
+          "state": {
+            "highwater": 1,
+            "ownerBlocked": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "state below ACK revision fails identity bound",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 3,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s",
+          "result": "protocolViolation",
+          "state": {
+            "highwater": 3
+          }
+        }
+      ]
+    },
+    {
+      "name": "snapshot flags sticky at higher revision",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s",
+          "snapshot": {
+            "ownerBlocked": true
+          }
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "duplicate"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 3,
+          "ref": "s",
+          "result": "protocolViolation",
+          "state": {
+            "highwater": 2,
+            "ownerBlocked": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "closed flag sticky",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "snapshot": {
+            "closed": true
+          }
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s",
+          "result": "protocolViolation",
+          "state": {
+            "ownerClosed": true,
+            "highwater": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "ownerClosed frame retires without transport or native inference",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "ownerClosed",
+          "state": {
+            "ownerClosed": true,
+            "ownerBlocked": false,
+            "connected": true
+          }
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1,
+          "result": "busy"
+        }
+      ]
+    },
+    {
+      "name": "authorizationLost frame blocks new registration",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "authorizationLost",
+          "state": {
+            "authorizationLost": true,
+            "ownerBlocked": false,
+            "connected": true
+          }
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1,
+          "result": "busy"
+        }
+      ]
+    },
+    {
+      "name": "resync permits explicit new generation",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "resyncRequired"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1
+        },
+        {
+          "op": "attach",
+          "id": "b",
+          "rev": 1,
+          "ref": "s2",
+          "state": {
+            "status": "ready",
+            "highwater": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "formal highwater survives generation",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 3,
+          "ref": "s"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": null,
+          "result": "invalidRequest"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 2,
+          "result": "invalidRequest"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 3
+        },
+        {
+          "op": "state",
+          "id": "b",
+          "ref": "s2",
+          "rev": 5
+        },
+        {
+          "op": "state",
+          "id": "b",
+          "ref": "s2",
+          "rev": 4
+        },
+        {
+          "op": "attach",
+          "id": "b",
+          "rev": 3,
+          "ref": "s2",
+          "state": {
+            "highwater": 5,
+            "usage": {
+              "snapshotRevisions": 4
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "old exact attach returns cached token below current H",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 3,
+          "ref": "s"
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null,
+          "result": "cached"
+        },
+        {
+          "op": "dispose"
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null,
+          "result": "cached",
+          "state": {
+            "highwater": 3,
+            "usage": {
+              "attachIds": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "same attach ID different body stops without allocation",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": 1,
+          "result": "protocolViolation",
+          "state": {
+            "highwater": 1,
+            "usage": {
+              "attachIds": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "pending attach blocks generation even when retired",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "retire",
+          "id": "a"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": null,
+          "result": "busy"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "ignoredRetired"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "b",
+          "rev": 1,
+          "ref": "s2"
+        }
+      ]
+    },
+    {
+      "name": "reused subscription cannot bind new generation",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1
+        },
+        {
+          "op": "attach",
+          "id": "b",
+          "rev": 1,
+          "ref": "s",
+          "result": "protocolViolation",
+          "terminalStored": true,
+          "state": {
+            "highwater": 1,
+            "usage": {
+              "pendingAttach": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "subscription retained after failed projection",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 3,
+          "ref": "s",
+          "result": "protocolViolation",
+          "terminalStored": true
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 3,
+          "ref": "s",
+          "result": "duplicate"
+        }
+      ]
+    },
+    {
+      "name": "disconnect retires and does not cancel terminal",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "connect",
+          "value": false
+        },
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": null,
+          "result": "busy"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "ignoredRetired",
+          "state": {
+            "highwater": null
+          }
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "b",
+          "rev": 1,
+          "ref": "s2"
+        }
+      ]
+    },
+    {
+      "name": "dispose recovers old terminal without promotion",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "dispose"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "ignoredRetired",
+          "state": {
+            "highwater": null,
+            "status": "stopped",
+            "stoppedReason": "disposed"
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "duplicate"
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null,
+          "result": "cached"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": null,
+          "result": "disposed"
+        }
+      ]
+    },
+    {
+      "name": "rejected attach is immutable terminal",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "outcome": {
+            "kind": "rejected",
+            "error": "ownerUnavailable"
+          },
+          "state": {
+            "highwater": null,
+            "usage": {
+              "pendingAttach": 0
+            }
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "outcome": {
+            "kind": "rejected",
+            "error": "ownerUnavailable"
+          },
+          "result": "duplicate"
+        }
+      ]
+    },
+    {
+      "name": "wrong echo leaves original attach uncollected",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "requestPatch": {
+            "attachId": "other"
+          },
+          "result": "protocolViolation",
+          "state": {
+            "usage": {
+              "pendingAttach": 1
+            }
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "ignoredRetired",
+          "state": {
+            "usage": {
+              "pendingAttach": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "malformed ACK leaves call uncollected",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "documentPatch": {
+            "extra": true
+          },
+          "result": "invalidDocument",
+          "state": {
+            "usage": {
+              "pendingAttach": 1
+            }
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "ignoredRetired"
+        }
+      ]
+    },
+    {
+      "name": "wrong frame scope stops",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s",
+          "scopePatch": {
+            "ownerEpoch": "epoch:other"
+          },
+          "result": "protocolViolation",
+          "state": {
+            "highwater": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong attached subscription stops",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "ref": "other",
+          "rev": 2,
+          "result": "protocolViolation"
+        }
+      ]
+    },
+    {
+      "name": "attach zero IDs rejects without reservation",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null,
+          "result": "capacity",
+          "state": {
+            "usage": {
+              "callBytes": 0,
+              "attachIds": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "attachIds": 0
+      }
+    },
+    {
+      "name": "attach one ID full cache remains available",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null,
+          "result": "cached"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1,
+          "result": "capacity",
+          "state": {
+            "generation": {
+              "attachId": "a",
+              "phase": "attached"
+            }
+          }
+        }
+      ],
+      "limits": {
+        "attachIds": 1
+      }
+    },
+    {
+      "name": "zero call pool no registration",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null,
+          "result": "capacity",
+          "state": {
+            "usage": {
+              "callBytes": 0,
+              "attachIds": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "callBytes": 0
+      }
+    },
+    {
+      "name": "zero snapshot count saves valid ACK",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "capacity",
+          "terminalStored": true,
+          "state": {
+            "highwater": null,
+            "usage": {
+              "pendingAttach": 0,
+              "snapshotRevisions": 0
+            }
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "duplicate"
+        }
+      ],
+      "limits": {
+        "snapshotRevisions": 0
+      }
+    },
+    {
+      "name": "zero snapshot bytes saves valid ACK",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "capacity",
+          "terminalStored": true,
+          "state": {
+            "highwater": null,
+            "usage": {
+              "pendingAttach": 0,
+              "snapshotBytes": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "snapshotBytes": 0
+      }
+    },
+    {
+      "name": "provisional capacity stops before formal publication",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 3,
+          "ref": "s",
+          "result": "capacity",
+          "state": {
+            "highwater": null,
+            "usage": {
+              "snapshotRevisions": 1
+            }
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "ignoredRetired",
+          "state": {
+            "usage": {
+              "pendingAttach": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "snapshotRevisions": 1
+      }
+    },
+    {
+      "name": "ACK batch capacity atomic projection",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "capacity",
+          "terminalStored": true,
+          "state": {
+            "highwater": null,
+            "latest": null,
+            "usage": {
+              "snapshotRevisions": 1,
+              "pendingAttach": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "snapshotRevisions": 1
+      }
+    },
+    {
+      "name": "snapshot capacity stops long stream",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 2,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "rev": 3,
+          "ref": "s",
+          "result": "capacity",
+          "state": {
+            "highwater": 2,
+            "latest": {
+              "revision": 2
+            },
+            "usage": {
+              "snapshotRevisions": 2
+            }
+          }
+        }
+      ],
+      "limits": {
+        "snapshotRevisions": 2
+      }
+    },
+    {
+      "name": "control snapshot normal terminal",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "state": {
+            "highwater": 2,
+            "usage": {
+              "pendingControl": 0
+            }
+          }
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "result": "duplicate"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s",
+          "result": "cached"
+        }
+      ]
+    },
+    {
+      "name": "control detach only retires",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "detach",
+          "ref": "s"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "outcome": {
+            "kind": "detached"
+          },
+          "state": {
+            "ownerClosed": false,
+            "ownerBlocked": false,
+            "connected": true,
+            "generation": {
+              "phase": "retired"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "pending control blocks attach even retired",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "retire",
+          "id": "a"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1,
+          "result": "busy"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "result": "ignoredRetired",
+          "state": {
+            "highwater": 1
+          }
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1
+        }
+      ]
+    },
+    {
+      "name": "disposed control reply saves terminal without promotion",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "dispose"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "result": "ignoredRetired",
+          "state": {
+            "highwater": 1
+          }
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "result": "duplicate"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s",
+          "result": "cached"
+        }
+      ]
+    },
+    {
+      "name": "second pending control blocks",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "d",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s",
+          "result": "busy"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2
+        },
+        {
+          "op": "beginControl",
+          "id": "d",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        }
+      ]
+    },
+    {
+      "name": "control wrong subscription rejects without ID consumption",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "other",
+          "result": "invalidRequest",
+          "state": {
+            "usage": {
+              "controlIds": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "same control ID different body stops",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "detach",
+          "ref": "s",
+          "result": "protocolViolation",
+          "state": {
+            "usage": {
+              "controlIds": 1,
+              "pendingControl": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "control reply mismatch leaves pending",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "requestPatch": {
+            "controlId": "other"
+          },
+          "result": "protocolViolation",
+          "state": {
+            "usage": {
+              "pendingControl": 1
+            }
+          }
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "result": "ignoredRetired",
+          "state": {
+            "usage": {
+              "pendingControl": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "control malformed terminal can later be recovered",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "documentPatch": {
+            "extra": true
+          },
+          "result": "invalidDocument"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "result": "ignoredRetired",
+          "state": {
+            "usage": {
+              "pendingControl": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "control snapshot history contradiction stores terminal",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 1,
+          "snapshot": {
+            "ownerBlocked": true
+          },
+          "result": "protocolViolation",
+          "terminalStored": true,
+          "state": {
+            "highwater": 1,
+            "ownerBlocked": false,
+            "usage": {
+              "pendingControl": 0
+            }
+          }
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 1,
+          "snapshot": {
+            "ownerBlocked": true
+          },
+          "result": "duplicate"
+        }
+      ]
+    },
+    {
+      "name": "control snapshot capacity stores terminal",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "result": "capacity",
+          "terminalStored": true,
+          "state": {
+            "highwater": 1,
+            "usage": {
+              "pendingControl": 0
+            }
+          }
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "result": "duplicate"
+        }
+      ],
+      "limits": {
+        "snapshotRevisions": 1
+      }
+    },
+    {
+      "name": "rejected control is just terminal",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "outcome": {
+            "kind": "rejected",
+            "error": "capacity"
+          },
+          "state": {
+            "highwater": 1,
+            "generation": {
+              "phase": "attached"
+            },
+            "usage": {
+              "pendingControl": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "zero control IDs gate",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s",
+          "result": "capacity",
+          "state": {
+            "usage": {
+              "controlIds": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "controlIds": 0
+      }
+    },
+    {
+      "name": "contradictory second attach ACK cannot replace original",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 2,
+          "ref": "s",
+          "result": "protocolViolation",
+          "state": {
+            "highwater": 1,
+            "usage": {
+              "pendingAttach": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "contradictory second control ACK cannot replace original",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "action": "snapshot",
+          "ref": "s"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 3,
+          "result": "protocolViolation",
+          "state": {
+            "highwater": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "complex DTO snapshot is retained with full wire meaning",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "snapshotBase": "complex"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "ref": "s",
+          "rev": 1,
+          "snapshotBase": "complex",
+          "result": "duplicate"
+        }
+      ]
+    },
+    {
+      "name": "ordered member array difference is a contradiction",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "snapshotBase": "complex"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "ref": "s",
+          "rev": 1,
+          "snapshotBase": "complex",
+          "reverseMembers": true,
+          "result": "protocolViolation"
+        }
+      ]
+    }
+  ]
+}

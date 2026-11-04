@@ -10,14 +10,19 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
-## 記録wireの受信frame設計（H5d4c4c-prep2c、2026-11-05）
+## 記録wireの純粋receiver実装（H5d4c4c-prep2c、2026-11-05）
 
-prep2b5aの[PR #82](https://github.com/tyaro/temp-scada/pull/82)はworkへ統合済み（`cc2bed9`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41871519106)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41871618502)全7job成功、head `212a8d2` のレビュー指摘なし）。[Astraの受信器設計](../design/runtime/historian-recording-wire-receiver.md)で、固定scopeとローカル世代ticketに束縛した純粋TypeScript receiverの境界を定めた。
+設計[PR #83](https://github.com/tyaro/temp-scada/pull/83)はworkへ統合済み（`7400ab2`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41876216620)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41876301076)全7job成功、head `453e18a` のレビュー指摘なし）。[Astraの採用設計](../design/runtime/historian-recording-wire-receiver.md)に沿い、固定Scope・private世代token・poll型の純粋TypeScript receiverを実装した。
 
-attach ACK前のstate／control、同revisionの全文一致と矛盾、既知の古い重複、明示再attachと旧世代の後着を扱う。未知の低revisionは正当な配送順逆転でもresyncを要求する保守的な方針とし、nativeの巻戻しや未実行とは断定しない。履歴は有限予算で保持し、容量不足やprotocol faultで既知の証拠を消さない。
+元callの正常ACK保存とsnapshotの正式化を分け、表示側の矛盾・容量不足でも元terminalを保持する。ACK前のstateは全有限履歴を保持してrevision昇順で原子的に昇格し、controlは別slotで保持する。同revisionは全文比較し、未知低revisionはresync、既知低revisionの完全重複はHを戻さず許可する。Scope履歴は世代を跨ぎ、subscriptionRefを別世代へ再束縛しない。
 
-receiverはcallback・I/O・Promiseの完了処理を持たないpoll型のprojectionで、記録操作registryをTSへ複製しない。closed／native ownerBlocked／認可喪失／配送切断と受信器faultを別に扱う。今回は詳細設計のみで、receiver実装と共有fixtureは後続。現local portにはownerEpoch・closed・ControlFrame等がないため、通常App／coordinatorへそのまま接続しない。Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存、実接続とP3bの保留を維持する。
-Astraの最終read-only整合レビューに必須所見はない。今回は文書変更のみのためローカル全体試験は再実行せず、全体Prettier・相対リンク・差分を確認し、Ready for Review PRの全体CIで回帰を確認する。
+切断・退役・dispose後も元replyを回収でき、未回収attach/controlがある間は新attachを拒否する。closed／ownerBlocked／認可喪失／配送切断と受信faultを分け、全mutationをdescriptor検査前から再入guardで保護する。共有59シナリオをunitとChromiumで同じ実装へ流し、独立予算oracle・境界・ownership・全mutationへの再入も検査する。
+
+保持はsnapshot正式＋provisional合計64件/8MiB、requestと最大replyの先取りを含むcall合計8MiBで、返却/GCは行わない。通常例の4回目attachは容量拒否となり、長時間streamの無期限運用は保証しない。既知証拠を失わず有限停止する初回実装である。
+
+通常App／coordinator／local portと実native・transportは未接続。次はwire→local表示契約と元call配送の詳細設計を行い、接続可否を判断する。Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存、P3bの保留を維持する。
+
+検証: TS全9,952件（新規113）、型検査0error/0warning・build、関連Chromium13件（新規1）、全体Prettier・変更文書リンクと差分。Rust source/schema/依存は変更せず、Rust全体検証はPR全体CIで確認する。Astraの最終read-onlyレビューに修正必須の所見はない。Ready for Review PRで全体CIを確認する。
 
 ## 記録registryの複数scope資源モデル（H5d4c4c-prep2b5a、2026-11-05）
 
