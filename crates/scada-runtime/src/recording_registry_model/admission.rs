@@ -66,6 +66,7 @@ impl RegistryModel {
             bytes(q)?,
             2 * scada_model::recording_admission::MAX_RECORDING_ADMISSION_JSON_BYTES,
         )?;
+        let cost = sum(cost, completion_reservation(role))?;
         self.can_charge(role, cost)?;
         let sequence = self.sequence.checked_add(1).ok_or(ModelError::Capacity)?;
         let id = id.to_owned();
@@ -111,6 +112,9 @@ impl RegistryModel {
                 same_value(old.as_value(), reply.as_value()),
                 ModelError::ProtocolViolation,
             );
+        }
+        if kind == "accepted" {
+            self.register_handle(ticket, &reply)?;
         }
         self.admissions
             .get_mut(&ticket.admission_id)

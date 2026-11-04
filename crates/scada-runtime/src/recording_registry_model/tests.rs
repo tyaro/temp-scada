@@ -1,5 +1,6 @@
 use super::*;
 mod boundaries;
+mod observation_boundaries;
 fn fixtures() -> Value {
     serde_json::from_str(include_str!(
         "../../../../examples/recording-registry-model-cases.json"
@@ -54,6 +55,10 @@ fn limits(v: &Value) -> ModelLimits {
             "unconsumed_leases" => l.unconsumed_leases = n,
             "admission_inspections" => l.admission_inspections = n,
             "call_inspections" => l.call_inspections = n,
+            "operation_observations" => l.operation_observations = n,
+            "read_observations" => l.read_observations = n,
+            "pending_operation_observations" => l.pending_operation_observations = n,
+            "pending_read_observations" => l.pending_read_observations = n,
             "total_bytes" => l.total_bytes = n,
             "read_bytes" => l.read_bytes = n,
             _ => panic!("unknown model test limit"),
@@ -63,32 +68,46 @@ fn limits(v: &Value) -> ModelLimits {
 }
 #[test]
 fn shared_virtual_scenarios_match_immutable_wire_transcripts() {
-    let all = fixtures();
+    assert_scenarios(&fixtures());
+}
+#[test]
+fn observation_scenarios_match_immutable_wire_transcripts() {
+    let all: Value = serde_json::from_str(include_str!(
+        "../../../../examples/recording-observation-model-cases.json"
+    ))
+    .unwrap();
+    assert_scenarios(&all);
+}
+fn assert_scenarios(all: &Value) {
     for scenario in all["scenarios"].as_array().unwrap() {
         let mut model =
-            RegistryModel::new(session(&all, &Value::Null), limits(&scenario["limits"])).unwrap();
+            RegistryModel::new(session(all, &Value::Null), limits(&scenario["limits"])).unwrap();
         let mut tickets = BTreeMap::new();
+        let mut handles = BTreeMap::new();
         for (index, step) in scenario["steps"].as_array().unwrap().iter().enumerate() {
             let before = model.stats();
-            let s = session(&all, &step["session"]);
+            let s = session(all, &step["session"]);
             let input = if step.get("input").is_some() {
-                document(&all, &step["input"])
+                document(all, &step["input"])
             } else {
                 Value::Null
             };
             let alias = step["ticket"].as_str().unwrap_or("a");
+            let label = format!("{} step {} {}", scenario["name"], index, step["op"]);
             let result: Result<(&str, Option<Value>), ModelError> = (|| {
                 Ok(match step["op"].as_str().unwrap() {
                     "issue" => {
                         let r = model.issue_lease(
                             &s,
-                            RecordingWireLeaseRequest::from_value(input).unwrap(),
+                            RecordingWireLeaseRequest::from_value(input)
+                                .unwrap_or_else(|e| panic!("{label}: {e}")),
                         )?;
                         ("reply", Some(r.as_value().clone()))
                     }
                     "begin" => match model.begin_admission(
                         &s,
-                        RecordingAdmissionRequest::from_value(input).unwrap(),
+                        RecordingAdmissionRequest::from_value(input)
+                            .unwrap_or_else(|e| panic!("{label}: {e}")),
                     )? {
                         AdmissionStart::Registered { ticket } => {
                             tickets.insert(alias.to_owned(), ticket);
@@ -103,7 +122,8 @@ fn shared_virtual_scenarios_match_immutable_wire_transcripts() {
                         }
                     },
                     "proof" => {
-                        let r = RecordingAdmissionReply::from_value(input).unwrap();
+                        let r = RecordingAdmissionReply::from_value(input)
+                            .unwrap_or_else(|e| panic!("{label}: {e}"));
                         let d = match step["decision"].as_str().unwrap() {
                             "Accepted" => SimulatedDecision::Accepted(r),
                             "Rejected" => SimulatedDecision::Rejected(r),
@@ -113,24 +133,49 @@ fn shared_virtual_scenarios_match_immutable_wire_transcripts() {
                         model.observe_native(&tickets[alias], d)?;
                         ("ok", None)
                     }
+                    "handle" => {
+                        let h = model.accepted_handle(&tickets[alias])?;
+                        handles.insert(step["handle"].as_str().unwrap().to_owned(), h);
+                        ("ok", None)
+                    }
+                    "complete" => {
+                        let c=match step["completion"].as_str().unwrap() {
+                            "operation"=>SimulatedCompletion::Operation(scada_model::recording_operations::RecordingOperationResult::from_value(input).unwrap_or_else(|e|panic!("{label}: {e}"))),
+                            "reconciliation"=>SimulatedCompletion::Reconciliation(RecordingReconciliationDelivery::from_value(input).unwrap_or_else(|e|panic!("{label}: {e}"))),
+                            _=>panic!("completion kind"),
+                        };
+                        model.complete_handle(&handles[step["handle"].as_str().unwrap()], c)?;
+                        ("ok", None)
+                    }
+                    "observe" => {
+                        let r = model.observe_result(
+                            &s,
+                            RecordingWireObservationRequest::from_value(input)
+                                .unwrap_or_else(|e| panic!("{label}: {e}")),
+                        )?;
+                        ("reply", Some(r.as_value().clone()))
+                    }
                     "finish" => {
                         model.finish_admission_call(
                             &tickets[alias],
-                            RecordingAdmissionReply::from_value(input).unwrap(),
+                            RecordingAdmissionReply::from_value(input)
+                                .unwrap_or_else(|e| panic!("{label}: {e}")),
                         )?;
                         ("ok", None)
                     }
                     "inspect" => {
                         let r = model.inspect_admission(
                             &s,
-                            RecordingAdmissionInspectionRequest::from_value(input).unwrap(),
+                            RecordingAdmissionInspectionRequest::from_value(input)
+                                .unwrap_or_else(|e| panic!("{label}: {e}")),
                         )?;
                         ("reply", Some(r.as_value().clone()))
                     }
                     "call" => {
                         let r = model.inspect_call(
                             &s,
-                            RecordingWireCallInspectionRequest::from_value(input).unwrap(),
+                            RecordingWireCallInspectionRequest::from_value(input)
+                                .unwrap_or_else(|e| panic!("{label}: {e}")),
                         )?;
                         ("reply", Some(r.as_value().clone()))
                     }
@@ -159,8 +204,11 @@ fn shared_virtual_scenarios_match_immutable_wire_transcripts() {
                 let (kind, value) = result.unwrap_or_else(|e| panic!("{label}: {e}"));
                 assert_eq!(kind, step["expect"]["kind"], "{label}");
                 if let Some(recipe) = step["expect"].get("document") {
-                    let expected = document(&all, recipe);
-                    assert_eq!(value.as_ref(), Some(&expected), "{label}");
+                    let expected = document(all, recipe);
+                    assert!(
+                        value.as_ref().is_some_and(|v| same_value(v, &expected)),
+                        "{label}: actual {value:?}, expected {expected}"
+                    );
                     let v = value.unwrap();
                     if v["kind"].as_str().unwrap().starts_with("recordingWire") {
                         validate_recording_wire(&v).unwrap();

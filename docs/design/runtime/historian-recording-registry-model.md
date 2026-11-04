@@ -1,6 +1,6 @@
 # 記録操作registryの決定的状態モデル
 
-状態: **prep2aモデル実装済み、prep2b・実adapterは未実装**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2a／prep2b1モデル実装済み、残るprep2b・実adapterは未実装**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
 [wire／host設計](historian-recording-wire-host.md)のprep1はPR #71で統合済み。本書はそのJSONを使うprep2を具体化する。
 実registry adapter、native dispatch、lease実発行、時計・認証・通信待受・製品hostを追加する許可ではない。
 Project 0.37.0／DB7／H1／SDK／Banto／依存とP3b保留を維持する。
@@ -12,7 +12,7 @@ Project 0.37.0／DB7／H1／SDK／Banto／依存とP3b保留を維持する。
 Tokio、Instant、SystemTime、DB、ファイル、network、SDK、callbackの呼出しをmoduleに入れない。
 全操作は `&mut self` の決定的遷移である。Rustの逐次呼出しで全caller gateを模擬し、実process間排他や認可の実装とは称さない。
 
-prep2bで結果観測／cancel／snapshot・subscriptionを追加する。workflow全段階の予約と元runのpause／apply適格性もその段階で詳細化する。
+[prep2b1](historian-recording-registry-observation-model.md)でmodel-bound handleと不変completion／結果観測を追加した。cancel／snapshot・subscriptionは後続である。workflow全段階の予約と元runのpause／apply適格性もその段階で詳細化する。
 prep2aは既存c4a全actionの受付台帳を扱えるが、nativeがそのactionを許可すべきかは実装しない。fake決定を明示入力する。
 この限定によって、単一callの曖昧さを検証するためにrecording／retention／native ownerを二重実装しない。
 
@@ -164,7 +164,7 @@ read専用はread admission／read lease／両inspectionに使用し、mutation�
 
 会計は既存scada-model::recording_wireで提供する `conservative_recording_json_bound(&Value, WireBound) -> Result<WireBound, RecordingWireError>` を使う。既存measure／JsonBudgetを再利用し、caller limitが4MiB／196608nodes／depth96以下であることをwalker開始前に検査する。これは構造metricsだけでありschema・native資格の検証ではない。既存validatorの予算・意味は変更しない。
 
-admissionは元request実測＋512KiB×2をmodel終了まで固定予約する。独立したcurrent knowledgeとimmutable terminal replyを両方保管でき、unknown返信後のlate proofも予約を取り直さず保存できる。未確定枠も早期解放しない。余剰返却／retire／GCはprep2aでは実装しない。
+admissionは元request実測＋512KiB×2をmodel終了まで固定予約する。prep2b1ではcompletion保管用としてmutation全actionへ958464bytes、readへ512KiBを追加予約する。独立したcurrent knowledgeとimmutable terminal replyを両方保管でき、unknown返信後のlate proofも予約を取り直さず保存できる。未確定枠も早期解放しない。余剰返却／retire／GCはprep2aでは実装しない。
 leaseは既知issued reply＋元requestの実測を原子登録前に計数する。inspect_admissionもその時点で構築したsnapshot reply＋元requestの実測を計数し、後のknowledge更新でその元replyを変更しない。
 CallInspectionはrequestのID binding実測だけを保存し、既存terminalを参照して返す。毎回4MiBのreplyコピーを永久保存しない。一時返却値はwire上限4MiBで別に有限化し、retained 8MiBと同じ会計だと主張しない。
 同値再送／二重proof／二重終端でID・bytesを二重課金しない。新proofが矛盾する場合は元証拠と会計を変えず拒否する。小さい要求でも2×512KiB固定予約を使うため、4096件は件数上限であって全件収容保証ではない。
@@ -175,9 +175,9 @@ byte計数は構造JSON payloadの上界でありBTreeMap／Arc等のallocator�
 prep2bでphase進行を解禁する前に、preflight／pause／apply／discard credit、callerOperation pool、reconcile poolとnative c2別cap拒否を追加設計・受入する。
 この違いは親wire設計のproduction要件を緩和したものではなく、モデルの提供段階の制限である。
 
-## 9. prep2bの接続点（今回未実装）
+## 9. prep2bの接続点（結果観測は実装済み、残りは後続）
 
-結果観測はfake operation／read handleごとの不変completionを保持し、元call terminalとは別のread-only protocolにする。
+結果観測はprep2b1でfake operation／read handleごとの不変completionを保持し、元call terminalとは別のread-only protocolとして実装した。read Acceptedは既存apply handleに束縛し、read結果から元applyの静止・回復解除を推測しない。
 cancelはfake token通知を高々一回記録し、requestedを完了へ変換しない。元cancel replyはCallInspectionから取得できるようにする。
 結果projectionではreceipt／quiescence／sticky recoveryを独立させ、receiptFoundでunknown静止をconfirmedへ変更しない。
 

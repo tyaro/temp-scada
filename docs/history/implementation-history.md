@@ -4,6 +4,16 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録registryモデルの不変結果と観測（H5d4c4c-prep2b1、2026-11-04）
+
+prep2aのPR #72をworkへ統合（`d1ba233`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[prep2b1](../design/runtime/historian-recording-registry-observation-model.md)として、private model-bound handle ticket、不変operation／read completion、read-only観測を実装した。read Acceptedは既存apply handleと元全文に束縛し、元completionの証拠がないconfirmedや回復要求の後退を拒否する。
+
+元unknown返信・受付知識・completionを別に保持し、readUncertainとreceiptFoundを元applyの静止や再送許可へ変換しない。観測はoperation/read各4096 ID・未回収pending各2。未知refのunavailableは不変で、ready結果の回収時だけその観測slotを解放する。新mutationの保守blockとP3b保留を維持する。
+
+受付前の固定予約へoperation958464bytes／read512KiBのcompletion分を加算した。観測には元requestだけを保持・課金し、terminal payloadはhandleの一個の不変completionから返す。既存55シナリオの容量期待値も新予約へ更新した。新規48シナリオ480ステップをRustで実行し、TS／browserは同じ期待DTOの既存validator受入・所有とApp保存不変を確認する。
+
+Rust workspace652件（新規6）、TS全9,095件（新規184）、型検査0error／0warning・build、関連Chromium5件（新規1）、Clippy全target `-D warnings`／rustfmt、全体Prettier・変更文書9件の相対リンク946箇所・差分検査が成功した。Astra最終read-onlyレビューに必須所見はない。取消・購読／再接続・workflow credit・複数scope allocatorと実native接続は後続であり、Project0.37.0／DB7／H1／SDK／Banto／依存版は変更しない。
+
 ## 記録操作registryの純粋状態モデル（H5d4c4c-prep2a、2026-11-04）
 
 prep1のPR #71をworkへ統合（`bbc5359`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[prep2a](../design/runtime/historian-recording-registry-model.md)として、仮想単調clockとlease、受付前の原子登録、模擬受付証拠、元callの不変終端とread-only照会をRustへ実装した。unknown元返信と後のaccepted知識を分離し、期限・principal／epoch・role・ID・bytesの境界を検証する。

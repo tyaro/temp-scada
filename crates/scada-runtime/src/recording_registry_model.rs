@@ -1,8 +1,11 @@
-//! Deterministic prep2a simulation, NOT a production registry/lease authority.
+//! Deterministic prep2 simulation, NOT a production registry/lease authority.
 //! No native owner, clock, executor, callbacks, persistence or transport is used.
 mod admission;
+mod handle;
 mod inspection;
 mod lease;
+mod observation;
+use handle::completion_reservation;
 mod types;
 use scada_model::recording_admission::*;
 use scada_model::recording_operations::{
@@ -33,6 +36,9 @@ pub struct RegistryModel {
     call_inspections: BTreeMap<String, RecordingWireCallInspectionRequest>,
     mutation_bytes: usize,
     read_bytes: usize,
+    handles: BTreeMap<HandleKey, HandleRecord>,
+    observations: BTreeMap<String, ObservationRecord>,
+    recovery_required: bool,
 }
 #[derive(Debug)]
 struct LeaseRecord {
@@ -50,10 +56,25 @@ struct AdmissionRecord {
     proof: Option<RecordingAdmissionReply>,
     terminal: Option<RecordingAdmissionReply>,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Role {
     Mutation,
     Read,
+}
+type HandleKey = (Role, String);
+#[derive(Debug)]
+struct HandleRecord {
+    admission_id: String,
+    sequence: u64,
+    original_operation: Option<HandleKey>,
+    completion: Option<SimulatedCompletion>,
+}
+#[derive(Debug)]
+struct ObservationRecord {
+    request: RecordingWireObservationRequest,
+    role: Role,
+    target: Option<HandleKey>,
+    pending: bool,
 }
 impl RegistryModel {
     pub fn new(session: ModelSession, limits: ModelLimits) -> Result<Self, ModelError> {
@@ -72,6 +93,9 @@ impl RegistryModel {
             call_inspections: BTreeMap::new(),
             mutation_bytes: 0,
             read_bytes: 0,
+            handles: BTreeMap::new(),
+            observations: BTreeMap::new(),
+            recovery_required: false,
         })
     }
     pub fn advance_to(&mut self, now: ModelInstant) -> Result<(), ModelError> {
@@ -117,6 +141,42 @@ impl RegistryModel {
             pending_dispatcher: self.admissions.values().any(|v| v.terminal.is_none()),
             closed: self.closed,
             clock_fault: self.clock_fault,
+            operation_handles: self
+                .handles
+                .keys()
+                .filter(|(r, _)| *r == Role::Mutation)
+                .count(),
+            read_handles: self
+                .handles
+                .keys()
+                .filter(|(r, _)| *r == Role::Read)
+                .count(),
+            completed_handles: self
+                .handles
+                .values()
+                .filter(|h| h.completion.is_some())
+                .count(),
+            operation_observations: self
+                .observations
+                .values()
+                .filter(|o| o.role == Role::Mutation)
+                .count(),
+            read_observations: self
+                .observations
+                .values()
+                .filter(|o| o.role == Role::Read)
+                .count(),
+            pending_operation_observations: self
+                .observations
+                .values()
+                .filter(|o| o.role == Role::Mutation && o.pending)
+                .count(),
+            pending_read_observations: self
+                .observations
+                .values()
+                .filter(|o| o.role == Role::Read && o.pending)
+                .count(),
+            recovery_required: self.recovery_required,
         }
     }
     fn qualify(&self, s: &ModelSession) -> Result<(), ModelError> {
