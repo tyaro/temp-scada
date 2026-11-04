@@ -1,5 +1,6 @@
 use super::*;
 mod boundaries;
+mod cancel_boundaries;
 mod observation_boundaries;
 fn fixtures() -> Value {
     serde_json::from_str(include_str!(
@@ -59,6 +60,8 @@ fn limits(v: &Value) -> ModelLimits {
             "read_observations" => l.read_observations = n,
             "pending_operation_observations" => l.pending_operation_observations = n,
             "pending_read_observations" => l.pending_read_observations = n,
+            "cancel_requests" => l.cancel_requests = n,
+            "pending_cancel_calls" => l.pending_cancel_calls = n,
             "total_bytes" => l.total_bytes = n,
             "read_bytes" => l.read_bytes = n,
             _ => panic!("unknown model test limit"),
@@ -78,12 +81,21 @@ fn observation_scenarios_match_immutable_wire_transcripts() {
     .unwrap();
     assert_scenarios(&all);
 }
+#[test]
+fn cancel_scenarios_match_immutable_wire_transcripts() {
+    let all: Value = serde_json::from_str(include_str!(
+        "../../../../examples/recording-cancel-model-cases.json"
+    ))
+    .unwrap();
+    assert_scenarios(&all);
+}
 fn assert_scenarios(all: &Value) {
     for scenario in all["scenarios"].as_array().unwrap() {
         let mut model =
             RegistryModel::new(session(all, &Value::Null), limits(&scenario["limits"])).unwrap();
         let mut tickets = BTreeMap::new();
         let mut handles = BTreeMap::new();
+        let mut cancel_tickets = BTreeMap::new();
         for (index, step) in scenario["steps"].as_array().unwrap().iter().enumerate() {
             let before = model.stats();
             let s = session(all, &step["session"]);
@@ -153,6 +165,33 @@ fn assert_scenarios(all: &Value) {
                             RecordingWireObservationRequest::from_value(input)
                                 .unwrap_or_else(|e| panic!("{label}: {e}")),
                         )?;
+                        ("reply", Some(r.as_value().clone()))
+                    }
+                    "begin_cancel" => {
+                        match model.begin_cancel(
+                            &s,
+                            RecordingWireCancelRequest::from_value(input)
+                                .unwrap_or_else(|e| panic!("{label}: {e}")),
+                        )? {
+                            CancelStart::Registered { ticket } => {
+                                cancel_tickets.insert(alias.to_owned(), ticket);
+                                ("Registered", None)
+                            }
+                            CancelStart::Pending { ticket } => {
+                                cancel_tickets.insert(alias.to_owned(), ticket);
+                                ("Pending", None)
+                            }
+                            CancelStart::Replay { reply } => {
+                                ("Replay", Some(reply.as_value().clone()))
+                            }
+                        }
+                    }
+                    "notify_cancel" => {
+                        let r = model.notify_cancel(&cancel_tickets[alias])?;
+                        ("reply", Some(r.as_value().clone()))
+                    }
+                    "finish_cancel" => {
+                        let r = model.finish_cancel_call(&cancel_tickets[alias])?;
                         ("reply", Some(r.as_value().clone()))
                     }
                     "finish" => {

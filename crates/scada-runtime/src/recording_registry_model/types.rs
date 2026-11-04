@@ -74,6 +74,19 @@ pub enum SimulatedCompletion {
     Operation(scada_model::recording_operations::RecordingOperationResult),
     Reconciliation(RecordingReconciliationDelivery),
 }
+/// Simulation-only original cancel call identity. Not a native cancellation token.
+#[derive(Clone, Debug)]
+pub struct ModelCancelTicket {
+    pub(super) identity: Arc<()>,
+    pub(super) sequence: u64,
+    pub(super) cancel_id: String,
+}
+#[derive(Clone, Debug)]
+pub enum CancelStart {
+    Registered { ticket: ModelCancelTicket },
+    Pending { ticket: ModelCancelTicket },
+    Replay { reply: RecordingWireCancelReply },
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum ModelError {
     InvalidInput,
@@ -104,6 +117,8 @@ pub struct ModelLimits {
     pub read_observations: usize,
     pub pending_operation_observations: usize,
     pub pending_read_observations: usize,
+    pub cancel_requests: usize,
+    pub pending_cancel_calls: usize,
     pub total_bytes: usize,
     pub read_bytes: usize,
 }
@@ -121,6 +136,8 @@ impl Default for ModelLimits {
             read_observations: 4096,
             pending_operation_observations: 2,
             pending_read_observations: 2,
+            cancel_requests: 4096,
+            pending_cancel_calls: 1,
             total_bytes: 8 * 1024 * 1024,
             read_bytes: 2 * 1024 * 1024,
         }
@@ -138,11 +155,13 @@ impl ModelLimits {
                 self.call_inspections,
                 self.operation_observations,
                 self.read_observations,
+                self.cancel_requests,
             ]
             .iter()
             .all(|n| *n <= 4096)
                 && self.pending_operation_observations <= 2
                 && self.pending_read_observations <= 2
+                && self.pending_cancel_calls <= 1
                 && self.unconsumed_leases <= 4
                 && self.total_bytes <= 8 * 1024 * 1024
                 && self.read_bytes <= 2 * 1024 * 1024
@@ -173,4 +192,7 @@ pub struct ModelStats {
     pub pending_operation_observations: usize,
     pub pending_read_observations: usize,
     pub recovery_required: bool,
+    pub cancel_requests: usize,
+    pub pending_cancel_calls: usize,
+    pub cancel_notified_handles: usize,
 }

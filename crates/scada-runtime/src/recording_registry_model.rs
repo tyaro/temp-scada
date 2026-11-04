@@ -1,6 +1,7 @@
 //! Deterministic prep2 simulation, NOT a production registry/lease authority.
 //! No native owner, clock, executor, callbacks, persistence or transport is used.
 mod admission;
+mod cancel;
 mod handle;
 mod inspection;
 mod lease;
@@ -39,6 +40,7 @@ pub struct RegistryModel {
     handles: BTreeMap<HandleKey, HandleRecord>,
     observations: BTreeMap<String, ObservationRecord>,
     recovery_required: bool,
+    cancels: BTreeMap<String, CancelRecord>,
 }
 #[derive(Debug)]
 struct LeaseRecord {
@@ -68,6 +70,7 @@ struct HandleRecord {
     sequence: u64,
     original_operation: Option<HandleKey>,
     completion: Option<SimulatedCompletion>,
+    cancel_notified: bool,
 }
 #[derive(Debug)]
 struct ObservationRecord {
@@ -75,6 +78,14 @@ struct ObservationRecord {
     role: Role,
     target: Option<HandleKey>,
     pending: bool,
+}
+#[derive(Debug)]
+struct CancelRecord {
+    request: RecordingWireCancelRequest,
+    sequence: u64,
+    target: Option<HandleKey>,
+    decision: Option<RecordingWireCancelReply>,
+    terminal: bool,
 }
 impl RegistryModel {
     pub fn new(session: ModelSession, limits: ModelLimits) -> Result<Self, ModelError> {
@@ -96,6 +107,7 @@ impl RegistryModel {
             handles: BTreeMap::new(),
             observations: BTreeMap::new(),
             recovery_required: false,
+            cancels: BTreeMap::new(),
         })
     }
     pub fn advance_to(&mut self, now: ModelInstant) -> Result<(), ModelError> {
@@ -177,6 +189,9 @@ impl RegistryModel {
                 .filter(|o| o.role == Role::Read && o.pending)
                 .count(),
             recovery_required: self.recovery_required,
+            cancel_requests: self.cancels.len(),
+            pending_cancel_calls: self.cancels.values().filter(|c| !c.terminal).count(),
+            cancel_notified_handles: self.handles.values().filter(|h| h.cancel_notified).count(),
         }
     }
     fn qualify(&self, s: &ModelSession) -> Result<(), ModelError> {
