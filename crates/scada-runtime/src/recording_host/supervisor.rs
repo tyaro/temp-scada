@@ -1,6 +1,7 @@
 //! Owns one recording Host and one same-store preflight lease. Every step is explicit.
 pub mod operations;
 mod preflight;
+mod receipt_read;
 mod resume;
 pub use resume::{
     ResumeInspectionCompletion, ResumeInspectionPhase, ResumeInspectionRun, ResumeResolution,
@@ -27,6 +28,7 @@ pub struct RecordingSupervisor {
     host: RecordingHost,
     preflight: PreflightOwner,
     resume: resume::ResumeOwner,
+    receipt_read: Option<receipt_read::ReceiptRead>,
 }
 impl RecordingSupervisor {
     pub fn try_new(store: SqliteStore) -> Result<Self, Box<SupervisorInitError>> {
@@ -35,6 +37,7 @@ impl RecordingSupervisor {
                 host: RecordingHost::new(store),
                 preflight: PreflightOwner::new(reader),
                 resume: resume::ResumeOwner::default(),
+                receipt_read: None,
             }),
             Err(error) => Err(Box::new(SupervisorInitError { error, store })),
         }

@@ -2,6 +2,11 @@
 //! No transport, new sessions, mapping registration, automatic resume or receipt polling.
 mod driver;
 mod projection;
+mod reconciliation;
+pub use reconciliation::{
+    ReconciliationPhase, RecordingReconciliationCompletion, RecordingReconciliationHandle,
+    MAX_RECONCILIATION_IDS,
+};
 mod registry;
 mod types;
 pub use registry::MAX_OWNER_IDS;
@@ -93,10 +98,13 @@ struct Core {
     latest: Option<Arc<RecordingOperationResult>>,
     last_applied: Option<AppliedSuccess>,
     native_receipt: Option<NativeReceiptEvidence>,
+    read: reconciliation::ReadState,
 }
 struct Shared {
     #[cfg(test)]
     fault: Mutex<Option<driver::TestFault>>,
+    #[cfg(test)]
+    read_fault: Mutex<Option<reconciliation::driver::TestFault>>,
     core: Mutex<Core>,
     context: RecordingOperationsContext,
     run: RecordingRun,
@@ -118,6 +126,9 @@ impl Shared {
             last_applied: core.last_applied.clone(),
             recovery_required: core.recovery,
             closed: core.closed,
+            reconciliation_phase: core.read.phase,
+            reconciling: core.read.handle.clone(),
+            last_reconciliation: core.read.last.clone(),
         }));
     }
     fn rejection(&self, code: OperationErrorCode) -> OperationRejection {
@@ -133,7 +144,7 @@ impl Shared {
         if core.closed {
             return Err(self.rejection(OperationErrorCode::WrongOwner));
         }
-        if core.in_flight {
+        if core.in_flight || core.read.phase == ReconciliationPhase::Uncertain {
             return Err(self.rejection(OperationErrorCode::Busy));
         }
         if core.recovery {
@@ -185,12 +196,17 @@ impl RecordingOperationsOwner {
             last_applied: None,
             recovery_required: false,
             closed: false,
+            reconciliation_phase: ReconciliationPhase::Idle,
+            reconciling: None,
+            last_reconciliation: None,
         });
         let (view, _) = watch::channel(initial);
         Ok(Self {
             shared: Arc::new(Shared {
                 #[cfg(test)]
                 fault: Mutex::new(None),
+                #[cfg(test)]
+                read_fault: Mutex::new(None),
                 core: Mutex::new(Core {
                     supervisor: Some(supervisor),
                     registry: registry::Registry::default(),
@@ -202,6 +218,7 @@ impl RecordingOperationsOwner {
                     latest: None,
                     last_applied: None,
                     native_receipt: None,
+                    read: reconciliation::ReadState::default(),
                 }),
                 context,
                 run: recording_run,
@@ -225,6 +242,10 @@ impl RecordingOperationsOwner {
             return Err(OwnerError::Closed);
         }
         if core.in_flight
+            || matches!(
+                core.read.phase,
+                ReconciliationPhase::InFlight | ReconciliationPhase::Uncertain
+            )
             || matches!(
                 core.phase,
                 OperationsPhase::Candidate | OperationsPhase::Paused
@@ -254,6 +275,9 @@ impl RecordingOperationsOwner {
             last_applied: core.last_applied.clone(),
             native_receipt: core.native_receipt.clone(),
             owner_recovery_required: core.recovery,
+            reconciliation_request: core.read.handle.as_ref().map(|h| h.request().clone()),
+            last_reconciliation: core.read.last.clone(),
+            reconciliation_failure: core.read.failure,
         };
         core.closed = true;
         self.shared.publish(&core);
@@ -274,6 +298,9 @@ impl Drop for RecordingOperationsOwner {
             for h in w.operations.iter().flatten() {
                 h.request_cancel();
             }
+        }
+        if let Some(h) = &core.read.handle {
+            h.request_cancel();
         }
         self.shared.publish(&core);
         // Drop idle native ownership outside the state lock. In-flight tasks retain it.

@@ -16,6 +16,7 @@ pub(super) enum TestFault {
     WorkerPanic,
     Full,
     LostResponse,
+    CommitThenPanic,
     LateCancel,
     Gate(Arc<TestGate>),
 }
@@ -183,6 +184,7 @@ impl Loan {
                 TestFault::WorkerPanic
                 | TestFault::Full
                 | TestFault::LostResponse
+                | TestFault::CommitThenPanic
                 | TestFault::LateCancel,
             ) => {
                 let fault = self.fault.clone();
@@ -204,11 +206,18 @@ impl Loan {
                                         ),
                                     ))
                                 }
-                                Some(TestFault::LostResponse | TestFault::LateCancel) => {
+                                Some(
+                                    TestFault::LostResponse
+                                    | TestFault::CommitThenPanic
+                                    | TestFault::LateCancel,
+                                ) => {
                                     let RecordingPlanTurnIntent::Apply(request) = intent else {
                                         unreachable!()
                                     };
                                     let receipt = store.apply_recording_plan(request, control)?;
+                                    if matches!(fault, Some(TestFault::CommitThenPanic)) {
+                                        panic!("native response lost after commit");
+                                    }
                                     if matches!(fault, Some(TestFault::LostResponse)) {
                                         Err(scada_historian::store::StoreError::Invalid(
                                             "lost native response",

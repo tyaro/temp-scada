@@ -680,18 +680,18 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 
 `scada-historian/src/store/recording_plan/receipt.rs`は`HistoryReader::recording_plan_receipt_for_request`と`RecordingPlanReceiptSnapshot`を公開する。元QueryControlの検証後に既存256行capと`query/management.rs`のsnapshot guardを使い、`read::heads`／`find`／`read::application`で同snapshotの保存証拠を検証してからcanonical要求全文を照合する。native member順の意味同値と、d4a元owned要求の表示順echoは別の責務である。writer API・latch・supervisorの所有を変更しない。
 
-`receipt/tests.rs`と`receipt/tests/failures.rs`は過去receipt、現在CASとの分離、並行commit、実FULL／応答喪失、保存証拠の破損、予算・取消・panicと既存leaseを検証する。`query/management.rs`の既存authorizer／cleanup試験でreadonlyとpoisoned readerを確認し、`recording_plan/tests/validation.rs`の8member／32origins試験で同じ256行上限を確認する。共有native ownerとregistryはc2、owner内read統合はc3に残し、browserへDB照会を直接公開しない。
+`receipt/tests.rs`と`receipt/tests/failures.rs`は過去receipt、現在CASとの分離、並行commit、実FULL／応答喪失、保存証拠の破損、予算・取消・panicと既存leaseを検証する。`query/management.rs`の既存authorizer／cleanup試験でreadonlyとpoisoned readerを確認し、`recording_plan/tests/validation.rs`の8member／32origins試験で同じ256行上限を確認する。共有native ownerとregistryはc2、owner内read統合はc3で提供し、browserへDB照会を直接公開しない。
 
 ## 記録操作の共有native owner（H5d4c2）
 
 公開入口は`scada_runtime::recording_operations`、実体は`recording_host/supervisor/operations`。`mod.rs`が共有gateとcached state、四枠予約後の受付、同期discard／handoffを担当し、`types.rs`がopaque token・immutable完了watch・有限errorとevidenceを定義する。`registry.rs`は役割付きID4096件と未使用credit、`projection.rs`はU1/nullのchecked変換・全文echo・d4a結果検証・typed error対応、`driver.rs`は一stageだけのSupervisor loan・native start/join・返却後の結果確定とDrop guardを所有する。
 
-`supervisor.rs`はinitとstart_preflightの純粋gateを`recording_operations_context`へ共有し、true方向だけの`latch_recording_operations_recovery`でowner-only blockをnativeへ伝える。Historianの`QueryControl::validate`を公開し、元予算の検査をruntimeへ複製しない。JS clockとのbridgeとc3 read統合は後続。
+`supervisor.rs`はinitとstart_preflightの純粋gateを`recording_operations_context`へ共有し、true方向だけの`latch_recording_operations_recovery`でowner-only blockをnativeへ伝える。Historianの`QueryControl::validate`を公開し、元予算の検査をruntimeへ複製しない。c3 read統合も実装済みで、JS clockとのbridgeは後続。
 
 `operations/tests.rs`と`registry.rs`の単体30件、`tests/recording_host/operations.rs`の公開API／SDK loopback2件で所有・期限・競合・失敗と履歴保持を確認する。既存native候補／worker起動のprivate seamを試験で共有し、runtime dev-dependencyだけで既存pinのrusqliteを使う。Historianの実FULL／rollback試験とownerの型付きFULL注入は区別する。公開test-support featureやproduction fault APIを設けない。
 
-## 同owner内の明示結果照会（H5d4c3、設計のみ）
+## 同owner内の明示結果照会（H5d4c3）
 
-[詳細設計](../design/runtime/historian-recording-owner-reconciliation.md)は、既存c2 ownerの元apply handleとc1のreceipt読取をつなぐ後続実装の境界を定める。照会の受付・独立した有限ID登録・read自身の物理状態・元apply結果の単調統合を分け、Supervisorの既存readerを一回だけloanしてjoin後に返す。元operation completionは不変、回復latchは解除しない。
+公開入口はc2と同じ`scada_runtime::recording_operations`。`supervisor/receipt_read.rs`が既存readerの限定read gate・spawn_blockingとborrowed join・返却を担当する。`operations/reconciliation/mod.rs`は元apply Arc照合、read用4096 IDと受付、`types.rs`は有限completion／read phase、`driver.rs`はSupervisor loan・read実行・元completionを変えないDTO投影／最新結果統合を所有する。mutation用gateは緩和せず、private helper以外へ回復時の読取例外を広げない。
 
-本節は実装入口の追加予定を示す。c3の公開API／driver／テストはまだ存在せず、c1 readerやd4b mock serviceの実装を同owner接続の完了とはしない。次の実装PRで設計の受入表に沿って検証し、実際の配置へ更新する。
+`reconciliation/tests/outcomes.rs`は実commit後の応答喪失／panicと同snapshotの元receipt、不在・破損・全文echo・投影失敗を扱う。`lifecycle.rs`は実blocking worker中の取消／期限／Drop・Runtime終了・poison、`gates.rs`は全caller・ID上限・opaque identity・既存leaseを扱う。`tests/recording_host/operations.rs`には実SDKで出力予算rollback→同owner notFound→非再開・履歴不変の公開API試験を追加した。通常AppのJS bridge、回復latch解除と製品transportは実装しない。

@@ -1,6 +1,6 @@
 # 記録操作owner内の明示receipt照会
 
-状態: **H5d4c3の採用詳細設計・未実装**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。 [c1 receipt reader](historian-recording-receipt-reader.md)、[c2共有owner](historian-recording-native-owner.md)、[d4操作DTOとservice](historian-recording-operations.md)を接続する次の一実装PRの契約である。c2はPR #63でマージ済み。本書はコード・schema・製品接続を追加しない。
+状態: **H5d4c3のRust実装済み・JS bridgeは後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。 [c1 receipt reader](historian-recording-receipt-reader.md)、[c2共有owner](historian-recording-native-owner.md)、[d4操作DTOとservice](historian-recording-operations.md)を接続する実装契約である。c3設計はPR #64でマージ済み（`cd6257a`）。Rustの照会と結果統合を実装し、schemaと製品接続は変更しない。
 
 ## 1. 範囲と根拠
 
@@ -18,7 +18,7 @@ c1はDB上のcommit証拠だけを返す。c2は元applyの物理完了と回復
 
 ## 2. Rust公開API
 
-既存 `scada_runtime::recording_operations` へ次を追加する。名前は実装時の整合調整を許すが、資格・所有・結果意味は変えない。
+既存 `scada_runtime::recording_operations` で次を提供する。資格・所有・結果意味は以下に従う。
 
 ```rust
 impl RecordingOperationsClient {
@@ -131,7 +131,7 @@ Tokio watch::Refはclone後に解放してからowner APIやawaitを呼ぶ。rec
 
 ## 8. 実装順と受入
 
-この設計PRの次に、一つのc3実装PRでprivate Supervisor receipt loan、owner read registry／API／watch、d4a投影と単調統合までを完成させる。JS bridge、認証、製品transport、回復gate解除は含めない。c1とc2の実装済み範囲は維持し、read開始資格を共有mutation gateの緩和で実現しない。
+c3の実装としてprivate Supervisor receipt loan、owner read registry／API／watch、d4a投影と単調統合までを提供する。JS bridge、認証、製品transport、回復gate解除は含めない。c1とc2の実装済み範囲は維持し、read開始資格を共有mutation gateの緩和で実現しない。
 
 | 境界       | 必須受入                                                                                                                                                                                |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -148,3 +148,13 @@ Tokio watch::Refはclone後に解放してからowner APIやawaitを呼ぶ。rec
 | 冪等通知   | subscriber不在・subscribe/completion順逆転・二重guard失敗・Core poisonでも一回completion、poison受付非登録／in-flight閉鎖／Internal保持／handoff拒否、known receipt／recovery巻戻しなし |
 
 実FULLの原子rollbackは既存Historian試験、owner境界のtyped failure／lost responseはprivate seamと区別して記録する。隔離SQLite／mockHubだけを使い、通常Appへ実adapterを接続したとは主張しない。実装後はAstra read-onlyレビュー、workspace／Clippy／既存共通DTOとbrowser回帰を確認してReady PRにする。
+
+## 9. 実装入口と検証範囲
+
+`supervisor/receipt_read.rs`のcrate内部helperは、既存readerの健康条件を共有してtakeし、borrowed join後に返却する。通常joinではtokenを勝手に取消状態へ変えず、未joinのDropだけcooperative cancelを送る。`operations/reconciliation/mod.rs`は元opaque applyの同期資格検査と独立4096 IDを担当し、`types.rs`はimmutable read completionとphase、`driver.rs`はspawn前のLoan guard・同readerの実行・返却後のDTO検証と単調統合を担当する。Core poisonでも取得済みnative receiptを元request付きで保持し、有限Internalと閉鎖状態を公開する。
+
+`reconciliation/tests/outcomes.rs`は実commit後の応答喪失／panicからのFound、不在・保存証拠破損、過去head、元要求echoとsafe投影を検証する。`lifecycle.rs`は実blocking worker中の取消／期限・正常join後の再照会、owner Dropとlock保持、Runtime終了／poison・一回completionを扱う。`gates.rs`は全caller競合・opaque identity・4096境界・既存二reader leaseとhandoff拒否を扱う。公開APIのSDK loopback結合試験は、出力予算による実rollback後のnotFound、既存履歴の不変と非再開・回復gate維持を確認する。
+
+実SQLite FULLの原子rollbackは既存Historian試験、ownerのFULL伝播は既存の型付き故障注入として区別する。receipt改変・safe上限の故障はprivateなテスト注入で、保存証拠破損と出力予算rollbackは隔離SQLiteで確認する。公開fault APIや依存追加はない。通常AppとJS clock bridgeは未接続のままである。
+
+Rust workspace618件（新規26）、Clippy全target `-D warnings`／rustfmt、既存の共通契約・操作workspaceのChromium16件が成功した。Astraの最終read-onlyレビューに必須指摘はない。

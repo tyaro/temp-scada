@@ -168,6 +168,10 @@ pub struct RecordingOperationsState {
     pub last_applied: Option<AppliedSuccess>,
     pub recovery_required: bool,
     pub closed: bool,
+    pub reconciliation_phase: ReconciliationPhase,
+    pub reconciling: Option<RecordingReconciliationHandle>,
+    pub last_reconciliation:
+        Option<Arc<scada_model::recording_operations::RecordingReconciliationResult>>,
 }
 #[derive(Clone, Debug)]
 pub struct RecordingOperationsRecoveryEvidence {
@@ -177,6 +181,11 @@ pub struct RecordingOperationsRecoveryEvidence {
     pub last_applied: Option<AppliedSuccess>,
     pub native_receipt: Option<NativeReceiptEvidence>,
     pub owner_recovery_required: bool,
+    pub reconciliation_request:
+        Option<scada_model::recording_operations::RecordingReconciliationRequest>,
+    pub last_reconciliation:
+        Option<Arc<scada_model::recording_operations::RecordingReconciliationResult>>,
+    pub reconciliation_failure: Option<OwnerError>,
 }
 /// A transfer of administrative ownership, never an implicit recovery or restart.
 pub struct RecordingOperationsHandoff {

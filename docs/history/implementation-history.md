@@ -4,6 +4,16 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 同owner内の明示結果照会のRust実装（H5d4c3、2026-11-04）
+
+設計PR #64はworkへ統合済み（`cd6257a`）。Astra設計に沿い、元apply opaque handleへのreconcile、独立した有限read registry、同Supervisorの既存reader loan／join、d4a DTO投影とlatest／lastAppliedの単調統合を実装した。元completionと元quiescenceは変えず、notFoundでも再送を許可しない。
+
+単体25件・公開API／実SDK loopback結合1件を追加。実commit後の応答喪失／panicからのFound、実出力予算rollbackと保存証拠破損、過去head／元要求echo、実blocking readの取消／期限と正常join後再照会、owner Drop／Runtime／poisonと資源保持を確認した。FULL原子性は既存Historian試験、ownerの型付き注入は別範囲として扱う。
+
+Rust workspace618件（新規26）、Clippy全target `-D warnings`／rustfmt、既存の共通契約・操作workspaceのChromium16件が成功した。Astraの最終read-onlyレビューに必須指摘はない。
+
+JS bridge／通常Appへのnative接続・回復gate解除は後続。各format／依存版・本番／上流の保留は維持する。
+
 ## 同owner内の明示結果照会の詳細設計（H5d4c3、2026-11-04）
 
 PR #63はworkへマージ済み（`7a6eca5`）。PR／push CIとも全7job成功、同headの自動レビューは指摘なし。Astra主設計で、c2の元apply handleとc1 receipt readerをつなぐ明示reconciliationを文書化した。元要求の全文echo、同reader loan／join、read自身の静止と元apply静止の分離、immutable completionとlatest／lastAppliedの単調統合、回復gateと有限保持を定める。
