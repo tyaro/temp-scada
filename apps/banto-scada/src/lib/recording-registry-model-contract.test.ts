@@ -48,9 +48,9 @@ it("fixed registry reservation oracle agrees with conservative browser accountin
   const exact = f.scenarios.find(
     (s) => s.name === "exact retained mutation budget accepts",
   )!;
-  expect(exact.limits!.total_bytes).toBe(cost);
+  expect(exact.limits!.total_bytes).toBe(cost + 1024);
   const read = f.scenarios.find(
     (s) => s.name === "exact read budget holds inspection binding",
   )!;
-  expect(read.limits!.read_bytes).toBe(measure(f.bases.call));
+  expect(read.limits!.read_bytes).toBe(measure(f.bases.call) + 1024);
 });

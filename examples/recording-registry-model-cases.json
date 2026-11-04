@@ -3685,8 +3685,7 @@
         }
       },
       "outcome": {
-        "kind": "unavailable",
-        "error": "ownerUnavailable"
+        "kind": "notFound"
       }
     },
     "nextIssuedSecond": {
@@ -5789,7 +5788,7 @@
       ]
     },
     {
-      "name": "unsupported original has no simulated side effect",
+      "name": "unregistered attach inspection never creates a subscription",
       "steps": [
         {
           "op": "call",
@@ -5831,8 +5830,8 @@
     {
       "name": "exact retained mutation budget accepts",
       "limits": {
-        "total_bytes": 2010321,
-        "read_bytes": 0
+        "total_bytes": 2011345,
+        "read_bytes": 1024
       },
       "steps": [
         {
@@ -5871,8 +5870,8 @@
     {
       "name": "one byte below reservation preserves unconsumed lease",
       "limits": {
-        "total_bytes": 2010320,
-        "read_bytes": 0
+        "total_bytes": 2011344,
+        "read_bytes": 1024
       },
       "steps": [
         {
@@ -5924,8 +5923,8 @@
     {
       "name": "one byte below lease allocation is atomic",
       "limits": {
-        "total_bytes": 1543,
-        "read_bytes": 0
+        "total_bytes": 2567,
+        "read_bytes": 1024
       },
       "steps": [
         {
@@ -5942,8 +5941,8 @@
     {
       "name": "exact read budget holds inspection binding",
       "limits": {
-        "total_bytes": 2343,
-        "read_bytes": 2343
+        "total_bytes": 3367,
+        "read_bytes": 3367
       },
       "steps": [
         {
@@ -5975,8 +5974,8 @@
     {
       "name": "one below read budget has no binding side effects",
       "limits": {
-        "total_bytes": 2342,
-        "read_bytes": 2342
+        "total_bytes": 3366,
+        "read_bytes": 3366
       },
       "steps": [
         {
@@ -5993,8 +5992,8 @@
     {
       "name": "mutation budget exhaustion preserves recovery read",
       "limits": {
-        "total_bytes": 2012664,
-        "read_bytes": 2343
+        "total_bytes": 2013688,
+        "read_bytes": 3367
       },
       "steps": [
         {
@@ -6055,8 +6054,8 @@
     {
       "name": "no borrowing of reserved read bytes by mutation",
       "limits": {
-        "total_bytes": 2343,
-        "read_bytes": 2343
+        "total_bytes": 3367,
+        "read_bytes": 3367
       },
       "steps": [
         {
@@ -6085,8 +6084,8 @@
     {
       "name": "read budget exhaustion does not consume mutation capacity",
       "limits": {
-        "total_bytes": 2010321,
-        "read_bytes": 0
+        "total_bytes": 2011345,
+        "read_bytes": 1024
       },
       "steps": [
         {

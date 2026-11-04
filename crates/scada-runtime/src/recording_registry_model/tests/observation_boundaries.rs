@@ -125,10 +125,10 @@ fn reference_collision_rejection_preserves_existing_owner_and_proof() {
     other.admission_id = "different-admission".into();
     other.sequence += 1;
     let reply = RecordingAdmissionReply::from_value(f["bases"]["opAdmitAccepted"].clone()).unwrap();
-    assert_eq!(
-        m.register_handle(&other, &reply),
+    assert!(matches!(
+        m.plan_handle(&other, &reply),
         Err(ModelError::ProtocolViolation)
-    );
+    ));
     assert_eq!(m.stats(), before);
     assert_eq!(m.accepted_handle(&t).unwrap().sequence, h.sequence);
     m.complete_handle(&h, result(&f)).unwrap();

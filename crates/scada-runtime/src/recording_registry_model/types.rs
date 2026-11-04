@@ -6,15 +6,7 @@ pub struct ModelInstant(pub u64);
 pub struct SimulatedPrincipal(String);
 impl SimulatedPrincipal {
     pub fn new(id: &str) -> Result<Self, ModelError> {
-        require(
-            !id.is_empty()
-                && id.len() <= 64
-                && id.as_bytes()[0].is_ascii_alphanumeric()
-                && id
-                    .bytes()
-                    .all(|c| c.is_ascii_alphanumeric() || b"._:-".contains(&c)),
-            ModelError::InvalidInput,
-        )?;
+        require(valid_id(id), ModelError::InvalidInput)?;
         Ok(Self(id.to_owned()))
     }
 }
@@ -119,6 +111,11 @@ pub struct ModelLimits {
     pub pending_read_observations: usize,
     pub cancel_requests: usize,
     pub pending_cancel_calls: usize,
+    pub live_subscriptions: usize,
+    pub attach_requests: usize,
+    pub control_requests: usize,
+    pub revision_ceiling: u64,
+    pub projection_limit: WireBound,
     pub total_bytes: usize,
     pub read_bytes: usize,
 }
@@ -138,6 +135,11 @@ impl Default for ModelLimits {
             pending_read_observations: 2,
             cancel_requests: 4096,
             pending_cancel_calls: 1,
+            live_subscriptions: 4,
+            attach_requests: 4096,
+            control_requests: 4096,
+            revision_ceiling: projection::MAX_REVISION,
+            projection_limit: WIRE_SNAPSHOT_LIMIT,
             total_bytes: 8 * 1024 * 1024,
             read_bytes: 2 * 1024 * 1024,
         }
@@ -156,12 +158,17 @@ impl ModelLimits {
                 self.operation_observations,
                 self.read_observations,
                 self.cancel_requests,
+                self.attach_requests,
+                self.control_requests,
             ]
             .iter()
             .all(|n| *n <= 4096)
                 && self.pending_operation_observations <= 2
                 && self.pending_read_observations <= 2
                 && self.pending_cancel_calls <= 1
+                && self.live_subscriptions <= 4
+                && (2..=projection::MAX_REVISION).contains(&self.revision_ceiling)
+                && projection::fits_bound(self.projection_limit, WIRE_SNAPSHOT_LIMIT)
                 && self.unconsumed_leases <= 4
                 && self.total_bytes <= 8 * 1024 * 1024
                 && self.read_bytes <= 2 * 1024 * 1024
@@ -195,4 +202,20 @@ pub struct ModelStats {
     pub cancel_requests: usize,
     pub pending_cancel_calls: usize,
     pub cancel_notified_handles: usize,
+    pub published_revision: u64,
+    pub reserved_revisions: u64,
+    pub live_subscriptions: usize,
+    pub attach_requests: usize,
+    pub control_requests: usize,
+    pub queued_state_frames: usize,
+    pub queued_control_frames: usize,
+}
+
+pub(super) fn valid_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= 64
+        && id.as_bytes()[0].is_ascii_alphanumeric()
+        && id
+            .bytes()
+            .all(|c| c.is_ascii_alphanumeric() || b"._:-".contains(&c))
 }

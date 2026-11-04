@@ -746,4 +746,12 @@ TSの`recording-wire-contract.ts`と`recording-wire/{types,budget,semantic,capac
 
 rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedのfalse→trueだけを追加する。通知・ackは既存operation/read completion・admission・観測slot・recoveryを変更しない。JSONの論理completionから返すalreadyCompletedを実native task静止の証拠にしない。
 
-`examples/recording-cancel-model-cases.json`の41シナリオ415ステップをRustの共通driverで実行し、`tests/cancel_boundaries.rs`でticket所有・改変・counter overflow・受付拒否原子性・他軸不変を検証する。test-only `__fixtures__/recording-cancel-model-cases.ts`、`recording-cancel-model-contract.test.ts`、`e2e/recording-cancel-model-contract.spec.ts`は既存JSON契約と通常App保存不変だけを確認する。prep2aの未対応original fixtureはAttachへ更新し、取消の第二のTSモデルを作らない。
+`examples/recording-cancel-model-cases.json`の41シナリオ415ステップをRustの共通driverで実行し、`tests/cancel_boundaries.rs`でticket所有・改変・counter overflow・受付拒否原子性・他軸不変を検証する。test-only `__fixtures__/recording-cancel-model-cases.ts`、`recording-cancel-model-contract.test.ts`、`e2e/recording-cancel-model-contract.spec.ts`は既存JSON契約と通常App保存不変だけを確認する。prep2aのoriginal fixtureはprep2b3で未登録AttachのnotFoundへ更新し、取消の第二のTSモデルを作らない。
+
+## 記録registryモデルのsnapshotと購読（H5d4c4c-prep2b3）
+
+`recording_registry_model/projection.rs`は三つの独立head、不変snapshot descriptor、受付前の将来投影上界とrevision credit、core変更前のcandidate検証、最新一件slotへの公開を担当する。admission／handle側はproof・completionを保存する前に同じ投影を検証し、失敗時にcoreやslotを変更しない。元call terminalや取消・観測だけではrevisionを進めない。
+
+`subscription.rs`は原子的attach、request全文へ束縛した不変attach／control返信、明示detachとlive slotだけの一回返却、state／controlの独立takeを担当する。rootは単一ownerのinitial descriptor 1KiB、typesは縮小専用limitsとstatsを追加する。`inspection.rs`は保存済みAttach／Controlを再構築し、未知originalを実行しない。
+
+`examples/recording-subscription-model-cases.json`の48シナリオ293ステップをRust共通driverで実行し、`tests/subscription_boundaries.rs`で三次元投影容量・revision／ID境界・不変返信・返却一回性と既存schema分岐の上界を検証する。TSのtest-only `__fixtures__/recording-subscription-model-cases.ts`、`recording-subscription-model-contract.test.ts`、`e2e/recording-subscription-model-contract.spec.ts`は141期待DTOの独立validator適合・所有・既知document対応とApp保存不変だけを確認する。第二のregistry／受信state machineは作らない。既存三fixtureのread予約期待へ初期descriptor 1KiBを加算した。

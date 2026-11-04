@@ -2,6 +2,7 @@ use super::*;
 mod boundaries;
 mod cancel_boundaries;
 mod observation_boundaries;
+mod subscription_boundaries;
 fn fixtures() -> Value {
     serde_json::from_str(include_str!(
         "../../../../examples/recording-registry-model-cases.json"
@@ -62,6 +63,13 @@ fn limits(v: &Value) -> ModelLimits {
             "pending_read_observations" => l.pending_read_observations = n,
             "cancel_requests" => l.cancel_requests = n,
             "pending_cancel_calls" => l.pending_cancel_calls = n,
+            "live_subscriptions" => l.live_subscriptions = n,
+            "attach_requests" => l.attach_requests = n,
+            "control_requests" => l.control_requests = n,
+            "revision_ceiling" => l.revision_ceiling = n as u64,
+            "projection_bytes" => l.projection_limit.bytes = n,
+            "projection_nodes" => l.projection_limit.nodes = n,
+            "projection_depth" => l.projection_limit.depth = n,
             "total_bytes" => l.total_bytes = n,
             "read_bytes" => l.read_bytes = n,
             _ => panic!("unknown model test limit"),
@@ -85,6 +93,14 @@ fn observation_scenarios_match_immutable_wire_transcripts() {
 fn cancel_scenarios_match_immutable_wire_transcripts() {
     let all: Value = serde_json::from_str(include_str!(
         "../../../../examples/recording-cancel-model-cases.json"
+    ))
+    .unwrap();
+    assert_scenarios(&all);
+}
+#[test]
+fn subscription_scenarios_match_immutable_wire_transcripts() {
+    let all: Value = serde_json::from_str(include_str!(
+        "../../../../examples/recording-subscription-model-cases.json"
     ))
     .unwrap();
     assert_scenarios(&all);
@@ -167,6 +183,41 @@ fn assert_scenarios(all: &Value) {
                         )?;
                         ("reply", Some(r.as_value().clone()))
                     }
+                    "snapshot" => ("reply", Some(model.owner_snapshot(&s)?)),
+                    "attach" => {
+                        let r = model.attach(
+                            &s,
+                            RecordingWireAttachRequest::from_value(input)
+                                .unwrap_or_else(|e| panic!("{label}: {e}")),
+                        )?;
+                        ("reply", Some(r.as_value().clone()))
+                    }
+                    "control" => {
+                        let r = model.control(
+                            &s,
+                            RecordingWireControlRequest::from_value(input)
+                                .unwrap_or_else(|e| panic!("{label}: {e}")),
+                        )?;
+                        ("reply", Some(r.as_value().clone()))
+                    }
+                    "state_frame" => {
+                        let f = model
+                            .take_state_frame(&s, step["subscriptionRef"].as_str().unwrap())?;
+                        if let Some(f) = f {
+                            ("reply", Some(f.as_value().clone()))
+                        } else {
+                            ("empty", None)
+                        }
+                    }
+                    "control_frame" => {
+                        let f = model
+                            .take_control_frame(&s, step["subscriptionRef"].as_str().unwrap())?;
+                        if let Some(f) = f {
+                            ("reply", Some(f.as_value().clone()))
+                        } else {
+                            ("empty", None)
+                        }
+                    }
                     "begin_cancel" => {
                         match model.begin_cancel(
                             &s,
@@ -225,7 +276,7 @@ fn assert_scenarios(all: &Value) {
                         ("ok", None)
                     }
                     "close" => {
-                        model.close();
+                        model.close()?;
                         ("ok", None)
                     }
                     "stats" => ("ok", None),
@@ -249,7 +300,9 @@ fn assert_scenarios(all: &Value) {
                         "{label}: actual {value:?}, expected {expected}"
                     );
                     let v = value.unwrap();
-                    if v["kind"].as_str().unwrap().starts_with("recordingWire") {
+                    if v.get("kind").is_none() {
+                        RecordingWireStateFrame::from_value(json!({"version":1,"kind":"recordingWireStateFrame","subscriptionRef":"validation","snapshot":v})).unwrap();
+                    } else if v["kind"].as_str().unwrap().starts_with("recordingWire") {
                         validate_recording_wire(&v).unwrap();
                     } else {
                         validate_recording_admission(&v).unwrap();

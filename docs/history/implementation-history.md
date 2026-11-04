@@ -4,6 +4,14 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録registryモデルのsnapshotと購読（H5d4c4c-prep2b3、2026-11-04）
+
+prep2b2のPR #74をworkへ統合（`3c2c87b`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[prep2b3](../design/runtime/historian-recording-registry-subscription-model.md)として、完全snapshotの原子的attach、不変元返信、最新一件state slotと独立control slot、明示detach／reconnectを実装した。古いunknown／nullを後着証拠で変えず、遅いsubscriberには最新の完全snapshotだけを保持する。
+
+future projectionのbyte／node／depth保守上界とrevision creditを受付前に予約し、read予算枯渇後もcompletion・closeを公開できる。新48シナリオ293ステップと既存144シナリオをRustで実行し、TS／browserは141期待DTOの既存契約・所有とApp保存不変を確認する。旧三fixtureのread予算期待へinitial descriptor 1KiBを加算し、未対応Attach例は未登録notFoundへ更新した。受信state machine、workflow credit、複数scope allocatorと実接続は後続であり、Project0.37.0／DB7／H1／schema／SDK／Banto・依存とP3b保留を維持する。
+
+Rust workspace665件（新規7、child workerの再実行2件は別）、TS全9,494件（新規191）、型検査0error／0warning・build、関連Chromium7件（新規1）、Clippy全target `-D warnings`／rustfmtが成功した。Astra最終read-onlyレビューに必須所見はない。全体Prettier・変更文書の相対リンクと差分を検査し、Ready for Review PRで全体CIを確認する。
+
 ## 記録registryモデルの取消と不変ack（H5d4c4c-prep2b2、2026-11-04）
 
 prep2b1のPR #73をworkへ統合（`fb7bf08`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[prep2b2](../design/runtime/historian-recording-registry-cancel-model.md)として、受理前取消登録・模擬通知・元call終端を分離した。通知はhandleごと高々一回、未知refのbindingは不変、pauseJoinのstopは撤回しない。CallInspectionはfinishまでpendingで、後から元ackを回収する。

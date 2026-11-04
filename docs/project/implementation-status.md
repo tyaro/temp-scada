@@ -10,13 +10,25 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 記録registryモデルのsnapshotと購読（H5d4c4c-prep2b3、2026-11-04）
+
+[Astraの詳細設計](../design/runtime/historian-recording-registry-subscription-model.md)に沿い、完全snapshot、原子的attach、最新一件のstate slot、独立control slot、明示detach／reconnectをRust純粋モデルへ追加した。revisionは実際の投影変更だけで進み、受付時に将来のproof・completionとclose用のcreditを予約する。
+
+snapshotは不変descriptorから再構築する。古いunknown／nullや元attach／control返信を後着証拠で変えない。最新admission・operation・readは別のheadを持ち、古い受付のlate proofで最新admissionを巻き戻さない。投影容量の保守上界を受付前に検査し、read予算枯渇後も予約済みcompletion・closeを公開する。
+
+新48シナリオ293ステップと既存144シナリオをRustで実行し、TS／browserは141期待DTOの既存validator適合・所有・通常App保存不変を確認する。受信側の並べ替え・同revision矛盾の検出は後続であり、今回の生成側モデルの範囲に含めない。
+
+prep2b2の[PR #74](https://github.com/tyaro/temp-scada/pull/74)はworkへ統合済み（`3c2c87b`、PR／push CI全7job成功、同head自動レビュー指摘なし）。次はworkflow creditと正常completion後の業務phase進行、その後に複数scope資源を扱う。実native／host接続とP3bは保留し、Project0.37.0／DB7／H1／schema／SDK／Banto・依存版を維持する。
+
+Rust workspace665件（新規7、child workerの再実行2件は別）、TS全9,494件（新規191）、型検査0error／0warning・build、関連Chromium7件（新規1）、Clippy全target `-D warnings`／rustfmtが成功した。Astra最終read-onlyレビューに必須所見はない。全体Prettier・変更文書の相対リンクと差分を検査し、Ready for Review PRで全体CIを確認する。
+
 ## 記録registryモデルの取消（H5d4c4c-prep2b2、2026-11-04）
 
 [Astraの詳細設計](../design/runtime/historian-recording-registry-cancel-model.md)に沿い、取消の受理前登録・模擬通知・元call終端を別遷移で実装した。handleごとの通知は高々一回で、異なるcancelIdの再要求でも再通知しない。未知refは登録時に固定し、後着Acceptedから別の処理へ取消を転送しない。
 
 元cancel ackを不変保持し、finishまではCallInspectionがpending、finish後は元返信を回収する。requested／alreadyCompletedを操作の物理静止・rollback・観測枠解放へ変換しない。pauseJoinのstopは撤回せずnotSupportedを返す。新規cancelのID／未終端1枠／最大返信容量をread専用予算から事前予約する。
 
-新41シナリオ415ステップと既存103シナリオをRustで実行し、TS／browserは期待DTOの既存validator受入・所有と通常App保存不変を確認する。prep2b1のPR #73はworkへ統合済み（`fb7bf08`、PR／push CI全7job成功、同head自動レビュー指摘なし）。snapshot／購読・再接続、workflow creditと実native／host接続は後続で、P3b保留とProject／DB／schema／依存版を維持する。
+新41シナリオ415ステップと既存103シナリオをRustで実行し、TS／browserは期待DTOの既存validator受入・所有と通常App保存不変を確認する。prep2b1のPR #73はworkへ統合済み（`fb7bf08`、PR／push CI全7job成功、同head自動レビュー指摘なし）。snapshot／購読・再接続は上節のprep2b3で実装した。workflow creditと実native／host接続は後続で、P3b保留とProject／DB／schema／依存版を維持する。
 
 ## 記録registryモデルの結果観測（H5d4c4c-prep2b1、2026-11-04）
 
@@ -26,7 +38,7 @@ read Acceptedは既存apply handleと元request全文に束縛する。元apply�
 
 operation／read観測は各ID4096・未回収pending各2の上限を持つ。completionがreadyになっただけでは枠を解放せず、同IDでterminalを回収した時に解放する。未知refは不変unavailableとして保持し、後着Acceptedから操作を勝手に開始しない。completion用の固定容量も受付前に予約する。
 
-新規48シナリオ・480ステップと既存55シナリオをRustで実行し、TS／browserで期待DTOの既存契約・所有・通常App保存不変を確認する。prep2aのPR #72はworkへ統合済み（`d1ba233`、PR／push CI全7job成功、同head自動レビュー指摘なし）。取消は上節のprep2b2へ進み、購読／再接続、workflow creditと実native／host接続は後続で、P3b保留とProject／DB／schema／依存版を維持する。
+新規48シナリオ・480ステップと既存55シナリオをRustで実行し、TS／browserで期待DTOの既存契約・所有・通常App保存不変を確認する。prep2aのPR #72はworkへ統合済み（`d1ba233`、PR／push CI全7job成功、同head自動レビュー指摘なし）。取消は上節のprep2b2へ進み、購読／再接続は上節のprep2b3で実装した。workflow creditと実native／host接続は後続で、P3b保留とProject／DB／schema／依存版を維持する。
 
 ## 記録操作registryの状態モデル（H5d4c4c-prep2a、2026-11-04）
 
@@ -36,7 +48,7 @@ operation／read観測は各ID4096・未回収pending各2の上限を持つ。co
 
 共通55シナリオ・201ステップをRustで実行し、期待DTO transcriptをTS／browserの既存validatorで確認する。browserに第二のregistryを作らない。raw scopeは複製前にbounded検査する。
 
-prep1のPR #71はworkへ統合済み（`bbc5359`、PR／push CIとも全7job成功、最終headの自動レビューに指摘なし）。prep2aは未解放workflow後の新mutationを保守停止する限定モデルであり、実lease発行・registry adapterを提供したとは扱わない。結果観測・取消は上節のprep2b1・2へ進み、購読・再接続、workflow credit、製品host・認証・P3bは後続である。
+prep1のPR #71はworkへ統合済み（`bbc5359`、PR／push CIとも全7job成功、最終headの自動レビューに指摘なし）。prep2aは未解放workflow後の新mutationを保守停止する限定モデルであり、実lease発行・registry adapterを提供したとは扱わない。結果観測・取消は上節のprep2b1・2へ進み、購読・再接続は上節のprep2b3で実装し、workflow credit、製品host・認証・P3bは後続である。
 
 ## 記録操作wireの純粋契約（H5d4c4c-prep1、2026-11-04）
 
