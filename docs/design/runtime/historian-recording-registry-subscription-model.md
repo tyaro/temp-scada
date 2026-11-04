@@ -1,6 +1,6 @@
 # 記録registryモデルのsnapshotと購読
 
-状態: **prep2b3モデル実装済み、複数scope・実接続は後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2b3モデル実装済み、実接続は後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
 [取消モデル](historian-recording-registry-cancel-model.md)はPR #74で統合済み。本書は決定的モデルにsnapshot／attach／controlと仮想配送slotを追加する。
 実native、SDK、DB、認証、時計、transport、hostへの接続はない。Project 0.37.0、DB7、H1、wire schema、依存は変更しない。
 
@@ -168,7 +168,7 @@ frame取得は元Attach/Control/admission/observation Promiseの終端根拠で�
 ## 10. capと段階制限
 
 ModelLimitsへlive_subscriptions<=4、attach_requests<=4096、control_requests<=4096、revision_ceiling（2..MAX_SAFE）とprojection_limit:WireBoundを追加する。projection_limitの既定はSnapshot上限1MiB/32768nodes/depth64で、各軸は縮小だけを許す。これはモデル試験用のclosure境界調整でありwire schemaの変更ではない。縮小値で初期snapshotが収まらなければnewを変更前に拒否する。
-全owner32制限・global16MiB allocatorは[prep2b5で詳細設計済み](historian-recording-registry-global-budget.md)だが未実装。単一scopeの4をprocess全体の制限と称さない。
+全owner32制限・global16MiBの全量予約は[prep2b5aの純粋domain](historian-recording-registry-global-budget.md)へ実装した。保証は同domainの管理scope内に限り、単一scopeの4や独立model群をprocess全体の制限と称さない。
 ID墓標と元replyはmodel終了まで保持し、live slot解放だけでIDを再使用しない。
 
 新requestには既存保守metricsとdescriptor予約をread枠から原子課金する。

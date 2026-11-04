@@ -4,6 +4,18 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録registryの複数scope資源モデル（H5d4c4c-prep2b5a、2026-11-05）
+
+[Astra設計](../design/runtime/historian-recording-registry-global-budget.md)に沿い、scope登録時に容量と購読枠を全量予約する純粋Rust domainを実装した。全体16MiB・購読32・scope32、scope最大8MiBを縮小設定でき、既定scopeは2件まで。既存RegistryModelを内部所有し、25のtyped APIを借用facadeから転送する。可変modelの持ち出しや独立時計、貸借・closeでのdomain予約返却は提供しない。
+
+resource／ownerRefの二重照合とprincipal束縛、初期mode／全limitsの不変再送、共通仮想時計のsticky逆行、sealと個別close・ticket Dropの区別を維持する。容量満杯でも既登録scopeの回復read・将来completionを保存し、別scopeの新規予約で証拠を失わない。設計[PR #81](https://github.com/tyaro/temp-scada/pull/81)はworkへ統合済み（`d55cbf3`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41865318059)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41865385671)全7job成功、head `6837461` のレビュー指摘なし）。
+
+境界14件と型の持ち出し・独立時計を拒否するcompile-fail2件を追加した。既存289シナリオは単独／domain両経路で実行し、各domainケース後の登録exact再送も元ticket／初期資格／現在stateを変えない。TS／browserは既存DTOの契約とApp保存不変を確認する。
+
+Rust workspace703件（新規unit14＋compile-fail2、child workerの再実行2件は別）、TS全9,839件、型検査0error／0warning・build、関連Chromium12件、Clippy全target `-D warnings`／rustfmtが成功した。Astraの最終read-only整合レビューに必須所見はない。全体Prettier・変更文書の相対リンクと差分を確認し、Ready for Review PRで全体CIを確認する。
+
+次は受信frameの順序・同revision矛盾検出の詳細設計。domainは純粋simulationで、実host全体の資源やnative排他の実装とはしない。実adapter／hostとP3bは保留し、Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持する。
+
 ## 記録registryの複数scope資源設計（H5d4c4c-prep2b5、2026-11-05）
 
 prep2b4bの[PR #80](https://github.com/tyaro/temp-scada/pull/80)はworkへ統合済み（`64efdee`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41859800728)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41859869176)全7job成功、head `5f99cf9` の自動レビュー指摘なし）。[Astraの複数scope設計](../design/runtime/historian-recording-registry-global-budget.md)で、単一scopeモデルの外に全体16MiB・購読32枠を持つ純粋Rust domainを置く境界を定めた。

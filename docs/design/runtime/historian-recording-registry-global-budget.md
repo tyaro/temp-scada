@@ -1,7 +1,7 @@
 # Historian registry resource domain model
 
 - 設計日: 2026-11-05 JST
-- 段階: H5d4c4c-prep2b5。詳細設計先行、実装は後続PR。
+- 段階: H5d4c4c-prep2b5a。純粋Rust domain実装済み（2026-11-05 JST）。実接続は後続。
 - 前提: [workflow renewal](historian-recording-registry-workflow-renewal.md)までの純粋Rustモデル。
 - 変更しないもの: Project 0.37.0、DB7、H1、wire/schema、SDK、Banto、依存、通常App。
 - 実native、host、認証、transport、実Hub/S7/本番DBは未接続。P3b保留を解除しない。
@@ -224,3 +224,11 @@ prep2b5aとして、domainのhard partition登録、opaque ticket、typed borrow
 型テストでは公開mutable model参照/持ち出しがないことを確認する。
 共有scenarioを追加する場合もRustだけがdomain遷移を実行する。
 既存単一scopeの正常・障害・再送受入をdomain facade経由でも代表例で確認し、転送時に独自gateを混入しない。
+
+## 11. 実装と検証の区切り
+
+`recording_registry_model/domain/mod.rs`へ全量予約・双方向identity照合・opaque scope ticket・共通仮想時計・sealと統計を実装した。`domain/facade.rs`は25の既存typed APIだけを転送し、独立advanceや可変modelの持ち出しを提供しない。全体の予約は登録後に返却せず、scope内の未使用workflow枠やdetachの局所返却から他scopeへの余力を作らない。
+
+`domain/tests.rs`の14件は全体bytes・購読・scope数の境界、全ModelLimitsの再送照合、constructor／sequence失敗の原子性、交差するowner／principal、回復readと予約済completion、共通時計・seal・Dropを検証する。compile-fail2件はmodel交換とscopeの独立advanceを拒否する。既存六つの共有fixtureの289シナリオは単独／domain両経路で実行し、各domainシナリオの終了後に登録再送が初期資格と元ticket・現在状態を維持することも確認する。JSONの試験命令やwire/schemaは追加しない。
+
+Astraの最終read-onlyレビューに残る必須所見はない。TS／browserは既存の共有期待DTOを既存validatorで検証し、第二のdomain実行機構は作らない。受信frameの順序・矛盾検出、実adapter／host・P3bは後続である。

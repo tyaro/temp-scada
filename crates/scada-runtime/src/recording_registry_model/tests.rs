@@ -128,21 +128,52 @@ fn renewal_scenarios_match_immutable_wire_transcripts() {
     assert_scenarios(&all);
 }
 fn assert_scenarios(all: &Value) {
+    for managed in [false, true] {
+        assert_scenarios_mode(all, managed);
+    }
+}
+fn assert_scenarios_mode(all: &Value, managed: bool) {
     for scenario in all["scenarios"].as_array().unwrap() {
         let s = session(all, &Value::Null);
-        let mut model = if scenario["workflow"] == true {
-            RegistryModel::new_workflow(
-                s,
-                limits(&scenario["limits"]),
-                match scenario["qualification"].as_str() {
+        let mode = if scenario["workflow"] == true {
+            DomainMode::Workflow {
+                qualification: match scenario["qualification"].as_str() {
                     Some("unqualified") => SimulatedRunQualification::Unqualified,
                     Some("cleanJoined") => SimulatedRunQualification::CleanJoined,
                     _ => SimulatedRunQualification::Running,
                 },
-            )
-            .unwrap()
+            }
         } else {
-            RegistryModel::new(s, limits(&scenario["limits"])).unwrap()
+            DomainMode::Standalone
+        };
+        let mut domain = RegistryDomain::new(Default::default()).unwrap();
+        let mut standalone = None;
+        let domain_ticket = if managed {
+            Some(
+                domain
+                    .register(DomainRegistration {
+                        resource: SimulatedResourceId::new("scenario").unwrap(),
+                        session: s.clone(),
+                        limits: limits(&scenario["limits"]),
+                        mode,
+                    })
+                    .unwrap(),
+            )
+        } else {
+            standalone = Some(
+                match mode {
+                    DomainMode::Standalone => {
+                        RegistryModel::new(s.clone(), limits(&scenario["limits"]))
+                    }
+                    DomainMode::Workflow { qualification } => RegistryModel::new_workflow(
+                        s.clone(),
+                        limits(&scenario["limits"]),
+                        qualification,
+                    ),
+                }
+                .unwrap(),
+            );
+            None
         };
         let mut workflow = None;
         let mut workflows = BTreeMap::new();
@@ -150,7 +181,29 @@ fn assert_scenarios(all: &Value) {
         let mut handles = BTreeMap::new();
         let mut cancel_tickets = BTreeMap::new();
         for (index, step) in scenario["steps"].as_array().unwrap().iter().enumerate() {
-            let before = model.stats();
+            let before = if managed {
+                domain
+                    .scope(domain_ticket.as_ref().unwrap(), &s)
+                    .unwrap()
+                    .stats()
+            } else {
+                standalone.as_ref().unwrap().stats()
+            };
+            let clock_result = if step["op"] == "advance" {
+                let now = ModelInstant(step["nowMs"].as_str().unwrap().parse().unwrap());
+                if managed {
+                    domain.advance_to(now)
+                } else {
+                    standalone.as_mut().unwrap().advance_to(now)
+                }
+            } else {
+                Ok(())
+            };
+            let mut model = if managed {
+                domain.scope(domain_ticket.as_ref().unwrap(), &s).unwrap()
+            } else {
+                DomainScope::unpooled(standalone.as_mut().unwrap())
+            };
             let s = session(all, &step["session"]);
             let input = if step.get("input").is_some() {
                 document(all, &step["input"])
@@ -158,7 +211,10 @@ fn assert_scenarios(all: &Value) {
                 Value::Null
             };
             let alias = step["ticket"].as_str().unwrap_or("a");
-            let label = format!("{} step {} {}", scenario["name"], index, step["op"]);
+            let label = format!(
+                "{} managed={managed} step {} {}",
+                scenario["name"], index, step["op"]
+            );
             let result: Result<(&str, Option<Value>), ModelError> = (|| {
                 Ok(match step["op"].as_str().unwrap() {
                     "reserve" => {
@@ -384,9 +440,7 @@ fn assert_scenarios(all: &Value) {
                         ("reply", Some(r.as_value().clone()))
                     }
                     "advance" => {
-                        model.advance_to(ModelInstant(
-                            step["nowMs"].as_str().unwrap().parse().unwrap(),
-                        ))?;
+                        clock_result?;
                         ("ok", None)
                     }
                     "close" => {
@@ -397,7 +451,10 @@ fn assert_scenarios(all: &Value) {
                     _ => panic!("unknown scenario command"),
                 })
             })();
-            let label = format!("{} step {} {}", scenario["name"], index, step["op"]);
+            let label = format!(
+                "{} managed={managed} step {} {}",
+                scenario["name"], index, step["op"]
+            );
             if let Some(error) = step["expect"].get("error") {
                 let e = result.expect_err(&label);
                 assert_eq!(serde_json::to_value(e).unwrap(), *error, "{label}");
@@ -432,6 +489,23 @@ fn assert_scenarios(all: &Value) {
                     assert_eq!(&stats[k], v, "{label}: {k}");
                 }
             }
+        }
+        if managed {
+            let before = domain.stats();
+            let saved = domain
+                .scope(domain_ticket.as_ref().unwrap(), &s)
+                .unwrap()
+                .stats();
+            let replay = domain
+                .register(DomainRegistration {
+                    resource: SimulatedResourceId::new("scenario").unwrap(),
+                    session: s.clone(),
+                    limits: limits(&scenario["limits"]),
+                    mode,
+                })
+                .unwrap();
+            assert_eq!(domain.stats(), before);
+            assert_eq!(domain.scope(&replay, &s).unwrap().stats(), saved);
         }
     }
 }
