@@ -9,6 +9,7 @@ import {
   recordingWireReplyMatchesRequest,
 } from "./recording-wire-contract";
 import { parseRecordingAdmissionDocument } from "./recording-admission-contract";
+import { WIRE_OPERATION_RESULT_UPPER } from "./recording-wire/capacity";
 import { ownMeasuredHistoryJson } from "./history/owned-json";
 for (const row of registryModelTranscripts())
   it("Rust model transcript " + row.name, () => {
@@ -42,7 +43,8 @@ it("fixed registry reservation oracle agrees with conservative browser accountin
     measure(f.bases.lease) +
     measure(f.bases.issued) +
     measure(f.bases.admit) +
-    2 * 512 * 1024;
+    2 * 512 * 1024 +
+    WIRE_OPERATION_RESULT_UPPER.bytes;
   const exact = f.scenarios.find(
     (s) => s.name === "exact retained mutation budget accepts",
   )!;

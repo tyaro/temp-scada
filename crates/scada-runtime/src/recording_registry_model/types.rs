@@ -61,6 +61,19 @@ pub enum SimulatedDecision {
     Rejected(RecordingAdmissionReply),
     CompletedDiscard(RecordingAdmissionReply),
 }
+/// Simulation-only opaque capability. Not serializable or constructible from a JSON ref.
+#[derive(Clone, Debug)]
+pub struct SimulatedHandleTicket {
+    pub(super) identity: Arc<()>,
+    pub(super) admission_id: String,
+    pub(super) sequence: u64,
+    pub(super) key: HandleKey,
+}
+#[derive(Clone, Debug)]
+pub enum SimulatedCompletion {
+    Operation(scada_model::recording_operations::RecordingOperationResult),
+    Reconciliation(RecordingReconciliationDelivery),
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum ModelError {
     InvalidInput,
@@ -87,6 +100,10 @@ pub struct ModelLimits {
     pub unconsumed_leases: usize,
     pub admission_inspections: usize,
     pub call_inspections: usize,
+    pub operation_observations: usize,
+    pub read_observations: usize,
+    pub pending_operation_observations: usize,
+    pub pending_read_observations: usize,
     pub total_bytes: usize,
     pub read_bytes: usize,
 }
@@ -100,6 +117,10 @@ impl Default for ModelLimits {
             unconsumed_leases: 4,
             admission_inspections: 4096,
             call_inspections: 4096,
+            operation_observations: 4096,
+            read_observations: 4096,
+            pending_operation_observations: 2,
+            pending_read_observations: 2,
             total_bytes: 8 * 1024 * 1024,
             read_bytes: 2 * 1024 * 1024,
         }
@@ -115,9 +136,13 @@ impl ModelLimits {
                 self.read_leases,
                 self.admission_inspections,
                 self.call_inspections,
+                self.operation_observations,
+                self.read_observations,
             ]
             .iter()
             .all(|n| *n <= 4096)
+                && self.pending_operation_observations <= 2
+                && self.pending_read_observations <= 2
                 && self.unconsumed_leases <= 4
                 && self.total_bytes <= 8 * 1024 * 1024
                 && self.read_bytes <= 2 * 1024 * 1024
@@ -140,4 +165,12 @@ pub struct ModelStats {
     pub pending_dispatcher: bool,
     pub closed: bool,
     pub clock_fault: bool,
+    pub operation_handles: usize,
+    pub read_handles: usize,
+    pub completed_handles: usize,
+    pub operation_observations: usize,
+    pub read_observations: usize,
+    pub pending_operation_observations: usize,
+    pub pending_read_observations: usize,
+    pub recovery_required: bool,
 }
