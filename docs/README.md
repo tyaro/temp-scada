@@ -169,6 +169,7 @@ docs/
 - [記録registryモデルのsnapshot・購読・再接続（prep2b3実装済み、実接続は後続）](design/runtime/historian-recording-registry-subscription-model.md)
 - [記録registryのworkflow予約・段階進行（prep2b4a実装済み、実接続は後続）](design/runtime/historian-recording-registry-workflow-model.md)
 - [記録registryの正常終端後の次workflow受入（prep2b4b純粋モデル実装済み、実接続は後続）](design/runtime/historian-recording-registry-workflow-renewal.md)
+- [記録registryの複数scope資源（prep2b5設計済み、domain実装は後続）](design/runtime/historian-recording-registry-global-budget.md)
 - [記録計画の永続台帳・mapping登録・原子的apply（H5b1）](design/runtime/historian-recording-plan-ledger.md)
 - [記録開始と適用計画の原子的結合（H5b2）](design/runtime/historian-recording-activation.md)
 - [適用済み計画からのRecorder／Host開始（H5c1）](design/runtime/historian-managed-recorder.md)

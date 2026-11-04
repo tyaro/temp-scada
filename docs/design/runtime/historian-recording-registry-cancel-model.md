@@ -1,6 +1,6 @@
 # 記録registryモデルの取消と不変ack
 
-状態: **prep2b2モデル実装済み、workflow予約・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2b2モデル実装済み、複数scope・実接続は後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
 [結果観測モデル](historian-recording-registry-observation-model.md)はPR #73で統合済み。本書は同じ決定的Rustモデルへ取消の三つの時点を追加する。
 新しいwire schema、Project 0.37.0、DB7、H1、SDK、Banto、依存の変更はない。実native／clock／auth／transport／hostには接続しない。
 
@@ -11,7 +11,7 @@ operation／readのcompletion、元admission dispatcher、観測slot、sticky re
 取消によって新mutationを解禁したり、成功receiptを削除したり、未知静止をconfirmedに変換したりしない。
 
 実装は `scada_runtime::recording_registry_model` に限定する。実CancellationToken、async task、generic backend、callbackは追加しない。
-subscription、全workflow credit、rearm、GC、複数owner allocatorは後続であり、取消モデルを製品adapterと扱わない。
+subscriptionと全workflow creditはprep2b3／b4で実装した。rearm、GC、複数owner allocatorは本取消モデルの範囲に含めず、製品adapterと扱わない。
 
 ## 2. APIと不変ticket
 
@@ -152,5 +152,5 @@ Rustの既存scenario runnerへbegin_cancel／notify_cancel／finish_cancelを�
 
 追加の具体受入として、元operation pending＋readUncertain保存済み→read cancel alreadyCompletedでもrecovery=true／元operation pendingを維持する。applied／quiescence=unknownのoperation cancel alreadyCompletedでもunknownを維持し、未実行／rollback／物理静止を生成しない。
 
-完全snapshot／subscription・再接続は[prep2b3](historian-recording-registry-subscription-model.md)で実装した。次は全workflow予約と業務phase進行、続いて複数scope allocatorを分けて扱う。
+完全snapshot／subscription・再接続は[prep2b3](historian-recording-registry-subscription-model.md)で実装した。[prep2b4](historian-recording-registry-workflow-model.md)で全workflow予約と業務phase進行・明示更新も実装した。[複数scope allocator](historian-recording-registry-global-budget.md)はprep2b5で詳細設計したが実装は後続である。
 prep2b2で全stage運転や実取消を提供したとは主張せず、P3bと実adapterの再開条件を維持する。

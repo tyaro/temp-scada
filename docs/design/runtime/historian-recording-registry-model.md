@@ -1,6 +1,6 @@
 # 記録操作registryの決定的状態モデル
 
-状態: **prep2a／prep2b1〜4aモデル実装済み、次workflow・実adapterは後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2a／prep2b1〜4bモデル実装済み、複数scope・実adapterは後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
 [wire／host設計](historian-recording-wire-host.md)のprep1はPR #71で統合済み。本書はそのJSONを使うprep2を具体化する。
 実registry adapter、native dispatch、lease実発行、時計・認証・通信待受・製品hostを追加する許可ではない。
 Project 0.37.0／DB7／H1／SDK／Banto／依存とP3b保留を維持する。
@@ -12,7 +12,7 @@ Project 0.37.0／DB7／H1／SDK／Banto／依存とP3b保留を維持する。
 Tokio、Instant、SystemTime、DB、ファイル、network、SDK、callbackの呼出しをmoduleに入れない。
 全操作は `&mut self` の決定的遷移である。Rustの逐次呼出しで全caller gateを模擬し、実process間排他や認可の実装とは称さない。
 
-[prep2b1](historian-recording-registry-observation-model.md)でmodel-bound handleと不変completion／結果観測を追加した。[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)も追加した。[prep2b3のsnapshot・subscription](historian-recording-registry-subscription-model.md)も追加した。[prep2b4a](historian-recording-registry-workflow-model.md)で単一候補の全段階予約と元run／候補の明示pause／apply適格性を実装した。正常終端後の次workflowは[b4bの詳細設計](historian-recording-registry-workflow-renewal.md)を採用し、実装は後続とする。
+[prep2b1](historian-recording-registry-observation-model.md)でmodel-bound handleと不変completion／結果観測を追加した。[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)も追加した。[prep2b3のsnapshot・subscription](historian-recording-registry-subscription-model.md)も追加した。[prep2b4a](historian-recording-registry-workflow-model.md)で単一候補の全段階予約と元run／候補の明示pause／apply適格性を実装した。正常終端後の次workflowも[b4bの詳細設計](historian-recording-registry-workflow-renewal.md)に沿い実装した。[prep2b5の複数scope資源設計](historian-recording-registry-global-budget.md)は採用済みだが、domain実装は後続である。
 prep2aは既存c4a全actionの受付台帳を扱えるが、nativeがそのactionを許可すべきかは実装しない。fake決定を明示入力する。
 この限定によって、単一callの曖昧さを検証するためにrecording／retention／native ownerを二重実装しない。
 
@@ -159,7 +159,7 @@ ModelLimitsは下表の上限以下への縮小だけを許す。ゼロcapは境
 | 本文・返信・予約の保守bytes    | 合計8MiB、うち2MiBを回復read専用に予約 |
 
 read専用はread admission／read lease／両inspectionに使用し、mutationから消費しない。readは専用枠内だけを使うと決め、残余共有枠を使う複雑な借入は初回導入しない。
-親設計のhost全体16MiB／複数scope allocatorはprep2b以降であり、単一モデルの8MiB検証をhost全体保証と呼ばない。
+親設計のhost全体16MiB／複数scope allocatorは[prep2b5](historian-recording-registry-global-budget.md)で詳細設計した。domainは未実装であり、単一モデルの8MiB検証をhost全体保証と呼ばない。
 
 会計は既存scada-model::recording_wireで提供する `conservative_recording_json_bound(&Value, WireBound) -> Result<WireBound, RecordingWireError>` を使う。既存measure／JsonBudgetを再利用し、caller limitが4MiB／196608nodes／depth96以下であることをwalker開始前に検査する。これは構造metricsだけでありschema・native資格の検証ではない。既存validatorの予算・意味は変更しない。
 

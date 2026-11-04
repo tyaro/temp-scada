@@ -1,6 +1,6 @@
 # 記録registryモデルのsnapshotと購読
 
-状態: **prep2b3モデル実装済み、次workflow・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2b3モデル実装済み、複数scope・実接続は後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
 [取消モデル](historian-recording-registry-cancel-model.md)はPR #74で統合済み。本書は決定的モデルにsnapshot／attach／controlと仮想配送slotを追加する。
 実native、SDK、DB、認証、時計、transport、hostへの接続はない。Project 0.37.0、DB7、H1、wire schema、依存は変更しない。
 
@@ -8,7 +8,7 @@
 
 既存14 wire rootのうちAttachRequest/Reply、ControlRequest/Reply、StateFrame、ControlFrameをモデルで扱う。
 採用するのは単一owner内の原子的snapshot登録、revision、最新一件slot、明示detach／reconnect、元callの不変返信である。
-async task、実socket、認証失効処理、global32購読allocator、workflow credit解禁、実native dispatchは追加しない。モデルは単調なframeを生成する側であり、受信frameの並べ替え／同revision矛盾を検出する第二のclient modelは作らない。対応付けのfixtureは既存pure helperで検証し、実clientでの受信安全性とは区別する。
+prep2b3ではasync task、実socket、認証失効処理、global32購読allocator、workflow credit解禁、実native dispatchを追加しない。モデルは単調なframeを生成する側であり、受信frameの並べ替え／同revision矛盾を検出する第二のclient modelは作らない。対応付けのfixtureは既存pure helperで検証し、実clientでの受信安全性とは区別する。
 
 構造は `scada_runtime::recording_registry_model` の拡張とし、TS側に第二のregistryを実装しない。
 Rust scenarioが遷移を実行し、browserは出力DTOの既存validator検証だけを行う。
@@ -168,7 +168,7 @@ frame取得は元Attach/Control/admission/observation Promiseの終端根拠で�
 ## 10. capと段階制限
 
 ModelLimitsへlive_subscriptions<=4、attach_requests<=4096、control_requests<=4096、revision_ceiling（2..MAX_SAFE）とprojection_limit:WireBoundを追加する。projection_limitの既定はSnapshot上限1MiB/32768nodes/depth64で、各軸は縮小だけを許す。これはモデル試験用のclosure境界調整でありwire schemaの変更ではない。縮小値で初期snapshotが収まらなければnewを変更前に拒否する。
-全owner32制限・global16MiB allocatorは未実装。単一scopeの4をprocess全体の制限と称さない。
+全owner32制限・global16MiB allocatorは[prep2b5で詳細設計済み](historian-recording-registry-global-budget.md)だが未実装。単一scopeの4をprocess全体の制限と称さない。
 ID墓標と元replyはmodel終了まで保持し、live slot解放だけでIDを再使用しない。
 
 新requestには既存保守metricsとdescriptor予約をread枠から原子課金する。
