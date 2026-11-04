@@ -728,7 +728,7 @@ TSの`recording-wire-contract.ts`と`recording-wire/{types,budget,semantic,capac
 
 `scada_runtime::recording_registry_model`は仮想時計・単一scopeとprincipal binding・役割別有限資源を保持する決定的モデル。`types.rs`はcheckedなsession／limitsと非Deserializeのinstance-bound SimulationTicket、`lease.rs`は一admission一lease・仮想期限・exact replay、`admission.rs`は原子登録とproof／元terminalの独立保持を担当する。`inspection.rs`は現在知識のsnapshotと元call照会のID bindingを保持し、未登録の元callを実行しない。実clock・native owner／SDK・DB・executor・transportを参照しない。
 
-保守bytesは`scada-model::recording_wire::conservative_recording_json_bound`が既存JsonBudgetから計数する。最大profileより大きいcaller limitを拒否し、schema-validやnative実行資格の判定には使わない。raw session scopeも複製前に同walkerで打ち切る。admissionのrequest＋二返信固定予約とread別枠はモデル終了まで維持する。
+保守bytesは`scada-model::recording_wire::conservative_recording_json_bound`が既存JsonBudgetから計数する。最大profileより大きいcaller limitを拒否し、schema-validやnative実行資格の判定には使わない。raw session scopeも複製前に同walkerで打ち切る。admissionのrequest＋二返信・completionの要求由来予約とread別枠はモデル終了まで維持する。
 
 `recording_registry_model/tests.rs`は`examples/recording-registry-model-cases.json`の55シナリオを実行して期待DTOへ照合する。`tests/boundaries.rs`はraw scope・instance ticket・ID／lease4上限と原子性を検証する。TSのtest-only `__fixtures__/recording-registry-model-cases.ts`、`recording-registry-model-contract.test.ts`、`e2e/recording-registry-model-contract.spec.ts`は同じtranscriptの既存validator適合・所有・App保存不変を確認し、第二のregistryは実装しない。Accepted後の新mutation停止、後続prep2bとP3bのgateを維持する。
 
@@ -736,7 +736,7 @@ TSの`recording-wire-contract.ts`と`recording-wire/{types,budget,semantic,capac
 
 `recording_registry_model/handle.rs`はAccepted refとmodel instance／元admission sequenceの束縛、readの元apply全文照合、予約済み容量内の不変completionを担当する。`observation.rs`はread-only requestのID binding、未知refの不変unavailable、operation/read独立ID・pending slotと明示terminal回収を担当する。結果は既存wire DTOへ投影するだけで元call終端・受付知識・業務phaseを変えない。`types.rs`のSimulatedHandleTicketは非Deserializeで、JSON refから発行しない。
 
-`admission.rs`は従来のknowledge／元terminal予約へ958464bytesまたは512KiBを固定追加し、Accepted保存とhandle登録を原子的に行う。rootのModelStatsはhandle数・観測数・未回収slot・模擬native recoveryのsticky ORを表示する。実時計／native owner／DB／SDK／transportは引き続き参照しない。
+`admission.rs`は要求由来のknowledge／元terminal／completion保持予約を受付前に確保し、Accepted保存とhandle登録を原子的に行う。rootのModelStatsはhandle数・観測数・未回収slot・模擬native recoveryのsticky ORを表示する。実時計／native owner／DB／SDK／transportは引き続き参照しない。
 
 `examples/recording-observation-model-cases.json`の48シナリオ480ステップを既存Rust scenario driverへ追加し、`tests/observation_boundaries.rs`でinstance固有ticket・ref競合・上限・二重回収の境界を確認する。test-only `__fixtures__/recording-observation-model-cases.ts`、`recording-observation-model-contract.test.ts`、`e2e/recording-observation-model-contract.spec.ts`は期待DTOの既存validator受入と通常App保存不変を確認する。既存prep2a fixtureの容量期待値は追加予約へ合わせる。schemaや第二のTS registryは追加しない。
 
@@ -756,4 +756,10 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 
 `examples/recording-subscription-model-cases.json`の48シナリオ293ステップをRust共通driverで実行し、`tests/subscription_boundaries.rs`で三次元投影容量・revision／ID境界・不変返信・返却一回性と既存schema分岐の上界を検証する。TSのtest-only `__fixtures__/recording-subscription-model-cases.ts`、`recording-subscription-model-contract.test.ts`、`e2e/recording-subscription-model-contract.spec.ts`は141期待DTOの独立validator適合・所有・既知document対応とApp保存不変だけを確認する。第二のregistry／受信state machineは作らない。既存三fixtureのread予約期待へ初期descriptor 1KiBを加算した。
 
-[prep2b4のworkflow予約・段階進行](../design/runtime/historian-recording-registry-workflow-model.md)は次の実装設計であり、現行コードへの追加はまだない。既存admissionの保守停止を弱める前に、同候補の適格性と全段階の有限資源を受け入れる。
+## 記録registryの単一workflow（H5d4c4c-prep2b4a）
+
+`recording_registry_model/reservation.rs`は既知requestから独立reply二個とcompletionのlifetime上界を算出し、保存前の実測も検査する。Standalone／Workflowで共有し、既存rootやlegacy compact予算を変更しない。`admission.rs`は独立reconciliation IDと256bytesをread admissionの予約へ原子的に含める。
+
+`workflow/mod.rs`はprivate instance ticket、元changeへの束縛、reserve／lease／beginの明示入口とnative identity登録planを担当する。`workflow/escrow.rs`は4stageの将来request／lease上界、projection high-water、11revision＋close1の予約・移管と未発行stageだけの返却を担当する。`workflow/state.rs`は元call／knowledge／immutable completionに基づくphaseとread gateを判定し、sourceを実行しない。通常mutation入口からWorkflow modeの予約を迂回できない。
+
+`examples/recording-workflow-model-cases.json`の47シナリオ597ステップと`tests/workflow_boundaries.rs`の10境界試験をRustの共通driverで実行する。test-only `recording-model-budget.ts`は独立した要求由来の会計oracle、`__fixtures__/recording-workflow-model-cases.ts`、`recording-workflow-model-contract.test.ts`、`e2e/recording-workflow-model-contract.spec.ts`は92期待DTO・全入力の既存validator受入とApp保存不変を確認する。既存四fixtureの会計を同期した。TS registry／workflow実行機構やnative接続は追加しない。

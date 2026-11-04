@@ -4,6 +4,16 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録registryの単一workflow予約と段階進行（H5d4c4c-prep2b4a、2026-11-04）
+
+設計PR #77をworkへ統合（`84b325b`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra設計の[prep2b4a](../design/runtime/historian-recording-registry-workflow-model.md)として、単一候補の全段階予約、lease時のattempt ID束縛、明示preflight／pause／apply／discardを実装した。元call未終端とcompletionを分離し、typed RejectedとAccepted後failed/notDispatchedのphaseを区別する。
+
+固定約2MiBの一律admission予約を要求由来のlifetime上界へ両modeで統一した。独立reconciliation IDをread admissionと原子登録し、管理用256bytesだけをread枠へ加算する。既存四fixtureの容量期待を更新し、全192シナリオを維持した。新47シナリオ597ステップと10境界試験で、初回discard保護、retry追加枠、三次元投影境界、ID／revision overflow、fake native ID衝突と別model ticketを確認する。
+
+Astraの初回レビューでphase表示の優先順位差を確認し、close／ClockFaultとsticky recoveryを優先し、元call終端後のunknown completionをUncertainとする回帰を追加した。最終read-onlyレビューに必須所見はない。正常終端後の次workflow、実native／host接続とP3bは後続であり、Project0.37.0／DB7／H1／schema／SDK／Banto・依存を維持する。
+
+Rust workspace676件（新規11、child workerの再実行2件は別）、TS全9,634件（新規140）、型検査0error／0warning・build、関連Chromium8件（新規1）、Clippy全target `-D warnings`／rustfmtが成功した。Astraの最終read-onlyレビューに必須所見はない。全体Prettier・変更文書の相対リンクと差分を検査し、Ready for Review PRで全体CIを確認する。
+
 ## 記録registryのworkflow予約・段階進行設計（H5d4c4c-prep2b4、2026-11-04）
 
 prep2b3のPR #76をworkへ統合（`0ffde65`、PR／push CI全7job成功、同headレビュー指摘なし）。Astra主設計の[workflowモデル](../design/runtime/historian-recording-registry-workflow-model.md)で、既存のAccepted後保守停止を段階的に置き換える条件を定めた。最初に単一候補の明示段階進行と全段階予約を実装し、正常終端後の次workflow解禁を別段階へ分ける。

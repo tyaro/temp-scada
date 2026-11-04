@@ -11,7 +11,7 @@ import {
 import { parseRecordingAdmissionDocument } from "./recording-admission-contract";
 import { parseRecordingOperationsDocument } from "./recording-operations-contract";
 import { ownMeasuredHistoryJson } from "./history/owned-json";
-import { WIRE_OPERATION_RESULT_UPPER } from "./recording-wire/capacity";
+import { modelLifetimeBytes } from "./__fixtures__/recording-model-budget";
 function parse(v: any) {
   return v.kind.startsWith("recordingWire")
     ? parseRecordingWireDocument(v)
@@ -45,9 +45,7 @@ it("result reservations match the shared conservative budget", () => {
   const op =
     bytes(f.bases.opLease) +
     bytes(f.bases.opLeaseReply) +
-    bytes(f.bases.opAdmit) +
-    2 * 512 * 1024 +
-    WIRE_OPERATION_RESULT_UPPER.bytes;
+    modelLifetimeBytes(f.bases.opAdmit);
   expect(
     f.scenarios.find(
       (s) => s.name === "completion reservation fits exact mutation budget",
@@ -56,8 +54,7 @@ it("result reservations match the shared conservative budget", () => {
   const r =
     bytes(f.bases.readLease) +
     bytes(f.bases.readLeaseReply) +
-    bytes(f.bases.readAdmit) +
-    3 * 512 * 1024;
+    modelLifetimeBytes(f.bases.readAdmit);
   expect(
     f.scenarios.find(
       (s) => s.name === "read completion reservation fits exact read budget",

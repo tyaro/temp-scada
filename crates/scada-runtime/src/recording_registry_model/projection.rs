@@ -7,11 +7,6 @@ const ENVELOPE: WireBound = WireBound {
     nodes: 4096,
     depth: 3,
 };
-const ZERO: WireBound = WireBound {
-    bytes: 0,
-    nodes: 0,
-    depth: 0,
-};
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct AdmissionView {
     pub id: String,
@@ -51,9 +46,21 @@ impl ProjectionState {
                 read: None,
             },
             budget: ProjectionBudget {
-                admission: ZERO,
-                operation: ZERO,
-                read: ZERO,
+                admission: WireBound {
+                    bytes: 0,
+                    nodes: 0,
+                    depth: 0,
+                },
+                operation: WireBound {
+                    bytes: 0,
+                    nodes: 0,
+                    depth: 0,
+                },
+                read: WireBound {
+                    bytes: 0,
+                    nodes: 0,
+                    depth: 0,
+                },
             },
             reserved: 1,
             close_credit: true,
@@ -92,13 +99,6 @@ fn max_bound(a: WireBound, b: WireBound) -> WireBound {
         depth: a.depth.max(b.depth),
     }
 }
-fn envelope(a: WireBound, b: WireBound, da: usize, db: usize) -> Result<WireBound, ModelError> {
-    Ok(WireBound {
-        bytes: sum(sum(a.bytes, b.bytes)?, ENVELOPE.bytes)?,
-        nodes: sum(sum(a.nodes, b.nodes)?, ENVELOPE.nodes)?,
-        depth: (a.depth + da).max(b.depth + db).max(ENVELOPE.depth),
-    })
-}
 impl RegistryModel {
     pub(super) fn projection_bound(&self, b: ProjectionBudget) -> Result<WireBound, ModelError> {
         let s = measured(&self.session.scope)?;
@@ -128,35 +128,7 @@ impl RegistryModel {
         &self,
         q: &RecordingAdmissionRequest,
     ) -> Result<ProjectionBudget, ModelError> {
-        let request = q.as_value();
-        let action = &request["action"];
-        let handle = match action["kind"].as_str().expect("validated action") {
-            "preflight" => Some(
-                json!({"version":1,"kind":"recordingOperationRequest","operationId":"r".repeat(64),"stage":"preflight","change":action["change"]}),
-            ),
-            "pauseJoin" | "apply" => Some(action["operation"].clone()),
-            "reconcile" => Some(action["reconciliation"].clone()),
-            "discard" => None,
-            _ => unreachable!("closed action"),
-        };
-        let h = handle.as_ref().map(measured).transpose()?.unwrap_or(ZERO);
-        let mut b = self.projection.budget;
-        b.admission = max_bound(b.admission, envelope(measured(request)?, h, 1, 3)?);
-        if handle.is_some() {
-            if admission_role(request) == Role::Read {
-                let mut bound = envelope(h, h, 3, 3)?;
-                bound.depth = bound.depth.max(6);
-                b.read = max_bound(b.read, bound);
-            } else {
-                let mut bound = envelope(h, ZERO, 1, 0)?;
-                bound.depth = bound.depth.max(4);
-                b.operation = max_bound(b.operation, bound);
-            }
-        }
-        require(
-            fits_bound(self.projection_bound(b)?, self.limits.projection_limit),
-            ModelError::Capacity,
-        )?;
+        let b = self.projection_for(q, self.projection.budget)?;
         let reserved = self
             .projection
             .reserved
@@ -164,6 +136,26 @@ impl RegistryModel {
             .and_then(|r| r.checked_add(self.projection.current.revision));
         require(
             reserved.is_some_and(|r| r <= self.limits.revision_ceiling),
+            ModelError::Capacity,
+        )?;
+        Ok(b)
+    }
+    pub(super) fn projection_for(
+        &self,
+        q: &RecordingAdmissionRequest,
+        mut b: ProjectionBudget,
+    ) -> Result<ProjectionBudget, ModelError> {
+        let storage = LifetimeBudget::for_request(q)?;
+        b.admission = max_bound(b.admission, storage.reply);
+        if q.as_value()["action"]["kind"] != "discard" {
+            if admission_role(q.as_value()) == Role::Read {
+                b.read = max_bound(b.read, storage.completion)
+            } else {
+                b.operation = max_bound(b.operation, storage.completion)
+            }
+        }
+        require(
+            fits_bound(self.projection_bound(b)?, self.limits.projection_limit),
             ModelError::Capacity,
         )?;
         Ok(b)

@@ -9,7 +9,7 @@ import {
   recordingWireReplyMatchesRequest,
 } from "./recording-wire-contract";
 import { parseRecordingAdmissionDocument } from "./recording-admission-contract";
-import { WIRE_OPERATION_RESULT_UPPER } from "./recording-wire/capacity";
+import { modelLifetimeBytes } from "./__fixtures__/recording-model-budget";
 import { ownMeasuredHistoryJson } from "./history/owned-json";
 for (const row of registryModelTranscripts())
   it("Rust model transcript " + row.name, () => {
@@ -35,16 +35,14 @@ it("all model scenario JSON inputs remain existing independent contracts", () =>
       ).not.toThrow();
     }
 });
-it("fixed registry reservation oracle agrees with conservative browser accounting", () => {
+it("request-derived registry reservation oracle agrees with conservative browser accounting", () => {
   const measure = (v: unknown) =>
     ownMeasuredHistoryJson(v, 4 * 1024 * 1024, 196608, "wireInspectionReply")
       .bytes;
   const cost =
     measure(f.bases.lease) +
     measure(f.bases.issued) +
-    measure(f.bases.admit) +
-    2 * 512 * 1024 +
-    WIRE_OPERATION_RESULT_UPPER.bytes;
+    modelLifetimeBytes(f.bases.admit);
   const exact = f.scenarios.find(
     (s) => s.name === "exact retained mutation budget accepts",
   )!;

@@ -1,14 +1,14 @@
 # 記録registryモデルのworkflowと全段階予約
 
-状態: **採用詳細設計、未実装。設計PRを先行する**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
+状態: **prep2b4a実装済み、次workflowの受理・実接続は後続**。2026-11-04（日本時間）。主設計はユーザー指定のAstra。
 [subscriptionモデル](historian-recording-registry-subscription-model.md)までがPR #76で統合済み。本書はその後の段階進行を設計する。
 Project 0.37.0、DB7、H1、wire schema、SDK／Banto／依存は維持する。実native、host、DB、auth、transport、P3bへの接続は行わない。
 
 ## 1. 設計PRを分ける理由
 
-現在のモデルはAcceptedが残る限り新mutationを保守的に拒否する。
+Standalone modeはAcceptedが残る限り新mutationを保守的に拒否する。prep2b4aで追加したWorkflow modeは、本書の予約と明示段階進行を必要とする。
 これを単純にcompletion後解除すると、異なる元runや候補の混入、apply失敗後の誤retry、discard資源の消失を招く。
-また現在の固定予約はmutation一件につきrequest＋2×512KiB＋958464bytesであり、4stageを予約するとmutation専用6MiBへ収まらない。
+prep2b3までの固定予約はmutation一件につきrequest＋2×512KiB＋958464bytesであり、4stageを予約するとmutation専用6MiBへ収まらなかった。prep2b4aは両modeを要求由来の保持上界へ統一した。
 
 **先に要求由来のtight lifetime上界と4stage escrowを確定し、その後にphaseを解禁する。**
 cap拡大、read2MiB借入、applyとdiscardの排他的max予約は採用しない。
@@ -84,7 +84,7 @@ Paused結果のsessionIdは元context.sessionIdへ一致させ、元runはその
 新stage送信は元callが正常terminalを持ち、knowledgeが確定し、必要なcompletionがある場合だけである。
 元callのunknown返信は不変で、後にAccepted知識とcompletionが判明しても書き換えない。
 unknown返信が正常terminalとして保存されていることと、受付knowledgeの未確定は別である。
-優先順位はclose／sticky recovery・readUncertain等の安全gate、元call未終端の進行中phase、元call終端後のknowledge未確定Uncertain、確定knowledgeとcompletionによるphaseの順とする。begin直後のRegisteredだけでUncertainへ変更せず、unknown正常terminal後もknowledge未確定の時にUncertainを表示する。安全gateはphase名とは別に全送信入口で検査する。
+優先順位はclose／sticky recovery・readUncertain等の安全gate、元call未終端の進行中phase、元call終端後のknowledge未確定Uncertain、確定knowledgeとcompletionによるphaseの順とする。begin直後のRegisteredだけでUncertainへ変更せず、unknown正常terminal後もknowledge未確定の時にUncertainを表示する。安全gateはphase名とは別に全送信入口で検査する。close／ClockFaultはBlockedを優先する。sticky recoveryがある場合も基本はBlockedとし、元call終端後にunknown completionを保持する場合だけUncertainへ分類する。正常completion先着だけで元call終端前に次stageを許さない。
 
 | 現stage／証拠                                                        | 次phase／許可                                           |
 | -------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -226,4 +226,4 @@ resume／fresh SDK／初期bootstrap／実native接続はこの工程からも�
 | projection/revision | 将来全stageの受付前予約、未使用credit返却と使用済み不変、close credit保持                                |
 | 未接続              | fake qualificationはnative資格でない、wire／DB／SDK／認証／transport不変                                 |
 
-設計PRの完了はphase実装完了ではない。各実装PRはRust scenarioと既存JSON契約のbrowser照合を用い、TS側に第二のworkflow権威を作らない。
+設計PR #77はworkへ統合済み（`84b325b`）。prep2b4aでは新47シナリオ597ステップと10境界試験を実装し、既存192シナリオも要求由来の会計で維持する。92期待DTOと全入力をTS／browserの既存validatorへ照合し、TS側に第二のworkflow権威を作らない。b4bの正常終端後の次workflow受理と実接続は未実装である。

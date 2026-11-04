@@ -7,9 +7,11 @@ mod inspection;
 mod lease;
 mod observation;
 mod projection;
+mod reservation;
 mod subscription;
-use handle::completion_reservation;
+mod workflow;
 use projection::{ProjectionEvent, ProjectionState, SnapshotDescriptor, DESCRIPTOR_BYTES};
+use reservation::{LifetimeBudget, READ_ID_BYTES};
 use subscription::{AttachRecord, ControlRecord, SubscriptionRecord};
 mod types;
 use scada_model::recording_admission::*;
@@ -50,6 +52,8 @@ pub struct RegistryModel {
     attaches: BTreeMap<String, AttachRecord>,
     controls: BTreeMap<String, ControlRecord>,
     subscription_sequence: u64,
+    workflow: Option<workflow::WorkflowMode>,
+    reconciliation_ids: BTreeMap<String, String>,
 }
 #[derive(Debug)]
 struct LeaseRecord {
@@ -67,6 +71,7 @@ struct AdmissionRecord {
     proof: Option<RecordingAdmissionReply>,
     terminal: Option<RecordingAdmissionReply>,
     projection_credits: u8,
+    storage: LifetimeBudget,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Role {
@@ -123,6 +128,8 @@ impl RegistryModel {
             attaches: BTreeMap::new(),
             controls: BTreeMap::new(),
             subscription_sequence: 0,
+            workflow: None,
+            reconciliation_ids: BTreeMap::new(),
         };
         require(
             projection::fits_bound(
@@ -228,6 +235,18 @@ impl RegistryModel {
             cancel_requests: self.cancels.len(),
             pending_cancel_calls: self.cancels.values().filter(|c| !c.terminal).count(),
             cancel_notified_handles: self.handles.values().filter(|h| h.cancel_notified).count(),
+            reconciliation_ids: self.reconciliation_ids.len(),
+            workflow_phase: self.workflow_phase(),
+            workflow_changes: usize::from(
+                self.workflow.as_ref().is_some_and(|m| m.record.is_some()),
+            ),
+            used_mutation_admission_ids: self.workflow_used_ids(),
+            reserved_mutation_admission_ids: self.workflow_reserved_ids(),
+            reserved_mutation_lease_ids: self.workflow_reserved_ids(),
+            caller_operation_ids: self.workflow_caller_ids(),
+            reserved_caller_operation_ids: self.workflow_reserved_caller_ids(),
+            simulated_native_identities: self.workflow_native_ids(),
+            reserved_simulated_native_identities: self.workflow_reserved_native_ids(),
             published_revision: self.projection.current.revision,
             reserved_revisions: self.projection.reserved,
             live_subscriptions: self.subscriptions.values().filter(|s| s.active).count(),

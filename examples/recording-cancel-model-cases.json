@@ -8274,7 +8274,7 @@
     {
       "name": "mutation byte exhaustion preserves independent cancel reservation",
       "limits": {
-        "total_bytes": 2078286,
+        "total_bytes": 275305,
         "read_bytes": 67824
       },
       "steps": [
@@ -8364,7 +8364,7 @@
             "kind": "ok"
           },
           "fields": {
-            "mutationBytes": 2010462,
+            "mutationBytes": 207481,
             "readBytes": 67824
           }
         }
@@ -8373,7 +8373,7 @@
     {
       "name": "known notification needs no new retained bytes",
       "limits": {
-        "total_bytes": 2078286,
+        "total_bytes": 275305,
         "read_bytes": 67824
       },
       "steps": [

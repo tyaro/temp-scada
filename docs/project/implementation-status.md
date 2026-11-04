@@ -10,13 +10,19 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
-## 記録registryのworkflow予約・段階進行設計（H5d4c4c-prep2b4、2026-11-04）
+## 記録registryのworkflow予約と段階進行（H5d4c4c-prep2b4a、2026-11-04）
 
-[Astraの詳細設計](../design/runtime/historian-recording-registry-workflow-model.md)で、同じ候補のpreflight→明示pause／join→applyまたはdiscardを進める条件と、受付前の資源予約を具体化した。mutation admission4枠とcaller operation2枠に加え、将来lease・不変返信／completion・投影容量・revisionを予約する。applyの確定未受理後も初回discard枠を残し、再試行は別の追加予約を必要とする。
+[Astra設計](../design/runtime/historian-recording-registry-workflow-model.md)に沿い、最初の単一workflowの資源予約と、同候補の明示preflight→pause／join→applyまたはdiscardをRust純粋モデルへ追加した。将来4admission／4lease／2caller operationと保持bytes・投影・revisionを予約し、初回lease発行時にattemptのIDを束縛する。期限切れでもIDを再利用せず、retryは追加枠を必要とする。applyの確定未受理後も初回discardの枠を残す。
 
-現行の一要求あたり固定容量を4件分予約するとmutation専用6MiBを超えるため、元要求から算出する保持上界へ変更する計画とした。read専用2MiBの借入や上限拡大は行わない。独立reconciliation ID台帳もread admissionと原子登録する計画とした。今回は設計のみで、実装済みモデルは従来どおりAccepted後の新mutationを保守停止する。
+元call終端、受付knowledge、immutable completionからphaseを判定する。completion先着で元call終端前に進めず、Accepted後failed/notDispatchedをCandidate／Pausedへ戻さない。unknown静止・recovery・closeの停止を維持し、取消やread receiptから成功を合成しない。
 
-prep2b3の[PR #76](https://github.com/tyaro/temp-scada/pull/76)はworkへ統合済み（`0ffde65`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41832921571)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41832971722)全7job成功、同head自動レビュー指摘なし）。次の実装は単一候補の予約・段階進行と、正常終端後の次workflowへの移行に分ける。実native／host接続とP3b保留、Project0.37.0／DB7／H1／schema／SDK／Banto・依存版を維持する。
+保持容量は両modeとも元要求由来のlifetime上界へ統一した。read専用2MiBを借りず、独立reconciliation IDをread admissionと原子登録し、同IDの別admission再使用を拒否する。既存Standaloneは低レベルsimulationとして残し、workflow入口の迂回と正常完了後のfresh workflowはb4aでは許可しない。
+
+新47シナリオ597ステップ、10境界試験、既存192シナリオを確認した。92期待DTOと全入力をTS／browserの既存validatorへ照合し、第二のworkflow権威を作らない。設計[PR #77](https://github.com/tyaro/temp-scada/pull/77)はworkへ統合済み（`84b325b`、PR／push CI全7job成功、同headレビュー指摘なし）。
+
+Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持し、実native／host接続とP3bは保留する。次はb4bの正常終端後の次workflowである。
+
+Rust workspace676件（新規11、child workerの再実行2件は別）、TS全9,634件（新規140）、型検査0error／0warning・build、関連Chromium8件（新規1）、Clippy全target `-D warnings`／rustfmtが成功した。Astraの最終read-onlyレビューに必須所見はない。全体Prettier・変更文書の相対リンクと差分を検査し、Ready for Review PRで全体CIを確認する。
 
 ## 記録registryモデルのsnapshotと購読（H5d4c4c-prep2b3、2026-11-04）
 
