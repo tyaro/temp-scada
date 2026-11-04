@@ -1,6 +1,6 @@
 # 元apply要求に対するreceiptの独立読取
 
-状態: **H5d4c1のnative読取実装済み・owner接続は後続**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。[明示操作契約](historian-recording-operations.md)のnative接続に必要な最初の読取境界を定める。 c2の[共有native owner](historian-recording-native-owner.md)はRust実装済みで、c3の同owner read統合は後続である。
+状態: **H5d4c1のnative読取実装済み・owner接続は後続**。2026-11-03（日本時間）。主設計はユーザー指定のAstra。[明示操作契約](historian-recording-operations.md)のnative接続に必要な最初の読取境界を定める。 c2の[共有native owner](historian-recording-native-owner.md)はRust実装済みで、[c3の同owner read統合](historian-recording-owner-reconciliation.md)は詳細設計済み・未実装である。
 
 ## 工程と責務
 

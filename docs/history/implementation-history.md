@@ -4,6 +4,12 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 同owner内の明示結果照会の詳細設計（H5d4c3、2026-11-04）
+
+PR #63はworkへマージ済み（`7a6eca5`）。PR／push CIとも全7job成功、同headの自動レビューは指摘なし。Astra主設計で、c2の元apply handleとc1 receipt readerをつなぐ明示reconciliationを文書化した。元要求の全文echo、同reader loan／join、read自身の静止と元apply静止の分離、immutable completionとlatest／lastAppliedの単調統合、回復gateと有限保持を定める。
+
+今回は設計文書のみ。c3のnative公開API・read driver・投影／状態統合は未実装で、次の実装PRへ分ける。JS bridge・通常Appへのnative接続と製品transportは後続、Project0.37.0／DB7／H1／SDK／Bantoと各依存版を維持する。実Hub／S7／本番DB・接続設定／資格情報・上流は変更しない。
+
 ## 記録操作の共有native owner実装（H5d4c2、2026-11-04）
 
 設計PR #62はworkへマージ済み（`35290a1`）。Astra設計に沿い、共有native owner・受理前registry・preflight／明示pause/join／同候補applyとd4a投影をRust libraryへ実装した。管理ownerとclient寿命を分け、四枠credit予約、一実行／queueなし、Supervisor返却後の終端公開、同期discardと回復gateを伝えるhandoffを提供する。

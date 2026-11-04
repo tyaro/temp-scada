@@ -689,3 +689,9 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 `supervisor.rs`はinitとstart_preflightの純粋gateを`recording_operations_context`へ共有し、true方向だけの`latch_recording_operations_recovery`でowner-only blockをnativeへ伝える。Historianの`QueryControl::validate`を公開し、元予算の検査をruntimeへ複製しない。JS clockとのbridgeとc3 read統合は後続。
 
 `operations/tests.rs`と`registry.rs`の単体30件、`tests/recording_host/operations.rs`の公開API／SDK loopback2件で所有・期限・競合・失敗と履歴保持を確認する。既存native候補／worker起動のprivate seamを試験で共有し、runtime dev-dependencyだけで既存pinのrusqliteを使う。Historianの実FULL／rollback試験とownerの型付きFULL注入は区別する。公開test-support featureやproduction fault APIを設けない。
+
+## 同owner内の明示結果照会（H5d4c3、設計のみ）
+
+[詳細設計](../design/runtime/historian-recording-owner-reconciliation.md)は、既存c2 ownerの元apply handleとc1のreceipt読取をつなぐ後続実装の境界を定める。照会の受付・独立した有限ID登録・read自身の物理状態・元apply結果の単調統合を分け、Supervisorの既存readerを一回だけloanしてjoin後に返す。元operation completionは不変、回復latchは解除しない。
+
+本節は実装入口の追加予定を示す。c3の公開API／driver／テストはまだ存在せず、c1 readerやd4b mock serviceの実装を同owner接続の完了とはしない。次の実装PRで設計の受入表に沿って検証し、実際の配置へ更新する。
