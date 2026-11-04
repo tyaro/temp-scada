@@ -783,3 +783,9 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 `examples/recording-wire-receiver-cases.json`の59シナリオはtest-only `__fixtures__/recording-wire-receiver-cases.ts`を通じて実receiverへ入力する。これはtest command DSLで、第二のserver registryではない。`recording-wire-receiver.test.ts`は共有シナリオに加え、独立予算oracle・全mutationへのProxy再入・ownership・terminal保持・容量exact/1不足を検査する。`e2e/recording-wire-receiver.spec.ts`も同じreceiverと全シナリオをChromiumで実行し、通常Appの保存不変・外部送信無しを確認する。
 
 callback／Promise終端／I/Oやnative registryの複製は含めない。`recording-async/port.ts`とcoordinatorは同realm test-only契約のままで、wireのownerEpoch／closed／ControlFrameを捨てた透過接続を作らない。snapshot64件/8MiBとcall8MiBは返却しない有限保持で、長時間運用を保証しない。通常Appへの投影契約と実host・P3bは別工程である。
+
+## 記録wireのclient境界（H5d4c4c-prep2d設計）
+
+[Astraのclient境界設計](../design/runtime/historian-recording-wire-client-boundary.md)は採用詳細設計で、実行コードは後続。prep2d1で既存receiverへ`currentDisplay()`／`attachTerminal()`／`controlTerminal()`を追加し、独立した表示型と元Attach/Control terminalの読取を提供する計画とする。保存済みowned/frozen本文を再利用し、表示・元delivery・操作資格を分ける。任意のstructural objectやwire frameを既存`recording-async/port.ts`へcastするadapterは作らない。
+
+既存`recording-wire-receiver.ts`と内部台帳、`recording-async/coordinator.ts`／`state.ts`／`port.ts`は現在の境界を照合する根拠で、今回変更しない。元callの物理配送／正常reply／表示更新の二段階、callback／Promiseと有限資源の接続、通常App注入は後続の詳細設計・実装へ分ける。
