@@ -12,7 +12,7 @@ Project 0.37.0／DB7／H1／SDK／Banto／依存とP3b保留を維持する。
 Tokio、Instant、SystemTime、DB、ファイル、network、SDK、callbackの呼出しをmoduleに入れない。
 全操作は `&mut self` の決定的遷移である。Rustの逐次呼出しで全caller gateを模擬し、実process間排他や認可の実装とは称さない。
 
-[prep2b1](historian-recording-registry-observation-model.md)でmodel-bound handleと不変completion／結果観測を追加した。[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)も追加した。[prep2b3のsnapshot・subscription](historian-recording-registry-subscription-model.md)も追加した。[prep2b4a](historian-recording-registry-workflow-model.md)で単一候補の全段階予約と元run／候補の明示pause／apply適格性を実装した。正常終端後の次workflowは後続で詳細化する。
+[prep2b1](historian-recording-registry-observation-model.md)でmodel-bound handleと不変completion／結果観測を追加した。[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)も追加した。[prep2b3のsnapshot・subscription](historian-recording-registry-subscription-model.md)も追加した。[prep2b4a](historian-recording-registry-workflow-model.md)で単一候補の全段階予約と元run／候補の明示pause／apply適格性を実装した。正常終端後の次workflowは[b4bの詳細設計](historian-recording-registry-workflow-renewal.md)を採用し、実装は後続とする。
 prep2aは既存c4a全actionの受付台帳を扱えるが、nativeがそのactionを許可すべきかは実装しない。fake決定を明示入力する。
 この限定によって、単一callの曖昧さを検証するためにrecording／retention／native ownerを二重実装しない。
 

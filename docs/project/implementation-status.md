@@ -10,6 +10,14 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 記録registryの次workflow受入設計（H5d4c4c-prep2b4b、2026-11-04）
+
+[Astraの詳細設計](../design/runtime/historian-recording-registry-workflow-renewal.md)で、正常終端した現在workflowのticketと、同runの管理資格宣言を使う明示的な次workflow予約を定めた。Running／clean Joinedの同run・同contextを対象とし、操作結果だけから現在のrun状態や自動resumeを合成しない。
+
+旧workflow・ID・元要求・結果・使用済み保持容量とprojection high-waterを保存し、新予約は累積使用量を含めて原子的に検査する。未終端call、未知受付、read／観測／取消の未回収、unknown静止・recoveryを残したまま更新しない。旧ticketの照会・正確な再送は保持し、新操作への転用やchangeRefの別候補への再束縛を防ぐ。
+
+prep2b4aの[PR #78](https://github.com/tyaro/temp-scada/pull/78)はworkへ統合済み（`238d82c`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41850010205)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41850078838)全7job成功、同head自動レビュー指摘なし）。今回は設計のみで、現行実装は最初の単一workflowまでである。実native／host接続とP3b、Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存と通常Appを維持する。
+
 ## 記録registryのworkflow予約と段階進行（H5d4c4c-prep2b4a、2026-11-04）
 
 [Astra設計](../design/runtime/historian-recording-registry-workflow-model.md)に沿い、最初の単一workflowの資源予約と、同候補の明示preflight→pause／join→applyまたはdiscardをRust純粋モデルへ追加した。将来4admission／4lease／2caller operationと保持bytes・投影・revisionを予約し、初回lease発行時にattemptのIDを束縛する。期限切れでもIDを再利用せず、retryは追加枠を必要とする。applyの確定未受理後も初回discardの枠を残す。

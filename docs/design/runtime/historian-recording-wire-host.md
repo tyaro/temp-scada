@@ -384,7 +384,7 @@ pure validatorはscope/request/refの既知文書間一致、branch、数値、�
 Rust／TS owned validator、既知request/reply／subscription frameの一致helper、最大reply closure、共有fixture、browser module評価を提供する。
 既存c4aの五rootを改版せず、local schema resourceとして参照する。App／native owner／listener／認証／transportは変更しない。
 
-[prep2詳細設計](historian-recording-registry-model.md)のprep2aとして、Rustの単一owner状態モデル、仮想lease／時計、受付台帳と元call終端照会を実装した。実native operationはdispatchしない。[prep2b1の結果観測](historian-recording-registry-observation-model.md)も純粋モデルへ実装した。[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)も実装した。[prep2b3のsnapshot・subscription](historian-recording-registry-subscription-model.md)も実装した。[prep2b4のAstra設計](historian-recording-registry-workflow-model.md)に沿い、b4aの単一候補の全段階予約と明示段階進行、独立reconciliation ID台帳を純粋モデルへ実装した。正常終端後の次workflowはb4bとして後続へ分ける。複数scope allocator、受信側の並べ替え・同revision矛盾検出も後続である。
+[prep2詳細設計](historian-recording-registry-model.md)のprep2aとして、Rustの単一owner状態モデル、仮想lease／時計、受付台帳と元call終端照会を実装した。実native operationはdispatchしない。[prep2b1の結果観測](historian-recording-registry-observation-model.md)も純粋モデルへ実装した。[prep2b2の取消モデル](historian-recording-registry-cancel-model.md)も実装した。[prep2b3のsnapshot・subscription](historian-recording-registry-subscription-model.md)も実装した。[prep2b4のAstra設計](historian-recording-registry-workflow-model.md)に沿い、b4aの単一候補の全段階予約と明示段階進行、独立reconciliation ID台帳を純粋モデルへ実装した。正常終端後の次workflowは[b4bの詳細設計](historian-recording-registry-workflow-renewal.md)で同run資格・predecessorと累積資源を確認する明示更新として定め、実装は後続へ分ける。複数scope allocator、受信側の並べ替え・同revision矛盾検出も後続である。
 実adapter／server core hostへの接続はc4c実装工程であり、prepという名前でP3b gateを迂回しない。
 着手前に製品shell／embedded host起動、認証APIとprincipal binding、資格情報と設定配置、実配送とshutdownを別途確定・レビューする。
 現在の保留中でもprep1は独立してレビュー可能であり、実環境の許可を推測する必要がない。
