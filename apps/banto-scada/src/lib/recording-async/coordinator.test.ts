@@ -1060,3 +1060,49 @@ it("readUncertain delivered during inspection notification stops the unsent insp
   expect(s.client.current().invalid).toBe(false);
   expect(s.client.current().inspectionCall).toBe("idle");
 });
+it.each([
+  "operation:retire",
+  "operation:disconnect",
+  "read:retire",
+  "read:disconnect",
+])(
+  "definitely unsent %s cancellation preserves eligibility for a current view",
+  async (mode) => {
+    const s = setup(),
+      read = mode.startsWith("read:");
+    if (read) {
+      await appliedUnknown(s);
+      s.view.reconcile(control());
+      await flush();
+    } else {
+      s.view.preflight(change(s.h), control());
+      await flush();
+    }
+    let interrupted = false;
+    s.client.subscribe((v) => {
+      if (v.cancelCall === "pending" && !interrupted) {
+        interrupted = true;
+        if (mode.endsWith("retire")) s.view.retire();
+        else s.h.emit({ connected: false });
+      }
+    });
+    expect(
+      read ? s.view.cancelReconciliation() : s.view.cancelOperation(),
+    ).toBe(true);
+    expect(s.h.cancels).toHaveLength(0);
+    expect(s.client.current().cancelCall).toBe("idle");
+    s.h.emit({ connected: true });
+    const next = s.client.bindView(s.identity);
+    expect(
+      read ? s.client.current().canCancelRead : s.client.current().canCancel,
+    ).toBe(true);
+    expect(read ? next.cancelReconciliation() : next.cancelOperation()).toBe(
+      true,
+    );
+    await flush();
+    expect(s.h.cancels).toHaveLength(1);
+    expect(read ? next.cancelReconciliation() : next.cancelOperation()).toBe(
+      false,
+    );
+  },
+);

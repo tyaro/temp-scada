@@ -1026,7 +1026,6 @@ export function createAsyncRecordingOperationsCoordinator(
       ownerRef,
       target: { kind: read ? "reconciliation" : "operation", ref: t.ref },
     });
-    t.cancelIssued = true;
     cancelCall = "pending";
     cancel = undefined;
     publish();
@@ -1035,6 +1034,7 @@ export function createAsyncRecordingOperationsCoordinator(
       publish();
       return true;
     }
+    t.cancelIssued = true;
     try {
       onPromise(
         methods.requestCancel.call(port, r),

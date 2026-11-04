@@ -20,7 +20,7 @@ rawな選択clientの変化で旧送信用viewを退役させ、live propsの資
 
 同期serviceは独立契約のまま維持し、最初の有効な単独注入でAppのmodeを固定する。二重注入／異modeへのprop交換は新送信を拒否し、旧監視を継続する。五roleそれぞれ4096のID枠を持ち、初回workflowのmutation4／callerOperation2予約と、再試行用追加枠を分離する。mutation枯渇でも予約済みdiscardと独立readAdmissionによる結果照会を保つ。local metadata／frameは専用予算でowned検証し、既存c4a／compact profileを変えない。
 
-新規単体92件を含むTS全6,829件、型検査0error／0warning・build、新規Chromium14件と同期回帰13件、全体Prettier・変更文書9件の相対リンク・差分検査を確認した。Astra最終レビューに必須未決はない。
+新規単体96件を含むTS全6,833件、型検査0error／0warning・build、新規Chromium15件と同期回帰13件、全体Prettier・変更文書9件の相対リンク・差分検査を確認した。Astra最終レビューに必須未決はない。
 
 設計PR #68はworkへマージ済み（`e23bea9`、PR／push CIとも全7job成功）。実lease発行・native adapter・stateframe等の実wireと製品hostは未実装。通常entryは未注入・未接続のまま、Project0.37.0／DB7／H1／SDK／Banto・依存版とP3b保留を維持する。
 

@@ -334,3 +334,32 @@ test("same-turn lease settlement before client prop replacement cannot dispatch 
     await page.evaluate(() => (window as any).__asyncHarness.h.stops),
   ).toBe(0);
 });
+test("cancel interrupted before dispatch can be explicitly requested after reconnect", async ({
+  page,
+}) => {
+  await prepare(page);
+  await preflight(page);
+  await page.evaluate(() => {
+    const a = (window as any).__asyncHarness;
+    let interrupted = false;
+    a.root.client.subscribe((s: any) => {
+      if (s.cancelCall === "pending" && !interrupted) {
+        interrupted = true;
+        a.h.emit({ connected: false });
+      }
+    });
+  });
+  await button(page, "操作の取消を要求").click();
+  await expect(dialog(page)).toContainText("接続切断");
+  expect(
+    await page.evaluate(() => (window as any).__asyncHarness.h.cancels.length),
+  ).toBe(0);
+  await page.evaluate(() =>
+    (window as any).__asyncHarness.h.emit({ connected: true }),
+  );
+  await expect(button(page, "操作の取消を要求")).toBeEnabled();
+  await button(page, "操作の取消を要求").click();
+  expect(
+    await page.evaluate(() => (window as any).__asyncHarness.h.cancels.length),
+  ).toBe(1);
+});
