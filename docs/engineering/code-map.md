@@ -755,3 +755,5 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 `subscription.rs`は原子的attach、request全文へ束縛した不変attach／control返信、明示detachとlive slotだけの一回返却、state／controlの独立takeを担当する。rootは単一ownerのinitial descriptor 1KiB、typesは縮小専用limitsとstatsを追加する。`inspection.rs`は保存済みAttach／Controlを再構築し、未知originalを実行しない。
 
 `examples/recording-subscription-model-cases.json`の48シナリオ293ステップをRust共通driverで実行し、`tests/subscription_boundaries.rs`で三次元投影容量・revision／ID境界・不変返信・返却一回性と既存schema分岐の上界を検証する。TSのtest-only `__fixtures__/recording-subscription-model-cases.ts`、`recording-subscription-model-contract.test.ts`、`e2e/recording-subscription-model-contract.spec.ts`は141期待DTOの独立validator適合・所有・既知document対応とApp保存不変だけを確認する。第二のregistry／受信state machineは作らない。既存三fixtureのread予約期待へ初期descriptor 1KiBを加算した。
+
+[prep2b4のworkflow予約・段階進行](../design/runtime/historian-recording-registry-workflow-model.md)は次の実装設計であり、現行コードへの追加はまだない。既存admissionの保守停止を弱める前に、同候補の適格性と全段階の有限資源を受け入れる。

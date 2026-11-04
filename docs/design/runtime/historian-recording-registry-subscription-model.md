@@ -191,3 +191,5 @@ closeや証拠更新には既存予約を使い、現在read枠が満杯とい�
 
 設計と実装はこのモデルまでであり、実subscription dispatcher／socket backpressure／host起動の保証へ拡張しない。
 workflow解禁と全段階creditは次工程で具体化し、今回もAccepted後の新mutation保守blockを維持する。
+
+次のworkflow credit・段階進行は[prep2b4の詳細設計](historian-recording-registry-workflow-model.md)で扱う。今回の購読実装だけで新mutationを解禁しない。

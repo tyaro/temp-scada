@@ -10,6 +10,14 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 記録registryのworkflow予約・段階進行設計（H5d4c4c-prep2b4、2026-11-04）
+
+[Astraの詳細設計](../design/runtime/historian-recording-registry-workflow-model.md)で、同じ候補のpreflight→明示pause／join→applyまたはdiscardを進める条件と、受付前の資源予約を具体化した。mutation admission4枠とcaller operation2枠に加え、将来lease・不変返信／completion・投影容量・revisionを予約する。applyの確定未受理後も初回discard枠を残し、再試行は別の追加予約を必要とする。
+
+現行の一要求あたり固定容量を4件分予約するとmutation専用6MiBを超えるため、元要求から算出する保持上界へ変更する計画とした。read専用2MiBの借入や上限拡大は行わない。独立reconciliation ID台帳もread admissionと原子登録する計画とした。今回は設計のみで、実装済みモデルは従来どおりAccepted後の新mutationを保守停止する。
+
+prep2b3の[PR #76](https://github.com/tyaro/temp-scada/pull/76)はworkへ統合済み（`0ffde65`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41832921571)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41832971722)全7job成功、同head自動レビュー指摘なし）。次の実装は単一候補の予約・段階進行と、正常終端後の次workflowへの移行に分ける。実native／host接続とP3b保留、Project0.37.0／DB7／H1／schema／SDK／Banto・依存版を維持する。
+
 ## 記録registryモデルのsnapshotと購読（H5d4c4c-prep2b3、2026-11-04）
 
 [Astraの詳細設計](../design/runtime/historian-recording-registry-subscription-model.md)に沿い、完全snapshot、原子的attach、最新一件のstate slot、独立control slot、明示detach／reconnectをRust純粋モデルへ追加した。revisionは実際の投影変更だけで進み、受付時に将来のproof・completionとclose用のcreditを予約する。
