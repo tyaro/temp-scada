@@ -1,6 +1,6 @@
 # 記録wireのObservation専用配送台帳
 
-状態: **C4 prep2d2bの採用詳細設計、純粋TS実装は後続**。2026-11-06（日本時間）。主設計・レビューはユーザー指定のAstra。[d2aの元call配送台帳](historian-recording-wire-delivery-ledger.md)と[wire host契約](historian-recording-wire-host.md)を前提とする。
+状態: **C4 prep2d2bの採用詳細設計、純粋TS台帳を実装済み**。2026-11-06（日本時間）。主設計・レビューはユーザー指定のAstra。[d2aの元call配送台帳](historian-recording-wire-delivery-ledger.md)と[wire host契約](historian-recording-wire-host.md)を前提とする。
 
 ## 1. この区切りの責務
 
@@ -132,4 +132,4 @@ target／query／attemptは各最大4096 ID、未回収Observation attemptはled
 | 容量   | 4MiBとID／attempt上限、exact／1不足、read2MiB非侵食、受信時無追加課金、二段階保存                                        |
 | 所有   | 入力後変更、deep freeze、getter無課金、全parse入口の再入と旧cache                                                        |
 
-このPRは詳細設計の採用までとし、純粋TS実装・local-v2・Promise adapter・native bridge・実SQLite記録・History接続の完了を示さない。次の実装PRで上記契約を実コードと試験へ揃える。
+純粋TS台帳とNode／Chromiumの境界検証を実装した。local-v2・Promise adapter・native bridge・実SQLite記録・History接続は後続とする。

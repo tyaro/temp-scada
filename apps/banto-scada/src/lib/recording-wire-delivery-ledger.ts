@@ -9,10 +9,12 @@ import {
 } from "./recording-wire-delivery-ledger/core";
 import * as original from "./recording-wire-delivery-ledger/original";
 import * as inspection from "./recording-wire-delivery-ledger/inspection";
+import * as observation from "./recording-wire-delivery-ledger/observation";
 import type {
   DeliveryLimits,
   LedgerResult,
   WireDeliveryLedger,
+  ObservationAcceptResult,
 } from "./recording-wire-delivery-ledger/types";
 export type * from "./recording-wire-delivery-ledger/types";
 export function createRecordingWireDeliveryLedger(
@@ -61,6 +63,14 @@ export function createRecordingWireDeliveryLedger(
     }
   }
   const read = <T>(fn: () => LedgerResult<T>) => guard(fn, () => no("busy"));
+  const observationBusy = (): ObservationAcceptResult =>
+    Object.freeze({
+      ok: false,
+      reason: "busy",
+      attemptStored: false,
+      queryTerminalStored: false,
+      targetResultStored: false,
+    });
   const receiver: WireDeliveryLedger = Object.freeze<WireDeliveryLedger>({
     beginOriginal: (q) => read(() => original.begin(c, q)),
     acceptOriginal: (t, r) =>
@@ -122,6 +132,14 @@ export function createRecordingWireDeliveryLedger(
             )
           : no("foreignToken");
       }),
+    bindObservationTarget: (t) => read(() => observation.bind(c, t)),
+    observationTarget: (t) => read(() => observation.target(c, t)),
+    beginObservation: (t, q) => read(() => observation.begin(c, t, q)),
+    repeatObservation: (t) => read(() => observation.repeat(c, t)),
+    acceptObservation: (t, r) =>
+      guard(() => observation.accept(c, t, r), observationBusy),
+    observation: (t) => read(() => observation.query(c, t)),
+    observationAttempt: (t) => read(() => observation.attempt(c, t)),
     current: () => published,
     retire: () =>
       read(() => {

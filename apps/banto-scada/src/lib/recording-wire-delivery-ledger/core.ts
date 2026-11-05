@@ -3,7 +3,14 @@ import type {
   RecordingWireScope,
   RecordingWireCallInspectionRequest,
   RecordingWireCallInspectionReply,
+  RecordingWireObservationTarget,
+  RecordingWireObservationRequest,
+  RecordingWireObservationReply,
 } from "../recording-wire-contract";
+import type {
+  RecordingAdmissionRequest,
+  RecordingAcceptedRef,
+} from "../recording-admission-contract";
 import type {
   OriginalRequest,
   OriginalReply,
@@ -15,14 +22,23 @@ import type {
   DeliveryAcceptResult,
   DeliveryLimits,
   DeliveryLedgerState,
+  ObservationTargetToken,
+  ObservationQueryToken,
+  ObservationAttemptToken,
+  ObservationTargetResult,
+  ObservationAcceptResult,
 } from "./types";
 export const DEFAULT_LIMITS: DeliveryLimits = Object.freeze({
   mutationBytes: 6 * 1024 * 1024,
   readBytes: 2 * 1024 * 1024,
+  observationBytes: 4 * 1024 * 1024,
   mutationIds: 4096,
   readIds: 4096,
   inspectionIds: 4096,
   inspectionAttempts: 4096,
+  observationTargets: 4096,
+  observationQueries: 4096,
+  observationAttempts: 4096,
 });
 export const yes = <T>(value: T): LedgerResult<T> =>
   Object.freeze({ ok: true, value });
@@ -59,7 +75,7 @@ export function parseLimits(input: unknown): DeliveryLimits {
     throw Error();
   const keys = Reflect.ownKeys(input),
     limits = { ...DEFAULT_LIMITS };
-  if (keys.length > 6) throw Error();
+  if (keys.length > Object.keys(DEFAULT_LIMITS).length) throw Error();
   for (const key of keys) {
     if (typeof key !== "string" || !Object.hasOwn(limits, key)) throw Error();
     const d = Object.getOwnPropertyDescriptor(input, key);
@@ -106,6 +122,56 @@ export interface AttemptRecord {
   outcome: AttemptOutcome | null;
   applied: boolean;
 }
+export interface ObservationTargetRecord {
+  token: ObservationTargetToken;
+  target: RecordingWireObservationTarget;
+  admission: RecordingAdmissionRequest;
+  accepted: RecordingAcceptedRef;
+  result: ObservationTargetResult | null;
+}
+export interface ObservationQueryRecord {
+  token: ObservationQueryToken;
+  request: RecordingWireObservationRequest;
+  target: ObservationTargetRecord;
+  first: ObservationAttemptRecord;
+  latest: ObservationAttemptRecord;
+  terminal: RecordingWireObservationReply | null;
+}
+export interface ObservationAttemptRecord {
+  token: ObservationAttemptToken;
+  query: ObservationQueryRecord;
+  R: number;
+  reply: RecordingWireObservationReply | null;
+  queryTerminalStored: boolean;
+  targetResultStored: boolean;
+}
+export function observationAccepted(
+  disposition: "stored" | "duplicate",
+  flags: {
+    attemptStored: boolean;
+    queryTerminalStored: boolean;
+    targetResultStored: boolean;
+  },
+): ObservationAcceptResult {
+  return Object.freeze({
+    ok: true,
+    value: Object.freeze({ disposition, ...flags }),
+  });
+}
+export function observationRejected(
+  reason: LedgerError,
+  flags: {
+    attemptStored: boolean;
+    queryTerminalStored: boolean;
+    targetResultStored: boolean;
+  } = {
+    attemptStored: false,
+    queryTerminalStored: false,
+    targetResultStored: false,
+  },
+): ObservationAcceptResult {
+  return Object.freeze({ ok: false, reason, ...flags });
+}
 export class Core {
   originals = new Map<string, OriginalRecord>();
   originalTokens = new WeakMap<object, OriginalRecord>();
@@ -113,6 +179,13 @@ export class Core {
   queryTokens = new WeakMap<object, QueryRecord>();
   attempts = new Map<number, AttemptRecord>();
   attemptTokens = new WeakMap<object, AttemptRecord>();
+  observationTargets = new Map<string, ObservationTargetRecord>();
+  observationTargetRefs = new Map<string, ObservationTargetRecord>();
+  observationTargetTokens = new WeakMap<object, ObservationTargetRecord>();
+  observationQueries = new Map<string, ObservationQueryRecord>();
+  observationQueryTokens = new WeakMap<object, ObservationQueryRecord>();
+  observationAttempts = new Map<number, ObservationAttemptRecord>();
+  observationAttemptTokens = new WeakMap<object, ObservationAttemptRecord>();
   retired = false;
   disposed = false;
   stoppedReason: DeliveryLedgerState["stoppedReason"] = null;
@@ -121,12 +194,16 @@ export class Core {
   usage = {
     mutationBytes: 0,
     readBytes: 0,
+    observationBytes: 0,
     mutationIds: 0,
     readIds: 0,
     inspectionIdsUsed: 0,
     inspectionIdsReserved: 0,
     inspectionAttemptsUsed: 0,
     inspectionAttemptsReserved: 0,
+    observationTargets: 0,
+    observationQueries: 0,
+    observationAttempts: 0,
   };
   constructor(
     readonly scope: RecordingWireScope,
@@ -191,6 +268,12 @@ export class Core {
         awaitingMutationTerminal: this.pending("mutation"),
         awaitingReadTerminal: this.pending("read"),
         awaitingInspectionReply: this.pendingInspection(),
+        awaitingObservationReply: [...this.observationAttempts.values()].filter(
+          (a) => a.reply === null,
+        ).length,
+        pendingObservationQueries: [...this.observationQueries.values()].filter(
+          (q) => q.terminal === null,
+        ).length,
       }),
     });
   }

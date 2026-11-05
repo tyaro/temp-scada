@@ -3,6 +3,9 @@ import type {
   RecordingWireLeaseReply,
   RecordingWireCancelRequest,
   RecordingWireCancelReply,
+  RecordingWireObservationTarget,
+  RecordingWireObservationRequest,
+  RecordingWireObservationReply,
   RecordingWireScope,
   RecordingWireCallInspectionRequest,
   RecordingWireCallInspectionReply,
@@ -13,6 +16,11 @@ import type {
   RecordingAdmissionInspectionRequest,
   RecordingAdmissionInspectionReply,
 } from "../recording-admission-contract";
+import type {
+  RecordingAcceptedRef,
+  RecordingReconciliationDelivery,
+} from "../recording-admission-contract";
+import type { RecordingOperationResult } from "../recording-operations-contract";
 export type OriginalRequest =
   | RecordingWireLeaseRequest
   | RecordingAdmissionRequest
@@ -25,10 +33,20 @@ export type OriginalReply =
   | RecordingWireCancelReply;
 declare const originalBrand: unique symbol,
   queryBrand: unique symbol,
-  attemptBrand: unique symbol;
+  attemptBrand: unique symbol,
+  observationTargetBrand: unique symbol,
+  observationQueryBrand: unique symbol,
+  observationAttemptBrand: unique symbol;
 export type OriginalCallToken = Readonly<{ [originalBrand]: true }>;
 export type InspectionQueryToken = Readonly<{ [queryBrand]: true }>;
 export type InspectionAttemptToken = Readonly<{ [attemptBrand]: true }>;
+export type ObservationTargetToken = Readonly<{
+  [observationTargetBrand]: true;
+}>;
+export type ObservationQueryToken = Readonly<{ [observationQueryBrand]: true }>;
+export type ObservationAttemptToken = Readonly<{
+  [observationAttemptBrand]: true;
+}>;
 export type LedgerError =
   | "busy"
   | "foreignToken"
@@ -61,11 +79,47 @@ export type DeliveryAcceptResult = Readonly<
 export interface DeliveryLimits {
   readonly mutationBytes: number;
   readonly readBytes: number;
+  readonly observationBytes: number;
   readonly mutationIds: number;
   readonly readIds: number;
   readonly inspectionIds: number;
   readonly inspectionAttempts: number;
+  readonly observationTargets: number;
+  readonly observationQueries: number;
+  readonly observationAttempts: number;
 }
+export type ObservationTargetResult =
+  RecordingOperationResult | RecordingReconciliationDelivery;
+export type ObservationTargetState = Readonly<{
+  target: RecordingWireObservationTarget;
+  admission: RecordingAdmissionRequest;
+  accepted: RecordingAcceptedRef;
+  result: ObservationTargetResult | null;
+}>;
+export type ObservationQueryState = Readonly<{
+  request: RecordingWireObservationRequest;
+  firstAttempt: ObservationAttemptToken;
+  latestAttempt: ObservationAttemptToken;
+  terminal: RecordingWireObservationReply | null;
+}>;
+export type ObservationAttemptState = Readonly<{
+  request: RecordingWireObservationRequest;
+  reply: RecordingWireObservationReply | null;
+}>;
+export type ObservationAcceptFlags = Readonly<{
+  attemptStored: boolean;
+  queryTerminalStored: boolean;
+  targetResultStored: boolean;
+}>;
+export type ObservationAcceptResult = Readonly<
+  | {
+      ok: true;
+      value: Readonly<
+        { disposition: "stored" | "duplicate" } & ObservationAcceptFlags
+      >;
+    }
+  | ({ ok: false; reason: LedgerError } & ObservationAcceptFlags)
+>;
 export type OriginalState = Readonly<{
   request: OriginalRequest;
   terminal: OriginalReply | null;
@@ -89,6 +143,7 @@ export interface DeliveryLedgerState {
   readonly usage: Readonly<{
     mutationBytes: number;
     readBytes: number;
+    observationBytes: number;
     mutationIds: number;
     readIds: number;
     inspectionIdsUsed: number;
@@ -98,6 +153,11 @@ export interface DeliveryLedgerState {
     awaitingMutationTerminal: number;
     awaitingReadTerminal: number;
     awaitingInspectionReply: number;
+    observationTargets: number;
+    observationQueries: number;
+    observationAttempts: number;
+    awaitingObservationReply: number;
+    pendingObservationQueries: number;
   }>;
 }
 export interface WireDeliveryLedger {
@@ -122,6 +182,31 @@ export interface WireDeliveryLedger {
   ): DeliveryAcceptResult;
   inspection(query: InspectionQueryToken): LedgerResult<QueryState>;
   attempt(token: InspectionAttemptToken): LedgerResult<AttemptState>;
+  bindObservationTarget(
+    source: OriginalCallToken,
+  ): LedgerResult<ObservationTargetToken>;
+  observationTarget(
+    token: ObservationTargetToken,
+  ): LedgerResult<ObservationTargetState>;
+  beginObservation(
+    target: ObservationTargetToken,
+    request: unknown,
+  ): LedgerResult<
+    Readonly<{ query: ObservationQueryToken; attempt: ObservationAttemptToken }>
+  >;
+  repeatObservation(
+    query: ObservationQueryToken,
+  ): LedgerResult<ObservationAttemptToken>;
+  acceptObservation(
+    attempt: ObservationAttemptToken,
+    reply: unknown,
+  ): ObservationAcceptResult;
+  observation(
+    query: ObservationQueryToken,
+  ): LedgerResult<ObservationQueryState>;
+  observationAttempt(
+    token: ObservationAttemptToken,
+  ): LedgerResult<ObservationAttemptState>;
   current(): DeliveryLedgerState;
   retire(): LedgerResult<null>;
   dispose(): LedgerResult<null>;

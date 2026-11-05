@@ -1,0 +1,19 @@
+{
+  "scenarios": [
+    {
+      "name": "operation pending then terminal",
+      "base": "operation",
+      "steps": ["pending", "terminal"]
+    },
+    {
+      "name": "reconciliation direct terminal",
+      "base": "reconciliation",
+      "steps": ["terminal"]
+    },
+    {
+      "name": "operation unavailable terminal",
+      "base": "operation",
+      "steps": ["unavailable"]
+    }
+  ]
+}
