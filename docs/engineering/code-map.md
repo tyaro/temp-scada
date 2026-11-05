@@ -792,8 +792,10 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 `recording-async/coordinator.ts`／`state.ts`／`port.ts`は変更しない。表示をLocalOwnerFrameへcastせず、Promise完了・native操作資格を生成しない。元call配送台帳の具体型と上限、local-v2、通常App注入は次の詳細設計・実装へ分ける。
 
-## 記録wireの元call配送台帳（H5d4c4c-prep2d2a設計）
+## 記録wireの元call配送台帳（H5d4c4c-prep2d2a）
 
-[Astraの元call配送台帳設計](../design/runtime/historian-recording-wire-delivery-ledger.md)は採用詳細設計で、実行コードは後続。Lease／Admission／AdmissionInspection／Cancelの固定Scope・元ID・全文をopaque tokenへ束縛し、正常元返信の不変保存とCallInspectionによる明示回収を扱う。論理queryと送受信attemptの所有・未回収枠・資源予約を分け、元terminalと後続admission知識を合成しない。元begin時に初回query/attemptを先取りし、mutation6MiB/read2MiB内へ原子的に登録する。inspectの正常reply保存と元terminal適用は二段階で、本文競合時も正常attemptを保持する。
+[Astraの採用設計](../design/runtime/historian-recording-wire-delivery-ledger.md)に沿うpure TS実装。公開入口`recording-wire-delivery-ledger.ts`はfactory・全mutation/getterのguard・dirty時だけのpoll commitを担当する。`recording-wire-delivery-ledger/types.ts`はopaque元call/query/attempt tokenとreadonly状態、`core.ts`は固定Scope・有限台帳・未回収枠・pool/credit・options、`validation.ts`は既存parser・kind別scope/ID/roleとQ/R/I、`original.ts`は原子的登録と不変元reply、`inspection.ts`はquery/attempt・初回credit移管・repeat・正規化返信の二段階保存を担当する。
 
-既存`recording-wire-contract.ts`／`recording-admission-contract.ts`と容量／全文同値helperを共用する。`recording-wire-receiver.ts`のAttach／Control本文を第二台帳へ複製せず、Observationは別設計へ分ける。通常App／coordinator／local port／Promise adapter／実transport／nativeは今回変更しない。新規配置・API・受入の具体契約は設計本文に従う。
+`examples/recording-wire-delivery-ledger-cases.json`の61シナリオをtest-only `__fixtures__/recording-wire-delivery-ledger-cases.ts`経由で実台帳へ流す。driverは正常DTOを既存wire/c4a validatorへ照合し、元返信・attempt全文と旧poll結果を確認する。`recording-wire-delivery-ledger.test.ts`は共通シナリオと独立Q/R/I oracle・exact/1不足・credit/未回収枠・ownershipを確認する。`recording-wire-delivery-boundaries.test.ts`は全parse入口のprototype/descriptor再入とR/I故障注入、`e2e/recording-wire-delivery-ledger.spec.ts`はChromiumの実module・App保存bytes不変・外部送信無しを確認する。独立oracleは既存receiver fixtureの保守計数を再利用し、production walkerを参照しない。
+
+元replyは元record、query/attemptは専用recordへ保持する。inspection包絡全体は永続複製せず、query request・closed outcome・元reply参照へ正規化する。mutation6MiB/read2MiB内で元begin時に初回probeも先取りし、履歴/creditを返却しない有限モデル。getterは新たな内部cacheを増やさない。既存receiverのAttach/Controlと本文を二重所有せず、Observationはprep2d2bへ分離する。通常App／coordinator／port／Promise adapter／実transport／nativeは未接続である。

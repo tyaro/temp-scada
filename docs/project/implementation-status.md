@@ -10,6 +10,20 @@
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+## 記録wireの元call配送台帳（H5d4c4c-prep2d2a、2026-11-05）
+
+設計[PR #87](https://github.com/tyaro/temp-scada/pull/87)はworkへ統合済み（`a3dd209`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41950704041)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41950777284)全7job成功、head `19f3169` の自動レビュー指摘・未解決なし）。[Astraの採用設計](../design/runtime/historian-recording-wire-delivery-ledger.md)に沿い、Lease／Admission／AdmissionInspection／Cancelの四元callとCallInspectionを扱うpure TS台帳を実装した。
+
+固定Scope・kind別ID・opaque tokenへ元要求全文を束縛し、不変な元terminalと、論理query／個々のattemptを分離する。元begin時にQ＋R＋1024bytesと初回probeのI＋R＋2048bytes、query／attempt各1creditを原子予約する。mutation6MiBとread2MiBを分離し、初回creditを後続登録へ貸さず、使用済み履歴と未使用creditを返却しない。
+
+正常なattempt返信を保存してから元terminalへ適用し、元返信との矛盾でもattemptを保持する。競合後のduplicateは保存済みflagsを返して再適用しない。pending／notFound／unavailableは当該attemptだけの正常返信で、元call未回収を解消しない。元unknown返信を後のaccepted知識で書き換えず、元terminal未判明件数を実HTTP／IPCの物理終了や新送信資格へ置き換えない。
+
+61共通シナリオを実台帳へ流し、独立Q/R/I oracleのexact／1不足、read枯渇後の既予約probe、reserved IDの保護、R/I故障注入、全parse入口のprototype／descriptor再入を確認した。getterはowned/frozen本文を共有し、poll cacheを再生成しない。通常App／coordinator／port、既存receiver、Rust／wire/schema／Project0.37.0／DB7／H1／SDK／Banto・依存は変更しない。
+
+検証: TS全10,081件（新規95）、型0error/0warning・build、関連Chromium15件（新規1）、全体Prettier・変更文書リンク／anchorと差分。Astraの最終read-onlyコードレビューに修正必須所見はない。Rust source変更はなく、Rustを含む全体回帰はReady for Review PRのpush／PR CIで確認する。
+
+次はObservationのpendingから結果への進行と各attemptを扱うprep2d2bの詳細設計。照会自身の応答喪失は未回収を保持してrepeatをBusyにする有限モデルであり、再帰照会・無期限運用・Promise adapter／local-v2／実transport／認証／native・P3bは後続とする。
+
 ## 記録wireの元call配送台帳設計（H5d4c4c-prep2d2a、2026-11-05）
 
 prep2d1の[PR #86](https://github.com/tyaro/temp-scada/pull/86)はworkへ統合済み（`c572081`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41946398145)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41946467473)全7job成功、head `18c9d00` の自動レビュー指摘・未解決なし）。[Astraの元call配送台帳設計](../design/runtime/historian-recording-wire-delivery-ledger.md)で、正常元返信の保存と明示的な回復照会をpure TSの有限台帳へ分離する。
@@ -18,9 +32,9 @@ prep2d1の[PR #86](https://github.com/tyaro/temp-scada/pull/86)はworkへ統合�
 
 元recordのQ＋R＋1024bytesと初回query／attemptのI＋R＋2048bytes、query／attempt各1枠を元begin時に原子予約する。mutation6MiBとread2MiBを分離し、未使用creditや正常終了後の予約も返却しない。初回回復分を後続登録へ貸さず、再照会は残容量内で明示登録する。元terminalとattemptの正常返信を二段階で保存し、元返信との矛盾があっても正常attemptは維持する。
 
-今回は詳細設計のみ。通常App／coordinator／local port、receiver／Rust／wire schema／Project0.37.0／DB7／H1／SDK／Banto・依存を変更しない。実transport／認証／native／製品hostとP3bは保留する。次実装は保存・照合・pollまでとし、Promise配送や新送信schedulerへ拡張しない。
+この区切りは詳細設計で、実装状況は上記prep2d2aを参照する。通常App／coordinator／local port、既存receiver／Rust／wire schema／Project0.37.0／DB7／H1／SDK／Banto・依存を維持する。実transport／認証／native／製品hostとP3bは保留する。次実装は保存・照合・pollまでとし、Promise配送や新送信schedulerへ拡張しない。
 
-文書変更として対象Markdownと全体Prettier、相対リンク1,011件／anchor229件、差分を確認した。Astraとrootの最終整合レビューに修正必須所見はない。ローカル全体試験は繰り返さず、Ready for Review PRの全体CIで回帰を確認する。
+文書変更として対象Markdownと全体Prettier、相対リンク1,011件／anchor229件、差分を確認した。Astraとrootの最終整合レビューに修正必須所見はない。ローカル全体試験は繰り返さず、設計PR #87は上記のとおり統合済みで、push／PR CIとも全7job成功。
 
 ## 記録wireの表示・元返信読取（H5d4c4c-prep2d1、2026-11-05）
 
