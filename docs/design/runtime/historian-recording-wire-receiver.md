@@ -292,3 +292,5 @@ Rust registryはframeの生成fixture根拠として使えるが、TSに第二�
 [`recording-wire-receiver-cases.json`](../../../examples/recording-wire-receiver-cases.json)は59の受信シナリオを表すtest command DSLで、wire schemaやserver registryではない。test-only driverから本物のreceiverをVitestとChromiumの両方で実行し、正常DTOを既存validatorへも照合する。unitでは独立bytes/nodes/depth oracle、exact/1不足、64件・通常例の4回目attachの容量停止、全mutationへのProxy再入、入力ownershipと旧poll状態の不変を追加検査する。browserではApp保存bytesと外部送信無しも確認する。
 
 この有限モデルを長時間運用へ使う前に、履歴の保持/retirementとwire→local表示契約を別途設計する。通常App・coordinator・local port・元Promise配送・認証・実hostは本工程で接続しない。
+
+表示projectionと元Attach/Control返信の読取は[prep2dのclient境界設計](historian-recording-wire-client-boundary.md)へ分離した。receiverの有限保持や正常terminal保存を、元Promiseの物理完了・操作資格へ置き換えない。

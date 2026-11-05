@@ -4,6 +4,16 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録wireの表示・元返信読取境界の設計（H5d4c4c-prep2d、2026-11-05）
+
+prep2cの[PR #84](https://github.com/tyaro/temp-scada/pull/84)はworkへ統合済み（`cec4ab0`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41887023933)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41887065368)全7job成功、head `8454f0b` の自動レビュー指摘・未解決なし）。[Astraのclient境界設計](../design/runtime/historian-recording-wire-client-boundary.md)で、receiverからの表示と元call返信の読取を段階化した。
+
+次のprep2d1は`currentDisplay()`による純粋な表示projectionと、`attachTerminal()`／`controlTerminal()`による元Attach／Control返信の非破壊読取までとする。ownerEpoch／closed／ownerBlocked／認可喪失／配送状態と受信停止を分け、旧世代のlastKnownを現行subscriptionの状態へ戻さない。表示は操作資格を返さず、snapshotやframeから元Promiseの完了を合成しない。
+
+今回は詳細設計のみ。既存local port／coordinator／通常Appとreceiverの実装は変更しない。他の元call配送とlocal操作契約の改版、製品接続は後続工程に分ける。有限履歴64件/8MiBとcall8MiBの制限、Project0.37.0／DB7／H1／wire・schema／固定SDK／Banto・依存、実native／認証／P3bの保留を維持する。
+
+文書変更のためローカル全体試験は繰り返さず、対象Markdown・全体Prettier、相対リンク1,000件／anchor229件と差分を確認した。Astraとrootの最終整合レビューに修正必須の所見はない。Ready for Review PRの全体CIで回帰を確認する。
+
 ## 記録wireの純粋receiver実装（H5d4c4c-prep2c、2026-11-05）
 
 設計[PR #83](https://github.com/tyaro/temp-scada/pull/83)はworkへ統合済み（`7400ab2`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41876216620)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41876301076)全7job成功、head `453e18a` のレビュー指摘なし）。[Astraの採用設計](../design/runtime/historian-recording-wire-receiver.md)に沿い、固定Scope・private世代token・poll型の純粋TypeScript receiverを実装した。
@@ -16,7 +26,7 @@
 
 通常App／coordinator／local portと実native・transportは未接続。次はwire→local表示契約と元call配送の詳細設計を行い、接続可否を判断する。Project0.37.0／DB7／H1／wire・schema／SDK／Banto・依存、P3bの保留を維持する。
 
-検証: TS全9,952件（新規113）、型検査0error/0warning・build、関連Chromium13件（新規1）、全体Prettier・変更文書リンクと差分。Rust source/schema/依存は変更せず、Rust全体検証はPR全体CIで確認する。Astraの最終read-onlyレビューに修正必須の所見はない。Ready for Review PRで全体CIを確認する。
+検証: TS全9,952件（新規113）、型検査0error/0warning・build、関連Chromium13件（新規1）、全体Prettier・変更文書リンクと差分。Rust source/schema/依存は変更せず、Rust全体検証もPR全体CIで成功した。Astraの最終read-onlyレビューに修正必須の所見はない。[PR #84](https://github.com/tyaro/temp-scada/pull/84)はworkへ統合済み（`cec4ab0`）。[push CI](https://github.com/tyaro/temp-scada/actions/runs/41887023933)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41887065368)はともに全7job成功、head `8454f0b` の自動レビュー指摘・未解決なし。
 
 ## 記録wireの受信frame設計（H5d4c4c-prep2c、2026-11-05）
 
