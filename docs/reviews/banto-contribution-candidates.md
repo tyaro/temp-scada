@@ -1,12 +1,29 @@
 # Bantoへの還元候補と採用境界
 
-2026-10-22（日本時間）更新。状態: **候補整理・公開ソース照合済み。横断設計はIndustrial [#762](https://github.com/tyaro/banto-industrial/issues/762)へ起票。v6.9.0へ固定依存更新済み。その他の追加起票・上流への追補、共通APIへの採用・受入は未完了**。
+2026-11-05（日本時間）更新。状態: **候補整理・公開ソース照合済み。横断設計はIndustrial [#762](https://github.com/tyaro/banto-industrial/issues/762)へ起票。Banto v6.10.0へ固定依存更新済み。新しい共通 UI の現行画面への採用判断は下記のとおり。その他の上流還元候補は継続調査**。
 
 SCADAの局所実装をそのまま移すのではなく、Bantoの既存APIに不足する契約と、再利用できる受入テストを渡す。[起票時の引渡し記録](banto-contribution-handoff.md)とは区別する。
 
 ## 現在の確認状態
 
-SCADAのadmin-core／theme／uiはBanto v6.9.0（`1bd12fe023cf3958dbdde923e1bdd4fdb28a9139`）へ固定依存更新済み。Menu #427／#430の上流修正受入と局所adapter撤去はPR #9で実施済み。[検証範囲と残課題](../design/editor/designer-menu-viewport.md)を参照する。その他の共通APIへの接続・採用・受入は未完了。
+SCADAのadmin-core／theme／uiはBanto v6.10.0（`0acaa5ba3132527064d20352dc122d1abfd004e8`）へ[PR #92](https://github.com/tyaro/temp-scada/pull/92)で固定依存更新済み。Menu #427／#430の上流修正受入と局所adapter撤去はPR #9で実施済み。[検証範囲と残課題](../design/editor/designer-menu-viewport.md)を参照する。forms／grid-svelteの直接依存と、新しいthemeのopt-in入力クラスを使う画面はない。
+
+## Banto #495の共通UIをSCADAへ採用する判断（Issue #75）
+
+[Banto v6.10.0の移行注意](https://github.com/tyaro/banto/blob/v6.10.0/CHANGELOG.md#6100---2026-11-05)と[SCADA #75](https://github.com/tyaro/temp-scada/issues/75)を照合した。**現行画面は基盤3パッケージの版だけ採用し、新しい共通UIは一括適用しない**。以下は現行画面に対する判断であり、後続画面を恒久的に禁止するものではない。対象画面と操作契約が確定した時点で小さいIssue／PRを作り、個別に受け入れる。
+
+| 候補                                                 | 現行画面での判断・対象                                                       | 優先と理由                                                                      | 再開条件                                                                                           |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| themeの下線型入力・浮動／固定ラベル・select          | 保留。Inspector、Project／画面設定フォームが候補                             | 中（C2後）。Designer専用の密度、長いラベル・単位、未適用入力を先に整合させる    | 1画面の視覚改訂を決め、既存フォームにopt-in classだけを試す。値・適用処理は保持する                |
+| themeのページナビ                                    | 見送り。現行Designerにページ単位の設定ナビはない                             | 対象外。左パネルのタブやメニューバーをページナビへ読み替えない                  | 独立した設定ページのカテゴリ構成が決まった時点で評価する                                           |
+| 入力の透明背景                                       | 見送り。現行SCADAに`.banto-input`／formsのfieldはない                        | 対象外。工程図と独立したDesigner外枠のコントラストを変える理由がない            | 共通入力を実際に採用する画面で、親背景とのコントラストを確認する                                   |
+| themeのcheckbox／switch                              | 保留。グリッド／スナップ等の編集設定が候補                                   | 低（C2後）。画面設定とPLCへの操作命令を混同しない                               | native checked／disabled・Space操作・強制配色を保つ小範囲の試用を決める                            |
+| `@banto/forms` の `BantoForm appearance="underline"` | 見送り。現行Designerの複数フォームは独自のdraft guardとProject commandを使う | 低。上流の個別`apply()`を複数フォームの原子的な事前検証・一括Undoの代用にしない | 独立した設定画面でschema formが必要になり、適用／取消・IME・対象切替の契約を満たせる場合に評価する |
+| `@banto/grid-svelte` の編集・エラー・filter          | 見送り。現行画面に編集gridの直接利用はない                                   | 低。セルblur／Tab／Enterの確定規則をDesigner全体へ持ち込まない                  | 専用の表画面が決まり、その画面の編集・失敗・IME規則と一致した場合に評価する                        |
+
+共通themeの追加クラスはopt-inであり、現行の`@banto/theme/css`読み込みだけでは上表の新しい見た目を採用しない。`@banto/forms`／`@banto/grid-svelte`を後で導入する場合は、themeと同じ対応版へ固定し、package／lockfile、局所CSS、入力ID・透明背景・セルエラーの[移行注意](https://github.com/tyaro/banto/blob/v6.10.0/CHANGELOG.md#6100---2026-11-05)を確認する。受入には実ブラウザで320px・文字200%・明暗・長いラベル／単位・readonly／disabled・キーボードとIME・未適用入力保護・Undo／Redoを含める。必要な画面では強制配色、読み上げ、タッチ、Tauri実機も別に確認する。
+
+今回採用したのは[PR #92](https://github.com/tyaro/temp-scada/pull/92)の基盤3パッケージ更新で、#495の追加UIを実画面へ適用するPRはない。Menuは以前から利用している。保留候補は画面の採用が決まるまで新しい依存や専用Issueを増やさず、各画面の実装Issue／PRへ切り出す。上流の共通契約に不足が再現した場合だけ、最小再現と期待結果をBantoへ返す。Banto [#495](https://github.com/tyaro/banto/issues/495)のSCADA引き継ぎ先は本判断である。
 
 ## 比較基準（2026-10-21確認時点）
 

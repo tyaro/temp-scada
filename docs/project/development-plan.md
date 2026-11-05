@@ -102,6 +102,8 @@ Banto v6.10.0を使い、汎用機能の共通化は上流へ還元する。SCAD
 
 v6.10.0ではフォーム入力の内部ID・既定背景とグリッドのセルエラー表示が変わる。現行SCADAは`@banto/forms`と`@banto/grid-svelte`を直接利用していないため、これらの移行作業は発生しない。`@banto/theme/css`と`@banto/ui`の既存利用は型検査・単体試験・画面受入で確認する。追加された下線型入力などの任意APIは現行UIに自動適用しない。上流の[移行注意](https://github.com/tyaro/banto/blob/v6.10.0/CHANGELOG.md#6100---2026-11-05)を将来の採用時に照合する。
 
+[SCADA Issue #75の採用判断](../reviews/banto-contribution-candidates.md#banto-495の共通uiをscadaへ採用する判断issue-75)では、v6.10.0の基盤版を採用し、下線型入力・switch・共通フォーム・編集grid等の新しいUIは現行Designerへ一括適用しない。候補の対象画面・優先順位・再開条件は同判断に記録した。次はC2の読取失敗経路を優先し、UI改訂で対象画面が決まった場合にだけ小範囲の実装・受入へ進む。
+
 Banto v6.9.0への依存更新では公開APIの必須移行はなく、既存の `optimizeDeps.exclude` を維持する。Menu #427／#430の上流修正を受け、依存更新後の別工程で局所adapterを撤去した。可用高・内部scroll・フォーカス・Esc・resize・狭幅の受入は[Menu仕様](../design/editor/designer-menu-viewport.md)に従う。PR #9レビュー修正ではMenuGroupだけをcontextKeyで再生成し、Menu／triggerとfocus復帰先を保持する。修正後のブラウザ受入はChromium 156とChrome 155で関連13spec・76件が成功した。200px幅の左端−4pxは撤去後の既知制約として上流報告候補に残す。認証・Host・新しい共通APIの採用は含めない。
 
 PR #9の残課題（2026-10-23・日本時間）は、Chromium 148のcontext menu即closeと過去の4並列画像比較差分の原因調査（ともに原因未特定）、floatingのorigin消失時に常設メニューへ戻すfallback経路のE2E追加、200px幅の左はみ出し（x=−4／幅204px）のBantoへの報告（Issue未起票）。[検証結果と残課題](../history/implementation-history.md#menu-review-phase-b)を参照する。
