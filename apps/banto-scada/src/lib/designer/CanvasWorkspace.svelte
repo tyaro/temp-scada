@@ -1084,6 +1084,10 @@
     background: var(--banto-bg);
     position: relative;
   }
+  .viewport.preview {
+    /* WebView2 のスクロールバーが表示領域を変え、fit 倍率へ戻る循環を防ぐ。 */
+    overflow: hidden;
+  }
   .canvas-workspace.preview {
     height: clamp(280px, calc(100dvh - 220px), 850px);
   }
