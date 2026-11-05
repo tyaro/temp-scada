@@ -18,7 +18,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 C2の検証として、通常entrypointのNativeShellからTauri command／eventを模したIPCを通し、数値0、Bad／Stale／Unbound、Project置換と旧通知拒否、切断・再接続、認証拒否、catalog失敗、WebView再読込をChromiumで確認した。認証失効時は読取sourceを外し、値とヘッダーの接続表示を消す。Tauri MockRuntimeとループバックのモックHubを使うnative試験では、製品のcommand／event・Bootstrapper・固定SDK・ReadHost／CatalogHostを一体で通し、数値0／bool false、Bad／Stale、認証拒否、owner再生成後の再接続を確認した。ブラウザ試験のモックはIPC境界、native試験のモックはHubとTauri runtimeである。実Windows GUIプロセスの終了・再起動も確認済み。
 
-記録・履歴の実接続はC4〜C5、連続運用受入はC6。純粋台帳の後続prep2d2bを初回読取接続の前提にしない。
+記録・履歴の実接続はC4〜C5、連続運用受入はC6。prep2d2bの純粋Observation台帳は実装済みで、初回読取接続の前提にしない。
 
 ## 記録wireの元call配送台帳（H5d4c4c-prep2d2a、2026-11-05）
 
@@ -32,7 +32,7 @@ C2の検証として、通常entrypointのNativeShellからTauri command／event
 
 検証: TS全10,081件（新規95）、型0error/0warning・build、関連Chromium15件（新規1）、全体Prettier・変更文書リンク／anchorと差分。Astraの最終read-onlyコードレビューに修正必須所見はない。Rust source変更はなく、Rustを含む全体回帰も成功した。[PR #88](https://github.com/tyaro/temp-scada/pull/88)はworkへ統合済み（`a23ae4c`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41955032384)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41955079867)各全7ジョブ成功、同head `88d8304` の自動レビュー指摘・未解決なし）。
 
-[C4 prep2d2bのObservation専用設計](../design/runtime/historian-recording-wire-observation-ledger.md)で、同IDのpending→terminalと個々の不変attempt、Accepted由来のopaque target、独立4MiBの有限poolを定めた。純粋TS実装は次の区切り。返信喪失時は未回収を保持してrepeatをBusyにする。再帰照会・無期限運用・Promise adapter／local-v2／実transport／認証／native・P3bは後続とする。
+[C4 prep2d2bのObservation専用設計](../design/runtime/historian-recording-wire-observation-ledger.md)で、同IDのpending→terminalと個々の不変attempt、Accepted由来のopaque target、独立4MiBの有限poolを定めた。純粋TS台帳を実装し、Accepted由来のtarget、pending→terminal、返信喪失時の未回収枠、独立4MiB容量と二段階保存をNode／Chromiumで確認した。再帰照会・無期限運用・Promise adapter／local-v2／実transport／認証／native・P3bは後続とする。
 
 ## 記録wireの元call配送台帳設計（H5d4c4c-prep2d2a、2026-11-05）
 

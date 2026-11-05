@@ -802,4 +802,10 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 `examples/recording-wire-delivery-ledger-cases.json`の61シナリオをtest-only `__fixtures__/recording-wire-delivery-ledger-cases.ts`経由で実台帳へ流す。driverは正常DTOを既存wire/c4a validatorへ照合し、元返信・attempt全文と旧poll結果を確認する。`recording-wire-delivery-ledger.test.ts`は共通シナリオと独立Q/R/I oracle・exact/1不足・credit/未回収枠・ownershipを確認する。`recording-wire-delivery-boundaries.test.ts`は全parse入口のprototype/descriptor再入とR/I故障注入、`e2e/recording-wire-delivery-ledger.spec.ts`はChromiumの実module・App保存bytes不変・外部送信無しを確認する。独立oracleは既存receiver fixtureの保守計数を再利用し、production walkerを参照しない。
 
-元replyは元record、query/attemptは専用recordへ保持する。inspection包絡全体は永続複製せず、query request・closed outcome・元reply参照へ正規化する。mutation6MiB/read2MiB内で元begin時に初回probeも先取りし、履歴/creditを返却しない有限モデル。getterは新たな内部cacheを増やさない。既存receiverのAttach/Controlと本文を二重所有せず、Observationはprep2d2bへ分離する。通常App／coordinator／port／Promise adapter／実transport／nativeは未接続である。
+元replyは元record、query/attemptは専用recordへ保持する。inspection包絡全体は永続複製せず、query request・closed outcome・元reply参照へ正規化する。mutation6MiB/read2MiB内で元begin時に初回probeも先取りし、履歴/creditを返却しない有限モデル。getterは新たな内部cacheを増やさない。既存receiverのAttach/Controlと本文を二重所有せず、Observationは次節へ分離する。通常App／coordinator／port／Promise adapter／実transport／nativeは未接続である。
+
+## 記録wireのObservation配送台帳（H5d4c4c-prep2d2b）
+
+`recording-wire-delivery-ledger/observation.ts`が既存台帳内にAccepted由来のtarget、論理query、正常返信ごとのattemptを保存する。公開入口と`types.ts`はopaque tokenとgetterを追加し、`core.ts`は独立4MiB pool・各4096 ID・未回収attempt最大1を管理する。元Admission返信やCallInspectionの保存内容は変更せず、target結果とquery terminalを別に保持する。返信喪失・malformed時は未回収枠を消さず、retire／dispose／sticky停止後も登録済みattemptの正常後着返信を保存する。
+
+`examples/recording-wire-observation-ledger-cases.json`のoperation／reconciliation／unavailable共通シナリオを`__fixtures__/recording-wire-observation-ledger-cases.ts`でNodeとChromiumへ流す。`recording-wire-observation-ledger.test.ts`はさらにAdmissionInspection、pending→terminal、同一ID、参照衝突、容量、二段階保存、再入を検証する。`e2e/recording-wire-delivery-ledger.spec.ts`はChromium実moduleで同じ進行とProject保存bytes不変を確認する。local-v2、Promise adapter、実transport、native ownerはこのpure台帳の外に残る。
