@@ -10,6 +10,17 @@ import type {
   CatalogSource,
 } from "../lib/designer/controllers/catalog.svelte";
 
+let readCommands = Promise.resolve();
+
+function enqueueRead(command: () => Promise<unknown>): Promise<void> {
+  const result = readCommands.then(command);
+  readCommands = result.then(
+    () => {},
+    () => {},
+  );
+  return result.then(() => {});
+}
+
 interface ReadPacket {
   subscriptionId: string;
   update: unknown;
@@ -50,20 +61,26 @@ export function nativeSources(onStream?: (phase: string) => void): {
               return;
             }
             unlisten = stop;
-            await invoke("hub_read_start", {
-              projectJson: JSON.stringify(project),
-              subscriptionId,
-            });
+            await enqueueRead(() =>
+              invoke("hub_read_start", {
+                projectJson: JSON.stringify(project),
+                subscriptionId,
+              }),
+            );
           } catch {
-            onStream?.("購読開始失敗");
-            if (active) delivery.fail();
+            if (active) {
+              onStream?.("購読開始失敗");
+              delivery.fail();
+            }
           }
         })();
         return () => {
           active = false;
           unlisten?.();
           delivery.close();
-          void invoke("hub_read_stop", { subscriptionId }).catch(() => {});
+          void enqueueRead(() =>
+            invoke("hub_read_stop", { subscriptionId }),
+          ).catch(() => {});
         };
       },
     },

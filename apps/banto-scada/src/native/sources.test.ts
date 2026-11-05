@@ -36,9 +36,11 @@ it("delivers only the active native subscription and retires it on close", async
   expect(receive).toHaveBeenCalledOnce();
   retire();
   expect(close).toHaveBeenCalledOnce();
-  expect(tauri.invoke).toHaveBeenCalledWith("hub_read_stop", {
-    subscriptionId,
-  });
+  await vi.waitFor(() =>
+    expect(tauri.invoke).toHaveBeenCalledWith("hub_read_stop", {
+      subscriptionId,
+    }),
+  );
   listener({ payload: { subscriptionId, update: { sequence: 3 } } });
   expect(receive).toHaveBeenCalledOnce();
 });
@@ -53,4 +55,32 @@ it("fails a delivery when the native read command rejects", async () => {
     fail,
   }));
   await vi.waitFor(() => expect(fail).toHaveBeenCalledOnce());
+});
+
+it("retires an in-flight start before starting the replacement", async () => {
+  let finishFirst!: () => void;
+  const firstStart = new Promise<void>((resolve) => {
+    finishFirst = resolve;
+  });
+  let starts = 0;
+  tauri.invoke.mockImplementation((name) => {
+    if (name === "hub_read_start" && ++starts === 1) return firstStart;
+    return Promise.resolve();
+  });
+  const project = parseProject(JSON.stringify(sample));
+  const source = nativeSources().readSource;
+  const begin = () => ({ receive: vi.fn(), close: vi.fn(), fail: vi.fn() });
+  const retire = source.subscribe(project, begin);
+  await vi.waitFor(() => expect(tauri.invoke).toHaveBeenCalledTimes(1));
+  retire();
+  source.subscribe(project, begin);
+  await vi.waitFor(() => expect(tauri.listen).toHaveBeenCalledTimes(2));
+  expect(tauri.invoke).toHaveBeenCalledTimes(1);
+  finishFirst();
+  await vi.waitFor(() => expect(tauri.invoke).toHaveBeenCalledTimes(3));
+  expect(tauri.invoke.mock.calls.map(([name]) => name)).toEqual([
+    "hub_read_start",
+    "hub_read_stop",
+    "hub_read_start",
+  ]);
 });
