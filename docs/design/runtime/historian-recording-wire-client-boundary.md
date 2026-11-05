@@ -216,3 +216,5 @@ d1完了は「検証済みreceiver状態を情報を落とさず表示用に参�
 公開入口は既存receiverのまま、内部[`readout.ts`](../../../apps/banto-scada/src/lib/recording-wire-receiver/readout.ts)が表示と元terminalの小wrapperを作る。両poll cacheは同じcommit済みReceiverStateに束縛し、read-only getterは更新guardを共有しながらcacheを再生成しない。元request/replyは既存台帳のowned/frozen参照で、wrapperの履歴台帳や第二のreply予約を追加しない。
 
 [`recording-wire-readout-cases.json`](../../../examples/recording-wire-readout-cases.json)の19シナリオと[`recording-wire-readout.test.ts`](../../../apps/banto-scada/src/lib/recording-wire-readout.test.ts)を追加し、既存receiver59シナリオのdriverにも全stepの元ACK読取・旧表示不変を加えた。共通fixtureをChromiumの実moduleでも実行し、Project保存前後一致と外部送信無しを確認する。通常Appへのservice注入は行わない。
+
+不変元callとCallInspectionの具体的な有限台帳は[prep2d2aの採用詳細設計](historian-recording-wire-delivery-ledger.md)へ分離した。Lease／Admission／AdmissionInspection／Cancelを先に扱い、Attach／Controlの所有はd1へ、Observationのpendingから結果への進行はd2bへ残す。

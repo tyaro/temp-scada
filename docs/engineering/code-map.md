@@ -791,3 +791,9 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 `examples/recording-wire-readout-cases.json`の19追加シナリオは既存test-only receiver driverで実行する。同driverは既存59シナリオ全stepでも元配送のACK全文・pending／terminal・read後のcache identity／旧poll不変を照合する。`recording-wire-readout.test.ts`と既存receiver testの拡張はforeign／wrong-kind token、参照共有、全入力mutationのProxy再入、getter反復と容量停止後の回収を確認する。`e2e/recording-wire-receiver.spec.ts`は両fixtureをChromiumで実行し、通常App保存bytes・外部送信無しを確認する。
 
 `recording-async/coordinator.ts`／`state.ts`／`port.ts`は変更しない。表示をLocalOwnerFrameへcastせず、Promise完了・native操作資格を生成しない。元call配送台帳の具体型と上限、local-v2、通常App注入は次の詳細設計・実装へ分ける。
+
+## 記録wireの元call配送台帳（H5d4c4c-prep2d2a設計）
+
+[Astraの元call配送台帳設計](../design/runtime/historian-recording-wire-delivery-ledger.md)は採用詳細設計で、実行コードは後続。Lease／Admission／AdmissionInspection／Cancelの固定Scope・元ID・全文をopaque tokenへ束縛し、正常元返信の不変保存とCallInspectionによる明示回収を扱う。論理queryと送受信attemptの所有・未回収枠・資源予約を分け、元terminalと後続admission知識を合成しない。元begin時に初回query/attemptを先取りし、mutation6MiB/read2MiB内へ原子的に登録する。inspectの正常reply保存と元terminal適用は二段階で、本文競合時も正常attemptを保持する。
+
+既存`recording-wire-contract.ts`／`recording-admission-contract.ts`と容量／全文同値helperを共用する。`recording-wire-receiver.ts`のAttach／Control本文を第二台帳へ複製せず、Observationは別設計へ分ける。通常App／coordinator／local port／Promise adapter／実transport／nativeは今回変更しない。新規配置・API・受入の具体契約は設計本文に従う。

@@ -172,6 +172,7 @@ docs/
 - [記録registryの複数scope資源（prep2b5a純粋domain実装済み、実接続は後続）](design/runtime/historian-recording-registry-global-budget.md)
 - [記録wireの受信frame・世代・revision照合（prep2c純粋TS receiver実装済み、App接続は後続）](design/runtime/historian-recording-wire-receiver.md)
 - [記録wireの表示projection・元返信読取とclient境界（prep2d1純粋実装済み、元配送・App接続は後続）](design/runtime/historian-recording-wire-client-boundary.md)
+- [記録wireの元call配送台帳・不変返信と回復照会（prep2d2a設計、実装は後続）](design/runtime/historian-recording-wire-delivery-ledger.md)
 - [記録計画の永続台帳・mapping登録・原子的apply（H5b1）](design/runtime/historian-recording-plan-ledger.md)
 - [記録開始と適用計画の原子的結合（H5b2）](design/runtime/historian-recording-activation.md)
 - [適用済み計画からのRecorder／Host開始（H5c1）](design/runtime/historian-managed-recorder.md)
