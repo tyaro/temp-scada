@@ -7,6 +7,10 @@ import {
   downloadBytes,
   downloadProject,
 } from "./helpers/project-files";
+const exampleRoot = `/@fs${process
+  .cwd()
+  .replaceAll("\\", "/")
+  .replace(/^([A-Za-z]:)/, "/$1")}/examples`;
 async function inject(page: Page) {
   await page.route("**/src/main.ts*", async (route) => {
     const response = await route.fetch(),
@@ -15,10 +19,10 @@ async function inject(page: Page) {
       /mount\(App,\s*\{\s*target:\s*document\.getElementById\("app"\)\s*\}\);/;
     expect(original).toMatch(mount);
     const body = `
-      import { createSubscriber } from "/node_modules/.vite/deps/svelte_reactivity.js";
-      import { unmount } from "/node_modules/.vite/deps/svelte.js";
-      import fixtures from "/@fs${process.cwd()}/examples/recording-management-cases.json?import";
-      import sample from "/@fs${process.cwd()}/examples/minimal.project.json?import";
+      const { createSubscriber } = await import("/node_modules/.vite/deps/svelte_reactivity.js");
+      const { unmount } = await import("/node_modules/.vite/deps/svelte.js");
+      const { default: fixtures } = await import("${exampleRoot}/recording-management-cases.json?import");
+      const { default: sample } = await import("${exampleRoot}/minimal.project.json?import");
       let notify=()=>{};
       const track=createSubscriber(update=>{notify=update;return()=>{};});
       const context={...fixtures.bases.context,projectId:sample.manifest.projectId,projectRevision:sample.manifest.projectRevision};

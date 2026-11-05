@@ -24,11 +24,11 @@ async function inject(page: Page, mode = "async") {
       /mount\(App,\s*\{\s*target:\s*document\.getElementById\("app"\)\s*\}\);/;
     expect(original).toMatch(pattern);
     const body = `
-    import {createSubscriber} from "/node_modules/.vite/deps/svelte_reactivity.js";
-    import {unmount} from "/node_modules/.vite/deps/svelte.js";
-    import {createAsyncPortHarness} from "/src/lib/__fixtures__/recording-async-port.ts";
-    import {createAsyncRecordingOperationsCoordinator} from "/src/lib/recording-async/coordinator.ts";
-    import {createOperationsHarness} from "/src/lib/__fixtures__/recording-operations-service.ts";
+    const {createSubscriber} = await import("/node_modules/.vite/deps/svelte_reactivity.js");
+    const {unmount} = await import("/node_modules/.vite/deps/svelte.js");
+    const {createAsyncPortHarness} = await import("/src/lib/__fixtures__/recording-async-port.ts");
+    const {createAsyncRecordingOperationsCoordinator} = await import("/src/lib/recording-async/coordinator.ts");
+    const {createOperationsHarness} = await import("/src/lib/__fixtures__/recording-operations-service.ts");
     const h=createAsyncPortHarness(), root=createAsyncRecordingOperationsCoordinator(h.port), sync=createOperationsHarness();
     let notify=()=>{};const track=createSubscriber(update=>{notify=update;return()=>{};});
     let asyncClient=${mode === "sync" ? "undefined" : "root.client"},service=${mode === "sync" || mode === "both" ? "sync.service" : "undefined"};

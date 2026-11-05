@@ -1,0 +1,16 @@
+[package]
+name = "banto-scada-desktop"
+version = "0.37.0"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+scada-host = { path = "../../../crates/scada-host" }
+scada-runtime = { path = "../../../crates/scada-runtime" }
+scada-model = { path = "../../../crates/scada-model" }
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["sync", "rt", "macros"] }

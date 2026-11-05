@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["crates/scada-model", "crates/scada-runtime", "crates/scada-historian"]
+members = ["crates/scada-model", "crates/scada-runtime", "crates/scada-historian", "crates/scada-host"]
+exclude = ["apps/banto-scada/src-tauri"]
 
 [workspace.package]
 version = "0.37.0"

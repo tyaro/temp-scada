@@ -29,6 +29,9 @@ importers:
       '@banto/ui':
         specifier: github:tyaro/banto#v6.9.0&path:packages/ui
         version: https://codeload.github.com/tyaro/banto/tar.gz/1bd12fe023cf3958dbdde923e1bdd4fdb28a9139#path:packages/ui
+      '@tauri-apps/api':
+        specifier: ^2.12.1
+        version: 2.12.4
       ajv:
         specifier: 8.20.0
         version: 8.20.0
@@ -207,6 +210,9 @@ packages:
     peerDependencies:
       svelte: ^5.46.4
       vite: ^8.0.0-beta.7 || ^8.0.0
+
+  '@tauri-apps/api@2.12.4':
+    resolution: {integrity: sha512-pVmfis+4zT8H0Qhp3xPZx9Ju7kpzvA6rr/PSJPyuwfvucTQ8sVt61NYU9KMkK703UFlYadFmjKA4HhybOtN0gg==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -704,6 +710,8 @@ snapshots:
       svelte: 5.57.2
       vite: 8.3.4
       vitefu: 1.1.3(vite@8.3.4)
+
+  '@tauri-apps/api@2.12.4': {}
 
   '@types/chai@5.2.3':
     dependencies:

@@ -1547,7 +1547,7 @@
   const backgroundScreen = $derived(
     project.screens.find((item) => item.id === screen.id),
   );
-  let message = $state("サンプルを表示しています。Hub には接続していません。");
+  let message = $state("サンプルを表示しています。");
   const projectFiles = createProjectFilesController({
     get project() {
       return project;
@@ -3457,7 +3457,7 @@
       {#if lastExport}<span class="sr-only">最終書き出し要求 {lastExport}</span
         >{/if}
     </div>
-    <StatusBadge variant="neutral" label="Hub 未接続" />
+    {#if !readSource}<StatusBadge variant="neutral" label="Hub 未接続" />{/if}
   {/snippet}
 </EditToolbar>
 <ScreenTabs

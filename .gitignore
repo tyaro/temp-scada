@@ -4,6 +4,7 @@ target/
 playwright-report/
 test-results/
 *.log
+apps/banto-scada/src-tauri/gen/
 
 # Local handoff notes
 docs/STATUS.md

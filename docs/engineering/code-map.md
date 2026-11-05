@@ -1,5 +1,9 @@
 # コードと検証の対応表
 
+`examples/real-hub-s7.project.json` はDB由来pushタグ、`examples/real-plc-r.project.json` はR系実PLCの数値・boolタグに結び付けた製品表示用fixture。後者のboolタグは実機Hubへ読取専用で追加した`SCADA_C3_M1000`を参照する。
+
+2026-11-05 の実Hub接続入口: `crates/scada-host` が Windows の資格情報と非機密のHub接続記録を所有し、`crates/scada-host/examples/real_hub_read.rs` が REST の読取専用プローブを提供する。`apps/banto-scada/src-tauri/src/main.rs` は Tauri command／event と `ReadHost`／`CatalogHost` の単一owner、購読開始より先に届いた終了通知も保持して退役済み開始を拒否する。`apps/banto-scada/src/native/` は通常entrypointの `ReadSource`／`CatalogSource` 配送を担当し、購読開始と終了のIPCを順に送る。`apps/banto-scada/src/native/sources.test.ts` と `e2e/read-presentation.spec.ts` が旧通知破棄と接続源切替を検証する。実機結果と残る受入条件は[接続記録](../project/real-hub-c0.md)を参照。
+
 状態: **現行構造の案内**。2026-10-21更新、Symbol内画像の作成UI（I7c）と接続の保存・編集追従（I8b）の追加を含む。責務や関数の移動時はこの対応表を更新する。[現在の実装状況](../project/implementation-status.md)、[構造整理の計画・結果](maintenance-refactoring-plan.md)、[作業規則](../../AGENTS.md)を併読する。
 
 パスはリポジトリルート基準。関数名を検索し、行番号・ファイルの大きさに依存しない。現在の依存方向はUI→編集／履歴→Project検証。純粋計算とモデルからDOMやAppをimportしない。

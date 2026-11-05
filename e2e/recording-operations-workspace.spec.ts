@@ -24,9 +24,9 @@ async function inject(page: Page) {
       /mount\(App,\s*\{\s*target:\s*document\.getElementById\("app"\)\s*\}\);/;
     expect(original).toMatch(pattern);
     const body = `
-  import {createSubscriber} from "/node_modules/.vite/deps/svelte_reactivity.js";
-  import {unmount} from "/node_modules/.vite/deps/svelte.js";
-  import {createOperationsHarness} from "/src/lib/__fixtures__/recording-operations-service.ts";
+  const {createSubscriber} = await import("/node_modules/.vite/deps/svelte_reactivity.js");
+  const {unmount} = await import("/node_modules/.vite/deps/svelte.js");
+  const {createOperationsHarness} = await import("/src/lib/__fixtures__/recording-operations-service.ts");
   let notify=()=>{};const track=createSubscriber(update=>{notify=update;return()=>{};});
   const h=createOperationsHarness();let service=h.service;
   const harness=window.__operationsHarness={h,replace(){service=createOperationsHarness().service;notify();},offline(){service=undefined;notify();}};

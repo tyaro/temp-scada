@@ -19,7 +19,8 @@ export interface SlotProvenance {
     | "computed"
     | "derived_simulation"
     | "internal"
-    | "db";
+    | "db"
+    | "push";
   sourceTimestampMs: number;
 }
 export type ReadSlotReading =
