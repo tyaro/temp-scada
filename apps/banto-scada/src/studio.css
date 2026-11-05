@@ -29,6 +29,11 @@ html[data-theme="dark"] #app {
   --banto-primary: #59dcc0;
   --banto-focus-ring: 0 0 0 2px #59dcc080;
 }
+/* WebView2 keeps a light native option popup for transparent selects. */
+#app select.banto-field-control option {
+  background: var(--banto-surface);
+  color: var(--banto-text);
+}
 #app .app-header {
   min-height: 32px;
   padding: 2px 14px;
