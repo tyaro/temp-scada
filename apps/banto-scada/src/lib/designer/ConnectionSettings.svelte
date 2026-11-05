@@ -84,8 +84,9 @@
             ? `接続中：${targetLabel(target)}／${labels[current.anchor]}`
             : "接続なし"}
         </p>
-        <label
-          >接続先<select
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">接続先</span><select
+            class="banto-field-control"
             oncompositionstart={(event) => composition(event, true)}
             oncompositionend={(event) => composition(event, false)}
             onkeydown={(event) => {
@@ -103,8 +104,9 @@
               >{/each}
           </select></label
         >
-        <label
-          >位置<select
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">位置</span><select
+            class="banto-field-control"
             oncompositionstart={(event) => composition(event, true)}
             oncompositionend={(event) => composition(event, false)}
             onkeydown={(event) => {

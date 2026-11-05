@@ -203,8 +203,9 @@
       </ul>
     {/if}
     {#if request.kind === "create" || request.kind === "rename"}
-      <label
-        >フォルダー名<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">フォルダー名</span><input
+          class="banto-field-control"
           bind:value={name}
           maxlength="200"
           required
@@ -213,8 +214,11 @@
       >
     {/if}
     {#if ["create", "move", "assign"].includes(request.kind)}
-      <label
-        >{request.kind === "assign" ? "移動先" : "親フォルダー"}<select
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label"
+          >{request.kind === "assign" ? "移動先" : "親フォルダー"}</span
+        ><select
+          class="banto-field-control"
           aria-label={request.kind === "assign" ? "移動先" : "親フォルダー"}
           bind:value={parent}
           >{#if request.kind === "assign" && initialFolder === undefined}<option

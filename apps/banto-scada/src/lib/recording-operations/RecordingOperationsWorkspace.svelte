@@ -196,16 +196,18 @@
       <p>
         記録管理状態で確認した版を入力してください。空欄は「版なし」を意味します。
       </p>
-      <label
-        >適用版<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">適用版</span><input
+          class="banto-field-control"
           aria-label="期待適用版"
           inputmode="numeric"
           bind:value={applied}
           disabled={blocked || !visible?.canPreflight}
         /></label
       >
-      <label
-        >mapping版<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">mapping版</span><input
+          class="banto-field-control"
           aria-label="期待mapping版"
           inputmode="numeric"
           bind:value={mapping}
@@ -214,8 +216,9 @@
             !binding?.desired?.enabled}
         /></label
       >
-      <label
-        >保持適用版<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">保持適用版</span><input
+          class="banto-field-control"
           aria-label="期待保持適用版"
           inputmode="numeric"
           bind:value={retention}

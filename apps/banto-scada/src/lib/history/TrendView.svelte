@@ -66,8 +66,9 @@
     <strong>履歴トレンド</strong><span role="status">{phaseText}</span>
   </header>
   {#if model && series}
-    <label
-      >系列 <select
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">系列 </span><select
+        class="banto-field-control"
         value={series.seriesId}
         onchange={(event) => (selected = event.currentTarget.value)}
         aria-label="表示する履歴系列"

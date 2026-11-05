@@ -71,8 +71,11 @@
         else onsubmit(event);
       }}
     >
-      <label
-        >表示方法<select name="fit" aria-label="背景画像の表示方法"
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">表示方法</span><select
+          class="banto-field-control"
+          name="fit"
+          aria-label="背景画像の表示方法"
           ><option value="contain">全体表示（中央）</option><option
             value="cover">枠を埋める（中央で切抜き）</option
           ><option value="stretch">画面に引き伸ばす</option><option
@@ -80,8 +83,9 @@
           ></select
         ></label
       >
-      <label
-        >不透明度（%）<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">不透明度（%）</span><input
+          class="banto-field-control"
           onkeydown={(event) => {
             if (
               event.key === "Enter" &&

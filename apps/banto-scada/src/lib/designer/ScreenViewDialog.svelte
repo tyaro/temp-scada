@@ -28,8 +28,9 @@
   <p>
     同じProjectの画面を、背景ごと読み取り表示します。元画面の編集はすべての使用先へ反映されます。
   </p>
-  <label
-    >画面を検索<input
+  <label class="banto-field banto-field--stacked"
+    ><span class="banto-field-label">画面を検索</span><input
+      class="banto-field-control"
       bind:value={search}
       type="search"
       aria-label="埋込画面を検索"

@@ -56,8 +56,9 @@
       : "選択した配置"}全体の不透明度を変更します。色や塗り、共有シンボルの色モードは保持します。
   </p>
   <fieldset disabled={locked}>
-    <label
-      >適用する不透明度（%）<input
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">適用する不透明度（%）</span><input
+        class="banto-field-control"
         bind:this={input}
         bind:value
         name="opacity"

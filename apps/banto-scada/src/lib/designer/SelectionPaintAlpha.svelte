@@ -77,8 +77,11 @@
             ? "混在"
             : `${Number((channel.target.common * 100).toPrecision(15))}%`}
       </p>
-      <label
-        >適用する{channel.label}の不透明度（%）<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label"
+          >適用する{channel.label}の不透明度（%）</span
+        ><input
+          class="banto-field-control"
           onkeydown={(event) => {
             if (
               event.key === "Enter" &&

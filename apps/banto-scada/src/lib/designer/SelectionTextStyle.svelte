@@ -98,8 +98,9 @@
         }}
       >
         <fieldset disabled={locked}>
-          <label
-            >適用する文字サイズ<input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">適用する文字サイズ</span><input
+              class="banto-field-control"
               name="fontSize"
               bind:value={size}
               aria-label="適用する文字サイズ"
@@ -119,8 +120,9 @@
             /></label
           >
           <div class="choices">
-            <label
-              >適用する文字の太さ<select
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">適用する文字の太さ</span><select
+                class="banto-field-control"
                 name="fontWeight"
                 bind:value={weight}
                 aria-label="適用する文字の太さ"
@@ -129,8 +131,9 @@
                 ><option value="bold">太字</option></select
               ></label
             >
-            <label
-              >適用する文字揃え<select
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">適用する文字揃え</span><select
+                class="banto-field-control"
                 name="textAlign"
                 bind:value={align}
                 aria-label="適用する文字揃え"

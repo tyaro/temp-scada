@@ -246,8 +246,11 @@
   <p>
     プレビュー専用の読取表示です。位置やサイズは保存せず、画面切替・編集復帰・Project読込で閉じます。
   </p>
-  <label
-    >{pickerKind === "screen" ? "画面を検索" : "機器を検索"}<input
+  <label class="banto-field banto-field--stacked"
+    ><span class="banto-field-label"
+      >{pickerKind === "screen" ? "画面を検索" : "機器を検索"}</span
+    ><input
+      class="banto-field-control"
       type="search"
       aria-label={pickerKind === "screen"
         ? "小窓に表示する画面を検索"

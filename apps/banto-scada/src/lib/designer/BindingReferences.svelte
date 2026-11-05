@@ -83,8 +83,9 @@
         のタグ一覧ではありません。使用箇所から編集できます。
       </p>
       <div class="search">
-        <label
-          >タグ参照を検索<input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">タグ参照を検索</span><input
+            class="banto-field-control"
             type="search"
             bind:value={search}
             placeholder="外部名・配置名・画面名・静的テキスト"

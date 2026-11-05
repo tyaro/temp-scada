@@ -98,14 +98,16 @@
   }}
 >
   <div class="layer-search-row">
-    <input
-      class="layer-search"
-      type="search"
-      aria-label="レイヤーを検索"
-      placeholder="検索"
-      bind:value={tree.layerQuery}
-      oninput={() => (tree.layersExpanded = true)}
-    />
+    <div class="banto-field banto-field--stacked layer-search">
+      <input
+        class="banto-field-control"
+        type="search"
+        aria-label="レイヤーを検索"
+        placeholder="検索"
+        bind:value={tree.layerQuery}
+        oninput={() => (tree.layersExpanded = true)}
+      />
+    </div>
     <button
       data-create-layer-folder
       title="ルートにフォルダーを作成"
@@ -577,21 +579,6 @@ ${object.id}`}
     .folder-more {
       opacity: 1;
     }
-  }
-  .layer-search {
-    width: 100%;
-    margin-bottom: 6px;
-    padding: 8px 10px;
-    border: 1px solid var(--banto-border);
-    border-radius: 6px;
-    background: var(--banto-surface);
-    color: var(--banto-text);
-    font: inherit;
-    font-size: 12px;
-  }
-  .layer-search:focus-visible {
-    outline: none;
-    box-shadow: var(--banto-focus-ring);
   }
   .layer-entry {
     position: relative;
