@@ -49,7 +49,17 @@
       connected = result.state === "connected";
       error = !connected;
       tagCount = connected ? (result.tagCount ?? 0) : 0;
-      if (connected) sources = nativeSources((phase) => (streamStatus = phase));
+      if (connected)
+        sources = nativeSources((phase) => {
+          streamStatus = phase;
+          if (phase === "認証が必要") {
+            sources = undefined;
+            connected = false;
+            error = true;
+            tagCount = 0;
+            status = "Hubの読取認証が失効しました";
+          }
+        });
     } catch {
       status = "Hub接続に失敗しました";
       error = true;

@@ -49,9 +49,12 @@ export function nativeSources(onStream?: (phase: string) => void): {
                 const phase = update?.text?.connection;
                 onStream?.(
                   accepted
-                    ? ({ live: "受信中", stopped: "停止", unbound: "タグ待ち" }[
-                        phase ?? ""
-                      ] ?? "接続中")
+                    ? ({
+                        live: "受信中",
+                        stopped: "停止",
+                        unbound: "タグ待ち",
+                        unauthorized: "認証が必要",
+                      }[phase ?? ""] ?? "接続中")
                     : "表示データを検証できません",
                 );
               }
@@ -67,10 +70,15 @@ export function nativeSources(onStream?: (phase: string) => void): {
                 subscriptionId,
               }),
             );
-          } catch {
+          } catch (error) {
             if (active) {
-              onStream?.("購読開始失敗");
               delivery.fail();
+              onStream?.(
+                error === "unauthorized" ||
+                  (error instanceof Error && error.message === "unauthorized")
+                  ? "認証が必要"
+                  : "購読開始失敗",
+              );
             }
           }
         })();

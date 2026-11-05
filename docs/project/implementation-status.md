@@ -16,6 +16,8 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 同日の実機側確認で[Windows の C0 構成と C1・C3 の製品読取](real-hub-c0.md)を記録した。Tauri の埋込 host から既存 Hub へ接続し、通常画面に数値・boolと品質・由来を表示した。切断で消え再接続で復帰する。最初の`s7-bridge`は検証用DBクエリのpush転送で元行の更新時刻は古い。続けてR系実PLCの既存D3000と新規読取専用M1000を画面で`Good / real`表示し、安全なD4000で一時的に`0→1→0`を書き戻した。一時キーとD4000タグは削除済み。Q系接続は再接続中で未検証。C2のモック製品経路は未完了である。
 
+C2の先行検証として、通常entrypointのNativeShellからTauri command／eventを模したモックを通し、数値0、Bad／Stale／Unbound、Project置換と旧通知拒否、切断・再接続、認証拒否、catalog失敗、WebView再読込をChromiumで確認した。認証失効時は読取sourceを外し、値とヘッダーの接続表示を消す。RustのReadHostはループバックのモックHubで同種の品質・権限・owner交代を検証済み。ブラウザ試験のモックはIPC境界であり、実Tauri hostとモックHubを一体で通す受入、および対象OSでのアプリ終了・再起動はC2に残る。
+
 記録・履歴の実接続はC4〜C5、連続運用受入はC6。純粋台帳の後続prep2d2bを初回読取接続の前提にしない。
 
 ## 記録wireの元call配送台帳（H5d4c4c-prep2d2a、2026-11-05）
