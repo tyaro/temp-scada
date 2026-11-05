@@ -110,9 +110,16 @@
     全画面の直接数値Textを完全一致で置換します。検索条件に関係なく非表示配置も対象です。Hubのタグ名は変更しません。
   </p>
   <div class="fields">
-    <label>置換元<input value={from} readonly /></label>
-    <label
-      >置換先<input
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">置換元</span><input
+        class="banto-field-control"
+        value={from}
+        readonly
+      /></label
+    >
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">置換先</span><input
+        class="banto-field-control"
         bind:this={input}
         onkeydown={(event) => {
           if (

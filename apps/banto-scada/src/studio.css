@@ -187,16 +187,6 @@ html[data-theme="dark"] #app {
   font-size: 12px;
   padding: 7px 8px;
 }
-#app .inspector .fields input[inputmode="decimal"] {
-  border-bottom-color: color-mix(
-    in srgb,
-    var(--banto-text-muted) 55%,
-    transparent
-  );
-}
-#app .inspector .fields input[aria-invalid="true"] {
-  border-color: var(--banto-danger, #b42318);
-}
 #app .definition-banner {
   margin: 8px 12px 0;
   padding: 8px 12px;

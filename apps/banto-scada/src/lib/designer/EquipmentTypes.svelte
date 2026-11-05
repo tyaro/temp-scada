@@ -82,8 +82,9 @@
 </script>
 
 <section aria-label="機器種別の編集">
-  <label
-    >編集する種別<select
+  <label class="banto-field banto-field--stacked"
+    ><span class="banto-field-label">編集する種別</span><select
+      class="banto-field-control"
       aria-label="編集する機器種別"
       value={selectedId}
       onchange={(event) => {
@@ -142,8 +143,9 @@
           });
       }}
     >
-      <label
-        >種別名<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">種別名</span><input
+          class="banto-field-control"
           name="name"
           required
           maxlength="200"
@@ -162,8 +164,9 @@
       {#each rows as row (row.key)}
         {@const count = row.originalName ? adopted(row.originalName) : 0}
         <div class="slot" data-equipment-type-slot={row.key}>
-          <label
-            >slot名<input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">slot名</span><input
+              class="banto-field-control"
               aria-label="slot名"
               value={row.name}
               readonly={count > 0}
@@ -172,8 +175,9 @@
               onkeydown={inputKey}
             /></label
           >
-          <label
-            >型<select
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">型</span><select
+              class="banto-field-control"
               aria-label="slot型"
               value={row.type}
               disabled={count > 0}

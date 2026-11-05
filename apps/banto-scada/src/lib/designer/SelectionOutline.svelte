@@ -147,8 +147,9 @@
         }}
       >
         <fieldset disabled={locked}>
-          <label
-            >適用する枠線<select
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">適用する枠線</span><select
+              class="banto-field-control"
               bind:this={modeInput}
               bind:value={mode}
               name="outlineMode"
@@ -158,8 +159,9 @@
               ><option value="enabled">あり</option></select
             ></label
           >
-          <label
-            >適用する枠線色<input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">適用する枠線色</span><input
+              class="banto-field-control"
               bind:this={colorInput}
               bind:value={code}
               name="outlineColor"
@@ -172,8 +174,9 @@
               onkeydown={compositionKey}
             /></label
           >
-          <label
-            >適用する枠線幅<input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">適用する枠線幅</span><input
+              class="banto-field-control"
               bind:this={widthInput}
               bind:value={width}
               name="outlineWidth"
@@ -186,8 +189,9 @@
               onkeydown={compositionKey}
             /></label
           >
-          <label
-            >適用する枠線の線種<select
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">適用する枠線の線種</span><select
+              class="banto-field-control"
               name="outlineStyle"
               aria-label="適用する枠線の線種"
               bind:this={styleInput}

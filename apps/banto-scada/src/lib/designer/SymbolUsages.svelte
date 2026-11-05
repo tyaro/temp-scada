@@ -40,13 +40,16 @@
     {usages.length} 配置 / {new Set(usages.map((u) => u.screenId)).size} 画面
   </p>
   {#if usages.length}
-    <input
-      bind:this={search}
-      type="search"
-      aria-label="共有定義の使用先を検索"
-      placeholder="配置名・画面名・配置 ID で検索"
-      bind:value={query}
-    />
+    <div class="banto-field banto-field--stacked">
+      <input
+        class="banto-field-control"
+        bind:this={search}
+        type="search"
+        aria-label="共有定義の使用先を検索"
+        placeholder="配置名・画面名・配置 ID で検索"
+        bind:value={query}
+      />
+    </div>
     <p>配置を選ぶと該当画面を表示します。</p>
     <div class="usages">
       {#each shown as usage (usage.objectId)}

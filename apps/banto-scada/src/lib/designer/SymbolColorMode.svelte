@@ -27,8 +27,11 @@
   {onsubmit}
 >
   <fieldset disabled={locked}>
-    <label
-      >色の使い方<select name="colorMode" aria-label="色の使い方"
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">色の使い方</span><select
+        class="banto-field-control"
+        name="colorMode"
+        aria-label="色の使い方"
         ><option value="monochrome">配置の単色</option><option
           value="definition">共有定義の色</option
         ></select

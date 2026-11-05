@@ -116,8 +116,11 @@
   <h1>履歴表示のローカル受入</h1>
   <p>サンプル応答のみ。SQLite・Hubには接続せず、Projectを変更しません。</p>
   <nav aria-label="受入fixture操作">
-    <label
-      >応答ケース <select bind:value={scenario} aria-label="応答ケース"
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">応答ケース </span><select
+        class="banto-field-control"
+        bind:value={scenario}
+        aria-label="応答ケース"
         ><option value="raw">raw</option><option value="minmax">minmax</option
         ><option value="mixed">混在</option><option value="expired"
           >保持期限経過</option

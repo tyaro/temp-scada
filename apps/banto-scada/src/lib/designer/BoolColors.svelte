@@ -33,8 +33,11 @@
 >
   <fieldset disabled={locked}>
     <legend>状態別の文字色</legend>
-    <label
-      >使用<select name="boolColorsMode" aria-label="状態別の文字色を使用"
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">使用</span><select
+        class="banto-field-control"
+        name="boolColorsMode"
+        aria-label="状態別の文字色を使用"
         ><option value="disabled">使用しない</option><option value="enabled"
           >使用する</option
         ></select

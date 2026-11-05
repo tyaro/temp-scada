@@ -71,8 +71,15 @@
 </script>
 
 <div class="hub-bar">
-  <label for="hub-endpoint">Hub</label>
-  <input id="hub-endpoint" bind:value={endpoint} disabled={busy} />
+  <label class="banto-field banto-field--stacked hub-endpoint">
+    <span class="banto-field-label">Hub</span>
+    <input
+      class="banto-field-control"
+      id="hub-endpoint"
+      bind:value={endpoint}
+      disabled={busy}
+    />
+  </label>
   <button disabled={busy} onclick={() => void connect()}>接続</button>
   <button disabled={busy} onclick={() => void disconnect()}>切断</button>
   <span role="status">{status}</span>
@@ -92,9 +99,8 @@
     color: #e2e8f0;
     background: #0f172a;
   }
-  .hub-bar input {
+  .hub-endpoint {
     width: 19rem;
-    padding: 0.2rem 0.35rem;
   }
   .hub-bar button {
     padding: 0.2rem 0.6rem;

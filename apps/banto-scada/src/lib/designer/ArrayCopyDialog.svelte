@@ -71,32 +71,36 @@
     oncompositionend={() => (composing = false)}
   >
     <div class="fields">
-      <label
-        >列数<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">列数</span><input
+          class="banto-field-control"
           name="columns"
           bind:value={columns}
           inputmode="numeric"
           onkeydown={compositionKey}
         /></label
       >
-      <label
-        >行数<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">行数</span><input
+          class="banto-field-control"
           name="rows"
           bind:value={rows}
           inputmode="numeric"
           onkeydown={compositionKey}
         /></label
       >
-      <label
-        >横の間隔<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">横の間隔</span><input
+          class="banto-field-control"
           name="stepX"
           value={stepX}
           inputmode="decimal"
           onkeydown={compositionKey}
         /></label
       >
-      <label
-        >縦の間隔<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">縦の間隔</span><input
+          class="banto-field-control"
           name="stepY"
           value={stepY}
           inputmode="decimal"
@@ -129,22 +133,6 @@
     grid-template-columns: 1fr 1fr;
     gap: 0.8rem;
   }
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-  }
-  input {
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
-    padding: 8px;
-    border: 1px solid var(--banto-border);
-    background: var(--banto-surface);
-    color: var(--banto-text);
-    border-radius: 4px;
-    font: inherit;
-  }
   p {
     max-width: 36rem;
     line-height: 1.65;
@@ -174,7 +162,6 @@
   button[type="submit"]:hover {
     background: var(--banto-primary-solid-hover);
   }
-  input:focus-visible,
   button:focus-visible {
     outline: none;
     box-shadow: var(--banto-focus-ring);

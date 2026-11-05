@@ -48,10 +48,17 @@
       /></svg
     >
   </label>
-  <select aria-label="グリッド間隔" title="グリッド間隔" bind:value={gridSize}>
-    {#each [5, 10, 20, 50] as size}<option value={size}>{size} unit</option
-      >{/each}
-  </select>
+  <div class="banto-field banto-field--stacked toolbar-field">
+    <select
+      class="banto-field-control"
+      aria-label="グリッド間隔"
+      title="グリッド間隔"
+      bind:value={gridSize}
+    >
+      {#each [5, 10, 20, 50] as size}<option value={size}>{size} unit</option
+        >{/each}
+    </select>
+  </div>
 </div>
 <div class="group" role="group" aria-label="キャンバス表示">
   <button
@@ -95,24 +102,27 @@
     ><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12H19" /></svg
     ></button
   >
-  <select
-    aria-label="表示倍率"
-    title="表示倍率"
-    value={view.zoom ?? "fit"}
-    onchange={(event) =>
-      onzoom(
-        event.currentTarget.value === "fit"
-          ? null
-          : Number(event.currentTarget.value),
-      )}
-  >
-    <option value="fit">全体 ({Math.round(view.fit * 100)}%)</option>
-    {#if view.zoom !== null && !zoomLevels.some((level) => level === view.zoom)}
-      <option value={view.zoom}>{Math.round(view.scale * 100)}%</option>
-    {/if}
-    {#each zoomLevels as level}<option value={level}>{level * 100}%</option
-      >{/each}
-  </select>
+  <div class="banto-field banto-field--stacked toolbar-field">
+    <select
+      class="banto-field-control"
+      aria-label="表示倍率"
+      title="表示倍率"
+      value={view.zoom ?? "fit"}
+      onchange={(event) =>
+        onzoom(
+          event.currentTarget.value === "fit"
+            ? null
+            : Number(event.currentTarget.value),
+        )}
+    >
+      <option value="fit">全体 ({Math.round(view.fit * 100)}%)</option>
+      {#if view.zoom !== null && !zoomLevels.some((level) => level === view.zoom)}
+        <option value={view.zoom}>{Math.round(view.scale * 100)}%</option>
+      {/if}
+      {#each zoomLevels as level}<option value={level}>{level * 100}%</option
+        >{/each}
+    </select>
+  </div>
   <button
     type="button"
     aria-label="拡大"
@@ -205,7 +215,6 @@
     cursor: default;
   }
   button:focus-visible,
-  select:focus-visible,
   .toggle:has(input:focus-visible) {
     outline: none;
     box-shadow: var(--banto-focus-ring);
@@ -219,15 +228,13 @@
     stroke-linecap: round;
     stroke-linejoin: round;
   }
-  select {
+  .toolbar-field {
+    width: 112px;
+  }
+  .toolbar-field > :global(.banto-field-control) {
+    min-height: 30px;
     height: 30px;
-    max-width: 112px;
     padding: 3px;
-    font: inherit;
     font-size: 12px;
-    background: var(--banto-surface);
-    color: var(--banto-text);
-    border: 1px solid var(--banto-border);
-    border-radius: 4px;
   }
 </style>

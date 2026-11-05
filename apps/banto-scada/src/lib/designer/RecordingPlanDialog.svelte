@@ -92,36 +92,41 @@
     }}
   >
     <div class="fields">
-      <label
-        >計画ID<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">計画ID</span><input
+          class="banto-field-control"
           bind:value={draft.planId}
           maxlength="64"
           spellcheck="false"
         /></label
       >
-      <label
-        >希望設定の版<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">希望設定の版</span><input
+          class="banto-field-control"
           bind:value={draft.revision}
           inputmode="numeric"
           maxlength="64"
         /></label
       >
-      <label
-        >グループID<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">グループID</span><input
+          class="banto-field-control"
           bind:value={draft.groupId}
           maxlength="64"
           spellcheck="false"
         /></label
       >
-      <label
-        >論理Hub参照<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">論理Hub参照</span><input
+          class="banto-field-control"
           bind:value={draft.hubRef}
           maxlength="64"
           spellcheck="false"
         /></label
       >
-      <label
-        >記録周期（ミリ秒）<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">記録周期（ミリ秒）</span><input
+          class="banto-field-control"
           bind:value={draft.periodMs}
           inputmode="numeric"
           maxlength="64"
@@ -158,15 +163,18 @@
         <fieldset>
           <legend>系列 {index + 1}</legend>
           <div class="fields">
-            <label
-              >メンバーID {index + 1}<input
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">メンバーID {index + 1}</span
+              ><input
+                class="banto-field-control"
                 bind:value={member.memberId}
                 maxlength="64"
                 spellcheck="false"
               /></label
             >
-            <label
-              >値の型 {index + 1}<select
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">値の型 {index + 1}</span><select
+                class="banto-field-control"
                 aria-label={`値の型 ${index + 1}`}
                 bind:value={member.valueType}
                 ><option value="number">数値</option><option value="bool"
@@ -174,8 +182,10 @@
                 ></select
               ></label
             >
-            <label class="external"
-              >タグ外部名 {index + 1}<textarea
+            <label class="external banto-field banto-field--stacked"
+              ><span class="banto-field-label">タグ外部名 {index + 1}</span
+              ><textarea
+                class="banto-field-control"
                 rows="2"
                 value={member.externalName}
                 maxlength="1024"

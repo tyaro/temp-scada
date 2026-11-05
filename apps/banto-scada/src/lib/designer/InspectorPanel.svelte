@@ -485,8 +485,9 @@
       <form use:drafts.track data-editor-form="move" onsubmit={moveSelection}>
         <fieldset disabled={selectionLocked}>
           <div class="fields">
-            <label
-              >移動量 X<input
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">移動量 X</span><input
+                class="banto-field-control"
                 name="dx"
                 aria-label="移動量 X"
                 type="number"
@@ -494,8 +495,9 @@
                 required
                 value="0"
               /></label
-            ><label
-              >移動量 Y<input
+            ><label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">移動量 Y</span><input
+                class="banto-field-control"
                 name="dy"
                 aria-label="移動量 Y"
                 type="number"
@@ -745,8 +747,9 @@
           }}
         >
           <fieldset disabled={selectionLocked}>
-            <label class="placement-name"
-              >配置名<input
+            <label class="placement-name banto-field banto-field--stacked"
+              ><span class="banto-field-label">配置名</span><input
+                class="banto-field-control"
                 name="name"
                 aria-label="配置名"
                 oncompositionstart={compositionStart}
@@ -799,16 +802,20 @@
             {/if}
             <div class="fields">
               {#each "width" in selected ? ["x", "y", "width", "height", "rotation", "opacity"] : ["x", "y", "rotation", "opacity"] as field}
-                <label
-                  >{field === "rotation"
-                    ? "回転（°）"
-                    : field === "opacity"
-                      ? "不透明度（%）"
-                      : selected.shape.type === "image" && field === "width"
-                        ? "画像枠の幅"
-                        : selected.shape.type === "image" && field === "height"
-                          ? "画像枠の高さ"
-                          : field}<input
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label"
+                    >{field === "rotation"
+                      ? "回転（°）"
+                      : field === "opacity"
+                        ? "不透明度（%）"
+                        : selected.shape.type === "image" && field === "width"
+                          ? "画像枠の幅"
+                          : selected.shape.type === "image" &&
+                              field === "height"
+                            ? "画像枠の高さ"
+                            : field}</span
+                  ><input
+                    class="banto-field-control"
                     name={field}
                     aria-label={field === "rotation"
                       ? "回転角度"
@@ -848,15 +855,17 @@
                       selected.shape.colorMode === "definition"}
                   /></label
                 >
-                <label>
-                  {selected.shape.type === "symbol"
-                    ? "単色"
-                    : selected.shape.type === "text"
-                      ? "文字"
-                      : selected.shape.type === "polyline"
-                        ? "線"
-                        : "塗り"}の不透明度（%）
-                  <input
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">
+                    {selected.shape.type === "symbol"
+                      ? "単色"
+                      : selected.shape.type === "text"
+                        ? "文字"
+                        : selected.shape.type === "polyline"
+                          ? "線"
+                          : "塗り"}の不透明度（%）
+                  </span><input
+                    class="banto-field-control"
                     name="colorAlpha"
                     aria-label="色の不透明度（%）"
                     type="text"
@@ -892,15 +901,18 @@
                   塗りは無効です。色と不透明度の設定は保持され、現在の描画には使われません。
                 </p>{/if}
               {#if selected.shape.type === "polyline"}
-                <label
-                  >頂点（x,y を1行ずつ）<textarea
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">頂点（x,y を1行ずつ）</span
+                  ><textarea
+                    class="banto-field-control"
                     name="points"
                     aria-label="頂点"
                     rows="5"
                     required></textarea></label
                 >
-                <label
-                  >線幅<input
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">線幅</span><input
+                    class="banto-field-control"
                     name="strokeWidth"
                     aria-label="線幅"
                     type="text"
@@ -924,15 +936,21 @@
                       role="alert">{numericErrors.strokeWidth}</span
                     >{/if}</label
                 >
-                <label
-                  >線種<select name="lineStyle" aria-label="線種"
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">線種</span><select
+                    class="banto-field-control"
+                    name="lineStyle"
+                    aria-label="線種"
                     ><option value="solid">実線</option><option value="dashed"
                       >破線</option
                     ><option value="dotted">点線</option></select
                   ></label
                 >
-                <label
-                  >矢印<select name="arrow" aria-label="矢印"
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">矢印</span><select
+                    class="banto-field-control"
+                    name="arrow"
+                    aria-label="矢印"
                     ><option value="none">なし</option><option value="end"
                       >終点</option
                     ></select
@@ -940,8 +958,9 @@
                 >
               {/if}
               {#if selected.shape.type === "text"}
-                <label
-                  >文字サイズ<input
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字サイズ</span><input
+                    class="banto-field-control"
                     name="fontSize"
                     aria-label="文字サイズ"
                     type="text"
@@ -963,15 +982,21 @@
                       role="alert">{numericErrors.fontSize}</span
                     >{/if}</label
                 >
-                <label
-                  >文字の太さ<select name="fontWeight" aria-label="文字の太さ"
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字の太さ</span><select
+                    class="banto-field-control"
+                    name="fontWeight"
+                    aria-label="文字の太さ"
                     ><option value="normal">標準</option><option value="bold"
                       >太字</option
                     ></select
                   ></label
                 >
-                <label
-                  >文字揃え<select name="textAlign" aria-label="文字揃え"
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字揃え</span><select
+                    class="banto-field-control"
+                    name="textAlign"
+                    aria-label="文字揃え"
                     ><option value="left">左</option><option value="center"
                       >中央</option
                     ><option value="right">右</option></select
@@ -980,15 +1005,19 @@
                 <p class="full-width numeric-hint">
                   静的テキストは改行・枠幅での折返しに対応します。Enterで改行、Ctrl／⌘＋Enterまたは「変更を適用」で確定します。文字サイズは枠変更で変わりません。タグ・機器情報の表示は1行です。
                 </p>
-                <label
-                  >折返し<select name="textWrap" aria-label="文字の折返し"
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">折返し</span><select
+                    class="banto-field-control"
+                    name="textWrap"
+                    aria-label="文字の折返し"
                     ><option value="none">折返しなし</option><option
                       value="word">枠幅で折返し</option
                     ></select
                   ></label
                 >
-                <label class="full-width"
-                  >テキスト<textarea
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">テキスト</span><textarea
+                    class="banto-field-control"
                     name="text"
                     aria-label="テキスト"
                     rows="4"
@@ -999,8 +1028,11 @@
                     onkeydown={textAreaKey}></textarea></label
                 >
                 {#if activeDefinition}
-                  <label class="full-width"
-                    >表示元<select name="slotName" aria-label="表示元"
+                  <label class="full-width banto-field banto-field--stacked"
+                    ><span class="banto-field-label">表示元</span><select
+                      class="banto-field-control"
+                      name="slotName"
+                      aria-label="表示元"
                       ><option value="">静的テキスト</option>
                       <optgroup label="機器情報">
                         <option value="@code">機器コード</option>
@@ -1019,8 +1051,10 @@
                   </p>
                 {:else}
                   <div class="full-width tag-binding">
-                    <label
-                      >表示タグ（外部名）<input
+                    <label class="banto-field banto-field--stacked"
+                      ><span class="banto-field-label">表示タグ（外部名）</span
+                      ><input
+                        class="banto-field-control"
                         bind:this={tagInput}
                         name="externalName"
                         aria-label="表示タグ（外部名）"
@@ -1042,8 +1076,10 @@
                 {/if}
               {/if}
               {#if selected.shape.type === "trend"}
-                <label class="full-width"
-                  >参照するトレンド<select
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">参照するトレンド</span
+                  ><select
+                    class="banto-field-control"
                     name="trendId"
                     aria-label="参照するトレンド"
                   >
@@ -1056,8 +1092,9 @@
                 >
               {/if}
               {#if selected.shape.type === "screenView"}
-                <label class="full-width"
-                  >参照する画面<select
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">参照する画面</span><select
+                    class="banto-field-control"
                     name="sourceScreenId"
                     aria-label="参照する画面"
                   >
@@ -1073,8 +1110,10 @@
               {/if}
               {#if selected.shape.type === "symbol"}
                 {#if !activeDefinition}
-                  <label class="full-width"
-                    >関連付ける機器<select
+                  <label class="full-width banto-field banto-field--stacked"
+                    ><span class="banto-field-label">関連付ける機器</span
+                    ><select
+                      class="banto-field-control"
                       name="equipmentId"
                       aria-label="関連付ける機器"
                     >
@@ -1089,8 +1128,10 @@
                     機器の割付状態と状態色を表示します。通常Designerの実Hub接続は後続です。同じ機器の表示を複製しても割付は共有します。
                   </p>
                 {/if}
-                <label class="full-width"
-                  >参照する Symbol 定義<select
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">参照する Symbol 定義</span
+                  ><select
+                    class="banto-field-control"
                     name="symbolId"
                     aria-label="参照する Symbol 定義"
                   >
@@ -1306,28 +1347,11 @@
     font-size: 12px;
     color: var(--banto-text-muted);
   }
-  .placement-name input,
-  .fields input,
-  .fields textarea,
-  .fields select {
-    display: block;
-    width: 100%;
-    min-height: 36px;
-    margin-top: 6px;
-    background: var(--banto-bg);
-    color: var(--banto-text);
-    border: 1px solid var(--banto-border);
-    padding: 6px;
-    border-radius: 4px;
-  }
   .field-error {
     display: block;
     color: var(--banto-danger, #b42318);
     margin-top: 5px;
     overflow-wrap: anywhere;
-  }
-  .fields input[aria-invalid="true"] {
-    border-color: var(--banto-danger, #b42318);
   }
   .inspector-subject {
     display: grid;
@@ -1353,18 +1377,6 @@
   }
   .numeric-hint {
     font-size: 12px;
-  }
-  .fields input[inputmode="decimal"] {
-    min-height: 30px;
-    margin-top: 4px;
-    padding: 4px 2px;
-    border: 0;
-    border-bottom: 1px solid var(--banto-border);
-    border-radius: 0;
-    background: transparent;
-  }
-  .fields input[inputmode="decimal"][aria-invalid="true"] {
-    border-bottom-color: var(--banto-danger);
   }
   .full-width,
   .fields label:has(textarea) {

@@ -38,8 +38,11 @@
   <fieldset disabled={locked || !supported}>
     <legend>状態表示の色に追従</legend>
     {#if supported}
-      <label
-        >配色元Text<select name="stateColorTextId" aria-label="配色元Text"
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">配色元Text</span><select
+          class="banto-field-control"
+          name="stateColorTextId"
+          aria-label="配色元Text"
           ><option value="">追従なし</option
           >{#each sources as source (source.id)}<option value={source.id}
               >{placementLabel(source)} · {source.shape.type === "text"

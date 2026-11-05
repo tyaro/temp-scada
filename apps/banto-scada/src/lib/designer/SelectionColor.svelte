@@ -105,8 +105,9 @@
       imageCount > 0 ||
       gradientCount > 0}
   >
-    <label
-      >適用する色<input
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">適用する色</span><input
+        class="banto-field-control"
         bind:this={input}
         bind:value={code}
         name="fill"

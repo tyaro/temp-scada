@@ -213,8 +213,12 @@
       <fieldset disabled={!context}>
         <legend>検索条件</legend>
         {#if !preset}
-          <label
-            >系列の絞り込み <input type="search" bind:value={filter} /></label
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">系列の絞り込み </span><input
+              class="banto-field-control"
+              type="search"
+              bind:value={filter}
+            /></label
           >
           <div class="series-list" role="group" aria-label="検索する履歴系列">
             {#each rows as row (row.seriesId)}
@@ -237,8 +241,9 @@
           <p>選択 {form.selected.length} / 8系列</p>
         {/if}
         <div class="conditions">
-          <label
-            >開始UTC <input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">開始UTC </span><input
+              class="banto-field-control"
               type="text"
               value={from}
               readonly={!!preset}
@@ -247,8 +252,9 @@
               oninput={(event) => change({ from: event.currentTarget.value })}
             /></label
           >
-          <label
-            >終了UTC <input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">終了UTC </span><input
+              class="banto-field-control"
               type="text"
               value={form.to}
               placeholder="2026-11-02T01:00:00.000Z"
@@ -256,8 +262,9 @@
               oninput={(event) => change({ to: event.currentTarget.value })}
             /></label
           >
-          <label
-            >取得モード <select
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">取得モード </span><select
+              class="banto-field-control"
               value={definition?.mode ?? form.mode}
               disabled={!!preset}
               onchange={(event) => change({ mode: event.currentTarget.value })}
@@ -266,8 +273,9 @@
               ></select
             ></label
           >
-          <label
-            >系列ごとの点数上限 <input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">系列ごとの点数上限 </span><input
+              class="banto-field-control"
               type="text"
               inputmode="numeric"
               value={definition?.maxPointsPerSeries ?? form.points}

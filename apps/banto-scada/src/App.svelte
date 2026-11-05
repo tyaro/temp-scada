@@ -3605,8 +3605,9 @@
                 oncompositionend={(event) =>
                   composingForms.delete(event.currentTarget)}
               >
-                <label
-                  >プロジェクト名<input
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">プロジェクト名</span><input
+                    class="banto-field-control"
                     onkeydown={nameFormKey}
                     name="name"
                     required
@@ -3671,8 +3672,11 @@
                 onsubmit={screenProperties}
                 aria-label="画面設定"
               >
-                <label
-                  >{activeDefinition ? "Symbol 名" : "画面名"}<input
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label"
+                    >{activeDefinition ? "Symbol 名" : "画面名"}</span
+                  ><input
+                    class="banto-field-control"
                     onkeydown={nameFormKey}
                     name="name"
                     value={screen.name}
@@ -3680,8 +3684,11 @@
                     maxlength="200"
                   /></label
                 >
-                <label
-                  >{activeDefinition ? "定義の幅" : "画面の幅"}<input
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label"
+                    >{activeDefinition ? "定義の幅" : "画面の幅"}</span
+                  ><input
+                    class="banto-field-control"
                     name="width"
                     type="number"
                     step="any"
@@ -3690,8 +3697,11 @@
                     required
                   /></label
                 >
-                <label
-                  >{activeDefinition ? "定義の高さ" : "画面の高さ"}<input
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label"
+                    >{activeDefinition ? "定義の高さ" : "画面の高さ"}</span
+                  ><input
+                    class="banto-field-control"
                     name="height"
                     type="number"
                     step="any"
@@ -4634,15 +4644,6 @@
   .project-sidebar form label:first-child,
   .project-sidebar form button {
     grid-column: 1 / -1;
-  }
-  .project-sidebar form input {
-    width: 100%;
-    min-width: 0;
-    padding: 7px;
-    border-radius: 4px;
-    border: 1px solid var(--banto-border);
-    background: var(--banto-bg);
-    color: var(--banto-text);
   }
   :global(#app) .app-header.fullscreen-preview {
     display: none;

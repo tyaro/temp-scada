@@ -68,8 +68,12 @@
 >
   <fieldset disabled={locked}>
     <legend>画像の表示方式</legend>
-    <label
-      >表示方式<select name="imageFit" aria-label="画像の表示方式">
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">表示方式</span><select
+        class="banto-field-control"
+        name="imageFit"
+        aria-label="画像の表示方式"
+      >
         <option value="contain">全体を収める（contain）</option><option
           value="cover">枠を埋める（cover）</option
         ><option value="stretch">枠へ伸ばす（stretch）</option>

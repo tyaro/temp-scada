@@ -54,8 +54,9 @@
     }}
   >
     <fieldset disabled={locked}>
-      <label
-        >グループ名<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">グループ名</span><input
+          class="banto-field-control"
           name="name"
           aria-label="グループ名"
           onkeydown={nameKey}

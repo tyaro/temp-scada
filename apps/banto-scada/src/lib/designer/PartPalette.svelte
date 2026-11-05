@@ -182,8 +182,9 @@
 <section aria-label="部品パレット" class:names={view === "names"}>
   <h2 class="sr-only">部品を追加</h2>
   <div class="search-tools">
-    <label class="search"
+    <label class="search banto-field banto-field--stacked"
       ><span class="sr-only">部品を検索</span><input
+        class="banto-field-control"
         type="search"
         bind:value={search}
         placeholder="部品を検索"

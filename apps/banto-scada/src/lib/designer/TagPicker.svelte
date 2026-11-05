@@ -191,16 +191,19 @@
       {selection.notice}
     </p>
     <div class="search-row">
-      <input
-        bind:this={searchInput}
-        aria-label="タグ候補を検索"
-        placeholder="名称・外部名・型で検索"
-        bind:value={query}
-        onkeydown={(event) => {
-          if (event.key === "Enter" && !event.isComposing)
-            event.preventDefault();
-        }}
-      />
+      <div class="banto-field banto-field--stacked tag-search">
+        <input
+          class="banto-field-control"
+          bind:this={searchInput}
+          aria-label="タグ候補を検索"
+          placeholder="名称・外部名・型で検索"
+          bind:value={query}
+          onkeydown={(event) => {
+            if (event.key === "Enter" && !event.isComposing)
+              event.preventDefault();
+          }}
+        />
+      </div>
       <label
         ><input
           type="checkbox"
@@ -315,7 +318,7 @@
     align-items: center;
     margin-bottom: 12px;
   }
-  .search-row > input {
+  .search-row > .tag-search {
     flex: 1;
     min-width: 0;
   }
@@ -431,7 +434,7 @@
     .search-row {
       flex-wrap: wrap;
     }
-    .search-row > input {
+    .search-row > .tag-search {
       width: 100%;
       flex-basis: 100%;
     }

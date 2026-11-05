@@ -204,7 +204,14 @@
   <fieldset disabled={locked}>
     <div class="fields">
       {#each [["cropX", "左から（%）"], ["cropY", "上から（%）"], ["cropWidth", "切出し幅（%）"], ["cropHeight", "切出し高さ（%）"]] as [name, label]}
-        <label>{label}<input {name} inputmode="decimal" required /></label>
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">{label}</span><input
+            class="banto-field-control"
+            {name}
+            inputmode="decimal"
+            required
+          /></label
+        >
       {/each}
     </div>
     <button

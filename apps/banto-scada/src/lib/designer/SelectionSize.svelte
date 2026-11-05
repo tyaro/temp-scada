@@ -74,8 +74,11 @@
   <fieldset disabled={locked || !supported}>
     <div class="dimensions">
       {#each ["width", "height"] as field}
-        <label
-          >{field === "width" ? "適用する幅" : "適用する高さ"}<input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label"
+            >{field === "width" ? "適用する幅" : "適用する高さ"}</span
+          ><input
+            class="banto-field-control"
             name={field}
             aria-label={field === "width" ? "適用する幅" : "適用する高さ"}
             value={field === "width" ? width : height}

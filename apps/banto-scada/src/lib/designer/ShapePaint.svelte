@@ -278,21 +278,29 @@
   <h3>塗りと枠線</h3>
   <fieldset disabled={locked}>
     <div class="options">
-      <label
-        >塗り<select name="fillEnabled" aria-label="塗り"
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">塗り</span><select
+          class="banto-field-control"
+          name="fillEnabled"
+          aria-label="塗り"
           ><option value="true">あり</option><option value="false">なし</option
           ></select
         ></label
       >
-      <label
-        >枠線<select name="strokeEnabled" aria-label="枠線" onchange={sync}
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">枠線</span><select
+          class="banto-field-control"
+          name="strokeEnabled"
+          aria-label="枠線"
+          onchange={sync}
           ><option value="false">なし</option><option value="true">あり</option
           ></select
         ></label
       >
     </div>
-    <label
-      >塗りの種類<select
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">塗りの種類</span><select
+        class="banto-field-control"
         name="fillType"
         aria-label="塗りの種類"
         onchange={switchFill}
@@ -311,8 +319,9 @@
           disabled={fillType !== "solid"}
         /></label
       >
-      <label
-        >塗りの不透明度（%）<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">塗りの不透明度（%）</span><input
+          class="banto-field-control"
           name="fillAlpha"
           aria-label="塗りの不透明度（%）"
           type="text"
@@ -332,8 +341,9 @@
             disabled={fillType !== "linearGradient"}
           /></label
         >
-        <label
-          >始点の不透明度（%）<input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">始点の不透明度（%）</span><input
+            class="banto-field-control"
             name="fillStartAlpha"
             aria-label="グラデーションの始点の不透明度（%）"
             type="text"
@@ -352,8 +362,9 @@
             disabled={fillType !== "linearGradient"}
           /></label
         >
-        <label
-          >終点の不透明度（%）<input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">終点の不透明度（%）</span><input
+            class="banto-field-control"
             name="fillEndAlpha"
             aria-label="グラデーションの終点の不透明度（%）"
             type="text"
@@ -363,8 +374,9 @@
           /></label
         >
       </div>
-      <label
-        >角度（°）<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">角度（°）</span><input
+          class="banto-field-control"
           name="fillAngle"
           aria-label="グラデーションの角度"
           type="text"
@@ -385,8 +397,9 @@
               disabled={fillType !== "radialGradient"}
             /></label
           >
-          <label
-            >{label}の不透明度（%）<input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">{label}の不透明度（%）</span><input
+              class="banto-field-control"
               name={`radial${stop}Alpha`}
               aria-label={`放射グラデーションの${label}の不透明度（%）`}
               inputmode="decimal"
@@ -397,8 +410,9 @@
         </div>
       {/each}
       <div class="options">
-        <label
-          >中心X（%）<input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">中心X（%）</span><input
+            class="banto-field-control"
             name="radialCenterX"
             aria-label="放射グラデーションの中心X（%）"
             inputmode="decimal"
@@ -406,8 +420,9 @@
             disabled={fillType !== "radialGradient"}
           /></label
         >
-        <label
-          >中心Y（%）<input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">中心Y（%）</span><input
+            class="banto-field-control"
             name="radialCenterY"
             aria-label="放射グラデーションの中心Y（%）"
             inputmode="decimal"
@@ -416,8 +431,9 @@
           /></label
         >
       </div>
-      <label
-        >半径（%）<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">半径（%）</span><input
+          class="banto-field-control"
           name="radialRadius"
           aria-label="放射グラデーションの半径（%）"
           inputmode="decimal"
@@ -440,8 +456,9 @@
       </p>
     </div>
     <div hidden={fillType !== "pattern"}>
-      <label
-        >模様<select
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">模様</span><select
+          class="banto-field-control"
           name="patternKind"
           aria-label="模様の種類"
           disabled={fillType !== "pattern"}
@@ -452,8 +469,9 @@
         ></label
       >
       <div class="options">
-        <label
-          >間隔<input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">間隔</span><input
+            class="banto-field-control"
             name="patternSpacing"
             aria-label="模様の間隔"
             type="text"
@@ -462,8 +480,11 @@
             disabled={fillType !== "pattern"}
           /></label
         >
-        <label
-          >{patternKind === "dots" ? "点の直径" : "線の太さ"}<input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label"
+            >{patternKind === "dots" ? "点の直径" : "線の太さ"}</span
+          ><input
+            class="banto-field-control"
             name="patternSize"
             aria-label="模様の太さ"
             type="text"
@@ -473,8 +494,9 @@
           /></label
         >
       </div>
-      <label
-        >線／格子の角度（°）<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">線／格子の角度（°）</span><input
+          class="banto-field-control"
           name="patternAngle"
           aria-label="模様の角度"
           type="text"
@@ -492,8 +514,9 @@
             disabled={fillType !== "pattern"}
           /></label
         >
-        <label
-          >不透明度（%）<input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">不透明度（%）</span><input
+            class="banto-field-control"
             name="patternForegroundAlpha"
             aria-label="模様の不透明度（%）"
             type="text"
@@ -503,8 +526,9 @@
           /></label
         >
       </div>
-      <label
-        >背景<select
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">背景</span><select
+          class="banto-field-control"
           name="patternBackgroundEnabled"
           aria-label="模様の背景"
           onchange={sync}
@@ -523,8 +547,9 @@
             disabled={fillType !== "pattern" || !backgroundShown}
           /></label
         >
-        <label
-          >不透明度（%）<input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">不透明度（%）</span><input
+            class="banto-field-control"
             name="patternBackgroundAlpha"
             aria-label="模様の背景の不透明度（%）"
             type="text"
@@ -557,8 +582,9 @@
           disabled={!strokeShown}
         /></label
       >
-      <label
-        >枠線の幅<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">枠線の幅</span><input
+          class="banto-field-control"
           type="text"
           inputmode="decimal"
           onkeydown={(event) => {
@@ -576,8 +602,9 @@
       >
     </div>
     <div class="options" hidden={!strokeShown}>
-      <label
-        >枠線の線種<select
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">枠線の線種</span><select
+          class="banto-field-control"
           name="strokeStyle"
           aria-label="枠線の線種"
           disabled={!strokeShown}
@@ -588,8 +615,9 @@
       >
     </div>
     <div class="options" hidden={!strokeShown}>
-      <label
-        >枠線の不透明度（%）<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">枠線の不透明度（%）</span><input
+          class="banto-field-control"
           name="strokeAlpha"
           aria-label="枠線の不透明度（%）"
           type="number"

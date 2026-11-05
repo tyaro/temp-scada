@@ -101,8 +101,9 @@
         }}
       >
         <fieldset disabled={locked}>
-          <label
-            >適用する線幅<input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">適用する線幅</span><input
+              class="banto-field-control"
               bind:this={widthInput}
               bind:value={width}
               name="strokeWidth"
@@ -125,8 +126,9 @@
           {#if !validWidth}<p class="hint" role="status">
               線幅は0より大きく64以下の有限の数値で指定してください。空欄は変更なしです。
             </p>{/if}
-          <label
-            >適用する矢印<select
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">適用する矢印</span><select
+              class="banto-field-control"
               bind:this={arrowInput}
               bind:value={arrow}
               name="arrow"
@@ -136,8 +138,9 @@
               ><option value="end">終端（最後の頂点）</option></select
             ></label
           >
-          <label
-            >適用する線種<select
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">適用する線種</span><select
+              class="banto-field-control"
               name="lineStyle"
               aria-label="適用する線種"
               bind:this={styleInput}

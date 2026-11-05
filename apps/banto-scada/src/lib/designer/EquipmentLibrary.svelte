@@ -273,12 +273,15 @@
           })}>計器種別を追加</button
       >
     </div>
-    <input
-      type="search"
-      aria-label="機器を検索"
-      placeholder="機器を検索"
-      bind:value={search}
-    />
+    <div class="banto-field banto-field--stacked">
+      <input
+        class="banto-field-control"
+        type="search"
+        aria-label="機器を検索"
+        placeholder="機器を検索"
+        bind:value={search}
+      />
+    </div>
     <p aria-live="polite">
       {matching.length}件 / 全{project.equipment?.length ?? 0}件
     </p>
@@ -370,15 +373,18 @@
             <p>
               採用した信号はすべて未割付で登録します。図面の配置と外部タグの割付は引き継ぎません。
             </p>
-          {:else}<label
-              >機器種別<select name="typeId"
+          {:else}<label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">機器種別</span><select
+                class="banto-field-control"
+                name="typeId"
                 >{#each project.equipmentTypes as type}<option value={type.id}
                     >{type.name}</option
                   >{/each}</select
               ></label
             >{/if}
-          <label
-            >機器番号<input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">機器番号</span><input
+              class="banto-field-control"
               onkeydown={inputKey}
               name="code"
               required
@@ -386,8 +392,9 @@
               placeholder={copySourceId ? "新しい機器番号" : "FAN-101"}
             /></label
           >
-          <label
-            >機器名<input
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">機器名</span><input
+              class="banto-field-control"
               onkeydown={inputKey}
               name="name"
               required
@@ -397,15 +404,19 @@
           {#each kind?.slots ?? [] as slot}
             <div class="slot">
               <strong>{slot.name} · {slot.type} / read</strong>
-              <label
-                >採用・割付状態<select name={`state:${slot.name}`}
+              <label class="banto-field banto-field--stacked"
+                ><span class="banto-field-label">採用・割付状態</span><select
+                  class="banto-field-control"
+                  name={`state:${slot.name}`}
                   ><option value="unadopted">未採用</option><option
                     value="unassigned">採用・未割付</option
                   ><option value="assigned">外部名を割付</option></select
                 ></label
               >
-              <label
-                >外部名（割付時のみ使用）<input
+              <label class="banto-field banto-field--stacked"
+                ><span class="banto-field-label">外部名（割付時のみ使用）</span
+                ><input
+                  class="banto-field-control"
                   onkeydown={inputKey}
                   name={`tag:${slot.name}`}
                   maxlength="512"

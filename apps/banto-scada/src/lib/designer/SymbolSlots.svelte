@@ -49,8 +49,9 @@
         else onsubmit(event);
       }}
     >
-      <label
-        >slot名<input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">slot名</span><input
+          class="banto-field-control"
           name="slotName"
           required
           maxlength="64"
@@ -59,8 +60,11 @@
           onkeydown={inputKey}
         /></label
       >
-      <label
-        >slot型<select name="slotType" aria-label="slot型"
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">slot型</span><select
+          class="banto-field-control"
+          name="slotType"
+          aria-label="slot型"
           ><option value="number">number</option><option value="bool"
             >bool</option
           ></select
@@ -94,8 +98,9 @@
               else onsubmit(event);
             }}
           >
-            <label
-              >slot名<input
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">slot名</span><input
+                class="banto-field-control"
                 name="slotName"
                 required
                 maxlength="64"
@@ -103,8 +108,11 @@
                 onkeydown={inputKey}
               /></label
             >
-            <label
-              >slot型<select name="slotType" aria-label="slot型"
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">slot型</span><select
+                class="banto-field-control"
+                name="slotType"
+                aria-label="slot型"
                 ><option value="number">number</option><option value="bool"
                   >bool</option
                 ></select

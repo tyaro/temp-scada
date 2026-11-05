@@ -99,8 +99,9 @@
   <p>
     履歴の表示条件を保存します。配置は静的なカードで、履歴表示は準備中です。記録設定は変更しません。
   </p>
-  <label
-    >編集するトレンド <select
+  <label class="banto-field banto-field--stacked"
+    ><span class="banto-field-label">編集するトレンド </span><select
+      class="banto-field-control"
       aria-label="編集するトレンド"
       value={selected}
       disabled={dirty}
@@ -119,18 +120,26 @@
     }}
   >
     <div class="fields">
-      <label
-        >トレンド名 <input bind:value={draft.name} maxlength="1024" /></label
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">トレンド名 </span><input
+          class="banto-field-control"
+          bind:value={draft.name}
+          maxlength="1024"
+        /></label
       >
-      <label
-        >履歴データ集合ID（namespace） <input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label"
+          >履歴データ集合ID（namespace）
+        </span><input
+          class="banto-field-control"
           bind:value={draft.historianNamespace}
           maxlength="64"
           spellcheck="false"
         /></label
       >
-      <label
-        >表示期間（ミリ秒） <input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">表示期間（ミリ秒） </span><input
+          class="banto-field-control"
           type="number"
           min="1"
           max="3600000"
@@ -138,15 +147,18 @@
           bind:value={draft.windowMs}
         /></label
       >
-      <label
-        >取得モード <select bind:value={draft.mode}
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">取得モード </span><select
+          class="banto-field-control"
+          bind:value={draft.mode}
           ><option value="raw">raw（観測点）</option><option value="minmax"
             >minmax（最小・最大）</option
           ></select
         ></label
       >
-      <label
-        >系列ごとの点数上限 <input
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label">系列ごとの点数上限 </span><input
+          class="banto-field-control"
           type="number"
           min="1"
           max="2000"
@@ -163,15 +175,18 @@
         <fieldset>
           <legend>ペン {index + 1}</legend>
           <div class="fields">
-            <label
-              >系列ID {index + 1}<input
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">系列ID {index + 1}</span><input
+                class="banto-field-control"
                 bind:value={pen.seriesId}
                 maxlength="64"
                 spellcheck="false"
               /></label
             >
-            <label
-              >凡例の別名 {index + 1}<input
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">凡例の別名 {index + 1}</span
+              ><input
+                class="banto-field-control"
                 value={pen.label ?? ""}
                 maxlength="1024"
                 oninput={(event) => {
@@ -181,8 +196,9 @@
                 }}
               /></label
             >
-            <label
-              >ペン色 {index + 1}<input
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">ペン色 {index + 1}</span><input
+                class="banto-field-control"
                 bind:value={pen.color}
                 maxlength="7"
                 placeholder="#008f76"
