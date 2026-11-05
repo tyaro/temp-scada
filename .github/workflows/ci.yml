@@ -23,12 +23,12 @@ jobs:
         run: |
           if [[ "$EVENT_NAME" == pull_request ]]; then
             merge_base=$(git merge-base "$BASE" "$HEAD")
-            git diff --name-only -z "$merge_base" "$HEAD" > "$RUNNER_TEMP/changed-files"
+            git diff --no-renames --name-only -z "$merge_base" "$HEAD" > "$RUNNER_TEMP/changed-files"
           elif [[ "$BEFORE" =~ ^0+$ ]]; then
             merge_base=$(git merge-base "origin/$DEFAULT_BRANCH" "$GITHUB_SHA")
-            git diff --name-only -z "$merge_base" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
+            git diff --no-renames --name-only -z "$merge_base" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
           else
-            git diff --name-only -z "$BEFORE" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
+            git diff --no-renames --name-only -z "$BEFORE" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
           fi
           docs_only=true
           count=0
