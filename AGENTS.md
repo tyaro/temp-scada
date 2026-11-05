@@ -12,7 +12,7 @@ industrial へ戻せるよう apps/banto-scada と crates/scada-* の配置を�
 
 クラウドのシェルでは scripts/cloud-env.sh を source してから README の検証コマンドを使います。新しい機能は対応する契約テストとブラウザ検証で確認し、Markdown / TS / Svelte / JSON は pnpm exec prettier --write <変更ファイル>、Rust は cargo fmt --all で整形してください。
 
-アプリ基盤は Banto v6.9.0 の公開パッケージを使います。独自の認証・テーマ・汎用 UI を重複実装する前に既存 API を確認してください。運用時の認証方針は docs/design/runtime/access-policy.md を参照。ems-apps の画面・コード・アセットは取り込みません。検証が通った機能の区切りで、日本語の Conventional Commits 形式でコミットしてセーブします。
+アプリ基盤は Banto v6.10.0 の公開パッケージを使います。独自の認証・テーマ・汎用 UI を重複実装する前に既存 API を確認してください。運用時の認証方針は docs/design/runtime/access-policy.md を参照。ems-apps の画面・コード・アセットは取り込みません。検証が通った機能の区切りで、日本語の Conventional Commits 形式でコミットしてセーブします。
 
 2026-11-05のユーザー指示により、次の作業は[実Hub・S7接続計画](docs/project/real-hub-connection-plan.md)のC0から初回読取接続へ進めます。S7 SOAK終了待ちは解除済みです。認証は2026-10-18の延期指示を維持し、C0で上流の最新契約と利用可否を確認して再開範囲を確定します。SOAK完了を認証修正完了と同一視せず、ローカル編集はログイン不要のまま維持します。
 

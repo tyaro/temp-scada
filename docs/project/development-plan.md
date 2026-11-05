@@ -24,7 +24,7 @@
 | タグ参照名の置換                    | 全画面差分・入力保護・明示適用を提供。I6b CI成功                                                          | [I6設計・実画面](../design/equipment/text-reference-replacement-design.md) |
 | 大図面の性能                        | I5d／e／f候補は未採用。I5g限定改善・全体CI成功。I5h読込診断で文字寸法・font準備の費用を確認、改善は未実施 | [計測・採否](../performance/mixed-editor-quality.md)                       |
 | 接続・配管の初回機能                | I7a〜c・I8a／bは全体CI成功。I8cのInspector接続・解除UIも完了・CI成功                                      | [接続・配管追従の段階設計](../design/editor/connection-follow-design.md)   |
-| 共通パネル・入力基盤                | 上流IssueはClosed。追加還元候補を整理し、v6.9.0へ依存更新済み。公開APIの接続・受入は別途計画              | [還元候補・採用境界](../reviews/banto-contribution-candidates.md)          |
+| 共通パネル・入力基盤                | 上流IssueはClosed。追加還元候補を整理し、v6.10.0へ依存更新済み。公開APIの接続・受入は別途計画             | [還元候補・採用境界](../reviews/banto-contribution-candidates.md)          |
 | 実Hub／catalog・正式Faceplate・認証 | 実Hub／catalogはC0〜C3、認証契約はC0で確認。正式Faceplate・運用は後続                                     | [保留と再開条件](upstream-independent-plan.md#今は保留するもの)            |
 
 次機能の候補調査は採用・着手完了を意味しない。新しい機能は詳細仕様→基盤→UI→受入の区切りで進める。
@@ -98,13 +98,15 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 
 ## 共有部品の扱い
 
-Banto v6.9.0を使い、汎用機能の共通化は上流へ還元する。SCADAはPLCへ直接接続せず、Hubを外部サービスとして利用する。ドライバ・式評価を複製しない。`banto-tagclient`は固定commit依存で利用済み。`banto-expr`は式機能を導入するときに動作確認済みcommitへ固定する。
+Banto v6.10.0を使い、汎用機能の共通化は上流へ還元する。SCADAはPLCへ直接接続せず、Hubを外部サービスとして利用する。ドライバ・式評価を複製しない。`banto-tagclient`は固定commit依存で利用済み。`banto-expr`は式機能を導入するときに動作確認済みcommitへ固定する。
+
+v6.10.0ではフォーム入力の内部ID・既定背景とグリッドのセルエラー表示が変わる。現行SCADAは`@banto/forms`と`@banto/grid-svelte`を直接利用していないため、これらの移行作業は発生しない。`@banto/theme/css`と`@banto/ui`の既存利用は型検査・単体試験・画面受入で確認する。追加された下線型入力などの任意APIは現行UIに自動適用しない。上流の[移行注意](https://github.com/tyaro/banto/blob/v6.10.0/CHANGELOG.md#6100---2026-11-05)を将来の採用時に照合する。
 
 Banto v6.9.0への依存更新では公開APIの必須移行はなく、既存の `optimizeDeps.exclude` を維持する。Menu #427／#430の上流修正を受け、依存更新後の別工程で局所adapterを撤去した。可用高・内部scroll・フォーカス・Esc・resize・狭幅の受入は[Menu仕様](../design/editor/designer-menu-viewport.md)に従う。PR #9レビュー修正ではMenuGroupだけをcontextKeyで再生成し、Menu／triggerとfocus復帰先を保持する。修正後のブラウザ受入はChromium 156とChrome 155で関連13spec・76件が成功した。200px幅の左端−4pxは撤去後の既知制約として上流報告候補に残す。認証・Host・新しい共通APIの採用は含めない。
 
 PR #9の残課題（2026-10-23・日本時間）は、Chromium 148のcontext menu即closeと過去の4並列画像比較差分の原因調査（ともに原因未特定）、floatingのorigin消失時に常設メニューへ戻すfallback経路のE2E追加、200px幅の左はみ出し（x=−4／幅204px）のBantoへの報告（Issue未起票）。[検証結果と残課題](../history/implementation-history.md#menu-review-phase-b)を参照する。
 
-SCADAはBanto v6.9.0で先行し、参照スナップショットのIndustrialはv6.7.0のまま。統合時にこの版差を照合する。寸法トークンは今回は採用せず、採用前に既存の`--banto-*`参照（レビュー時点で約58ファイル）との重複・移行範囲を整理する。
+SCADAはBanto v6.10.0で先行し、参照スナップショットのIndustrialはv6.7.0のまま。統合時にこの版差を照合する。寸法トークンは今回は採用せず、採用前に既存の`--banto-*`参照（レビュー時点で約58ファイル）との重複・移行範囲を整理する。
 
 認証はIndustrial側の修正中につき延期。ローカル編集はログイン不要。運用時のユーザー管理必須と、再起動後の読取監視の要望は[運用・ログイン方針](../design/runtime/access-policy.md)を維持する。リリース前の旧Project互換性を必須とせず、変更後のTS／Rust／schema／サンプル／検証を揃える。
 

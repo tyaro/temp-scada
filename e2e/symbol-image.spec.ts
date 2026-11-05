@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import sample from "../examples/symbol-image.project.json" with { type: "json" };
 import {
   chooseTheme,
@@ -343,7 +344,7 @@ test("geometry edits retain image URLs while identical-package reload replaces t
   expect(await readable(nextUrl!)).toBe(true);
   await openProject(
     page,
-    new URL("../examples/minimal.project.json", import.meta.url).pathname,
+    fileURLToPath(new URL("../examples/minimal.project.json", import.meta.url)),
   );
   await expect(mainCanvas(page).locator("image")).toHaveCount(0);
   expect(await readable(nextUrl!)).toBe(false);

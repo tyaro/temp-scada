@@ -310,6 +310,9 @@ test("reappearing menu bar updates the floating top boundary without a window re
 }) => {
   await start(page);
   await float(page);
+  await page.addStyleTag({
+    content: '#app .app-header [role="menubar"] { min-height: 80px; }',
+  });
   await menu(page, "メニューバーを隠す");
   await move(page, 0, -2000);
   const before = (await panel(page).boundingBox())!;
