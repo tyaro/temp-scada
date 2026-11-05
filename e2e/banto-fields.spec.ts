@@ -35,5 +35,18 @@ for (const theme of ["light", "dark"]) {
       expect(style.top).toBe("0px");
       expect(Number.parseFloat(style.bottom)).toBeGreaterThan(0);
     }
+
+    for (const control of [controls[1], controls[3]]) {
+      const option = control.locator("option").first();
+      const style = await option.evaluate((element) => {
+        const computed = getComputedStyle(element);
+        return { background: computed.backgroundColor, color: computed.color };
+      });
+      expect(style).toEqual(
+        theme === "dark"
+          ? { background: "rgb(23, 47, 57)", color: "rgb(226, 239, 246)" }
+          : { background: "rgb(249, 253, 255)", color: "rgb(23, 40, 70)" },
+      );
+    }
   });
 }
