@@ -4,7 +4,7 @@ use scada_model::Project;
 use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
 use serde::Serialize;
 use std::collections::HashSet;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Runtime, State};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
@@ -87,8 +87,8 @@ fn hub_saved_endpoint(state: State<'_, NativeHost>) -> Result<Option<String>, St
 }
 
 #[tauri::command]
-async fn hub_read_start(
-    app: AppHandle,
+async fn hub_read_start<R: Runtime>(
+    app: AppHandle<R>,
     state: State<'_, NativeHost>,
     project_json: String,
     subscription_id: String,
@@ -178,6 +178,9 @@ mod tests {
         assert!(active.claim("new"));
     }
 }
+
+#[cfg(test)]
+mod native_tests;
 
 #[tauri::command]
 async fn hub_catalog(
