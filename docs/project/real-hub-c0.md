@@ -40,3 +40,13 @@
 Tauri 2 のデスクトップを通常 entrypoint で起動し、`examples/real-hub-s7.project.json` を読み込んだ。Tauri host の読取専用 `ReadHost`／`CatalogHost` が既存 Hub へ接続し、画面の数値 Text に温度 `44`、機器詳細の number slot に `44`、bool slot に `true` を表示した。いずれも `Good`、由来 `push`、catalog revision 1、SIM 0件である。意図的に未割付／存在しないタグへ結び付けた4件は取得不能として表示した。
 
 切断直後は表示値が消え、取得不能8件に変わった。再接続後は再び取得不能4件となり、数値と bool が復帰した。再接続時に新しい配送を画面が追跡しない問題を修正し、ブラウザの接続源切替試験でも確認した。native IPC adapter の単体試験で旧購読通知の破棄と開始失敗の扱いを確認した。`push` は Hub への投入方式を表し、元DB行の現在値・物理 PLC との関係・SIM／非SIMを単独では証明しない。したがって C3 の元データ鮮度の受入は保留する。C2 のモック Hub による認証拒否・品質変化・再接続を含む製品経路検証も後続で行う。
+
+## C3 実PLC R系の読取と限定書込み（2026-11-05）
+
+ユーザーがPLC書込みとQ/R系列、新規タグの使用を許可した後に実施。上流の実機記録にある三菱 R08ENCPU の安全範囲 `D3000-4999`／`M1000-2000` を使用した。Hub 管理APIで既存 `plc_slmp`（接続ID 3、`192.168.11.200:5200`、SLMP、非SIM）が接続中、`plc_q`（接続ID 4、`192.168.11.10:3100`）は再接続中と確認した。PLCへ直接ソケットを張らず、既存HubのREST経路を使った。
+
+既存の `plc_slmp.group1.D3000` は `Good / real`、値が観測中に変化し、Hubの行時刻も進んだ。安全範囲の `M1000` に読取専用タグ `plc_slmp.group1.SCADA_C3_M1000`（HubタグID 119）を追加し、`1 / Good / real` を確認した。このタグは製品画面の継続確認用に保持する。`examples/real-plc-r.project.json` を通常Tauri画面で開き、数値Textと機器のnumber slotにD3000、bool slotにM1000の`true`を表示した。機器詳細は双方 `Good / source real / mode configured / catalog 4 / run 1`、SIM 0件。D3000は画面上で `-10183` を観測した（値は変動する）。未割付例の4表示は取得不能として残る。
+
+書込みは専用の一時タグ `SCADA_C3_D4000`（HubタグID 118、i16、writable）だけで行った。書込み前の元値 `0 / Good / real` を確認し、`write:plc_slmp.group1.SCADA_C3_D4000` の一時キーでHub経由 `0→1→0` を送った。`1 / Good / real`（行時刻 `1793855597867`）と復旧した `0 / Good / real`（`1793855598867`）を読み戻した。一時キーID 7は失効・削除、一時タグID 118も削除し、短命grantはlogoutした。キー値は記録・Project・リポジトリに保存していない。Hubサービスの再起動とQ系PLCへの書込みは行っていない。
+
+このR系の数値・boolの製品表示と限定書込みはC3の初回実機確認に達した。DB由来の`s7-bridge`は別経路で、元DB行の古い`updated_at`を新鮮と判定しない。C2のモックHubによるUnauthorized／Bad／Staleなどの製品経路試験は引き続き必要。

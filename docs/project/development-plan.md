@@ -6,7 +6,7 @@
 
 2026-11-05のユーザー指示により、次は[実Hub・S7接続計画](real-hub-connection-plan.md)のC0（上流契約・対象環境・接続条件・shell／IPC確認）から、C1最小host・読取接続、C2モックによる製品経路検証、C3実Hub経由の初回S7読取へ進む。SOAKは完了申告済みで、終了待ちを外す。認証の利用可能な契約はC0で確認し、実接続成功・認証修正完了を今回の計画採用だけで宣言しない。
 
-[C0 の Windows 実行条件と C1 の製品読取](real-hub-c0.md)で既存 Hub 0.3.0-alpha.1、REST v1、試運転中の read キー経路、S7 bridge の候補タグを確認した。Tauri 2 の埋込 host を実装し、通常画面で数値・bool の読取、切断・再接続を確認した。候補タグは検証用DBクエリのpush転送で、`updated_at` は古い。C2 のモック製品経路と C3 の元データ鮮度確認を続ける。
+[C0 の Windows 実行条件と C1・C3 の製品読取](real-hub-c0.md)で既存 Hub 0.3.0-alpha.1、REST v1、試運転中の read キー経路を確認した。Tauri 2 の埋込 host を実装し、通常画面でDB由来のpushタグと実PLC R系の数値・boolを区別して表示した。切断・再接続、R系安全番地の限定書込みと元値復旧も確認した。最初のS7 bridgeタグの`updated_at`は古く、そのDB行の鮮度は未証明。Q系接続は再接続中。C2のモック製品経路検証を続ける。
 
 記録clientの残りはC4、実SQLite記録・History接続はC5、連続運用はC6へ分ける。prep2d2aはPR #88でworkへ統合済み（`a23ae4c`、push／PR CI各全7ジョブ成功、同head `88d8304` のレビュー指摘なし）。prep2d2b Observationの詳細設計はC4で再開し、初回読取接続を妨げる前提にしない。
 
