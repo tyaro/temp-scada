@@ -1,23 +1,23 @@
 # 記録wireのlocal表示と元call配送の境界
 
-状態: **H5d4c4c-prep2dの採用詳細設計。実装は後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
+状態: **H5d4c4c-prep2dの採用詳細設計。prep2d1の純粋表示・元返信読取を実装済み、d2は後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
 
 [prep2c receiver](historian-recording-wire-receiver.md)はPR84でworkへ統合済み（`cec4ab003aedcdc2c73e9001b27c89e6c022650a`）。本書はその次の独立したclient境界を定める。Project 0.37.0、DB7、H1、wire schema、SDK、Banto、依存版を変更しない。
 
 ## 1. 採用する区切り
 
-次の実装PRは **prep2d1: read-only表示projectionと保存済みAttach／Control terminalの取得** とする。pure TS receiverへ小さい取得APIを追加し、未知入力をもう一度信用する表示用receiverや第二のregistryは作らない。
+**prep2d1: read-only表示projectionと保存済みAttach／Control terminalの取得** を実装した。pure TS receiverへ小さい取得APIを追加し、未知入力をもう一度信用する表示用receiverや第二のregistryは作らない。
 
 その後の **prep2d2: 元call配送の独立台帳** は別PRの対象とする。lease／admit／受付照会／cancel／observationとCallInspectionの対応を保持し、正常元配送と状態表示を分ける。次実装にそれらを先取りしない。Promiseを持つportへの接続はさらに後のlocal-v2契約と製品host接続のgateを必要とする。
 
-今回の文書PRも次のd1も、通常App／既存coordinator／monitor／local portを改版・接続しない。network listener、transport、認証、実lease、native dispatch、Rust registryへの通信、実Hub／S7／本番DBを追加しない。pure receiverに渡したJSONは認可証拠ではなく、試験入力を実hostから取得済みの情報と称さない。
+prep2d1は、通常App／既存coordinator／monitor／local portを改版・接続しない。network listener、transport、認証、実lease、native dispatch、Rust registryへの通信、実Hub／S7／本番DBを追加しない。pure receiverに渡したJSONは認可証拠ではなく、試験入力を実hostから取得済みの情報と称さない。
 
 ## 2. 現実装から分かる不足
 
 根拠は以下の現行実装と採用設計である。
 
 - [receiver](../../../apps/banto-scada/src/lib/recording-wire-receiver.ts)はopaque generation／control tokenを発行し、元ACK保存とsnapshot昇格を二段階で行う。
-- [ReceiverState](../../../apps/banto-scada/src/lib/recording-wire-receiver/types.ts)のcurrent()はscope、表示snapshot、停止理由、pending件数を返すが、元ACK本文を返さない。
+- [ReceiverState](../../../apps/banto-scada/src/lib/recording-wire-receiver/types.ts)のcurrent()はscope、表示snapshot、停止理由、pending件数を返すが、元ACK本文を返さない。d1では以下のtoken別getterを追加した。
 - [local port](../../../apps/banto-scada/src/lib/recording-async/port.ts)は同realm test-only契約で、ownerEpoch、closed、ControlFrame、元call terminalが無い。
 - [coordinator](../../../apps/banto-scada/src/lib/recording-async/coordinator.ts)はframeの結果知識と元Promiseの正常settleを別に保持する。frame先着で元call枠を解放しない。
 - [monitor](../../../apps/banto-scada/src/lib/recording-async/monitor.ts)はProject／service／view所有を検査する。wire scopeをProject object identityへ自動変換する仕組みではない。
@@ -27,7 +27,7 @@
 
 ## 3. d1の所有と公開API
 
-receiver factoryの引数・既存methodの意味・既定上限は変えない。次の三methodを `WireReceiver` へ追加する。別factory／別scope登録／public mutable Coreは追加しない。
+receiver factoryの引数・既存methodの意味・既定上限は変えない。次の三methodを `WireReceiver` へ追加した。別factory／別scope登録／public mutable Coreは追加しない。
 
 ```ts
 type StoredTerminal<Q, R> = Readonly<
@@ -204,9 +204,15 @@ P3bの認証・製品transportとembedded host 1の実装条件は解除しな�
 
 ## 12. 実装順と完了判定
 
-1. 本設計PRをレビュー・統合する。新API／表示projectionはまだ無い。
-2. prep2d1でreceiverの三取得method、内部表示helper、上記受入を実装する。現在の6file構造を壊さず、小さいpresentation helperを追加してよい。独立UI・新schema・新依存は作らない。
+1. 設計PR #85をwork `16cf2e3`へ統合した。
+2. prep2d1でreceiverの三取得method、内部readout helper、上記受入を実装した。独立UI・新schema・新依存は追加しない。
 3. d1の実装レビュー後、prep2d2の有限元配送台帳の具体型と上限を別途詳細化して実装する。通常Appへ結ぶ前にlocal-v2の情報欠落／寿命／mode契約をレビューする。
 4. 製品bridge、実wire取得、実native接続はhost／P3bのgateを満たす別工程とする。
 
 d1完了は「検証済みreceiver状態を情報を落とさず表示用に参照でき、保存済み元ACKをopaque tokenで安全に取得できる」ことに限る。元callを実送信した、native mutationを許可した、実通信を回復したという完了表現は用いない。
+
+## 13. 実装と検証の入口
+
+公開入口は既存receiverのまま、内部[`readout.ts`](../../../apps/banto-scada/src/lib/recording-wire-receiver/readout.ts)が表示と元terminalの小wrapperを作る。両poll cacheは同じcommit済みReceiverStateに束縛し、read-only getterは更新guardを共有しながらcacheを再生成しない。元request/replyは既存台帳のowned/frozen参照で、wrapperの履歴台帳や第二のreply予約を追加しない。
+
+[`recording-wire-readout-cases.json`](../../../examples/recording-wire-readout-cases.json)の19シナリオと[`recording-wire-readout.test.ts`](../../../apps/banto-scada/src/lib/recording-wire-readout.test.ts)を追加し、既存receiver59シナリオのdriverにも全stepの元ACK読取・旧表示不変を加えた。共通fixtureをChromiumの実moduleでも実行し、Project保存前後一致と外部送信無しを確認する。通常Appへのservice注入は行わない。

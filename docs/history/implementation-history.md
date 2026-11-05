@@ -4,6 +4,20 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 記録wireの表示・元返信読取（H5d4c4c-prep2d1、2026-11-05）
+
+設計[PR #85](https://github.com/tyaro/temp-scada/pull/85)はworkへ統合済み（`16cf2e3`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41892046902)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41892113807)全7job成功、head `5f92c76` の自動レビュー指摘・未解決なし）。[Astraのclient境界設計](../design/runtime/historian-recording-wire-client-boundary.md)に沿い、receiver自身へ`currentDisplay()`／`attachTerminal()`／`controlTerminal()`を実装した。
+
+表示はcommit済みのowned状態だけから作り、未受信・現行購読・保持している以前の観測を区別する。epoch／owner終了／native回復要求／認可喪失／配送切断／受信停止を別軸で保ち、操作資格や時刻の鮮度を生成しない。ownerClosed control後の古いsnapshot.closed=falseを本文のまま保持し、上位sticky事実とlastKnownを併記する。
+
+元Attach／Control返信はopaque tokenで非破壊に取得する。既存request／reply本文をfreeze済み参照のまま共有し、読取でquota・未回収件数・poll cacheを変更しない。元ACKが正常なら表示更新の容量不足・矛盾の後も取得でき、退役・切断・dispose後も回収を続ける。更新中のgetterはbusyで拒否し、current／currentDisplayは更新前のcommit済みcacheを返す。
+
+追加19シナリオと境界試験をunit／Chromiumで実receiverへ流した。既存59シナリオも各stepで元ACK全文・pending／terminal・旧表示不変を照合する。native dispatchやPromise完了を表示から合成しない。通常App／coordinator／local port、Rust／wire/schema／Project0.37.0／DB7／H1／固定SDK／Banto・依存は維持する。
+
+検証: TS全9,986件（新規34）、型検査0error/0warning・build、関連Chromium14件（新規1）、全体Prettierと変更文書リンク／anchor・差分。Astraの最終read-onlyレビューに修正必須の所見はない。Rust source変更はなく、Rustを含む全体回帰はReady for Review PRのpush／PR CIで確認する。
+
+次はprep2d2の有限な元call配送台帳について、具体型・保存上限・回復read枠と物理callの関係を詳細設計する。snapshot64件/8MiBとcall8MiBは返却しない有限モデルのまま。通常App接続・local-v2、認証・実native・製品hostとP3bは別工程とする。
+
 ## 記録wireの表示・元返信読取境界の設計（H5d4c4c-prep2d、2026-11-05）
 
 prep2cの[PR #84](https://github.com/tyaro/temp-scada/pull/84)はworkへ統合済み（`cec4ab0`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41887023933)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41887065368)全7job成功、head `8454f0b` の自動レビュー指摘・未解決なし）。[Astraのclient境界設計](../design/runtime/historian-recording-wire-client-boundary.md)で、receiverからの表示と元call返信の読取を段階化した。

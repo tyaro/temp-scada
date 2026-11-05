@@ -1,0 +1,992 @@
+{
+  "description": "Read-only receiver display and original terminal scenarios; test command DSL only.",
+  "scenarios": [
+    {
+      "name": "initial readout is frozen none without authority",
+      "steps": [
+        {
+          "op": "observe",
+          "display": {
+            "snapshotRelation": "none",
+            "transportConnected": false,
+            "receiverStatus": "awaitingAttach",
+            "receiverStoppedReason": null,
+            "generation": null,
+            "ownerClosed": false,
+            "nativeRecoveryRequired": false,
+            "authorizationLost": false,
+            "highwater": null,
+            "snapshot": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "provisional evidence is not displayed or an original terminal",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "ref": "s",
+          "rev": 3,
+          "display": {
+            "snapshotRelation": "none",
+            "snapshot": null
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "pending",
+            "request": {
+              "attachId": "a"
+            }
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "display": {
+            "snapshotRelation": "currentSubscription",
+            "highwater": 3,
+            "snapshot": {
+              "revision": 3
+            }
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "kind": "attached",
+                "snapshot": {
+                  "revision": 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "native recovery is independent of current subscription",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "ref": "s",
+          "rev": 2,
+          "snapshot": {
+            "ownerBlocked": true
+          },
+          "display": {
+            "snapshotRelation": "currentSubscription",
+            "nativeRecoveryRequired": true,
+            "ownerClosed": false,
+            "authorizationLost": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "owner closed control preserves old snapshot body",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "ownerClosed",
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "ownerClosed": true,
+            "snapshot": {
+              "closed": false
+            },
+            "transportConnected": true,
+            "nativeRecoveryRequired": false
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "snapshot": {
+                  "closed": false
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "closed snapshot is historical display without invented transport loss",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "snapshot": {
+            "closed": true
+          },
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "ownerClosed": true,
+            "transportConnected": true,
+            "snapshot": {
+              "closed": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "authorization loss is separate from native recovery",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "controlFrame",
+          "id": "a",
+          "ref": "s",
+          "reason": "authorizationLost",
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "authorizationLost": true,
+            "ownerClosed": false,
+            "nativeRecoveryRequired": false,
+            "transportConnected": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "disconnect then reconnect keeps old generation historical",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "connect",
+          "value": false,
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "transportConnected": false
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "terminal"
+          }
+        },
+        {
+          "op": "connect",
+          "value": true,
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "transportConnected": true
+          }
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1,
+          "display": {
+            "snapshotRelation": "lastKnown"
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "b",
+          "value": {
+            "kind": "pending"
+          }
+        },
+        {
+          "op": "attach",
+          "id": "b",
+          "rev": 1,
+          "ref": "s2",
+          "display": {
+            "snapshotRelation": "currentSubscription"
+          }
+        }
+      ]
+    },
+    {
+      "name": "new attach does not promote old snapshot before ACK",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1,
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "generation": {
+              "phase": "attaching"
+            }
+          }
+        },
+        {
+          "op": "state",
+          "id": "b",
+          "ref": "s2",
+          "rev": 2,
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "highwater": 1
+          }
+        },
+        {
+          "op": "attach",
+          "id": "b",
+          "rev": 1,
+          "ref": "s2",
+          "display": {
+            "snapshotRelation": "currentSubscription",
+            "highwater": 2
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "snapshot": {
+                  "revision": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "b",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "snapshot": {
+                  "revision": 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown low control snapshot still exposes original terminal",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "ref": "s",
+          "rev": 3
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "ref": "s",
+          "action": "snapshot"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "result": "resyncRequired",
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "receiverStatus": "resyncRequired",
+            "highwater": 3
+          }
+        },
+        {
+          "op": "controlTerminal",
+          "id": "c",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "snapshot": {
+                  "revision": 2
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "controlTerminal",
+          "id": "c",
+          "value": {
+            "kind": "terminal"
+          }
+        }
+      ]
+    },
+    {
+      "name": "capacity stop retains original ACK without snapshot",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "capacity",
+          "terminalStored": true,
+          "display": {
+            "snapshotRelation": "none",
+            "receiverStatus": "stopped",
+            "receiverStoppedReason": "capacity",
+            "snapshot": null
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "kind": "attached",
+                "snapshot": {
+                  "revision": 1
+                }
+              }
+            }
+          }
+        }
+      ],
+      "limits": {
+        "snapshotRevisions": 0
+      }
+    },
+    {
+      "name": "projection contradiction leaves the exact normal reply accessible",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "ref": "s",
+          "rev": 1,
+          "snapshot": {
+            "ownerBlocked": true
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "protocolViolation",
+          "terminalStored": true,
+          "display": {
+            "snapshotRelation": "none",
+            "nativeRecoveryRequired": false
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "snapshot": {
+                  "ownerBlocked": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "duplicate"
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "terminal"
+          }
+        }
+      ]
+    },
+    {
+      "name": "subscription ref reuse stores terminal then stops display",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginAttach",
+          "id": "b",
+          "after": 1
+        },
+        {
+          "op": "attach",
+          "id": "b",
+          "rev": 1,
+          "ref": "s",
+          "result": "protocolViolation",
+          "terminalStored": true,
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "receiverStoppedReason": "protocolViolation",
+            "highwater": 1
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "b",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "subscriptionRef": "s"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "malformed ACK pending survives disposal and normal late delivery",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "documentPatch": {
+            "extra": true
+          },
+          "result": "invalidDocument"
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "pending"
+          }
+        },
+        {
+          "op": "dispose",
+          "display": {
+            "snapshotRelation": "none"
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "pending"
+          }
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "result": "ignoredRetired"
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "terminal"
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "terminal"
+          }
+        }
+      ]
+    },
+    {
+      "name": "pending control is not settled by frame evidence",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "ref": "s",
+          "action": "snapshot"
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "ref": "s",
+          "rev": 2
+        },
+        {
+          "op": "controlTerminal",
+          "id": "c",
+          "value": {
+            "kind": "pending"
+          }
+        },
+        {
+          "op": "retire",
+          "id": "a",
+          "display": {
+            "snapshotRelation": "lastKnown"
+          }
+        },
+        {
+          "op": "controlTerminal",
+          "id": "c",
+          "value": {
+            "kind": "pending"
+          }
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 3,
+          "result": "ignoredRetired"
+        },
+        {
+          "op": "controlTerminal",
+          "id": "c",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "snapshot": {
+                  "revision": 3
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "contradictory terminal never replaces first reply",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "ref": "s",
+          "action": "snapshot"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2
+        },
+        {
+          "op": "controlTerminal",
+          "id": "c",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "snapshot": {
+                  "revision": 2
+                }
+              }
+            }
+          }
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 3,
+          "result": "protocolViolation",
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "highwater": 2
+          }
+        },
+        {
+          "op": "controlTerminal",
+          "id": "c",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "snapshot": {
+                  "revision": 2
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "rejected control terminal does not close subscription",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "ref": "s",
+          "action": "snapshot"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "outcome": {
+            "kind": "rejected",
+            "error": "capacity"
+          },
+          "display": {
+            "snapshotRelation": "currentSubscription"
+          }
+        },
+        {
+          "op": "controlTerminal",
+          "id": "c",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "kind": "rejected",
+                "error": "capacity"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "detach terminal does not invent owner closure",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s"
+        },
+        {
+          "op": "beginControl",
+          "id": "c",
+          "generation": "a",
+          "ref": "s",
+          "action": "detach"
+        },
+        {
+          "op": "controlReply",
+          "id": "c",
+          "rev": 2,
+          "outcome": {
+            "kind": "detached"
+          },
+          "display": {
+            "snapshotRelation": "lastKnown",
+            "ownerClosed": false,
+            "nativeRecoveryRequired": false,
+            "transportConnected": true
+          }
+        },
+        {
+          "op": "controlTerminal",
+          "id": "c",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "kind": "detached"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "readout accepts no fabricated identity",
+      "steps": [
+        {
+          "op": "attachTerminal",
+          "id": "unknown",
+          "result": "foreignToken"
+        },
+        {
+          "op": "controlTerminal",
+          "id": "unknown",
+          "result": "foreignToken"
+        },
+        {
+          "op": "observe",
+          "display": {
+            "snapshotRelation": "none"
+          }
+        }
+      ]
+    },
+    {
+      "name": "complete snapshot nulls replace previous nested evidence",
+      "steps": [
+        {
+          "op": "connect",
+          "value": true
+        },
+        {
+          "op": "beginAttach",
+          "id": "a",
+          "after": null
+        },
+        {
+          "op": "attach",
+          "id": "a",
+          "rev": 1,
+          "ref": "s",
+          "snapshotBase": "complex",
+          "display": {
+            "snapshotRelation": "currentSubscription"
+          }
+        },
+        {
+          "op": "state",
+          "id": "a",
+          "ref": "s",
+          "rev": 2,
+          "display": {
+            "snapshotRelation": "currentSubscription",
+            "snapshot": {
+              "admission": null,
+              "operation": null,
+              "reconciliation": null
+            }
+          }
+        },
+        {
+          "op": "attachTerminal",
+          "id": "a",
+          "value": {
+            "kind": "terminal",
+            "reply": {
+              "outcome": {
+                "snapshot": {
+                  "revision": 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

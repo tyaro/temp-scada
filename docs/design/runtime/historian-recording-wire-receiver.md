@@ -293,4 +293,4 @@ Rust registryはframeの生成fixture根拠として使えるが、TSに第二�
 
 この有限モデルを長時間運用へ使う前に、履歴の保持/retirementとwire→local表示契約を別途設計する。通常App・coordinator・local port・元Promise配送・認証・実hostは本工程で接続しない。
 
-表示projectionと元Attach/Control返信の読取は[prep2dのclient境界設計](historian-recording-wire-client-boundary.md)へ分離した。receiverの有限保持や正常terminal保存を、元Promiseの物理完了・操作資格へ置き換えない。
+表示projectionと元Attach/Control返信の読取は[prep2dのclient境界設計・d1実装](historian-recording-wire-client-boundary.md)へ分離した。`currentDisplay()`はcommit済み表示、`attachTerminal()`／`controlTerminal()`はopaque tokenに対応する不変元返信を非破壊に返す。receiverの有限保持や正常terminal保存を、元Promiseの物理完了・操作資格へ置き換えない。
