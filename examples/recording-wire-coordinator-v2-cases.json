@@ -1,0 +1,7 @@
+{
+  "scenarios": [
+    { "name": "reply before transport end", "kind": "replyFirst" },
+    { "name": "transport end before reply", "kind": "transportFirst" },
+    { "name": "ticket ended before start", "kind": "endedBeforeStart" }
+  ]
+}

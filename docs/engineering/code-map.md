@@ -815,3 +815,9 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 [採用設計](../design/runtime/historian-recording-wire-local-v2.md)に沿い、`recording-wire-local-v2.ts`が実factory由来のledger／receiverのopaque tokenを六経路の同realm Promiseへ結ぶ。`recording-wire-delivery-ledger.ts`と`recording-wire-receiver.ts`のprivate WeakSetがsource instanceを検査する。明示`pump()`は元getterに保存済みの正常返信だけを一度配送する。`recording-async`、通常App、native owner、transportへの接続は後続工程である。
 
 `examples/recording-wire-local-v2-cases.json`と`__fixtures__/recording-wire-local-v2-cases.ts`はNode／Chromium共通の配送経路を実moduleで実行する。`recording-wire-local-v2.test.ts`はforeign source／token、未配送、Observationのattemptとquery、後着、有限容量を確認し、`e2e/recording-wire-local-v2.spec.ts`はProject保存bytes不変も確認する。
+
+## 記録wire coordinator-v2（C4、test-only）
+
+[採用設計](../design/runtime/historian-recording-coordinator-v2.md)に沿い、`recording-wire-coordinator-v2.ts`が実ledger／receiver／local-v2とtest-only portを固定scopeで束縛する。source単位の一回claim、token帰属・容量、元返信Promiseと個別transport ticketの終了、Observation queryとattempt、close後の後着回収を別に保持する。`recording-wire-local-v2.ts`のprivate source brandは同scopeでも別ledger／receiverの組合せを拒否する。test portの同期lifecycleは開始前に終了したticketを送信へ流さず、元返信やnative workerの静止を偽装しない。
+
+`examples/recording-wire-coordinator-v2-cases.json`と`__fixtures__/recording-wire-coordinator-v2-cases.ts`をNode／Chromiumで共通実行する。`recording-wire-coordinator-v2.test.ts`はreply／taskの全順序、CallInspection、Observation pending、Attach／Control、有限容量、source再claim、再入・後着を検証する。`e2e/recording-wire-coordinator-v2.spec.ts`はProject保存bytes不変を確認する。既存`recording-async`／通常App／Tauri／native ownerはこの区切りで接続しない。

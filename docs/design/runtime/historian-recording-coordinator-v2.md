@@ -1,6 +1,6 @@
 # 記録wire coordinator-v2の所有・attempt境界
 
-状態: **C4の採用詳細設計、実装は次の区切り**。2026-11-06（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[wire host契約](historian-recording-wire-host.md)、[元call・Observation台帳](historian-recording-wire-delivery-ledger.md)、[local-v2配送](historian-recording-wire-local-v2.md)、[実Hub・S7接続計画](../../project/real-hub-connection-plan.md)を前提にする。
+状態: **C4の採用詳細設計。同realm・test-only rootを実装済み、製品接続は後続**。2026-11-06（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[wire host契約](historian-recording-wire-host.md)、[元call・Observation台帳](historian-recording-wire-delivery-ledger.md)、[local-v2配送](historian-recording-wire-local-v2.md)、[実Hub・S7接続計画](../../project/real-hub-connection-plan.md)を前提にする。
 
 ## 1. 対象と順序
 
@@ -54,4 +54,4 @@ coordinator自身は各trackとattemptを最大256件に縮小可能な上限で
 5. coordinator／local-v2容量のexact／1不足、attempt容量不足時の既存track保持、既存ledgerの初回回復read予約の不変、ledger又はreceiverを再利用したroot再作成拒否、失敗factory後の再試行、再入・throw後復帰・commit済みcacheを検証する。
 6. dispatch同期throw後のlate終了通知、開始前に終了したticketの送信拒否、同trackへの別ticket・重複開始、foreign ticketを検証する。いずれもcoordinator自身から外部dispatchを呼ばない。
 
-この段階のtest portによるattempt通知は試験入力であり、製品の物理終了保証ではない。次にGUI非依存のnative registry adapterを実`RecordingOperationsOwner`の外部所有rootへ接続し、registry ticketとnative handleを一対一に束縛する。native `Instant`のlease期限、trusted principal、server決定のscope／epoch、role照合、認可失効後の監視、process shutdownとview closeの違いを閉じる。protected **read key**を記録変更のprincipalに流用しない。mock Hub／一時SQLiteで返信喪失、切断、late reply、世代交代、複数caller、容量不足を受け入れた後にTauri transportへ接続する。
+同realmのtest-only rootとtest portを実装した。portのissue／finishは未知requestより前に再入guardを取得し、満杯時のforeign token判定もsource帰属を先に確認する。test portによるattempt通知は試験入力であり、製品の物理終了保証ではない。次にGUI非依存のnative registry adapterを実`RecordingOperationsOwner`の外部所有rootへ接続し、registry ticketとnative handleを一対一に束縛する。native `Instant`のlease期限、trusted principal、server決定のscope／epoch、role照合、認可失効後の監視、process shutdownとview closeの違いを閉じる。protected **read key**を記録変更のprincipalに流用しない。mock Hub／一時SQLiteで返信喪失、切断、late reply、世代交代、複数caller、容量不足を受け入れた後にTauri transportへ接続する。

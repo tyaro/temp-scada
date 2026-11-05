@@ -103,6 +103,20 @@ export interface RecordingWireLocalV2 {
   current(): LocalV2State;
 }
 
+const localSources = new WeakMap<
+  object,
+  Readonly<{ ledger: WireDeliveryLedger; receiver: WireReceiver }>
+>();
+export function isRecordingWireLocalV2For(
+  value: unknown,
+  ledger: WireDeliveryLedger,
+  receiver: WireReceiver,
+): value is RecordingWireLocalV2 {
+  if (!value || typeof value !== "object") return false;
+  const source = localSources.get(value);
+  return source?.ledger === ledger && source.receiver === receiver;
+}
+
 type Route =
   | "original"
   | "inspectionAttempt"
@@ -405,5 +419,6 @@ export function createRecordingWireLocalV2(
       ),
     current: () => published,
   });
+  localSources.set(adapter, Object.freeze({ ledger, receiver }));
   return Object.freeze({ ok: true, value: adapter });
 }
