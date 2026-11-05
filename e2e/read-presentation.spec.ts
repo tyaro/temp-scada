@@ -10,7 +10,7 @@ async function fixtureEntry(page: Page) {
     const response = await route.fetch();
     const original = await response.text();
     const mount =
-      /mount\(App,\s*\{\s*target:\s*document\.getElementById\("app"\)\s*\}\);/;
+      /if \("__TAURI_INTERNALS__" in window\) \{[\s\S]*?\} else \{\s*mount\(App,\s*\{\s*target:\s*document\.getElementById\("app"\)\s*\}\);\s*\}/;
     expect(original).toMatch(mount);
     const injected = `
       import { createSubscriber } from "/node_modules/.vite/deps/svelte_reactivity.js";
@@ -25,6 +25,7 @@ async function fixtureEntry(page: Page) {
         return () => {h.ended++; if (h.throwUnsubscribe) throw Error("test cleanup failure");};
       }});
       let source = makeSource();
+      h.detachSource = () => {source = undefined; notifySource();};
       h.replaceSource = () => {source = makeSource(); notifySource();};
       h.restart = () => {h.delivery = h.begin(); h.deliveries.push(h.delivery);};
       mount(App, {target: document.getElementById("app"), props: {get readSource() {trackSource(); return source;}}});
@@ -176,6 +177,15 @@ for (const theme of ["light", "dark"] as const) {
     await expect(detail).toHaveAttribute("data-slot-state", "invalid");
     await page.evaluate(() => (window as any).__readHarness.restart());
     expect(await send(page, "good", 1, 1)).toBe(true);
+    await expect(numbers.first()).toHaveAttribute("data-tag-state", "good");
+    await page.evaluate(() => (window as any).__readHarness.detachSource());
+    await expect(numbers.first()).toHaveAttribute(
+      "data-tag-state",
+      "disconnected",
+    );
+    await page.evaluate(() => (window as any).__readHarness.replaceSource());
+    expect(await send(page, "good", 1, 1)).toBe(true);
+    await expect(numbers.first()).toHaveAttribute("data-tag-state", "good");
     await page.evaluate(() => {
       const h = (window as any).__readHarness;
       h.previous = h.delivery;

@@ -25,3 +25,17 @@
 4. C3: 実 Hub の対象タグで現在値・品質・SIM 区別を照合し、元 S7 の更新時刻と値の新鮮さを確認する。実機側サービスの再起動や故障注入は行わない。
 
 [採用計画](real-hub-connection-plan.md)と[P3b 境界](../design/runtime/transport-boundary.md)の完了条件を維持する。この C0 記録だけで C1〜C3 を完了扱いしない。
+
+## 読取専用 REST 試行（2026-11-05 13:17:54 JST）
+
+`scada-host` の Windows 資格情報ストア実装と固定 `banto-hub-bootstrap`／`banto-tagclient` を使い、既存の `127.0.0.1:8722` に接続した。bootstrap は `connected`、catalog は revision 1／113タグ。`read` スコープのキーは Windows 資格情報ストアに保存し、非機密の接続記録は `%LOCALAPPDATA%/temp-scada/hub-read.json` に保存した。キー値は出力・Project・リポジトリへ保存していない。Hub サービスやタグ構成は変更していない。
+
+`GET /api/v1/values` の SDK 応答は `temperature=44`、`pressure=101.3`、`running=1`。3件とも `quality=good`、`value_source=push`、行の時刻は 13:17:53.811 JST。応答時刻は 13:17:54.059 JST。別タグ `updated_at` の値は 2026-11-01 05:26:48.271 JST を示す。Hub までの配送は現在進行だが、元 S7 の値が同時刻に更新された証拠ではない。C3 の実機由来・鮮度受入は保留する。
+
+実行入口は `cargo run -p scada-host --example real_hub_read`。対象タグ名はこのローカル環境の検証用で、他の設備に自動適用しない。
+
+## C1 製品画面での読取（2026-11-05）
+
+Tauri 2 のデスクトップを通常 entrypoint で起動し、`examples/real-hub-s7.project.json` を読み込んだ。Tauri host の読取専用 `ReadHost`／`CatalogHost` が既存 Hub へ接続し、画面の数値 Text に温度 `44`、機器詳細の number slot に `44`、bool slot に `true` を表示した。いずれも `Good`、由来 `push`、catalog revision 1、SIM 0件である。意図的に未割付／存在しないタグへ結び付けた4件は取得不能として表示した。
+
+切断直後は表示値が消え、取得不能8件に変わった。再接続後は再び取得不能4件となり、数値と bool が復帰した。再接続時に新しい配送を画面が追跡しない問題を修正し、ブラウザの接続源切替試験でも確認した。native IPC adapter の単体試験で旧購読通知の破棄と開始失敗の扱いを確認した。`push` は Hub への投入方式を表し、元 PLC の現在値・SIM／非SIMを証明しない。したがって C3 の実機由来と鮮度の受入は保留する。C2 のモック Hub による認証拒否・品質変化・再接続を含む製品経路検証も後続で行う。

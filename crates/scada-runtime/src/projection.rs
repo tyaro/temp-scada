@@ -107,7 +107,10 @@ impl<'a> SnapshotIndex<'a> {
         };
         // The catalog label is informational. Only the value entry owns its
         // source, including simulation and derived_simulation (#682 R7).
-        if matches!(value.value_source, ValueSource::Unknown(_)) {
+        // The pinned SDK has no Push variant yet, while the current Hub uses
+        // `push` for ingested values. Keep the original label: it proves
+        // neither physical PLC origin nor simulation.
+        if matches!(&value.value_source, ValueSource::Unknown(raw) if raw != "push") {
             return invalid(Reason::UnknownSource);
         }
         let (quality, projected) = match value.q {
@@ -149,6 +152,34 @@ impl<'a> SnapshotIndex<'a> {
 mod tests {
     use super::*;
     use std::sync::Arc;
+
+    #[test]
+    fn hub_push_is_preserved_without_claiming_real_or_simulation() {
+        let catalog = crate::tests::catalog();
+        let mut values = crate::tests::snapshot();
+        values.values[0].value_source = ValueSource::Unknown("push".into());
+        let name = catalog.tags[0].external_name.clone();
+        let request = BindingRequest {
+            binding_key: name.clone(),
+            external_name: name.clone(),
+        };
+        let index = SnapshotIndex::new(&[request], Some(&values), &catalog).unwrap();
+        let (reading, provenance) = index.read(&name, ReadSlotType::Number);
+        assert!(matches!(reading, ReadSlotReading::Resolved { .. }));
+        assert_eq!(provenance.unwrap().value_source, "push");
+        values.values[0].value_source = ValueSource::Unknown("future_source".into());
+        let request = BindingRequest {
+            binding_key: name.clone(),
+            external_name: name.clone(),
+        };
+        let index = SnapshotIndex::new(&[request], Some(&values), &catalog).unwrap();
+        assert!(matches!(
+            index.read(&name, ReadSlotType::Number).0,
+            ReadSlotReading::Invalid {
+                reason: Reason::UnknownSource
+            }
+        ));
+    }
 
     #[test]
     fn unrequested_names_and_keys_are_not_diagnosed_as_missing_hub_tags() {

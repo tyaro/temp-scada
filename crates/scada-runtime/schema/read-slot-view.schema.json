@@ -108,7 +108,8 @@
             "computed",
             "derived_simulation",
             "internal",
-            "db"
+            "db",
+            "push"
           ]
         },
         "sourceTimestampMs": {

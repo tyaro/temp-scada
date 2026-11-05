@@ -82,9 +82,12 @@ export function createReadPresentationController(
   });
   return {
     get context() {
+      // Track frame even while a replacement source is being bound. Otherwise
+      // an early read can drop the only reactive dependency on new deliveries.
+      const currentFrame = frame;
       return readPresentationContext(
         getProject(),
-        getSource() === boundSource ? frame : undefined,
+        getSource() === boundSource ? currentFrame : undefined,
       );
     },
   };
