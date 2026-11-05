@@ -1,0 +1,3524 @@
+{
+  "description": "Pure client ledger command DSL; not a wire schema, transport or server registry.",
+  "scope": {
+    "ownerRef": "owner",
+    "ownerEpoch": "epoch:1",
+    "context": {
+      "version": 1,
+      "kind": "recordingOperationsContext",
+      "target": {
+        "version": 1,
+        "kind": "recordingManagementContext",
+        "contextId": "context:1",
+        "projectId": " プロジェクト\r\nA ",
+        "projectRevision": 2,
+        "deploymentId": "deployment:1",
+        "storeId": "store:1",
+        "historianNamespace": null
+      },
+      "capabilityId": "capability:1",
+      "recordingRunRef": "run:1",
+      "sessionId": "session:1"
+    }
+  },
+  "bases": {
+    "lease": {
+      "version": 1,
+      "kind": "recordingWireLeaseRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "leaseRequestId": "lease",
+      "admissionId": "admit:preflight",
+      "role": "mutation",
+      "requestedBudgetMs": 10
+    },
+    "admit": {
+      "version": 1,
+      "kind": "recordingAdmissionRequest",
+      "ownerRef": "owner",
+      "admissionId": "admit:preflight",
+      "context": {
+        "version": 1,
+        "kind": "recordingOperationsContext",
+        "target": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        },
+        "capabilityId": "capability:1",
+        "recordingRunRef": "run:1",
+        "sessionId": "session:1"
+      },
+      "deadlineLeaseRef": "model-lease:1",
+      "action": {
+        "kind": "preflight",
+        "change": {
+          "version": 1,
+          "kind": "recordingChangeRequest",
+          "changeId": "change:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          },
+          "apply": {
+            "requestId": "apply:1",
+            "desired": {
+              "version": 1,
+              "kind": "recordingPlan",
+              "planId": "recording:1",
+              "revision": 7,
+              "enabled": true,
+              "group": {
+                "groupId": "group:1",
+                "hubRef": "hub:1",
+                "periodMs": 1000,
+                "members": [
+                  {
+                    "memberId": "member:b",
+                    "externalName": " 温度 ",
+                    "valueType": "number"
+                  },
+                  {
+                    "memberId": "member:a",
+                    "externalName": "設備.運転",
+                    "valueType": "bool"
+                  }
+                ]
+              }
+            },
+            "expectedAppliedRevision": 41,
+            "expectedMappingRevision": 11,
+            "expectedRetentionAppliedRevision": 13
+          }
+        }
+      }
+    },
+    "inspect": {
+      "version": 1,
+      "kind": "recordingAdmissionInspectionRequest",
+      "inspectionId": "inspect",
+      "original": {
+        "version": 1,
+        "kind": "recordingAdmissionRequest",
+        "ownerRef": "owner",
+        "admissionId": "admit:preflight",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        },
+        "deadlineLeaseRef": "model-lease:1",
+        "action": {
+          "kind": "preflight",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      }
+    },
+    "readAdmit": {
+      "version": 1,
+      "kind": "recordingAdmissionRequest",
+      "ownerRef": "owner",
+      "admissionId": "admit:reconcile",
+      "context": {
+        "version": 1,
+        "kind": "recordingOperationsContext",
+        "target": {
+          "version": 1,
+          "kind": "recordingManagementContext",
+          "contextId": "context:1",
+          "projectId": " プロジェクト\r\nA ",
+          "projectRevision": 2,
+          "deploymentId": "deployment:1",
+          "storeId": "store:1",
+          "historianNamespace": null
+        },
+        "capabilityId": "capability:1",
+        "recordingRunRef": "run:1",
+        "sessionId": "session:1"
+      },
+      "deadlineLeaseRef": "model-lease:3",
+      "action": {
+        "kind": "reconcile",
+        "changeRef": "change-ref",
+        "operationRef": "operation-ref",
+        "reconciliation": {
+          "version": 1,
+          "kind": "recordingReconciliationRequest",
+          "reconciliationId": "reconcile:1",
+          "operation": {
+            "version": 1,
+            "kind": "recordingOperationRequest",
+            "operationId": "operation:1",
+            "stage": "apply",
+            "change": {
+              "version": 1,
+              "kind": "recordingChangeRequest",
+              "changeId": "change:1",
+              "context": {
+                "version": 1,
+                "kind": "recordingOperationsContext",
+                "target": {
+                  "version": 1,
+                  "kind": "recordingManagementContext",
+                  "contextId": "context:1",
+                  "projectId": " プロジェクト\r\nA ",
+                  "projectRevision": 2,
+                  "deploymentId": "deployment:1",
+                  "storeId": "store:1",
+                  "historianNamespace": null
+                },
+                "capabilityId": "capability:1",
+                "recordingRunRef": "run:1",
+                "sessionId": "session:1"
+              },
+              "apply": {
+                "requestId": "apply:1",
+                "desired": {
+                  "version": 1,
+                  "kind": "recordingPlan",
+                  "planId": "recording:1",
+                  "revision": 7,
+                  "enabled": true,
+                  "group": {
+                    "groupId": "group:1",
+                    "hubRef": "hub:1",
+                    "periodMs": 1000,
+                    "members": [
+                      {
+                        "memberId": "member:b",
+                        "externalName": " 温度 ",
+                        "valueType": "number"
+                      },
+                      {
+                        "memberId": "member:a",
+                        "externalName": "設備.運転",
+                        "valueType": "bool"
+                      }
+                    ]
+                  }
+                },
+                "expectedAppliedRevision": 41,
+                "expectedMappingRevision": 11,
+                "expectedRetentionAppliedRevision": 13
+              }
+            }
+          }
+        }
+      }
+    },
+    "cancel": {
+      "version": 1,
+      "kind": "recordingWireCancelRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "cancelId": "cancel",
+      "target": {
+        "kind": "operation",
+        "ref": "operation-ref"
+      }
+    },
+    "attach": {
+      "version": 1,
+      "kind": "recordingWireAttachRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "attachId": "attach",
+      "afterRevision": 1
+    },
+    "observe": {
+      "version": 1,
+      "kind": "recordingWireObservationRequest",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "observationId": "observation",
+      "target": {
+        "kind": "operation",
+        "operationRef": "operation-ref",
+        "request": {
+          "version": 1,
+          "kind": "recordingOperationRequest",
+          "operationId": "operation:1",
+          "stage": "apply",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      }
+    },
+    "state": {
+      "version": 1,
+      "kind": "recordingWireStateFrame",
+      "subscriptionRef": "subscription",
+      "snapshot": {
+        "scope": {
+          "ownerRef": "owner",
+          "ownerEpoch": "epoch:1",
+          "context": {
+            "version": 1,
+            "kind": "recordingOperationsContext",
+            "target": {
+              "version": 1,
+              "kind": "recordingManagementContext",
+              "contextId": "context:1",
+              "projectId": " プロジェクト\r\nA ",
+              "projectRevision": 2,
+              "deploymentId": "deployment:1",
+              "storeId": "store:1",
+              "historianNamespace": null
+            },
+            "capabilityId": "capability:1",
+            "recordingRunRef": "run:1",
+            "sessionId": "session:1"
+          }
+        },
+        "revision": 2,
+        "closed": false,
+        "ownerBlocked": false,
+        "admission": {
+          "version": 1,
+          "kind": "recordingAdmissionReply",
+          "request": {
+            "version": 1,
+            "kind": "recordingAdmissionRequest",
+            "ownerRef": "owner",
+            "admissionId": "admit:apply",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "deadlineLeaseRef": "lease",
+            "action": {
+              "kind": "apply",
+              "changeRef": "change-ref",
+              "operation": {
+                "version": 1,
+                "kind": "recordingOperationRequest",
+                "operationId": "operation:1",
+                "stage": "apply",
+                "change": {
+                  "version": 1,
+                  "kind": "recordingChangeRequest",
+                  "changeId": "change:1",
+                  "context": {
+                    "version": 1,
+                    "kind": "recordingOperationsContext",
+                    "target": {
+                      "version": 1,
+                      "kind": "recordingManagementContext",
+                      "contextId": "context:1",
+                      "projectId": " プロジェクト\r\nA ",
+                      "projectRevision": 2,
+                      "deploymentId": "deployment:1",
+                      "storeId": "store:1",
+                      "historianNamespace": null
+                    },
+                    "capabilityId": "capability:1",
+                    "recordingRunRef": "run:1",
+                    "sessionId": "session:1"
+                  },
+                  "apply": {
+                    "requestId": "apply:1",
+                    "desired": {
+                      "version": 1,
+                      "kind": "recordingPlan",
+                      "planId": "recording:1",
+                      "revision": 7,
+                      "enabled": true,
+                      "group": {
+                        "groupId": "group:1",
+                        "hubRef": "hub:1",
+                        "periodMs": 1000,
+                        "members": [
+                          {
+                            "memberId": "member:b",
+                            "externalName": " 温度 ",
+                            "valueType": "number"
+                          },
+                          {
+                            "memberId": "member:a",
+                            "externalName": "設備.運転",
+                            "valueType": "bool"
+                          }
+                        ]
+                      }
+                    },
+                    "expectedAppliedRevision": 41,
+                    "expectedMappingRevision": 11,
+                    "expectedRetentionAppliedRevision": 13
+                  }
+                }
+              }
+            }
+          },
+          "outcome": {
+            "kind": "accepted",
+            "handle": {
+              "kind": "operation",
+              "changeRef": "change-ref",
+              "operationRef": "operation-ref",
+              "request": {
+                "version": 1,
+                "kind": "recordingOperationRequest",
+                "operationId": "operation:1",
+                "stage": "apply",
+                "change": {
+                  "version": 1,
+                  "kind": "recordingChangeRequest",
+                  "changeId": "change:1",
+                  "context": {
+                    "version": 1,
+                    "kind": "recordingOperationsContext",
+                    "target": {
+                      "version": 1,
+                      "kind": "recordingManagementContext",
+                      "contextId": "context:1",
+                      "projectId": " プロジェクト\r\nA ",
+                      "projectRevision": 2,
+                      "deploymentId": "deployment:1",
+                      "storeId": "store:1",
+                      "historianNamespace": null
+                    },
+                    "capabilityId": "capability:1",
+                    "recordingRunRef": "run:1",
+                    "sessionId": "session:1"
+                  },
+                  "apply": {
+                    "requestId": "apply:1",
+                    "desired": {
+                      "version": 1,
+                      "kind": "recordingPlan",
+                      "planId": "recording:1",
+                      "revision": 7,
+                      "enabled": true,
+                      "group": {
+                        "groupId": "group:1",
+                        "hubRef": "hub:1",
+                        "periodMs": 1000,
+                        "members": [
+                          {
+                            "memberId": "member:b",
+                            "externalName": " 温度 ",
+                            "valueType": "number"
+                          },
+                          {
+                            "memberId": "member:a",
+                            "externalName": "設備.運転",
+                            "valueType": "bool"
+                          }
+                        ]
+                      }
+                    },
+                    "expectedAppliedRevision": 41,
+                    "expectedMappingRevision": 11,
+                    "expectedRetentionAppliedRevision": 13
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operation": {
+          "operationRef": "operation-ref",
+          "result": {
+            "version": 1,
+            "kind": "recordingOperationResult",
+            "request": {
+              "version": 1,
+              "kind": "recordingOperationRequest",
+              "operationId": "operation:1",
+              "stage": "apply",
+              "change": {
+                "version": 1,
+                "kind": "recordingChangeRequest",
+                "changeId": "change:1",
+                "context": {
+                  "version": 1,
+                  "kind": "recordingOperationsContext",
+                  "target": {
+                    "version": 1,
+                    "kind": "recordingManagementContext",
+                    "contextId": "context:1",
+                    "projectId": " プロジェクト\r\nA ",
+                    "projectRevision": 2,
+                    "deploymentId": "deployment:1",
+                    "storeId": "store:1",
+                    "historianNamespace": null
+                  },
+                  "capabilityId": "capability:1",
+                  "recordingRunRef": "run:1",
+                  "sessionId": "session:1"
+                },
+                "apply": {
+                  "requestId": "apply:1",
+                  "desired": {
+                    "version": 1,
+                    "kind": "recordingPlan",
+                    "planId": "recording:1",
+                    "revision": 7,
+                    "enabled": true,
+                    "group": {
+                      "groupId": "group:1",
+                      "hubRef": "hub:1",
+                      "periodMs": 1000,
+                      "members": [
+                        {
+                          "memberId": "member:b",
+                          "externalName": " 温度 ",
+                          "valueType": "number"
+                        },
+                        {
+                          "memberId": "member:a",
+                          "externalName": "設備.運転",
+                          "valueType": "bool"
+                        }
+                      ]
+                    }
+                  },
+                  "expectedAppliedRevision": 41,
+                  "expectedMappingRevision": 11,
+                  "expectedRetentionAppliedRevision": 13
+                }
+              }
+            },
+            "outcome": {
+              "kind": "applied",
+              "receipt": {
+                "requestId": "apply:1",
+                "appliedRevision": 42,
+                "commitVersion": 80,
+                "desiredPlanId": "recording:1",
+                "desiredRevision": 7,
+                "desiredHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "resolvedConfigHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "plan": {
+                  "planId": "ledger:1",
+                  "revision": 42
+                },
+                "mappingRevision": 11,
+                "retentionAppliedRevision": 13,
+                "enabled": true
+              }
+            },
+            "quiescence": "confirmed",
+            "recoveryRequired": false
+          }
+        },
+        "reconciliation": {
+          "version": 1,
+          "kind": "recordingReconciliationDelivery",
+          "ownerRef": "owner",
+          "readRef": "read-ref",
+          "request": {
+            "version": 1,
+            "kind": "recordingReconciliationRequest",
+            "reconciliationId": "reconcile:1",
+            "operation": {
+              "version": 1,
+              "kind": "recordingOperationRequest",
+              "operationId": "operation:1",
+              "stage": "apply",
+              "change": {
+                "version": 1,
+                "kind": "recordingChangeRequest",
+                "changeId": "change:1",
+                "context": {
+                  "version": 1,
+                  "kind": "recordingOperationsContext",
+                  "target": {
+                    "version": 1,
+                    "kind": "recordingManagementContext",
+                    "contextId": "context:1",
+                    "projectId": " プロジェクト\r\nA ",
+                    "projectRevision": 2,
+                    "deploymentId": "deployment:1",
+                    "storeId": "store:1",
+                    "historianNamespace": null
+                  },
+                  "capabilityId": "capability:1",
+                  "recordingRunRef": "run:1",
+                  "sessionId": "session:1"
+                },
+                "apply": {
+                  "requestId": "apply:1",
+                  "desired": {
+                    "version": 1,
+                    "kind": "recordingPlan",
+                    "planId": "recording:1",
+                    "revision": 7,
+                    "enabled": true,
+                    "group": {
+                      "groupId": "group:1",
+                      "hubRef": "hub:1",
+                      "periodMs": 1000,
+                      "members": [
+                        {
+                          "memberId": "member:b",
+                          "externalName": " 温度 ",
+                          "valueType": "number"
+                        },
+                        {
+                          "memberId": "member:a",
+                          "externalName": "設備.運転",
+                          "valueType": "bool"
+                        }
+                      ]
+                    }
+                  },
+                  "expectedAppliedRevision": 41,
+                  "expectedMappingRevision": 11,
+                  "expectedRetentionAppliedRevision": 13
+                }
+              }
+            }
+          },
+          "outcome": {
+            "kind": "result",
+            "result": {
+              "version": 1,
+              "kind": "recordingReconciliationResult",
+              "request": {
+                "version": 1,
+                "kind": "recordingReconciliationRequest",
+                "reconciliationId": "reconcile:1",
+                "operation": {
+                  "version": 1,
+                  "kind": "recordingOperationRequest",
+                  "operationId": "operation:1",
+                  "stage": "apply",
+                  "change": {
+                    "version": 1,
+                    "kind": "recordingChangeRequest",
+                    "changeId": "change:1",
+                    "context": {
+                      "version": 1,
+                      "kind": "recordingOperationsContext",
+                      "target": {
+                        "version": 1,
+                        "kind": "recordingManagementContext",
+                        "contextId": "context:1",
+                        "projectId": " プロジェクト\r\nA ",
+                        "projectRevision": 2,
+                        "deploymentId": "deployment:1",
+                        "storeId": "store:1",
+                        "historianNamespace": null
+                      },
+                      "capabilityId": "capability:1",
+                      "recordingRunRef": "run:1",
+                      "sessionId": "session:1"
+                    },
+                    "apply": {
+                      "requestId": "apply:1",
+                      "desired": {
+                        "version": 1,
+                        "kind": "recordingPlan",
+                        "planId": "recording:1",
+                        "revision": 7,
+                        "enabled": true,
+                        "group": {
+                          "groupId": "group:1",
+                          "hubRef": "hub:1",
+                          "periodMs": 1000,
+                          "members": [
+                            {
+                              "memberId": "member:b",
+                              "externalName": " 温度 ",
+                              "valueType": "number"
+                            },
+                            {
+                              "memberId": "member:a",
+                              "externalName": "設備.運転",
+                              "valueType": "bool"
+                            }
+                          ]
+                        }
+                      },
+                      "expectedAppliedRevision": 41,
+                      "expectedMappingRevision": 11,
+                      "expectedRetentionAppliedRevision": 13
+                    }
+                  }
+                }
+              },
+              "outcome": {
+                "kind": "receiptFound",
+                "receipt": {
+                  "requestId": "apply:1",
+                  "appliedRevision": 42,
+                  "commitVersion": 80,
+                  "desiredPlanId": "recording:1",
+                  "desiredRevision": 7,
+                  "desiredHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                  "resolvedConfigHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "plan": {
+                    "planId": "ledger:1",
+                    "revision": 42
+                  },
+                  "mappingRevision": 11,
+                  "retentionAppliedRevision": 13,
+                  "enabled": true
+                }
+              },
+              "quiescence": "unknown",
+              "recoveryRequired": true
+            }
+          }
+        }
+      }
+    },
+    "controlFrame": {
+      "version": 1,
+      "kind": "recordingWireControlFrame",
+      "scope": {
+        "ownerRef": "owner",
+        "ownerEpoch": "epoch:1",
+        "context": {
+          "version": 1,
+          "kind": "recordingOperationsContext",
+          "target": {
+            "version": 1,
+            "kind": "recordingManagementContext",
+            "contextId": "context:1",
+            "projectId": " プロジェクト\r\nA ",
+            "projectRevision": 2,
+            "deploymentId": "deployment:1",
+            "storeId": "store:1",
+            "historianNamespace": null
+          },
+          "capabilityId": "capability:1",
+          "recordingRunRef": "run:1",
+          "sessionId": "session:1"
+        }
+      },
+      "subscriptionRef": "subscription",
+      "reason": "resyncRequired"
+    }
+  },
+  "replyOutcomes": {
+    "unknown": {
+      "kind": "unknown",
+      "error": "workerFailure"
+    },
+    "accepted": {
+      "kind": "accepted",
+      "handle": {
+        "kind": "operation",
+        "changeRef": "change-ref",
+        "operationRef": "operation-ref",
+        "request": {
+          "version": 1,
+          "kind": "recordingOperationRequest",
+          "operationId": "operation:1",
+          "stage": "preflight",
+          "change": {
+            "version": 1,
+            "kind": "recordingChangeRequest",
+            "changeId": "change:1",
+            "context": {
+              "version": 1,
+              "kind": "recordingOperationsContext",
+              "target": {
+                "version": 1,
+                "kind": "recordingManagementContext",
+                "contextId": "context:1",
+                "projectId": " プロジェクト\r\nA ",
+                "projectRevision": 2,
+                "deploymentId": "deployment:1",
+                "storeId": "store:1",
+                "historianNamespace": null
+              },
+              "capabilityId": "capability:1",
+              "recordingRunRef": "run:1",
+              "sessionId": "session:1"
+            },
+            "apply": {
+              "requestId": "apply:1",
+              "desired": {
+                "version": 1,
+                "kind": "recordingPlan",
+                "planId": "recording:1",
+                "revision": 7,
+                "enabled": true,
+                "group": {
+                  "groupId": "group:1",
+                  "hubRef": "hub:1",
+                  "periodMs": 1000,
+                  "members": [
+                    {
+                      "memberId": "member:b",
+                      "externalName": " 温度 ",
+                      "valueType": "number"
+                    },
+                    {
+                      "memberId": "member:a",
+                      "externalName": "設備.運転",
+                      "valueType": "bool"
+                    }
+                  ]
+                }
+              },
+              "expectedAppliedRevision": 41,
+              "expectedMappingRevision": 11,
+              "expectedRetentionAppliedRevision": 13
+            }
+          }
+        }
+      }
+    },
+    "rejected": {
+      "kind": "rejected",
+      "error": "busy"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "initial fixed empty ledger",
+      "steps": [
+        {
+          "op": "current",
+          "state": {
+            "retired": false,
+            "disposed": false,
+            "stoppedReason": null,
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0,
+              "mutationIds": 0,
+              "readIds": 0,
+              "inspectionIdsUsed": 0,
+              "inspectionIdsReserved": 0,
+              "inspectionAttemptsUsed": 0,
+              "inspectionAttemptsReserved": 0,
+              "awaitingMutationTerminal": 0,
+              "awaitingReadTerminal": 0,
+              "awaitingInspectionReply": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "direct normal immutable lease",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": null,
+            "learnedBy": null
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "state": {
+            "usage": {
+              "awaitingMutationTerminal": 0,
+              "awaitingReadTerminal": 0
+            }
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "direct"
+          }
+        }
+      ]
+    },
+    {
+      "name": "inspection recovery lease",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "inspection"
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "result": "duplicate",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "inspection"
+          }
+        }
+      ]
+    },
+    {
+      "name": "direct normal immutable admit",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "admit",
+          "id": "o"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": null,
+            "learnedBy": null
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "state": {
+            "usage": {
+              "awaitingMutationTerminal": 0,
+              "awaitingReadTerminal": 0
+            }
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "direct"
+          }
+        }
+      ]
+    },
+    {
+      "name": "inspection recovery admit",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "admit",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "inspection"
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "result": "duplicate",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "inspection"
+          }
+        }
+      ]
+    },
+    {
+      "name": "direct normal immutable inspect",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "inspect",
+          "id": "o"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": null,
+            "learnedBy": null
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "state": {
+            "usage": {
+              "awaitingMutationTerminal": 0,
+              "awaitingReadTerminal": 0
+            }
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "direct"
+          }
+        }
+      ]
+    },
+    {
+      "name": "inspection recovery inspect",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "inspect",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "inspection"
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "result": "duplicate",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "inspection"
+          }
+        }
+      ]
+    },
+    {
+      "name": "direct normal immutable cancel",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "cancel",
+          "id": "o"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": null,
+            "learnedBy": null
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "state": {
+            "usage": {
+              "awaitingMutationTerminal": 0,
+              "awaitingReadTerminal": 0
+            }
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "direct"
+          }
+        }
+      ]
+    },
+    {
+      "name": "inspection recovery cancel",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "cancel",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "inspection"
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "result": "duplicate",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "inspection"
+          }
+        }
+      ]
+    },
+    {
+      "name": "direct normal immutable readAdmit",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "readAdmit",
+          "id": "o"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": null,
+            "learnedBy": null
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "state": {
+            "usage": {
+              "awaitingMutationTerminal": 0,
+              "awaitingReadTerminal": 0
+            }
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "direct"
+          }
+        }
+      ]
+    },
+    {
+      "name": "inspection recovery readAdmit",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "readAdmit",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "inspection"
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "result": "duplicate",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "inspection"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unsupported valid wire attach",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "attach",
+          "id": "o",
+          "result": "unsupportedKind",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0,
+              "inspectionIdsReserved": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unsupported valid wire observe",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "observe",
+          "id": "o",
+          "result": "unsupportedKind",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0,
+              "inspectionIdsReserved": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unsupported valid wire state",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "state",
+          "id": "o",
+          "result": "unsupportedKind",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0,
+              "inspectionIdsReserved": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unsupported valid wire controlFrame",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "controlFrame",
+          "id": "o",
+          "result": "unsupportedKind",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0,
+              "inspectionIdsReserved": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unrecovered mutation and read slots independent",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "begin",
+          "base": "admit",
+          "id": "m",
+          "result": "busy"
+        },
+        {
+          "op": "begin",
+          "base": "cancel",
+          "id": "c"
+        },
+        {
+          "op": "query",
+          "original": "c",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "p",
+          "attempt": "p",
+          "wireId": "query2"
+        },
+        {
+          "op": "receive",
+          "attempt": "p",
+          "outcome": "terminal",
+          "variant": "default"
+        },
+        {
+          "op": "direct",
+          "id": "c",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        }
+      ]
+    },
+    {
+      "name": "read original does not consume inspection slot",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "inspect",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "current",
+          "state": {
+            "usage": {
+              "awaitingReadTerminal": 1,
+              "awaitingInspectionReply": 1
+            }
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "state": {
+            "usage": {
+              "awaitingReadTerminal": 0,
+              "awaitingInspectionReply": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "pending notFound unavailable are normal attempts only",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b"
+        },
+        {
+          "op": "receive",
+          "attempt": "b",
+          "outcome": "notFound",
+          "variant": "default"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "c"
+        },
+        {
+          "op": "receive",
+          "attempt": "c",
+          "outcome": "unavailable",
+          "variant": "default"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": null
+          }
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "z"
+        },
+        {
+          "op": "receive",
+          "attempt": "z",
+          "outcome": "terminal",
+          "variant": "default",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "lost attempt blocks repeat and new query",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b",
+          "result": "busy"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "other",
+          "attempt": "x",
+          "wireId": "other",
+          "result": "busy"
+        },
+        {
+          "op": "retire"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b",
+          "result": "busy"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": null
+          }
+        },
+        {
+          "op": "attempt",
+          "id": "a",
+          "value": {
+            "reply": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "exact query returns first attempt after repeat",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "same",
+          "attempt": "first",
+          "wireId": "query",
+          "sameQueryAs": "q",
+          "sameAttemptAs": "a"
+        },
+        {
+          "op": "queryState",
+          "id": "q",
+          "latestAs": "b"
+        },
+        {
+          "op": "receive",
+          "attempt": "b",
+          "outcome": "terminal",
+          "variant": "default"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "again",
+          "attempt": "first2",
+          "wireId": "query",
+          "sameQueryAs": "q",
+          "sameAttemptAs": "a"
+        }
+      ]
+    },
+    {
+      "name": "original exact lookup survives all current gates",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "same",
+          "sameAs": "o"
+        },
+        {
+          "op": "retire"
+        },
+        {
+          "op": "dispose"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "disposedCopy",
+          "sameAs": "o"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "new",
+          "patch": [
+            {
+              "path": "leaseRequestId",
+              "value": "new"
+            }
+          ],
+          "result": "disposed"
+        }
+      ]
+    },
+    {
+      "name": "new query ID after normal pending uses extra reservation",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "next",
+          "attempt": "b",
+          "wireId": "next"
+        },
+        {
+          "op": "receive",
+          "attempt": "b",
+          "outcome": "terminal",
+          "variant": "default"
+        },
+        {
+          "op": "queryState",
+          "id": "q",
+          "value": {
+            "terminal": null
+          }
+        },
+        {
+          "op": "queryState",
+          "id": "next",
+          "value": {
+            "terminal": {
+              "kind": "recordingWireLeaseReply"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "one inspection slot across original roles",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "begin",
+          "base": "cancel",
+          "id": "c"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "query",
+          "original": "c",
+          "query": "other",
+          "attempt": "x",
+          "wireId": "other",
+          "result": "busy"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "query",
+          "original": "c",
+          "query": "other",
+          "attempt": "x",
+          "wireId": "other"
+        },
+        {
+          "op": "receive",
+          "attempt": "x",
+          "outcome": "terminal",
+          "variant": "default"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b"
+        },
+        {
+          "op": "receive",
+          "attempt": "b",
+          "outcome": "terminal",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "normal direct result does not settle in flight inspection",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "state": {
+            "usage": {
+              "awaitingMutationTerminal": 0,
+              "awaitingInspectionReply": 1
+            }
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default",
+          "state": {
+            "usage": {
+              "awaitingInspectionReply": 0
+            }
+          }
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b",
+          "result": "busy"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "new",
+          "attempt": "x",
+          "wireId": "new",
+          "result": "busy"
+        }
+      ]
+    },
+    {
+      "name": "normal direct result and matching inspection share first terminal",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "direct"
+          }
+        }
+      ]
+    },
+    {
+      "name": "competing recovered terminal preserves normal attempt",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "admit",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "unknown"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "accepted",
+          "result": "protocolViolation",
+          "flags": {
+            "terminalStored": false,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": {
+              "outcome": {
+                "kind": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "op": "queryState",
+          "id": "q",
+          "value": {
+            "terminal": {
+              "outcome": {
+                "kind": "accepted"
+              }
+            }
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "accepted",
+          "result": "duplicate",
+          "flags": {
+            "terminalStored": false,
+            "attemptStored": true
+          }
+        },
+        {
+          "op": "current",
+          "state": {
+            "stoppedReason": "protocolViolation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "recovered first terminal rejects contradictory direct late reply",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "admit",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "unknown"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "accepted",
+          "result": "protocolViolation"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": {
+              "outcome": {
+                "kind": "unknown"
+              }
+            },
+            "learnedBy": "inspection"
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "unknown",
+          "result": "duplicate",
+          "flags": {
+            "terminalStored": true,
+            "attemptStored": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "admission knowledge is a separate original call",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "admit",
+          "id": "o"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "unknown"
+        },
+        {
+          "op": "begin",
+          "base": "inspect",
+          "id": "i"
+        },
+        {
+          "op": "direct",
+          "id": "i",
+          "variant": "foundAccepted"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": {
+              "outcome": {
+                "kind": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "op": "original",
+          "id": "i",
+          "value": {
+            "terminal": {
+              "outcome": {
+                "kind": "found",
+                "reply": {
+                  "outcome": {
+                    "kind": "accepted"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "first probe credit migrates without second charge",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "current",
+          "state": {
+            "usage": {
+              "inspectionIdsUsed": 0,
+              "inspectionIdsReserved": 1,
+              "inspectionAttemptsUsed": 0,
+              "inspectionAttemptsReserved": 1
+            }
+          }
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query",
+          "state": {
+            "usage": {
+              "inspectionIdsUsed": 1,
+              "inspectionIdsReserved": 0,
+              "inspectionAttemptsUsed": 1,
+              "inspectionAttemptsReserved": 0
+            }
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "unused first credit never refunded",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        },
+        {
+          "op": "current",
+          "state": {
+            "usage": {
+              "inspectionIdsReserved": 1,
+              "inspectionAttemptsReserved": 1
+            }
+          }
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query",
+          "result": "busy"
+        },
+        {
+          "op": "dispose"
+        },
+        {
+          "op": "current",
+          "state": {
+            "usage": {
+              "inspectionIdsReserved": 1,
+              "inspectionAttemptsReserved": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "retire allows old recovery and exact registration",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "retire"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "same",
+          "sameAs": "o"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "n",
+          "patch": [
+            {
+              "path": "leaseRequestId",
+              "value": "n"
+            }
+          ],
+          "result": "retired"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b"
+        },
+        {
+          "op": "receive",
+          "attempt": "b",
+          "outcome": "terminal",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "dispose blocks new attempts while preserving late originals",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "dispose"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b",
+          "result": "disposed"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "same",
+          "attempt": "first",
+          "wireId": "query",
+          "sameQueryAs": "q",
+          "sameAttemptAs": "a"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "dispose"
+        },
+        {
+          "op": "retire"
+        }
+      ]
+    },
+    {
+      "name": "dispose leaves an unresolved attempt uncollected",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "dispose"
+        },
+        {
+          "op": "attempt",
+          "id": "a",
+          "value": {
+            "reply": null
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b",
+          "result": "disposed"
+        },
+        {
+          "op": "current",
+          "state": {
+            "usage": {
+              "awaitingMutationTerminal": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "same original ID different valid body stops without allocating",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "same",
+          "patch": [
+            {
+              "path": "requestedBudgetMs",
+              "value": 1
+            }
+          ],
+          "result": "protocolViolation"
+        },
+        {
+          "op": "current",
+          "state": {
+            "usage": {
+              "mutationIds": 1,
+              "inspectionIdsReserved": 1
+            }
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "cached",
+          "sameAs": "o"
+        }
+      ]
+    },
+    {
+      "name": "kind namespaces accept same textual root ID",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o",
+          "patch": [
+            {
+              "path": "leaseRequestId",
+              "value": "shared"
+            }
+          ]
+        },
+        {
+          "op": "begin",
+          "base": "cancel",
+          "id": "c",
+          "patch": [
+            {
+              "path": "cancelId",
+              "value": "shared"
+            }
+          ]
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        },
+        {
+          "op": "direct",
+          "id": "c",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "admission namespace cannot move from mutation to read",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "admit",
+          "id": "o"
+        },
+        {
+          "op": "begin",
+          "base": "readAdmit",
+          "id": "other",
+          "patch": [
+            {
+              "path": "admissionId",
+              "value": "admit:preflight"
+            }
+          ],
+          "result": "protocolViolation"
+        }
+      ]
+    },
+    {
+      "name": "same query ID cannot rebind to another original",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "begin",
+          "base": "cancel",
+          "id": "c"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "query",
+          "original": "c",
+          "query": "other",
+          "attempt": "x",
+          "wireId": "query",
+          "result": "protocolViolation"
+        },
+        {
+          "op": "current",
+          "state": {
+            "usage": {
+              "inspectionIdsUsed": 1,
+              "inspectionIdsReserved": 1
+            }
+          }
+        },
+        {
+          "op": "direct",
+          "id": "c",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "query different original with fresh ID is invalid request",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query",
+          "originalBase": "cancel",
+          "result": "invalidRequest"
+        },
+        {
+          "op": "current",
+          "state": {
+            "stoppedReason": null,
+            "usage": {
+              "inspectionIdsUsed": 0,
+              "inspectionIdsReserved": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "query scope mismatch never moves reserved credit",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query",
+          "patch": [
+            {
+              "path": "scope.ownerEpoch",
+              "value": "epoch:2"
+            },
+            {
+              "path": "original.scope.ownerEpoch",
+              "value": "epoch:2"
+            }
+          ],
+          "result": "invalidRequest"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "scope mismatch lease",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o",
+          "patch": [
+            {
+              "path": "scope.ownerEpoch",
+              "value": "other"
+            }
+          ],
+          "result": "invalidRequest",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "scope mismatch admit",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "admit",
+          "id": "o",
+          "patch": [
+            {
+              "path": "ownerRef",
+              "value": "other"
+            }
+          ],
+          "result": "invalidRequest",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "scope mismatch inspect",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "inspect",
+          "id": "o",
+          "patch": [
+            {
+              "path": "original.ownerRef",
+              "value": "other"
+            }
+          ],
+          "result": "invalidRequest",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "malformed direct reply preserves pending and later recovers",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "documentPatch": {
+            "extra": true
+          },
+          "result": "invalidDocument"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": null
+          }
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query",
+          "result": "protocolViolation"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "learnedBy": "direct"
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong direct request echo is protocol violation",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "requestPatch": [
+            {
+              "path": "leaseRequestId",
+              "value": "other"
+            }
+          ],
+          "result": "protocolViolation"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": null
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "wrong reply root kind does not settle original",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default",
+          "kind": "recordingWireCancelReply",
+          "result": "invalidDocument"
+        },
+        {
+          "op": "original",
+          "id": "o",
+          "value": {
+            "terminal": null
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "malformed inspection remains pending and accepts late normal reply",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default",
+          "documentPatch": {
+            "extra": true
+          },
+          "result": "invalidDocument"
+        },
+        {
+          "op": "attempt",
+          "id": "a",
+          "value": {
+            "reply": null
+          }
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b",
+          "result": "protocolViolation"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "wrong inspection request echo never stores attempt",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default",
+          "requestPatch": [
+            {
+              "path": "callInspectionId",
+              "value": "other"
+            }
+          ],
+          "result": "protocolViolation"
+        },
+        {
+          "op": "attempt",
+          "id": "a",
+          "value": {
+            "reply": null
+          }
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "same attempt cannot change normal pending to terminal",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "result": "protocolViolation"
+        },
+        {
+          "op": "attempt",
+          "id": "a",
+          "value": {
+            "reply": {
+              "outcome": {
+                "kind": "pending"
+              }
+            }
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "old attempt duplicate never replaces latest pending attempt",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default",
+          "result": "duplicate"
+        },
+        {
+          "op": "attempt",
+          "id": "b",
+          "value": {
+            "reply": null
+          }
+        },
+        {
+          "op": "queryState",
+          "id": "q",
+          "latestAs": "b"
+        },
+        {
+          "op": "receive",
+          "attempt": "b",
+          "outcome": "terminal",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "malformed embedded original echo never stores inspection",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default",
+          "embeddedRequestPatch": [
+            {
+              "path": "leaseRequestId",
+              "value": "other"
+            }
+          ],
+          "result": "invalidDocument"
+        },
+        {
+          "op": "attempt",
+          "id": "a",
+          "value": {
+            "reply": null
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        }
+      ]
+    },
+    {
+      "name": "zero mutationBytes rejects whole mutation reservation",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o",
+          "result": "capacity",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0,
+              "mutationIds": 0,
+              "inspectionIdsUsed": 0,
+              "inspectionIdsReserved": 0,
+              "inspectionAttemptsReserved": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "mutationBytes": 0
+      }
+    },
+    {
+      "name": "zero readBytes rejects whole mutation reservation",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o",
+          "result": "capacity",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0,
+              "mutationIds": 0,
+              "inspectionIdsUsed": 0,
+              "inspectionIdsReserved": 0,
+              "inspectionAttemptsReserved": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "readBytes": 0
+      }
+    },
+    {
+      "name": "zero mutationIds rejects whole mutation reservation",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o",
+          "result": "capacity",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0,
+              "mutationIds": 0,
+              "inspectionIdsUsed": 0,
+              "inspectionIdsReserved": 0,
+              "inspectionAttemptsReserved": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "mutationIds": 0
+      }
+    },
+    {
+      "name": "zero inspectionIds rejects whole mutation reservation",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o",
+          "result": "capacity",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0,
+              "mutationIds": 0,
+              "inspectionIdsUsed": 0,
+              "inspectionIdsReserved": 0,
+              "inspectionAttemptsReserved": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "inspectionIds": 0
+      }
+    },
+    {
+      "name": "zero inspectionAttempts rejects whole mutation reservation",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o",
+          "result": "capacity",
+          "state": {
+            "usage": {
+              "mutationBytes": 0,
+              "readBytes": 0,
+              "mutationIds": 0,
+              "inspectionIdsUsed": 0,
+              "inspectionIdsReserved": 0,
+              "inspectionAttemptsReserved": 0
+            }
+          }
+        }
+      ],
+      "limits": {
+        "inspectionAttempts": 0
+      }
+    },
+    {
+      "name": "zero read IDs rejects read root only",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "cancel",
+          "id": "o",
+          "result": "capacity"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "terminal",
+          "variant": "default"
+        }
+      ],
+      "limits": {
+        "readIds": 0
+      }
+    },
+    {
+      "name": "one original ID keeps exact token and old credit",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "same",
+          "sameAs": "o"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "new",
+          "patch": [
+            {
+              "path": "leaseRequestId",
+              "value": "new"
+            }
+          ],
+          "result": "capacity"
+        }
+      ],
+      "limits": {
+        "mutationIds": 1
+      }
+    },
+    {
+      "name": "reserved query ID cannot be stolen by new original",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        },
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "new",
+          "patch": [
+            {
+              "path": "leaseRequestId",
+              "value": "new"
+            }
+          ],
+          "result": "capacity"
+        }
+      ],
+      "limits": {
+        "inspectionIds": 1
+      }
+    },
+    {
+      "name": "one reserved attempt is available but repeat capacity is finite",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b",
+          "result": "capacity"
+        },
+        {
+          "op": "current",
+          "state": {
+            "stoppedReason": null,
+            "usage": {
+              "inspectionAttemptsUsed": 1
+            }
+          }
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        }
+      ],
+      "limits": {
+        "inspectionAttempts": 1
+      }
+    },
+    {
+      "name": "reserved attempt for other original blocks repeat extra ID",
+      "steps": [
+        {
+          "op": "begin",
+          "base": "lease",
+          "id": "o"
+        },
+        {
+          "op": "begin",
+          "base": "cancel",
+          "id": "c"
+        },
+        {
+          "op": "query",
+          "original": "o",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query"
+        },
+        {
+          "op": "receive",
+          "attempt": "a",
+          "outcome": "pending",
+          "variant": "default"
+        },
+        {
+          "op": "repeat",
+          "query": "q",
+          "attempt": "b",
+          "result": "capacity"
+        },
+        {
+          "op": "query",
+          "original": "c",
+          "query": "q2",
+          "attempt": "b",
+          "wireId": "q2"
+        },
+        {
+          "op": "receive",
+          "attempt": "b",
+          "outcome": "terminal",
+          "variant": "default"
+        },
+        {
+          "op": "direct",
+          "id": "o",
+          "variant": "default"
+        }
+      ],
+      "limits": {
+        "inspectionAttempts": 2
+      }
+    },
+    {
+      "name": "foreign inputs cannot settle any local record",
+      "steps": [
+        {
+          "op": "direct",
+          "id": "none",
+          "result": "foreignToken"
+        },
+        {
+          "op": "receive",
+          "attempt": "none",
+          "result": "foreignToken"
+        },
+        {
+          "op": "query",
+          "original": "none",
+          "query": "q",
+          "attempt": "a",
+          "wireId": "query",
+          "result": "foreignToken"
+        },
+        {
+          "op": "repeat",
+          "query": "none",
+          "attempt": "b",
+          "result": "foreignToken"
+        },
+        {
+          "op": "original",
+          "id": "none",
+          "result": "foreignToken"
+        },
+        {
+          "op": "attempt",
+          "id": "none",
+          "result": "foreignToken"
+        },
+        {
+          "op": "queryState",
+          "id": "none",
+          "result": "foreignToken"
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # 記録wireの有限な元call配送台帳
 
-状態: **H5d4c4c-prep2d2の採用詳細設計。実装は後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
+状態: **H5d4c4c-prep2d2の採用詳細設計。prep2d2aの純粋TS台帳を実装済み、Observationは後続**。2026-11-05（日本時間）。主設計はユーザー指定のAstra。
 
 [client境界設計](historian-recording-wire-client-boundary.md)のprep2d1はPR86でworkへ統合済み（`c5720812c64df755ed36ebfaceecc8f912a36751`）。本書はその次のpure TS・poll型台帳を定める。Project 0.37.0、DB7、H1、wire/schema、SDK、Banto、依存版は維持する。
 
@@ -338,6 +338,12 @@ shared JSONはtest command DSLとしてpure ledgerへ入力する。正常reques
 
 ## 15. 実装順と完了判定
 
-本PRは詳細設計のみ。次PRでprep2d2aの四元call・CallInspection・有限予約・poll APIと受入を実装する。元callとattemptの正常配送保存までを完了条件とし、native stage、表示統合、Promise正常settle、実transport quiescenceを実装済みとしない。
+設計PR #87はwork `a3dd209`へ統合済み。prep2d2aの四元call・CallInspection・有限予約・poll APIと受入を実装した。元callとattemptの正常配送保存までを完了条件とし、native stage、表示統合、Promise正常settle、実transport quiescenceを実装済みとしない。
 
 その後にd2bのObservation専用経路を詳細化し、local-v2／実bridge接続はP3bを含む別gateで扱う。d2aを実装するためのhost選択・認証・未決clock較正は必要としない。
+
+## 16. 実装と検証の入口
+
+公開入口は[`recording-wire-delivery-ledger.ts`](../../../apps/banto-scada/src/lib/recording-wire-delivery-ledger.ts)。内部のtypes/core/validation/original/inspectionへ分け、既存wire/c4a validatorと容量・全文同値helperを共用する。guardの内側で準備し、全検査後に原子登録する。正常attemptだけは元terminalとの競合時も第一段階保存を維持する。getterはowned/frozen本文を共有し、current cacheとusageを変更しない。
+
+[`recording-wire-delivery-ledger-cases.json`](../../../examples/recording-wire-delivery-ledger-cases.json)の61シナリオと95追加unitで、四経路・query/attempt・pool/credit・正常後着・duplicate flags・ownershipを検証する。独立Q/R/I oracleのexact/1不足、read枯渇時の初回credit、R/Iを壊した防御試験、全parse入口での再入も確認する。同じfixtureをChromiumで実台帳へ流し、通常Appの保存前後一致と外部送信無しを検証する。
