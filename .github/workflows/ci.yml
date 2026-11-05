@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       docs_only: ${{ steps.classify.outputs.docs_only }}
+      native: ${{ steps.classify.outputs.native }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,6 +32,7 @@ jobs:
             git diff --no-renames --name-only -z "$BEFORE" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
           fi
           docs_only=true
+          native=false
           count=0
           while IFS= read -r -d '' file; do
             count=$((count + 1))
@@ -38,10 +40,14 @@ jobs:
               *.md|docs/*) ;;
               *) docs_only=false ;;
             esac
+            case "$file" in
+              apps/banto-scada/src-tauri/*|apps/banto-scada/src/native/*|.github/workflows/ci.yml) native=true ;;
+            esac
           done < "$RUNNER_TEMP/changed-files"
           if (( count == 0 )); then docs_only=false; fi
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
-          echo "Changed files: $count; docs only: $docs_only"
+          echo "native=$native" >> "$GITHUB_OUTPUT"
+          echo "Changed files: $count; docs only: $docs_only; native: $native"
 
   docs:
     needs: changes
@@ -90,6 +96,22 @@ jobs:
       - run: cargo run --locked -p scada-model -- validate examples/process.project.json
       - run: cargo run --locked -p scada-model -- validate examples/tag-binding.project.json
 
+  native:
+    needs: changes
+    if: ${{ needs.changes.outputs.native == 'true' }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.98.1
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2
+        with:
+          workspaces: apps/banto-scada/src-tauri -> target
+      - run: cargo fmt --manifest-path apps/banto-scada/src-tauri/Cargo.toml --check
+      - run: cargo clippy --manifest-path apps/banto-scada/src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+      - run: cargo test --manifest-path apps/banto-scada/src-tauri/Cargo.toml --locked
+
   e2e:
     needs: changes
     if: ${{ needs.changes.outputs.docs_only != 'true' }}
@@ -122,17 +144,19 @@ jobs:
 
   check:
     if: ${{ always() }}
-    needs: [changes, docs, frontend, rust, e2e]
+    needs: [changes, docs, frontend, rust, native, e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Require all checks to pass
         env:
           FRONTEND_RESULT: ${{ needs.frontend.result }}
           RUST_RESULT: ${{ needs.rust.result }}
+          NATIVE_RESULT: ${{ needs.native.result }}
           E2E_RESULT: ${{ needs.e2e.result }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           DOCS_RESULT: ${{ needs.docs.result }}
           DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
+          NATIVE_CHANGED: ${{ needs.changes.outputs.native }}
         shell: bash
         run: |
           test "$CHANGES_RESULT" = success
@@ -141,8 +165,14 @@ jobs:
             test "$FRONTEND_RESULT" = skipped
             test "$RUST_RESULT" = skipped
             test "$E2E_RESULT" = skipped
+            test "$NATIVE_RESULT" = skipped
           else
             test "$FRONTEND_RESULT" = success
             test "$RUST_RESULT" = success
             test "$E2E_RESULT" = success
+            if [[ "$NATIVE_CHANGED" == true ]]; then
+              test "$NATIVE_RESULT" = success
+            else
+              test "$NATIVE_RESULT" = skipped
+            fi
           fi

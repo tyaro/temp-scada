@@ -136,13 +136,17 @@ dependencies = [
 name = "banto-scada-desktop"
 version = "0.37.0"
 dependencies = [
+ "banto-hub-bootstrap",
+ "futures-util",
  "scada-host",
  "scada-model",
  "scada-runtime",
  "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tokio",
+ "tokio-tungstenite",
 ]
 
 [[package]]

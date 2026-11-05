@@ -14,3 +14,11 @@ scada-runtime = { path = "../../../crates/scada-runtime" }
 scada-model = { path = "../../../crates/scada-model" }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["sync", "rt", "macros"] }
+
+[dev-dependencies]
+tauri = { version = "2", features = ["test"] }
+banto-hub-bootstrap = { git = "https://github.com/tyaro/banto-industrial.git", rev = "33410f6d25d36559c5ce81375e243eb6f3e85038" }
+tokio = { version = "1", features = ["net", "io-util", "time"] }
+tokio-tungstenite = "0.29"
+futures-util = "0.3"
+serde_json = "1"
