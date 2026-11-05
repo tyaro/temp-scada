@@ -92,11 +92,7 @@ test("ruler visibility preserves center, drafts and selection, persists, and sta
     .getByRole("button", { name: "text · 5", exact: true })
     .click();
   const input = page.getByLabel("テキスト", { exact: true });
-  const rulerBox = await page.getByTestId("ruler-x").boundingBox();
-  const titleBox = await page
-    .locator("main > section > .toolbar")
-    .boundingBox();
-  expect(titleBox!.y).toBeGreaterThanOrEqual(rulerBox!.y + rulerBox!.height);
+  await expect(page.locator("main > section > .toolbar")).toHaveCount(0);
   await input.fill("保持する未適用入力");
   const center = () =>
     svg(page).evaluate((el) => {

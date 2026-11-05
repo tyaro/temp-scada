@@ -27,14 +27,12 @@ for (const theme of ["light", "dark"] as const)
     });
     const status = page.locator('details[aria-label^="読取状態："]').first();
     const assertLayout = async () => {
-      const caption = await page
-        .locator("main > section > .toolbar")
+      const tabs = await page
+        .getByRole("navigation", { name: "画面タブ" })
         .boundingBox();
       const disclosure = await status.boundingBox();
       const canvas = await page.locator(".canvas-workspace").boundingBox();
-      expect(disclosure!.y).toBeGreaterThanOrEqual(
-        caption!.y + caption!.height,
-      );
+      expect(disclosure!.y).toBeGreaterThanOrEqual(tabs!.y + tabs!.height);
       expect(canvas!.y).toBeGreaterThanOrEqual(
         disclosure!.y + disclosure!.height,
       );
