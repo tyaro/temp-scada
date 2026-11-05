@@ -14,10 +14,12 @@ const anchors = new Map();
 const failures = [];
 let checked = 0;
 
+function withoutFences(source) {
+  return source.replace(/^\s*(```|~~~)[^\n]*\n[\s\S]*?^\s*\1[^\n]*$/gm, "");
+}
+
 function visibleMarkdown(source) {
-  return source
-    .replace(/^\s*(```|~~~)[^\n]*\n[\s\S]*?^\s*\1[^\n]*$/gm, "")
-    .replace(/`[^`\n]+`/g, "");
+  return withoutFences(source).replace(/`[^`\n]+`/g, "");
 }
 
 function slug(heading) {
@@ -35,7 +37,10 @@ function anchorsFor(file) {
   if (anchors.has(file)) return anchors.get(file);
   const result = new Set();
   const counts = new Map();
-  const content = visibleMarkdown(readFileSync(file, "utf8"));
+  const content = withoutFences(readFileSync(file, "utf8")).replace(
+    /`([^`\n]+)`/g,
+    "$1",
+  );
   for (const match of content.matchAll(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/gm)) {
     const base = slug(match[1]);
     const count = counts.get(base) ?? 0;
@@ -62,7 +67,9 @@ for (const relative of files) {
       continue;
     const [location, fragment] = raw.split("#", 2);
     const filePart = decodeURIComponent(location.split("?")[0]);
-    const target = path.resolve(path.dirname(sourceFile), filePart || ".");
+    const target = filePart
+      ? path.resolve(path.dirname(sourceFile), filePart)
+      : sourceFile;
     checked++;
     if (!existsSync(target)) {
       failures.push(`${relative}: missing ${raw}`);
