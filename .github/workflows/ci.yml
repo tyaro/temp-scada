@@ -98,7 +98,7 @@ jobs:
 
   native:
     needs: changes
-    if: ${{ needs.changes.outputs.native == 'true' }}
+    if: ${{ needs.changes.outputs.docs_only != 'true' && needs.changes.outputs.native == 'true' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
