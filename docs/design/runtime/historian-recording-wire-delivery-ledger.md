@@ -308,7 +308,7 @@ Proxy trapは任意JSを実行できるためsandbox保証ではない。trap内
 
 ## 13. d2bと製品接続へ残すもの
 
-Observationは別の専用詳細設計で、同observationIdのpending→結果、各transport attemptの正常返信、opaque target bindingと結果不変性を閉じる。CallInspection.originalへ追加して既存schemaを変える方法は採らない。d2aの元reply台帳へ無理に入れない。
+Observationは[C4 prep2d2bの専用詳細設計](historian-recording-wire-observation-ledger.md)で、同observationIdのpending→結果、各transport attemptの正常返信、opaque target bindingと結果不変性を閉じる。CallInspection.originalへ追加して既存schemaを変える方法は採らない。d2aの元reply台帳へ無理に入れない。
 
 Attach/Controlの元回収はreceiverのd1 getterを使うが、d2aではその取得結果を台帳へimportしない。将来delivery rootが複数専用経路を束ねる場合も、本文所有者を一つにする。
 
@@ -340,7 +340,7 @@ shared JSONはtest command DSLとしてpure ledgerへ入力する。正常reques
 
 設計PR #87はwork `a3dd209`へ統合済み。prep2d2aの四元call・CallInspection・有限予約・poll APIと受入を実装した。元callとattemptの正常配送保存までを完了条件とし、native stage、表示統合、Promise正常settle、実transport quiescenceを実装済みとしない。
 
-その後にd2bのObservation専用経路を詳細化し、local-v2／実bridge接続はP3bを含む別gateで扱う。d2aを実装するためのhost選択・認証・未決clock較正は必要としない。
+d2bのObservation専用経路は[別設計](historian-recording-wire-observation-ledger.md)へ分離した。local-v2／実bridge接続はP3bを含む別gateで扱う。d2aを実装するためのhost選択・認証・未決clock較正は必要としない。
 
 ## 16. 実装と検証の入口
 

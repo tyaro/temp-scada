@@ -32,7 +32,7 @@ C2の検証として、通常entrypointのNativeShellからTauri command／event
 
 検証: TS全10,081件（新規95）、型0error/0warning・build、関連Chromium15件（新規1）、全体Prettier・変更文書リンク／anchorと差分。Astraの最終read-onlyコードレビューに修正必須所見はない。Rust source変更はなく、Rustを含む全体回帰も成功した。[PR #88](https://github.com/tyaro/temp-scada/pull/88)はworkへ統合済み（`a23ae4c`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41955032384)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41955079867)各全7ジョブ成功、同head `88d8304` の自動レビュー指摘・未解決なし）。
 
-Observationのpendingから結果への進行と各attemptを扱うprep2d2bの詳細設計はC4で再開する。直近は上記C0〜C3の読取接続を優先する。照会自身の応答喪失は未回収を保持してrepeatをBusyにする有限モデルであり、再帰照会・無期限運用・Promise adapter／local-v2／実transport／認証／native・P3bは後続とする。
+[C4 prep2d2bのObservation専用設計](../design/runtime/historian-recording-wire-observation-ledger.md)で、同IDのpending→terminalと個々の不変attempt、Accepted由来のopaque target、独立4MiBの有限poolを定めた。純粋TS実装は次の区切り。返信喪失時は未回収を保持してrepeatをBusyにする。再帰照会・無期限運用・Promise adapter／local-v2／実transport／認証／native・P3bは後続とする。
 
 ## 記録wireの元call配送台帳設計（H5d4c4c-prep2d2a、2026-11-05）
 
