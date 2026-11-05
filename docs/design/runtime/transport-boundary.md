@@ -1,6 +1,6 @@
 # P3b: 製品transportと接続設定の再開条件
 
-2026-11-04（日本時間）更新。状態: **境界を採用、製品transportは保留**。P3aはPR #12でマージ済み。認証延期はユーザーの既存指示であり、今回の調査で解除しない。
+2026-11-05（日本時間）更新。状態: **境界を採用、実Hub・S7接続計画のC0から再開条件を確認**。P3aはPR #12でマージ済み。SOAK終了待ちはユーザーの完了申告により解除した。[実Hub・S7接続計画](../../project/real-hub-connection-plan.md)に従い、初回読取接続を次の作業とする。認証延期は上流の現行契約・利用可否をC0で確認するまで維持する。
 
 現行はViteのローカル編集アプリとRustライブラリで、Tauri hostもSCADA serverもない。P3aの`ReadSource`は配送の差込み口であり、利用可能な製品transportではない。現在の段階で無認証HTTP待受やブラウザからHubへの接続を追加しない。
 
@@ -17,9 +17,9 @@
 1. 採用済みのSCADA server core＋アプリ埋込host 1に沿って、具体的なshell・runtime／IPCと既存サービス検出・終了の責任を確定し、Bantoの既存API・認証の最新契約を確認する。Tauriはshell候補でありserver coreの所有とは別の層。headless／Windowsサービスは後続hostとして扱う。
 2. 接続設定の保存先・配布・切替、資格情報の提供と破棄、匿名閲覧の接続範囲を決める。既存の[アクセス方針](access-policy.md)に従う。
 3. transportの購読開始／終了・取消・サイズ制限・timeout・backpressureと、配送sessionの対応を実装する。任意の遅延イベントで新sessionを開始できる経路を作らない。
-4. 実Hubへの接続はS7 SOAKの終了と接続対象の確認後に行う。実PLC・Windows・本番運用の結果をモック試験から推定しない。
+4. S7 SOAKは完了申告済み。実Hubへの接続はC0の接続対象・条件確認とC1〜C2の製品経路検証後に行う。実PLC・Windows・本番運用の結果をモック試験から推定しない。
 
-この保留はRustのcatalog取得・表示DTO・選択session・fixtureでの受入を妨げない。次のP4を独立して進める。P3bを完了扱いしない。
+Rustのcatalog取得・表示DTO・選択session・fixtureの受入は実装済み。次はC0から製品transportと初回読取へ進む。実装・実Hub受入まではP3bを完了扱いしない。以下の記録操作bridgeはC4の後続工程とし、C3の初回読取を妨げる前提にしない。
 
 ## 記録操作bridgeとの関係
 
