@@ -47,6 +47,7 @@ pnpm test
 pnpm build
 pnpm e2e
 pnpm format:check
+node scripts/check-doc-links.mjs
 cargo fmt --all --check
 cargo clippy --workspace --locked --all-targets -- -D warnings
 cargo test --workspace --locked
@@ -55,6 +56,8 @@ cargo run --locked -p scada-model -- validate examples/process.project.json
 ```
 
 E2E は開発サーバーを自動起動します。既に同じサーバーを起動しているときは再利用します。
+
+GitHub Actions は Markdown または `docs/` 内のファイルだけを変更した場合、全体整形と文書リンク・アンカー検査を実行します。コードを含む変更では Frontend・Rust・E2E も実行します。
 
 macOS でも同じ `pnpm e2e` を使います。コピー・切り取り・貼り付けや通常の追加選択は、Playwright の `ControlOrMeta` で OS 標準の修飾キーを送ります。Ctrl 自体のクリック契約は、Ctrl＋クリックが右クリックになる macOS ではスキップします。Ctrl＋ホイールなど、Ctrl 固有の操作はそのまま検証します。
 

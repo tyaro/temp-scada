@@ -3,7 +3,63 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: classify
+        name: Classify changed files
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        shell: bash
+        run: |
+          if [[ "$EVENT_NAME" == pull_request ]]; then
+            merge_base=$(git merge-base "$BASE" "$HEAD")
+            git diff --no-renames --name-only -z "$merge_base" "$HEAD" > "$RUNNER_TEMP/changed-files"
+          elif [[ "$BEFORE" =~ ^0+$ ]]; then
+            merge_base=$(git merge-base "origin/$DEFAULT_BRANCH" "$GITHUB_SHA")
+            git diff --no-renames --name-only -z "$merge_base" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
+          else
+            git diff --no-renames --name-only -z "$BEFORE" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
+          fi
+          docs_only=true
+          count=0
+          while IFS= read -r -d '' file; do
+            count=$((count + 1))
+            case "$file" in
+              *.md|docs/*) ;;
+              *) docs_only=false ;;
+            esac
+          done < "$RUNNER_TEMP/changed-files"
+          if (( count == 0 )); then docs_only=false; fi
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "Changed files: $count; docs only: $docs_only"
+
+  docs:
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: node scripts/check-doc-links.mjs
+
   frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,9 +72,10 @@ jobs:
       - run: pnpm check
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm format:check
 
   rust:
+    needs: changes
+    if: ${{ needs.changes.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +91,8 @@ jobs:
       - run: cargo run --locked -p scada-model -- validate examples/tag-binding.project.json
 
   e2e:
+    needs: changes
+    if: ${{ needs.changes.outputs.docs_only != 'true' }}
     name: e2e (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     strategy:
@@ -63,7 +122,7 @@ jobs:
 
   check:
     if: ${{ always() }}
-    needs: [frontend, rust, e2e]
+    needs: [changes, docs, frontend, rust, e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Require all checks to pass
@@ -71,8 +130,19 @@ jobs:
           FRONTEND_RESULT: ${{ needs.frontend.result }}
           RUST_RESULT: ${{ needs.rust.result }}
           E2E_RESULT: ${{ needs.e2e.result }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          DOCS_RESULT: ${{ needs.docs.result }}
+          DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
         shell: bash
         run: |
-          test "$FRONTEND_RESULT" = success
-          test "$RUST_RESULT" = success
-          test "$E2E_RESULT" = success
+          test "$CHANGES_RESULT" = success
+          test "$DOCS_RESULT" = success
+          if [[ "$DOCS_ONLY" == true ]]; then
+            test "$FRONTEND_RESULT" = skipped
+            test "$RUST_RESULT" = skipped
+            test "$E2E_RESULT" = skipped
+          else
+            test "$FRONTEND_RESULT" = success
+            test "$RUST_RESULT" = success
+            test "$E2E_RESULT" = success
+          fi
