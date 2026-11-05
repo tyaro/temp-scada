@@ -176,6 +176,7 @@ docs/
 - [記録wireのObservation専用配送台帳（C4 prep2d2b純粋TS実装済み）](design/runtime/historian-recording-wire-observation-ledger.md)
 - [記録wireのlocal-v2正常返信Promise配送（C4純粋TS実装済み）](design/runtime/historian-recording-wire-local-v2.md)
 - [記録wire coordinator-v2の所有・attempt境界（C4 test-only root実装済み）](design/runtime/historian-recording-coordinator-v2.md)
+- [記録wireのnative registry adapter（C4採用詳細設計）](design/runtime/historian-recording-native-registry-adapter.md)
 - [記録計画の永続台帳・mapping登録・原子的apply（H5b1）](design/runtime/historian-recording-plan-ledger.md)
 - [記録開始と適用計画の原子的結合（H5b2）](design/runtime/historian-recording-activation.md)
 - [適用済み計画からのRecorder／Host開始（H5c1）](design/runtime/historian-managed-recorder.md)

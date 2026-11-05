@@ -13,14 +13,14 @@ Historianの記録・保持・検索と、SCADA serverの警報評価／ACK／�
 Hubは現在値と書込みを担い、History／警報エンジンを追加しない。
 
 **推薦する次の構造はserver core側にtransport非依存adapterを置くこと**である。
-これは「Tauriかserverか」の二者択一ではない。Tauriはアプリshellの候補で、server coreの所有を置き換えない。
+これは「Tauriかserverか」の二者択一ではない。TauriはC0〜C3で読取shellとして使っているが、server coreの所有を置き換えない。
 製品shellやHTTP framework、IPC方式の選定・公開は今回確定しない。
 
 | 選択肢                      | 責務と利点                                           | 本書の位置付け                                 |
 | --------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
 | server core library         | 全callerのowner／記録／警報の共通管理、UI viewと独立 | 採用済み責務。wire registryを置く推奨場所      |
 | embedded application host 1 | coreをアプリprocessへ同梱し、初期配布を単純化        | 既存v1目標。具体shell／起動実装は保留          |
-| Tauri shell                 | desktop bridge／trayなどの実装候補                   | 未選定。同期FFIが存在すると仮定しない          |
+| Tauri shell                 | C0〜C3の読取bridge、trayなどの追加候補               | 記録操作の接続は未選定。同期FFIを仮定しない    |
 | headless／Windows service   | UI process終了後も記録する運用形態                   | 後続host。先に無認証HTTPを公開する理由にしない |
 
 local modeではSCM Runningかつhealthyだけ既存serviceへ接続し、Stopped／NotInstalledが埋込起動候補である。
