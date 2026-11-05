@@ -35,7 +35,9 @@ test("right-click only opens operations, keeps drafts and selection, and returns
   await edit(page);
   await button(page, "Rectangle を追加").click();
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
-  const before = await page.locator(".toolbar").innerText();
+  const before = await page
+    .locator("main")
+    .getAttribute("data-project-revision");
   const pump = button(page, "ポンプを追加");
   await pump.click({ button: "right" });
   await expect(menu(page, "ポンプ（組込）")).toBeVisible();
@@ -49,7 +51,9 @@ test("right-click only opens operations, keeps drafts and selection, and returns
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
   ).toHaveValue("#aabbcc");
-  expect(await page.locator(".toolbar").innerText()).toBe(before);
+  expect(await page.locator("main").getAttribute("data-project-revision")).toBe(
+    before,
+  );
   await page.keyboard.press("Escape");
   await expect(pump).toBeFocused();
   await pump.press("Shift+F10");
@@ -62,7 +66,9 @@ test("right-click only opens operations, keeps drafts and selection, and returns
   await expect(info).toContainText("100 × 100");
   await info.getByRole("button", { name: "閉じる", exact: true }).click();
   await expect(pump).toBeFocused();
-  expect(await page.locator(".toolbar").innerText()).toBe(before);
+  expect(await page.locator("main").getAttribute("data-project-revision")).toBe(
+    before,
+  );
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
   ).toHaveValue("#aabbcc");

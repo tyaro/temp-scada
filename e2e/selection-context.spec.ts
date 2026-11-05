@@ -47,7 +47,9 @@ test("canvas and layer context menus keep multiple selection and share toolbar c
   await list(page)
     .getByRole("button", { name: "ellipse · 4", exact: true })
     .click({ modifiers: ["Shift"] });
-  const before = await page.locator(".toolbar").innerText();
+  const before = await page
+    .locator("main")
+    .getAttribute("data-project-revision");
   await svg(page)
     .locator("[data-object-id]")
     .first()
@@ -61,7 +63,9 @@ test("canvas and layer context menus keep multiple selection and share toolbar c
   await expect(
     popup.getByRole("menuitem", { name: "最前面へ", exact: true }),
   ).toHaveCount(0);
-  expect(await page.locator(".toolbar").innerText()).toBe(before);
+  expect(await page.locator("main").getAttribute("data-project-revision")).toBe(
+    before,
+  );
   await page.keyboard.press("Escape");
   await expect(canvas(page)).toBeFocused();
   await list(page)

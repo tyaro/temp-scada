@@ -35,7 +35,9 @@ test("hiding properties releases its width, retains drafts and restores through 
     .getByRole("button", { name: "Rectangle を追加", exact: true })
     .click();
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
-  const revision = await page.locator(".toolbar").innerText();
+  const revision = await page
+    .locator("main")
+    .getAttribute("data-project-revision");
   const width = (await viewport(page).boundingBox())!.width;
   await inspector(page)
     .getByRole("button", { name: "プロパティを隠す", exact: true })
@@ -51,7 +53,9 @@ test("hiding properties releases its width, retains drafts and restores through 
     page.locator('[data-editor-form="shape-paint"] input[name="fillColor"]'),
   ).toHaveValue("#aabbcc");
   await expect(page.getByTestId("save-state")).toContainText("1 フォーム");
-  expect(await page.locator(".toolbar").innerText()).toBe(revision);
+  expect(await page.locator("main").getAttribute("data-project-revision")).toBe(
+    revision,
+  );
   await page
     .getByRole("menubar")
     .getByRole("menuitem", { name: "表示", exact: true })

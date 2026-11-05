@@ -44,7 +44,14 @@ for (const theme of ["light", "dark"])
         .getByRole("region", { name: "画面プレビュー", exact: true })
         .getByRole("group", { name: "キャンバス表示", exact: true }),
     ).toHaveCount(0);
-    const revision = await page.locator(".toolbar").innerText();
+    const canvas = page.getByRole("region", {
+      name: "画面プレビュー",
+      exact: true,
+    });
+    await expect(
+      canvas.getByRole("heading", { name: "プロセス画面" }),
+    ).toHaveCount(0);
+    await expect(canvas).not.toContainText("SCREEN ·");
     await toolbar.getByLabel("グリッド表示", { exact: true }).check();
     await toolbar.getByLabel("グリッドにスナップ", { exact: true }).check();
     await toolbar
@@ -74,7 +81,14 @@ for (const theme of ["light", "dark"])
     await expect(toolbar.getByLabel("表示倍率", { exact: true })).toHaveValue(
       "fit",
     );
-    expect(await page.locator(".toolbar").innerText()).toBe(revision);
+    await toolbar
+      .getByRole("button", { name: "表示プレビュー", exact: true })
+      .click();
+    await expect(
+      canvas.getByRole("heading", { name: "プロセス画面" }),
+    ).toHaveCount(0);
+    await expect(canvas).not.toContainText("SCREEN ·");
+    await toolbar.getByRole("button", { name: "編集", exact: true }).click();
     expect(
       (await page
         .getByRole("region", { name: "キャンバス操作領域", exact: true })

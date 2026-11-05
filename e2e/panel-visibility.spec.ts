@@ -43,7 +43,9 @@ test("restore returns the previous panel subset, search, tab, selection and unap
   await page.getByRole("searchbox", { name: "部品を検索" }).fill("rectangle");
   await page.getByRole("button", { name: "名称一覧", exact: true }).click();
   await menu(page, "タグ参照一覧を隠す");
-  const before = await page.locator(".toolbar").innerText();
+  const before = await page
+    .locator("main")
+    .getAttribute("data-project-revision");
   const width = (await viewport(page).boundingBox())!.width;
   await menu(page, "補助パネルをすべて隠す");
   await expect(sidebar(page)).toHaveCount(0);
@@ -55,7 +57,9 @@ test("restore returns the previous panel subset, search, tab, selection and unap
     page.getByRole("button", { name: "メニュー", exact: true }),
   ).toBeFocused();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  expect(await page.locator(".toolbar").innerText()).toBe(before);
+  expect(await page.locator("main").getAttribute("data-project-revision")).toBe(
+    before,
+  );
   await menu(page, "メニューバーを隠す");
   await menu(page, "補助パネルを元の表示に戻す");
   await expect(sidebar(page)).toBeVisible();
