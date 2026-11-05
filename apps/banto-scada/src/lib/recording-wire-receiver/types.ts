@@ -1,6 +1,10 @@
 import type {
   RecordingWireOwnerSnapshot,
   RecordingWireScope,
+  RecordingWireAttachRequest,
+  RecordingWireAttachReply,
+  RecordingWireControlRequest,
+  RecordingWireControlReply,
 } from "../recording-wire-contract";
 declare const attachBrand: unique symbol;
 declare const controlBrand: unique symbol;
@@ -58,6 +62,24 @@ export interface ReceiverState {
     controlSlot: number;
   }>;
 }
+export type StoredTerminal<Q, R> = Readonly<
+  { kind: "pending"; request: Q } | { kind: "terminal"; request: Q; reply: R }
+>;
+/** Local display facts only. Current subscription is neither clock freshness nor authority. */
+export interface RecordingWireDisplay {
+  readonly scope: RecordingWireScope;
+  readonly transportConnected: boolean;
+  readonly receiverStatus: ReceiverState["status"];
+  readonly receiverStoppedReason: ReceiverState["stoppedReason"];
+  readonly generation: ReceiverState["generation"];
+  readonly ownerClosed: boolean;
+  readonly nativeRecoveryRequired: boolean;
+  readonly authorizationLost: boolean;
+  readonly highwater: number | null;
+  readonly snapshotRelation: "none" | "currentSubscription" | "lastKnown";
+  readonly snapshot: RecordingWireOwnerSnapshot | null;
+  readonly usage: ReceiverState["usage"];
+}
 export interface WireReceiver {
   beginAttach(request: unknown): ReceiverResult<AttachGeneration>;
   acceptAttach(generation: AttachGeneration, reply: unknown): ReceiveResult;
@@ -74,5 +96,16 @@ export interface WireReceiver {
   setConnected(connected: boolean): ReceiverResult<null>;
   retire(generation: AttachGeneration): ReceiverResult<null>;
   current(): ReceiverState;
+  currentDisplay(): RecordingWireDisplay;
+  attachTerminal(
+    generation: AttachGeneration,
+  ): ReceiverResult<
+    StoredTerminal<RecordingWireAttachRequest, RecordingWireAttachReply>
+  >;
+  controlTerminal(
+    call: ControlCall,
+  ): ReceiverResult<
+    StoredTerminal<RecordingWireControlRequest, RecordingWireControlReply>
+  >;
   dispose(): ReceiverResult<null>;
 }

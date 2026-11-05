@@ -8,6 +8,7 @@ import {
 } from "./recording-wire-receiver/core";
 import * as calls from "./recording-wire-receiver/calls";
 import * as frames from "./recording-wire-receiver/frames";
+import { display, terminal } from "./recording-wire-receiver/readout";
 import type {
   ReceiverLimits,
   ReceiverResult,
@@ -41,15 +42,27 @@ export function createRecordingWireReceiver(
     return Object.freeze({ ok: false, reason: "invalidScope" });
   }
   let busy = false,
-    published = c.view();
-  function guard<T>(fn: () => ReceiverResult<T>): ReceiverResult<T> {
+    published = c.view(),
+    publishedDisplay = display(published);
+  function guard<T>(
+    fn: () => ReceiverResult<T>,
+    commit = true,
+  ): ReceiverResult<T> {
     if (busy) return reject("busy");
     busy = true;
     try {
       return fn();
     } finally {
-      published = c.view();
-      busy = false;
+      try {
+        if (commit) {
+          const next = c.view(),
+            nextDisplay = display(next);
+          published = next;
+          publishedDisplay = nextDisplay;
+        }
+      } finally {
+        busy = false;
+      }
     }
   }
   const receiver: WireReceiver = Object.freeze<WireReceiver>({
@@ -77,6 +90,17 @@ export function createRecordingWireReceiver(
         return success(null);
       }),
     current: () => published,
+    currentDisplay: () => publishedDisplay,
+    attachTerminal: (token) =>
+      guard(() => {
+        const record = c.generation(token);
+        return record ? success(terminal(record)) : reject("foreignToken");
+      }, false),
+    controlTerminal: (token) =>
+      guard(() => {
+        const record = c.control(token);
+        return record ? success(terminal(record)) : reject("foreignToken");
+      }, false),
     dispose: () =>
       guard(() => {
         c.disposed = true;

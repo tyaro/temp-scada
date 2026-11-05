@@ -365,6 +365,8 @@ describe("reentry is guarded before even nested descriptor validation", () => {
     "setConnected",
     "retire",
     "dispose",
+    "attachTerminal",
+    "controlTerminal",
   ] as const;
   for (const outer of [
     "beginAttach",
@@ -382,6 +384,7 @@ describe("reentry is guarded before even nested descriptor validation", () => {
         let t: any;
         if (outer === "acceptControlReply") t = take(r.beginControl(g, cq()));
         const before = r.current(),
+          beforeDisplay = r.currentDisplay(),
           nested: any[] = [];
         let traps = 0;
         const dangerous = new Proxy(
@@ -395,6 +398,7 @@ describe("reentry is guarded before even nested descriptor validation", () => {
         const fire = () => {
           traps++;
           expect(r.current()).toBe(before);
+          expect(r.currentDisplay()).toBe(beforeDisplay);
           for (const m of mutations) {
             let result;
             if (m === "beginAttach") result = r.beginAttach(dangerous);
@@ -409,6 +413,8 @@ describe("reentry is guarded before even nested descriptor validation", () => {
               result = r.acceptControlReply(t, dangerous);
             else if (m === "setConnected") result = r.setConnected(false);
             else if (m === "retire") result = r.retire(g);
+            else if (m === "attachTerminal") result = r.attachTerminal(g);
+            else if (m === "controlTerminal") result = r.controlTerminal(t);
             else result = r.dispose();
             nested.push(result);
             expect(result).toEqual({
@@ -417,6 +423,7 @@ describe("reentry is guarded before even nested descriptor validation", () => {
               terminalStored: false,
             });
             expect(r.current()).toBe(before);
+            expect(r.currentDisplay()).toBe(beforeDisplay);
           }
         };
         const q =

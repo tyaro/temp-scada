@@ -1,10 +1,12 @@
 /** Shared receiver scenarios run against the real implementation in Vitest and Chromium.
  * This test command DSL is not a wire document, server registry or native adapter. */
 import raw from "../../../../../examples/recording-wire-receiver-cases.json";
+import readout from "../../../../../examples/recording-wire-readout-cases.json";
 import { createRecordingWireReceiver } from "../recording-wire-receiver";
 import { parseRecordingWireDocument } from "../recording-wire-contract";
 import type { ReceiverLimits, WireReceiver } from "../recording-wire-receiver";
 export const receiverFixtures = raw;
+export const receiverReadoutFixtures = readout;
 export const cloneReceiverJson = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 export function receiverSnapshot(
   rev = 1,
@@ -124,7 +126,12 @@ export function runReceiverScenario(scenario: {
   const requests = new Map<string, any>(),
     controlRequests = new Map<string, any>();
   const prior: { state: unknown; json: string }[] = [];
-  let documents = 0;
+  const expectedAttach = new Map<string, any>(),
+    expectedControl = new Map<string, any>();
+  const priorDisplays: { state: unknown; json: string }[] = [];
+  const priorTerminals: any[] = [];
+  let documents = 0,
+    terminalReads = 0;
   for (const [index, s] of scenario.steps.entries()) {
     try {
       let input: any, result: any;
@@ -203,11 +210,28 @@ export function runReceiverScenario(scenario: {
         case "controlReply":
           result = r.acceptControlReply(controls.get(s.id), input);
           break;
+        case "attachTerminal":
+          result = r.attachTerminal(generations.get(s.id));
+          break;
+        case "controlTerminal":
+          result = r.controlTerminal(controls.get(s.id));
+          break;
         case "observe":
           result = Object.freeze({ ok: true, value: null });
           break;
         default:
           throw Error("unknown test op");
+      }
+      // Test oracle records only normal original deliveries, never frame knowledge.
+      if (input && (result.ok || result.terminalStored === true)) {
+        const ledger =
+          s.op === "attach"
+            ? expectedAttach
+            : s.op === "controlReply"
+              ? expectedControl
+              : null;
+        if (ledger && !ledger.has(s.id))
+          ledger.set(s.id, cloneReceiverJson(input));
       }
       const wanted = s.result ?? "applied";
       if (
@@ -231,7 +255,61 @@ export function runReceiverScenario(scenario: {
           "result",
         );
       } else if (!result.ok) throw Error("cache " + JSON.stringify(result));
+      if ((s.op === "attachTerminal" || s.op === "controlTerminal") && s.value)
+        subset(result.value, s.value, "value");
       if (s.state) subset(r.current(), s.state);
+      if (s.display) subset(r.currentDisplay(), s.display, "display");
+      const committed = r.current(),
+        view = r.currentDisplay();
+      if (
+        !deeplyFrozen(view) ||
+        view.scope !== committed.scope ||
+        view.snapshot !== committed.latest ||
+        view.generation !== committed.generation ||
+        view.usage !== committed.usage
+      )
+        throw Error("readout lost owned references");
+      for (const [tokens, tokenRequests, replies, get] of [
+        [
+          generations,
+          requests,
+          expectedAttach,
+          (t: any) => r.attachTerminal(t),
+        ],
+        [
+          controls,
+          controlRequests,
+          expectedControl,
+          (t: any) => r.controlTerminal(t),
+        ],
+      ] as const)
+        for (const [id, token] of tokens) {
+          const got = get(token);
+          const expected = replies.has(id)
+            ? {
+                kind: "terminal",
+                request: tokenRequests.get(id),
+                reply: replies.get(id),
+              }
+            : { kind: "pending", request: tokenRequests.get(id) };
+          if (
+            !got.ok ||
+            JSON.stringify(got.value) !== JSON.stringify(expected) ||
+            !deeplyFrozen(got)
+          )
+            throw Error("original terminal mismatch");
+          priorTerminals.push({ value: got, json: JSON.stringify(got) });
+          terminalReads++;
+        }
+      if (r.current() !== committed || r.currentDisplay() !== view)
+        throw Error("read changed committed cache");
+      for (const old of [
+        ...priorDisplays,
+        ...priorTerminals.map((v) => ({ state: v.value, json: v.json })),
+      ])
+        if (JSON.stringify(old.state) !== old.json)
+          throw Error("old readout mutated");
+      priorDisplays.push({ state: view, json: JSON.stringify(view) });
       if (!deeplyFrozen(r.current()) || !deeplyFrozen(result))
         throw Error("mutable result");
       for (const old of prior)
@@ -242,7 +320,12 @@ export function runReceiverScenario(scenario: {
       throw Error(`${scenario.name} / ${index} (${s.op}): ${error}`);
     }
   }
-  return { documents, state: r.current() };
+  return {
+    documents,
+    terminalReads,
+    state: r.current(),
+    display: r.currentDisplay(),
+  };
 }
 /** Independent structural oracle. Deliberately does not import production measurement. */
 export function receiverMetrics(
