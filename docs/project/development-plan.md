@@ -31,7 +31,7 @@
 
 [Astra主設計](../design/runtime/historian-recording-project.md)に沿い、まずd1でProject0.37.0のoptional単一`recordingPlan`とH5a共通検証を導入する。TS／Rust／schema／examples／新規作成／既存legacy変換の出力版と契約試験を同じPRで更新する。0.36.0の自動移行は必須にせず、旧版を明示拒否する。d1でこの保存契約を実装し、H5a共通fixtureをProject内部にも適用した。通常Appでの保存・再読込と、不正読込時の旧Project保持を受け入れる。d2で編集UIを追加した。d3でreadonly管理serviceと状態表示、d4bで別の任意注入操作serviceと三段階UIを導入済み。native接続はd4cで段階化する。
 
-d2は原子的な編集・Undo／Redoと入力保護を提供する。原子的commandは元設定の全文を照合し、同計画IDの内容変更に新しいdesired版を要求する。未設定・無効計画・削除を区別し、Project保存をHistorian停止や適用の命令にしない。d3は外部ownerが供給する管理serviceを任意注入して状態だけを読み、d4で登録済みmappingによる明示検査・停止／join・管理turnを接続する。fresh SDK解決・再開とinitialIdle bootstrapは後続capabilityに分ける。各段階の詳細受入を完了してから次へ進み、製品transport・認証・実接続の保留を維持する。
+d2は原子的な編集・Undo／Redoと入力保護を提供する。原子的commandは元設定の全文を照合し、同計画IDの内容変更に新しいdesired版を要求する。未設定・無効計画・削除を区別し、Project保存をHistorian停止や適用の命令にしない。d3は外部ownerが供給する管理serviceを任意注入して状態だけを読み、d4で登録済みmappingによる明示検査・停止／join・管理turnを接続する。fresh SDK解決・再開とinitialIdle bootstrapは後続capabilityに分ける。各段階の詳細受入を完了してから次へ進み、記録管理の製品transport・実接続はC4で扱う。初回読取はC0〜C3で先に進め、認証の利用可否はC0で確認する。
 
 desired版はProject版・applied版と独立して扱う。Undoや旧ファイルの読込でDBのimmutable制約を回避せず、競合時に黙って採番・再送しない。管理ownerはUIより長く生存し、画面を閉じる・Projectを切り替える操作で記録を停止しない。
 
@@ -39,7 +39,7 @@ desired版はProject版・applied版と独立して扱う。Undoや旧ファイ�
 
 [Astra詳細契約](../design/runtime/historian-recording-management.md)は、Project対象とdeployment/storeのcaller宣言、要求・応答、同snapshotのDB状態と別時点のHost観測、厳密なJSON予算と安全なerror分類を定める。ネイティブの管理型をそのままブラウザ公開した既存APIとは扱わない。
 
-d3aの共通DTO／schema／Rust・TS validator／比較／fixtureを実装した。受理447・H5aネスト139・比較18・全文request9の共有期待値を両言語とbrowserで確認する。d3bでApp常設の有限controllerと通常Appの読取表示へ接続した。通常起動はservice未接続で、テストだけが同realmのserviceを注入する。[d4詳細設計](../design/runtime/historian-recording-operations.md)で操作capability・receipt・不確定commit表示を分離し、d4aの共通純粋契約とd4bの操作境界を実装した。native接続はd4cで進める。sourceのAbort非協力や閉じる／再open／Project・service交換でも、物理読取一枠をPromise終了まで保持する。表示だけでwriter・recorder・保持jobやlatchを変更しない。管理操作はd4、正式transport／認証・実接続は保留を維持する。
+d3aの共通DTO／schema／Rust・TS validator／比較／fixtureを実装した。受理447・H5aネスト139・比較18・全文request9の共有期待値を両言語とbrowserで確認する。d3bでApp常設の有限controllerと通常Appの読取表示へ接続した。通常起動はservice未接続で、テストだけが同realmのserviceを注入する。[d4詳細設計](../design/runtime/historian-recording-operations.md)で操作capability・receipt・不確定commit表示を分離し、d4aの共通純粋契約とd4bの操作境界を実装した。native接続はd4cで進める。sourceのAbort非協力や閉じる／再open／Project・service交換でも、物理読取一枠をPromise終了まで保持する。表示だけでwriter・recorder・保持jobやlatchを変更しない。管理操作はd4、記録用の正式transportと実接続はC4で扱う。
 
 ## H5d4の明示操作と実装順
 
@@ -47,7 +47,7 @@ d3aの共通DTO／schema／Rust・TS validator／比較／fixtureを実装した
 
 d4aで版付きの操作・結果照会DTO／validator・全文一致と共有fixtureを実装した。受理925・一致102・H5aネスト695・d3 target447を共通検証する。d4bで外部ownerと有限monitorを持つ注入service・通常App操作UIと手動結果照会をtest-only providerで受け入れた。[c1の独立receipt読取](../design/runtime/historian-recording-receipt-reader.md)を実装した。[c2の共有native owner](../design/runtime/historian-recording-native-owner.md)をAstra設計に沿ってRust libraryへ実装した。共有owner・受理前registry・三段階操作と結果投影を一貫して受け入れた。c2はPR #63でworkへ統合済み（`7a6eca5`、PR／push CIとも全7job成功）。[c3の同owner内reconciliation詳細設計](../design/runtime/historian-recording-owner-reconciliation.md)に沿い、c1 readと元applyの物理完了根拠を統合した。c3設計はPR #64で統合済み（`cd6257a`）。native read handle・同reader loan／join・結果統合をRustへ実装した。c3はPR #65でworkへ統合済み（`658bb5b`、PR／push CIとも全7job成功）。次は[c4の非同期bridge境界](../design/runtime/historian-recording-bridge-boundary.md)に従い、c4aの共通admission契約／pure検証、c4bの非同期monitor／UI、製品hostの選定とP3b条件を満たしたc4c以降のnative接続へ分ける。設計PR #66はworkへ統合済み（`eef9316`）。c4aで五つの独立JSON root、Rust／TS owned検証、最大返信容量と共有fixtureを実装した。c4aはPR #67でworkへ統合済み（`1370d4c`、PR／push CIとも全7job成功）。[c4bの詳細設計](../design/runtime/historian-recording-async-monitor.md)で常設monitor／UIの非同期admission・所有・復帰手順を定めた。設計PR #68はworkへマージ済み（`e23bea9`、PR／push CIとも全7job成功）。外部root-owned coordinatorとtest-only portを使うUIを実装し、同期／非同期のmode固定、受付不明からの明示照会、物理call枠と結果の分離、旧対象の監視継続を受け入れる。次はc4c前の実lease／frame／cancel wireと製品hostの詳細設計・再開条件の確認である。Rust ownerへの実接続はまだ行っていない。各詳細境界を実装前にAstraと設計・レビューし、既存supervisorへ接続する。d3のread serviceをmutation操作へ拡張解釈しない。画面やProjectを離れても受理済み操作は元ownerに帰属し、結果不明を未実行やrollbackに変換しない。
 
-d4aのpure DTO検証、d4bの操作service・monitor／UIとclientのreceipt／latch保持は実装済み。d4c1のHistoryReaderは元apply全文に照合した実receiptを同snapshotで読む。c2でnative owner・registry・三段階操作と物理join後の結果確定まで提供する。c3で同ownerの結果照会も統合した。JSへの接続は後続へ残す。Project0.37.0・DB7・H1・固定SDK／Banto／依存と、上流・実Hub・S7・本番DB・認証／製品transportの保留を維持する。
+d4aのpure DTO検証、d4bの操作service・monitor／UIとclientのreceipt／latch保持は実装済み。d4c1のHistoryReaderは元apply全文に照合した実receiptを同snapshotで読む。c2でnative owner・registry・三段階操作と物理join後の結果確定まで提供する。c3で同ownerの結果照会も統合した。JSへの接続は後続へ残す。この記録操作の工程ではProject0.37.0・DB7・H1・固定SDK／Banto／依存を維持する。記録の実配送はC4、検証用DBへの実記録はC5で受け入れ、初回読取はC0〜C3で先に進める。
 
 ## H5d4c4c接続前のwire・host設計
 
@@ -55,7 +55,7 @@ c4b実装は[PR #69](https://github.com/tyaro/temp-scada/pull/69)でworkへ統�
 
 採用済み構成はSCADA server coreを独立ライブラリとし、最初のhostをアプリへ埋め込むhost 1である。Tauri等のshell、実配送、接続設定とBantoの最新認証契約はP3b再開時に確定する。headless／Windowsサービスは後続hostとし、共有サービス接続失敗から別coreを自動起動しない。
 
-c4c-prep1の純粋wire JSON契約14root・Rust／TS validator・共通fixture・最大返信容量の検証を実装した。設計PR #70はworkへ統合済み（`e0ab72b`、PR／push CI全7job成功、同headレビュー指摘なし）。既存c4aの五rootとc4bのlocal port、Project0.37.0／DB7／H1／SDK／Banto・依存版は維持する。実registry adapter・native配送・製品hostはhost／P3bの条件を満たした後に分け、認証・実Hub／S7・本番DBの保留を暗黙解除しない。
+c4c-prep1の純粋wire JSON契約14root・Rust／TS validator・共通fixture・最大返信容量の検証を実装した。設計PR #70はworkへ統合済み（`e0ab72b`、PR／push CI全7job成功、同headレビュー指摘なし）。既存c4aの五rootとc4bのlocal port、Project0.37.0／DB7／H1／SDK／Banto・依存版は維持する。記録用の実registry adapter・native配送はC4でhost／P3bの条件を満たして接続し、C5では検証用DBを使う。初回読取hostはC0〜C3で進め、認証の再開範囲はC0で確認する。
 
 ## H5d4c4c-prep2の状態モデル
 
@@ -67,7 +67,7 @@ c4c-prep1の純粋wire JSON契約14root・Rust／TS validator・共通fixture・
 
 [Astra主設計](../design/runtime/historian-recording-supervisor.md)に沿い、c2aの停止前read-only preflight、c2bの正常pause後の一回の管理turn、c2cのpreflight／stop／join／fresh SDK解決／明示resumeの順に分割する。c2aはworkのH5b2にだけ依存し、[PR #47](https://github.com/tyaro/temp-scada/pull/47)のmanaged Recorder／Host開始とは独立に実装・受入できる。PR #47と#48はworkへ統合済み（6c26ea6）。同workの全体CIも成功した。
 
-c2aは既存HistoryReaderから保存済みmappingに対するapplyとmapping登録の候補を検査する。Candidateは予約や停止許可ではなく、既知receiptのReplayでは停止しない。mapping登録とapplyは別commitで、登録後にapplyへ失敗してもmapping成功を黙って戻さない。通常App／Project編集・配布はH5dへ分け、製品接続・認証・transportの保留を維持する。
+c2aは既存HistoryReaderから保存済みmappingに対するapplyとmapping登録の候補を検査する。Candidateは予約や停止許可ではなく、既知receiptのReplayでは停止しない。mapping登録とapplyは別commitで、登録後にapplyへ失敗してもmapping成功を黙って戻さない。通常App／Project編集・配布はH5dへ分け、記録の製品接続・transportはC4〜C5で扱う。認証の利用可否はC0で確認する。
 
 c2bは同じHostが正常join後のwriterを保持し、元RecordingRunと管理操作tokenを照合する。一回のnative書込と結果joinを分け、mapping／apply各最新成功receiptを元run/token付きで保持する。native errorは回復要求をstickyにし、記録再開・次の管理turn・保持操作を停止する。新規Hostの初回設定は既存SqliteStore API、異常時の回復はjoin後の明示照会／必要な再openで扱う。c2c1のsupervisorが元run・session・owned候補を検査ticketへ結び付け、明示pause/joinした同じ要求だけを一回適用する。Replay/errorでは止めず、新しい運転の開始前に未消費候補の明示破棄を要求する。c2c2は現在applied/mapping・直近activation・保持状態を同snapshotで読み、latchを解除せず診断する。callerが提供したcoherent SDK snapshotから全系列のpinsを検証し、opaque ticketで新session/epochの明示resumeへつなぐ。異常ownerの自動修復・接続設定/認証・実取得時刻の証明は追加しない。
 
