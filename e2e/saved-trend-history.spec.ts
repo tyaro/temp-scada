@@ -6,6 +6,10 @@ import {
   downloadBytes,
   downloadProject,
 } from "./helpers/project-files";
+const exampleRoot = `/@fs${process
+  .cwd()
+  .replaceAll("\\", "/")
+  .replace(/^([A-Za-z]:)/, "/$1")}/examples`;
 
 function fixture() {
   const project = structuredClone(sample);
@@ -44,9 +48,9 @@ async function inject(
       /mount\(App,\s*\{\s*target:\s*document\.getElementById\("app"\)\s*\}\);/;
     expect(original).toMatch(mount);
     const body = `
-      import { createSubscriber } from "/node_modules/.vite/deps/svelte_reactivity.js";
-      import rawCases from "/@fs${process.cwd()}/examples/history-query-cases.json?import";
-      import minmaxCases from "/@fs${process.cwd()}/examples/history-minmax-cases.json?import";
+      const { createSubscriber } = await import("/node_modules/.vite/deps/svelte_reactivity.js");
+      const { default: rawCases } = await import("${exampleRoot}/history-query-cases.json?import");
+      const { default: minmaxCases } = await import("${exampleRoot}/history-minmax-cases.json?import");
       const project=${JSON.stringify(project)};
       let notify=()=>{};
       const track=createSubscriber(update=>{notify=update;return ()=>{};});

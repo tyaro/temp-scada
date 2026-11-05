@@ -17,7 +17,7 @@ async function entry(page: Page) {
       /mount\(App,\s*\{\s*target:\s*document\.getElementById\("app"\)\s*\}\);/;
     expect(original).toMatch(mount);
     const injected = `
-      import { createSubscriber } from "/node_modules/.vite/deps/svelte_reactivity.js";
+      const { createSubscriber } = await import("/node_modules/.vite/deps/svelte_reactivity.js");
       let notify = () => {};
       const track = createSubscriber(update => {notify = update; return () => {};});
       const h = window.__catalogHarness = { throwSubscribe: false, throwUnsubscribe: false };

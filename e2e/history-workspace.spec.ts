@@ -9,6 +9,10 @@ import {
 
 // Only the test entry injects a service. The actual App, menu, Project lifetime,
 // Modal and form remain production components.
+const exampleRoot = `/@fs${process
+  .cwd()
+  .replaceAll("\\", "/")
+  .replace(/^([A-Za-z]:)/, "/$1")}/examples`;
 async function inject(page: Page) {
   await page.route("**/src/main.ts*", async (route) => {
     const response = await route.fetch(),
@@ -17,11 +21,11 @@ async function inject(page: Page) {
       /mount\(App,\s*\{\s*target:\s*document\.getElementById\("app"\)\s*\}\);/;
     expect(original).toMatch(mount);
     const body = `
-      import { createSubscriber } from "/node_modules/.vite/deps/svelte_reactivity.js";
-      import rawCases from "/@fs${process.cwd()}/examples/history-query-cases.json?import";
-      import minmaxCases from "/@fs${process.cwd()}/examples/history-minmax-cases.json?import";
-      import sample from "/@fs${process.cwd()}/examples/minimal.project.json?import";
-      import { HistorySourceError } from "/src/lib/history/presentation.ts";
+      const { createSubscriber } = await import("/node_modules/.vite/deps/svelte_reactivity.js");
+      const { default: rawCases } = await import("${exampleRoot}/history-query-cases.json?import");
+      const { default: minmaxCases } = await import("${exampleRoot}/history-minmax-cases.json?import");
+      const { default: sample } = await import("${exampleRoot}/minimal.project.json?import");
+      const { HistorySourceError } = await import("/src/lib/history/presentation.ts");
       let notify = () => {};
       const track = createSubscriber(update => {notify = update; return () => {};});
       const context = {version:1,kind:"historyContext",contextId:"context:1",

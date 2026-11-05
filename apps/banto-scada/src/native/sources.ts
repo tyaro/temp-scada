@@ -10,8 +10,6 @@ import type {
   CatalogSource,
 } from "../lib/designer/controllers/catalog.svelte";
 
-let nextSubscription = 0;
-
 interface ReadPacket {
   subscriptionId: string;
   update: unknown;
@@ -24,7 +22,7 @@ export function nativeSources(onStream?: (phase: string) => void): {
   return {
     readSource: {
       subscribe(project: Project, begin: () => ReadDelivery) {
-        const subscriptionId = String(++nextSubscription);
+        const subscriptionId = crypto.randomUUID();
         const delivery = begin();
         onStream?.("購読準備");
         let active = true;

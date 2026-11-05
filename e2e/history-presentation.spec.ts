@@ -11,7 +11,7 @@ async function fixture(page: Page) {
       response,
       body: original.replace(
         mount,
-        `import HistoryFixture from "/src/lib/history/__fixtures__/HistoryPresentation.svelte"; mount(HistoryFixture,{target:document.getElementById("app")});`,
+        `const { default: HistoryFixture } = await import("/src/lib/history/__fixtures__/HistoryPresentation.svelte"); mount(HistoryFixture,{target:document.getElementById("app")});`,
       ),
     });
   });

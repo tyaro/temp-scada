@@ -3,6 +3,7 @@ use scada_host::{local_bootstrap, Bootstrapper, HubStatus};
 use scada_model::Project;
 use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
 use serde::Serialize;
+use std::collections::HashSet;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -16,8 +17,24 @@ struct NativeHost {
 struct Active {
     connected: bool,
     owner: Option<String>,
+    retired: HashSet<String>,
     read: Option<ReadHost>,
     pump: Option<JoinHandle<()>>,
+}
+
+impl Active {
+    fn claim(&mut self, subscription_id: &str) -> bool {
+        !self.retired.remove(subscription_id)
+    }
+
+    fn retire(&mut self, subscription_id: &str) -> bool {
+        if self.owner.as_deref() == Some(subscription_id) {
+            true
+        } else {
+            self.retired.insert(subscription_id.to_owned());
+            false
+        }
+    }
 }
 
 #[derive(Clone, Serialize)]
@@ -78,6 +95,9 @@ async fn hub_read_start(
 ) -> Result<(), String> {
     let project = Project::from_json(&project_json).map_err(|_| "invalid_project".to_owned())?;
     let mut active = state.active.lock().await;
+    if !active.claim(&subscription_id) {
+        return Err("subscription_retired".into());
+    }
     stop_read(&mut active).await;
     if !active.connected {
         return Err("not_connected".into());
@@ -138,10 +158,25 @@ async fn hub_read_stop(
     subscription_id: String,
 ) -> Result<(), String> {
     let mut active = state.active.lock().await;
-    if active.owner.as_deref() == Some(&subscription_id) {
+    if active.retire(&subscription_id) {
         stop_read(&mut active).await;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Active;
+
+    #[test]
+    fn retired_start_cannot_replace_a_newer_owner() {
+        let mut active = Active::default();
+        assert!(!active.retire("old"));
+        active.owner = Some("new".into());
+        assert!(!active.claim("old"));
+        assert_eq!(active.owner.as_deref(), Some("new"));
+        assert!(active.claim("new"));
+    }
 }
 
 #[tauri::command]
