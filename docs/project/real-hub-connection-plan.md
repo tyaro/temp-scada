@@ -22,7 +22,7 @@ C0でWindowsの既存Hubと認証契約を確定し、C1のTauri host、C2のモ
 | C1 最小hostと読取接続の実装        | UIと独立したRust側ownerにSDK、ReadHost、CatalogHostを保持。接続設定をProject外へ置き、認可済みの配送経路を用意する。通常起動から既存ReadSource／CatalogSourceへ接続し、接続・切断・接続先切替を提供する。                                                       | 通常entrypointでモックHubの数値Text・機器number/bool・タグ選択が動く。資格情報がProject・ブラウザstorage・DTO・ログへ漏れない。要求0件、host起動失敗・終了、既存サービスとの二重owner防止を検証する。                                                               |
 | C2 読取経路の通し検証              | 実製品と同じhost／IPCでモックHubから通常UIまで試験する。Project置換、旧通知、Bad／Stale、Unbound、Unauthorized、切断・再接続を確認する。                                                                                                                        | 切断・権限喪失・Project置換時に旧値を消し、新しい購読開始に対応する通知だけを表示する。catalog失敗時にサンプルへ置換しない。対象OSで起動・終了と再起動を含めて成功する。                                                                                            |
 | C3 実Hub経由の初回読取受入         | C0で確定した対象Hubと既存S7タグに接続する。数値・bool、0・false、Quality、タグ選択、通常画面と機器小窓を照合する。                                                                                                                                              | Hubの観測値と画面表示が一致し、SIMと実機由来を区別できる。SCADA側の切断・再接続、Project再読込、アプリ再起動を受け入れる。実機側の故障・再起動を伴う試験は対象設備の条件を別途確定してから行う。ここを「初回実機読取接続完了」とする。                              |
-| C4 記録clientとnative bridgeの完成 | 実装済みd2a台帳を基に、d2b結果観測、local-v2、Promise adapterと既存coordinatorの接続を順に実装する。Rust registryを実native ownerへ接続し、principal／epoch、実clockとlease、元返信、取消・再照会と物理完了を対応付ける。                                       | モックHub＋一時DBで、返信喪失・切断・late reply・世代交代・容量不足・複数caller競合を通し検証。受付不明から二重applyせず、結果表示だけで物理枠を解放しない。製品の初回設定に必要なmapping登録・initialIdle開始・fresh SDK解決・明示resumeの範囲も定めて実装する。   |
+| C4 記録clientとnative bridgeの完成 | d2a／d2b台帳とlocal-v2正常返信配送に続き、独立coordinator-v2で元返信・結果知識・個別transport attemptを分ける。GUI非依存のnative registry adapterを実ownerへ接続し、principal／epoch、実clockとlease、元返信、取消・再照会と物理完了を対応付ける。              | モックHub＋一時DBで、返信喪失・切断・late reply・世代交代・容量不足・複数caller競合を通し検証。受付不明から二重applyせず、結果表示だけで物理枠を解放しない。製品の初回設定に必要なmapping登録・initialIdle開始・fresh SDK解決・明示resumeの範囲も定めて実装する。   |
 | C5 実データの記録・履歴受入        | 実Hubを専用SDK ownerで読み、専用の検証用SQLiteへ単一groupで記録する。HistoryHostを既存履歴画面・保存Trendへ接続する。DB identityとnamespace／系列対応を検証する。                                                                                               | UIを閉じてもhost processが生きている間は記録が継続する。停止・join・明示再開、raw／minmax、欠測・Quality・SIM、再起動後の状態照会を確認する。検証済みの保持容量に収まる実時間試験を行い、時刻・件数・欠測・DB増分を記録する。仮想時間試験だけで実時間受入としない。 |
 | C6 連続運用とリリース判断          | 対象タグ数・周期・運転時間から保存量と台帳上限を評価し、実媒体・時計異常・容量不足・復旧・保持を検証する。監視再開、運用時ユーザー管理と操作認可、配布・更新・停止手順を揃える。                                                                                | 運用目標時間内の容量と障害時の挙動を実測し、起動・終了・復旧手順を記録する。必要なGC／世代退役・自動保持・サービスhostを要件に応じて追加する。合格した構成・運転時間に限って運用可能と判断する。                                                                    |
 
@@ -40,7 +40,7 @@ C0でWindowsの既存Hubと認証契約を確定し、C1のTauri host、C2のモ
 
 計画採用時の文書変更に続き、C0〜C3を段階ごとのPRと[実機接続記録](real-hub-c0.md)で受け入れた。今回のC3最終確認ではQ/R系の実値`0`／`false`と製品表示を追加照合した。運用時のユーザー管理・認証、記録配送と長時間運転は完了扱いしない。
 
-C4はd2a、d2b、local-v2、実native adapterの境界で分割する。着手時に進行中の実装・マージ状況を確認し、完了済みの作業を重複実装しない。C5のHistory配送も記録操作bridgeとは別の責務で検証する。
+C4はd2a、d2b、local-v2まで統合済み。次は[coordinator-v2](../design/runtime/historian-recording-coordinator-v2.md)、GUI非依存の実native adapter、製品transportの境界で分割する。着手時に進行中の実装・マージ状況を確認し、完了済みの作業を重複実装しない。C5のHistory配送も記録操作bridgeとは別の責務で検証する。
 
 コード変更に応じてRustのfmt／Clippy／workspace test、TSの型検査／unit／build、通常entrypointを通るブラウザ試験、全体整形を実施する。各PRでpush／PR CIを確認する。実機検証は対象・構成版・時刻・結果・未確認事項を記録し、秘密情報は保存しない。マージ後は統合済み枝・生成物・一時ファイルを復元可能性を確認して整理する。
 
