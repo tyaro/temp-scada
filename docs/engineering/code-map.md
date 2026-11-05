@@ -809,3 +809,9 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 `recording-wire-delivery-ledger/observation.ts`が既存台帳内にAccepted由来のtarget、論理query、正常返信ごとのattemptを保存する。公開入口と`types.ts`はopaque tokenとgetterを追加し、`core.ts`は独立4MiB pool・各4096 ID・未回収attempt最大1を管理する。元Admission返信やCallInspectionの保存内容は変更せず、target結果とquery terminalを別に保持する。返信喪失・malformed時は未回収枠を消さず、retire／dispose／sticky停止後も登録済みattemptの正常後着返信を保存する。
 
 `examples/recording-wire-observation-ledger-cases.json`のoperation／reconciliation／unavailable共通シナリオを`__fixtures__/recording-wire-observation-ledger-cases.ts`でNodeとChromiumへ流す。`recording-wire-observation-ledger.test.ts`はさらにAdmissionInspection、pending→terminal、同一ID、参照衝突、容量、二段階保存、再入を検証する。`e2e/recording-wire-delivery-ledger.spec.ts`はChromium実moduleで同じ進行とProject保存bytes不変を確認する。local-v2、Promise adapter、実transport、native ownerはこのpure台帳の外に残る。
+
+## 記録wireのlocal-v2配送（C4）
+
+[採用設計](../design/runtime/historian-recording-wire-local-v2.md)に沿い、`recording-wire-local-v2.ts`が実factory由来のledger／receiverのopaque tokenを六経路の同realm Promiseへ結ぶ。`recording-wire-delivery-ledger.ts`と`recording-wire-receiver.ts`のprivate WeakSetがsource instanceを検査する。明示`pump()`は元getterに保存済みの正常返信だけを一度配送する。`recording-async`、通常App、native owner、transportへの接続は後続工程である。
+
+`examples/recording-wire-local-v2-cases.json`と`__fixtures__/recording-wire-local-v2-cases.ts`はNode／Chromium共通の配送経路を実moduleで実行する。`recording-wire-local-v2.test.ts`はforeign source／token、未配送、Observationのattemptとquery、後着、有限容量を確認し、`e2e/recording-wire-local-v2.spec.ts`はProject保存bytes不変も確認する。

@@ -15,6 +15,12 @@ import type {
   WireReceiver,
 } from "./recording-wire-receiver/types";
 export type * from "./recording-wire-receiver/types";
+const receiverInstances = new WeakSet<object>();
+export function isRecordingWireReceiver(value: unknown): value is WireReceiver {
+  return (
+    typeof value === "object" && value !== null && receiverInstances.has(value)
+  );
+}
 export function createRecordingWireReceiver(
   scope: unknown,
   options?: Partial<ReceiverLimits>,
@@ -109,5 +115,6 @@ export function createRecordingWireReceiver(
         return success(null);
       }),
   });
+  receiverInstances.add(receiver);
   return Object.freeze({ ok: true, value: receiver });
 }
