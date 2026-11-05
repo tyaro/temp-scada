@@ -34,6 +34,8 @@ C2の検証として、通常entrypointのNativeShellからTauri command／event
 
 [C4 prep2d2bのObservation専用設計](../design/runtime/historian-recording-wire-observation-ledger.md)で、同IDのpending→terminalと個々の不変attempt、Accepted由来のopaque target、独立4MiBの有限poolを定めた。純粋TS台帳を実装し、Accepted由来のtarget、pending→terminal、返信喪失時の未回収枠、独立4MiB容量と二段階保存をNode／Chromiumで確認した。再帰照会・無期限運用・Promise adapter／local-v2／実transport／認証／native・P3bは後続とする。
 
+[C4 local-v2配送境界](../design/runtime/historian-recording-wire-local-v2.md)では、実receiver／台帳のopaque tokenに結び付いた六経路の保存済み正常返信を、同realmのPromiseへ一度だけ配送する純粋adapterを追加した。明示pump、有限handle、旧epoch分離、Observationのattemptとqueryの区別をNode／Chromiumで検証する。製品transport、coordinator-v2、native ownerと実記録は後続である。
+
 ## 記録wireの元call配送台帳設計（H5d4c4c-prep2d2a、2026-11-05）
 
 prep2d1の[PR #86](https://github.com/tyaro/temp-scada/pull/86)はworkへ統合済み（`c572081`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41946398145)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41946467473)全7job成功、head `18c9d00` の自動レビュー指摘・未解決なし）。[Astraの元call配送台帳設計](../design/runtime/historian-recording-wire-delivery-ledger.md)で、正常元返信の保存と明示的な回復照会をpure TSの有限台帳へ分離する。

@@ -1,0 +1,7 @@
+{
+  "scenarios": [
+    { "name": "original lease delivery", "kind": "original" },
+    { "name": "Observation pending then terminal", "kind": "observation" },
+    { "name": "receiver Attach terminal", "kind": "attach" }
+  ]
+}

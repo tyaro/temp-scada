@@ -17,6 +17,14 @@ import type {
   ObservationAcceptResult,
 } from "./recording-wire-delivery-ledger/types";
 export type * from "./recording-wire-delivery-ledger/types";
+const ledgerInstances = new WeakSet<object>();
+export function isRecordingWireDeliveryLedger(
+  value: unknown,
+): value is WireDeliveryLedger {
+  return (
+    typeof value === "object" && value !== null && ledgerInstances.has(value)
+  );
+}
 export function createRecordingWireDeliveryLedger(
   scope: unknown,
   options?: Partial<DeliveryLimits>,
@@ -158,5 +166,6 @@ export function createRecordingWireDeliveryLedger(
         return yes(null);
       }),
   });
+  ledgerInstances.add(receiver);
   return Object.freeze({ ok: true, value: receiver });
 }
