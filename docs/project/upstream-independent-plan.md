@@ -1,6 +1,6 @@
 # 上流変更中に進めるSCADA単体開発計画
 
-2026-11-01追記: 今後の読取開発は[S7 SOAK中の計画](soak-independent-runtime-plan.md)を正とする。本書のI工程の提供状況は維持し、下記の実Hub／catalog／Hostの保留は固定SDKとモックによる同計画の範囲だけ解除する。実S7環境・認証・正式運用の保留は維持する。
+2026-11-05更新: 現在の着手順は[実Hub・S7接続計画](real-hub-connection-plan.md)のC0〜C3を正とする。SOAK完了の申告を受け、下記の実Hub／catalog／Hostの一括保留は現行契約・対象環境を確認するC0から見直す。認証の利用可否もC0で確認し、正式運用は別受入とする。本書のI工程と[SOAK中の開発記録](soak-independent-runtime-plan.md)は従来の実施結果として残す。
 
 2026-10-21（日本時間）。状態: **I0〜I4・I6は完了・全体CI成功。I5は再計測・I5f候補見送り、I5gの履歴資産索引を限定改善・全体CI成功。I5hで読込診断を追加、アプリ改善は未実施。遅延は残課題**。現行保存契約はProject0.35.0。[統合設計](../design/scada-integrated-design.md)のローカル作図領域を対象とする。[I7：Symbol内画像](../design/images/symbol-image-design.md)はI7a／bの全体CI成功、I7cの取込・編集UIも全体CI成功。
 

@@ -4,6 +4,12 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## 実Hub・S7接続計画の取り込み（2026-11-05）
+
+ユーザー指示により、サイドチャットの計画を[実Hub・S7接続計画](../project/real-hub-connection-plan.md)として採用した。SOAK完了の申告を反映して終了待ちを外し、C0接続条件確認→C1最小host・読取→C2製品経路検証→C3初回S7現在値表示を優先する。記録clientの残りはC4、実SQLiteとHistoryはC5、連続運用はC6へ分けた。
+
+PR #88はworkへ統合済み（`a23ae4c`、push／PR CI各全7ジョブ成功）。d2a台帳を再実装せず、Observationのd2b以降を初回読取の前提にしない。今回の変更は計画・索引・再開条件・実装状況の整理で、実Hub接続・C0のshell選定・認証の修正完了は未確認。過去のSOAK中の検証記録は保持した。
+
 ## 記録wireの元call配送台帳（H5d4c4c-prep2d2a、2026-11-05）
 
 設計[PR #87](https://github.com/tyaro/temp-scada/pull/87)はworkへ統合済み（`a3dd209`、[push CI](https://github.com/tyaro/temp-scada/actions/runs/41950704041)／[PR CI](https://github.com/tyaro/temp-scada/actions/runs/41950777284)全7job成功、head `19f3169` の自動レビュー指摘・未解決なし）。[Astraの採用設計](../design/runtime/historian-recording-wire-delivery-ledger.md)に沿い、Lease／Admission／AdmissionInspection／Cancelの四元callとCallInspectionを扱うpure TS台帳を実装した。
