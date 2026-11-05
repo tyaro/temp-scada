@@ -50,3 +50,13 @@ Tauri 2 のデスクトップを通常 entrypoint で起動し、`examples/real-
 書込みは専用の一時タグ `SCADA_C3_D4000`（HubタグID 118、i16、writable）だけで行った。書込み前の元値 `0 / Good / real` を確認し、`write:plc_slmp.group1.SCADA_C3_D4000` の一時キーでHub経由 `0→1→0` を送った。`1 / Good / real`（行時刻 `1793855597867`）と復旧した `0 / Good / real`（`1793855598867`）を読み戻した。一時キーID 7は失効・削除、一時タグID 118も削除し、短命grantはlogoutした。キー値は記録・Project・リポジトリに保存していない。Hubサービスの再起動とQ系PLCへの書込みは行っていない。
 
 このR系の数値・boolの製品表示と限定書込みはC3の初回実機確認に達した。DB由来の`s7-bridge`は別経路で、元DB行の古い`updated_at`を新鮮と判定しない。C2のモックHubによるUnauthorized／Bad／Staleなどの製品経路試験は引き続き必要。
+
+## C3 実Hubと最新版Tauriの追加照合（2026-11-05 23:12〜23:24 JST）
+
+PR #96を統合した`f9a70f8`を別targetへビルドし、既存の未保存ウィンドウとは別の検証用Tauriで`examples/real-plc-r.project.json`を開いた。保存済みのread資格情報でHubへ接続し、catalog 104件を取得した。読取専用プローブでは23:12:07頃、`D3000=21939`と`SCADA_C3_M1000=1`がともに`Good / real`、行時刻は23:12:06.635 JST、Hub応答時刻はその約1秒後だった。23:23:24頃の再照合では`D3000=22616`、既存`D3001=-19316`、`M1000=1`で、3件とも`Good / real`、行時刻は23:23:23.645 JST。D3000の値と行時刻は進んでおり、今回のR系経路では古い値の貼り付きを観測しなかった。DB由来push経路の元行鮮度は別件である。
+
+製品の通常画面でD3000の変化する数値とM1000の`true`を表示し、機器小窓では2 slotとも`Good / source real / mode configured`、SIM 0件を確認した。編集画面のタグ選択ではHub catalogからD3000を検索し、型と外部名を照合して同じタグを適用した。Project再読込直後は値が消え、新しい読取で復帰した。SCADA側の切断では8表示が取得不能になり、再接続後は意図的な未割付4表示だけが取得不能となった。検証用Tauriを通常終了（exit 0）して再起動すると、Hubへ自動接続し、Projectを開き直した後もD3000の数値とM1000の`true`が復帰した。Projectの自動再開は現行仕様に含めない。
+
+現行R系catalogで`plc_slmp.group1.`に一致するのはD3000、D3001、M1000の3件で、この時点の値はそれぞれ22616、-19316、1だった。したがって実値の`0`／`false`はまだ製品画面で照合していない。C2のモックでは両方確認済みだが、C3の実値受入には別の読取専用タグ、または安全な試験値の設定と復旧確認が必要。Q系は今回も未検証。実機側サービスの再起動・故障注入は行っていない。
+
+読取専用プローブはタグ名を引数で渡せる。`cargo run --locked -p scada-host --example real_hub_read -- plc_slmp.group1.D3000 plc_slmp.group1.SCADA_C3_M1000`、または`-- --prefix plc_slmp.group1.`でcatalog内の対象を列挙して現在値を読む。APIキー値を引数やログへ出さない。

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 target/
+apps/banto-scada/src-tauri/target-*/
 playwright-report/
 test-results/
 *.log

@@ -10,6 +10,7 @@ const TAGS: [&str; 4] = [
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let requested: Vec<String> = std::env::args().skip(1).collect();
     let bootstrap = local_bootstrap()?;
     let result = bootstrap.connect(DEFAULT_HUB_ENDPOINT).await?;
     println!("hub_status={}", result.status.as_str());
@@ -22,14 +23,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         catalog.revision,
         catalog.tags.len()
     );
-    for name in TAGS {
+    let tags: Vec<&str> = if requested.len() == 2 && requested[0] == "--prefix" {
+        catalog
+            .tags
+            .iter()
+            .filter(|tag| tag.external_name.starts_with(&requested[1]))
+            .map(|tag| tag.external_name.as_str())
+            .collect()
+    } else if requested.is_empty() {
+        TAGS.to_vec()
+    } else {
+        requested.iter().map(String::as_str).collect()
+    };
+    if tags.is_empty() {
+        eprintln!("no tags match the requested prefix");
+        return Ok(());
+    }
+    for name in &tags {
         println!(
             "tag_present={name}:{}",
-            catalog.tags.iter().any(|tag| tag.external_name == name)
+            catalog.tags.iter().any(|tag| tag.external_name == *name)
         );
     }
     let client = bootstrap.rest_client()?.expect("connected client");
-    let values = client.fetch_values(&TAGS).await?;
+    let values = client.fetch_values(&tags).await?;
     println!("response_time_ms={} revision={}", values.t, values.revision);
     for value in values.values {
         println!(

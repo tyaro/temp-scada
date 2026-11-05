@@ -14,9 +14,9 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 サイドチャットの[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、ユーザー申告によりSOAK終了待ちを外した。C0の上流契約・対象環境・接続条件確認とC1の通常App読取接続を実施した。ローカル編集はオフラインのまま、デスクトップだけがread専用の製品host・IPCを使う。運用時の認証・管理操作は後続で確定する。
 
-同日の実機側確認で[Windows の C0 構成と C1・C3 の製品読取](real-hub-c0.md)を記録した。Tauri の埋込 host から既存 Hub へ接続し、通常画面に数値・boolと品質・由来を表示した。切断で消え再接続で復帰する。最初の`s7-bridge`は検証用DBクエリのpush転送で元行の更新時刻は古い。続けてR系実PLCの既存D3000と新規読取専用M1000を画面で`Good / real`表示し、安全なD4000で一時的に`0→1→0`を書き戻した。一時キーとD4000タグは削除済み。Q系接続は再接続中で未検証。C2のモック製品経路は未完了である。
+同日の実機側確認で[Windows の C0 構成と C1・C3 の製品読取](real-hub-c0.md)を記録した。Tauri の埋込 host から既存 Hub へ接続し、通常画面に数値・boolと品質・由来を表示した。切断で消え再接続で復帰する。最初の`s7-bridge`は検証用DBクエリのpush転送で元行の更新時刻は古い。続けてR系実PLCの既存D3000と新規読取専用M1000を画面で`Good / real`表示し、安全なD4000で一時的に`0→1→0`を書き戻した。一時キーとD4000タグは削除済み。PR #96のC2モック製品経路は完了。C3追加照合では最新版Tauriの通常画面・機器小窓・タグ選択・Project再読込・アプリ再起動を確認した。実値の0／falseとQ系は未検証。
 
-C2の検証として、通常entrypointのNativeShellからTauri command／eventを模したIPCを通し、数値0、Bad／Stale／Unbound、Project置換と旧通知拒否、切断・再接続、認証拒否、catalog失敗、WebView再読込をChromiumで確認した。認証失効時は読取sourceを外し、値とヘッダーの接続表示を消す。Tauri MockRuntimeとループバックのモックHubを使うnative試験では、製品のcommand／event・Bootstrapper・固定SDK・ReadHost／CatalogHostを一体で通し、数値0／bool false、Bad／Stale、認証拒否、owner再生成後の再接続を確認した。ブラウザ試験のモックはIPC境界、native試験のモックはHubとTauri runtimeである。実Windows GUIプロセスの終了・再起動はC2に残る。
+C2の検証として、通常entrypointのNativeShellからTauri command／eventを模したIPCを通し、数値0、Bad／Stale／Unbound、Project置換と旧通知拒否、切断・再接続、認証拒否、catalog失敗、WebView再読込をChromiumで確認した。認証失効時は読取sourceを外し、値とヘッダーの接続表示を消す。Tauri MockRuntimeとループバックのモックHubを使うnative試験では、製品のcommand／event・Bootstrapper・固定SDK・ReadHost／CatalogHostを一体で通し、数値0／bool false、Bad／Stale、認証拒否、owner再生成後の再接続を確認した。ブラウザ試験のモックはIPC境界、native試験のモックはHubとTauri runtimeである。実Windows GUIプロセスの終了・再起動も確認済み。
 
 記録・履歴の実接続はC4〜C5、連続運用受入はC6。純粋台帳の後続prep2d2bを初回読取接続の前提にしない。
 
