@@ -65,7 +65,7 @@ macOS のプライバシー制限により、headless Chrome から `~/Documents
 
 ## Banto 基盤
 
-**Banto v6.9.0** を git サブディレクトリ依存で利用します。`pnpm-lock.yaml` は参照先コミット `1bd12fe023cf3958dbdde923e1bdd4fdb28a9139` を固定しています。
+**Banto v6.10.0** を git サブディレクトリ依存で利用します。`pnpm-lock.yaml` は参照先コミット `0acaa5ba3132527064d20352dc122d1abfd004e8` を固定しています。
 
 - `@banto/admin-core`: 起動時の `initBanto`、通知の接続、ローカル UI 設定の保存。
 - `@banto/theme`: アプリ外枠のカラートークン、ダーク / ライト / OS 連動。
