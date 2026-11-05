@@ -1,12 +1,12 @@
 # SCADA の独立開発と industrial への統合
 
-状態: **現在の計画・統合方針**。2026-11-05（日本時間）更新。[文書索引](../README.md)、[実装状況](implementation-status.md)、[操作ガイド](../guides/user-guide.md)、[実装履歴](../history/implementation-history.md)を使い分ける。機能仕様の基準は[統合設計](../design/scada-integrated-design.md)。
+状態: **現在の計画・統合方針**。2026-11-06（日本時間）更新。[文書索引](../README.md)、[実装状況](implementation-status.md)、[操作ガイド](../guides/user-guide.md)、[実装履歴](../history/implementation-history.md)を使い分ける。機能仕様の基準は[統合設計](../design/scada-integrated-design.md)。
 
 ## 次の実装順
 
-2026-11-05のユーザー指示により、次は[実Hub・S7接続計画](real-hub-connection-plan.md)のC0（上流契約・対象環境・接続条件・shell／IPC確認）から、C1最小host・読取接続、C2モックによる製品経路検証、C3実Hub経由の初回S7読取へ進む。SOAKは完了申告済みで、終了待ちを外す。認証の利用可能な契約はC0で確認し、実接続成功・認証修正完了を今回の計画採用だけで宣言しない。
+2026-11-05のユーザー指示で[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、C0〜C3を実施した。SOAK終了待ちは解除済み。次はC4の記録client・native bridge、続いてC5の実SQLite／History接続、C6の連続運用へ進む。初回読取の成功を運用時の認証・記録・長時間運転の完了とは扱わない。
 
-[C0 の Windows 実行条件と C1・C3 の製品読取](real-hub-c0.md)で既存 Hub 0.3.0-alpha.1、REST v1、試運転中の read キー経路を確認した。Tauri 2 の埋込 host を実装し、通常画面でDB由来のpushタグと実PLC R系の数値・boolを区別して表示した。切断・再接続、R系安全番地の限定書込みと元値復旧も確認した。最初のS7 bridgeタグの`updated_at`は古く、そのDB行の鮮度は未証明。Q系接続は再接続中。C2のモック製品経路検証を続ける。
+[Windows実機接続記録](real-hub-c0.md)で既存Hub 0.3.0-alpha.1、REST v1、試運転中のreadキー経路を確認した。Tauri 2の埋込hostでR系の数値・boolとQ系の数値を表示し、実値`0`／`false`、品質・由来、切断・再接続、Project再読込、アプリ再起動まで受け入れた。Q系は一時的な再接続待機後に接続と行時刻更新を確認した。R系安全番地の限定書込みと元値復旧も確認済み。DB由来pushタグの元行`updated_at`は古く、鮮度は未証明。C2のモック製品経路検証も完了した。
 
 記録clientの残りはC4、実SQLite記録・History接続はC5、連続運用はC6へ分ける。prep2d2aはPR #88でworkへ統合済み（`a23ae4c`、push／PR CI各全7ジョブ成功、同head `88d8304` のレビュー指摘なし）。prep2d2b Observationの詳細設計はC4で再開し、初回読取接続を妨げる前提にしない。
 

@@ -1,6 +1,6 @@
 # コードと検証の対応表
 
-`examples/real-hub-s7.project.json` はDB由来pushタグ、`examples/real-plc-r.project.json` はR系実PLCの数値・boolタグに結び付けた製品表示用fixture。後者のboolタグは実機Hubへ読取専用で追加した`SCADA_C3_M1000`を参照する。
+`examples/real-hub-s7.project.json` はDB由来pushタグ、`examples/real-plc-r.project.json` はR系実PLCの変動数値・trueの製品表示用fixture。`examples/real-plc-q-r-zero.project.json` はQ系D3000の数値0と、R系の読取専用D4000／M1500の0・falseを通常画面と機器小窓で照合するfixture。実機Hubへ追加した読取専用タグを参照し、別環境へそのまま適用しない。
 
 2026-11-05 の実Hub接続入口: `crates/scada-host` が Windows の資格情報と非機密のHub接続記録を所有し、`crates/scada-host/examples/real_hub_read.rs` が REST の読取専用プローブを提供する。`apps/banto-scada/src-tauri/src/main.rs` は Tauri command／event と `ReadHost`／`CatalogHost` の単一owner、購読開始より先に届いた終了通知も保持して退役済み開始を拒否する。`apps/banto-scada/src/native/` は通常entrypointの `ReadSource`／`CatalogSource` 配送を担当し、購読開始と終了のIPCを順に送る。`sources.ts` は認証失効をShellへ通知し、値と接続表示を消す。`sources.test.ts`、`e2e/read-presentation.spec.ts`、`e2e/native-read-path.spec.ts` が旧通知破棄・接続源切替・通常画面のIPC経路を検証する。`src-tauri/src/native_tests.rs` はTauri command／eventからループバックのモックHubまで、`crates/scada-runtime/tests/read_host.rs` はReadHost／SDK境界を検証する。native試験は関連変更時にWindows CIで実行する。実機結果と残る受入条件は[接続記録](../project/real-hub-c0.md)を参照。
 

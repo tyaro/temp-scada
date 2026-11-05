@@ -60,3 +60,11 @@ PR #96を統合した`f9a70f8`を別targetへビルドし、既存の未保存�
 現行R系catalogで`plc_slmp.group1.`に一致するのはD3000、D3001、M1000の3件で、この時点の値はそれぞれ22616、-19316、1だった。したがって実値の`0`／`false`はまだ製品画面で照合していない。C2のモックでは両方確認済みだが、C3の実値受入には別の読取専用タグ、または安全な試験値の設定と復旧確認が必要。Q系は今回も未検証。実機側サービスの再起動・故障注入は行っていない。
 
 読取専用プローブはタグ名を引数で渡せる。`cargo run --locked -p scada-host --example real_hub_read -- plc_slmp.group1.D3000 plc_slmp.group1.SCADA_C3_M1000`、または`-- --prefix plc_slmp.group1.`でcatalog内の対象を列挙して現在値を読む。APIキー値を引数やログへ出さない。
+
+## C3 実値0・falseとQ/R系の受入（2026-11-06 01:31〜01:43 JST）
+
+既存のHub 0.3.0-alpha.1／REST v1と保存済みread資格情報を使用した。R系R08ENCPUの既知安全範囲内に、`M1500`の読取専用bitタグ`plc_slmp.group1.SCADA_C3_M1500_FALSE`（Hub ID 120）と、`D4000`の読取専用f32タグ`plc_slmp.group1.SCADA_C3_D4000_ZERO`（Hub ID 121）を追加した。いずれも有効・書込み不可で、継続照合用に保持する。PLCへの直接接続・書込み、Hubサービスの再起動は行っていない。
+
+Hub管理画面のモニタではR系`D4000=0`／`M1500=0`がともに品質「良好」で、行時刻が進んだ。Q系`plc_q.group2.D3000=0`も確認した。Q系は01:31頃に管理画面で再接続待機中だったため、その時点の`Good`値を鮮度の証拠とせず、01:38頃の接続中表示と行時刻の更新を再確認した。01:43:00.242の読取専用SDK応答ではcatalog revision 3／106タグ、Q D3000は`0 / good / real`（行時刻01:42:59.853）、R D4000とM1500も`0 / good / real`（ともに行時刻01:43:00.093）だった。
+
+通常Tauriの表示プレビューで`examples/real-plc-q-r-zero.project.json`を読み、Q D3000の数値Text、R D4000の数値Textと機器number slot、R M1500の機器bool slotを表示した。画面は`0`／`false`、機器小窓は2 slotとも`Good / source real / mode configured`、SIM 0件、取得不能は意図した未割付4件のみだった。先行のR D3000／M1000検証ではタグ選択、SCADA切断・再接続、Project再読込、アプリ再起動も同じ通常Tauri経路で確認済み。これで計画C3の初回実Hub・実PLC読取受入を完了とする。DB由来`s7-bridge`の元行鮮度、実機側故障・再起動、記録・長時間運用は別工程のまま。
