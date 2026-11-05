@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import {
     createReadPresentationController,
     type ReadSource,
@@ -25,6 +26,7 @@
     recordingManagementService,
     recordingOperationsService,
     recordingAsyncOperations,
+    headerExtension,
   }: {
     readSource?: ReadSource;
     catalogSource?: CatalogSource;
@@ -32,6 +34,7 @@
     recordingManagementService?: RecordingManagementService;
     recordingOperationsService?: RecordingOperationsService;
     recordingAsyncOperations?: AsyncOperationsClient;
+    headerExtension?: Snippet;
   } = $props();
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
@@ -3297,6 +3300,9 @@
 >
   <span class="studio-brand">SCADA<span>/ studio</span></span>
   <h1 title={project.manifest.name}>{project.manifest.name}</h1>
+  {#if headerExtension}<div class="header-extension">
+      {@render headerExtension()}
+    </div>{/if}
   {#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
   <div class="header-actions">
     <Menu label="常設メニュー" placement="bottom-end">
@@ -3470,6 +3476,7 @@
 />
 <main
   use:measureWorkspace
+  data-project-revision={project.manifest.projectRevision}
   style:--sidebar-width={`${leftWidth}px`}
   style:--inspector-width={`${rightWidth}px`}
   class:editing={mode === "edit"}
@@ -3834,14 +3841,6 @@
         >
       </div>
     {/if}
-    <div class="toolbar" class:ruler-offset={mode === "edit" && showRulers}>
-      <h2>{screen.name}</h2>
-      <span
-        >{activeDefinition ? "SYMBOL" : "SCREEN"} · {screen.width} × {screen.height}
-        · {screen.objects.length} 図形 · rev {project.manifest
-          .projectRevision}</span
-      >
-    </div>
     {#key `${workspaceGeneration}:${screen.id}`}
       <SlotReadStatus
         {screen}
@@ -4323,7 +4322,7 @@
     overflow: hidden;
   }
   .project-root {
-    padding: 14px 4px 8px;
+    padding: 6px 4px 4px;
     font-weight: 600;
     overflow-wrap: anywhere;
   }
@@ -4343,8 +4342,8 @@
   }
   .screen-row {
     margin: 0;
-    padding: 7px 26px 7px 8px;
-    min-height: 36px;
+    padding: 4px 22px 4px 6px;
+    min-height: 28px;
     border: 0;
     border-radius: 3px;
     background: transparent;
@@ -4464,6 +4463,9 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  .header-extension {
+    flex-shrink: 0;
   }
   .header-actions {
     display: flex;
@@ -4616,15 +4618,6 @@
     padding: 24px;
     min-width: 0;
   }
-  .toolbar {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-  .toolbar span {
-    font-size: 12px;
-    color: var(--banto-text-muted);
-  }
   section p {
     overflow-wrap: anywhere;
   }
@@ -4656,13 +4649,6 @@
   }
   .references-panel {
     position: relative;
-  }
-  .toolbar {
-    align-items: center;
-    gap: 12px;
-  }
-  .toolbar span {
-    text-align: right;
   }
   @media (min-width: 1100px) {
     :global(#app) {

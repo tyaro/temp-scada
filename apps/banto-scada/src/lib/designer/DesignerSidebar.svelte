@@ -123,7 +123,7 @@
   .panel {
     min-height: 0;
     overflow: auto;
-    padding: 10px 8px;
+    padding: 6px 8px;
     flex: 1;
   }
   .panel[hidden] {

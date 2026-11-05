@@ -18,8 +18,8 @@
     ><svg
       class="folder"
       aria-hidden="true"
-      width="19"
-      height="19"
+      width="17"
+      height="17"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -37,12 +37,12 @@
 
 <style>
   .tree-section {
-    margin: 2px 0 6px;
+    margin: 0 0 2px;
   }
   summary {
     cursor: pointer;
-    padding: 8px 4px;
-    min-height: 36px;
+    padding: 4px;
+    min-height: 28px;
     border-radius: 3px;
     font-size: 13px;
     font-weight: 600;
@@ -56,7 +56,7 @@
     box-shadow: inset var(--banto-focus-ring);
   }
   .folder {
-    margin: 0 7px 0 2px;
+    margin: 0 5px 0 2px;
     color: var(--banto-primary);
     vertical-align: middle;
   }
@@ -67,8 +67,8 @@
     font-size: 11px;
   }
   .branches {
-    margin-left: 12px;
-    padding-left: 8px;
+    margin-left: 10px;
+    padding-left: 6px;
     border-left: 1px solid var(--banto-border);
   }
 </style>

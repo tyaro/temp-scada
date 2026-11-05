@@ -97,34 +97,6 @@ html[data-theme="dark"] #app {
   position: relative;
   padding: 0;
 }
-#app main > section > .toolbar {
-  position: absolute;
-  z-index: 1;
-  left: 16px;
-  right: 16px;
-  top: 12px;
-  margin: 0;
-  pointer-events: none;
-  align-items: baseline;
-}
-#app main > section > .toolbar.ruler-offset {
-  top: 34px;
-  left: 38px;
-}
-/* The read-status disclosure reserves space above the drawing, including its caption. */
-#app main > section:has(> .slot-read-status) > .toolbar {
-  position: static;
-  top: auto;
-  left: auto;
-  right: auto;
-  margin: 6px 12px;
-}
-#app main > section > .toolbar h2 {
-  font-size: 13px;
-}
-#app main > section > .toolbar span {
-  font-size: 10px;
-}
 #app .canvas-stack > [role="status"] {
   padding: 3px 14px;
   margin: 0;
@@ -171,35 +143,48 @@ html[data-theme="dark"] #app {
   color: var(--banto-primary);
 }
 #app .panel-content {
-  padding: 8px 14px;
+  padding: 8px 10px;
 }
 #app .inspector p {
   font-size: 11px;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 #app .inspector .fields {
-  gap: 10px;
+  gap: 7px;
 }
 #app .inspector .fields label {
   font-size: 11px;
+}
+#app .inspector .banto-field--stacked {
+  gap: 2px;
 }
 #app .inspector input,
 #app .inspector textarea,
 #app .inspector select {
   font-size: 12px;
 }
+#app
+  .inspector
+  input:not([type="color"]):not([type="checkbox"]):not([type="radio"]):not(
+    [type="range"]
+  ):not([type="file"]),
+#app .inspector textarea,
+#app .inspector select {
+  min-height: 30px;
+  padding: 3px 6px;
+}
+#app .inspector input[type="color"] {
+  min-height: 30px;
+  padding: 2px;
+}
 #app .inspector button {
   font-size: 12px;
-  padding: 7px 8px;
+  padding: 5px 8px;
 }
 #app .definition-banner {
   margin: 8px 12px 0;
   padding: 8px 12px;
   border-radius: 4px;
-}
-#app .definition-banner + .toolbar {
-  position: static;
-  margin: 6px 16px;
 }
 @media (max-width: 1099px) {
   #app .mode-tools {
@@ -207,10 +192,6 @@ html[data-theme="dark"] #app {
     min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
-  }
-  #app main > section > .toolbar {
-    position: static;
-    padding: 10px 12px 0;
   }
   #app .app-header {
     flex-wrap: wrap;
