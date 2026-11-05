@@ -14,6 +14,8 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 サイドチャットの[実Hub・S7接続計画](real-hub-connection-plan.md)を採用した。ユーザー申告によりSOAK終了待ちを外し、次はC0の上流契約・対象環境・接続条件確認から、通常Appの読取接続と初回S7現在値表示（C1〜C3）へ進む。現在の通常entrypointは実Hub未接続で、製品host・IPCは未実装、認証の利用可否は未確認。今回の文書取り込みは実機接続成功を意味しない。
 
+同日の実機側確認で[Windows の C0 構成](real-hub-c0.md)を記録した。稼働中 Hub の管理画面では S7 bridge 候補の数値・bool が「良好」だが、タグ内の更新時刻は古い。SCADA 製品経路の C1〜C2 と元 S7 の鮮度照合は未完了であり、C3 の受入を宣言しない。
+
 記録・履歴の実接続はC4〜C5、連続運用受入はC6。純粋台帳の後続prep2d2bを初回読取接続の前提にしない。
 
 ## 記録wireの元call配送台帳（H5d4c4c-prep2d2a、2026-11-05）
