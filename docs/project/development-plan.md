@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-C4 native registry adapterの最初の安全gateとして、既存ownerを外部client発行前にだけ排他的に受け取るseedを追加した。次はsimulationのkernel抽出と回帰を行い、実clock lease・一workflow受付へ進む。seed単体は製品の認可・送信資格を発行しない。
+C4 native registry adapterの最初の安全gateとして、既存ownerを外部client発行前にだけ排他的に受け取るseedを追加した。Admission生存期間の純粋予算計算をkernelへ抽出し、simulationの登録・workflow予約・投影で共有する。次は実clock lease・一workflow受付へ進む。seedとkernelは製品の認可・送信資格を発行しない。
 
 2026-11-05のユーザー指示で[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、C0〜C3を実施した。SOAK終了待ちは解除済み。次はC4の記録client・native bridge、続いてC5の実SQLite／History接続、C6の連続運用へ進む。初回読取の成功を運用時の認証・記録・長時間運転の完了とは扱わない。
 

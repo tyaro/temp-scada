@@ -1,6 +1,6 @@
 # 記録wireのnative registry adapter
 
-状態: **C4の採用詳細設計。排他的owner引渡しのseedのみ実装、実registryは後続**。2026-11-06（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[coordinator-v2](historian-recording-coordinator-v2.md)、[wire・host契約](historian-recording-wire-host.md)、[共有native owner](historian-recording-native-owner.md)、[接続境界](historian-recording-bridge-boundary.md)に続く。
+状態: **C4の採用詳細設計。排他的owner seedと純粋予算kernelを実装、実registryは後続**。2026-11-06（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[coordinator-v2](historian-recording-coordinator-v2.md)、[wire・host契約](historian-recording-wire-host.md)、[共有native owner](historian-recording-native-owner.md)、[接続境界](historian-recording-bridge-boundary.md)に続く。
 
 ## 1. この区切りの対象
 
@@ -74,4 +74,4 @@ view close、Project切替、Hub読取再接続はrootをdropしない。既存o
 5. 元apply completion確定・Supervisor回収後に限定したreconcile、receiptFound後のrecovery維持、readUncertainとread不可を分ける。全poolのexact／1不足と最大replyの保存を確認する。
 6. view切断・認可失効・root close後も既登録操作を監視し、Rust生成wire DTOを既存TS validatorで検査する。通常AppとTauri読取経路に副作用を作らない。
 
-最初の独立した安全gateとして、既存ownerを失敗時返却付きで`RecordingRegistryOwnerSeed`へ排他的に移す処理を実装した。公開client発行履歴はdrop後も残し、native Coreが未使用でないownerを拒否する。seedはlease・session・admissionを発行せず、handoffは既存native gateへ委譲する。この先は (1) kernel抽出とsimulation回帰、(2) root・試験専用session・実lease・一workflow事前予約、(3) native admission／handle保存／元reply・inspection／completion、(4) cancel・snapshot／subscription・失効・管理側shutdown、(5) mock Hub＋一時DBの一貫受入の順に分ける。製品hostのsession issuer、権限失効後の結果開示、epoch生成・永続衝突防止、Tauri endpointは認証・host gateとして別に固定する。その後に製品transportと通常Appへ接続する。
+最初の独立した安全gateとして、既存ownerを失敗時返却付きで`RecordingRegistryOwnerSeed`へ排他的に移す処理を実装した。公開client発行履歴はdrop後も残し、native Coreが未使用でないownerを拒否する。seedはlease・session・admissionを発行せず、handoffは既存native gateへ委譲する。次にAdmission一件の`request + 2 × reply + completion`という保存上界とbytes／nodes／depth照合をcrate-private kernelへ抽出し、simulation facadeの既存登録・workflow予約・投影で使う。これも実native受付の証拠ではない。この先は (1) root・試験専用session・実lease・一workflow事前予約、(2) native admission／handle保存／元reply・inspection／completion、(3) cancel・snapshot／subscription・失効・管理側shutdown、(4) mock Hub＋一時DBの一貫受入の順に分ける。製品hostのsession issuer、権限失効後の結果開示、epoch生成・永続衝突防止、Tauri endpointは認証・host gateとして別に固定する。その後に製品transportと通常Appへ接続する。

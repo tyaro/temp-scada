@@ -9,7 +9,7 @@ mod inspection;
 mod lease;
 mod observation;
 mod projection;
-mod reservation;
+use crate::recording_registry::kernel::budget as reservation;
 mod subscription;
 mod workflow;
 use projection::{ProjectionEvent, ProjectionState, SnapshotDescriptor, DESCRIPTOR_BYTES};
@@ -24,6 +24,14 @@ use scada_model::recording_wire::*;
 use serde_json::{json, Value};
 use std::{collections::BTreeMap, sync::Arc};
 pub use types::*;
+impl From<reservation::BudgetError> for ModelError {
+    fn from(value: reservation::BudgetError) -> Self {
+        match value {
+            reservation::BudgetError::InvalidInput => Self::InvalidInput,
+            reservation::BudgetError::Capacity => Self::Capacity,
+        }
+    }
+}
 #[derive(Debug)]
 pub struct RegistryModel {
     session: ModelSession,
