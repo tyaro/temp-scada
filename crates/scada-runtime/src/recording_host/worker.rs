@@ -9,6 +9,10 @@ use scada_historian::{
         SqliteStore,
     },
 };
+#[cfg(test)]
+use std::sync::{mpsc, Mutex};
+#[cfg(test)]
+use tokio::sync::Notify;
 use tokio::{runtime::Handle, sync::watch};
 
 use super::{
@@ -33,6 +37,30 @@ pub(super) struct Worker {
     pub cancel: CancellationToken,
     pub status: watch::Sender<Arc<RecordingHostStatus>>,
     pub run: RecordingRun,
+    #[cfg(test)]
+    pub shutdown_gate: Option<Arc<TestShutdownGate>>,
+}
+#[cfg(test)]
+pub(super) struct TestShutdownGate {
+    pub entered: Notify,
+    release: Mutex<mpsc::Receiver<()>>,
+}
+#[cfg(test)]
+impl TestShutdownGate {
+    pub fn new() -> (Arc<Self>, mpsc::Sender<()>) {
+        let (sender, receiver) = mpsc::channel();
+        (
+            Arc::new(Self {
+                entered: Notify::new(),
+                release: Mutex::new(receiver),
+            }),
+            sender,
+        )
+    }
+    fn wait(&self) {
+        self.entered.notify_one();
+        let _ = self.release.lock().expect("test gate").recv();
+    }
 }
 pub(super) struct WorkerResult {
     pub store: SqliteStore,
@@ -50,6 +78,8 @@ impl Worker {
             cancel,
             status,
             run,
+            #[cfg(test)]
+            shutdown_gate,
         } = self;
         let mut last_report = None;
         let mut start_error = None;
@@ -83,6 +113,12 @@ impl Worker {
                     });
                     start_error = Some(error);
                 }
+            }
+        }
+        #[cfg(test)]
+        if cancel.is_cancelled() {
+            if let Some(gate) = shutdown_gate {
+                gate.wait();
             }
         }
         let shutdown = runtime.block_on(source.shutdown());

@@ -198,6 +198,13 @@ fn project_index(
 }
 
 #[cfg(test)]
+extern crate self as scada_runtime;
+#[cfg(test)]
+#[allow(dead_code)]
+#[path = "../tests/support/recorder_hub.rs"]
+mod recorder_hub_fixture;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use banto_tagclient::{

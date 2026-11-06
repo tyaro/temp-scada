@@ -848,4 +848,8 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 ## 記録registryの初回pause/join lease（C4）
 
-`recording_registry/pause.rs`は元preflightのAccepted証拠、保存済み実handleのCandidate完了、confirmed quiescence、回復不要、元request全文を照合してから、予約済みpause/join leaseを一件発行する。callerのoperation IDをworkflowへ固定し、preflightと同じleaseRequestId／admissionIdを拒否する。同一pause要求の再取得は元replyと期限を保つ。`operations/tests.rs`は実Candidate・受付照会で回収したAccepted・未完了・容量境界・ID再利用・別principalを確認する。native pause実行と元pause Admission登録は後続。
+`recording_registry/pause.rs`は元preflightのAccepted証拠、保存済み実handleのCandidate完了、confirmed quiescence、回復不要、元request全文を照合してから、予約済みpause/join leaseを一件発行する。callerのoperation IDをworkflowへ固定し、preflightと同じleaseRequestId／admissionIdを拒否する。同一pause要求の再取得は元replyと期限を保つ。`operations/tests.rs`は実Candidate・受付照会で回収したAccepted・未完了・容量境界・ID再利用・別principalを確認する。native pause実行と元pause Admission登録は次の区切りで扱う。
+
+## 記録registryの実pause/join配送（C4）
+
+`recording_registry/pause.rs`はpause専用ticketを発行して元Admission全文と実期限を検査し、lease消費と登録を同時に確定する。登録済みticketから保存済み実change handleへ一回だけnative pause/joinを配送し、元受付replyとjoin completionを別に保持する。元`unknown`や`Calling`ではhandoffを止める。`recording_host/worker.rs`の試験専用shutdown gateは停止要求後のcleanup待機を作り、`operations/tests.rs`がRunning recorderの期限超過中もjoinを打ち切らないことをmock Hub・一時SQLiteで確認する。apply／discardと製品session issuerは後続。

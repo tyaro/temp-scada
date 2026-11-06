@@ -44,6 +44,8 @@ pub struct RecordingHost {
     retention: retention::RetentionOwner,
     last_clock_epoch: Option<String>,
     plan_turn: plan_turn::PlanOwner,
+    #[cfg(test)]
+    shutdown_gate: Option<Arc<worker::TestShutdownGate>>,
 }
 struct Running {
     cancel: CancellationToken,
@@ -70,6 +72,8 @@ impl RecordingHost {
             retention: retention::RetentionOwner::default(),
             last_clock_epoch: None,
             plan_turn: plan_turn::PlanOwner::default(),
+            #[cfg(test)]
+            shutdown_gate: None,
         }
     }
 
@@ -202,6 +206,8 @@ impl RecordingHost {
             cancel: worker_cancel,
             status,
             run: worker_run,
+            #[cfg(test)]
+            shutdown_gate: self.shutdown_gate.take(),
         };
         let task = tokio::task::spawn_blocking(move || worker.run());
         self.running = Some(Running { cancel, task });
