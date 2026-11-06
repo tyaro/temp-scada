@@ -1,7 +1,10 @@
 use super::*;
 use crate::recording_host::retention::tests::control;
 use crate::recording_host::{RecordingPhase, RecordingPlanTurnIntent};
-use crate::recording_registry::RecordingRegistryOwnerSeed;
+use crate::recording_registry::{
+    LeaseError, LeaseRole, RecordingRegistryOwnerSeed, RecordingRegistryRoot,
+};
+use scada_model::recording_wire::RecordingWireLeaseRequest;
 use serde_json::{json, Value};
 use std::time::Duration;
 pub(super) fn context() -> RecordingOperationsContext {
@@ -95,6 +98,267 @@ async fn registry_seed_refuses_an_owner_after_handoff() {
         .unwrap();
     assert_eq!(failure.reason, RegistryClaimReason::NotPristine);
     drop(handoff);
+}
+
+fn registry_scope(epoch: &str) -> Value {
+    json!({"ownerRef":"native-owner", "ownerEpoch":epoch, "context":context().as_value()})
+}
+
+fn registry_lease(
+    scope: &Value,
+    id: &str,
+    admission: &str,
+    role: &str,
+    budget: u64,
+) -> RecordingWireLeaseRequest {
+    RecordingWireLeaseRequest::from_value(json!({
+        "version":1, "kind":"recordingWireLeaseRequest", "scope":scope,
+        "leaseRequestId":id, "admissionId":admission, "role":role,
+        "requestedBudgetMs":budget
+    }))
+    .unwrap()
+}
+
+#[tokio::test]
+async fn registry_root_matches_native_context_and_returns_seed_on_failure() {
+    let (owner, _dir) = setup();
+    let seed = RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap();
+    let mut foreign = registry_scope("epoch-1");
+    foreign["context"]["sessionId"] = json!("other");
+    let failure = RecordingRegistryRoot::try_new(seed, foreign).err().unwrap();
+    assert_eq!(failure.error, LeaseError::InvalidInput);
+    let mut root = RecordingRegistryRoot::try_new(failure.seed, registry_scope("epoch-1"))
+        .ok()
+        .unwrap();
+    assert!(root.try_handoff().is_ok());
+}
+
+#[tokio::test]
+async fn registry_root_refuses_a_seed_after_native_handoff() {
+    let (owner, _dir) = setup();
+    let mut seed = RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap();
+    let handoff = seed.try_handoff().unwrap();
+    let failure = RecordingRegistryRoot::try_new(seed, registry_scope("epoch-1"))
+        .err()
+        .unwrap();
+    assert_eq!(failure.error, LeaseError::Forbidden);
+    drop(handoff);
+}
+
+#[tokio::test]
+async fn registry_lease_accepts_equivalent_json_numbers() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-1");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let mut equivalent = scope;
+    equivalent["context"]["version"] = json!(1.0);
+    let request = RecordingWireLeaseRequest::from_value(json!({
+        "version":1, "kind":"recordingWireLeaseRequest", "scope":equivalent,
+        "leaseRequestId":"lease-1", "admissionId":"admission-1", "role":"mutation",
+        "requestedBudgetMs":1.0
+    }))
+    .unwrap();
+    let first = root.issue_lease(&session, request.clone()).unwrap();
+    assert_eq!(
+        root.issue_lease(&session, request).unwrap().as_value(),
+        first.as_value()
+    );
+}
+
+#[tokio::test]
+async fn registry_lease_byte_budget_accepts_exact_and_rejects_one_short_atomically() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-1");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let now = std::time::Instant::now();
+    for (role, name) in [
+        (LeaseRole::Mutation, "mutation"),
+        (LeaseRole::Reconciliation, "reconciliation"),
+    ] {
+        let session = root.test_session("alice", role);
+        root.issue_lease_at(
+            &session,
+            registry_lease(
+                &scope,
+                &format!("{name}-1"),
+                &format!("admission-{name}-1"),
+                name,
+                1,
+            ),
+            now,
+        )
+        .unwrap();
+        let one = root.test_used_bytes(role);
+        let second = registry_lease(
+            &scope,
+            &format!("{name}-2"),
+            &format!("admission-{name}-2"),
+            name,
+            1,
+        );
+        root.test_set_byte_limit(role, one * 2 - 1);
+        assert_eq!(
+            root.issue_lease_at(&session, second.clone(), now),
+            Err(LeaseError::Capacity)
+        );
+        assert_eq!(root.test_used_bytes(role), one);
+        root.test_set_byte_limit(role, one * 2);
+        let reply = root.issue_lease_at(&session, second, now).unwrap();
+        assert_eq!(
+            reply.as_value()["outcome"]["deadlineLeaseRef"],
+            format!(
+                "native-lease:{}",
+                if role == LeaseRole::Mutation { 2 } else { 4 }
+            )
+        );
+        assert_eq!(root.test_used_bytes(role), one * 2);
+    }
+}
+
+#[tokio::test]
+async fn registry_real_lease_replay_keeps_deadline_and_is_principal_bound() {
+    let (owner, _dir) = setup();
+    let seed = RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap();
+    let scope = registry_scope("epoch-1");
+    let mut root = RecordingRegistryRoot::try_new(seed, scope.clone())
+        .ok()
+        .unwrap();
+    let alice = root.test_session("alice", LeaseRole::Mutation);
+    let bob = root.test_session("bob", LeaseRole::Mutation);
+    let now = std::time::Instant::now();
+    let request = registry_lease(&scope, "lease-1", "admission-1", "mutation", 5);
+    let first = root.issue_lease_at(&alice, request.clone(), now).unwrap();
+    assert_eq!(
+        root.issue_lease_at(&bob, request.clone(), now),
+        Err(LeaseError::Forbidden)
+    );
+    assert_eq!(
+        root.issue_lease_at(
+            &alice,
+            registry_lease(&scope, "lease-1", "admission-2", "mutation", 5),
+            now
+        ),
+        Err(LeaseError::ProtocolViolation)
+    );
+    assert_eq!(
+        root.issue_lease_at(
+            &alice,
+            registry_lease(&scope, "lease-2", "admission-1", "mutation", 5),
+            now
+        ),
+        Err(LeaseError::ProtocolViolation)
+    );
+    let later = now + Duration::from_millis(5);
+    assert_eq!(
+        root.issue_lease_at(&alice, request, later)
+            .unwrap()
+            .as_value(),
+        first.as_value()
+    );
+    for index in 2..=5 {
+        let id = format!("lease-{index}");
+        let admission = format!("admission-{index}");
+        root.issue_lease_at(
+            &alice,
+            registry_lease(&scope, &id, &admission, "mutation", 5),
+            later,
+        )
+        .unwrap();
+    }
+    assert_eq!(
+        root.issue_lease_at(
+            &alice,
+            registry_lease(&scope, "lease-6", "admission-6", "mutation", 5),
+            later
+        ),
+        Err(LeaseError::Capacity)
+    );
+    let other_role = root.test_session("alice", LeaseRole::Reconciliation);
+    root.issue_lease_at(
+        &other_role,
+        registry_lease(&scope, "read-1", "read-admission-1", "reconciliation", 5),
+        later,
+    )
+    .unwrap();
+    assert_eq!(
+        root.issue_lease_at(
+            &alice,
+            registry_lease(
+                &scope,
+                "wrong-role",
+                "wrong-role-admission",
+                "reconciliation",
+                5
+            ),
+            later
+        ),
+        Err(LeaseError::Forbidden)
+    );
+    assert!(root.try_handoff().is_ok());
+    assert_eq!(
+        root.issue_lease_at(
+            &alice,
+            registry_lease(
+                &scope,
+                "after-close",
+                "after-close-admission",
+                "mutation",
+                5
+            ),
+            later
+        ),
+        Err(LeaseError::Closed)
+    );
+}
+
+#[tokio::test]
+async fn registry_lease_rejects_foreign_root_scope_and_epoch() {
+    let (first_owner, _first_dir) = setup();
+    let (second_owner, _second_dir) = setup();
+    let first_scope = registry_scope("epoch-1");
+    let second_scope = registry_scope("epoch-2");
+    let first = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(first_owner).unwrap(),
+        first_scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let mut second = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(second_owner).unwrap(),
+        second_scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let first_session = first.test_session("alice", LeaseRole::Mutation);
+    let second_session = second.test_session("alice", LeaseRole::Mutation);
+    let now = std::time::Instant::now();
+    assert_eq!(
+        second.issue_lease_at(
+            &first_session,
+            registry_lease(&second_scope, "lease-1", "admission-1", "mutation", 5),
+            now
+        ),
+        Err(LeaseError::Forbidden)
+    );
+    assert_eq!(
+        second.issue_lease_at(
+            &second_session,
+            registry_lease(&first_scope, "lease-1", "admission-1", "mutation", 5),
+            now
+        ),
+        Err(LeaseError::Forbidden)
+    );
 }
 #[tokio::test]
 async fn explicit_stages_return_the_native_owner_before_each_terminal_state() {

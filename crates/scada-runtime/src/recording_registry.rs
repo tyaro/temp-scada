@@ -1,8 +1,12 @@
-//! Exclusive owner handoff and pure budget kernel for the future recording registry.
-//! No session issuer, lease, admission, or transport is exposed here.
+//! Native recording registry ownership and real-clock lease boundary.
+//! Product session issuance, admission, and transport remain unconnected.
 pub(crate) mod kernel;
+mod lease;
 use crate::recording_operations::{
     OwnerError, RecordingOperationsHandoff, RecordingOperationsOwner, RegistryClaimReason,
+};
+pub use lease::{
+    LeaseError, LeaseRole, RecordingRegistryRoot, RecordingRegistrySession, RegistryRootInitFailure,
 };
 use std::fmt;
 
@@ -39,5 +43,13 @@ impl RecordingRegistryOwnerSeed {
     /// Returns native ownership only through the existing quiescence and recovery gate.
     pub fn try_handoff(&mut self) -> Result<RecordingOperationsHandoff, OwnerError> {
         self.owner.try_handoff()
+    }
+
+    pub(crate) fn context(&self) -> &scada_model::recording_operations::RecordingOperationsContext {
+        self.owner.registry_context()
+    }
+
+    pub(crate) fn check_claim(&self) -> Result<(), RegistryClaimReason> {
+        self.owner.check_registry_claim()
     }
 }
