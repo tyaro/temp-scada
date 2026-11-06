@@ -26,7 +26,7 @@ use std::{
 
 #[derive(Clone)]
 pub struct RecordingRegistryWorkflowTicket {
-    identity: Arc<()>,
+    pub(super) identity: Arc<()>,
     sequence: u64,
     change_id: String,
 }
@@ -42,12 +42,12 @@ impl RecordingRegistryWorkflowTicket {
 }
 
 pub(super) struct WorkflowRecord {
-    ticket: RecordingRegistryWorkflowTicket,
-    change: RecordingChangeRequest,
-    principal: String,
+    pub(super) ticket: RecordingRegistryWorkflowTicket,
+    pub(super) change: RecordingChangeRequest,
+    pub(super) principal: String,
     attempts: BTreeMap<String, PreflightAttempt>,
     active_attempt: Option<String>,
-    registered: Option<RegisteredPreflight>,
+    pub(super) registered: Option<RegisteredPreflight>,
 }
 
 impl WorkflowRecord {
@@ -64,7 +64,7 @@ struct PreflightAttempt {
 
 #[derive(Clone)]
 pub struct RecordingRegistryAdmissionTicket {
-    identity: Arc<()>,
+    pub(super) identity: Arc<()>,
     sequence: u64,
     admission_id: String,
 }
@@ -79,12 +79,15 @@ impl RecordingRegistryAdmissionTicket {
     }
 }
 
-struct RegisteredPreflight {
-    ticket: RecordingRegistryAdmissionTicket,
-    request: RecordingAdmissionRequest,
-    budget: LifetimeBudget,
-    state: PreflightDispatchState,
-    binding: Option<AcceptedRecordingChange>,
+pub(super) struct RegisteredPreflight {
+    pub(super) ticket: RecordingRegistryAdmissionTicket,
+    pub(super) request: RecordingAdmissionRequest,
+    pub(super) budget: LifetimeBudget,
+    pub(super) state: PreflightDispatchState,
+    pub(super) binding: Option<AcceptedRecordingChange>,
+    pub(super) knowledge: Option<RecordingAdmissionReply>,
+    #[cfg(test)]
+    pub(super) inspection_projection_panic: bool,
     #[cfg(test)]
     fault: Option<TestDispatchFault>,
 }
@@ -108,7 +111,7 @@ impl RegisteredPreflight {
     }
 }
 
-enum PreflightDispatchState {
+pub(super) enum PreflightDispatchState {
     Registered,
     Calling,
     Finished(RecordingAdmissionReply),
@@ -444,6 +447,9 @@ impl RecordingRegistryRoot {
             budget: stage.storage,
             state: PreflightDispatchState::Registered,
             binding: None,
+            knowledge: None,
+            #[cfg(test)]
+            inspection_projection_panic: false,
             #[cfg(test)]
             fault: None,
         });
@@ -529,6 +535,22 @@ impl RecordingRegistryRoot {
             .fault = Some(fault);
     }
 
+    #[cfg(test)]
+    pub(crate) fn test_set_inspection_projection_panic(
+        &mut self,
+        session: &RecordingRegistrySession,
+        ticket: &RecordingRegistryAdmissionTicket,
+    ) {
+        self.registered_preflight(session, ticket).unwrap();
+        self.workflow
+            .as_mut()
+            .unwrap()
+            .registered
+            .as_mut()
+            .unwrap()
+            .inspection_projection_panic = true;
+    }
+
     /// Calls the registered native preflight at most once, preserving the real handle and reply.
     pub fn dispatch_preflight(
         &mut self,
@@ -608,19 +630,16 @@ impl RecordingRegistryRoot {
                     if fault == Some(TestDispatchFault::ProjectionPanic) {
                         panic!("test projection panic after handle save");
                     }
-                    let operation = registered.binding.as_ref().expect("saved binding")
-                        .operation.request().as_value();
-                    let outcome = json!({"kind":"accepted", "handle":{
-                        "kind":"operation", "changeRef":format!("native-change:{}", ticket.sequence),
-                        "operationRef":operation["operationId"], "request":operation
-                    }});
-                    let reply = RecordingAdmissionReply::from_value(json!({
-                        "version":1, "kind":"recordingAdmissionReply",
-                        "request":request.as_value(), "outcome":outcome
-                    })).ok()?;
-                    registered.budget.check_reply(reply.as_value()).ok()?;
-                    Some(reply)
-                })).ok().flatten().unwrap_or_else(|| unknown.clone())
+                    accepted_preflight_reply(
+                        &request,
+                        ticket.sequence,
+                        registered.binding.as_ref().expect("saved binding"),
+                        registered.budget,
+                    )
+                }))
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| unknown.clone())
             }
             Ok(Err(rejection)) => admission_reply(
                 &request,
@@ -635,6 +654,26 @@ impl RecordingRegistryRoot {
         registered.state = PreflightDispatchState::Finished(reply.clone());
         Ok(reply)
     }
+}
+
+pub(super) fn accepted_preflight_reply(
+    request: &RecordingAdmissionRequest,
+    sequence: u64,
+    binding: &AcceptedRecordingChange,
+    budget: LifetimeBudget,
+) -> Option<RecordingAdmissionReply> {
+    let operation = binding.operation.request().as_value();
+    let outcome = json!({"kind":"accepted", "handle":{
+        "kind":"operation", "changeRef":format!("native-change:{sequence}"),
+        "operationRef":operation["operationId"], "request":operation
+    }});
+    let reply = RecordingAdmissionReply::from_value(json!({
+        "version":1, "kind":"recordingAdmissionReply",
+        "request":request.as_value(), "outcome":outcome
+    }))
+    .ok()?;
+    budget.check_reply(reply.as_value()).ok()?;
+    Some(reply)
 }
 
 fn admission_reply(

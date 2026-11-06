@@ -1,6 +1,6 @@
 # 現在の実装状況
 
-状態: **現行実装の要約**。2026-11-06（日本時間）、Project 0.37.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
+状態: **現行実装の要約**。2026-11-07（日本時間）、Project 0.37.0。Banto基盤のローカル工程図エディタと読取表示確認を提供する。**Core v1全体・正式Runtime・SCADA serverは未完成**。
 
 この文書を現在状況の入口とする。[統合設計](../design/scada-integrated-design.md)は目標仕様、[開発計画](development-plan.md)は今後の工程、[実装履歴](../history/implementation-history.md)は過去の仕様・検証。[リファクタリング計画](../engineering/maintenance-refactoring-plan.md)の構造整理は機能追加と分離して進める。
 
@@ -38,7 +38,7 @@ C2の検証として、通常entrypointのNativeShellからTauri command／event
 
 [C4 coordinator-v2境界](../design/runtime/historian-recording-coordinator-v2.md)では、同realmのtest-only rootとattempt portを追加した。保存済み元返信とtransport call taskの終了を独立に保持し、Observation queryの結果、receiver表示、view寿命、closeを別欄で扱う。実nativeの物理終了・認可・送信資格はこのportでは証明しない。製品native adapterとtransportは後続である。
 
-[C4 native registry adapterの採用設計](../design/runtime/historian-recording-native-registry-adapter.md)では、実`RecordingOperationsOwner`を共有rootが所有し、実時計・trusted session・native handleと元受付を束縛する順序を定めた。未使用ownerの排他的seedと失敗時返却、Admission保存予算kernel、固定scopeのnative rootと実`Instant` lease台帳に続き、四段階の保持bytesとsnapshot上界を共有kernelへ移し、最初の一workflowを事前予約する。preflight leaseの初回発行・失効retry、元Admissionの不変登録とleaseの原子消費に続き、登録済みticketから実nativeへ高々一回preflightを渡す。元replyと実change／operation handleを保存し、handleから完了を読む。期限切れ・同期拒否・受理・不確定を分ける。後続stageと製品session issuerは未接続で、現行の`RegistryDomain`はsimulationのままである。
+[C4 native registry adapterの採用設計](../design/runtime/historian-recording-native-registry-adapter.md)では、実`RecordingOperationsOwner`を共有rootが所有し、実時計・trusted session・native handleと元受付を束縛する順序を定めた。未使用ownerの排他的seedと失敗時返却、Admission保存予算kernel、固定scopeのnative rootと実`Instant` lease台帳に続き、四段階の保持bytesとsnapshot上界を共有kernelへ移し、最初の一workflowを事前予約する。preflight leaseの初回発行・失効retry、元Admissionの不変登録とleaseの原子消費に続き、登録済みticketから実nativeへ高々一回preflightを渡す。元replyと実change／operation handleを保存し、handleから完了を読む。期限切れ・同期拒否・受理・不確定を分ける。preflightのAdmissionInspectionは照会IDごとに不変な結果とread容量を保持し、元返信が`unknown`でも実handleから現在の受付証拠を返せる。後続stageと製品session issuerは未接続で、現行の`RegistryDomain`はsimulationのままである。
 
 ## 記録wireの元call配送台帳設計（H5d4c4c-prep2d2a、2026-11-05）
 

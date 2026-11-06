@@ -5,7 +5,10 @@ use crate::recording_registry::{
     LeaseError, LeaseRole, PreflightRegistration, RecordingRegistryOwnerSeed,
     RecordingRegistryRoot, TestDispatchFault,
 };
-use scada_model::recording_admission::RecordingAdmissionRequest;
+use scada_model::recording_admission::{
+    RecordingAdmissionInspectionReply, RecordingAdmissionInspectionRequest,
+    RecordingAdmissionRequest,
+};
 use scada_model::recording_wire::{RecordingWireLeaseReply, RecordingWireLeaseRequest};
 use serde_json::{json, Value};
 use std::time::Duration;
@@ -132,6 +135,17 @@ fn registry_preflight(
         "admissionId":admission, "context":scope["context"],
         "deadlineLeaseRef":lease.as_value()["outcome"]["deadlineLeaseRef"],
         "action":{"kind":"preflight", "change":change.as_value()}
+    }))
+    .unwrap()
+}
+
+fn registry_inspection(
+    original: &RecordingAdmissionRequest,
+    id: &str,
+) -> RecordingAdmissionInspectionRequest {
+    RecordingAdmissionInspectionRequest::from_value(json!({
+        "version":1, "kind":"recordingAdmissionInspectionRequest",
+        "inspectionId":id, "original":original.as_value()
     }))
     .unwrap()
 }
@@ -869,12 +883,9 @@ async fn registry_native_typed_rejection_is_saved_without_a_handle() {
             ),
         )
         .unwrap();
+    let original = registry_preflight(&scope, &change, "rejection-admission", &lease);
     let ticket = match root
-        .register_preflight(
-            &session,
-            &workflow,
-            registry_preflight(&scope, &change, "rejection-admission", &lease),
-        )
+        .register_preflight(&session, &workflow, original.clone())
         .unwrap()
     {
         PreflightRegistration::Registered(ticket) => ticket,
@@ -889,8 +900,17 @@ async fn registry_native_typed_rejection_is_saved_without_a_handle() {
     assert_eq!(reply.as_value()["outcome"]["error"], "busy");
     assert_eq!(
         root.preflight_reply(&session, &ticket).unwrap(),
-        Some(reply)
+        Some(reply.clone())
     );
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let inspection = root
+        .inspect_preflight_admission(
+            &read,
+            &workflow,
+            registry_inspection(&original, "rejection-inspection"),
+        )
+        .unwrap();
+    assert_eq!(inspection.as_value()["outcome"]["reply"], *reply.as_value());
     assert!(root
         .preflight_completion(&session, &ticket)
         .unwrap()
@@ -964,6 +984,267 @@ async fn registry_uncertain_native_or_projection_panic_never_redispatches() {
                 .is_none());
         }
     }
+}
+
+#[tokio::test]
+async fn registry_inspection_freezes_each_query_without_rewriting_the_original_reply() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-inspection");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let mutation = root.test_session("alice", LeaseRole::Mutation);
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let bob = root.test_session("bob", LeaseRole::Reconciliation);
+    let change = change("inspect-preflight");
+    let workflow = root.reserve_workflow(&mutation, change.clone()).unwrap();
+    let lease = root
+        .issue_preflight_lease(
+            &mutation,
+            &workflow,
+            registry_lease(
+                &scope,
+                "inspect-lease",
+                "inspect-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let original = registry_preflight(&scope, &change, "inspect-admission", &lease);
+    let first_request = registry_inspection(&original, "inspection-1");
+    let (foreign_owner, _foreign_dir) = setup();
+    let mut foreign_root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(foreign_owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let foreign_session = foreign_root.test_session("alice", LeaseRole::Mutation);
+    let foreign_workflow = foreign_root
+        .reserve_workflow(&foreign_session, change.clone())
+        .unwrap();
+    assert!(matches!(
+        root.inspect_preflight_admission(&read, &foreign_workflow, first_request.clone()),
+        Err(LeaseError::Forbidden)
+    ));
+    assert!(matches!(
+        root.inspect_preflight_admission(&bob, &workflow, first_request.clone()),
+        Err(LeaseError::Forbidden)
+    ));
+    assert!(matches!(
+        root.inspect_preflight_admission(&mutation, &workflow, first_request.clone()),
+        Err(LeaseError::Forbidden)
+    ));
+    let mutation_bytes = root.test_used_bytes(LeaseRole::Mutation);
+    let first = root
+        .inspect_preflight_admission(&read, &workflow, first_request.clone())
+        .unwrap();
+    assert_eq!(first.as_value()["outcome"]["kind"], "notFound");
+    let read_bytes = root.test_used_bytes(LeaseRole::Reconciliation);
+    let ticket = match root
+        .register_preflight(&mutation, &workflow, original.clone())
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new registration expected"),
+    };
+    let pending = root
+        .inspect_preflight_admission(
+            &read,
+            &workflow,
+            registry_inspection(&original, "inspection-2"),
+        )
+        .unwrap();
+    assert_eq!(pending.as_value()["outcome"]["kind"], "found");
+    assert_eq!(
+        pending.as_value()["outcome"]["reply"]["outcome"]["kind"],
+        "unknown"
+    );
+    let accepted = root.dispatch_preflight(&mutation, &ticket).unwrap();
+    let replay = root
+        .inspect_preflight_admission(&read, &workflow, first_request)
+        .unwrap();
+    assert_eq!(replay, first);
+    assert!(root.test_used_bytes(LeaseRole::Reconciliation) > read_bytes);
+    let current = root
+        .inspect_preflight_admission(
+            &read,
+            &workflow,
+            registry_inspection(&original, "inspection-3"),
+        )
+        .unwrap();
+    assert_eq!(current.as_value()["outcome"]["reply"], *accepted.as_value());
+    assert_eq!(
+        root.preflight_reply(&mutation, &ticket).unwrap(),
+        Some(accepted)
+    );
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), mutation_bytes);
+    assert_eq!(root.test_admission_inspection_count(), 3);
+    let changed = registry_inspection(
+        &registry_preflight(&scope, &change, "different-admission", &lease),
+        "inspection-3",
+    );
+    assert!(matches!(
+        root.inspect_preflight_admission(&read, &workflow, changed),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    let mut changed_original = original.as_value().clone();
+    changed_original["deadlineLeaseRef"] = json!("changed-lease-ref");
+    let changed_original = RecordingAdmissionRequest::from_value(changed_original).unwrap();
+    assert!(matches!(
+        root.inspect_preflight_admission(
+            &read,
+            &workflow,
+            registry_inspection(&changed_original, "inspection-4")
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+}
+
+#[tokio::test]
+async fn registry_inspection_can_prove_saved_handle_after_projection_panic() {
+    for fault in [
+        TestDispatchFault::ProjectionPanic,
+        TestDispatchFault::NativePanicAfterCall,
+    ] {
+        let (owner, _dir) = setup();
+        let scope = registry_scope("epoch-inspection-panic");
+        let mut root = RecordingRegistryRoot::try_new(
+            RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+            scope.clone(),
+        )
+        .ok()
+        .unwrap();
+        let mutation = root.test_session("alice", LeaseRole::Mutation);
+        let read = root.test_session("alice", LeaseRole::Reconciliation);
+        let change = change("inspect-panic");
+        let workflow = root.reserve_workflow(&mutation, change.clone()).unwrap();
+        let lease = root
+            .issue_preflight_lease(
+                &mutation,
+                &workflow,
+                registry_lease(
+                    &scope,
+                    "panic-inspection-lease",
+                    "panic-inspection-admission",
+                    "mutation",
+                    1000,
+                ),
+            )
+            .unwrap();
+        let original = registry_preflight(&scope, &change, "panic-inspection-admission", &lease);
+        let ticket = match root
+            .register_preflight(&mutation, &workflow, original.clone())
+            .unwrap()
+        {
+            PreflightRegistration::Registered(ticket) => ticket,
+            _ => panic!("new registration expected"),
+        };
+        root.test_set_dispatch_fault(&mutation, &ticket, fault);
+        let original_reply = root.dispatch_preflight(&mutation, &ticket).unwrap();
+        assert_eq!(original_reply.as_value()["outcome"]["kind"], "unknown");
+        let inspection = root
+            .inspect_preflight_admission(
+                &read,
+                &workflow,
+                registry_inspection(&original, "panic-inspection"),
+            )
+            .unwrap();
+        let expected = if fault == TestDispatchFault::ProjectionPanic {
+            "accepted"
+        } else {
+            "unknown"
+        };
+        assert_eq!(
+            inspection.as_value()["outcome"]["reply"]["outcome"]["kind"],
+            expected
+        );
+        if fault == TestDispatchFault::ProjectionPanic {
+            root.test_set_inspection_projection_panic(&mutation, &ticket);
+            let later = root
+                .inspect_preflight_admission(
+                    &read,
+                    &workflow,
+                    registry_inspection(&original, "panic-inspection-later"),
+                )
+                .unwrap();
+            assert_eq!(
+                later.as_value()["outcome"]["reply"]["outcome"]["kind"],
+                "accepted"
+            );
+        }
+        assert_eq!(
+            root.preflight_reply(&mutation, &ticket).unwrap(),
+            Some(original_reply)
+        );
+        assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+    }
+}
+
+#[tokio::test]
+async fn registry_inspection_capacity_failure_does_not_bind_id_or_spend_read_bytes() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-inspection-capacity");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let mutation = root.test_session("alice", LeaseRole::Mutation);
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let change = change("inspect-capacity");
+    let workflow = root.reserve_workflow(&mutation, change.clone()).unwrap();
+    let lease = root
+        .issue_preflight_lease(
+            &mutation,
+            &workflow,
+            registry_lease(
+                &scope,
+                "capacity-lease",
+                "capacity-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let original = registry_preflight(&scope, &change, "capacity-admission", &lease);
+    let request = registry_inspection(&original, "capacity-inspection");
+    let reply = RecordingAdmissionInspectionReply::from_value(json!({
+        "version":1, "kind":"recordingAdmissionInspectionReply",
+        "request":request.as_value(), "outcome":{"kind":"notFound"}
+    }))
+    .unwrap();
+    let cost = crate::recording_registry::kernel::budget::measured(request.as_value())
+        .unwrap()
+        .bytes
+        + crate::recording_registry::kernel::budget::measured(reply.as_value())
+            .unwrap()
+            .bytes;
+    root.test_set_byte_limit(LeaseRole::Reconciliation, cost - 1);
+    assert!(matches!(
+        root.inspect_preflight_admission(&read, &workflow, request.clone()),
+        Err(LeaseError::Capacity)
+    ));
+    assert_eq!(root.test_admission_inspection_count(), 0);
+    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), 0);
+    root.test_set_byte_limit(LeaseRole::Reconciliation, cost);
+    assert_eq!(
+        root.inspect_preflight_admission(&read, &workflow, request.clone())
+            .unwrap(),
+        reply
+    );
+    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), cost);
+    assert_eq!(
+        root.inspect_preflight_admission(&read, &workflow, request)
+            .unwrap(),
+        reply
+    );
+    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), cost);
 }
 
 #[tokio::test]
