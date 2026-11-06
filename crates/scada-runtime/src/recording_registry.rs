@@ -1,5 +1,5 @@
 //! Native recording registry ownership and real-clock lease boundary.
-//! Product session issuance, admission, and transport remain unconnected.
+//! Product session issuance and transport remain unconnected.
 mod inspection;
 pub(crate) mod kernel;
 mod lease;
@@ -12,6 +12,9 @@ use crate::recording_operations::{
 pub use lease::{
     LeaseError, LeaseRole, RecordingRegistryRoot, RecordingRegistrySession, RegistryRootInitFailure,
 };
+#[cfg(test)]
+pub(crate) use pause::PauseDispatchFault;
+pub use pause::{PauseRegistration, RecordingRegistryPauseTicket};
 use std::fmt;
 #[cfg(test)]
 pub(crate) use workflow::TestDispatchFault;

@@ -57,6 +57,10 @@ impl WorkflowRecord {
         self.registered
             .as_ref()
             .is_some_and(|record| record.is_uncertain())
+            || self
+                .pause_lease
+                .as_ref()
+                .is_some_and(PauseLease::is_uncertain)
     }
 }
 

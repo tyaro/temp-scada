@@ -1,17 +1,26 @@
 use super::*;
 use crate::recording_host::retention::tests::control;
-use crate::recording_host::{RecordingPhase, RecordingPlanTurnIntent};
+use crate::recording_host::{RecordingOptions, RecordingPhase, RecordingPlanTurnIntent};
 use crate::recording_registry::{
-    LeaseError, LeaseRole, PreflightRegistration, RecordingRegistryOwnerSeed,
-    RecordingRegistryRoot, TestDispatchFault,
+    LeaseError, LeaseRole, PauseDispatchFault, PauseRegistration, PreflightRegistration,
+    RecordingRegistryAdmissionTicket, RecordingRegistryOwnerSeed, RecordingRegistryRoot,
+    RecordingRegistrySession, RecordingRegistryWorkflowTicket, TestDispatchFault,
 };
+use futures_util::SinkExt;
+use scada_historian::store::{Source, SqliteStore, StoreIdentity};
 use scada_model::recording_admission::{
     RecordingAdmissionInspectionReply, RecordingAdmissionInspectionRequest,
     RecordingAdmissionRequest,
 };
 use scada_model::recording_wire::{RecordingWireLeaseReply, RecordingWireLeaseRequest};
 use serde_json::{json, Value};
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use std::{
+    fs,
+    path::PathBuf,
+    sync::atomic::{AtomicU64, Ordering},
+};
+use tokio_tungstenite::tungstenite::Message;
 pub(super) fn context() -> RecordingOperationsContext {
     let fixtures: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -137,6 +146,118 @@ fn registry_preflight(
         "action":{"kind":"preflight", "change":change.as_value()}
     }))
     .unwrap()
+}
+
+fn registry_pause_admission(
+    scope: &Value,
+    change: &RecordingChangeRequest,
+    admission: &str,
+    lease: &RecordingWireLeaseReply,
+    change_ref: &str,
+    operation_id: &str,
+) -> RecordingAdmissionRequest {
+    RecordingAdmissionRequest::from_value(json!({
+        "version":1, "kind":"recordingAdmissionRequest", "ownerRef":scope["ownerRef"],
+        "admissionId":admission, "context":scope["context"],
+        "deadlineLeaseRef":lease.as_value()["outcome"]["deadlineLeaseRef"],
+        "action":{"kind":"pauseJoin", "changeRef":change_ref,
+            "operation":{"version":1,"kind":"recordingOperationRequest",
+                "operationId":operation_id,"stage":"pauseJoin","change":change.as_value()}}
+    }))
+    .unwrap()
+}
+
+async fn ready_pause_registry(
+    epoch: &str,
+    pause_budget_ms: u64,
+) -> (
+    RecordingRegistryRoot,
+    RecordingRegistrySession,
+    RecordingRegistryWorkflowTicket,
+    RecordingRegistryAdmissionTicket,
+    RecordingAdmissionRequest,
+    crate::recording_host::retention::tests::Directory,
+) {
+    let (owner, dir) = setup();
+    let scope = registry_scope(epoch);
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let change = change("pause-ready");
+    let workflow = root.reserve_workflow(&session, change.clone()).unwrap();
+    let lease = root
+        .issue_preflight_lease(
+            &session,
+            &workflow,
+            registry_lease(
+                &scope,
+                "preflight-lease",
+                "preflight-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let preflight = match root
+        .register_preflight(
+            &session,
+            &workflow,
+            registry_preflight(&scope, &change, "preflight-admission", &lease),
+        )
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new preflight"),
+    };
+    let accepted = root.dispatch_preflight(&session, &preflight).unwrap();
+    for _ in 0..100 {
+        if root
+            .preflight_completion(&session, &preflight)
+            .unwrap()
+            .is_some()
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(
+        root.preflight_completion(&session, &preflight)
+            .unwrap()
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "candidate"
+    );
+    let change_ref = accepted.as_value()["outcome"]["handle"]["changeRef"]
+        .as_str()
+        .unwrap();
+    let pause_lease = root
+        .issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "pause:ready",
+            registry_lease(
+                &scope,
+                "pause-lease",
+                "pause-admission",
+                "mutation",
+                pause_budget_ms,
+            ),
+        )
+        .unwrap();
+    let admission = registry_pause_admission(
+        &scope,
+        &change,
+        "pause-admission",
+        &pause_lease,
+        change_ref,
+        "pause:ready",
+    );
+    (root, session, workflow, preflight, admission, dir)
 }
 
 fn registry_inspection(
@@ -1245,6 +1366,444 @@ async fn registry_inspection_capacity_failure_does_not_bind_id_or_spend_read_byt
         reply
     );
     assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), cost);
+}
+
+#[tokio::test]
+async fn registry_pause_admission_dispatches_one_native_join_and_keeps_original_reply() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-pause-dispatch");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let bob = root.test_session("bob", LeaseRole::Mutation);
+    let change = change("pause-dispatch");
+    let workflow = root.reserve_workflow(&session, change.clone()).unwrap();
+    let first = root
+        .issue_preflight_lease(
+            &session,
+            &workflow,
+            registry_lease(
+                &scope,
+                "preflight-lease",
+                "preflight-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let preflight = match root
+        .register_preflight(
+            &session,
+            &workflow,
+            registry_preflight(&scope, &change, "preflight-admission", &first),
+        )
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new preflight"),
+    };
+    let accepted = root.dispatch_preflight(&session, &preflight).unwrap();
+    for _ in 0..100 {
+        if root
+            .preflight_completion(&session, &preflight)
+            .unwrap()
+            .is_some()
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(
+        root.preflight_completion(&session, &preflight)
+            .unwrap()
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "candidate"
+    );
+    let change_ref = accepted.as_value()["outcome"]["handle"]["changeRef"]
+        .as_str()
+        .unwrap();
+    let pause_lease = root
+        .issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "pause:dispatch",
+            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 1000),
+        )
+        .unwrap();
+    let admission = registry_pause_admission(
+        &scope,
+        &change,
+        "pause-admission",
+        &pause_lease,
+        change_ref,
+        "pause:dispatch",
+    );
+    let mut alternate_number = admission.as_value().clone();
+    let revision =
+        &mut alternate_number["action"]["operation"]["change"]["apply"]["desired"]["revision"];
+    assert_eq!(*revision, json!(1));
+    *revision = json!(1.0);
+    let admission = RecordingAdmissionRequest::from_value(alternate_number).unwrap();
+    let mut wrong = admission.as_value().clone();
+    wrong["action"]["changeRef"] = json!("native-change:wrong");
+    assert!(matches!(
+        root.register_pause_join(
+            &session,
+            &workflow,
+            &preflight,
+            RecordingAdmissionRequest::from_value(wrong).unwrap()
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    assert!(matches!(
+        root.register_pause_join(&bob, &workflow, &preflight, admission.clone()),
+        Err(LeaseError::Forbidden)
+    ));
+    let bytes = root.test_used_bytes(LeaseRole::Mutation);
+    let ticket = match root
+        .register_pause_join(&session, &workflow, &preflight, admission.clone())
+        .unwrap()
+    {
+        PauseRegistration::Registered(ticket) => ticket,
+        _ => panic!("new pause"),
+    };
+    assert_eq!(root.test_lease_consumed("pause-lease"), Some(true));
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    assert!(matches!(
+        root.register_pause_join_at(
+            &session,
+            &workflow,
+            &preflight,
+            admission.clone(),
+            Instant::now() + Duration::from_secs(3)
+        )
+        .unwrap(),
+        PauseRegistration::Existing(_)
+    ));
+    let gate = Arc::new(driver::TestGate::default());
+    let client = root.test_native_client();
+    *client.shared.fault.lock().unwrap() = Some(driver::TestFault::Gate(gate.clone()));
+    let reply = root.dispatch_pause_join(&session, &ticket).unwrap();
+    assert_eq!(reply.as_value()["outcome"]["kind"], "accepted");
+    assert_eq!(
+        reply.as_value()["outcome"]["handle"]["changeRef"],
+        change_ref
+    );
+    gate.entered.notified().await;
+    assert_eq!(client.state().phase, OperationsPhase::Pausing);
+    assert!(root.pause_completion(&session, &ticket).unwrap().is_none());
+    assert_eq!(root.dispatch_pause_join(&session, &ticket).unwrap(), reply);
+    assert_eq!(
+        root.pause_reply(&session, &ticket).unwrap(),
+        Some(reply.clone())
+    );
+    assert!(matches!(
+        root.pause_reply(&bob, &ticket),
+        Err(LeaseError::Forbidden)
+    ));
+    gate.release.notify_one();
+    for _ in 0..100 {
+        if root.pause_completion(&session, &ticket).unwrap().is_some() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let completion = root.pause_completion(&session, &ticket).unwrap().unwrap();
+    assert_eq!(completion.as_value()["outcome"]["kind"], "paused");
+    assert_eq!(completion.as_value()["quiescence"], "confirmed");
+    assert_eq!(completion.as_value()["recoveryRequired"], false);
+    assert_eq!(root.pause_reply(&session, &ticket).unwrap(), Some(reply));
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+}
+
+#[tokio::test]
+async fn registry_pause_admission_expires_before_registration_or_native_call() {
+    let (mut root, session, workflow, preflight, admission, _dir) =
+        ready_pause_registry("epoch-pause-expiry", 100).await;
+    let bytes = root.test_used_bytes(LeaseRole::Mutation);
+    assert!(matches!(
+        root.register_pause_join_at(
+            &session,
+            &workflow,
+            &preflight,
+            admission.clone(),
+            Instant::now() + Duration::from_secs(2)
+        ),
+        Err(LeaseError::Expired)
+    ));
+    assert_eq!(root.test_lease_consumed("pause-lease"), Some(false));
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    let ticket = match root
+        .register_pause_join(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        PauseRegistration::Registered(ticket) => ticket,
+        _ => panic!("new pause"),
+    };
+    tokio::time::sleep(Duration::from_millis(120)).await;
+    let reply = root.dispatch_pause_join(&session, &ticket).unwrap();
+    assert_eq!(reply.as_value()["outcome"]["kind"], "rejected");
+    assert_eq!(reply.as_value()["outcome"]["error"], "deadlineExceeded");
+    assert_eq!(root.pause_completion(&session, &ticket).unwrap(), None);
+    assert_eq!(root.dispatch_pause_join(&session, &ticket).unwrap(), reply);
+    assert_eq!(
+        root.test_native_client().state().phase,
+        OperationsPhase::Candidate
+    );
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+}
+
+#[tokio::test]
+async fn registry_pause_admission_keeps_unknown_and_real_handle_after_projection_failure() {
+    let (mut root, session, workflow, preflight, admission, _dir) =
+        ready_pause_registry("epoch-pause-unknown", 1000).await;
+    let ticket = match root
+        .register_pause_join(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        PauseRegistration::Registered(ticket) => ticket,
+        _ => panic!("new pause"),
+    };
+    root.test_set_pause_dispatch_fault(&session, &ticket, PauseDispatchFault::ProjectionPanic);
+    let unknown = root.dispatch_pause_join(&session, &ticket).unwrap();
+    assert_eq!(unknown.as_value()["outcome"]["kind"], "unknown");
+    assert_eq!(
+        root.pause_reply(&session, &ticket).unwrap(),
+        Some(unknown.clone())
+    );
+    assert_eq!(
+        root.dispatch_pause_join(&session, &ticket).unwrap(),
+        unknown
+    );
+    for _ in 0..100 {
+        if root.pause_completion(&session, &ticket).unwrap().is_some() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let completion = root.pause_completion(&session, &ticket).unwrap().unwrap();
+    assert_eq!(completion.as_value()["outcome"]["kind"], "paused");
+    assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+
+    let (mut root, session, workflow, preflight, admission, _dir) =
+        ready_pause_registry("epoch-pause-after-call-panic", 1000).await;
+    let ticket = match root
+        .register_pause_join(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        PauseRegistration::Registered(ticket) => ticket,
+        _ => panic!("new pause"),
+    };
+    root.test_set_pause_dispatch_fault(&session, &ticket, PauseDispatchFault::NativePanicAfterCall);
+    let unknown = root.dispatch_pause_join(&session, &ticket).unwrap();
+    assert_eq!(unknown.as_value()["outcome"]["kind"], "unknown");
+    assert_eq!(root.pause_completion(&session, &ticket).unwrap(), None);
+    assert_eq!(
+        root.dispatch_pause_join(&session, &ticket).unwrap(),
+        unknown
+    );
+    assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+}
+
+struct RunningRegistryDirectory(PathBuf);
+impl Drop for RunningRegistryDirectory {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+#[tokio::test]
+async fn registry_pause_join_waits_for_running_worker_cleanup_after_lease_expiry() {
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    let hub = crate::recorder_hub_fixture::Hub::new().await;
+    let directory = RunningRegistryDirectory(std::env::temp_dir().join(format!(
+        "scada-registry-running-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    )));
+    let mut store = SqliteStore::create(
+        &directory.0,
+        StoreIdentity {
+            store_id: "running-registry".into(),
+            deployment_id: "test-deployment".into(),
+        },
+    )
+    .unwrap();
+    let sdk = crate::recorder_hub_fixture::plan(Some(7), Source::Real, false);
+    let (plan_ref, binding) =
+        crate::recording_host::tests::managed_support::apply(&mut store, sdk.session());
+    let mut supervisor = RecordingSupervisor::try_new(store).unwrap();
+    let (gate, release) = crate::recording_host::worker::TestShutdownGate::new();
+    supervisor.host.shutdown_gate = Some(gate.clone());
+    let run = supervisor
+        .start_managed(
+            sdk,
+            RecordingOptions {
+                plan: plan_ref,
+                slot_count: None,
+                max_clock_skew_ms: 1000,
+                clock_epoch: "running-registry-clock".into(),
+            },
+            binding,
+            control(),
+            hub.client(),
+        )
+        .unwrap();
+    let mut socket = hub.serve(false, Some(7), "real", 3).await;
+    socket
+        .send(Message::Text(
+            json!({"op":"data","id":1,"t":200,
+        "values":[{"tag":crate::recorder_hub_fixture::NUMBER,"v":42,"q":"good","t":200}]})
+            .to_string()
+            .into(),
+        ))
+        .await
+        .unwrap();
+    let mut frames = supervisor.recording_watch();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if frames
+                .borrow_and_update()
+                .progress
+                .as_ref()
+                .is_some_and(|p| p.counters.committed_ticks >= 1)
+            {
+                break;
+            }
+            frames.changed().await.unwrap();
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(supervisor.state().recording.phase, RecordingPhase::Running);
+    let owner = RecordingOperationsOwner::try_new(supervisor, context(), run).unwrap();
+    let scope = registry_scope("epoch-running-pause");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let mut change_value = change("running-pause").as_value().clone();
+    change_value["apply"]["expectedAppliedRevision"] = json!(1);
+    change_value["apply"]["expectedMappingRevision"] = json!(1);
+    change_value["apply"]["expectedRetentionAppliedRevision"] = json!(1);
+    change_value["apply"]["desired"] = json!({
+        "version":1,"kind":"recordingPlan","planId":"desired","revision":1,"enabled":true,
+        "group":{"groupId":"group","hubRef":"hub","periodMs":1000,
+            "members":[{"memberId":"member:0","externalName":crate::recorder_hub_fixture::NUMBER,"valueType":"number"}]}
+    });
+    let change = RecordingChangeRequest::from_value(change_value).unwrap();
+    let workflow = root.reserve_workflow(&session, change.clone()).unwrap();
+    let first = root
+        .issue_preflight_lease(
+            &session,
+            &workflow,
+            registry_lease(
+                &scope,
+                "preflight-lease",
+                "preflight-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let preflight = match root
+        .register_preflight(
+            &session,
+            &workflow,
+            registry_preflight(&scope, &change, "preflight-admission", &first),
+        )
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new preflight"),
+    };
+    let accepted = root.dispatch_preflight(&session, &preflight).unwrap();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if root
+                .preflight_completion(&session, &preflight)
+                .unwrap()
+                .is_some()
+            {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        root.preflight_completion(&session, &preflight)
+            .unwrap()
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "candidate"
+    );
+    let change_ref = accepted.as_value()["outcome"]["handle"]["changeRef"]
+        .as_str()
+        .unwrap();
+    let lease = root
+        .issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "pause:running",
+            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 100),
+        )
+        .unwrap();
+    let admission = registry_pause_admission(
+        &scope,
+        &change,
+        "pause-admission",
+        &lease,
+        change_ref,
+        "pause:running",
+    );
+    let ticket = match root
+        .register_pause_join(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        PauseRegistration::Registered(ticket) => ticket,
+        _ => panic!("new pause"),
+    };
+    let reply = root.dispatch_pause_join(&session, &ticket).unwrap();
+    assert_eq!(reply.as_value()["outcome"]["kind"], "accepted");
+    tokio::time::timeout(Duration::from_secs(5), gate.entered.notified())
+        .await
+        .unwrap();
+    assert!(root.test_native_client().state().phase == OperationsPhase::Pausing);
+    assert!(frames.borrow().stop_requested);
+    assert!(root.pause_completion(&session, &ticket).unwrap().is_none());
+    assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+    tokio::time::sleep(Duration::from_millis(130)).await;
+    assert_eq!(root.dispatch_pause_join(&session, &ticket).unwrap(), reply);
+    assert!(root.pause_completion(&session, &ticket).unwrap().is_none());
+    assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+    drop(release);
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if root.pause_completion(&session, &ticket).unwrap().is_some() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let completion = root.pause_completion(&session, &ticket).unwrap().unwrap();
+    assert_eq!(completion.as_value()["outcome"]["kind"], "paused");
+    assert_eq!(completion.as_value()["quiescence"], "confirmed");
+    assert_eq!(completion.as_value()["recoveryRequired"], false);
+    crate::recorder_hub_fixture::closed(&mut socket).await;
 }
 
 #[tokio::test]
