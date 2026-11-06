@@ -177,6 +177,10 @@ pub struct RecordingOperationsClient {
     shared: Arc<Shared>,
 }
 impl RecordingOperationsOwner {
+    pub(crate) fn registry_context(&self) -> &RecordingOperationsContext {
+        &self.shared.context
+    }
+
     pub fn try_new(
         supervisor: RecordingSupervisor,
         context: RecordingOperationsContext,

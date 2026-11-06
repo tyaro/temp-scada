@@ -829,3 +829,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 ## 記録registryの純粋予算kernel（C4）
 
 `scada-runtime/src/recording_registry/kernel/budget.rs`は検証済みAdmission一件のrequest／受付証拠reply／不変元reply／completionの生存期間上界をbytes・nodes・depthで計算する。`recording_registry_model.rs`は計測不正と容量不足を既存`ModelError`へ写し、`admission.rs`、`workflow/escrow.rs`、`projection.rs`が同じkernelを使う。simulationの時計・principal・判定・completionはkernelへ入れず、native受付資格も生成しない。既存`recording_registry_model`の境界・共有scenarioとRust全体試験で意味を保つ。
+
+## 記録registryの実時計lease（C4、native root）
+
+`scada-runtime/src/recording_registry/lease.rs`の非Clone `RecordingRegistryRoot`は排他的seed、固定scope、実`Instant`の期限、role別の有限lease台帳を保持する。factoryはnative ownerのcontext全文を照合し、失敗時にseedを返す。`recording_host/supervisor/operations/mod.rs`のcrate内context読取はこの照合専用。sessionはroot identity・scope・principal・roleを束縛するopaque capabilityで、issuerはRust unit testだけに置く。lease再取得は元replyと期限を保持し、別principal／scope／epoch／roleや同ID別本文を拒否する。handoff成功は新規lease受付を閉じる。`operations/tests.rs`で実ownerを使い、失敗時返却、再取得、期限後の同時枠、role、異rootを確認する。native admissionと製品session発行は後続。
