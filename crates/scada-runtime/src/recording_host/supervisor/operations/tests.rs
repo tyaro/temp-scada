@@ -1498,6 +1498,17 @@ async fn registry_pause_admission_dispatches_one_native_join_and_keeps_original_
     gate.entered.notified().await;
     assert_eq!(client.state().phase, OperationsPhase::Pausing);
     assert!(root.pause_completion(&session, &ticket).unwrap().is_none());
+    let apply_request = registry_lease(&scope, "apply-lease", "apply-admission", "mutation", 100);
+    assert!(matches!(
+        root.issue_apply_lease(
+            &session,
+            &workflow,
+            &ticket,
+            "apply:operation",
+            apply_request.clone()
+        ),
+        Err(LeaseError::Busy)
+    ));
     assert_eq!(root.dispatch_pause_join(&session, &ticket).unwrap(), reply);
     assert_eq!(
         root.pause_reply(&session, &ticket).unwrap(),
@@ -1520,6 +1531,171 @@ async fn registry_pause_admission_dispatches_one_native_join_and_keeps_original_
     assert_eq!(completion.as_value()["recoveryRequired"], false);
     assert_eq!(root.pause_reply(&session, &ticket).unwrap(), Some(reply));
     assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    let native_preflight_id = accepted.as_value()["outcome"]["handle"]["operationRef"]
+        .as_str()
+        .unwrap();
+    for collision in [native_preflight_id, "pause:dispatch"] {
+        assert!(matches!(
+            root.issue_apply_lease(
+                &session,
+                &workflow,
+                &ticket,
+                collision,
+                apply_request.clone()
+            ),
+            Err(LeaseError::ProtocolViolation)
+        ));
+    }
+    let oversized = "x".repeat(65);
+    assert!(matches!(
+        root.issue_apply_lease(
+            &session,
+            &workflow,
+            &ticket,
+            &oversized,
+            apply_request.clone()
+        ),
+        Err(LeaseError::InvalidInput)
+    ));
+    assert!(matches!(
+        root.issue_apply_lease(
+            &bob,
+            &workflow,
+            &ticket,
+            "apply:operation",
+            apply_request.clone()
+        ),
+        Err(LeaseError::Forbidden)
+    ));
+    let (
+        mut other_root,
+        other_session,
+        other_workflow,
+        other_preflight,
+        other_admission,
+        _other_dir,
+    ) = ready_pause_registry("other-root-apply", 1000).await;
+    let other_ticket = match other_root
+        .register_pause_join(
+            &other_session,
+            &other_workflow,
+            &other_preflight,
+            other_admission,
+        )
+        .unwrap()
+    {
+        PauseRegistration::Registered(ticket) => ticket,
+        _ => panic!("other pause"),
+    };
+    assert!(matches!(
+        root.issue_apply_lease(
+            &session,
+            &workflow,
+            &other_ticket,
+            "apply:operation",
+            apply_request.clone()
+        ),
+        Err(LeaseError::Forbidden)
+    ));
+    let foreign = registry_scope("foreign-apply-epoch");
+    for id in ["pause-lease", "unused-foreign-lease"] {
+        assert!(matches!(
+            root.issue_apply_lease(
+                &session,
+                &workflow,
+                &ticket,
+                "apply:operation",
+                registry_lease(&foreign, id, "foreign-admission", "mutation", 100)
+            ),
+            Err(LeaseError::Forbidden)
+        ));
+    }
+    for reused in [
+        registry_lease(&scope, "pause-lease", "new-admission", "mutation", 100),
+        registry_lease(&scope, "new-lease", "pause-admission", "mutation", 100),
+        registry_lease(
+            &scope,
+            "preflight-lease",
+            "newer-admission",
+            "mutation",
+            100,
+        ),
+        registry_lease(
+            &scope,
+            "newer-lease",
+            "preflight-admission",
+            "mutation",
+            100,
+        ),
+    ] {
+        assert!(matches!(
+            root.issue_apply_lease(&session, &workflow, &ticket, "apply:operation", reused),
+            Err(LeaseError::ProtocolViolation)
+        ));
+    }
+    assert_eq!(root.test_lease_consumed("apply-lease"), None);
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    root.test_set_lease_limit(LeaseRole::Mutation, 2);
+    assert!(matches!(
+        root.issue_apply_lease(
+            &session,
+            &workflow,
+            &ticket,
+            "apply:operation",
+            apply_request.clone()
+        ),
+        Err(LeaseError::Capacity)
+    ));
+    assert_eq!(root.test_lease_consumed("apply-lease"), None);
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    root.test_set_lease_limit(LeaseRole::Mutation, 3);
+    let apply_reply = root
+        .issue_apply_lease(
+            &session,
+            &workflow,
+            &ticket,
+            "apply:operation",
+            apply_request.clone(),
+        )
+        .unwrap();
+    assert_eq!(root.test_lease_consumed("apply-lease"), Some(false));
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    assert_eq!(root.test_reserved_revisions(), 11);
+    assert_eq!(client.state().phase, OperationsPhase::Paused);
+    assert!(client.state().last_applied.is_none());
+    tokio::time::sleep(Duration::from_millis(110)).await;
+    assert_eq!(
+        root.issue_apply_lease(
+            &session,
+            &workflow,
+            &ticket,
+            "apply:operation",
+            apply_request.clone()
+        )
+        .unwrap(),
+        apply_reply
+    );
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    assert!(matches!(
+        root.issue_apply_lease(
+            &session,
+            &workflow,
+            &ticket,
+            "other:apply",
+            apply_request.clone()
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    assert!(matches!(
+        root.issue_apply_lease(
+            &session,
+            &workflow,
+            &ticket,
+            "apply:operation",
+            registry_lease(&scope, "other-lease", "other-admission", "mutation", 100)
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
 }
 
 #[tokio::test]
@@ -1590,6 +1766,17 @@ async fn registry_pause_admission_keeps_unknown_and_real_handle_after_projection
     let completion = root.pause_completion(&session, &ticket).unwrap().unwrap();
     assert_eq!(completion.as_value()["outcome"]["kind"], "paused");
     assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+    let scope = registry_scope("epoch-pause-unknown");
+    assert!(matches!(
+        root.issue_apply_lease(
+            &session,
+            &workflow,
+            &ticket,
+            "apply:unknown",
+            registry_lease(&scope, "apply-lease", "apply-admission", "mutation", 1000)
+        ),
+        Err(LeaseError::Busy)
+    ));
 
     let (mut root, session, workflow, preflight, admission, _dir) =
         ready_pause_registry("epoch-pause-after-call-panic", 1000).await;
@@ -1783,6 +1970,17 @@ async fn registry_pause_join_waits_for_running_worker_cleanup_after_lease_expiry
     assert!(root.test_native_client().state().phase == OperationsPhase::Pausing);
     assert!(frames.borrow().stop_requested);
     assert!(root.pause_completion(&session, &ticket).unwrap().is_none());
+    let apply_request = registry_lease(&scope, "apply-lease", "apply-admission", "mutation", 1000);
+    assert!(matches!(
+        root.issue_apply_lease(
+            &session,
+            &workflow,
+            &ticket,
+            "apply:running",
+            apply_request.clone()
+        ),
+        Err(LeaseError::Busy)
+    ));
     assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
     tokio::time::sleep(Duration::from_millis(130)).await;
     assert_eq!(root.dispatch_pause_join(&session, &ticket).unwrap(), reply);
@@ -1803,6 +2001,31 @@ async fn registry_pause_join_waits_for_running_worker_cleanup_after_lease_expiry
     assert_eq!(completion.as_value()["outcome"]["kind"], "paused");
     assert_eq!(completion.as_value()["quiescence"], "confirmed");
     assert_eq!(completion.as_value()["recoveryRequired"], false);
+    let database = rusqlite::Connection::open_with_flags(
+        directory.0.join("store.sqlite3"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    let applied_revision = || {
+        database
+            .query_row(
+                "SELECT applied_revision FROM recording_plan_state WHERE singleton=1",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .unwrap()
+    };
+    let before_apply_lease = applied_revision();
+    let bytes = root.test_used_bytes(LeaseRole::Mutation);
+    root.issue_apply_lease(&session, &workflow, &ticket, "apply:running", apply_request)
+        .unwrap();
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    assert_eq!(applied_revision(), before_apply_lease);
+    assert_eq!(
+        root.test_native_client().state().phase,
+        OperationsPhase::Paused
+    );
+    assert!(root.test_native_client().state().last_applied.is_none());
     crate::recorder_hub_fixture::closed(&mut socket).await;
 }
 
@@ -2120,12 +2343,76 @@ async fn registry_pause_lease_requires_recovered_acceptance_and_real_candidate()
         inspection.as_value()["outcome"]["reply"]["outcome"]["kind"],
         "accepted"
     );
-    root.issue_pause_join_lease(
+    let pause_lease = root
+        .issue_pause_join_lease(
+            &mutation,
+            &workflow,
+            &preflight,
+            "recovered:pause",
+            pause_request,
+        )
+        .unwrap();
+    assert_eq!(
+        root.preflight_reply(&mutation, &preflight).unwrap(),
+        Some(unknown.clone())
+    );
+    assert_eq!(
+        root.test_native_client().state().phase,
+        OperationsPhase::Candidate
+    );
+    let change_ref = inspection.as_value()["outcome"]["reply"]["outcome"]["handle"]["changeRef"]
+        .as_str()
+        .unwrap();
+    let admission = registry_pause_admission(
+        &scope,
+        &change,
+        "recovered-pause",
+        &pause_lease,
+        change_ref,
+        "recovered:pause",
+    );
+    let pause_ticket = match root
+        .register_pause_join(&mutation, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        PauseRegistration::Registered(ticket) => ticket,
+        _ => panic!("new pause"),
+    };
+    assert_eq!(
+        root.dispatch_pause_join(&mutation, &pause_ticket)
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "accepted"
+    );
+    for _ in 0..100 {
+        if root
+            .pause_completion(&mutation, &pause_ticket)
+            .unwrap()
+            .is_some()
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(
+        root.pause_completion(&mutation, &pause_ticket)
+            .unwrap()
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "paused"
+    );
+    root.issue_apply_lease(
         &mutation,
         &workflow,
-        &preflight,
-        "recovered:pause",
-        pause_request,
+        &pause_ticket,
+        "recovered:apply",
+        registry_lease(
+            &scope,
+            "recovered-apply-lease",
+            "recovered-apply",
+            "mutation",
+            1000,
+        ),
     )
     .unwrap();
     assert_eq!(
@@ -2134,7 +2421,7 @@ async fn registry_pause_lease_requires_recovered_acceptance_and_real_candidate()
     );
     assert_eq!(
         root.test_native_client().state().phase,
-        OperationsPhase::Candidate
+        OperationsPhase::Paused
     );
 }
 

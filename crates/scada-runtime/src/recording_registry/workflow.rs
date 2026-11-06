@@ -1,5 +1,5 @@
 //! Initial native workflow reservation, preflight registration and one-time dispatch.
-use super::pause::PauseLease;
+use super::{apply::ApplyLease, pause::PauseLease};
 use super::{
     kernel::{
         budget::{BudgetError, LifetimeBudget},
@@ -50,6 +50,7 @@ pub(super) struct WorkflowRecord {
     active_attempt: Option<String>,
     pub(super) registered: Option<RegisteredPreflight>,
     pub(super) pause_lease: Option<PauseLease>,
+    pub(super) apply_lease: Option<ApplyLease>,
 }
 
 impl WorkflowRecord {
@@ -229,6 +230,7 @@ impl RecordingRegistryRoot {
             active_attempt: None,
             registered: None,
             pause_lease: None,
+            apply_lease: None,
         });
         Ok(ticket)
     }
