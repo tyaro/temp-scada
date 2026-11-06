@@ -1,5 +1,5 @@
 //! Initial native workflow reservation, preflight registration and one-time dispatch.
-use super::{apply::ApplyLease, pause::PauseLease};
+use super::{apply::ApplyLease, discard::DiscardLease, pause::PauseLease};
 use super::{
     kernel::{
         budget::{BudgetError, LifetimeBudget},
@@ -51,13 +51,20 @@ pub(super) struct WorkflowRecord {
     pub(super) registered: Option<RegisteredPreflight>,
     pub(super) pause_lease: Option<PauseLease>,
     pub(super) apply_lease: Option<ApplyLease>,
+    pub(super) discard_lease: Option<DiscardLease>,
+    pub(super) released_unused_stages: bool,
 }
 
 impl WorkflowRecord {
     pub(super) fn has_uncertain_dispatch(&self) -> bool {
-        self.registered
+        (self
+            .registered
             .as_ref()
             .is_some_and(|record| record.is_uncertain())
+            && !self
+                .discard_lease
+                .as_ref()
+                .is_some_and(DiscardLease::is_completed))
             || self
                 .pause_lease
                 .as_ref()
@@ -66,6 +73,10 @@ impl WorkflowRecord {
                 .apply_lease
                 .as_ref()
                 .is_some_and(ApplyLease::is_uncertain)
+            || self
+                .discard_lease
+                .as_ref()
+                .is_some_and(DiscardLease::is_uncertain)
     }
 }
 
@@ -134,6 +145,21 @@ pub enum PreflightRegistration {
 }
 
 impl RecordingRegistryRoot {
+    #[cfg(test)]
+    pub(crate) fn test_preflight_ticket(
+        &self,
+        session: &RecordingRegistrySession,
+        workflow: &RecordingRegistryWorkflowTicket,
+    ) -> RecordingRegistryAdmissionTicket {
+        self.workflow_record(session, workflow)
+            .unwrap()
+            .registered
+            .as_ref()
+            .unwrap()
+            .ticket
+            .clone()
+    }
+
     pub(super) fn workflow_record(
         &self,
         session: &RecordingRegistrySession,
@@ -235,6 +261,8 @@ impl RecordingRegistryRoot {
             registered: None,
             pause_lease: None,
             apply_lease: None,
+            discard_lease: None,
+            released_unused_stages: false,
         });
         Ok(ticket)
     }
