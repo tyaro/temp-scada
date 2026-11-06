@@ -6,7 +6,7 @@
 
 [service.ts](../../../apps/banto-scada/src/lib/recording-operations/service.ts)のd4b serviceはpreflight／pauseJoin／apply／reconcileが同期handleを返し、discardも同期完了する。RecordingOperationRejectedは当該呼出が何もdispatchしなかった証明である。[native owner](../../../crates/scada-runtime/src/recording_host/supervisor/operations/mod.rs)はRust HandleとTokio runtimeを前提とし、[reconciliation](../../../crates/scada-runtime/src/recording_host/supervisor/operations/reconciliation/mod.rs)はread確認不能をDTOとは別のOwnerErrorで返す。
 
-ViteとRust libraryの間にはTauri host、SCADA server、同期FFI、IPCは存在しない。[P3b保留](transport-boundary.md)を維持する。一般のTauri invoke／HTTP／IPCを同期関数のように呼ぶことはできず、Promiseを同期handleへ包むだけでは「未受付」と「native受理後の応答喪失」を区別できない。
+C0〜C3でTauriの**読取専用**埋込hostと非同期command／eventを接続した。記録操作のRust libraryにはnative ownerがあるが、それを保持する製品composition root、SCADA server、同期FFI、mutation IPCはまだない。[P3b](transport-boundary.md)の記録操作・認可境界は保留する。一般のTauri invoke／HTTP／IPCを同期関数のように呼ぶことはできず、Promiseを同期handleへ包むだけでは「未受付」と「native受理後の応答喪失」を区別できない。
 
 したがって次工程では**別の非同期admission契約**を採用する。既存同期serviceの意味は変更せず、非同期境界を別interfaceとして定義・検証する。host製品の選択は行わない。同期FFI portを暗黙の既存機能とせず、将来それを採用する場合も別途host選定・寿命・安全性のレビューを必要とする。
 
