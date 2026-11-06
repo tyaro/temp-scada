@@ -1,4 +1,5 @@
 //! Initial native workflow reservation, preflight registration and one-time dispatch.
+use super::pause::PauseLease;
 use super::{
     kernel::{
         budget::{BudgetError, LifetimeBudget},
@@ -48,6 +49,7 @@ pub(super) struct WorkflowRecord {
     attempts: BTreeMap<String, PreflightAttempt>,
     active_attempt: Option<String>,
     pub(super) registered: Option<RegisteredPreflight>,
+    pub(super) pause_lease: Option<PauseLease>,
 }
 
 impl WorkflowRecord {
@@ -123,7 +125,7 @@ pub enum PreflightRegistration {
 }
 
 impl RecordingRegistryRoot {
-    fn workflow_record(
+    pub(super) fn workflow_record(
         &self,
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryWorkflowTicket,
@@ -222,6 +224,7 @@ impl RecordingRegistryRoot {
             attempts: BTreeMap::new(),
             active_attempt: None,
             registered: None,
+            pause_lease: None,
         });
         Ok(ticket)
     }
@@ -456,7 +459,7 @@ impl RecordingRegistryRoot {
         Ok(PreflightRegistration::Registered(ticket))
     }
 
-    fn registered_preflight(
+    pub(super) fn registered_preflight(
         &self,
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryAdmissionTicket,

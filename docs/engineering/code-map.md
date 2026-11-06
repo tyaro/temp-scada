@@ -844,4 +844,8 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 ## 記録registryの実preflight受付照会（C4）
 
-`recording_registry/inspection.rs`はread roleの同一root・principal・workflowと元Admission全文を照合し、保存済み実handleから現在の受付証拠を投影する。同じinspection IDの初回replyは固定し、新しいIDだけが後着証拠を読む。元dispatcher replyの`unknown`は書き換えない。Accepted証拠はread容量の確定後に登録recordへ保存し、後の投影障害でも後退させない。照会request＋replyを2MiB read枠へ原子課金し、最大4,096件に制限する。`workflow.rs`のAccepted投影helperはnative初回返信と受付照会で共有する。`operations/tests.rs`は未登録NotFound、登録後Unknown、実handle Accepted、panic後の証拠分離、容量exact／1不足、replayと権限を確認する。pause/join資格と製品session issuerは後続。
+`recording_registry/inspection.rs`はread roleの同一root・principal・workflowと元Admission全文を照合し、保存済み実handleから現在の受付証拠を投影する。同じinspection IDの初回replyは固定し、新しいIDだけが後着証拠を読む。元dispatcher replyの`unknown`は書き換えない。Accepted証拠はread容量の確定後に登録recordへ保存し、後の投影障害でも後退させない。照会request＋replyを2MiB read枠へ原子課金し、最大4,096件に制限する。`workflow.rs`のAccepted投影helperはnative初回返信と受付照会で共有する。`operations/tests.rs`は未登録NotFound、登録後Unknown、実handle Accepted、panic後の証拠分離、容量exact／1不足、replayと権限を確認する。pause/join leaseの資格確認は次の区切り、製品session issuerは後続。
+
+## 記録registryの初回pause/join lease（C4）
+
+`recording_registry/pause.rs`は元preflightのAccepted証拠、保存済み実handleのCandidate完了、confirmed quiescence、回復不要、元request全文を照合してから、予約済みpause/join leaseを一件発行する。callerのoperation IDをworkflowへ固定し、preflightと同じleaseRequestId／admissionIdを拒否する。同一pause要求の再取得は元replyと期限を保つ。`operations/tests.rs`は実Candidate・受付照会で回収したAccepted・未完了・容量境界・ID再利用・別principalを確認する。native pause実行と元pause Admission登録は後続。

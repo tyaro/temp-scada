@@ -423,7 +423,7 @@ impl RecordingRegistryRoot {
     }
 }
 
-fn same_scope(expected: &Value, actual: &Value) -> bool {
+pub(super) fn same_scope(expected: &Value, actual: &Value) -> bool {
     if expected["ownerRef"] != actual["ownerRef"] || expected["ownerEpoch"] != actual["ownerEpoch"]
     {
         return false;
