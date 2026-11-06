@@ -3,9 +3,10 @@ use crate::recording_host::retention::tests::control;
 use crate::recording_host::{RecordingOptions, RecordingPhase, RecordingPlanTurnIntent};
 use crate::recording_registry::{
     ApplyDispatchFault, ApplyRegistration, LeaseError, LeaseRole, PauseDispatchFault,
-    PauseRegistration, PreflightRegistration, RecordingRegistryAdmissionTicket,
-    RecordingRegistryOwnerSeed, RecordingRegistryPauseTicket, RecordingRegistryRoot,
-    RecordingRegistrySession, RecordingRegistryWorkflowTicket, TestDispatchFault,
+    PauseRegistration, PreflightRegistration, ReconciliationRegistration,
+    RecordingRegistryAdmissionTicket, RecordingRegistryOwnerSeed, RecordingRegistryPauseTicket,
+    RecordingRegistryRoot, RecordingRegistrySession, RecordingRegistryWorkflowTicket,
+    TestDispatchFault,
 };
 use futures_util::SinkExt;
 use scada_historian::store::{Source, SqliteStore, StoreIdentity};
@@ -183,6 +184,27 @@ fn registry_apply_admission(
         "action":{"kind":"apply", "changeRef":change_ref,
             "operation":{"version":1,"kind":"recordingOperationRequest",
                 "operationId":operation_id,"stage":"apply","change":change.as_value()}}
+    }))
+    .unwrap()
+}
+
+fn registry_reconciliation_admission(
+    scope: &Value,
+    apply: &RecordingAdmissionRequest,
+    admission: &str,
+    lease: &RecordingWireLeaseReply,
+    change_ref: &str,
+    operation_ref: &str,
+) -> RecordingAdmissionRequest {
+    RecordingAdmissionRequest::from_value(json!({
+        "version":1, "kind":"recordingAdmissionRequest", "ownerRef":scope["ownerRef"],
+        "admissionId":admission, "context":scope["context"],
+        "deadlineLeaseRef":lease.as_value()["outcome"]["deadlineLeaseRef"],
+        "action":{"kind":"reconcile", "changeRef":change_ref,
+            "operationRef":operation_ref,
+            "reconciliation":{"version":1,"kind":"recordingReconciliationRequest",
+                "reconciliationId":"read:original-apply",
+                "operation":apply.as_value()["action"]["operation"]}}
     }))
     .unwrap()
 }
@@ -3717,4 +3739,570 @@ async fn state_poison_during_a_loan_closes_the_owner_and_preserves_a_finite_comp
     assert_eq!(result.as_value()["recoveryRequired"], true);
     assert!(c.state().closed);
     assert!(c.state().recovery_required);
+}
+
+#[tokio::test]
+async fn registry_reconciliation_reads_only_the_saved_original_apply_once() {
+    for (epoch, fault, outcome) in [
+        (
+            "epoch-reconcile-found",
+            driver::TestFault::LostResponse,
+            "receiptFound",
+        ),
+        (
+            "epoch-reconcile-missing",
+            driver::TestFault::Full,
+            "notFound",
+        ),
+    ] {
+        let (mut root, mutation, workflow, pause, apply, _dir) =
+            ready_apply_registry(epoch, 1000).await;
+        let client = root.test_native_client();
+        let apply_ticket = match root
+            .register_apply(&mutation, &workflow, &pause, apply.clone())
+            .unwrap()
+        {
+            ApplyRegistration::Registered(ticket) => ticket,
+            _ => panic!("new apply"),
+        };
+        *client.shared.fault.lock().unwrap() = Some(fault);
+        let original_reply = root.dispatch_apply(&mutation, &apply_ticket).unwrap();
+        let original_completion = tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if let Some(value) = root.apply_completion(&mutation, &apply_ticket).unwrap() {
+                    break value;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(original_completion.as_value()["outcome"]["kind"], "failed");
+        let read = root.test_session("alice", LeaseRole::Reconciliation);
+        let scope = registry_scope(epoch);
+        let lease = root
+            .issue_lease(
+                &read,
+                registry_lease(
+                    &scope,
+                    "read-lease",
+                    "read-admission",
+                    "reconciliation",
+                    1000,
+                ),
+            )
+            .unwrap();
+        let admission = registry_reconciliation_admission(
+            &scope,
+            &apply,
+            "read-admission",
+            &lease,
+            original_reply.as_value()["outcome"]["handle"]["changeRef"]
+                .as_str()
+                .unwrap(),
+            original_reply.as_value()["outcome"]["handle"]["operationRef"]
+                .as_str()
+                .unwrap(),
+        );
+        let foreign = root.test_session("bob", LeaseRole::Reconciliation);
+        assert!(matches!(
+            root.register_reconciliation(&foreign, &workflow, &apply_ticket, admission.clone()),
+            Err(LeaseError::Forbidden)
+        ));
+        let mut wrong = admission.as_value().clone();
+        wrong["action"]["operationRef"] = json!("other-apply");
+        assert!(matches!(
+            root.register_reconciliation(
+                &read,
+                &workflow,
+                &apply_ticket,
+                RecordingAdmissionRequest::from_value(wrong).unwrap()
+            ),
+            Err(LeaseError::ProtocolViolation)
+        ));
+        let ticket = match root
+            .register_reconciliation(&read, &workflow, &apply_ticket, admission.clone())
+            .unwrap()
+        {
+            ReconciliationRegistration::Registered(ticket) => ticket,
+            _ => panic!("new reconciliation"),
+        };
+        assert!(matches!(
+            root.register_reconciliation(&read, &workflow, &apply_ticket, admission)
+                .unwrap(),
+            ReconciliationRegistration::Existing(_)
+        ));
+        let accepted = root.dispatch_reconciliation(&read, &ticket).unwrap();
+        assert_eq!(accepted.as_value()["outcome"]["kind"], "accepted");
+        let delivery = tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if let Some(value) = root.reconciliation_delivery(&read, &ticket).unwrap() {
+                    break value;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(delivery.as_value()["outcome"]["kind"], "result");
+        assert_eq!(
+            delivery.as_value()["outcome"]["result"]["outcome"]["kind"],
+            outcome
+        );
+        assert_eq!(
+            delivery.as_value()["outcome"]["result"]["recoveryRequired"],
+            true
+        );
+        assert_eq!(client.shared.reconcile_calls.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            root.dispatch_reconciliation(&read, &ticket).unwrap(),
+            accepted
+        );
+        assert_eq!(
+            root.reconciliation_reply(&read, &ticket).unwrap(),
+            Some(accepted)
+        );
+        assert_eq!(
+            root.apply_reply(&mutation, &apply_ticket).unwrap(),
+            Some(original_reply)
+        );
+        assert_eq!(
+            root.apply_completion(&mutation, &apply_ticket)
+                .unwrap()
+                .unwrap(),
+            original_completion
+        );
+        assert_eq!(client.shared.reconcile_calls.load(Ordering::Relaxed), 1);
+        assert!(client.state().recovery_required);
+    }
+}
+
+#[tokio::test]
+async fn registry_reconciliation_expiry_and_one_byte_short_keep_read_lease_unconsumed() {
+    let epoch = "epoch-reconcile-limits";
+    let (mut root, mutation, workflow, pause, apply, _dir) =
+        ready_apply_registry(epoch, 1000).await;
+    let client = root.test_native_client();
+    let apply_ticket = match root
+        .register_apply(&mutation, &workflow, &pause, apply.clone())
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    *client.shared.fault.lock().unwrap() = Some(driver::TestFault::Full);
+    let original_reply = root.dispatch_apply(&mutation, &apply_ticket).unwrap();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while root
+            .apply_completion(&mutation, &apply_ticket)
+            .unwrap()
+            .is_none()
+        {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let scope = registry_scope(epoch);
+    let lease = root
+        .issue_lease(
+            &read,
+            registry_lease(
+                &scope,
+                "read-lease",
+                "read-admission",
+                "reconciliation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let admission = registry_reconciliation_admission(
+        &scope,
+        &apply,
+        "read-admission",
+        &lease,
+        original_reply.as_value()["outcome"]["handle"]["changeRef"]
+            .as_str()
+            .unwrap(),
+        original_reply.as_value()["outcome"]["handle"]["operationRef"]
+            .as_str()
+            .unwrap(),
+    );
+    let before = root.test_used_bytes(LeaseRole::Reconciliation);
+    let needed = crate::recording_registry::kernel::budget::LifetimeBudget::for_request(&admission)
+        .unwrap()
+        .bytes()
+        .unwrap()
+        + crate::recording_registry::kernel::budget::READ_ID_BYTES;
+    root.test_set_byte_limit(LeaseRole::Reconciliation, before + needed - 1);
+    assert!(matches!(
+        root.register_reconciliation(&read, &workflow, &apply_ticket, admission.clone()),
+        Err(LeaseError::Capacity)
+    ));
+    assert_eq!(root.test_lease_consumed("read-lease"), Some(false));
+    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), before);
+    root.test_set_byte_limit(LeaseRole::Reconciliation, before + needed);
+    assert!(matches!(
+        root.register_reconciliation_at(
+            &read,
+            &workflow,
+            &apply_ticket,
+            admission.clone(),
+            Instant::now() + Duration::from_secs(2)
+        ),
+        Err(LeaseError::Expired)
+    ));
+    assert_eq!(root.test_lease_consumed("read-lease"), Some(false));
+    assert_eq!(client.shared.reconcile_calls.load(Ordering::Relaxed), 0);
+    assert!(matches!(
+        root.register_reconciliation(&read, &workflow, &apply_ticket, admission)
+            .unwrap(),
+        ReconciliationRegistration::Registered(_)
+    ));
+}
+
+#[tokio::test]
+async fn registry_reconciliation_uses_saved_handle_after_original_reply_projection_failure() {
+    let epoch = "epoch-reconcile-unknown-apply";
+    let (mut root, mutation, workflow, pause, apply, _dir) =
+        ready_apply_registry(epoch, 1000).await;
+    let client = root.test_native_client();
+    let apply_ticket = match root
+        .register_apply(&mutation, &workflow, &pause, apply.clone())
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    root.test_set_apply_dispatch_fault(
+        &mutation,
+        &apply_ticket,
+        ApplyDispatchFault::ProjectionPanic,
+    );
+    *client.shared.fault.lock().unwrap() = Some(driver::TestFault::LostResponse);
+    let original_reply = root.dispatch_apply(&mutation, &apply_ticket).unwrap();
+    assert_eq!(original_reply.as_value()["outcome"]["kind"], "unknown");
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while root
+            .apply_completion(&mutation, &apply_ticket)
+            .unwrap()
+            .is_none()
+        {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let scope = registry_scope(epoch);
+    let lease = root
+        .issue_lease(
+            &read,
+            registry_lease(
+                &scope,
+                "read-lease",
+                "read-admission",
+                "reconciliation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let admission = registry_reconciliation_admission(
+        &scope,
+        &apply,
+        "read-admission",
+        &lease,
+        apply.as_value()["action"]["changeRef"].as_str().unwrap(),
+        apply.as_value()["action"]["operation"]["operationId"]
+            .as_str()
+            .unwrap(),
+    );
+    let ticket = match root
+        .register_reconciliation(&read, &workflow, &apply_ticket, admission)
+        .unwrap()
+    {
+        ReconciliationRegistration::Registered(ticket) => ticket,
+        _ => panic!("new reconciliation"),
+    };
+    assert_eq!(
+        root.dispatch_reconciliation(&read, &ticket)
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "accepted"
+    );
+    let delivery = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Some(value) = root.reconciliation_delivery(&read, &ticket).unwrap() {
+                break value;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        delivery.as_value()["outcome"]["result"]["outcome"]["kind"],
+        "receiptFound"
+    );
+    assert_eq!(
+        root.apply_reply(&mutation, &apply_ticket).unwrap(),
+        Some(original_reply)
+    );
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(client.shared.reconcile_calls.load(Ordering::Relaxed), 1);
+}
+
+#[tokio::test]
+async fn registry_reconciliation_worker_panic_remains_read_uncertain() {
+    let epoch = "epoch-reconcile-worker-panic";
+    let (mut root, mutation, workflow, pause, apply, _dir) =
+        ready_apply_registry(epoch, 1000).await;
+    let client = root.test_native_client();
+    let apply_ticket = match root
+        .register_apply(&mutation, &workflow, &pause, apply.clone())
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    *client.shared.fault.lock().unwrap() = Some(driver::TestFault::Full);
+    let original_reply = root.dispatch_apply(&mutation, &apply_ticket).unwrap();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while root
+            .apply_completion(&mutation, &apply_ticket)
+            .unwrap()
+            .is_none()
+        {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let scope = registry_scope(epoch);
+    let lease = root
+        .issue_lease(
+            &read,
+            registry_lease(
+                &scope,
+                "read-lease",
+                "read-admission",
+                "reconciliation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let admission = registry_reconciliation_admission(
+        &scope,
+        &apply,
+        "read-admission",
+        &lease,
+        original_reply.as_value()["outcome"]["handle"]["changeRef"]
+            .as_str()
+            .unwrap(),
+        original_reply.as_value()["outcome"]["handle"]["operationRef"]
+            .as_str()
+            .unwrap(),
+    );
+    let ticket = match root
+        .register_reconciliation(&read, &workflow, &apply_ticket, admission)
+        .unwrap()
+    {
+        ReconciliationRegistration::Registered(ticket) => ticket,
+        _ => panic!("new reconciliation"),
+    };
+    *client.shared.read_fault.lock().unwrap() =
+        Some(reconciliation::driver::TestFault::WorkerPanic);
+    assert_eq!(
+        root.dispatch_reconciliation(&read, &ticket)
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "accepted"
+    );
+    let delivery = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Some(value) = root.reconciliation_delivery(&read, &ticket).unwrap() {
+                break value;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(delivery.as_value()["outcome"]["kind"], "readUncertain");
+    assert_eq!(
+        root.apply_reply(&mutation, &apply_ticket).unwrap(),
+        Some(original_reply)
+    );
+    assert_eq!(client.shared.reconcile_calls.load(Ordering::Relaxed), 1);
+    assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+}
+
+#[tokio::test]
+async fn registry_reconciliation_accepts_later_native_recovery_latch() {
+    let epoch = "epoch-reconcile-later-latch";
+    let (mut root, mutation, workflow, pause, apply, _dir) =
+        ready_apply_registry(epoch, 1000).await;
+    let client = root.test_native_client();
+    let apply_ticket = match root
+        .register_apply(&mutation, &workflow, &pause, apply.clone())
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    let original_reply = root.dispatch_apply(&mutation, &apply_ticket).unwrap();
+    let completion = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Some(value) = root.apply_completion(&mutation, &apply_ticket).unwrap() {
+                break value;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(completion.as_value()["outcome"]["kind"], "applied");
+    assert_eq!(completion.as_value()["quiescence"], "confirmed");
+    assert_eq!(completion.as_value()["recoveryRequired"], false);
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let scope = registry_scope(epoch);
+    let lease = root
+        .issue_lease(
+            &read,
+            registry_lease(
+                &scope,
+                "read-lease",
+                "read-admission",
+                "reconciliation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let admission = registry_reconciliation_admission(
+        &scope,
+        &apply,
+        "read-admission",
+        &lease,
+        original_reply.as_value()["outcome"]["handle"]["changeRef"]
+            .as_str()
+            .unwrap(),
+        original_reply.as_value()["outcome"]["handle"]["operationRef"]
+            .as_str()
+            .unwrap(),
+    );
+    assert!(matches!(
+        root.register_reconciliation(&read, &workflow, &apply_ticket, admission.clone()),
+        Err(LeaseError::Busy)
+    ));
+    assert_eq!(root.test_lease_consumed("read-lease"), Some(false));
+    client
+        .shared
+        .core
+        .lock()
+        .unwrap()
+        .supervisor
+        .as_mut()
+        .unwrap()
+        .latch_recording_operations_recovery();
+    let ticket = match root
+        .register_reconciliation(&read, &workflow, &apply_ticket, admission)
+        .unwrap()
+    {
+        ReconciliationRegistration::Registered(ticket) => ticket,
+        _ => panic!("new reconciliation"),
+    };
+    assert_eq!(
+        root.dispatch_reconciliation(&read, &ticket)
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "accepted"
+    );
+    let delivery = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Some(value) = root.reconciliation_delivery(&read, &ticket).unwrap() {
+                break value;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        delivery.as_value()["outcome"]["result"]["outcome"]["kind"],
+        "receiptFound"
+    );
+    assert_eq!(
+        root.apply_completion(&mutation, &apply_ticket)
+            .unwrap()
+            .unwrap(),
+        completion
+    );
+    assert_eq!(
+        root.apply_reply(&mutation, &apply_ticket).unwrap(),
+        Some(original_reply)
+    );
+}
+
+#[tokio::test]
+async fn registry_reconciliation_rejects_unfinished_apply_and_foreign_ticket() {
+    let epoch = "epoch-reconcile-source-gate";
+    let (mut root, mutation, workflow, pause, apply, _dir) =
+        ready_apply_registry(epoch, 1000).await;
+    let apply_ticket = match root
+        .register_apply(&mutation, &workflow, &pause, apply.clone())
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let scope = registry_scope(epoch);
+    let lease = root
+        .issue_lease(
+            &read,
+            registry_lease(
+                &scope,
+                "read-lease",
+                "read-admission",
+                "reconciliation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let admission = registry_reconciliation_admission(
+        &scope,
+        &apply,
+        "read-admission",
+        &lease,
+        apply.as_value()["action"]["changeRef"].as_str().unwrap(),
+        apply.as_value()["action"]["operation"]["operationId"]
+            .as_str()
+            .unwrap(),
+    );
+    assert!(matches!(
+        root.register_reconciliation(&read, &workflow, &apply_ticket, admission.clone()),
+        Err(LeaseError::Busy)
+    ));
+    assert_eq!(root.test_lease_consumed("read-lease"), Some(false));
+    let (mut foreign_root, foreign_mutation, foreign_workflow, foreign_pause, foreign_apply, _dir) =
+        ready_apply_registry("epoch-reconcile-foreign", 1000).await;
+    let foreign_ticket = match foreign_root
+        .register_apply(
+            &foreign_mutation,
+            &foreign_workflow,
+            &foreign_pause,
+            foreign_apply,
+        )
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new foreign apply"),
+    };
+    assert!(matches!(
+        root.register_reconciliation(&read, &workflow, &foreign_ticket, admission),
+        Err(LeaseError::Forbidden)
+    ));
+    assert_eq!(root.test_lease_consumed("read-lease"), Some(false));
 }
