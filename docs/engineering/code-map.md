@@ -853,3 +853,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 ## 記録registryの実pause/join配送（C4）
 
 `recording_registry/pause.rs`はpause専用ticketを発行して元Admission全文と実期限を検査し、lease消費と登録を同時に確定する。登録済みticketから保存済み実change handleへ一回だけnative pause/joinを配送し、元受付replyとjoin completionを別に保持する。元`unknown`や`Calling`ではhandoffを止める。`recording_host/worker.rs`の試験専用shutdown gateは停止要求後のcleanup待機を作り、`operations/tests.rs`がRunning recorderの期限超過中もjoinを打ち切らないことをmock Hub・一時SQLiteで確認する。apply／discardと製品session issuerは後続。
+
+## 記録registryの初回apply lease（C4）
+
+`recording_registry/apply.rs`は同一root・principal・scopeとpause専用ticketを照合し、保存済みpreflight Accepted、元pause Accepted、実pause handleの`paused / confirmed / recoveryRequired=false`完了、ownerのPaused状態から初回apply leaseを発行する。preflight／pauseとoperation ID、leaseRequestId／admissionIdの再使用を拒否し、既予約apply枠を移管する。同一全文の再取得は期限後も元replyを返す。`operations/tests.rs`はRunning cleanup待機中の拒否、正常join後の発行、preflight元unknownの独立Accepted回収、pause元unknownの停止、容量と別root／scope／principalを確認する。apply Admission登録とDB書込みは後続。

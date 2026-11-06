@@ -1,5 +1,6 @@
 //! Native recording registry ownership and real-clock lease boundary.
 //! Product session issuance and transport remain unconnected.
+mod apply;
 mod inspection;
 pub(crate) mod kernel;
 mod lease;

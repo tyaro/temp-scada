@@ -28,11 +28,11 @@ use std::{
 pub(super) struct PauseLease {
     admission_id: String,
     lease_id: String,
-    operation_id: String,
-    change_ref: String,
+    pub(super) operation_id: String,
+    pub(super) change_ref: String,
     preflight_operation_id: String,
-    preflight_sequence: u64,
-    registered: Option<RegisteredPause>,
+    pub(super) preflight_sequence: u64,
+    pub(super) registered: Option<RegisteredPause>,
 }
 
 #[derive(Clone)]
@@ -56,17 +56,17 @@ pub enum PauseRegistration {
     Existing(RecordingRegistryPauseTicket),
 }
 
-struct RegisteredPause {
+pub(super) struct RegisteredPause {
     ticket: RecordingRegistryPauseTicket,
-    request: RecordingAdmissionRequest,
+    pub(super) request: RecordingAdmissionRequest,
     budget: LifetimeBudget,
-    state: PauseDispatchState,
-    binding: Option<RecordingOperationHandle>,
+    pub(super) state: PauseDispatchState,
+    pub(super) binding: Option<RecordingOperationHandle>,
     #[cfg(test)]
     fault: Option<PauseDispatchFault>,
 }
 
-enum PauseDispatchState {
+pub(super) enum PauseDispatchState {
     Registered,
     Calling,
     Finished(RecordingAdmissionReply),
@@ -351,7 +351,7 @@ impl RecordingRegistryRoot {
         Ok(PauseRegistration::Registered(ticket))
     }
 
-    fn registered_pause(
+    pub(super) fn registered_pause(
         &self,
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryPauseTicket,
@@ -578,7 +578,7 @@ fn pause_admission_reply(
     .expect("validated admission and reserved reply capacity")
 }
 
-fn matches_pause_operation(
+pub(super) fn matches_pause_operation(
     admission: &RecordingAdmissionRequest,
     actual: &RecordingOperationRequest,
 ) -> bool {
