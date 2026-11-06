@@ -2,17 +2,17 @@ use super::*;
 use crate::recording_host::retention::tests::control;
 use crate::recording_host::{RecordingOptions, RecordingPhase, RecordingPlanTurnIntent};
 use crate::recording_registry::{
-    ApplyDispatchFault, ApplyRegistration, LeaseError, LeaseRole, PauseDispatchFault,
-    PauseRegistration, PreflightRegistration, ReconciliationRegistration,
-    RecordingRegistryAdmissionTicket, RecordingRegistryOwnerSeed, RecordingRegistryPauseTicket,
-    RecordingRegistryRoot, RecordingRegistrySession, RecordingRegistryWorkflowTicket,
-    TestDispatchFault,
+    ApplyDispatchFault, ApplyRegistration, DiscardDispatchFault, DiscardRegistration, LeaseError,
+    LeaseRole, PauseDispatchFault, PauseRegistration, PreflightRegistration,
+    ReconciliationRegistration, RecordingRegistryAdmissionTicket, RecordingRegistryOwnerSeed,
+    RecordingRegistryPauseTicket, RecordingRegistryRoot, RecordingRegistrySession,
+    RecordingRegistryWorkflowTicket, TestDispatchFault,
 };
 use futures_util::SinkExt;
 use scada_historian::store::{Source, SqliteStore, StoreIdentity};
 use scada_model::recording_admission::{
     RecordingAdmissionInspectionReply, RecordingAdmissionInspectionRequest,
-    RecordingAdmissionRequest,
+    RecordingAdmissionReply, RecordingAdmissionRequest,
 };
 use scada_model::recording_wire::{RecordingWireLeaseReply, RecordingWireLeaseRequest};
 use serde_json::{json, Value};
@@ -209,6 +209,22 @@ fn registry_reconciliation_admission(
     .unwrap()
 }
 
+fn registry_discard_admission(
+    scope: &Value,
+    change: &RecordingChangeRequest,
+    admission: &str,
+    lease: &RecordingWireLeaseReply,
+    change_ref: &str,
+) -> RecordingAdmissionRequest {
+    RecordingAdmissionRequest::from_value(json!({
+        "version":1, "kind":"recordingAdmissionRequest", "ownerRef":scope["ownerRef"],
+        "admissionId":admission, "context":scope["context"],
+        "deadlineLeaseRef":lease.as_value()["outcome"]["deadlineLeaseRef"],
+        "action":{"kind":"discard", "changeRef":change_ref, "change":change.as_value()}
+    }))
+    .unwrap()
+}
+
 async fn ready_pause_registry(
     epoch: &str,
     pause_budget_ms: u64,
@@ -300,6 +316,73 @@ async fn ready_pause_registry(
         "pause:ready",
     );
     (root, session, workflow, preflight, admission, dir)
+}
+
+async fn ready_discard_candidate_registry(
+    epoch: &str,
+) -> (
+    RecordingRegistryRoot,
+    RecordingRegistrySession,
+    RecordingRegistryWorkflowTicket,
+    RecordingRegistryAdmissionTicket,
+    RecordingAdmissionReply,
+    crate::recording_host::retention::tests::Directory,
+) {
+    let (owner, dir) = setup();
+    let scope = registry_scope(epoch);
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let change = change("pause-ready");
+    let workflow = root.reserve_workflow(&session, change.clone()).unwrap();
+    let lease = root
+        .issue_preflight_lease(
+            &session,
+            &workflow,
+            registry_lease(
+                &scope,
+                "preflight-lease",
+                "preflight-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let preflight = match root
+        .register_preflight(
+            &session,
+            &workflow,
+            registry_preflight(&scope, &change, "preflight-admission", &lease),
+        )
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new preflight"),
+    };
+    let accepted = root.dispatch_preflight(&session, &preflight).unwrap();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while root
+            .preflight_completion(&session, &preflight)
+            .unwrap()
+            .is_none()
+        {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        root.preflight_completion(&session, &preflight)
+            .unwrap()
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "candidate"
+    );
+    (root, session, workflow, preflight, accepted, dir)
 }
 
 async fn ready_apply_registry(
@@ -4305,4 +4388,760 @@ async fn registry_reconciliation_rejects_unfinished_apply_and_foreign_ticket() {
         Err(LeaseError::Forbidden)
     ));
     assert_eq!(root.test_lease_consumed("read-lease"), Some(false));
+}
+
+#[tokio::test]
+async fn registry_discard_candidate_after_expired_pause_lease_is_one_native_call() {
+    let epoch = "epoch-discard-candidate";
+    let (mut root, session, workflow, preflight, pause_admission, dir) =
+        ready_pause_registry(epoch, 100).await;
+    let client = root.test_native_client();
+    let before = sqlite_applied_revision(&dir.0);
+    let scope = registry_scope(epoch);
+    let discard_lease = registry_lease(
+        &scope,
+        "discard-lease",
+        "discard-admission",
+        "mutation",
+        1000,
+    );
+    assert!(matches!(
+        root.issue_discard_lease(&session, &workflow, &preflight, discard_lease.clone()),
+        Err(LeaseError::Busy)
+    ));
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    let change = change("pause-ready");
+    let lease = root
+        .issue_discard_lease(&session, &workflow, &preflight, discard_lease)
+        .unwrap();
+    let admission = registry_discard_admission(
+        &scope,
+        &change,
+        "discard-admission",
+        &lease,
+        pause_admission.as_value()["action"]["changeRef"]
+            .as_str()
+            .unwrap(),
+    );
+    let bob = root.test_session("bob", LeaseRole::Mutation);
+    assert!(matches!(
+        root.register_discard(&bob, &workflow, &preflight, admission.clone()),
+        Err(LeaseError::Forbidden)
+    ));
+    let mut wrong = admission.as_value().clone();
+    wrong["action"]["change"]["changeId"] = json!("other");
+    assert!(matches!(
+        root.register_discard(
+            &session,
+            &workflow,
+            &preflight,
+            RecordingAdmissionRequest::from_value(wrong).unwrap()
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    let ticket = match root
+        .register_discard(&session, &workflow, &preflight, admission.clone())
+        .unwrap()
+    {
+        DiscardRegistration::Registered(ticket) => ticket,
+        _ => panic!("new discard"),
+    };
+    assert!(matches!(
+        root.register_discard(&session, &workflow, &preflight, admission)
+            .unwrap(),
+        DiscardRegistration::Existing(_)
+    ));
+    assert_eq!(root.discard_reply(&session, &ticket).unwrap(), None);
+    let reserved_before = root.test_used_bytes(LeaseRole::Mutation);
+    let reply = root.dispatch_discard(&session, &ticket).unwrap();
+    assert_eq!(reply.as_value()["outcome"]["kind"], "completedDiscard");
+    let reserved_after = root.test_used_bytes(LeaseRole::Mutation);
+    assert!(reserved_after < reserved_before);
+    // The issued but expired pause slot remains in history; only unissued apply is returned.
+    assert_eq!(root.test_reserved_revisions(), 8);
+    assert_eq!(client.state().phase, OperationsPhase::Idle);
+    assert_eq!(
+        root.discard_reply(&session, &ticket).unwrap(),
+        Some(reply.clone())
+    );
+    assert_eq!(root.dispatch_discard(&session, &ticket).unwrap(), reply);
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), reserved_after);
+    assert_eq!(root.test_reserved_revisions(), 8);
+    assert_eq!(client.shared.discard_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(sqlite_applied_revision(&dir.0), before);
+}
+
+#[tokio::test]
+async fn registry_discard_paused_candidate_does_not_resume_or_apply() {
+    let epoch = "epoch-discard-paused";
+    let (mut root, session, workflow, preflight, pause_admission, dir) =
+        ready_pause_registry(epoch, 1000).await;
+    let client = root.test_native_client();
+    let before = sqlite_applied_revision(&dir.0);
+    let pause = match root
+        .register_pause_join(&session, &workflow, &preflight, pause_admission.clone())
+        .unwrap()
+    {
+        PauseRegistration::Registered(ticket) => ticket,
+        _ => panic!("new pause"),
+    };
+    assert_eq!(
+        root.dispatch_pause_join(&session, &pause)
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "accepted"
+    );
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while root.pause_completion(&session, &pause).unwrap().is_none() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(client.state().phase, OperationsPhase::Paused);
+    let scope = registry_scope(epoch);
+    let change = change("pause-ready");
+    let lease = root
+        .issue_discard_lease(
+            &session,
+            &workflow,
+            &preflight,
+            registry_lease(
+                &scope,
+                "discard-lease",
+                "discard-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    assert!(matches!(
+        root.issue_apply_lease(
+            &session,
+            &workflow,
+            &pause,
+            "apply:blocked",
+            registry_lease(
+                &scope,
+                "apply-blocked-lease",
+                "apply-blocked-admission",
+                "mutation",
+                1000
+            )
+        ),
+        Err(LeaseError::Busy)
+    ));
+    let admission = registry_discard_admission(
+        &scope,
+        &change,
+        "discard-admission",
+        &lease,
+        pause_admission.as_value()["action"]["changeRef"]
+            .as_str()
+            .unwrap(),
+    );
+    let ticket = match root
+        .register_discard(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        DiscardRegistration::Registered(ticket) => ticket,
+        _ => panic!("new discard"),
+    };
+    let reserved_before = root.test_used_bytes(LeaseRole::Mutation);
+    assert_eq!(
+        root.dispatch_discard(&session, &ticket).unwrap().as_value()["outcome"]["kind"],
+        "completedDiscard"
+    );
+    assert!(root.test_used_bytes(LeaseRole::Mutation) < reserved_before);
+    assert_eq!(root.test_reserved_revisions(), 8);
+    assert_eq!(client.state().phase, OperationsPhase::Idle);
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 0);
+    assert_eq!(client.shared.discard_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(sqlite_applied_revision(&dir.0), before);
+}
+
+#[tokio::test]
+async fn registry_discard_after_typed_apply_rejection_keeps_both_original_replies() {
+    let epoch = "epoch-discard-rejected-apply";
+    let (mut root, session, workflow, pause, apply, dir) = ready_apply_registry(epoch, 1000).await;
+    let client = root.test_native_client();
+    let before = sqlite_applied_revision(&dir.0);
+    let apply_ticket = match root
+        .register_apply(&session, &workflow, &pause, apply.clone())
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    client
+        .shared
+        .core
+        .lock()
+        .unwrap()
+        .registry
+        .used
+        .insert((true, "apply:ready".into()));
+    let rejected = root.dispatch_apply(&session, &apply_ticket).unwrap();
+    assert_eq!(rejected.as_value()["outcome"]["kind"], "rejected");
+    assert_eq!(client.state().phase, OperationsPhase::Paused);
+    let scope = registry_scope(epoch);
+    let change = change("pause-ready");
+    let preflight = {
+        // The first workflow's immutable preflight ticket remains stored after apply rejection.
+        root.test_preflight_ticket(&session, &workflow)
+    };
+    let lease = root
+        .issue_discard_lease(
+            &session,
+            &workflow,
+            &preflight,
+            registry_lease(
+                &scope,
+                "discard-lease",
+                "discard-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let admission = registry_discard_admission(
+        &scope,
+        &change,
+        "discard-admission",
+        &lease,
+        apply.as_value()["action"]["changeRef"].as_str().unwrap(),
+    );
+    let ticket = match root
+        .register_discard(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        DiscardRegistration::Registered(ticket) => ticket,
+        _ => panic!("new discard"),
+    };
+    let discard = root.dispatch_discard(&session, &ticket).unwrap();
+    assert_eq!(discard.as_value()["outcome"]["kind"], "completedDiscard");
+    assert_eq!(
+        root.apply_reply(&session, &apply_ticket).unwrap(),
+        Some(rejected)
+    );
+    assert_eq!(
+        root.discard_reply(&session, &ticket).unwrap(),
+        Some(discard)
+    );
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(client.shared.discard_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(sqlite_applied_revision(&dir.0), before);
+}
+
+#[tokio::test]
+async fn registry_discard_lost_response_keeps_unknown_even_after_native_idle() {
+    let epoch = "epoch-discard-lost-response";
+    let (mut root, session, workflow, preflight, pause_admission, dir) =
+        ready_pause_registry(epoch, 1).await;
+    let client = root.test_native_client();
+    let before = sqlite_applied_revision(&dir.0);
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    let scope = registry_scope(epoch);
+    let change = change("pause-ready");
+    let lease = root
+        .issue_discard_lease(
+            &session,
+            &workflow,
+            &preflight,
+            registry_lease(
+                &scope,
+                "discard-lease",
+                "discard-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let admission = registry_discard_admission(
+        &scope,
+        &change,
+        "discard-admission",
+        &lease,
+        pause_admission.as_value()["action"]["changeRef"]
+            .as_str()
+            .unwrap(),
+    );
+    let ticket = match root
+        .register_discard(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        DiscardRegistration::Registered(ticket) => ticket,
+        _ => panic!("new discard"),
+    };
+    root.test_set_discard_dispatch_fault(
+        &session,
+        &ticket,
+        DiscardDispatchFault::NativePanicAfterCall,
+    );
+    let reserved_before = root.test_used_bytes(LeaseRole::Mutation);
+    let unknown = root.dispatch_discard(&session, &ticket).unwrap();
+    assert_eq!(unknown.as_value()["outcome"]["kind"], "unknown");
+    assert_eq!(client.state().phase, OperationsPhase::Idle);
+    assert_eq!(root.dispatch_discard(&session, &ticket).unwrap(), unknown);
+    assert_eq!(
+        root.discard_reply(&session, &ticket).unwrap(),
+        Some(unknown)
+    );
+    assert_eq!(client.shared.discard_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), reserved_before);
+    assert_eq!(root.test_reserved_revisions(), 11);
+    assert_eq!(sqlite_applied_revision(&dir.0), before);
+    assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+}
+
+#[tokio::test]
+async fn registry_discard_recovered_preflight_unknown_allows_handoff() {
+    let epoch = "epoch-discard-recovered-preflight";
+    let (owner, _dir) = setup();
+    let scope = registry_scope(epoch);
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let mutation = root.test_session("alice", LeaseRole::Mutation);
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let change = change("recovered-discard");
+    let workflow = root.reserve_workflow(&mutation, change.clone()).unwrap();
+    let preflight_lease = root
+        .issue_preflight_lease(
+            &mutation,
+            &workflow,
+            registry_lease(&scope, "preflight-lease", "preflight", "mutation", 1000),
+        )
+        .unwrap();
+    let original = registry_preflight(&scope, &change, "preflight", &preflight_lease);
+    let preflight = match root
+        .register_preflight(&mutation, &workflow, original.clone())
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new preflight"),
+    };
+    root.test_set_dispatch_fault(&mutation, &preflight, TestDispatchFault::ProjectionPanic);
+    let unknown = root.dispatch_preflight(&mutation, &preflight).unwrap();
+    assert_eq!(unknown.as_value()["outcome"]["kind"], "unknown");
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while root
+            .preflight_completion(&mutation, &preflight)
+            .unwrap()
+            .is_none()
+        {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let inspection = root
+        .inspect_preflight_admission(
+            &read,
+            &workflow,
+            registry_inspection(&original, "inspect-preflight"),
+        )
+        .unwrap();
+    let recovered = &inspection.as_value()["outcome"]["reply"];
+    assert_eq!(recovered["outcome"]["kind"], "accepted");
+    let discard_lease = root
+        .issue_discard_lease(
+            &mutation,
+            &workflow,
+            &preflight,
+            registry_lease(&scope, "discard-lease", "discard", "mutation", 1000),
+        )
+        .unwrap();
+    let admission = registry_discard_admission(
+        &scope,
+        &change,
+        "discard",
+        &discard_lease,
+        recovered["outcome"]["handle"]["changeRef"]
+            .as_str()
+            .unwrap(),
+    );
+    let discard = match root
+        .register_discard(&mutation, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        DiscardRegistration::Registered(ticket) => ticket,
+        _ => panic!("new discard"),
+    };
+    assert_eq!(
+        root.dispatch_discard(&mutation, &discard)
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "completedDiscard"
+    );
+    assert_eq!(
+        root.preflight_reply(&mutation, &preflight).unwrap(),
+        Some(unknown)
+    );
+    assert_eq!(root.test_reserved_revisions(), 5);
+    assert!(root.try_handoff().is_ok());
+}
+
+#[tokio::test]
+async fn registry_discard_lease_blocks_new_pause_and_expired_registration_is_atomic() {
+    let epoch = "epoch-discard-intent-gate";
+    let (mut root, session, workflow, preflight, accepted, _dir) =
+        ready_discard_candidate_registry(epoch).await;
+    let client = root.test_native_client();
+    let scope = registry_scope(epoch);
+    let change = change("pause-ready");
+    let lease_request = registry_lease(
+        &scope,
+        "discard-lease",
+        "discard-admission",
+        "mutation",
+        1000,
+    );
+    let lease = root
+        .issue_discard_lease(&session, &workflow, &preflight, lease_request.clone())
+        .unwrap();
+    assert_eq!(
+        root.issue_discard_lease(&session, &workflow, &preflight, lease_request)
+            .unwrap(),
+        lease
+    );
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "pause:blocked",
+            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 1000)
+        ),
+        Err(LeaseError::Busy)
+    ));
+    let admission = registry_discard_admission(
+        &scope,
+        &change,
+        "discard-admission",
+        &lease,
+        accepted.as_value()["outcome"]["handle"]["changeRef"]
+            .as_str()
+            .unwrap(),
+    );
+    assert!(matches!(
+        root.register_discard_at(
+            &session,
+            &workflow,
+            &preflight,
+            admission.clone(),
+            Instant::now() + Duration::from_secs(2)
+        ),
+        Err(LeaseError::Expired)
+    ));
+    assert_eq!(root.test_lease_consumed("discard-lease"), Some(false));
+    assert_eq!(client.shared.discard_calls.load(Ordering::Relaxed), 0);
+    let ticket = match root
+        .register_discard(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        DiscardRegistration::Registered(ticket) => ticket,
+        _ => panic!("new discard"),
+    };
+    let reserved_before = root.test_used_bytes(LeaseRole::Mutation);
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "pause:blocked",
+            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 1000)
+        ),
+        Err(LeaseError::Busy)
+    ));
+    assert_eq!(
+        root.dispatch_discard(&session, &ticket).unwrap().as_value()["outcome"]["kind"],
+        "completedDiscard"
+    );
+    assert_eq!(client.shared.discard_calls.load(Ordering::Relaxed), 1);
+    assert!(root.test_used_bytes(LeaseRole::Mutation) < reserved_before);
+    assert_eq!(root.test_reserved_revisions(), 5);
+}
+
+#[tokio::test]
+async fn registry_discard_after_expired_apply_lease_preserves_paused_candidate() {
+    let epoch = "epoch-discard-expired-apply";
+    let (mut root, session, workflow, _pause, apply, dir) = ready_apply_registry(epoch, 100).await;
+    let client = root.test_native_client();
+    let preflight = root.test_preflight_ticket(&session, &workflow);
+    let scope = registry_scope(epoch);
+    let before = sqlite_applied_revision(&dir.0);
+    let request = registry_lease(
+        &scope,
+        "discard-lease",
+        "discard-admission",
+        "mutation",
+        1000,
+    );
+    assert!(matches!(
+        root.issue_discard_lease(&session, &workflow, &preflight, request.clone()),
+        Err(LeaseError::Busy)
+    ));
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    let lease = root
+        .issue_discard_lease(&session, &workflow, &preflight, request)
+        .unwrap();
+    let admission = registry_discard_admission(
+        &scope,
+        &change("pause-ready"),
+        "discard-admission",
+        &lease,
+        apply.as_value()["action"]["changeRef"].as_str().unwrap(),
+    );
+    let ticket = match root
+        .register_discard(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        DiscardRegistration::Registered(ticket) => ticket,
+        _ => panic!("new discard"),
+    };
+    let reserved_before = root.test_used_bytes(LeaseRole::Mutation);
+    assert_eq!(
+        root.dispatch_discard(&session, &ticket).unwrap().as_value()["outcome"]["kind"],
+        "completedDiscard"
+    );
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 0);
+    assert_eq!(client.shared.discard_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(client.state().phase, OperationsPhase::Idle);
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), reserved_before);
+    assert_eq!(root.test_reserved_revisions(), 11);
+    assert_eq!(sqlite_applied_revision(&dir.0), before);
+}
+
+#[tokio::test]
+async fn registry_discard_dispatch_deadline_does_not_call_native() {
+    let epoch = "epoch-discard-dispatch-expiry";
+    let (mut root, session, workflow, preflight, accepted, dir) =
+        ready_discard_candidate_registry(epoch).await;
+    let client = root.test_native_client();
+    let before = sqlite_applied_revision(&dir.0);
+    let scope = registry_scope(epoch);
+    let lease = root
+        .issue_discard_lease(
+            &session,
+            &workflow,
+            &preflight,
+            registry_lease(
+                &scope,
+                "discard-lease",
+                "discard-admission",
+                "mutation",
+                100,
+            ),
+        )
+        .unwrap();
+    let admission = registry_discard_admission(
+        &scope,
+        &change("pause-ready"),
+        "discard-admission",
+        &lease,
+        accepted.as_value()["outcome"]["handle"]["changeRef"]
+            .as_str()
+            .unwrap(),
+    );
+    let ticket = match root
+        .register_discard(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        DiscardRegistration::Registered(ticket) => ticket,
+        _ => panic!("new discard"),
+    };
+    tokio::time::sleep(Duration::from_millis(150)).await;
+    let reply = root.dispatch_discard(&session, &ticket).unwrap();
+    assert_eq!(reply.as_value()["outcome"]["kind"], "rejected");
+    assert_eq!(reply.as_value()["outcome"]["error"], "deadlineExceeded");
+    assert_eq!(root.discard_reply(&session, &ticket).unwrap(), Some(reply));
+    assert_eq!(client.state().phase, OperationsPhase::Candidate);
+    assert_eq!(client.shared.discard_calls.load(Ordering::Relaxed), 0);
+    assert_eq!(sqlite_applied_revision(&dir.0), before);
+}
+
+#[tokio::test]
+async fn registry_discard_running_candidate_keeps_the_recorder_running() {
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    let hub = crate::recorder_hub_fixture::Hub::new().await;
+    let directory = RunningRegistryDirectory(std::env::temp_dir().join(format!(
+        "scada-registry-discard-running-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, Ordering::Relaxed),
+    )));
+    let mut store = SqliteStore::create(
+        &directory.0,
+        StoreIdentity {
+            store_id: "running-discard".into(),
+            deployment_id: "test-deployment".into(),
+        },
+    )
+    .unwrap();
+    let sdk = crate::recorder_hub_fixture::plan(Some(7), Source::Real, false);
+    let (plan_ref, binding) =
+        crate::recording_host::tests::managed_support::apply(&mut store, sdk.session());
+    let mut supervisor = RecordingSupervisor::try_new(store).unwrap();
+    let run = supervisor
+        .start_managed(
+            sdk,
+            RecordingOptions {
+                plan: plan_ref,
+                slot_count: None,
+                max_clock_skew_ms: 1000,
+                clock_epoch: "running-discard-clock".into(),
+            },
+            binding,
+            control(),
+            hub.client(),
+        )
+        .unwrap();
+    let mut socket = hub.serve(false, Some(7), "real", 3).await;
+    socket
+        .send(Message::Text(
+            json!({"op":"data","id":1,"t":200,
+        "values":[{"tag":crate::recorder_hub_fixture::NUMBER,"v":42,"q":"good","t":200}]})
+            .to_string()
+            .into(),
+        ))
+        .await
+        .unwrap();
+    let mut frames = supervisor.recording_watch();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if frames
+                .borrow_and_update()
+                .progress
+                .as_ref()
+                .is_some_and(|p| p.counters.committed_ticks >= 1)
+            {
+                break;
+            }
+            frames.changed().await.unwrap();
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(supervisor.state().recording.phase, RecordingPhase::Running);
+    let epoch = "epoch-discard-running";
+    let scope = registry_scope(epoch);
+    let owner = RecordingOperationsOwner::try_new(supervisor, context(), run).unwrap();
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let mut change_value = change("running-discard").as_value().clone();
+    change_value["apply"]["expectedAppliedRevision"] = json!(1);
+    change_value["apply"]["expectedMappingRevision"] = json!(1);
+    change_value["apply"]["expectedRetentionAppliedRevision"] = json!(1);
+    change_value["apply"]["desired"] = json!({
+        "version":1,"kind":"recordingPlan","planId":"desired","revision":1,"enabled":true,
+        "group":{"groupId":"group","hubRef":"hub","periodMs":1000,
+            "members":[{"memberId":"member:0","externalName":crate::recorder_hub_fixture::NUMBER,
+                "valueType":"number"}]}
+    });
+    let change = RecordingChangeRequest::from_value(change_value).unwrap();
+    let workflow = root.reserve_workflow(&session, change.clone()).unwrap();
+    let preflight_lease = root
+        .issue_preflight_lease(
+            &session,
+            &workflow,
+            registry_lease(
+                &scope,
+                "preflight-lease",
+                "preflight-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let preflight = match root
+        .register_preflight(
+            &session,
+            &workflow,
+            registry_preflight(&scope, &change, "preflight-admission", &preflight_lease),
+        )
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new preflight"),
+    };
+    let accepted = root.dispatch_preflight(&session, &preflight).unwrap();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while root
+            .preflight_completion(&session, &preflight)
+            .unwrap()
+            .is_none()
+        {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        root.preflight_completion(&session, &preflight)
+            .unwrap()
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "candidate"
+    );
+    let client = root.test_native_client();
+    let before = sqlite_applied_revision(&directory.0);
+    let lease = root
+        .issue_discard_lease(
+            &session,
+            &workflow,
+            &preflight,
+            registry_lease(
+                &scope,
+                "discard-lease",
+                "discard-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let admission = registry_discard_admission(
+        &scope,
+        &change,
+        "discard-admission",
+        &lease,
+        accepted.as_value()["outcome"]["handle"]["changeRef"]
+            .as_str()
+            .unwrap(),
+    );
+    let ticket = match root
+        .register_discard(&session, &workflow, &preflight, admission)
+        .unwrap()
+    {
+        DiscardRegistration::Registered(ticket) => ticket,
+        _ => panic!("new discard"),
+    };
+    assert_eq!(
+        root.dispatch_discard(&session, &ticket).unwrap().as_value()["outcome"]["kind"],
+        "completedDiscard"
+    );
+    assert_eq!(client.state().phase, OperationsPhase::Idle);
+    assert_eq!(
+        client
+            .shared
+            .core
+            .lock()
+            .unwrap()
+            .supervisor
+            .as_ref()
+            .unwrap()
+            .state()
+            .recording
+            .phase,
+        RecordingPhase::Running
+    );
+    assert_eq!(client.shared.discard_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(sqlite_applied_revision(&directory.0), before);
 }

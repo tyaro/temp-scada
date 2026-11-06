@@ -27,7 +27,7 @@ use std::{
 
 pub(super) struct PauseLease {
     admission_id: String,
-    lease_id: String,
+    pub(super) lease_id: String,
     pub(super) operation_id: String,
     pub(super) change_ref: String,
     preflight_operation_id: String,
@@ -57,9 +57,9 @@ pub enum PauseRegistration {
 }
 
 pub(super) struct RegisteredPause {
-    ticket: RecordingRegistryPauseTicket,
+    pub(super) ticket: RecordingRegistryPauseTicket,
     pub(super) request: RecordingAdmissionRequest,
-    budget: LifetimeBudget,
+    pub(super) budget: LifetimeBudget,
     pub(super) state: PauseDispatchState,
     pub(super) binding: Option<RecordingOperationHandle>,
     #[cfg(test)]
@@ -180,6 +180,13 @@ impl RecordingRegistryRoot {
                 Instant::now(),
                 stage.lease_bytes,
             );
+        }
+        if record
+            .discard_lease
+            .as_ref()
+            .is_some_and(|discard| discard.blocks_other(&self.leases, Instant::now()))
+        {
+            return Err(LeaseError::Busy);
         }
         if self.leases.contains_key(&lease_id)
             || self

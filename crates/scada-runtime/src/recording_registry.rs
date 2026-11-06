@@ -1,6 +1,7 @@
 //! Native recording registry ownership and real-clock lease boundary.
 //! Product session issuance and transport remain unconnected.
 mod apply;
+mod discard;
 mod inspection;
 pub(crate) mod kernel;
 mod lease;
@@ -14,6 +15,9 @@ use crate::recording_operations::{
 #[cfg(test)]
 pub(crate) use apply::ApplyDispatchFault;
 pub use apply::{ApplyRegistration, RecordingRegistryApplyTicket};
+#[cfg(test)]
+pub(crate) use discard::DiscardDispatchFault;
+pub use discard::{DiscardRegistration, RecordingRegistryDiscardTicket};
 pub use lease::{
     LeaseError, LeaseRole, RecordingRegistryRoot, RecordingRegistrySession, RegistryRootInitFailure,
 };

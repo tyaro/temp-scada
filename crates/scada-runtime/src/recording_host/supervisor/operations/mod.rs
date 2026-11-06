@@ -111,6 +111,8 @@ struct Shared {
     #[cfg(test)]
     apply_calls: AtomicU64,
     #[cfg(test)]
+    discard_calls: AtomicU64,
+    #[cfg(test)]
     reconcile_calls: AtomicU64,
     #[cfg(test)]
     read_fault: Mutex<Option<reconciliation::driver::TestFault>>,
@@ -246,6 +248,8 @@ impl RecordingOperationsOwner {
                 fault: Mutex::new(None),
                 #[cfg(test)]
                 apply_calls: AtomicU64::new(0),
+                #[cfg(test)]
+                discard_calls: AtomicU64::new(0),
                 #[cfg(test)]
                 reconcile_calls: AtomicU64::new(0),
                 #[cfg(test)]
@@ -520,6 +524,8 @@ impl RecordingOperationsClient {
         Ok(operation)
     }
     pub fn discard(&self, change: &RecordingChangeHandle) -> Result<(), OperationRejection> {
+        #[cfg(test)]
+        self.shared.discard_calls.fetch_add(1, Ordering::Relaxed);
         let fail = |code| self.shared.rejection(code);
         let mut core = self.shared.locked()?;
         let w = core

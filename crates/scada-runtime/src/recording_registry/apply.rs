@@ -153,6 +153,13 @@ impl RecordingRegistryRoot {
                 stage.lease_bytes,
             );
         }
+        if record
+            .discard_lease
+            .as_ref()
+            .is_some_and(|discard| discard.blocks_other(&self.leases, Instant::now()))
+        {
+            return Err(LeaseError::Busy);
+        }
         if self.leases.contains_key(lease_id)
             || self
                 .leases
