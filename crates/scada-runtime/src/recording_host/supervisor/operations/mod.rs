@@ -181,6 +181,24 @@ impl RecordingOperationsOwner {
         &self.shared.context
     }
 
+    pub(crate) fn registry_initial_workflow_eligible(&self) -> Result<bool, RegistryClaimReason> {
+        let core = self.shared.core.try_lock().map_err(|error| match error {
+            TryLockError::WouldBlock => RegistryClaimReason::Busy,
+            TryLockError::Poisoned(_) => RegistryClaimReason::Internal,
+        })?;
+        let Some(supervisor) = core.supervisor.as_ref() else {
+            return Ok(false);
+        };
+        let eligible = supervisor.recording_operations_context().ok();
+        Ok(!core.closed
+            && !core.recovery
+            && !core.in_flight
+            && eligible.as_ref().is_some_and(|(run, session)| {
+                run == &self.shared.run
+                    && self.shared.context.as_value()["sessionId"].as_str() == Some(session)
+            }))
+    }
+
     pub fn try_new(
         supervisor: RecordingSupervisor,
         context: RecordingOperationsContext,

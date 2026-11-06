@@ -360,6 +360,102 @@ async fn registry_lease_rejects_foreign_root_scope_and_epoch() {
         Err(LeaseError::Forbidden)
     );
 }
+
+#[tokio::test]
+async fn registry_workflow_reserves_all_four_stages_before_a_mutation_lease() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-1");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let planned_change = change("workflow-1");
+    let model_session = crate::recording_registry_model::ModelSession::new(
+        scope.clone(),
+        crate::recording_registry_model::SimulatedPrincipal::new("alice").unwrap(),
+    )
+    .unwrap();
+    let mut model = crate::recording_registry_model::RegistryModel::new_workflow(
+        model_session.clone(),
+        crate::recording_registry_model::ModelLimits::default(),
+        crate::recording_registry_model::SimulatedRunQualification::CleanJoined,
+    )
+    .unwrap();
+    let before = model.stats().mutation_bytes;
+    model
+        .reserve_workflow(&model_session, planned_change.clone())
+        .unwrap();
+    let expected_bytes = model.stats().mutation_bytes - before;
+    root.test_set_byte_limit(LeaseRole::Mutation, expected_bytes - 1);
+    assert!(matches!(
+        root.reserve_workflow(&session, planned_change.clone()),
+        Err(LeaseError::Capacity)
+    ));
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), 0);
+    root.test_set_byte_limit(LeaseRole::Mutation, expected_bytes);
+    let ticket = root
+        .reserve_workflow(&session, planned_change.clone())
+        .unwrap();
+    assert_eq!(ticket.change_id(), "workflow-1");
+    assert_eq!(ticket.sequence(), 1);
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), expected_bytes);
+    let replay = root
+        .reserve_workflow(&session, planned_change.clone())
+        .unwrap();
+    assert_eq!(replay.sequence(), ticket.sequence());
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), expected_bytes);
+    assert!(matches!(
+        root.reserve_workflow(
+            &root.test_session("bob", LeaseRole::Mutation),
+            planned_change.clone()
+        ),
+        Err(LeaseError::Forbidden)
+    ));
+    assert!(matches!(
+        root.reserve_workflow(&read, change("workflow-2")),
+        Err(LeaseError::Forbidden)
+    ));
+    assert!(matches!(
+        root.reserve_workflow(&session, change("workflow-2")),
+        Err(LeaseError::Busy)
+    ));
+    let mutation_lease = registry_lease(&scope, "lease-1", "admission-1", "mutation", 1);
+    assert_eq!(
+        root.issue_lease(&session, mutation_lease),
+        Err(LeaseError::Forbidden)
+    );
+    assert!(root.try_handoff().is_ok());
+    assert!(matches!(
+        root.reserve_workflow(&session, planned_change),
+        Err(LeaseError::Closed)
+    ));
+}
+
+#[tokio::test]
+async fn registry_workflow_cannot_follow_an_unreserved_mutation_lease() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-1");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    root.issue_lease(
+        &session,
+        registry_lease(&scope, "lease-1", "admission-1", "mutation", 1),
+    )
+    .unwrap();
+    assert!(matches!(
+        root.reserve_workflow(&session, change("workflow-1")),
+        Err(LeaseError::Busy)
+    ));
+}
 #[tokio::test]
 async fn explicit_stages_return_the_native_owner_before_each_terminal_state() {
     let (mut root, _dir) = setup();

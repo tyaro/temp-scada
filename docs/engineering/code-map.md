@@ -833,3 +833,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 ## 記録registryの実時計lease（C4、native root）
 
 `scada-runtime/src/recording_registry/lease.rs`の非Clone `RecordingRegistryRoot`は排他的seed、固定scope、実`Instant`の期限、role別の有限lease台帳を保持する。factoryはnative ownerのcontext全文を照合し、失敗時にseedを返す。`recording_host/supervisor/operations/mod.rs`のcrate内context読取はこの照合専用。sessionはroot identity・scope・principal・roleを束縛するopaque capabilityで、issuerはRust unit testだけに置く。lease再取得は元replyと期限を保持し、別principal／scope／epoch／roleや同ID別本文を拒否する。handoff成功は新規lease受付を閉じる。`operations/tests.rs`で実ownerを使い、失敗時返却、再取得、期限後の同時枠、role、異rootを確認する。native admissionと製品session発行は後続。
+
+## 記録registryの初回workflow予約（C4）
+
+`recording_registry/kernel/workflow.rs`は四段階の最大ID・最大lease時間を使い、Admissionの生存期間保存bytesとlease往復bytes、snapshotのbytes／nodes／depth上界を純粋計算する。`recording_registry_model/workflow/escrow.rs`も同じstage templateを使う。`recording_registry/workflow.rs`は実ownerの既存Supervisor資格を確認し、同一principal・changeの初回ticketを一件だけ登録して保持bytesを先取りする。再取得は再課金せず、以前の汎用mutation leaseがあれば期限後も予約しない。予約後は汎用mutation leaseの新規発行を止める。`operations/tests.rs`はsimulationの予約増分とnative rootの確保量を比較し、容量exact／1不足・別caller・handoffを検証する。stage別credit・11 revision、leaseへの移管／消費、元Admissionとnative呼出しは次の区切り。

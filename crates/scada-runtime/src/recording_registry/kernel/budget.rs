@@ -39,7 +39,7 @@ pub(crate) fn fits_bound(a: WireBound, b: WireBound) -> bool {
     a.bytes <= b.bytes && a.nodes <= b.nodes && a.depth <= b.depth
 }
 
-fn sum(a: usize, b: usize) -> Result<usize, BudgetError> {
+pub(crate) fn sum(a: usize, b: usize) -> Result<usize, BudgetError> {
     a.checked_add(b).ok_or(BudgetError::Capacity)
 }
 
