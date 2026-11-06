@@ -1,4 +1,4 @@
-use super::RecordingRegistryOwnerSeed;
+use super::{workflow::WorkflowRecord, RecordingRegistryOwnerSeed};
 use crate::recording_operations::{OwnerError, RecordingOperationsHandoff};
 use scada_model::recording_operations::{
     same_recording_operations_context, RecordingOperationsContext,
@@ -43,6 +43,7 @@ pub enum LeaseError {
     Forbidden,
     ProtocolViolation,
     Capacity,
+    Busy,
     Expired,
     Closed,
 }
@@ -57,10 +58,10 @@ impl std::error::Error for LeaseError {}
 /// An opaque host-granted capability. Production issuance waits for the host auth contract.
 #[derive(Clone)]
 pub struct RecordingRegistrySession {
-    root_identity: Arc<()>,
-    scope: Value,
-    principal: String,
-    role: LeaseRole,
+    pub(super) root_identity: Arc<()>,
+    pub(super) scope: Value,
+    pub(super) principal: String,
+    pub(super) role: LeaseRole,
 }
 
 struct LeaseRecord {
@@ -74,16 +75,17 @@ struct LeaseRecord {
 
 /// Native owner and lease history survive UI view and transport disconnects.
 pub struct RecordingRegistryRoot {
-    seed: RecordingRegistryOwnerSeed,
-    scope: Value,
-    identity: Arc<()>,
+    pub(super) seed: RecordingRegistryOwnerSeed,
+    pub(super) scope: Value,
+    pub(super) identity: Arc<()>,
     leases: BTreeMap<String, LeaseRecord>,
-    sequence: u64,
-    mutation_bytes: usize,
+    pub(super) sequence: u64,
+    pub(super) mutation_bytes: usize,
     read_bytes: usize,
-    mutation_byte_limit: usize,
+    pub(super) mutation_byte_limit: usize,
     read_byte_limit: usize,
-    closed: bool,
+    pub(super) closed: bool,
+    pub(super) workflow: Option<WorkflowRecord>,
 }
 
 pub struct RegistryRootInitFailure {
@@ -147,6 +149,7 @@ impl RecordingRegistryRoot {
             mutation_byte_limit: LeaseRole::Mutation.byte_limit(),
             read_byte_limit: LeaseRole::Reconciliation.byte_limit(),
             closed: false,
+            workflow: None,
         })
     }
 
@@ -213,6 +216,9 @@ impl RecordingRegistryRoot {
                 return Err(LeaseError::ProtocolViolation);
             }
             return Ok(existing.reply.clone());
+        }
+        if session.role == LeaseRole::Mutation && self.workflow.is_some() {
+            return Err(LeaseError::Forbidden);
         }
         if self
             .leases
@@ -298,6 +304,12 @@ impl RecordingRegistryRoot {
             LeaseRole::Mutation => self.mutation_bytes,
             LeaseRole::Reconciliation => self.read_bytes,
         }
+    }
+
+    pub(super) fn has_mutation_lease(&self) -> bool {
+        self.leases
+            .values()
+            .any(|lease| lease.role == LeaseRole::Mutation)
     }
 
     fn used_bytes_mut(&mut self, role: LeaseRole) -> &mut usize {

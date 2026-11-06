@@ -1,6 +1,6 @@
 # 記録wireのnative registry adapter
 
-状態: **C4の採用詳細設計。排他的owner seed・純粋予算kernel・実時計leaseを実装、native admissionは後続**。2026-11-06（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[coordinator-v2](historian-recording-coordinator-v2.md)、[wire・host契約](historian-recording-wire-host.md)、[共有native owner](historian-recording-native-owner.md)、[接続境界](historian-recording-bridge-boundary.md)に続く。
+状態: **C4の採用詳細設計。排他的owner seed・純粋予算kernel・実時計lease・初回workflowの保持bytes予約を実装、native admissionは後続**。2026-11-06（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[coordinator-v2](historian-recording-coordinator-v2.md)、[wire・host契約](historian-recording-wire-host.md)、[共有native owner](historian-recording-native-owner.md)、[接続境界](historian-recording-bridge-boundary.md)に続く。
 
 ## 1. この区切りの対象
 
@@ -65,7 +65,7 @@ view close、Project切替、Hub読取再接続はrootをdropしない。既存o
 
 ## 7. 受入と実装順
 
-2026-11-06の実装区切りでは、seedを固定scopeの非Clone rootへ移し、試験専用sessionと実`Instant`期限のlease台帳を追加した。同一要求の再取得は元replyを返して期限を延長しない。製品session発行、一workflow事前予約、native admission／handle保存は後続であり、leaseの存在をnative受理の証拠としない。
+2026-11-06の実装区切りでは、seedを固定scopeの非Clone rootへ移し、試験専用sessionと実`Instant`期限のlease台帳を追加した。同一要求の再取得は元replyを返して期限を延長しない。次に四段階の保持bytesとsnapshot上界を共有kernelで計算し、native rootで最初の一workflowを予約した。既存Supervisorの同run資格を確認し、予約前に汎用mutation leaseを発行したrootは期限後も予約を拒否する。stage別credit・revision、leaseへの移管・消費、native admission／handle保存と製品session発行は後続であり、予約やleaseの存在をnative受理の証拠としない。
 
 一時SQLiteとmock Hubを使い、実`RecordingOperationsOwner`で次を受け入れる。
 
@@ -76,4 +76,4 @@ view close、Project切替、Hub読取再接続はrootをdropしない。既存o
 5. 元apply completion確定・Supervisor回収後に限定したreconcile、receiptFound後のrecovery維持、readUncertainとread不可を分ける。全poolのexact／1不足と最大replyの保存を確認する。
 6. view切断・認可失効・root close後も既登録操作を監視し、Rust生成wire DTOを既存TS validatorで検査する。通常AppとTauri読取経路に副作用を作らない。
 
-最初の独立した安全gateとして、既存ownerを失敗時返却付きで`RecordingRegistryOwnerSeed`へ排他的に移した。公開client発行履歴はdrop後も残し、native Coreが未使用でないownerを拒否する。次にAdmission一件の保存上界とbytes／nodes／depth照合をcrate-private kernelへ抽出し、simulationの登録・予約・投影で使う。さらに固定scopeのroot・試験専用session・実時計leaseを追加した。この先は (1) 一workflow事前予約とlease消費、(2) native admission／handle保存／元reply・inspection／completion、(3) cancel・snapshot／subscription・失効・管理側shutdown、(4) mock Hub＋一時DBの一貫受入の順に分ける。製品hostのsession issuer、権限失効後の結果開示、epoch生成・永続衝突防止、Tauri endpointは認証・host gateとして別に固定する。その後に製品transportと通常Appへ接続する。
+最初の独立した安全gateとして、既存ownerを失敗時返却付きで`RecordingRegistryOwnerSeed`へ排他的に移した。公開client発行履歴はdrop後も残し、native Coreが未使用でないownerを拒否する。次にAdmission一件の保存上界とbytes／nodes／depth照合をcrate-private kernelへ抽出し、simulationの登録・予約・投影で使う。さらに固定scopeのroot・試験専用session・実時計leaseと初回workflowの保持bytes予約を追加した。この先は (1) stage別creditとrevision予約・lease移管／原子消費・元Admission登録、(2) native admission／handle保存／元reply・inspection／completion、(3) cancel・snapshot／subscription・失効・管理側shutdown、(4) mock Hub＋一時DBの一貫受入の順に分ける。製品hostのsession issuer、権限失効後の結果開示、epoch生成・永続衝突防止、Tauri endpointは認証・host gateとして別に固定する。その後に製品transportと通常Appへ接続する。

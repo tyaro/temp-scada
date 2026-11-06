@@ -2,6 +2,7 @@
 //! Product session issuance, admission, and transport remain unconnected.
 pub(crate) mod kernel;
 mod lease;
+mod workflow;
 use crate::recording_operations::{
     OwnerError, RecordingOperationsHandoff, RecordingOperationsOwner, RegistryClaimReason,
 };
@@ -9,6 +10,7 @@ pub use lease::{
     LeaseError, LeaseRole, RecordingRegistryRoot, RecordingRegistrySession, RegistryRootInitFailure,
 };
 use std::fmt;
+pub use workflow::RecordingRegistryWorkflowTicket;
 
 /// Consumes a pristine native owner before any external client has been issued.
 /// The later registry root can add scope, lease, and admission without a bypassing client.
@@ -51,5 +53,9 @@ impl RecordingRegistryOwnerSeed {
 
     pub(crate) fn check_claim(&self) -> Result<(), RegistryClaimReason> {
         self.owner.check_registry_claim()
+    }
+
+    pub(crate) fn initial_workflow_eligible(&self) -> Result<bool, RegistryClaimReason> {
+        self.owner.registry_initial_workflow_eligible()
     }
 }
