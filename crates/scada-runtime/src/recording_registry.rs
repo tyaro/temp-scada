@@ -4,12 +4,15 @@ pub(crate) mod kernel;
 mod lease;
 mod workflow;
 use crate::recording_operations::{
-    OwnerError, RecordingOperationsHandoff, RecordingOperationsOwner, RegistryClaimReason,
+    OwnerError, RecordingOperationsClient, RecordingOperationsHandoff, RecordingOperationsOwner,
+    RegistryClaimReason,
 };
 pub use lease::{
     LeaseError, LeaseRole, RecordingRegistryRoot, RecordingRegistrySession, RegistryRootInitFailure,
 };
 use std::fmt;
+#[cfg(test)]
+pub(crate) use workflow::TestDispatchFault;
 pub use workflow::{
     PreflightRegistration, RecordingRegistryAdmissionTicket, RecordingRegistryWorkflowTicket,
 };
@@ -59,5 +62,9 @@ impl RecordingRegistryOwnerSeed {
 
     pub(crate) fn initial_workflow_eligible(&self) -> Result<bool, RegistryClaimReason> {
         self.owner.registry_initial_workflow_eligible()
+    }
+
+    pub(crate) fn client(&self) -> RecordingOperationsClient {
+        self.owner.registry_client()
     }
 }

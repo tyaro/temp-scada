@@ -1,4 +1,6 @@
 use super::{workflow::WorkflowRecord, RecordingRegistryOwnerSeed};
+#[cfg(test)]
+use crate::recording_operations::RecordingOperationsClient;
 use crate::recording_operations::{OwnerError, RecordingOperationsHandoff};
 use scada_model::recording_operations::{
     same_recording_operations_context, RecordingOperationsContext,
@@ -173,6 +175,11 @@ impl RecordingRegistryRoot {
             principal: principal.to_owned(),
             role,
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_native_client(&self) -> RecordingOperationsClient {
+        self.seed.client()
     }
 
     #[cfg(test)]
@@ -387,6 +394,13 @@ impl RecordingRegistryRoot {
 
     /// The native owner handoff gate remains authoritative. Successful handoff closes this root.
     pub fn try_handoff(&mut self) -> Result<RecordingOperationsHandoff, OwnerError> {
+        if self
+            .workflow
+            .as_ref()
+            .is_some_and(WorkflowRecord::has_uncertain_dispatch)
+        {
+            return Err(OwnerError::Busy);
+        }
         let handoff = self.seed.try_handoff()?;
         self.closed = true;
         Ok(handoff)

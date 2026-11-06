@@ -270,6 +270,12 @@ impl RecordingOperationsOwner {
             shared: self.shared.clone(),
         }
     }
+    /// The registry owns this client after its exclusive seed claim; never expose it to callers.
+    pub(crate) fn registry_client(&self) -> RecordingOperationsClient {
+        RecordingOperationsClient {
+            shared: self.shared.clone(),
+        }
+    }
     pub(crate) fn check_registry_claim(&self) -> Result<(), RegistryClaimReason> {
         let core = self.shared.core.try_lock().map_err(|e| match e {
             TryLockError::WouldBlock => RegistryClaimReason::Busy,
