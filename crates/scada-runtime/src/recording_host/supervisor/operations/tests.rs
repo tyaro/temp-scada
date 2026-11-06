@@ -1,6 +1,7 @@
 use super::*;
 use crate::recording_host::retention::tests::control;
 use crate::recording_host::{RecordingPhase, RecordingPlanTurnIntent};
+use crate::recording_registry::RecordingRegistryOwnerSeed;
 use serde_json::{json, Value};
 use std::time::Duration;
 pub(super) fn context() -> RecordingOperationsContext {
@@ -47,6 +48,53 @@ pub(super) async fn paused(c: &RecordingOperationsClient, id: &str) -> AcceptedR
         "paused"
     );
     a
+}
+#[tokio::test]
+async fn registry_seed_claims_only_a_pristine_unshared_native_owner() {
+    let (root, _dir) = setup();
+    let mut seed = RecordingRegistryOwnerSeed::try_from_owner(root).unwrap();
+    let handoff = seed.try_handoff().unwrap();
+    assert_eq!(
+        handoff.supervisor.state().recording.phase,
+        RecordingPhase::Joined
+    );
+}
+
+#[tokio::test]
+async fn registry_seed_refuses_even_a_dropped_external_client_and_returns_owner() {
+    let (root, _dir) = setup();
+    drop(root.client());
+    let failure = RecordingRegistryOwnerSeed::try_from_owner(root)
+        .err()
+        .unwrap();
+    assert_eq!(failure.reason, RegistryClaimReason::ClientAlreadyIssued);
+    let mut recovered = failure.owner;
+    assert!(recovered.try_handoff().is_ok());
+}
+
+#[tokio::test]
+async fn registry_seed_busy_failure_does_not_claim_the_owner() {
+    let (root, _dir) = setup();
+    let shared = root.shared.clone();
+    let guard = shared.core.lock().unwrap();
+    let failure = RecordingRegistryOwnerSeed::try_from_owner(root)
+        .err()
+        .unwrap();
+    assert_eq!(failure.reason, RegistryClaimReason::Busy);
+    drop(guard);
+    drop(shared);
+    assert!(RecordingRegistryOwnerSeed::try_from_owner(failure.owner).is_ok());
+}
+
+#[tokio::test]
+async fn registry_seed_refuses_an_owner_after_handoff() {
+    let (mut root, _dir) = setup();
+    let handoff = root.try_handoff().unwrap();
+    let failure = RecordingRegistryOwnerSeed::try_from_owner(root)
+        .err()
+        .unwrap();
+    assert_eq!(failure.reason, RegistryClaimReason::NotPristine);
+    drop(handoff);
 }
 #[tokio::test]
 async fn explicit_stages_return_the_native_owner_before_each_terminal_state() {

@@ -4,6 +4,8 @@
 
 ## 次の実装順
 
+C4 native registry adapterの最初の安全gateとして、既存ownerを外部client発行前にだけ排他的に受け取るseedを追加した。次はsimulationのkernel抽出と回帰を行い、実clock lease・一workflow受付へ進む。seed単体は製品の認可・送信資格を発行しない。
+
 2026-11-05のユーザー指示で[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、C0〜C3を実施した。SOAK終了待ちは解除済み。次はC4の記録client・native bridge、続いてC5の実SQLite／History接続、C6の連続運用へ進む。初回読取の成功を運用時の認証・記録・長時間運転の完了とは扱わない。
 
 [Windows実機接続記録](real-hub-c0.md)で既存Hub 0.3.0-alpha.1、REST v1、試運転中のreadキー経路を確認した。Tauri 2の埋込hostでR系の数値・boolとQ系の数値を表示し、実値`0`／`false`、品質・由来、切断・再接続、Project再読込、アプリ再起動まで受け入れた。Q系は一時的な再接続待機後に接続と行時刻更新を確認した。R系安全番地の限定書込みと元値復旧も確認済み。DB由来pushタグの元行`updated_at`は古く、鮮度は未証明。C2のモック製品経路検証も完了した。

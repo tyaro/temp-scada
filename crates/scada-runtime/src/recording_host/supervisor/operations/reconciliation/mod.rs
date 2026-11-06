@@ -45,6 +45,15 @@ impl Default for ReadState {
         }
     }
 }
+impl ReadState {
+    pub(super) fn is_pristine(&self) -> bool {
+        self.used.is_empty()
+            && self.phase == ReconciliationPhase::Idle
+            && self.handle.is_none()
+            && self.last.is_none()
+            && self.failure.is_none()
+    }
+}
 impl RecordingOperationsClient {
     /// Inspect the current original apply only. A receipt never clears recovery.
     pub fn reconcile(
