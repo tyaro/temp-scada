@@ -10,7 +10,9 @@ pub use lease::{
     LeaseError, LeaseRole, RecordingRegistryRoot, RecordingRegistrySession, RegistryRootInitFailure,
 };
 use std::fmt;
-pub use workflow::RecordingRegistryWorkflowTicket;
+pub use workflow::{
+    PreflightRegistration, RecordingRegistryAdmissionTicket, RecordingRegistryWorkflowTicket,
+};
 
 /// Consumes a pristine native owner before any external client has been issued.
 /// The later registry root can add scope, lease, and admission without a bypassing client.

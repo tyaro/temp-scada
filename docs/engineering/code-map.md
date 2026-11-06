@@ -836,4 +836,8 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 ## 記録registryの初回workflow予約（C4）
 
-`recording_registry/kernel/workflow.rs`は四段階の最大ID・最大lease時間を使い、Admissionの生存期間保存bytesとlease往復bytes、snapshotのbytes／nodes／depth上界を純粋計算する。`recording_registry_model/workflow/escrow.rs`も同じstage templateを使う。`recording_registry/workflow.rs`は実ownerの既存Supervisor資格を確認し、同一principal・changeの初回ticketを一件だけ登録して保持bytesを先取りする。再取得は再課金せず、以前の汎用mutation leaseがあれば期限後も予約しない。予約後は汎用mutation leaseの新規発行を止める。`operations/tests.rs`はsimulationの予約増分とnative rootの確保量を比較し、容量exact／1不足・別caller・handoffを検証する。stage別credit・11 revision、leaseへの移管／消費、元Admissionとnative呼出しは次の区切り。
+`recording_registry/kernel/workflow.rs`は四段階の最大ID・最大lease時間を使い、Admissionの生存期間保存bytesとlease往復bytes、snapshotのbytes／nodes／depth上界を純粋計算する。`recording_registry_model/workflow/escrow.rs`も同じstage templateを使う。`recording_registry/workflow.rs`は実ownerの既存Supervisor資格を確認し、同一principal・changeの初回ticketを一件だけ登録して保持bytesを先取りする。再取得は再課金せず、以前の汎用mutation leaseがあれば期限後も予約しない。予約後は汎用mutation leaseの新規発行を止める。`operations/tests.rs`はsimulationの予約増分とnative rootの確保量を比較し、容量exact／1不足・別caller・handoffを検証する。この段階ではstage別creditとrevisionの実使用、lease消費、元Admission、native呼出しは未接続。
+
+## 記録registryのpreflight原本登録（C4）
+
+`recording_registry/workflow.rs`の`issue_preflight_lease`は初回の予約済みlease保持量を移管し、期限切れretryだけ別のID・保存量・revision枠を追加予約する。`register_preflight`はroot／principal／workflow ticket、元change全文、lease refと期限、Admissionの生存期間上界を確認し、commit直前の実`Instant`で期限を判定する。成功時だけlease消費と元request・登録sequenceを同じ更新で確定する。登録済み同一要求の再取得は時計もnativeも使わず`Existing`を返す。read履歴はmutation件数に算入しない。`operations/tests.rs`は期限境界、retryのexact／1不足、role分離、別caller／別root、登録後の不変性と未送信handoffを確認する。native呼出し・結果・製品session issuerは後続。

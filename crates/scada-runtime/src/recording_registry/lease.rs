@@ -64,13 +64,14 @@ pub struct RecordingRegistrySession {
     pub(super) role: LeaseRole,
 }
 
-struct LeaseRecord {
-    request: RecordingWireLeaseRequest,
-    reply: RecordingWireLeaseReply,
-    principal: String,
-    role: LeaseRole,
-    deadline: Instant,
-    consumed: bool,
+pub(super) struct LeaseRecord {
+    pub(super) request: RecordingWireLeaseRequest,
+    pub(super) reply: RecordingWireLeaseReply,
+    pub(super) principal: String,
+    pub(super) role: LeaseRole,
+    pub(super) deadline: Instant,
+    pub(super) consumed: bool,
+    pub(super) workflow_owned: bool,
 }
 
 /// Native owner and lease history survive UI view and transport disconnects.
@@ -78,14 +79,17 @@ pub struct RecordingRegistryRoot {
     pub(super) seed: RecordingRegistryOwnerSeed,
     pub(super) scope: Value,
     pub(super) identity: Arc<()>,
-    leases: BTreeMap<String, LeaseRecord>,
+    pub(super) leases: BTreeMap<String, LeaseRecord>,
     pub(super) sequence: u64,
     pub(super) mutation_bytes: usize,
     read_bytes: usize,
     pub(super) mutation_byte_limit: usize,
     read_byte_limit: usize,
+    pub(super) mutation_lease_limit: usize,
+    read_lease_limit: usize,
     pub(super) closed: bool,
     pub(super) workflow: Option<WorkflowRecord>,
+    pub(super) reserved_revisions: u64,
 }
 
 pub struct RegistryRootInitFailure {
@@ -148,8 +152,11 @@ impl RecordingRegistryRoot {
             read_bytes: 0,
             mutation_byte_limit: LeaseRole::Mutation.byte_limit(),
             read_byte_limit: LeaseRole::Reconciliation.byte_limit(),
+            mutation_lease_limit: 4096,
+            read_lease_limit: 4096,
             closed: false,
             workflow: None,
+            reserved_revisions: 0,
         })
     }
 
@@ -182,19 +189,59 @@ impl RecordingRegistryRoot {
         self.used_bytes(role)
     }
 
+    #[cfg(test)]
+    pub(crate) fn test_reserved_revisions(&self) -> u64 {
+        self.reserved_revisions
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_set_lease_limit(&mut self, role: LeaseRole, limit: usize) {
+        assert!(limit <= 4096);
+        match role {
+            LeaseRole::Mutation => self.mutation_lease_limit = limit,
+            LeaseRole::Reconciliation => self.read_lease_limit = limit,
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_lease_consumed(&self, lease_id: &str) -> Option<bool> {
+        self.leases.get(lease_id).map(|lease| lease.consumed)
+    }
+
     pub fn issue_lease(
         &mut self,
         session: &RecordingRegistrySession,
         request: RecordingWireLeaseRequest,
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
-        self.issue_lease_at(session, request, Instant::now())
+        self.issue_lease_inner(session, request, Instant::now(), None)
     }
 
+    #[cfg(test)]
     pub(crate) fn issue_lease_at(
         &mut self,
         session: &RecordingRegistrySession,
         request: RecordingWireLeaseRequest,
         now: Instant,
+    ) -> Result<RecordingWireLeaseReply, LeaseError> {
+        self.issue_lease_inner(session, request, now, None)
+    }
+
+    pub(super) fn issue_prepaid_lease_at(
+        &mut self,
+        session: &RecordingRegistrySession,
+        request: RecordingWireLeaseRequest,
+        now: Instant,
+        reserved_lease_bytes: usize,
+    ) -> Result<RecordingWireLeaseReply, LeaseError> {
+        self.issue_lease_inner(session, request, now, Some(reserved_lease_bytes))
+    }
+
+    fn issue_lease_inner(
+        &mut self,
+        session: &RecordingRegistrySession,
+        request: RecordingWireLeaseRequest,
+        now: Instant,
+        reserved_lease_bytes: Option<usize>,
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
         if self.closed {
             return Err(LeaseError::Closed);
@@ -209,7 +256,10 @@ impl RecordingRegistryRoot {
         let value = request.as_value();
         let id = value["leaseRequestId"].as_str().expect("validated ID");
         if let Some(existing) = self.leases.get(id) {
-            if existing.principal != session.principal || existing.role != session.role {
+            if existing.principal != session.principal
+                || existing.role != session.role
+                || existing.workflow_owned != reserved_lease_bytes.is_some()
+            {
                 return Err(LeaseError::Forbidden);
             }
             if !same_recording_wire_request(existing.request.as_document(), request.as_document()) {
@@ -217,7 +267,10 @@ impl RecordingRegistryRoot {
             }
             return Ok(existing.reply.clone());
         }
-        if session.role == LeaseRole::Mutation && self.workflow.is_some() {
+        if session.role == LeaseRole::Mutation
+            && self.workflow.is_some()
+            && reserved_lease_bytes.is_none()
+        {
             return Err(LeaseError::Forbidden);
         }
         if self
@@ -227,12 +280,16 @@ impl RecordingRegistryRoot {
         {
             return Err(LeaseError::ProtocolViolation);
         }
+        let history_limit = match session.role {
+            LeaseRole::Mutation => self.mutation_lease_limit,
+            LeaseRole::Reconciliation => self.read_lease_limit,
+        };
         if self
             .leases
             .values()
             .filter(|lease| lease.role == session.role)
             .count()
-            >= 4096
+            >= history_limit
             || self
                 .leases
                 .values()
@@ -271,11 +328,19 @@ impl RecordingRegistryRoot {
         )
         .map_err(|_| LeaseError::InvalidInput)?
         .bytes;
-        let new_bytes = self
-            .used_bytes(session.role)
-            .checked_add(request_bytes)
-            .and_then(|bytes| bytes.checked_add(reply_bytes))
+        let lease_bytes = request_bytes
+            .checked_add(reply_bytes)
             .ok_or(LeaseError::Capacity)?;
+        if reserved_lease_bytes.is_some_and(|bound| lease_bytes > bound) {
+            return Err(LeaseError::Capacity);
+        }
+        let new_bytes = if reserved_lease_bytes.is_some() {
+            self.used_bytes(session.role)
+        } else {
+            self.used_bytes(session.role)
+                .checked_add(lease_bytes)
+                .ok_or(LeaseError::Capacity)?
+        };
         let limit = match session.role {
             LeaseRole::Mutation => self.mutation_byte_limit,
             LeaseRole::Reconciliation => self.read_byte_limit,
@@ -294,6 +359,7 @@ impl RecordingRegistryRoot {
                 role: session.role,
                 deadline,
                 consumed: false,
+                workflow_owned: reserved_lease_bytes.is_some(),
             },
         );
         Ok(reply)
