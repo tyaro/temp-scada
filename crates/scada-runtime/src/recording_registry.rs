@@ -1,5 +1,6 @@
-//! Exclusive native owner handoff for the future recording registry.
+//! Exclusive owner handoff and pure budget kernel for the future recording registry.
 //! No session issuer, lease, admission, or transport is exposed here.
+pub(crate) mod kernel;
 use crate::recording_operations::{
     OwnerError, RecordingOperationsHandoff, RecordingOperationsOwner, RegistryClaimReason,
 };

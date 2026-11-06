@@ -1,5 +1,7 @@
 //! Bounded immutable snapshot references and publication credits; no live JSON cache.
 use super::*;
+pub(super) use crate::recording_registry::kernel::budget::fits_bound;
+use crate::recording_registry::kernel::budget::measured;
 pub(super) const DESCRIPTOR_BYTES: usize = 1024;
 pub(super) const MAX_REVISION: u64 = 9_007_199_254_740_991;
 const ENVELOPE: WireBound = WireBound {
@@ -84,13 +86,6 @@ pub(super) enum ProjectionEvent<'a> {
         recovery: bool,
     },
     Close,
-}
-fn measured(v: &Value) -> Result<WireBound, ModelError> {
-    conservative_recording_json_bound(v, WIRE_INSPECTION_REPLY_LIMIT)
-        .map_err(|_| ModelError::InvalidInput)
-}
-pub(super) fn fits_bound(a: WireBound, b: WireBound) -> bool {
-    a.bytes <= b.bytes && a.nodes <= b.nodes && a.depth <= b.depth
 }
 fn max_bound(a: WireBound, b: WireBound) -> WireBound {
     WireBound {

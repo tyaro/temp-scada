@@ -825,3 +825,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 ## native registryへのowner引渡し（C4、seed）
 
 [採用設計](../design/runtime/historian-recording-native-registry-adapter.md)の最初の安全gate。`scada-runtime/src/recording_registry.rs`は非Cloneの`RecordingRegistryOwnerSeed`へ実`RecordingOperationsOwner`を消費し、失敗時は理由と元ownerを返す。`recording_host/supervisor/operations/mod.rs`は公開clientの発行履歴と未使用Coreを照合し、`registry.rs`と`reconciliation/mod.rs`は各台帳のpristine判定を持つ。seedからのhandoffは既存の静止・回復gateへ委譲する。Rust `operations/tests.rs`は未使用成功、drop済みclient拒否、ロック競合後再試行、handoff済み拒否を確認する。seedはscope、認可、lease、admission、native結果配送をまだ持たない。
+
+## 記録registryの純粋予算kernel（C4）
+
+`scada-runtime/src/recording_registry/kernel/budget.rs`は検証済みAdmission一件のrequest／受付証拠reply／不変元reply／completionの生存期間上界をbytes・nodes・depthで計算する。`recording_registry_model.rs`は計測不正と容量不足を既存`ModelError`へ写し、`admission.rs`、`workflow/escrow.rs`、`projection.rs`が同じkernelを使う。simulationの時計・principal・判定・completionはkernelへ入れず、native受付資格も生成しない。既存`recording_registry_model`の境界・共有scenarioとRust全体試験で意味を保つ。
