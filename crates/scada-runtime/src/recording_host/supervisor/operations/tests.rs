@@ -2,8 +2,9 @@ use super::*;
 use crate::recording_host::retention::tests::control;
 use crate::recording_host::{RecordingOptions, RecordingPhase, RecordingPlanTurnIntent};
 use crate::recording_registry::{
-    LeaseError, LeaseRole, PauseDispatchFault, PauseRegistration, PreflightRegistration,
-    RecordingRegistryAdmissionTicket, RecordingRegistryOwnerSeed, RecordingRegistryRoot,
+    ApplyDispatchFault, ApplyRegistration, LeaseError, LeaseRole, PauseDispatchFault,
+    PauseRegistration, PreflightRegistration, RecordingRegistryAdmissionTicket,
+    RecordingRegistryOwnerSeed, RecordingRegistryPauseTicket, RecordingRegistryRoot,
     RecordingRegistrySession, RecordingRegistryWorkflowTicket, TestDispatchFault,
 };
 use futures_util::SinkExt;
@@ -17,7 +18,7 @@ use serde_json::{json, Value};
 use std::time::{Duration, Instant};
 use std::{
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
 use tokio_tungstenite::tungstenite::Message;
@@ -167,6 +168,25 @@ fn registry_pause_admission(
     .unwrap()
 }
 
+fn registry_apply_admission(
+    scope: &Value,
+    change: &RecordingChangeRequest,
+    admission: &str,
+    lease: &RecordingWireLeaseReply,
+    change_ref: &str,
+    operation_id: &str,
+) -> RecordingAdmissionRequest {
+    RecordingAdmissionRequest::from_value(json!({
+        "version":1, "kind":"recordingAdmissionRequest", "ownerRef":scope["ownerRef"],
+        "admissionId":admission, "context":scope["context"],
+        "deadlineLeaseRef":lease.as_value()["outcome"]["deadlineLeaseRef"],
+        "action":{"kind":"apply", "changeRef":change_ref,
+            "operation":{"version":1,"kind":"recordingOperationRequest",
+                "operationId":operation_id,"stage":"apply","change":change.as_value()}}
+    }))
+    .unwrap()
+}
+
 async fn ready_pause_registry(
     epoch: &str,
     pause_budget_ms: u64,
@@ -258,6 +278,438 @@ async fn ready_pause_registry(
         "pause:ready",
     );
     (root, session, workflow, preflight, admission, dir)
+}
+
+async fn ready_apply_registry(
+    epoch: &str,
+    apply_budget_ms: u64,
+) -> (
+    RecordingRegistryRoot,
+    RecordingRegistrySession,
+    RecordingRegistryWorkflowTicket,
+    RecordingRegistryPauseTicket,
+    RecordingAdmissionRequest,
+    crate::recording_host::retention::tests::Directory,
+) {
+    let (mut root, session, workflow, preflight, pause_admission, dir) =
+        ready_pause_registry(epoch, 1000).await;
+    let pause = match root
+        .register_pause_join(&session, &workflow, &preflight, pause_admission)
+        .unwrap()
+    {
+        PauseRegistration::Registered(ticket) => ticket,
+        _ => panic!("new pause"),
+    };
+    let accepted = root.dispatch_pause_join(&session, &pause).unwrap();
+    assert_eq!(accepted.as_value()["outcome"]["kind"], "accepted");
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if root.pause_completion(&session, &pause).unwrap().is_some() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let scope = registry_scope(epoch);
+    let change = change("pause-ready");
+    let lease = root
+        .issue_apply_lease(
+            &session,
+            &workflow,
+            &pause,
+            "apply:ready",
+            registry_lease(
+                &scope,
+                "apply-lease",
+                "apply-admission",
+                "mutation",
+                apply_budget_ms,
+            ),
+        )
+        .unwrap();
+    let change_ref = accepted.as_value()["outcome"]["handle"]["changeRef"]
+        .as_str()
+        .unwrap();
+    let admission = registry_apply_admission(
+        &scope,
+        &change,
+        "apply-admission",
+        &lease,
+        change_ref,
+        "apply:ready",
+    );
+    (root, session, workflow, pause, admission, dir)
+}
+
+fn sqlite_applied_revision(directory: &Path) -> i64 {
+    let db = rusqlite::Connection::open_with_flags(
+        directory.join("store.sqlite3"),
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .unwrap();
+    db.query_row(
+        "SELECT COALESCE(applied_revision, 0) FROM recording_plan_state WHERE singleton=1",
+        [],
+        |row| row.get(0),
+    )
+    .unwrap()
+}
+
+#[tokio::test]
+async fn registry_apply_admission_consumes_lease_and_dispatches_one_native_commit() {
+    let (mut root, session, workflow, pause, admission, dir) =
+        ready_apply_registry("epoch-apply-dispatch", 1000).await;
+    let bob = root.test_session("bob", LeaseRole::Mutation);
+    let mut wrong = admission.as_value().clone();
+    wrong["action"]["operation"]["operationId"] = json!("other:apply");
+    assert!(matches!(
+        root.register_apply(
+            &session,
+            &workflow,
+            &pause,
+            RecordingAdmissionRequest::from_value(wrong).unwrap(),
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    assert!(matches!(
+        root.register_apply(&bob, &workflow, &pause, admission.clone()),
+        Err(LeaseError::Forbidden)
+    ));
+    let mut wrong_stage = admission.as_value().clone();
+    wrong_stage["action"]["kind"] = json!("pauseJoin");
+    wrong_stage["action"]["operation"]["stage"] = json!("pauseJoin");
+    assert!(matches!(
+        root.register_apply(
+            &session,
+            &workflow,
+            &pause,
+            RecordingAdmissionRequest::from_value(wrong_stage).unwrap()
+        ),
+        Err(LeaseError::Forbidden)
+    ));
+    let mut alternate = admission.as_value().clone();
+    alternate["action"]["operation"]["change"]["apply"]["desired"]["revision"] = json!(1.0);
+    let alternate = RecordingAdmissionRequest::from_value(alternate).unwrap();
+    let client = root.test_native_client();
+    let before = sqlite_applied_revision(&dir.0);
+    let used_before = client.shared.core.lock().unwrap().registry.used.len();
+    let bytes = root.test_used_bytes(LeaseRole::Mutation);
+    let ticket = match root
+        .register_apply(&session, &workflow, &pause, alternate.clone())
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    assert_eq!(root.test_lease_consumed("apply-lease"), Some(true));
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    assert_eq!(sqlite_applied_revision(&dir.0), before);
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 0);
+    assert_eq!(
+        client.shared.core.lock().unwrap().registry.used.len(),
+        used_before
+    );
+    assert!(matches!(
+        root.register_apply_at(
+            &session,
+            &workflow,
+            &pause,
+            admission.clone(),
+            Instant::now() + Duration::from_secs(2),
+        )
+        .unwrap(),
+        ApplyRegistration::Existing(_)
+    ));
+    let reply = root.dispatch_apply(&session, &ticket).unwrap();
+    assert_eq!(reply.as_value()["outcome"]["kind"], "accepted");
+    assert_eq!(reply.as_value()["request"], *alternate.as_value());
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(
+        client.shared.core.lock().unwrap().registry.used.len(),
+        used_before + 1
+    );
+    let completion = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Some(result) = root.apply_completion(&session, &ticket).unwrap() {
+                break result;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(completion.as_value()["outcome"]["kind"], "applied");
+    assert_eq!(
+        completion.as_value()["outcome"]["receipt"]["appliedRevision"],
+        before + 1
+    );
+    assert_eq!(sqlite_applied_revision(&dir.0), before + 1);
+    assert_eq!(
+        root.apply_reply(&session, &ticket).unwrap(),
+        Some(reply.clone())
+    );
+    assert_eq!(root.dispatch_apply(&session, &ticket).unwrap(), reply);
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(
+        client.shared.core.lock().unwrap().registry.used.len(),
+        used_before + 1
+    );
+    assert_eq!(sqlite_applied_revision(&dir.0), before + 1);
+    assert!(matches!(
+        root.apply_reply(&bob, &ticket),
+        Err(LeaseError::Forbidden)
+    ));
+    let mut conflicting = admission.as_value().clone();
+    conflicting["deadlineLeaseRef"] = json!("different-lease");
+    assert!(matches!(
+        root.register_apply(
+            &session,
+            &workflow,
+            &pause,
+            RecordingAdmissionRequest::from_value(conflicting).unwrap()
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+}
+
+#[tokio::test]
+async fn registry_apply_admission_expiry_does_not_call_native_or_change_sqlite() {
+    let (mut root, session, workflow, pause, admission, dir) =
+        ready_apply_registry("epoch-apply-expiry", 2000).await;
+    let client = root.test_native_client();
+    let before = sqlite_applied_revision(&dir.0);
+    let used_before = client.shared.core.lock().unwrap().registry.used.len();
+    assert!(matches!(
+        root.register_apply_at(
+            &session,
+            &workflow,
+            &pause,
+            admission.clone(),
+            Instant::now() + Duration::from_secs(2),
+        ),
+        Err(LeaseError::Expired)
+    ));
+    assert_eq!(root.test_lease_consumed("apply-lease"), Some(false));
+    let ticket = match root
+        .register_apply(&session, &workflow, &pause, admission)
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    tokio::time::sleep(Duration::from_millis(2100)).await;
+    let reply = root.dispatch_apply(&session, &ticket).unwrap();
+    assert_eq!(reply.as_value()["outcome"]["kind"], "rejected");
+    assert_eq!(reply.as_value()["outcome"]["error"], "deadlineExceeded");
+    assert_eq!(root.dispatch_apply(&session, &ticket).unwrap(), reply);
+    assert!(root.apply_completion(&session, &ticket).unwrap().is_none());
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 0);
+    assert_eq!(
+        client.shared.core.lock().unwrap().registry.used.len(),
+        used_before
+    );
+    assert_eq!(sqlite_applied_revision(&dir.0), before);
+}
+
+#[tokio::test]
+async fn registry_apply_admission_keeps_unknown_after_projection_or_native_panic() {
+    for (epoch, fault, has_handle) in [
+        (
+            "epoch-apply-projection",
+            ApplyDispatchFault::ProjectionPanic,
+            true,
+        ),
+        (
+            "epoch-apply-native-panic",
+            ApplyDispatchFault::NativePanicAfterCall,
+            false,
+        ),
+    ] {
+        let (mut root, session, workflow, pause, admission, dir) =
+            ready_apply_registry(epoch, 1000).await;
+        let client = root.test_native_client();
+        let before = sqlite_applied_revision(&dir.0);
+        let used_before = client.shared.core.lock().unwrap().registry.used.len();
+        let ticket = match root
+            .register_apply(&session, &workflow, &pause, admission)
+            .unwrap()
+        {
+            ApplyRegistration::Registered(ticket) => ticket,
+            _ => panic!("new apply"),
+        };
+        root.test_set_apply_dispatch_fault(&session, &ticket, fault);
+        let unknown = root.dispatch_apply(&session, &ticket).unwrap();
+        assert_eq!(unknown.as_value()["outcome"]["kind"], "unknown");
+        assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            root.apply_reply(&session, &ticket).unwrap(),
+            Some(unknown.clone())
+        );
+        assert_eq!(
+            client.shared.core.lock().unwrap().registry.used.len(),
+            used_before + 1
+        );
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if client.state().phase != OperationsPhase::Applying {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(sqlite_applied_revision(&dir.0), before + 1);
+        assert_eq!(
+            root.apply_completion(&session, &ticket).unwrap().is_some(),
+            has_handle
+        );
+        assert_eq!(root.dispatch_apply(&session, &ticket).unwrap(), unknown);
+        assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            client.shared.core.lock().unwrap().registry.used.len(),
+            used_before + 1
+        );
+        assert_eq!(sqlite_applied_revision(&dir.0), before + 1);
+        assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+    }
+}
+
+#[tokio::test]
+async fn registry_apply_admission_distinguishes_committed_loss_from_failed_write() {
+    for (epoch, fault, committed) in [
+        ("epoch-apply-lost", driver::TestFault::LostResponse, true),
+        ("epoch-apply-full", driver::TestFault::Full, false),
+    ] {
+        let (mut root, session, workflow, pause, admission, dir) =
+            ready_apply_registry(epoch, 1000).await;
+        let client = root.test_native_client();
+        let before = sqlite_applied_revision(&dir.0);
+        let used_before = client.shared.core.lock().unwrap().registry.used.len();
+        let ticket = match root
+            .register_apply(&session, &workflow, &pause, admission)
+            .unwrap()
+        {
+            ApplyRegistration::Registered(ticket) => ticket,
+            _ => panic!("new apply"),
+        };
+        *client.shared.fault.lock().unwrap() = Some(fault);
+        let accepted = root.dispatch_apply(&session, &ticket).unwrap();
+        assert_eq!(accepted.as_value()["outcome"]["kind"], "accepted");
+        assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+        let completion = tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if let Some(result) = root.apply_completion(&session, &ticket).unwrap() {
+                    break result;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(completion.as_value()["outcome"]["kind"], "failed");
+        assert_eq!(completion.as_value()["outcome"]["effect"], "unconfirmed");
+        assert_eq!(completion.as_value()["recoveryRequired"], true);
+        assert_eq!(
+            sqlite_applied_revision(&dir.0),
+            before + i64::from(committed)
+        );
+        assert_eq!(
+            root.apply_reply(&session, &ticket).unwrap(),
+            Some(accepted.clone())
+        );
+        assert_eq!(root.dispatch_apply(&session, &ticket).unwrap(), accepted);
+        assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+        assert_eq!(
+            client.shared.core.lock().unwrap().registry.used.len(),
+            used_before + 1
+        );
+        assert_eq!(
+            sqlite_applied_revision(&dir.0),
+            before + i64::from(committed)
+        );
+    }
+}
+
+#[tokio::test]
+async fn registry_apply_admission_commit_then_panic_preserves_unknown_quiescence() {
+    let (mut root, session, workflow, pause, admission, dir) =
+        ready_apply_registry("epoch-apply-commit-panic", 1000).await;
+    let client = root.test_native_client();
+    let before = sqlite_applied_revision(&dir.0);
+    let used_before = client.shared.core.lock().unwrap().registry.used.len();
+    let ticket = match root
+        .register_apply(&session, &workflow, &pause, admission)
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    *client.shared.fault.lock().unwrap() = Some(driver::TestFault::CommitThenPanic);
+    let accepted = root.dispatch_apply(&session, &ticket).unwrap();
+    assert_eq!(accepted.as_value()["outcome"]["kind"], "accepted");
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+    let completion = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if let Some(result) = root.apply_completion(&session, &ticket).unwrap() {
+                break result;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(completion.as_value()["quiescence"], "unknown");
+    assert_eq!(completion.as_value()["recoveryRequired"], true);
+    assert_eq!(sqlite_applied_revision(&dir.0), before + 1);
+    assert_eq!(
+        root.apply_reply(&session, &ticket).unwrap(),
+        Some(accepted.clone())
+    );
+    assert_eq!(root.dispatch_apply(&session, &ticket).unwrap(), accepted);
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(
+        client.shared.core.lock().unwrap().registry.used.len(),
+        used_before + 1
+    );
+    assert_eq!(sqlite_applied_revision(&dir.0), before + 1);
+    assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+}
+
+#[tokio::test]
+async fn registry_apply_admission_typed_native_rejection_does_not_claim_apply_id() {
+    let (mut root, session, workflow, pause, admission, dir) =
+        ready_apply_registry("epoch-apply-rejection", 1000).await;
+    let client = root.test_native_client();
+    let before = sqlite_applied_revision(&dir.0);
+    let used_before = client.shared.core.lock().unwrap().registry.used.len();
+    let ticket = match root
+        .register_apply(&session, &workflow, &pause, admission)
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    {
+        let mut core = client.shared.core.lock().unwrap();
+        core.recovery = true;
+    }
+    let rejected = root.dispatch_apply(&session, &ticket).unwrap();
+    assert_eq!(rejected.as_value()["outcome"]["kind"], "rejected");
+    assert_eq!(
+        rejected.as_value()["outcome"]["error"],
+        "planRecoveryRequired"
+    );
+    assert_eq!(root.dispatch_apply(&session, &ticket).unwrap(), rejected);
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+    assert!(root.apply_completion(&session, &ticket).unwrap().is_none());
+    assert_eq!(
+        client.shared.core.lock().unwrap().registry.used.len(),
+        used_before
+    );
+    assert_eq!(sqlite_applied_revision(&dir.0), before);
 }
 
 fn registry_inspection(
@@ -1944,7 +2396,7 @@ async fn registry_pause_join_waits_for_running_worker_cleanup_after_lease_expiry
             &workflow,
             &preflight,
             "pause:running",
-            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 100),
+            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 2000),
         )
         .unwrap();
     let admission = registry_pause_admission(
@@ -1982,7 +2434,7 @@ async fn registry_pause_join_waits_for_running_worker_cleanup_after_lease_expiry
         Err(LeaseError::Busy)
     ));
     assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
-    tokio::time::sleep(Duration::from_millis(130)).await;
+    tokio::time::sleep(Duration::from_millis(2100)).await;
     assert_eq!(root.dispatch_pause_join(&session, &ticket).unwrap(), reply);
     assert!(root.pause_completion(&session, &ticket).unwrap().is_none());
     assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));

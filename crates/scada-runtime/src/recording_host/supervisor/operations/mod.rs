@@ -22,6 +22,8 @@ use scada_model::recording_operations::{
     same_recording_operations_context, RecordingChangeRequest, RecordingOperationRequest,
     RecordingOperationResult, RecordingOperationsContext,
 };
+#[cfg(test)]
+use std::sync::atomic::AtomicU64;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex, MutexGuard, TryLockError,
@@ -106,6 +108,8 @@ struct Core {
 struct Shared {
     #[cfg(test)]
     fault: Mutex<Option<driver::TestFault>>,
+    #[cfg(test)]
+    apply_calls: AtomicU64,
     #[cfg(test)]
     read_fault: Mutex<Option<reconciliation::driver::TestFault>>,
     core: Mutex<Core>,
@@ -238,6 +242,8 @@ impl RecordingOperationsOwner {
             shared: Arc::new(Shared {
                 #[cfg(test)]
                 fault: Mutex::new(None),
+                #[cfg(test)]
+                apply_calls: AtomicU64::new(0),
                 #[cfg(test)]
                 read_fault: Mutex::new(None),
                 core: Mutex::new(Core {
@@ -453,6 +459,8 @@ impl RecordingOperationsClient {
         operation_id: &str,
         control: QueryControl,
     ) -> Result<RecordingOperationHandle, OperationRejection> {
+        #[cfg(test)]
+        self.shared.apply_calls.fetch_add(1, Ordering::Relaxed);
         self.next(change, operation_id, control, Stage::Apply)
     }
     fn next(

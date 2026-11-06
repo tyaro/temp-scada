@@ -10,6 +10,9 @@ use crate::recording_operations::{
     OwnerError, RecordingOperationsClient, RecordingOperationsHandoff, RecordingOperationsOwner,
     RegistryClaimReason,
 };
+#[cfg(test)]
+pub(crate) use apply::ApplyDispatchFault;
+pub use apply::{ApplyRegistration, RecordingRegistryApplyTicket};
 pub use lease::{
     LeaseError, LeaseRole, RecordingRegistryRoot, RecordingRegistrySession, RegistryRootInitFailure,
 };
