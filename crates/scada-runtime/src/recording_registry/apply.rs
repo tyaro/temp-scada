@@ -24,19 +24,19 @@ use std::{
 };
 
 pub(super) struct ApplyLease {
-    pause_sequence: u64,
-    change_ref: String,
-    operation_id: String,
-    admission_id: String,
-    lease_id: String,
-    registered: Option<RegisteredApply>,
+    pub(super) pause_sequence: u64,
+    pub(super) change_ref: String,
+    pub(super) operation_id: String,
+    pub(super) admission_id: String,
+    pub(super) lease_id: String,
+    pub(super) registered: Option<RegisteredApply>,
 }
 
 #[derive(Clone)]
 pub struct RecordingRegistryApplyTicket {
-    identity: Arc<()>,
-    sequence: u64,
-    admission_id: String,
+    pub(super) identity: Arc<()>,
+    pub(super) sequence: u64,
+    pub(super) admission_id: String,
 }
 
 impl RecordingRegistryApplyTicket {
@@ -54,17 +54,17 @@ pub enum ApplyRegistration {
     Existing(RecordingRegistryApplyTicket),
 }
 
-struct RegisteredApply {
-    ticket: RecordingRegistryApplyTicket,
-    request: RecordingAdmissionRequest,
-    budget: LifetimeBudget,
-    state: ApplyDispatchState,
-    binding: Option<RecordingOperationHandle>,
+pub(super) struct RegisteredApply {
+    pub(super) ticket: RecordingRegistryApplyTicket,
+    pub(super) request: RecordingAdmissionRequest,
+    pub(super) budget: LifetimeBudget,
+    pub(super) state: ApplyDispatchState,
+    pub(super) binding: Option<RecordingOperationHandle>,
     #[cfg(test)]
     fault: Option<ApplyDispatchFault>,
 }
 
-enum ApplyDispatchState {
+pub(super) enum ApplyDispatchState {
     Registered,
     Calling,
     Finished(RecordingAdmissionReply),

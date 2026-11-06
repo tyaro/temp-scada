@@ -1,4 +1,6 @@
-use super::{workflow::WorkflowRecord, RecordingRegistryOwnerSeed};
+use super::{
+    reconciliation::RegisteredReconciliation, workflow::WorkflowRecord, RecordingRegistryOwnerSeed,
+};
 #[cfg(test)]
 use crate::recording_operations::RecordingOperationsClient;
 use crate::recording_operations::{OwnerError, RecordingOperationsHandoff};
@@ -94,6 +96,7 @@ pub struct RecordingRegistryRoot {
     read_lease_limit: usize,
     pub(super) closed: bool,
     pub(super) workflow: Option<WorkflowRecord>,
+    pub(super) reconciliation: Option<RegisteredReconciliation>,
     pub(super) reserved_revisions: u64,
     pub(super) admission_inspections: BTreeMap<
         String,
@@ -168,6 +171,7 @@ impl RecordingRegistryRoot {
             read_lease_limit: 4096,
             closed: false,
             workflow: None,
+            reconciliation: None,
             reserved_revisions: 0,
             admission_inspections: BTreeMap::new(),
         })
@@ -414,6 +418,10 @@ impl RecordingRegistryRoot {
             .workflow
             .as_ref()
             .is_some_and(WorkflowRecord::has_uncertain_dispatch)
+            || self
+                .reconciliation
+                .as_ref()
+                .is_some_and(RegisteredReconciliation::is_uncertain)
         {
             return Err(OwnerError::Busy);
         }

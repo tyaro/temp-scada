@@ -55,6 +55,42 @@ impl ReadState {
     }
 }
 impl RecordingOperationsClient {
+    /// Read-only qualification for the registry before it consumes a read admission.
+    pub(crate) fn registry_reconciliation_eligible(
+        &self,
+        original: &RecordingOperationHandle,
+    ) -> bool {
+        let Ok(core) = self.shared.core.try_lock() else {
+            return false;
+        };
+        if core.closed
+            || core.in_flight
+            || matches!(
+                core.read.phase,
+                ReconciliationPhase::InFlight | ReconciliationPhase::Uncertain
+            )
+        {
+            return false;
+        }
+        let Some(workflow) = &core.workflow else {
+            return false;
+        };
+        if !workflow.operations[Stage::Apply.index()]
+            .as_ref()
+            .is_some_and(|handle| Arc::ptr_eq(&handle.0, &original.0))
+        {
+            return false;
+        }
+        let Some(completed) = original.0.completion.borrow().clone() else {
+            return false;
+        };
+        let Some(supervisor) = core.supervisor.as_ref() else {
+            return false;
+        };
+        qualifies_read(&core, supervisor, completed.as_value())
+            && supervisor.require_receipt_reader().is_ok()
+    }
+
     /// Inspect the current original apply only. A receipt never clears recovery.
     pub fn reconcile(
         &self,
@@ -63,6 +99,8 @@ impl RecordingOperationsClient {
         reconciliation_id: &str,
         control: QueryControl,
     ) -> Result<RecordingReconciliationHandle, OperationRejection> {
+        #[cfg(test)]
+        self.shared.reconcile_calls.fetch_add(1, Ordering::Relaxed);
         let fail = |code| self.shared.rejection(code);
         // Bound the identifier before cloning it into a JSON document.
         if reconciliation_id.is_empty() || reconciliation_id.len() > 64 {
@@ -109,15 +147,7 @@ impl RecordingOperationsClient {
             .supervisor
             .as_ref()
             .ok_or_else(|| fail(OperationErrorCode::WorkerFailure))?;
-        let value = completed.as_value();
-        let qualifies = value["outcome"]["kind"] == "failed"
-            && value["outcome"]["effect"] == "unconfirmed"
-            || value["outcome"]["kind"] == "applied"
-                && (value["quiescence"] == "unknown"
-                    || value["recoveryRequired"] == true
-                    || core.recovery
-                    || s.recording_plan_guard_state().recovery_required);
-        if !qualifies {
+        if !qualifies_read(&core, s, completed.as_value()) {
             return Err(fail(OperationErrorCode::InvalidRequest));
         }
         s.require_receipt_reader()
@@ -155,6 +185,19 @@ impl RecordingOperationsClient {
         );
         Ok(handle)
     }
+}
+
+fn qualifies_read(
+    core: &Core,
+    supervisor: &RecordingSupervisor,
+    value: &serde_json::Value,
+) -> bool {
+    value["outcome"]["kind"] == "failed" && value["outcome"]["effect"] == "unconfirmed"
+        || value["outcome"]["kind"] == "applied"
+            && (value["quiescence"] == "unknown"
+                || value["recoveryRequired"] == true
+                || core.recovery
+                || supervisor.recording_plan_guard_state().recovery_required)
 }
 
 #[cfg(test)]

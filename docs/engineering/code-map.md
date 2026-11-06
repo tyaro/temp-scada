@@ -860,4 +860,8 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 ## 記録registryの実apply Admission（C4）
 
-`recording_registry/apply.rs`はapply専用ticketに元Admission全文・lease・実change handleを束縛し、登録とlease消費を一度に確定する。登録ticketから実native applyへ一回だけ配送し、元受付replyと実apply handleの完了を別に読む。元`unknown`と配送中はhandoffを止める。`operations/tests.rs`は一時SQLiteの適用revisionと試験専用native apply呼出回数を別々に確認し、commit後の応答喪失・投影失敗・SQLite FULL・期限切れを検証する。reconcile、discard、製品session issuerは後続。
+`recording_registry/apply.rs`はapply専用ticketに元Admission全文・lease・実change handleを束縛し、登録とlease消費を一度に確定する。登録ticketから実native applyへ一回だけ配送し、元受付replyと実apply handleの完了を別に読む。元`unknown`と配送中はhandoffを止める。`operations/tests.rs`は一時SQLiteの適用revisionと試験専用native apply呼出回数を別々に確認し、commit後の応答喪失・投影失敗・SQLite FULL・期限切れを検証する。discard、製品session issuerは後続。
+
+## 記録registryの初回reconcile（C4）
+
+`recording_registry/reconciliation.rs`はread roleの同一root・principal・workflow・元apply ticketを照合する。保存済み実apply handleと完了の全文一致、回復対象の結果、独立read lease・ID／2MiB容量を登録前に検査し、lease消費と元Admissionを一度に確定する。絶対期限でnative `reconcile`を高々一回呼び、実read handleを先に保存して元replyを固定する。`reconciliation_delivery`はそのhandleからのみ結果／readUncertainを読み、元applyのreply・completion・recoveryを変更しない。`lease.rs`のhandoffは不確定readを拒否する。`operations/tests.rs`は実SQLiteのcommit後応答喪失／FULLをreceiptFound／notFoundへ分け、元applyの投影失敗、期限と容量1byte不足、二重配送を検証する。Observation／cancel／複数read retryと製品session issuerは後続。

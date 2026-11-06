@@ -5,6 +5,7 @@ mod inspection;
 pub(crate) mod kernel;
 mod lease;
 mod pause;
+mod reconciliation;
 mod workflow;
 use crate::recording_operations::{
     OwnerError, RecordingOperationsClient, RecordingOperationsHandoff, RecordingOperationsOwner,
@@ -19,6 +20,7 @@ pub use lease::{
 #[cfg(test)]
 pub(crate) use pause::PauseDispatchFault;
 pub use pause::{PauseRegistration, RecordingRegistryPauseTicket};
+pub use reconciliation::{ReconciliationRegistration, RecordingRegistryReconciliationTicket};
 use std::fmt;
 #[cfg(test)]
 pub(crate) use workflow::TestDispatchFault;

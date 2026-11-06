@@ -111,6 +111,8 @@ struct Shared {
     #[cfg(test)]
     apply_calls: AtomicU64,
     #[cfg(test)]
+    reconcile_calls: AtomicU64,
+    #[cfg(test)]
     read_fault: Mutex<Option<reconciliation::driver::TestFault>>,
     core: Mutex<Core>,
     external_client_issued: AtomicBool,
@@ -244,6 +246,8 @@ impl RecordingOperationsOwner {
                 fault: Mutex::new(None),
                 #[cfg(test)]
                 apply_calls: AtomicU64::new(0),
+                #[cfg(test)]
+                reconcile_calls: AtomicU64::new(0),
                 #[cfg(test)]
                 read_fault: Mutex::new(None),
                 core: Mutex::new(Core {
