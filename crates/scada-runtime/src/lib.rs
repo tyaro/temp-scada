@@ -7,6 +7,7 @@ mod host;
 mod projection;
 pub mod recorder_source;
 pub mod recording_host;
+pub mod recording_registry;
 pub mod recording_registry_model;
 pub use recording_host::operations as recording_operations;
 mod slots;

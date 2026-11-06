@@ -821,3 +821,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 [採用設計](../design/runtime/historian-recording-coordinator-v2.md)に沿い、`recording-wire-coordinator-v2.ts`が実ledger／receiver／local-v2とtest-only portを固定scopeで束縛する。source単位の一回claim、token帰属・容量、元返信Promiseと個別transport ticketの終了、Observation queryとattempt、close後の後着回収を別に保持する。`recording-wire-local-v2.ts`のprivate source brandは同scopeでも別ledger／receiverの組合せを拒否する。test portの同期lifecycleは開始前に終了したticketを送信へ流さず、元返信やnative workerの静止を偽装しない。
 
 `examples/recording-wire-coordinator-v2-cases.json`と`__fixtures__/recording-wire-coordinator-v2-cases.ts`をNode／Chromiumで共通実行する。`recording-wire-coordinator-v2.test.ts`はreply／taskの全順序、CallInspection、Observation pending、Attach／Control、有限容量、source再claim、再入・後着を検証する。`e2e/recording-wire-coordinator-v2.spec.ts`はProject保存bytes不変を確認する。既存`recording-async`／通常App／Tauri／native ownerはこの区切りで接続しない。
+
+## native registryへのowner引渡し（C4、seed）
+
+[採用設計](../design/runtime/historian-recording-native-registry-adapter.md)の最初の安全gate。`scada-runtime/src/recording_registry.rs`は非Cloneの`RecordingRegistryOwnerSeed`へ実`RecordingOperationsOwner`を消費し、失敗時は理由と元ownerを返す。`recording_host/supervisor/operations/mod.rs`は公開clientの発行履歴と未使用Coreを照合し、`registry.rs`と`reconciliation/mod.rs`は各台帳のpristine判定を持つ。seedからのhandoffは既存の静止・回復gateへ委譲する。Rust `operations/tests.rs`は未使用成功、drop済みclient拒否、ロック競合後再試行、handoff済み拒否を確認する。seedはscope、認可、lease、admission、native結果配送をまだ持たない。

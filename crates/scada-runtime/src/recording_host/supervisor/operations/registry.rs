@@ -8,6 +8,9 @@ pub(super) struct Registry {
     counter: u64,
 }
 impl Registry {
+    pub(super) fn is_pristine(&self) -> bool {
+        self.used.is_empty() && self.reserved == 0 && self.counter == 0
+    }
     pub fn prepare(&self, change: &str) -> Result<(String, u64), OperationErrorCode> {
         if self.used.contains(&(false, change.into())) {
             return Err(OperationErrorCode::Consumed);

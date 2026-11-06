@@ -22,7 +22,10 @@ use scada_model::recording_operations::{
     same_recording_operations_context, RecordingChangeRequest, RecordingOperationRequest,
     RecordingOperationResult, RecordingOperationsContext,
 };
-use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex, MutexGuard, TryLockError,
+};
 use tokio::{runtime::Handle, sync::watch};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -106,6 +109,7 @@ struct Shared {
     #[cfg(test)]
     read_fault: Mutex<Option<reconciliation::driver::TestFault>>,
     core: Mutex<Core>,
+    external_client_issued: AtomicBool,
     context: RecordingOperationsContext,
     run: RecordingRun,
     identity: Arc<()>,
@@ -160,6 +164,13 @@ impl Shared {
 /// Dropping a client does nothing to the source. Dropping this root ends the service.
 pub struct RecordingOperationsOwner {
     shared: Arc<Shared>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RegistryClaimReason {
+    Busy,
+    ClientAlreadyIssued,
+    NotPristine,
+    Internal,
 }
 #[derive(Clone)]
 pub struct RecordingOperationsClient {
@@ -220,6 +231,7 @@ impl RecordingOperationsOwner {
                     native_receipt: None,
                     read: reconciliation::ReadState::default(),
                 }),
+                external_client_issued: AtomicBool::new(false),
                 context,
                 run: recording_run,
                 identity: Arc::new(()),
@@ -229,9 +241,38 @@ impl RecordingOperationsOwner {
         })
     }
     pub fn client(&self) -> RecordingOperationsClient {
+        self.shared
+            .external_client_issued
+            .store(true, Ordering::Release);
         RecordingOperationsClient {
             shared: self.shared.clone(),
         }
+    }
+    pub(crate) fn check_registry_claim(&self) -> Result<(), RegistryClaimReason> {
+        let core = self.shared.core.try_lock().map_err(|e| match e {
+            TryLockError::WouldBlock => RegistryClaimReason::Busy,
+            TryLockError::Poisoned(_) => RegistryClaimReason::Internal,
+        })?;
+        if self.shared.external_client_issued.load(Ordering::Acquire)
+            || Arc::strong_count(&self.shared) != 1
+        {
+            return Err(RegistryClaimReason::ClientAlreadyIssued);
+        }
+        if core.closed
+            || core.in_flight
+            || core.recovery
+            || core.phase != OperationsPhase::Idle
+            || core.workflow.is_some()
+            || core.latest.is_some()
+            || core.last_applied.is_some()
+            || core.native_receipt.is_some()
+            || core.supervisor.is_none()
+            || !core.registry.is_pristine()
+            || !core.read.is_pristine()
+        {
+            return Err(RegistryClaimReason::NotPristine);
+        }
+        Ok(())
     }
     pub fn try_handoff(&mut self) -> Result<RecordingOperationsHandoff, OwnerError> {
         let mut core = self.shared.core.try_lock().map_err(|e| match e {
