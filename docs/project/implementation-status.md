@@ -38,7 +38,7 @@ C2の検証として、通常entrypointのNativeShellからTauri command／event
 
 [C4 coordinator-v2境界](../design/runtime/historian-recording-coordinator-v2.md)では、同realmのtest-only rootとattempt portを追加した。保存済み元返信とtransport call taskの終了を独立に保持し、Observation queryの結果、receiver表示、view寿命、closeを別欄で扱う。実nativeの物理終了・認可・送信資格はこのportでは証明しない。製品native adapterとtransportは後続である。
 
-[C4 native registry adapterの採用設計](../design/runtime/historian-recording-native-registry-adapter.md)では、実`RecordingOperationsOwner`を共有rootが所有し、実時計・trusted session・native handleと元受付を束縛する順序を定めた。未使用ownerの排他的seedと失敗時返却、Admission保存予算kernel、固定scopeのnative rootと実`Instant` lease台帳に続き、四段階の保持bytesとsnapshot上界を共有kernelへ移し、最初の一workflowをnative rootで事前予約できるようにした。stage別credit・revision、lease消費、製品session issuerと実native admissionは未接続で、現行の`RegistryDomain`はsimulationのままである。
+[C4 native registry adapterの採用設計](../design/runtime/historian-recording-native-registry-adapter.md)では、実`RecordingOperationsOwner`を共有rootが所有し、実時計・trusted session・native handleと元受付を束縛する順序を定めた。未使用ownerの排他的seedと失敗時返却、Admission保存予算kernel、固定scopeのnative rootと実`Instant` lease台帳に続き、四段階の保持bytesとsnapshot上界を共有kernelへ移し、最初の一workflowを事前予約する。preflight leaseの初回発行・失効retry、元Admissionの不変登録とleaseの原子消費まで追加した。native呼出し・結果と製品session issuerは未接続で、現行の`RegistryDomain`はsimulationのままである。
 
 ## 記録wireの元call配送台帳設計（H5d4c4c-prep2d2a、2026-11-05）
 

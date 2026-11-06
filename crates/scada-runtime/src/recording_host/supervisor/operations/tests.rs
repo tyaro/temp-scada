@@ -2,9 +2,10 @@ use super::*;
 use crate::recording_host::retention::tests::control;
 use crate::recording_host::{RecordingPhase, RecordingPlanTurnIntent};
 use crate::recording_registry::{
-    LeaseError, LeaseRole, RecordingRegistryOwnerSeed, RecordingRegistryRoot,
+    LeaseError, LeaseRole, PreflightRegistration, RecordingRegistryOwnerSeed, RecordingRegistryRoot,
 };
-use scada_model::recording_wire::RecordingWireLeaseRequest;
+use scada_model::recording_admission::RecordingAdmissionRequest;
+use scada_model::recording_wire::{RecordingWireLeaseReply, RecordingWireLeaseRequest};
 use serde_json::{json, Value};
 use std::time::Duration;
 pub(super) fn context() -> RecordingOperationsContext {
@@ -115,6 +116,21 @@ fn registry_lease(
         "version":1, "kind":"recordingWireLeaseRequest", "scope":scope,
         "leaseRequestId":id, "admissionId":admission, "role":role,
         "requestedBudgetMs":budget
+    }))
+    .unwrap()
+}
+
+fn registry_preflight(
+    scope: &Value,
+    change: &RecordingChangeRequest,
+    admission: &str,
+    lease: &RecordingWireLeaseReply,
+) -> RecordingAdmissionRequest {
+    RecordingAdmissionRequest::from_value(json!({
+        "version":1, "kind":"recordingAdmissionRequest", "ownerRef":scope["ownerRef"],
+        "admissionId":admission, "context":scope["context"],
+        "deadlineLeaseRef":lease.as_value()["outcome"]["deadlineLeaseRef"],
+        "action":{"kind":"preflight", "change":change.as_value()}
     }))
     .unwrap()
 }
@@ -455,6 +471,293 @@ async fn registry_workflow_cannot_follow_an_unreserved_mutation_lease() {
         root.reserve_workflow(&session, change("workflow-1")),
         Err(LeaseError::Busy)
     ));
+}
+
+#[tokio::test]
+async fn registry_preflight_registration_consumes_lease_once_without_native_call() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-1");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let planned = change("workflow-preflight");
+    let workflow = root.reserve_workflow(&session, planned.clone()).unwrap();
+    let reserved_bytes = root.test_used_bytes(LeaseRole::Mutation);
+    let now = std::time::Instant::now();
+    let lease_request = registry_lease(&scope, "lease-1", "admission-1", "mutation", 10);
+    let lease = root
+        .issue_preflight_lease_at(&session, &workflow, lease_request.clone(), now)
+        .unwrap();
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), reserved_bytes);
+    assert_eq!(root.test_reserved_revisions(), 11);
+    assert_eq!(root.test_lease_consumed("lease-1"), Some(false));
+    let request = registry_preflight(&scope, &planned, "admission-1", &lease);
+    let bob = root.test_session("bob", LeaseRole::Mutation);
+    assert!(matches!(
+        root.issue_preflight_lease_at(&bob, &workflow, lease_request, now),
+        Err(LeaseError::Forbidden)
+    ));
+    assert!(matches!(
+        root.register_preflight_at(&bob, &workflow, request.clone(), now),
+        Err(LeaseError::Forbidden)
+    ));
+    let mut changed_before_registration = request.as_value().clone();
+    changed_before_registration["action"]["change"] = change("different-change").as_value().clone();
+    let changed_before_registration =
+        RecordingAdmissionRequest::from_value(changed_before_registration).unwrap();
+    assert!(matches!(
+        root.register_preflight_at(&session, &workflow, changed_before_registration, now),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    let registered = root
+        .register_preflight_at(
+            &session,
+            &workflow,
+            request.clone(),
+            now + Duration::from_millis(9),
+        )
+        .unwrap();
+    let PreflightRegistration::Registered(ticket) = registered else {
+        panic!("new registration expected")
+    };
+    assert_eq!(ticket.admission_id(), "admission-1");
+    assert_eq!(ticket.sequence(), 3);
+    assert_eq!(root.test_lease_consumed("lease-1"), Some(true));
+    let replay = root
+        .register_preflight_at(
+            &session,
+            &workflow,
+            request.clone(),
+            now + Duration::from_millis(20),
+        )
+        .unwrap();
+    let PreflightRegistration::Existing(existing) = replay else {
+        panic!("existing registration expected")
+    };
+    assert_eq!(existing.sequence(), ticket.sequence());
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), reserved_bytes);
+    let mut changed = request.as_value().clone();
+    changed["deadlineLeaseRef"] = json!("different-ref");
+    let changed = RecordingAdmissionRequest::from_value(changed).unwrap();
+    assert!(matches!(
+        root.register_preflight_at(
+            &session,
+            &workflow,
+            changed,
+            now + Duration::from_millis(20)
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    assert!(matches!(
+        root.issue_preflight_lease_at(
+            &session,
+            &workflow,
+            registry_lease(&scope, "lease-2", "admission-2", "mutation", 10),
+            now + Duration::from_millis(20)
+        ),
+        Err(LeaseError::Busy)
+    ));
+    let handoff = root.try_handoff().unwrap();
+    assert_eq!(
+        handoff.supervisor.state().recording.phase,
+        RecordingPhase::Joined
+    );
+    assert!(matches!(
+        root.register_preflight_at(
+            &session,
+            &workflow,
+            request,
+            now + Duration::from_millis(20)
+        ),
+        Err(LeaseError::Closed)
+    ));
+}
+
+#[tokio::test]
+async fn registry_preflight_expiry_retry_preserves_original_and_future_reservations() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-1");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let planned = change("workflow-retry");
+    let workflow = root.reserve_workflow(&session, planned.clone()).unwrap();
+    let initial_bytes = root.test_used_bytes(LeaseRole::Mutation);
+    let (stage, _) =
+        crate::recording_registry::kernel::workflow::stage(&planned, &scope, "preflight").unwrap();
+    let retry_bytes = stage.bytes().unwrap();
+    let now = std::time::Instant::now();
+    let first_request = registry_lease(&scope, "lease-1", "admission-1", "mutation", 5);
+    let first = root
+        .issue_preflight_lease_at(&session, &workflow, first_request.clone(), now)
+        .unwrap();
+    let first_admission = registry_preflight(&scope, &planned, "admission-1", &first);
+    assert!(matches!(
+        root.test_register_preflight_with_clock(
+            &session,
+            &workflow,
+            first_admission.clone(),
+            || now + Duration::from_millis(5)
+        ),
+        Err(LeaseError::Expired)
+    ));
+    assert_eq!(root.test_lease_consumed("lease-1"), Some(false));
+    assert!(matches!(
+        root.issue_preflight_lease_at(
+            &session,
+            &workflow,
+            registry_lease(&scope, "lease-2", "admission-2", "mutation", 5),
+            now + Duration::from_millis(4)
+        ),
+        Err(LeaseError::Busy)
+    ));
+    assert_eq!(
+        root.issue_preflight_lease_at(
+            &session,
+            &workflow,
+            first_request,
+            now + Duration::from_millis(20)
+        )
+        .unwrap()
+        .as_value(),
+        first.as_value()
+    );
+    let retry_request = registry_lease(&scope, "lease-2", "admission-2", "mutation", 5);
+    root.test_set_byte_limit(LeaseRole::Mutation, initial_bytes + retry_bytes - 1);
+    assert!(matches!(
+        root.issue_preflight_lease_at(
+            &session,
+            &workflow,
+            retry_request.clone(),
+            now + Duration::from_millis(5)
+        ),
+        Err(LeaseError::Capacity)
+    ));
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), initial_bytes);
+    assert_eq!(root.test_reserved_revisions(), 11);
+    root.test_set_byte_limit(LeaseRole::Mutation, initial_bytes + retry_bytes);
+    let second = root
+        .issue_preflight_lease_at(
+            &session,
+            &workflow,
+            retry_request,
+            now + Duration::from_millis(5),
+        )
+        .unwrap();
+    assert_eq!(
+        second.as_value()["outcome"]["deadlineLeaseRef"],
+        "native-lease:3"
+    );
+    assert_eq!(
+        root.test_used_bytes(LeaseRole::Mutation),
+        initial_bytes + retry_bytes
+    );
+    assert_eq!(root.test_reserved_revisions(), 14);
+    assert!(matches!(
+        root.issue_preflight_lease_at(
+            &session,
+            &workflow,
+            registry_lease(&scope, "lease-3", "admission-2", "mutation", 5),
+            now + Duration::from_millis(6)
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    assert!(matches!(
+        root.register_preflight_at(
+            &session,
+            &workflow,
+            first_admission,
+            now + Duration::from_millis(6)
+        ),
+        Err(LeaseError::Busy)
+    ));
+    let second_admission = registry_preflight(&scope, &planned, "admission-2", &second);
+    assert!(matches!(
+        root.register_preflight_at(
+            &session,
+            &workflow,
+            second_admission,
+            now + Duration::from_millis(9)
+        ),
+        Ok(PreflightRegistration::Registered(_))
+    ));
+    assert_eq!(root.test_lease_consumed("lease-1"), Some(false));
+    assert_eq!(root.test_lease_consumed("lease-2"), Some(true));
+}
+
+#[tokio::test]
+async fn registry_preflight_rejects_a_same_named_ticket_from_another_root() {
+    let (first_owner, _first_dir) = setup();
+    let (second_owner, _second_dir) = setup();
+    let scope = registry_scope("epoch-1");
+    let mut first = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(first_owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let mut second = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(second_owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let first_session = first.test_session("alice", LeaseRole::Mutation);
+    let second_session = second.test_session("alice", LeaseRole::Mutation);
+    let planned = change("same-name");
+    let foreign = first
+        .reserve_workflow(&first_session, planned.clone())
+        .unwrap();
+    let _local = second.reserve_workflow(&second_session, planned).unwrap();
+    let request = registry_lease(&scope, "lease-1", "admission-1", "mutation", 5);
+    assert!(matches!(
+        second.issue_preflight_lease_at(
+            &second_session,
+            &foreign,
+            request,
+            std::time::Instant::now()
+        ),
+        Err(LeaseError::Forbidden)
+    ));
+}
+
+#[tokio::test]
+async fn registry_preflight_lease_history_is_partitioned_from_read_history() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-1");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let mutation = root.test_session("alice", LeaseRole::Mutation);
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let workflow = root
+        .reserve_workflow(&mutation, change("workflow-partition"))
+        .unwrap();
+    root.issue_lease(
+        &read,
+        registry_lease(&scope, "read-1", "read-admission-1", "reconciliation", 5),
+    )
+    .unwrap();
+    root.test_set_lease_limit(LeaseRole::Mutation, 4);
+    assert!(root
+        .issue_preflight_lease_at(
+            &mutation,
+            &workflow,
+            registry_lease(&scope, "lease-1", "admission-1", "mutation", 5),
+            std::time::Instant::now(),
+        )
+        .is_ok());
 }
 #[tokio::test]
 async fn explicit_stages_return_the_native_owner_before_each_terminal_state() {

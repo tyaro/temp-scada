@@ -92,6 +92,12 @@ impl LifetimeBudget {
         )
     }
 
+    pub(crate) fn covers(self, actual: Self) -> bool {
+        fits_bound(actual.request, self.request)
+            && fits_bound(actual.reply, self.reply)
+            && fits_bound(actual.completion, self.completion)
+    }
+
     pub(crate) fn check_request(self, v: &Value) -> Result<(), BudgetError> {
         check(v, self.request)
     }
