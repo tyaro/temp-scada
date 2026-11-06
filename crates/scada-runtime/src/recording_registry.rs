@@ -3,6 +3,7 @@
 mod inspection;
 pub(crate) mod kernel;
 mod lease;
+mod pause;
 mod workflow;
 use crate::recording_operations::{
     OwnerError, RecordingOperationsClient, RecordingOperationsHandoff, RecordingOperationsOwner,

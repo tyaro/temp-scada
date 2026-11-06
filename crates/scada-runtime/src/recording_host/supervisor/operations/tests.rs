@@ -1248,6 +1248,429 @@ async fn registry_inspection_capacity_failure_does_not_bind_id_or_spend_read_byt
 }
 
 #[tokio::test]
+async fn registry_pause_lease_binds_confirmed_candidate_without_stopping_native() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-pause-lease");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let bob = root.test_session("bob", LeaseRole::Mutation);
+    let change = change("pause-lease-candidate");
+    let workflow = root.reserve_workflow(&session, change.clone()).unwrap();
+    let first_lease = root
+        .issue_preflight_lease(
+            &session,
+            &workflow,
+            registry_lease(
+                &scope,
+                "preflight-lease",
+                "preflight-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let preflight = match root
+        .register_preflight(
+            &session,
+            &workflow,
+            registry_preflight(&scope, &change, "preflight-admission", &first_lease),
+        )
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new registration expected"),
+    };
+    let accepted = root.dispatch_preflight(&session, &preflight).unwrap();
+    for _ in 0..100 {
+        if root
+            .preflight_completion(&session, &preflight)
+            .unwrap()
+            .is_some()
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let candidate = root
+        .preflight_completion(&session, &preflight)
+        .unwrap()
+        .unwrap();
+    assert_eq!(candidate.as_value()["outcome"]["kind"], "candidate");
+    assert_eq!(candidate.as_value()["quiescence"], "confirmed");
+    assert_eq!(candidate.as_value()["recoveryRequired"], false);
+    assert_eq!(
+        root.test_native_client().state().phase,
+        OperationsPhase::Candidate
+    );
+    let bytes = root.test_used_bytes(LeaseRole::Mutation);
+    let native_operation_id = accepted.as_value()["outcome"]["handle"]["operationRef"]
+        .as_str()
+        .unwrap();
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            native_operation_id,
+            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 100),
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &bob,
+            &workflow,
+            &preflight,
+            "pause:operation",
+            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 100),
+        ),
+        Err(LeaseError::Forbidden)
+    ));
+    let other_scope = registry_scope("other-epoch-pause-lease");
+    for lease_id in ["preflight-lease", "unused-foreign-lease"] {
+        assert!(matches!(
+            root.issue_pause_join_lease(
+                &session,
+                &workflow,
+                &preflight,
+                "pause:operation",
+                registry_lease(&other_scope, lease_id, "foreign-admission", "mutation", 100),
+            ),
+            Err(LeaseError::Forbidden)
+        ));
+    }
+    for reused in [
+        registry_lease(
+            &scope,
+            "preflight-lease",
+            "preflight-admission",
+            "mutation",
+            1000,
+        ),
+        registry_lease(
+            &scope,
+            "preflight-lease",
+            "fresh-pause-admission",
+            "mutation",
+            100,
+        ),
+        registry_lease(
+            &scope,
+            "fresh-pause-lease",
+            "preflight-admission",
+            "mutation",
+            100,
+        ),
+    ] {
+        assert!(matches!(
+            root.issue_pause_join_lease(
+                &session,
+                &workflow,
+                &preflight,
+                "pause:operation",
+                reused,
+            ),
+            Err(LeaseError::ProtocolViolation)
+        ));
+    }
+    let oversized_id = "x".repeat(65);
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            &oversized_id,
+            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 100),
+        ),
+        Err(LeaseError::InvalidInput)
+    ));
+    assert_eq!(root.test_lease_consumed("pause-lease"), None);
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    root.test_set_lease_limit(LeaseRole::Mutation, 1);
+    let request = registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 100);
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "pause:operation",
+            request.clone()
+        ),
+        Err(LeaseError::Capacity)
+    ));
+    assert_eq!(root.test_lease_consumed("pause-lease"), None);
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    root.test_set_lease_limit(LeaseRole::Mutation, 2);
+    let reply = root
+        .issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "pause:operation",
+            request.clone(),
+        )
+        .unwrap();
+    assert_eq!(root.test_lease_consumed("pause-lease"), Some(false));
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    assert_eq!(root.test_reserved_revisions(), 11);
+    assert_eq!(
+        root.test_native_client().state().phase,
+        OperationsPhase::Candidate
+    );
+    tokio::time::sleep(Duration::from_millis(110)).await;
+    assert_eq!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "pause:operation",
+            request.clone()
+        )
+        .unwrap(),
+        reply
+    );
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "another-pause",
+            request.clone()
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "pause:operation",
+            registry_lease(
+                &scope,
+                "another-lease",
+                "another-admission",
+                "mutation",
+                100
+            )
+        ),
+        Err(LeaseError::ProtocolViolation)
+    ));
+    assert_eq!(
+        root.test_native_client().state().phase,
+        OperationsPhase::Candidate
+    );
+}
+
+#[tokio::test]
+async fn registry_pause_lease_requires_recovered_acceptance_and_real_candidate() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-pause-recovered");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let mutation = root.test_session("alice", LeaseRole::Mutation);
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let change = change("pause-recovered");
+    let workflow = root.reserve_workflow(&mutation, change.clone()).unwrap();
+    let first_lease = root
+        .issue_preflight_lease(
+            &mutation,
+            &workflow,
+            registry_lease(
+                &scope,
+                "recovered-preflight-lease",
+                "recovered-preflight",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let original = registry_preflight(&scope, &change, "recovered-preflight", &first_lease);
+    let preflight = match root
+        .register_preflight(&mutation, &workflow, original.clone())
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new registration expected"),
+    };
+    root.test_set_dispatch_fault(&mutation, &preflight, TestDispatchFault::ProjectionPanic);
+    let unknown = root.dispatch_preflight(&mutation, &preflight).unwrap();
+    assert_eq!(unknown.as_value()["outcome"]["kind"], "unknown");
+    let pause_request = registry_lease(
+        &scope,
+        "recovered-pause-lease",
+        "recovered-pause",
+        "mutation",
+        1000,
+    );
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &mutation,
+            &workflow,
+            &preflight,
+            "recovered:pause",
+            pause_request.clone()
+        ),
+        Err(LeaseError::Busy)
+    ));
+    assert_eq!(root.test_lease_consumed("recovered-pause-lease"), None);
+    for _ in 0..100 {
+        if root
+            .preflight_completion(&mutation, &preflight)
+            .unwrap()
+            .is_some()
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(
+        root.preflight_completion(&mutation, &preflight)
+            .unwrap()
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "candidate"
+    );
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &mutation,
+            &workflow,
+            &preflight,
+            "recovered:pause",
+            pause_request.clone()
+        ),
+        Err(LeaseError::Busy)
+    ));
+    let inspection = root
+        .inspect_preflight_admission(
+            &read,
+            &workflow,
+            registry_inspection(&original, "recovered-inspection"),
+        )
+        .unwrap();
+    assert_eq!(
+        inspection.as_value()["outcome"]["reply"]["outcome"]["kind"],
+        "accepted"
+    );
+    root.issue_pause_join_lease(
+        &mutation,
+        &workflow,
+        &preflight,
+        "recovered:pause",
+        pause_request,
+    )
+    .unwrap();
+    assert_eq!(
+        root.preflight_reply(&mutation, &preflight).unwrap(),
+        Some(unknown)
+    );
+    assert_eq!(
+        root.test_native_client().state().phase,
+        OperationsPhase::Candidate
+    );
+}
+
+#[tokio::test]
+async fn registry_pause_lease_waits_for_the_original_handle_completion() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-pause-pending");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let change = change("pause-pending");
+    let workflow = root.reserve_workflow(&session, change.clone()).unwrap();
+    let first_lease = root
+        .issue_preflight_lease(
+            &session,
+            &workflow,
+            registry_lease(
+                &scope,
+                "pending-preflight-lease",
+                "pending-preflight",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let preflight = match root
+        .register_preflight(
+            &session,
+            &workflow,
+            registry_preflight(&scope, &change, "pending-preflight", &first_lease),
+        )
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new registration expected"),
+    };
+    let gate = Arc::new(driver::TestGate::default());
+    let client = root.test_native_client();
+    *client.shared.fault.lock().unwrap() = Some(driver::TestFault::Gate(gate.clone()));
+    drop(client);
+    assert_eq!(
+        root.dispatch_preflight(&session, &preflight)
+            .unwrap()
+            .as_value()["outcome"]["kind"],
+        "accepted"
+    );
+    gate.entered.notified().await;
+    let bytes = root.test_used_bytes(LeaseRole::Mutation);
+    let request = registry_lease(
+        &scope,
+        "pending-pause-lease",
+        "pending-pause",
+        "mutation",
+        1000,
+    );
+    assert!(matches!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &preflight,
+            "pending:pause",
+            request.clone()
+        ),
+        Err(LeaseError::Busy)
+    ));
+    assert_eq!(root.test_lease_consumed("pending-pause-lease"), None);
+    assert_eq!(root.test_used_bytes(LeaseRole::Mutation), bytes);
+    gate.release.notify_one();
+    for _ in 0..100 {
+        if root
+            .preflight_completion(&session, &preflight)
+            .unwrap()
+            .is_some()
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(root
+        .preflight_completion(&session, &preflight)
+        .unwrap()
+        .is_some());
+    root.issue_pause_join_lease(&session, &workflow, &preflight, "pending:pause", request)
+        .unwrap();
+    assert_eq!(
+        root.test_native_client().state().phase,
+        OperationsPhase::Candidate
+    );
+}
+
+#[tokio::test]
 async fn registry_preflight_lease_history_is_partitioned_from_read_history() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-1");

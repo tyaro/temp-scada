@@ -1,6 +1,6 @@
 # 記録wireのnative registry adapter
 
-状態: **C4の採用詳細設計。初回workflow予約・preflight lease／元Admission登録・一回のnative preflight・AdmissionInspectionまで実装**。2026-11-07（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[coordinator-v2](historian-recording-coordinator-v2.md)、[wire・host契約](historian-recording-wire-host.md)、[共有native owner](historian-recording-native-owner.md)、[接続境界](historian-recording-bridge-boundary.md)に続く。
+状態: **C4の採用詳細設計。初回workflow予約・preflight・AdmissionInspection・実Candidate資格付き初回pause/join leaseまで実装**。2026-11-07（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[coordinator-v2](historian-recording-coordinator-v2.md)、[wire・host契約](historian-recording-wire-host.md)、[共有native owner](historian-recording-native-owner.md)、[接続境界](historian-recording-bridge-boundary.md)に続く。
 
 ## 1. この区切りの対象
 
@@ -65,7 +65,7 @@ view close、Project切替、Hub読取再接続はrootをdropしない。既存o
 
 ## 7. 受入と実装順
 
-2026-11-06の実装区切りでは、seedを固定scopeの非Clone rootへ移し、試験専用sessionと実`Instant`期限のlease台帳を追加した。同一要求の再取得は元replyを返して期限を延長しない。次に四段階の保持bytesとsnapshot上界を共有kernelで計算し、native rootで最初の一workflowを予約した。既存Supervisorの同run資格を確認し、予約前に汎用mutation leaseを発行したrootは期限後も予約を拒否する。さらに初回preflight leaseと期限切れretryを予約済み容量へ束縛し、元Admissionの全文を保存して同時にleaseを消費する。登録済み同一要求は期限後も`Existing`として再取得できる。登録済みticketから実ownerのpreflightを高々一回呼び、leaseの絶対期限をnativeへ渡す。同期受理では実change／operation handleを先に保持して元Accepted返信を保存し、完了は保存済みhandleから読む。同期拒否だけをRejected、panic等はUnknownとして保存し、不確定なhandoffを止める。2026-11-07にはread roleのpreflight AdmissionInspectionを追加した。root・principal・workflowと元request全文を照合し、未登録はNotFound、受付証拠未確定はUnknown、保存済み実handleはAcceptedとして新しい照会IDへ投影する。同じ照会IDの初回結果と元dispatcher返信は不変に保ち、照会request＋replyを2MiB read枠へ原子課金する。Accepted証拠は容量確認後に元返信と別に保存し、後の投影障害でも受付知識を後退させない。Accepted照会はpause/joinの実行資格を意味しない。stage別creditとrevisionの実使用、後続native stage、製品session発行は後続であり、登録やleaseの存在をnative受理の証拠としない。
+2026-11-06の実装区切りでは、seedを固定scopeの非Clone rootへ移し、試験専用sessionと実`Instant`期限のlease台帳を追加した。同一要求の再取得は元replyを返して期限を延長しない。次に四段階の保持bytesとsnapshot上界を共有kernelで計算し、native rootで最初の一workflowを予約した。既存Supervisorの同run資格を確認し、予約前に汎用mutation leaseを発行したrootは期限後も予約を拒否する。さらに初回preflight leaseと期限切れretryを予約済み容量へ束縛し、元Admissionの全文を保存して同時にleaseを消費する。登録済み同一要求は期限後も`Existing`として再取得できる。登録済みticketから実ownerのpreflightを高々一回呼び、leaseの絶対期限をnativeへ渡す。同期受理では実change／operation handleを先に保持して元Accepted返信を保存し、完了は保存済みhandleから読む。同期拒否だけをRejected、panic等はUnknownとして保存し、不確定なhandoffを止める。2026-11-07にはread roleのpreflight AdmissionInspectionを追加した。root・principal・workflowと元request全文を照合し、未登録はNotFound、受付証拠未確定はUnknown、保存済み実handleはAcceptedとして新しい照会IDへ投影する。同じ照会IDの初回結果と元dispatcher返信は不変に保ち、照会request＋replyを2MiB read枠へ原子課金する。Accepted証拠は容量確認後に元返信と別に保存し、後の投影障害でも受付知識を後退させない。Accepted照会だけではpause/joinの実行資格にならない。実Candidate完了と元requestを確認して初回pause/join leaseを一件発行する。元preflightのleaseRequestId／admissionIdを再利用せず、同一pause要求の再取得では元replyと期限を保つ。この段階ではrecorderを停止しない。stage別creditとrevisionの実使用、元pause Admission登録、後続native stage、製品session発行は後続であり、登録やleaseの存在をnative受理の証拠としない。
 
 一時SQLiteとmock Hubを使い、実`RecordingOperationsOwner`で次を受け入れる。
 
