@@ -841,3 +841,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 ## 記録registryのpreflight原本登録（C4）
 
 `recording_registry/workflow.rs`の`issue_preflight_lease`は初回の予約済みlease保持量を移管し、期限切れretryだけ別のID・保存量・revision枠を追加予約する。`register_preflight`はroot／principal／workflow ticket、元change全文、lease refと期限、Admissionの生存期間上界を確認し、commit直前の実`Instant`で期限を判定する。成功時だけlease消費と元request・登録sequenceを同じ更新で確定する。登録済み同一要求の再取得は時計もnativeも使わず`Existing`を返す。read履歴はmutation件数に算入しない。`dispatch_preflight`は登録済み原本とleaseの絶対期限から実ownerを一度だけ呼び、実handleを保持して元replyを固定する。`preflight_reply`は同じ元返信、`preflight_completion`は保存済みhandleの完了を読む。`operations/mod.rs`のcrate内clientは排他的seedの所有下でのみ使い、外部へ公開しない。`lease.rs`は不確定dispatch時のhandoffを拒否する。`operations/tests.rs`は期限境界、retryのexact／1不足、role分離、別caller／別root、受理と同期拒否・同一reply再取得・完了を実ownerで確認する。後続native stageと製品session issuerは後続。
+
+## 記録registryの実preflight受付照会（C4）
+
+`recording_registry/inspection.rs`はread roleの同一root・principal・workflowと元Admission全文を照合し、保存済み実handleから現在の受付証拠を投影する。同じinspection IDの初回replyは固定し、新しいIDだけが後着証拠を読む。元dispatcher replyの`unknown`は書き換えない。Accepted証拠はread容量の確定後に登録recordへ保存し、後の投影障害でも後退させない。照会request＋replyを2MiB read枠へ原子課金し、最大4,096件に制限する。`workflow.rs`のAccepted投影helperはnative初回返信と受付照会で共有する。`operations/tests.rs`は未登録NotFound、登録後Unknown、実handle Accepted、panic後の証拠分離、容量exact／1不足、replayと権限を確認する。pause/join資格と製品session issuerは後続。

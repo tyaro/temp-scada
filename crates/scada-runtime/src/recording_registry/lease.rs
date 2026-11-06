@@ -2,6 +2,9 @@ use super::{workflow::WorkflowRecord, RecordingRegistryOwnerSeed};
 #[cfg(test)]
 use crate::recording_operations::RecordingOperationsClient;
 use crate::recording_operations::{OwnerError, RecordingOperationsHandoff};
+use scada_model::recording_admission::{
+    RecordingAdmissionInspectionReply, RecordingAdmissionInspectionRequest,
+};
 use scada_model::recording_operations::{
     same_recording_operations_context, RecordingOperationsContext,
 };
@@ -84,14 +87,21 @@ pub struct RecordingRegistryRoot {
     pub(super) leases: BTreeMap<String, LeaseRecord>,
     pub(super) sequence: u64,
     pub(super) mutation_bytes: usize,
-    read_bytes: usize,
+    pub(super) read_bytes: usize,
     pub(super) mutation_byte_limit: usize,
-    read_byte_limit: usize,
+    pub(super) read_byte_limit: usize,
     pub(super) mutation_lease_limit: usize,
     read_lease_limit: usize,
     pub(super) closed: bool,
     pub(super) workflow: Option<WorkflowRecord>,
     pub(super) reserved_revisions: u64,
+    pub(super) admission_inspections: BTreeMap<
+        String,
+        (
+            RecordingAdmissionInspectionRequest,
+            RecordingAdmissionInspectionReply,
+        ),
+    >,
 }
 
 pub struct RegistryRootInitFailure {
@@ -159,6 +169,7 @@ impl RecordingRegistryRoot {
             closed: false,
             workflow: None,
             reserved_revisions: 0,
+            admission_inspections: BTreeMap::new(),
         })
     }
 
@@ -199,6 +210,11 @@ impl RecordingRegistryRoot {
     #[cfg(test)]
     pub(crate) fn test_reserved_revisions(&self) -> u64 {
         self.reserved_revisions
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_admission_inspection_count(&self) -> usize {
+        self.admission_inspections.len()
     }
 
     #[cfg(test)]
