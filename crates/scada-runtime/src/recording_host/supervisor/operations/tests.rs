@@ -2,7 +2,8 @@ use super::*;
 use crate::recording_host::retention::tests::control;
 use crate::recording_host::{RecordingPhase, RecordingPlanTurnIntent};
 use crate::recording_registry::{
-    LeaseError, LeaseRole, PreflightRegistration, RecordingRegistryOwnerSeed, RecordingRegistryRoot,
+    LeaseError, LeaseRole, PreflightRegistration, RecordingRegistryOwnerSeed,
+    RecordingRegistryRoot, TestDispatchFault,
 };
 use scada_model::recording_admission::RecordingAdmissionRequest;
 use scada_model::recording_wire::{RecordingWireLeaseReply, RecordingWireLeaseRequest};
@@ -727,6 +728,242 @@ async fn registry_preflight_rejects_a_same_named_ticket_from_another_root() {
         ),
         Err(LeaseError::Forbidden)
     ));
+}
+
+#[tokio::test]
+async fn registry_dispatches_registered_preflight_once_and_recovers_original_reply() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-dispatch");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let alice = root.test_session("alice", LeaseRole::Mutation);
+    let bob = root.test_session("bob", LeaseRole::Mutation);
+    let change = change("native-dispatch");
+    let workflow = root.reserve_workflow(&alice, change.clone()).unwrap();
+    let lease = root
+        .issue_preflight_lease(
+            &alice,
+            &workflow,
+            registry_lease(
+                &scope,
+                "dispatch-lease",
+                "dispatch-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let request = registry_preflight(&scope, &change, "dispatch-admission", &lease);
+    let ticket = match root
+        .register_preflight(&alice, &workflow, request.clone())
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new registration expected"),
+    };
+    assert!(root.preflight_reply(&alice, &ticket).unwrap().is_none());
+    assert!(matches!(
+        root.dispatch_preflight(&bob, &ticket),
+        Err(LeaseError::Forbidden)
+    ));
+    let reply = root.dispatch_preflight(&alice, &ticket).unwrap();
+    assert_eq!(reply.as_value()["outcome"]["kind"], "accepted");
+    assert_eq!(reply.as_value()["request"], *request.as_value());
+    assert_eq!(root.dispatch_preflight(&alice, &ticket).unwrap(), reply);
+    assert_eq!(
+        root.preflight_reply(&alice, &ticket).unwrap(),
+        Some(reply.clone())
+    );
+    assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+    for _ in 0..100 {
+        if root
+            .preflight_completion(&alice, &ticket)
+            .unwrap()
+            .is_some()
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let completion = root.preflight_completion(&alice, &ticket).unwrap().unwrap();
+    assert_eq!(
+        completion.as_value()["request"],
+        reply.as_value()["outcome"]["handle"]["request"]
+    );
+    assert_eq!(root.preflight_reply(&alice, &ticket).unwrap(), Some(reply));
+}
+
+#[tokio::test]
+async fn registry_expired_registered_preflight_never_calls_native() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-expiry");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let change = change("native-expiry");
+    let workflow = root.reserve_workflow(&session, change.clone()).unwrap();
+    let now = std::time::Instant::now();
+    let lease = root
+        .issue_preflight_lease_at(
+            &session,
+            &workflow,
+            registry_lease(&scope, "expired-lease", "expired-admission", "mutation", 1),
+            now,
+        )
+        .unwrap();
+    let ticket = match root
+        .register_preflight_at(
+            &session,
+            &workflow,
+            registry_preflight(&scope, &change, "expired-admission", &lease),
+            now,
+        )
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new registration expected"),
+    };
+    tokio::time::sleep(Duration::from_millis(3)).await;
+    let reply = root.dispatch_preflight(&session, &ticket).unwrap();
+    assert_eq!(reply.as_value()["outcome"]["kind"], "rejected");
+    assert_eq!(reply.as_value()["outcome"]["error"], "deadlineExceeded");
+    assert_eq!(root.dispatch_preflight(&session, &ticket).unwrap(), reply);
+    assert!(root
+        .preflight_completion(&session, &ticket)
+        .unwrap()
+        .is_none());
+    assert!(root.try_handoff().is_ok());
+}
+
+#[tokio::test]
+async fn registry_native_typed_rejection_is_saved_without_a_handle() {
+    let (owner, _dir) = setup();
+    let scope = registry_scope("epoch-rejection");
+    let mut root = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+        scope.clone(),
+    )
+    .ok()
+    .unwrap();
+    let session = root.test_session("alice", LeaseRole::Mutation);
+    let change = change("native-rejection");
+    let workflow = root.reserve_workflow(&session, change.clone()).unwrap();
+    let lease = root
+        .issue_preflight_lease(
+            &session,
+            &workflow,
+            registry_lease(
+                &scope,
+                "rejection-lease",
+                "rejection-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let ticket = match root
+        .register_preflight(
+            &session,
+            &workflow,
+            registry_preflight(&scope, &change, "rejection-admission", &lease),
+        )
+        .unwrap()
+    {
+        PreflightRegistration::Registered(ticket) => ticket,
+        _ => panic!("new registration expected"),
+    };
+    let competing = root
+        .test_native_client()
+        .preflight(self::change("competing"), control())
+        .unwrap();
+    let reply = root.dispatch_preflight(&session, &ticket).unwrap();
+    assert_eq!(reply.as_value()["outcome"]["kind"], "rejected");
+    assert_eq!(reply.as_value()["outcome"]["error"], "busy");
+    assert_eq!(
+        root.preflight_reply(&session, &ticket).unwrap(),
+        Some(reply)
+    );
+    assert!(root
+        .preflight_completion(&session, &ticket)
+        .unwrap()
+        .is_none());
+    let _ = competing.operation.wait().await.unwrap();
+}
+
+#[tokio::test]
+async fn registry_uncertain_native_or_projection_panic_never_redispatches() {
+    for fault in [
+        TestDispatchFault::NativePanicAfterCall,
+        TestDispatchFault::ProjectionPanic,
+    ] {
+        let (owner, _dir) = setup();
+        let scope = registry_scope("epoch-panic");
+        let mut root = RecordingRegistryRoot::try_new(
+            RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
+            scope.clone(),
+        )
+        .ok()
+        .unwrap();
+        let session = root.test_session("alice", LeaseRole::Mutation);
+        let change = change("native-panic");
+        let workflow = root.reserve_workflow(&session, change.clone()).unwrap();
+        let lease = root
+            .issue_preflight_lease(
+                &session,
+                &workflow,
+                registry_lease(&scope, "panic-lease", "panic-admission", "mutation", 1000),
+            )
+            .unwrap();
+        let ticket = match root
+            .register_preflight(
+                &session,
+                &workflow,
+                registry_preflight(&scope, &change, "panic-admission", &lease),
+            )
+            .unwrap()
+        {
+            PreflightRegistration::Registered(ticket) => ticket,
+            _ => panic!("new registration expected"),
+        };
+        root.test_set_dispatch_fault(&session, &ticket, fault);
+        let reply = root.dispatch_preflight(&session, &ticket).unwrap();
+        assert_eq!(reply.as_value()["outcome"]["kind"], "unknown");
+        assert_eq!(root.dispatch_preflight(&session, &ticket).unwrap(), reply);
+        assert_eq!(
+            root.preflight_reply(&session, &ticket).unwrap(),
+            Some(reply)
+        );
+        assert!(matches!(root.try_handoff(), Err(OwnerError::Busy)));
+        if fault == TestDispatchFault::ProjectionPanic {
+            for _ in 0..100 {
+                if root
+                    .preflight_completion(&session, &ticket)
+                    .unwrap()
+                    .is_some()
+                {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+            assert!(root
+                .preflight_completion(&session, &ticket)
+                .unwrap()
+                .is_some());
+        } else {
+            assert!(root
+                .preflight_completion(&session, &ticket)
+                .unwrap()
+                .is_none());
+        }
+    }
 }
 
 #[tokio::test]

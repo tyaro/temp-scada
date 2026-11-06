@@ -1,4 +1,4 @@
-//! Initial native workflow reservation and preflight registration; no native dispatch yet.
+//! Initial native workflow reservation, preflight registration and one-time dispatch.
 use super::{
     kernel::{
         budget::{BudgetError, LifetimeBudget},
@@ -6,16 +6,23 @@ use super::{
     },
     LeaseError, LeaseRole, RecordingRegistryRoot, RecordingRegistrySession,
 };
-use crate::recording_operations::RegistryClaimReason;
+use crate::recording_operations::{AcceptedRecordingChange, RegistryClaimReason};
+use scada_historian::store::query::{CancellationToken, QueryControl, QueryLimits};
 use scada_model::recording_admission::{
-    same_recording_admission_request, RecordingAdmissionRequest,
+    same_recording_admission_request, RecordingAdmissionReply, RecordingAdmissionRequest,
 };
 use scada_model::recording_operations::{
     same_recording_change_request, same_recording_operations_context, RecordingChangeRequest,
-    RecordingOperationsContext,
+    RecordingOperationResult, RecordingOperationsContext,
 };
 use scada_model::recording_wire::{RecordingWireLeaseReply, RecordingWireLeaseRequest};
-use std::{collections::BTreeMap, sync::Arc, time::Instant};
+use serde_json::json;
+use std::{
+    collections::BTreeMap,
+    panic::{catch_unwind, AssertUnwindSafe},
+    sync::Arc,
+    time::Instant,
+};
 
 #[derive(Clone)]
 pub struct RecordingRegistryWorkflowTicket {
@@ -43,6 +50,14 @@ pub(super) struct WorkflowRecord {
     registered: Option<RegisteredPreflight>,
 }
 
+impl WorkflowRecord {
+    pub(super) fn has_uncertain_dispatch(&self) -> bool {
+        self.registered
+            .as_ref()
+            .is_some_and(|record| record.is_uncertain())
+    }
+}
+
 struct PreflightAttempt {
     lease_id: String,
 }
@@ -67,6 +82,36 @@ impl RecordingRegistryAdmissionTicket {
 struct RegisteredPreflight {
     ticket: RecordingRegistryAdmissionTicket,
     request: RecordingAdmissionRequest,
+    budget: LifetimeBudget,
+    state: PreflightDispatchState,
+    binding: Option<AcceptedRecordingChange>,
+    #[cfg(test)]
+    fault: Option<TestDispatchFault>,
+}
+
+#[cfg(test)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TestDispatchFault {
+    NativePanicAfterCall,
+    ProjectionPanic,
+}
+
+impl RegisteredPreflight {
+    fn is_uncertain(&self) -> bool {
+        match &self.state {
+            PreflightDispatchState::Calling => true,
+            PreflightDispatchState::Finished(reply) => {
+                reply.as_value()["outcome"]["kind"] == "unknown"
+            }
+            PreflightDispatchState::Registered => false,
+        }
+    }
+}
+
+enum PreflightDispatchState {
+    Registered,
+    Calling,
+    Finished(RecordingAdmissionReply),
 }
 
 pub enum PreflightRegistration {
@@ -396,9 +441,211 @@ impl RecordingRegistryRoot {
             .registered = Some(RegisteredPreflight {
             ticket: ticket.clone(),
             request,
+            budget: stage.storage,
+            state: PreflightDispatchState::Registered,
+            binding: None,
+            #[cfg(test)]
+            fault: None,
         });
         Ok(PreflightRegistration::Registered(ticket))
     }
+
+    fn registered_preflight(
+        &self,
+        session: &RecordingRegistrySession,
+        ticket: &RecordingRegistryAdmissionTicket,
+    ) -> Result<&RegisteredPreflight, LeaseError> {
+        if self.closed {
+            return Err(LeaseError::Closed);
+        }
+        if !Arc::ptr_eq(&self.identity, &session.root_identity)
+            || !Arc::ptr_eq(&self.identity, &ticket.identity)
+            || session.scope != self.scope
+            || session.role != LeaseRole::Mutation
+        {
+            return Err(LeaseError::Forbidden);
+        }
+        let record = self.workflow.as_ref().ok_or(LeaseError::InvalidInput)?;
+        if record.principal != session.principal {
+            return Err(LeaseError::Forbidden);
+        }
+        let registered = record.registered.as_ref().ok_or(LeaseError::InvalidInput)?;
+        if registered.ticket.sequence != ticket.sequence
+            || registered.ticket.admission_id != ticket.admission_id
+        {
+            return Err(LeaseError::ProtocolViolation);
+        }
+        Ok(registered)
+    }
+
+    /// Reads the immutable original dispatcher reply, including after caller delivery loss.
+    pub fn preflight_reply(
+        &self,
+        session: &RecordingRegistrySession,
+        ticket: &RecordingRegistryAdmissionTicket,
+    ) -> Result<Option<RecordingAdmissionReply>, LeaseError> {
+        let registered = self.registered_preflight(session, ticket)?;
+        Ok(match &registered.state {
+            PreflightDispatchState::Finished(reply) => Some(reply.clone()),
+            _ => None,
+        })
+    }
+
+    /// Reads native completion only from the handle returned by this admission.
+    pub fn preflight_completion(
+        &self,
+        session: &RecordingRegistrySession,
+        ticket: &RecordingRegistryAdmissionTicket,
+    ) -> Result<Option<Arc<RecordingOperationResult>>, LeaseError> {
+        let registered = self.registered_preflight(session, ticket)?;
+        let Some(binding) = &registered.binding else {
+            return Ok(None);
+        };
+        let receiver = binding.operation.watch();
+        let result = receiver.borrow().clone();
+        if let Some(value) = &result {
+            registered
+                .budget
+                .check_completion(value.as_value())
+                .map_err(map_budget_error)?;
+        }
+        Ok(result)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_set_dispatch_fault(
+        &mut self,
+        session: &RecordingRegistrySession,
+        ticket: &RecordingRegistryAdmissionTicket,
+        fault: TestDispatchFault,
+    ) {
+        self.registered_preflight(session, ticket).unwrap();
+        self.workflow
+            .as_mut()
+            .unwrap()
+            .registered
+            .as_mut()
+            .unwrap()
+            .fault = Some(fault);
+    }
+
+    /// Calls the registered native preflight at most once, preserving the real handle and reply.
+    pub fn dispatch_preflight(
+        &mut self,
+        session: &RecordingRegistrySession,
+        ticket: &RecordingRegistryAdmissionTicket,
+    ) -> Result<RecordingAdmissionReply, LeaseError> {
+        let registered = self.registered_preflight(session, ticket)?;
+        match &registered.state {
+            PreflightDispatchState::Finished(reply) => return Ok(reply.clone()),
+            PreflightDispatchState::Calling => return Err(LeaseError::Busy),
+            PreflightDispatchState::Registered => {}
+        }
+        let request = registered.request.clone();
+        let budget = registered.budget;
+        #[cfg(test)]
+        let fault = registered.fault;
+        let change = self
+            .workflow
+            .as_ref()
+            .expect("qualified workflow")
+            .change
+            .clone();
+        let lease_id = self.workflow.as_ref().expect("qualified workflow").attempts
+            [&ticket.admission_id]
+            .lease_id
+            .clone();
+        let deadline = self.leases[&lease_id].deadline;
+        let unknown = admission_reply(&request, json!({"kind":"unknown","error":"workerFailure"}));
+        budget
+            .check_reply(unknown.as_value())
+            .map_err(map_budget_error)?;
+        let expired = Instant::now() >= deadline;
+        let registered = self
+            .workflow
+            .as_mut()
+            .expect("qualified workflow")
+            .registered
+            .as_mut()
+            .expect("qualified admission");
+        if expired {
+            let reply = admission_reply(
+                &request,
+                json!({"kind":"rejected","error":"deadlineExceeded"}),
+            );
+            budget
+                .check_reply(reply.as_value())
+                .map_err(map_budget_error)?;
+            registered.state = PreflightDispatchState::Finished(reply.clone());
+            return Ok(reply);
+        }
+        registered.state = PreflightDispatchState::Calling;
+        let control = QueryControl {
+            cancellation: CancellationToken::default(),
+            deadline,
+            limits: QueryLimits::default(),
+        };
+        let result = catch_unwind(AssertUnwindSafe(|| {
+            let result = self.seed.client().preflight(change, control);
+            #[cfg(test)]
+            if fault == Some(TestDispatchFault::NativePanicAfterCall) {
+                panic!("test native panic after call");
+            }
+            result
+        }));
+        let registered = self
+            .workflow
+            .as_mut()
+            .expect("qualified workflow")
+            .registered
+            .as_mut()
+            .expect("qualified admission");
+        let reply = match result {
+            Ok(Ok(binding)) => {
+                registered.binding = Some(binding);
+                catch_unwind(AssertUnwindSafe(|| {
+                    #[cfg(test)]
+                    if fault == Some(TestDispatchFault::ProjectionPanic) {
+                        panic!("test projection panic after handle save");
+                    }
+                    let operation = registered.binding.as_ref().expect("saved binding")
+                        .operation.request().as_value();
+                    let outcome = json!({"kind":"accepted", "handle":{
+                        "kind":"operation", "changeRef":format!("native-change:{}", ticket.sequence),
+                        "operationRef":operation["operationId"], "request":operation
+                    }});
+                    let reply = RecordingAdmissionReply::from_value(json!({
+                        "version":1, "kind":"recordingAdmissionReply",
+                        "request":request.as_value(), "outcome":outcome
+                    })).ok()?;
+                    registered.budget.check_reply(reply.as_value()).ok()?;
+                    Some(reply)
+                })).ok().flatten().unwrap_or_else(|| unknown.clone())
+            }
+            Ok(Err(rejection)) => admission_reply(
+                &request,
+                json!({"kind":"rejected","error":rejection.code.as_str()}),
+            ),
+            Err(_) => unknown.clone(),
+        };
+        if registered.budget.check_reply(reply.as_value()).is_err() {
+            registered.state = PreflightDispatchState::Finished(unknown.clone());
+            return Ok(unknown);
+        }
+        registered.state = PreflightDispatchState::Finished(reply.clone());
+        Ok(reply)
+    }
+}
+
+fn admission_reply(
+    request: &RecordingAdmissionRequest,
+    outcome: serde_json::Value,
+) -> RecordingAdmissionReply {
+    RecordingAdmissionReply::from_value(json!({
+        "version":1, "kind":"recordingAdmissionReply",
+        "request":request.as_value(), "outcome":outcome
+    }))
+    .expect("validated admission and reserved reply capacity")
 }
 
 fn map_budget_error(error: BudgetError) -> LeaseError {

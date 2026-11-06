@@ -4,7 +4,7 @@
 
 ## 次の実装順
 
-C4 native registry adapterでは、既存ownerの排他的seed、Admission保存予算kernel、固定scopeのnative rootと実`Instant` lease台帳を実装した。四段階の保持bytesとsnapshot上界をsimulationと共有し、native rootの最初の一workflowを受付前に予約する。preflight leaseの初回発行・失効retry、元Admissionの不変登録とleaseの原子消費まで実装した。stage別creditとrevisionの実使用、native呼出し・結果、製品session issuerは未接続。次は登録済みticketから実nativeへ一回だけ渡し、元replyとhandle・完了証拠を保持する。
+C4 native registry adapterでは、既存ownerの排他的seed、Admission保存予算kernel、固定scopeのnative rootと実`Instant` lease台帳を実装した。四段階の保持bytesとsnapshot上界をsimulationと共有し、native rootの最初の一workflowを受付前に予約する。preflight leaseの初回発行・失効retry、元Admissionの不変登録とleaseの原子消費に続き、登録済みticketから実nativeへ高々一回preflightを渡し、元reply・実change／operation handle・完了をrootに保持する。stage別creditとrevisionの実使用、pause／apply等の後続native操作、製品session issuerは未接続。次は結果のinspectionと後続stageの受付資格を実handleへ束縛する。
 
 2026-11-05のユーザー指示で[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、C0〜C3を実施した。SOAK終了待ちは解除済み。次はC4の記録client・native bridge、続いてC5の実SQLite／History接続、C6の連続運用へ進む。初回読取の成功を運用時の認証・記録・長時間運転の完了とは扱わない。
 
