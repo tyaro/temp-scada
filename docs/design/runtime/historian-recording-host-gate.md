@@ -120,6 +120,10 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
 - **受付処理**: Tauri commandのFutureがdropされても、登録からhandle保存までが途中で切れないようにする。そのためroot所有の受付処理を使う（adapter設計§4の3）。
 - **返信**: UIは非同期の受付と元返信をそのまま扱い、同期の`RecordingOperationsService`へ偽装しない。
+- **返信の世代確認**: 各commandは、開始時のdesktop sessionの世代（`AuthSlot`のseq）に束縛する。hostは返信を返す直前に、§4の規則で認証と世代を確かめ直す。
+  - **世代が変わっていた場合**: 受付の途中でlogoutやユーザー交代が起きていれば、結果を返さず`unauthorized`を返す。返信には世代を添え、UIは現在の世代と違う返信を捨てる。
+  - **registryの状態は変えない**: 返信を捨てても、registryの登録・配送・元返信の保存はそのまま残り、受理済み操作の内部監視も続く。同じprincipalが再ログインすれば、CallInspectionで元返信を回収できる（§4）。
+  - **受入試験**: 受付後・返信前のlogoutとユーザー交代で、旧ユーザーの結果がwebviewへ返らないこと、registryの記録と監視が残ること、再ログイン後に同じprincipalが回収できることを確かめる。
 - **購読frame**: Tauri eventで配送する。配送のたびに、§4と同じ規則でdesktop sessionを再検証する。これにより、次のcommandが来なくても購読中の失効を検知できる。
   - **失効を検知した場合**: そのdesktop sessionの全registry sessionを`revoke_session`で失効させる。購読を切り、配送を止める。
   - **認証DBの読取に失敗した場合**: そのframeを配送せずに保留し、次の配送機会に再検証する。保留中のframeはregistryの最新一件slotに残るので、保留しても容量は増えない。保留したframeを、再検証の前に配送しない。
@@ -164,7 +168,8 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
   3. `auth.disabled=false`を保存する。
   4. `auth-phase.json`を`operational`にする。
   5. そのアカウントのdesktop sessionを入れ、`banto-local:auth-disabled`の全registry sessionを失効させる（§4）。
-- **途中で失敗した場合**: 1より前の失敗では`initializing`のまま残る。1以降の失敗や強制終了では`transitioning`が残る。再起動後も同じcommandを管理者の資格情報で呼べば、2の照合から続きを完了できる。
+- **途中で失敗した場合**: 1より前の失敗では`initializing`のまま残る。1の後から4の保存が終わるまでの失敗や強制終了では`transitioning`が残る。再起動後も同じcommandを管理者の資格情報で呼べば、2の照合から続きを完了できる。
+- **移行の完了点**: 4の`operational`の保存を、移行の永続的な完了点とする。4の後に終了したり返信を失ったりしても、移行はやり直さない。再起動後は`operational`・認証有効・管理者ありの状態で起動し、通常のログインへ進む。5のsession導入は、そのログインで行われる。5の失効対象は旧processのメモリ上のsessionだけで、再起動でrootごと消えている。返信を失ったUIは、`auth_status`とフェーズを読み直して通常のログイン画面へ進む。
 - **`transitioning`の間**: 記録registryの入口はすべて拒否する。認証無効モードがonのままでも、`AuthDisabledLocal`のsessionへregistry sessionを発行しない。UIは移行の再実行を促す。
 - **移行の確認**: 管理者の存在は、ブラウザの保存値でなくbackendで確認する。
 - **未静止のworkflowがある場合**: 移行すると旧principalのsessionは失効する。運用側のユーザーからは照会も操作もできない（§8の未決事項1）ので、Candidate／Pausedを解くdiscardも実行できなくなる。そのため、静止の確認はhostで行う。
@@ -198,6 +203,6 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 1. `scada-host`へ`HostAuth`（Bantoの依存、migrationのコピー、`DesktopSession`の再検証、`require_role`）を追加する。試験は一時SQLiteで行う。
 2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`、read-onlyの`quiescence()`を追加し、失効の連動を試験する。CallInspectionをread roleで受ける契約変更（§4）も行い、Adminで返信を失ったapplyをViewerへ降格した後に回収できることを試験する。
 3. ownerRef・epochの世代ごとの生成と保存を追加する。
-4. Tauri command（§5のworkflowの段階別入口とticketの保持を含む）とUIの`TauriAuthProvider`を追加する。Tauri commandだけで予約から初回preflight・pause/join・apply・reconcileまで進めることを試験する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、初回初期化の各保存境界での強制終了と再起動後の再開、`auth-phase.json`がなく認証DBだけがある場合の拒否、移行commandの成功と、各保存境界（1〜4の後）での失敗・強制終了からの再起動後の再実行、未静止workflowでの移行拒否と並行するpreflightとの排他、`transitioning`中のregistry入口の拒否、`bootstrapping`以外のフェーズでの認証DB欠落の拒否をnativeで試験する。
+4. Tauri command（§5のworkflowの段階別入口とticketの保持を含む）とUIの`TauriAuthProvider`を追加する。Tauri commandだけで予約から初回preflight・pause/join・apply・reconcileまで進めることを試験する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、初回初期化の各保存境界での強制終了と再起動後の再開、`auth-phase.json`がなく認証DBだけがある場合の拒否、移行commandの成功と、各保存境界（1〜3の後）での失敗・強制終了からの再起動後の再実行、4の後の強制終了・返信喪失から通常ログインへ進めること、未静止workflowでの移行拒否と並行するpreflightとの排他、`transitioning`中のregistry入口の拒否、`bootstrapping`以外のフェーズでの認証DB欠落の拒否をnativeで試験する。
 
 製品transportと実ownerの配置（C5）は、この区切りの後に行う。
