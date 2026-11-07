@@ -124,15 +124,20 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
 ## 6. 開発・初期設定フェーズと運用への移行
 
-**フェーズの記録**: hostは、認証DBとは別に、アプリdata dirの`auth-phase.json`へフェーズを記録する。値は`initializing`（開発・初期設定）、`transitioning`（運用への移行の途中）、`operational`（運用）の三つである。
+**フェーズの記録**: hostは、認証DBとは別に、アプリdata dirの`auth-phase.json`へフェーズを記録する。値は`bootstrapping`（初回初期化の途中）、`initializing`（開発・初期設定）、`transitioning`（運用への移行の途中）、`operational`（運用）の四つである。
 
-- **初回起動**: `auth-phase.json`も認証DBもないときだけ、初回起動とする。hostは認証DBを作り、`auth.disabled=true`と`auth.disabled_role=admin`を保存してから、`initializing`を記録する。
+- **初回起動**: `auth-phase.json`も認証DBもないときだけ、初回起動とする。hostは次の順に進める。
+  1. `auth-phase.json`を`bootstrapping`にする。
+  2. 認証DBを作り、migrationを適用し、`auth.disabled=true`と`auth.disabled_role=admin`を保存する。
+  3. `auth-phase.json`を`initializing`にする。
+- **初回初期化の再開**: 起動時に`bootstrapping`なら、認証DBの有無や中身によらず2から再開する。2は何度実行しても同じ結果になる。DBが途中まで作られていればmigrationと設定の保存を続け、なければ作る。`bootstrapping`は`operational`に達する前にしか存在しないので、ここでDBを作り直しても、運用済み端末を無認証へ戻すことにはならない。
+- **フェーズの記録がない場合**: `auth-phase.json`がなく認証DBだけがある状態は、上の順序からは生じない。フェーズの記録を失ったものとして扱い、記録registryの入口を拒否する。
 - **このフェーズでの動作**: ログインせずに`AuthDisabledLocal`のsessionで動き、記録変更も許す。
 - **既存DB**: 保存値に従う。
 
 **認証DBが開けない、または欠けている場合**: 記録registryの入口はすべて拒否する。
 
-- **再作成しない**: `auth-phase.json`があるのに認証DBがない場合は、DBを再作成しない。これにより、運用済み端末で認証DBだけを失ったときに、再起動で無認証の記録変更ができるようになることを防ぐ。
+- **再作成しない**: フェーズが`initializing`・`transitioning`・`operational`なのに認証DBがない場合は、DBを再作成しない。これにより、運用済み端末で認証DBだけを失ったときに、再起動で無認証の記録変更ができるようになることを防ぐ。
 - **自動で戻さない**: 初期設定へ自動で戻さず、無認証の変更を許さない（access-policyのとおり）。
 - **防げる範囲**: 防げるのは、DBの偶発的な消失と再作成である。data dirを書き換えられる者による改変は、この仕組みの対象外とする。
 - **復旧**: 正式な復旧手順は、運用から初期設定へ戻す手順と合わせて後続で設計する。
@@ -151,7 +156,13 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 - **途中で失敗した場合**: 1より前の失敗では`initializing`のまま残る。1以降の失敗や強制終了では`transitioning`が残る。再起動後も同じcommandを管理者の資格情報で呼べば、2の照合から続きを完了できる。
 - **`transitioning`の間**: 記録registryの入口はすべて拒否する。認証無効モードがonのままでも、`AuthDisabledLocal`のsessionへregistry sessionを発行しない。UIは移行の再実行を促す。
 - **移行の確認**: 管理者の存在は、ブラウザの保存値でなくbackendで確認する。
-- **未静止のworkflowがある場合**: 移行しても、受理済み操作は監視が続くだけで止まらない。ただし運用側のユーザーからは照会できない（§8の未決事項1）。そのためUIは、未静止のworkflowがある間は移行を確認ダイアログで止める。
+- **未静止のworkflowがある場合**: 移行すると旧principalのsessionは失効する。運用側のユーザーからは照会も操作もできない（§8の未決事項1）ので、Candidate／Pausedを解くdiscardも実行できなくなる。そのため、静止の確認はhostで行う。
+  - **排他**: 移行commandは、hostの移行lockを取ってから始める。registryの入口（lease、Admission、cancel）も同じlockの下で受け付けるので、確認と移行の間に新しい要求は入らない。
+  - **新規mutationの停止**: lockの下で、まず新しいmutation lease・Admissionの受付を止める。
+  - **静止の確認**: 次に、registryのread-onlyの照会`root.quiescence()`で、workflowがないか、正常に終端しており、未配送の登録・未完了のnative操作・未確定の受付がないことを確かめる。この照会は状態を変えない。実装順§9の2で追加する。
+  - **未静止なら**: 受付の停止を解き、`busy`で拒否する。`transitioning`は保存しない。UIは理由を表示し、discardや完了の待機を促す。
+  - **静止していれば**: そのまま`transitioning`を保存し、以後は`transitioning`の規則で入口を拒否する。
+  - **`transitioning`からの再開時**: 再開時も同じ確認を行う。`transitioning`の間は新しい受付がないので、静止は保たれている。
 - **認証無効モードに戻す場合**: `operational`で認証無効モードをonに戻すことは、この区切りでは提供しない。
 
 ## 7. epoch生成と永続衝突防止
@@ -174,8 +185,8 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 ## 9. 実装順
 
 1. `scada-host`へ`HostAuth`（Bantoの依存、migrationのコピー、`DesktopSession`の再検証、`require_role`）を追加する。試験は一時SQLiteで行う。
-2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`を追加し、失効の連動を試験する。CallInspectionをread roleで受ける契約変更（§4）も行い、Adminで返信を失ったapplyをViewerへ降格した後に回収できることを試験する。
+2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`、read-onlyの`quiescence()`を追加し、失効の連動を試験する。CallInspectionをread roleで受ける契約変更（§4）も行い、Adminで返信を失ったapplyをViewerへ降格した後に回収できることを試験する。
 3. ownerRef・epochの世代ごとの生成と保存を追加する。
-4. Tauri commandとUIの`TauriAuthProvider`を追加する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、移行commandの成功と、各保存境界（1〜4の後）での失敗・強制終了からの再起動後の再実行、`transitioning`中のregistry入口の拒否、`auth-phase.json`がある状態での認証DB欠落の拒否をnativeで試験する。
+4. Tauri commandとUIの`TauriAuthProvider`を追加する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、初回初期化の各保存境界での強制終了と再起動後の再開、`auth-phase.json`がなく認証DBだけがある場合の拒否、移行commandの成功と、各保存境界（1〜4の後）での失敗・強制終了からの再起動後の再実行、未静止workflowでの移行拒否と並行するpreflightとの排他、`transitioning`中のregistry入口の拒否、`bootstrapping`以外のフェーズでの認証DB欠落の拒否をnativeで試験する。
 
 製品transportと実ownerの配置（C5）は、この区切りの後に行う。
