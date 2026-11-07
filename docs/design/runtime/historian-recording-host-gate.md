@@ -76,7 +76,13 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 - **再発行**: 新しいdesktop sessionで必要になったとき、発行し直す。
 - **既存の失効契約**: 失効はnative状態を変えない。受理済み操作の内部監視は続く。失効したgrantには何も開示しない。
 - **logout後の復帰**: 同じユーザーが再ログインすると、同じprincipalのsessionが再発行される。元返信、Observation、cancelの再取得はそのsessionで続けられる。
-- **権限変更後**: roleがViewerへ下がったユーザーは、read sessionだけを受ける。自分のworkflowの照会・Observationは続けられ、新しい変更はできない。
+- **権限変更後**: roleがViewerへ下がったユーザーは、read sessionだけを受ける。自分のworkflowの照会・Observation・購読は続けられ、新しい変更はできない。
+- **降格後の元返信の回収**: 現行の`inspect_call`は元callと同じroleを要求する（adapter設計§7）。そのままでは、Adminの時に返信を失ったapplyの元返信を、Viewerへ降格した後に回収できない。そこでCallInspectionの契約を次のように変える。
+  - **必要なrole**: 元callのkindによらずread roleとする。mutation sessionでの照会も従来どおり受ける。
+  - **開示の条件**: 見つかったrecordの開示は、従来どおりそのrecordまたはworkflowのprincipalに限る。
+  - **照会でしないこと**: 未登録originalの登録、native配送、lease発行、cancel通知、購読開始をしない。これは従来と同じで、照会からは新しい実行・再配送が起きない。
+  - **変えないもの**: 元Admission・lease・cancelの同ID再取得は、元のroleのままとする。同ID再取得は登録済みticketの配送につながり得るためである。降格後の回収は、CallInspectionの`terminal`か`pending`で行う。
+  - **反映先**: この変更はadapter設計§7とwire・host契約§9の記述も直す。実装順§9の2で行う。
 
 **権限失効後の結果開示**は、この再発行で扱う。registryは、失効したgrantにも別principalにも開示しない。開示できるのは、hostが同じprincipalへ新たに発行したsessionだけである。
 
@@ -92,7 +98,10 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
 - **受付処理**: Tauri commandのFutureがdropされても、登録からhandle保存までが途中で切れないようにする。そのためroot所有の受付処理を使う（adapter設計§4の3）。
 - **返信**: UIは非同期の受付と元返信をそのまま扱い、同期の`RecordingOperationsService`へ偽装しない。
-- **購読frame**: Tauri eventで配送する。
+- **購読frame**: Tauri eventで配送する。配送のたびに、§4と同じ規則でdesktop sessionを再検証する。これにより、次のcommandが来なくても購読中の失効を検知できる。
+  - **失効を検知した場合**: そのdesktop sessionの全registry sessionを`revoke_session`で失効させる。購読を切り、配送を止める。
+  - **認証DBの読取に失敗した場合**: そのframeを配送せずに保留し、次の配送機会に再検証する。保留中のframeはregistryの最新一件slotに残るので、保留しても容量は増えない。保留したframeを、再検証の前に配送しない。
+  - **認証の変更commandを受けた場合**: 同じhostのcommandでlogout、role変更、password変更・reset、ユーザー削除、認証無効モードの切替をしたときは、そのcommandの中で影響するdesktop sessionを再検証し、失効させる。配送の次の機会まで待たない。
 - **監査**: mutationの登録とcancelを、`origin: "tauri"`でBantoの監査logへ記録する。監査の失敗で操作を止めない（Bantoの`record`と同じbest-effort）。拒否は`denied`として記録する。
 
 認証用のcommandは、Bantoの`auth_status`、`auth_setup`、`auth_login`、`auth_logout`、`auth_resolve`、`auth_change_password`を移植する。
@@ -140,8 +149,8 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 ## 9. 実装順
 
 1. `scada-host`へ`HostAuth`（Bantoの依存、migrationのコピー、`DesktopSession`の再検証、`require_role`）を追加する。試験は一時SQLiteで行う。
-2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`を追加し、失効の連動を試験する。
+2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`を追加し、失効の連動を試験する。CallInspectionをread roleで受ける契約変更（§4）も行い、Adminで返信を失ったapplyをViewerへ降格した後に回収できることを試験する。
 3. ownerRef・epochの世代ごとの生成と保存を追加する。
-4. Tauri commandとUIの`TauriAuthProvider`を追加する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定をnativeで試験する。
+4. Tauri commandとUIの`TauriAuthProvider`を追加する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知と認証DB読取失敗時の保留をnativeで試験する。
 
 製品transportと実ownerの配置（C5）は、この区切りの後に行う。
