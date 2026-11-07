@@ -11,7 +11,7 @@ use crate::recording_operations::{
 };
 use scada_model::recording_wire::{
     recording_wire_reply_capacity, same_recording_wire_request, RecordingWireCancelReply,
-    RecordingWireCancelRequest,
+    RecordingWireCancelRequest, RecordingWireDocument,
 };
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -238,6 +238,25 @@ impl RecordingRegistryRoot {
         self.reconciliation_by_sequence(sequence)
             .and_then(|read| read.binding.as_ref())
             .ok_or(LeaseError::ProtocolViolation)
+    }
+
+    /// The saved reply of a registered cancel ID, for read-only call inspection.
+    pub(super) fn saved_cancel(
+        &self,
+        id: &str,
+        principal: &str,
+        original: &RecordingWireDocument,
+    ) -> Result<Option<RecordingWireCancelReply>, LeaseError> {
+        let Some(record) = self.cancels.get(id) else {
+            return Ok(None);
+        };
+        if record.principal != principal {
+            return Err(LeaseError::Forbidden);
+        }
+        if !same_recording_wire_request(record.request.as_document(), original) {
+            return Err(LeaseError::ProtocolViolation);
+        }
+        Ok(Some(record.reply.clone()))
     }
 
     #[cfg(test)]

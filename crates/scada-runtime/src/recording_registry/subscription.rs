@@ -19,7 +19,7 @@ use scada_model::recording_admission::{RecordingAdmissionReply, RecordingAdmissi
 use scada_model::recording_wire::{
     same_recording_wire_request, RecordingWireAttachReply, RecordingWireAttachRequest,
     RecordingWireControlFrame, RecordingWireControlReply, RecordingWireControlRequest,
-    RecordingWireStateFrame, WIRE_SNAPSHOT_LIMIT,
+    RecordingWireDocument, RecordingWireStateFrame, WIRE_SNAPSHOT_LIMIT,
 };
 use serde_json::{json, Value};
 use std::{collections::BTreeMap, sync::Arc};
@@ -170,7 +170,7 @@ impl RecordingRegistryRoot {
         Ok(())
     }
 
-    fn admission_entries(&self) -> Vec<AdmissionEntry<'_>> {
+    pub(super) fn admission_entries(&self) -> Vec<AdmissionEntry<'_>> {
         let mut entries = Vec::new();
         if let Some(workflow) = &self.workflow {
             if let Some(record) = &workflow.registered {
@@ -657,6 +657,52 @@ impl RecordingRegistryRoot {
             .expect("existing subscription")
             .control = false;
         Ok(Some(frame))
+    }
+
+    /// The original attach reply of a registered ID (its first snapshot), for call inspection.
+    pub(super) fn saved_attach(
+        &self,
+        session: &RecordingRegistrySession,
+        original: &RecordingWireDocument,
+    ) -> Result<Option<RecordingWireAttachReply>, LeaseError> {
+        let id = original.as_value()["attachId"]
+            .as_str()
+            .expect("validated ID");
+        let Some(old) = self.subscriptions.attaches.get(id) else {
+            return Ok(None);
+        };
+        if old.principal != session.principal {
+            return Err(LeaseError::Forbidden);
+        }
+        if !same_recording_wire_request(old.request.as_document(), original) {
+            return Err(LeaseError::ProtocolViolation);
+        }
+        self.qualify_disclosure(session)?;
+        self.attach_reply(old).map(Some)
+    }
+
+    /// The original control reply of a registered ID, for call inspection.
+    pub(super) fn saved_control(
+        &self,
+        session: &RecordingRegistrySession,
+        original: &RecordingWireDocument,
+    ) -> Result<Option<RecordingWireControlReply>, LeaseError> {
+        let id = original.as_value()["controlId"]
+            .as_str()
+            .expect("validated ID");
+        let Some(old) = self.subscriptions.controls.get(id) else {
+            return Ok(None);
+        };
+        if old.principal != session.principal {
+            return Err(LeaseError::Forbidden);
+        }
+        if !same_recording_wire_request(old.request.as_document(), original) {
+            return Err(LeaseError::ProtocolViolation);
+        }
+        if old.snapshot.is_some() {
+            self.qualify_disclosure(session)?;
+        }
+        self.control_reply(old).map(Some)
     }
 
     #[cfg(test)]

@@ -1,6 +1,7 @@
 //! Native recording registry ownership and real-clock lease boundary.
 //! Product session issuance and transport remain unconnected.
 mod apply;
+mod call_inspection;
 mod cancel;
 mod discard;
 mod inspection;
