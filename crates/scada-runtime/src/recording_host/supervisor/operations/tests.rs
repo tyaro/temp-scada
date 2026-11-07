@@ -1316,6 +1316,27 @@ async fn registry_preflight_registration_consumes_lease_once_without_native_call
         ),
         Err(LeaseError::Closed)
     ));
+    // The settled preflight has no accepted proof, yet a next-stage lease is `Closed`, not the
+    // `Busy` its proof lookup would answer on an open root.
+    assert_eq!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &ticket,
+            "pause-after-close",
+            registry_lease(&scope, "lease-4", "admission-4", "mutation", 10),
+        ),
+        Err(LeaseError::Closed)
+    );
+    assert_eq!(
+        root.issue_discard_lease(
+            &session,
+            &workflow,
+            &ticket,
+            registry_lease(&scope, "lease-5", "admission-5", "mutation", 10),
+        ),
+        Err(LeaseError::Closed)
+    );
 }
 
 #[tokio::test]
