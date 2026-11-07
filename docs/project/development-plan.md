@@ -4,7 +4,17 @@
 
 ## 次の実装順
 
-C4 native registry adapterでは、既存ownerの排他的seed、Admission保存予算kernel、固定scopeのnative rootと実`Instant` lease台帳を実装した。四段階の保持bytesとsnapshot上界をsimulationと共有し、native rootの最初の一workflowを受付前に予約する。preflight leaseの初回発行・失効retry、元Admissionの不変登録とleaseの原子消費に続き、登録済みticketから実nativeへ高々一回preflightを渡し、元reply・実change／operation handle・完了をrootに保持する。preflightのAdmissionInspectionは保存済み実handleから受付証拠を読み、照会IDごとの初回返信とread容量を固定する。元`unknown`返信は後着の受付証拠で変更しない。実Candidateの完了と元Accepted証拠へ初回pause/join leaseを束縛した。元pause Admissionの原本登録とlease消費、実native pause/joinの一回配送、元返信とjoin完了の分離を実装した。正常な実pause/join完了とownerのPaused状態へ初回apply leaseを束縛した。元apply Admissionの不変登録・lease原子消費、実native applyの一回配送、元返信と実handle完了の分離も実装した。commit後の応答喪失でも元返信を変更・再配送せず、SQLiteの適用revisionと試験専用native apply呼出回数で一回性を確認する。保存済み実apply handleから初回reconcileを明示登録・一回配送し、read leaseの2MiB枠と元返信／delivery分離を追加した。CandidateまたはPausedからの初回discardも実装し、lease競合と一回配送、正常終端で未発行stageの予約返却を確認した。製品session issuerは未接続。次は製品境界を進める。
+C4 native registry adapter（PR #105〜#118、2026-11-06〜07）は、一workflowの各段階を実`RecordingOperationsOwner`へ一回ずつ配送するところまで統合済み。経緯は[実装履歴](../history/implementation-history.md)、現在の契約は[採用設計](../design/runtime/historian-recording-native-registry-adapter.md)と[実装状況](implementation-status.md)を参照する。
+
+| 区分                           | 状態                                                                                                                                                                                                                                |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 基盤（seed・予算kernel・root） | 統合済み。ownerの排他的seed、Admission保存予算kernel、固定scopeのnative root、実`Instant` lease台帳、初回workflowの保持bytes予約                                                                                                    |
+| 段階配送                       | 統合済み。preflight→AdmissionInspection→pause/join→apply→reconcile、Candidate／Pausedからのdiscard。各段階でlease発行・元Admissionの原子登録・native一回配送・元返信と実handle完了の分離を持ち、元`unknown`は後着証拠で書き換えない |
+| adapter内の残り                | 未着手。Observation、cancel（重複・`notSupported`・late結果）、複数read retry、snapshot／subscription、lease失効・管理側shutdown。設計§7の受入1〜6をmock Hub＋一時SQLiteで一貫して通す                                              |
+| 認証・host gate                | 未着手。製品hostのsession issuer、epoch生成と永続衝突防止、権限失効後の結果開示、Tauri endpoint。認証は2026-10-18の延期指示を維持し、上流契約で再開範囲を確定してから進める                                                         |
+| 製品transport・通常App         | 未着手。現行`RegistryDomain`はsimulationのまま。native rootを製品transportで通常Appへ接続し、初回設定（mapping登録・initialIdle開始・fresh SDK解決・明示resume）の範囲を決める                                                      |
+
+次の候補は、adapter内の残りのうちObservationと同handle chainでの完走（設計§7の受入1）を先に閉じ、cancel・失効・shutdownへ進む順である。認証・host gateと製品transportはその後に分けて着手する。着手時にこの順を確定する。
 
 2026-11-05のユーザー指示で[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、C0〜C3を実施した。SOAK終了待ちは解除済み。次はC4の記録client・native bridge、続いてC5の実SQLite／History接続、C6の連続運用へ進む。初回読取の成功を運用時の認証・記録・長時間運転の完了とは扱わない。
 
