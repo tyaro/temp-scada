@@ -9,6 +9,7 @@ mod lease;
 mod observation;
 mod pause;
 mod reconciliation;
+mod shutdown;
 mod subscription;
 mod workflow;
 use crate::recording_operations::{
@@ -28,6 +29,7 @@ pub use lease::{
 pub(crate) use pause::PauseDispatchFault;
 pub use pause::{PauseRegistration, RecordingRegistryPauseTicket};
 pub use reconciliation::{ReconciliationRegistration, RecordingRegistryReconciliationTicket};
+pub use shutdown::RegistryLifecycle;
 use std::fmt;
 #[cfg(test)]
 pub(crate) use workflow::TestDispatchFault;

@@ -105,6 +105,8 @@ pub struct RecordingRegistryRoot {
     pub(super) read_byte_limit: usize,
     pub(super) mutation_lease_limit: usize,
     read_lease_limit: usize,
+    /// Management-side shutdown: no new lease, workflow, or admission; set before `closed`.
+    pub(super) shutdown: bool,
     pub(super) closed: bool,
     pub(super) workflow: Option<WorkflowRecord>,
     /// Every registered read in order; at most one is unsettled at a time.
@@ -190,6 +192,7 @@ impl RecordingRegistryRoot {
             read_byte_limit: LeaseRole::Reconciliation.byte_limit(),
             mutation_lease_limit: 4096,
             read_lease_limit: 4096,
+            shutdown: false,
             closed: false,
             workflow: None,
             reconciliations: Vec::new(),
@@ -267,7 +270,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         request: RecordingWireLeaseRequest,
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
-        self.issue_lease_inner(session, request, Instant::now(), None)
+        self.issue_lease_inner(session, request, Instant::now(), None, false)
     }
 
     #[cfg(test)]
@@ -277,7 +280,7 @@ impl RecordingRegistryRoot {
         request: RecordingWireLeaseRequest,
         now: Instant,
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
-        self.issue_lease_inner(session, request, now, None)
+        self.issue_lease_inner(session, request, now, None, false)
     }
 
     pub(super) fn issue_prepaid_lease_at(
@@ -287,7 +290,18 @@ impl RecordingRegistryRoot {
         now: Instant,
         reserved_lease_bytes: usize,
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
-        self.issue_lease_inner(session, request, now, Some(reserved_lease_bytes))
+        self.issue_lease_inner(session, request, now, Some(reserved_lease_bytes), false)
+    }
+
+    /// Discard only moves the native owner toward quiescence, so it stays open while draining.
+    pub(super) fn issue_drain_lease_at(
+        &mut self,
+        session: &RecordingRegistrySession,
+        request: RecordingWireLeaseRequest,
+        now: Instant,
+        reserved_lease_bytes: usize,
+    ) -> Result<RecordingWireLeaseReply, LeaseError> {
+        self.issue_lease_inner(session, request, now, Some(reserved_lease_bytes), true)
     }
 
     fn issue_lease_inner(
@@ -296,6 +310,7 @@ impl RecordingRegistryRoot {
         request: RecordingWireLeaseRequest,
         now: Instant,
         reserved_lease_bytes: Option<usize>,
+        while_draining: bool,
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
         if self.closed {
             return Err(LeaseError::Closed);
@@ -320,6 +335,9 @@ impl RecordingRegistryRoot {
                 return Err(LeaseError::ProtocolViolation);
             }
             return Ok(existing.reply.clone());
+        }
+        if self.shutdown && !while_draining {
+            return Err(LeaseError::Closed);
         }
         if session.role == LeaseRole::Mutation
             && self.workflow.is_some()
