@@ -92,7 +92,18 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
 - **command**: `recording_lease`、`recording_admission`、`recording_admission_inspection`、`recording_observation`、`recording_cancel`、`recording_call_inspection`、`recording_attach`、`recording_control`。
 - **引数**: wire request JSONの一つだけである。principal・role・session IDを引数に取らない。
-- **sessionの選び方**: hostは§4の再検証の後、requestのroleに対応する現在のregistry sessionを選ぶ。
+- **sessionの選び方**: wire requestで`role`を持つのはLeaseRequestだけである。そこでhostは§4の再検証の後、次の表でcommandとrequest本文から必要なroleを決め、そのroleの現在のregistry sessionを選ぶ。callerはroleを指定しない。
+
+| command                                 | 必要なrole（Bantoの権限）                                                                                   |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `recording_lease`                       | requestの`role`。`mutation`ならAdmin、`reconciliation`ならViewer以上                                        |
+| `recording_admission`                   | 操作種別で決める。preflight・pause/join・apply・discardはmutation（Admin）、reconcileはread（Viewer以上）   |
+| `recording_admission_inspection`        | read（Viewer以上）                                                                                          |
+| `recording_observation`                 | read（Viewer以上）                                                                                          |
+| `recording_cancel`                      | 対象の種別で決める。operationはmutation（Admin）、reconciliationはread（Viewer以上）。adapter設計§5のとおり |
+| `recording_call_inspection`             | 元callのkindによらずread（Viewer以上）。§4の降格後の回収のため                                              |
+| `recording_attach`・`recording_control` | read（Viewer以上）                                                                                          |
+
 - **未ログイン**: sessionがなければ`unauthorized`を返す。
 - **権限不足**: mutationに必要なAdminを満たさなければ`forbidden`を返す。
 
