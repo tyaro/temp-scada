@@ -1712,21 +1712,8 @@ async fn registry_inspection_freezes_each_query_without_rewriting_the_original_r
     let bob = root.test_session("bob", LeaseRole::Reconciliation);
     let change = change("inspect-preflight");
     let workflow = root.reserve_workflow(&mutation, change.clone()).unwrap();
-    let lease = root
-        .issue_preflight_lease(
-            &mutation,
-            &workflow,
-            registry_lease(
-                &scope,
-                "inspect-lease",
-                "inspect-admission",
-                "mutation",
-                1000,
-            ),
-        )
-        .unwrap();
-    let original = registry_preflight(&scope, &change, "inspect-admission", &lease);
-    let first_request = registry_inspection(&original, "inspection-1");
+    // Build the foreign root before the real-clock lease starts, so a slow SQLite setup can
+    // never expire it before registration.
     let (foreign_owner, _foreign_dir) = setup();
     let mut foreign_root = RecordingRegistryRoot::try_new(
         RecordingRegistryOwnerSeed::try_from_owner(foreign_owner).unwrap(),
@@ -1738,6 +1725,21 @@ async fn registry_inspection_freezes_each_query_without_rewriting_the_original_r
     let foreign_workflow = foreign_root
         .reserve_workflow(&foreign_session, change.clone())
         .unwrap();
+    let lease = root
+        .issue_preflight_lease(
+            &mutation,
+            &workflow,
+            registry_lease(
+                &scope,
+                "inspect-lease",
+                "inspect-admission",
+                "mutation",
+                10000,
+            ),
+        )
+        .unwrap();
+    let original = registry_preflight(&scope, &change, "inspect-admission", &lease);
+    let first_request = registry_inspection(&original, "inspection-1");
     assert!(matches!(
         root.inspect_preflight_admission(&read, &foreign_workflow, first_request.clone()),
         Err(LeaseError::Forbidden)
