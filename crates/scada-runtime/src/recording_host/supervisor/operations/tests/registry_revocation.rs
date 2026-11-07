@@ -169,6 +169,43 @@ async fn registry_revocation_rejects_the_grant_and_keeps_monitoring_an_accepted_
         .as_value()["outcome"],
         json!({"kind":"ack","disposition":"requested"})
     );
+    // Revocation is reported before close on every entry point; a non-revoked session of the
+    // same root still sees `Closed`, and a session of another root stays `Forbidden`.
+    let (other_owner, _other_dir) = setup();
+    let other = RecordingRegistryRoot::try_new(
+        RecordingRegistryOwnerSeed::try_from_owner(other_owner).unwrap(),
+        registry_scope("epoch-revoke-closed-other"),
+    )
+    .ok()
+    .unwrap();
+    let foreign_mutation = other.test_session("alice", LeaseRole::Mutation);
+    let foreign_read = other.test_session("alice", LeaseRole::Reconciliation);
+    let closed_lease =
+        || registry_lease(&scope, "lease:closed", "admission:closed", "mutation", 1000);
+    for (session, expected) in [
+        (&mutation, LeaseError::Unauthorized),
+        (&renewed_mutation, LeaseError::Closed),
+        (&foreign_mutation, LeaseError::Forbidden),
+    ] {
+        assert_eq!(root.issue_lease(session, closed_lease()), Err(expected));
+        assert_eq!(root.apply_reply(session, &ticket).err(), Some(expected));
+        assert_eq!(
+            root.reserve_workflow(session, change("apply-ready")).err(),
+            Some(expected)
+        );
+    }
+    let closed_observation = operation_observation(&scope, "observe:closed", &operation);
+    for (session, expected) in [
+        (&read, LeaseError::Unauthorized),
+        (&renewed_read, LeaseError::Closed),
+        (&foreign_read, LeaseError::Forbidden),
+    ] {
+        assert_eq!(
+            root.observe_result(session, closed_observation.clone())
+                .err(),
+            Some(expected)
+        );
+    }
 }
 
 #[tokio::test]

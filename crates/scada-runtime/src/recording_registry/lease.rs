@@ -321,10 +321,10 @@ impl RecordingRegistryRoot {
         reserved_lease_bytes: Option<usize>,
         while_draining: bool,
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }
-        self.check_grant(session)?;
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || session.scope != self.scope
             || !same_scope(&self.scope, &request.as_value()["scope"])

@@ -206,10 +206,10 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryWorkflowTicket,
     ) -> Result<&WorkflowRecord, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }
-        self.check_grant(session)?;
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope
@@ -234,10 +234,10 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         change: RecordingChangeRequest,
     ) -> Result<RecordingRegistryWorkflowTicket, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }
-        self.check_grant(session)?;
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || session.scope != self.scope
             || session.role != LeaseRole::Mutation
@@ -553,10 +553,10 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryAdmissionTicket,
     ) -> Result<&RegisteredPreflight, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }
-        self.check_grant(session)?;
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope
