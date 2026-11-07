@@ -868,7 +868,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 ## 記録registryのObservation（C4）
 
-`recording_registry/observation.rs`の`observe_result`はread roleの同一root・principal・scopeを照合し、kindとrefで保存済み実handle（preflight／pause／apply／初回reconcile）を引いて元request全文を比較する。各段階の`completion()`／`delivery()`は`workflow.rs`／`pause.rs`／`apply.rs`／`reconciliation.rs`の登録recordに置き、ticket付きの既存読取とObservationが同じ照合を使う。照会はwatchの現在値を読むだけで、native task・待機・再配送を追加しない。未知refと実handleのない同期拒否はIDごとに不変の`unavailable`、新IDはrequest bytesだけをread枠へ課金し、各kind4096件・pending2枠とする。Rust `operations/tests/registry_observation.rs`で、一時SQLiteとmock Hubを使うpreflight→pause/join→apply→Observationの完走、pending→terminal、早期unknown ref、role・principal・epoch・同ID別本文の拒否、同期拒否・handle保存前panic・投影panic後のunknown・SQLite FULL後のfailedとreconcile deliveryを確認する。受理後notDispatchedのObservationは未検証。
+`recording_registry/observation.rs`の`observe_result`はread roleの同一root・principal・scopeを照合し、kindとrefで保存済み実handle（preflight／pause／apply／初回reconcile）を引いて元request全文を比較する。各段階の`completion()`／`delivery()`は`workflow.rs`／`pause.rs`／`apply.rs`／`reconciliation.rs`の登録recordに置き、ticket付きの既存読取とObservationが同じ照合を使う。照会はwatchの現在値を読むだけで、native task・待機・再配送を追加しない。未知refと実handleのない同期拒否はIDごとに不変の`unavailable`、新IDはrequest bytesだけをread枠へ課金し、各kind4096件・pending2枠とする。Rust `operations/tests/registry_observation.rs`で、一時SQLiteとmock Hubを使うpreflight→pause/join→apply→Observationの完走、pending→terminal、早期unknown ref、role・principal・epoch・同ID別本文の拒否、同期拒否・handle保存前panic・投影panic後のunknown・SQLite FULL後のfailedとreconcile delivery、受理後に期限を越えてowner処理へ入らなかったapply／pause/joinのfailed・`notDispatched`（元Accepted不変、native apply呼出し一回、SQLite不変、Blocked、handoffでのrecovery証拠引継ぎ）を確認する。
 
 ## 記録registryの初回discard（C4）
 

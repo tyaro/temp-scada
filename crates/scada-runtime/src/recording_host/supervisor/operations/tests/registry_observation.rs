@@ -538,3 +538,113 @@ async fn registry_observation_separates_rejection_unknown_reply_and_failed_compl
     assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
     assert!(client.state().recovery_required);
 }
+
+#[tokio::test]
+async fn registry_observation_reads_not_dispatched_completion_after_acceptance() {
+    // Apply: the native handle is accepted, then the lease deadline passes before the owner
+    // loan starts. The completion is failed/notDispatched on the saved handle, not a rejection.
+    let epoch = "epoch-observe-not-dispatched-apply";
+    let scope = registry_scope(epoch);
+    let (mut root, mutation, workflow, pause, admission, dir) =
+        ready_apply_registry(epoch, 200).await;
+    let client = root.test_native_client();
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let operation = admission.as_value()["action"]["operation"].clone();
+    let ticket = match root
+        .register_apply(&mutation, &workflow, &pause, admission)
+        .unwrap()
+    {
+        ApplyRegistration::Registered(ticket) => ticket,
+        _ => panic!("new apply"),
+    };
+    let before = sqlite_applied_revision(&dir.0);
+    let gate = Arc::new(driver::TestGate::default());
+    *client.shared.fault.lock().unwrap() = Some(driver::TestFault::Gate(gate.clone()));
+    let accepted = root.dispatch_apply(&mutation, &ticket).unwrap();
+    assert_eq!(accepted.as_value()["outcome"]["kind"], "accepted");
+    gate.entered.notified().await;
+    let observation = operation_observation(&scope, "observe:nd-apply", &operation);
+    assert_eq!(
+        outcome(&root.observe_result(&read, observation.clone()).unwrap())["kind"],
+        "pending"
+    );
+    tokio::time::sleep(Duration::from_millis(250)).await;
+    gate.release.notify_one();
+    let failed = observe_terminal(&mut root, &read, observation.clone()).await;
+    let result = &outcome(&failed)["result"];
+    assert_eq!(result["request"], operation);
+    assert_eq!(result["outcome"]["kind"], "failed");
+    assert_eq!(result["outcome"]["error"], "deadlineExceeded");
+    assert_eq!(result["outcome"]["effect"], "notDispatched");
+    assert_eq!(result["recoveryRequired"], true);
+    assert_eq!(
+        root.apply_completion(&mutation, &ticket)
+            .unwrap()
+            .unwrap()
+            .as_value(),
+        result
+    );
+    // The original Accepted reply is unchanged, native apply ran once and SQLite is untouched.
+    assert_eq!(
+        root.apply_reply(&mutation, &ticket).unwrap(),
+        Some(accepted)
+    );
+    for _ in 0..3 {
+        assert_eq!(
+            root.observe_result(&read, observation.clone()).unwrap(),
+            failed
+        );
+    }
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(sqlite_applied_revision(&dir.0), before);
+    assert_eq!(client.state().phase, OperationsPhase::Blocked);
+    assert!(client.state().recovery_required);
+    // A confirmed notDispatched is not an uncertain dispatch: handoff carries its recovery.
+    let handoff = root.try_handoff().unwrap();
+    assert!(handoff.evidence.owner_recovery_required);
+    assert_eq!(handoff.evidence.latest.unwrap().as_value(), result);
+    assert!(handoff.evidence.last_applied.is_none());
+
+    // Pause/join: the same post-acceptance notDispatched completion leaves the recorder
+    // unpaused and is observed on the saved pause handle.
+    let epoch = "epoch-observe-not-dispatched-pause";
+    let scope = registry_scope(epoch);
+    let (mut root, mutation, workflow, preflight, pause_admission, _dir) =
+        ready_pause_registry(epoch, 200).await;
+    let client = root.test_native_client();
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let pause = match root
+        .register_pause_join(&mutation, &workflow, &preflight, pause_admission)
+        .unwrap()
+    {
+        PauseRegistration::Registered(ticket) => ticket,
+        _ => panic!("new pause"),
+    };
+    let gate = Arc::new(driver::TestGate::default());
+    *client.shared.fault.lock().unwrap() = Some(driver::TestFault::Gate(gate.clone()));
+    let accepted = root.dispatch_pause_join(&mutation, &pause).unwrap();
+    assert_eq!(accepted.as_value()["outcome"]["kind"], "accepted");
+    gate.entered.notified().await;
+    tokio::time::sleep(Duration::from_millis(250)).await;
+    gate.release.notify_one();
+    let observation = operation_observation(&scope, "observe:nd-pause", &handle_request(&accepted));
+    let failed = observe_terminal(&mut root, &read, observation.clone()).await;
+    let result = &outcome(&failed)["result"];
+    assert_eq!(result["outcome"]["kind"], "failed");
+    assert_eq!(result["outcome"]["error"], "deadlineExceeded");
+    assert_eq!(result["outcome"]["effect"], "notDispatched");
+    assert_eq!(result["recoveryRequired"], true);
+    assert_eq!(
+        root.pause_completion(&mutation, &pause)
+            .unwrap()
+            .unwrap()
+            .as_value(),
+        result
+    );
+    assert_eq!(root.pause_reply(&mutation, &pause).unwrap(), Some(accepted));
+    assert_eq!(root.observe_result(&read, observation).unwrap(), failed);
+    assert_eq!(client.state().phase, OperationsPhase::Blocked);
+    let handoff = root.try_handoff().unwrap();
+    assert!(handoff.evidence.owner_recovery_required);
+    assert_eq!(handoff.evidence.latest.unwrap().as_value(), result);
+}
