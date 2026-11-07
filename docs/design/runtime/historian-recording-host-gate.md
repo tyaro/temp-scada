@@ -77,6 +77,10 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 - **既存の失効契約**: 失効はnative状態を変えない。受理済み操作の内部監視は続く。失効したgrantには何も開示しない。
 - **logout後の復帰**: 同じユーザーが再ログインすると、同じprincipalのsessionが再発行される。元返信、Observation、cancelの再取得はそのsessionで続けられる。
 - **権限変更後**: roleがViewerへ下がったユーザーは、read sessionだけを受ける。自分のworkflowの照会・Observation・購読は続けられ、新しい変更はできない。
+- **未静止workflowがある間の降格・削除**: AdminがworkflowをCandidate／Pausedまで進めた後に降格や削除をされると、本人はdiscardできず、別のAdminもprincipalの制約で操作できない。そこでhostは、§6の運用移行と同じ排他で、この状態を作る変更を拒否する。
+  - **対象**: Adminから下位roleへの変更と、ユーザー削除である。password変更・resetは対象外とする。これらは`auth_epoch`を上げてsessionを失効させるが、同じprincipalが再ログインすれば、従来どおりAdminとしてdiscardや続きを実行できるためである。
+  - **確認**: 変更commandは移行lockを取り、対象ユーザーのprincipalのworkflowについて`root.quiescence()`で静止を確かめる。未静止なら`busy`で拒否し、UIはdiscardか完了の待機を促す。静止していれば変更を確定し、§4のとおり即時に失効させる。
+  - **lockの外で起きた変更**: 認証DBを外部から書き換えられた場合など、この確認を通らずに降格・削除が起きても、registryの状態は変えない。その場合の解消（別のAdminによる引継ぎかdiscard）は、§8の未決事項1と合わせて設計する。
 - **降格後の元返信の回収**: 現行の`inspect_call`は元callと同じroleを要求する（adapter設計§7）。そのままでは、Adminの時に返信を失ったapplyの元返信を、Viewerへ降格した後に回収できない。そこでCallInspectionの契約を次のように変える。
   - **必要なrole**: 元callのkindによらずread roleとする。mutation sessionでの照会も従来どおり受ける。
   - **開示の条件**: 見つかったrecordの開示は、従来どおりそのrecordまたはworkflowのprincipalに限る。
@@ -194,7 +198,7 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
 ## 8. 未決事項（レビューで確定する）
 
-1. **principalごとの開示**: 現行registryはrecordとworkflowをprincipalに束縛している。そのため、Admin Aが始めたworkflowをAdmin Bが監視・取消できない。また開発フェーズのworkflowは、運用移行後に照会できない。初回は単一workflowなので現行のままとし、交代運用が必要になった時点で「Admin共有principal」案を別に設計するか。
+1. **principalごとの開示**: 現行registryはrecordとworkflowをprincipalに束縛している。そのため、Admin Aが始めたworkflowをAdmin Bが監視・取消できない。また開発フェーズのworkflowは、運用移行後に照会できない。初回は単一workflowなので現行のままとし、交代運用が必要になった時点で「Admin共有principal」案を別に設計するか。 Admin間の共有を設ければ、lockの外で起きた降格・削除の後に、別のAdminがworkflowを引き継ぐかdiscardする復旧経路にもなる（§4）。
 2. **認証無効モードの初期値**: 初回起動（`auth-phase.json`も認証DBもない）で認証無効をonとする（§6）のは、Bantoの既定（off）と逆である。access-policyの「開発中はログイン不要」に合わせる案だが、これでよいか。
 3. **認証DBの置き場所**: 認証DBをHistorian DBと別fileにする（§2）。
 
@@ -203,6 +207,6 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 1. `scada-host`へ`HostAuth`（Bantoの依存、migrationのコピー、`DesktopSession`の再検証、`require_role`）を追加する。試験は一時SQLiteで行う。
 2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`、read-onlyの`quiescence()`を追加し、失効の連動を試験する。CallInspectionをread roleで受ける契約変更（§4）も行い、Adminで返信を失ったapplyをViewerへ降格した後に回収できることを試験する。
 3. ownerRef・epochの世代ごとの生成と保存を追加する。
-4. Tauri command（§5のworkflowの段階別入口とticketの保持を含む）とUIの`TauriAuthProvider`を追加する。Tauri commandだけで予約から初回preflight・pause/join・apply・reconcileまで進めることを試験する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、初回初期化の各保存境界での強制終了と再起動後の再開、`auth-phase.json`がなく認証DBだけがある場合の拒否、移行commandの成功と、各保存境界（1〜3の後）での失敗・強制終了からの再起動後の再実行、4の後の強制終了・返信喪失から通常ログインへ進めること、未静止workflowでの移行拒否と並行するpreflightとの排他、`transitioning`中のregistry入口の拒否、`bootstrapping`以外のフェーズでの認証DB欠落の拒否をnativeで試験する。
+4. Tauri command（§5のworkflowの段階別入口とticketの保持を含む）とUIの`TauriAuthProvider`を追加する。Tauri commandだけで予約から初回preflight・pause/join・apply・reconcileまで進めることを試験する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、初回初期化の各保存境界での強制終了と再起動後の再開、`auth-phase.json`がなく認証DBだけがある場合の拒否、移行commandの成功と、各保存境界（1〜3の後）での失敗・強制終了からの再起動後の再実行、4の後の強制終了・返信喪失から通常ログインへ進めること、未静止workflowでの移行拒否と並行するpreflightとの排他、Candidate／Pausedでの降格・削除の拒否と静止後の確定、`transitioning`中のregistry入口の拒否、`bootstrapping`以外のフェーズでの認証DB欠落の拒否をnativeで試験する。
 
 製品transportと実ownerの配置（C5）は、この区切りの後に行う。
