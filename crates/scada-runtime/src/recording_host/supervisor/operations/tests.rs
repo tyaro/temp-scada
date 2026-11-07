@@ -27,6 +27,7 @@ use tokio_tungstenite::tungstenite::Message;
 mod registry_cancel;
 mod registry_observation;
 mod registry_read_retry;
+mod registry_subscription;
 pub(super) fn context() -> RecordingOperationsContext {
     let fixtures: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -912,7 +913,13 @@ async fn registry_lease_byte_budget_accepts_exact_and_rejects_one_short_atomical
             now,
         )
         .unwrap();
-        let one = root.test_used_bytes(role);
+        // The read pool also retains the root's current snapshot descriptor from creation.
+        let base = if role == LeaseRole::Reconciliation {
+            1024
+        } else {
+            0
+        };
+        let one = root.test_used_bytes(role) - base;
         let second = registry_lease(
             &scope,
             &format!("{name}-2"),
@@ -920,13 +927,13 @@ async fn registry_lease_byte_budget_accepts_exact_and_rejects_one_short_atomical
             name,
             1,
         );
-        root.test_set_byte_limit(role, one * 2 - 1);
+        root.test_set_byte_limit(role, base + one * 2 - 1);
         assert_eq!(
             root.issue_lease_at(&session, second.clone(), now),
             Err(LeaseError::Capacity)
         );
-        assert_eq!(root.test_used_bytes(role), one);
-        root.test_set_byte_limit(role, one * 2);
+        assert_eq!(root.test_used_bytes(role), base + one);
+        root.test_set_byte_limit(role, base + one * 2);
         let reply = root.issue_lease_at(&session, second, now).unwrap();
         assert_eq!(
             reply.as_value()["outcome"]["deadlineLeaseRef"],
@@ -935,7 +942,7 @@ async fn registry_lease_byte_budget_accepts_exact_and_rejects_one_short_atomical
                 if role == LeaseRole::Mutation { 2 } else { 4 }
             )
         );
-        assert_eq!(root.test_used_bytes(role), one * 2);
+        assert_eq!(root.test_used_bytes(role), base + one * 2);
     }
 }
 
@@ -1907,26 +1914,29 @@ async fn registry_inspection_capacity_failure_does_not_bind_id_or_spend_read_byt
         + crate::recording_registry::kernel::budget::measured(reply.as_value())
             .unwrap()
             .bytes;
-    root.test_set_byte_limit(LeaseRole::Reconciliation, cost - 1);
+    // The root's current snapshot descriptor is retained in the read pool from creation.
+    let base = root.test_used_bytes(LeaseRole::Reconciliation);
+    assert_eq!(base, 1024);
+    root.test_set_byte_limit(LeaseRole::Reconciliation, base + cost - 1);
     assert!(matches!(
         root.inspect_preflight_admission(&read, &workflow, request.clone()),
         Err(LeaseError::Capacity)
     ));
     assert_eq!(root.test_admission_inspection_count(), 0);
-    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), 0);
-    root.test_set_byte_limit(LeaseRole::Reconciliation, cost);
+    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), base);
+    root.test_set_byte_limit(LeaseRole::Reconciliation, base + cost);
     assert_eq!(
         root.inspect_preflight_admission(&read, &workflow, request.clone())
             .unwrap(),
         reply
     );
-    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), cost);
+    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), base + cost);
     assert_eq!(
         root.inspect_preflight_admission(&read, &workflow, request)
             .unwrap(),
         reply
     );
-    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), cost);
+    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), base + cost);
 }
 
 #[tokio::test]

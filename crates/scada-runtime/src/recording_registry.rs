@@ -9,6 +9,7 @@ mod lease;
 mod observation;
 mod pause;
 mod reconciliation;
+mod subscription;
 mod workflow;
 use crate::recording_operations::{
     OwnerError, RecordingOperationsClient, RecordingOperationsHandoff, RecordingOperationsOwner,
@@ -75,6 +76,10 @@ impl RecordingRegistryOwnerSeed {
 
     pub(crate) fn check_claim(&self) -> Result<(), RegistryClaimReason> {
         self.owner.check_registry_claim()
+    }
+
+    pub(crate) fn recovery_required(&self) -> bool {
+        self.owner.registry_recovery_required()
     }
 
     pub(crate) fn initial_workflow_eligible(&self) -> Result<bool, RegistryClaimReason> {

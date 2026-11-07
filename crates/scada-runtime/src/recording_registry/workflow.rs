@@ -17,7 +17,7 @@ use scada_model::recording_operations::{
     same_recording_operations_context, RecordingChangeRequest, RecordingOperationRequest,
     RecordingOperationResult, RecordingOperationsContext,
 };
-use scada_model::recording_wire::{RecordingWireLeaseReply, RecordingWireLeaseRequest};
+use scada_model::recording_wire::{RecordingWireLeaseReply, RecordingWireLeaseRequest, WireBound};
 use serde_json::json;
 use std::{
     collections::BTreeMap,
@@ -54,6 +54,9 @@ pub(super) struct WorkflowRecord {
     pub(super) apply_lease: Option<ApplyLease>,
     pub(super) discard_lease: Option<DiscardLease>,
     pub(super) released_unused_stages: bool,
+    /// Reserved snapshot slot bounds for every stage admission and operation completion.
+    pub(super) projection_admission: WireBound,
+    pub(super) projection_operation: WireBound,
 }
 
 impl WorkflowRecord {
@@ -284,6 +287,8 @@ impl RecordingRegistryRoot {
             apply_lease: None,
             discard_lease: None,
             released_unused_stages: false,
+            projection_admission: budget.admission,
+            projection_operation: budget.operation,
         });
         Ok(ticket)
     }

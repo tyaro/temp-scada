@@ -2,8 +2,12 @@
 //! read lease and admission, and starts only after every earlier read has settled.
 use super::{
     apply::RecordingRegistryApplyTicket,
-    kernel::budget::{LifetimeBudget, READ_ID_BYTES},
+    kernel::{
+        budget::{LifetimeBudget, READ_ID_BYTES},
+        workflow::{check_snapshot, max_bound},
+    },
     lease::same_scope,
+    subscription::{AdmissionEntry, AdmissionStage},
     workflow::RecordingRegistryWorkflowTicket,
     LeaseError, LeaseRole, RecordingRegistryRoot, RecordingRegistrySession,
 };
@@ -128,6 +132,19 @@ impl RegisteredReconciliation {
                 _ => false,
             },
             _ => false,
+        }
+    }
+
+    pub(super) fn admission_entry(&self) -> AdmissionEntry<'_> {
+        AdmissionEntry {
+            stage: AdmissionStage::Reconciliation,
+            sequence: self.ticket.sequence,
+            request: &self.request,
+            reply: match &self.state {
+                DispatchState::Finished(reply) => Some(reply),
+                _ => None,
+            },
+            knowledge: None,
         }
     }
 
@@ -308,6 +325,16 @@ impl RecordingRegistryRoot {
         if next_bytes > self.read_byte_limit {
             return Err(LeaseError::Capacity);
         }
+        // Every read admission may become the snapshot head; reserve its slots before commit.
+        let read_admission = max_bound(self.projection_read_admission, budget.reply);
+        let read_completion = max_bound(self.projection_read, budget.completion);
+        check_snapshot(
+            &self.scope,
+            max_bound(record.projection_admission, read_admission),
+            record.projection_operation,
+            read_completion,
+        )
+        .map_err(|_| LeaseError::Capacity)?;
         let sequence = self.sequence.checked_add(1).ok_or(LeaseError::Capacity)?;
         let unknown = admission_reply(&request, json!({"kind":"unknown","error":"workerFailure"}));
         budget
@@ -330,6 +357,8 @@ impl RecordingRegistryRoot {
         };
         self.sequence = sequence;
         self.read_bytes = next_bytes;
+        self.projection_read_admission = read_admission;
+        self.projection_read = read_completion;
         self.leases
             .get_mut(&lease_id)
             .expect("qualified lease")

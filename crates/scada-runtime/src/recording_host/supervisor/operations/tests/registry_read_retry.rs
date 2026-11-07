@@ -6,7 +6,7 @@ use crate::recording_registry::{
 };
 
 /// Issues a fresh read lease and builds a reconcile admission bound to it.
-fn read_admission(
+pub(super) fn read_admission(
     root: &mut RecordingRegistryRoot,
     read: &RecordingRegistrySession,
     scope: &Value,
@@ -43,7 +43,9 @@ fn read_admission(
     RecordingAdmissionRequest::from_value(value).unwrap()
 }
 
-fn registered(registration: ReconciliationRegistration) -> RecordingRegistryReconciliationTicket {
+pub(super) fn registered(
+    registration: ReconciliationRegistration,
+) -> RecordingRegistryReconciliationTicket {
     match registration {
         ReconciliationRegistration::Registered(ticket) => ticket,
         ReconciliationRegistration::Existing(_) => panic!("new reconciliation"),
@@ -51,7 +53,7 @@ fn registered(registration: ReconciliationRegistration) -> RecordingRegistryReco
 }
 
 /// Dispatches an apply under the given native fault and waits for its completion.
-async fn failed_apply(
+pub(super) async fn failed_apply(
     epoch: &str,
     fault: driver::TestFault,
 ) -> (
