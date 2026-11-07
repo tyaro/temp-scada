@@ -146,6 +146,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         scope: Option<&Value>,
     ) -> Result<(), LeaseError> {
+        self.check_grant(session)?;
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || session.scope != self.scope
             || session.role != LeaseRole::Reconciliation

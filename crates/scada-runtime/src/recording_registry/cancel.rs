@@ -50,6 +50,7 @@ impl RecordingRegistryRoot {
         } else {
             LeaseRole::Reconciliation
         };
+        self.check_grant(session)?;
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || session.scope != self.scope
             || session.role != role

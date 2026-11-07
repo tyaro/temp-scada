@@ -206,6 +206,7 @@ impl RecordingRegistryRoot {
         if self.closed {
             return Err(LeaseError::Closed);
         }
+        self.check_grant(session)?;
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &workflow.identity)
             || !Arc::ptr_eq(&self.identity, &apply_ticket.identity)
@@ -396,6 +397,7 @@ impl RecordingRegistryRoot {
         if self.closed {
             return Err(LeaseError::Closed);
         }
+        self.check_grant(session)?;
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope

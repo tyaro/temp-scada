@@ -9,6 +9,7 @@ mod lease;
 mod observation;
 mod pause;
 mod reconciliation;
+mod revocation;
 mod shutdown;
 mod subscription;
 mod workflow;
