@@ -137,6 +137,13 @@ impl RecordingRegistryRoot {
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
         let record = self.workflow_record(session, workflow)?;
         let registered = self.registered_pause(session, pause_ticket)?;
+        self.refuse_new_after_close(
+            record
+                .apply_lease
+                .as_ref()
+                .map(|lease| lease.lease_id.as_str()),
+            &request.as_value()["leaseRequestId"],
+        )?;
         if request.as_value()["role"] != "mutation"
             || !same_scope(&self.scope, &request.as_value()["scope"])
         {
@@ -318,6 +325,14 @@ impl RecordingRegistryRoot {
     ) -> Result<ApplyRegistration, LeaseError> {
         let record = self.workflow_record(session, workflow)?;
         self.registered_pause(session, pause_ticket)?;
+        self.refuse_new_after_close(
+            record
+                .apply_lease
+                .as_ref()
+                .and_then(|lease| lease.registered.as_ref())
+                .map(|registered| registered.ticket.admission_id()),
+            &request.as_value()["admissionId"],
+        )?;
         let apply = record
             .apply_lease
             .as_ref()
@@ -419,9 +434,6 @@ impl RecordingRegistryRoot {
         ticket: &RecordingRegistryApplyTicket,
     ) -> Result<&RegisteredApply, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope

@@ -28,9 +28,6 @@ impl RecordingRegistryRoot {
         request: RecordingAdmissionInspectionRequest,
     ) -> Result<RecordingAdmissionInspectionReply, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &workflow.identity)
             || session.scope != self.scope

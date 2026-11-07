@@ -204,9 +204,6 @@ impl RecordingRegistryRoot {
         clock: impl FnOnce() -> Instant,
     ) -> Result<ReconciliationRegistration, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &workflow.identity)
             || !Arc::ptr_eq(&self.identity, &apply_ticket.identity)
@@ -219,6 +216,13 @@ impl RecordingRegistryRoot {
         if record.principal != session.principal {
             return Err(LeaseError::Forbidden);
         }
+        self.refuse_new_after_close(
+            self.reconciliations
+                .iter()
+                .map(|read| read.ticket.admission_id.as_str())
+                .find(|id| request.as_value()["admissionId"] == *id),
+            &request.as_value()["admissionId"],
+        )?;
         if record.ticket.sequence() != workflow.sequence()
             || record.ticket.change_id() != workflow.change_id()
         {
@@ -395,9 +399,6 @@ impl RecordingRegistryRoot {
         ticket: &RecordingRegistryReconciliationTicket,
     ) -> Result<&RegisteredReconciliation, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope

@@ -1154,8 +1154,11 @@ async fn registry_workflow_reserves_all_four_stages_before_a_mutation_lease() {
         Err(LeaseError::Forbidden)
     );
     assert!(root.try_handoff().is_ok());
+    // After close the reserved workflow is still re-fetched; a new reservation is refused.
+    let refetched = root.reserve_workflow(&session, planned_change).unwrap();
+    assert_eq!(refetched.sequence(), ticket.sequence());
     assert!(matches!(
-        root.reserve_workflow(&session, planned_change),
+        root.reserve_workflow(&session, change("workflow-2")),
         Err(LeaseError::Closed)
     ));
 }
@@ -1275,15 +1278,65 @@ async fn registry_preflight_registration_consumes_lease_once_without_native_call
         handoff.supervisor.state().recording.phase,
         RecordingPhase::Joined
     );
-    assert!(matches!(
-        root.register_preflight_at(
+    // The handoff settles the never-dispatched registration as `cancelled`; after close the
+    // same request re-fetches its ticket and that reply, and nothing reaches native.
+    let replay = root
+        .register_preflight_at(
             &session,
             &workflow,
             request,
+            now + Duration::from_millis(20),
+        )
+        .unwrap();
+    let PreflightRegistration::Existing(existing) = replay else {
+        panic!("existing registration expected")
+    };
+    assert_eq!(existing.sequence(), ticket.sequence());
+    let settled = root.dispatch_preflight(&session, &ticket).unwrap();
+    assert_eq!(
+        settled.as_value()["outcome"],
+        json!({"kind":"rejected","error":"cancelled"})
+    );
+    assert_eq!(
+        root.preflight_reply(&session, &ticket).unwrap(),
+        Some(settled)
+    );
+    // Any other ID is new work after close: `Closed`, never the open-root `Busy`.
+    let other = registry_preflight(&scope, &planned, "admission-other", &lease);
+    assert!(matches!(
+        root.register_preflight_at(&session, &workflow, other, now + Duration::from_millis(20)),
+        Err(LeaseError::Closed)
+    ));
+    assert!(matches!(
+        root.issue_preflight_lease_at(
+            &session,
+            &workflow,
+            registry_lease(&scope, "lease-3", "admission-3", "mutation", 10),
             now + Duration::from_millis(20)
         ),
         Err(LeaseError::Closed)
     ));
+    // The settled preflight has no accepted proof, yet a next-stage lease is `Closed`, not the
+    // `Busy` its proof lookup would answer on an open root.
+    assert_eq!(
+        root.issue_pause_join_lease(
+            &session,
+            &workflow,
+            &ticket,
+            "pause-after-close",
+            registry_lease(&scope, "lease-4", "admission-4", "mutation", 10),
+        ),
+        Err(LeaseError::Closed)
+    );
+    assert_eq!(
+        root.issue_discard_lease(
+            &session,
+            &workflow,
+            &ticket,
+            registry_lease(&scope, "lease-5", "admission-5", "mutation", 10),
+        ),
+        Err(LeaseError::Closed)
+    );
 }
 
 #[tokio::test]
@@ -1695,21 +1748,8 @@ async fn registry_inspection_freezes_each_query_without_rewriting_the_original_r
     let bob = root.test_session("bob", LeaseRole::Reconciliation);
     let change = change("inspect-preflight");
     let workflow = root.reserve_workflow(&mutation, change.clone()).unwrap();
-    let lease = root
-        .issue_preflight_lease(
-            &mutation,
-            &workflow,
-            registry_lease(
-                &scope,
-                "inspect-lease",
-                "inspect-admission",
-                "mutation",
-                1000,
-            ),
-        )
-        .unwrap();
-    let original = registry_preflight(&scope, &change, "inspect-admission", &lease);
-    let first_request = registry_inspection(&original, "inspection-1");
+    // Build the foreign root before the real-clock lease starts, so a slow SQLite setup can
+    // never expire it before registration.
     let (foreign_owner, _foreign_dir) = setup();
     let mut foreign_root = RecordingRegistryRoot::try_new(
         RecordingRegistryOwnerSeed::try_from_owner(foreign_owner).unwrap(),
@@ -1721,6 +1761,21 @@ async fn registry_inspection_freezes_each_query_without_rewriting_the_original_r
     let foreign_workflow = foreign_root
         .reserve_workflow(&foreign_session, change.clone())
         .unwrap();
+    let lease = root
+        .issue_preflight_lease(
+            &mutation,
+            &workflow,
+            registry_lease(
+                &scope,
+                "inspect-lease",
+                "inspect-admission",
+                "mutation",
+                10000,
+            ),
+        )
+        .unwrap();
+    let original = registry_preflight(&scope, &change, "inspect-admission", &lease);
+    let first_request = registry_inspection(&original, "inspection-1");
     assert!(matches!(
         root.inspect_preflight_admission(&read, &foreign_workflow, first_request.clone()),
         Err(LeaseError::Forbidden)
