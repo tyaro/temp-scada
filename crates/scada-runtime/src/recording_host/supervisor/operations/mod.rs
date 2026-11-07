@@ -189,6 +189,11 @@ impl RecordingOperationsOwner {
         &self.shared.context
     }
 
+    /// The published sticky recovery latch; transport loss or a transient Busy never sets it.
+    pub(crate) fn registry_recovery_required(&self) -> bool {
+        self.shared.view.borrow().recovery_required
+    }
+
     pub(crate) fn registry_initial_workflow_eligible(&self) -> Result<bool, RegistryClaimReason> {
         let core = self.shared.core.try_lock().map_err(|error| match error {
             TryLockError::WouldBlock => RegistryClaimReason::Busy,

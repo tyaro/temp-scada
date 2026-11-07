@@ -4,6 +4,7 @@ use super::{
     kernel::{budget::LifetimeBudget, workflow as bounds},
     lease::{same_scope, LeaseRecord},
     pause::{PauseDispatchState, PauseLease},
+    subscription::{AdmissionEntry, AdmissionStage},
     workflow::{
         accepted_preflight_reply, PreflightDispatchState, RecordingRegistryAdmissionTicket,
         RecordingRegistryWorkflowTicket,
@@ -111,6 +112,21 @@ enum DiscardDispatchState {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DiscardDispatchFault {
     NativePanicAfterCall,
+}
+
+impl DiscardLease {
+    pub(super) fn admission_entry(&self) -> Option<AdmissionEntry<'_>> {
+        self.registered.as_ref().map(|record| AdmissionEntry {
+            stage: AdmissionStage::Discard,
+            sequence: record.ticket.sequence,
+            request: &record.request,
+            reply: match &record.state {
+                DiscardDispatchState::Finished(reply) => Some(reply),
+                _ => None,
+            },
+            knowledge: None,
+        })
+    }
 }
 
 fn competing_pause(

@@ -2,6 +2,7 @@ use super::{
     cancel::{CancelRecord, CancelTarget},
     observation::ObservationRecord,
     reconciliation::RegisteredReconciliation,
+    subscription::{SubscriptionState, DESCRIPTOR_BYTES},
     workflow::WorkflowRecord,
     RecordingRegistryOwnerSeed,
 };
@@ -16,7 +17,13 @@ use scada_model::recording_operations::{
 };
 use scada_model::recording_wire::{
     conservative_recording_json_bound, same_recording_wire_request, RecordingWireLeaseReply,
-    RecordingWireLeaseRequest, WIRE_REQUEST_LIMIT,
+    RecordingWireLeaseRequest, WireBound, WIRE_REQUEST_LIMIT,
+};
+
+const ZERO_BOUND: WireBound = WireBound {
+    bytes: 0,
+    nodes: 0,
+    depth: 0,
 };
 use serde_json::{json, Value};
 use std::{
@@ -114,6 +121,10 @@ pub struct RecordingRegistryRoot {
     pub(super) cancels: BTreeMap<String, CancelRecord>,
     /// Handles notified by any cancel ID; the only native notify count evidence.
     pub(super) cancel_notified: BTreeSet<CancelTarget>,
+    /// High-water snapshot slot bounds of every registered read admission.
+    pub(super) projection_read_admission: WireBound,
+    pub(super) projection_read: WireBound,
+    pub(super) subscriptions: SubscriptionState,
 }
 
 pub struct RegistryRootInitFailure {
@@ -173,7 +184,8 @@ impl RecordingRegistryRoot {
             leases: BTreeMap::new(),
             sequence: 0,
             mutation_bytes: 0,
-            read_bytes: 0,
+            // The current snapshot descriptor is retained for the root's lifetime.
+            read_bytes: DESCRIPTOR_BYTES,
             mutation_byte_limit: LeaseRole::Mutation.byte_limit(),
             read_byte_limit: LeaseRole::Reconciliation.byte_limit(),
             mutation_lease_limit: 4096,
@@ -186,6 +198,9 @@ impl RecordingRegistryRoot {
             observations: BTreeMap::new(),
             cancels: BTreeMap::new(),
             cancel_notified: BTreeSet::new(),
+            projection_read_admission: ZERO_BOUND,
+            projection_read: ZERO_BOUND,
+            subscriptions: SubscriptionState::new(),
         })
     }
 

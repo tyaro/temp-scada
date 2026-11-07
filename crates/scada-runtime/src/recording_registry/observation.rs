@@ -19,7 +19,7 @@ const MAX_PENDING_OBSERVATIONS_PER_KIND: usize = 2;
 
 /// The saved native handle an observation ID is bound to. `None` stays unavailable forever.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum ObservedHandle {
+pub(super) enum ObservedHandle {
     Preflight(u64),
     Pause(u64),
     Apply(u64),
@@ -207,7 +207,24 @@ impl RecordingRegistryRoot {
     }
 
     fn observed_outcome(&self, handle: ObservedHandle) -> Result<Value, LeaseError> {
-        let workflow = self.workflow.as_ref().expect("qualified workflow");
+        Ok(match (handle, self.handle_completion(handle)?) {
+            (_, None) => json!({"kind":"pending"}),
+            (ObservedHandle::Reconciliation(_), Some(delivery)) => {
+                json!({"kind":"reconciliation","delivery":delivery})
+            }
+            (_, Some(result)) => json!({"kind":"operation","result":result}),
+        })
+    }
+
+    /// The set-once operation result or read delivery of a saved handle, if completed.
+    pub(super) fn handle_completion(
+        &self,
+        handle: ObservedHandle,
+    ) -> Result<Option<Value>, LeaseError> {
+        let workflow = self
+            .workflow
+            .as_ref()
+            .ok_or(LeaseError::ProtocolViolation)?;
         let operation = match handle {
             ObservedHandle::Preflight(sequence) => workflow
                 .registered
@@ -233,18 +250,12 @@ impl RecordingRegistryRoot {
                 let read = self
                     .reconciliation_by_sequence(sequence)
                     .ok_or(LeaseError::ProtocolViolation)?;
-                return Ok(match read.delivery(&self.scope["ownerRef"])? {
-                    Some(delivery) => {
-                        json!({"kind":"reconciliation","delivery":delivery.as_value()})
-                    }
-                    None => json!({"kind":"pending"}),
-                });
+                return Ok(read
+                    .delivery(&self.scope["ownerRef"])?
+                    .map(|delivery| delivery.as_value().clone()));
             }
         };
-        Ok(match operation {
-            Some(result) => json!({"kind":"operation","result":result.as_value()}),
-            None => json!({"kind":"pending"}),
-        })
+        Ok(operation.map(|result| result.as_value().clone()))
     }
 
     #[cfg(test)]

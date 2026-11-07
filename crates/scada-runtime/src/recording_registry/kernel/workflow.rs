@@ -27,6 +27,64 @@ impl StageBudget {
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct WorkflowBudget {
     pub total_bytes: usize,
+    /// Largest admission reply of the four stages; a snapshot slot reservation.
+    pub admission: WireBound,
+    /// Largest operation completion of the three handle stages.
+    pub operation: WireBound,
+}
+
+const ZERO: WireBound = WireBound {
+    bytes: 0,
+    nodes: 0,
+    depth: 0,
+};
+
+/// OwnerSnapshot upper bound from independent slot bounds (an absent slot is zero).
+pub(crate) fn snapshot_bound(
+    scope: &Value,
+    admission: WireBound,
+    operation: WireBound,
+    read: WireBound,
+) -> Result<WireBound, BudgetError> {
+    let scope_bound = measured(scope)?;
+    Ok(WireBound {
+        bytes: sum(
+            sum(
+                sum(sum(scope_bound.bytes, admission.bytes)?, operation.bytes)?,
+                read.bytes,
+            )?,
+            SNAPSHOT_ENVELOPE.bytes,
+        )?,
+        nodes: sum(
+            sum(
+                sum(sum(scope_bound.nodes, admission.nodes)?, operation.nodes)?,
+                read.nodes,
+            )?,
+            SNAPSHOT_ENVELOPE.nodes,
+        )?,
+        depth: (scope_bound.depth + 1)
+            .max(admission.depth + 1)
+            .max(operation.depth + 2)
+            .max(read.depth + 1)
+            .max(3),
+    })
+}
+
+/// Fails with Capacity when the reserved slot bounds could not fit one snapshot.
+pub(crate) fn check_snapshot(
+    scope: &Value,
+    admission: WireBound,
+    operation: WireBound,
+    read: WireBound,
+) -> Result<(), BudgetError> {
+    if fits_bound(
+        snapshot_bound(scope, admission, operation, read)?,
+        WIRE_SNAPSHOT_LIMIT,
+    ) {
+        Ok(())
+    } else {
+        Err(BudgetError::Capacity)
+    }
 }
 
 pub(crate) fn stage(
@@ -91,28 +149,15 @@ pub(crate) fn workflow(
             operation = max_bound(operation, budget.storage.completion);
         }
     }
-    let scope_bound = measured(scope)?;
-    let snapshot = WireBound {
-        bytes: sum(
-            sum(sum(scope_bound.bytes, admission.bytes)?, operation.bytes)?,
-            SNAPSHOT_ENVELOPE.bytes,
-        )?,
-        nodes: sum(
-            sum(sum(scope_bound.nodes, admission.nodes)?, operation.nodes)?,
-            SNAPSHOT_ENVELOPE.nodes,
-        )?,
-        depth: (scope_bound.depth + 1)
-            .max(admission.depth + 1)
-            .max(operation.depth + 2)
-            .max(3),
-    };
-    if !fits_bound(snapshot, WIRE_SNAPSHOT_LIMIT) {
-        return Err(BudgetError::Capacity);
-    }
-    Ok(WorkflowBudget { total_bytes })
+    check_snapshot(scope, admission, operation, ZERO)?;
+    Ok(WorkflowBudget {
+        total_bytes,
+        admission,
+        operation,
+    })
 }
 
-fn max_bound(a: WireBound, b: WireBound) -> WireBound {
+pub(crate) fn max_bound(a: WireBound, b: WireBound) -> WireBound {
     WireBound {
         bytes: a.bytes.max(b.bytes),
         nodes: a.nodes.max(b.nodes),
