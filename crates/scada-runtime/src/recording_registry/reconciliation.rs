@@ -68,6 +68,16 @@ enum DispatchState {
 }
 
 impl RegisteredReconciliation {
+    /// Settles a never-dispatched read at shutdown; native is never called.
+    pub(super) fn cancel_undispatched(&mut self) {
+        if matches!(self.state, DispatchState::Registered) {
+            let reply = admission_reply(&self.request, super::workflow::shutdown_rejection());
+            if self.budget.check_reply(reply.as_value()).is_ok() {
+                self.state = DispatchState::Finished(reply);
+            }
+        }
+    }
+
     pub(super) fn ticket_sequence(&self) -> u64 {
         self.ticket.sequence
     }
@@ -257,6 +267,9 @@ impl RecordingRegistryRoot {
                 existing.ticket.clone(),
             ));
         }
+        if self.shutdown {
+            return Err(LeaseError::Closed);
+        }
         // A retry starts only after every earlier read has a fixed, certain reply and, when
         // accepted, a native completion. An `unknown` reply is never retried past.
         if !self
@@ -439,6 +452,7 @@ impl RecordingRegistryRoot {
         match &record.state {
             DispatchState::Finished(reply) => return Ok(reply.clone()),
             DispatchState::Calling => return Err(LeaseError::Busy),
+            DispatchState::Registered if self.shutdown => return Err(LeaseError::Closed),
             DispatchState::Registered => {}
         }
         let request = record.request.clone();

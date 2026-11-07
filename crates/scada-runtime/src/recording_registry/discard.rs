@@ -227,7 +227,7 @@ impl RecordingRegistryRoot {
             {
                 return Err(LeaseError::ProtocolViolation);
             }
-            return self.issue_prepaid_lease_at(session, request, now, stage.lease_bytes);
+            return self.issue_drain_lease_at(session, request, now, stage.lease_bytes);
         }
         if self.leases.contains_key(&lease_id)
             || self
@@ -356,7 +356,7 @@ impl RecordingRegistryRoot {
             }
             _ => return Err(LeaseError::Busy),
         }
-        let reply = self.issue_prepaid_lease_at(session, request, now, stage.lease_bytes)?;
+        let reply = self.issue_drain_lease_at(session, request, now, stage.lease_bytes)?;
         self.workflow
             .as_mut()
             .expect("qualified workflow")

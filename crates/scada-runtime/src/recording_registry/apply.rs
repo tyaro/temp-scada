@@ -65,6 +65,16 @@ pub(super) struct RegisteredApply {
 }
 
 impl RegisteredApply {
+    /// Settles a never-dispatched admission at shutdown; native is never called.
+    pub(super) fn cancel_undispatched(&mut self) {
+        if matches!(self.state, ApplyDispatchState::Registered) {
+            let reply = apply_admission_reply(&self.request, super::workflow::shutdown_rejection());
+            if self.budget.check_reply(reply.as_value()).is_ok() {
+                self.state = ApplyDispatchState::Finished(reply);
+            }
+        }
+    }
+
     /// Reads the saved native apply handle; it never starts a native wait task.
     pub(super) fn completion(&self) -> Result<Option<Arc<RecordingOperationResult>>, LeaseError> {
         let Some(binding) = &self.binding else {
@@ -343,6 +353,9 @@ impl RecordingRegistryRoot {
             }
             return Ok(ApplyRegistration::Existing(existing.ticket.clone()));
         }
+        if self.shutdown {
+            return Err(LeaseError::Closed);
+        }
         let lease = self
             .leases
             .get(&apply.lease_id)
@@ -462,6 +475,7 @@ impl RecordingRegistryRoot {
         match &registered.state {
             ApplyDispatchState::Finished(reply) => return Ok(reply.clone()),
             ApplyDispatchState::Calling => return Err(LeaseError::Busy),
+            ApplyDispatchState::Registered if self.shutdown => return Err(LeaseError::Closed),
             ApplyDispatchState::Registered => {}
         }
         let request = registered.request.clone();

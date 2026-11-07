@@ -168,6 +168,23 @@ pub enum PreflightRegistration {
     Existing(RecordingRegistryAdmissionTicket),
 }
 
+impl RegisteredPreflight {
+    /// Settles a never-dispatched admission at shutdown; native is never called.
+    pub(super) fn cancel_undispatched(&mut self) {
+        if matches!(self.state, PreflightDispatchState::Registered) {
+            let reply = admission_reply(&self.request, shutdown_rejection());
+            if self.budget.check_reply(reply.as_value()).is_ok() {
+                self.state = PreflightDispatchState::Finished(reply);
+            }
+        }
+    }
+}
+
+/// The registry withdrew the admission before any native call: certain and not accepted.
+pub(super) fn shutdown_rejection() -> serde_json::Value {
+    json!({"kind":"rejected","error":"cancelled"})
+}
+
 impl RecordingRegistryRoot {
     #[cfg(test)]
     pub(crate) fn test_preflight_ticket(
@@ -246,6 +263,9 @@ impl RecordingRegistryRoot {
                 return Err(LeaseError::ProtocolViolation);
             }
             return Ok(record.ticket.clone());
+        }
+        if self.shutdown {
+            return Err(LeaseError::Closed);
         }
         if self.has_mutation_lease() {
             return Err(LeaseError::Busy);
@@ -448,6 +468,9 @@ impl RecordingRegistryRoot {
             }
             return Ok(PreflightRegistration::Existing(existing.ticket.clone()));
         }
+        if self.shutdown {
+            return Err(LeaseError::Closed);
+        }
         if value["ownerRef"] != self.scope["ownerRef"] || value["action"]["kind"] != "preflight" {
             return Err(LeaseError::Forbidden);
         }
@@ -616,6 +639,7 @@ impl RecordingRegistryRoot {
         match &registered.state {
             PreflightDispatchState::Finished(reply) => return Ok(reply.clone()),
             PreflightDispatchState::Calling => return Err(LeaseError::Busy),
+            PreflightDispatchState::Registered if self.shutdown => return Err(LeaseError::Closed),
             PreflightDispatchState::Registered => {}
         }
         let request = registered.request.clone();
