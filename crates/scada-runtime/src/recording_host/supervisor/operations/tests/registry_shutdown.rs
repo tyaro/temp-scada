@@ -106,6 +106,7 @@ async fn registry_shutdown_keeps_monitoring_an_accepted_apply_until_handoff() {
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = admission.as_value()["action"]["operation"].clone();
+    let original = admission.clone();
     let ticket = match root
         .register_apply(&mutation, &workflow, &pause, admission)
         .unwrap()
@@ -155,4 +156,42 @@ async fn registry_shutdown_keeps_monitoring_an_accepted_apply_until_handoff() {
     assert_eq!(sqlite_applied_revision(&dir.0), before);
     root.try_handoff().unwrap();
     assert_eq!(root.lifecycle(), RegistryLifecycle::Closed);
+
+    // After close the same apply request re-fetches its ticket and reply; any other ID is
+    // new work and is `Closed` before a stage-specific error can answer it.
+    match root
+        .register_apply(&mutation, &workflow, &pause, original.clone())
+        .unwrap()
+    {
+        ApplyRegistration::Existing(existing) => assert_eq!(existing.sequence(), ticket.sequence()),
+        _ => panic!("existing apply"),
+    }
+    let mut other = original.as_value().clone();
+    other["admissionId"] = json!("admission:after-close");
+    assert!(matches!(
+        root.register_apply(
+            &mutation,
+            &workflow,
+            &pause,
+            RecordingAdmissionRequest::from_value(other).unwrap()
+        ),
+        Err(LeaseError::Closed)
+    ));
+    assert_eq!(
+        root.issue_apply_lease(
+            &mutation,
+            &workflow,
+            &pause,
+            "apply:after-close",
+            registry_lease(
+                &scope,
+                "lease:after-close",
+                "admission:after-close",
+                "mutation",
+                1000
+            ),
+        ),
+        Err(LeaseError::Closed)
+    );
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
 }

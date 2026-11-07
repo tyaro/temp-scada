@@ -205,6 +205,13 @@ impl RecordingRegistryRoot {
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
         let record = self.workflow_record(session, workflow)?;
         let original = self.registered_preflight(session, preflight)?;
+        self.refuse_new_after_close(
+            record
+                .discard_lease
+                .as_ref()
+                .map(|lease| lease.lease_id.as_str()),
+            &request.as_value()["leaseRequestId"],
+        )?;
         if request.as_value()["role"] != "mutation"
             || !same_scope(&self.scope, &request.as_value()["scope"])
         {
@@ -228,9 +235,6 @@ impl RecordingRegistryRoot {
                 return Err(LeaseError::ProtocolViolation);
             }
             return self.issue_drain_lease_at(session, request, now, stage.lease_bytes);
-        }
-        if self.closed {
-            return Err(LeaseError::Closed);
         }
         if self.leases.contains_key(&lease_id)
             || self
@@ -405,6 +409,14 @@ impl RecordingRegistryRoot {
     ) -> Result<DiscardRegistration, LeaseError> {
         let record = self.workflow_record(session, workflow)?;
         self.registered_preflight(session, preflight)?;
+        self.refuse_new_after_close(
+            record
+                .discard_lease
+                .as_ref()
+                .and_then(|lease| lease.registered.as_ref())
+                .map(|registered| registered.ticket.admission_id()),
+            &request.as_value()["admissionId"],
+        )?;
         let discard = record
             .discard_lease
             .as_ref()
@@ -434,9 +446,6 @@ impl RecordingRegistryRoot {
                 return Err(LeaseError::ProtocolViolation);
             }
             return Ok(DiscardRegistration::Existing(existing.ticket.clone()));
-        }
-        if self.closed {
-            return Err(LeaseError::Closed);
         }
         let lease = self
             .leases

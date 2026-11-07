@@ -216,6 +216,13 @@ impl RecordingRegistryRoot {
         if record.principal != session.principal {
             return Err(LeaseError::Forbidden);
         }
+        self.refuse_new_after_close(
+            self.reconciliations
+                .iter()
+                .map(|read| read.ticket.admission_id.as_str())
+                .find(|id| request.as_value()["admissionId"] == *id),
+            &request.as_value()["admissionId"],
+        )?;
         if record.ticket.sequence() != workflow.sequence()
             || record.ticket.change_id() != workflow.change_id()
         {

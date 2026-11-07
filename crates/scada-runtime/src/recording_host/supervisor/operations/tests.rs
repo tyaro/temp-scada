@@ -1301,6 +1301,21 @@ async fn registry_preflight_registration_consumes_lease_once_without_native_call
         root.preflight_reply(&session, &ticket).unwrap(),
         Some(settled)
     );
+    // Any other ID is new work after close: `Closed`, never the open-root `Busy`.
+    let other = registry_preflight(&scope, &planned, "admission-other", &lease);
+    assert!(matches!(
+        root.register_preflight_at(&session, &workflow, other, now + Duration::from_millis(20)),
+        Err(LeaseError::Closed)
+    ));
+    assert!(matches!(
+        root.issue_preflight_lease_at(
+            &session,
+            &workflow,
+            registry_lease(&scope, "lease-3", "admission-3", "mutation", 10),
+            now + Duration::from_millis(20)
+        ),
+        Err(LeaseError::Closed)
+    ));
 }
 
 #[tokio::test]

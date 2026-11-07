@@ -552,6 +552,19 @@ impl RecordingRegistryRoot {
         }
     }
 
+    /// After close only a same-ID re-fetch of a saved record proceeds: any other call is new
+    /// work and is `Closed` before a stage-specific `Busy` or validation error can answer it.
+    pub(super) fn refuse_new_after_close(
+        &self,
+        saved: Option<&str>,
+        requested: &serde_json::Value,
+    ) -> Result<(), LeaseError> {
+        if self.closed && (saved.is_none() || saved != requested.as_str()) {
+            return Err(LeaseError::Closed);
+        }
+        Ok(())
+    }
+
     pub(super) fn has_mutation_lease(&self) -> bool {
         self.leases
             .values()
