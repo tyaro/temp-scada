@@ -1,6 +1,9 @@
 use super::{
-    observation::ObservationRecord, reconciliation::RegisteredReconciliation,
-    workflow::WorkflowRecord, RecordingRegistryOwnerSeed,
+    cancel::{CancelRecord, CancelTarget},
+    observation::ObservationRecord,
+    reconciliation::RegisteredReconciliation,
+    workflow::WorkflowRecord,
+    RecordingRegistryOwnerSeed,
 };
 #[cfg(test)]
 use crate::recording_operations::RecordingOperationsClient;
@@ -17,7 +20,7 @@ use scada_model::recording_wire::{
 };
 use serde_json::{json, Value};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fmt,
     sync::Arc,
     time::{Duration, Instant},
@@ -107,6 +110,9 @@ pub struct RecordingRegistryRoot {
         ),
     >,
     pub(super) observations: BTreeMap<String, ObservationRecord>,
+    pub(super) cancels: BTreeMap<String, CancelRecord>,
+    /// Handles notified by any cancel ID; the only native notify count evidence.
+    pub(super) cancel_notified: BTreeSet<CancelTarget>,
 }
 
 pub struct RegistryRootInitFailure {
@@ -177,6 +183,8 @@ impl RecordingRegistryRoot {
             reserved_revisions: 0,
             admission_inspections: BTreeMap::new(),
             observations: BTreeMap::new(),
+            cancels: BTreeMap::new(),
+            cancel_notified: BTreeSet::new(),
         })
     }
 
