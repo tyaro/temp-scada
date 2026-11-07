@@ -101,6 +101,7 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 - **購読frame**: Tauri eventで配送する。配送のたびに、§4と同じ規則でdesktop sessionを再検証する。これにより、次のcommandが来なくても購読中の失効を検知できる。
   - **失効を検知した場合**: そのdesktop sessionの全registry sessionを`revoke_session`で失効させる。購読を切り、配送を止める。
   - **認証DBの読取に失敗した場合**: そのframeを配送せずに保留し、次の配送機会に再検証する。保留中のframeはregistryの最新一件slotに残るので、保留しても容量は増えない。保留したframeを、再検証の前に配送しない。
+  - **session世代への束縛**: 購読はattach時のdesktop sessionの世代（`AuthSlot`のseq）へ束縛する。logout、ユーザー交代、世代が変わる再ログインでは、旧世代の購読を切る。hostは、旧世代の購読のframeを新しいsessionへ送らない。UIは、現在の世代と違う世代のeventを捨てる。
   - **認証の変更commandを受けた場合**: 同じhostのcommandでlogout、role変更、password変更・reset、ユーザー削除、認証無効モードの切替をしたときは、そのcommandの中で影響するdesktop sessionを再検証し、失効させる。配送の次の機会まで待たない。
 - **監査**: mutationの登録とcancelを、`origin: "tauri"`でBantoの監査logへ記録する。監査の失敗で操作を止めない（Bantoの`record`と同じbest-effort）。拒否は`denied`として記録する。
 
@@ -112,22 +113,29 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
 ## 6. 開発・初期設定フェーズと運用への移行
 
-**新しい認証DBの初期値**: 認証DBを新たに作ったとき、hostは`auth.disabled=true`と`auth.disabled_role=admin`を保存する。これを開発・初期設定フェーズとする。
+**フェーズの記録**: hostは、認証DBとは別に、アプリdata dirの`auth-phase.json`へフェーズを記録する。値は`initializing`（開発・初期設定）と`operational`（運用）の二つである。
 
+- **初回起動**: `auth-phase.json`も認証DBもないときだけ、初回起動とする。hostは認証DBを作り、`auth.disabled=true`と`auth.disabled_role=admin`を保存してから、`initializing`を記録する。
 - **このフェーズでの動作**: ログインせずに`AuthDisabledLocal`のsessionで動き、記録変更も許す。
 - **既存DB**: 保存値に従う。
 
-**運用への移行**: 次の手順で行う。
+**認証DBが開けない、または欠けている場合**: 記録registryの入口はすべて拒否する。
 
-1. 最初の管理者を`auth_setup`で作る。
-2. その管理者でログインする。
-3. 認証無効モードを切る。
+- **再作成しない**: `auth-phase.json`があるのに認証DBがない場合は、DBを再作成しない。これにより、運用済み端末で認証DBだけを失ったときに、再起動で無認証の記録変更ができるようになることを防ぐ。
+- **自動で戻さない**: 初期設定へ自動で戻さず、無認証の変更を許さない（access-policyのとおり）。
+- **防げる範囲**: 防げるのは、DBの偶発的な消失と再作成である。data dirを書き換えられる者による改変は、この仕組みの対象外とする。
+- **復旧**: 正式な復旧手順は、運用から初期設定へ戻す手順と合わせて後続で設計する。
 
-- **移行の確認**: 管理者が存在することを、ブラウザの保存値でなくbackendで確認してから移行を確定する。
-- **移行で失効するもの**: `banto-local:auth-disabled`の全registry sessionが失効する（§4）。
-- **移行の制限**: native処理を進行中に移行しても、受理済み操作は監視が続くだけで止まらない。ただし運用側のユーザーからは照会できない（§8の未決事項1）。そのためUIは、未静止のworkflowがある間は移行を確認ダイアログで止める。
+**運用への移行**: Bantoは、認証無効モードの間は`auth_setup`も`auth_login`も拒否する（admin-templateの`setup_body`）。そのため、Bantoの手順を組み合わせただけでは移行できない。hostに、移行専用のcommand `auth_transition_to_operational(username, password, display_name)`を追加する。
 
-**認証DBが開けない場合**: 記録registryの入口はすべて拒否する。初期設定へ自動で戻さず、無認証の変更を許さない（access-policyのとおり）。
+- **呼べる条件**: `initializing`で、認証無効モードがonであり、現在のsessionが`AuthDisabledLocal`で、そのroleがAdminのときだけ受ける。
+- **管理者がいない場合**: 管理者を`setup_first_user`で作る。
+- **管理者がいる場合**: 渡された資格情報を`verify`で照合し、そのアカウントがAdminであることを確かめる。
+- **確定の順序**: 管理者の作成か照合が成功した後、`auth.disabled=false`を保存し、`auth-phase.json`を`operational`にする。そのアカウントのdesktop sessionを入れ、`banto-local:auth-disabled`の全registry sessionを失効させる（§4）。
+- **途中で失敗した場合**: どこかで失敗したら、認証無効モードをonのまま残し、`initializing`を保つ。管理者だけ作られて移行が終わらなかった場合も、同じcommandを再度呼べば照合の経路で完了できる。
+- **移行の確認**: 管理者の存在は、ブラウザの保存値でなくbackendで確認する。
+- **未静止のworkflowがある場合**: 移行しても、受理済み操作は監視が続くだけで止まらない。ただし運用側のユーザーからは照会できない（§8の未決事項1）。そのためUIは、未静止のworkflowがある間は移行を確認ダイアログで止める。
+- **認証無効モードに戻す場合**: `operational`で認証無効モードをonに戻すことは、この区切りでは提供しない。
 
 ## 7. epoch生成と永続衝突防止
 
@@ -143,7 +151,7 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 ## 8. 未決事項（レビューで確定する）
 
 1. **principalごとの開示**: 現行registryはrecordとworkflowをprincipalに束縛している。そのため、Admin Aが始めたworkflowをAdmin Bが監視・取消できない。また開発フェーズのworkflowは、運用移行後に照会できない。初回は単一workflowなので現行のままとし、交代運用が必要になった時点で「Admin共有principal」案を別に設計するか。
-2. **認証無効モードの初期値**: 新しい認証DBで認証無効をonとする（§6）のは、Bantoの既定（off）と逆である。access-policyの「開発中はログイン不要」に合わせる案だが、これでよいか。
+2. **認証無効モードの初期値**: 初回起動（`auth-phase.json`も認証DBもない）で認証無効をonとする（§6）のは、Bantoの既定（off）と逆である。access-policyの「開発中はログイン不要」に合わせる案だが、これでよいか。
 3. **認証DBの置き場所**: 認証DBをHistorian DBと別fileにする（§2）。
 
 ## 9. 実装順
@@ -151,6 +159,6 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 1. `scada-host`へ`HostAuth`（Bantoの依存、migrationのコピー、`DesktopSession`の再検証、`require_role`）を追加する。試験は一時SQLiteで行う。
 2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`を追加し、失効の連動を試験する。CallInspectionをread roleで受ける契約変更（§4）も行い、Adminで返信を失ったapplyをViewerへ降格した後に回収できることを試験する。
 3. ownerRef・epochの世代ごとの生成と保存を追加する。
-4. Tauri commandとUIの`TauriAuthProvider`を追加する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知と認証DB読取失敗時の保留をnativeで試験する。
+4. Tauri commandとUIの`TauriAuthProvider`を追加する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、移行commandの成功・途中失敗からの再実行、`auth-phase.json`がある状態での認証DB欠落の拒否をnativeで試験する。
 
 製品transportと実ownerの配置（C5）は、この区切りの後に行う。
