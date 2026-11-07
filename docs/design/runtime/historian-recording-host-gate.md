@@ -122,15 +122,14 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
 ## 7. epoch生成と永続衝突防止
 
-`ownerEpoch`は、root作成のたびにhostが生成する。
+`ownerEpoch`と`ownerRef`は、どちらもroot作成のたびにhostが新しく生成する。
 
-- **生成方法**: OSのCSPRNGから得た128bitを、32桁の小文字16進にする。
-- **前回値との照合**: hostは、直前に使ったepochをアプリdata dirの`recording-epoch.json`へ保存する。生成値が前回値と一致したら、生成し直す。
+- **生成方法**: それぞれOSのCSPRNGから得た128bitを、32桁の小文字16進にする。
+- **`ownerRef`も世代ごとにする理由**: 既存c4aのAdmissionRequestやAdmissionInspectionRequestは`ownerEpoch`を持たず、ownerRefとcontextだけで照合される。インストール固定のownerRefにすると、再起動前の要求と新ownerへの要求を区別できない。そのため[wire・host契約](historian-recording-wire-host.md)§3のとおり、ownerRefをepochをまたいで再利用しない。
+- **前回値との照合**: hostは、直前に使ったownerRefとepochの組をアプリdata dirの`recording-epoch.json`へ保存する。生成値のどちらかが前回値と一致したら、生成し直す。
 - **保存の順序**: 保存はroot作成の前に行う。保存に失敗したら、rootを作らずに記録registryの入口を拒否する。
-
-- **`ownerRef`**: インストールごとの固定値とする。初回に同じ方法で生成し、同じfileへ保存する。
-- **旧epochの扱い**: 旧epochのref・lease・sessionを新rootへ移さない（wire・host契約のとおり）。
-- **1件だけ保存する理由**: 128bitの乱数は再起動のたびに独立に生成されるので、衝突の確率は無視できる。前回値の照合は、乱数源の故障などで同じ値が出た場合への防御に限る。履歴の全件は保存しない。
+- **旧世代の扱い**: 旧ownerRef・旧epochのref・lease・sessionを新rootへ移さない（wire・host契約のとおり）。
+- **1組だけ保存する理由**: 128bitの乱数は再起動のたびに独立に生成されるので、衝突の確率は無視できる。前回値の照合は、乱数源の故障などで同じ値が出た場合への防御に限る。履歴の全件は保存しない。
 
 ## 8. 未決事項（レビューで確定する）
 
@@ -142,7 +141,7 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
 1. `scada-host`へ`HostAuth`（Bantoの依存、migrationのコピー、`DesktopSession`の再検証、`require_role`）を追加する。試験は一時SQLiteで行う。
 2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`を追加し、失効の連動を試験する。
-3. epochの生成と保存を追加する。
+3. ownerRef・epochの世代ごとの生成と保存を追加する。
 4. Tauri commandとUIの`TauriAuthProvider`を追加する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定をnativeで試験する。
 
 製品transportと実ownerの配置（C5）は、この区切りの後に行う。
