@@ -1,4 +1,5 @@
-//! One explicit receipt read bound to the saved original apply handle.
+//! Explicit receipt reads bound to the saved original apply handle. Each retry needs its own
+//! read lease and admission, and starts only after every earlier read has settled.
 use super::{
     apply::RecordingRegistryApplyTicket,
     kernel::budget::{LifetimeBudget, READ_ID_BYTES},
@@ -116,6 +117,20 @@ impl RegisteredReconciliation {
         Ok(Some(delivery))
     }
 
+    fn is_settled(&self) -> bool {
+        match &self.state {
+            DispatchState::Finished(reply) => match reply.as_value()["outcome"]["kind"].as_str() {
+                Some("accepted") => self
+                    .binding
+                    .as_ref()
+                    .is_some_and(|binding| binding.watch().borrow().is_some()),
+                Some("rejected") => true,
+                _ => false,
+            },
+            _ => false,
+        }
+    }
+
     pub(super) fn is_uncertain(&self) -> bool {
         matches!(self.state, DispatchState::Calling)
             || matches!(&self.state, DispatchState::Finished(reply)
@@ -213,13 +228,26 @@ impl RecordingRegistryRoot {
         {
             return Err(LeaseError::ProtocolViolation);
         }
-        if let Some(existing) = &self.reconciliation {
+        if let Some(existing) = self
+            .reconciliations
+            .iter()
+            .find(|read| read.ticket.admission_id == value["admissionId"])
+        {
             if !same_recording_admission_request(&existing.request, &request) {
                 return Err(LeaseError::ProtocolViolation);
             }
             return Ok(ReconciliationRegistration::Existing(
                 existing.ticket.clone(),
             ));
+        }
+        // A retry starts only after every earlier read has a fixed, certain reply and, when
+        // accepted, a native completion. An `unknown` reply is never retried past.
+        if !self
+            .reconciliations
+            .iter()
+            .all(RegisteredReconciliation::is_settled)
+        {
+            return Err(LeaseError::Busy);
         }
         let binding = original.binding.as_ref().ok_or(LeaseError::Busy)?;
         if !same_recording_operation_request(binding.request(), &expected) {
@@ -306,7 +334,7 @@ impl RecordingRegistryRoot {
             .get_mut(&lease_id)
             .expect("qualified lease")
             .consumed = true;
-        self.reconciliation = Some(RegisteredReconciliation {
+        self.reconciliations.push(RegisteredReconciliation {
             ticket: ticket.clone(),
             request,
             budget,
@@ -337,16 +365,16 @@ impl RecordingRegistryRoot {
         if workflow.principal != session.principal {
             return Err(LeaseError::Forbidden);
         }
-        let record = self
-            .reconciliation
-            .as_ref()
-            .ok_or(LeaseError::InvalidInput)?;
-        if record.ticket.sequence != ticket.sequence
-            || record.ticket.admission_id != ticket.admission_id
-        {
-            return Err(LeaseError::ProtocolViolation);
+        if self.reconciliations.is_empty() {
+            return Err(LeaseError::InvalidInput);
         }
-        Ok(record)
+        self.reconciliations
+            .iter()
+            .find(|record| {
+                record.ticket.sequence == ticket.sequence
+                    && record.ticket.admission_id == ticket.admission_id
+            })
+            .ok_or(LeaseError::ProtocolViolation)
     }
 
     pub fn reconciliation_reply(
@@ -415,11 +443,10 @@ impl RecordingRegistryRoot {
             budget
                 .check_reply(reply.as_value())
                 .map_err(|_| LeaseError::Capacity)?;
-            self.reconciliation.as_mut().expect("registered read").state =
-                DispatchState::Finished(reply.clone());
+            self.reconciliation_mut(ticket.sequence).state = DispatchState::Finished(reply.clone());
             return Ok(reply);
         }
-        self.reconciliation.as_mut().expect("registered read").state = DispatchState::Calling;
+        self.reconciliation_mut(ticket.sequence).state = DispatchState::Calling;
         let control = QueryControl {
             cancellation: CancellationToken::default(),
             deadline,
@@ -433,7 +460,7 @@ impl RecordingRegistryRoot {
                 .client()
                 .reconcile(&change, &original, id, control)
         }));
-        let record = self.reconciliation.as_mut().expect("registered read");
+        let record = self.reconciliation_mut(ticket.sequence);
         let reply = match result {
             Ok(Ok(binding)) => {
                 record.binding = Some(binding);
@@ -475,6 +502,34 @@ impl RecordingRegistryRoot {
             DispatchState::Finished(reply) => reply.clone(),
             _ => unreachable!(),
         })
+    }
+}
+
+impl RecordingRegistryRoot {
+    fn reconciliation_mut(&mut self, sequence: u64) -> &mut RegisteredReconciliation {
+        self.reconciliations
+            .iter_mut()
+            .find(|record| record.ticket.sequence == sequence)
+            .expect("registered read")
+    }
+
+    /// Resolves a read ref to its registration; refs are unique per root.
+    pub(super) fn reconciliation_by_ref(
+        &self,
+        read_ref: &str,
+    ) -> Option<&RegisteredReconciliation> {
+        self.reconciliations
+            .iter()
+            .find(|record| record.read_ref == read_ref)
+    }
+
+    pub(super) fn reconciliation_by_sequence(
+        &self,
+        sequence: u64,
+    ) -> Option<&RegisteredReconciliation> {
+        self.reconciliations
+            .iter()
+            .find(|record| record.ticket.sequence == sequence)
     }
 }
 

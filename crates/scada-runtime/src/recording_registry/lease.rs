@@ -100,7 +100,8 @@ pub struct RecordingRegistryRoot {
     read_lease_limit: usize,
     pub(super) closed: bool,
     pub(super) workflow: Option<WorkflowRecord>,
-    pub(super) reconciliation: Option<RegisteredReconciliation>,
+    /// Every registered read in order; at most one is unsettled at a time.
+    pub(super) reconciliations: Vec<RegisteredReconciliation>,
     pub(super) reserved_revisions: u64,
     pub(super) admission_inspections: BTreeMap<
         String,
@@ -179,7 +180,7 @@ impl RecordingRegistryRoot {
             read_lease_limit: 4096,
             closed: false,
             workflow: None,
-            reconciliation: None,
+            reconciliations: Vec::new(),
             reserved_revisions: 0,
             admission_inspections: BTreeMap::new(),
             observations: BTreeMap::new(),
@@ -430,9 +431,9 @@ impl RecordingRegistryRoot {
             .as_ref()
             .is_some_and(WorkflowRecord::has_uncertain_dispatch)
             || self
-                .reconciliation
-                .as_ref()
-                .is_some_and(RegisteredReconciliation::is_uncertain)
+                .reconciliations
+                .iter()
+                .any(RegisteredReconciliation::is_uncertain)
         {
             return Err(OwnerError::Busy);
         }
