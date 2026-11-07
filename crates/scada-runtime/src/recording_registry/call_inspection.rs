@@ -17,8 +17,6 @@ use scada_model::recording_wire::{
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-const MAX_CALL_INSPECTIONS: usize = 4096;
-
 /// One call inspection ID, fixed to its original call and principal at first use.
 pub(super) struct CallInspectionRecord {
     request: RecordingWireCallInspectionRequest,
@@ -73,7 +71,7 @@ impl RecordingRegistryRoot {
         }))
         .map_err(|_| LeaseError::ProtocolViolation)?;
         if fresh {
-            if self.call_inspections.len() >= MAX_CALL_INSPECTIONS {
+            if self.call_inspections.len() >= self.count_limits.call_inspections {
                 return Err(LeaseError::Capacity);
             }
             // The reply is rebuilt from immutable saved records, so only the request is

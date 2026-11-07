@@ -14,9 +14,6 @@ use scada_model::recording_wire::{
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-const MAX_OBSERVATIONS_PER_KIND: usize = 4096;
-const MAX_PENDING_OBSERVATIONS_PER_KIND: usize = 2;
-
 /// The saved native handle an observation ID is bound to. `None` stays unavailable forever.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum ObservedHandle {
@@ -109,8 +106,8 @@ impl RecordingRegistryRoot {
         let (count, pending_count) = same_kind.fold((0usize, 0usize), |(all, open), o| {
             (all + 1, open + usize::from(o.pending))
         });
-        if count >= MAX_OBSERVATIONS_PER_KIND
-            || (pending && pending_count >= MAX_PENDING_OBSERVATIONS_PER_KIND)
+        if count >= self.count_limits.observations_per_kind
+            || (pending && pending_count >= self.count_limits.pending_observations_per_kind)
         {
             return Err(LeaseError::Capacity);
         }
