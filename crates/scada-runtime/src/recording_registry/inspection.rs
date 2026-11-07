@@ -29,6 +29,7 @@ impl RecordingRegistryRoot {
         workflow: &RecordingRegistryWorkflowTicket,
         request: RecordingAdmissionInspectionRequest,
     ) -> Result<RecordingAdmissionInspectionReply, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }

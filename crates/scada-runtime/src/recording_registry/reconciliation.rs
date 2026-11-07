@@ -203,6 +203,7 @@ impl RecordingRegistryRoot {
         request: RecordingAdmissionRequest,
         clock: impl FnOnce() -> Instant,
     ) -> Result<ReconciliationRegistration, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }
@@ -393,6 +394,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryReconciliationTicket,
     ) -> Result<&RegisteredReconciliation, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }

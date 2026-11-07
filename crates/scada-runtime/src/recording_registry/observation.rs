@@ -50,6 +50,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         request: RecordingWireObservationRequest,
     ) -> Result<RecordingWireObservationReply, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }

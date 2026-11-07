@@ -29,7 +29,7 @@ use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
-    sync::Arc,
+    sync::{Arc, Weak},
     time::{Duration, Instant},
 };
 
@@ -64,6 +64,8 @@ pub enum LeaseError {
     Busy,
     Expired,
     Closed,
+    /// The session's grant was revoked by the host; maps to wire `unauthorized`.
+    Unauthorized,
 }
 
 impl fmt::Display for LeaseError {
@@ -74,9 +76,11 @@ impl fmt::Display for LeaseError {
 impl std::error::Error for LeaseError {}
 
 /// An opaque host-granted capability. Production issuance waits for the host auth contract.
+/// Clones share one grant, so revoking the grant revokes every clone at once.
 #[derive(Clone)]
 pub struct RecordingRegistrySession {
     pub(super) root_identity: Arc<()>,
+    pub(super) grant: Arc<()>,
     pub(super) scope: Value,
     pub(super) principal: String,
     pub(super) role: LeaseRole,
@@ -108,6 +112,9 @@ pub struct RecordingRegistryRoot {
     /// Management-side shutdown: no new lease, workflow, or admission; set before `closed`.
     pub(super) shutdown: bool,
     pub(super) closed: bool,
+    /// Revoked session grants. A `Weak` keeps the allocation alive, so a live session's grant
+    /// address cannot be reused while it is listed; entries without sessions are pruned.
+    pub(super) revoked_grants: Vec<Weak<()>>,
     pub(super) workflow: Option<WorkflowRecord>,
     /// Every registered read in order; at most one is unsettled at a time.
     pub(super) reconciliations: Vec<RegisteredReconciliation>,
@@ -194,6 +201,7 @@ impl RecordingRegistryRoot {
             read_lease_limit: 4096,
             shutdown: false,
             closed: false,
+            revoked_grants: Vec::new(),
             workflow: None,
             reconciliations: Vec::new(),
             reserved_revisions: 0,
@@ -216,6 +224,7 @@ impl RecordingRegistryRoot {
         assert!(!principal.is_empty());
         RecordingRegistrySession {
             root_identity: self.identity.clone(),
+            grant: Arc::new(()),
             scope: self.scope.clone(),
             principal: principal.to_owned(),
             role,
@@ -312,6 +321,7 @@ impl RecordingRegistryRoot {
         reserved_lease_bytes: Option<usize>,
         while_draining: bool,
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }
@@ -435,6 +445,24 @@ impl RecordingRegistryRoot {
             },
         );
         Ok(reply)
+    }
+
+    /// Every session entry point checks this first: a foreign root is `Forbidden`, and a
+    /// revoked grant is `Unauthorized` even for re-fetching an original reply.
+    pub(super) fn check_grant(&self, session: &RecordingRegistrySession) -> Result<(), LeaseError> {
+        if !Arc::ptr_eq(&self.identity, &session.root_identity) {
+            return Err(LeaseError::Forbidden);
+        }
+        if self.grant_revoked(&session.grant) {
+            return Err(LeaseError::Unauthorized);
+        }
+        Ok(())
+    }
+
+    pub(super) fn grant_revoked(&self, grant: &Arc<()>) -> bool {
+        self.revoked_grants
+            .iter()
+            .any(|revoked| std::ptr::eq(revoked.as_ptr(), Arc::as_ptr(grant)))
     }
 
     fn used_bytes(&self, role: LeaseRole) -> usize {

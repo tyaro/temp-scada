@@ -206,6 +206,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryWorkflowTicket,
     ) -> Result<&WorkflowRecord, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }
@@ -233,6 +234,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         change: RecordingChangeRequest,
     ) -> Result<RecordingRegistryWorkflowTicket, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }
@@ -551,6 +553,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryAdmissionTicket,
     ) -> Result<&RegisteredPreflight, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }

@@ -491,6 +491,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryDiscardTicket,
     ) -> Result<&RegisteredDiscard, LeaseError> {
+        self.check_grant(session)?;
         if self.closed {
             return Err(LeaseError::Closed);
         }
