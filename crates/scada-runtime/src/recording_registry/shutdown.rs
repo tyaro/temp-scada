@@ -7,7 +7,7 @@ pub enum RegistryLifecycle {
     Open,
     /// Shutdown was requested; native ownership is still held until `try_handoff` succeeds.
     Draining,
-    /// Native ownership was handed off.
+    /// Native ownership was handed off. Read-only lookups of the immutable records remain.
     Closed,
 }
 

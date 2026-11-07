@@ -169,8 +169,9 @@ async fn registry_revocation_rejects_the_grant_and_keeps_monitoring_an_accepted_
         .as_value()["outcome"],
         json!({"kind":"ack","disposition":"requested"})
     );
-    // Revocation is reported before close on every entry point; a non-revoked session of the
-    // same root still sees `Closed`, and a session of another root stays `Forbidden`.
+    // Revocation is reported before close on every entry point and a session of another root
+    // stays `Forbidden`. A non-revoked session of the same root keeps read-only lookups after
+    // close and sees `Closed` only for new work.
     let (other_owner, _other_dir) = setup();
     let other = RecordingRegistryRoot::try_new(
         RecordingRegistryOwnerSeed::try_from_owner(other_owner).unwrap(),
@@ -184,7 +185,6 @@ async fn registry_revocation_rejects_the_grant_and_keeps_monitoring_an_accepted_
         || registry_lease(&scope, "lease:closed", "admission:closed", "mutation", 1000);
     for (session, expected) in [
         (&mutation, LeaseError::Unauthorized),
-        (&renewed_mutation, LeaseError::Closed),
         (&foreign_mutation, LeaseError::Forbidden),
     ] {
         assert_eq!(root.issue_lease(session, closed_lease()), Err(expected));
@@ -194,10 +194,22 @@ async fn registry_revocation_rejects_the_grant_and_keeps_monitoring_an_accepted_
             Some(expected)
         );
     }
+    assert_eq!(
+        root.issue_lease(&renewed_mutation, closed_lease()),
+        Err(LeaseError::Closed)
+    );
+    assert_eq!(
+        root.apply_reply(&renewed_mutation, &ticket).unwrap(),
+        Some(accepted.clone())
+    );
+    assert_eq!(
+        root.reserve_workflow(&renewed_mutation, change("apply-closed"))
+            .err(),
+        Some(LeaseError::Closed)
+    );
     let closed_observation = operation_observation(&scope, "observe:closed", &operation);
     for (session, expected) in [
         (&read, LeaseError::Unauthorized),
-        (&renewed_read, LeaseError::Closed),
         (&foreign_read, LeaseError::Forbidden),
     ] {
         assert_eq!(
@@ -206,6 +218,12 @@ async fn registry_revocation_rejects_the_grant_and_keeps_monitoring_an_accepted_
             Some(expected)
         );
     }
+    let observed = root
+        .observe_result(&renewed_read, closed_observation)
+        .unwrap();
+    // A new observation ID first sent after close returns the same set-once completion.
+    assert_eq!(outcome(&observed), outcome(&terminal));
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
 }
 
 #[tokio::test]

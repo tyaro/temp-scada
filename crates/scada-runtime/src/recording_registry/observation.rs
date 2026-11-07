@@ -48,9 +48,6 @@ impl RecordingRegistryRoot {
         request: RecordingWireObservationRequest,
     ) -> Result<RecordingWireObservationReply, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         let value = request.as_value();
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || session.scope != self.scope

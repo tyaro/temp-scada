@@ -207,9 +207,6 @@ impl RecordingRegistryRoot {
         ticket: &RecordingRegistryWorkflowTicket,
     ) -> Result<&WorkflowRecord, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope
@@ -235,9 +232,6 @@ impl RecordingRegistryRoot {
         change: RecordingChangeRequest,
     ) -> Result<RecordingRegistryWorkflowTicket, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || session.scope != self.scope
             || session.role != LeaseRole::Mutation
@@ -257,7 +251,12 @@ impl RecordingRegistryRoot {
                 return Err(LeaseError::Forbidden);
             }
             if record.ticket.change_id != id {
-                return Err(LeaseError::Busy);
+                // A new reservation never starts once shutdown began, even after this workflow.
+                return Err(if self.shutdown {
+                    LeaseError::Closed
+                } else {
+                    LeaseError::Busy
+                });
             }
             if !Arc::ptr_eq(&record.ticket.identity, &self.identity)
                 || !same_recording_change_request(&record.change, &change)
@@ -345,6 +344,13 @@ impl RecordingRegistryRoot {
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
         let record = self.workflow_record(session, workflow)?;
         let value = request.as_value();
+        self.refuse_new_after_close(
+            record
+                .attempts
+                .get(value["admissionId"].as_str().expect("validated ID"))
+                .map(|attempt| attempt.lease_id.as_str()),
+            &value["leaseRequestId"],
+        )?;
         if value["role"] != "mutation" {
             return Err(LeaseError::Forbidden);
         }
@@ -460,7 +466,13 @@ impl RecordingRegistryRoot {
         let admission_id = value["admissionId"].as_str().expect("validated ID");
         if let Some(existing) = &record.registered {
             if existing.ticket.admission_id != admission_id {
-                return Err(LeaseError::Busy);
+                // One preflight per workflow: a different ID is `Busy` while open and new work,
+                // hence `Closed`, once shutdown began.
+                return Err(if self.shutdown {
+                    LeaseError::Closed
+                } else {
+                    LeaseError::Busy
+                });
             }
             if !same_recording_admission_request(&existing.request, &request) {
                 return Err(LeaseError::ProtocolViolation);
@@ -554,9 +566,6 @@ impl RecordingRegistryRoot {
         ticket: &RecordingRegistryAdmissionTicket,
     ) -> Result<&RegisteredPreflight, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope

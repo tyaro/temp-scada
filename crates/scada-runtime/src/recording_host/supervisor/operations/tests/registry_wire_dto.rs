@@ -420,6 +420,31 @@ async fn registry_wire_dto_fixture_matches_the_native_scenario() {
         detached.as_value(),
         Some(detach_request.as_value()),
     );
+    // Close keeps read-only lookups (adapter acceptance 6): the same AdmissionInspection ID
+    // returns its original reply, and new inspection and observation IDs first sent after
+    // close see the same immutable evidence. Nothing here reaches native again.
+    assert_eq!(
+        root.inspect_preflight_admission(&read, &workflow, inspection)
+            .unwrap(),
+        inspected
+    );
+    let late = registry_inspection(
+        &RecordingAdmissionRequest::from_value(preflight_request.clone()).unwrap(),
+        "inspect:after-close",
+    );
+    assert_eq!(
+        root.inspect_preflight_admission(&read, &workflow, late)
+            .unwrap()
+            .as_value()["outcome"],
+        inspected.as_value()["outcome"]
+    );
+    let late = operation_observation(&scope, "observe:after-close", &preflight_operation);
+    assert_eq!(
+        root.observe_result(&read, late).unwrap().as_value()["outcome"],
+        candidate.as_value()["outcome"]
+    );
+    assert_eq!(client.shared.apply_calls.load(Ordering::Relaxed), 1);
+    assert_eq!(client.shared.reconcile_calls.load(Ordering::Relaxed), 1);
     drop(handoff);
 
     let mut generated = json!({

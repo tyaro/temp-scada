@@ -413,7 +413,7 @@ async fn registry_call_inspection_is_role_principal_scope_and_capacity_bound() {
 }
 
 #[tokio::test]
-async fn registry_call_inspection_is_refused_after_handoff_closes_the_root() {
+async fn registry_call_inspection_keeps_serving_after_handoff_closes_the_root() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-call-closed");
     let mut root = RecordingRegistryRoot::try_new(
@@ -431,15 +431,34 @@ async fn registry_call_inspection_is_refused_after_handoff_closes_the_root() {
         500,
     );
     let request = inspect(&scope, "call:closed", lease.as_value());
-    root.issue_lease(&read, lease).unwrap();
-    assert_eq!(
-        outcome(&root.inspect_call(&read, request.clone()).unwrap())["kind"],
-        "terminal"
-    );
+    let original = root.issue_lease(&read, lease.clone()).unwrap();
+    let before = root.inspect_call(&read, request.clone()).unwrap();
+    assert_eq!(*outcome(&before), terminal(original.as_value()));
     root.try_handoff().unwrap();
-    // Monitoring after close is decided separately; inspection does not widen it.
-    assert!(matches!(
-        root.inspect_call(&read, request),
-        Err(LeaseError::Closed)
-    ));
+    // Close keeps every lookup of the immutable records (adapter acceptance 6): the same ID,
+    // a new ID first sent after close, and the original call itself return the saved reply.
+    assert_eq!(root.inspect_call(&read, request).unwrap(), before);
+    let late = root
+        .inspect_call(&read, inspect(&scope, "call:after-close", lease.as_value()))
+        .unwrap();
+    assert_eq!(*outcome(&late), terminal(original.as_value()));
+    assert_eq!(root.issue_lease(&read, lease).unwrap(), original);
+    // Nothing new starts: an unseen original stays `notFound` and a new lease is `Closed`.
+    let unseen = registry_lease(
+        &scope,
+        "call:unseen-lease",
+        "call:unseen",
+        "reconciliation",
+        500,
+    );
+    assert_eq!(
+        *outcome(
+            &root
+                .inspect_call(&read, inspect(&scope, "call:unseen", unseen.as_value()))
+                .unwrap()
+        ),
+        json!({"kind":"notFound"})
+    );
+    assert_eq!(root.issue_lease(&read, unseen), Err(LeaseError::Closed));
+    assert_eq!(root.test_lease_consumed("call:unseen-lease"), None);
 }

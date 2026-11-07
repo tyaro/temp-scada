@@ -205,6 +205,13 @@ impl RecordingRegistryRoot {
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
         let record = self.workflow_record(session, workflow)?;
         let original = self.registered_preflight(session, preflight)?;
+        self.refuse_new_after_close(
+            record
+                .discard_lease
+                .as_ref()
+                .map(|lease| lease.lease_id.as_str()),
+            &request.as_value()["leaseRequestId"],
+        )?;
         if request.as_value()["role"] != "mutation"
             || !same_scope(&self.scope, &request.as_value()["scope"])
         {
@@ -402,6 +409,14 @@ impl RecordingRegistryRoot {
     ) -> Result<DiscardRegistration, LeaseError> {
         let record = self.workflow_record(session, workflow)?;
         self.registered_preflight(session, preflight)?;
+        self.refuse_new_after_close(
+            record
+                .discard_lease
+                .as_ref()
+                .and_then(|lease| lease.registered.as_ref())
+                .map(|registered| registered.ticket.admission_id()),
+            &request.as_value()["admissionId"],
+        )?;
         let discard = record
             .discard_lease
             .as_ref()
@@ -492,9 +507,6 @@ impl RecordingRegistryRoot {
         ticket: &RecordingRegistryDiscardTicket,
     ) -> Result<&RegisteredDiscard, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope
@@ -540,6 +552,7 @@ impl RecordingRegistryRoot {
         match &registered.state {
             DiscardDispatchState::Finished(reply) => return Ok(reply.clone()),
             DiscardDispatchState::Calling => return Err(LeaseError::Busy),
+            DiscardDispatchState::Registered if self.closed => return Err(LeaseError::Closed),
             DiscardDispatchState::Registered => {}
         }
         let request = registered.request.clone();
