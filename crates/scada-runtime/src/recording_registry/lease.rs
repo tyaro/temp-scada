@@ -1,4 +1,5 @@
 use super::{
+    call_inspection::CallInspectionRecord,
     cancel::{CancelRecord, CancelTarget},
     observation::ObservationRecord,
     reconciliation::RegisteredReconciliation,
@@ -128,6 +129,8 @@ pub struct RecordingRegistryRoot {
     >,
     pub(super) observations: BTreeMap<String, ObservationRecord>,
     pub(super) cancels: BTreeMap<String, CancelRecord>,
+    /// Read-only original-call inspection IDs, each fixed to one original call.
+    pub(super) call_inspections: BTreeMap<String, CallInspectionRecord>,
     /// Handles notified by any cancel ID; the only native notify count evidence.
     pub(super) cancel_notified: BTreeSet<CancelTarget>,
     /// High-water snapshot slot bounds of every registered read admission.
@@ -208,6 +211,7 @@ impl RecordingRegistryRoot {
             admission_inspections: BTreeMap::new(),
             observations: BTreeMap::new(),
             cancels: BTreeMap::new(),
+            call_inspections: BTreeMap::new(),
             cancel_notified: BTreeSet::new(),
             projection_read_admission: ZERO_BOUND,
             projection_read: ZERO_BOUND,
