@@ -51,9 +51,9 @@ pub(super) struct RegisteredReconciliation {
     request: RecordingAdmissionRequest,
     budget: LifetimeBudget,
     lease_id: String,
-    read_ref: String,
+    pub(super) read_ref: String,
     state: DispatchState,
-    binding: Option<RecordingReconciliationHandle>,
+    pub(super) binding: Option<RecordingReconciliationHandle>,
 }
 
 enum DispatchState {
@@ -63,6 +63,59 @@ enum DispatchState {
 }
 
 impl RegisteredReconciliation {
+    pub(super) fn ticket_sequence(&self) -> u64 {
+        self.ticket.sequence
+    }
+
+    /// Reads only the saved read handle; this never alters the original apply result.
+    pub(super) fn delivery(
+        &self,
+        owner_ref: &serde_json::Value,
+    ) -> Result<Option<RecordingReconciliationDelivery>, LeaseError> {
+        let binding = match &self.binding {
+            Some(binding) => binding,
+            None => return Ok(None),
+        };
+        let expected = RecordingReconciliationRequest::from_value(
+            self.request.as_value()["action"]["reconciliation"].clone(),
+        )
+        .map_err(|_| LeaseError::ProtocolViolation)?;
+        if !same_recording_reconciliation_request(binding.request(), &expected) {
+            return Err(LeaseError::ProtocolViolation);
+        }
+        let completion = match binding.watch().borrow().clone() {
+            Some(completion) => completion,
+            None => return Ok(None),
+        };
+        let outcome = match completion {
+            Ok(result) => {
+                self.budget
+                    .check_completion(result.as_value())
+                    .map_err(|_| LeaseError::Capacity)?;
+                let result_request = RecordingReconciliationRequest::from_value(
+                    result.as_value()["request"].clone(),
+                )
+                .map_err(|_| LeaseError::ProtocolViolation)?;
+                if !same_recording_reconciliation_request(&result_request, binding.request()) {
+                    return Err(LeaseError::ProtocolViolation);
+                }
+                json!({"kind":"result","result":result.as_value()})
+            }
+            Err(error) => json!({"kind":"readUncertain","error":
+                if error == OwnerError::Unavailable { "workerFailure" } else { "internal" }}),
+        };
+        let delivery = RecordingReconciliationDelivery::from_value(json!({
+            "version":1,"kind":"recordingReconciliationDelivery",
+            "ownerRef":owner_ref, "readRef":self.read_ref,
+            "request":binding.request().as_value(), "outcome":outcome,
+        }))
+        .map_err(|_| LeaseError::ProtocolViolation)?;
+        self.budget
+            .check_completion(delivery.as_value())
+            .map_err(|_| LeaseError::Capacity)?;
+        Ok(Some(delivery))
+    }
+
     pub(super) fn is_uncertain(&self) -> bool {
         matches!(self.state, DispatchState::Calling)
             || matches!(&self.state, DispatchState::Finished(reply)
@@ -314,51 +367,9 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryReconciliationTicket,
     ) -> Result<Option<RecordingReconciliationDelivery>, LeaseError> {
-        let record = self.registered_reconciliation(session, ticket)?;
-        let binding = match &record.binding {
-            Some(binding) => binding,
-            None => return Ok(None),
-        };
-        let expected = RecordingReconciliationRequest::from_value(
-            record.request.as_value()["action"]["reconciliation"].clone(),
-        )
-        .map_err(|_| LeaseError::ProtocolViolation)?;
-        if !same_recording_reconciliation_request(binding.request(), &expected) {
-            return Err(LeaseError::ProtocolViolation);
-        }
-        let completion = match binding.watch().borrow().clone() {
-            Some(completion) => completion,
-            None => return Ok(None),
-        };
-        let outcome = match completion {
-            Ok(result) => {
-                record
-                    .budget
-                    .check_completion(result.as_value())
-                    .map_err(|_| LeaseError::Capacity)?;
-                let result_request = RecordingReconciliationRequest::from_value(
-                    result.as_value()["request"].clone(),
-                )
-                .map_err(|_| LeaseError::ProtocolViolation)?;
-                if !same_recording_reconciliation_request(&result_request, binding.request()) {
-                    return Err(LeaseError::ProtocolViolation);
-                }
-                json!({"kind":"result","result":result.as_value()})
-            }
-            Err(error) => json!({"kind":"readUncertain","error":
-                if error == OwnerError::Unavailable { "workerFailure" } else { "internal" }}),
-        };
-        let delivery = RecordingReconciliationDelivery::from_value(json!({
-            "version":1,"kind":"recordingReconciliationDelivery",
-            "ownerRef":self.scope["ownerRef"], "readRef":record.read_ref,
-            "request":binding.request().as_value(), "outcome":outcome,
-        }))
-        .map_err(|_| LeaseError::ProtocolViolation)?;
-        record
-            .budget
-            .check_completion(delivery.as_value())
-            .map_err(|_| LeaseError::Capacity)?;
-        Ok(Some(delivery))
+        let owner_ref = self.scope["ownerRef"].clone();
+        self.registered_reconciliation(session, ticket)?
+            .delivery(&owner_ref)
     }
 
     /// Saves the native read handle before projecting the accepted reply. Repeats return the first reply.

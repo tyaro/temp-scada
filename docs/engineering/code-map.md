@@ -864,7 +864,11 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 ## 記録registryの初回reconcile（C4）
 
-`recording_registry/reconciliation.rs`はread roleの同一root・principal・workflow・元apply ticketを照合する。保存済み実apply handleと完了の全文一致、回復対象の結果、独立read lease・ID／2MiB容量を登録前に検査し、lease消費と元Admissionを一度に確定する。絶対期限でnative `reconcile`を高々一回呼び、実read handleを先に保存して元replyを固定する。`reconciliation_delivery`はそのhandleからのみ結果／readUncertainを読み、元applyのreply・completion・recoveryを変更しない。`lease.rs`のhandoffは不確定readを拒否する。`operations/tests.rs`は実SQLiteのcommit後応答喪失／FULLをreceiptFound／notFoundへ分け、元applyの投影失敗、期限と容量1byte不足、二重配送を検証する。Observation／cancel／複数read retryと製品session issuerは後続。
+`recording_registry/reconciliation.rs`はread roleの同一root・principal・workflow・元apply ticketを照合する。保存済み実apply handleと完了の全文一致、回復対象の結果、独立read lease・ID／2MiB容量を登録前に検査し、lease消費と元Admissionを一度に確定する。絶対期限でnative `reconcile`を高々一回呼び、実read handleを先に保存して元replyを固定する。`reconciliation_delivery`はそのhandleからのみ結果／readUncertainを読み、元applyのreply・completion・recoveryを変更しない。`lease.rs`のhandoffは不確定readを拒否する。`operations/tests.rs`は実SQLiteのcommit後応答喪失／FULLをreceiptFound／notFoundへ分け、元applyの投影失敗、期限と容量1byte不足、二重配送を検証する。cancel／複数read retryと製品session issuerは後続。
+
+## 記録registryのObservation（C4）
+
+`recording_registry/observation.rs`の`observe_result`はread roleの同一root・principal・scopeを照合し、kindとrefで保存済み実handle（preflight／pause／apply／初回reconcile）を引いて元request全文を比較する。各段階の`completion()`／`delivery()`は`workflow.rs`／`pause.rs`／`apply.rs`／`reconciliation.rs`の登録recordに置き、ticket付きの既存読取とObservationが同じ照合を使う。照会はwatchの現在値を読むだけで、native task・待機・再配送を追加しない。未知refと実handleのない同期拒否はIDごとに不変の`unavailable`、新IDはrequest bytesだけをread枠へ課金し、各kind4096件・pending2枠とする。Rust `operations/tests/registry_observation.rs`で、一時SQLiteとmock Hubを使うpreflight→pause/join→apply→Observationの完走、pending→terminal、早期unknown ref、role・principal・epoch・同ID別本文の拒否、同期拒否・handle保存前panic・投影panic後のunknown・SQLite FULL後のfailedとreconcile deliveryを確認する。受理後notDispatchedのObservationは未検証。
 
 ## 記録registryの初回discard（C4）
 

@@ -16,7 +16,7 @@
 
 各段階で、元返信と実handle完了を別に保持し、元`unknown`を後着の証拠で書き換えない。一時SQLiteとmock Hubを使い、応答喪失・投影失敗・SQLite FULL・期限切れ・容量不足・二重配送を検証した。
 
-統合時点の未完了: Observation、cancel、複数read retry、snapshot／subscription、失効・shutdown、製品session issuer、製品transport・通常Appへの接続。現行の`RegistryDomain`はsimulationのまま。認証の延期指示は維持している。
+統合時点の未完了: Observation（後続の区切りで実装）、cancel、複数read retry、snapshot／subscription、失効・shutdown、製品session issuer、製品transport・通常Appへの接続。現行の`RegistryDomain`はsimulationのまま。認証の延期指示は維持している。
 
 ## C4 client側の配送台帳とcoordinator-v2（PR #100〜#104、2026-11-06）
 

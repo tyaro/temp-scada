@@ -5,6 +5,7 @@ mod discard;
 mod inspection;
 pub(crate) mod kernel;
 mod lease;
+mod observation;
 mod pause;
 mod reconciliation;
 mod workflow;
