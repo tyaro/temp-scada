@@ -131,9 +131,8 @@ impl RecordingRegistryRoot {
         let reference = target["ref"].as_str().expect("validated ref");
         if target["kind"] != "operation" {
             return self
-                .reconciliation
-                .as_ref()
-                .filter(|read| read.read_ref == reference && read.binding.is_some())
+                .reconciliation_by_ref(reference)
+                .filter(|read| read.binding.is_some())
                 .map(|read| CancelTarget::Reconciliation(read.ticket_sequence()));
         }
         let same = |operation: &RecordingOperationHandle| {
@@ -235,9 +234,7 @@ impl RecordingRegistryRoot {
         let CancelTarget::Reconciliation(sequence) = target else {
             return Err(LeaseError::ProtocolViolation);
         };
-        self.reconciliation
-            .as_ref()
-            .filter(|read| read.ticket_sequence() == sequence)
+        self.reconciliation_by_sequence(sequence)
             .and_then(|read| read.binding.as_ref())
             .ok_or(LeaseError::ProtocolViolation)
     }

@@ -192,10 +192,9 @@ impl RecordingRegistryRoot {
         } else {
             let wanted = RecordingReconciliationRequest::from_value(target["request"].clone())
                 .map_err(|_| LeaseError::InvalidInput)?;
-            let Some((read, binding)) = self
-                .reconciliation
-                .as_ref()
-                .filter(|read| target["readRef"] == read.read_ref.as_str())
+            let Some((read, binding)) = target["readRef"]
+                .as_str()
+                .and_then(|reference| self.reconciliation_by_ref(reference))
                 .and_then(|read| read.binding.as_ref().map(|binding| (read, binding)))
             else {
                 return Ok(None);
@@ -232,9 +231,7 @@ impl RecordingRegistryRoot {
                 .completion()?,
             ObservedHandle::Reconciliation(sequence) => {
                 let read = self
-                    .reconciliation
-                    .as_ref()
-                    .filter(|read| read.ticket_sequence() == sequence)
+                    .reconciliation_by_sequence(sequence)
                     .ok_or(LeaseError::ProtocolViolation)?;
                 return Ok(match read.delivery(&self.scope["ownerRef"])? {
                     Some(delivery) => {
