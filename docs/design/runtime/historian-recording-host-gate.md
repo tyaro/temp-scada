@@ -90,19 +90,30 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
 記録registryの入口を、native hostだけのTauri commandとして追加する。
 
-- **command**: `recording_lease`、`recording_admission`、`recording_admission_inspection`、`recording_observation`、`recording_cancel`、`recording_call_inspection`、`recording_attach`、`recording_control`。
+- **command**: `recording_workflow_reserve`、`recording_workflow_lease`、`recording_lease`、`recording_admission`、`recording_admission_inspection`、`recording_observation`、`recording_cancel`、`recording_call_inspection`、`recording_attach`、`recording_control`。
 - **引数**: wire request JSONの一つだけである。principal・role・session IDを引数に取らない。
 - **sessionの選び方**: wire requestで`role`を持つのはLeaseRequestだけである。そこでhostは§4の再検証の後、次の表でcommandとrequest本文から必要なroleを決め、そのroleの現在のregistry sessionを選ぶ。callerはroleを指定しない。
 
 | command                                 | 必要なrole（Bantoの権限）                                                                                   |
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `recording_lease`                       | requestの`role`。`mutation`ならAdmin、`reconciliation`ならViewer以上                                        |
+| `recording_workflow_reserve`            | mutation（Admin）                                                                                           |
+| `recording_workflow_lease`              | mutation（Admin）                                                                                           |
+| `recording_lease`                       | read（Viewer以上）。requestの`role`が`reconciliation`のものだけを受け、`mutation`は`forbidden`とする        |
 | `recording_admission`                   | 操作種別で決める。preflight・pause/join・apply・discardはmutation（Admin）、reconcileはread（Viewer以上）   |
 | `recording_admission_inspection`        | read（Viewer以上）                                                                                          |
 | `recording_observation`                 | read（Viewer以上）                                                                                          |
 | `recording_cancel`                      | 対象の種別で決める。operationはmutation（Admin）、reconciliationはread（Viewer以上）。adapter設計§5のとおり |
 | `recording_call_inspection`             | 元callのkindによらずread（Viewer以上）。§4の降格後の回収のため                                              |
 | `recording_attach`・`recording_control` | read（Viewer以上）                                                                                          |
+
+**workflowの段階別入口**: registryの変更操作は、段階ごとの公開APIに分かれている。最初に変更要求の全文で`reserve_workflow`を呼んで初回workflowを予約し、その後は保持したworkflow ticketから段階ごとの専用leaseを発行する。汎用の`issue_lease`で先にmutation leaseを発行すると、`reserve_workflow`は`Busy`になり、初回preflightを始められない。そこでhostは次のように対応する。
+
+- **`recording_workflow_reserve`**: 引数は変更要求（`RecordingChangeRequest`）の全文である。認可の後に`reserve_workflow`を呼び、workflowの全段階の容量を予約する。同じ本文の再呼出しは同じ予約を返し、別本文は既存の契約のとおり拒否する。返信はchangeIdと予約の成否だけで、ticketそのものは返さない。
+- **`recording_workflow_lease`**: 引数は段階（`preflight`、`pauseJoin`、`apply`、`discard`）とLeaseRequestである。hostは保持したworkflow ticketで、その段階の専用lease（`issue_preflight_lease`、`issue_pause_join_lease`、`issue_apply_lease`、`issue_discard_lease`）を発行する。
+- **`recording_lease`**: reconcile用のread leaseだけを汎用の`issue_lease`で発行する。mutation leaseは受けない。workflow外のmutation leaseには用途がなく、発行すると初回workflowの予約を妨げるためである。
+- **`recording_admission`**: requestの操作種別から段階を決め、保持したticketで`register_*`と`dispatch_*`を呼ぶ。reconcileでは、保持した元applyの登録ticketを使う。
+- **ticketの保持**: workflow ticketと各段階の登録ticketは、hostがrootと同じ寿命で保持する。予約したsessionのprincipalに束縛し、同じprincipalのsessionからだけ使う。ticketはwire・UIへ渡さず、IDの文字列から作り直さない（adapter設計§2のとおり）。
+- **受入試験**: Tauri commandだけで、予約から初回preflight、pause/join、apply、元applyのreconcileまで進めることを確かめる。先に`recording_lease`でmutation leaseを求めても`forbidden`になり、予約が妨げられないことも確かめる。
 
 - **未ログイン**: sessionがなければ`unauthorized`を返す。
 - **権限不足**: mutationに必要なAdminを満たさなければ`forbidden`を返す。
@@ -157,8 +168,8 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 - **`transitioning`の間**: 記録registryの入口はすべて拒否する。認証無効モードがonのままでも、`AuthDisabledLocal`のsessionへregistry sessionを発行しない。UIは移行の再実行を促す。
 - **移行の確認**: 管理者の存在は、ブラウザの保存値でなくbackendで確認する。
 - **未静止のworkflowがある場合**: 移行すると旧principalのsessionは失効する。運用側のユーザーからは照会も操作もできない（§8の未決事項1）ので、Candidate／Pausedを解くdiscardも実行できなくなる。そのため、静止の確認はhostで行う。
-  - **排他**: 移行commandは、hostの移行lockを取ってから始める。registryの入口（lease、Admission、cancel）も同じlockの下で受け付けるので、確認と移行の間に新しい要求は入らない。
-  - **新規mutationの停止**: lockの下で、まず新しいmutation lease・Admissionの受付を止める。
+  - **排他**: 移行commandは、hostの移行lockを取ってから始める。registryの入口（workflowの予約、lease、Admission、cancel）も同じlockの下で受け付けるので、確認と移行の間に新しい要求は入らない。
+  - **新規mutationの停止**: lockの下で、まず新しいworkflowの予約・mutation lease・Admissionの受付を止める。
   - **静止の確認**: 次に、registryのread-onlyの照会`root.quiescence()`で、workflowがないか、正常に終端しており、未配送の登録・未完了のnative操作・未確定の受付がないことを確かめる。この照会は状態を変えない。実装順§9の2で追加する。
   - **未静止なら**: 受付の停止を解き、`busy`で拒否する。`transitioning`は保存しない。UIは理由を表示し、discardや完了の待機を促す。
   - **静止していれば**: そのまま`transitioning`を保存し、以後は`transitioning`の規則で入口を拒否する。
@@ -187,6 +198,6 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 1. `scada-host`へ`HostAuth`（Bantoの依存、migrationのコピー、`DesktopSession`の再検証、`require_role`）を追加する。試験は一時SQLiteで行う。
 2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`、read-onlyの`quiescence()`を追加し、失効の連動を試験する。CallInspectionをread roleで受ける契約変更（§4）も行い、Adminで返信を失ったapplyをViewerへ降格した後に回収できることを試験する。
 3. ownerRef・epochの世代ごとの生成と保存を追加する。
-4. Tauri commandとUIの`TauriAuthProvider`を追加する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、初回初期化の各保存境界での強制終了と再起動後の再開、`auth-phase.json`がなく認証DBだけがある場合の拒否、移行commandの成功と、各保存境界（1〜4の後）での失敗・強制終了からの再起動後の再実行、未静止workflowでの移行拒否と並行するpreflightとの排他、`transitioning`中のregistry入口の拒否、`bootstrapping`以外のフェーズでの認証DB欠落の拒否をnativeで試験する。
+4. Tauri command（§5のworkflowの段階別入口とticketの保持を含む）とUIの`TauriAuthProvider`を追加する。Tauri commandだけで予約から初回preflight・pause/join・apply・reconcileまで進めることを試験する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、初回初期化の各保存境界での強制終了と再起動後の再開、`auth-phase.json`がなく認証DBだけがある場合の拒否、移行commandの成功と、各保存境界（1〜4の後）での失敗・強制終了からの再起動後の再実行、未静止workflowでの移行拒否と並行するpreflightとの排他、`transitioning`中のregistry入口の拒否、`bootstrapping`以外のフェーズでの認証DB欠落の拒否をnativeで試験する。
 
 製品transportと実ownerの配置（C5）は、この区切りの後に行う。
