@@ -4,6 +4,35 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## C4 native registry adapterの段階配送（PR #105〜#118、2026-11-06〜07）
+
+[採用設計](../design/runtime/historian-recording-native-registry-adapter.md)（PR #105）に沿い、GUI非依存のnative rootが実`RecordingOperationsOwner`を所有し、一workflowの各段階を実nativeへ一回ずつ配送するところまでをworkへ統合した。
+
+- 基盤: ownerの排他的seedと失敗時返却（#106）、Admission保存予算の共通kernel抽出（#107）、実ownerに束縛した実`Instant` lease台帳（#108）、記録workflowの保持量の事前予約（#109）。
+- preflight: 元要求の原子登録とlease消費（#110）、登録済みticketからの一回配送と実handle保存（#111）、read roleのAdmissionInspection（#112）。
+- pause/join: 実Candidate完了へのlease束縛（#113）、元pause Admissionの一回配送とjoin完了の分離（#114）。
+- apply: 正常pause完了とowner Pausedからのlease発行（#115）、元apply Admissionの一回配送（#116）。
+- reconcile・discard: 保存済みapply handleからの明示reconcile（#117）、Candidate／Pausedからの初回discardと未発行stageの予約返却（#118、`8f4aa4d`）。
+
+各段階で、元返信と実handle完了を別に保持し、元`unknown`を後着の証拠で書き換えない。一時SQLiteとmock Hubを使い、応答喪失・投影失敗・SQLite FULL・期限切れ・容量不足・二重配送を検証した。
+
+統合時点の未完了: Observation、cancel、複数read retry、snapshot／subscription、失効・shutdown、製品session issuer、製品transport・通常Appへの接続。現行の`RegistryDomain`はsimulationのまま。認証の延期指示は維持している。
+
+## C4 client側の配送台帳とcoordinator-v2（PR #100〜#104、2026-11-06）
+
+Observation専用配送台帳の設計（#100）と実装（#101）、local-v2の正常返信Promise配送（#102）、coordinator-v2の所有・attempt境界の設計（#103）とtest-only root実装（#104）を統合した。元返信・結果知識・個々のtransport attemptを分け、実nativeの物理終了・認可・送信資格はこのportでは証明しない。
+
+## 実Hub初回読取とBanto 6.10.0（C0〜C3、PR #89〜#99、2026-11-05〜06）
+
+接続計画内で記録接続の後続工程と初回読取を統一した（#89）。文書更新時のCI案内を加えた（#90）。
+
+- C0／C1（#91）: C0の構成と鮮度条件を記録し、実Hub読取用のTauri desktop hostを接続した。購読IPCの開始・終了の順序と退役購読の開始競合を修正し、R系実PLCの読取と書込み・元値復旧を記録した。
+- C2（#96）: Tauri hostとモックHubの通し試験、Tauri読取経路と認証失効表示の検証を追加した。文書のみの変更ではnative CIを省く。
+- UI（#92〜#95、#98）: Banto v6.10.0へ更新し、採用範囲の決定に沿って入力欄・選択欄を移行した。Tauriの選択候補をテーマ色で表示し、Hub接続をヘッダーへ移して編集画面をコンパクトにした。表示プレビューの倍率揺れも修正した。
+- C3（#97、#99）: 実HubでのGUI照合とQ/R系の`0`／`false`受入を[実機接続記録](../project/real-hub-c0.md)に残した。
+
+運用時の認証・記録・長時間運転は完了扱いしていない。
+
 ## 実Hub・S7接続計画の取り込み（2026-11-05）
 
 ユーザー指示により、サイドチャットの計画を[実Hub・S7接続計画](../project/real-hub-connection-plan.md)として採用した。SOAK完了の申告を反映して終了待ちを外し、C0接続条件確認→C1最小host・読取→C2製品経路検証→C3初回S7現在値表示を優先する。記録clientの残りはC4、実SQLiteとHistoryはC5、連続運用はC6へ分けた。
