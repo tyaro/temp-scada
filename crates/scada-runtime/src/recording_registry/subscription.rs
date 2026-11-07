@@ -156,6 +156,19 @@ impl RecordingRegistryRoot {
         Ok(())
     }
 
+    /// A snapshot carries the workflow's original admissions and results, so it is disclosed
+    /// only to the workflow's principal, like Observation and AdmissionInspection.
+    fn qualify_disclosure(&self, session: &RecordingRegistrySession) -> Result<(), LeaseError> {
+        if self
+            .workflow
+            .as_ref()
+            .is_some_and(|workflow| workflow.principal != session.principal)
+        {
+            return Err(LeaseError::Forbidden);
+        }
+        Ok(())
+    }
+
     fn admission_entries(&self) -> Vec<AdmissionEntry<'_>> {
         let mut entries = Vec::new();
         if let Some(workflow) = &self.workflow {
@@ -383,6 +396,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
     ) -> Result<Value, LeaseError> {
         self.qualify_subscriber(session, None)?;
+        self.qualify_disclosure(session)?;
         self.refresh_snapshot()?;
         self.snapshot_value(&self.subscriptions.current)
     }
@@ -420,6 +434,7 @@ impl RecordingRegistryRoot {
     ) -> Result<RecordingWireAttachReply, LeaseError> {
         let value = request.as_value();
         self.qualify_subscriber(session, Some(&value["scope"]))?;
+        self.qualify_disclosure(session)?;
         let id = value["attachId"].as_str().expect("validated ID").to_owned();
         if let Some(old) = self.subscriptions.attaches.get(&id) {
             if old.principal != session.principal {
@@ -506,6 +521,9 @@ impl RecordingRegistryRoot {
             if !same_recording_wire_request(old.request.as_document(), request.as_document()) {
                 return Err(LeaseError::ProtocolViolation);
             }
+            if old.snapshot.is_some() {
+                self.qualify_disclosure(session)?;
+            }
             return self.control_reply(old);
         }
         if self.subscriptions.controls.len() >= MAX_CONTROLS {
@@ -533,6 +551,7 @@ impl RecordingRegistryRoot {
             0
         };
         if !detach {
+            self.qualify_disclosure(session)?;
             self.refresh_snapshot()?;
         }
         let cost = measured(request.as_value())
@@ -592,6 +611,7 @@ impl RecordingRegistryRoot {
         reference: &str,
     ) -> Result<Option<RecordingWireStateFrame>, LeaseError> {
         self.live_subscription(session, reference)?;
+        self.qualify_disclosure(session)?;
         self.refresh_snapshot()?;
         let Some(d) = self.subscriptions.subscriptions[reference].state else {
             return Ok(None);

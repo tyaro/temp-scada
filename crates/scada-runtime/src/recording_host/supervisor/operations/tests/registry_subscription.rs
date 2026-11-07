@@ -576,3 +576,69 @@ async fn registry_subscription_read_bytes_accept_exact_and_reject_one_short_atom
         base + cost - 1024 + detach_cost
     );
 }
+
+#[tokio::test]
+async fn registry_subscription_discloses_workflow_evidence_only_to_its_principal() {
+    let epoch = "epoch-subscribe-principal";
+    let scope = registry_scope(epoch);
+    let (mut root, _dir) = fresh_root(epoch);
+    let bob = root.test_session("bob", LeaseRole::Reconciliation);
+    // Bob attaches before any workflow exists; nothing is disclosed yet.
+    let early = attach(&scope, "attach:bob-early", Value::Null);
+    let (bob_ref, empty) = attached(&root.attach(&bob, early.clone()).unwrap());
+    assert!(empty["admission"].is_null());
+    let bob_snapshot = control(&scope, "control:bob-early", &bob_ref, "snapshot");
+    root.control(&bob, bob_snapshot.clone()).unwrap();
+
+    let mutation = root.test_session("alice", LeaseRole::Mutation);
+    let alice = root.test_session("alice", LeaseRole::Reconciliation);
+    let change = change("subscribe-principal");
+    let workflow = root.reserve_workflow(&mutation, change.clone()).unwrap();
+    let lease = root
+        .issue_preflight_lease(
+            &mutation,
+            &workflow,
+            registry_lease(
+                &scope,
+                "principal-lease",
+                "principal-admission",
+                "mutation",
+                1000,
+            ),
+        )
+        .unwrap();
+    let original = registry_preflight(&scope, &change, "principal-admission", &lease);
+    root.register_preflight(&mutation, &workflow, original.clone())
+        .unwrap();
+    assert_eq!(
+        &root.owner_snapshot(&alice).unwrap()["admission"]["request"],
+        original.as_value()
+    );
+
+    // Every path that renders a snapshot now refuses Bob, including his earlier IDs.
+    for result in [
+        root.owner_snapshot(&bob).map(|_| ()),
+        root.attach(&bob, attach(&scope, "attach:bob-late", Value::Null))
+            .map(|_| ()),
+        root.attach(&bob, early).map(|_| ()),
+        root.control(&bob, bob_snapshot).map(|_| ()),
+        root.control(
+            &bob,
+            control(&scope, "control:bob-late", &bob_ref, "snapshot"),
+        )
+        .map(|_| ()),
+        root.take_state_frame(&bob, &bob_ref).map(|_| ()),
+    ] {
+        assert!(matches!(result, Err(LeaseError::Forbidden)));
+    }
+    // Bob can still release his own slot; that discloses nothing.
+    assert!(root.take_control_frame(&bob, &bob_ref).unwrap().is_none());
+    let detached = root
+        .control(
+            &bob,
+            control(&scope, "control:bob-detach", &bob_ref, "detach"),
+        )
+        .unwrap();
+    assert_eq!(detached.as_value()["outcome"]["kind"], "detached");
+    assert_eq!(root.test_live_subscriptions(), 0);
+}
