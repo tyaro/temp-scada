@@ -870,6 +870,10 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 `recording_registry/observation.rs`の`observe_result`はread roleの同一root・principal・scopeを照合し、kindとrefで保存済み実handle（preflight／pause／apply／初回reconcile）を引いて元request全文を比較する。各段階の`completion()`／`delivery()`は`workflow.rs`／`pause.rs`／`apply.rs`／`reconciliation.rs`の登録recordに置き、ticket付きの既存読取とObservationが同じ照合を使う。照会はwatchの現在値を読むだけで、native task・待機・再配送を追加しない。未知refと実handleのない同期拒否はIDごとに不変の`unavailable`、新IDはrequest bytesだけをread枠へ課金し、各kind4096件・pending2枠とする。Rust `operations/tests/registry_observation.rs`で、一時SQLiteとmock Hubを使うpreflight→pause/join→apply→Observationの完走、pending→terminal、早期unknown ref、role・principal・epoch・同ID別本文の拒否、同期拒否・handle保存前panic・投影panic後のunknown・SQLite FULL後のfailedとreconcile delivery、受理後に期限を越えてowner処理へ入らなかったapply／pause/joinのfailed・`notDispatched`（元Accepted不変、native apply呼出し一回、SQLite不変、Blocked、handoffでのrecovery証拠引継ぎ）を確認する。
 
+## 記録registryの元cancel call（C4）
+
+`recording_registry/cancel.rs`の`request_cancel`は、operation対象をmutation role、reconciliation対象をread roleの同一root・principal・scopeで受ける。cancelIdは登録時にkindとrefで保存済み実handle（preflight／pause／apply／初回reconcile）へ一度だけ束縛し、未知refは不変の`rejected`とする。副作用なしの判定（pause/joinは`notSupported`、完了済みは`alreadyCompleted`、通知済みは`requested`）の後、残りだけ実handleの`request_cancel`を一回呼ぶ。通知済みhandleはrootの`cancel_notified`集合で全IDを通じて一回に限る。request＋reply上界をread枠へ一回課金し、4096件まで保持する。同ID同本文はclose後も元replyを返す。Rust `operations/tests/registry_cancel.rs`で、gate中applyへのcancelと重複・別ID・late結果後の`alreadyCompleted`、Observation pendingの明示再照会、pause/joinの`notSupported`と停止継続、完了済みpreflight、namespace分離、role・principal・epoch・容量exact／1不足、handoff後のreplayとClosed、read cancelが元applyのfailedとrecoveryを変えないことを確認する。
+
 ## 記録registryの初回discard（C4）
 
 `recording_registry/discard.rs`は保存済みpreflight Accepted、対応する実handleのCandidate完了とownerのCandidate／Paused状態を照合し、discard専用leaseとAdmissionを原子登録する。pause／applyの有効な意図と配送中・不確定な結果は競合として止める。登録ticketから実native discardへ一回だけ配送し、元返信を固定する。`completedDiscard`時だけ未発行のpause／apply枠を一度返却し、元preflightのunknownが独立Acceptedへ回収済みならhandoffを許す。discard自身のunknownはhandoffを止める。`operations/tests.rs`はRunning recorder、Paused、apply拒否、期限切れ、応答喪失、呼出回数、SQLite不変、予約返却を確認する。

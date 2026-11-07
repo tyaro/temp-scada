@@ -24,6 +24,7 @@ use std::{
 };
 use tokio_tungstenite::tungstenite::Message;
 
+mod registry_cancel;
 mod registry_observation;
 pub(super) fn context() -> RecordingOperationsContext {
     let fixtures: Value = serde_json::from_str(include_str!(concat!(

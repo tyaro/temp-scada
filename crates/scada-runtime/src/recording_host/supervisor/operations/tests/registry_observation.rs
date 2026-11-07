@@ -2,7 +2,7 @@
 use super::*;
 use scada_model::recording_wire::{RecordingWireObservationReply, RecordingWireObservationRequest};
 
-fn operation_observation(
+pub(super) fn operation_observation(
     scope: &Value,
     id: &str,
     operation: &Value,
@@ -16,7 +16,7 @@ fn operation_observation(
     .unwrap()
 }
 
-fn read_observation(
+pub(super) fn read_observation(
     scope: &Value,
     id: &str,
     read_ref: &Value,
@@ -30,11 +30,11 @@ fn read_observation(
     .unwrap()
 }
 
-fn outcome(reply: &RecordingWireObservationReply) -> &Value {
+pub(super) fn outcome(reply: &RecordingWireObservationReply) -> &Value {
     &reply.as_value()["outcome"]
 }
 
-async fn observe_terminal(
+pub(super) async fn observe_terminal(
     root: &mut RecordingRegistryRoot,
     read: &RecordingRegistrySession,
     request: RecordingWireObservationRequest,
@@ -52,7 +52,7 @@ async fn observe_terminal(
     .unwrap()
 }
 
-fn handle_request(reply: &RecordingAdmissionReply) -> Value {
+pub(super) fn handle_request(reply: &RecordingAdmissionReply) -> Value {
     reply.as_value()["outcome"]["handle"]["request"].clone()
 }
 
