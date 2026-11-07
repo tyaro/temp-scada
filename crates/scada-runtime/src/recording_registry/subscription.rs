@@ -289,13 +289,18 @@ impl RecordingRegistryRoot {
                 _ => None,
             })
         };
+        let operation = completed(self.operation_head())?;
+        let read = completed(self.read_head())?;
+        // The native owner publishes its recovery latch before finishing a handle, so reading
+        // the latch after the completions never pairs a failed completion with `unblocked`.
+        let blocked = self.seed.recovery_required();
         Ok(SnapshotDescriptor {
             revision: self.subscriptions.current.revision,
             closed: self.closed,
-            blocked: self.seed.recovery_required(),
+            blocked,
             admission,
-            operation: completed(self.operation_head())?,
-            read: completed(self.read_head())?,
+            operation,
+            read,
         })
     }
 
