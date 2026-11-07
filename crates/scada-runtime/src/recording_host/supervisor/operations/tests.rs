@@ -30,6 +30,7 @@ mod registry_read_retry;
 mod registry_revocation;
 mod registry_shutdown;
 mod registry_subscription;
+mod registry_wire_dto;
 pub(super) fn context() -> RecordingOperationsContext {
     let fixtures: Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),

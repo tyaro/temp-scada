@@ -1,6 +1,6 @@
 # 記録wireのnative registry adapter
 
-状態: **C4の採用詳細設計。初回workflow予約・preflight・AdmissionInspection・実Candidate資格付きpause/join・正常join資格付きapply Admissionとnative配送、保存済み実handleのObservation、元cancel call、複数read retry、OwnerSnapshotと購読、管理側shutdown、session単位の認可失効まで実装**。2026-11-07（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[coordinator-v2](historian-recording-coordinator-v2.md)、[wire・host契約](historian-recording-wire-host.md)、[共有native owner](historian-recording-native-owner.md)、[接続境界](historian-recording-bridge-boundary.md)に続く。
+状態: **C4の採用詳細設計。初回workflow予約・preflight・AdmissionInspection・実Candidate資格付きpause/join・正常join資格付きapply Admissionとnative配送、保存済み実handleのObservation、元cancel call、複数read retry、OwnerSnapshotと購読、管理側shutdown、session単位の認可失効、Rust生成wire DTOのTS検査まで実装**。2026-11-07（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[coordinator-v2](historian-recording-coordinator-v2.md)、[wire・host契約](historian-recording-wire-host.md)、[共有native owner](historian-recording-native-owner.md)、[接続境界](historian-recording-bridge-boundary.md)に続く。
 
 ## 1. この区切りの対象
 
@@ -79,5 +79,9 @@ view close、Project切替、Hub読取再接続はrootをdropしない。既存o
 4. lease reply遅延、dispatch待機、期限境界、role交換、同ID別lease、別caller・scope・epoch・principal・同ref別handleを拒否する。
 5. 元apply completion確定・Supervisor回収後に限定したreconcile、receiptFound後のrecovery維持、readUncertainとread不可を分ける。全poolのexact／1不足と最大replyの保存を確認する。
 6. view切断・認可失効・root close後も既登録操作を監視し、Rust生成wire DTOを既存TS validatorで検査する。通常AppとTauri読取経路に副作用を作らない。
+
+2026-11-07に、一貫受入の範囲を既存試験との対応で確定した。受入1と3は閉じている。受入4は既存試験（別root・scope・epoch、principal束縛、role違い、期限境界、同ref別handle）でほぼ満たし、残りは補強に限る。受入2はregistryのCallInspection（[wire・host契約](historian-recording-wire-host.md)§9）が未実装で、監視登録前に完了したhandleの取りこぼしなしも明示試験がない。受入5は最大replyの保存と、全poolのexact／1不足を一覧で確認する試験が残る。受入6は、handoff後の再取得を`Closed`とする現行動作と「close後も監視」との差を別に確定する。順序はTS検査→CallInspection→受入4・5の補強→close後の監視範囲とする。
+
+受入6のTS検査として、実ownerの一workflow（Candidate、gate中のpause、commit後に応答を失ったapply、元applyのreconcile、handoff）でregistryが返すDTOを`examples/recording-registry-native-wire-cases.json`へ記録した。Rust試験`registry_wire_dto.rs`が生成値と完全一致を照合し、TSの`recording-registry-native-wire.test.ts`が既存の`parse*`・返信とrequestの対応・frameと購読の対応・deliveryと元返信の対応で検査する。対象はAdmission／AdmissionInspection／Lease／Observation／Cancel／Attach／Control返信、State／Control frame、ReconciliationDeliveryである。DB生成のplan IDだけを固定値へ置き換え、lease予算は最大値にして遅い環境でもpauseを`notDispatched`にしない。更新は`SCADA_BLESS_WIRE_FIXTURES=1`でRust試験を実行し、prettierで整形して差分を確認する。
 
 最初の独立した安全gateとして、既存ownerを失敗時返却付きで`RecordingRegistryOwnerSeed`へ排他的に移した。公開client発行履歴はdrop後も残し、native Coreが未使用でないownerを拒否する。次にAdmission一件の保存上界とbytes／nodes／depth照合をcrate-private kernelへ抽出し、simulationの登録・予約・投影で使う。さらに固定scopeのroot・試験専用session・実時計leaseと初回workflowの保持bytes予約、preflight leaseの移管・失効retry・元Admissionの原子登録を追加した。この先は (1) stage別creditとrevisionの実使用・登録済みticketからの一回のnative呼出し・handle保存／元reply・inspection／completion、(2) cancel・snapshot／subscription・失効・管理側shutdown、(3) mock Hub＋一時DBの一貫受入の順に分ける。(1)と(2)は実装済みである。製品hostのsession issuer、権限失効後の結果開示、epoch生成・永続衝突防止、Tauri endpointは認証・host gateとして別に固定する。その後に製品transportと通常Appへ接続する。
