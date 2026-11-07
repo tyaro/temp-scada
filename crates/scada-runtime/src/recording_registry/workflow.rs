@@ -13,7 +13,8 @@ use scada_model::recording_admission::{
     same_recording_admission_request, RecordingAdmissionReply, RecordingAdmissionRequest,
 };
 use scada_model::recording_operations::{
-    same_recording_change_request, same_recording_operations_context, RecordingChangeRequest,
+    same_recording_change_request, same_recording_operation_request,
+    same_recording_operations_context, RecordingChangeRequest, RecordingOperationRequest,
     RecordingOperationResult, RecordingOperationsContext,
 };
 use scada_model::recording_wire::{RecordingWireLeaseReply, RecordingWireLeaseRequest};
@@ -122,6 +123,26 @@ pub(crate) enum TestDispatchFault {
 }
 
 impl RegisteredPreflight {
+    /// Reads the saved native preflight handle; it never starts a native wait task.
+    pub(super) fn completion(&self) -> Result<Option<Arc<RecordingOperationResult>>, LeaseError> {
+        let Some(binding) = &self.binding else {
+            return Ok(None);
+        };
+        let result = binding.operation.watch().borrow().clone();
+        if let Some(value) = &result {
+            self.budget
+                .check_completion(value.as_value())
+                .map_err(map_budget_error)?;
+            let completed_request =
+                RecordingOperationRequest::from_value(value.as_value()["request"].clone())
+                    .map_err(|_| LeaseError::ProtocolViolation)?;
+            if !same_recording_operation_request(&completed_request, binding.operation.request()) {
+                return Err(LeaseError::ProtocolViolation);
+            }
+        }
+        Ok(result)
+    }
+
     fn is_uncertain(&self) -> bool {
         match &self.state {
             PreflightDispatchState::Calling => true,
@@ -544,19 +565,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryAdmissionTicket,
     ) -> Result<Option<Arc<RecordingOperationResult>>, LeaseError> {
-        let registered = self.registered_preflight(session, ticket)?;
-        let Some(binding) = &registered.binding else {
-            return Ok(None);
-        };
-        let receiver = binding.operation.watch();
-        let result = receiver.borrow().clone();
-        if let Some(value) = &result {
-            registered
-                .budget
-                .check_completion(value.as_value())
-                .map_err(map_budget_error)?;
-        }
-        Ok(result)
+        self.registered_preflight(session, ticket)?.completion()
     }
 
     #[cfg(test)]

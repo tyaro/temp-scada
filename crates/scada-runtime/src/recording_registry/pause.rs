@@ -66,6 +66,28 @@ pub(super) struct RegisteredPause {
     fault: Option<PauseDispatchFault>,
 }
 
+impl RegisteredPause {
+    /// Reads the saved native join handle; it never starts a native wait task.
+    pub(super) fn completion(&self) -> Result<Option<Arc<RecordingOperationResult>>, LeaseError> {
+        let Some(binding) = &self.binding else {
+            return Ok(None);
+        };
+        let result = binding.watch().borrow().clone();
+        if let Some(value) = &result {
+            self.budget
+                .check_completion(value.as_value())
+                .map_err(|_| LeaseError::Capacity)?;
+            let completed_request =
+                RecordingOperationRequest::from_value(value.as_value()["request"].clone())
+                    .map_err(|_| LeaseError::ProtocolViolation)?;
+            if !matches_pause_operation(&self.request, &completed_request) {
+                return Err(LeaseError::ProtocolViolation);
+            }
+        }
+        Ok(result)
+    }
+}
+
 pub(super) enum PauseDispatchState {
     Registered,
     Calling,
@@ -407,25 +429,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryPauseTicket,
     ) -> Result<Option<Arc<RecordingOperationResult>>, LeaseError> {
-        let registered = self.registered_pause(session, ticket)?;
-        let Some(binding) = &registered.binding else {
-            return Ok(None);
-        };
-        let receiver = binding.watch();
-        let result = receiver.borrow().clone();
-        if let Some(value) = &result {
-            registered
-                .budget
-                .check_completion(value.as_value())
-                .map_err(|_| LeaseError::Capacity)?;
-            let completed_request =
-                RecordingOperationRequest::from_value(value.as_value()["request"].clone())
-                    .map_err(|_| LeaseError::ProtocolViolation)?;
-            if !matches_pause_operation(&registered.request, &completed_request) {
-                return Err(LeaseError::ProtocolViolation);
-            }
-        }
-        Ok(result)
+        self.registered_pause(session, ticket)?.completion()
     }
 
     /// Dispatches the registered pause exactly once and keeps its native join handle.

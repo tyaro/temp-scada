@@ -64,6 +64,30 @@ pub(super) struct RegisteredApply {
     fault: Option<ApplyDispatchFault>,
 }
 
+impl RegisteredApply {
+    /// Reads the saved native apply handle; it never starts a native wait task.
+    pub(super) fn completion(&self) -> Result<Option<Arc<RecordingOperationResult>>, LeaseError> {
+        let Some(binding) = &self.binding else {
+            return Ok(None);
+        };
+        let result = binding.watch().borrow().clone();
+        if let Some(value) = &result {
+            self.budget
+                .check_completion(value.as_value())
+                .map_err(|_| LeaseError::Capacity)?;
+            let completed_request =
+                RecordingOperationRequest::from_value(value.as_value()["request"].clone())
+                    .map_err(|_| LeaseError::ProtocolViolation)?;
+            if !matches_apply_operation(&self.request, &completed_request)
+                || !same_recording_operation_request(&completed_request, binding.request())
+            {
+                return Err(LeaseError::ProtocolViolation);
+            }
+        }
+        Ok(result)
+    }
+}
+
 pub(super) enum ApplyDispatchState {
     Registered,
     Calling,
@@ -425,27 +449,7 @@ impl RecordingRegistryRoot {
         session: &RecordingRegistrySession,
         ticket: &RecordingRegistryApplyTicket,
     ) -> Result<Option<Arc<RecordingOperationResult>>, LeaseError> {
-        let registered = self.registered_apply(session, ticket)?;
-        let Some(binding) = &registered.binding else {
-            return Ok(None);
-        };
-        let receiver = binding.watch();
-        let result = receiver.borrow().clone();
-        if let Some(value) = &result {
-            registered
-                .budget
-                .check_completion(value.as_value())
-                .map_err(|_| LeaseError::Capacity)?;
-            let completed_request =
-                RecordingOperationRequest::from_value(value.as_value()["request"].clone())
-                    .map_err(|_| LeaseError::ProtocolViolation)?;
-            if !matches_apply_operation(&registered.request, &completed_request)
-                || !same_recording_operation_request(&completed_request, binding.request())
-            {
-                return Err(LeaseError::ProtocolViolation);
-            }
-        }
-        Ok(result)
+        self.registered_apply(session, ticket)?.completion()
     }
 
     /// Dispatches the registered apply once and keeps its native handle before reply projection.

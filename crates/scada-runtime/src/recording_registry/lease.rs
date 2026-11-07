@@ -1,5 +1,6 @@
 use super::{
-    reconciliation::RegisteredReconciliation, workflow::WorkflowRecord, RecordingRegistryOwnerSeed,
+    observation::ObservationRecord, reconciliation::RegisteredReconciliation,
+    workflow::WorkflowRecord, RecordingRegistryOwnerSeed,
 };
 #[cfg(test)]
 use crate::recording_operations::RecordingOperationsClient;
@@ -105,6 +106,7 @@ pub struct RecordingRegistryRoot {
             RecordingAdmissionInspectionReply,
         ),
     >,
+    pub(super) observations: BTreeMap<String, ObservationRecord>,
 }
 
 pub struct RegistryRootInitFailure {
@@ -174,6 +176,7 @@ impl RecordingRegistryRoot {
             reconciliation: None,
             reserved_revisions: 0,
             admission_inspections: BTreeMap::new(),
+            observations: BTreeMap::new(),
         })
     }
 
