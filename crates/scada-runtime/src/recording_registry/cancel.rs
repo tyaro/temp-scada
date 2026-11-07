@@ -16,8 +16,6 @@ use scada_model::recording_wire::{
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-const MAX_CANCEL_REQUESTS: usize = 4096;
-
 /// The saved native handle a cancel ID was bound to at registration. Never rebound later.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(super) enum CancelTarget {
@@ -75,7 +73,7 @@ impl RecordingRegistryRoot {
         if workflow.principal != session.principal {
             return Err(LeaseError::Forbidden);
         }
-        if self.cancels.len() >= MAX_CANCEL_REQUESTS {
+        if self.cancels.len() >= self.count_limits.cancels {
             return Err(LeaseError::Capacity);
         }
         // The request and the largest possible reply are charged once, before any notify.

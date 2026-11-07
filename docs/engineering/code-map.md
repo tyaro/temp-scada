@@ -877,3 +877,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 ## 記録registryの初回discard（C4）
 
 `recording_registry/discard.rs`は保存済みpreflight Accepted、対応する実handleのCandidate完了とownerのCandidate／Paused状態を照合し、discard専用leaseとAdmissionを原子登録する。pause／applyの有効な意図と配送中・不確定な結果は競合として止める。登録ticketから実native discardへ一回だけ配送し、元返信を固定する。`completedDiscard`時だけ未発行のpause／apply枠を一度返却し、元preflightのunknownが独立Acceptedへ回収済みならhandoffを許す。discard自身のunknownはhandoffを止める。`operations/tests.rs`はRunning recorder、Paused、apply拒否、期限切れ、応答喪失、呼出回数、SQLite不変、予約返却を確認する。
+
+## 記録registryの容量poolと境界試験（C4）
+
+`recording_registry/lease.rs`の`CountLimits`はrootの件数上限（AdmissionInspection・CallInspection・cancel・kind別Observation・pending Observation・live購読・attach・control）をまとめ、本番値は`CountLimits::DEFAULT`に固定する。試験専用の`test_set_count_limit`は上限を下げるだけで、bytes枠より先に件数枠の境界へ届かせる。`operations/tests/registry_capacity.rs`は全poolのexact／1不足を一つの表で確認し、`CountPool`の追加は網羅matchで表への追加を強制する。最大長IDの一workflowで元返信が予約上界内に保存されること、同ID別leaseと配送待機中の期限も同じファイルで確認する。

@@ -24,6 +24,8 @@ pub use apply::{ApplyRegistration, RecordingRegistryApplyTicket};
 #[cfg(test)]
 pub(crate) use discard::DiscardDispatchFault;
 pub use discard::{DiscardRegistration, RecordingRegistryDiscardTicket};
+#[cfg(test)]
+pub(crate) use lease::CountPool;
 pub use lease::{
     LeaseError, LeaseRole, RecordingRegistryRoot, RecordingRegistrySession, RegistryRootInitFailure,
 };

@@ -21,6 +21,46 @@ use scada_model::recording_wire::{
     RecordingWireLeaseRequest, WireBound, WIRE_REQUEST_LIMIT,
 };
 
+/// Per-root ID and slot counts. Production uses `DEFAULT`; tests may only lower a limit.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct CountLimits {
+    pub admission_inspections: usize,
+    pub call_inspections: usize,
+    pub cancels: usize,
+    pub observations_per_kind: usize,
+    pub pending_observations_per_kind: usize,
+    pub live_subscriptions: usize,
+    pub attaches: usize,
+    pub controls: usize,
+}
+
+impl CountLimits {
+    pub(super) const DEFAULT: Self = Self {
+        admission_inspections: 4096,
+        call_inspections: 4096,
+        cancels: 4096,
+        observations_per_kind: 4096,
+        pending_observations_per_kind: 2,
+        live_subscriptions: 4,
+        attaches: 4096,
+        controls: 4096,
+    };
+}
+
+/// A count-limited pool, for tests that lower its limit to reach the boundary cheaply.
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum CountPool {
+    AdmissionInspections,
+    CallInspections,
+    Cancels,
+    ObservationsPerKind,
+    PendingObservationsPerKind,
+    LiveSubscriptions,
+    Attaches,
+    Controls,
+}
+
 const ZERO_BOUND: WireBound = WireBound {
     bytes: 0,
     nodes: 0,
@@ -110,6 +150,7 @@ pub struct RecordingRegistryRoot {
     pub(super) read_byte_limit: usize,
     pub(super) mutation_lease_limit: usize,
     read_lease_limit: usize,
+    pub(super) count_limits: CountLimits,
     /// Management-side shutdown: no new lease, workflow, or admission; set before `closed`.
     pub(super) shutdown: bool,
     pub(super) closed: bool,
@@ -202,6 +243,7 @@ impl RecordingRegistryRoot {
             read_byte_limit: LeaseRole::Reconciliation.byte_limit(),
             mutation_lease_limit: 4096,
             read_lease_limit: 4096,
+            count_limits: CountLimits::DEFAULT,
             shutdown: false,
             closed: false,
             revoked_grants: Vec::new(),
@@ -271,6 +313,42 @@ impl RecordingRegistryRoot {
             LeaseRole::Mutation => self.mutation_lease_limit = limit,
             LeaseRole::Reconciliation => self.read_lease_limit = limit,
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_lease_count(&self, role: LeaseRole) -> usize {
+        self.leases
+            .values()
+            .filter(|lease| lease.role == role)
+            .count()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_set_count_limit(&mut self, pool: CountPool, limit: usize) {
+        let (limits, default) = (&mut self.count_limits, CountLimits::DEFAULT);
+        let (slot, max) = match pool {
+            CountPool::AdmissionInspections => (
+                &mut limits.admission_inspections,
+                default.admission_inspections,
+            ),
+            CountPool::CallInspections => (&mut limits.call_inspections, default.call_inspections),
+            CountPool::Cancels => (&mut limits.cancels, default.cancels),
+            CountPool::ObservationsPerKind => (
+                &mut limits.observations_per_kind,
+                default.observations_per_kind,
+            ),
+            CountPool::PendingObservationsPerKind => (
+                &mut limits.pending_observations_per_kind,
+                default.pending_observations_per_kind,
+            ),
+            CountPool::LiveSubscriptions => {
+                (&mut limits.live_subscriptions, default.live_subscriptions)
+            }
+            CountPool::Attaches => (&mut limits.attaches, default.attaches),
+            CountPool::Controls => (&mut limits.controls, default.controls),
+        };
+        assert!(limit <= max);
+        *slot = limit;
     }
 
     #[cfg(test)]

@@ -19,8 +19,6 @@ use std::{
     sync::Arc,
 };
 
-const MAX_ADMISSION_INSPECTIONS: usize = 4096;
-
 impl RecordingRegistryRoot {
     /// Freezes one observation of native preflight acceptance without changing its original call reply.
     pub fn inspect_preflight_admission(
@@ -73,7 +71,7 @@ impl RecordingRegistryRoot {
             }
             return Ok(reply.clone());
         }
-        if self.admission_inspections.len() >= MAX_ADMISSION_INSPECTIONS {
+        if self.admission_inspections.len() >= self.count_limits.admission_inspections {
             return Err(LeaseError::Capacity);
         }
         let mut new_knowledge = None;

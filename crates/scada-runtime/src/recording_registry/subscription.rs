@@ -27,9 +27,6 @@ use std::{collections::BTreeMap, sync::Arc};
 /// Retained cost of one descriptor: a few record keys and scalars, never snapshot JSON.
 pub(super) const DESCRIPTOR_BYTES: usize = 1024;
 const MAX_REVISION: u64 = 9_007_199_254_740_991;
-const MAX_LIVE_SUBSCRIPTIONS: usize = 4;
-const MAX_ATTACHES: usize = 4096;
-const MAX_CONTROLS: usize = 4096;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum AdmissionStage {
@@ -464,8 +461,8 @@ impl RecordingRegistryRoot {
         {
             return Err(LeaseError::ProtocolViolation);
         }
-        if self.subscriptions.attaches.len() >= MAX_ATTACHES
-            || self.subscriptions.live() >= MAX_LIVE_SUBSCRIPTIONS
+        if self.subscriptions.attaches.len() >= self.count_limits.attaches
+            || self.subscriptions.live() >= self.count_limits.live_subscriptions
         {
             return Err(LeaseError::Capacity);
         }
@@ -532,7 +529,7 @@ impl RecordingRegistryRoot {
             }
             return self.control_reply(old);
         }
-        if self.subscriptions.controls.len() >= MAX_CONTROLS {
+        if self.subscriptions.controls.len() >= self.count_limits.controls {
             return Err(LeaseError::Capacity);
         }
         let reference = value["subscriptionRef"]
@@ -708,5 +705,15 @@ impl RecordingRegistryRoot {
     #[cfg(test)]
     pub(crate) fn test_live_subscriptions(&self) -> usize {
         self.subscriptions.live()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_attach_count(&self) -> usize {
+        self.subscriptions.attaches.len()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn test_control_count(&self) -> usize {
+        self.subscriptions.controls.len()
     }
 }
