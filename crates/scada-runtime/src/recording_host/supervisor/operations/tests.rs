@@ -1154,8 +1154,11 @@ async fn registry_workflow_reserves_all_four_stages_before_a_mutation_lease() {
         Err(LeaseError::Forbidden)
     );
     assert!(root.try_handoff().is_ok());
+    // After close the reserved workflow is still re-fetched; a new reservation is refused.
+    let refetched = root.reserve_workflow(&session, planned_change).unwrap();
+    assert_eq!(refetched.sequence(), ticket.sequence());
     assert!(matches!(
-        root.reserve_workflow(&session, planned_change),
+        root.reserve_workflow(&session, change("workflow-2")),
         Err(LeaseError::Closed)
     ));
 }
@@ -1275,15 +1278,29 @@ async fn registry_preflight_registration_consumes_lease_once_without_native_call
         handoff.supervisor.state().recording.phase,
         RecordingPhase::Joined
     );
-    assert!(matches!(
-        root.register_preflight_at(
+    // The handoff settles the never-dispatched registration as `cancelled`; after close the
+    // same request re-fetches its ticket and that reply, and nothing reaches native.
+    let replay = root
+        .register_preflight_at(
             &session,
             &workflow,
             request,
-            now + Duration::from_millis(20)
-        ),
-        Err(LeaseError::Closed)
-    ));
+            now + Duration::from_millis(20),
+        )
+        .unwrap();
+    let PreflightRegistration::Existing(existing) = replay else {
+        panic!("existing registration expected")
+    };
+    assert_eq!(existing.sequence(), ticket.sequence());
+    let settled = root.dispatch_preflight(&session, &ticket).unwrap();
+    assert_eq!(
+        settled.as_value()["outcome"],
+        json!({"kind":"rejected","error":"cancelled"})
+    );
+    assert_eq!(
+        root.preflight_reply(&session, &ticket).unwrap(),
+        Some(settled)
+    );
 }
 
 #[tokio::test]

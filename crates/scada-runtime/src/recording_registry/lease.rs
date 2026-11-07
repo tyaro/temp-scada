@@ -404,9 +404,6 @@ impl RecordingRegistryRoot {
         while_draining: bool,
     ) -> Result<RecordingWireLeaseReply, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || session.scope != self.scope
             || !same_scope(&self.scope, &request.as_value()["scope"])
@@ -428,7 +425,8 @@ impl RecordingRegistryRoot {
             }
             return Ok(existing.reply.clone());
         }
-        if self.shutdown && !while_draining {
+        // A closed root re-serves saved replies only; discard leases end with the handoff.
+        if self.closed || (self.shutdown && !while_draining) {
             return Err(LeaseError::Closed);
         }
         if session.role == LeaseRole::Mutation
@@ -567,7 +565,9 @@ impl RecordingRegistryRoot {
         }
     }
 
-    /// The native owner handoff gate remains authoritative. Successful handoff closes this root.
+    /// The native owner handoff gate remains authoritative. Successful handoff closes this root:
+    /// lookups of immutable records (saved replies, Observation, inspections, snapshots) keep
+    /// working, while new leases, registrations, dispatches, cancels, and attaches are `Closed`.
     pub fn try_handoff(&mut self) -> Result<RecordingOperationsHandoff, OwnerError> {
         if self
             .workflow
@@ -581,6 +581,9 @@ impl RecordingRegistryRoot {
             return Err(OwnerError::Busy);
         }
         let handoff = self.seed.try_handoff()?;
+        // Nothing can be dispatched after a handoff, so settle never-dispatched admissions now;
+        // `shutdown` also turns every new lease, reservation, and registration into `Closed`.
+        self.begin_shutdown();
         self.closed = true;
         Ok(handoff)
     }

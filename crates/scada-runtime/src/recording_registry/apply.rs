@@ -187,6 +187,9 @@ impl RecordingRegistryRoot {
                 stage.lease_bytes,
             );
         }
+        if self.closed {
+            return Err(LeaseError::Closed);
+        }
         if record
             .discard_lease
             .as_ref()
@@ -419,9 +422,6 @@ impl RecordingRegistryRoot {
         ticket: &RecordingRegistryApplyTicket,
     ) -> Result<&RegisteredApply, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope

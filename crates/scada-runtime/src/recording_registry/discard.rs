@@ -229,6 +229,9 @@ impl RecordingRegistryRoot {
             }
             return self.issue_drain_lease_at(session, request, now, stage.lease_bytes);
         }
+        if self.closed {
+            return Err(LeaseError::Closed);
+        }
         if self.leases.contains_key(&lease_id)
             || self
                 .leases
@@ -432,6 +435,9 @@ impl RecordingRegistryRoot {
             }
             return Ok(DiscardRegistration::Existing(existing.ticket.clone()));
         }
+        if self.closed {
+            return Err(LeaseError::Closed);
+        }
         let lease = self
             .leases
             .get(&discard.lease_id)
@@ -492,9 +498,6 @@ impl RecordingRegistryRoot {
         ticket: &RecordingRegistryDiscardTicket,
     ) -> Result<&RegisteredDiscard, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope
@@ -540,6 +543,7 @@ impl RecordingRegistryRoot {
         match &registered.state {
             DiscardDispatchState::Finished(reply) => return Ok(reply.clone()),
             DiscardDispatchState::Calling => return Err(LeaseError::Busy),
+            DiscardDispatchState::Registered if self.closed => return Err(LeaseError::Closed),
             DiscardDispatchState::Registered => {}
         }
         let request = registered.request.clone();

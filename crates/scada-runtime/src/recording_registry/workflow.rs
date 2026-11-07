@@ -207,9 +207,6 @@ impl RecordingRegistryRoot {
         ticket: &RecordingRegistryWorkflowTicket,
     ) -> Result<&WorkflowRecord, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope
@@ -235,9 +232,6 @@ impl RecordingRegistryRoot {
         change: RecordingChangeRequest,
     ) -> Result<RecordingRegistryWorkflowTicket, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || session.scope != self.scope
             || session.role != LeaseRole::Mutation
@@ -257,7 +251,12 @@ impl RecordingRegistryRoot {
                 return Err(LeaseError::Forbidden);
             }
             if record.ticket.change_id != id {
-                return Err(LeaseError::Busy);
+                // A new reservation never starts once shutdown began, even after this workflow.
+                return Err(if self.shutdown {
+                    LeaseError::Closed
+                } else {
+                    LeaseError::Busy
+                });
             }
             if !Arc::ptr_eq(&record.ticket.identity, &self.identity)
                 || !same_recording_change_request(&record.change, &change)
@@ -363,6 +362,9 @@ impl RecordingRegistryRoot {
                 return Err(LeaseError::ProtocolViolation);
             }
             return self.issue_prepaid_lease_at(session, request, now, stage.lease_bytes);
+        }
+        if self.closed {
+            return Err(LeaseError::Closed);
         }
         if record.registered.is_some() {
             return Err(LeaseError::Busy);
@@ -554,9 +556,6 @@ impl RecordingRegistryRoot {
         ticket: &RecordingRegistryAdmissionTicket,
     ) -> Result<&RegisteredPreflight, LeaseError> {
         self.check_grant(session)?;
-        if self.closed {
-            return Err(LeaseError::Closed);
-        }
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || !Arc::ptr_eq(&self.identity, &ticket.identity)
             || session.scope != self.scope
