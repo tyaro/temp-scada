@@ -321,3 +321,24 @@ async fn a_login_racing_the_mode_turning_on_never_leaves_an_account_session() {
         DesktopSession::AuthDisabledLocal(_)
     ));
 }
+
+#[tokio::test]
+async fn a_stale_check_never_answers_with_a_role_it_did_not_read() {
+    let db = TempDb::new();
+    let auth = HostAuth::open(db.path()).await.unwrap();
+    set_disabled(&auth, true, Role::Admin).await;
+    let admin = auth.current().await.unwrap().unwrap();
+    let stale = admin.seq - 1;
+
+    // Another check moved the slot on; this one read Viewer meanwhile.
+    assert_eq!(
+        auth.settle(Some(local_session(Role::Viewer)), stale),
+        Settled::Retry
+    );
+    assert_eq!(auth.current().await.unwrap(), Some(admin.clone()));
+    // A stale read that agrees with the slot is answered from the slot.
+    assert_eq!(
+        auth.settle(Some(local_session(Role::Admin)), stale),
+        Settled::Decided(Some(admin))
+    );
+}

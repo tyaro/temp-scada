@@ -78,6 +78,18 @@ pub enum LoginOutcome {
     Superseded,
 }
 
+/// How many times [`HostAuth::current`] re-reads the store when concurrent
+/// re-binds keep the slot from matching what it read.
+const SETTLE_ATTEMPTS: usize = 3;
+
+/// Outcome of one settle attempt.
+#[derive(Debug, PartialEq)]
+enum Settled {
+    Decided(Option<CurrentSession>),
+    /// The slot was re-bound meanwhile and no longer matches this read.
+    Retry,
+}
+
 #[derive(Debug, Default)]
 struct AuthSlot {
     session: Option<DesktopSession>,
@@ -142,13 +154,25 @@ impl HostAuth {
     ///
     /// A read failure is `Err` and keeps the session (a DB hiccup must not
     /// log the user out). The lock is never held across an `.await`.
+    ///
+    /// If another check or command re-bound the slot while the store was
+    /// read and the slot no longer matches what this call read, the check is
+    /// repeated (at most [`SETTLE_ATTEMPTS`] times, then `Err` like a read
+    /// failure). It never answers with a role this call did not read.
     pub async fn current(&self) -> Result<Option<CurrentSession>, BantoError> {
-        let (cached, seq_at_entry) = {
-            let slot = self.lock();
-            (slot.session.clone(), slot.seq)
-        };
-        let fresh = self.read_source(cached.as_ref()).await?;
-        Ok(self.settle(fresh, seq_at_entry))
+        for _ in 0..SETTLE_ATTEMPTS {
+            let (cached, seq_at_entry) = {
+                let slot = self.lock();
+                (slot.session.clone(), slot.seq)
+            };
+            let fresh = self.read_source(cached.as_ref()).await?;
+            if let Settled::Decided(current) = self.settle(fresh, seq_at_entry) {
+                return Ok(current);
+            }
+        }
+        Err(BantoError::Other(
+            "認証状態の確認が他の操作と競合しました".to_string(),
+        ))
     }
 
     /// Save the auth-mode settings, then settle the slot to the new mode
@@ -307,18 +331,21 @@ impl HostAuth {
     /// role changed); a synthetic `fresh` is installed over anything else; an
     /// account `fresh` of another binding clears the slot, so a session is
     /// never moved to the account's newest epoch on its behalf.
-    fn settle(&self, fresh: Option<DesktopSession>, seq_at_entry: u64) -> Option<CurrentSession> {
+    fn settle(&self, fresh: Option<DesktopSession>, seq_at_entry: u64) -> Settled {
         let mut slot = self.lock();
         let same = match (slot.session.as_ref(), fresh.as_ref()) {
             (Some(now), Some(fresh)) => same_binding(now, fresh),
             _ => false,
         };
         if slot.seq != seq_at_entry {
-            let session = slot.session.clone().filter(|_| same)?;
-            return Some(CurrentSession {
-                session,
-                seq: slot.seq,
-            });
+            return match (slot.session.clone(), fresh) {
+                (Some(session), Some(_)) if same => Settled::Decided(Some(CurrentSession {
+                    session,
+                    seq: slot.seq,
+                })),
+                (None, None) => Settled::Decided(None),
+                _ => Settled::Retry,
+            };
         }
         let next = match fresh {
             Some(session) if same => {
@@ -329,7 +356,7 @@ impl HostAuth {
             Some(local @ DesktopSession::AuthDisabledLocal(_)) => Some((local, true)),
             Some(DesktopSession::Account(_)) | None => None,
         };
-        match next {
+        Settled::Decided(match next {
             Some((session, rebound)) => {
                 if rebound {
                     slot.seq += 1;
@@ -346,7 +373,7 @@ impl HostAuth {
                 }
                 None
             }
-        }
+        })
     }
 
     /// Write `next` and advance `seq` only if `seq` is still `expected`.
@@ -393,7 +420,10 @@ fn same_binding(a: &DesktopSession, b: &DesktopSession) -> bool {
         (DesktopSession::Account(a), DesktopSession::Account(b)) => {
             a.id == b.id && a.auth_epoch == b.auth_epoch
         }
-        (DesktopSession::AuthDisabledLocal(_), DesktopSession::AuthDisabledLocal(_)) => true,
+        // The synthetic session has no epoch: its role is its binding.
+        (DesktopSession::AuthDisabledLocal(a), DesktopSession::AuthDisabledLocal(b)) => {
+            a.role == b.role
+        }
         _ => false,
     }
 }
