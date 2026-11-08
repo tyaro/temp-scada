@@ -53,7 +53,7 @@ SourceEpochを正規化した論理内容でdedupし、DB内部のepoch IDで観
 
 ## SQLiteの最小schema
 
-新SQLite依存はH2aで明示追加する。adapterはrusqlite 0.41.1（default-features=false、bundled）とlibsqlite3-sys 0.39.1をlockへ固定した。既存依存versionは変更していない。SQLite設定はforeign_keys=ON、trusted_schema=OFF、journal_mode=WAL、synchronous=FULL、wal_autocheckpoint=1000、busy_timeout=0。全SQLはbound parameterを使う。foreign_keysを有効化し、WALと保守的な同期設定を明示して、driver既定値へ依存しない。format確認は既存DBへwriteするPRAGMAやmigrationより前に行う。
+新SQLite依存はH2aで明示追加する。adapterはrusqlite 0.41.1（default-features=false、bundled）とlibsqlite3-sys 0.39.1をlockへ固定した。既存依存versionは変更していない。2026-11-08のユーザー判断で、Bantoの認証DB（sqlx 0.9.0、`libsqlite3-sys <0.38`）と同じSQLiteをlinkするため、rusqlite 0.39.0・libsqlite3-sys 0.37.0（bundled SQLite 3.51.3）へ下げた（[認証・host gate](historian-recording-host-gate.md)§1）。SQLite設定はforeign_keys=ON、trusted_schema=OFF、journal_mode=WAL、synchronous=FULL、wal_autocheckpoint=1000、busy_timeout=0。全SQLはbound parameterを使う。foreign_keysを有効化し、WALと保守的な同期設定を明示して、driver既定値へ依存しない。format確認は既存DBへwriteするPRAGMAやmigrationより前に行う。
 
 | 表              | 主な内容と制約                                                                                                                         |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
