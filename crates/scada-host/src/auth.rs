@@ -19,6 +19,7 @@ use banto_admin_services::users::{bound_username_for_audit, UsersService};
 pub use banto_admin_services::Role;
 pub use banto_core::BantoError;
 use banto_storage::Db;
+use scada_runtime::recording_registry::RecordingPrincipal;
 
 /// File name of the auth DB inside the app data dir (design §2, §8-3).
 pub const AUTH_DB_FILE: &str = "scada-auth.sqlite3";
@@ -51,10 +52,10 @@ impl DesktopSession {
 
     /// The registry principal this session stands for (design §3). Bound to
     /// `users.id`, never the username, which may change.
-    pub fn principal(&self) -> String {
+    pub fn principal(&self) -> RecordingPrincipal {
         match self {
-            Self::Account(identity) => format!("banto-user:{}", identity.id),
-            Self::AuthDisabledLocal(_) => "banto-local:auth-disabled".to_string(),
+            Self::Account(identity) => RecordingPrincipal::banto_user(identity.id),
+            Self::AuthDisabledLocal(_) => RecordingPrincipal::auth_disabled_local(),
         }
     }
 }

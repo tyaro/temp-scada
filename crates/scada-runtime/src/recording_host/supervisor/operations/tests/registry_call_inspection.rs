@@ -93,7 +93,7 @@ async fn registry_call_inspection_never_dispatches_and_recovers_the_original_rep
         Some(accepted)
     );
 
-    // A read lease is inspected only by the read role that issued it.
+    // Either role of the same principal inspects a lease; another principal cannot.
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let read_lease = registry_lease(
         &scope,
@@ -104,12 +104,24 @@ async fn registry_call_inspection_never_dispatches_and_recovers_the_original_rep
     );
     let issued = root.issue_lease(&read, read_lease.clone()).unwrap();
     let lease_inspection = inspect(&scope, "call:read-lease", read_lease.as_value());
+    let bob = root.test_session("bob", LeaseRole::Reconciliation);
     assert!(matches!(
-        root.inspect_call(&mutation, lease_inspection.clone()),
+        root.inspect_call(&bob, lease_inspection.clone()),
         Err(LeaseError::Forbidden)
     ));
     assert_eq!(
         *outcome(&root.inspect_call(&read, lease_inspection).unwrap()),
+        terminal(issued.as_value())
+    );
+    assert_eq!(
+        *outcome(
+            &root
+                .inspect_call(
+                    &mutation,
+                    inspect(&scope, "call:read-lease:mutation", read_lease.as_value())
+                )
+                .unwrap()
+        ),
         terminal(issued.as_value())
     );
 }
@@ -118,7 +130,7 @@ async fn registry_call_inspection_never_dispatches_and_recovers_the_original_rep
 async fn registry_call_inspection_keeps_an_unknown_original_after_accepted_knowledge() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-call-unknown");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -320,11 +332,7 @@ async fn registry_call_inspection_is_role_principal_scope_and_capacity_bound() {
     let request = inspect(&scope, "call:auth", &original);
     let base = root.test_used_bytes(LeaseRole::Reconciliation);
 
-    // The original call's role, the workflow principal and the root scope are all required.
-    assert!(matches!(
-        root.inspect_call(&read, request.clone()),
-        Err(LeaseError::Forbidden)
-    ));
+    // The workflow principal and the root scope are required; the original's role is not.
     assert!(matches!(
         root.inspect_call(&bob, request.clone()),
         Err(LeaseError::Forbidden)
@@ -399,6 +407,17 @@ async fn registry_call_inspection_is_role_principal_scope_and_capacity_bound() {
     ));
     assert_eq!(root.test_call_inspection_count(), 1);
 
+    // A read session of the same principal recovers the mutation original under its own ID.
+    root.test_set_byte_limit(LeaseRole::Reconciliation, 2 * 1024 * 1024);
+    assert_eq!(
+        *outcome(
+            &root
+                .inspect_call(&read, inspect(&scope, "call:auth:read", &original))
+                .unwrap()
+        ),
+        *outcome(&saved)
+    );
+
     // A revoked grant is unauthorized.
     let revoked = root.test_session("alice", LeaseRole::Mutation);
     root.revoke_session(&revoked).unwrap();
@@ -416,7 +435,7 @@ async fn registry_call_inspection_is_role_principal_scope_and_capacity_bound() {
 async fn registry_call_inspection_keeps_serving_after_handoff_closes_the_root() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-call-closed");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )

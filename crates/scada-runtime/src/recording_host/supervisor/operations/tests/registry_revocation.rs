@@ -173,7 +173,7 @@ async fn registry_revocation_rejects_the_grant_and_keeps_monitoring_an_accepted_
     // stays `Forbidden`. A non-revoked session of the same root keeps read-only lookups after
     // close and sees `Closed` only for new work.
     let (other_owner, _other_dir) = setup();
-    let other = RecordingRegistryRoot::try_new(
+    let other = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(other_owner).unwrap(),
         registry_scope("epoch-revoke-closed-other"),
     )
@@ -250,7 +250,7 @@ async fn registry_revocation_never_dispatches_a_registered_admission_for_the_rev
 
     // A different grant of another root cannot revoke here.
     let (other_owner, _other_dir) = setup();
-    let other = RecordingRegistryRoot::try_new(
+    let other = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(other_owner).unwrap(),
         registry_scope("epoch-revoke-other"),
     )

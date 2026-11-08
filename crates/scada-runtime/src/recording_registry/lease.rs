@@ -1,6 +1,7 @@
 use super::{
     call_inspection::CallInspectionRecord,
     cancel::{CancelRecord, CancelTarget},
+    issuer::RecordingSessionIssuer,
     observation::ObservationRecord,
     reconciliation::RegisteredReconciliation,
     subscription::{SubscriptionState, DESCRIPTOR_BYTES},
@@ -116,7 +117,7 @@ impl fmt::Display for LeaseError {
 }
 impl std::error::Error for LeaseError {}
 
-/// An opaque host-granted capability. Production issuance waits for the host auth contract.
+/// An opaque host-granted capability, issued only by the root's `RecordingSessionIssuer`.
 /// Clones share one grant, so revoking the grant revokes every clone at once.
 #[derive(Clone)]
 pub struct RecordingRegistrySession {
@@ -195,7 +196,27 @@ impl fmt::Debug for RegistryRootInitFailure {
 }
 
 impl RecordingRegistryRoot {
+    /// Claims the seed for `scope` and returns the root with its only session issuer
+    /// (host-gate design §3). Product sessions come from that issuer alone.
     pub fn try_new(
+        seed: RecordingRegistryOwnerSeed,
+        scope: Value,
+    ) -> Result<(Self, RecordingSessionIssuer), RegistryRootInitFailure> {
+        let root = Self::new_root(seed, scope)?;
+        let issuer = RecordingSessionIssuer::new(&root);
+        Ok((root, issuer))
+    }
+
+    /// A root whose issuer is dropped; tests issue sessions with `test_session`.
+    #[cfg(test)]
+    pub(crate) fn test_try_new(
+        seed: RecordingRegistryOwnerSeed,
+        scope: Value,
+    ) -> Result<Self, RegistryRootInitFailure> {
+        Self::new_root(seed, scope)
+    }
+
+    fn new_root(
         seed: RecordingRegistryOwnerSeed,
         scope: Value,
     ) -> Result<Self, RegistryRootInitFailure> {

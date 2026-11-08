@@ -2,8 +2,11 @@
 //! A call inspection only looks up saved records: an unregistered original is never
 //! registered, dispatched, leased, notified or subscribed, and a saved original reply is
 //! returned unchanged, so an `unknown` original admission stays `unknown` forever.
+//! Any role may inspect any original kind (host-gate design §4): a principal demoted to read
+//! still recovers the original reply of its own earlier mutation, while same-ID re-fetches
+//! keep the original role because they can lead to a dispatch.
 use super::{
-    kernel::budget::measured, lease::same_scope, LeaseError, LeaseRole, RecordingRegistryRoot,
+    kernel::budget::measured, lease::same_scope, LeaseError, RecordingRegistryRoot,
     RecordingRegistrySession,
 };
 use scada_model::recording_admission::{
@@ -26,8 +29,8 @@ pub(super) struct CallInspectionRecord {
 impl RecordingRegistryRoot {
     /// Looks up the original call named by kind and ID and returns its saved reply as
     /// `terminal`, `pending` while a registered admission has no reply yet, or `notFound`.
-    /// The session needs the role of the original call; a found record also needs its
-    /// principal. `notFound` is not proof that the original can no longer arrive.
+    /// Either role may inspect any original kind; a found record needs its principal.
+    /// `notFound` is not proof that the original can no longer arrive.
     pub fn inspect_call(
         &mut self,
         session: &RecordingRegistrySession,
@@ -39,7 +42,6 @@ impl RecordingRegistryRoot {
         if !Arc::ptr_eq(&self.identity, &session.root_identity)
             || session.scope != self.scope
             || !same_scope(&self.scope, &value["scope"])
-            || session.role != original_role(original)
         {
             return Err(LeaseError::Forbidden);
         }
@@ -142,7 +144,7 @@ impl RecordingRegistryRoot {
                         let Some(lease) = self.leases.get(id("leaseRequestId")) else {
                             return Ok(None);
                         };
-                        if lease.principal != session.principal || lease.role != session.role {
+                        if lease.principal != session.principal {
                             return Err(LeaseError::Forbidden);
                         }
                         if !same_recording_wire_request(lease.request.as_document(), &current) {
@@ -184,19 +186,4 @@ impl RecordingRegistryRoot {
 enum Saved {
     Terminal(Value),
     Pending,
-}
-
-/// The role the original call itself requires, so inspection never crosses roles.
-fn original_role(original: &Value) -> LeaseRole {
-    let read = match original["kind"].as_str() {
-        Some("recordingWireLeaseRequest") => original["role"] == "reconciliation",
-        Some("recordingAdmissionRequest") => original["action"]["kind"] == "reconcile",
-        Some("recordingWireCancelRequest") => original["target"]["kind"] != "operation",
-        _ => true,
-    };
-    if read {
-        LeaseRole::Reconciliation
-    } else {
-        LeaseRole::Mutation
-    }
 }

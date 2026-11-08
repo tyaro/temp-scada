@@ -60,6 +60,25 @@ pub(super) struct WorkflowRecord {
 }
 
 impl WorkflowRecord {
+    /// Any stage admission registered but never dispatched.
+    pub(super) fn has_undispatched(&self) -> bool {
+        self.registered
+            .as_ref()
+            .is_some_and(|record| matches!(record.state, PreflightDispatchState::Registered))
+            || self
+                .pause_lease
+                .as_ref()
+                .is_some_and(PauseLease::is_undispatched)
+            || self
+                .apply_lease
+                .as_ref()
+                .is_some_and(ApplyLease::is_undispatched)
+            || self
+                .discard_lease
+                .as_ref()
+                .is_some_and(DiscardLease::is_undispatched)
+    }
+
     pub(super) fn has_uncertain_dispatch(&self) -> bool {
         (self
             .registered
