@@ -195,6 +195,7 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 - **前回値との照合**: hostは、直前に使ったownerRefとepochの組をアプリdata dirの`recording-epoch.json`へ保存する。生成値のどちらかが前回値と一致したら、生成し直す。
 - **保存の順序**: 保存はroot作成の前に行う。保存に失敗したら、rootを作らずに記録registryの入口を拒否する。
 - **旧世代の扱い**: 旧ownerRef・旧epochのref・lease・sessionを新rootへ移さない（wire・host契約のとおり）。
+- **Windowsでの永続性**（2026-11-08ユーザー判断）: Windowsでは、同じvolume内のrenameと新しく作ったdirの親について、保存成功後の電源断でも残るという文書化された保証がない。`MOVEFILE_WRITE_THROUGH`が保証するflushは、copyと削除を伴う移動だけである。そのためWindowsではbest-effortとし、file本体のsyncと`MOVEFILE_WRITE_THROUGH`付きの置き換えまでを行う。この保存は乱数源の故障への防御に限られる。失われた場合の影響は、次回の照合相手が一つ前の組（またはなし）になることだけで、旧世代のref・lease・sessionは新rootへ持ち越されない。
 - **1組だけ保存する理由**: 128bitの乱数は再起動のたびに独立に生成されるので、衝突の確率は無視できる。前回値の照合は、乱数源の故障などで同じ値が出た場合への防御に限る。履歴の全件は保存しない。
 
 ## 8. 確定事項（2026-11-08ユーザー判断）
@@ -211,7 +212,7 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
 1. `scada-host`へ`HostAuth`（Bantoの依存、migrationのコピー、`DesktopSession`の再検証、`require_role`）を追加する。試験は一時SQLiteで行う。**実装済み**（`crates/scada-host/src/auth.rs`）。Bantoとの違いは一点で、認証無効モードの`disabled_role`が変わったときもslotの`seq`を進める。これで`seq`は認可の内容が変わったときだけ進むので、手順2ではregistry sessionを`seq`に束縛し、`seq`の比較だけで失効を判定できる。また、確認のたびに認証無効モードを先に読む。onならslotの中身（Account・空）によらず合成sessionへ置き換えるので、host外で設定が変わっても`auth.disabled`と`AuthDisabledLocal`の対応が崩れない。設定の変更は`HostAuth::set_auth_config`で保存し、同じ呼出しの中でslotを新しいモードへ合わせる。loginは照合の後にもモードを読み直す。
 2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`、read-onlyの`quiescence()`を追加し、失効の連動を試験する。CallInspectionをread roleで受ける契約変更（§4）も行い、Adminで返信を失ったapplyをViewerへ降格した後に回収できることを試験する。**実装済み**（`recording_registry/issuer.rs`、試験`registry_issuer.rs`。詳細はadapter設計§7の末尾）。`scada-host`の`DesktopSession::principal()`は`RecordingPrincipal`を返す。registry sessionを`HostAuth`の`seq`へ束縛して失効させる部分は、hostがsessionを保持する手順4で行う。
-3. ownerRef・epochの世代ごとの生成と保存を追加する。
+3. ownerRef・epochの世代ごとの生成と保存を追加する。**実装済み**（`crates/scada-host/src/recording_epoch.rs`）。`create_recording_root`が`recording-epoch.json`の保存の成功後にだけ`RecordingRegistryRoot::try_new`を呼ぶ。保存は同じdirの一時fileへ書いてsyncし、renameで置き換える。unixではrename後にdirをsyncし、data dirを新しく作った場合は作った各dirの親もsyncする。Windowsでは`MoveFileExW`に`MOVEFILE_WRITE_THROUGH`を付けて置き換える（電源断への耐性はbest-effort。§7）。どちらでも、強制終了しても旧組か新組のどちらかが残る。前回値の読込から保存の完了までは、同じdirの`recording-epoch.lock`の排他lockを取る。別processの二重起動を含めて並行しても、一時fileを共有せず、返した組と保存した組が食い違わない。前回値の読込に失敗した場合や、中身が`version`・`ownerRef`・`ownerEpoch`の3項目で32桁小文字hexでない場合は、照合ができないので上書きせずに拒否する。生成値が前回のどちらかの値、または互いに一致したら引き直し、4回続けば乱数源の故障として拒否する。rootの結合はnativeのownerを組む手順4の試験で確かめる。
 4. Tauri command（§5のworkflowの段階別入口とticketの保持を含む）とUIの`TauriAuthProvider`を追加する。Tauri commandだけで予約から初回preflight・pause/join・apply・reconcileまで進めることを試験する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、初回初期化の各保存境界での強制終了と再起動後の再開、`auth-phase.json`がなく認証DBだけがある場合の拒否、移行commandの成功と、各保存境界（1〜3の後）での失敗・強制終了からの再起動後の再実行、4の後の強制終了・返信喪失から通常ログインへ進めること、未静止workflowでの移行拒否と並行するpreflightとの排他、Candidate／Pausedでの降格・削除の拒否と静止後の確定、`transitioning`中のregistry入口の拒否、`bootstrapping`以外のフェーズでの認証DB欠落の拒否をnativeで試験する。
 
 製品transportと実ownerの配置（C5）は、この区切りの後に行う。

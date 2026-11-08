@@ -3476,12 +3476,14 @@ dependencies = [
  "banto-core",
  "banto-hub-bootstrap",
  "banto-storage",
+ "getrandom 0.3.4",
  "keyring",
  "scada-model",
  "scada-runtime",
  "serde_json",
  "sqlx",
  "uuid",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
