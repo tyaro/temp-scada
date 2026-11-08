@@ -19,6 +19,8 @@ use serde_json::{json, Value};
 
 /// File name of the saved previous generation inside the app data dir.
 pub const RECORDING_EPOCH_FILE: &str = "recording-epoch.json";
+/// Lock file serializing generation changes in one data dir, across processes.
+pub const RECORDING_EPOCH_LOCK_FILE: &str = "recording-epoch.lock";
 
 const FILE_VERSION: u64 = 1;
 const ID_BYTES: usize = 16;
@@ -56,6 +58,8 @@ pub enum GenerationError {
     /// The previous generation is not a valid saved pair. It is not
     /// overwritten, since the comparison it guards could not be made.
     Corrupt,
+    /// The data dir's generation lock could not be taken.
+    Lock,
     /// The OS random source failed.
     Random,
     /// Every draw repeated a previous or sibling value.
@@ -75,11 +79,28 @@ pub(crate) fn next_generation_with(
     data_dir: &Path,
     random: &mut dyn FnMut(&mut [u8]) -> Result<(), GenerationError>,
 ) -> Result<RecordingGeneration, GenerationError> {
+    let _lock = lock(data_dir)?;
     let path = data_dir.join(RECORDING_EPOCH_FILE);
     let previous = load(&path)?;
     let generation = draw(previous.as_ref(), random)?;
     save(&path, &generation)?;
     Ok(generation)
+}
+
+/// Holds the data dir's exclusive lock from reading the previous pair until
+/// the new pair is renamed into place, so concurrent callers (another
+/// process included) neither share the temp file nor return a pair other
+/// than the saved one. The OS releases the lock when the file is closed.
+fn lock(data_dir: &Path) -> Result<fs::File, GenerationError> {
+    fs::create_dir_all(data_dir).map_err(|_| GenerationError::Lock)?;
+    let file = fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(data_dir.join(RECORDING_EPOCH_LOCK_FILE))
+        .map_err(|_| GenerationError::Lock)?;
+    file.lock().map_err(|_| GenerationError::Lock)?;
+    Ok(file)
 }
 
 pub enum RootCreateError {

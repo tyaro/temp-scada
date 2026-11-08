@@ -160,3 +160,37 @@ fn the_data_dir_is_created_when_missing() {
     next_generation(&nested).unwrap();
     assert!(nested.join(RECORDING_EPOCH_FILE).is_file());
 }
+
+#[test]
+fn generation_changes_wait_for_the_data_dir_lock() {
+    let dir = TempDir::new();
+    let held = lock(&dir.0).unwrap();
+    let path = dir.0.clone();
+    let (sent, received) = std::sync::mpsc::channel();
+    let waiter = std::thread::spawn(move || sent.send(next_generation(&path)).unwrap());
+    assert!(received
+        .recv_timeout(std::time::Duration::from_millis(200))
+        .is_err());
+    assert!(!dir.file().exists());
+    drop(held);
+    let generation = received.recv().unwrap().unwrap();
+    waiter.join().unwrap();
+    assert_eq!(dir.saved()["ownerRef"], json!(generation.owner_ref()));
+}
+
+#[test]
+fn concurrent_callers_each_return_the_pair_they_saved() {
+    let dir = TempDir::new();
+    let generations: Vec<_> = std::thread::scope(|scope| {
+        let calls: Vec<_> = (0..8)
+            .map(|_| scope.spawn(|| next_generation(&dir.0).unwrap()))
+            .collect();
+        calls.into_iter().map(|c| c.join().unwrap()).collect()
+    });
+    let saved = dir.saved();
+    assert!(generations
+        .iter()
+        .any(|g| saved["ownerRef"] == json!(g.owner_ref())
+            && saved["ownerEpoch"] == json!(g.owner_epoch())));
+    assert!(!temp_path(&dir.file()).exists());
+}
