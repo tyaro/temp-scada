@@ -1,6 +1,6 @@
 # 記録registryの認証・host gate
 
-状態: **設計案（レビュー待ち）**。2026-11-07（日本時間）。[native registry adapter](historian-recording-native-registry-adapter.md)の受入1〜6を閉じた後の区切りで、製品hostのsession issuer、権限失効後の結果開示、epoch生成と永続衝突防止、Tauri endpointを定める。製品transportと通常Appへの接続はこの後の区切りとする。
+状態: **採用**。2026-11-07作成、2026-11-08にユーザー判断で§8を確定（日本時間）。[native registry adapter](historian-recording-native-registry-adapter.md)の受入1〜6を閉じた後の区切りで、製品hostのsession issuer、権限失効後の結果開示、epoch生成と永続衝突防止、Tauri endpointを定める。製品transportと通常Appへの接続はこの後の区切りとする。
 
 ## 1. 前提とユーザー判断
 
@@ -56,7 +56,7 @@ Vite単体起動のオフライン編集は従来どおりログイン不要の�
 | なし（未ログイン）         | 発行しない                  | 監視画面の閲覧はHub read経路のみ。記録registryは`Unauthorized` |
 
 - **principalの束縛先**: usernameは変更され得るので、principalはusernameでなく`users.id`へ束縛する。Bantoはidを再利用しない。
-- **record・workflowの開示範囲**: 既存のregistryは、recordとworkflowを同じprincipalへ限って開示する。あるAdminが始めたworkflowは、別のAdminからは照会できない（§8の未決事項1）。
+- **record・workflowの開示範囲**: 既存のregistryは、recordとworkflowを同じprincipalへ限って開示する。あるAdminが始めたworkflowは、別のAdminからは照会できない（§8の1）。
 - **認証無効モード**: 開発・初期設定フェーズのworkflowは`banto-local:auth-disabled`に属する。運用への移行で認証無効モードを切ると、そのsessionは失効する。
 
 ## 4. 再検証と失効
@@ -80,7 +80,7 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 - **未静止workflowがある間の降格・削除**: AdminがworkflowをCandidate／Pausedまで進めた後に降格や削除をされると、本人はdiscardできず、別のAdminもprincipalの制約で操作できない。そこでhostは、§6の運用移行と同じ排他で、この状態を作る変更を拒否する。
   - **対象**: Adminから下位roleへの変更と、ユーザー削除である。password変更・resetは対象外とする。これらは`auth_epoch`を上げてsessionを失効させるが、同じprincipalが再ログインすれば、従来どおりAdminとしてdiscardや続きを実行できるためである。
   - **確認**: 変更commandは移行lockを取り、対象ユーザーのprincipalのworkflowについて`root.quiescence()`で静止を確かめる。未静止なら`busy`で拒否し、UIはdiscardか完了の待機を促す。静止していれば変更を確定し、§4のとおり即時に失効させる。
-  - **lockの外で起きた変更**: 認証DBを外部から書き換えられた場合など、この確認を通らずに降格・削除が起きても、registryの状態は変えない。その場合の解消（別のAdminによる引継ぎかdiscard）は、§8の未決事項1と合わせて設計する。
+  - **lockの外で起きた変更**: 認証DBを外部から書き換えられた場合など、この確認を通らずに降格・削除が起きても、registryの状態は変えない。その場合の解消（別のAdminによる引継ぎかdiscard）は、§8の1と合わせて設計する。
 - **降格後の元返信の回収**: 現行の`inspect_call`は元callと同じroleを要求する（adapter設計§7）。そのままでは、Adminの時に返信を失ったapplyの元返信を、Viewerへ降格した後に回収できない。そこでCallInspectionの契約を次のように変える。
   - **必要なrole**: 元callのkindによらずread roleとする。mutation sessionでの照会も従来どおり受ける。
   - **開示の条件**: 見つかったrecordの開示は、従来どおりそのrecordまたはworkflowのprincipalに限る。
@@ -176,7 +176,7 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 - **移行の完了点**: 4の`operational`の保存を、移行の永続的な完了点とする。4の後に終了したり返信を失ったりしても、移行はやり直さない。再起動後は`operational`・認証有効・管理者ありの状態で起動し、通常のログインへ進む。5のsession導入は、そのログインで行われる。5の失効対象は旧processのメモリ上のsessionだけで、再起動でrootごと消えている。返信を失ったUIは、`auth_status`とフェーズを読み直して通常のログイン画面へ進む。
 - **`transitioning`の間**: 記録registryの入口はすべて拒否する。認証無効モードがonのままでも、`AuthDisabledLocal`のsessionへregistry sessionを発行しない。UIは移行の再実行を促す。
 - **移行の確認**: 管理者の存在は、ブラウザの保存値でなくbackendで確認する。
-- **未静止のworkflowがある場合**: 移行すると旧principalのsessionは失効する。運用側のユーザーからは照会も操作もできない（§8の未決事項1）ので、Candidate／Pausedを解くdiscardも実行できなくなる。そのため、静止の確認はhostで行う。
+- **未静止のworkflowがある場合**: 移行すると旧principalのsessionは失効する。運用側のユーザーからは照会も操作もできない（§8の1）ので、Candidate／Pausedを解くdiscardも実行できなくなる。そのため、静止の確認はhostで行う。
   - **排他**: 移行commandは、hostの移行lockを取ってから始める。registryの入口（workflowの予約、lease、Admission、cancel）も同じlockの下で受け付けるので、確認と移行の間に新しい要求は入らない。
   - **新規mutationの停止**: lockの下で、まず新しいworkflowの予約・mutation lease・Admissionの受付を止める。
   - **静止の確認**: 次に、registryのread-onlyの照会`root.quiescence()`で、workflowがないか、正常に終端しており、未配送の登録・未完了のnative操作・未確定の受付がないことを確かめる。この照会は状態を変えない。実装順§9の2で追加する。
@@ -196,11 +196,15 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 - **旧世代の扱い**: 旧ownerRef・旧epochのref・lease・sessionを新rootへ移さない（wire・host契約のとおり）。
 - **1組だけ保存する理由**: 128bitの乱数は再起動のたびに独立に生成されるので、衝突の確率は無視できる。前回値の照合は、乱数源の故障などで同じ値が出た場合への防御に限る。履歴の全件は保存しない。
 
-## 8. 未決事項（レビューで確定する）
+## 8. 確定事項（2026-11-08ユーザー判断）
 
-1. **principalごとの開示**: 現行registryはrecordとworkflowをprincipalに束縛している。そのため、Admin Aが始めたworkflowをAdmin Bが監視・取消できない。また開発フェーズのworkflowは、運用移行後に照会できない。初回は単一workflowなので現行のままとし、交代運用が必要になった時点で「Admin共有principal」案を別に設計するか。 Admin間の共有を設ければ、lockの外で起きた降格・削除の後に、別のAdminがworkflowを引き継ぐかdiscardする復旧経路にもなる（§4）。
-2. **認証無効モードの初期値**: 初回起動（`auth-phase.json`も認証DBもない）で認証無効をonとする（§6）のは、Bantoの既定（off）と逆である。access-policyの「開発中はログイン不要」に合わせる案だが、これでよいか。
-3. **認証DBの置き場所**: 認証DBをHistorian DBと別fileにする（§2）。
+2026-11-08のユーザー判断で、次の3点を推奨案のとおり確定した。
+
+1. **principalごとの開示**: 現行registryは、recordとworkflowをprincipalに束縛している。そのため、Admin Aが始めたworkflowを、Admin Bは監視も取消もできない。開発フェーズのworkflowも、運用移行後には照会できない。初回は単一workflowなので、現行のままとする。
+   - 交代運用が必要になった時点で、「Admin共有principal」案を別に設計する。
+   - その設計は、lockの外で起きた降格・削除の後に、別のAdminがworkflowを引き継ぐかdiscardする復旧経路も扱う（§4）。
+2. **認証無効モードの初期値**: 初回起動（`auth-phase.json`も認証DBもない）でだけ、認証無効をonとする（§6）。Bantoの既定（off）とは逆だが、access-policyの「開発中はログイン不要」に合わせる。
+3. **認証DBの置き場所**: 認証DBは、Historian DBとは別のfile（`scada-auth.sqlite3`）とする（§2）。
 
 ## 9. 実装順
 
