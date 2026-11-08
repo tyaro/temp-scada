@@ -569,3 +569,55 @@ async fn a_withheld_admission_reply_stays_registered_for_its_principal() {
         ]
     );
 }
+
+#[tokio::test]
+async fn a_dropped_admission_command_is_still_audited_once() {
+    let f = initializing().await;
+    let change = test_support::change("dropped-change");
+    f.gate.workflow_reserve(change.clone()).await.unwrap();
+    let lease = f
+        .gate
+        .workflow_lease(
+            WorkflowStage::Preflight,
+            stage_lease(&f.scope, "preflight", "mutation"),
+        )
+        .await
+        .unwrap();
+    let request = admission(
+        &f.scope,
+        "preflight",
+        &lease,
+        json!({"kind":"preflight", "change":change.as_value()}),
+    );
+
+    // The command's future is dropped while its audit is being written: the
+    // registration is audited all the same.
+    f.gate.after_next_call(std::future::pending());
+    assert!(tokio::time::timeout(
+        Duration::from_millis(200),
+        f.gate.admission(request.clone())
+    )
+    .await
+    .is_err());
+    let registered = row("register", "recording_admission", "preflight", "ok", "");
+    let audited = tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            let audit = recording_audit(&f.dir).await;
+            if audit.len() == 2 {
+                break audit;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        (&audited[1].0, &audited[1].1, &audited[1].2, &audited[1].3),
+        (&registered.0, &registered.1, &registered.2, &registered.3)
+    );
+
+    // The replay returns the original reply and records nothing more.
+    let replayed = f.gate.admission(request).await.unwrap();
+    assert_eq!(outcome_kind(&replayed, |r| r.as_value()), "accepted");
+    assert_eq!(recording_audit(&f.dir).await.len(), 2);
+}

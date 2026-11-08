@@ -741,12 +741,15 @@ impl RecordingGate {
     }
 
     /// Audit a mutation registration or a cancel (best effort: a failed
-    /// write never fails the command, design §5).
+    /// write never fails the command, design §5). The write runs in its own
+    /// task, started before the first await after the registry call: if the
+    /// command's future is dropped, the operation stays registered and its
+    /// replay registers nothing, so only this task can still record it.
     async fn audit(
         &self,
         current: &CurrentSession,
-        action: &str,
-        resource: &str,
+        action: &'static str,
+        resource: &'static str,
         entity_id: &str,
         detail: Value,
         result: Result<(), &LeaseError>,
@@ -762,17 +765,20 @@ impl RecordingGate {
             }
         }
         let detail = (!detail.is_null()).then_some(detail);
-        self.auth
-            .auth()
-            .record(
-                current.session.identity(),
-                action,
-                resource,
-                Some(entity_id),
-                detail,
-                audit_result(&result),
-            )
-            .await;
+        let outcome = audit_result(&result);
+        let auth = self.auth.clone();
+        let actor = current.session.identity().clone();
+        let entity_id = entity_id.to_owned();
+        let task = tokio::spawn(async move {
+            auth.auth()
+                .record(&actor, action, resource, Some(&entity_id), detail, outcome)
+                .await;
+        });
+        // Test only: a command dropped while its audit is being written.
+        #[cfg(test)]
+        self.run_hook().await;
+        // A panic in the write is the audit's own failure, never the command's.
+        let _ = task.await;
     }
 
     fn lock(&self) -> MutexGuard<'_, GateState> {
@@ -780,7 +786,8 @@ impl RecordingGate {
     }
 
     /// Test only: run `hook` after the next registry call, before its
-    /// generation check (a logout or user switch racing the command), or
+    /// generation check (a logout or user switch racing the command; for an
+    /// audited command, while its audit is being written), or
     /// inside the next [`Self::refresh`], between its check and the
     /// revocation it decides (a login and command racing the refresh).
     #[cfg(test)]
