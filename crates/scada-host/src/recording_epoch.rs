@@ -287,8 +287,11 @@ fn replace_durably(from: &Path, to: &Path) -> std::io::Result<()> {
     fs::File::open(dir)?.sync_all()
 }
 
-/// Windows has no directory sync through `std`; `MoveFileExW` with
-/// `MOVEFILE_WRITE_THROUGH` returns only after the move is flushed to disk.
+/// Best effort on Windows (design §7, user decision 2026-11-08): the flush
+/// `MOVEFILE_WRITE_THROUGH` documents covers copy-and-delete moves only, and
+/// `std` cannot sync a directory, so a same-volume rename is not guaranteed
+/// to survive a power loss. A lost pair only makes the next comparison use
+/// an older pair; nothing of the old generation reaches the new root.
 #[cfg(windows)]
 fn replace_durably(from: &Path, to: &Path) -> std::io::Result<()> {
     use std::os::windows::ffi::OsStrExt;
