@@ -92,7 +92,7 @@ pub(crate) fn next_generation_with(
 /// process included) neither share the temp file nor return a pair other
 /// than the saved one. The OS releases the lock when the file is closed.
 fn lock(data_dir: &Path) -> Result<fs::File, GenerationError> {
-    fs::create_dir_all(data_dir).map_err(|_| GenerationError::Lock)?;
+    create_dir_durably(data_dir).map_err(|_| GenerationError::Lock)?;
     let file = fs::OpenOptions::new()
         .create(true)
         .truncate(false)
@@ -211,8 +211,6 @@ fn load(path: &Path) -> Result<Option<RecordingGeneration>, GenerationError> {
 /// Writes a sibling temp file, syncs it, and renames it over the old pair, so
 /// a crash leaves either the old or the new pair, never a torn one.
 fn save(path: &Path, generation: &RecordingGeneration) -> Result<(), GenerationError> {
-    let dir = path.parent().ok_or(GenerationError::Save)?;
-    fs::create_dir_all(dir).map_err(|_| GenerationError::Save)?;
     let body = serde_json::to_vec(&json!({
         "version": FILE_VERSION,
         "ownerRef": generation.owner_ref,
@@ -237,6 +235,39 @@ fn temp_path(path: &Path) -> PathBuf {
     let mut name = path.file_name().unwrap_or_default().to_owned();
     name.push(".tmp");
     path.with_file_name(name)
+}
+
+/// Creates `dir` and its missing ancestors. On unix the parent of every
+/// directory created here is synced, so the new names survive a power loss
+/// along with the pair saved inside them.
+fn create_dir_durably(dir: &Path) -> std::io::Result<()> {
+    let mut missing = Vec::new();
+    let mut cursor = Some(dir);
+    while let Some(path) = cursor.filter(|path| !path.as_os_str().is_empty() && !path.exists()) {
+        missing.push(path);
+        cursor = path.parent();
+    }
+    fs::create_dir_all(dir)?;
+    for created in missing.iter().rev() {
+        sync_parent(created)?;
+    }
+    Ok(())
+}
+
+#[cfg(unix)]
+fn sync_parent(path: &Path) -> std::io::Result<()> {
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    fs::File::open(parent)?.sync_all()
+}
+
+/// `std` cannot sync a directory on Windows; durability of the parent's new
+/// entry is left to the NTFS metadata journal.
+#[cfg(not(unix))]
+fn sync_parent(_path: &Path) -> std::io::Result<()> {
+    Ok(())
 }
 
 /// Renames `from` over `to` and returns only once the new name is durable:
