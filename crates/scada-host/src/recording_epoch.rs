@@ -186,7 +186,15 @@ fn is_id(value: &str) -> bool {
 fn load(path: &Path) -> Result<Option<RecordingGeneration>, GenerationError> {
     let bytes = match fs::read(path) {
         Ok(bytes) => bytes,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        // Only a path that does not exist at all means "no previous pair";
+        // a dangling link exists but cannot be compared against.
+        Err(error)
+            if error.kind() == std::io::ErrorKind::NotFound
+                && fs::symlink_metadata(path)
+                    .is_err_and(|e| e.kind() == std::io::ErrorKind::NotFound) =>
+        {
+            return Ok(None)
+        }
         Err(_) => return Err(GenerationError::Unreadable),
     };
     let value: Value = serde_json::from_slice(&bytes).map_err(|_| GenerationError::Corrupt)?;

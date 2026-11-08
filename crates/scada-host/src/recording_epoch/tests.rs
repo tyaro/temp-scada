@@ -144,6 +144,18 @@ fn an_unreadable_previous_pair_is_refused() {
     assert_eq!(next_generation(&dir.0), Err(GenerationError::Unreadable));
 }
 
+#[cfg(unix)]
+#[test]
+fn a_dangling_link_in_place_of_the_previous_pair_is_refused_and_kept() {
+    let dir = TempDir::new();
+    std::os::unix::fs::symlink(dir.0.join("missing"), dir.file()).unwrap();
+    assert_eq!(next_generation(&dir.0), Err(GenerationError::Unreadable));
+    assert!(std::fs::symlink_metadata(dir.file())
+        .unwrap()
+        .file_type()
+        .is_symlink());
+}
+
 #[test]
 fn a_failed_save_is_reported() {
     let dir = TempDir::new();
