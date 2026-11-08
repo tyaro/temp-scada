@@ -8,6 +8,7 @@ use crate::{
         operations::RecordingOperationsOwner, RecordingCompletion, RecordingHost, RecordingPhase,
         RecordingRun,
     },
+    recording_registry::RecordingRegistryRoot,
 };
 use banto_tagclient::{CollectionMode, StableTagId};
 use scada_historian::{
@@ -19,8 +20,8 @@ use scada_historian::{
         IdentityDescriptor, SessionSpec, Source, SqliteStore, StoreIdentity, ValueType,
     },
 };
-use scada_model::recording_operations::RecordingOperationsContext;
-use serde_json::Value;
+use scada_model::recording_operations::{RecordingChangeRequest, RecordingOperationsContext};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -55,6 +56,32 @@ pub fn context() -> RecordingOperationsContext {
     let mut context = fixtures["bases"]["context"].clone();
     context["sessionId"] = Value::from("recording");
     RecordingOperationsContext::from_value(context).expect("fixture context")
+}
+
+/// A change request for [`joined_owner`]'s recording: it disables the plan over the
+/// recording's one member, like the crate's own unit tests.
+pub fn change(change_id: &str) -> RecordingChangeRequest {
+    let external_name = plan().session().members[0].external_name.clone();
+    RecordingChangeRequest::from_value(json!({
+        "version":1, "kind":"recordingChangeRequest", "changeId":change_id,
+        "context":context().as_value(),
+        "apply":{
+            "requestId":format!("apply:{change_id}"),
+            "desired":{"version":1,"kind":"recordingPlan","planId":"desired","revision":1,
+                "enabled":false,"group":{"groupId":"group","hubRef":"hub","periodMs":1000,
+                "members":[{"memberId":"member:0","externalName":external_name,
+                    "valueType":"number"}]}},
+            "expectedAppliedRevision":null, "expectedMappingRevision":null,
+            "expectedRetentionAppliedRevision":null
+        }
+    }))
+    .expect("fixture change")
+}
+
+/// Make `root`'s next native apply commit and then lose its response: the original
+/// apply completes `failed` with an unconfirmed effect, the case a reconcile reads.
+pub fn lose_next_apply_response(root: &RecordingRegistryRoot) {
+    root.test_native_client().test_lose_next_apply_response();
 }
 
 /// A pristine native owner (no client issued) of a joined recording, ready for

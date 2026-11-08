@@ -8,7 +8,7 @@ use super::{
     workflow::WorkflowRecord,
     RecordingRegistryOwnerSeed,
 };
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 use crate::recording_operations::RecordingOperationsClient;
 use crate::recording_operations::{OwnerError, RecordingOperationsHandoff};
 use scada_model::recording_admission::{
@@ -298,7 +298,7 @@ impl RecordingRegistryRoot {
         }
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     pub(crate) fn test_native_client(&self) -> RecordingOperationsClient {
         self.seed.client()
     }

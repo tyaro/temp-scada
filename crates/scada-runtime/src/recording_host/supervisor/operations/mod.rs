@@ -106,7 +106,7 @@ struct Core {
     read: reconciliation::ReadState,
 }
 struct Shared {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     fault: Mutex<Option<driver::TestFault>>,
     #[cfg(test)]
     apply_calls: AtomicU64,
@@ -262,7 +262,7 @@ impl RecordingOperationsOwner {
         let (view, _) = watch::channel(initial);
         Ok(Self {
             shared: Arc::new(Shared {
-                #[cfg(test)]
+                #[cfg(any(test, feature = "test-support"))]
                 fault: Mutex::new(None),
                 #[cfg(test)]
                 apply_calls: AtomicU64::new(0),
@@ -428,6 +428,12 @@ impl Drop for RecordingOperationsOwner {
     }
 }
 impl RecordingOperationsClient {
+    /// Test only: the next apply commits natively, then reports its response lost, so
+    /// the original apply ends `failed` with an unconfirmed effect and needs a reconcile.
+    #[cfg(feature = "test-support")]
+    pub(crate) fn test_lose_next_apply_response(&self) {
+        *self.shared.fault.lock().unwrap() = Some(driver::TestFault::LostResponse);
+    }
     pub fn state(&self) -> Arc<RecordingOperationsState> {
         self.shared.view.borrow().clone()
     }

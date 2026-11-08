@@ -18,10 +18,19 @@
 //!    `Unauthorized`; the registry keeps what it registered and keeps
 //!    monitoring, and the same principal recovers it after logging in again.
 //!
+//! The workflow ticket and each stage's registration ticket are held here for
+//! the root's lifetime, bound to the principal that reserved the workflow
+//! (§5). Mutation registrations, reservations and cancels are audited.
+//!
 //! Registry sessions, workflow tickets and principals never leave this type.
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use banto_core::BantoError;
+use scada_model::recording_admission::{
+    RecordingAdmissionInspectionReply, RecordingAdmissionInspectionRequest,
+    RecordingAdmissionReply, RecordingAdmissionRequest,
+};
+use scada_model::recording_operations::RecordingChangeRequest;
 use scada_model::recording_wire::{
     RecordingWireAttachReply, RecordingWireAttachRequest, RecordingWireCallInspectionReply,
     RecordingWireCallInspectionRequest, RecordingWireCancelReply, RecordingWireCancelRequest,
@@ -29,9 +38,13 @@ use scada_model::recording_wire::{
     RecordingWireLeaseRequest, RecordingWireObservationReply, RecordingWireObservationRequest,
 };
 use scada_runtime::recording_registry::{
-    LeaseError, LeaseRole, RecordingPrincipal, RecordingRegistryRoot, RecordingRegistrySession,
+    ApplyRegistration, DiscardRegistration, LeaseError, LeaseRole, PauseRegistration,
+    PreflightRegistration, ReconciliationRegistration, RecordingPrincipal,
+    RecordingRegistryAdmissionTicket, RecordingRegistryApplyTicket, RecordingRegistryPauseTicket,
+    RecordingRegistryRoot, RecordingRegistrySession, RecordingRegistryWorkflowTicket,
     RecordingSessionIssuer,
 };
+use serde_json::{json, Value};
 
 use crate::auth::{CurrentSession, Role};
 use crate::auth_phase::{AuthHost, AuthPhase, PhaseGuard};
@@ -58,6 +71,24 @@ pub enum GateError {
 pub struct Bound<T> {
     pub seq: u64,
     pub reply: T,
+}
+
+/// The reply of `recording_workflow_reserve`: the reserved change only. The
+/// workflow ticket stays in the gate (design §5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowReservation {
+    pub change_id: String,
+}
+
+/// The stage `recording_workflow_lease` issues a lease for (design §5).
+/// Pause/join and apply name the caller's operation ID of the native
+/// operation their admission carries (`action.operation.operationId`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WorkflowStage {
+    Preflight,
+    PauseJoin { operation_id: String },
+    Apply { operation_id: String },
+    Discard,
 }
 
 /// What a command needs from the desktop session (design §5 table).
@@ -96,10 +127,138 @@ struct HeldSessions {
     mutation: Option<RecordingRegistrySession>,
 }
 
+/// The root's one workflow: its ticket and the registration tickets the
+/// later stages build on, bound to the principal that reserved it. A discard
+/// or a reconcile starts no later stage, and re-registering the same request
+/// returns its ticket, so their tickets are not kept.
+struct HeldWorkflow {
+    principal: RecordingPrincipal,
+    ticket: RecordingRegistryWorkflowTicket,
+    preflight: Option<RecordingRegistryAdmissionTicket>,
+    pause: Option<RecordingRegistryPauseTicket>,
+    apply: Option<RecordingRegistryApplyTicket>,
+}
+
+/// The tickets of the held workflow, for `principal` only.
+fn workflow_of<'w>(
+    workflow: &'w mut Option<HeldWorkflow>,
+    principal: &RecordingPrincipal,
+) -> Result<&'w mut HeldWorkflow, LeaseError> {
+    // No workflow is the registry's own answer for a missing reservation.
+    let held = workflow.as_mut().ok_or(LeaseError::InvalidInput)?;
+    if held.principal != *principal {
+        return Err(LeaseError::Forbidden);
+    }
+    Ok(held)
+}
+
+/// A ticket of an earlier stage that was never registered through the gate.
+fn earlier<T: Clone>(ticket: &Option<T>) -> Result<T, LeaseError> {
+    ticket.clone().ok_or(LeaseError::InvalidInput)
+}
+
+/// What one registry call sees: the root, the held session, its principal and
+/// the held workflow.
+struct Registry<'a> {
+    root: &'a mut RecordingRegistryRoot,
+    session: &'a RecordingRegistrySession,
+    principal: &'a RecordingPrincipal,
+    workflow: &'a mut Option<HeldWorkflow>,
+}
+
+/// An admission call: whether it registered a new admission (audited once),
+/// and the dispatch reply. A replay of the same request registers nothing.
+struct Admitted {
+    registered: bool,
+    reply: Result<RecordingAdmissionReply, LeaseError>,
+}
+
+/// Register an admission with the held tickets and dispatch it once. Both run
+/// under the gate's lock without an await, so a dropped command future never
+/// splits registration from dispatch (design §5).
+fn admit(r: Registry<'_>, request: RecordingAdmissionRequest) -> Result<Admitted, LeaseError> {
+    let Registry {
+        root,
+        session,
+        principal,
+        workflow,
+    } = r;
+    let held = workflow_of(workflow, principal)?;
+    let kind = request.as_value()["action"]["kind"]
+        .as_str()
+        .unwrap_or_default()
+        .to_owned();
+    match kind.as_str() {
+        "preflight" => {
+            let (ticket, registered) =
+                match root.register_preflight(session, &held.ticket, request)? {
+                    PreflightRegistration::Registered(ticket) => (ticket, true),
+                    PreflightRegistration::Existing(ticket) => (ticket, false),
+                };
+            held.preflight = Some(ticket.clone());
+            let reply = root.dispatch_preflight(session, &ticket);
+            Ok(Admitted { registered, reply })
+        }
+        "pauseJoin" => {
+            let preflight = earlier(&held.preflight)?;
+            let (ticket, registered) =
+                match root.register_pause_join(session, &held.ticket, &preflight, request)? {
+                    PauseRegistration::Registered(ticket) => (ticket, true),
+                    PauseRegistration::Existing(ticket) => (ticket, false),
+                };
+            held.pause = Some(ticket.clone());
+            let reply = root.dispatch_pause_join(session, &ticket);
+            Ok(Admitted { registered, reply })
+        }
+        "apply" => {
+            let pause = earlier(&held.pause)?;
+            let (ticket, registered) =
+                match root.register_apply(session, &held.ticket, &pause, request)? {
+                    ApplyRegistration::Registered(ticket) => (ticket, true),
+                    ApplyRegistration::Existing(ticket) => (ticket, false),
+                };
+            held.apply = Some(ticket.clone());
+            let reply = root.dispatch_apply(session, &ticket);
+            Ok(Admitted { registered, reply })
+        }
+        "discard" => {
+            let preflight = earlier(&held.preflight)?;
+            let (ticket, registered) =
+                match root.register_discard(session, &held.ticket, &preflight, request)? {
+                    DiscardRegistration::Registered(ticket) => (ticket, true),
+                    DiscardRegistration::Existing(ticket) => (ticket, false),
+                };
+            let reply = root.dispatch_discard(session, &ticket);
+            Ok(Admitted { registered, reply })
+        }
+        "reconcile" => {
+            let apply = earlier(&held.apply)?;
+            let (ticket, registered) =
+                match root.register_reconciliation(session, &held.ticket, &apply, request)? {
+                    ReconciliationRegistration::Registered(ticket) => (ticket, true),
+                    ReconciliationRegistration::Existing(ticket) => (ticket, false),
+                };
+            let reply = root.dispatch_reconciliation(session, &ticket);
+            Ok(Admitted { registered, reply })
+        }
+        _ => Err(LeaseError::InvalidInput),
+    }
+}
+
+/// The audit `result` of a registry answer.
+fn audit_result(result: &Result<(), &LeaseError>) -> &'static str {
+    match result {
+        Ok(()) => "ok",
+        Err(LeaseError::Forbidden | LeaseError::Unauthorized) => "denied",
+        Err(_) => "failed",
+    }
+}
+
 struct GateState {
     root: RecordingRegistryRoot,
     issuer: RecordingSessionIssuer,
     held: Option<HeldSessions>,
+    workflow: Option<HeldWorkflow>,
 }
 
 impl GateState {
@@ -147,7 +306,9 @@ impl GateState {
         {
             self.revoke_through(u64::MAX, None);
         }
-        let Self { root, issuer, held } = self;
+        let Self {
+            root, issuer, held, ..
+        } = self;
         let held = held.get_or_insert_with(|| HeldSessions {
             seq: current.seq,
             principal: current.session.principal(),
@@ -172,6 +333,19 @@ struct Entered<'a, T> {
     _phase: PhaseGuard<'a>,
     current: CurrentSession,
     result: Result<T, LeaseError>,
+}
+
+impl<'a, T> Entered<'a, T> {
+    fn map<U>(
+        self,
+        f: impl FnOnce(Result<T, LeaseError>) -> Result<U, LeaseError>,
+    ) -> Entered<'a, U> {
+        Entered {
+            _phase: self._phase,
+            current: self.current,
+            result: f(self.result),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -201,6 +375,7 @@ impl RecordingGate {
                 root,
                 issuer,
                 held: None,
+                workflow: None,
             }),
             #[cfg(test)]
             after_call: Mutex::new(None),
@@ -243,8 +418,8 @@ impl RecordingGate {
             Need::Refused
         };
         let entered = self
-            .enter(need, "recording_lease", |root, session| {
-                root.issue_lease(session, request)
+            .enter(need, "recording_lease", |r| {
+                r.root.issue_lease(r.session, request)
             })
             .await?;
         self.bind(entered).await
@@ -256,8 +431,8 @@ impl RecordingGate {
         request: RecordingWireObservationRequest,
     ) -> Result<Bound<RecordingWireObservationReply>, GateError> {
         let entered = self
-            .enter(Need::Read, "recording_observation", |root, session| {
-                root.observe_result(session, request)
+            .enter(Need::Read, "recording_observation", |r| {
+                r.root.observe_result(r.session, request)
             })
             .await?;
         self.bind(entered).await
@@ -270,8 +445,8 @@ impl RecordingGate {
         request: RecordingWireCallInspectionRequest,
     ) -> Result<Bound<RecordingWireCallInspectionReply>, GateError> {
         let entered = self
-            .enter(Need::Read, "recording_call_inspection", |root, session| {
-                root.inspect_call(session, request)
+            .enter(Need::Read, "recording_call_inspection", |r| {
+                r.root.inspect_call(r.session, request)
             })
             .await?;
         self.bind(entered).await
@@ -288,9 +463,173 @@ impl RecordingGate {
         } else {
             Need::Read
         };
+        let cancel_id = request.as_value()["cancelId"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
+        let detail = json!({"target": request.as_value()["target"]["kind"]});
         let entered = self
-            .enter(need, "recording_cancel", |root, session| {
-                root.request_cancel(session, request)
+            .enter(need, "recording_cancel", |r| {
+                r.root.request_cancel(r.session, request)
+            })
+            .await?;
+        self.audit(
+            &entered.current,
+            "cancel",
+            "recording_cancel",
+            &cancel_id,
+            detail,
+            entered.result.as_ref().map(|_| ()),
+        )
+        .await;
+        self.bind(entered).await
+    }
+
+    /// `recording_workflow_reserve` (mutation): reserve the root's workflow
+    /// for the full change request, before any mutation lease. The same
+    /// request again returns the same reservation (design §5).
+    pub async fn workflow_reserve(
+        &self,
+        change: RecordingChangeRequest,
+    ) -> Result<Bound<WorkflowReservation>, GateError> {
+        let change_id = change.as_value()["changeId"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
+        let entered = self
+            .enter(Need::Mutation, "recording_workflow_reserve", |r| {
+                let ticket = r.root.reserve_workflow(r.session, change)?;
+                // The gate holds every ticket of this root, so an existing
+                // reservation is the held one.
+                let reserved = r.workflow.is_none();
+                if reserved {
+                    *r.workflow = Some(HeldWorkflow {
+                        principal: r.principal.clone(),
+                        ticket: ticket.clone(),
+                        preflight: None,
+                        pause: None,
+                        apply: None,
+                    });
+                }
+                Ok((
+                    WorkflowReservation {
+                        change_id: ticket.change_id().to_owned(),
+                    },
+                    reserved,
+                ))
+            })
+            .await?;
+        if !matches!(entered.result, Ok((_, false))) {
+            self.audit(
+                &entered.current,
+                "reserve",
+                "recording_workflow",
+                &change_id,
+                Value::Null,
+                entered.result.as_ref().map(|_| ()),
+            )
+            .await;
+        }
+        self.bind(entered.map(|result| result.map(|(reply, _)| reply)))
+            .await
+    }
+
+    /// `recording_workflow_lease` (mutation): the prepaid lease of one stage,
+    /// issued with the held workflow ticket and the earlier stage's ticket.
+    pub async fn workflow_lease(
+        &self,
+        stage: WorkflowStage,
+        request: RecordingWireLeaseRequest,
+    ) -> Result<Bound<RecordingWireLeaseReply>, GateError> {
+        let entered = self
+            .enter(Need::Mutation, "recording_workflow_lease", |r| {
+                let held = workflow_of(r.workflow, r.principal)?;
+                let (root, session, workflow) = (r.root, r.session, &held.ticket);
+                match &stage {
+                    WorkflowStage::Preflight => {
+                        root.issue_preflight_lease(session, workflow, request)
+                    }
+                    WorkflowStage::PauseJoin { operation_id } => root.issue_pause_join_lease(
+                        session,
+                        workflow,
+                        &earlier(&held.preflight)?,
+                        operation_id,
+                        request,
+                    ),
+                    WorkflowStage::Apply { operation_id } => root.issue_apply_lease(
+                        session,
+                        workflow,
+                        &earlier(&held.pause)?,
+                        operation_id,
+                        request,
+                    ),
+                    WorkflowStage::Discard => root.issue_discard_lease(
+                        session,
+                        workflow,
+                        &earlier(&held.preflight)?,
+                        request,
+                    ),
+                }
+            })
+            .await?;
+        self.bind(entered).await
+    }
+
+    /// `recording_admission`: preflight, pause/join, apply and discard need
+    /// mutation (Admin), a reconcile of the original apply needs read. The
+    /// stage comes from the request's action, and the held tickets are used.
+    pub async fn admission(
+        &self,
+        request: RecordingAdmissionRequest,
+    ) -> Result<Bound<RecordingAdmissionReply>, GateError> {
+        let action = request.as_value()["action"]["kind"].clone();
+        let need = if action == "reconcile" {
+            Need::Read
+        } else {
+            Need::Mutation
+        };
+        let admission_id = request.as_value()["admissionId"]
+            .as_str()
+            .unwrap_or_default()
+            .to_owned();
+        let entered = self
+            .enter(need, "recording_admission", |r| admit(r, request))
+            .await?;
+        // Mutation registrations are audited once; a replay registers nothing.
+        if need == Need::Mutation
+            && !matches!(
+                entered.result,
+                Ok(Admitted {
+                    registered: false,
+                    ..
+                })
+            )
+        {
+            self.audit(
+                &entered.current,
+                "register",
+                "recording_admission",
+                &admission_id,
+                json!({"stage": action}),
+                entered.result.as_ref().map(|_| ()),
+            )
+            .await;
+        }
+        self.bind(entered.map(|result| result.and_then(|admitted| admitted.reply)))
+            .await
+    }
+
+    /// `recording_admission_inspection` (read): an inspection of the held
+    /// workflow's preflight admission, for its principal only.
+    pub async fn admission_inspection(
+        &self,
+        request: RecordingAdmissionInspectionRequest,
+    ) -> Result<Bound<RecordingAdmissionInspectionReply>, GateError> {
+        let entered = self
+            .enter(Need::Read, "recording_admission_inspection", |r| {
+                let held = workflow_of(r.workflow, r.principal)?;
+                r.root
+                    .inspect_preflight_admission(r.session, &held.ticket, request)
             })
             .await?;
         self.bind(entered).await
@@ -302,8 +641,8 @@ impl RecordingGate {
         request: RecordingWireAttachRequest,
     ) -> Result<Bound<RecordingWireAttachReply>, GateError> {
         let entered = self
-            .enter(Need::Read, "recording_attach", |root, session| {
-                root.attach(session, request)
+            .enter(Need::Read, "recording_attach", |r| {
+                r.root.attach(r.session, request)
             })
             .await?;
         self.bind(entered).await
@@ -315,8 +654,8 @@ impl RecordingGate {
         request: RecordingWireControlRequest,
     ) -> Result<Bound<RecordingWireControlReply>, GateError> {
         let entered = self
-            .enter(Need::Read, "recording_control", |root, session| {
-                root.control(session, request)
+            .enter(Need::Read, "recording_control", |r| {
+                r.root.control(r.session, request)
             })
             .await?;
         self.bind(entered).await
@@ -328,10 +667,7 @@ impl RecordingGate {
         &self,
         need: Need,
         resource: &str,
-        call: impl FnOnce(
-            &mut RecordingRegistryRoot,
-            &RecordingRegistrySession,
-        ) -> Result<T, LeaseError>,
+        call: impl FnOnce(Registry<'_>) -> Result<T, LeaseError>,
     ) -> Result<Entered<'_, T>, GateError> {
         let phase = self.auth.gate().await;
         if !phase.phase().admits_registry() {
@@ -363,9 +699,18 @@ impl RecordingGate {
         }
         let result = {
             let mut state = self.lock();
+            let principal = current.session.principal();
             state
                 .session_for(&current, need.lease_role())
-                .and_then(|session| call(&mut state.root, &session))
+                .and_then(|session| {
+                    let GateState { root, workflow, .. } = &mut *state;
+                    call(Registry {
+                        root,
+                        session: &session,
+                        principal: &principal,
+                        workflow,
+                    })
+                })
         };
         Ok(Entered {
             _phase: phase,
@@ -393,6 +738,41 @@ impl RecordingGate {
             .result
             .map(|reply| Bound { seq, reply })
             .map_err(GateError::Registry)
+    }
+
+    /// Audit a mutation registration or a cancel (best effort: a failed
+    /// write never fails the command, design §5).
+    async fn audit(
+        &self,
+        current: &CurrentSession,
+        action: &str,
+        resource: &str,
+        entity_id: &str,
+        detail: Value,
+        result: Result<(), &LeaseError>,
+    ) {
+        let mut detail = detail;
+        if let Err(error) = result {
+            let entry = json!(format!("{error:?}"));
+            match &mut detail {
+                Value::Object(map) => {
+                    map.insert("error".into(), entry);
+                }
+                _ => detail = json!({ "error": entry }),
+            }
+        }
+        let detail = (!detail.is_null()).then_some(detail);
+        self.auth
+            .auth()
+            .record(
+                current.session.identity(),
+                action,
+                resource,
+                Some(entity_id),
+                detail,
+                audit_result(&result),
+            )
+            .await;
     }
 
     fn lock(&self) -> MutexGuard<'_, GateState> {
