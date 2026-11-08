@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use super::*;
+use crate::durable::temp_path;
 
 /// A fresh app data dir under the OS temp dir, removed on drop.
 struct TempDir(PathBuf);

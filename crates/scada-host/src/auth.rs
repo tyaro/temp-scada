@@ -247,6 +247,13 @@ impl HostAuth {
         self.install_verified(seq_at_entry, identity).await
     }
 
+    /// Install an account the caller has just verified or created (the
+    /// operational transition, design §6 step 5), like a login.
+    pub(crate) async fn adopt(&self, identity: UserIdentity) -> Result<LoginOutcome, BantoError> {
+        let seq_at_entry = self.seq();
+        self.install_verified(seq_at_entry, identity).await
+    }
+
     /// Install a verified account, then re-validate it before reporting
     /// success: the row read by `verify` may have been demoted, deleted or
     /// reset (or the mode turned on) while the password was checked. Such a
