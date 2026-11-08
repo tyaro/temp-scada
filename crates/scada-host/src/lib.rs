@@ -1,5 +1,7 @@
 //! Native settings and protected read credential for the embedded SCADA host.
 //! Neither the Project nor the UI receives an API key.
+pub mod auth;
+
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;

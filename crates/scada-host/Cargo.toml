@@ -11,6 +11,12 @@ serde_json.workspace = true
 scada-model = { path = "../scada-model" }
 scada-runtime = { path = "../scada-runtime" }
 uuid = { version = "1", features = ["v4"] }
+# Banto v6.10.0 (tag commit). The admin services own users / settings / audit;
+# the host only re-validates the desktop session and maps roles.
+banto-admin-services = { git = "https://github.com/tyaro/banto.git", rev = "0acaa5ba3132527064d20352dc122d1abfd004e8" }
+banto-core = { git = "https://github.com/tyaro/banto.git", rev = "0acaa5ba3132527064d20352dc122d1abfd004e8" }
+banto-storage = { git = "https://github.com/tyaro/banto.git", rev = "0acaa5ba3132527064d20352dc122d1abfd004e8", features = ["sqlite"] }
+sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", features = ["windows-native"] }

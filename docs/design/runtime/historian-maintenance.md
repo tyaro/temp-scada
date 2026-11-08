@@ -103,7 +103,7 @@ checkpoint の途中で process が終了した後も、SQLite WAL 回復と既�
 
 ## 根拠と未完了項目
 
-固定依存 libsqlite3-sys 0.39.1 の SQLite API 定義は、PASSIVE が busy handler を呼ばず可能な frame を処理すること、reader／writer により未完了になること、checkpointed count が以前の処理分を含むことを明示している。[SQLite checkpoint API](https://www.sqlite.org/c3ref/wal_checkpoint_v2.html) と [PRAGMA wal_checkpoint](https://www.sqlite.org/pragma.html#pragma_wal_checkpoint) を意味の根拠とする。現 checkout の bundled sqlite3.h の同定義を静的確認した。上流 repository への操作は行っていない。
+固定依存 libsqlite3-sys の SQLite API 定義（確認時は0.39.1。2026-11-08に0.37.0・SQLite 3.51.3へ変更し、同じ定義を確認した）は、PASSIVE が busy handler を呼ばず可能な frame を処理すること、reader／writer により未完了になること、checkpointed count が以前の処理分を含むことを明示している。[SQLite checkpoint API](https://www.sqlite.org/c3ref/wal_checkpoint_v2.html) と [PRAGMA wal_checkpoint](https://www.sqlite.org/pragma.html#pragma_wal_checkpoint) を意味の根拠とする。現 checkout の bundled sqlite3.h の同定義を静的確認した。上流 repository への操作は行っていない。
 
 volume の free bytes、allocated blocks、disk-full 復旧、WAL上限超過時の製品運用、物理縮小、receipt GC、metadata／ledger の圧縮、保持設定・時刻信頼は未完了である。H2c2 は容量を観測し、安全な範囲で明示 checkpoint を実行する基礎を作る区切りである。
 

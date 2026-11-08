@@ -4,6 +4,8 @@
 
 2026-11-05 の実Hub接続入口: `crates/scada-host` が Windows の資格情報と非機密のHub接続記録を所有し、`crates/scada-host/examples/real_hub_read.rs` が REST の読取専用プローブを提供する。`apps/banto-scada/src-tauri/src/main.rs` は Tauri command／event と `ReadHost`／`CatalogHost` の単一owner、購読開始より先に届いた終了通知も保持して退役済み開始を拒否する。`apps/banto-scada/src/native/` は通常entrypointの `ReadSource`／`CatalogSource` 配送を担当し、購読開始と終了のIPCを順に送る。`sources.ts` は認証失効をShellへ通知し、値と接続表示を消す。`sources.test.ts`、`e2e/read-presentation.spec.ts`、`e2e/native-read-path.spec.ts` が旧通知破棄・接続源切替・通常画面のIPC経路を検証する。`src-tauri/src/native_tests.rs` はTauri command／eventからループバックのモックHubまで、`crates/scada-runtime/tests/read_host.rs` はReadHost／SDK境界を検証する。native試験は関連変更時にWindows CIで実行する。実機結果と残る受入条件は[接続記録](../project/real-hub-c0.md)を参照。
 
+2026-11-08 の記録registry認証: `crates/scada-host/src/auth.rs` の `HostAuth` が、Banto v6.10.0 の `banto-admin-services`（users／settings／audit）とwebviewの `DesktopSession` 一枠を所有する。migrationはBanto admin-templateの0002〜0008（0001・0006を除く）を `crates/scada-host/migrations-sqlite/` へそのままコピーしている。`current`が毎回認証DBを（認証無効モードを先に）読み直してsessionを再検証し、`require_role`が未ログインを`Unauthorized`、権限不足を`Forbidden`（監査に`denied`）とする。slotの`seq`は認可の内容が変わったときだけ進む。試験は `crates/scada-host/src/auth/tests.rs`（一時SQLite）。設計は[認証・host gate](../design/runtime/historian-recording-host-gate.md)。
+
 状態: **現行構造の案内**。2026-10-21更新、Symbol内画像の作成UI（I7c）と接続の保存・編集追従（I8b）の追加を含む。責務や関数の移動時はこの対応表を更新する。[現在の実装状況](../project/implementation-status.md)、[構造整理の計画・結果](maintenance-refactoring-plan.md)、[作業規則](../../AGENTS.md)を併読する。
 
 パスはリポジトリルート基準。関数名を検索し、行番号・ファイルの大きさに依存しない。現在の依存方向はUI→編集／履歴→Project検証。純粋計算とモデルからDOMやAppをimportしない。
