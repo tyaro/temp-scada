@@ -107,13 +107,13 @@ fn row(
 }
 
 /// A reserved workflow with its preflight accepted and its Candidate ready.
-struct Preflighted {
+pub(super) struct Preflighted {
     change: RecordingChangeRequest,
     request: RecordingAdmissionRequest,
     accepted: Bound<RecordingAdmissionReply>,
 }
 
-async fn preflighted(f: &Fixture, change_id: &str) -> Preflighted {
+pub(super) async fn preflighted(f: &Fixture, change_id: &str) -> Preflighted {
     let change = test_support::change(change_id);
     f.gate.workflow_reserve(change.clone()).await.unwrap();
     let lease = f
@@ -481,6 +481,31 @@ async fn a_stage_before_its_earlier_stage_is_invalid_and_registers_nothing() {
     assert!(audit[1..]
         .iter()
         .all(|(action, _, _, result, _)| action == "register" && result == "failed"));
+}
+
+/// Discard the Candidate of `p` (after its preflight completed).
+pub(super) async fn discard(f: &Fixture, p: &Preflighted, id: &str) {
+    let lease = when_ready!(
+        f.gate
+            .workflow_lease(
+                WorkflowStage::Discard,
+                stage_lease(&f.scope, id, "mutation")
+            )
+            .await
+    )
+    .unwrap();
+    let request = admission(
+        &f.scope,
+        id,
+        &lease,
+        json!({"kind":"discard", "changeRef":handle(&p.accepted, "changeRef"),
+            "change":p.change.as_value()}),
+    );
+    let discarded = f.gate.admission(request).await.unwrap();
+    assert_eq!(
+        outcome_kind(&discarded, |r| r.as_value()),
+        "completedDiscard"
+    );
 }
 
 #[tokio::test]
