@@ -1,6 +1,8 @@
 //! Native settings and protected read credential for the embedded SCADA host.
 //! Neither the Project nor the UI receives an API key.
 pub mod auth;
+pub mod auth_phase;
+mod durable;
 pub mod recording_epoch;
 
 use std::fs;

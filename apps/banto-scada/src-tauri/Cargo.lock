@@ -3482,6 +3482,7 @@ dependencies = [
  "scada-runtime",
  "serde_json",
  "sqlx",
+ "tokio",
  "uuid",
  "windows-sys 0.61.2",
 ]

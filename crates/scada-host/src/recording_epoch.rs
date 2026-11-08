@@ -8,14 +8,15 @@
 //! durably before the root exists, and [`create_recording_root`] refuses to
 //! build a root when that save fails.
 use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use scada_runtime::recording_registry::{
     RecordingRegistryOwnerSeed, RecordingRegistryRoot, RecordingSessionIssuer,
     RegistryRootInitFailure,
 };
 use serde_json::{json, Value};
+
+use crate::durable;
 
 /// File name of the saved previous generation inside the app data dir.
 pub const RECORDING_EPOCH_FILE: &str = "recording-epoch.json";
@@ -92,12 +93,7 @@ pub(crate) fn next_generation_with(
 /// process included) neither share the temp file nor return a pair other
 /// than the saved one. The OS releases the lock when the file is closed.
 fn lock(data_dir: &Path) -> Result<fs::File, GenerationError> {
-    create_dir_durably(data_dir).map_err(|_| GenerationError::Lock)?;
-    let file = fs::OpenOptions::new()
-        .create(true)
-        .truncate(false)
-        .write(true)
-        .open(data_dir.join(RECORDING_EPOCH_LOCK_FILE))
+    let file = durable::open_lock_file(data_dir, RECORDING_EPOCH_LOCK_FILE)
         .map_err(|_| GenerationError::Lock)?;
     file.lock().map_err(|_| GenerationError::Lock)?;
     Ok(file)
@@ -184,18 +180,8 @@ fn is_id(value: &str) -> bool {
 }
 
 fn load(path: &Path) -> Result<Option<RecordingGeneration>, GenerationError> {
-    let bytes = match fs::read(path) {
-        Ok(bytes) => bytes,
-        // Only a path that does not exist at all means "no previous pair";
-        // a dangling link exists but cannot be compared against.
-        Err(error)
-            if error.kind() == std::io::ErrorKind::NotFound
-                && fs::symlink_metadata(path)
-                    .is_err_and(|e| e.kind() == std::io::ErrorKind::NotFound) =>
-        {
-            return Ok(None)
-        }
-        Err(_) => return Err(GenerationError::Unreadable),
+    let Some(bytes) = durable::read_optional(path).map_err(|_| GenerationError::Unreadable)? else {
+        return Ok(None);
     };
     let value: Value = serde_json::from_slice(&bytes).map_err(|_| GenerationError::Corrupt)?;
     let object = value.as_object().ok_or(GenerationError::Corrupt)?;
@@ -216,8 +202,8 @@ fn load(path: &Path) -> Result<Option<RecordingGeneration>, GenerationError> {
     }))
 }
 
-/// Writes a sibling temp file, syncs it, and renames it over the old pair, so
-/// a crash leaves either the old or the new pair, never a torn one.
+/// Saves the pair with [`durable::replace`]: a crash leaves either the old
+/// or the new pair, never a torn one.
 fn save(path: &Path, generation: &RecordingGeneration) -> Result<(), GenerationError> {
     let body = serde_json::to_vec(&json!({
         "version": FILE_VERSION,
@@ -225,95 +211,7 @@ fn save(path: &Path, generation: &RecordingGeneration) -> Result<(), GenerationE
         "ownerEpoch": generation.owner_epoch,
     }))
     .map_err(|_| GenerationError::Save)?;
-    let temp = temp_path(path);
-    let written = (|| {
-        let mut file = fs::File::create(&temp)?;
-        file.write_all(&body)?;
-        file.sync_all()?;
-        replace_durably(&temp, path)
-    })();
-    if written.is_err() {
-        let _ = fs::remove_file(&temp);
-        return Err(GenerationError::Save);
-    }
-    Ok(())
-}
-
-fn temp_path(path: &Path) -> PathBuf {
-    let mut name = path.file_name().unwrap_or_default().to_owned();
-    name.push(".tmp");
-    path.with_file_name(name)
-}
-
-/// Creates `dir` and its missing ancestors. On unix the parent of every
-/// directory created here is synced, so the new names survive a power loss
-/// along with the pair saved inside them.
-fn create_dir_durably(dir: &Path) -> std::io::Result<()> {
-    let mut missing = Vec::new();
-    let mut cursor = Some(dir);
-    while let Some(path) = cursor.filter(|path| !path.as_os_str().is_empty() && !path.exists()) {
-        missing.push(path);
-        cursor = path.parent();
-    }
-    fs::create_dir_all(dir)?;
-    for created in missing.iter().rev() {
-        sync_parent(created)?;
-    }
-    Ok(())
-}
-
-#[cfg(unix)]
-fn sync_parent(path: &Path) -> std::io::Result<()> {
-    let parent = path
-        .parent()
-        .filter(|parent| !parent.as_os_str().is_empty())
-        .unwrap_or(Path::new("."));
-    fs::File::open(parent)?.sync_all()
-}
-
-/// `std` cannot sync a directory on Windows; durability of the parent's new
-/// entry is left to the NTFS metadata journal.
-#[cfg(not(unix))]
-fn sync_parent(_path: &Path) -> std::io::Result<()> {
-    Ok(())
-}
-
-/// Renames `from` over `to` and returns only once the new name is durable:
-/// the directory entry is synced after the rename.
-#[cfg(unix)]
-fn replace_durably(from: &Path, to: &Path) -> std::io::Result<()> {
-    fs::rename(from, to)?;
-    let dir = to.parent().ok_or(std::io::ErrorKind::InvalidInput)?;
-    fs::File::open(dir)?.sync_all()
-}
-
-/// Best effort on Windows (design §7, user decision 2026-11-08): the flush
-/// `MOVEFILE_WRITE_THROUGH` documents covers copy-and-delete moves only, and
-/// `std` cannot sync a directory, so a same-volume rename is not guaranteed
-/// to survive a power loss. A lost pair only makes the next comparison use
-/// an older pair; nothing of the old generation reaches the new root.
-#[cfg(windows)]
-fn replace_durably(from: &Path, to: &Path) -> std::io::Result<()> {
-    use std::os::windows::ffi::OsStrExt;
-    use windows_sys::Win32::Storage::FileSystem::{
-        MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
-    };
-    let wide =
-        |path: &Path| -> Vec<u16> { path.as_os_str().encode_wide().chain(Some(0)).collect() };
-    let (from, to) = (wide(from), wide(to));
-    // SAFETY: both pointers are NUL-terminated UTF-16 buffers that outlive the call.
-    let moved = unsafe {
-        MoveFileExW(
-            from.as_ptr(),
-            to.as_ptr(),
-            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
-        )
-    };
-    if moved == 0 {
-        Err(std::io::Error::last_os_error())
-    } else {
-        Ok(())
-    }
+    durable::replace(path, &body).map_err(|_| GenerationError::Save)
 }
 
 #[cfg(test)]
