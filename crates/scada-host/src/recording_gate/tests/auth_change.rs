@@ -470,3 +470,21 @@ async fn auth_changes_are_audited_by_the_acting_admin() {
         ]
     );
 }
+
+#[tokio::test]
+async fn a_stale_validation_never_uses_or_ends_a_newer_generation() {
+    let f = operational().await;
+    let stale = f.auth.auth().current().await.unwrap().unwrap();
+    f.gate.logout().await;
+    let newer = login(&f.auth, "admin").await;
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    // A call that validated the older generation reaches the state late.
+    assert!(matches!(
+        f.gate.lock().session_for(&stale, LeaseRole::Reconciliation),
+        Err(LeaseError::Unauthorized)
+    ));
+    let (held_seq, _) = f.gate.held(LeaseRole::Reconciliation).unwrap();
+    assert_eq!(held_seq, newer.seq);
+    assert!(live(&f, &reference));
+    assert_eq!(f.gate.frames(&reference).await.unwrap().seq, newer.seq);
+}

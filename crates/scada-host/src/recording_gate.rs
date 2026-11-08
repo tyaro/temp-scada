@@ -369,14 +369,15 @@ impl GateState {
         current: &CurrentSession,
         role: LeaseRole,
     ) -> Result<RecordingRegistrySession, LeaseError> {
-        // Called under the transition lock with a just-validated session:
-        // anything held for another generation is stale.
-        if self
-            .held
-            .as_ref()
-            .is_some_and(|held| held.seq != current.seq)
-        {
-            self.revoke_through(u64::MAX, Some(current.seq));
+        // `current` was validated before this lock was taken. Sessions of an
+        // older generation are stale; a newer one means `current` itself is
+        // stale, and it must neither use nor end the newer generation.
+        match self.held.as_ref().map(|held| held.seq) {
+            Some(seq) if seq > current.seq => return Err(LeaseError::Unauthorized),
+            Some(seq) if seq < current.seq => {
+                self.revoke_through(current.seq, Some(current.seq));
+            }
+            _ => {}
         }
         let Self {
             root, issuer, held, ..
