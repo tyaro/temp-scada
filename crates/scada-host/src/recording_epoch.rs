@@ -224,8 +224,7 @@ fn save(path: &Path, generation: &RecordingGeneration) -> Result<(), GenerationE
         let mut file = fs::File::create(&temp)?;
         file.write_all(&body)?;
         file.sync_all()?;
-        fs::rename(&temp, path)?;
-        sync_dir(dir)
+        replace_durably(&temp, path)
     })();
     if written.is_err() {
         let _ = fs::remove_file(&temp);
@@ -240,16 +239,39 @@ fn temp_path(path: &Path) -> PathBuf {
     path.with_file_name(name)
 }
 
+/// Renames `from` over `to` and returns only once the new name is durable:
+/// the directory entry is synced after the rename.
 #[cfg(unix)]
-fn sync_dir(dir: &Path) -> std::io::Result<()> {
+fn replace_durably(from: &Path, to: &Path) -> std::io::Result<()> {
+    fs::rename(from, to)?;
+    let dir = to.parent().ok_or(std::io::ErrorKind::InvalidInput)?;
     fs::File::open(dir)?.sync_all()
 }
 
-/// Windows has no directory handle sync through `std`; `rename` there is
-/// `MoveFileEx` with replace, and the file data itself was already synced.
-#[cfg(not(unix))]
-fn sync_dir(_dir: &Path) -> std::io::Result<()> {
-    Ok(())
+/// Windows has no directory sync through `std`; `MoveFileExW` with
+/// `MOVEFILE_WRITE_THROUGH` returns only after the move is flushed to disk.
+#[cfg(windows)]
+fn replace_durably(from: &Path, to: &Path) -> std::io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{
+        MoveFileExW, MOVEFILE_REPLACE_EXISTING, MOVEFILE_WRITE_THROUGH,
+    };
+    let wide =
+        |path: &Path| -> Vec<u16> { path.as_os_str().encode_wide().chain(Some(0)).collect() };
+    let (from, to) = (wide(from), wide(to));
+    // SAFETY: both pointers are NUL-terminated UTF-16 buffers that outlive the call.
+    let moved = unsafe {
+        MoveFileExW(
+            from.as_ptr(),
+            to.as_ptr(),
+            MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH,
+        )
+    };
+    if moved == 0 {
+        Err(std::io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
 }
 
 #[cfg(test)]

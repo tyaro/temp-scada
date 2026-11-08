@@ -21,6 +21,7 @@ sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio",
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", features = ["windows-native"] }
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem"] }
 
 [dev-dependencies]
 tokio.workspace = true
