@@ -257,9 +257,9 @@ impl HostAuth {
     /// auth-disabled mode keeps the synthetic session, logout is a no-op:
     /// the next check would install it again anyway.
     pub async fn logout(&self) -> u64 {
-        let ended = {
+        let (ended, seq) = {
             let mut slot = self.lock();
-            match slot.session.take() {
+            let ended = match slot.session.take() {
                 Some(DesktopSession::Account(identity)) => {
                     slot.seq += 1;
                     Some(identity)
@@ -272,13 +272,16 @@ impl HostAuth {
                     slot.seq += 1;
                     None
                 }
-            }
+            };
+            (ended, slot.seq)
         };
         if let Some(identity) = ended {
             self.record_ok(&identity, "logout", "auth", None, None)
                 .await;
         }
-        self.seq()
+        // The generation this logout set, not one a later login installed
+        // while the audit entry was written.
+        seq
     }
 
     /// Record a successful, actor-attributed event (best effort, Banto's
