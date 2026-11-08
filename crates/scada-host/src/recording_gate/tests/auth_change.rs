@@ -488,3 +488,31 @@ async fn a_stale_validation_never_uses_or_ends_a_newer_generation() {
     assert!(live(&f, &reference));
     assert_eq!(f.gate.frames(&reference).await.unwrap().seq, newer.seq);
 }
+
+#[tokio::test]
+async fn an_auth_change_whose_refresh_fails_still_revokes_the_held_sessions() {
+    let (f, _) = with_operator().await;
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    let (_, read) = f.gate.held(LeaseRole::Reconciliation).unwrap();
+    // The change was saved; the auth DB then fails before the refresh.
+    let raw = f.dir.raw().await;
+    sqlx::query("ALTER TABLE users RENAME TO users_hidden")
+        .execute(&raw)
+        .await
+        .unwrap();
+    f.gate.refresh_after_change().await;
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
+    assert!(matches!(
+        f.gate
+            .with_root(|root| root.take_state_frame(&read, &reference)),
+        Err(LeaseError::Unauthorized)
+    ));
+    // Nothing was ended for good: once the DB is back and nothing changed,
+    // the same generation is re-issued and its subscription delivers.
+    sqlx::query("ALTER TABLE users_hidden RENAME TO users")
+        .execute(&raw)
+        .await
+        .unwrap();
+    let current = f.auth.auth().current().await.unwrap().unwrap();
+    assert_eq!(f.gate.frames(&reference).await.unwrap().seq, current.seq);
+}

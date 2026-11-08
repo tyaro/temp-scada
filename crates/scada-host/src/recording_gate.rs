@@ -333,16 +333,23 @@ impl GateState {
     fn revoke_through(&mut self, through: u64, keep: Option<u64>) {
         let stale = |seq: u64| seq <= through && Some(seq) != keep;
         if self.held.as_ref().is_some_and(|held| stale(held.seq)) {
-            let held = self.held.take().expect("checked above");
-            for session in [held.read, held.mutation].into_iter().flatten() {
-                // Only this root's sessions are held, so this cannot fail.
-                let _ = self.root.revoke_session(&session);
-            }
+            self.revoke_held_sessions();
         }
         for (reference, binding) in &mut self.subscriptions {
             if !binding.ended && stale(binding.seq) {
                 binding.ended = true;
                 self.root.end_subscription(reference);
+            }
+        }
+    }
+
+    /// Revoke the held registry sessions of every generation, leaving the
+    /// subscription bindings as they are.
+    fn revoke_held_sessions(&mut self) {
+        if let Some(held) = self.held.take() {
+            for session in [held.read, held.mutation].into_iter().flatten() {
+                // Only this root's sessions are held, so this cannot fail.
+                let _ = self.root.revoke_session(&session);
             }
         }
     }
@@ -477,6 +484,18 @@ impl RecordingGate {
         self.run_hook().await;
         self.lock().settle(seen, current.as_ref());
         Ok(current)
+    }
+
+    /// After an auth change was saved: [`Self::refresh`], and if the auth DB
+    /// cannot be read, revoke every held registry session anyway, since the
+    /// change may have ended them. That costs only a re-issue for the same
+    /// principal at its next command. Subscriptions are not ended here: a
+    /// change that ended nothing must not cut them for good, and each
+    /// delivery re-validates before it sends a frame.
+    async fn refresh_after_change(&self) {
+        if self.refresh().await.is_err() {
+            self.lock().revoke_held_sessions();
+        }
     }
 
     /// `recording_lease`: a reconciliation lease only. A mutation lease is
@@ -837,8 +856,7 @@ impl RecordingGate {
                 self.lock().root.quiescence().is_quiescent()
             })
             .await;
-        // Best effort: on a read failure the next command revokes them.
-        let _ = self.refresh().await;
+        self.refresh_after_change().await;
         result
     }
 
@@ -875,8 +893,7 @@ impl RecordingGate {
                 Some(json!({"role": role.as_str()})),
             )
             .await;
-        // Best effort: on a read failure the next command revokes them.
-        let _ = self.refresh().await;
+        self.refresh_after_change().await;
         Ok(updated)
     }
 
@@ -905,7 +922,7 @@ impl RecordingGate {
                 None,
             )
             .await;
-        let _ = self.refresh().await;
+        self.refresh_after_change().await;
         Ok(())
     }
 
@@ -946,9 +963,8 @@ impl RecordingGate {
                 Some(json!({"disabledRole": config.disabled_role.as_str()})),
             )
             .await;
-        // Settle the slot to the saved mode and revoke what it ended now. On
-        // a read failure the next check does both.
-        let _ = self.refresh().await;
+        // Settle the slot to the saved mode and revoke what it ended now.
+        self.refresh_after_change().await;
         Ok(())
     }
 

@@ -225,6 +225,7 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
          - **降格・削除**: `update_user`と`delete_user`はAdminを要し、移行lockの下で確かめる。AdminからAdmin未満への変更と削除は、`quiescence().holds(banto_user(id))`が真なら`busy`とし、何も変えない。表示名だけの変更と、workflowの持ち主でない利用者の変更は、未静止でも受ける。確定後は`refresh()`で、終わったsessionを同じcommandの中で失効させる。
          - **認証無効モードの設定**: `set_auth_config`はAdminを要する。モードのon／offはここでは切り替えない（`NotAllowed`）。offにするのは運用移行だけで、onに戻すことはこの区切りでは提供しない（§6）。`disabled_role`をAdminから下げる変更は、`holds(auth_disabled_local)`が真なら`busy`とする。
          - **logout**: `logout`は、logoutが設定した世代より前のregistry sessionと購読を、同じcommandの中で失効させる。
+         - **変更後の再検証の失敗**: 変更を保存した後の`refresh()`で認証DBを読めなかった場合は、保持中のregistry sessionをすべて失効させる。次のcommandで同じprincipalへ発行し直すだけなので、失うものはない。購読は終えない。変更と関係のない利用者の購読を取り消せない形で切らないためで、frameは配送のたびに再検証される。
          - **4-3へ残すもの**: password変更・resetのcommandは、Banto側の変更の後に`refresh()`を呼ぶ。試験は`recording_gate/tests/auth_change.rs`。
    3. **Tauri commandとUI**: 2をTauri commandと購読eventへ載せ、認証commandと`TauriAuthProvider`を追加する。
 
