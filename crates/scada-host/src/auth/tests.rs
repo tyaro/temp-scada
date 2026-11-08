@@ -262,3 +262,62 @@ async fn auth_disabled_mode_follows_the_current_role_and_ends_when_turned_off() 
     assert_eq!(auth.current().await.unwrap(), None);
     assert!(auth.seq() > admin.seq);
 }
+
+#[tokio::test]
+async fn turning_auth_disabled_mode_on_replaces_a_logged_in_account() {
+    let (_db, auth, _) = with_admin().await;
+    let admin = login(&auth, "admin").await;
+
+    let local = auth
+        .set_auth_config(&AuthSettings {
+            disabled: true,
+            disabled_role: Role::Viewer,
+            autologin_enabled: false,
+            autologin_username: None,
+        })
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(local.session.principal(), "banto-local:auth-disabled");
+    assert_eq!(local.session.role(), Role::Viewer);
+    assert!(local.seq > admin.seq);
+    assert!(matches!(
+        auth.require_role(Role::Admin, "recording").await,
+        Err(BantoError::Forbidden)
+    ));
+}
+
+#[tokio::test]
+async fn a_mode_change_made_outside_the_host_is_followed_on_the_next_check() {
+    let (_db, auth, _) = with_admin().await;
+    let admin = login(&auth, "admin").await;
+    set_disabled(&auth, true, Role::Viewer).await;
+    let local = auth.current().await.unwrap().unwrap();
+    assert!(matches!(
+        local.session,
+        DesktopSession::AuthDisabledLocal(_)
+    ));
+    assert!(local.seq > admin.seq);
+
+    // An empty slot also picks the synthetic session up.
+    set_disabled(&auth, false, Role::Viewer).await;
+    assert_eq!(auth.current().await.unwrap(), None);
+    set_disabled(&auth, true, Role::Admin).await;
+    let installed = auth.current().await.unwrap().unwrap();
+    assert_eq!(installed.session.role(), Role::Admin);
+    assert_eq!(auth.current().await.unwrap(), Some(installed));
+}
+
+#[tokio::test]
+async fn a_login_racing_the_mode_turning_on_never_leaves_an_account_session() {
+    let (_db, auth, _) = with_admin().await;
+    let (outcome, ()) = tokio::join!(auth.login("admin", PASSWORD), async {
+        set_disabled(&auth, true, Role::Viewer).await;
+    });
+    assert_eq!(outcome.unwrap(), LoginOutcome::AuthDisabled);
+    let current = auth.current().await.unwrap().unwrap();
+    assert!(matches!(
+        current.session,
+        DesktopSession::AuthDisabledLocal(_)
+    ));
+}

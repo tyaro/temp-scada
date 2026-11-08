@@ -13,7 +13,7 @@ use std::path::Path;
 use std::sync::Mutex;
 
 use banto_admin_services::audit::{AuditEntry, AuditLogService};
-use banto_admin_services::settings::SettingsService;
+use banto_admin_services::settings::{AuthSettings, SettingsService};
 pub use banto_admin_services::users::UserIdentity;
 use banto_admin_services::users::{bound_username_for_audit, UsersService};
 pub use banto_admin_services::Role;
@@ -130,10 +130,15 @@ impl HostAuth {
 
     /// Re-validate the session against the auth DB (design §4).
     ///
-    /// - `Account`: the row is re-read; gone, another `id`, or another
-    ///   `auth_epoch` clears the session.
-    /// - `AuthDisabledLocal`: the mode is re-read; off clears the session,
-    ///   otherwise the current `disabled_role` applies.
+    /// The auth mode is read first, whatever the slot holds, so the slot
+    /// follows Banto's invariant `auth.disabled <=> AuthDisabledLocal` even
+    /// when the settings were changed outside this host:
+    ///
+    /// - mode on: the synthetic session with the current `disabled_role`.
+    ///   An account session (or an empty slot) is replaced by it.
+    /// - mode off, `Account`: the row is re-read; gone, another `id`, or
+    ///   another `auth_epoch` clears the session.
+    /// - mode off, `AuthDisabledLocal`: the session is cleared.
     ///
     /// A read failure is `Err` and keeps the session (a DB hiccup must not
     /// log the user out). The lock is never held across an `.await`.
@@ -142,11 +147,20 @@ impl HostAuth {
             let slot = self.lock();
             (slot.session.clone(), slot.seq)
         };
-        let Some(cached) = cached else {
-            return Ok(None);
-        };
-        let fresh = self.read_source(&cached).await?;
+        let fresh = self.read_source(cached.as_ref()).await?;
         Ok(self.settle(fresh, seq_at_entry))
+    }
+
+    /// Save the auth-mode settings, then settle the slot to the new mode
+    /// within the same call (design §5: an auth change ends the sessions it
+    /// affects without waiting for the next check). A raw
+    /// `settings().set_auth_config` is still caught by the next [`Self::current`].
+    pub async fn set_auth_config(
+        &self,
+        config: &AuthSettings,
+    ) -> Result<Option<CurrentSession>, BantoError> {
+        self.settings.set_auth_config(config).await?;
+        self.current().await
     }
 
     /// Require a session with at least `min`. No session is `Unauthorized`;
@@ -184,7 +198,12 @@ impl HostAuth {
         if self.settings.auth_config().await?.disabled {
             return Ok(LoginOutcome::AuthDisabled);
         }
-        let Some(identity) = self.users.verify(username, password).await? else {
+        let verified = self.users.verify(username, password).await?;
+        // The mode may have been turned on while the password was checked.
+        if self.settings.auth_config().await?.disabled {
+            return Ok(LoginOutcome::AuthDisabled);
+        }
+        let Some(identity) = verified else {
             let bounded = bound_username_for_audit(username);
             self.audit
                 .record(AuditEntry {
@@ -264,41 +283,55 @@ impl HostAuth {
 
     async fn read_source(
         &self,
-        cached: &DesktopSession,
+        cached: Option<&DesktopSession>,
     ) -> Result<Option<DesktopSession>, BantoError> {
+        let config = self.settings.auth_config().await?;
+        if config.disabled {
+            return Ok(Some(local_session(config.disabled_role)));
+        }
         Ok(match cached {
-            DesktopSession::Account(identity) => self
+            Some(DesktopSession::Account(identity)) => self
                 .users
                 .get_by_username(&identity.username)
                 .await?
                 .map(DesktopSession::Account),
-            DesktopSession::AuthDisabledLocal(_) => {
-                let config = self.settings.auth_config().await?;
-                config.disabled.then(|| local_session(config.disabled_role))
-            }
+            Some(DesktopSession::AuthDisabledLocal(_)) | None => None,
         })
     }
 
     /// Decide on `fresh` (read without the lock) against the slot as it is
     /// now. If another command re-bound the slot meanwhile, write nothing and
     /// keep the newer session only if `fresh` reports exactly its binding.
+    ///
+    /// Otherwise: the same binding is refreshed (`seq` advances only if the
+    /// role changed); a synthetic `fresh` is installed over anything else; an
+    /// account `fresh` of another binding clears the slot, so a session is
+    /// never moved to the account's newest epoch on its behalf.
     fn settle(&self, fresh: Option<DesktopSession>, seq_at_entry: u64) -> Option<CurrentSession> {
         let mut slot = self.lock();
-        let valid = match slot.session.as_ref() {
-            Some(now) => fresh.filter(|fresh| same_binding(now, fresh)),
-            None => None,
+        let same = match (slot.session.as_ref(), fresh.as_ref()) {
+            (Some(now), Some(fresh)) => same_binding(now, fresh),
+            _ => false,
         };
         if slot.seq != seq_at_entry {
-            let session = valid.and(slot.session.clone())?;
+            let session = slot.session.clone().filter(|_| same)?;
             return Some(CurrentSession {
                 session,
                 seq: slot.seq,
             });
         }
-        let previous_role = slot.session.as_ref().map(DesktopSession::role);
-        match valid {
-            Some(session) => {
-                if previous_role != Some(session.role()) {
+        let next = match fresh {
+            Some(session) if same => {
+                let role_changed =
+                    slot.session.as_ref().map(DesktopSession::role) != Some(session.role());
+                Some((session, role_changed))
+            }
+            Some(local @ DesktopSession::AuthDisabledLocal(_)) => Some((local, true)),
+            Some(DesktopSession::Account(_)) | None => None,
+        };
+        match next {
+            Some((session, rebound)) => {
+                if rebound {
                     slot.seq += 1;
                 }
                 slot.session = Some(session.clone());
@@ -308,8 +341,9 @@ impl HostAuth {
                 })
             }
             None => {
-                slot.session = None;
-                slot.seq += 1;
+                if slot.session.take().is_some() {
+                    slot.seq += 1;
+                }
                 None
             }
         }
