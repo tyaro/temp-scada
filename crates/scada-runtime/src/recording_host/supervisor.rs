@@ -3,6 +3,9 @@ pub mod operations;
 mod preflight;
 mod receipt_read;
 mod resume;
+#[cfg(feature = "test-support")]
+#[doc(hidden)]
+pub mod test_support;
 pub use resume::{
     ResumeInspectionCompletion, ResumeInspectionPhase, ResumeInspectionRun, ResumeResolution,
     ResumeTicket,
