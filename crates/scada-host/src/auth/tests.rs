@@ -218,15 +218,14 @@ async fn logout_ends_the_account_session_and_advances_the_generation() {
 }
 
 #[tokio::test]
-async fn a_login_superseded_by_another_binding_does_not_install() {
+async fn a_logout_during_an_initial_login_supersedes_it() {
     let (_db, auth, _) = with_admin().await;
-    let seq_at_entry = auth.seq();
-    auth.logout().await;
-    auth.compare_and_set(auth.seq(), None).unwrap();
-    assert_eq!(
-        auth.compare_and_set(seq_at_entry, Some(local_session(Role::Admin))),
-        None
-    );
+    let seq_before = auth.seq();
+    // The login reads `seq`, then awaits the auth DB; the logout of the
+    // still-empty slot runs meanwhile and must win.
+    let (outcome, seq_after_logout) = tokio::join!(auth.login("admin", PASSWORD), auth.logout());
+    assert_eq!(outcome.unwrap(), LoginOutcome::Superseded);
+    assert!(seq_after_logout > seq_before);
     assert_eq!(auth.current().await.unwrap(), None);
 }
 

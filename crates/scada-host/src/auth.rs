@@ -209,8 +209,10 @@ impl HostAuth {
     }
 
     /// End the account session and return the slot generation after it.
-    /// While auth-disabled mode keeps the synthetic session, logout is a
-    /// no-op (Banto's rule): the next check would install it again anyway.
+    /// A logout of an empty slot still advances `seq`, so a login that
+    /// started before it can no longer install (Banto's rule). While
+    /// auth-disabled mode keeps the synthetic session, logout is a no-op:
+    /// the next check would install it again anyway.
     pub async fn logout(&self) -> u64 {
         let ended = {
             let mut slot = self.lock();
@@ -219,8 +221,12 @@ impl HostAuth {
                     slot.seq += 1;
                     Some(identity)
                 }
-                local => {
-                    slot.session = local;
+                Some(local @ DesktopSession::AuthDisabledLocal(_)) => {
+                    slot.session = Some(local);
+                    None
+                }
+                None => {
+                    slot.seq += 1;
                     None
                 }
             }
