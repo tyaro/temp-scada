@@ -2,6 +2,9 @@
 //! SDK work stays on Tokio; synchronous recorder/SQLite work stays off it.
 mod plan_turn;
 mod supervisor;
+#[cfg(feature = "test-support")]
+#[doc(hidden)]
+pub use supervisor::test_support;
 pub use supervisor::{
     operations, CandidatePhase, PreflightCompletion, PreflightPhase, PreflightReport, PreflightRun,
     RecordingSupervisor, ResumeInspectionCompletion, ResumeInspectionPhase, ResumeInspectionRun,

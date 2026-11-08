@@ -4,6 +4,7 @@ pub mod auth;
 pub mod auth_phase;
 mod durable;
 pub mod recording_epoch;
+pub mod recording_gate;
 
 use std::fs;
 use std::path::{Path, PathBuf};
