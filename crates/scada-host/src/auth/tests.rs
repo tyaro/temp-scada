@@ -342,3 +342,61 @@ async fn a_stale_check_never_answers_with_a_role_it_did_not_read() {
         Settled::Decided(Some(admin))
     );
 }
+
+#[tokio::test]
+async fn a_login_whose_account_changed_during_the_password_check_does_not_succeed() {
+    let (_db, auth, _) = with_admin().await;
+    let operator = auth
+        .users()
+        .create_user("operator", PASSWORD, "運転員", Role::Admin)
+        .await
+        .unwrap();
+
+    // `verify` read the row as Admin; the account is demoted before install.
+    let verified = auth
+        .users()
+        .verify("operator", PASSWORD)
+        .await
+        .unwrap()
+        .unwrap();
+    auth.users()
+        .update_user(operator.id, "運転員", Role::Viewer)
+        .await
+        .unwrap();
+    assert_eq!(
+        auth.install_verified(auth.seq(), verified).await.unwrap(),
+        LoginOutcome::Superseded
+    );
+    assert_eq!(auth.current().await.unwrap(), None);
+
+    // Deleted meanwhile: the same.
+    let verified = auth
+        .users()
+        .verify("operator", PASSWORD)
+        .await
+        .unwrap()
+        .unwrap();
+    auth.users().delete_user(operator.id, None).await.unwrap();
+    assert_eq!(
+        auth.install_verified(auth.seq(), verified).await.unwrap(),
+        LoginOutcome::Superseded
+    );
+    assert_eq!(auth.current().await.unwrap(), None);
+
+    // Auth-disabled mode turned on meanwhile: the synthetic session wins.
+    let verified = auth
+        .users()
+        .verify("admin", PASSWORD)
+        .await
+        .unwrap()
+        .unwrap();
+    set_disabled(&auth, true, Role::Viewer).await;
+    assert_eq!(
+        auth.install_verified(auth.seq(), verified).await.unwrap(),
+        LoginOutcome::Superseded
+    );
+    assert!(matches!(
+        auth.current().await.unwrap().unwrap().session,
+        DesktopSession::AuthDisabledLocal(_)
+    ));
+}

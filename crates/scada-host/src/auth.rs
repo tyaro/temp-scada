@@ -243,12 +243,33 @@ impl HostAuth {
                 .await;
             return Ok(LoginOutcome::InvalidCredentials);
         };
+        self.install_verified(seq_at_entry, identity).await
+    }
+
+    /// Install a verified account, then re-validate it before reporting
+    /// success: the row read by `verify` may have been demoted, deleted or
+    /// reset (or the mode turned on) while the password was checked. Such a
+    /// session is cleared by that re-validation and reported `Superseded`.
+    async fn install_verified(
+        &self,
+        seq_at_entry: u64,
+        identity: UserIdentity,
+    ) -> Result<LoginOutcome, BantoError> {
         let session = DesktopSession::Account(identity.clone());
-        let Some(seq) = self.compare_and_set(seq_at_entry, Some(session.clone())) else {
+        if self
+            .compare_and_set(seq_at_entry, Some(session.clone()))
+            .is_none()
+        {
             return Ok(LoginOutcome::Superseded);
-        };
-        self.record_ok(&identity, "login", "auth", None, None).await;
-        Ok(LoginOutcome::LoggedIn(CurrentSession { session, seq }))
+        }
+        match self.current().await? {
+            Some(current) if same_binding(&current.session, &session) => {
+                self.record_ok(current.session.identity(), "login", "auth", None, None)
+                    .await;
+                Ok(LoginOutcome::LoggedIn(current))
+            }
+            _ => Ok(LoginOutcome::Superseded),
+        }
     }
 
     /// End the account session and return the slot generation after it.
