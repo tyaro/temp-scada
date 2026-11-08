@@ -828,7 +828,12 @@ impl RecordingGate {
     /// `auth_logout`: end the account session and, in the same call, the
     /// registry sessions and subscriptions of the generations before it.
     /// Returns the slot generation after the logout.
+    ///
+    /// Taken under the transition lock, like every registry entry: a command
+    /// that validated the session before the logout finishes first, so none
+    /// runs its registry call with a session the logout has already ended.
     pub async fn logout(&self) -> u64 {
+        let _phase = self.auth.gate().await;
         let seq = self.auth.auth().logout().await;
         // Every generation before the one the logout set has ended. A no-op
         // logout (auth-disabled mode) keeps `seq` and revokes nothing current;
