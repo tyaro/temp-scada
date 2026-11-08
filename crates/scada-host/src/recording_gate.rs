@@ -811,8 +811,11 @@ impl RecordingGate {
     pub async fn logout(&self) -> u64 {
         let seq = self.auth.auth().logout().await;
         // Every generation before the one the logout set has ended. A no-op
-        // logout (auth-disabled mode) keeps `seq` and revokes nothing current.
-        self.lock().revoke_through(seq.saturating_sub(1), None);
+        // logout (auth-disabled mode) keeps `seq` and revokes nothing current;
+        // at generation 0 there is no earlier one to revoke.
+        if let Some(before) = seq.checked_sub(1) {
+            self.lock().revoke_through(before, None);
+        }
         seq
     }
 

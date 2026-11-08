@@ -74,8 +74,14 @@ async fn frames_are_delivered_to_the_attaching_generation_only() {
         state.as_value()["subscriptionRef"].as_str(),
         Some(reference.as_str())
     );
-    // The latest-one slot was taken.
-    assert_eq!(f.gate.frames(&reference).await.unwrap().reply.state, None);
+    // The latest-one slot was taken: a later delivery carries only a newer
+    // revision (the native preflight may complete meanwhile), never this one.
+    let revision = |frame: &RecordingWireStateFrame| {
+        frame.as_value()["snapshot"]["revision"].as_u64().unwrap()
+    };
+    if let Some(next) = f.gate.frames(&reference).await.unwrap().reply.state {
+        assert!(revision(&next) > revision(&state));
+    }
     // A reference the gate never attached is unknown.
     assert!(matches!(
         f.gate.frames("native-subscription:99").await,
@@ -208,6 +214,22 @@ async fn logout_revokes_and_ends_subscriptions_within_the_command() {
     login(&f.auth, "admin").await;
     f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();
     assert!(!live(&f, &reference));
+}
+
+#[tokio::test]
+async fn a_no_op_logout_in_auth_disabled_mode_keeps_the_current_generation() {
+    // A host restarted with the mode already on is at generation 0.
+    let Fixture {
+        gate, auth, dir, ..
+    } = initializing().await;
+    drop((gate, auth));
+    let f = gate_in(dir).await;
+    assert_eq!(f.auth.auth().seq(), 0);
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    assert_eq!(f.gate.logout().await, 0);
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_some());
+    assert!(live(&f, &reference));
+    assert_eq!(f.gate.frames(&reference).await.unwrap().seq, 0);
 }
 
 #[tokio::test]
