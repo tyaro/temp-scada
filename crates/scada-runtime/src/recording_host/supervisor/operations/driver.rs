@@ -8,7 +8,9 @@ use serde_json::{json, Value};
 
 /// Constructed before spawning, so even an unpolled/dropped stage future retains
 /// a failure guard. A consumer never owns this task or its AbortHandle.
-#[cfg(test)]
+/// Test faults. Only the lost apply response is reachable from `test_support`.
+#[cfg(any(test, feature = "test-support"))]
+#[cfg_attr(not(test), allow(dead_code))]
 #[derive(Clone)]
 pub(super) enum TestFault {
     DriverPanic,
@@ -20,7 +22,8 @@ pub(super) enum TestFault {
     LateCancel,
     Gate(Arc<TestGate>),
 }
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
+#[cfg_attr(not(test), allow(dead_code))]
 #[derive(Default)]
 pub(super) struct TestGate {
     pub entered: tokio::sync::Notify,
@@ -28,7 +31,7 @@ pub(super) struct TestGate {
 }
 
 struct Loan {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "test-support"))]
     fault: Option<TestFault>,
     shared: Arc<Shared>,
     supervisor: Option<RecordingSupervisor>,
@@ -51,7 +54,7 @@ pub(super) fn dispatch(
         (w.apply.clone(), w.preflight.clone())
     };
     let loan = Loan {
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         fault: shared.fault.lock().unwrap().take(),
         shared: shared.clone(),
         supervisor: Some(supervisor),
@@ -178,7 +181,7 @@ impl Loan {
         if matches!(self.fault, Some(TestFault::NativeReject)) {
             s.latch_recording_operations_recovery();
         }
-        #[cfg(test)]
+        #[cfg(any(test, feature = "test-support"))]
         let started = match self.fault.clone() {
             Some(
                 TestFault::WorkerPanic
@@ -198,6 +201,8 @@ impl Loan {
                             control,
                             move |intent, store, control| match fault {
                                 Some(TestFault::WorkerPanic) => panic!("native worker fault"),
+                                // rusqlite is a dev-dependency only.
+                                #[cfg(test)]
                                 Some(TestFault::Full) => {
                                     Err(scada_historian::store::StoreError::Sqlite(
                                         rusqlite::Error::SqliteFailure(
@@ -235,7 +240,7 @@ impl Loan {
             }
             _ => s.execute_candidate(&run, self.control.clone()),
         };
-        #[cfg(not(test))]
+        #[cfg(not(any(test, feature = "test-support")))]
         let started = s.execute_candidate(&run, self.control.clone());
         let turn = match started {
             Ok(turn) => turn,

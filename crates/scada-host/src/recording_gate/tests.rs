@@ -479,3 +479,5 @@ async fn a_stale_refresh_never_revokes_the_sessions_of_a_newer_generation() {
     let (held_seq, _) = f.gate.held(LeaseRole::Reconciliation).unwrap();
     assert_eq!(held_seq, current.seq);
 }
+
+mod workflow;

@@ -323,6 +323,21 @@ impl HostAuth {
         entity_id: Option<&str>,
         detail: Option<serde_json::Value>,
     ) {
+        self.record(actor, action, resource, entity_id, detail, "ok")
+            .await;
+    }
+
+    /// Record an actor-attributed event with its `result` (`ok`, `denied`
+    /// or `failed`), best effort like [`Self::record_ok`].
+    pub async fn record(
+        &self,
+        actor: &UserIdentity,
+        action: &str,
+        resource: &str,
+        entity_id: Option<&str>,
+        detail: Option<serde_json::Value>,
+        result: &str,
+    ) {
         self.audit
             .record(AuditEntry {
                 actor_username: Some(&actor.username),
@@ -332,7 +347,7 @@ impl HostAuth {
                 entity_id,
                 detail,
                 origin: "tauri",
-                result: "ok",
+                result,
             })
             .await;
     }
