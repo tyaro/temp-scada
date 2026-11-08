@@ -37,7 +37,7 @@ impl Drop for TempDir {
 const PASSWORD: &str = "correct-horse-1";
 
 struct Fixture {
-    gate: RecordingGate,
+    gate: Arc<RecordingGate>,
     auth: Arc<AuthHost>,
     scope: Value,
     _store: TestStoreDir,
@@ -53,7 +53,7 @@ async fn gate_in(dir: TempDir) -> Fixture {
     let context = test_support::context().as_value().clone();
     let (root, issuer, generation) = create_recording_root(&dir.0, seed, context.clone()).unwrap();
     Fixture {
-        gate: RecordingGate::new(auth.clone(), root, issuer),
+        gate: Arc::new(RecordingGate::new(auth.clone(), root, issuer)),
         auth,
         scope: generation.scope(context),
         _store: store,
@@ -450,4 +450,32 @@ async fn refresh_revokes_after_an_auth_change_without_waiting_for_a_command() {
             .await,
         Err(GateError::Forbidden)
     ));
+}
+
+#[tokio::test]
+async fn a_stale_refresh_never_revokes_the_sessions_of_a_newer_generation() {
+    let f = operational().await;
+    f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
+    f.auth.auth().logout().await;
+
+    // The refresh reads "no session"; before it decides, the user logs in
+    // again and a command issues sessions for the new generation.
+    let (gate, auth, scope) = (f.gate.clone(), f.auth.clone(), f.scope.clone());
+    f.gate.after_next_call(async move {
+        login(&auth, "admin").await;
+        gate.attach(attach(&scope, "attach-2")).await.unwrap();
+    });
+    assert_eq!(f.gate.refresh().await.unwrap(), None);
+
+    let current = f.auth.auth().current().await.unwrap().unwrap();
+    let (held_seq, held) = f.gate.held(LeaseRole::Reconciliation).unwrap();
+    assert_eq!(held_seq, current.seq);
+    assert!(f
+        .gate
+        .with_root(|root| root.attach(&held, attach(&f.scope, "attach-2")))
+        .is_ok());
+    // An up-to-date refresh keeps it too.
+    assert_eq!(f.gate.refresh().await.unwrap(), Some(current.clone()));
+    let (held_seq, _) = f.gate.held(LeaseRole::Reconciliation).unwrap();
+    assert_eq!(held_seq, current.seq);
 }

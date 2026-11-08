@@ -103,18 +103,31 @@ struct GateState {
 }
 
 impl GateState {
-    /// Revoke the held sessions unless they belong to generation `keep`.
-    fn revoke_unless(&mut self, keep: Option<u64>) {
+    /// Revoke the held sessions if they are not newer than `through` and
+    /// are not of the still-valid generation `keep`. A check only knows the
+    /// generations up to the one it read: sessions issued for a later one
+    /// (a login racing the check) are left for the next check.
+    fn revoke_through(&mut self, through: u64, keep: Option<u64>) {
         if self
             .held
             .as_ref()
-            .is_some_and(|held| Some(held.seq) != keep)
+            .is_some_and(|held| held.seq <= through && Some(held.seq) != keep)
         {
             let held = self.held.take().expect("checked above");
             for session in [held.read, held.mutation].into_iter().flatten() {
                 // Only this root's sessions are held, so this cannot fail.
                 let _ = self.root.revoke_session(&session);
             }
+        }
+    }
+
+    /// Apply one re-validation: `seen` is the slot generation read before it
+    /// started, `current` its answer. An answer of no session ends every
+    /// generation up to `seen`; a session ends every older one.
+    fn settle(&mut self, seen: u64, current: Option<&CurrentSession>) {
+        match current {
+            Some(current) => self.revoke_through(current.seq, Some(current.seq)),
+            None => self.revoke_through(seen, None),
         }
     }
 
@@ -125,7 +138,15 @@ impl GateState {
         current: &CurrentSession,
         role: LeaseRole,
     ) -> Result<RecordingRegistrySession, LeaseError> {
-        self.revoke_unless(Some(current.seq));
+        // Called under the transition lock with a just-validated session:
+        // anything held for another generation is stale.
+        if self
+            .held
+            .as_ref()
+            .is_some_and(|held| held.seq != current.seq)
+        {
+            self.revoke_through(u64::MAX, None);
+        }
         let Self { root, issuer, held } = self;
         let held = held.get_or_insert_with(|| HeldSessions {
             seq: current.seq,
@@ -161,7 +182,7 @@ type AfterCall = std::pin::Pin<Box<dyn std::future::Future<Output = ()> + Send>>
 pub struct RecordingGate {
     auth: Arc<AuthHost>,
     state: Mutex<GateState>,
-    /// Test only: runs after the registry call, before the generation check.
+    /// Test only: see [`Self::run_hook`].
     #[cfg(test)]
     after_call: Mutex<Option<AfterCall>>,
 }
@@ -196,14 +217,16 @@ impl RecordingGate {
     /// return, so the revocation does not wait for the next registry command
     /// (design §5). A read failure keeps the sessions.
     pub async fn refresh(&self) -> Result<Option<CurrentSession>, GateError> {
+        let seen = self.auth.auth().seq();
         let current = self
             .auth
             .auth()
             .current()
             .await
             .map_err(GateError::AuthUnavailable)?;
-        self.lock()
-            .revoke_unless(current.as_ref().map(|current| current.seq));
+        #[cfg(test)]
+        self.run_hook().await;
+        self.lock().settle(seen, current.as_ref());
         Ok(current)
     }
 
@@ -314,6 +337,7 @@ impl RecordingGate {
         if !phase.phase().admits_registry() {
             return Err(GateError::Phase(phase.phase()));
         }
+        let seen = self.auth.auth().seq();
         let current = match self
             .auth
             .auth()
@@ -322,19 +346,19 @@ impl RecordingGate {
         {
             Ok(current) => current,
             Err(BantoError::Unauthorized) => {
-                self.lock().revoke_unless(None);
+                self.lock().settle(seen, None);
                 return Err(GateError::Unauthorized);
             }
             Err(BantoError::Forbidden) => {
                 // The check just ran, so `seq` is the validated generation.
                 let seq = self.auth.auth().seq();
-                self.lock().revoke_unless(Some(seq));
+                self.lock().revoke_through(seq, Some(seq));
                 return Err(GateError::Forbidden);
             }
             Err(error) => return Err(GateError::AuthUnavailable(error)),
         };
         if need == Need::Refused {
-            self.lock().revoke_unless(Some(current.seq));
+            self.lock().settle(seen, Some(&current));
             return Err(GateError::Forbidden);
         }
         let result = {
@@ -354,18 +378,13 @@ impl RecordingGate {
     /// asked. The registry's state is never rolled back here.
     async fn bind<T>(&self, entered: Entered<'_, T>) -> Result<Bound<T>, GateError> {
         #[cfg(test)]
-        {
-            let hook = self.after_call.lock().expect("hook mutex").take();
-            if let Some(hook) = hook {
-                hook.await;
-            }
-        }
+        self.run_hook().await;
         let seq = entered.current.seq;
+        let seen = self.auth.auth().seq();
         match self.auth.auth().current().await {
             Ok(Some(after)) if after.seq == seq => {}
             Ok(after) => {
-                self.lock()
-                    .revoke_unless(after.as_ref().map(|after| after.seq));
+                self.lock().settle(seen, after.as_ref());
                 return Err(GateError::Unauthorized);
             }
             Err(error) => return Err(GateError::AuthUnavailable(error)),
@@ -381,7 +400,17 @@ impl RecordingGate {
     }
 
     /// Test only: run `hook` after the next registry call, before its
-    /// generation check (a logout or user switch racing the command).
+    /// generation check (a logout or user switch racing the command), or
+    /// inside the next [`Self::refresh`], between its check and the
+    /// revocation it decides (a login and command racing the refresh).
+    #[cfg(test)]
+    async fn run_hook(&self) {
+        let hook = self.after_call.lock().expect("hook mutex").take();
+        if let Some(hook) = hook {
+            hook.await;
+        }
+    }
+
     #[cfg(test)]
     fn after_next_call(&self, hook: impl std::future::Future<Output = ()> + Send + 'static) {
         *self.after_call.lock().expect("hook mutex") = Some(Box::pin(hook));
