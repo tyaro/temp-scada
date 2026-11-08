@@ -95,7 +95,7 @@ async fn registry_maximum_id_workflow_saves_every_original_reply_within_its_rese
     let (owner, dir) = setup();
     let scope = json!({"ownerRef":max_id("owner:"), "ownerEpoch":max_id("epoch:"),
         "context":context().as_value()});
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -343,7 +343,7 @@ async fn registry_maximum_id_discard_saves_its_original_reply_within_its_reserva
     let (owner, _dir) = setup();
     let scope = json!({"ownerRef":max_id("owner:"), "ownerEpoch":max_id("epoch:"),
         "context":context().as_value()});
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -638,7 +638,7 @@ fn count_boundary(
 
 fn fresh_root(epoch: &str) -> (Root, crate::recording_host::retention::tests::Directory) {
     let (owner, dir) = setup();
-    let root = RecordingRegistryRoot::try_new(
+    let root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         registry_scope(epoch),
     )

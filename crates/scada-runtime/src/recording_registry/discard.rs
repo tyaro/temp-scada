@@ -45,6 +45,13 @@ impl DiscardLease {
         })
     }
 
+    /// Registered but never dispatched: no native call yet, and no reply either.
+    pub(super) fn is_undispatched(&self) -> bool {
+        self.registered
+            .as_ref()
+            .is_some_and(|registered| matches!(registered.state, DiscardDispatchState::Registered))
+    }
+
     pub(super) fn is_uncertain(&self) -> bool {
         self.registered
             .as_ref()

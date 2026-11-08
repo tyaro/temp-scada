@@ -102,7 +102,7 @@ async fn login_installs_an_account_session_bound_to_the_user_id() {
     );
     let current = login(&auth, "admin").await;
     assert_eq!(
-        current.session.principal(),
+        current.session.principal().as_str(),
         format!("banto-user:{}", admin.id)
     );
     assert_eq!(
@@ -238,7 +238,10 @@ async fn auth_disabled_mode_follows_the_current_role_and_ends_when_turned_off() 
 
     let auth = HostAuth::open(db.path()).await.unwrap();
     let viewer = auth.current().await.unwrap().unwrap();
-    assert_eq!(viewer.session.principal(), "banto-local:auth-disabled");
+    assert_eq!(
+        viewer.session.principal().as_str(),
+        "banto-local:auth-disabled"
+    );
     assert_eq!(viewer.session.role(), Role::Viewer);
     assert_eq!(
         auth.login("admin", PASSWORD).await.unwrap(),
@@ -278,7 +281,10 @@ async fn turning_auth_disabled_mode_on_replaces_a_logged_in_account() {
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(local.session.principal(), "banto-local:auth-disabled");
+    assert_eq!(
+        local.session.principal().as_str(),
+        "banto-local:auth-disabled"
+    );
     assert_eq!(local.session.role(), Role::Viewer);
     assert!(local.seq > admin.seq);
     assert!(matches!(

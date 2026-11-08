@@ -158,6 +158,11 @@ impl RegisteredReconciliation {
         }
     }
 
+    /// Registered but never dispatched: no native call yet, and no reply either.
+    pub(super) fn is_undispatched(&self) -> bool {
+        matches!(self.state, DispatchState::Registered)
+    }
+
     pub(super) fn is_uncertain(&self) -> bool {
         matches!(self.state, DispatchState::Calling)
             || matches!(&self.state, DispatchState::Finished(reply)

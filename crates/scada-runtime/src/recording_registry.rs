@@ -1,10 +1,11 @@
 //! Native recording registry ownership and real-clock lease boundary.
-//! Product session issuance and transport remain unconnected.
+//! Product sessions come from the root's issuer; transport remains unconnected.
 mod apply;
 mod call_inspection;
 mod cancel;
 mod discard;
 mod inspection;
+mod issuer;
 pub(crate) mod kernel;
 mod lease;
 mod observation;
@@ -24,6 +25,7 @@ pub use apply::{ApplyRegistration, RecordingRegistryApplyTicket};
 #[cfg(test)]
 pub(crate) use discard::DiscardDispatchFault;
 pub use discard::{DiscardRegistration, RecordingRegistryDiscardTicket};
+pub use issuer::{RecordingPrincipal, RecordingSessionIssuer, RegistryQuiescence};
 #[cfg(test)]
 pub(crate) use lease::CountPool;
 pub use lease::{
@@ -86,6 +88,10 @@ impl RecordingRegistryOwnerSeed {
 
     pub(crate) fn recovery_required(&self) -> bool {
         self.owner.registry_recovery_required()
+    }
+
+    pub(crate) fn native_quiescence(&self) -> crate::recording_operations::NativeQuiescence {
+        self.owner.registry_quiescence()
     }
 
     pub(crate) fn initial_workflow_eligible(&self) -> Result<bool, RegistryClaimReason> {

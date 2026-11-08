@@ -168,6 +168,19 @@ impl Shared {
         Ok(core)
     }
 }
+/// The native handoff gate split by cause: a Candidate, Paused, or unconfirmed change belongs
+/// to the one workflow; an operation or read in flight, or a contended lock, names no owner.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct NativeQuiescence {
+    pub(crate) change_settled: bool,
+    pub(crate) other_settled: bool,
+}
+impl NativeQuiescence {
+    const SETTLED: Self = Self {
+        change_settled: true,
+        other_settled: true,
+    };
+}
 /// Retain this administrative root beyond every UI/client and keep its runtimes alive.
 /// Dropping a client does nothing to the source. Dropping this root ends the service.
 pub struct RecordingOperationsOwner {
@@ -321,6 +334,39 @@ impl RecordingOperationsOwner {
         }
         Ok(())
     }
+    /// The handoff gate without handing off, split by cause. A closed owner has nothing left
+    /// to settle; a contended lock is unsettled with no cause it can name.
+    pub(crate) fn registry_quiescence(&self) -> NativeQuiescence {
+        match self.shared.core.try_lock() {
+            Ok(core) if core.closed => NativeQuiescence::SETTLED,
+            Ok(core) => Self::native_quiescence(&core),
+            Err(_) => NativeQuiescence {
+                change_settled: true,
+                other_settled: false,
+            },
+        }
+    }
+    fn native_quiescence(core: &Core) -> NativeQuiescence {
+        NativeQuiescence {
+            change_settled: !matches!(
+                core.phase,
+                OperationsPhase::Candidate | OperationsPhase::Paused
+            ) && !core
+                .latest
+                .as_ref()
+                .is_some_and(|r| r.as_value()["quiescence"] != "confirmed"),
+            // `in_flight` covers both changes and reads, so it names no change.
+            other_settled: !core.in_flight
+                && !matches!(
+                    core.read.phase,
+                    ReconciliationPhase::InFlight | ReconciliationPhase::Uncertain
+                ),
+        }
+    }
+    fn quiescent(core: &Core) -> bool {
+        let native = Self::native_quiescence(core);
+        native.change_settled && native.other_settled
+    }
     pub fn try_handoff(&mut self) -> Result<RecordingOperationsHandoff, OwnerError> {
         let mut core = self.shared.core.try_lock().map_err(|e| match e {
             TryLockError::WouldBlock => OwnerError::Busy,
@@ -329,23 +375,7 @@ impl RecordingOperationsOwner {
         if core.closed {
             return Err(OwnerError::Closed);
         }
-        if core.in_flight
-            || matches!(
-                core.read.phase,
-                ReconciliationPhase::InFlight | ReconciliationPhase::Uncertain
-            )
-            || matches!(
-                core.phase,
-                OperationsPhase::Candidate | OperationsPhase::Paused
-            )
-        {
-            return Err(OwnerError::Busy);
-        }
-        if core
-            .latest
-            .as_ref()
-            .is_some_and(|r| r.as_value()["quiescence"] != "confirmed")
-        {
+        if !Self::quiescent(&core) {
             return Err(OwnerError::Busy);
         }
         let mut supervisor = core.supervisor.take().ok_or(OwnerError::Unavailable)?;

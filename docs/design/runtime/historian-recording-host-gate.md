@@ -210,7 +210,7 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 ## 9. 実装順
 
 1. `scada-host`へ`HostAuth`（Bantoの依存、migrationのコピー、`DesktopSession`の再検証、`require_role`）を追加する。試験は一時SQLiteで行う。**実装済み**（`crates/scada-host/src/auth.rs`）。Bantoとの違いは一点で、認証無効モードの`disabled_role`が変わったときもslotの`seq`を進める。これで`seq`は認可の内容が変わったときだけ進むので、手順2ではregistry sessionを`seq`に束縛し、`seq`の比較だけで失効を判定できる。また、確認のたびに認証無効モードを先に読む。onならslotの中身（Account・空）によらず合成sessionへ置き換えるので、host外で設定が変わっても`auth.disabled`と`AuthDisabledLocal`の対応が崩れない。設定の変更は`HostAuth::set_auth_config`で保存し、同じ呼出しの中でslotを新しいモードへ合わせる。loginは照合の後にもモードを読み直す。
-2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`、read-onlyの`quiescence()`を追加し、失効の連動を試験する。CallInspectionをread roleで受ける契約変更（§4）も行い、Adminで返信を失ったapplyをViewerへ降格した後に回収できることを試験する。
+2. `scada-runtime`へ`RecordingSessionIssuer`と`RecordingPrincipal`、read-onlyの`quiescence()`を追加し、失効の連動を試験する。CallInspectionをread roleで受ける契約変更（§4）も行い、Adminで返信を失ったapplyをViewerへ降格した後に回収できることを試験する。**実装済み**（`recording_registry/issuer.rs`、試験`registry_issuer.rs`。詳細はadapter設計§7の末尾）。`scada-host`の`DesktopSession::principal()`は`RecordingPrincipal`を返す。registry sessionを`HostAuth`の`seq`へ束縛して失効させる部分は、hostがsessionを保持する手順4で行う。
 3. ownerRef・epochの世代ごとの生成と保存を追加する。
 4. Tauri command（§5のworkflowの段階別入口とticketの保持を含む）とUIの`TauriAuthProvider`を追加する。Tauri commandだけで予約から初回preflight・pause/join・apply・reconcileまで進めることを試験する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、初回初期化の各保存境界での強制終了と再起動後の再開、`auth-phase.json`がなく認証DBだけがある場合の拒否、移行commandの成功と、各保存境界（1〜3の後）での失敗・強制終了からの再起動後の再実行、4の後の強制終了・返信喪失から通常ログインへ進めること、未静止workflowでの移行拒否と並行するpreflightとの排他、Candidate／Pausedでの降格・削除の拒否と静止後の確定、`transitioning`中のregistry入口の拒否、`bootstrapping`以外のフェーズでの認証DB欠落の拒否をnativeで試験する。
 

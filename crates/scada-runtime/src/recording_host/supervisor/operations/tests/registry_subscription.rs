@@ -37,7 +37,7 @@ fn fresh_root(
     crate::recording_host::retention::tests::Directory,
 ) {
     let (owner, dir) = setup();
-    let root = RecordingRegistryRoot::try_new(
+    let root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         registry_scope(epoch),
     )

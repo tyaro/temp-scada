@@ -27,6 +27,7 @@ use tokio_tungstenite::tungstenite::Message;
 mod registry_call_inspection;
 mod registry_cancel;
 mod registry_capacity;
+mod registry_issuer;
 mod registry_observation;
 mod registry_read_retry;
 mod registry_revocation;
@@ -248,7 +249,7 @@ async fn ready_pause_registry(
 ) {
     let (owner, dir) = setup();
     let scope = registry_scope(epoch);
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -340,7 +341,7 @@ async fn ready_discard_candidate_registry(
 ) {
     let (owner, dir) = setup();
     let scope = registry_scope(epoch);
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -844,9 +845,11 @@ async fn registry_root_matches_native_context_and_returns_seed_on_failure() {
     let seed = RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap();
     let mut foreign = registry_scope("epoch-1");
     foreign["context"]["sessionId"] = json!("other");
-    let failure = RecordingRegistryRoot::try_new(seed, foreign).err().unwrap();
+    let failure = RecordingRegistryRoot::test_try_new(seed, foreign)
+        .err()
+        .unwrap();
     assert_eq!(failure.error, LeaseError::InvalidInput);
-    let mut root = RecordingRegistryRoot::try_new(failure.seed, registry_scope("epoch-1"))
+    let mut root = RecordingRegistryRoot::test_try_new(failure.seed, registry_scope("epoch-1"))
         .ok()
         .unwrap();
     assert!(root.try_handoff().is_ok());
@@ -857,7 +860,7 @@ async fn registry_root_refuses_a_seed_after_native_handoff() {
     let (owner, _dir) = setup();
     let mut seed = RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap();
     let handoff = seed.try_handoff().unwrap();
-    let failure = RecordingRegistryRoot::try_new(seed, registry_scope("epoch-1"))
+    let failure = RecordingRegistryRoot::test_try_new(seed, registry_scope("epoch-1"))
         .err()
         .unwrap();
     assert_eq!(failure.error, LeaseError::Forbidden);
@@ -868,7 +871,7 @@ async fn registry_root_refuses_a_seed_after_native_handoff() {
 async fn registry_lease_accepts_equivalent_json_numbers() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-1");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -894,7 +897,7 @@ async fn registry_lease_accepts_equivalent_json_numbers() {
 async fn registry_lease_byte_budget_accepts_exact_and_rejects_one_short_atomically() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-1");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -956,7 +959,7 @@ async fn registry_real_lease_replay_keeps_deadline_and_is_principal_bound() {
     let (owner, _dir) = setup();
     let seed = RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap();
     let scope = registry_scope("epoch-1");
-    let mut root = RecordingRegistryRoot::try_new(seed, scope.clone())
+    let mut root = RecordingRegistryRoot::test_try_new(seed, scope.clone())
         .ok()
         .unwrap();
     let alice = root.test_session("alice", LeaseRole::Mutation);
@@ -1053,13 +1056,13 @@ async fn registry_lease_rejects_foreign_root_scope_and_epoch() {
     let (second_owner, _second_dir) = setup();
     let first_scope = registry_scope("epoch-1");
     let second_scope = registry_scope("epoch-2");
-    let first = RecordingRegistryRoot::try_new(
+    let first = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(first_owner).unwrap(),
         first_scope.clone(),
     )
     .ok()
     .unwrap();
-    let mut second = RecordingRegistryRoot::try_new(
+    let mut second = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(second_owner).unwrap(),
         second_scope.clone(),
     )
@@ -1090,7 +1093,7 @@ async fn registry_lease_rejects_foreign_root_scope_and_epoch() {
 async fn registry_workflow_reserves_all_four_stages_before_a_mutation_lease() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-1");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -1167,7 +1170,7 @@ async fn registry_workflow_reserves_all_four_stages_before_a_mutation_lease() {
 async fn registry_workflow_cannot_follow_an_unreserved_mutation_lease() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-1");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -1189,7 +1192,7 @@ async fn registry_workflow_cannot_follow_an_unreserved_mutation_lease() {
 async fn registry_preflight_registration_consumes_lease_once_without_native_call() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-1");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -1343,7 +1346,7 @@ async fn registry_preflight_registration_consumes_lease_once_without_native_call
 async fn registry_preflight_expiry_retry_preserves_original_and_future_reservations() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-1");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -1460,13 +1463,13 @@ async fn registry_preflight_rejects_a_same_named_ticket_from_another_root() {
     let (first_owner, _first_dir) = setup();
     let (second_owner, _second_dir) = setup();
     let scope = registry_scope("epoch-1");
-    let mut first = RecordingRegistryRoot::try_new(
+    let mut first = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(first_owner).unwrap(),
         scope.clone(),
     )
     .ok()
     .unwrap();
-    let mut second = RecordingRegistryRoot::try_new(
+    let mut second = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(second_owner).unwrap(),
         scope.clone(),
     )
@@ -1495,7 +1498,7 @@ async fn registry_preflight_rejects_a_same_named_ticket_from_another_root() {
 async fn registry_dispatches_registered_preflight_once_and_recovers_original_reply() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-dispatch");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -1562,7 +1565,7 @@ async fn registry_dispatches_registered_preflight_once_and_recovers_original_rep
 async fn registry_expired_registered_preflight_never_calls_native() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-expiry");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -1608,7 +1611,7 @@ async fn registry_expired_registered_preflight_never_calls_native() {
 async fn registry_native_typed_rejection_is_saved_without_a_handle() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-rejection");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -1673,7 +1676,7 @@ async fn registry_uncertain_native_or_projection_panic_never_redispatches() {
     ] {
         let (owner, _dir) = setup();
         let scope = registry_scope("epoch-panic");
-        let mut root = RecordingRegistryRoot::try_new(
+        let mut root = RecordingRegistryRoot::test_try_new(
             RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
             scope.clone(),
         )
@@ -1737,7 +1740,7 @@ async fn registry_uncertain_native_or_projection_panic_never_redispatches() {
 async fn registry_inspection_freezes_each_query_without_rewriting_the_original_reply() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-inspection");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -1751,7 +1754,7 @@ async fn registry_inspection_freezes_each_query_without_rewriting_the_original_r
     // Build the foreign root before the real-clock lease starts, so a slow SQLite setup can
     // never expire it before registration.
     let (foreign_owner, _foreign_dir) = setup();
-    let mut foreign_root = RecordingRegistryRoot::try_new(
+    let mut foreign_root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(foreign_owner).unwrap(),
         scope.clone(),
     )
@@ -1862,7 +1865,7 @@ async fn registry_inspection_can_prove_saved_handle_after_projection_panic() {
     ] {
         let (owner, _dir) = setup();
         let scope = registry_scope("epoch-inspection-panic");
-        let mut root = RecordingRegistryRoot::try_new(
+        let mut root = RecordingRegistryRoot::test_try_new(
             RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
             scope.clone(),
         )
@@ -1938,7 +1941,7 @@ async fn registry_inspection_can_prove_saved_handle_after_projection_panic() {
 async fn registry_inspection_capacity_failure_does_not_bind_id_or_spend_read_bytes() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-inspection-capacity");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -2003,7 +2006,7 @@ async fn registry_inspection_capacity_failure_does_not_bind_id_or_spend_read_byt
 async fn registry_pause_admission_dispatches_one_native_join_and_keeps_original_reply() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-pause-dispatch");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -2502,7 +2505,7 @@ async fn registry_pause_join_waits_for_running_worker_cleanup_after_lease_expiry
     assert_eq!(supervisor.state().recording.phase, RecordingPhase::Running);
     let owner = RecordingOperationsOwner::try_new(supervisor, context(), run).unwrap();
     let scope = registry_scope("epoch-running-pause");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -2664,7 +2667,7 @@ async fn registry_pause_join_waits_for_running_worker_cleanup_after_lease_expiry
 async fn registry_pause_lease_binds_confirmed_candidate_without_stopping_native() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-pause-lease");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -2884,7 +2887,7 @@ async fn registry_pause_lease_binds_confirmed_candidate_without_stopping_native(
 async fn registry_pause_lease_requires_recovered_acceptance_and_real_candidate() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-pause-recovered");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -3060,7 +3063,7 @@ async fn registry_pause_lease_requires_recovered_acceptance_and_real_candidate()
 async fn registry_pause_lease_waits_for_the_original_handle_completion() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-pause-pending");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -3151,7 +3154,7 @@ async fn registry_pause_lease_waits_for_the_original_handle_completion() {
 async fn registry_preflight_lease_history_is_partitioned_from_read_history() {
     let (owner, _dir) = setup();
     let scope = registry_scope("epoch-1");
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -4773,7 +4776,7 @@ async fn registry_discard_recovered_preflight_unknown_allows_handoff() {
     let epoch = "epoch-discard-recovered-preflight";
     let (owner, _dir) = setup();
     let scope = registry_scope(epoch);
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
@@ -5103,7 +5106,7 @@ async fn registry_discard_running_candidate_keeps_the_recorder_running() {
     let epoch = "epoch-discard-running";
     let scope = registry_scope(epoch);
     let owner = RecordingOperationsOwner::try_new(supervisor, context(), run).unwrap();
-    let mut root = RecordingRegistryRoot::try_new(
+    let mut root = RecordingRegistryRoot::test_try_new(
         RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap(),
         scope.clone(),
     )
