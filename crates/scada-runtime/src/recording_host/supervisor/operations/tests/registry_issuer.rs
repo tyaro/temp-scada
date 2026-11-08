@@ -209,9 +209,23 @@ async fn registry_quiescence_follows_apply_from_registration_to_confirmed_comple
         ApplyRegistration::Registered(ticket) => ticket,
         _ => panic!("new apply"),
     };
-    assert!(!root.quiescence().is_quiescent());
+    // A registered apply on a Paused change is the workflow's own: only its principal is held.
+    let registered = root.quiescence();
+    assert!(!registered.is_quiescent());
+    assert!(!registered.holds(&RecordingPrincipal::auth_disabled_local()));
+    // An operation in flight names no owner, so every principal is held until it settles.
+    let client = root.test_native_client();
+    let gate = Arc::new(driver::TestGate::default());
+    *client.shared.fault.lock().unwrap() = Some(driver::TestFault::Gate(gate.clone()));
     let accepted = root.dispatch_apply(&session, &ticket).unwrap();
     assert_eq!(accepted.as_value()["outcome"]["kind"], "accepted");
+    gate.entered.notified().await;
+    let in_flight = root.quiescence();
+    assert!(!in_flight.is_quiescent());
+    assert!(in_flight.holds(&RecordingPrincipal::auth_disabled_local()));
+    assert!(in_flight.holds(&RecordingPrincipal::banto_user(2)));
+    *client.shared.fault.lock().unwrap() = None;
+    gate.release.notify_one();
     let completion = tokio::time::timeout(Duration::from_secs(5), async {
         loop {
             if let Some(result) = root.apply_completion(&session, &ticket).unwrap() {

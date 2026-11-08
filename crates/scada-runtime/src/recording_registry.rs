@@ -90,8 +90,8 @@ impl RecordingRegistryOwnerSeed {
         self.owner.registry_recovery_required()
     }
 
-    pub(crate) fn native_quiescent(&self) -> bool {
-        self.owner.registry_quiescent()
+    pub(crate) fn native_quiescence(&self) -> crate::recording_operations::NativeQuiescence {
+        self.owner.registry_quiescence()
     }
 
     pub(crate) fn initial_workflow_eligible(&self) -> Result<bool, RegistryClaimReason> {

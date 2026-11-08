@@ -83,7 +83,8 @@ impl RecordingSessionIssuer {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RegistryQuiescence {
     quiescent: bool,
-    workflow_principal: Option<String>,
+    /// Set only when every unsettled cause is the workflow's own change.
+    attributed_to: Option<String>,
 }
 
 impl RegistryQuiescence {
@@ -94,13 +95,14 @@ impl RegistryQuiescence {
         self.quiescent
     }
 
-    /// Whether demoting or deleting `principal` could strand an unsettled workflow: the root
-    /// is not quiescent and its workflow belongs to `principal`. When the unsettled state has
-    /// no workflow to attribute it to, every principal is held, conservatively.
+    /// Whether demoting or deleting `principal` could strand unsettled work. Only when every
+    /// unsettled cause is the workflow's own change (a stage admission, or a Candidate, Paused,
+    /// or unconfirmed native change) is it limited to the workflow's principal. A read, an
+    /// operation in flight, or a contended native lock names no owner, so it holds everyone.
     pub fn holds(&self, principal: &RecordingPrincipal) -> bool {
         !self.quiescent
             && self
-                .workflow_principal
+                .attributed_to
                 .as_deref()
                 .is_none_or(|owner| owner == principal.as_str())
     }
@@ -111,22 +113,30 @@ impl RecordingRegistryRoot {
     /// or native call. The host checks it under its own transition lock (design §4, §6), so
     /// nothing new is accepted between this answer and the auth change it guards.
     pub fn quiescence(&self) -> RegistryQuiescence {
-        let workflow_principal = self.workflow.as_ref().map(|w| w.principal.clone());
         if self.closed {
             return RegistryQuiescence {
                 quiescent: true,
-                workflow_principal,
+                attributed_to: None,
             };
         }
-        let registry_settled = !self.workflow.as_ref().is_some_and(|workflow| {
-            workflow.has_undispatched() || workflow.has_uncertain_dispatch()
-        }) && !self
-            .reconciliations
-            .iter()
-            .any(|read| read.is_undispatched() || read.is_uncertain());
+        let native = self.seed.native_quiescence();
+        let change_settled = native.change_settled
+            && !self.workflow.as_ref().is_some_and(|workflow| {
+                workflow.has_undispatched() || workflow.has_uncertain_dispatch()
+            });
+        let other_settled = native.other_settled
+            && !self
+                .reconciliations
+                .iter()
+                .any(|read| read.is_undispatched() || read.is_uncertain());
+        let attributed_to = self
+            .workflow
+            .as_ref()
+            .filter(|_| other_settled)
+            .map(|workflow| workflow.principal.clone());
         RegistryQuiescence {
-            quiescent: registry_settled && self.seed.native_quiescent(),
-            workflow_principal,
+            quiescent: change_settled && other_settled,
+            attributed_to,
         }
     }
 }
