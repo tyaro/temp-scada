@@ -25,6 +25,9 @@ use tokio::sync::Mutex;
 pub const STORE_IDENTITY_FILE: &str = "historian-store.json";
 /// The store directory in the app data dir (`store.sqlite3`, `writer.lock`, WAL).
 pub const STORE_DIR: &str = "historian";
+/// Held from reading the identity until the store is open, so that two
+/// processes starting on a new data dir cannot each save their own identity.
+pub const STORE_INIT_LOCK_FILE: &str = "historian-store.lock";
 
 /// Why the runtime is unavailable. Fixed codes only: no path, SQLite message
 /// or identity value reaches the UI.
@@ -35,6 +38,7 @@ pub const IDENTITY_MISSING: &str = "store_identity_missing";
 pub const IDENTITY_UNSAVED: &str = "store_identity_unsaved";
 pub const IDENTITY_MISMATCH: &str = "store_identity_mismatch";
 pub const STORE_LOCKED: &str = "store_locked";
+pub const INIT_LOCK_FAILED: &str = "store_init_lock_failed";
 pub const STORE_UNSUPPORTED: &str = "store_unsupported";
 pub const STORE_UNAVAILABLE: &str = "store_unavailable";
 
@@ -193,6 +197,8 @@ impl CancelBook {
     fn cancel(&mut self, call: &str) {
         match &self.current {
             Some((id, token)) if id == call => token.cancel(),
+            // A repeated cancel of one call is kept once: it stops one query.
+            _ if self.early.iter().any(|id| id == call) => {}
             _ => {
                 if self.early.len() == EARLY_CANCELS {
                     self.early.pop_front();
@@ -318,6 +324,17 @@ fn lock<T>(mutex: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 }
 
 fn open(data_dir: &Path, deployment_id: &str) -> Result<Ready, &'static str> {
+    // A later process waits here, then finds the first one's identity and
+    // store, and stops at the store's writer lock (`store_locked`).
+    let init =
+        durable::open_lock_file(data_dir, STORE_INIT_LOCK_FILE).map_err(|_| INIT_LOCK_FAILED)?;
+    init.lock().map_err(|_| INIT_LOCK_FAILED)?;
+    let opened = open_locked(data_dir, deployment_id);
+    drop(init);
+    opened
+}
+
+fn open_locked(data_dir: &Path, deployment_id: &str) -> Result<Ready, &'static str> {
     let identity_path = data_dir.join(STORE_IDENTITY_FILE);
     let store_dir = data_dir.join(STORE_DIR);
     let saved = durable::read_optional(&identity_path).map_err(|_| IDENTITY_UNREADABLE)?;
@@ -347,7 +364,6 @@ fn open(data_dir: &Path, deployment_id: &str) -> Result<Ready, &'static str> {
                 return Err(IDENTITY_INVALID);
             }
             let body = serde_json::to_vec_pretty(&identity).map_err(|_| IDENTITY_UNSAVED)?;
-            durable::create_dir_durably(data_dir).map_err(|_| IDENTITY_UNSAVED)?;
             durable::replace(&identity_path, &body).map_err(|_| IDENTITY_UNSAVED)?;
             let store =
                 SqliteStore::create(&store_dir, identity.store_identity()).map_err(store_reason)?;

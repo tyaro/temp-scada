@@ -35,8 +35,8 @@ storeが存在しない初回起動ではstoreを作り、`Idle`のSupervisorを
 C5-1の実装で次を定めた。
 
 - **履歴namespace**: [Trend定義](historian-trend-definition.md)のnamespaceは「deployment／callerが割り当てる不透明な履歴データ集合の識別」で、DB再作成で系列継続性が保証できなければ新しく割り当てる。製品hostではstoreを一つの履歴データ集合とし、store作成時に`historianNamespace`（`historian:`＋UUID）を`storeId`とは別に引いて`historian-store.json`へ保存する。`storeId`からは導出しない（[記録管理](historian-recording-management.md)の「storeIdから生成しない」）。
-- **起動時の分岐**: identity fileがなくstore dirもなければ、identityを保存してからstoreを作る。identity fileがあってstore dirがなければ（保存とstore作成の間で止まった起動）、保存済みのidentityでstoreを作る。identity fileがなくstore dirがあれば、新しいidentityで採用せず`store_identity_missing`とする。
-- **理由コード**: `no_data_dir`・`store_identity_unreadable`・`store_identity_invalid`・`store_identity_missing`・`store_identity_unsaved`・`store_identity_mismatch`・`store_locked`・`store_unsupported`・`store_unavailable`。path・SQLiteの文言・identityの値はUIへ出さない。
+- **起動時の分岐**: identity fileがなくstore dirもなければ、identityを保存してからstoreを作る。identity fileがあってstore dirがなければ（保存とstore作成の間で止まった起動）、保存済みのidentityでstoreを作る。identity fileがなくstore dirがあれば、新しいidentityで採用せず`store_identity_missing`とする。identityの読取からstoreのopenまでは`historian-store.lock`の排他lockの下で行い、新しいdata dirで同時に起動した二つのprocessがそれぞれのidentityを保存しないようにする（後のprocessは先のprocessのstoreを見つけ、writer lockで`store_locked`になる）。
+- **理由コード**: `no_data_dir`・`store_identity_unreadable`・`store_identity_invalid`・`store_identity_missing`・`store_identity_unsaved`・`store_identity_mismatch`・`store_locked`・`store_init_lock_failed`・`store_unsupported`・`store_unavailable`。path・SQLiteの文言・identityの値はUIへ出さない。
 
 ## 4. gateの導入と入替え
 

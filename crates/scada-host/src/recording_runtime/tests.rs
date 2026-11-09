@@ -406,3 +406,41 @@ fn store_errors_map_to_fixed_reasons() {
         STORE_UNAVAILABLE
     );
 }
+
+#[test]
+fn a_repeated_early_cancel_stops_only_one_query() {
+    let mut book = CancelBook::default();
+    book.cancel("call");
+    book.cancel("call");
+    assert_eq!(book.early.len(), 1);
+    assert!(!book.begin("call", CancellationToken::default()));
+    assert!(book.begin("call", CancellationToken::default()));
+}
+
+#[test]
+fn concurrent_first_starts_agree_on_one_identity() {
+    for _ in 0..8 {
+        let dir = TempDir::new();
+        let starts: Vec<_> = (0..2)
+            .map(|n| {
+                let path = dir.0.clone();
+                std::thread::spawn(move || {
+                    RecordingRuntime::start(&path, &format!("deployment-{n}"))
+                })
+            })
+            .collect();
+        let runtimes: Vec<_> = starts.into_iter().map(|t| t.join().unwrap()).collect();
+        let ready: Vec<_> = runtimes.iter().filter_map(|r| r.identity()).collect();
+        assert_eq!(ready.len(), 1);
+        assert_eq!(ready[0], &dir.saved());
+        assert!(runtimes
+            .iter()
+            .any(|r| r.unavailable_reason() == Some(STORE_LOCKED)));
+        drop(runtimes);
+        // The saved identity still opens the store.
+        assert_eq!(
+            RecordingRuntime::start(&dir.0, "deployment-x").unavailable_reason(),
+            None
+        );
+    }
+}
