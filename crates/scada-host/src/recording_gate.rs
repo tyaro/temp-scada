@@ -61,10 +61,9 @@ use scada_runtime::recording_registry::{
 };
 use serde_json::{json, Value};
 
-use crate::auth::{
-    CurrentSession, DesktopSession, LoginOutcome, Resolved, Role, UserIdentity, Verified,
-};
+use crate::auth::{CurrentSession, LoginOutcome, Resolved, Role, UserIdentity, Verified};
 use crate::auth_phase::{AuthHost, AuthPhase, PhaseGuard, TransitionError, Transitioned};
+use crate::user_admin;
 
 /// Why an entry point refused or failed.
 #[derive(Debug)]
@@ -1003,30 +1002,25 @@ impl RecordingGate {
         role: Role,
     ) -> Result<UserSummary, AuthChangeError> {
         let _phase = self.auth.gate().await;
-        let actor = self.auth.auth().require_role(Role::Admin, "users").await?;
-        let users = self.auth.auth().users();
-        let target = users
-            .list_users()
-            .await?
-            .into_iter()
-            .find(|user| user.id == id);
-        let demotes = target.is_some_and(|user| user.role == Role::Admin && role != Role::Admin);
-        if demotes && self.lock().holds(&RecordingPrincipal::banto_user(id)) {
-            return Err(AuthChangeError::Busy);
-        }
-        let updated = users.update_user(id, display_name, role).await?;
-        self.auth
-            .auth()
-            .record_ok(
-                actor.session.identity(),
-                "update",
-                "users",
-                Some(&id.to_string()),
-                Some(json!({"role": role.as_str()})),
-            )
-            .await;
+        let updated = user_admin::update_user(self.auth.auth(), id, display_name, role, |p| {
+            self.lock().holds(p)
+        })
+        .await?;
         self.refresh_after_change().await;
         Ok(updated)
+    }
+
+    /// `users_reset_password` (Admin): set an account's password without the
+    /// current one. It ends that account's sessions (a new `auth_epoch`),
+    /// revoked before returning. Never `Busy`: the principal stays the same
+    /// account and reaches its workflow again after the next login.
+    pub async fn reset_password(&self, id: i64, new_password: &str) -> Result<(), AuthChangeError> {
+        let _phase = self.auth.gate().await;
+        let result = user_admin::reset_password(self.auth.auth(), id, new_password).await;
+        if result.is_ok() {
+            self.refresh_after_change().await;
+        }
+        result
     }
 
     /// `users_delete` (Admin): delete an account. Refused as `Busy` while
@@ -1034,70 +1028,30 @@ impl RecordingGate {
     /// §4); once applied, the sessions it ends are revoked before returning.
     pub async fn delete_user(&self, id: i64) -> Result<(), AuthChangeError> {
         let _phase = self.auth.gate().await;
-        let actor = self.auth.auth().require_role(Role::Admin, "users").await?;
-        if self.lock().holds(&RecordingPrincipal::banto_user(id)) {
-            return Err(AuthChangeError::Busy);
-        }
-        // The synthetic session has no row of its own (Banto's `None`).
-        let acting = match &actor.session {
-            DesktopSession::Account(identity) => Some(identity.id),
-            DesktopSession::AuthDisabledLocal(_) => None,
-        };
-        self.auth.auth().users().delete_user(id, acting).await?;
-        self.auth
-            .auth()
-            .record_ok(
-                actor.session.identity(),
-                "delete",
-                "users",
-                Some(&id.to_string()),
-                None,
-            )
-            .await;
+        user_admin::delete_user(self.auth.auth(), id, |p| self.lock().holds(p)).await?;
         self.refresh_after_change().await;
         Ok(())
     }
 
-    /// `auth_config_set` (Admin): save the auth-mode settings. The mode
-    /// itself is not switched here (`NotAllowed`): it goes off only through
-    /// the move to operation and never back on (design §6). Lowering the
-    /// auth-disabled role below Admin is refused as `Busy` while the registry
-    /// holds unsettled work of the synthetic principal (design §4).
-    pub async fn set_auth_config(&self, config: &AuthSettings) -> Result<(), AuthChangeError> {
+    /// `auth_config_apply`: save the auth-mode settings (Admin, or any role
+    /// while auth-disabled mode is on). The mode itself is not switched here
+    /// (`NotAllowed`): it goes off only through the move to operation and
+    /// never back on (design §6). Lowering the auth-disabled role below
+    /// Admin is refused as `Busy` while the registry holds unsettled work of
+    /// the synthetic principal (design §4). See [`user_admin::set_auth_config`].
+    pub async fn set_auth_config(
+        &self,
+        disabled: bool,
+        disabled_role: Role,
+    ) -> Result<AuthSettings, AuthChangeError> {
         let _phase = self.auth.gate().await;
-        let actor = self
-            .auth
-            .auth()
-            .require_role(Role::Admin, "settings")
-            .await?;
-        let saved = self.auth.auth().settings().auth_config().await?;
-        if config.disabled != saved.disabled {
-            return Err(AuthChangeError::NotAllowed);
-        }
-        let demotes = saved.disabled
-            && saved.disabled_role == Role::Admin
-            && config.disabled_role != Role::Admin;
-        if demotes
-            && self
-                .lock()
-                .holds(&RecordingPrincipal::auth_disabled_local())
-        {
-            return Err(AuthChangeError::Busy);
-        }
-        self.auth.auth().settings().set_auth_config(config).await?;
-        self.auth
-            .auth()
-            .record_ok(
-                actor.session.identity(),
-                "update",
-                "auth_config",
-                None,
-                Some(json!({"disabledRole": config.disabled_role.as_str()})),
-            )
-            .await;
+        let saved = user_admin::set_auth_config(self.auth.auth(), disabled, disabled_role, |p| {
+            self.lock().holds(p)
+        })
+        .await?;
         // Settle the slot to the saved mode and revoke what it ended now.
         self.refresh_after_change().await;
-        Ok(())
+        Ok(saved)
     }
 
     /// Steps 1-3: the phase, the session and role, then the registry call

@@ -23,9 +23,13 @@ use std::sync::Arc;
 use serde::{Serialize, Serializer};
 use serde_json::json;
 
-use crate::auth::{BantoError, DesktopSession, LoginOutcome, Verified};
+use banto_admin_services::settings::AuthSettings;
+use banto_admin_services::users::{UserIdentity, UserSummary};
+
+use crate::auth::{BantoError, DesktopSession, LoginOutcome, Role, Verified};
 use crate::auth_phase::{AuthHost, StartupError, TransitionError, Transitioned};
-use crate::recording_gate::RecordingGate;
+use crate::recording_gate::{AuthChangeError, RecordingGate};
+use crate::user_admin;
 
 const INVALID_CREDENTIALS_MESSAGE: &str = "ユーザー名またはパスワードが違います";
 const SUPERSEDED_LOGIN_MESSAGE: &str =
@@ -45,9 +49,13 @@ pub enum CommandError {
     /// The auth host did not start (design §6); no auth command is served.
     /// `{"kind": "auth_unavailable", "reason": ...}`.
     Unavailable(&'static str),
-    /// `auth_transition_to_operational` refused: `{"kind": ...}` with
-    /// `not_allowed`, `busy`, `invalid_credentials`, `not_admin` or `save`.
-    Transition(&'static str),
+    /// A refusal of this host's own: `{"kind": ...}`.
+    /// `auth_transition_to_operational`: `not_allowed`, `busy`,
+    /// `invalid_credentials`, `not_admin` or `save`. User management and
+    /// `auth_config_apply`: `not_allowed` (the auth mode is switched only by
+    /// the move to operation) or `busy` (the registry holds unsettled work
+    /// of the principal the change would end; nothing was changed).
+    Refused(&'static str),
 }
 
 impl From<BantoError> for CommandError {
@@ -63,7 +71,19 @@ impl Serialize for CommandError {
             Self::Unavailable(reason) => {
                 json!({"kind": "auth_unavailable", "reason": reason}).serialize(serializer)
             }
-            Self::Transition(kind) => json!({ "kind": kind }).serialize(serializer),
+            Self::Refused(kind) => json!({ "kind": kind }).serialize(serializer),
+        }
+    }
+}
+
+impl From<AuthChangeError> for CommandError {
+    fn from(error: AuthChangeError) -> Self {
+        match error {
+            AuthChangeError::Unauthorized => Self::Banto(BantoError::Unauthorized),
+            AuthChangeError::Forbidden => Self::Banto(BantoError::Forbidden),
+            AuthChangeError::NotAllowed => Self::Refused("not_allowed"),
+            AuthChangeError::Busy => Self::Refused("busy"),
+            AuthChangeError::Auth(error) => Self::Banto(error),
         }
     }
 }
@@ -71,14 +91,14 @@ impl Serialize for CommandError {
 impl From<TransitionError> for CommandError {
     fn from(error: TransitionError) -> Self {
         match error {
-            TransitionError::NotAllowed => Self::Transition("not_allowed"),
-            TransitionError::Busy => Self::Transition("busy"),
-            TransitionError::InvalidCredentials => Self::Transition("invalid_credentials"),
-            TransitionError::NotAdmin => Self::Transition("not_admin"),
-            TransitionError::Save => Self::Transition("save"),
+            TransitionError::NotAllowed => Self::Refused("not_allowed"),
+            TransitionError::Busy => Self::Refused("busy"),
+            TransitionError::InvalidCredentials => Self::Refused("invalid_credentials"),
+            TransitionError::NotAdmin => Self::Refused("not_admin"),
+            TransitionError::Save => Self::Refused("save"),
             TransitionError::Auth(error) => Self::Banto(error),
             #[cfg(test)]
-            TransitionError::Crashed(_) => Self::Transition("crashed"),
+            TransitionError::Crashed(_) => Self::Refused("crashed"),
         }
     }
 }
@@ -166,6 +186,28 @@ pub struct AuthResolveResult {
     pub checked: u64,
     pub current: u64,
     pub stale: bool,
+}
+
+/// `users_create` (Banto's `UserIdentityResult`): the new account, without
+/// its `auth_epoch`.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatedUser {
+    pub id: i64,
+    pub username: String,
+    pub display_name: String,
+    pub role: Role,
+}
+
+impl From<UserIdentity> for CreatedUser {
+    fn from(identity: UserIdentity) -> Self {
+        Self {
+            id: identity.id,
+            username: identity.username,
+            display_name: identity.display_name,
+            role: identity.role,
+        }
+    }
 }
 
 /// The desktop auth commands of one host.
@@ -377,6 +419,119 @@ impl DesktopAuth {
             // none to name, so the slot's.
             seq: session.map_or_else(|| self.auth().auth().seq(), |admin| admin.seq),
         })
+    }
+
+    /// `users_list` (Admin).
+    pub async fn users_list(&self) -> Result<Vec<UserSummary>, CommandError> {
+        let _lock = self.auth().gate().await;
+        Ok(user_admin::list_users(self.auth().auth()).await?)
+    }
+
+    /// `users_create` (Admin). Ends no session.
+    pub async fn users_create(
+        &self,
+        username: &str,
+        password: &str,
+        display_name: &str,
+        role: Role,
+    ) -> Result<CreatedUser, CommandError> {
+        let _lock = self.auth().gate().await;
+        let created =
+            user_admin::create_user(self.auth().auth(), username, password, display_name, role)
+                .await?;
+        Ok(created.into())
+    }
+
+    /// `users_update` (Admin): display name and role. Demoting an Admin
+    /// whose workflow is unsettled is `busy` (design §4).
+    pub async fn users_update(
+        &self,
+        id: i64,
+        display_name: &str,
+        role: Role,
+    ) -> Result<UserSummary, CommandError> {
+        match self.gate() {
+            Some(gate) => Ok(gate.update_user(id, display_name, role).await?),
+            None => {
+                let _lock = self.auth().gate().await;
+                let updated =
+                    user_admin::update_user(self.auth().auth(), id, display_name, role, |_| false)
+                        .await?;
+                self.settle().await;
+                Ok(updated)
+            }
+        }
+    }
+
+    /// `users_reset_password` (Admin). The account's sessions end before
+    /// returning.
+    pub async fn users_reset_password(
+        &self,
+        id: i64,
+        new_password: &str,
+    ) -> Result<(), CommandError> {
+        match self.gate() {
+            Some(gate) => Ok(gate.reset_password(id, new_password).await?),
+            None => {
+                let _lock = self.auth().gate().await;
+                user_admin::reset_password(self.auth().auth(), id, new_password).await?;
+                self.settle().await;
+                Ok(())
+            }
+        }
+    }
+
+    /// `users_delete` (Admin). Deleting an account whose workflow is
+    /// unsettled is `busy` (design §4).
+    pub async fn users_delete(&self, id: i64) -> Result<(), CommandError> {
+        match self.gate() {
+            Some(gate) => Ok(gate.delete_user(id).await?),
+            None => {
+                let _lock = self.auth().gate().await;
+                user_admin::delete_user(self.auth().auth(), id, |_| false).await?;
+                self.settle().await;
+                Ok(())
+            }
+        }
+    }
+
+    /// `auth_config_get` (Viewer or above).
+    pub async fn auth_config_get(&self) -> Result<AuthSettings, CommandError> {
+        let _lock = self.auth().gate().await;
+        Ok(user_admin::auth_config(self.auth().auth()).await?)
+    }
+
+    /// `auth_config_apply(disabled, disabledRole)`: Banto's arguments.
+    /// Switching the mode is `not_allowed` (design §6); see
+    /// [`user_admin::set_auth_config`] for who may call it and when it is
+    /// `busy`.
+    pub async fn auth_config_apply(
+        &self,
+        disabled: bool,
+        disabled_role: Role,
+    ) -> Result<AuthSettings, CommandError> {
+        match self.gate() {
+            Some(gate) => Ok(gate.set_auth_config(disabled, disabled_role).await?),
+            None => {
+                let _lock = self.auth().gate().await;
+                let saved = user_admin::set_auth_config(
+                    self.auth().auth(),
+                    disabled,
+                    disabled_role,
+                    |_| false,
+                )
+                .await?;
+                self.settle().await;
+                Ok(saved)
+            }
+        }
+    }
+
+    /// After a change without a gate: settle the slot now, so the session
+    /// the change ended is ended before the command returns. A read failure
+    /// is left to the next check.
+    async fn settle(&self) {
+        let _ = self.auth().auth().current().await;
     }
 
     fn login_result(&self, outcome: LoginOutcome) -> LoginResult {
