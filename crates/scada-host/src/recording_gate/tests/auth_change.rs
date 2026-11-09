@@ -614,3 +614,197 @@ async fn the_move_to_operation_ends_the_synthetic_subscriptions_even_if_the_refr
         ));
     }
 }
+
+#[tokio::test]
+async fn a_user_switch_revokes_and_ends_the_previous_user_within_the_login() {
+    let f = operational().await;
+    f.auth
+        .auth()
+        .users()
+        .create_user("operator", PASSWORD, "運転員", Role::Admin)
+        .await
+        .unwrap();
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    let (_, old) = f.gate.held(LeaseRole::Reconciliation).unwrap();
+
+    // No logout in between: the login itself switches the user.
+    let LoginOutcome::LoggedIn(operator) = f.gate.login("operator", PASSWORD).await.unwrap() else {
+        panic!("login failed");
+    };
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
+    assert!(matches!(
+        f.gate
+            .with_root(|root| root.take_state_frame(&old, &reference)),
+        Err(LeaseError::Unauthorized)
+    ));
+    assert!(matches!(
+        f.gate.frames(&reference).await,
+        Err(GateError::Unauthorized)
+    ));
+    let attached = f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();
+    assert_eq!(attached.seq, operator.seq);
+    assert!(!live(&f, &reference));
+
+    // A refused login writes nothing and revokes nothing.
+    assert_eq!(
+        f.gate.login("operator", "wrong-password-0").await.unwrap(),
+        LoginOutcome::InvalidCredentials
+    );
+    assert_eq!(
+        f.gate.held(LeaseRole::Reconciliation).unwrap().0,
+        operator.seq
+    );
+}
+
+#[tokio::test]
+async fn the_own_password_change_revokes_the_old_generation_within_the_command() {
+    let f = operational().await;
+    let before = f.auth.auth().current().await.unwrap().unwrap();
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    let (_, old) = f.gate.held(LeaseRole::Reconciliation).unwrap();
+
+    // A wrong current password changes and revokes nothing.
+    assert!(matches!(
+        f.gate
+            .change_own_password("wrong-password-0", "another-horse-2")
+            .await,
+        Err(BantoError::Validation { .. })
+    ));
+    assert_eq!(
+        f.gate.held(LeaseRole::Reconciliation).unwrap().0,
+        before.seq
+    );
+
+    let seq = f
+        .gate
+        .change_own_password(PASSWORD, "another-horse-2")
+        .await
+        .unwrap();
+    assert_eq!(seq, before.seq + 1);
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
+    assert!(matches!(
+        f.gate
+            .with_root(|root| root.take_state_frame(&old, &reference)),
+        Err(LeaseError::Unauthorized)
+    ));
+    // The same principal is served again under the new generation.
+    let attached = f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();
+    assert_eq!(attached.seq, seq);
+}
+
+#[tokio::test]
+async fn a_password_change_ends_the_old_subscriptions_even_if_the_refresh_fails() {
+    let f = operational().await;
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    // The auth DB fails after the change, before its refresh.
+    let raw = f.dir.raw().await;
+    let hide = raw.clone();
+    f.gate.after_next_call(async move {
+        sqlx::query("ALTER TABLE settings RENAME TO settings_hidden")
+            .execute(&hide)
+            .await
+            .unwrap();
+    });
+    let seq = f
+        .gate
+        .change_own_password(PASSWORD, "another-horse-2")
+        .await
+        .unwrap();
+    sqlx::query("ALTER TABLE settings_hidden RENAME TO settings")
+        .execute(&raw)
+        .await
+        .unwrap();
+    let attached = f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();
+    assert_eq!(attached.seq, seq);
+    assert!(!live(&f, &reference));
+}
+
+#[tokio::test]
+async fn a_resolve_that_ends_the_session_ends_its_subscriptions_within_the_command() {
+    let f = operational().await;
+    let admin = f.auth.auth().current().await.unwrap().unwrap();
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    let (_, old) = f.gate.held(LeaseRole::Reconciliation).unwrap();
+    f.auth
+        .auth()
+        .users()
+        .reset_password(admin.session.identity().id, "another-horse-2")
+        .await
+        .unwrap();
+
+    let desktop = crate::desktop_auth::DesktopAuth::with_gate(f.gate.clone());
+    let resolved = desktop.resolve().await.unwrap();
+    assert_eq!(resolved.identity, None);
+    assert_eq!(resolved.current, admin.seq + 1);
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
+    assert!(matches!(
+        f.gate
+            .with_root(|root| root.take_state_frame(&old, &reference)),
+        Err(LeaseError::Unauthorized)
+    ));
+}
+
+#[tokio::test]
+async fn a_password_change_and_a_resolve_wait_for_a_command_that_already_validated() {
+    let f = operational().await;
+    let current = f.auth.auth().current().await.unwrap().unwrap();
+    let started = Arc::new(Mutex::new(None));
+    let (slot, gate, auth) = (started.clone(), f.gate.clone(), f.auth.clone());
+    f.gate.after_next_call(async move {
+        let change = {
+            let gate = gate.clone();
+            tokio::spawn(async move {
+                gate.change_own_password(PASSWORD, "another-horse-2")
+                    .await
+                    .unwrap()
+            })
+        };
+        let resolve = tokio::spawn(async move { gate.resolve().await.unwrap() });
+        // Neither can get past the lock this command holds.
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert!(!change.is_finished(), "the change ran inside the command");
+        assert!(!resolve.is_finished(), "the resolve ran inside the command");
+        assert_eq!(auth.auth().seq(), current.seq);
+        *slot.lock().unwrap() = Some((change, resolve));
+    });
+    let attached = f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
+    assert_eq!(attached.seq, current.seq);
+    let (change, resolve) = started.lock().unwrap().take().expect("the hook ran");
+    assert_eq!(change.await.unwrap(), current.seq + 1);
+    resolve.await.unwrap();
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
+}
+
+#[tokio::test]
+async fn a_refused_password_change_still_ends_a_generation_its_check_moved_past() {
+    let f = initializing().await;
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    let (seq, old) = f.gate.held(LeaseRole::Reconciliation).unwrap();
+    // The auth-disabled role lowered outside the host: the change's own
+    // check follows it (a new generation), then refuses the synthetic
+    // session, which owns no password.
+    f.auth
+        .auth()
+        .settings()
+        .set_auth_config(&AuthSettings {
+            disabled: true,
+            disabled_role: Role::Viewer,
+            autologin_enabled: false,
+            autologin_username: None,
+        })
+        .await
+        .unwrap();
+    assert!(matches!(
+        f.gate
+            .change_own_password(PASSWORD, "another-horse-2")
+            .await,
+        Err(BantoError::Forbidden)
+    ));
+    assert!(f.auth.auth().seq() > seq);
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
+    assert!(matches!(
+        f.gate
+            .with_root(|root| root.take_state_frame(&old, &reference)),
+        Err(LeaseError::Unauthorized)
+    ));
+}

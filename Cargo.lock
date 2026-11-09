@@ -1785,6 +1785,7 @@ dependencies = [
  "keyring",
  "scada-model",
  "scada-runtime",
+ "serde",
  "serde_json",
  "sqlx",
  "tokio",

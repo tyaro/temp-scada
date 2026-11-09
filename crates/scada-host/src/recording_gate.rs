@@ -61,7 +61,9 @@ use scada_runtime::recording_registry::{
 };
 use serde_json::{json, Value};
 
-use crate::auth::{CurrentSession, DesktopSession, Role};
+use crate::auth::{
+    CurrentSession, DesktopSession, LoginOutcome, Resolved, Role, UserIdentity, Verified,
+};
 use crate::auth_phase::{AuthHost, AuthPhase, PhaseGuard, TransitionError, Transitioned};
 
 /// Why an entry point refused or failed.
@@ -831,6 +833,96 @@ impl RecordingGate {
             seq: current.seq,
             reply: frames,
         })
+    }
+
+    /// `auth_login`: verify the credentials, then install the account under
+    /// the transition lock and, in the same call, end the registry sessions
+    /// and subscriptions of the generations before it (a user switch, §5).
+    /// The password is checked outside the lock, so a slow check does not
+    /// hold the registry; a command that validated the previous user
+    /// finishes before the switch, as for [`Self::logout`].
+    pub async fn login(&self, username: &str, password: &str) -> Result<LoginOutcome, BantoError> {
+        let (identity, seq_at_entry) =
+            match self.auth.auth().verify_login(username, password).await? {
+                Verified::Account {
+                    identity,
+                    seq_at_entry,
+                } => (identity, seq_at_entry),
+                Verified::Refused(outcome) => return Ok(outcome),
+            };
+        self.install_account(seq_at_entry, identity).await
+    }
+
+    /// Install an account verified or created outside the lock (a login or
+    /// the first-account setup) as [`Self::login`] does.
+    pub(crate) async fn install_account(
+        &self,
+        seq_at_entry: u64,
+        identity: UserIdentity,
+    ) -> Result<LoginOutcome, BantoError> {
+        let phase = self.auth.gate().await;
+        let outcome = self.auth.auth().install_login(seq_at_entry, identity).await;
+        // Whatever the outcome (a superseded install, or a re-validation
+        // that failed after writing the slot), every generation before the
+        // slot's has ended; no second auth DB read is needed.
+        self.end_generations_before(self.auth.auth().seq());
+        drop(phase);
+        outcome
+    }
+
+    /// `auth_change_password`: the own password change, then [`Self::refresh`]
+    /// so the registry sessions of the generation it re-bound away from end
+    /// in the same call (§5). The principal does not change, so the next
+    /// command re-issues for the same user.
+    pub async fn change_own_password(
+        &self,
+        current_password: &str,
+        new_password: &str,
+    ) -> Result<u64, BantoError> {
+        // Under the transition lock, like a logout: a registry command that
+        // validated the old generation finishes before it ends.
+        let phase = self.auth.gate().await;
+        let result = self
+            .auth
+            .auth()
+            .change_own_password(current_password, new_password)
+            .await;
+        let changed = !matches!(
+            result,
+            Err(BantoError::Forbidden | BantoError::Validation { .. })
+        );
+        // Whatever the result: the re-bind, or the initial check (which can
+        // clear a revoked session or follow a role change even when the
+        // password is then refused), has ended every generation before the
+        // slot's, whatever the refresh below can read.
+        self.end_generations_before(self.auth.auth().seq());
+        drop(phase);
+        if changed {
+            self.refresh_after_change().await;
+        }
+        result
+    }
+
+    /// `auth_resolve`: [`HostAuth::resolve`] under the transition lock, then
+    /// the end of every generation before the `current` it reports. A
+    /// session it clears or re-binds ends its registry sessions and
+    /// subscriptions in the same call, after any registry command that
+    /// validated it has finished, without a second auth DB read.
+    pub async fn resolve(&self) -> Result<Resolved, BantoError> {
+        let _phase = self.auth.gate().await;
+        let resolved = self.auth.auth().resolve().await?;
+        self.end_generations_before(resolved.current);
+        Ok(resolved)
+    }
+
+    /// End the registry sessions and subscriptions of every generation
+    /// before `seq`, a generation the slot has reached. The slot holds one
+    /// session and `seq` only grows, so those generations are over; this
+    /// needs no re-validation, and a newer generation is kept.
+    pub(crate) fn end_generations_before(&self, seq: u64) {
+        if let Some(through) = seq.checked_sub(1) {
+            self.lock().revoke_through(through, None);
+        }
     }
 
     /// `auth_logout`: end the account session and, in the same call, the

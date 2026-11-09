@@ -2,6 +2,7 @@
 //! Neither the Project nor the UI receives an API key.
 pub mod auth;
 pub mod auth_phase;
+pub mod desktop_auth;
 mod durable;
 pub mod recording_epoch;
 pub mod recording_gate;
@@ -15,9 +16,18 @@ pub use banto_hub_bootstrap::{Bootstrapper, HubStatus};
 
 pub const DEFAULT_HUB_ENDPOINT: &str = "http://127.0.0.1:8722";
 
+/// The app data dir of the embedded host: the Hub read record, the
+/// installation ID, and the auth phase, auth DB and recording epoch
+/// (host-gate design §2, §6, §7).
+pub fn local_data_dir() -> Result<PathBuf, &'static str> {
+    Ok(
+        PathBuf::from(std::env::var("LOCALAPPDATA").map_err(|_| "no app data directory")?)
+            .join("temp-scada"),
+    )
+}
+
 pub fn local_bootstrap() -> Result<Bootstrapper, &'static str> {
-    let root = PathBuf::from(std::env::var("LOCALAPPDATA").map_err(|_| "no app data directory")?)
-        .join("temp-scada");
+    let root = local_data_dir()?;
     let id = installation_id(&root)?;
     Ok(Bootstrapper::new(
         "temp-scada",
