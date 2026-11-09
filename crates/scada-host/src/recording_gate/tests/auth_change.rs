@@ -559,3 +559,58 @@ async fn logout_waits_for_a_command_that_already_validated_the_session() {
     assert_ne!(logout.await.unwrap(), current.seq);
     assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
 }
+
+#[tokio::test]
+async fn the_move_to_operation_ends_the_synthetic_subscriptions_even_if_the_refresh_fails() {
+    let f = initializing().await;
+    // The synthetic session fills every live subscription slot.
+    let mut references = Vec::new();
+    for index in 0..4 {
+        let attached = f
+            .gate
+            .attach(attach(&f.scope, &format!("attach-{index}")))
+            .await
+            .unwrap();
+        references.push(subscription_ref(&attached));
+    }
+    assert!(matches!(
+        f.gate.attach(attach(&f.scope, "attach-full")).await,
+        Err(GateError::Registry(LeaseError::Capacity))
+    ));
+    // The auth DB fails after the transition, before its refresh.
+    let raw = f.dir.raw().await;
+    let hide = raw.clone();
+    f.gate.after_next_call(async move {
+        sqlx::query("ALTER TABLE settings RENAME TO settings_hidden")
+            .execute(&hide)
+            .await
+            .unwrap();
+    });
+    let admin = f
+        .gate
+        .transition_to_operational("admin", PASSWORD, "管理者")
+        .await
+        .unwrap()
+        .session
+        .expect("the administrator is logged in");
+    sqlx::query("ALTER TABLE settings_hidden RENAME TO settings")
+        .execute(&raw)
+        .await
+        .unwrap();
+    // The synthetic generation's subscriptions ended within the command,
+    // before any later command or delivery could settle them.
+    assert!(f.gate.lock().subscriptions.values().all(|b| b.ended));
+    // So the administrator's attach finds free slots.
+    let attached = f
+        .gate
+        .attach(attach(&f.scope, "attach-admin"))
+        .await
+        .unwrap();
+    assert_eq!(attached.seq, admin.seq);
+    for reference in &references {
+        assert!(matches!(
+            f.gate.frames(reference).await,
+            Err(GateError::Unauthorized)
+        ));
+    }
+}

@@ -869,6 +869,18 @@ impl RecordingGate {
                 self.lock().root.quiescence().is_quiescent()
             })
             .await;
+        // The administrator's session took the single slot: every earlier
+        // generation (the synthetic one included) has ended, whatever a
+        // re-validation can read now.
+        if let Ok(Transitioned {
+            session: Some(admin),
+        }) = &result
+        {
+            self.lock().revoke_through(admin.seq - 1, None);
+        }
+        // Test only: the auth DB failing before the refresh below.
+        #[cfg(test)]
+        self.run_hook().await;
         self.refresh_after_change().await;
         result
     }
