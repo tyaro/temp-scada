@@ -216,8 +216,11 @@ impl DesktopAuth {
     /// and the login screen (design §6).
     pub async fn phase(&self) -> Result<AuthPhaseResult, CommandError> {
         let auth = self.auth().auth();
+        // Under the transition lock: a move to operation holds it from its
+        // first save to its last, so the three values are of one state.
+        let guard = self.auth().gate().await;
         Ok(AuthPhaseResult {
-            phase: self.auth().phase().await.as_str(),
+            phase: guard.phase().as_str(),
             auth_disabled: auth.settings().auth_config().await?.disabled,
             has_admin: auth.users().has_admin().await?,
         })

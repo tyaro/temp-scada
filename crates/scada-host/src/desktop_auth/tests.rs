@@ -223,3 +223,20 @@ fn every_command_future_is_send(desktop: &DesktopAuth) {
     send(desktop.change_password("", ""));
     send(desktop.transition_to_operational("", "", ""));
 }
+
+#[tokio::test]
+async fn the_phase_is_read_as_one_state_with_a_running_move() {
+    let (_dir, desktop) = first_start().await;
+    let desktop = Arc::new(desktop);
+    // A move holds the transition lock; the phase waits for it to finish.
+    let guard = desktop.auth().gate().await;
+    let reader = desktop.clone();
+    let phase = tokio::spawn(async move { reader.phase().await.unwrap() });
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert!(!phase.is_finished());
+    drop(guard);
+    assert_eq!(
+        wire(&phase.await.unwrap()),
+        json!({"phase": "initializing", "authDisabled": true, "hasAdmin": false})
+    );
+}
