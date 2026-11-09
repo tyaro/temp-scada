@@ -16,7 +16,7 @@ export interface ClosePrompt {
 export type CloseView =
   | { kind: "candidate"; id: number }
   | { kind: "waiting" }
-  | { kind: "discarding" }
+  | { kind: "discarding"; id: number }
   | undefined;
 
 type Invoke = (
@@ -64,13 +64,17 @@ export function createCloseConfirmation(
     async answer(reply) {
       const asked = view;
       if (asked?.kind !== "candidate") return;
-      show(reply === "discard" ? { kind: "discarding" } : undefined);
+      show(
+        reply === "discard" ? { kind: "discarding", id: asked.id } : undefined,
+      );
       try {
         await invoke("app_close_reply", { id: asked.id, reply });
       } catch {
         // A newer question replaced it, or the exit already started: the
-        // host's latest event decides what is shown.
-        if (view?.kind === "discarding") show(undefined);
+        // host's latest event decides what is shown. Only this answer's
+        // own notice is dropped.
+        if (view?.kind === "discarding" && view.id === asked.id)
+          show(undefined);
       }
     },
     dispose() {

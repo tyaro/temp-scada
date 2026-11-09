@@ -42,7 +42,7 @@ it("acknowledges a question at once and answers it once", async () => {
   expect(t.views).toEqual([{ kind: "candidate", id: 3 }]);
   expect(t.calls).toEqual([{ id: 3, reply: "shown" }]);
   await t.confirmation.answer("discard");
-  expect(t.views.at(-1)).toEqual({ kind: "discarding" });
+  expect(t.views.at(-1)).toEqual({ kind: "discarding", id: 3 });
   expect(t.calls.at(-1)).toEqual({ id: 3, reply: "discard" });
   // Nothing more to answer.
   await t.confirmation.answer("cancel");
@@ -74,6 +74,22 @@ it("drops the discarding notice when the host refuses a stale answer", async () 
   await t.emit({ id: 4, kind: "candidate" });
   await t.confirmation.answer("discard");
   expect(t.views.at(-1)).toBeUndefined();
+});
+
+it("keeps a newer discard's notice when an older answer is refused", async () => {
+  let refuse: (reason: unknown) => void = () => {};
+  const t = setup((args) =>
+    args.id === 1 && args.reply === "discard"
+      ? new Promise((_, reject) => (refuse = reject))
+      : Promise.resolve(null),
+  );
+  await t.emit({ id: 1, kind: "candidate" });
+  const older = t.confirmation.answer("discard");
+  await t.emit({ id: 2, kind: "candidate" });
+  await t.confirmation.answer("discard");
+  refuse("stale_prompt");
+  await older;
+  expect(t.views.at(-1)).toEqual({ kind: "discarding", id: 2 });
 });
 
 it("ignores a payload that is not a close prompt", async () => {
