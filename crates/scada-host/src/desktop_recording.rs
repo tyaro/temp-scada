@@ -164,13 +164,8 @@ pub struct DesktopRecording {
 struct Host {
     gate: Arc<RecordingGate>,
     pumps: Arc<tokio::sync::Mutex<Pumps>>,
-    /// The pages open now: begun ([`DesktopRecording::begin_page`]) and
-    /// not ended ([`DesktopRecording::end_page`]). Read by a claim, so an
-    /// attach of an ended page never takes a live page's subscription and a
-    /// subscription of an ended page is ended even if its pump has not
-    /// noticed yet, and by each emit, so an ended page receives nothing.
-    /// Holds only the open pages (one per webview).
-    live_pages: Arc<Mutex<BTreeSet<u64>>>,
+    /// The open pages and which page each claimed subscription belongs to.
+    live_pages: Arc<Mutex<PageState>>,
     interval: Duration,
 }
 
@@ -187,6 +182,19 @@ struct Host {
 struct Pumps {
     next: u64,
     claims: BTreeMap<String, Claim>,
+}
+
+/// The pages open now: begun ([`DesktopRecording::begin_page`]) and not
+/// ended ([`DesktopRecording::end_page`]), one per webview. Read by a claim,
+/// so an attach of an ended page never takes an open page's subscription,
+/// and by each emit, so an ended page receives nothing. `owners` mirrors the
+/// page of each claim, so `end_page` ends that page's subscriptions in the
+/// registry before the page hook returns, without waiting for their pumps:
+/// the next page finds their live slots freed.
+#[derive(Default)]
+struct PageState {
+    live: BTreeSet<u64>,
+    owners: BTreeMap<String, u64>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -240,21 +248,29 @@ impl DesktopRecording {
             host.live_pages
                 .lock()
                 .expect("live pages mutex poisoned")
+                .live
                 .insert(page);
         }
     }
 
     /// The page `page` ended (its webview loaded another page or was
     /// destroyed). Called synchronously from the host's page hooks, before
-    /// the next page can attach, so its subscriptions are ended whichever of
-    /// its pump, the next page's replayed attach, or its own attach still in
-    /// flight comes first.
+    /// the next page can attach. The subscriptions the page holds (not those
+    /// another page took over) are ended in the registry before this
+    /// returns, so the next page finds their live slots free; their pumps
+    /// stop at their next delivery. An attach of the page still in flight
+    /// ends its own subscription at its claim.
     pub fn end_page(&self, page: u64) {
         if let Ok(host) = &self.host {
-            host.live_pages
-                .lock()
-                .expect("live pages mutex poisoned")
-                .remove(&page);
+            let mut pages = host.live_pages.lock().expect("live pages mutex poisoned");
+            pages.live.remove(&page);
+            pages.owners.retain(|reference, owner| {
+                let ended = *owner == page;
+                if ended {
+                    host.gate.end_subscription(reference);
+                }
+                !ended
+            });
         }
     }
 
@@ -263,7 +279,7 @@ impl DesktopRecording {
     fn live_page_count(&self) -> usize {
         self.host
             .as_ref()
-            .map_or(0, |host| host.live_pages.lock().unwrap().len())
+            .map_or(0, |host| host.live_pages.lock().unwrap().live.len())
     }
 
     fn gate(&self) -> Result<&RecordingGate, RecordingCommandError> {
@@ -410,7 +426,7 @@ impl DesktopRecording {
 pub struct FramePump {
     gate: Arc<RecordingGate>,
     pumps: Arc<tokio::sync::Mutex<Pumps>>,
-    live_pages: Arc<Mutex<BTreeSet<u64>>>,
+    live_pages: Arc<Mutex<PageState>>,
     reference: String,
     claim: Claim,
     interval: Duration,
@@ -434,14 +450,15 @@ enum Delivery {
 impl FramePump {
     async fn claim(host: &Host, reference: &str, page: u64) -> Option<Self> {
         let mut pumps = host.pumps.lock().await;
-        let live = host.live_pages.lock().expect("live pages mutex poisoned");
+        let mut pages = host.live_pages.lock().expect("live pages mutex poisoned");
         let existing = pumps.claims.get(reference).copied();
-        if !live.contains(&page) {
+        if !pages.live.contains(&page) {
             // An attach whose page ended while it ran: it never takes the
             // subscription from an open page. With no open page holding it,
             // nothing will deliver it, so it is ended (its live slot freed).
-            if !existing.is_some_and(|claim| live.contains(&claim.page)) {
+            if !existing.is_some_and(|claim| pages.live.contains(&claim.page)) {
                 pumps.claims.remove(reference);
+                pages.owners.remove(reference);
                 host.gate.end_subscription(reference);
             }
             return None;
@@ -452,11 +469,12 @@ impl FramePump {
             }
             // The subscription of an ended page is over, even if its pump
             // has not stopped yet; the new pump reports it ended.
-            if !live.contains(&existing.page) {
+            if !pages.live.contains(&existing.page) {
                 host.gate.end_subscription(reference);
             }
         }
-        drop(live);
+        pages.owners.insert(reference.to_owned(), page);
+        drop(pages);
         pumps.next += 1;
         let claim = Claim {
             page,
@@ -482,7 +500,17 @@ impl FramePump {
             .live_pages
             .lock()
             .expect("live pages mutex poisoned")
+            .live
             .contains(&self.claim.page)
+    }
+
+    /// Drop this pump's claim (the caller holds `pumps` and owns it).
+    fn release(&self, pumps: &mut Pumps) {
+        pumps.claims.remove(&self.reference);
+        let mut pages = self.live_pages.lock().expect("live pages mutex poisoned");
+        if pages.owners.get(&self.reference) == Some(&self.claim.page) {
+            pages.owners.remove(&self.reference);
+        }
     }
 
     fn owns(&self, pumps: &Pumps) -> bool {
@@ -522,7 +550,7 @@ impl FramePump {
         };
         let mut pumps = self.pumps.lock().await;
         if self.owns(&pumps) {
-            pumps.claims.remove(&self.reference);
+            self.release(&mut pumps);
             if matches!(outcome, Delivery::Gone) {
                 self.gate.end_subscription(&self.reference);
             }
@@ -561,8 +589,8 @@ impl FramePump {
         // the emit hold the live-pages lock, which `end_page` takes from the
         // page hook before the next page loads: an event of an ended page is
         // never emitted (to the next page of the same webview).
-        let live = self.live_pages.lock().expect("live pages mutex poisoned");
-        if !live.contains(&self.claim.page) {
+        let pages = self.live_pages.lock().expect("live pages mutex poisoned");
+        if !pages.live.contains(&self.claim.page) {
             return Delivery::Gone;
         }
         let done = match &event {
@@ -572,7 +600,7 @@ impl FramePump {
             RecordingEvent::Ended { .. } => true,
         };
         let delivered = emit(event);
-        drop(live);
+        drop(pages);
         drop(pumps);
         match (delivered, done) {
             (false, _) => Delivery::Gone,
@@ -589,7 +617,7 @@ impl Drop for FramePump {
     fn drop(&mut self) {
         if let Ok(mut pumps) = self.pumps.try_lock() {
             if self.owns(&pumps) {
-                pumps.claims.remove(&self.reference);
+                self.release(&mut pumps);
             }
         }
     }

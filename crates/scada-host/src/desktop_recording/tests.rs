@@ -651,3 +651,38 @@ async fn an_attach_of_an_ended_page_that_no_open_page_holds_ends_its_subscriptio
         json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
     );
 }
+
+#[tokio::test]
+async fn the_end_of_a_page_frees_its_live_slots_before_its_pumps_stop() {
+    let f = initializing().await;
+    // The page holds every live subscription; its pumps never run, so only
+    // `end_page` can free them.
+    let mut pumps = Vec::new();
+    for i in 0..4 {
+        let (_, pump) = f
+            .recording
+            .attach(attach(&f.scope, &format!("old-{i}")), PAGE)
+            .await
+            .unwrap();
+        pumps.push(pump.unwrap());
+    }
+    assert_eq!(
+        error_of(
+            f.recording
+                .attach(attach(&f.scope, "one-too-many"), PAGE)
+                .await
+        ),
+        json!({"kind": "capacity"})
+    );
+    f.recording.end_page(PAGE);
+    // The next page attaches at once, while the old pumps still exist.
+    for i in 0..4 {
+        let (_, pump) = f
+            .recording
+            .attach(attach(&f.scope, &format!("new-{i}")), PAGE + 1)
+            .await
+            .unwrap_or_else(|error| panic!("new-{i}: {}", wire(&error)));
+        assert!(pump.is_some());
+    }
+    drop(pumps);
+}
