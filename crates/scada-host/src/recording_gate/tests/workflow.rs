@@ -12,7 +12,7 @@ use super::*;
 
 const BUDGET_MS: u64 = 5000;
 
-fn stage_lease(scope: &Value, id: &str, role: &str) -> RecordingWireLeaseRequest {
+pub(super) fn stage_lease(scope: &Value, id: &str, role: &str) -> RecordingWireLeaseRequest {
     RecordingWireLeaseRequest::from_value(json!({
         "version":1, "kind":"recordingWireLeaseRequest", "scope":scope,
         "leaseRequestId":format!("{id}-lease"), "admissionId":id, "role":role,
@@ -21,7 +21,7 @@ fn stage_lease(scope: &Value, id: &str, role: &str) -> RecordingWireLeaseRequest
     .unwrap()
 }
 
-fn admission(
+pub(super) fn admission(
     scope: &Value,
     id: &str,
     lease: &Bound<RecordingWireLeaseReply>,
@@ -36,12 +36,12 @@ fn admission(
     .unwrap()
 }
 
-fn operation(change: &RecordingChangeRequest, id: &str, stage: &str) -> Value {
+pub(super) fn operation(change: &RecordingChangeRequest, id: &str, stage: &str) -> Value {
     json!({"version":1, "kind":"recordingOperationRequest", "operationId":id,
         "stage":stage, "change":change.as_value()})
 }
 
-fn handle(reply: &Bound<RecordingAdmissionReply>, field: &str) -> String {
+pub(super) fn handle(reply: &Bound<RecordingAdmissionReply>, field: &str) -> String {
     reply.reply.as_value()["outcome"]["handle"][field]
         .as_str()
         .unwrap()
@@ -80,7 +80,9 @@ macro_rules! when_ready {
 
 /// The audit rows of the recording registry, as (action, resource, entity,
 /// result, actor).
-async fn recording_audit(dir: &TempDir) -> Vec<(String, String, String, String, String)> {
+pub(super) async fn recording_audit(
+    dir: &TempDir,
+) -> Vec<(String, String, String, String, String)> {
     sqlx::query_as(
         "SELECT action, resource, COALESCE(entity_id, ''), result, actor_username FROM audit_log \
          WHERE resource LIKE 'recording_%' ORDER BY id",
@@ -90,7 +92,7 @@ async fn recording_audit(dir: &TempDir) -> Vec<(String, String, String, String, 
     .unwrap()
 }
 
-fn row(
+pub(super) fn row(
     action: &str,
     resource: &str,
     entity: &str,
@@ -108,9 +110,9 @@ fn row(
 
 /// A reserved workflow with its preflight accepted and its Candidate ready.
 pub(super) struct Preflighted {
-    change: RecordingChangeRequest,
+    pub(super) change: RecordingChangeRequest,
     request: RecordingAdmissionRequest,
-    accepted: Bound<RecordingAdmissionReply>,
+    pub(super) accepted: Bound<RecordingAdmissionReply>,
 }
 
 pub(super) async fn preflighted(f: &Fixture, change_id: &str) -> Preflighted {

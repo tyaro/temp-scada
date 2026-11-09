@@ -7,19 +7,19 @@
 //! watch; [`RecordingRuntime::inspect`] then reads the DB with the History
 //! host's reader. Every change of the slot runs under the transition lock
 //! the caller holds.
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use scada_model::recording_operations::RecordingOperationsContext;
 use scada_model::Project;
 use scada_runtime::recording_host::{RecordingPhase, RecordingRun, RecordingSupervisor};
-use scada_runtime::recording_operations::{OwnerError, RecordingOperationsOwner};
+use scada_runtime::recording_operations::{OperationsPhase, OwnerError, RecordingOperationsOwner};
 use scada_runtime::recording_registry::{RecordingRegistryOwnerSeed, RegistryRootInitFailure};
 use serde_json::json;
 
 use super::{lock, RecordingRuntime};
 use crate::auth_phase::PhaseGuard;
 use crate::recording_epoch::{create_recording_root, RootCreateError};
-use crate::recording_gate::{RecordingGate, NO_RECORDING_RUN, OWNER_UNAVAILABLE};
+use crate::recording_gate::{RecordingGate, ShutdownDiscard, NO_RECORDING_RUN, OWNER_UNAVAILABLE};
 
 /// Why a stop did not run. `as_str` is the command's error.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -50,6 +50,11 @@ impl StopFailure {
 pub enum ExitOutcome {
     /// Nothing was recording, or the recording was stopped and joined.
     Stopped,
+    /// The root holds a Paused change: its recording was already stopped
+    /// and joined by the pause/join, so the process exits without the
+    /// handoff and nothing is interrupted. The change is lost with the
+    /// process; the next start is `Idle` (design §6 step 2).
+    Paused,
     /// The root stayed unsettled past the wait. The process exits with the
     /// recording running; the next start finds its session interrupted.
     Interrupted,
@@ -205,10 +210,16 @@ impl RecordingRuntime {
 
     /// The exit sequence (design §6): stop new registry work, take the
     /// Supervisor back by the handoff, then stop and join the recording,
-    /// all within `limit`. A root that stays unsettled (a Candidate, a
-    /// Paused change, an accepted operation still running) is left as it
-    /// is: the recording is not stopped and the next start finds its
-    /// session interrupted, or (Paused) already ended.
+    /// all within `limit`. While the root is unsettled:
+    ///
+    /// - a Candidate is discarded once by the host (§6.1), then the handoff
+    ///   is asked again; a discard that does not complete leaves the root as
+    ///   it is (interrupted);
+    /// - a Paused change ends the exit at once ([`ExitOutcome::Paused`]);
+    /// - anything else (a preflight or an accepted operation still running)
+    ///   is waited for. A root still unsettled at `limit` is left as it is:
+    ///   the recording is not stopped and the next start finds its session
+    ///   interrupted.
     pub async fn exit(
         &self,
         gate: Option<&RecordingGate>,
@@ -218,15 +229,36 @@ impl RecordingRuntime {
         let Ok(ready) = self.state.as_ref() else {
             return ExitOutcome::Stopped;
         };
+        let deadline = Instant::now() + limit;
         let sequence = async {
             if let Some(gate) = gate {
                 gate.begin_shutdown();
+                let mut discarded = false;
                 loop {
                     match self.take_owner(gate, phase).await {
                         Ok(_) => break,
-                        Err(OwnerError::Busy) => tokio::time::sleep(EXIT_POLL).await,
+                        Err(OwnerError::Busy) => {}
                         Err(_) => return ExitOutcome::Interrupted,
                     }
+                    match gate.owner_phase() {
+                        Some(OperationsPhase::Paused) => return ExitOutcome::Paused,
+                        Some(OperationsPhase::Candidate) if !discarded => {
+                            let left = deadline.saturating_duration_since(Instant::now());
+                            match gate.shutdown_discard(phase, left) {
+                                ShutdownDiscard::Done(done) => {
+                                    discarded = true;
+                                    gate.audit_shutdown_discard(&done).await;
+                                    if !done.completed() {
+                                        return ExitOutcome::Interrupted;
+                                    }
+                                    continue;
+                                }
+                                ShutdownDiscard::Pending | ShutdownDiscard::NotCandidate => {}
+                            }
+                        }
+                        _ => {}
+                    }
+                    tokio::time::sleep(EXIT_POLL).await;
                 }
             }
             let mut slot = ready.supervisor.lock().await;

@@ -34,7 +34,7 @@
 //! revoke the sessions they end before returning (§4, §6).
 //!
 //! Registry sessions, workflow tickets and principals never leave this type.
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use banto_admin_services::settings::AuthSettings;
@@ -194,12 +194,21 @@ struct HeldSessions {
 /// later stages build on, bound to the principal that reserved it. A discard
 /// or a reconcile starts no later stage, and re-registering the same request
 /// returns its ticket, so their tickets are not kept.
+///
+/// The change and the last discard lease issued for it are kept for the
+/// exit's discard (product-owner design §6.1), which takes over a discard
+/// lease the principal already holds under its own IDs.
 struct HeldWorkflow {
     principal: RecordingPrincipal,
     ticket: RecordingRegistryWorkflowTicket,
+    change: RecordingChangeRequest,
     preflight: Option<RecordingRegistryAdmissionTicket>,
     pause: Option<RecordingRegistryPauseTicket>,
     apply: Option<RecordingRegistryApplyTicket>,
+    /// The discard lease most recently issued under new IDs. A re-fetch of
+    /// an earlier lease (one the registry since replaced) leaves it.
+    discard_lease: Option<RecordingWireLeaseRequest>,
+    discard_lease_ids: BTreeSet<String>,
 }
 
 /// The tickets of the held workflow, for `principal` only.
@@ -561,6 +570,9 @@ pub struct RecordingGate {
     /// Test only: see [`Self::run_hook`].
     #[cfg(test)]
     after_call: Mutex<Option<AfterCall>>,
+    /// Test only: see [`Self::refuse_next_shutdown_discard`].
+    #[cfg(test)]
+    refuse_shutdown_discard: std::sync::atomic::AtomicBool,
 }
 
 impl RecordingGate {
@@ -591,6 +603,8 @@ impl RecordingGate {
             }),
             #[cfg(test)]
             after_call: Mutex::new(None),
+            #[cfg(test)]
+            refuse_shutdown_discard: Default::default(),
         }
     }
 
@@ -771,7 +785,7 @@ impl RecordingGate {
             })
             .await?;
         self.audit(
-            &entered.current,
+            entered.current.session.identity(),
             "cancel",
             "recording_cancel",
             &cancel_id,
@@ -795,7 +809,7 @@ impl RecordingGate {
             .to_owned();
         let entered = self
             .enter(Need::Mutation, "recording_workflow_reserve", |r| {
-                let ticket = r.root.reserve_workflow(r.session, change)?;
+                let ticket = r.root.reserve_workflow(r.session, change.clone())?;
                 // The gate holds every ticket of this root, so an existing
                 // reservation is the held one.
                 let reserved = r.workflow.is_none();
@@ -803,9 +817,12 @@ impl RecordingGate {
                     *r.workflow = Some(HeldWorkflow {
                         principal: r.principal.clone(),
                         ticket: ticket.clone(),
+                        change,
                         preflight: None,
                         pause: None,
                         apply: None,
+                        discard_lease: None,
+                        discard_lease_ids: BTreeSet::new(),
                     });
                 }
                 Ok((
@@ -818,7 +835,7 @@ impl RecordingGate {
             .await?;
         if !matches!(entered.result, Ok((_, false))) {
             self.audit(
-                &entered.current,
+                entered.current.session.identity(),
                 "reserve",
                 "recording_workflow",
                 &change_id,
@@ -860,12 +877,21 @@ impl RecordingGate {
                         operation_id,
                         request,
                     ),
-                    WorkflowStage::Discard => root.issue_discard_lease(
-                        session,
-                        workflow,
-                        &earlier(&held.preflight)?,
-                        request,
-                    ),
+                    WorkflowStage::Discard => {
+                        let reply = root.issue_discard_lease(
+                            session,
+                            workflow,
+                            &earlier(&held.preflight)?,
+                            request.clone(),
+                        )?;
+                        // The exit's discard takes this lease over (§6.1).
+                        if let Some(id) = request.as_value()["leaseRequestId"].as_str() {
+                            if held.discard_lease_ids.insert(id.to_owned()) {
+                                held.discard_lease = Some(request);
+                            }
+                        }
+                        Ok(reply)
+                    }
                 }
             })
             .await?;
@@ -903,7 +929,7 @@ impl RecordingGate {
             )
         {
             self.audit(
-                &entered.current,
+                entered.current.session.identity(),
                 "register",
                 "recording_admission",
                 &admission_id,
@@ -1371,7 +1397,7 @@ impl RecordingGate {
     /// replay registers nothing, so only this task can still record it.
     async fn audit(
         &self,
-        current: &CurrentSession,
+        actor: &UserIdentity,
         action: &'static str,
         resource: &'static str,
         entity_id: &str,
@@ -1389,9 +1415,29 @@ impl RecordingGate {
             }
         }
         let detail = (!detail.is_null()).then_some(detail);
-        let outcome = audit_result(&result);
+        self.write_audit(
+            actor,
+            action,
+            resource,
+            entity_id,
+            detail,
+            audit_result(&result),
+        )
+        .await;
+    }
+
+    /// Write one audit row in its own task (see [`Self::audit`]).
+    async fn write_audit(
+        &self,
+        actor: &UserIdentity,
+        action: &'static str,
+        resource: &'static str,
+        entity_id: &str,
+        detail: Option<Value>,
+        outcome: &'static str,
+    ) {
         let auth = self.auth.clone();
-        let actor = current.session.identity().clone();
+        let actor = actor.clone();
         let entity_id = entity_id.to_owned();
         let task = tokio::spawn(async move {
             auth.auth()
@@ -1459,6 +1505,9 @@ impl RecordingGate {
         f(&mut self.lock().installed.as_mut().expect("installed root").root)
     }
 }
+
+mod shutdown;
+pub use shutdown::{ShutdownDiscard, ShutdownDiscarded, SHUTDOWN_ACTOR};
 
 #[cfg(test)]
 mod tests;

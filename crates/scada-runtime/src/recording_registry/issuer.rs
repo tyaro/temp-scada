@@ -109,6 +109,18 @@ impl RegistryQuiescence {
 }
 
 impl RecordingRegistryRoot {
+    /// The native owner's phase, read-only; `None` once the root has handed native ownership
+    /// off. The host's exit decides by it whether a Candidate is discarded, or a Paused change
+    /// (its recording already stopped and joined) is left to the next start (product owner
+    /// design §6).
+    pub fn owner_phase(&self) -> Option<crate::recording_operations::OperationsPhase> {
+        if self.closed {
+            return None;
+        }
+        let state = self.seed.client().state();
+        (!state.closed).then_some(state.phase)
+    }
+
     /// Reports quiescence without changing anything: no lease, registration, dispatch, cancel,
     /// or native call. The host checks it under its own transition lock (design §4, §6), so
     /// nothing new is accepted between this answer and the auth change it guards.
