@@ -21,16 +21,22 @@
 
 ## 3. 配置
 
-| 対象                               | 置き場所・所有                                                                                                                                                                                                                      |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 記録DB（`SqliteStore`）            | アプリdata dirの`historian\`（`store.sqlite3`・`writer.lock`・WAL）。認証DB（`scada-auth.sqlite3`）とは別（host-gate §8.3）。Project・ブラウザstorageには置かない                                                                   |
-| store identity                     | `historian-store.json`（`version`・`storeId`・`deploymentId`）。`storeId`は作成時に乱数で引く。`durable.rs`の一時file→sync→置換で、store作成より前に保存する。`open_existing`はこの値で照合し、読めない・不正なら上書きせず拒否する |
-| 記録host（新設`RecordingRuntime`） | 起動時に作り、process終了まで保持する。storeから先に`HistoryReader`を一つ取り（readerは最大2つ。残りの一つはSupervisorのpreflight用）、storeを`RecordingSupervisor::try_new`へ渡す                                                  |
-| 記録用SDK接続                      | `Bootstrapper::rest_client()`を記録の開始ごとに新しく取る。読取host（`hub_read_start`）のclientと共有しない。Hubの切断操作（`hub_disconnect`）は読取だけを止め、記録は止めない                                                      |
-| owner・root・gate                  | 記録が`Running`になった後に、`RecordingOperationsOwner`→`RecordingRegistryOwnerSeed`→`create_recording_root`→`RecordingGate`の順に組む。記録runごとに入れ替える（§4）                                                               |
-| `HistoryHost`                      | 起動時に取ったreaderで作り、process終了まで保持する。記録の開始・停止と独立に動く（[History host](historian-history-host.md)）                                                                                                      |
+| 対象                               | 置き場所・所有                                                                                                                                                                                                                                                                                                                 |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 記録DB（`SqliteStore`）            | アプリdata dirの`historian\`（`store.sqlite3`・`writer.lock`・WAL）。認証DB（`scada-auth.sqlite3`）とは別（host-gate §8.3）。Project・ブラウザstorageには置かない                                                                                                                                                              |
+| store identity                     | `historian-store.json`（`version`・`storeId`・`deploymentId`・`historianNamespace`）。`storeId`と`historianNamespace`は作成時に乱数で引き、`deploymentId`は作成時のinstallation IDとする。`durable.rs`の一時file→sync→置換で、store作成より前に保存する。`open_existing`はこの値で照合し、読めない・不正なら上書きせず拒否する |
+| 記録host（新設`RecordingRuntime`） | 起動時に作り、process終了まで保持する。storeから先に`HistoryReader`を一つ取り（readerは最大2つ。残りの一つはSupervisorのpreflight用）、storeを`RecordingSupervisor::try_new`へ渡す                                                                                                                                             |
+| 記録用SDK接続                      | `Bootstrapper::rest_client()`を記録の開始ごとに新しく取る。読取host（`hub_read_start`）のclientと共有しない。Hubの切断操作（`hub_disconnect`）は読取だけを止め、記録は止めない                                                                                                                                                 |
+| owner・root・gate                  | 記録が`Running`になった後に、`RecordingOperationsOwner`→`RecordingRegistryOwnerSeed`→`create_recording_root`→`RecordingGate`の順に組む。記録runごとに入れ替える（§4）                                                                                                                                                          |
+| `HistoryHost`                      | 起動時に取ったreaderで作り、process終了まで保持する。記録の開始・停止と独立に動く（[History host](historian-history-host.md)）                                                                                                                                                                                                 |
 
 storeが存在しない初回起動ではstoreを作り、`Idle`のSupervisorを置く。storeを開けない場合（identityの不一致、形式違い、別processのwriter lock）は記録hostを`unavailable(理由)`とし、アプリは止めない（認証の起動失敗と同じ扱い、host-gate §6）。
+
+C5-1の実装で次を定めた。
+
+- **履歴namespace**: [Trend定義](historian-trend-definition.md)のnamespaceは「deployment／callerが割り当てる不透明な履歴データ集合の識別」で、DB再作成で系列継続性が保証できなければ新しく割り当てる。製品hostではstoreを一つの履歴データ集合とし、store作成時に`historianNamespace`（`historian:`＋UUID）を`storeId`とは別に引いて`historian-store.json`へ保存する。`storeId`からは導出しない（[記録管理](historian-recording-management.md)の「storeIdから生成しない」）。
+- **起動時の分岐**: identity fileがなくstore dirもなければ、identityを保存してからstoreを作る。identity fileがあってstore dirがなければ（保存とstore作成の間で止まった起動）、保存済みのidentityでstoreを作る。identity fileがなくstore dirがあれば、新しいidentityで採用せず`store_identity_missing`とする。identityの読取からstoreのopenまでは`historian-store.lock`の排他lockの下で行い、新しいdata dirで同時に起動した二つのprocessがそれぞれのidentityを保存しないようにする（後のprocessは先のprocessのstoreを見つけ、writer lockで`store_locked`になる）。
+- **理由コード**: `no_data_dir`・`store_identity_unreadable`・`store_identity_invalid`・`store_identity_missing`・`store_identity_unsaved`・`store_identity_mismatch`・`store_locked`・`store_init_lock_failed`・`store_unsupported`・`store_unavailable`。path・SQLiteの文言・identityの値はUIへ出さない。
 
 ## 4. gateの導入と入替え
 
@@ -139,6 +145,14 @@ preflightの配送が未完了なら、上限の中で完了を待ってから�
 
 nativeの`HistoryService`を作る。`source.query`は`history_query` commandで`HistoryHost`の`start_query`→`join_query`を呼び、`AbortSignal`で`history_cancel`を呼ぶ。`context`（v2、`historianNamespace`を含む）はhostが適用済みの計画とstore identityから作り、`history_context(projectJson)`で返す。Projectのmanifestと一致しない場合や、計画がない場合はserviceを渡さない（画面は未接続を表示する）。
 
+C5-1の実装で次を定めた。
+
+- **系列**: 起動時に`recording_plan_state`で読んだ適用済み計画の、解決済みmapping（無効な計画では登録済みmapping）のmemberを`seriesId`・`label`（`externalName`）とする。計画を変える操作（C5-2以降）はこの一覧を更新する。
+- **Projectとの照合**: Projectの`recordingPlan.planId`が適用済み計画の`planId`と一致するときだけcontextを返し、`projectId`・`projectRevision`はそのProjectの値を入れる。`contextId`は`applied:<適用revision>`とする。一致しない、計画がない、storeがないときは`null`を返し、画面は未接続を表示する。
+- **画面への受け渡し**: `App`にProjectの置換えを通知する`onprojectchange`を加え、`NativeShell`がProjectのID・revision・計画IDが変わるたびに`history_context`を呼び直してserviceを作り直す。返信を待つ間と前のProjectへの返信は捨てる（serviceなし）。履歴はHubではなく記録DBを読むので、Hubの接続・切断に従わない（§8の6）。
+- **照会**: `history_query(callId, query)`は一件ずつ実行し、後の要求は前の要求の終了を待つ。期限は5秒。`callId`は呼出し側が引くIDで、H1の`requestId`とは別である。`history_cancel(callId)`は実行中の同じcallIdにだけ取消を通知し、照会より先に届いた取消は記録して、その照会を実行しない。エラーは`unavailable`・`busy`・`cancelled`・`deadline`・`tooManyPoints`・`invalidRequest`・`failed`で、画面へは`deadline`・`tooManyPoints`・`busy`をそのまま、他を`failed`として渡す。
+- **認可**: 履歴の照会はHubの読取と同じく認証を要求しない。
+
 ### 7.2 記録操作
 
 [client接続境界](historian-recording-wire-client-boundary.md)§10は、現在のv1 local portへwireの情報を落として載せることと、通常Appへ三つ目の注入propを加えることを禁じている。そこで次のとおりとする。
@@ -167,7 +181,7 @@ port v2の型の詳細はC5-5の着手時にこの節へ追記し、レビュー
 
 | 区切り                  | 内容                                                                                                                                                                                                                                                                                                                          |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C5-1 記録DBと履歴読取   | `historian-store.json`とstoreの作成・open（§3）、`RecordingRuntime`の起動（Supervisorは`Idle`のまま）、`history_context`・`history_query`・`history_cancel`のcommand、nativeの`HistoryService`。一時DBの試験とIPC mockのe2e                                                                                                   |
+| C5-1 記録DBと履歴読取   | **実装済み（2026-11-09）**。`historian-store.json`とstoreの作成・open（§3）、`RecordingRuntime`の起動（Supervisorは`Idle`のまま）、`history_context`・`history_query`・`history_cancel`のcommand、nativeの`HistoryService`。一時DBの試験とIPC mockのe2e                                                                       |
 | C5-2 初回設定と開始     | `recording_status`・`recording_initial_setup`（§5）、記録管理画面の照会と操作。mock Hub＋一時DBで、mappingからtickの保存まで。受付不明からの再実行                                                                                                                                                                            |
 | C5-3 ownerとgateの導入  | `RecordingSlot`（§4）、開始後のgate導入、`recording_stop`、終了処理（§6、Candidateでの終了時discardとPausedでの終了を含む）、期限切れのdiscard leaseの取り直し（§6.1、`scada-runtime`の変更）。registry commandが`Running`の記録に対して働くことと、gateを外すと購読が`ownerClosed`で終わることをsrc-tauriのIPC試験で確かめる |
 | C5-4 再開               | `recording_resume`（applyの後と再起動後）、`recording_reconfigure`（停止中の計画変更と無効計画からの有効化）、fresh SDK解決、gateの入替え、`interrupted`の表示                                                                                                                                                                |

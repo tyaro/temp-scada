@@ -3478,6 +3478,7 @@ dependencies = [
  "banto-storage",
  "getrandom 0.3.4",
  "keyring",
+ "scada-historian",
  "scada-model",
  "scada-runtime",
  "serde",

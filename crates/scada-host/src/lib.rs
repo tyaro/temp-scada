@@ -7,6 +7,7 @@ pub mod desktop_recording;
 mod durable;
 pub mod recording_epoch;
 pub mod recording_gate;
+pub mod recording_runtime;
 mod user_admin;
 
 use std::fs;
@@ -41,6 +42,12 @@ pub fn local_bootstrap() -> Result<Bootstrapper, &'static str> {
         Arc::new(WindowsKeys),
         Arc::new(FileState(root.join("hub-read.json"))),
     ))
+}
+
+/// The installation ID of this host (`installation-id` in the app data dir),
+/// created on first use. The recording store records it as its deployment.
+pub fn local_installation_id() -> Result<String, &'static str> {
+    installation_id(&local_data_dir()?)
 }
 
 fn installation_id(root: &Path) -> Result<String, &'static str> {
