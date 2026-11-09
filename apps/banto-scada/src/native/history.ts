@@ -28,12 +28,14 @@ const PASSED_THROUGH: readonly HistoryFailureCode[] = [
 export function nativeHistorySource(invoke: NativeInvoke): HistorySource {
   return {
     async query(query: HistoryQuery, { signal }: { signal: AbortSignal }) {
+      // Nothing runs for a request aborted before it starts. A later abort
+      // may reach the host before its query; the host keeps that cancel.
+      if (signal.aborted) throw new HistorySourceError("failed");
       const callId = crypto.randomUUID();
       const cancel = () => {
         void invoke("history_cancel", { callId }).catch(() => {});
       };
-      if (signal.aborted) cancel();
-      else signal.addEventListener("abort", cancel, { once: true });
+      signal.addEventListener("abort", cancel, { once: true });
       try {
         return await invoke<unknown>("history_query", { callId, query });
       } catch (error) {

@@ -82,17 +82,14 @@ it("runs one host query per call and cancels it by its own call ID", async () =>
   ).toHaveLength(1);
 });
 
-it("cancels at once when the signal is already aborted", async () => {
+it("sends nothing for a signal aborted before the query", async () => {
   const abort = new AbortController();
   abort.abort();
-  invoke.mockImplementation((command: string) =>
-    Promise.resolve(command === "history_query" ? { kind: "result" } : null),
-  );
-  await nativeHistorySource(invoke).query(query, { signal: abort.signal });
-  const [cancel, run] = invoke.mock.calls;
-  expect(cancel[0]).toBe("history_cancel");
-  expect(run[0]).toBe("history_query");
-  expect(cancel[1].callId).toBe(run[1].callId);
+  const failure = await nativeHistorySource(invoke)
+    .query(query, { signal: abort.signal })
+    .catch((e: unknown) => e);
+  expect(failure).toBeInstanceOf(HistorySourceError);
+  expect(invoke).not.toHaveBeenCalled();
 });
 
 it.each([
