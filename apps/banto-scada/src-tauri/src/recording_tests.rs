@@ -10,7 +10,7 @@ use super::*;
 use scada_host::auth_phase::AuthHost;
 use scada_host::desktop_recording::RECORDING_EVENT;
 use scada_host::recording_epoch::create_recording_root;
-use scada_host::recording_gate::RecordingGate;
+use scada_host::recording_gate::{RecordingGate, NO_RECORDING_RUN};
 use scada_runtime::recording_host::test_support::{self, TestStoreDir};
 use scada_runtime::recording_registry::RecordingRegistryOwnerSeed;
 use serde_json::{json, Value};
@@ -71,7 +71,12 @@ fn host() -> Host {
             create_recording_root(&dir.0, seed, context.clone()).unwrap(),
         )
     });
-    let gate = Arc::new(RecordingGate::new(auth, root, issuer));
+    let gate = Arc::new(RecordingGate::new(
+        auth,
+        root,
+        issuer,
+        generation.scope(context.clone()),
+    ));
     let app = commands(mock_builder())
         .manage(AuthState::with_gate(gate.clone()))
         .manage(DesktopRecording::with_interval(
@@ -383,11 +388,55 @@ fn a_logout_ends_the_subscription_events_of_its_generation() {
 }
 
 #[test]
-fn a_host_without_a_recording_owner_answers_why() {
+fn taking_the_root_out_ends_its_subscription_with_owner_closed() {
+    let h = host();
+    let scope = &h.scope;
+    let attached = h
+        .invoke(
+            "recording_attach",
+            json!({"request": {"version":1, "kind":"recordingWireAttachRequest",
+                "scope":scope, "attachId":"attach-1", "afterRevision":null}}),
+        )
+        .unwrap();
+    let reference = attached["reply"]["outcome"]["subscriptionRef"].clone();
+
+    // The handoff the stop and the resume use (product-owner design §4).
+    tauri::async_runtime::block_on(async {
+        let lock = h.gate.auth().gate().await;
+        assert!(h.gate.try_take(&lock, NO_RECORDING_RUN).unwrap().is_some());
+    });
+    let closed = loop {
+        let event = h.next_event();
+        assert_eq!(event["subscriptionRef"], reference);
+        assert_eq!(event["kind"], "frames", "{event}");
+        if !event["control"].is_null() {
+            break event;
+        }
+    };
+    assert_eq!(closed["control"]["reason"], "ownerClosed");
+    assert_eq!(closed["control"]["scope"], *scope);
+    // The registry commands end with the root.
+    assert_eq!(
+        h.invoke(
+            "recording_lease",
+            json!({"request": lease(scope, "after", "reconciliation")})
+        )
+        .unwrap_err(),
+        json!({"kind": "recordingUnavailable", "reason": "no_recording_run"})
+    );
+    // The pump delivers nothing after the control frame.
+    assert!(h.events.recv_timeout(Duration::from_millis(100)).is_err());
+}
+
+#[test]
+fn a_host_with_an_empty_slot_answers_why() {
     let dir = TempDir::new();
+    // The product host before any recording runs (product-owner design §4).
+    let (auth, recording) =
+        tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run"));
     let app = commands(mock_builder())
-        .manage(tauri::async_runtime::block_on(AuthState::start(&dir.0)))
-        .manage(DesktopRecording::unavailable(NO_RECORDING_OWNER))
+        .manage(auth)
+        .manage(recording)
         .build(mock_context(noop_assets()))
         .unwrap();
     let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
@@ -427,7 +476,7 @@ fn a_host_without_a_recording_owner_answers_why() {
     ] {
         assert_eq!(
             h(cmd, json!({"request": {}})).unwrap_err(),
-            json!({"kind": "recordingUnavailable", "reason": "no_recording_owner"}),
+            json!({"kind": "recordingUnavailable", "reason": "no_recording_run"}),
             "{cmd}"
         );
     }
@@ -437,7 +486,7 @@ fn a_host_without_a_recording_owner_answers_why() {
             json!({"stage": "preflight", "request": {}})
         )
         .unwrap_err(),
-        json!({"kind": "recordingUnavailable", "reason": "no_recording_owner"})
+        json!({"kind": "recordingUnavailable", "reason": "no_recording_run"})
     );
     // The auth commands still answer on such a host.
     assert_eq!(h("auth_phase", json!({})).unwrap()["phase"], "initializing");

@@ -52,6 +52,7 @@ use scada_model::recording_wire::{
     RecordingWireLeaseReply, RecordingWireLeaseRequest, RecordingWireObservationReply,
     RecordingWireObservationRequest, RecordingWireStateFrame,
 };
+use scada_runtime::recording_operations::{OwnerError, RecordingOperationsHandoff};
 use scada_runtime::recording_registry::{
     ApplyRegistration, DiscardRegistration, LeaseError, LeaseRole, PauseRegistration,
     PreflightRegistration, ReconciliationRegistration, RecordingPrincipal,
@@ -65,9 +66,19 @@ use crate::auth::{CurrentSession, LoginOutcome, Resolved, Role, UserIdentity, Ve
 use crate::auth_phase::{AuthHost, AuthPhase, PhaseGuard, TransitionError, Transitioned};
 use crate::user_admin;
 
+/// Why the slot is empty before any recording run has started on this host,
+/// or after one was handed off (design §4).
+pub const NO_RECORDING_RUN: &str = "no_recording_run";
+/// Why the slot is empty when the recording runs but its owner could not be
+/// installed (design §5).
+pub const OWNER_UNAVAILABLE: &str = "owner_unavailable";
+
 /// Why an entry point refused or failed.
 #[derive(Debug)]
 pub enum GateError {
+    /// No root is installed (design §4): `no_recording_run`,
+    /// `store_unavailable` or `owner_unavailable`.
+    Unavailable(&'static str),
     /// The phase refuses the registry (`transitioning`, design §6).
     Phase(AuthPhase),
     /// No desktop session, or it changed before the reply was returned.
@@ -224,6 +235,7 @@ struct Registry<'a> {
     session: &'a RecordingRegistrySession,
     principal: &'a RecordingPrincipal,
     seq: u64,
+    generation: u64,
     workflow: &'a mut Option<HeldWorkflow>,
     subscriptions: &'a mut BTreeMap<String, SubscriptionBinding>,
 }
@@ -317,7 +329,14 @@ fn audit_result(result: &Result<(), &LeaseError>) -> &'static str {
     }
 }
 
-struct GateState {
+/// One installed root: the registry root of one recording run, its issuer,
+/// and the sessions, workflow and subscriptions held for it (design §4).
+struct RootState {
+    /// Counts the roots installed in this gate; a subscription's pump names
+    /// it, since subscription references restart with each root.
+    generation: u64,
+    /// The root's wire scope (`ownerRef`, `ownerEpoch`, `context`).
+    scope: Value,
     root: RecordingRegistryRoot,
     issuer: RecordingSessionIssuer,
     held: Option<HeldSessions>,
@@ -325,7 +344,7 @@ struct GateState {
     subscriptions: BTreeMap<String, SubscriptionBinding>,
 }
 
-impl GateState {
+impl RootState {
     /// Revoke the held sessions, and end the subscriptions, of generations
     /// not newer than `through` other than the still-valid generation `keep`.
     /// A check only knows the generations up to the one it read: sessions
@@ -413,6 +432,104 @@ impl GateState {
     }
 }
 
+/// The gate's slot (product-owner design §4): the installed root, or why
+/// there is none, and the last root handed off, kept only so that its
+/// subscriptions can take their final `ownerClosed` frame. Changed only
+/// under the transition lock.
+struct GateState {
+    installed: Result<RootState, &'static str>,
+    retired: Option<RootState>,
+    generations: u64,
+}
+
+impl GateState {
+    fn roots(&mut self) -> impl Iterator<Item = &mut RootState> {
+        self.installed
+            .as_mut()
+            .ok()
+            .into_iter()
+            .chain(&mut self.retired)
+    }
+
+    fn root_of(&mut self, generation: u64) -> Option<&mut RootState> {
+        self.roots().find(|root| root.generation == generation)
+    }
+
+    fn revoke_through(&mut self, through: u64, keep: Option<u64>) {
+        for root in self.roots() {
+            root.revoke_through(through, keep);
+        }
+    }
+
+    fn revoke_held_sessions(&mut self) {
+        for root in self.roots() {
+            root.revoke_held_sessions();
+        }
+    }
+
+    fn settle(&mut self, seen: u64, current: Option<&CurrentSession>) {
+        for root in self.roots() {
+            root.settle(seen, current);
+        }
+    }
+
+    /// Whether changing `principal` now could strand unsettled work (§4).
+    /// A handed-off root holds nothing.
+    fn holds(&self, principal: &RecordingPrincipal) -> bool {
+        self.installed
+            .as_ref()
+            .is_ok_and(|root| root.holds(principal))
+    }
+
+    fn is_quiescent(&self) -> bool {
+        self.installed
+            .as_ref()
+            .map_or(true, |root| root.root.quiescence().is_quiescent())
+    }
+
+    fn install(
+        &mut self,
+        root: RecordingRegistryRoot,
+        issuer: RecordingSessionIssuer,
+        scope: Value,
+    ) -> Installed {
+        self.generations += 1;
+        self.installed = Ok(RootState {
+            generation: self.generations,
+            scope,
+            root,
+            issuer,
+            held: None,
+            workflow: None,
+            subscriptions: BTreeMap::new(),
+        });
+        Installed {
+            generation: self.generations,
+            scope: self
+                .installed
+                .as_ref()
+                .expect("just installed")
+                .scope
+                .clone(),
+        }
+    }
+}
+
+/// An installed root: its generation and wire scope.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Installed {
+    pub generation: u64,
+    pub scope: Value,
+}
+
+/// A subscription attached through the gate: the reply, and the generation
+/// of the root it belongs to, which its deliveries name.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Attached {
+    pub reply: RecordingWireAttachReply,
+    pub generation: u64,
+}
+
 /// A command accepted under the transition lock, before its generation check.
 struct Entered<'a, T> {
     _phase: PhaseGuard<'a>,
@@ -449,23 +566,105 @@ pub struct RecordingGate {
 impl RecordingGate {
     /// Take ownership of the root and its issuer. The issuer never leaves
     /// the gate, so only the gate issues product sessions (design §3).
+    /// A gate with `root` (of wire scope `scope`) installed.
     pub fn new(
         auth: Arc<AuthHost>,
         root: RecordingRegistryRoot,
         issuer: RecordingSessionIssuer,
+        scope: Value,
     ) -> Self {
+        let gate = Self::empty(auth, NO_RECORDING_RUN);
+        gate.lock().install(root, issuer, scope);
+        gate
+    }
+
+    /// A gate with an empty slot: registry commands answer
+    /// [`GateError::Unavailable`] with `reason` until a root is installed,
+    /// and the auth commands go through it all the same (design §4).
+    pub fn empty(auth: Arc<AuthHost>, reason: &'static str) -> Self {
         Self {
             auth,
             state: Mutex::new(GateState {
-                root,
-                issuer,
-                held: None,
-                workflow: None,
-                subscriptions: BTreeMap::new(),
+                installed: Err(reason),
+                retired: None,
+                generations: 0,
             }),
             #[cfg(test)]
             after_call: Mutex::new(None),
         }
+    }
+
+    /// Install the root of a recording run that has just started (design
+    /// §4), under the transition lock `_phase`. Its sessions are issued on
+    /// first use. Refused (the root is returned) while another is installed.
+    pub fn install(
+        &self,
+        _phase: &PhaseGuard<'_>,
+        root: RecordingRegistryRoot,
+        issuer: RecordingSessionIssuer,
+        scope: Value,
+    ) -> Result<Installed, Box<(RecordingRegistryRoot, RecordingSessionIssuer)>> {
+        let mut state = self.lock();
+        if state.installed.is_ok() {
+            return Err(Box::new((root, issuer)));
+        }
+        Ok(state.install(root, issuer, scope))
+    }
+
+    /// Empty the slot with `reason` when no root is installed (a failed
+    /// installation, design §5). An installed root is left as it is.
+    pub fn set_empty_reason(&self, _phase: &PhaseGuard<'_>, reason: &'static str) {
+        if let Err(current) = &mut self.lock().installed {
+            *current = reason;
+        }
+    }
+
+    /// The installed root, or why the slot is empty.
+    pub fn slot(&self) -> Result<Installed, &'static str> {
+        self.lock()
+            .installed
+            .as_ref()
+            .map(|root| Installed {
+                generation: root.generation,
+                scope: root.scope.clone(),
+            })
+            .map_err(|reason| *reason)
+    }
+
+    /// Take the Supervisor back from the installed root, under the
+    /// transition lock `_phase` (design §4). Only the root's
+    /// [`RecordingRegistryRoot::try_handoff`] is used: an unsettled root is
+    /// `Err` and stays installed and `Open`. On success the slot is empty
+    /// with `reason`, and the root is kept closed only so that its
+    /// subscriptions take their `ownerClosed` frame; its registry commands
+    /// end here. `Ok(None)` when no root is installed.
+    pub fn try_take(
+        &self,
+        _phase: &PhaseGuard<'_>,
+        reason: &'static str,
+    ) -> Result<Option<RecordingOperationsHandoff>, OwnerError> {
+        let mut state = self.lock();
+        let Ok(installed) = state.installed.as_mut() else {
+            return Ok(None);
+        };
+        let handoff = installed.root.try_handoff()?;
+        let installed = std::mem::replace(&mut state.installed, Err(reason));
+        state.retired = installed.ok();
+        Ok(Some(handoff))
+    }
+
+    /// Stop new registry work on the installed root for the process exit
+    /// (design §6 step 1): undispatched registrations are settled, accepted
+    /// native work is not cancelled. Not withdrawable; only the exit uses it.
+    pub fn begin_shutdown(&self) {
+        if let Ok(installed) = self.lock().installed.as_mut() {
+            installed.root.begin_shutdown();
+        }
+    }
+
+    /// The installed root's quiescence; `true` with none.
+    pub fn is_quiescent(&self) -> bool {
+        self.lock().is_quiescent()
     }
 
     pub fn auth(&self) -> &AuthHost {
@@ -737,7 +936,7 @@ impl RecordingGate {
     pub async fn attach(
         &self,
         request: RecordingWireAttachRequest,
-    ) -> Result<Bound<RecordingWireAttachReply>, GateError> {
+    ) -> Result<Bound<Attached>, GateError> {
         let entered = self
             .enter(Need::Read, "recording_attach", |r| {
                 let reply = r.root.attach(r.session, request)?;
@@ -750,7 +949,10 @@ impl RecordingGate {
                             ended: false,
                         });
                 }
-                Ok(reply)
+                Ok(Attached {
+                    reply,
+                    generation: r.generation,
+                })
             })
             .await?;
         self.bind(entered).await
@@ -782,7 +984,14 @@ impl RecordingGate {
     /// - a phase that refuses the registry takes nothing.
     ///
     /// A generation change racing the take withholds the taken frames.
-    pub async fn frames(&self, reference: &str) -> Result<Bound<SubscriptionFrames>, GateError> {
+    /// `generation` is the root's ([`Attached::generation`]): a handed-off
+    /// root delivers until its `ownerClosed` frame, and a replaced one is
+    /// `closed`.
+    pub async fn frames(
+        &self,
+        generation: u64,
+        reference: &str,
+    ) -> Result<Bound<SubscriptionFrames>, GateError> {
         let phase = self.auth.gate().await;
         if !phase.phase().admits_registry() {
             return Err(GateError::Phase(phase.phase()));
@@ -796,8 +1005,12 @@ impl RecordingGate {
             .map_err(GateError::AuthUnavailable)?;
         #[cfg(test)]
         self.run_hook().await;
-        let mut state = self.lock();
-        state.settle(seen, current.as_ref());
+        let mut slot = self.lock();
+        slot.settle(seen, current.as_ref());
+        // A root handed off and replaced since: its subscriptions are over.
+        let state = slot
+            .root_of(generation)
+            .ok_or(GateError::Registry(LeaseError::Closed))?;
         let binding = state
             .subscriptions
             .get(reference)
@@ -811,9 +1024,10 @@ impl RecordingGate {
         // so it is ended now rather than left to a delivery that may never
         // come. Its frames are not taken.
         if self.auth.auth().seq() != current.seq {
-            state.revoke_through(current.seq, None);
+            slot.revoke_through(current.seq, None);
             return Err(GateError::Unauthorized);
         }
+        let state = slot.root_of(generation).expect("found above");
         let session = state
             .session_for(&current, LeaseRole::Reconciliation)
             .map_err(GateError::Registry)?;
@@ -825,7 +1039,7 @@ impl RecordingGate {
         })()
         .map_err(GateError::Registry)?;
         if self.auth.auth().seq() != current.seq {
-            state.revoke_through(current.seq, None);
+            slot.revoke_through(current.seq, None);
             return Err(GateError::Unauthorized);
         }
         Ok(Bound {
@@ -919,8 +1133,11 @@ impl RecordingGate {
     /// deliveries are `Unauthorized`. For a desktop page that is gone (its
     /// webview reloaded or closed): nothing is disclosed and native work is
     /// untouched. Unknown or already ended references are a no-op.
-    pub(crate) fn end_subscription(&self, reference: &str) {
-        let state = &mut *self.lock();
+    pub(crate) fn end_subscription(&self, generation: u64, reference: &str) {
+        let mut slot = self.lock();
+        let Some(state) = slot.root_of(generation) else {
+            return;
+        };
         if let Some(binding) = state.subscriptions.get_mut(reference) {
             if !binding.ended {
                 binding.ended = true;
@@ -972,7 +1189,7 @@ impl RecordingGate {
         let result = self
             .auth
             .transition_to_operational(username, password, display_name, || {
-                self.lock().root.quiescence().is_quiescent()
+                self.lock().is_quiescent()
             })
             .await;
         // The administrator's session took the single slot: every earlier
@@ -1063,6 +1280,9 @@ impl RecordingGate {
         call: impl FnOnce(Registry<'_>) -> Result<T, LeaseError>,
     ) -> Result<Entered<'_, T>, GateError> {
         let phase = self.auth.gate().await;
+        if let Err(reason) = self.slot() {
+            return Err(GateError::Unavailable(reason));
+        }
         if !phase.phase().admits_registry() {
             return Err(GateError::Phase(phase.phase()));
         }
@@ -1091,12 +1311,15 @@ impl RecordingGate {
             return Err(GateError::Forbidden);
         }
         let result = {
-            let mut state = self.lock();
+            let mut slot = self.lock();
+            // The slot changes only under the transition lock, held here.
+            let state = slot.installed.as_mut().expect("installed under the lock");
             let principal = current.session.principal();
             state
                 .session_for(&current, need.lease_role())
                 .and_then(|session| {
-                    let GateState {
+                    let RootState {
+                        generation,
                         root,
                         workflow,
                         subscriptions,
@@ -1107,6 +1330,7 @@ impl RecordingGate {
                         session: &session,
                         principal: &principal,
                         seq: current.seq,
+                        generation: *generation,
                         workflow,
                         subscriptions,
                     })
@@ -1210,7 +1434,7 @@ impl RecordingGate {
     #[cfg(test)]
     fn held(&self, role: LeaseRole) -> Option<(u64, RecordingRegistrySession)> {
         let state = self.lock();
-        let held = state.held.as_ref()?;
+        let held = state.installed.as_ref().ok()?.held.as_ref()?;
         let session = match role {
             LeaseRole::Reconciliation => held.read.clone(),
             LeaseRole::Mutation => held.mutation.clone(),
@@ -1224,13 +1448,15 @@ impl RecordingGate {
     /// cannot reach the root.
     #[cfg(any(test, feature = "test-support"))]
     pub fn test_lose_next_apply_response(&self) {
-        scada_runtime::recording_host::test_support::lose_next_apply_response(&self.lock().root);
+        scada_runtime::recording_host::test_support::lose_next_apply_response(
+            &self.lock().installed.as_ref().expect("installed root").root,
+        );
     }
 
     /// Test only: direct access to the root.
     #[cfg(test)]
     fn with_root<T>(&self, f: impl FnOnce(&mut RecordingRegistryRoot) -> T) -> T {
-        f(&mut self.lock().root)
+        f(&mut self.lock().installed.as_mut().expect("installed root").root)
     }
 }
 

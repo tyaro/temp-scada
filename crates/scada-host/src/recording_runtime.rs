@@ -25,13 +25,15 @@ use scada_runtime::recording_host::{RecordingPhase, ResumeResolution};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::VecDeque;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::sync::Mutex;
 
 mod inspection;
+mod owner;
 mod sdk;
 mod setup;
+pub use owner::{ExitOutcome, StopFailure};
 pub use setup::{
     default_retention_policy, SetupFailure, DEFAULT_RETENTION_MS, DEFAULT_RETENTION_POLICY_ID,
     MAX_CLOCK_SKEW_MS,
@@ -228,6 +230,8 @@ impl CancelBook {
 }
 
 struct Ready {
+    /// The app data dir: the owner epoch of each installed root is saved here.
+    data_dir: PathBuf,
     identity: StoreIdentityFile,
     /// The management context of this process (contract §4): a new ID per
     /// start, so run display IDs are never reused within one context.
@@ -235,11 +239,18 @@ struct Ready {
     catalog: std::sync::Mutex<Option<HistoryCatalog>>,
     history: Mutex<HistoryHost>,
     cancels: std::sync::Mutex<CancelBook>,
-    /// The Supervisor that owns the store's writer. `None` only after a
-    /// setup step lost the store (it is then unavailable until restart).
+    /// The Supervisor that owns the store's writer. `None` while it is lent
+    /// to an installed root's owner (`lent`), or after a setup step lost the
+    /// store (it is then unavailable until restart).
     supervisor: Mutex<Option<RecordingSupervisor>>,
+    /// The recording status of the Supervisor lent to an installed root.
+    lent: std::sync::Mutex<Option<StatusWatch>>,
     runs: std::sync::Mutex<inspection::RunRefs>,
 }
+
+type StatusWatch = tokio::sync::watch::Receiver<
+    std::sync::Arc<scada_runtime::recording_host::RecordingHostStatus>,
+>;
 
 /// Why an inspection produced no response. `as_str` is the command's error.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -400,12 +411,21 @@ impl RecordingRuntime {
             return Err(InspectFailure::ContextMismatch);
         }
         let mut slot = ready.supervisor.lock().await;
-        let (database, host) = match slot.as_mut() {
-            None => (
+        let lent = lock(&ready.lent).clone();
+        let (database, host) = match (slot.as_mut(), lent) {
+            // Lent to an installed root's owner: the DB through the History
+            // host's reader, the Host view from the recording status alone.
+            (None, Some(watch)) => {
+                let database = lent_database(ready).await;
+                let status = watch.borrow().clone();
+                let host = inspection::lent_host(&status, &mut lock(&ready.runs), setup::now_ms());
+                (database, host)
+            }
+            (None, None) => (
                 json!({"state": "unavailable", "error": "unavailable"}),
                 json!({"state": "unknown"}),
             ),
-            Some(supervisor) => {
+            (Some(supervisor), _) => {
                 let database = match supervisor.start_resume_inspection(setup::control()) {
                     Ok(run) => match supervisor.join_resume_inspection(&run).await {
                         Ok(completion) => match &completion.outcome {
@@ -464,7 +484,13 @@ impl RecordingRuntime {
         }
         let desired = desired.clone();
         let mut slot = ready.supervisor.lock().await;
-        let supervisor = slot.as_mut().ok_or(SetupFailure::Unavailable)?;
+        let Some(supervisor) = slot.as_mut() else {
+            // Lent to an installed root: a recording runs.
+            return Err(match lock(&ready.lent).is_some() {
+                true => SetupFailure::NotAllowed,
+                false => SetupFailure::Unavailable,
+            });
+        };
         if !matches!(
             supervisor.state().recording.phase,
             RecordingPhase::Idle | RecordingPhase::Joined
@@ -521,6 +547,45 @@ impl RecordingRuntime {
         };
         *slot = Some(supervisor);
         result
+    }
+}
+
+/// The DB view of one resume inspection read with the History host's
+/// reader, while the Supervisor is lent to an installed root (its own reader
+/// is the owner's). Waits for a running history query.
+async fn lent_database(ready: &Ready) -> Value {
+    let unavailable = |error: &str| json!({"state": "unavailable", "error": error});
+    // A running `history_query` holds this lock until it joins, so it is
+    // waited for, not cancelled. A query left in flight by a caller that
+    // went away is joined (it ends by its own deadline), never cancelled
+    // here: an inspection never cuts a history read short.
+    let mut host = ready.history.lock().await;
+    let state = host.state();
+    if let (HistoryPhase::InFlight, Some(stale)) = (state.phase, state.request) {
+        let _ = host.join_query(&stale).await;
+    }
+    let Ok(mut reader) = host.take_reader() else {
+        return unavailable("readerUnusable");
+    };
+    let Ok(control) = QueryControl::with_timeout(START_READ_TIMEOUT) else {
+        *host = HistoryHost::new(reader);
+        return unavailable("internal");
+    };
+    match tokio::task::spawn_blocking(move || {
+        let outcome = reader.recording_resume_state(&control);
+        (reader, outcome)
+    })
+    .await
+    {
+        Ok((reader, outcome)) => {
+            *host = HistoryHost::new(reader);
+            match outcome {
+                Ok(state) => inspection::database(&state),
+                Err(error) => unavailable(inspection::store_error(&error)),
+            }
+        }
+        // The reader was lost with the task: history reads stay unavailable.
+        Err(_) => unavailable("readerUnusable"),
     }
 }
 
@@ -672,6 +737,8 @@ fn open_locked(data_dir: &Path, deployment_id: &str) -> Result<Ready, &'static s
     let reader = store.reader().map_err(store_reason)?;
     let supervisor = RecordingSupervisor::try_new(store).map_err(|e| store_reason(e.error))?;
     Ok(Ready {
+        data_dir: data_dir.to_owned(),
+        lent: std::sync::Mutex::default(),
         identity,
         catalog: std::sync::Mutex::new(catalog),
         history: Mutex::new(HistoryHost::new(reader)),

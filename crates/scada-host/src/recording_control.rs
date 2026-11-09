@@ -1,7 +1,7 @@
 //! The host's recording control commands (product-owner design §5), outside
-//! the recording registry: the management context and inspection (Viewer or
-//! above) and the first setup and start (Admin, including the synthetic
-//! Admin of auth-disabled mode). Each runs under the transition lock
+//! the recording registry: the management context, the inspection and the
+//! slot (Viewer or above), and the first setup and start and the stop
+//! (Admin, including the synthetic Admin of auth-disabled mode). Each runs under the transition lock
 //! ([`AuthHost::gate`](crate::auth_phase::AuthHost::gate)) after the role is
 //! checked again, like user management. Tauri-independent: the commands of
 //! `apps/banto-scada/src-tauri` call these and return the result unchanged.
@@ -19,7 +19,8 @@ use serde_json::{json, Value};
 
 use crate::auth::Role;
 use crate::desktop_auth::{CommandError, DesktopAuth};
-use crate::recording_runtime::{InspectFailure, RecordingRuntime, SetupFailure};
+use crate::recording_gate::NO_RECORDING_RUN;
+use crate::recording_runtime::{InspectFailure, RecordingRuntime, SetupFailure, StopFailure};
 
 /// The audit resource of the recording control commands.
 const RESOURCE: &str = "recording";
@@ -98,8 +99,12 @@ pub async fn status(
 /// `recording_initial_setup(projectJson)` (Admin): the first setup and
 /// start of the Project's recording plan. `clients` are the Hub clients for
 /// the resolution and the recording, `None` when no Hub is configured.
-/// Answers the recording phase reached (`{"phase": "running" | "starting"}`).
-/// Every accepted call is audited (`initial_setup`, ok or failed).
+/// Answers the recording phase reached and whether the registry root was
+/// installed over it (`{"phase": "running" | "starting", "owner":
+/// "installed" | "owner_unavailable"}`): a recording that runs gets its root
+/// in the same call, and one whose root cannot be installed keeps running
+/// with the slot `owner_unavailable` (design §5). Every accepted call is
+/// audited (`initial_setup`, ok or failed).
 pub async fn initial_setup(
     auth: &DesktopAuth,
     runtime: &RecordingRuntime,
@@ -120,16 +125,30 @@ pub async fn initial_setup(
     let plan_id = project.recording_plan_id();
     match result {
         Ok(phase) => {
+            let owner = match auth.recording_gate() {
+                Some(gate) if phase == "running" => {
+                    match runtime.install_owner(gate, &lock, project).await {
+                        Ok(_) => "installed",
+                        Err(reason) => reason,
+                    }
+                }
+                Some(gate) => {
+                    gate.set_empty_reason(&lock, crate::recording_gate::OWNER_UNAVAILABLE);
+                    crate::recording_gate::OWNER_UNAVAILABLE
+                }
+                None => crate::recording_gate::OWNER_UNAVAILABLE,
+            };
+            let detail = json!({ "phase": phase, "owner": owner });
             host.auth()
                 .record_ok(
                     identity,
                     "initial_setup",
                     RESOURCE,
                     plan_id,
-                    Some(json!({ "phase": phase })),
+                    Some(detail.clone()),
                 )
                 .await;
-            Ok(json!({ "phase": phase }))
+            Ok(detail)
         }
         Err(failure) => {
             host.auth()
@@ -152,6 +171,73 @@ pub async fn initial_setup(
             })
         }
     }
+}
+
+/// `recording_slot` (Viewer): the registry slot (design §4), as
+/// `{"state": "installed", "generation": n, "scope": <wire scope>}` or `{"state": "empty",
+/// "reason": "no_recording_run" | "store_unavailable" | "owner_unavailable"}`.
+pub async fn slot(auth: &DesktopAuth, runtime: &RecordingRuntime) -> Result<Value, ControlError> {
+    let host = auth.auth();
+    let _lock = host.gate().await;
+    host.auth().require_role(Role::Viewer, RESOURCE).await?;
+    Ok(match auth.recording_gate().map(|gate| gate.slot()) {
+        Some(Ok(installed)) => json!({"state": "installed",
+            "generation": installed.generation, "scope": installed.scope}),
+        Some(Err(reason)) => json!({"state": "empty", "reason": reason}),
+        None => json!({"state": "empty", "reason": runtime
+            .unavailable_reason()
+            .unwrap_or(NO_RECORDING_RUN)}),
+    })
+}
+
+/// `recording_stop` (Admin): stop the recording without changing the plan
+/// (design §5). An installed root is taken back by its handoff first; while
+/// it holds unsettled work the stop is `busy` and nothing changes. Answers
+/// `{"phase": "joined"}`. Every accepted call is audited (`stop`).
+pub async fn stop(auth: &DesktopAuth, runtime: &RecordingRuntime) -> Result<Value, ControlError> {
+    let host = auth.auth();
+    let lock = host.gate().await;
+    let actor = host.auth().require_role(Role::Admin, RESOURCE).await?;
+    if !lock.phase().admits_registry() {
+        return Err(ControlError::Refused("not_allowed"));
+    }
+    let Some(gate) = auth.recording_gate() else {
+        return Err(ControlError::Unavailable(
+            runtime.unavailable_reason().unwrap_or(NO_RECORDING_RUN),
+        ));
+    };
+    let result = runtime.stop(gate, &lock).await;
+    let identity = actor.session.identity();
+    let (detail, outcome) = match &result {
+        Ok(phase) => (json!({ "phase": phase }), "ok"),
+        Err(failure) => (json!({ "error": failure.as_str() }), "failed"),
+    };
+    host.auth()
+        .record(identity, "stop", RESOURCE, None, Some(detail), outcome)
+        .await;
+    match result {
+        Ok(phase) => Ok(json!({ "phase": phase })),
+        Err(StopFailure::Unavailable) => Err(ControlError::Unavailable(
+            runtime
+                .unavailable_reason()
+                .unwrap_or(crate::recording_runtime::STORE_UNAVAILABLE),
+        )),
+        Err(failure) => Err(ControlError::Refused(failure.as_str())),
+    }
+}
+
+/// The exit sequence (design §6) within `limit`, under the transition lock
+/// so no registry or control command runs meanwhile. Without a recording
+/// gate or store there is nothing to stop.
+pub async fn exit(
+    auth: &DesktopAuth,
+    runtime: &RecordingRuntime,
+    limit: std::time::Duration,
+) -> crate::recording_runtime::ExitOutcome {
+    let lock = auth.auth().gate().await;
+    runtime
+        .exit(auth.recording_gate().map(|gate| &**gate), &lock, limit)
+        .await
 }
 
 #[cfg(test)]

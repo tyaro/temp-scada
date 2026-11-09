@@ -71,7 +71,8 @@ fn invoke(webview: &WebviewWindow<MockRuntime>, cmd: &str, args: Value) -> Resul
 #[test]
 fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
     let dir = TempDir::new();
-    let (_app, webview) = app(tauri::async_runtime::block_on(AuthState::start(&dir.0)));
+    let (_app, webview) =
+        app(tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run")).0);
 
     assert_eq!(
         invoke(&webview, "auth_phase", json!({})).unwrap(),
@@ -163,7 +164,8 @@ fn a_host_whose_auth_did_not_start_answers_why() {
 #[test]
 fn user_management_and_auth_settings_answer_over_ipc() {
     let dir = TempDir::new();
-    let (_app, webview) = app(tauri::async_runtime::block_on(AuthState::start(&dir.0)));
+    let (_app, webview) =
+        app(tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run")).0);
     // Before the move: the mode is not switched here, the local role is.
     assert_eq!(
         invoke(

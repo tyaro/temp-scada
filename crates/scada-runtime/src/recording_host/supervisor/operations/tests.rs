@@ -27,6 +27,7 @@ use tokio_tungstenite::tungstenite::Message;
 mod registry_call_inspection;
 mod registry_cancel;
 mod registry_capacity;
+mod registry_discard_reissue;
 mod registry_issuer;
 mod registry_observation;
 mod registry_read_retry;

@@ -39,9 +39,11 @@ impl Drop for TempDir {
 
 /// A first-start host (auth-disabled, synthetic Admin) with no saved Hub.
 fn app(dir: &TempDir) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
-    let auth = tauri::async_runtime::block_on(AuthState::start(&dir.0));
+    let (auth, recording) =
+        tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run"));
     let app = commands(mock_builder())
         .manage(auth)
+        .manage(recording)
         .manage(RecordingRuntime::start(&dir.0, "deployment-a"))
         .manage(NativeHost {
             bootstrap: Bootstrapper::new(
@@ -132,5 +134,15 @@ fn the_control_commands_answer_over_ipc() {
             json!({"projectJson": project_json()})
         ),
         Err(json!({"kind": "hub_not_configured"}))
+    );
+
+    // The slot stays empty until a recording runs, and nothing records.
+    assert_eq!(
+        invoke(&webview, "recording_slot", json!({})),
+        Ok(json!({"state": "empty", "reason": "no_recording_run"}))
+    );
+    assert_eq!(
+        invoke(&webview, "recording_stop", json!({})),
+        Err(json!({"kind": "not_allowed"}))
     );
 }

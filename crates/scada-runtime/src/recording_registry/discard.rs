@@ -34,6 +34,9 @@ pub(super) struct DiscardLease {
     change_ref: String,
     admission_id: String,
     lease_id: String,
+    /// Earlier `(leaseRequestId, admissionId)` pairs of this workflow's discard lease, each
+    /// expired unregistered and replaced. A same-ID re-fetch still returns its saved reply.
+    superseded: Vec<(String, String)>,
     registered: Option<RegisteredDiscard>,
 }
 
@@ -192,6 +195,13 @@ impl RecordingRegistryRoot {
     }
 
     /// The separately reserved discard slot is usable only for a real Candidate or Paused owner.
+    ///
+    /// The slot holds one discard lease. The same IDs re-fetch its saved reply without extending
+    /// it. Other IDs are `ProtocolViolation`, except when the held lease expired (by the host's
+    /// `Instant`) without a registration: then the lease is re-issued under the new IDs in the
+    /// same reserved slot, after the same checks as the first issue, and the old lease stays
+    /// expired in history. Without this, an expired unregistered discard lease would leave the
+    /// Candidate undiscardable and the owner unable to hand off.
     pub fn issue_discard_lease(
         &mut self,
         session: &RecordingRegistrySession,
@@ -234,14 +244,28 @@ impl RecordingRegistryRoot {
             .as_str()
             .expect("validated ID")
             .to_owned();
+        let mut superseded = Vec::new();
         if let Some(existing) = &record.discard_lease {
-            if existing.preflight_sequence != preflight.sequence()
-                || existing.admission_id != admission_id
-                || existing.lease_id != lease_id
-            {
+            if existing.preflight_sequence != preflight.sequence() {
                 return Err(LeaseError::ProtocolViolation);
             }
-            return self.issue_drain_lease_at(session, request, now, stage.lease_bytes);
+            let ids = (lease_id.clone(), admission_id.clone());
+            if (existing.lease_id == ids.0 && existing.admission_id == ids.1)
+                || existing.superseded.contains(&ids)
+            {
+                return self.issue_drain_lease_at(session, request, now, stage.lease_bytes);
+            }
+            // Only a lease that expired unregistered is replaced, in the same reserved slot,
+            // under new IDs (product owner design §6.1). A live or registered one keeps its IDs.
+            let expired = self
+                .leases
+                .get(&existing.lease_id)
+                .is_some_and(|lease| now >= lease.deadline);
+            if existing.registered.is_some() || !expired {
+                return Err(LeaseError::ProtocolViolation);
+            }
+            superseded = existing.superseded.clone();
+            superseded.push((existing.lease_id.clone(), existing.admission_id.clone()));
         }
         if self.leases.contains_key(&lease_id)
             || self
@@ -379,6 +403,7 @@ impl RecordingRegistryRoot {
             change_ref,
             admission_id,
             lease_id,
+            superseded,
             registered: None,
         });
         Ok(reply)

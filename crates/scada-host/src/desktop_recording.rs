@@ -22,8 +22,9 @@
 //!   subscription with a [`RecordingEvent::Ended`]. When the page ends
 //!   ([`DesktopRecording::end_page`], or the pump's `stop`), its
 //!   subscriptions are ended in the registry too, freeing their live slots.
-//! - **Without a recording owner** (the product host until C5), every
-//!   command answers `{"kind": "recordingUnavailable", "reason": ...}`.
+//! - **Without a recording root** (the gate's slot is empty until a
+//!   recording runs, product-owner design §4, or the host has no gate),
+//!   every command answers `{"kind": "recordingUnavailable", "reason": ...}`.
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -92,6 +93,7 @@ fn registry_kind(error: &LeaseError) -> &'static str {
 /// The wire kind of a gate refusal.
 fn gate_kind(error: &GateError) -> &'static str {
     match error {
+        GateError::Unavailable(_) => "recordingUnavailable",
         GateError::Phase(_) => "phase",
         GateError::Unauthorized => "unauthorized",
         GateError::Forbidden => "forbidden",
@@ -103,7 +105,7 @@ fn gate_kind(error: &GateError) -> &'static str {
 impl Serialize for RecordingCommandError {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
-            Self::Unavailable(reason) => {
+            Self::Unavailable(reason) | Self::Gate(GateError::Unavailable(reason)) => {
                 json!({"kind": "recordingUnavailable", "reason": reason}).serialize(serializer)
             }
             Self::InvalidRequest => json!({"kind": "invalidRequest"}).serialize(serializer),
@@ -181,8 +183,12 @@ struct Host {
 #[derive(Default)]
 struct Pumps {
     next: u64,
-    claims: BTreeMap<String, Claim>,
+    claims: BTreeMap<Key, Claim>,
 }
+
+/// A subscription: the generation of the root it was attached to, and its
+/// reference, which restarts with each root.
+type Key = (u64, String);
 
 /// The pages open now: begun ([`DesktopRecording::begin_page`]) and not
 /// ended ([`DesktopRecording::end_page`]), one per webview. Read by a claim,
@@ -194,7 +200,7 @@ struct Pumps {
 #[derive(Default)]
 struct PageState {
     live: BTreeSet<u64>,
-    owners: BTreeMap<String, u64>,
+    owners: BTreeMap<Key, u64>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -235,10 +241,18 @@ impl DesktopRecording {
         Self { host: Err(reason) }
     }
 
+    /// The host, while its gate has a root installed. An empty slot answers
+    /// before the request is parsed; the gate checks it again under the
+    /// transition lock.
     fn host(&self) -> Result<&Host, RecordingCommandError> {
-        self.host
+        let host = self
+            .host
             .as_ref()
-            .map_err(|reason| RecordingCommandError::Unavailable(reason))
+            .map_err(|reason| RecordingCommandError::Unavailable(reason))?;
+        host.gate
+            .slot()
+            .map_err(RecordingCommandError::Unavailable)?;
+        Ok(host)
     }
 
     /// The page `page` was opened (a webview's page load). The host gives
@@ -264,10 +278,10 @@ impl DesktopRecording {
         if let Ok(host) = &self.host {
             let mut pages = host.live_pages.lock().expect("live pages mutex poisoned");
             pages.live.remove(&page);
-            pages.owners.retain(|reference, owner| {
+            pages.owners.retain(|(generation, reference), owner| {
                 let ended = *owner == page;
                 if ended {
-                    host.gate.end_subscription(reference);
+                    host.gate.end_subscription(*generation, reference);
                 }
                 !ended
             });
@@ -399,12 +413,15 @@ impl DesktopRecording {
         let host = self.host()?;
         let request = parse(request, RecordingWireAttachRequest::from_value)?;
         let bound = host.gate.attach(request).await?;
-        let pump = match bound.reply.as_value()["outcome"]["subscriptionRef"].as_str() {
-            Some(reference) => FramePump::claim(host, reference, page).await,
+        let attached = &bound.reply;
+        let pump = match attached.reply.as_value()["outcome"]["subscriptionRef"].as_str() {
+            Some(reference) => {
+                FramePump::claim(host, (attached.generation, reference.to_owned()), page).await
+            }
             None => None,
         };
         Ok((
-            RecordingResult::of(bound, |reply| reply.as_value().clone()),
+            RecordingResult::of(bound, |attached| attached.reply.as_value().clone()),
             pump,
         ))
     }
@@ -427,7 +444,7 @@ pub struct FramePump {
     gate: Arc<RecordingGate>,
     pumps: Arc<tokio::sync::Mutex<Pumps>>,
     live_pages: Arc<Mutex<PageState>>,
-    reference: String,
+    key: Key,
     claim: Claim,
     interval: Duration,
 }
@@ -448,18 +465,18 @@ enum Delivery {
 }
 
 impl FramePump {
-    async fn claim(host: &Host, reference: &str, page: u64) -> Option<Self> {
+    async fn claim(host: &Host, key: Key, page: u64) -> Option<Self> {
         let mut pumps = host.pumps.lock().await;
         let mut pages = host.live_pages.lock().expect("live pages mutex poisoned");
-        let existing = pumps.claims.get(reference).copied();
+        let existing = pumps.claims.get(&key).copied();
         if !pages.live.contains(&page) {
             // An attach whose page ended while it ran: it never takes the
             // subscription from an open page. With no open page holding it,
             // nothing will deliver it, so it is ended (its live slot freed).
             if !existing.is_some_and(|claim| pages.live.contains(&claim.page)) {
-                pumps.claims.remove(reference);
-                pages.owners.remove(reference);
-                host.gate.end_subscription(reference);
+                pumps.claims.remove(&key);
+                pages.owners.remove(&key);
+                host.gate.end_subscription(key.0, &key.1);
             }
             return None;
         }
@@ -470,29 +487,29 @@ impl FramePump {
             // The subscription of an ended page is over, even if its pump
             // has not stopped yet; the new pump reports it ended.
             if !pages.live.contains(&existing.page) {
-                host.gate.end_subscription(reference);
+                host.gate.end_subscription(key.0, &key.1);
             }
         }
-        pages.owners.insert(reference.to_owned(), page);
+        pages.owners.insert(key.clone(), page);
         drop(pages);
         pumps.next += 1;
         let claim = Claim {
             page,
             token: pumps.next,
         };
-        pumps.claims.insert(reference.to_owned(), claim);
+        pumps.claims.insert(key.clone(), claim);
         Some(Self {
             gate: host.gate.clone(),
             pumps: host.pumps.clone(),
             live_pages: host.live_pages.clone(),
-            reference: reference.to_owned(),
+            key,
             claim,
             interval: host.interval,
         })
     }
 
     pub fn subscription_ref(&self) -> &str {
-        &self.reference
+        &self.key.1
     }
 
     fn page_ended(&self) -> bool {
@@ -506,15 +523,15 @@ impl FramePump {
 
     /// Drop this pump's claim (the caller holds `pumps` and owns it).
     fn release(&self, pumps: &mut Pumps) {
-        pumps.claims.remove(&self.reference);
+        pumps.claims.remove(&self.key);
         let mut pages = self.live_pages.lock().expect("live pages mutex poisoned");
-        if pages.owners.get(&self.reference) == Some(&self.claim.page) {
-            pages.owners.remove(&self.reference);
+        if pages.owners.get(&self.key) == Some(&self.claim.page) {
+            pages.owners.remove(&self.key);
         }
     }
 
     fn owns(&self, pumps: &Pumps) -> bool {
-        pumps.claims.get(&self.reference) == Some(&self.claim)
+        pumps.claims.get(&self.key) == Some(&self.claim)
     }
 
     /// Deliver until the subscription ends, the page ends (`stop`
@@ -552,7 +569,7 @@ impl FramePump {
         if self.owns(&pumps) {
             self.release(&mut pumps);
             if matches!(outcome, Delivery::Gone) {
-                self.gate.end_subscription(&self.reference);
+                self.gate.end_subscription(self.key.0, &self.key.1);
             }
         }
     }
@@ -567,13 +584,13 @@ impl FramePump {
         if self.page_ended() {
             return Delivery::Gone;
         }
-        let event = match self.gate.frames(&self.reference).await {
+        let event = match self.gate.frames(self.key.0, &self.key.1).await {
             Ok(Bound { seq, reply }) => {
                 if reply.state.is_none() && reply.control.is_none() {
                     return Delivery::Continue;
                 }
                 RecordingEvent::Frames {
-                    subscription_ref: self.reference.clone(),
+                    subscription_ref: self.key.1.clone(),
                     seq,
                     state: reply.state.map(|frame| frame.as_value().clone()),
                     control: reply.control.map(|frame| frame.as_value().clone()),
@@ -581,7 +598,7 @@ impl FramePump {
             }
             Err(GateError::AuthUnavailable(_) | GateError::Phase(_)) => return Delivery::Hold,
             Err(error) => RecordingEvent::Ended {
-                subscription_ref: self.reference.clone(),
+                subscription_ref: self.key.1.clone(),
                 reason: gate_kind(&error),
             },
         };
