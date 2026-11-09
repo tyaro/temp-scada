@@ -384,6 +384,92 @@ async fn demoting_yourself_revokes_your_sessions_within_the_command() {
 }
 
 #[tokio::test]
+async fn a_password_reset_ends_the_sessions_but_not_the_owners_workflow() {
+    let (f, operator) = with_operator().await;
+    let operator_id = operator.session.identity().id;
+    let p = preflighted(&f, "reset-change").await;
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    let (_, mutation) = f.gate.held(LeaseRole::Mutation).unwrap();
+
+    // Not `Busy` under the unsettled workflow: the principal stays the same.
+    f.gate
+        .reset_password(operator_id, "reset-horse-3")
+        .await
+        .unwrap();
+    // The reset ended the operator's own session, its registry sessions and
+    // subscription within the command.
+    assert!(f.gate.held(LeaseRole::Mutation).is_none());
+    assert!(matches!(
+        f.gate.with_root(|root| root.revoke_session(&mutation)),
+        Ok(())
+    ));
+    assert!(matches!(
+        f.gate.frames(&reference).await,
+        Err(GateError::Unauthorized)
+    ));
+    assert!(f.auth.auth().current().await.unwrap().is_none());
+
+    // With the new password the same principal reaches its workflow again.
+    match f
+        .auth
+        .auth()
+        .login("operator", "reset-horse-3")
+        .await
+        .unwrap()
+    {
+        LoginOutcome::LoggedIn(_) => {}
+        other => panic!("login failed: {other:?}"),
+    }
+    discard(&f, &p, "discard").await;
+}
+
+#[tokio::test]
+async fn a_refused_reset_revokes_nothing() {
+    let f = operational().await;
+    f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
+    let before = f.auth.auth().seq();
+    // Banto refuses an unknown account.
+    assert!(matches!(
+        f.gate.reset_password(9999, "reset-horse-3").await,
+        Err(AuthChangeError::Auth(_))
+    ));
+    assert_eq!(f.auth.auth().seq(), before);
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_some());
+    // Below Admin, refused before anything is touched.
+    f.gate.logout().await;
+    login(&f.auth, "viewer").await;
+    assert!(matches!(
+        f.gate.reset_password(1, "reset-horse-3").await,
+        Err(AuthChangeError::Forbidden)
+    ));
+}
+
+#[tokio::test]
+async fn while_the_mode_is_on_a_lowered_local_role_raises_itself() {
+    let f = initializing().await;
+    f.gate.set_auth_config(true, Role::Viewer).await.unwrap();
+    // Neither the move (it needs the synthetic Admin) nor any other Admin
+    // command is open to the lowered session; the settings stay open.
+    assert!(matches!(
+        f.gate.delete_user(1).await,
+        Err(AuthChangeError::Forbidden)
+    ));
+    let saved = f.gate.set_auth_config(true, Role::Admin).await.unwrap();
+    assert_eq!(saved.disabled_role, Role::Admin);
+    assert_eq!(
+        f.auth
+            .auth()
+            .current()
+            .await
+            .unwrap()
+            .unwrap()
+            .session
+            .role(),
+        Role::Admin
+    );
+}
+
+#[tokio::test]
 async fn only_an_admin_changes_users_and_settings() {
     let f = operational().await;
     f.gate.logout().await;
@@ -397,7 +483,7 @@ async fn only_an_admin_changes_users_and_settings() {
         Err(AuthChangeError::Forbidden)
     ));
     assert!(matches!(
-        f.gate.set_auth_config(&AuthSettings::default()).await,
+        f.gate.set_auth_config(false, Role::Admin).await,
         Err(AuthChangeError::Forbidden)
     ));
 }
@@ -406,31 +492,22 @@ async fn only_an_admin_changes_users_and_settings() {
 async fn the_auth_disabled_role_is_not_lowered_under_an_unsettled_workflow() {
     let f = initializing().await;
     let saved = f.auth.auth().settings().auth_config().await.unwrap();
-    let lowered = AuthSettings {
-        disabled_role: Role::Viewer,
-        ..saved.clone()
-    };
     // The mode is switched only by the move to operation.
     assert!(matches!(
-        f.gate
-            .set_auth_config(&AuthSettings {
-                disabled: false,
-                ..saved.clone()
-            })
-            .await,
+        f.gate.set_auth_config(false, Role::Admin).await,
         Err(AuthChangeError::NotAllowed)
     ));
 
     let p = preflighted(&f, "disabled-role-change").await;
     assert!(matches!(
-        f.gate.set_auth_config(&lowered).await,
+        f.gate.set_auth_config(true, Role::Viewer).await,
         Err(AuthChangeError::Busy)
     ));
     assert_eq!(f.auth.auth().settings().auth_config().await.unwrap(), saved);
     discard(&f, &p, "discard").await;
     let (_, mutation) = f.gate.held(LeaseRole::Mutation).unwrap();
     let before = f.auth.auth().seq();
-    f.gate.set_auth_config(&lowered).await.unwrap();
+    f.gate.set_auth_config(true, Role::Viewer).await.unwrap();
     // A new generation with the lowered role; the old sessions ended.
     assert_ne!(f.auth.auth().seq(), before);
     assert!(f.gate.held(LeaseRole::Mutation).is_none());

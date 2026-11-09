@@ -5,16 +5,20 @@
 //! The results and errors are Banto admin-template's wire shapes, so the
 //! webview's `createTauriAuthProvider` (`@banto/admin-core`) reads them
 //! unchanged. `auth_phase` and `auth_transition_to_operational` are this
-//! host's own (design §6).
+//! host's own (design §6). The user-management and auth-settings commands
+//! (`users_*`, `auth_config_get`, `auth_config_apply`) take Banto's
+//! arguments; their own refusals are `{"kind": "not_allowed" | "busy"}`.
 use std::path::Path;
 use std::sync::Arc;
 
+use scada_host::auth::Role;
 use scada_host::auth_phase::AuthHost;
 use scada_host::desktop_auth::{
     startup_reason, AuthPhaseResult, AuthResolveResult, AuthStatusResult, ChangePasswordResult,
-    CommandError, DesktopAuth, LoginResult, LogoutResult, TransitionResult,
+    CommandError, CreatedUser, DesktopAuth, LoginResult, LogoutResult, TransitionResult,
 };
 use scada_host::recording_gate::RecordingGate;
+use scada_host::{AuthSettings, UserSummary};
 use tauri::State;
 
 /// The auth of this host, or why it did not start. A failed start is not
@@ -116,5 +120,65 @@ pub async fn auth_transition_to_operational(
     state
         .get()?
         .transition_to_operational(&username, &password, &display_name)
+        .await
+}
+
+#[tauri::command]
+pub async fn users_list(state: State<'_, AuthState>) -> Result<Vec<UserSummary>, CommandError> {
+    state.get()?.users_list().await
+}
+
+#[tauri::command]
+pub async fn users_create(
+    state: State<'_, AuthState>,
+    username: String,
+    password: String,
+    display_name: String,
+    role: Role,
+) -> Result<CreatedUser, CommandError> {
+    state
+        .get()?
+        .users_create(&username, &password, &display_name, role)
+        .await
+}
+
+#[tauri::command]
+pub async fn users_update(
+    state: State<'_, AuthState>,
+    id: i64,
+    display_name: String,
+    role: Role,
+) -> Result<UserSummary, CommandError> {
+    state.get()?.users_update(id, &display_name, role).await
+}
+
+#[tauri::command]
+pub async fn users_reset_password(
+    state: State<'_, AuthState>,
+    id: i64,
+    new_password: String,
+) -> Result<(), CommandError> {
+    state.get()?.users_reset_password(id, &new_password).await
+}
+
+#[tauri::command]
+pub async fn users_delete(state: State<'_, AuthState>, id: i64) -> Result<(), CommandError> {
+    state.get()?.users_delete(id).await
+}
+
+#[tauri::command]
+pub async fn auth_config_get(state: State<'_, AuthState>) -> Result<AuthSettings, CommandError> {
+    state.get()?.auth_config_get().await
+}
+
+#[tauri::command]
+pub async fn auth_config_apply(
+    state: State<'_, AuthState>,
+    disabled: bool,
+    disabled_role: Role,
+) -> Result<AuthSettings, CommandError> {
+    state
+        .get()?
+        .auth_config_apply(disabled, disabled_role)
         .await
 }

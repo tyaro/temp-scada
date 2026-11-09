@@ -7,11 +7,16 @@ pub mod desktop_recording;
 mod durable;
 pub mod recording_epoch;
 pub mod recording_gate;
+mod user_admin;
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+/// The user-management and auth-settings wire shapes (Banto's), for the
+/// Tauri commands that return them.
+pub use banto_admin_services::settings::AuthSettings;
+pub use banto_admin_services::users::UserSummary;
 use banto_hub_bootstrap::{BootstrapState, Error, ErrorKind, HubRecord, KeyStore};
 pub use banto_hub_bootstrap::{Bootstrapper, HubStatus};
 

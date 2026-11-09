@@ -159,3 +159,82 @@ fn a_host_whose_auth_did_not_start_answers_why() {
         );
     }
 }
+
+#[test]
+fn user_management_and_auth_settings_answer_over_ipc() {
+    let dir = TempDir::new();
+    let (_app, webview) = app(tauri::async_runtime::block_on(AuthState::start(&dir.0)));
+    // Before the move: the mode is not switched here, the local role is.
+    assert_eq!(
+        invoke(
+            &webview,
+            "auth_config_apply",
+            json!({"disabled": false, "disabledRole": "admin"}),
+        )
+        .unwrap_err(),
+        json!({"kind": "not_allowed"})
+    );
+    assert_eq!(
+        invoke(&webview, "auth_config_get", json!({})).unwrap(),
+        json!({"disabled": true, "disabledRole": "admin", "autologinEnabled": false,
+            "autologinUsername": null})
+    );
+    invoke(
+        &webview,
+        "auth_transition_to_operational",
+        json!({"username": "admin", "password": PASSWORD, "displayName": "管理者"}),
+    )
+    .unwrap();
+
+    let created = invoke(
+        &webview,
+        "users_create",
+        json!({"username": "viewer", "password": PASSWORD, "displayName": "閲覧者",
+            "role": "viewer"}),
+    )
+    .unwrap();
+    let id = created["id"].clone();
+    assert_eq!(
+        created,
+        json!({"id": id, "username": "viewer", "displayName": "閲覧者", "role": "viewer"})
+    );
+    let updated = invoke(
+        &webview,
+        "users_update",
+        json!({"id": id, "displayName": "編集者", "role": "editor"}),
+    )
+    .unwrap();
+    assert_eq!(
+        (updated["displayName"].clone(), updated["role"].clone()),
+        (json!("編集者"), json!("editor"))
+    );
+    assert_eq!(
+        invoke(
+            &webview,
+            "users_reset_password",
+            json!({"id": id, "newPassword": "reset-horse-3"}),
+        )
+        .unwrap(),
+        Value::Null
+    );
+    let users = invoke(&webview, "users_list", json!({})).unwrap();
+    assert_eq!(users.as_array().unwrap().len(), 2);
+    assert!(users[1]["createdAt"].is_string());
+    assert_eq!(
+        invoke(&webview, "users_delete", json!({"id": id})).unwrap(),
+        Value::Null
+    );
+    assert_eq!(
+        invoke(&webview, "users_list", json!({}))
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    invoke(&webview, "auth_logout", json!({})).unwrap();
+    assert_eq!(
+        invoke(&webview, "users_list", json!({})).unwrap_err(),
+        json!({"kind": "unauthorized"})
+    );
+}

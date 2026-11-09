@@ -207,6 +207,18 @@ fn errors_serialize_as_banto_error_bodies() {
         wire(&CommandError::from(BantoError::Unauthorized)),
         json!({"kind": "unauthorized"})
     );
+    assert_eq!(
+        wire(&CommandError::from(AuthChangeError::Busy)),
+        json!({"kind": "busy"})
+    );
+    assert_eq!(
+        wire(&CommandError::from(AuthChangeError::NotAllowed)),
+        json!({"kind": "not_allowed"})
+    );
+    assert_eq!(
+        wire(&CommandError::from(AuthChangeError::Forbidden)),
+        json!({"kind": "forbidden"})
+    );
 }
 
 /// Tauri runs each async command as a spawned task: every command future
@@ -222,6 +234,13 @@ fn every_command_future_is_send(desktop: &DesktopAuth) {
     send(desktop.resolve());
     send(desktop.change_password("", ""));
     send(desktop.transition_to_operational("", "", ""));
+    send(desktop.users_list());
+    send(desktop.users_create("", "", "", Role::Viewer));
+    send(desktop.users_update(0, "", Role::Viewer));
+    send(desktop.users_reset_password(0, ""));
+    send(desktop.users_delete(0));
+    send(desktop.auth_config_get());
+    send(desktop.auth_config_apply(false, Role::Admin));
 }
 
 #[tokio::test]
@@ -255,4 +274,176 @@ async fn session_changes_wait_for_the_transition_lock_without_a_gate() {
     drop(guard);
     assert_eq!(change.await.unwrap().unwrap().seq, before + 1);
     resolve.await.unwrap().unwrap();
+}
+
+async fn login_as(desktop: &DesktopAuth, username: &str, password: &str) {
+    assert!(desktop.login(username, password).await.unwrap().success);
+}
+
+#[tokio::test]
+async fn an_admin_manages_users_in_banto_wire_shapes() {
+    let (_dir, desktop) = operational().await;
+    let created = desktop
+        .users_create("viewer", PASSWORD, "閲覧者", Role::Viewer)
+        .await
+        .unwrap();
+    assert_eq!(
+        wire(&created),
+        json!({"id": created.id, "username": "viewer", "displayName": "閲覧者",
+            "role": "viewer"})
+    );
+    let listed = wire(&desktop.users_list().await.unwrap());
+    let names: Vec<_> = listed
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|user| user["username"].as_str().unwrap().to_owned())
+        .collect();
+    assert_eq!(names, ["admin", "viewer"]);
+    let row = &listed[1];
+    assert_eq!(row["displayName"], "閲覧者");
+    assert!(row["createdAt"].is_string());
+    assert!(row.get("passwordHash").is_none() && row.get("authEpoch").is_none());
+
+    let updated = desktop
+        .users_update(created.id, "編集者", Role::Editor)
+        .await
+        .unwrap();
+    assert_eq!(
+        (updated.display_name.as_str(), updated.role),
+        ("編集者", Role::Editor)
+    );
+    // Banto's guards come back as Banto's errors.
+    let admin_id = wire(&desktop.users_list().await.unwrap())[0]["id"]
+        .as_i64()
+        .unwrap();
+    assert_eq!(
+        wire(&desktop.users_delete(admin_id).await.unwrap_err())["kind"],
+        "other"
+    );
+
+    // A reset takes effect at once: the old password no longer logs in.
+    desktop
+        .users_reset_password(created.id, "reset-horse-3")
+        .await
+        .unwrap();
+    desktop.logout().await.unwrap();
+    assert!(!desktop.login("viewer", PASSWORD).await.unwrap().success);
+    login_as(&desktop, "viewer", "reset-horse-3").await;
+    // Below Admin, user management is forbidden, the settings readable.
+    assert_eq!(
+        wire(&desktop.users_list().await.unwrap_err()),
+        json!({"kind": "forbidden"})
+    );
+    assert_eq!(
+        wire(
+            &desktop
+                .users_create("x", PASSWORD, "x", Role::Viewer)
+                .await
+                .unwrap_err()
+        ),
+        json!({"kind": "forbidden"})
+    );
+    assert_eq!(
+        wire(&desktop.auth_config_get().await.unwrap()),
+        json!({"disabled": false, "disabledRole": "admin", "autologinEnabled": false,
+            "autologinUsername": null})
+    );
+    assert_eq!(
+        wire(
+            &desktop
+                .auth_config_apply(false, Role::Admin)
+                .await
+                .unwrap_err()
+        ),
+        json!({"kind": "forbidden"})
+    );
+
+    desktop.logout().await.unwrap();
+    login_as(&desktop, "admin", PASSWORD).await;
+    desktop.users_delete(created.id).await.unwrap();
+    assert_eq!(desktop.users_list().await.unwrap().len(), 1);
+    desktop.logout().await.unwrap();
+    assert_eq!(
+        wire(&desktop.users_list().await.unwrap_err()),
+        json!({"kind": "unauthorized"})
+    );
+}
+
+#[tokio::test]
+async fn resetting_the_own_password_ends_the_session_before_returning() {
+    let (_dir, desktop) = operational().await;
+    let before = desktop.resolve().await.unwrap();
+    let id = wire(&desktop.users_list().await.unwrap())[0]["id"]
+        .as_i64()
+        .unwrap();
+    desktop
+        .users_reset_password(id, "reset-horse-3")
+        .await
+        .unwrap();
+    // Settled by the command itself, not by this check.
+    assert!(desktop.auth().auth().seq() > before.current);
+    let after = desktop.resolve().await.unwrap();
+    assert_eq!(after.identity, None);
+    login_as(&desktop, "admin", "reset-horse-3").await;
+}
+
+#[tokio::test]
+async fn the_auth_mode_is_not_switched_and_a_lowered_local_role_can_raise_itself() {
+    let (_dir, desktop) = first_start().await;
+    // On only before the move to operation, and switched off only by it.
+    assert_eq!(
+        wire(
+            &desktop
+                .auth_config_apply(false, Role::Admin)
+                .await
+                .unwrap_err()
+        ),
+        json!({"kind": "not_allowed"})
+    );
+    let saved = desktop.auth_config_apply(true, Role::Viewer).await.unwrap();
+    assert_eq!(saved.disabled_role, Role::Viewer);
+    // The synthetic session follows within the command.
+    let resolved = desktop.resolve().await.unwrap();
+    assert_eq!(resolved.identity.unwrap().role, "viewer");
+    assert_eq!(
+        wire(&desktop.users_list().await.unwrap_err()),
+        json!({"kind": "forbidden"})
+    );
+    // The move needs the synthetic Admin...
+    assert_eq!(
+        wire(
+            &desktop
+                .transition_to_operational("admin", PASSWORD, "管理者")
+                .await
+                .unwrap_err()
+        ),
+        json!({"kind": "not_allowed"})
+    );
+    // ...so while the mode is on, the lowered role may raise it again.
+    desktop.auth_config_apply(true, Role::Admin).await.unwrap();
+    assert_eq!(
+        desktop.resolve().await.unwrap().identity.unwrap().role,
+        "admin"
+    );
+    desktop
+        .transition_to_operational("admin", PASSWORD, "管理者")
+        .await
+        .unwrap();
+    // In operation the escape hatch is gone: Admin only.
+    desktop
+        .users_create("viewer", PASSWORD, "閲覧者", Role::Viewer)
+        .await
+        .unwrap();
+    desktop.logout().await.unwrap();
+    login_as(&desktop, "viewer", PASSWORD).await;
+    assert_eq!(
+        wire(
+            &desktop
+                .auth_config_apply(false, Role::Viewer)
+                .await
+                .unwrap_err()
+        ),
+        json!({"kind": "forbidden"})
+    );
 }
