@@ -61,7 +61,9 @@ use scada_runtime::recording_registry::{
 };
 use serde_json::{json, Value};
 
-use crate::auth::{CurrentSession, DesktopSession, LoginOutcome, Role, UserIdentity, Verified};
+use crate::auth::{
+    CurrentSession, DesktopSession, LoginOutcome, Resolved, Role, UserIdentity, Verified,
+};
 use crate::auth_phase::{AuthHost, AuthPhase, PhaseGuard, TransitionError, Transitioned};
 
 /// Why an entry point refused or failed.
@@ -881,22 +883,41 @@ impl RecordingGate {
         current_password: &str,
         new_password: &str,
     ) -> Result<u64, BantoError> {
+        // Under the transition lock, like a logout: a registry command that
+        // validated the old generation finishes before it ends.
+        let phase = self.auth.gate().await;
         let result = self
             .auth
             .auth()
             .change_own_password(current_password, new_password)
             .await;
-        if !matches!(
+        let changed = !matches!(
             result,
             Err(BantoError::Forbidden | BantoError::Validation { .. })
-        ) {
+        );
+        if changed {
             // The re-bind (or the initial check clearing a revoked session)
             // has already ended the generations before the slot's, whatever
             // the refresh below can read.
             self.end_generations_before(self.auth.auth().seq());
+        }
+        drop(phase);
+        if changed {
             self.refresh_after_change().await;
         }
         result
+    }
+
+    /// `auth_resolve`: [`HostAuth::resolve`] under the transition lock, then
+    /// the end of every generation before the `current` it reports. A
+    /// session it clears or re-binds ends its registry sessions and
+    /// subscriptions in the same call, after any registry command that
+    /// validated it has finished, without a second auth DB read.
+    pub async fn resolve(&self) -> Result<Resolved, BantoError> {
+        let _phase = self.auth.gate().await;
+        let resolved = self.auth.auth().resolve().await?;
+        self.end_generations_before(resolved.current);
+        Ok(resolved)
     }
 
     /// End the registry sessions and subscriptions of every generation

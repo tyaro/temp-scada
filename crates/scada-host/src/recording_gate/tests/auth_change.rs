@@ -743,3 +743,34 @@ async fn a_resolve_that_ends_the_session_ends_its_subscriptions_within_the_comma
         Err(LeaseError::Unauthorized)
     ));
 }
+
+#[tokio::test]
+async fn a_password_change_and_a_resolve_wait_for_a_command_that_already_validated() {
+    let f = operational().await;
+    let current = f.auth.auth().current().await.unwrap().unwrap();
+    let started = Arc::new(Mutex::new(None));
+    let (slot, gate, auth) = (started.clone(), f.gate.clone(), f.auth.clone());
+    f.gate.after_next_call(async move {
+        let change = {
+            let gate = gate.clone();
+            tokio::spawn(async move {
+                gate.change_own_password(PASSWORD, "another-horse-2")
+                    .await
+                    .unwrap()
+            })
+        };
+        let resolve = tokio::spawn(async move { gate.resolve().await.unwrap() });
+        // Neither can get past the lock this command holds.
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        assert!(!change.is_finished(), "the change ran inside the command");
+        assert!(!resolve.is_finished(), "the resolve ran inside the command");
+        assert_eq!(auth.auth().seq(), current.seq);
+        *slot.lock().unwrap() = Some((change, resolve));
+    });
+    let attached = f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
+    assert_eq!(attached.seq, current.seq);
+    let (change, resolve) = started.lock().unwrap().take().expect("the hook ran");
+    assert_eq!(change.await.unwrap(), current.seq + 1);
+    resolve.await.unwrap();
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
+}

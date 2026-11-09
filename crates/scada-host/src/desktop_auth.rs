@@ -288,13 +288,10 @@ impl DesktopAuth {
     /// answer is about. A generation it ended has its registry sessions and
     /// subscriptions ended before returning.
     pub async fn resolve(&self) -> Result<AuthResolveResult, CommandError> {
-        let resolved = self.auth().auth().resolve().await?;
-        if let Some(gate) = self.gate() {
-            // Every generation before `current` has ended, so a session this
-            // call cleared or re-bound ends its registry sessions and
-            // subscriptions here, without a second auth DB read.
-            gate.end_generations_before(resolved.current);
-        }
+        let resolved = match self.gate() {
+            Some(gate) => gate.resolve().await?,
+            None => self.auth().auth().resolve().await?,
+        };
         Ok(AuthResolveResult {
             identity: resolved.session.as_ref().map(identity_of),
             kind: resolved.session.as_ref().map(|session| match session {
