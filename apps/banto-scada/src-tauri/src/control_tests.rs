@@ -146,3 +146,34 @@ fn the_control_commands_answer_over_ipc() {
         Err(json!({"kind": "not_allowed"}))
     );
 }
+
+/// The confirmation before the window closes (design §6.1): an empty slot
+/// asks nothing, and a question is answered once over IPC.
+#[test]
+fn the_close_confirmation_is_answered_over_ipc() {
+    use close::{CloseGuard, Decision};
+    use scada_host::recording_gate::CloseCheck;
+    let dir = TempDir::new();
+    let (app, webview) = app(&dir);
+    let auth = app.state::<AuthState>();
+    assert_eq!(
+        scada_host::recording_control::close_check(auth.get().ok()),
+        CloseCheck::Close
+    );
+
+    let Decision::Ask(prompt) = app.state::<CloseGuard>().request(CloseCheck::Candidate) else {
+        panic!("not asked");
+    };
+    let reply = |id: u64, reply: &str| {
+        invoke(
+            &webview,
+            "app_close_reply",
+            json!({"id": id, "reply": reply}),
+        )
+    };
+    assert_eq!(reply(prompt.id, "shown"), Ok(Value::Null));
+    assert_eq!(reply(prompt.id, "later"), Err(json!("invalid_reply")));
+    assert_eq!(reply(prompt.id + 1, "cancel"), Err(json!("stale_prompt")));
+    assert_eq!(reply(prompt.id, "cancel"), Ok(Value::Null));
+    assert_eq!(reply(prompt.id, "discard"), Err(json!("stale_prompt")));
+}

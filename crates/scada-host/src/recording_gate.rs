@@ -1507,7 +1507,7 @@ impl RecordingGate {
 }
 
 mod shutdown;
-pub use shutdown::{ShutdownDiscard, ShutdownDiscarded, SHUTDOWN_ACTOR};
+pub use shutdown::{CloseCheck, ShutdownDiscard, ShutdownDiscarded, SHUTDOWN_ACTOR};
 
 #[cfg(test)]
 mod tests;
