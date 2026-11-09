@@ -93,9 +93,26 @@ preflightの配送が未完了なら、上限の中で完了を待ってから�
 2. **lease**: discard leaseはworkflowごとに一つで、予約時に枠が確保されている。
    - 利用者がすでにdiscard leaseを取っていたら、同じ`leaseRequestId`・`admissionId`で取り直す（違うIDは`protocolViolation`になる）。そのため、gateは`recording_workflow_lease`の`discard`段階で発行したleaseのIDを`HeldWorkflow`に記録する（C5-3で追加）。
    - まだなければ、hostが新しいIDを引いて取る。期限は残りの待ち時間以内とする。
-3. **admission**: hostが受理済みpreflightの返信（`changeRef`）からdiscardのadmission requestを組み立て、`register_discard`→`dispatch_discard`で配送する。
-   - 利用者のdiscard登録がすでにある場合（`DiscardRegistration::Existing`）は、それをそのまま配送する。`begin_shutdown`はdiscardの未配送登録を取り消さない。
-   - 配送済みなら完了を待つ。
+   - 利用者のdiscard leaseが登録されないまま期限切れなら、下の「期限切れのdiscard leaseの取り直し」で新しいIDのleaseへ取り直す。
+
+**期限切れのdiscard leaseの取り直し**（registryの変更、C5-3で行う）: 現行のregistryでは、未登録のまま期限切れになったdiscard leaseから戻る経路がない。
+
+- 期限切れのleaseは表から消えないので、同じIDで取り直すと保存済みの返信（古い期限）が返り、`register_discard`は`Expired`になる。
+- 違うIDの取り直しは`issue_discard_lease`が`protocolViolation`とする。
+- discard leaseがある間はpause/joinのleaseも`busy`になる。
+
+このため、そのCandidateは利用者の操作でも終了時でも破棄できず、handoff（§4の入替え・停止と§6の終了）もできなくなる。そこで`scada-runtime`の`issue_discard_lease`を次のとおり変える。
+
+- 保存済みのdiscard leaseがあり、かつ**未登録で、hostの`Instant`で期限を過ぎている**ときだけ、同じ予約枠（保持bytesと`reservedRevisions`）で新しい`leaseRequestId`・`admissionId`のleaseを発行する。
+- 古いleaseは`expired`のまま残し、新しいleaseで登録できるようにする。
+- 期限内のleaseや登録済みのleaseがあるときは、従来どおり違うIDを`protocolViolation`とする。
+- 同じIDでの取り直しが期限を延ばさないこと（wire-host §14「同ID返信で延長無し」）は変えない。
+
+利用者の通常のdiscard（記録操作画面）も同じ経路で回復できる。試験は、未登録のまま期限切れにした後に新しいIDで取り直してdiscardが一度だけ配送されること、期限内と登録済みでは拒否されること、予約枠の会計が増えないことを`scada-runtime`で確かめる。3. **admission**: hostが受理済みpreflightの返信（`changeRef`）からdiscardのadmission requestを組み立て、`register_discard`→`dispatch_discard`で配送する。
+
+- 利用者のdiscard登録がすでにある場合（`DiscardRegistration::Existing`）は、それをそのまま配送する。`begin_shutdown`はdiscardの未配送登録を取り消さない。
+- 配送済みなら完了を待つ。
+
 4. **確認**: discardの完了を待ち、ownerが`Idle`へ戻ったら`try_handoff`をやり直す。拒否された場合や上限を越えた場合は、§6の4（中断として終了）へ進む。
 5. **監査**: 既存のgateの監査と同じ`recording_admission`として、結果（成功・`denied`・`failed`）を記録する。detailは`{"stage": "discard", "origin": "shutdown", "principal": <予約principal>}`とする。既存の記録はdesktop sessionのidentityをactorにするが、この破棄には利用者のsessionがない。そこでactorはhostを表す合成のidentityとし、その形はC5-3で決める。
 
@@ -148,13 +165,13 @@ port v2の型の詳細はC5-5の着手時にこの節へ追記し、レビュー
 
 ## 9. 実装順
 
-| 区切り                  | 内容                                                                                                                                                                                                                                                        |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C5-1 記録DBと履歴読取   | `historian-store.json`とstoreの作成・open（§3）、`RecordingRuntime`の起動（Supervisorは`Idle`のまま）、`history_context`・`history_query`・`history_cancel`のcommand、nativeの`HistoryService`。一時DBの試験とIPC mockのe2e                                 |
-| C5-2 初回設定と開始     | `recording_status`・`recording_initial_setup`（§5）、記録管理画面の照会と操作。mock Hub＋一時DBで、mappingからtickの保存まで。受付不明からの再実行                                                                                                          |
-| C5-3 ownerとgateの導入  | `RecordingSlot`（§4）、開始後のgate導入、`recording_stop`、終了処理（§6、Candidateでの終了時discardとPausedでの終了を含む）。registry commandが`Running`の記録に対して働くことと、gateを外すと購読が`ownerClosed`で終わることをsrc-tauriのIPC試験で確かめる |
-| C5-4 再開               | `recording_resume`（applyの後と再起動後）、`recording_reconfigure`（停止中の計画変更と無効計画からの有効化）、fresh SDK解決、gateの入替え、`interrupted`の表示                                                                                              |
-| C5-5 記録操作の画面接続 | port v2（§7.2）、native実装、coordinatorの改訂。IPC mockのe2eで予約からapply・reconcileまで、logoutでの`ended`、再読込後のattachし直し                                                                                                                      |
-| C5-6 Windows実機受入    | 実Hubを読み、検証用DBへ記録し、履歴画面と保存Trendで確かめる。UIを閉じない間の継続、停止・join・明示再開、raw／minmax、欠測・Quality・SIM、再起動後の照会、実時間の件数とDB増分を記録する（ユーザー作業）                                                   |
+| 区切り                  | 内容                                                                                                                                                                                                                                                                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C5-1 記録DBと履歴読取   | `historian-store.json`とstoreの作成・open（§3）、`RecordingRuntime`の起動（Supervisorは`Idle`のまま）、`history_context`・`history_query`・`history_cancel`のcommand、nativeの`HistoryService`。一時DBの試験とIPC mockのe2e                                                                                                   |
+| C5-2 初回設定と開始     | `recording_status`・`recording_initial_setup`（§5）、記録管理画面の照会と操作。mock Hub＋一時DBで、mappingからtickの保存まで。受付不明からの再実行                                                                                                                                                                            |
+| C5-3 ownerとgateの導入  | `RecordingSlot`（§4）、開始後のgate導入、`recording_stop`、終了処理（§6、Candidateでの終了時discardとPausedでの終了を含む）、期限切れのdiscard leaseの取り直し（§6.1、`scada-runtime`の変更）。registry commandが`Running`の記録に対して働くことと、gateを外すと購読が`ownerClosed`で終わることをsrc-tauriのIPC試験で確かめる |
+| C5-4 再開               | `recording_resume`（applyの後と再起動後）、`recording_reconfigure`（停止中の計画変更と無効計画からの有効化）、fresh SDK解決、gateの入替え、`interrupted`の表示                                                                                                                                                                |
+| C5-5 記録操作の画面接続 | port v2（§7.2）、native実装、coordinatorの改訂。IPC mockのe2eで予約からapply・reconcileまで、logoutでの`ended`、再読込後のattachし直し                                                                                                                                                                                        |
+| C5-6 Windows実機受入    | 実Hubを読み、検証用DBへ記録し、履歴画面と保存Trendで確かめる。UIを閉じない間の継続、停止・join・明示再開、raw／minmax、欠測・Quality・SIM、再起動後の照会、実時間の件数とDB増分を記録する（ユーザー作業）                                                                                                                     |
 
 C5-1は記録registryと独立で、C5-2以降の前提（store・`RecordingRuntime`）を置く。C5-5はC5-3の後ならC5-4と並行できる。
