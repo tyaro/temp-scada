@@ -518,6 +518,23 @@ async fn an_auth_change_whose_refresh_fails_still_revokes_the_held_sessions() {
         .unwrap();
     let current = f.auth.auth().current().await.unwrap().unwrap();
     assert_eq!(f.gate.frames(&reference).await.unwrap().seq, current.seq);
+
+    // Revoked once more, then a new generation logs in behind the gate's
+    // back: its first command ends the old subscription although no
+    // session of the old generation is held any longer.
+    sqlx::query("ALTER TABLE users RENAME TO users_hidden")
+        .execute(&raw)
+        .await
+        .unwrap();
+    f.gate.refresh_after_change().await;
+    sqlx::query("ALTER TABLE users_hidden RENAME TO users")
+        .execute(&raw)
+        .await
+        .unwrap();
+    f.auth.auth().logout().await;
+    login(&f.auth, "operator").await;
+    f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();
+    assert!(!live(&f, &reference));
 }
 
 #[tokio::test]

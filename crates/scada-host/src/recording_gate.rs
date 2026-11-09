@@ -379,13 +379,17 @@ impl GateState {
         // `current` was validated before this lock was taken. Sessions of an
         // older generation are stale; a newer one means `current` itself is
         // stale, and it must neither use nor end the newer generation.
-        match self.held.as_ref().map(|held| held.seq) {
-            Some(seq) if seq > current.seq => return Err(LeaseError::Unauthorized),
-            Some(seq) if seq < current.seq => {
-                self.revoke_through(current.seq, Some(current.seq));
-            }
-            _ => {}
+        if self
+            .held
+            .as_ref()
+            .is_some_and(|held| held.seq > current.seq)
+        {
+            return Err(LeaseError::Unauthorized);
         }
+        // Older generations end here whether or not their sessions are still
+        // held: a refresh that failed after an auth change revokes the held
+        // sessions but leaves the subscriptions to this settlement.
+        self.revoke_through(current.seq, Some(current.seq));
         let Self {
             root, issuer, held, ..
         } = self;
