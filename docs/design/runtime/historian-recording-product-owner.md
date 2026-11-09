@@ -63,9 +63,15 @@ registryの外で、記録の開始・再開・停止をhost独自のcommandと�
 
 `RunEvent::ExitRequested`で次を順に行う（native registry adapter「recorderを含むnative処理のstop／joinが完了するまでruntimeを終了しない」）。
 
-1. gateがあれば`begin_shutdown`で新規受付を止め、`try_handoff`でSupervisorを取り戻す。未静止（Candidate／Pausedなど）で`Busy`のときも終了は止めない。
-2. Supervisorの記録を`request_stop_recording`→`join_recording`で止める。
-3. 待つ時間には上限（§8の3）を置く。上限を越えたら終了し、次回の`open_existing`が`interrupted`へ確定する。この場合は記録の欠測として扱う。
+1. gateがあれば`begin_shutdown`で新規受付を止める。未配送の登録はここで`rejected`／`cancelled`に確定する。受理済みのnative処理（preflight・pause/join・apply・read）は取り消さず、上限（§8の3）の中で完了を待つ。
+2. `try_handoff`でSupervisorを取り戻す。`busy`のときはownerの段階で分ける。
+   - **Candidate**（preflightの候補があり、記録は動いている）: このままではSupervisorが戻らず、記録を止められない。gateが**終了時のdiscard**を行う。gateは、保持しているworkflow ticketの予約principalに対して、自分のissuerからdiscard専用のmutation sessionを発行し、`issue_discard_lease`→discardのadmissionを登録・配送する（shutdown中もdiscardだけは受け付ける）。discardは候補を捨てるだけで、記録計画も記録も変えない。予約principalのdesktop sessionがなくても行い、監査へ`origin: "shutdown"`で記録する。完了したら`try_handoff`をやり直す。
+   - **Paused**（pause/join済み）: 記録はすでに正常に止まってjoinされ、storeに`active`のsessionはない。handoffせずに終了しても中断にはならない。候補はprocessとともに失われる（registryの状態は保存しない）。次回は`Idle`から起動し、適用済みの計画を`recording_resume`で再開する。
+   - **受理済み処理の未完了・未確定の配送**: 上限まで待ってもhandoffできなければ、そのまま3へ進む。
+3. Supervisorが戻ったら、記録を`request_stop_recording`→`join_recording`で止める。
+4. 1〜3の全体の待ち時間に上限（§8の3）を置く。上限を越えたら終了し、次回の`open_existing`が`interrupted`へ確定する。この場合は記録の欠測として扱う。
+
+終了時のdiscardは、利用者の認可によらずhostが行う唯一のregistry操作である。候補の破棄はnativeの物理状態を変えないので、終了のためだけにこれを認める。利用者が見ている候補は終了で失われるので、終了の確認dialogで「未完了の変更候補を破棄して終了します」と示す。
 
 UIを閉じても、hostのprocessが生きている間は記録を続ける（C5の完了条件）。トレイ常駐などでwindowとprocessの寿命を分けることは本書の範囲外とし、window終了はprocess終了とする。
 
@@ -101,13 +107,13 @@ port v2の型の詳細はC5-5の着手時にこの節へ追記し、レビュー
 
 ## 9. 実装順
 
-| 区切り                  | 内容                                                                                                                                                                                                                        |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C5-1 記録DBと履歴読取   | `historian-store.json`とstoreの作成・open（§3）、`RecordingRuntime`の起動（Supervisorは`Idle`のまま）、`history_context`・`history_query`・`history_cancel`のcommand、nativeの`HistoryService`。一時DBの試験とIPC mockのe2e |
-| C5-2 初回設定と開始     | `recording_status`・`recording_initial_setup`（§5）、記録管理画面の照会と操作。mock Hub＋一時DBで、mappingからtickの保存まで。受付不明からの再実行                                                                          |
-| C5-3 ownerとgateの導入  | `RecordingSlot`（§4）、開始後のgate導入、`recording_stop`、終了処理（§6）。registry commandが`Running`の記録に対して働くことと、gateを外すと購読が`ownerClosed`で終わることをsrc-tauriのIPC試験で確かめる                   |
-| C5-4 再開               | `recording_resume`（applyの後と再起動後）、fresh SDK解決、gateの入替え、`interrupted`の表示                                                                                                                                 |
-| C5-5 記録操作の画面接続 | port v2（§7.2）、native実装、coordinatorの改訂。IPC mockのe2eで予約からapply・reconcileまで、logoutでの`ended`、再読込後のattachし直し                                                                                      |
-| C5-6 Windows実機受入    | 実Hubを読み、検証用DBへ記録し、履歴画面と保存Trendで確かめる。UIを閉じない間の継続、停止・join・明示再開、raw／minmax、欠測・Quality・SIM、再起動後の照会、実時間の件数とDB増分を記録する（ユーザー作業）                   |
+| 区切り                  | 内容                                                                                                                                                                                                                                                        |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C5-1 記録DBと履歴読取   | `historian-store.json`とstoreの作成・open（§3）、`RecordingRuntime`の起動（Supervisorは`Idle`のまま）、`history_context`・`history_query`・`history_cancel`のcommand、nativeの`HistoryService`。一時DBの試験とIPC mockのe2e                                 |
+| C5-2 初回設定と開始     | `recording_status`・`recording_initial_setup`（§5）、記録管理画面の照会と操作。mock Hub＋一時DBで、mappingからtickの保存まで。受付不明からの再実行                                                                                                          |
+| C5-3 ownerとgateの導入  | `RecordingSlot`（§4）、開始後のgate導入、`recording_stop`、終了処理（§6、Candidateでの終了時discardとPausedでの終了を含む）。registry commandが`Running`の記録に対して働くことと、gateを外すと購読が`ownerClosed`で終わることをsrc-tauriのIPC試験で確かめる |
+| C5-4 再開               | `recording_resume`（applyの後と再起動後）、fresh SDK解決、gateの入替え、`interrupted`の表示                                                                                                                                                                 |
+| C5-5 記録操作の画面接続 | port v2（§7.2）、native実装、coordinatorの改訂。IPC mockのe2eで予約からapply・reconcileまで、logoutでの`ended`、再読込後のattachし直し                                                                                                                      |
+| C5-6 Windows実機受入    | 実Hubを読み、検証用DBへ記録し、履歴画面と保存Trendで確かめる。UIを閉じない間の継続、停止・join・明示再開、raw／minmax、欠測・Quality・SIM、再起動後の照会、実時間の件数とDB増分を記録する（ユーザー作業）                                                   |
 
 C5-1は記録registryと独立で、C5-2以降の前提（store・`RecordingRuntime`）を置く。C5-5はC5-3の後ならC5-4と並行できる。
