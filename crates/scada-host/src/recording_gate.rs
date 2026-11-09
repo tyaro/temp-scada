@@ -802,8 +802,11 @@ impl RecordingGate {
             _ => return Err(GateError::Unauthorized),
         };
         // The check above ran before the lock: a re-bind since then ends
-        // this generation, and its frames stay where they are.
+        // this generation (`seq` advances only when authorization changes),
+        // so it is ended now rather than left to a delivery that may never
+        // come. Its frames are not taken.
         if self.auth.auth().seq() != current.seq {
+            state.revoke_through(current.seq, None);
             return Err(GateError::Unauthorized);
         }
         let session = state
@@ -817,6 +820,7 @@ impl RecordingGate {
         })()
         .map_err(GateError::Registry)?;
         if self.auth.auth().seq() != current.seq {
+            state.revoke_through(current.seq, None);
             return Err(GateError::Unauthorized);
         }
         Ok(Bound {

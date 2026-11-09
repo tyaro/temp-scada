@@ -143,12 +143,15 @@ async fn a_generation_change_racing_the_delivery_withholds_the_frame() {
         f.gate.frames(&reference).await,
         Err(GateError::Unauthorized)
     ));
-    // The next delivery ends it; the frame was never sent to the new one.
+    // The withheld delivery ended it at once, without waiting for another
+    // delivery; the frame was never sent to the new generation.
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
+    f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();
+    assert!(!live(&f, &reference));
     assert!(matches!(
         f.gate.frames(&reference).await,
         Err(GateError::Unauthorized)
     ));
-    assert!(!live(&f, &reference));
 }
 
 #[tokio::test]
