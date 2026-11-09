@@ -373,16 +373,31 @@ impl FramePump {
         &self.reference
     }
 
-    /// Deliver until the subscription ends or `emit` reports the webview
-    /// gone (`false`). Each delivery re-validates the desktop session in the
-    /// gate before it takes a frame (design §5).
-    pub async fn run(self, mut emit: impl FnMut(RecordingEvent) -> bool + Send) {
-        loop {
-            match self.deliver(&mut emit).await {
-                Delivery::Continue | Delivery::Hold => {}
-                Delivery::Stop => return,
+    /// Deliver until the subscription ends, `emit` fails (`false`), or
+    /// `stop` completes. Each delivery re-validates the desktop session in
+    /// the gate before it takes a frame (design §5).
+    ///
+    /// `stop` is the end of the page that attached: an event emitted with no
+    /// listener still succeeds, so `emit` alone cannot tell a reloaded or
+    /// closed webview. Stopping drops the pump, which releases the
+    /// subscription (a frame taken meanwhile is for the page that is gone).
+    pub async fn run(
+        self,
+        mut emit: impl FnMut(RecordingEvent) -> bool + Send,
+        stop: impl std::future::Future<Output = ()> + Send,
+    ) {
+        let deliver = async {
+            loop {
+                match self.deliver(&mut emit).await {
+                    Delivery::Continue | Delivery::Hold => {}
+                    Delivery::Stop => return,
+                }
+                tokio::time::sleep(self.interval).await;
             }
-            tokio::time::sleep(self.interval).await;
+        };
+        tokio::select! {
+            () = deliver => {}
+            () = stop => {}
         }
     }
 

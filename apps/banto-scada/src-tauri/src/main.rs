@@ -9,7 +9,8 @@ use scada_model::Project;
 use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
 use serde::Serialize;
 use std::collections::HashSet;
-use tauri::{AppHandle, Emitter, Runtime, State};
+use tauri::webview::PageLoadEvent;
+use tauri::{AppHandle, Emitter, Manager, Runtime, State, WindowEvent};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
@@ -219,34 +220,47 @@ async fn hub_catalog(
 }
 
 /// Every command of the desktop host, registered once for the app and its
-/// IPC tests.
+/// IPC tests, with the page hooks that stop the recording pumps of a page
+/// that is gone.
 fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
-    builder.invoke_handler(tauri::generate_handler![
-        hub_connect,
-        hub_disconnect,
-        hub_saved_endpoint,
-        hub_read_start,
-        hub_read_stop,
-        hub_catalog,
-        auth::auth_status,
-        auth::auth_phase,
-        auth::auth_setup,
-        auth::auth_login,
-        auth::auth_logout,
-        auth::auth_resolve,
-        auth::auth_change_password,
-        auth::auth_transition_to_operational,
-        recording::recording_workflow_reserve,
-        recording::recording_workflow_lease,
-        recording::recording_lease,
-        recording::recording_admission,
-        recording::recording_admission_inspection,
-        recording::recording_observation,
-        recording::recording_cancel,
-        recording::recording_call_inspection,
-        recording::recording_attach,
-        recording::recording_control
-    ])
+    builder
+        .manage(recording::Pages::default())
+        .on_page_load(|webview, payload| {
+            if payload.event() == PageLoadEvent::Started {
+                webview.state::<recording::Pages>().end(webview.label());
+            }
+        })
+        .on_window_event(|window, event| {
+            if matches!(event, WindowEvent::Destroyed) {
+                window.state::<recording::Pages>().end(window.label());
+            }
+        })
+        .invoke_handler(tauri::generate_handler![
+            hub_connect,
+            hub_disconnect,
+            hub_saved_endpoint,
+            hub_read_start,
+            hub_read_stop,
+            hub_catalog,
+            auth::auth_status,
+            auth::auth_phase,
+            auth::auth_setup,
+            auth::auth_login,
+            auth::auth_logout,
+            auth::auth_resolve,
+            auth::auth_change_password,
+            auth::auth_transition_to_operational,
+            recording::recording_workflow_reserve,
+            recording::recording_workflow_lease,
+            recording::recording_lease,
+            recording::recording_admission,
+            recording::recording_admission_inspection,
+            recording::recording_observation,
+            recording::recording_cancel,
+            recording::recording_call_inspection,
+            recording::recording_attach,
+            recording::recording_control
+        ])
 }
 
 fn main() {

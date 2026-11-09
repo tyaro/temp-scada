@@ -5,14 +5,50 @@
 //! Each command takes the wire request JSON alone (`request`), plus the stage
 //! and operation ID for `recording_workflow_lease`, and answers
 //! `{"seq", "reply"}` or `{"kind": ...}`. A new subscription of
-//! `recording_attach` delivers its frames as `scada:recording` events.
+//! `recording_attach` delivers its frames as `scada:recording` events to the
+//! webview that attached it, until that webview starts loading another page
+//! or is destroyed ([`Pages`]).
 //! Without a recording owner (the product host until C5), every command
 //! answers `{"kind": "recordingUnavailable", "reason": ...}`.
 use scada_host::desktop_recording::{
     DesktopRecording, RecordingCommandError, RecordingResult, RECORDING_EVENT,
 };
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, Runtime, State};
+use std::collections::HashMap;
+use std::future::Future;
+use std::sync::Mutex;
+use tauri::{AppHandle, Emitter, EventTarget, Runtime, State, Webview};
+use tokio::sync::watch;
+
+/// The current page of each webview, by label. An event emitted with no
+/// listener still succeeds, so a pump cannot tell a reloaded or closed
+/// webview from its emits: the page load and destroy hooks end the page
+/// instead, which stops every pump it started.
+#[derive(Default)]
+pub struct Pages(Mutex<HashMap<String, watch::Sender<()>>>);
+
+impl Pages {
+    /// Completes when the current page of `label` ends.
+    fn ended(&self, label: &str) -> impl Future<Output = ()> + Send + 'static {
+        let mut receiver = self
+            .0
+            .lock()
+            .expect("pages mutex poisoned")
+            .entry(label.to_owned())
+            .or_insert_with(|| watch::channel(()).0)
+            .subscribe();
+        async move {
+            // Only the sender's drop ends it: nothing is ever sent.
+            while receiver.changed().await.is_ok() {}
+        }
+    }
+
+    /// End the current page of `label` (a new page load, or the webview
+    /// destroyed): its pumps stop and release their subscriptions.
+    pub fn end(&self, label: &str) {
+        self.0.lock().expect("pages mutex poisoned").remove(label);
+    }
+}
 
 type Reply = Result<RecordingResult, RecordingCommandError>;
 
@@ -70,19 +106,27 @@ pub async fn recording_call_inspection(
     state.call_inspection(request).await
 }
 
-/// A new subscription's frames are emitted as `scada:recording` until it
-/// ends or the app is gone.
+/// A new subscription's frames are emitted as `scada:recording` to the
+/// attaching webview until the subscription ends or that page does.
 #[tauri::command]
 pub async fn recording_attach<R: Runtime>(
     app: AppHandle<R>,
+    webview: Webview<R>,
     state: State<'_, DesktopRecording>,
+    pages: State<'_, Pages>,
     request: Value,
 ) -> Reply {
+    let label = webview.label().to_owned();
+    // Taken before the attach: a page that ends meanwhile stops the pump
+    // at once rather than leaving it to the next page.
+    let ended = pages.ended(&label);
     let (result, pump) = state.attach(request).await?;
     if let Some(pump) = pump {
-        tauri::async_runtime::spawn(
-            pump.run(move |event| app.emit(RECORDING_EVENT, event).is_ok()),
-        );
+        let target = EventTarget::labeled(label);
+        tauri::async_runtime::spawn(pump.run(
+            move |event| app.emit_to(target.clone(), RECORDING_EVENT, event).is_ok(),
+            ended,
+        ));
     }
     Ok(result)
 }

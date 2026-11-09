@@ -20,7 +20,7 @@ use std::time::{Duration, Instant};
 use tauri::ipc::{CallbackFn, InvokeBody};
 use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, INVOKE_KEY};
 use tauri::webview::{InvokeRequest, WebviewWindow};
-use tauri::{test::MockRuntime, App, Listener, WebviewWindowBuilder};
+use tauri::{test::MockRuntime, App, Listener, Manager, WebviewWindowBuilder};
 
 /// A fresh app data dir under the OS temp dir, removed on drop.
 struct TempDir(PathBuf);
@@ -47,7 +47,7 @@ impl Drop for TempDir {
 }
 
 struct Host {
-    _app: App<MockRuntime>,
+    app: App<MockRuntime>,
     webview: WebviewWindow<MockRuntime>,
     gate: Arc<RecordingGate>,
     events: mpsc::Receiver<Value>,
@@ -80,15 +80,12 @@ fn host() -> Host {
         ))
         .build(mock_context(noop_assets()))
         .unwrap();
-    let (sender, events) = mpsc::channel();
-    app.listen(RECORDING_EVENT, move |event| {
-        let _ = sender.send(serde_json::from_str(event.payload()).unwrap());
-    });
     let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .unwrap();
+    let events = listen(&webview);
     Host {
-        _app: app,
+        app,
         webview,
         gate,
         events,
@@ -98,27 +95,41 @@ fn host() -> Host {
     }
 }
 
+/// The recording events emitted to `webview` (each pump emits to the webview
+/// that attached it only).
+fn listen(webview: &WebviewWindow<MockRuntime>) -> mpsc::Receiver<Value> {
+    let (sender, events) = mpsc::channel();
+    webview.listen(RECORDING_EVENT, move |event| {
+        let _ = sender.send(serde_json::from_str(event.payload()).unwrap());
+    });
+    events
+}
+
+fn invoke_on(webview: &WebviewWindow<MockRuntime>, cmd: &str, args: Value) -> Result<Value, Value> {
+    get_ipc_response(
+        webview,
+        InvokeRequest {
+            cmd: cmd.into(),
+            callback: CallbackFn(0),
+            error: CallbackFn(1),
+            url: if cfg!(windows) {
+                "http://tauri.localhost"
+            } else {
+                "tauri://localhost"
+            }
+            .parse()
+            .unwrap(),
+            body: InvokeBody::Json(args),
+            headers: Default::default(),
+            invoke_key: INVOKE_KEY.to_string(),
+        },
+    )
+    .map(|body| body.deserialize::<Value>().unwrap())
+}
+
 impl Host {
     fn invoke(&self, cmd: &str, args: Value) -> Result<Value, Value> {
-        get_ipc_response(
-            &self.webview,
-            InvokeRequest {
-                cmd: cmd.into(),
-                callback: CallbackFn(0),
-                error: CallbackFn(1),
-                url: if cfg!(windows) {
-                    "http://tauri.localhost"
-                } else {
-                    "tauri://localhost"
-                }
-                .parse()
-                .unwrap(),
-                body: InvokeBody::Json(args),
-                headers: Default::default(),
-                invoke_key: INVOKE_KEY.to_string(),
-            },
-        )
-        .map(|body| body.deserialize::<Value>().unwrap())
+        invoke_on(&self.webview, cmd, args)
     }
 
     /// Retry a call the registry answers `busy` until the native stage it
@@ -136,10 +147,14 @@ impl Host {
     }
 
     fn next_event(&self) -> Value {
-        self.events
-            .recv_timeout(Duration::from_secs(10))
-            .expect("the pump delivers")
+        next(&self.events)
     }
+}
+
+fn next(events: &mpsc::Receiver<Value>) -> Value {
+    events
+        .recv_timeout(Duration::from_secs(10))
+        .expect("the pump delivers")
 }
 
 fn lease(scope: &Value, id: &str, role: &str) -> Value {
@@ -419,4 +434,49 @@ fn a_host_without_a_recording_owner_answers_why() {
     );
     // The auth commands still answer on such a host.
     assert_eq!(h("auth_phase", json!({})).unwrap()["phase"], "initializing");
+}
+
+#[test]
+fn the_end_of_a_page_stops_its_pumps_and_releases_the_subscription() {
+    let h = host();
+    let scope = &h.scope;
+    let attach = json!({"request": {"version":1, "kind":"recordingWireAttachRequest",
+        "scope":scope, "attachId":"attach-1", "afterRevision":null}});
+    h.invoke("recording_attach", attach.clone()).unwrap();
+    // What the page load and destroy hooks do (`commands`); the mock
+    // runtime emits neither event.
+    h.app.state::<recording::Pages>().end("main");
+
+    // A new page replays the attach: the old pump released the
+    // subscription, so the new page gets a pump of its own and the frames
+    // (an unreleased one would take them and emit to `main` only).
+    let second = WebviewWindowBuilder::new(&h.app, "second", Default::default())
+        .build()
+        .unwrap();
+    let events = listen(&second);
+    let replayed = invoke_on(&second, "recording_attach", attach).unwrap();
+    let reference = replayed["reply"]["outcome"]["subscriptionRef"].clone();
+    let change = test_support::change("second-page").as_value().clone();
+    invoke_on(
+        &second,
+        "recording_workflow_reserve",
+        json!({"request": change}),
+    )
+    .unwrap();
+    let leased = invoke_on(
+        &second,
+        "recording_workflow_lease",
+        json!({"stage": "preflight", "request": lease(scope, "preflight", "mutation")}),
+    )
+    .unwrap();
+    invoke_on(
+        &second,
+        "recording_admission",
+        json!({"request": admission(scope, "preflight", &leased,
+            json!({"kind":"preflight", "change":change}))}),
+    )
+    .unwrap();
+    let frame = next(&events);
+    assert_eq!(frame["kind"], "frames");
+    assert_eq!(frame["subscriptionRef"], reference);
 }

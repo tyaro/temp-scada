@@ -142,7 +142,10 @@ fn spawn(
     tokio::task::JoinHandle<()>,
 ) {
     let (sender, receiver) = mpsc::unbounded_channel();
-    let task = tokio::spawn(pump.run(move |event| sender.send(event).is_ok()));
+    let task = tokio::spawn(pump.run(
+        move |event| sender.send(event).is_ok(),
+        std::future::pending(),
+    ));
     (receiver, task)
 }
 
@@ -394,4 +397,37 @@ async fn a_detach_ends_the_pump_and_a_released_subscription_gets_a_new_one() {
         .await
         .unwrap()
         .unwrap();
+}
+
+#[tokio::test]
+async fn the_end_of_the_attaching_page_stops_the_pump_and_releases_it() {
+    let f = initializing().await;
+    let (_, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"))
+        .await
+        .unwrap();
+    let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
+    let (sender, mut events) = mpsc::unbounded_channel();
+    let task = tokio::spawn(
+        pump.unwrap()
+            .run(move |event| sender.send(event).is_ok(), async {
+                let _ = stopped.await;
+            }),
+    );
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    drop(stop);
+    timeout(Duration::from_secs(10), task)
+        .await
+        .unwrap()
+        .unwrap();
+    // Nothing was delivered, no `ended` either: the page is gone.
+    assert!(events.try_recv().is_err());
+    // The subscription is released for a later page's replayed attach.
+    let (_, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"))
+        .await
+        .unwrap();
+    assert!(pump.is_some());
 }
