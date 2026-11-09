@@ -21,6 +21,11 @@ banto-storage = { git = "https://github.com/tyaro/banto.git", rev = "0acaa5ba313
 tokio.workspace = true
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
 
+[features]
+# Test hooks for the desktop host's command tests (`apps/banto-scada/src-tauri`).
+# Never enabled by a product build.
+test-support = ["scada-runtime/test-support"]
+
 [dev-dependencies]
 # A pristine native owner for the registry gate tests.
 scada-runtime = { path = "../scada-runtime", features = ["test-support"] }

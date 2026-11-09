@@ -1,13 +1,16 @@
 //! One embedded read-only host. Hub services and PLC connections stay external.
 mod auth;
+mod recording;
 
 use auth::AuthState;
+use scada_host::desktop_recording::{DesktopRecording, NO_RECORDING_OWNER};
 use scada_host::{local_bootstrap, local_data_dir, Bootstrapper, HubStatus};
 use scada_model::Project;
 use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
 use serde::Serialize;
 use std::collections::HashSet;
-use tauri::{AppHandle, Emitter, Runtime, State};
+use tauri::webview::PageLoadEvent;
+use tauri::{AppHandle, Emitter, Runtime, State, WindowEvent};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
@@ -188,6 +191,9 @@ mod native_tests;
 #[cfg(test)]
 mod auth_tests;
 
+#[cfg(test)]
+mod recording_tests;
+
 #[tauri::command]
 async fn hub_catalog(
     state: State<'_, NativeHost>,
@@ -214,24 +220,47 @@ async fn hub_catalog(
 }
 
 /// Every command of the desktop host, registered once for the app and its
-/// IPC tests.
+/// IPC tests, with the page hooks that stop the recording pumps of a page
+/// that is gone.
 fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
-    builder.invoke_handler(tauri::generate_handler![
-        hub_connect,
-        hub_disconnect,
-        hub_saved_endpoint,
-        hub_read_start,
-        hub_read_stop,
-        hub_catalog,
-        auth::auth_status,
-        auth::auth_phase,
-        auth::auth_setup,
-        auth::auth_login,
-        auth::auth_logout,
-        auth::auth_resolve,
-        auth::auth_change_password,
-        auth::auth_transition_to_operational
-    ])
+    builder
+        .manage(recording::Pages::default())
+        .on_page_load(|webview, payload| {
+            if payload.event() == PageLoadEvent::Started {
+                recording::end_page(webview, webview.label());
+            }
+        })
+        .on_window_event(|window, event| {
+            if matches!(event, WindowEvent::Destroyed) {
+                recording::end_page(window, window.label());
+            }
+        })
+        .invoke_handler(tauri::generate_handler![
+            hub_connect,
+            hub_disconnect,
+            hub_saved_endpoint,
+            hub_read_start,
+            hub_read_stop,
+            hub_catalog,
+            auth::auth_status,
+            auth::auth_phase,
+            auth::auth_setup,
+            auth::auth_login,
+            auth::auth_logout,
+            auth::auth_resolve,
+            auth::auth_change_password,
+            auth::auth_transition_to_operational,
+            recording::recording_workflow_reserve,
+            recording::recording_workflow_lease,
+            recording::recording_lease,
+            recording::recording_admission,
+            recording::recording_admission_inspection,
+            recording::recording_observation,
+            recording::recording_cancel,
+            recording::recording_call_inspection,
+            recording::recording_attach,
+            recording::recording_control
+        ])
 }
 
 fn main() {
@@ -248,6 +277,9 @@ fn main() {
             active: Mutex::new(Active::default()),
         })
         .manage(auth)
+        // No recording owner on this host until C5: the registry commands
+        // answer `recordingUnavailable` (host-gate design §9 step 4-3-2).
+        .manage(DesktopRecording::unavailable(NO_RECORDING_OWNER))
         .run(tauri::generate_context!())
         .expect("SCADA desktop failed");
 }

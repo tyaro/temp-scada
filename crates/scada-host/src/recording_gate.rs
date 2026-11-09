@@ -915,6 +915,21 @@ impl RecordingGate {
         Ok(resolved)
     }
 
+    /// End the subscription `reference` attached through the gate, as a
+    /// revocation does: its live slot and descriptor are freed, and later
+    /// deliveries are `Unauthorized`. For a desktop page that is gone (its
+    /// webview reloaded or closed): nothing is disclosed and native work is
+    /// untouched. Unknown or already ended references are a no-op.
+    pub(crate) fn end_subscription(&self, reference: &str) {
+        let state = &mut *self.lock();
+        if let Some(binding) = state.subscriptions.get_mut(reference) {
+            if !binding.ended {
+                binding.ended = true;
+                state.root.end_subscription(reference);
+            }
+        }
+    }
+
     /// End the registry sessions and subscriptions of every generation
     /// before `seq`, a generation the slot has reached. The slot holds one
     /// session and `seq` only grows, so those generations are over; this
@@ -1230,7 +1245,10 @@ impl RecordingGate {
     }
 
     #[cfg(test)]
-    fn after_next_call(&self, hook: impl std::future::Future<Output = ()> + Send + 'static) {
+    pub(crate) fn after_next_call(
+        &self,
+        hook: impl std::future::Future<Output = ()> + Send + 'static,
+    ) {
         *self.after_call.lock().expect("hook mutex") = Some(Box::pin(hook));
     }
 
@@ -1244,6 +1262,15 @@ impl RecordingGate {
             LeaseRole::Mutation => held.mutation.clone(),
         }?;
         Some((held.seq, session))
+    }
+
+    /// Test support (feature `test-support`): make the root's next native
+    /// apply commit and then lose its response, the case a reconcile of the
+    /// original apply reads. For the desktop host's command tests, which
+    /// cannot reach the root.
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn test_lose_next_apply_response(&self) {
+        scada_runtime::recording_host::test_support::lose_next_apply_response(&self.lock().root);
     }
 
     /// Test only: direct access to the root.
