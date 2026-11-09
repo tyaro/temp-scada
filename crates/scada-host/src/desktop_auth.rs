@@ -372,7 +372,10 @@ impl DesktopAuth {
         };
         Ok(TransitionResult {
             signed_in: session.is_some(),
-            seq: self.auth().auth().seq(),
+            // The administrator's own generation, not one a logout or login
+            // reached after the move returned. Without a session there is
+            // none to name, so the slot's.
+            seq: session.map_or_else(|| self.auth().auth().seq(), |admin| admin.seq),
         })
     }
 
