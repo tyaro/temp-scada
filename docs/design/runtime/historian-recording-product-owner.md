@@ -89,7 +89,7 @@ C5-2の実装で次を定めた。
 C5-3aの実装で次を定めた。
 
 - **導入**: `recording_initial_setup`は、記録が`Running`になったら同じcommandの中（移行lockの下）でrootを導入し、応答に`"owner": "installed" | "owner_unavailable"`を加える。導入は、Supervisorを`RecordingOperationsOwner::try_new`へ渡し（contextは§5の管理context、`capabilityId`は`capability:`＋UUID、`recordingRunRef`は照会と同じ`run:<連番>`、`sessionId`は記録中のsession）、seed、`create_recording_root`、`RecordingGate::install`の順に行う。どの段階で失敗してもSupervisorを取り戻し、記録は止めず、slotを`owner_unavailable`とする。開始待ちが10秒を越えた（`starting`）ときも導入しない。
-- **導入中の照会**: Supervisorはownerの中にあるので、`recording_status`のDB viewはHistory hostのreaderで一回のresume inspectionを読む（History照会と同じreaderを順に使う）。Host viewは導入前に取ったSupervisorの記録状態のwatchから作り、ownerの中にあるplan・retentionのguardは`null`（契約§6の未観測）とする。導入中の初回設定は`not_allowed`である。
+- **導入中の照会**: Supervisorはownerの中にあるので、`recording_status`のDB viewはHistory hostのreaderで一回のresume inspectionを読む（History照会と同じreaderを順に使い、実行中の照会は取り消さずに完了を待つ）。Host viewは導入前に取ったSupervisorの記録状態のwatchから作り、ownerの中にあるplan・retentionのguardは`null`（契約§6の未観測）とする。導入中の初回設定は`not_allowed`である。
 - **`recording_slot`**（Viewer）: `{"state": "installed", "generation", "scope"}`か`{"state": "empty", "reason"}`を返す。`scope`はrootのwire scope（`ownerRef`・`ownerEpoch`・`context`）で、C5-5のclientがattachとleaseに使う。照会応答v1は契約で形が決まっているので、slotは別commandとした。
 - **`recording_stop`**（Admin、移行lockの下）: 導入中のrootを`try_take`で外してSupervisorを取り戻し、`request_stop_recording`→`join_recording`（上限10秒）で止める。rootが未静止なら`busy`で何も変えない。記録が動いていなければ`not_allowed`。結果を`stop`（resource `recording`）として監査に残す。応答は`{"phase": "joined"}`。
 

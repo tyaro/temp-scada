@@ -555,10 +555,13 @@ impl RecordingRuntime {
 /// is the owner's). Waits for a running history query.
 async fn lent_database(ready: &Ready) -> Value {
     let unavailable = |error: &str| json!({"state": "unavailable", "error": error});
+    // A running `history_query` holds this lock until it joins, so it is
+    // waited for, not cancelled. A query left in flight by a caller that
+    // went away is joined (it ends by its own deadline), never cancelled
+    // here: an inspection never cuts a history read short.
     let mut host = ready.history.lock().await;
     let state = host.state();
     if let (HistoryPhase::InFlight, Some(stale)) = (state.phase, state.request) {
-        let _ = host.cancel_query(&stale);
         let _ = host.join_query(&stale).await;
     }
     let Ok(mut reader) = host.take_reader() else {
