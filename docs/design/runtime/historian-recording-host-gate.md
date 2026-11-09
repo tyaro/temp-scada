@@ -260,4 +260,4 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
 
    手順4全体の試験項目は次のとおり。Tauri commandだけで予約から初回preflight・pause/join・apply・reconcileまで進めることを試験する。認証無効モード、ログイン、logout、role変更による失効、Viewerの読取限定、購読配送中の失効検知・認証DB読取失敗時の保留・旧世代frameの不送信、初回初期化の各保存境界での強制終了と再起動後の再開、`auth-phase.json`がなく認証DBだけがある場合の拒否、移行commandの成功と、各保存境界（1〜3の後）での失敗・強制終了からの再起動後の再実行、4の後の強制終了・返信喪失から通常ログインへ進めること、未静止workflowでの移行拒否と並行するpreflightとの排他、Candidate／Pausedでの降格・削除の拒否と静止後の確定、`transitioning`中のregistry入口の拒否、`bootstrapping`以外のフェーズでの認証DB欠落の拒否をnativeで試験する。
 
-製品transportと実ownerの配置（C5）は、この区切りの後に行う。
+製品transportと実ownerの配置（C5）は、この区切りの後に行う。範囲と分割は[製品hostの記録ownerと画面接続](historian-recording-product-owner.md)で定める。
