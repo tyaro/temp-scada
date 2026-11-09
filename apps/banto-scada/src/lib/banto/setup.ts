@@ -264,10 +264,13 @@ export async function setThemeMode(mode: ThemeMode): Promise<void> {
     );
   }
 }
-export async function initializeBanto(): Promise<() => void> {
+/** `authProvider`: the desktop host's; the web version has no account. */
+export async function initializeBanto(
+  authProvider: AuthProvider = localFileAuth,
+): Promise<() => void> {
   initBanto({
     dataProvider: createInMemoryDataProvider({}),
-    authProvider: localFileAuth,
+    authProvider,
     notifier: {
       notify: (kind, message) => {
         toastStore.push(kind, message);

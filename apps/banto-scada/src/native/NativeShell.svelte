@@ -3,6 +3,14 @@
   import { invoke } from "@tauri-apps/api/core";
   import App from "../App.svelte";
   import { nativeSources } from "./sources";
+  import AuthControls from "./auth/AuthControls.svelte";
+  import type { NativeAuthClient } from "./auth/client";
+  import { AuthSession } from "./auth/session.svelte";
+
+  let { authClient }: { authClient: NativeAuthClient } = $props();
+  // The client is fixed for the life of the window.
+  // svelte-ignore state_referenced_locally
+  const authSession = new AuthSession(authClient);
 
   interface HubStatus {
     state: string;
@@ -113,38 +121,42 @@
 </script>
 
 {#snippet hubControls()}
-  <details class="hub-connection" bind:this={hubDetails}>
-    <summary aria-label={`Hub: ${status}。接続設定を開く`} title={status}>
-      <span class="hub-dot" class:connected class:error></span>
-      <span>Hub</span>
-      <span class="hub-summary-state"
-        >{busy
-          ? "処理中"
-          : connected
-            ? `${tagCount} 件`
-            : error
-              ? "要確認"
-              : "未接続"}</span
-      >
-    </summary>
-    <div class="hub-popover">
-      <label class="banto-field banto-field--stacked hub-endpoint">
-        <span class="banto-field-label">Hub 接続先</span>
-        <input
-          class="banto-field-control"
-          id="hub-endpoint"
-          bind:value={endpoint}
-          disabled={busy}
-        />
-      </label>
-      <div class="hub-actions">
-        <button disabled={busy} onclick={() => void connect()}>接続</button>
-        <button disabled={busy} onclick={() => void disconnect()}>切断</button>
+  <div class="native-controls">
+    <AuthControls session={authSession} />
+    <details class="hub-connection" bind:this={hubDetails}>
+      <summary aria-label={`Hub: ${status}。接続設定を開く`} title={status}>
+        <span class="hub-dot" class:connected class:error></span>
+        <span>Hub</span>
+        <span class="hub-summary-state"
+          >{busy
+            ? "処理中"
+            : connected
+              ? `${tagCount} 件`
+              : error
+                ? "要確認"
+                : "未接続"}</span
+        >
+      </summary>
+      <div class="hub-popover">
+        <label class="banto-field banto-field--stacked hub-endpoint">
+          <span class="banto-field-label">Hub 接続先</span>
+          <input
+            class="banto-field-control"
+            id="hub-endpoint"
+            bind:value={endpoint}
+            disabled={busy}
+          />
+        </label>
+        <div class="hub-actions">
+          <button disabled={busy} onclick={() => void connect()}>接続</button>
+          <button disabled={busy} onclick={() => void disconnect()}>切断</button
+          >
+        </div>
+        <p role="status">{status}</p>
+        {#if streamStatus}<p role="status">読取: {streamStatus}</p>{/if}
       </div>
-      <p role="status">{status}</p>
-      {#if streamStatus}<p role="status">読取: {streamStatus}</p>{/if}
-    </div>
-  </details>
+    </details>
+  </div>
 {/snippet}
 <App
   readSource={sources?.readSource}
@@ -153,6 +165,11 @@
 />
 
 <style>
+  .native-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
   .hub-connection {
     position: relative;
     z-index: calc(var(--banto-z-header, 100) + 1);
