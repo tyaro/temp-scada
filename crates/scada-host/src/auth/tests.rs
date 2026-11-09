@@ -346,8 +346,9 @@ async fn a_stale_check_never_answers_with_a_role_it_did_not_read() {
     assert_eq!(
         auth.settle(Some(local_session(Role::Admin)), stale),
         Settled::Decided {
-            current: Some(admin),
+            current: Some(admin.clone()),
             moved: true,
+            seq: admin.seq,
         }
     );
 }
@@ -450,6 +451,7 @@ async fn a_resolve_overtaken_by_a_re_bind_is_stale_and_writes_nothing() {
         Settled::Decided {
             current: Some(logged_in.clone()),
             moved: true,
+            seq: logged_in.seq,
         }
     );
     assert_eq!(auth.seq(), logged_in.seq);
@@ -494,4 +496,27 @@ async fn only_an_account_session_changes_its_own_password() {
         auth.change_own_password(PASSWORD, "another-horse-2").await,
         Err(BantoError::Forbidden)
     ));
+}
+
+#[tokio::test]
+async fn a_relogin_during_the_password_change_is_not_re_bound() {
+    let (_db, auth, admin) = with_admin().await;
+    let before = login(&auth, "admin").await;
+    let validated = before.session.identity().clone();
+    // A logout and a new login of the same account (same id and epoch)
+    // happen while the change validated `before` runs.
+    auth.logout().await;
+    let relogin = login(&auth, "admin").await;
+    let new_epoch = auth
+        .users()
+        .change_password("admin", PASSWORD, "another-horse-2")
+        .await
+        .unwrap();
+    assert_eq!(new_epoch, admin.auth_epoch + 1);
+    assert_eq!(
+        auth.rebind_after_password_change(&validated, before.seq, new_epoch),
+        relogin.seq
+    );
+    // The newer session is ended by the change, not moved to the new epoch.
+    assert_eq!(auth.current().await.unwrap(), None);
 }

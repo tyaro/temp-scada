@@ -113,6 +113,8 @@ enum Settled {
     Decided {
         current: Option<CurrentSession>,
         moved: bool,
+        /// The slot generation when this was decided.
+        seq: u64,
     },
     /// The slot was re-bound meanwhile and no longer matches this read.
     Retry,
@@ -318,13 +320,16 @@ impl HostAuth {
         };
         let fresh = self.read_source(cached.as_ref()).await?;
         Ok(match self.settle(fresh, checked) {
+            // The generation this call decided at, not a later one another
+            // command may have reached since.
             Settled::Decided {
                 current,
                 moved: false,
+                seq,
             } => Resolved {
-                current: current.as_ref().map_or_else(|| self.seq(), |c| c.seq),
                 session: current.map(|c| c.session),
                 checked,
+                current: seq,
                 stale: false,
             },
             Settled::Decided { moved: true, .. } | Settled::Retry => Resolved {
@@ -349,11 +354,11 @@ impl HostAuth {
         current_password: &str,
         new_password: &str,
     ) -> Result<u64, BantoError> {
-        let identity = match self.current().await? {
+        let (identity, validated) = match self.current().await? {
             Some(CurrentSession {
                 session: DesktopSession::Account(identity),
-                ..
-            }) => identity,
+                seq,
+            }) => (identity, seq),
             Some(_) => return Err(BantoError::Forbidden),
             None => return Err(BantoError::Unauthorized),
         };
@@ -361,18 +366,7 @@ impl HostAuth {
             .users
             .change_password(&identity.username, current_password, new_password)
             .await?;
-        let seq = {
-            let mut slot = self.lock();
-            if new_epoch == identity.auth_epoch + 1 {
-                if let Some(DesktopSession::Account(session)) = slot.session.as_mut() {
-                    if session.id == identity.id && session.auth_epoch == identity.auth_epoch {
-                        session.auth_epoch = new_epoch;
-                        slot.seq += 1;
-                    }
-                }
-            }
-            slot.seq
-        };
+        let seq = self.rebind_after_password_change(&identity, validated, new_epoch);
         // Never the old or new password, nor a hash (Banto spec M14).
         self.record_ok(
             &identity,
@@ -490,6 +484,29 @@ impl HostAuth {
             .await;
     }
 
+    /// Move the session validated at `validated` to the account's new epoch
+    /// after its own password change, and return the slot generation. Only
+    /// that session: a logout and a new login of the same account meanwhile
+    /// (same id and epoch, a later `seq`) is a session the change ends, so
+    /// it is left for the next check to clear.
+    fn rebind_after_password_change(
+        &self,
+        identity: &UserIdentity,
+        validated: u64,
+        new_epoch: i64,
+    ) -> u64 {
+        let mut slot = self.lock();
+        if new_epoch == identity.auth_epoch + 1 && slot.seq == validated {
+            if let Some(DesktopSession::Account(session)) = slot.session.as_mut() {
+                if session.id == identity.id && session.auth_epoch == identity.auth_epoch {
+                    session.auth_epoch = new_epoch;
+                    slot.seq += 1;
+                }
+            }
+        }
+        slot.seq
+    }
+
     async fn read_source(
         &self,
         cached: Option<&DesktopSession>,
@@ -530,10 +547,12 @@ impl HostAuth {
                         seq: slot.seq,
                     }),
                     moved: true,
+                    seq: slot.seq,
                 },
                 (None, None) => Settled::Decided {
                     current: None,
                     moved: true,
+                    seq: slot.seq,
                 },
                 _ => Settled::Retry,
             };
@@ -568,6 +587,7 @@ impl HostAuth {
         Settled::Decided {
             current,
             moved: false,
+            seq: slot.seq,
         }
     }
 
