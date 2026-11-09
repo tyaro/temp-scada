@@ -292,3 +292,5 @@ Rustの`recording_management`は`validate_recording_management(&Value)`と、pri
 常設`RecordingManagementWorkspace.svelte`がModalの外でcontrollerを保持し、effect前のrender／action資格検査で旧応答を隠す。「表示→記録管理状態」の明示openと「状態を照会」を分け、再照会で最新一待機を置換できる。DB・activation・別観測Host・保持／回復gate・SDK・desired比較を独立表示する。閉じる／Project交換／App破棄はreadへのabort要求だけである。別Appへ移る場合の物理上限は将来adapter自身のgateで保証する。
 
 `controller.test.ts`は制御Promiseと単調時計で、取消後のcleanup・期限切れ・全文要求不一致・subscriber／abort再入・owner交換を直接検証する。`e2e/recording-management-workspace.spec.ts`は通常Appの両theme、未接続、注入service、寿命・部分観測、保存不変を確認する。native adapterや実DBを管理画面へ接続した受入ではない。次のd4は操作capability／receipt／不確定commitの詳細設計から進める。
+
+製品hostへの接続（C5-2、[製品hostの記録owner](historian-recording-product-owner.md)§5）で、serviceに省略可能な`initialSetup`（初回設定と開始）を加えた。照会と独立の操作で、照会の成功は実行の許可ではない。hostが役割と状態を実行時に確かめ直す。

@@ -4,6 +4,9 @@
   import App from "../App.svelte";
   import type { HistoryService } from "../lib/history/workspace-model";
   import { createNativeHistory } from "./history";
+  import { createNativeRecordingManagement } from "./recording-management";
+  import type { RecordingManagementService } from "../lib/recording-management/service";
+  import type { Project } from "../lib/project";
   import { nativeSources } from "./sources";
   import AuthControls from "./auth/AuthControls.svelte";
   import type { NativeAuthClient } from "./auth/client";
@@ -36,6 +39,30 @@
     (service) => (historyService = service),
   );
   onDestroy(() => nativeHistory.dispose());
+  // The recording management service follows the Project and the session:
+  // inspection needs a session, the first setup an administrator (design §5).
+  let recordingManagementService = $state.raw<RecordingManagementService>();
+  const nativeManagement = createNativeRecordingManagement(
+    invoke,
+    (service) => (recordingManagementService = service),
+    (project) => nativeHistory.refresh(project),
+  );
+  onDestroy(() => nativeManagement.dispose());
+  let currentProject = $state.raw<Project>();
+  const access = $derived.by(() => {
+    const view = authSession.view;
+    const session = view.status === "ready" ? view.session : null;
+    return {
+      signedIn: !!session,
+      admin: session?.role === "admin",
+      sessionKey: JSON.stringify(
+        session ? [session.identity.id, session.role, session.kind] : null,
+      ),
+    };
+  });
+  $effect(() => {
+    if (currentProject) nativeManagement.update(currentProject, access);
+  });
   let hubDetails: HTMLDetailsElement;
 
   function closeHubOnOutsidePointer(event: PointerEvent) {
@@ -172,7 +199,11 @@
   readSource={sources?.readSource}
   catalogSource={sources?.catalogSource}
   {historyService}
-  onprojectchange={(project) => nativeHistory.update(project)}
+  {recordingManagementService}
+  onprojectchange={(project) => {
+    nativeHistory.update(project);
+    currentProject = project;
+  }}
   headerExtension={hubControls}
 />
 

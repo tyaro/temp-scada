@@ -93,6 +93,11 @@ export function createNativeHistory(
         },
       );
     },
+    /** Asks again for `project`, after the host's applied plan changed. */
+    refresh(project: Project) {
+      key = undefined;
+      this.update(project);
+    },
     dispose() {
       disposed = true;
       generation++;

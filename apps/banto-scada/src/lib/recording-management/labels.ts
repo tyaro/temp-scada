@@ -76,3 +76,29 @@ export const inspectionErrorLabels: Record<InspectionError, string> = {
 };
 export const knownFlag = (value: boolean | null) =>
   value === null ? "未提供" : value ? "必要 / あり" : "不要 / なし";
+
+/** The host's error kinds of the first setup (product-owner design §5). */
+const setupErrors: Record<string, string> = {
+  not_allowed:
+    "初回設定はできません（DBに別の適用済み設定があるか、記録が止まっていないか、認証の移行中です）",
+  busy: "別の記録操作の実行中です。少し待ってからやり直してください",
+  no_recording_plan: "Projectに記録の希望設定がありません",
+  plan_disabled: "Projectの記録の希望設定が無効（enabled: false）です",
+  invalid_plan: "Projectの記録の希望設定を確認できません",
+  hub_not_configured: "Hubの接続先が保存されていません",
+  hub_unauthorized: "HubがAPIキーを受け付けませんでした",
+  hub_unavailable: "Hubから現在値を取得できませんでした",
+  tags_unresolved: "希望設定のタグがHubのカタログにありません",
+  resolution_mismatch:
+    "Hubのタグの型・取得元が希望設定または登録済みの対応と合いません",
+  store_failed:
+    "記録DBへの保存に失敗しました。保存できたかどうかは次の実行で確かめます。もう一度実行してください",
+  start_failed: "記録を受け付けましたが、開始前に停止しました",
+  recordingUnavailable: "記録DBを開けていません",
+  invalid_project: "Projectを確認できません",
+  unauthorized: "ログインが必要です",
+  forbidden: "管理者だけが実行できます",
+};
+export function setupErrorLabel(kind: string): string {
+  return setupErrors[kind] ?? `初回設定に失敗しました（${kind}）`;
+}
