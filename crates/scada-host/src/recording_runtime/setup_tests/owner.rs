@@ -2,8 +2,13 @@
 //! the exit (product-owner design §4-§6, C5-3).
 use super::*;
 use crate::auth_phase::AuthHost;
-use crate::recording_gate::{GateError, RecordingGate, NO_RECORDING_RUN};
+use crate::recording_gate::{
+    GateError, RecordingGate, WorkflowStage, NO_RECORDING_RUN, SHUTDOWN_ACTOR,
+};
+use scada_model::recording_admission::RecordingAdmissionRequest;
+use scada_model::recording_operations::RecordingChangeRequest;
 use scada_model::recording_wire::{RecordingWireAttachRequest, RecordingWireLeaseRequest};
+use scada_runtime::recording_operations::OperationsPhase;
 
 struct Owned {
     dir: TempDir,
@@ -175,4 +180,212 @@ async fn an_exit_without_a_root_stops_a_recording_the_owner_never_took() {
     drop(lock);
     let after = inspect(&runtime, &project).await;
     assert_eq!(after["database"]["latestActivation"]["state"], "closed");
+}
+
+/// A change of the running recording's plan to disabled, in the root's
+/// operations context.
+fn disable(scope: &Value) -> RecordingChangeRequest {
+    let mut desired = plan(false);
+    desired["revision"] = json!(2);
+    RecordingChangeRequest::from_value(json!({
+        "version":1, "kind":"recordingChangeRequest", "changeId":"exit-change",
+        "context":scope["context"],
+        "apply":{"requestId":"apply:exit-change", "desired":desired,
+            "expectedAppliedRevision":1, "expectedMappingRevision":null,
+            "expectedRetentionAppliedRevision":null}
+    }))
+    .unwrap()
+}
+
+fn stage_lease(scope: &Value, id: &str) -> RecordingWireLeaseRequest {
+    RecordingWireLeaseRequest::from_value(json!({
+        "version":1, "kind":"recordingWireLeaseRequest", "scope":scope,
+        "leaseRequestId":format!("{id}-lease"), "admissionId":id, "role":"mutation",
+        "requestedBudgetMs":5000
+    }))
+    .unwrap()
+}
+
+fn admission(scope: &Value, id: &str, lease: &Value, action: Value) -> RecordingAdmissionRequest {
+    RecordingAdmissionRequest::from_value(json!({
+        "version":1, "kind":"recordingAdmissionRequest", "ownerRef":scope["ownerRef"],
+        "admissionId":id, "context":scope["context"],
+        "deadlineLeaseRef":lease["outcome"]["deadlineLeaseRef"], "action":action
+    }))
+    .unwrap()
+}
+
+/// Reserve the change and dispatch its preflight through the gate (the
+/// synthetic Admin of auth-disabled mode). Returns the change and the
+/// accepted reply; the preflight may still be running.
+async fn preflight(o: &Owned, scope: &Value) -> (RecordingChangeRequest, Value) {
+    let change = disable(scope);
+    o.gate.workflow_reserve(change.clone()).await.unwrap();
+    let lease = o
+        .gate
+        .workflow_lease(WorkflowStage::Preflight, stage_lease(scope, "preflight"))
+        .await
+        .unwrap();
+    let accepted = o
+        .gate
+        .admission(admission(
+            scope,
+            "preflight",
+            lease.reply.as_value(),
+            json!({"kind":"preflight", "change":change.as_value()}),
+        ))
+        .await
+        .unwrap();
+    let accepted = accepted.reply.as_value().clone();
+    assert_eq!(accepted["outcome"]["kind"], "accepted", "{accepted}");
+    (change, accepted)
+}
+
+async fn until_phase(gate: &RecordingGate, phase: OperationsPhase) {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while gate.owner_phase() != Some(phase) {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("the owner reaches {phase:?}: {:?}", gate.owner_phase()));
+}
+
+/// Exit, then start again over the same data dir; the start's inspection.
+async fn exit_and_restart(o: Owned) -> (ExitOutcome, Value, TempDir) {
+    let lock = o.auth.gate().await;
+    let outcome = o
+        .runtime
+        .exit(Some(&o.gate), &lock, Duration::from_secs(10))
+        .await;
+    drop(lock);
+    let Owned {
+        dir,
+        runtime,
+        project,
+        gate,
+        auth,
+        ..
+    } = o;
+    // The process ends: a root left installed goes with it.
+    drop(gate);
+    drop(auth);
+    drop(runtime);
+    let restarted = RecordingRuntime::start(&dir.0, "deployment-a");
+    let after = inspect(&restarted, &project).await;
+    (outcome, after, dir)
+}
+
+/// The recording audit rows as (action, entity, result, actor).
+async fn admission_audit(dir: &TempDir) -> Vec<(String, String, String, String)> {
+    let pool = sqlx::SqlitePool::connect_with(
+        sqlx::sqlite::SqliteConnectOptions::new().filename(dir.0.join(crate::auth::AUTH_DB_FILE)),
+    )
+    .await
+    .unwrap();
+    sqlx::query_as(
+        "SELECT action, COALESCE(entity_id, ''), result, actor_username FROM audit_log \
+         WHERE resource = 'recording_admission' ORDER BY id",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap()
+}
+
+#[tokio::test]
+async fn the_exit_discards_a_candidate_then_stops_the_recording() {
+    let o = owned().await;
+    let scope = o.gate.slot().unwrap().scope;
+    // The exit starts right after the preflight was accepted: it waits for
+    // the preflight to complete, then discards its Candidate (design §6.1).
+    preflight(&o, &scope).await;
+
+    let (outcome, after, dir) = exit_and_restart(o).await;
+    assert_eq!(outcome, ExitOutcome::Stopped);
+    // Stopped and joined: the next start finds no interrupted session.
+    assert_eq!(after["database"]["latestActivation"]["state"], "closed");
+    assert_eq!(after["host"]["phase"], "idle");
+    // The plan is unchanged.
+    assert_eq!(after["database"]["applied"]["appliedRevision"], 1);
+    let audit = admission_audit(&dir).await;
+    let (action, entity, result, actor) = audit.last().unwrap();
+    assert_eq!(
+        (action.as_str(), result.as_str(), actor.as_str()),
+        ("register", "ok", SHUTDOWN_ACTOR),
+        "{audit:?}"
+    );
+    assert!(entity.starts_with("shutdown-discard:"), "{entity}");
+}
+
+#[tokio::test]
+async fn the_exit_leaves_a_paused_change_without_an_interruption() {
+    let o = owned().await;
+    let scope = o.gate.slot().unwrap().scope;
+    let (change, accepted) = preflight(&o, &scope).await;
+    until_phase(&o.gate, OperationsPhase::Candidate).await;
+    let stage = WorkflowStage::PauseJoin {
+        operation_id: "pause:exit".into(),
+    };
+    let lease = o
+        .gate
+        .workflow_lease(stage, stage_lease(&scope, "pause"))
+        .await
+        .unwrap();
+    let paused = o
+        .gate
+        .admission(admission(
+            &scope,
+            "pause",
+            lease.reply.as_value(),
+            json!({"kind":"pauseJoin", "changeRef":accepted["outcome"]["handle"]["changeRef"],
+                "operation":{"version":1, "kind":"recordingOperationRequest",
+                    "operationId":"pause:exit", "stage":"pauseJoin",
+                    "change":change.as_value()}}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(paused.reply.as_value()["outcome"]["kind"], "accepted");
+    until_phase(&o.gate, OperationsPhase::Paused).await;
+
+    let (outcome, after, dir) = exit_and_restart(o).await;
+    assert_eq!(outcome, ExitOutcome::Paused);
+    // The pause/join already ended the session.
+    assert_eq!(after["database"]["latestActivation"]["state"], "closed");
+    assert_eq!(after["host"]["phase"], "idle");
+    // Nothing was discarded.
+    assert!(admission_audit(&dir)
+        .await
+        .iter()
+        .all(|(_, _, _, actor)| actor != SHUTDOWN_ACTOR));
+}
+
+#[tokio::test]
+async fn a_refused_discard_leaves_the_recording_running_for_the_interruption() {
+    let o = owned().await;
+    let scope = o.gate.slot().unwrap().scope;
+    preflight(&o, &scope).await;
+    until_phase(&o.gate, OperationsPhase::Candidate).await;
+    o.gate.refuse_next_shutdown_discard();
+
+    let lock = o.auth.gate().await;
+    let outcome = o
+        .runtime
+        .exit(Some(&o.gate), &lock, Duration::from_secs(10))
+        .await;
+    drop(lock);
+    assert_eq!(outcome, ExitOutcome::Interrupted);
+    // The root and its Candidate are left as they are, and the recording
+    // keeps running until the process ends; the next start then closes its
+    // session as interrupted (design §6 step 4).
+    assert_eq!(o.gate.slot().map(|i| i.generation), Ok(1));
+    assert_eq!(o.gate.owner_phase(), Some(OperationsPhase::Candidate));
+    let lent = inspect(&o.runtime, &o.project).await;
+    assert_eq!(lent["host"]["phase"], "running");
+    assert_eq!(lent["database"]["latestActivation"]["state"], "active");
+    let audit = admission_audit(&o.dir).await;
+    let (_, _, result, actor) = audit.last().unwrap();
+    assert_eq!(
+        (result.as_str(), actor.as_str()),
+        ("denied", SHUTDOWN_ACTOR)
+    );
 }

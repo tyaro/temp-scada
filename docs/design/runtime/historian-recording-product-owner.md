@@ -107,7 +107,7 @@ C5-3aの実装で次を定めた。
 
 UIを閉じても、hostのprocessが生きている間は記録を続ける（C5の完了条件）。トレイ常駐などでwindowとprocessの寿命を分けることは本書の範囲外とし、window終了はprocess終了とする。
 
-C5-3aでは1・3・4を実装した。最初の`ExitRequested`で終了を止め（`prevent_exit`）、移行lockの下で`begin_shutdown`→`try_handoff`（静止するまで50msごとに再試行）→`request_stop_recording`→`join_recording`を10秒以内に行ってから`exit(0)`する。その間に届いた終了要求も止め、手順の後の要求だけを通す。rootのないhost（初回設定前、またはhandoff後）では記録の停止だけを行う。2のうちCandidateの終了時破棄（§6.1）とPausedの即時終了、確認dialogはC5-3bで行い、それまでは未静止のrootを上限まで待ってから中断として終了する。
+C5-3aでは1・3・4を実装した。最初の`ExitRequested`で終了を止め（`prevent_exit`）、移行lockの下で`begin_shutdown`→`try_handoff`（静止するまで50msごとに再試行）→`request_stop_recording`→`join_recording`を10秒以内に行ってから`exit(0)`する。その間に届いた終了要求も止め、手順の後の要求だけを通す。rootのないhost（初回設定前、またはhandoff後）では記録の停止だけを行う。2のうちCandidateの終了時破棄（§6.1）とPausedの即時終了はC5-3b1で実装した。`try_handoff`が`busy`の間はownerの段階（registryの`owner_phase`）を見て、Candidateなら破棄を一度だけ行ってhandoffをやり直し、破棄が完了しなければ中断として終了する。Pausedならhandoffせずにすぐ終了する（`ExitOutcome::Paused`）。それ以外（preflightの実行中、受理済み処理の未完了）は上限まで50msごとに待つ。確認dialogはC5-3b2で行う。
 
 **期限切れのdiscard leaseの取り直し**（下の§6.1）はC5-3aで`scada-runtime`に入れた。同じIDでの取り直しは保存済みの返信を返し、取り替えられた古いleaseも同じIDなら自分の返信を返す。
 
@@ -134,7 +134,7 @@ preflightの配送が未完了なら、上限の中で完了を待ってから�
    - 利用者のdiscard登録がすでにある場合（`DiscardRegistration::Existing`）は、それをそのまま配送する。`begin_shutdown`はdiscardの未配送登録を取り消さない。
    - 配送済みなら完了を待つ。
 4. **確認**: discardの完了を待ち、ownerが`Idle`へ戻ったら`try_handoff`をやり直す。拒否された場合や上限を越えた場合は、§6の4（中断として終了）へ進む。
-5. **監査**: 既存のgateの監査と同じ`recording_admission`として、結果（成功・`denied`・`failed`）を記録する。detailは`{"stage": "discard", "origin": "shutdown", "principal": <予約principal>}`とする。既存の記録はdesktop sessionのidentityをactorにするが、この破棄には利用者のsessionがない。そこでactorはhostを表す合成のidentityとし、その形はC5-3bで決める。
+5. **監査**: 既存のgateの監査と同じ`recording_admission`として、結果（成功・`denied`・`failed`）を記録する。detailは`{"stage": "discard", "origin": "shutdown", "principal": <予約principal>}`とする。既存の記録はdesktop sessionのidentityをactorにするが、この破棄には利用者のsessionがない。そこでactorはhostを表す合成のidentityとする（C5-3b1で決定）。`actor_username`は`host:shutdown`（Bantoのusernameは`:`を含まないので、どのaccountも指さない）、`actor_role`は`admin`、`entity_id`は破棄のadmission ID（hostが引いたIDは`shutdown-discard:<uuid>`）とする。拒否のdetailには`error`を、配送したが完了しなかった場合は`outcome`（`rejected`・`unknown`）を加え、resultは`failed`とする。
 
 **期限切れのdiscard leaseの取り直し**（registryの変更、C5-3aで実装済み）: 現行のregistryでは、未登録のまま期限切れになったdiscard leaseから戻る経路がない。
 
@@ -158,15 +158,21 @@ preflightの配送が未完了なら、上限の中で完了を待ってから�
 - キャンセルしたら何もしない。利用者は記録操作画面で候補を適用するか破棄できる。
 - dialogを出せない終了（OSのshutdown、UIの応答なし）では、確認なしに§6の手順を進める。
 
-**試験**（C5-3b）:
+**実装上の補足**（C5-3b1）:
 
-- Candidateで終了すると、破棄、handoff、stop/joinの順に進み、次回の起動で`interrupted`が残らない。
-- 予約principalがlogout済み・降格済みでも破棄できる。
-- 利用者が取ったdiscard leaseや登録を引き継ぐ。
-- preflightの配送中に終了すると、完了を待ってから判断する。
-- Pausedでは破棄せずに終了し、中断にならない。
-- 破棄が拒否されたら中断として終了する。
-- 監査の記録が残る。
+- gateは`HeldWorkflow`に予約時の変更要求と、`discard`段階で新しいIDで発行したdiscard leaseの要求を記録する。利用者が置き換えられた古いleaseを同じIDで取り直しても、記録は最新のleaseのままにする。
+- 利用者のdiscard登録は、gateでは登録と配送を同じlockの下で行うので、未配送のまま残ることはない。hostは利用者のleaseの`admissionId`と`deadlineLeaseRef`から同じadmission requestを組み立てるので、登録済みなら`Existing`として返り、その保存済みの返信を使う。完了済みならownerはすでにCandidateではない。拒否済みならその結果を破棄の失敗として扱う。
+- 降格と削除は、Candidateの間は§4により`busy`で拒否されるので、実際に起きるのはlogoutと別の利用者のloginである。破棄はdesktop sessionを読まないので、どの場合も同じに動く。
+- registryが`busy`と答えたとき（preflightの完了がまだ見えない）は何も登録せず、次の再試行で判断し直す。
+
+**試験**（C5-3b1、scada-hostの`recording_gate/tests/shutdown.rs`と`recording_runtime/setup_tests/owner.rs`）:
+
+- Candidateで終了すると、破棄、handoff、stop/joinの順に進み、次回の起動で`interrupted`が残らない。計画は変わらない。preflightが受理された直後（native処理の完了前）に終了を始め、完了を待ってから破棄することも同じ試験で確かめる。
+- 予約principalがlogoutし、別の利用者（Viewer）がloginした後でも破棄できる。
+- 利用者が取ったdiscard leaseを同じIDで引き継ぐ。未登録のまま期限切れのleaseは新しいIDで取り直す。
+- Pausedでは破棄せずに終了し（`ExitOutcome::Paused`）、次回の起動で`interrupted`が残らない。
+- 破棄が拒否されたら中断として終了する。rootとCandidateはそのまま残り、記録はprocessの終了まで続く（拒否は試験用のhookで起こす）。
+- 監査の記録が残る（成功は`ok`、拒否は`denied`、actorは`host:shutdown`、detailに予約principal）。
 
 ## 7. 画面接続
 
@@ -213,7 +219,8 @@ port v2の型の詳細はC5-5の着手時にこの節へ追記し、レビュー
 | C5-1 記録DBと履歴読取   | **実装済み（2026-11-09）**。`historian-store.json`とstoreの作成・open（§3）、`RecordingRuntime`の起動（Supervisorは`Idle`のまま）、`history_context`・`history_query`・`history_cancel`のcommand、nativeの`HistoryService`。一時DBの試験とIPC mockのe2e                                                                                                 |
 | C5-2 初回設定と開始     | **実装済み（2026-11-09）**。`recording_status`・`recording_initial_setup`（§5）、記録管理画面の照会と操作。mock Hub＋一時DBで、mappingからtickの保存まで。受付不明からの再実行                                                                                                                                                                          |
 | C5-3a ownerとgateの導入 | **実装済み（2026-11-09）**。gate内のslot（§4）、開始後のgate導入、`recording_slot`・`recording_stop`、終了処理の1・3・4（§6）、期限切れのdiscard leaseの取り直し（§6.1、`scada-runtime`の変更）。registry commandが`Running`の記録に対して働くこと（scada-hostの一時DB＋mock Hub）と、gateを外すと購読が`ownerClosed`で終わること（src-tauriのIPC試験） |
-| C5-3b 終了時の破棄      | Candidateの終了時破棄（§6.1、`HeldWorkflow`へのdiscard lease IDの記録、hostの合成actorの監査）、Pausedでの即時終了、`CloseRequested`の確認dialog。§6.1の試験                                                                                                                                                                                            |
+| C5-3b1 終了時の破棄     | **実装済み（2026-11-09）**。Candidateの終了時破棄（§6.1、`HeldWorkflow`へのdiscard leaseの記録、hostの合成actorの監査）、Pausedでの即時終了。§6.1の試験                                                                                                                                                                                                 |
+| C5-3b2 確認dialog       | `CloseRequested`の確認dialog（§6.1）。hostの`quiescence()`による判定、UIへの通知、「破棄して終了」「キャンセル」。IPC mockのe2e                                                                                                                                                                                                                         |
 | C5-4 再開               | `recording_resume`（applyの後と再起動後）、`recording_reconfigure`（停止中の計画変更と無効計画からの有効化）、fresh SDK解決、gateの入替え、`interrupted`の表示                                                                                                                                                                                          |
 | C5-5 記録操作の画面接続 | port v2（§7.2）、native実装、coordinatorの改訂。IPC mockのe2eで予約からapply・reconcileまで、logoutでの`ended`、再読込後のattachし直し                                                                                                                                                                                                                  |
 | C5-6 Windows実機受入    | 実Hubを読み、検証用DBへ記録し、履歴画面と保存Trendで確かめる。UIを閉じない間の継続、停止・join・明示再開、raw／minmax、欠測・Quality・SIM、再起動後の照会、実時間の件数とDB増分を記録する（ユーザー作業）                                                                                                                                               |
