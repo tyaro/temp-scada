@@ -240,3 +240,19 @@ async fn the_phase_is_read_as_one_state_with_a_running_move() {
         json!({"phase": "initializing", "authDisabled": true, "hasAdmin": false})
     );
 }
+
+#[tokio::test]
+async fn session_changes_wait_for_the_transition_lock_without_a_gate() {
+    let (_dir, desktop) = operational().await;
+    let desktop = Arc::new(desktop);
+    let before = desktop.resolve().await.unwrap().current;
+    let guard = desktop.auth().gate().await;
+    let (a, b) = (desktop.clone(), desktop.clone());
+    let change = tokio::spawn(async move { a.change_password(PASSWORD, "another-horse-2").await });
+    let resolve = tokio::spawn(async move { b.resolve().await });
+    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+    assert!(!change.is_finished() && !resolve.is_finished());
+    drop(guard);
+    assert_eq!(change.await.unwrap().unwrap().seq, before + 1);
+    resolve.await.unwrap().unwrap();
+}

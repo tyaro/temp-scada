@@ -862,15 +862,11 @@ impl RecordingGate {
     ) -> Result<LoginOutcome, BantoError> {
         let phase = self.auth.gate().await;
         let outcome = self.auth.auth().install_login(seq_at_entry, identity).await;
-        if let Ok(LoginOutcome::LoggedIn(current)) = &outcome {
-            self.lock().revoke_through(current.seq - 1, None);
-        }
+        // Whatever the outcome (a superseded install, or a re-validation
+        // that failed after writing the slot), every generation before the
+        // slot's has ended; no second auth DB read is needed.
+        self.end_generations_before(self.auth.auth().seq());
         drop(phase);
-        if !matches!(outcome, Ok(LoginOutcome::LoggedIn(_))) {
-            // A superseded install may still have written the slot before
-            // its re-validation cleared it.
-            let _ = self.refresh().await;
-        }
         outcome
     }
 

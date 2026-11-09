@@ -14,12 +14,16 @@
 //! through it, so the registry sessions and subscriptions it ends are
 //! revoked within the same command (§5). Without one (no recording owner on
 //! this host yet), there is nothing to revoke and nothing to keep quiescent.
+//! Either way the session changes (login and setup installs, logout,
+//! resolve, the own password change) run under the transition lock
+//! ([`AuthHost::gate`]), so they never interleave: a password change
+//! finishes on the session it validated.
 use std::sync::Arc;
 
 use serde::{Serialize, Serializer};
 use serde_json::json;
 
-use crate::auth::{BantoError, DesktopSession, LoginOutcome};
+use crate::auth::{BantoError, DesktopSession, LoginOutcome, Verified};
 use crate::auth_phase::{AuthHost, StartupError, TransitionError, Transitioned};
 use crate::recording_gate::RecordingGate;
 
@@ -231,7 +235,19 @@ impl DesktopAuth {
     pub async fn login(&self, username: &str, password: &str) -> Result<LoginResult, CommandError> {
         let outcome = match self.gate() {
             Some(gate) => gate.login(username, password).await?,
-            None => self.auth().auth().login(username, password).await?,
+            None => {
+                let auth = self.auth().auth();
+                match auth.verify_login(username, password).await? {
+                    Verified::Account {
+                        identity,
+                        seq_at_entry,
+                    } => {
+                        let _lock = self.auth().gate().await;
+                        auth.install_login(seq_at_entry, identity).await?
+                    }
+                    Verified::Refused(outcome) => outcome,
+                }
+            }
         };
         Ok(self.login_result(outcome))
     }
@@ -270,7 +286,10 @@ impl DesktopAuth {
         auth.record_ok(&identity, "setup", "auth", None, None).await;
         let outcome = match self.gate() {
             Some(gate) => gate.install_account(seq_at_entry, identity).await?,
-            None => auth.install_login(seq_at_entry, identity).await?,
+            None => {
+                let _lock = self.auth().gate().await;
+                auth.install_login(seq_at_entry, identity).await?
+            }
         };
         Ok(self.login_result(outcome))
     }
@@ -279,7 +298,10 @@ impl DesktopAuth {
     pub async fn logout(&self) -> Result<LogoutResult, CommandError> {
         let seq = match self.gate() {
             Some(gate) => gate.logout().await,
-            None => self.auth().auth().logout().await,
+            None => {
+                let _lock = self.auth().gate().await;
+                self.auth().auth().logout().await
+            }
         };
         Ok(LogoutResult { seq })
     }
@@ -290,7 +312,10 @@ impl DesktopAuth {
     pub async fn resolve(&self) -> Result<AuthResolveResult, CommandError> {
         let resolved = match self.gate() {
             Some(gate) => gate.resolve().await?,
-            None => self.auth().auth().resolve().await?,
+            None => {
+                let _lock = self.auth().gate().await;
+                self.auth().auth().resolve().await?
+            }
         };
         Ok(AuthResolveResult {
             identity: resolved.session.as_ref().map(identity_of),
@@ -316,6 +341,7 @@ impl DesktopAuth {
                     .await?
             }
             None => {
+                let _lock = self.auth().gate().await;
                 self.auth()
                     .auth()
                     .change_own_password(current_password, new_password)
