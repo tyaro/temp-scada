@@ -1,5 +1,6 @@
 //! One embedded read-only host. Hub services and PLC connections stay external.
 mod auth;
+mod control;
 mod history;
 mod recording;
 
@@ -199,6 +200,9 @@ mod recording_tests;
 #[cfg(test)]
 mod history_tests;
 
+#[cfg(test)]
+mod control_tests;
+
 #[tauri::command]
 async fn hub_catalog(
     state: State<'_, NativeHost>,
@@ -265,6 +269,9 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             history::history_context,
             history::history_query,
             history::history_cancel,
+            control::recording_context,
+            control::recording_status,
+            control::recording_initial_setup,
             recording::recording_workflow_reserve,
             recording::recording_workflow_lease,
             recording::recording_lease,

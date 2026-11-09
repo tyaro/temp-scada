@@ -235,7 +235,7 @@ impl DesktopAuth {
         }
     }
 
-    fn auth(&self) -> &AuthHost {
+    pub(crate) fn auth(&self) -> &AuthHost {
         match &self.host {
             Host::Auth(auth) => auth,
             Host::Gate(gate) => gate.auth(),
