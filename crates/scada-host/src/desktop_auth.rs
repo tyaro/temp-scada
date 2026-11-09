@@ -282,16 +282,15 @@ impl DesktopAuth {
     }
 
     /// `auth_resolve`: the re-validated session, and which slot write the
-    /// answer is about. A session it ended has its registry sessions revoked
-    /// before returning.
+    /// answer is about. A generation it ended has its registry sessions and
+    /// subscriptions ended before returning.
     pub async fn resolve(&self) -> Result<AuthResolveResult, CommandError> {
         let resolved = self.auth().auth().resolve().await?;
-        if resolved.current != resolved.checked {
-            if let Some(gate) = self.gate() {
-                // A read failure here keeps the sessions; the next registry
-                // command re-validates anyway.
-                let _ = gate.refresh().await;
-            }
+        if let Some(gate) = self.gate() {
+            // Every generation before `current` has ended, so a session this
+            // call cleared or re-bound ends its registry sessions and
+            // subscriptions here, without a second auth DB read.
+            gate.end_generations_before(resolved.current);
         }
         Ok(AuthResolveResult {
             identity: resolved.session.as_ref().map(identity_of),

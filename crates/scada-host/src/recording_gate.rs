@@ -890,9 +890,23 @@ impl RecordingGate {
             result,
             Err(BantoError::Forbidden | BantoError::Validation { .. })
         ) {
+            // The re-bind (or the initial check clearing a revoked session)
+            // has already ended the generations before the slot's, whatever
+            // the refresh below can read.
+            self.end_generations_before(self.auth.auth().seq());
             self.refresh_after_change().await;
         }
         result
+    }
+
+    /// End the registry sessions and subscriptions of every generation
+    /// before `seq`, a generation the slot has reached. The slot holds one
+    /// session and `seq` only grows, so those generations are over; this
+    /// needs no re-validation, and a newer generation is kept.
+    pub(crate) fn end_generations_before(&self, seq: u64) {
+        if let Some(through) = seq.checked_sub(1) {
+            self.lock().revoke_through(through, None);
+        }
     }
 
     /// `auth_logout`: end the account session and, in the same call, the

@@ -691,3 +691,55 @@ async fn the_own_password_change_revokes_the_old_generation_within_the_command()
     let attached = f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();
     assert_eq!(attached.seq, seq);
 }
+
+#[tokio::test]
+async fn a_password_change_ends_the_old_subscriptions_even_if_the_refresh_fails() {
+    let f = operational().await;
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    // The auth DB fails after the change, before its refresh.
+    let raw = f.dir.raw().await;
+    let hide = raw.clone();
+    f.gate.after_next_call(async move {
+        sqlx::query("ALTER TABLE settings RENAME TO settings_hidden")
+            .execute(&hide)
+            .await
+            .unwrap();
+    });
+    let seq = f
+        .gate
+        .change_own_password(PASSWORD, "another-horse-2")
+        .await
+        .unwrap();
+    sqlx::query("ALTER TABLE settings_hidden RENAME TO settings")
+        .execute(&raw)
+        .await
+        .unwrap();
+    let attached = f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();
+    assert_eq!(attached.seq, seq);
+    assert!(!live(&f, &reference));
+}
+
+#[tokio::test]
+async fn a_resolve_that_ends_the_session_ends_its_subscriptions_within_the_command() {
+    let f = operational().await;
+    let admin = f.auth.auth().current().await.unwrap().unwrap();
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    let (_, old) = f.gate.held(LeaseRole::Reconciliation).unwrap();
+    f.auth
+        .auth()
+        .users()
+        .reset_password(admin.session.identity().id, "another-horse-2")
+        .await
+        .unwrap();
+
+    let desktop = crate::desktop_auth::DesktopAuth::with_gate(f.gate.clone());
+    let resolved = desktop.resolve().await.unwrap();
+    assert_eq!(resolved.identity, None);
+    assert_eq!(resolved.current, admin.seq + 1);
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
+    assert!(matches!(
+        f.gate
+            .with_root(|root| root.take_state_frame(&old, &reference)),
+        Err(LeaseError::Unauthorized)
+    ));
+}
