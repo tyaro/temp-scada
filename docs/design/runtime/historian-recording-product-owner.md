@@ -95,6 +95,12 @@ preflightの配送が未完了なら、上限の中で完了を待ってから�
    - まだなければ、hostが新しいIDを引いて取る。期限は残りの待ち時間以内とする。
    - 利用者のdiscard leaseが登録されないまま期限切れなら、下の「期限切れのdiscard leaseの取り直し」で新しいIDのleaseへ取り直す。
 
+3. **admission**: hostが受理済みpreflightの返信（`changeRef`）からdiscardのadmission requestを組み立て、`register_discard`→`dispatch_discard`で配送する。
+   - 利用者のdiscard登録がすでにある場合（`DiscardRegistration::Existing`）は、それをそのまま配送する。`begin_shutdown`はdiscardの未配送登録を取り消さない。
+   - 配送済みなら完了を待つ。
+4. **確認**: discardの完了を待ち、ownerが`Idle`へ戻ったら`try_handoff`をやり直す。拒否された場合や上限を越えた場合は、§6の4（中断として終了）へ進む。
+5. **監査**: 既存のgateの監査と同じ`recording_admission`として、結果（成功・`denied`・`failed`）を記録する。detailは`{"stage": "discard", "origin": "shutdown", "principal": <予約principal>}`とする。既存の記録はdesktop sessionのidentityをactorにするが、この破棄には利用者のsessionがない。そこでactorはhostを表す合成のidentityとし、その形はC5-3で決める。
+
 **期限切れのdiscard leaseの取り直し**（registryの変更、C5-3で行う）: 現行のregistryでは、未登録のまま期限切れになったdiscard leaseから戻る経路がない。
 
 - 期限切れのleaseは表から消えないので、同じIDで取り直すと保存済みの返信（古い期限）が返り、`register_discard`は`Expired`になる。
@@ -108,13 +114,7 @@ preflightの配送が未完了なら、上限の中で完了を待ってから�
 - 期限内のleaseや登録済みのleaseがあるときは、従来どおり違うIDを`protocolViolation`とする。
 - 同じIDでの取り直しが期限を延ばさないこと（wire-host §14「同ID返信で延長無し」）は変えない。
 
-利用者の通常のdiscard（記録操作画面）も同じ経路で回復できる。試験は、未登録のまま期限切れにした後に新しいIDで取り直してdiscardが一度だけ配送されること、期限内と登録済みでは拒否されること、予約枠の会計が増えないことを`scada-runtime`で確かめる。3. **admission**: hostが受理済みpreflightの返信（`changeRef`）からdiscardのadmission requestを組み立て、`register_discard`→`dispatch_discard`で配送する。
-
-- 利用者のdiscard登録がすでにある場合（`DiscardRegistration::Existing`）は、それをそのまま配送する。`begin_shutdown`はdiscardの未配送登録を取り消さない。
-- 配送済みなら完了を待つ。
-
-4. **確認**: discardの完了を待ち、ownerが`Idle`へ戻ったら`try_handoff`をやり直す。拒否された場合や上限を越えた場合は、§6の4（中断として終了）へ進む。
-5. **監査**: 既存のgateの監査と同じ`recording_admission`として、結果（成功・`denied`・`failed`）を記録する。detailは`{"stage": "discard", "origin": "shutdown", "principal": <予約principal>}`とする。既存の記録はdesktop sessionのidentityをactorにするが、この破棄には利用者のsessionがない。そこでactorはhostを表す合成のidentityとし、その形はC5-3で決める。
+利用者の通常のdiscard（記録操作画面）も同じ経路で回復できる。試験は、未登録のまま期限切れにした後に新しいIDで取り直してdiscardが一度だけ配送されること、期限内と登録済みでは拒否されること、予約枠の会計が増えないことを`scada-runtime`で確かめる。
 
 **確認dialog**: windowの`CloseRequested`で、hostは`quiescence()`を読む。未静止なら閉じるのを止め、UIへ理由を送る。
 
