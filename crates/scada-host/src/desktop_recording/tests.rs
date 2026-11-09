@@ -47,6 +47,7 @@ const PAGE: u64 = 1;
 
 struct Fixture {
     recording: DesktopRecording,
+    gate: Arc<RecordingGate>,
     auth: DesktopAuth,
     scope: Value,
     _store: TestStoreDir,
@@ -64,7 +65,8 @@ async fn initializing() -> Fixture {
     let gate = Arc::new(RecordingGate::new(auth, root, issuer));
     Fixture {
         recording: DesktopRecording::with_interval(gate.clone(), Duration::from_millis(10)),
-        auth: DesktopAuth::with_gate(gate),
+        auth: DesktopAuth::with_gate(gate.clone()),
+        gate,
         scope: generation.scope(context),
         _store: store,
         dir,
@@ -541,4 +543,72 @@ async fn a_replay_from_the_next_page_finds_the_ended_subscription_before_the_old
         .unwrap()
         .unwrap();
     assert!(old_events.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn a_page_that_ended_mid_delivery_receives_nothing_and_its_subscription_ends() {
+    let f = initializing().await;
+    let (attached, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"), PAGE)
+        .await
+        .unwrap();
+    let reference = attached.reply["outcome"]["subscriptionRef"].clone();
+    preflight(&f, "ended-page").await;
+    // The pump's delivery re-validated the session and waits to take the
+    // frame; meanwhile the page ends (the hook ran, the pump's `stop` has
+    // not fired). The frame it then takes is for a page that is gone.
+    let (taken, take) = tokio::sync::oneshot::channel::<()>();
+    f.gate.after_next_call(async {
+        let _ = take.await;
+    });
+    let (_old_stop, mut events, task) = spawn_page(pump.unwrap());
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    f.recording.end_page(PAGE);
+    taken.send(()).unwrap();
+    timeout(Duration::from_secs(10), task)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(events.try_recv().is_err());
+    // The subscription was ended in the registry.
+    let (_, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"), PAGE + 1)
+        .await
+        .unwrap();
+    let (mut events, _task) = spawn(pump.unwrap());
+    assert_eq!(
+        wire(&next(&mut events).await),
+        json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
+    );
+}
+
+#[tokio::test]
+async fn ended_pages_are_forgotten_once_no_claim_names_them() {
+    let f = initializing().await;
+    for page in 0..8 {
+        let id = format!("attach-{page}");
+        let (_, pump) = f
+            .recording
+            .attach(attach(&f.scope, &id), page)
+            .await
+            .unwrap();
+        let (_stop, _events, task) = spawn_page(pump.unwrap());
+        f.recording.end_page(page);
+        timeout(Duration::from_secs(10), task)
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(f.recording.ended_page_count(), 0, "page {page}");
+    }
+    // A page with no claim at all is forgotten at the next claim.
+    f.recording.end_page(100);
+    let (_, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-last"), 101)
+        .await
+        .unwrap();
+    assert!(pump.is_some());
+    assert_eq!(f.recording.ended_page_count(), 0);
 }

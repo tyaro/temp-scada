@@ -1245,7 +1245,10 @@ impl RecordingGate {
     }
 
     #[cfg(test)]
-    fn after_next_call(&self, hook: impl std::future::Future<Output = ()> + Send + 'static) {
+    pub(crate) fn after_next_call(
+        &self,
+        hook: impl std::future::Future<Output = ()> + Send + 'static,
+    ) {
         *self.after_call.lock().expect("hook mutex") = Some(Box::pin(hook));
     }
 

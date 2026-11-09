@@ -164,9 +164,11 @@ pub struct DesktopRecording {
 struct Host {
     gate: Arc<RecordingGate>,
     pumps: Arc<tokio::sync::Mutex<Pumps>>,
-    /// The pages the host reported ended ([`DesktopRecording::end_page`]).
-    /// Read by a claim, so a subscription of an ended page is ended even if
-    /// its pump has not noticed yet. One ID per page load.
+    /// The pages the host reported ended ([`DesktopRecording::end_page`])
+    /// that a claim still names. Read by a claim, so a subscription of an
+    /// ended page is ended even if its pump has not noticed yet, and by each
+    /// emit, so an ended page receives nothing. Pruned whenever a claim is
+    /// made or released.
     ended_pages: Arc<Mutex<BTreeSet<u64>>>,
     interval: Duration,
 }
@@ -239,6 +241,14 @@ impl DesktopRecording {
                 .expect("ended pages mutex poisoned")
                 .insert(page);
         }
+    }
+
+    /// Test only: how many ended pages are remembered.
+    #[cfg(test)]
+    fn ended_page_count(&self) -> usize {
+        self.host
+            .as_ref()
+            .map_or(0, |host| host.ended_pages.lock().unwrap().len())
     }
 
     fn gate(&self) -> Result<&RecordingGate, RecordingCommandError> {
@@ -385,6 +395,7 @@ impl DesktopRecording {
 pub struct FramePump {
     gate: Arc<RecordingGate>,
     pumps: Arc<tokio::sync::Mutex<Pumps>>,
+    ended_pages: Arc<Mutex<BTreeSet<u64>>>,
     reference: String,
     claim: Claim,
     interval: Duration,
@@ -429,9 +440,11 @@ impl FramePump {
             token: pumps.next,
         };
         pumps.claims.insert(reference.to_owned(), claim);
+        prune(&pumps, &host.ended_pages);
         Some(Self {
             gate: host.gate.clone(),
             pumps: host.pumps.clone(),
+            ended_pages: host.ended_pages.clone(),
             reference: reference.to_owned(),
             claim,
             interval: host.interval,
@@ -440,6 +453,13 @@ impl FramePump {
 
     pub fn subscription_ref(&self) -> &str {
         &self.reference
+    }
+
+    fn page_ended(&self) -> bool {
+        self.ended_pages
+            .lock()
+            .expect("ended pages mutex poisoned")
+            .contains(&self.claim.page)
     }
 
     fn owns(&self, pumps: &Pumps) -> bool {
@@ -470,9 +490,12 @@ impl FramePump {
                 tokio::time::sleep(self.interval).await;
             }
         };
+        // `stop` first: a page that ended before the pump started delivers
+        // nothing.
         let outcome = tokio::select! {
-            outcome = deliver => outcome,
+            biased;
             () = stop => Delivery::Gone,
+            outcome = deliver => outcome,
         };
         let mut pumps = self.pumps.lock().await;
         if self.owns(&pumps) {
@@ -480,50 +503,71 @@ impl FramePump {
             if matches!(outcome, Delivery::Gone) {
                 self.gate.end_subscription(&self.reference);
             }
+            prune(&pumps, &self.ended_pages);
         }
     }
 
     async fn deliver(&self, emit: &mut (impl FnMut(RecordingEvent) -> bool + Send)) -> Delivery {
         // Held across the take and the emit, so a takeover waits for this
-        // delivery and the frame reaches the page that owns it.
+        // delivery and every event reaches only the page that owns it.
         let pumps = self.pumps.lock().await;
         if !self.owns(&pumps) {
             return Delivery::TakenOver;
         }
-        let error = match self.gate.frames(&self.reference).await {
+        if self.page_ended() {
+            return Delivery::Gone;
+        }
+        let event = match self.gate.frames(&self.reference).await {
             Ok(Bound { seq, reply }) => {
                 if reply.state.is_none() && reply.control.is_none() {
                     return Delivery::Continue;
                 }
-                // `ownerClosed` is the only control frame: the closed
-                // snapshot came with it, and nothing follows.
-                let closed = reply.control.is_some();
-                let delivered = emit(RecordingEvent::Frames {
+                RecordingEvent::Frames {
                     subscription_ref: self.reference.clone(),
                     seq,
                     state: reply.state.map(|frame| frame.as_value().clone()),
                     control: reply.control.map(|frame| frame.as_value().clone()),
-                });
-                return match (delivered, closed) {
-                    (false, _) => Delivery::Gone,
-                    (true, true) => Delivery::Done,
-                    (true, false) => Delivery::Continue,
-                };
+                }
             }
-            Err(error) => error,
+            Err(GateError::AuthUnavailable(_) | GateError::Phase(_)) => return Delivery::Hold,
+            Err(error) => RecordingEvent::Ended {
+                subscription_ref: self.reference.clone(),
+                reason: gate_kind(&error),
+            },
         };
+        // The page may have ended while the frames were taken. The check and
+        // the emit hold the ended-pages lock, which `end_page` takes from
+        // the page hook before the next page loads: an event of an ended
+        // page is never emitted (to the next page of the same webview).
+        let ended = self.ended_pages.lock().expect("ended pages mutex poisoned");
+        if ended.contains(&self.claim.page) {
+            return Delivery::Gone;
+        }
+        let done = match &event {
+            // `ownerClosed` is the only control frame: the closed snapshot
+            // came with it, and nothing follows.
+            RecordingEvent::Frames { control, .. } => control.is_some(),
+            RecordingEvent::Ended { .. } => true,
+        };
+        let delivered = emit(event);
+        drop(ended);
         drop(pumps);
-        match error {
-            GateError::AuthUnavailable(_) | GateError::Phase(_) => Delivery::Hold,
-            error => {
-                emit(RecordingEvent::Ended {
-                    subscription_ref: self.reference.clone(),
-                    reason: gate_kind(&error),
-                });
-                Delivery::Done
-            }
+        match (delivered, done) {
+            (false, _) => Delivery::Gone,
+            (true, true) => Delivery::Done,
+            (true, false) => Delivery::Continue,
         }
     }
+}
+
+/// Forget the ended pages no claim names: only a claim reads them. A page
+/// that ends with an attach still in flight needs no entry either, since its
+/// pump's `stop` has already completed and the pump ends the subscription.
+fn prune(pumps: &Pumps, ended_pages: &Mutex<BTreeSet<u64>>) {
+    ended_pages
+        .lock()
+        .expect("ended pages mutex poisoned")
+        .retain(|page| pumps.claims.values().any(|claim| claim.page == *page));
 }
 
 impl Drop for FramePump {
