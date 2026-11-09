@@ -167,3 +167,23 @@ it("publishes no service for a null context, a host error, an earlier Project or
   expect(published).toHaveLength(4);
   expect(replies).toHaveLength(4);
 });
+
+it("refreshes only the current Project's context", async () => {
+  const context = { version: 2, kind: "historyContext" };
+  invoke.mockResolvedValue(context);
+  const published: (HistoryService | undefined)[] = [];
+  const history = createNativeHistory(invoke, (s) => published.push(s));
+  const first = project(1, "plan-a");
+  history.update(first);
+  history.update(project(2, "plan-a"));
+  await vi.waitFor(() => expect(published).toHaveLength(3));
+  // A refresh for the earlier Project (a late setup reply) is ignored.
+  history.refresh(first);
+  expect(invoke).toHaveBeenCalledTimes(2);
+  history.refresh(project(2, "plan-a"));
+  expect(invoke).toHaveBeenCalledTimes(3);
+  expect(invoke).toHaveBeenLastCalledWith("history_context", {
+    projectJson: JSON.stringify(project(2, "plan-a")),
+  });
+  await vi.waitFor(() => expect(published).toHaveLength(5));
+});
