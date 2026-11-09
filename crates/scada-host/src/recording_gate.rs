@@ -891,12 +891,11 @@ impl RecordingGate {
             result,
             Err(BantoError::Forbidden | BantoError::Validation { .. })
         );
-        if changed {
-            // The re-bind (or the initial check clearing a revoked session)
-            // has already ended the generations before the slot's, whatever
-            // the refresh below can read.
-            self.end_generations_before(self.auth.auth().seq());
-        }
+        // Whatever the result: the re-bind, or the initial check (which can
+        // clear a revoked session or follow a role change even when the
+        // password is then refused), has ended every generation before the
+        // slot's, whatever the refresh below can read.
+        self.end_generations_before(self.auth.auth().seq());
         drop(phase);
         if changed {
             self.refresh_after_change().await;

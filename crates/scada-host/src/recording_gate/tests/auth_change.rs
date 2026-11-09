@@ -774,3 +774,37 @@ async fn a_password_change_and_a_resolve_wait_for_a_command_that_already_validat
     resolve.await.unwrap();
     assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
 }
+
+#[tokio::test]
+async fn a_refused_password_change_still_ends_a_generation_its_check_moved_past() {
+    let f = initializing().await;
+    let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
+    let (seq, old) = f.gate.held(LeaseRole::Reconciliation).unwrap();
+    // The auth-disabled role lowered outside the host: the change's own
+    // check follows it (a new generation), then refuses the synthetic
+    // session, which owns no password.
+    f.auth
+        .auth()
+        .settings()
+        .set_auth_config(&AuthSettings {
+            disabled: true,
+            disabled_role: Role::Viewer,
+            autologin_enabled: false,
+            autologin_username: None,
+        })
+        .await
+        .unwrap();
+    assert!(matches!(
+        f.gate
+            .change_own_password(PASSWORD, "another-horse-2")
+            .await,
+        Err(BantoError::Forbidden)
+    ));
+    assert!(f.auth.auth().seq() > seq);
+    assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
+    assert!(matches!(
+        f.gate
+            .with_root(|root| root.take_state_frame(&old, &reference)),
+        Err(LeaseError::Unauthorized)
+    ));
+}
