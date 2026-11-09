@@ -43,7 +43,7 @@ Empty ──開始・再開──▶ Installed(gate N) ──handoff・停止─
 - `RecordingSlot`（新設）は`Empty(理由)`か`Installed(gate)`を持つ。`DesktopRecording`と`DesktopAuth`は同じslotを共有し、現在の`AuthState::with_gate`・`DesktopRecording::new`（起動時にgateがある前提）を置き換える。
 - slotの変更は移行lock（`AuthHost::gate()`）の下で行う。desktop sessionの`seq`はslotと独立で、registry sessionはgateの中で初回に発行するので、入替えの前後でloginし直す必要はない。
 - `Empty`の間、registry commandは`{"kind": "recordingUnavailable", "reason": "no_recording_run" | "store_unavailable" | "owner_unavailable"}`を返し、認証commandはgateなしの経路（現行）を通る。
-- gateを外すときは、そのrootの`begin_shutdown`→`try_handoff`でSupervisorを取り戻す。未静止（Candidate／Paused、未確定の配送）なら`busy`で何も変えない。handoffしたrootは閉じ、そのrootの購読には`ownerClosed`のcontrol frameが届く。clientは新しいownerEpochのrootへattachし直す。閉じたrootの不変記録の照会は、gateを外した時点で終わる（新しいrootでは旧ownerEpochの要求を`closed`とする）。
+- gateを外すときは、そのrootの`try_handoff`だけでSupervisorを取り戻す。`try_handoff`は成功したときにだけ自分で`begin_shutdown`を呼ぶ。未静止（Candidate／Paused、未確定の配送）なら`busy`で、rootは`Open`のまま何も変えない。先に`begin_shutdown`を呼ぶと、取り消せない受付停止（Draining）と未配送登録の確定が残り、拒否した後も既存のworkflowが進めなくなるので、入替えと停止では呼ばない（`begin_shutdown`を先に呼ぶのは終了時だけ、§6）。handoffしたrootは閉じ、そのrootの購読には`ownerClosed`のcontrol frameが届く。clientは新しいownerEpochのrootへattachし直す。閉じたrootの不変記録の照会は、gateを外した時点で終わる（新しいrootでは旧ownerEpochの要求を`closed`とする）。
 - 新しいgateのownerEpochは`create_recording_root`が世代ごとに引き直す（host-gate §7）。
 
 ## 5. 記録制御command
