@@ -589,6 +589,24 @@ impl RecordingRegistryRoot {
         Ok(reply)
     }
 
+    /// Host only: ends a live subscription whose desktop session ended (host-gate design §5),
+    /// like a detach without a control record. Its slots are cleared and its live slot and
+    /// descriptor bytes freed; later frames and snapshots of it are refused as for a detached
+    /// one, while saved replies (attach replay, an explicit detach) still answer. Native work is
+    /// untouched. Unknown or already ended references are a no-op. It takes no session: only
+    /// the host holds the root, and ending a subscription discloses nothing.
+    pub fn end_subscription(&mut self, reference: &str) {
+        let Some(subscription) = self.subscriptions.subscriptions.get_mut(reference) else {
+            return;
+        };
+        if subscription.active {
+            subscription.active = false;
+            subscription.state = None;
+            subscription.control = false;
+            self.read_bytes = self.read_bytes.saturating_sub(DESCRIPTOR_BYTES);
+        }
+    }
+
     fn live_subscription(
         &self,
         session: &RecordingRegistrySession,

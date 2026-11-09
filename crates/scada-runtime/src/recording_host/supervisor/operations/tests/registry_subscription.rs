@@ -642,3 +642,52 @@ async fn registry_subscription_discloses_workflow_evidence_only_to_its_principal
     assert_eq!(detached.as_value()["outcome"]["kind"], "detached");
     assert_eq!(root.test_live_subscriptions(), 0);
 }
+
+#[tokio::test]
+async fn registry_subscription_host_end_frees_the_live_slot_and_keeps_saved_replies() {
+    let epoch = "epoch-subscribe-end";
+    let scope = registry_scope(epoch);
+    let (mut root, _dir) = fresh_root(epoch);
+    let read = root.test_session("alice", LeaseRole::Reconciliation);
+    let base = root.test_used_bytes(LeaseRole::Reconciliation);
+    let request = attach(&scope, "attach:end", Value::Null);
+    let reply = root.attach(&read, request.clone()).unwrap();
+    let (reference, _) = attached(&reply);
+    let used = root.test_used_bytes(LeaseRole::Reconciliation);
+
+    root.end_subscription(&reference);
+    assert_eq!(root.test_live_subscriptions(), 0);
+    // Only the live slot's descriptor is returned; the request and reply stay saved.
+    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), used - 1024);
+    assert!(root.test_used_bytes(LeaseRole::Reconciliation) > base);
+    assert!(matches!(
+        root.take_state_frame(&read, &reference),
+        Err(LeaseError::InvalidInput)
+    ));
+    assert!(matches!(
+        root.take_control_frame(&read, &reference),
+        Err(LeaseError::InvalidInput)
+    ));
+    assert!(matches!(
+        root.control(
+            &read,
+            control(&scope, "control:end", &reference, "snapshot")
+        ),
+        Err(LeaseError::InvalidInput)
+    ));
+    // The original attach reply is a saved record and still answers its replay.
+    assert_eq!(root.attach(&read, request).unwrap(), reply);
+    // Ending again, or an unknown reference, changes nothing.
+    root.end_subscription(&reference);
+    root.end_subscription("native-subscription:99");
+    assert_eq!(root.test_used_bytes(LeaseRole::Reconciliation), used - 1024);
+    // An explicit detach of the ended subscription refunds nothing more.
+    let detached = root
+        .control(
+            &read,
+            control(&scope, "control:detach-end", &reference, "detach"),
+        )
+        .unwrap();
+    assert_eq!(detached.as_value()["outcome"]["kind"], "detached");
+    assert_eq!(root.test_live_subscriptions(), 0);
+}

@@ -22,9 +22,23 @@
 //! the root's lifetime, bound to the principal that reserved the workflow
 //! (§5). Mutation registrations, reservations and cancels are audited.
 //!
+//! Subscriptions are bound to the generation that attached them. Each frame
+//! delivery re-validates the desktop session first: a new generation ends the
+//! subscription (its frames never reach the new session), and an auth DB read
+//! failure leaves the frame in the registry's latest-one slot until the next
+//! delivery (§5).
+//!
+//! Auth changes that could strand a workflow (the move to operation, demoting
+//! or deleting an Admin, lowering the auth-disabled role) are decided under
+//! the transition lock against [`RecordingRegistryRoot::quiescence`] and
+//! revoke the sessions they end before returning (§4, §6).
+//!
 //! Registry sessions, workflow tickets and principals never leave this type.
+use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use banto_admin_services::settings::AuthSettings;
+use banto_admin_services::users::UserSummary;
 use banto_core::BantoError;
 use scada_model::recording_admission::{
     RecordingAdmissionInspectionReply, RecordingAdmissionInspectionRequest,
@@ -34,8 +48,9 @@ use scada_model::recording_operations::RecordingChangeRequest;
 use scada_model::recording_wire::{
     RecordingWireAttachReply, RecordingWireAttachRequest, RecordingWireCallInspectionReply,
     RecordingWireCallInspectionRequest, RecordingWireCancelReply, RecordingWireCancelRequest,
-    RecordingWireControlReply, RecordingWireControlRequest, RecordingWireLeaseReply,
-    RecordingWireLeaseRequest, RecordingWireObservationReply, RecordingWireObservationRequest,
+    RecordingWireControlFrame, RecordingWireControlReply, RecordingWireControlRequest,
+    RecordingWireLeaseReply, RecordingWireLeaseRequest, RecordingWireObservationReply,
+    RecordingWireObservationRequest, RecordingWireStateFrame,
 };
 use scada_runtime::recording_registry::{
     ApplyRegistration, DiscardRegistration, LeaseError, LeaseRole, PauseRegistration,
@@ -46,8 +61,8 @@ use scada_runtime::recording_registry::{
 };
 use serde_json::{json, Value};
 
-use crate::auth::{CurrentSession, Role};
-use crate::auth_phase::{AuthHost, AuthPhase, PhaseGuard};
+use crate::auth::{CurrentSession, DesktopSession, Role};
+use crate::auth_phase::{AuthHost, AuthPhase, PhaseGuard, TransitionError, Transitioned};
 
 /// Why an entry point refused or failed.
 #[derive(Debug)]
@@ -71,6 +86,42 @@ pub enum GateError {
 pub struct Bound<T> {
     pub seq: u64,
     pub reply: T,
+}
+
+/// Why an auth-changing command refused or failed.
+#[derive(Debug)]
+pub enum AuthChangeError {
+    /// No desktop session.
+    Unauthorized,
+    /// The session is not an Admin.
+    Forbidden,
+    /// The change is not offered here: auth-disabled mode is switched off
+    /// only by the move to operation and never back on (design §6).
+    NotAllowed,
+    /// The registry holds unsettled work of the principal the change would
+    /// end; nothing was changed. Discard or wait for completion (design §4).
+    Busy,
+    /// The auth DB failed, or Banto refused the change (validation, the
+    /// last Admin, self-deletion, an unknown user).
+    Auth(BantoError),
+}
+
+impl From<BantoError> for AuthChangeError {
+    fn from(error: BantoError) -> Self {
+        match error {
+            BantoError::Unauthorized => Self::Unauthorized,
+            BantoError::Forbidden => Self::Forbidden,
+            other => Self::Auth(other),
+        }
+    }
+}
+
+/// The frames of one subscription taken at one delivery: at most the latest
+/// state and the control slot (design §5).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubscriptionFrames {
+    pub state: Option<RecordingWireStateFrame>,
+    pub control: Option<RecordingWireControlFrame>,
 }
 
 /// The reply of `recording_workflow_reserve`: the reserved change only. The
@@ -157,13 +208,23 @@ fn earlier<T: Clone>(ticket: &Option<T>) -> Result<T, LeaseError> {
     ticket.clone().ok_or(LeaseError::InvalidInput)
 }
 
+/// A subscription attached through the gate, bound to the generation that
+/// attached it. An ended one stays recorded, so a replayed attach never binds
+/// it to a later generation.
+struct SubscriptionBinding {
+    seq: u64,
+    ended: bool,
+}
+
 /// What one registry call sees: the root, the held session, its principal and
-/// the held workflow.
+/// generation, the held workflow and the subscription bindings.
 struct Registry<'a> {
     root: &'a mut RecordingRegistryRoot,
     session: &'a RecordingRegistrySession,
     principal: &'a RecordingPrincipal,
+    seq: u64,
     workflow: &'a mut Option<HeldWorkflow>,
+    subscriptions: &'a mut BTreeMap<String, SubscriptionBinding>,
 }
 
 /// An admission call: whether it registered a new admission (audited once),
@@ -182,6 +243,7 @@ fn admit(r: Registry<'_>, request: RecordingAdmissionRequest) -> Result<Admitted
         session,
         principal,
         workflow,
+        ..
     } = r;
     let held = workflow_of(workflow, principal)?;
     let kind = request.as_value()["action"]["kind"]
@@ -259,25 +321,42 @@ struct GateState {
     issuer: RecordingSessionIssuer,
     held: Option<HeldSessions>,
     workflow: Option<HeldWorkflow>,
+    subscriptions: BTreeMap<String, SubscriptionBinding>,
 }
 
 impl GateState {
-    /// Revoke the held sessions if they are not newer than `through` and
-    /// are not of the still-valid generation `keep`. A check only knows the
-    /// generations up to the one it read: sessions issued for a later one
-    /// (a login racing the check) are left for the next check.
+    /// Revoke the held sessions, and end the subscriptions, of generations
+    /// not newer than `through` other than the still-valid generation `keep`.
+    /// A check only knows the generations up to the one it read: sessions
+    /// issued for a later one (a login racing the check) are left for the
+    /// next check.
     fn revoke_through(&mut self, through: u64, keep: Option<u64>) {
-        if self
-            .held
-            .as_ref()
-            .is_some_and(|held| held.seq <= through && Some(held.seq) != keep)
-        {
-            let held = self.held.take().expect("checked above");
+        let stale = |seq: u64| seq <= through && Some(seq) != keep;
+        if self.held.as_ref().is_some_and(|held| stale(held.seq)) {
+            self.revoke_held_sessions();
+        }
+        for (reference, binding) in &mut self.subscriptions {
+            if !binding.ended && stale(binding.seq) {
+                binding.ended = true;
+                self.root.end_subscription(reference);
+            }
+        }
+    }
+
+    /// Revoke the held registry sessions of every generation, leaving the
+    /// subscription bindings as they are.
+    fn revoke_held_sessions(&mut self) {
+        if let Some(held) = self.held.take() {
             for session in [held.read, held.mutation].into_iter().flatten() {
                 // Only this root's sessions are held, so this cannot fail.
                 let _ = self.root.revoke_session(&session);
             }
         }
+    }
+
+    /// Whether changing `principal` now could strand unsettled work (§4).
+    fn holds(&self, principal: &RecordingPrincipal) -> bool {
+        self.root.quiescence().holds(principal)
     }
 
     /// Apply one re-validation: `seen` is the slot generation read before it
@@ -297,15 +376,20 @@ impl GateState {
         current: &CurrentSession,
         role: LeaseRole,
     ) -> Result<RecordingRegistrySession, LeaseError> {
-        // Called under the transition lock with a just-validated session:
-        // anything held for another generation is stale.
+        // `current` was validated before this lock was taken. Sessions of an
+        // older generation are stale; a newer one means `current` itself is
+        // stale, and it must neither use nor end the newer generation.
         if self
             .held
             .as_ref()
-            .is_some_and(|held| held.seq != current.seq)
+            .is_some_and(|held| held.seq > current.seq)
         {
-            self.revoke_through(u64::MAX, None);
+            return Err(LeaseError::Unauthorized);
         }
+        // Older generations end here whether or not their sessions are still
+        // held: a refresh that failed after an auth change revokes the held
+        // sessions but leaves the subscriptions to this settlement.
+        self.revoke_through(current.seq, Some(current.seq));
         let Self {
             root, issuer, held, ..
         } = self;
@@ -376,6 +460,7 @@ impl RecordingGate {
                 issuer,
                 held: None,
                 workflow: None,
+                subscriptions: BTreeMap::new(),
             }),
             #[cfg(test)]
             after_call: Mutex::new(None),
@@ -403,6 +488,18 @@ impl RecordingGate {
         self.run_hook().await;
         self.lock().settle(seen, current.as_ref());
         Ok(current)
+    }
+
+    /// After an auth change was saved: [`Self::refresh`], and if the auth DB
+    /// cannot be read, revoke every held registry session anyway, since the
+    /// change may have ended them. That costs only a re-issue for the same
+    /// principal at its next command. Subscriptions are not ended here: a
+    /// change that ended nothing must not cut them for good, and each
+    /// delivery re-validates before it sends a frame.
+    async fn refresh_after_change(&self) {
+        if self.refresh().await.is_err() {
+            self.lock().revoke_held_sessions();
+        }
     }
 
     /// `recording_lease`: a reconciliation lease only. A mutation lease is
@@ -642,7 +739,17 @@ impl RecordingGate {
     ) -> Result<Bound<RecordingWireAttachReply>, GateError> {
         let entered = self
             .enter(Need::Read, "recording_attach", |r| {
-                r.root.attach(r.session, request)
+                let reply = r.root.attach(r.session, request)?;
+                if let Some(reference) = reply.as_value()["outcome"]["subscriptionRef"].as_str() {
+                    // A replay keeps the generation of the first attach.
+                    r.subscriptions
+                        .entry(reference.to_owned())
+                        .or_insert(SubscriptionBinding {
+                            seq: r.seq,
+                            ended: false,
+                        });
+                }
+                Ok(reply)
             })
             .await?;
         self.bind(entered).await
@@ -659,6 +766,231 @@ impl RecordingGate {
             })
             .await?;
         self.bind(entered).await
+    }
+
+    /// Deliver the frames of the subscription `reference` (design §5). Each
+    /// delivery first re-validates the desktop session, so a revocation is
+    /// found without waiting for the next command:
+    ///
+    /// - an auth DB read failure is [`GateError::AuthUnavailable`]; nothing
+    ///   is taken, and the frame stays in the registry's latest-one slot for
+    ///   the next delivery;
+    /// - a subscription of another generation (logout, another user, a role
+    ///   change, a re-login) is ended and refused as `Unauthorized`; its
+    ///   frames are never sent to the new session;
+    /// - a phase that refuses the registry takes nothing.
+    ///
+    /// A generation change racing the take withholds the taken frames.
+    pub async fn frames(&self, reference: &str) -> Result<Bound<SubscriptionFrames>, GateError> {
+        let phase = self.auth.gate().await;
+        if !phase.phase().admits_registry() {
+            return Err(GateError::Phase(phase.phase()));
+        }
+        let seen = self.auth.auth().seq();
+        let current = self
+            .auth
+            .auth()
+            .current()
+            .await
+            .map_err(GateError::AuthUnavailable)?;
+        #[cfg(test)]
+        self.run_hook().await;
+        let mut state = self.lock();
+        state.settle(seen, current.as_ref());
+        let binding = state
+            .subscriptions
+            .get(reference)
+            .ok_or(GateError::Registry(LeaseError::InvalidInput))?;
+        let current = match current {
+            Some(current) if !binding.ended && binding.seq == current.seq => current,
+            _ => return Err(GateError::Unauthorized),
+        };
+        // The check above ran before the lock: a re-bind since then ends
+        // this generation (`seq` advances only when authorization changes),
+        // so it is ended now rather than left to a delivery that may never
+        // come. Its frames are not taken.
+        if self.auth.auth().seq() != current.seq {
+            state.revoke_through(current.seq, None);
+            return Err(GateError::Unauthorized);
+        }
+        let session = state
+            .session_for(&current, LeaseRole::Reconciliation)
+            .map_err(GateError::Registry)?;
+        let frames = (|| {
+            Ok(SubscriptionFrames {
+                state: state.root.take_state_frame(&session, reference)?,
+                control: state.root.take_control_frame(&session, reference)?,
+            })
+        })()
+        .map_err(GateError::Registry)?;
+        if self.auth.auth().seq() != current.seq {
+            state.revoke_through(current.seq, None);
+            return Err(GateError::Unauthorized);
+        }
+        Ok(Bound {
+            seq: current.seq,
+            reply: frames,
+        })
+    }
+
+    /// `auth_logout`: end the account session and, in the same call, the
+    /// registry sessions and subscriptions of the generations before it.
+    /// Returns the slot generation after the logout.
+    ///
+    /// Taken under the transition lock, like every registry entry: a command
+    /// that validated the session before the logout finishes first, so none
+    /// runs its registry call with a session the logout has already ended.
+    pub async fn logout(&self) -> u64 {
+        let _phase = self.auth.gate().await;
+        let seq = self.auth.auth().logout().await;
+        // Every generation before the one the logout set has ended. A no-op
+        // logout (auth-disabled mode) keeps `seq` and revokes nothing current;
+        // at generation 0 there is no earlier one to revoke.
+        if let Some(before) = seq.checked_sub(1) {
+            self.lock().revoke_through(before, None);
+        }
+        seq
+    }
+
+    /// `auth_transition_to_operational` (design §6): the move to operation,
+    /// with the registry's quiescence asked under the transition lock. The
+    /// synthetic session's registry sessions and subscriptions are revoked
+    /// before returning (step 5), whatever the outcome: a failure after
+    /// auth-disabled mode was turned off has ended that session too.
+    pub async fn transition_to_operational(
+        &self,
+        username: &str,
+        password: &str,
+        display_name: &str,
+    ) -> Result<Transitioned, TransitionError> {
+        let result = self
+            .auth
+            .transition_to_operational(username, password, display_name, || {
+                self.lock().root.quiescence().is_quiescent()
+            })
+            .await;
+        // The administrator's session took the single slot: every earlier
+        // generation (the synthetic one included) has ended, whatever a
+        // re-validation can read now.
+        if let Ok(Transitioned {
+            session: Some(admin),
+        }) = &result
+        {
+            self.lock().revoke_through(admin.seq - 1, None);
+        }
+        // Test only: the auth DB failing before the refresh below.
+        #[cfg(test)]
+        self.run_hook().await;
+        self.refresh_after_change().await;
+        result
+    }
+
+    /// `users_update` (Admin): change an account's display name and role.
+    /// Demoting an Admin is refused as `Busy` while the registry holds
+    /// unsettled work of that user's principal (design §4); once applied,
+    /// the sessions it ends are revoked before returning.
+    pub async fn update_user(
+        &self,
+        id: i64,
+        display_name: &str,
+        role: Role,
+    ) -> Result<UserSummary, AuthChangeError> {
+        let _phase = self.auth.gate().await;
+        let actor = self.auth.auth().require_role(Role::Admin, "users").await?;
+        let users = self.auth.auth().users();
+        let target = users
+            .list_users()
+            .await?
+            .into_iter()
+            .find(|user| user.id == id);
+        let demotes = target.is_some_and(|user| user.role == Role::Admin && role != Role::Admin);
+        if demotes && self.lock().holds(&RecordingPrincipal::banto_user(id)) {
+            return Err(AuthChangeError::Busy);
+        }
+        let updated = users.update_user(id, display_name, role).await?;
+        self.auth
+            .auth()
+            .record_ok(
+                actor.session.identity(),
+                "update",
+                "users",
+                Some(&id.to_string()),
+                Some(json!({"role": role.as_str()})),
+            )
+            .await;
+        self.refresh_after_change().await;
+        Ok(updated)
+    }
+
+    /// `users_delete` (Admin): delete an account. Refused as `Busy` while
+    /// the registry holds unsettled work of that user's principal (design
+    /// §4); once applied, the sessions it ends are revoked before returning.
+    pub async fn delete_user(&self, id: i64) -> Result<(), AuthChangeError> {
+        let _phase = self.auth.gate().await;
+        let actor = self.auth.auth().require_role(Role::Admin, "users").await?;
+        if self.lock().holds(&RecordingPrincipal::banto_user(id)) {
+            return Err(AuthChangeError::Busy);
+        }
+        // The synthetic session has no row of its own (Banto's `None`).
+        let acting = match &actor.session {
+            DesktopSession::Account(identity) => Some(identity.id),
+            DesktopSession::AuthDisabledLocal(_) => None,
+        };
+        self.auth.auth().users().delete_user(id, acting).await?;
+        self.auth
+            .auth()
+            .record_ok(
+                actor.session.identity(),
+                "delete",
+                "users",
+                Some(&id.to_string()),
+                None,
+            )
+            .await;
+        self.refresh_after_change().await;
+        Ok(())
+    }
+
+    /// `auth_config_set` (Admin): save the auth-mode settings. The mode
+    /// itself is not switched here (`NotAllowed`): it goes off only through
+    /// the move to operation and never back on (design §6). Lowering the
+    /// auth-disabled role below Admin is refused as `Busy` while the registry
+    /// holds unsettled work of the synthetic principal (design §4).
+    pub async fn set_auth_config(&self, config: &AuthSettings) -> Result<(), AuthChangeError> {
+        let _phase = self.auth.gate().await;
+        let actor = self
+            .auth
+            .auth()
+            .require_role(Role::Admin, "settings")
+            .await?;
+        let saved = self.auth.auth().settings().auth_config().await?;
+        if config.disabled != saved.disabled {
+            return Err(AuthChangeError::NotAllowed);
+        }
+        let demotes = saved.disabled
+            && saved.disabled_role == Role::Admin
+            && config.disabled_role != Role::Admin;
+        if demotes
+            && self
+                .lock()
+                .holds(&RecordingPrincipal::auth_disabled_local())
+        {
+            return Err(AuthChangeError::Busy);
+        }
+        self.auth.auth().settings().set_auth_config(config).await?;
+        self.auth
+            .auth()
+            .record_ok(
+                actor.session.identity(),
+                "update",
+                "auth_config",
+                None,
+                Some(json!({"disabledRole": config.disabled_role.as_str()})),
+            )
+            .await;
+        // Settle the slot to the saved mode and revoke what it ended now.
+        self.refresh_after_change().await;
+        Ok(())
     }
 
     /// Steps 1-3: the phase, the session and role, then the registry call
@@ -703,12 +1035,19 @@ impl RecordingGate {
             state
                 .session_for(&current, need.lease_role())
                 .and_then(|session| {
-                    let GateState { root, workflow, .. } = &mut *state;
+                    let GateState {
+                        root,
+                        workflow,
+                        subscriptions,
+                        ..
+                    } = &mut *state;
                     call(Registry {
                         root,
                         session: &session,
                         principal: &principal,
+                        seq: current.seq,
                         workflow,
+                        subscriptions,
                     })
                 })
         };

@@ -480,4 +480,5 @@ async fn a_stale_refresh_never_revokes_the_sessions_of_a_newer_generation() {
     assert_eq!(held_seq, current.seq);
 }
 
+mod auth_change;
 mod workflow;
