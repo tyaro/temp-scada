@@ -145,6 +145,31 @@ pub(super) fn host(supervisor: &RecordingSupervisor, runs: &mut RunRefs, now_ms:
     let status = supervisor.state().recording;
     let plan = supervisor.recording_plan_guard_state();
     let retention = supervisor.retention_guard_state();
+    observed(
+        &status,
+        runs,
+        now_ms,
+        json!(plan.recovery_required),
+        json!(retention.rearm_required),
+        json!(retention.job_pending),
+    )
+}
+
+/// The observed HostView of a Supervisor lent to an installed root's owner:
+/// its recording status only. The plan and retention guards are inside the
+/// owner and are not observed (`null`, contract §6).
+pub(super) fn lent_host(status: &RecordingHostStatus, runs: &mut RunRefs, now_ms: i64) -> Value {
+    observed(status, runs, now_ms, Value::Null, Value::Null, Value::Null)
+}
+
+fn observed(
+    status: &RecordingHostStatus,
+    runs: &mut RunRefs,
+    now_ms: i64,
+    plan_recovery_required: Value,
+    retention_rearm_required: Value,
+    retention_job_pending: Value,
+) -> Value {
     json!({
         "state": "observed",
         "observedAtMs": now_ms,
@@ -152,7 +177,7 @@ pub(super) fn host(supervisor: &RecordingSupervisor, runs: &mut RunRefs, now_ms:
         "sessionId": status.session_id,
         "phase": phase(status.phase),
         "stopRequested": status.stop_requested,
-        "issue": issue(&status),
+        "issue": issue(status),
         "cleanup": match status.progress.as_ref().and_then(|p| p.cleanup.as_ref()) {
             Some(RecordingCleanup::Closed) => "closed",
             Some(RecordingCleanup::Interrupted) => "interrupted",
@@ -164,8 +189,8 @@ pub(super) fn host(supervisor: &RecordingSupervisor, runs: &mut RunRefs, now_ms:
             Some(Err(_)) => "failed",
             None => "unknown",
         },
-        "planRecoveryRequired": plan.recovery_required,
-        "retentionRearmRequired": retention.rearm_required,
-        "retentionJobPending": retention.job_pending,
+        "planRecoveryRequired": plan_recovery_required,
+        "retentionRearmRequired": retention_rearm_required,
+        "retentionJobPending": retention_job_pending,
     })
 }

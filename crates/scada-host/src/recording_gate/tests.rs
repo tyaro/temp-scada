@@ -53,7 +53,12 @@ async fn gate_in(dir: TempDir) -> Fixture {
     let context = test_support::context().as_value().clone();
     let (root, issuer, generation) = create_recording_root(&dir.0, seed, context.clone()).unwrap();
     Fixture {
-        gate: Arc::new(RecordingGate::new(auth.clone(), root, issuer)),
+        gate: Arc::new(RecordingGate::new(
+            auth.clone(),
+            root,
+            issuer,
+            generation.scope(context.clone()),
+        )),
         auth,
         scope: generation.scope(context),
         _store: store,
@@ -73,7 +78,7 @@ async fn operational() -> Fixture {
     fixture
         .auth
         .transition_to_operational("admin", PASSWORD, "管理者", || {
-            fixture.gate.lock().root.quiescence().is_quiescent()
+            fixture.gate.lock().is_quiescent()
         })
         .await
         .unwrap();
@@ -149,14 +154,17 @@ async fn the_auth_disabled_admin_reads_with_replies_bound_to_its_generation() {
 
     let attached = f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
     assert_eq!(attached.seq, seq);
-    assert_eq!(outcome_kind(&attached, |r| r.as_value()), "attached");
-    let reference = attached.reply.as_value()["outcome"]["subscriptionRef"]
+    assert_eq!(outcome_kind(&attached, |r| r.reply.as_value()), "attached");
+    let reference = attached.reply.reply.as_value()["outcome"]["subscriptionRef"]
         .as_str()
         .unwrap()
         .to_owned();
     // The same ID and body is a re-fetch of the same reply.
     let again = f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
-    assert_eq!(again.reply.as_value(), attached.reply.as_value());
+    assert_eq!(
+        again.reply.reply.as_value(),
+        attached.reply.reply.as_value()
+    );
     let snapshot = f
         .gate
         .control(control(&f.scope, "control-1", &reference))
@@ -291,7 +299,10 @@ async fn a_new_generation_revokes_the_old_sessions_and_the_principal_continues()
     // The same principal re-fetches its own attach under the new generation.
     let again = f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
     assert_eq!(again.seq, second.seq);
-    assert_eq!(again.reply.as_value(), attached.reply.as_value());
+    assert_eq!(
+        again.reply.reply.as_value(),
+        attached.reply.reply.as_value()
+    );
     let (held_seq, _) = f.gate.held(LeaseRole::Reconciliation).unwrap();
     assert_eq!(held_seq, second.seq);
     // The first generation's grant is revoked in the registry.
@@ -366,7 +377,7 @@ async fn a_reply_is_withheld_when_the_generation_changes_before_it_returns() {
     );
     let attached = f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
     assert_eq!(attached.seq, admin.seq);
-    assert_eq!(outcome_kind(&attached, |r| r.as_value()), "attached");
+    assert_eq!(outcome_kind(&attached, |r| r.reply.as_value()), "attached");
 }
 
 #[tokio::test]

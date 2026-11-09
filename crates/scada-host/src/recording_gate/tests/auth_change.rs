@@ -10,8 +10,8 @@ use super::workflow::{discard, preflighted};
 use super::*;
 use crate::auth_phase::TransitionError;
 
-fn subscription_ref(attached: &Bound<RecordingWireAttachReply>) -> String {
-    attached.reply.as_value()["outcome"]["subscriptionRef"]
+fn subscription_ref(attached: &Bound<Attached>) -> String {
+    attached.reply.reply.as_value()["outcome"]["subscriptionRef"]
         .as_str()
         .unwrap()
         .to_owned()
@@ -62,12 +62,12 @@ async fn frames_are_delivered_to_the_attaching_generation_only() {
     let attached = f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
     let reference = subscription_ref(&attached);
     // Nothing new since the attach snapshot.
-    let empty = f.gate.frames(&reference).await.unwrap();
+    let empty = f.gate.frames(1, &reference).await.unwrap();
     assert_eq!(empty.seq, seq);
     assert_eq!(empty.reply.state, None);
 
     preflighted(&f, "frames-change").await;
-    let delivered = f.gate.frames(&reference).await.unwrap();
+    let delivered = f.gate.frames(1, &reference).await.unwrap();
     assert_eq!(delivered.seq, seq);
     let state = delivered.reply.state.expect("a new revision");
     assert_eq!(
@@ -79,12 +79,12 @@ async fn frames_are_delivered_to_the_attaching_generation_only() {
     let revision = |frame: &RecordingWireStateFrame| {
         frame.as_value()["snapshot"]["revision"].as_u64().unwrap()
     };
-    if let Some(next) = f.gate.frames(&reference).await.unwrap().reply.state {
+    if let Some(next) = f.gate.frames(1, &reference).await.unwrap().reply.state {
         assert!(revision(&next) > revision(&state));
     }
     // A reference the gate never attached is unknown.
     assert!(matches!(
-        f.gate.frames("native-subscription:99").await,
+        f.gate.frames(1, "native-subscription:99").await,
         Err(GateError::Registry(LeaseError::InvalidInput))
     ));
 }
@@ -100,7 +100,7 @@ async fn a_new_generation_ends_the_old_subscription_at_its_next_delivery() {
     let second = login(&f.auth, "operator").await;
     assert_ne!(second.seq, first.seq);
     assert!(matches!(
-        f.gate.frames(&reference).await,
+        f.gate.frames(1, &reference).await,
         Err(GateError::Unauthorized)
     ));
     // The subscription is ended in the registry, its live slot freed, and
@@ -110,12 +110,12 @@ async fn a_new_generation_ends_the_old_subscription_at_its_next_delivery() {
     assert_eq!(subscription_ref(&again), reference);
     assert!(!live(&f, &reference));
     assert!(matches!(
-        f.gate.frames(&reference).await,
+        f.gate.frames(1, &reference).await,
         Err(GateError::Unauthorized)
     ));
     // A new attach of the new generation is delivered.
     let fresh = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap());
-    assert_eq!(f.gate.frames(&fresh).await.unwrap().seq, second.seq);
+    assert_eq!(f.gate.frames(1, &fresh).await.unwrap().seq, second.seq);
 }
 
 #[tokio::test]
@@ -140,7 +140,7 @@ async fn a_generation_change_racing_the_delivery_withholds_the_frame() {
         auth.auth().current().await.unwrap();
     });
     assert!(matches!(
-        f.gate.frames(&reference).await,
+        f.gate.frames(1, &reference).await,
         Err(GateError::Unauthorized)
     ));
     // The withheld delivery ended it at once, without waiting for another
@@ -149,7 +149,7 @@ async fn a_generation_change_racing_the_delivery_withholds_the_frame() {
     f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();
     assert!(!live(&f, &reference));
     assert!(matches!(
-        f.gate.frames(&reference).await,
+        f.gate.frames(1, &reference).await,
         Err(GateError::Unauthorized)
     ));
 }
@@ -166,7 +166,7 @@ async fn an_auth_db_read_failure_holds_the_frame_for_the_next_delivery() {
         .await
         .unwrap();
     assert!(matches!(
-        f.gate.frames(&reference).await,
+        f.gate.frames(1, &reference).await,
         Err(GateError::AuthUnavailable(_))
     ));
     // Nothing was revoked or ended.
@@ -175,7 +175,7 @@ async fn an_auth_db_read_failure_holds_the_frame_for_the_next_delivery() {
         .execute(&raw)
         .await
         .unwrap();
-    assert_eq!(f.gate.frames(&reference).await.unwrap().seq, current.seq);
+    assert_eq!(f.gate.frames(1, &reference).await.unwrap().seq, current.seq);
 }
 
 #[tokio::test]
@@ -189,7 +189,7 @@ async fn a_held_frame_is_delivered_after_the_auth_db_recovers() {
         .await
         .unwrap();
     assert!(matches!(
-        f.gate.frames(&reference).await,
+        f.gate.frames(1, &reference).await,
         Err(GateError::AuthUnavailable(_))
     ));
     sqlx::query("ALTER TABLE settings_hidden RENAME TO settings")
@@ -197,7 +197,7 @@ async fn a_held_frame_is_delivered_after_the_auth_db_recovers() {
         .await
         .unwrap();
     // The frame stayed in the latest-one slot and is delivered now.
-    let delivered = f.gate.frames(&reference).await.unwrap();
+    let delivered = f.gate.frames(1, &reference).await.unwrap();
     assert!(delivered.reply.state.is_some());
 }
 
@@ -232,7 +232,7 @@ async fn a_no_op_logout_in_auth_disabled_mode_keeps_the_current_generation() {
     assert_eq!(f.gate.logout().await, 0);
     assert!(f.gate.held(LeaseRole::Reconciliation).is_some());
     assert!(live(&f, &reference));
-    assert_eq!(f.gate.frames(&reference).await.unwrap().seq, 0);
+    assert_eq!(f.gate.frames(1, &reference).await.unwrap().seq, 0);
 }
 
 #[tokio::test]
@@ -286,7 +286,7 @@ async fn the_move_to_operation_waits_for_quiescence_and_revokes_the_synthetic_se
         Err(GateError::Registry(LeaseError::Forbidden))
     ));
     assert!(matches!(
-        f.gate.frames(&reference).await,
+        f.gate.frames(1, &reference).await,
         Err(GateError::Unauthorized)
     ));
 }
@@ -378,7 +378,7 @@ async fn demoting_yourself_revokes_your_sessions_within_the_command() {
         Err(LeaseError::Unauthorized)
     ));
     assert!(matches!(
-        f.gate.frames(&reference).await,
+        f.gate.frames(1, &reference).await,
         Err(GateError::Unauthorized)
     ));
 }
@@ -404,7 +404,7 @@ async fn a_password_reset_ends_the_sessions_but_not_the_owners_workflow() {
         Ok(())
     ));
     assert!(matches!(
-        f.gate.frames(&reference).await,
+        f.gate.frames(1, &reference).await,
         Err(GateError::Unauthorized)
     ));
     assert!(f.auth.auth().current().await.unwrap().is_none());
@@ -560,13 +560,18 @@ async fn a_stale_validation_never_uses_or_ends_a_newer_generation() {
     let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
     // A call that validated the older generation reaches the state late.
     assert!(matches!(
-        f.gate.lock().session_for(&stale, LeaseRole::Reconciliation),
+        f.gate
+            .lock()
+            .installed
+            .as_mut()
+            .unwrap()
+            .session_for(&stale, LeaseRole::Reconciliation),
         Err(LeaseError::Unauthorized)
     ));
     let (held_seq, _) = f.gate.held(LeaseRole::Reconciliation).unwrap();
     assert_eq!(held_seq, newer.seq);
     assert!(live(&f, &reference));
-    assert_eq!(f.gate.frames(&reference).await.unwrap().seq, newer.seq);
+    assert_eq!(f.gate.frames(1, &reference).await.unwrap().seq, newer.seq);
 }
 
 #[tokio::test]
@@ -594,7 +599,7 @@ async fn an_auth_change_whose_refresh_fails_still_revokes_the_held_sessions() {
         .await
         .unwrap();
     let current = f.auth.auth().current().await.unwrap().unwrap();
-    assert_eq!(f.gate.frames(&reference).await.unwrap().seq, current.seq);
+    assert_eq!(f.gate.frames(1, &reference).await.unwrap().seq, current.seq);
 
     // Revoked once more, then a new generation logs in behind the gate's
     // back: its first command ends the old subscription although no
@@ -676,7 +681,15 @@ async fn the_move_to_operation_ends_the_synthetic_subscriptions_even_if_the_refr
         .unwrap();
     // The synthetic generation's subscriptions ended within the command,
     // before any later command or delivery could settle them.
-    assert!(f.gate.lock().subscriptions.values().all(|b| b.ended));
+    assert!(f
+        .gate
+        .lock()
+        .installed
+        .as_ref()
+        .unwrap()
+        .subscriptions
+        .values()
+        .all(|b| b.ended));
     // So the administrator's attach finds free slots.
     let attached = f
         .gate
@@ -686,7 +699,7 @@ async fn the_move_to_operation_ends_the_synthetic_subscriptions_even_if_the_refr
     assert_eq!(attached.seq, admin.seq);
     for reference in &references {
         assert!(matches!(
-            f.gate.frames(reference).await,
+            f.gate.frames(1, reference).await,
             Err(GateError::Unauthorized)
         ));
     }
@@ -715,7 +728,7 @@ async fn a_user_switch_revokes_and_ends_the_previous_user_within_the_login() {
         Err(LeaseError::Unauthorized)
     ));
     assert!(matches!(
-        f.gate.frames(&reference).await,
+        f.gate.frames(1, &reference).await,
         Err(GateError::Unauthorized)
     ));
     let attached = f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();

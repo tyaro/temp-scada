@@ -5,15 +5,18 @@ mod history;
 mod recording;
 
 use auth::AuthState;
-use scada_host::desktop_recording::{DesktopRecording, NO_RECORDING_OWNER};
-use scada_host::recording_runtime::{RecordingRuntime, NO_DATA_DIR};
+use scada_host::desktop_recording::DesktopRecording;
+use scada_host::recording_gate::NO_RECORDING_RUN;
+use scada_host::recording_runtime::{RecordingRuntime, NO_DATA_DIR, STORE_UNAVAILABLE};
 use scada_host::{local_bootstrap, local_data_dir, local_installation_id, Bootstrapper, HubStatus};
 use scada_model::Project;
 use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
 use serde::Serialize;
 use std::collections::HashSet;
+use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::Arc;
 use tauri::webview::PageLoadEvent;
-use tauri::{AppHandle, Emitter, Runtime, State, WindowEvent};
+use tauri::{AppHandle, Emitter, RunEvent, Runtime, State, WindowEvent};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
@@ -272,6 +275,8 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             control::recording_context,
             control::recording_status,
             control::recording_initial_setup,
+            control::recording_slot,
+            control::recording_stop,
             recording::recording_workflow_reserve,
             recording::recording_workflow_lease,
             recording::recording_lease,
@@ -287,17 +292,26 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
 
 fn main() {
     let bootstrap = local_bootstrap().expect("SCADA settings store unavailable");
-    // A failed auth start does not stop the app: reading and editing still
-    // work, and each auth command reports why (host-gate design §6).
-    let auth = match local_data_dir() {
-        Ok(dir) => tauri::async_runtime::block_on(AuthState::start(&dir)),
-        Err(_) => AuthState::unavailable("no_data_dir"),
-    };
     // The recording DB and the History host. A store that cannot be opened
-    // does not stop the app either (product-owner design §3).
+    // does not stop the app (product-owner design §3).
     let recording_runtime = match (local_data_dir(), local_installation_id()) {
         (Ok(dir), Ok(deployment)) => RecordingRuntime::start(&dir, &deployment),
         _ => RecordingRuntime::unavailable(NO_DATA_DIR),
+    };
+    // A failed auth start does not stop the app either: reading and editing
+    // still work, and each auth command reports why (host-gate design §6).
+    // The auth and the recording registry share one gate, whose slot stays
+    // empty until a recording runs (product-owner design §4).
+    let empty = match recording_runtime.unavailable_reason() {
+        Some(_) => STORE_UNAVAILABLE,
+        None => NO_RECORDING_RUN,
+    };
+    let (auth, recording) = match local_data_dir() {
+        Ok(dir) => tauri::async_runtime::block_on(AuthState::start(&dir, empty)),
+        Err(_) => (
+            AuthState::unavailable(NO_DATA_DIR),
+            DesktopRecording::unavailable(NO_DATA_DIR),
+        ),
     };
     commands(tauri::Builder::default())
         .manage(NativeHost {
@@ -306,9 +320,37 @@ fn main() {
         })
         .manage(auth)
         .manage(recording_runtime)
-        // No recording owner on this host until C5: the registry commands
-        // answer `recordingUnavailable` (host-gate design §9 step 4-3-2).
-        .manage(DesktopRecording::unavailable(NO_RECORDING_OWNER))
-        .run(tauri::generate_context!())
-        .expect("SCADA desktop failed");
+        .manage(recording)
+        .build(tauri::generate_context!())
+        .expect("SCADA desktop failed")
+        .run(on_exit());
+}
+
+/// The exit (product-owner design §6): the first exit request is held while
+/// the recording is stopped (at most [`control::EXIT_LIMIT`]), then the app
+/// exits. Requests meanwhile are held too; the one after it proceeds.
+fn on_exit<R: Runtime>() -> impl FnMut(&AppHandle<R>, RunEvent) {
+    const RUNNING: u8 = 0;
+    const STOPPING: u8 = 1;
+    const DONE: u8 = 2;
+    let state = Arc::new(AtomicU8::new(RUNNING));
+    move |app, event| {
+        let RunEvent::ExitRequested { api, .. } = event else {
+            return;
+        };
+        match state.compare_exchange(RUNNING, STOPPING, Ordering::SeqCst, Ordering::SeqCst) {
+            Ok(_) => {
+                api.prevent_exit();
+                let app = app.clone();
+                let state = state.clone();
+                tauri::async_runtime::spawn(async move {
+                    control::exit(&app).await;
+                    state.store(DONE, Ordering::SeqCst);
+                    app.exit(0);
+                });
+            }
+            Err(STOPPING) => api.prevent_exit(),
+            Err(_) => {}
+        }
+    }
 }

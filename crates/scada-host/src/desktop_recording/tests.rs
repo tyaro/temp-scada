@@ -62,7 +62,12 @@ async fn initializing() -> Fixture {
     let seed = RecordingRegistryOwnerSeed::try_from_owner(owner).unwrap();
     let context = test_support::context().as_value().clone();
     let (root, issuer, generation) = create_recording_root(&dir.0, seed, context.clone()).unwrap();
-    let gate = Arc::new(RecordingGate::new(auth, root, issuer));
+    let gate = Arc::new(RecordingGate::new(
+        auth,
+        root,
+        issuer,
+        generation.scope(context.clone()),
+    ));
     let recording = DesktopRecording::with_interval(gate.clone(), Duration::from_millis(10));
     // The page most tests attach from, and the next page of its webview.
     recording.begin_page(PAGE);

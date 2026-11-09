@@ -105,3 +105,49 @@ async fn a_viewer_inspects_but_does_not_set_up_and_no_session_does_neither() {
         "forbidden"
     );
 }
+
+/// The auth and recording DB of one data dir, the auth through an empty gate.
+async fn gated() -> (TempDir, DesktopAuth, RecordingRuntime) {
+    let dir = TempDir::new();
+    let host = Arc::new(AuthHost::start(&dir.0).await.unwrap());
+    let gate = crate::recording_gate::RecordingGate::empty(host, NO_RECORDING_RUN);
+    let auth = DesktopAuth::with_gate(Arc::new(gate));
+    let runtime = RecordingRuntime::start(&dir.0, "deployment-a");
+    (dir, auth, runtime)
+}
+
+#[tokio::test]
+async fn the_slot_is_read_by_a_viewer_and_the_stop_needs_an_admin_and_a_recording() {
+    let (_dir, auth, runtime) = gated().await;
+    assert_eq!(
+        slot(&auth, &runtime).await.unwrap(),
+        json!({"state": "empty", "reason": "no_recording_run"})
+    );
+    // The synthetic Admin: nothing records yet.
+    assert_eq!(kind(stop(&auth, &runtime).await), "not_allowed");
+
+    auth.transition_to_operational("admin", PASSWORD, "管理者")
+        .await
+        .unwrap();
+    auth.users_create("viewer", PASSWORD, "閲覧者", Role::Viewer)
+        .await
+        .unwrap();
+    auth.logout().await.unwrap();
+    assert_eq!(kind(slot(&auth, &runtime).await), "unauthorized");
+    assert_eq!(kind(stop(&auth, &runtime).await), "unauthorized");
+    assert!(auth.login("viewer", PASSWORD).await.unwrap().success);
+    assert_eq!(slot(&auth, &runtime).await.unwrap()["state"], "empty");
+    assert_eq!(kind(stop(&auth, &runtime).await), "forbidden");
+
+    // Without a gate (no auth registry) the slot names the store's state.
+    let (_dir, plain, _) = host().await;
+    let closed = RecordingRuntime::unavailable(crate::recording_runtime::STORE_LOCKED);
+    assert_eq!(
+        slot(&plain, &closed).await.unwrap(),
+        json!({"state": "empty", "reason": "store_locked"})
+    );
+    assert_eq!(
+        serde_json::to_value(stop(&plain, &closed).await.unwrap_err()).unwrap(),
+        json!({"kind": "recordingUnavailable", "reason": "store_locked"})
+    );
+}

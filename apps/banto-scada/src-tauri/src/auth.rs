@@ -17,6 +17,7 @@ use scada_host::desktop_auth::{
     startup_reason, AuthPhaseResult, AuthResolveResult, AuthStatusResult, ChangePasswordResult,
     CommandError, CreatedUser, DesktopAuth, LoginResult, LogoutResult, TransitionResult,
 };
+use scada_host::desktop_recording::DesktopRecording;
 use scada_host::recording_gate::RecordingGate;
 use scada_host::{AuthSettings, UserSummary};
 use tauri::State;
@@ -27,20 +28,32 @@ use tauri::State;
 pub struct AuthState(Result<DesktopAuth, &'static str>);
 
 impl AuthState {
-    pub async fn start(data_dir: &Path) -> Self {
-        Self(
-            AuthHost::start(data_dir)
-                .await
-                .map(|auth| DesktopAuth::new(Arc::new(auth)))
-                .map_err(|error| startup_reason(&error)),
-        )
+    /// The auth of `data_dir` and the recording commands, over one gate
+    /// whose slot starts empty with `empty_reason` (product-owner design
+    /// §4): a root is installed only once a recording runs. Without the
+    /// auth, the recording commands answer `recordingUnavailable` with the
+    /// auth's reason.
+    pub async fn start(data_dir: &Path, empty_reason: &'static str) -> (Self, DesktopRecording) {
+        match AuthHost::start(data_dir).await {
+            Ok(auth) => {
+                let gate = Arc::new(RecordingGate::empty(Arc::new(auth), empty_reason));
+                (
+                    Self(Ok(DesktopAuth::with_gate(gate.clone()))),
+                    DesktopRecording::new(gate),
+                )
+            }
+            Err(error) => {
+                let reason = startup_reason(&error);
+                (Self(Err(reason)), DesktopRecording::unavailable(reason))
+            }
+        }
     }
 
     /// The auth of a host with a recording registry: every change of the
     /// desktop session goes through `gate`, so the registry sessions and
     /// subscriptions it ends are revoked within the same command. The
     /// recording commands use the same gate.
-    #[cfg_attr(not(test), allow(dead_code))]
+    #[cfg(test)]
     pub fn with_gate(gate: Arc<RecordingGate>) -> Self {
         Self(Ok(DesktopAuth::with_gate(gate)))
     }

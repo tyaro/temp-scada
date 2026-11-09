@@ -242,6 +242,15 @@ impl DesktopAuth {
         }
     }
 
+    /// The recording gate the auth commands go through, if this host has
+    /// one: its slot holds the recording registry (product-owner design §4).
+    pub fn recording_gate(&self) -> Option<&Arc<RecordingGate>> {
+        match &self.host {
+            Host::Auth(_) => None,
+            Host::Gate(gate) => Some(gate),
+        }
+    }
+
     fn gate(&self) -> Option<&RecordingGate> {
         match &self.host {
             Host::Auth(_) => None,
