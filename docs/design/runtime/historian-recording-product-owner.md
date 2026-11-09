@@ -65,15 +65,53 @@ registryの外で、記録の開始・再開・停止をhost独自のcommandと�
 
 1. gateがあれば`begin_shutdown`で新規受付を止める。未配送の登録はここで`rejected`／`cancelled`に確定する。受理済みのnative処理（preflight・pause/join・apply・read）は取り消さず、上限（§8の3）の中で完了を待つ。
 2. `try_handoff`でSupervisorを取り戻す。`busy`のときはownerの段階で分ける。
-   - **Candidate**（preflightの候補があり、記録は動いている）: このままではSupervisorが戻らず、記録を止められない。gateが**終了時のdiscard**を行う。gateは、保持しているworkflow ticketの予約principalに対して、自分のissuerからdiscard専用のmutation sessionを発行し、`issue_discard_lease`→discardのadmissionを登録・配送する（shutdown中もdiscardだけは受け付ける）。discardは候補を捨てるだけで、記録計画も記録も変えない。予約principalのdesktop sessionがなくても行い、監査へ`origin: "shutdown"`で記録する。完了したら`try_handoff`をやり直す。
+   - **Candidate**（preflightの候補があり、記録は動いている）: このままではSupervisorが戻らず、記録を止められない。gateが**終了時の破棄**（§6.1）を行い、完了したら`try_handoff`をやり直す。
    - **Paused**（pause/join済み）: 記録はすでに正常に止まってjoinされ、storeに`active`のsessionはない。handoffせずに終了しても中断にはならない。候補はprocessとともに失われる（registryの状態は保存しない）。次回は`Idle`から起動し、適用済みの計画を`recording_resume`で再開する。
    - **受理済み処理の未完了・未確定の配送**: 上限まで待ってもhandoffできなければ、そのまま3へ進む。
 3. Supervisorが戻ったら、記録を`request_stop_recording`→`join_recording`で止める。
 4. 1〜3の全体の待ち時間に上限（§8の3）を置く。上限を越えたら終了し、次回の`open_existing`が`interrupted`へ確定する。この場合は記録の欠測として扱う。
 
-終了時のdiscardは、利用者の認可によらずhostが行う唯一のregistry操作である。候補の破棄はnativeの物理状態を変えないので、終了のためだけにこれを認める。利用者が見ている候補は終了で失われるので、終了の確認dialogで「未完了の変更候補を破棄して終了します」と示す。
-
 UIを閉じても、hostのprocessが生きている間は記録を続ける（C5の完了条件）。トレイ常駐などでwindowとprocessの寿命を分けることは本書の範囲外とし、window終了はprocess終了とする。
+
+### 6.1 終了時の破棄
+
+終了時の破棄は、利用者の認可によらずhostが行う唯一のregistry操作である。候補の破棄はnativeの物理状態（記録計画・mapping・保持・記録）を変えず、ownerをCandidateから`Idle`へ戻すだけなので、終了のためだけにこれを認める。
+
+**対象**: ownerがCandidateで、その候補が次をすべて満たすときだけ行う。registryの`issue_discard_lease`が同じ条件を確かめ、満たさなければ拒否する。
+
+- preflightのadmissionが`accepted`で、元callの完了が`candidate`・`quiescence: confirmed`・`recoveryRequired: false`である。
+- gateが保持するworkflow（`HeldWorkflow`）にpreflightのticketがある。
+
+preflightの配送が未完了なら、上限の中で完了を待ってから判断する。完了が`replay`や`failed`ならownerは静止しているので、破棄せずにhandoffへ進む。Paused（pause/join済み）は破棄しない（§6の2）。
+
+**手順**（gateの`shutdown_discard`、移行lockとgateのlockの下で行う）:
+
+1. **session**: gateのissuerから、`HeldWorkflow`の予約principalに、mutation roleのregistry sessionを新しく発行する。issuerはshutdown中も発行できる。desktop sessionの再検証は行わない。予約principalがlogout済み、降格済み、削除済みでも行う。このsessionは破棄にだけ使い、終わったら`revoke_session`で失効させる。gateのsession表（`seq`とroleごと）には入れない。
+2. **lease**: discard leaseはworkflowごとに一つで、予約時に枠が確保されている。
+   - 利用者がすでにdiscard leaseを取っていたら、同じ`leaseRequestId`・`admissionId`で取り直す（違うIDは`protocolViolation`になる）。そのため、gateは`recording_workflow_lease`の`discard`段階で発行したleaseのIDを`HeldWorkflow`に記録する（C5-3で追加）。
+   - まだなければ、hostが新しいIDを引いて取る。期限は残りの待ち時間以内とする。
+3. **admission**: hostが受理済みpreflightの返信（`changeRef`）からdiscardのadmission requestを組み立て、`register_discard`→`dispatch_discard`で配送する。
+   - 利用者のdiscard登録がすでにある場合（`DiscardRegistration::Existing`）は、それをそのまま配送する。`begin_shutdown`はdiscardの未配送登録を取り消さない。
+   - 配送済みなら完了を待つ。
+4. **確認**: discardの完了を待ち、ownerが`Idle`へ戻ったら`try_handoff`をやり直す。拒否された場合や上限を越えた場合は、§6の4（中断として終了）へ進む。
+5. **監査**: 既存のgateの監査と同じ`recording_admission`として、結果（成功・`denied`・`failed`）を記録する。detailは`{"stage": "discard", "origin": "shutdown", "principal": <予約principal>}`とする。既存の記録はdesktop sessionのidentityをactorにするが、この破棄には利用者のsessionがない。そこでactorはhostを表す合成のidentityとし、その形はC5-3で決める。
+
+**確認dialog**: windowの`CloseRequested`で、hostは`quiescence()`を読む。未静止なら閉じるのを止め、UIへ理由を送る。
+
+- Candidateなら「未完了の変更候補があります。破棄して終了しますか」と示し、「破棄して終了」と「キャンセル」を出す。
+- 受理済み処理の完了待ちなら「記録の操作が終わるまで待って終了します」と示す。
+- キャンセルしたら何もしない。利用者は記録操作画面で候補を適用するか破棄できる。
+- dialogを出せない終了（OSのshutdown、UIの応答なし）では、確認なしに§6の手順を進める。
+
+**試験**（C5-3）:
+
+- Candidateで終了すると、破棄、handoff、stop/joinの順に進み、次回の起動で`interrupted`が残らない。
+- 予約principalがlogout済み・降格済みでも破棄できる。
+- 利用者が取ったdiscard leaseや登録を引き継ぐ。
+- preflightの配送中に終了すると、完了を待ってから判断する。
+- Pausedでは破棄せずに終了し、中断にならない。
+- 破棄が拒否されたら中断として終了する。
+- 監査の記録が残る。
 
 ## 7. 画面接続
 
