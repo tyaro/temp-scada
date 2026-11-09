@@ -164,22 +164,25 @@ pub struct DesktopRecording {
 struct Host {
     gate: Arc<RecordingGate>,
     pumps: Arc<tokio::sync::Mutex<Pumps>>,
-    /// The pages the host reported ended ([`DesktopRecording::end_page`])
-    /// that a claim still names. Read by a claim, so a subscription of an
-    /// ended page is ended even if its pump has not noticed yet, and by each
-    /// emit, so an ended page receives nothing. Pruned whenever a claim is
-    /// made or released.
-    ended_pages: Arc<Mutex<BTreeSet<u64>>>,
+    /// The pages open now: begun ([`DesktopRecording::begin_page`]) and
+    /// not ended ([`DesktopRecording::end_page`]). Read by a claim, so an
+    /// attach of an ended page never takes a live page's subscription and a
+    /// subscription of an ended page is ended even if its pump has not
+    /// noticed yet, and by each emit, so an ended page receives nothing.
+    /// Holds only the open pages (one per webview).
+    live_pages: Arc<Mutex<BTreeSet<u64>>>,
     interval: Duration,
 }
 
 /// Which pump delivers each subscription. A replayed attach from the same
-/// page starts no second pump. One from another page takes the claim over
-/// at once, so it never waits on the old page's pump to notice anything:
-/// if the old page ended, the subscription is ended and the new pump says
-/// so; if the old page is still open (another webview), delivery moves to
-/// the new page. Every delivery checks its claim under this lock, so a pump
-/// taken over delivers nothing more.
+/// page starts no second pump. One from another open page takes the claim
+/// over at once, so it never waits on the old page's pump to notice
+/// anything: if the old page ended, the subscription is ended and the new
+/// pump says so; if the old page is still open (another webview), delivery
+/// moves to the new page. An attach whose own page ended meanwhile takes
+/// nothing from an open page; with no open page holding the subscription it
+/// ends it. Every delivery checks its claim under this lock, so a pump taken
+/// over delivers nothing more.
 #[derive(Default)]
 struct Pumps {
     next: u64,
@@ -212,7 +215,7 @@ impl DesktopRecording {
             host: Ok(Host {
                 gate,
                 pumps: Arc::default(),
-                ended_pages: Arc::default(),
+                live_pages: Arc::default(),
                 interval,
             }),
         }
@@ -230,25 +233,37 @@ impl DesktopRecording {
             .map_err(|reason| RecordingCommandError::Unavailable(reason))
     }
 
-    /// The page `page` ended (its webview loaded another page or was
-    /// destroyed). Called synchronously from the host's page hooks, before
-    /// the next page can attach, so its subscriptions are ended whichever of
-    /// its pump or the next page's replayed attach comes first.
-    pub fn end_page(&self, page: u64) {
+    /// The page `page` was opened (a webview's page load). The host gives
+    /// each page load its own ID and calls this before the page can attach.
+    pub fn begin_page(&self, page: u64) {
         if let Ok(host) = &self.host {
-            host.ended_pages
+            host.live_pages
                 .lock()
-                .expect("ended pages mutex poisoned")
+                .expect("live pages mutex poisoned")
                 .insert(page);
         }
     }
 
-    /// Test only: how many ended pages are remembered.
+    /// The page `page` ended (its webview loaded another page or was
+    /// destroyed). Called synchronously from the host's page hooks, before
+    /// the next page can attach, so its subscriptions are ended whichever of
+    /// its pump, the next page's replayed attach, or its own attach still in
+    /// flight comes first.
+    pub fn end_page(&self, page: u64) {
+        if let Ok(host) = &self.host {
+            host.live_pages
+                .lock()
+                .expect("live pages mutex poisoned")
+                .remove(&page);
+        }
+    }
+
+    /// Test only: how many pages are open.
     #[cfg(test)]
-    fn ended_page_count(&self) -> usize {
+    fn live_page_count(&self) -> usize {
         self.host
             .as_ref()
-            .map_or(0, |host| host.ended_pages.lock().unwrap().len())
+            .map_or(0, |host| host.live_pages.lock().unwrap().len())
     }
 
     fn gate(&self) -> Result<&RecordingGate, RecordingCommandError> {
@@ -395,7 +410,7 @@ impl DesktopRecording {
 pub struct FramePump {
     gate: Arc<RecordingGate>,
     pumps: Arc<tokio::sync::Mutex<Pumps>>,
-    ended_pages: Arc<Mutex<BTreeSet<u64>>>,
+    live_pages: Arc<Mutex<BTreeSet<u64>>>,
     reference: String,
     claim: Claim,
     interval: Duration,
@@ -419,32 +434,39 @@ enum Delivery {
 impl FramePump {
     async fn claim(host: &Host, reference: &str, page: u64) -> Option<Self> {
         let mut pumps = host.pumps.lock().await;
-        if let Some(existing) = pumps.claims.get(reference) {
+        let live = host.live_pages.lock().expect("live pages mutex poisoned");
+        let existing = pumps.claims.get(reference).copied();
+        if !live.contains(&page) {
+            // An attach whose page ended while it ran: it never takes the
+            // subscription from an open page. With no open page holding it,
+            // nothing will deliver it, so it is ended (its live slot freed).
+            if !existing.is_some_and(|claim| live.contains(&claim.page)) {
+                pumps.claims.remove(reference);
+                host.gate.end_subscription(reference);
+            }
+            return None;
+        }
+        if let Some(existing) = existing {
             if existing.page == page {
                 return None;
             }
             // The subscription of an ended page is over, even if its pump
             // has not stopped yet; the new pump reports it ended.
-            let ended = host
-                .ended_pages
-                .lock()
-                .expect("ended pages mutex poisoned")
-                .contains(&existing.page);
-            if ended {
+            if !live.contains(&existing.page) {
                 host.gate.end_subscription(reference);
             }
         }
+        drop(live);
         pumps.next += 1;
         let claim = Claim {
             page,
             token: pumps.next,
         };
         pumps.claims.insert(reference.to_owned(), claim);
-        prune(&pumps, &host.ended_pages);
         Some(Self {
             gate: host.gate.clone(),
             pumps: host.pumps.clone(),
-            ended_pages: host.ended_pages.clone(),
+            live_pages: host.live_pages.clone(),
             reference: reference.to_owned(),
             claim,
             interval: host.interval,
@@ -456,9 +478,10 @@ impl FramePump {
     }
 
     fn page_ended(&self) -> bool {
-        self.ended_pages
+        !self
+            .live_pages
             .lock()
-            .expect("ended pages mutex poisoned")
+            .expect("live pages mutex poisoned")
             .contains(&self.claim.page)
     }
 
@@ -503,7 +526,6 @@ impl FramePump {
             if matches!(outcome, Delivery::Gone) {
                 self.gate.end_subscription(&self.reference);
             }
-            prune(&pumps, &self.ended_pages);
         }
     }
 
@@ -536,11 +558,11 @@ impl FramePump {
             },
         };
         // The page may have ended while the frames were taken. The check and
-        // the emit hold the ended-pages lock, which `end_page` takes from
-        // the page hook before the next page loads: an event of an ended
-        // page is never emitted (to the next page of the same webview).
-        let ended = self.ended_pages.lock().expect("ended pages mutex poisoned");
-        if ended.contains(&self.claim.page) {
+        // the emit hold the live-pages lock, which `end_page` takes from the
+        // page hook before the next page loads: an event of an ended page is
+        // never emitted (to the next page of the same webview).
+        let live = self.live_pages.lock().expect("live pages mutex poisoned");
+        if !live.contains(&self.claim.page) {
             return Delivery::Gone;
         }
         let done = match &event {
@@ -550,7 +572,7 @@ impl FramePump {
             RecordingEvent::Ended { .. } => true,
         };
         let delivered = emit(event);
-        drop(ended);
+        drop(live);
         drop(pumps);
         match (delivered, done) {
             (false, _) => Delivery::Gone,
@@ -558,16 +580,6 @@ impl FramePump {
             (true, false) => Delivery::Continue,
         }
     }
-}
-
-/// Forget the ended pages no claim names: only a claim reads them. A page
-/// that ends with an attach still in flight needs no entry either, since its
-/// pump's `stop` has already completed and the pump ends the subscription.
-fn prune(pumps: &Pumps, ended_pages: &Mutex<BTreeSet<u64>>) {
-    ended_pages
-        .lock()
-        .expect("ended pages mutex poisoned")
-        .retain(|page| pumps.claims.values().any(|claim| claim.page == *page));
 }
 
 impl Drop for FramePump {

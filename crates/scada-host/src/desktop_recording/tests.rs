@@ -63,8 +63,12 @@ async fn initializing() -> Fixture {
     let context = test_support::context().as_value().clone();
     let (root, issuer, generation) = create_recording_root(&dir.0, seed, context.clone()).unwrap();
     let gate = Arc::new(RecordingGate::new(auth, root, issuer));
+    let recording = DesktopRecording::with_interval(gate.clone(), Duration::from_millis(10));
+    // The page most tests attach from, and the next page of its webview.
+    recording.begin_page(PAGE);
+    recording.begin_page(PAGE + 1);
     Fixture {
-        recording: DesktopRecording::with_interval(gate.clone(), Duration::from_millis(10)),
+        recording,
         auth: DesktopAuth::with_gate(gate.clone()),
         gate,
         scope: generation.scope(context),
@@ -458,7 +462,8 @@ async fn pages_that_end_free_their_live_subscriptions() {
     let f = initializing().await;
     // More pages than the registry's live subscriptions, one after another:
     // each ended page frees its slot for the next one.
-    for page in 0..8 {
+    for page in 10..18 {
+        f.recording.begin_page(page);
         let id = format!("attach-{page}");
         let (_, pump) = f
             .recording
@@ -585,30 +590,64 @@ async fn a_page_that_ended_mid_delivery_receives_nothing_and_its_subscription_en
 }
 
 #[tokio::test]
-async fn ended_pages_are_forgotten_once_no_claim_names_them() {
+async fn only_open_pages_are_remembered() {
     let f = initializing().await;
-    for page in 0..8 {
-        let id = format!("attach-{page}");
-        let (_, pump) = f
-            .recording
-            .attach(attach(&f.scope, &id), page)
-            .await
-            .unwrap();
-        let (_stop, _events, task) = spawn_page(pump.unwrap());
+    f.recording.end_page(PAGE);
+    f.recording.end_page(PAGE + 1);
+    for page in 10..18 {
+        f.recording.begin_page(page);
         f.recording.end_page(page);
-        timeout(Duration::from_secs(10), task)
-            .await
-            .unwrap()
-            .unwrap();
-        assert_eq!(f.recording.ended_page_count(), 0, "page {page}");
     }
-    // A page with no claim at all is forgotten at the next claim.
-    f.recording.end_page(100);
+    assert_eq!(f.recording.live_page_count(), 0);
+}
+
+#[tokio::test]
+async fn an_attach_of_an_ended_page_never_takes_the_next_pages_subscription() {
+    let f = initializing().await;
+    // The next page has attached; the old page's attach, still in flight
+    // when its page ended, reaches its claim only now.
     let (_, pump) = f
         .recording
-        .attach(attach(&f.scope, "attach-last"), 101)
+        .attach(attach(&f.scope, "attach-1"), PAGE + 1)
         .await
         .unwrap();
-    assert!(pump.is_some());
-    assert_eq!(f.recording.ended_page_count(), 0);
+    let (mut events, _task) = spawn(pump.expect("the next page's pump"));
+    f.recording.end_page(PAGE);
+    let (_, stale) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"), PAGE)
+        .await
+        .unwrap();
+    assert!(stale.is_none());
+    // The next page keeps its subscription and its frames.
+    preflight(&f, "stale-attach").await;
+    let RecordingEvent::Frames { state, .. } = next(&mut events).await else {
+        panic!("the next page still receives the frames");
+    };
+    assert!(state.is_some());
+}
+
+#[tokio::test]
+async fn an_attach_of_an_ended_page_that_no_open_page_holds_ends_its_subscription() {
+    let f = initializing().await;
+    // The page ended while its first attach ran: no pump, and the
+    // subscription does not hold a live slot for nobody.
+    f.recording.end_page(PAGE);
+    let (attached, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"), PAGE)
+        .await
+        .unwrap();
+    assert!(pump.is_none());
+    let reference = attached.reply["outcome"]["subscriptionRef"].clone();
+    let (_, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"), PAGE + 1)
+        .await
+        .unwrap();
+    let (mut events, _task) = spawn(pump.unwrap());
+    assert_eq!(
+        wire(&next(&mut events).await),
+        json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
+    );
 }

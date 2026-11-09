@@ -42,12 +42,18 @@ struct Page {
 
 impl Pages {
     /// The current page of `label`, and a future that completes when it
-    /// ends.
-    fn current(&self, label: &str) -> (u64, impl Future<Output = ()> + Send + 'static) {
+    /// ends. A new page is opened in `recording` under this lock, so its
+    /// begin and end are never reordered.
+    fn current(
+        &self,
+        label: &str,
+        recording: &DesktopRecording,
+    ) -> (u64, impl Future<Output = ()> + Send + 'static) {
         let mut table = self.0.lock().expect("pages mutex poisoned");
         let PageTable { next, current } = &mut *table;
         let page = current.entry(label.to_owned()).or_insert_with(|| {
             *next += 1;
+            recording.begin_page(*next);
             Page {
                 id: *next,
                 ended: watch::channel(()).0,
@@ -60,14 +66,13 @@ impl Pages {
         })
     }
 
-    /// End the current page of `label`; its ID if it had one.
-    fn end(&self, label: &str) -> Option<u64> {
-        self.0
-            .lock()
-            .expect("pages mutex poisoned")
-            .current
-            .remove(label)
-            .map(|page| page.id)
+    /// End the current page of `label`, in `recording` too, under the same
+    /// lock as [`Self::current`].
+    fn end(&self, label: &str, recording: &DesktopRecording) {
+        let mut table = self.0.lock().expect("pages mutex poisoned");
+        if let Some(page) = table.current.remove(label) {
+            recording.end_page(page.id);
+        }
     }
 }
 
@@ -75,9 +80,9 @@ impl Pages {
 /// its pumps stop and its subscriptions are ended, before the next page can
 /// attach. Called by the page hooks of `commands`.
 pub fn end_page<R: Runtime, M: Manager<R>>(manager: &M, label: &str) {
-    if let Some(page) = manager.state::<Pages>().end(label) {
-        manager.state::<DesktopRecording>().end_page(page);
-    }
+    manager
+        .state::<Pages>()
+        .end(label, &manager.state::<DesktopRecording>());
 }
 
 type Reply = Result<RecordingResult, RecordingCommandError>;
@@ -149,7 +154,7 @@ pub async fn recording_attach<R: Runtime>(
     let label = webview.label().to_owned();
     // Taken before the attach: a page that ends meanwhile stops the pump
     // at once rather than leaving it to the next page.
-    let (page, ended) = pages.current(&label);
+    let (page, ended) = pages.current(&label, &state);
     let (result, pump) = state.attach(request, page).await?;
     if let Some(pump) = pump {
         let target = EventTarget::labeled(label);
