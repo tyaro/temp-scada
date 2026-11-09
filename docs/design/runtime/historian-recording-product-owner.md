@@ -1,6 +1,6 @@
 # 製品hostの記録ownerと画面接続（C5）
 
-状態: **提案**。2026-11-09作成（日本時間）。[認証・host gate](historian-recording-host-gate.md)の手順1〜4（PR #131〜#142）を閉じた後の区切りである。[実Hub・S7接続計画](../../project/real-hub-connection-plan.md)のC5（実データの記録・履歴受入）のうち、製品hostへ記録DB・Supervisor・記録registryを置く範囲と、通常Appの履歴・記録画面へ接続する範囲を定め、PRの分割を決める。§8の確認事項はユーザー判断を待つ。
+状態: **採用**。2026-11-09作成、同日ユーザー判断で§8を推奨案のとおり確定（日本時間）。[認証・host gate](historian-recording-host-gate.md)の手順1〜4（PR #131〜#142）を閉じた後の区切りである。[実Hub・S7接続計画](../../project/real-hub-connection-plan.md)のC5（実データの記録・履歴受入）のうち、製品hostへ記録DB・Supervisor・記録registryを置く範囲と、通常Appの履歴・記録画面へ接続する範囲を定め、PRの分割を決める。
 
 ## 1. 現状
 
@@ -87,7 +87,9 @@ nativeの`HistoryService`を作る。`source.query`は`history_query` commandで
 
 port v2の型の詳細はC5-5の着手時にこの節へ追記し、レビューを受けてから実装する。
 
-## 8. 確認事項（推奨案）
+## 8. 確定事項（2026-11-09ユーザー判断）
+
+2026-11-09のユーザー判断で、次の7点を推奨案のとおり確定した。
 
 1. **記録DBの置き場所**: アプリdata dir（`%LOCALAPPDATA%\temp-scada`）の`historian\`と`historian-store.json`とする。
 2. **起動時の自動再開**: 行わない。再起動後は`Idle`で起動し、Adminが「記録を再開」を押す（supervisor設計の「自動復旧ではない」に合わせる）。押すまでregistryは`no_recording_run`である。
