@@ -524,24 +524,21 @@ async fn an_auth_change_whose_refresh_fails_still_revokes_the_held_sessions() {
 async fn logout_waits_for_a_command_that_already_validated_the_session() {
     let f = operational().await;
     let current = f.auth.auth().current().await.unwrap().unwrap();
-    // The command validated and ran its registry call; while it re-checks
-    // before returning, a logout is requested.
-    let (gate, done) = (f.gate.clone(), Arc::new(tokio::sync::Notify::new()));
-    let logged_out = done.clone();
-    let logout = tokio::spawn(async move {
-        let seq = gate.logout().await;
-        logged_out.notify_one();
-        seq
-    });
-    let (waiter, auth) = (done.clone(), f.auth.clone());
+    // The logout is started only once the command has validated the session
+    // and run its registry call (the hook runs while it holds the lock).
+    let started = Arc::new(Mutex::new(None));
+    let (slot, gate, auth) = (started.clone(), f.gate.clone(), f.auth.clone());
     f.gate.after_next_call(async move {
+        let mut logout = tokio::spawn(async move { gate.logout().await });
         // The logout cannot get past the lock this command holds.
-        let raced = tokio::time::timeout(Duration::from_millis(200), waiter.notified()).await;
+        let raced = tokio::time::timeout(Duration::from_millis(200), &mut logout).await;
         assert!(raced.is_err(), "logout ran inside the command");
         assert_eq!(auth.auth().seq(), current.seq);
+        *slot.lock().unwrap() = Some(logout);
     });
     let attached = f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
     assert_eq!(attached.seq, current.seq);
+    let logout = started.lock().unwrap().take().expect("the hook ran");
     assert_ne!(logout.await.unwrap(), current.seq);
     assert!(f.gate.held(LeaseRole::Reconciliation).is_none());
 }
