@@ -136,6 +136,11 @@ impl Project {
         self.0["manifest"]["projectRevision"].as_f64().unwrap() as u64
     }
 
+    /// The Project's desired recording plan document, if it has one.
+    pub fn recording_plan(&self) -> Option<&Value> {
+        self.0.get("recordingPlan")
+    }
+
     /// The `planId` of the Project's desired recording plan, if it has one.
     pub fn recording_plan_id(&self) -> Option<&str> {
         self.0.get("recordingPlan")?["planId"].as_str()

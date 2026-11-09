@@ -1781,6 +1781,8 @@ dependencies = [
  "banto-core",
  "banto-hub-bootstrap",
  "banto-storage",
+ "banto-tagclient",
+ "futures-util",
  "getrandom 0.3.4",
  "keyring",
  "scada-historian",
@@ -1790,6 +1792,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
+ "tokio-tungstenite",
  "uuid",
  "windows-sys 0.61.2",
 ]

@@ -93,6 +93,14 @@ export function createNativeHistory(
         },
       );
     },
+    /** Asks again for `project`, after the host's applied plan changed.
+     * Ignored unless `project` is still the current one, so a late setup
+     * reply never brings back an earlier Project's context. */
+    refresh(project: Project) {
+      if (disposed || contextKey(project) !== key) return;
+      key = undefined;
+      this.update(project);
+    },
     dispose() {
       disposed = true;
       generation++;

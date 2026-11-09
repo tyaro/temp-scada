@@ -9,6 +9,7 @@ publish.workspace = true
 banto-hub-bootstrap = { git = "https://github.com/tyaro/banto-industrial.git", rev = "33410f6d25d36559c5ce81375e243eb6f3e85038" }
 serde = { version = "1", features = ["derive"] }
 serde_json.workspace = true
+banto-tagclient.workspace = true
 scada-historian = { path = "../scada-historian" }
 scada-model = { path = "../scada-model" }
 scada-runtime = { path = "../scada-runtime" }
@@ -30,6 +31,9 @@ test-support = ["scada-runtime/test-support"]
 [dev-dependencies]
 # A pristine native owner for the registry gate tests.
 scada-runtime = { path = "../scada-runtime", features = ["test-support"] }
+# A loopback Hub for the recording setup tests.
+futures-util = { version = "0.3", features = ["sink"] }
+tokio-tungstenite = "0.29"
 
 [target.'cfg(windows)'.dependencies]
 keyring = { version = "3", features = ["windows-native"] }

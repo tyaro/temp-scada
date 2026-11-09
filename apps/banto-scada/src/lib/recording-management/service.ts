@@ -16,12 +16,21 @@ export interface InspectionControl {
 /** Replace the whole service for context changes. Settle only after read/cleanup
  * is quiescent, even on abort. Sync throw means nothing was dispatched. Native
  * adapters must also enforce a physical gate across different Apps/controllers. */
+/** The outcome of a first setup: the recording phase reached, or the host's
+ * error kind. Never throws. */
+export type InitialSetupResult = Readonly<
+  { ok: true; phase: "running" | "starting" } | { ok: false; error: string }
+>;
 export interface RecordingManagementService {
   readonly context: unknown;
   readonly inspect: (
     request: RecordingInspectionRequest,
     control: InspectionControl,
   ) => Promise<unknown>;
+  /** The first setup and start of the Project's recording plan (product-owner
+   * design §5). Present only when the host offers it to the current session
+   * (an administrator); the host checks the role again. */
+  readonly initialSetup?: () => Promise<InitialSetupResult>;
 }
 export interface RecordingManagementOwner {
   readonly project: Project;

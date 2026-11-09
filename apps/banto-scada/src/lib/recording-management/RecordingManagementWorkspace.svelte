@@ -18,6 +18,7 @@
     hostIssueLabels,
     inspectionErrorLabels,
     knownFlag,
+    setupErrorLabel,
   } from "./labels";
   import RecordingPlanView from "./RecordingPlanView.svelte";
   let {
@@ -84,6 +85,46 @@
   function load() {
     if (current && binding) controller.load(10000);
   }
+  // The first setup (design §8-5): offered to an administrator while the
+  // DB has no applied plan and the Project's plan is enabled.
+  let setup = $state.raw<{
+    owner: object;
+    running: boolean;
+    message?: string;
+    failed?: boolean;
+  }>();
+  const setupShown = $derived(setup?.owner === binding ? setup : undefined);
+  const canSetup = $derived(
+    !!binding?.service.initialSetup &&
+      response?.database.state === "available" &&
+      response.database.applied === null &&
+      binding.desired?.enabled === true &&
+      !setupShown?.running,
+  );
+  async function initialSetup() {
+    const target = binding;
+    const run = target?.service.initialSetup;
+    if (!current || !target || !run || !canSetup) return;
+    setup = { owner: target, running: true };
+    const result = await run();
+    if (binding !== target) return;
+    setup = result.ok
+      ? {
+          owner: target,
+          running: false,
+          message:
+            result.phase === "running"
+              ? "記録を開始しました"
+              : "記録の開始を受け付けました（開始待ち）",
+        }
+      : {
+          owner: target,
+          running: false,
+          failed: true,
+          message: setupErrorLabel(result.error),
+        };
+    load();
+  }
   function close() {
     owner = undefined;
     controller.setOwner({ phase: "offline" });
@@ -122,8 +163,32 @@
       >
     </div>
     <p>
-      画面を開くだけでは照会しません。設定の適用・記録の開始や停止は行いません。
+      画面を開くだけでは照会しません。照会では設定の適用・記録の開始や停止は行いません。
     </p>
+    {#if binding?.service.initialSetup}
+      <section aria-label="初回設定と開始">
+        <h3>初回設定と開始</h3>
+        <p>
+          Projectの希望設定をそのまま使い、Hubのタグとの対応の登録、既定の保持方針（経過30日）の適用、計画の適用を行って記録を開始します。DBに適用済みの設定がない間だけ実行できます。
+        </p>
+        <div class="actions">
+          <button
+            type="button"
+            disabled={!canSetup}
+            data-recording-initial-setup
+            onclick={() => void initialSetup()}
+            >{setupShown?.running ? "初回設定中…" : "初回設定と開始"}</button
+          >
+        </div>
+        {#if !response}<p>実行する前に状態を照会してください。</p>{/if}
+        {#if setupShown?.message}<p
+            role={setupShown.failed ? "alert" : "status"}
+            data-recording-setup-result={setupShown.failed ? "failed" : "ok"}
+          >
+            {setupShown.message}
+          </p>{/if}
+      </section>
+    {/if}
     {#if binding}
       <section aria-label="照会対象">
         <h3>照会対象</h3>

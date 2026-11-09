@@ -49,7 +49,7 @@ impl AuthState {
         Self(Err(reason))
     }
 
-    fn get(&self) -> Result<&DesktopAuth, CommandError> {
+    pub(crate) fn get(&self) -> Result<&DesktopAuth, CommandError> {
         self.0
             .as_ref()
             .map_err(|reason| CommandError::Unavailable(reason))
