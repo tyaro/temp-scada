@@ -1,7 +1,9 @@
 //! One embedded read-only host. Hub services and PLC connections stay external.
 mod auth;
+mod recording;
 
 use auth::AuthState;
+use scada_host::desktop_recording::{DesktopRecording, NO_RECORDING_OWNER};
 use scada_host::{local_bootstrap, local_data_dir, Bootstrapper, HubStatus};
 use scada_model::Project;
 use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
@@ -188,6 +190,9 @@ mod native_tests;
 #[cfg(test)]
 mod auth_tests;
 
+#[cfg(test)]
+mod recording_tests;
+
 #[tauri::command]
 async fn hub_catalog(
     state: State<'_, NativeHost>,
@@ -230,7 +235,17 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
         auth::auth_logout,
         auth::auth_resolve,
         auth::auth_change_password,
-        auth::auth_transition_to_operational
+        auth::auth_transition_to_operational,
+        recording::recording_workflow_reserve,
+        recording::recording_workflow_lease,
+        recording::recording_lease,
+        recording::recording_admission,
+        recording::recording_admission_inspection,
+        recording::recording_observation,
+        recording::recording_cancel,
+        recording::recording_call_inspection,
+        recording::recording_attach,
+        recording::recording_control
     ])
 }
 
@@ -248,6 +263,9 @@ fn main() {
             active: Mutex::new(Active::default()),
         })
         .manage(auth)
+        // No recording owner on this host until C5: the registry commands
+        // answer `recordingUnavailable` (host-gate design §9 step 4-3-2).
+        .manage(DesktopRecording::unavailable(NO_RECORDING_OWNER))
         .run(tauri::generate_context!())
         .expect("SCADA desktop failed");
 }

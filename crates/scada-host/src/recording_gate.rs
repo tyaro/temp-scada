@@ -1246,6 +1246,15 @@ impl RecordingGate {
         Some((held.seq, session))
     }
 
+    /// Test support (feature `test-support`): make the root's next native
+    /// apply commit and then lose its response, the case a reconcile of the
+    /// original apply reads. For the desktop host's command tests, which
+    /// cannot reach the root.
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn test_lose_next_apply_response(&self) {
+        scada_runtime::recording_host::test_support::lose_next_apply_response(&self.lock().root);
+    }
+
     /// Test only: direct access to the root.
     #[cfg(test)]
     fn with_root<T>(&self, f: impl FnOnce(&mut RecordingRegistryRoot) -> T) -> T {

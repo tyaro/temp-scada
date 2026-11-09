@@ -14,6 +14,7 @@ use scada_host::desktop_auth::{
     startup_reason, AuthPhaseResult, AuthResolveResult, AuthStatusResult, ChangePasswordResult,
     CommandError, DesktopAuth, LoginResult, LogoutResult, TransitionResult,
 };
+use scada_host::recording_gate::RecordingGate;
 use tauri::State;
 
 /// The auth of this host, or why it did not start. A failed start is not
@@ -29,6 +30,15 @@ impl AuthState {
                 .map(|auth| DesktopAuth::new(Arc::new(auth)))
                 .map_err(|error| startup_reason(&error)),
         )
+    }
+
+    /// The auth of a host with a recording registry: every change of the
+    /// desktop session goes through `gate`, so the registry sessions and
+    /// subscriptions it ends are revoked within the same command. The
+    /// recording commands use the same gate.
+    #[cfg_attr(not(test), allow(dead_code))]
+    pub fn with_gate(gate: Arc<RecordingGate>) -> Self {
+        Self(Ok(DesktopAuth::with_gate(gate)))
     }
 
     pub fn unavailable(reason: &'static str) -> Self {
