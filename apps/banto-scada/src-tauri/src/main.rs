@@ -1,10 +1,12 @@
 //! One embedded read-only host. Hub services and PLC connections stay external.
 mod auth;
+mod history;
 mod recording;
 
 use auth::AuthState;
 use scada_host::desktop_recording::{DesktopRecording, NO_RECORDING_OWNER};
-use scada_host::{local_bootstrap, local_data_dir, Bootstrapper, HubStatus};
+use scada_host::recording_runtime::{RecordingRuntime, NO_DATA_DIR};
+use scada_host::{local_bootstrap, local_data_dir, local_installation_id, Bootstrapper, HubStatus};
 use scada_model::Project;
 use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
 use serde::Serialize;
@@ -194,6 +196,9 @@ mod auth_tests;
 #[cfg(test)]
 mod recording_tests;
 
+#[cfg(test)]
+mod history_tests;
+
 #[tauri::command]
 async fn hub_catalog(
     state: State<'_, NativeHost>,
@@ -257,6 +262,9 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             auth::users_delete,
             auth::auth_config_get,
             auth::auth_config_apply,
+            history::history_context,
+            history::history_query,
+            history::history_cancel,
             recording::recording_workflow_reserve,
             recording::recording_workflow_lease,
             recording::recording_lease,
@@ -278,12 +286,19 @@ fn main() {
         Ok(dir) => tauri::async_runtime::block_on(AuthState::start(&dir)),
         Err(_) => AuthState::unavailable("no_data_dir"),
     };
+    // The recording DB and the History host. A store that cannot be opened
+    // does not stop the app either (product-owner design §3).
+    let recording_runtime = match (local_data_dir(), local_installation_id()) {
+        (Ok(dir), Ok(deployment)) => RecordingRuntime::start(&dir, &deployment),
+        _ => RecordingRuntime::unavailable(NO_DATA_DIR),
+    };
     commands(tauri::Builder::default())
         .manage(NativeHost {
             bootstrap,
             active: Mutex::new(Active::default()),
         })
         .manage(auth)
+        .manage(recording_runtime)
         // No recording owner on this host until C5: the registry commands
         // answer `recordingUnavailable` (host-gate design §9 step 4-3-2).
         .manage(DesktopRecording::unavailable(NO_RECORDING_OWNER))

@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { onMount, tick } from "svelte";
+  import { onDestroy, onMount, tick } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import App from "../App.svelte";
+  import type { HistoryService } from "../lib/history/workspace-model";
+  import { createNativeHistory } from "./history";
   import { nativeSources } from "./sources";
   import AuthControls from "./auth/AuthControls.svelte";
   import type { NativeAuthClient } from "./auth/client";
@@ -26,6 +28,14 @@
   let tagCount = $state(0);
   let busy = $state(false);
   let sources = $state.raw<ReturnType<typeof nativeSources>>();
+  // History reads the recording DB, not the Hub: it does not follow the Hub
+  // connection (product-owner design §8-6).
+  let historyService = $state.raw<HistoryService>();
+  const nativeHistory = createNativeHistory(
+    invoke,
+    (service) => (historyService = service),
+  );
+  onDestroy(() => nativeHistory.dispose());
   let hubDetails: HTMLDetailsElement;
 
   function closeHubOnOutsidePointer(event: PointerEvent) {
@@ -161,6 +171,8 @@
 <App
   readSource={sources?.readSource}
   catalogSource={sources?.catalogSource}
+  {historyService}
+  onprojectchange={(project) => nativeHistory.update(project)}
   headerExtension={hubControls}
 />
 

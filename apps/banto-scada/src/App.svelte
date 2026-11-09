@@ -27,6 +27,7 @@
     recordingOperationsService,
     recordingAsyncOperations,
     headerExtension,
+    onprojectchange,
   }: {
     readSource?: ReadSource;
     catalogSource?: CatalogSource;
@@ -35,6 +36,9 @@
     recordingOperationsService?: RecordingOperationsService;
     recordingAsyncOperations?: AsyncOperationsClient;
     headerExtension?: Snippet;
+    /** Each replacement of the validated Project (the desktop shell keys its
+     * History service on it). */
+    onprojectchange?: (project: Project) => void;
   } = $props();
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
@@ -1270,6 +1274,10 @@
   // Commands, history and file adoption replace the whole validated Project.
   // Track that boundary, not every field in the immutable document snapshot.
   let project = $state.raw(parseProject(JSON.stringify(sample)));
+  $effect(() => {
+    const next = project;
+    untrack(() => onprojectchange?.(next));
+  });
   const readPresentation = createReadPresentationController(
     () => project,
     () => readSource,
