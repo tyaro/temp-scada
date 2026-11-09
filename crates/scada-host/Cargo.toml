@@ -7,6 +7,7 @@ publish.workspace = true
 
 [dependencies]
 banto-hub-bootstrap = { git = "https://github.com/tyaro/banto-industrial.git", rev = "33410f6d25d36559c5ce81375e243eb6f3e85038" }
+serde = { version = "1", features = ["derive"] }
 serde_json.workspace = true
 scada-model = { path = "../scada-model" }
 scada-runtime = { path = "../scada-runtime" }

@@ -143,7 +143,7 @@ pub enum Checkpoint {
 
 /// Fault injection: `false` stops at the checkpoint. Always `true` outside
 /// tests.
-type Faults<'a> = &'a mut dyn FnMut(Checkpoint) -> bool;
+type Faults<'a> = &'a mut (dyn FnMut(Checkpoint) -> bool + Send);
 
 macro_rules! checkpoint {
     ($faults:expr, $point:expr, $error:ident) => {
@@ -204,7 +204,7 @@ impl AuthHost {
     #[cfg(test)]
     pub(crate) async fn start_with(
         data_dir: &Path,
-        faults: &mut dyn FnMut(Checkpoint) -> bool,
+        faults: &mut (dyn FnMut(Checkpoint) -> bool + Send),
     ) -> Result<Self, StartupError> {
         Self::start_inner(data_dir, faults).await
     }
@@ -298,7 +298,7 @@ impl AuthHost {
         password: &str,
         display_name: &str,
         quiescent: impl FnOnce() -> bool,
-        faults: &mut dyn FnMut(Checkpoint) -> bool,
+        faults: &mut (dyn FnMut(Checkpoint) -> bool + Send),
     ) -> Result<Transitioned, TransitionError> {
         self.transition_inner(username, password, display_name, quiescent, faults)
             .await

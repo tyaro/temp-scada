@@ -79,6 +79,27 @@ pub enum LoginOutcome {
     Superseded,
 }
 
+/// What [`HostAuth::verify_login`] decided.
+#[derive(Debug)]
+pub(crate) enum Verified {
+    /// The credentials verified; install with [`HostAuth::install_login`].
+    Account {
+        identity: UserIdentity,
+        seq_at_entry: u64,
+    },
+    /// Nothing to install.
+    Refused(LoginOutcome),
+}
+
+/// Outcome of [`HostAuth::resolve`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct Resolved {
+    pub session: Option<DesktopSession>,
+    pub checked: u64,
+    pub current: u64,
+    pub stale: bool,
+}
+
 /// How many times [`HostAuth::current`] re-reads the store when concurrent
 /// re-binds keep the slot from matching what it read.
 const SETTLE_ATTEMPTS: usize = 3;
@@ -86,7 +107,13 @@ const SETTLE_ATTEMPTS: usize = 3;
 /// Outcome of one settle attempt.
 #[derive(Debug, PartialEq)]
 enum Settled {
-    Decided(Option<CurrentSession>),
+    /// `moved`: another command re-bound the slot after it was read, and
+    /// `current` is that newer session because the read reports exactly its
+    /// binding; nothing was written.
+    Decided {
+        current: Option<CurrentSession>,
+        moved: bool,
+    },
     /// The slot was re-bound meanwhile and no longer matches this read.
     Retry,
 }
@@ -167,7 +194,7 @@ impl HostAuth {
                 (slot.session.clone(), slot.seq)
             };
             let fresh = self.read_source(cached.as_ref()).await?;
-            if let Settled::Decided(current) = self.settle(fresh, seq_at_entry) {
+            if let Settled::Decided { current, .. } = self.settle(fresh, seq_at_entry) {
                 return Ok(current);
             }
         }
@@ -219,14 +246,32 @@ impl HostAuth {
 
     /// Verify the credentials and install an account session.
     pub async fn login(&self, username: &str, password: &str) -> Result<LoginOutcome, BantoError> {
+        match self.verify_login(username, password).await? {
+            Verified::Account {
+                identity,
+                seq_at_entry,
+            } => self.install_verified(seq_at_entry, identity).await,
+            Verified::Refused(outcome) => Ok(outcome),
+        }
+    }
+
+    /// The first half of [`Self::login`]: check the mode and the credentials
+    /// without writing the slot. The registry gate installs the result under
+    /// its transition lock ([`Self::install_login`]), so a user switch does
+    /// not overtake a registry command that validated the previous user.
+    pub(crate) async fn verify_login(
+        &self,
+        username: &str,
+        password: &str,
+    ) -> Result<Verified, BantoError> {
         let seq_at_entry = self.seq();
         if self.settings.auth_config().await?.disabled {
-            return Ok(LoginOutcome::AuthDisabled);
+            return Ok(Verified::Refused(LoginOutcome::AuthDisabled));
         }
         let verified = self.users.verify(username, password).await?;
         // The mode may have been turned on while the password was checked.
         if self.settings.auth_config().await?.disabled {
-            return Ok(LoginOutcome::AuthDisabled);
+            return Ok(Verified::Refused(LoginOutcome::AuthDisabled));
         }
         let Some(identity) = verified else {
             let bounded = bound_username_for_audit(username);
@@ -242,9 +287,102 @@ impl HostAuth {
                     result: "failed",
                 })
                 .await;
-            return Ok(LoginOutcome::InvalidCredentials);
+            return Ok(Verified::Refused(LoginOutcome::InvalidCredentials));
         };
+        Ok(Verified::Account {
+            identity,
+            seq_at_entry,
+        })
+    }
+
+    /// The second half of [`Self::login`]: install what
+    /// [`Self::verify_login`] verified, unless the slot moved since.
+    pub(crate) async fn install_login(
+        &self,
+        seq_at_entry: u64,
+        identity: UserIdentity,
+    ) -> Result<LoginOutcome, BantoError> {
         self.install_verified(seq_at_entry, identity).await
+    }
+
+    /// `auth_resolve` (Banto's `resolve_body`): re-validate once and report
+    /// which slot write the answer is about. `checked` is the generation
+    /// read before the store; `current` the one after this call's settle
+    /// (`checked + 1` when this call ended or re-bound the session). If
+    /// another command re-bound the slot while the store was read, nothing
+    /// is written and the answer is `stale` with no session.
+    pub async fn resolve(&self) -> Result<Resolved, BantoError> {
+        let (cached, checked) = {
+            let slot = self.lock();
+            (slot.session.clone(), slot.seq)
+        };
+        let fresh = self.read_source(cached.as_ref()).await?;
+        Ok(match self.settle(fresh, checked) {
+            Settled::Decided {
+                current,
+                moved: false,
+            } => Resolved {
+                current: current.as_ref().map_or_else(|| self.seq(), |c| c.seq),
+                session: current.map(|c| c.session),
+                checked,
+                stale: false,
+            },
+            Settled::Decided { moved: true, .. } | Settled::Retry => Resolved {
+                session: None,
+                checked,
+                current: self.seq(),
+                stale: true,
+            },
+        })
+    }
+
+    /// `auth_change_password`: change the logged-in account's own password
+    /// and return the slot generation after it. The change advances the
+    /// account's `auth_epoch`, which ends its sessions; this session just
+    /// proved the current password, so it is re-bound to the new epoch
+    /// (advancing `seq`), unless the account changed in between (then it
+    /// ends at the next check). The synthetic session owns no credentials
+    /// (`Forbidden`). Only `Unauthorized` can follow a slot write (the
+    /// initial check clearing a revoked session), as in Banto.
+    pub async fn change_own_password(
+        &self,
+        current_password: &str,
+        new_password: &str,
+    ) -> Result<u64, BantoError> {
+        let identity = match self.current().await? {
+            Some(CurrentSession {
+                session: DesktopSession::Account(identity),
+                ..
+            }) => identity,
+            Some(_) => return Err(BantoError::Forbidden),
+            None => return Err(BantoError::Unauthorized),
+        };
+        let new_epoch = self
+            .users
+            .change_password(&identity.username, current_password, new_password)
+            .await?;
+        let seq = {
+            let mut slot = self.lock();
+            if new_epoch == identity.auth_epoch + 1 {
+                if let Some(DesktopSession::Account(session)) = slot.session.as_mut() {
+                    if session.id == identity.id && session.auth_epoch == identity.auth_epoch {
+                        session.auth_epoch = new_epoch;
+                        slot.seq += 1;
+                    }
+                }
+            }
+            slot.seq
+        };
+        // Never the old or new password, nor a hash (Banto spec M14).
+        self.record_ok(
+            &identity,
+            "password_change",
+            "users",
+            Some(&identity.id.to_string()),
+            None,
+        )
+        .await;
+        Ok(seq)
     }
 
     /// Install an account the caller has just verified or created (the
@@ -386,11 +524,17 @@ impl HostAuth {
         };
         if slot.seq != seq_at_entry {
             return match (slot.session.clone(), fresh) {
-                (Some(session), Some(_)) if same => Settled::Decided(Some(CurrentSession {
-                    session,
-                    seq: slot.seq,
-                })),
-                (None, None) => Settled::Decided(None),
+                (Some(session), Some(_)) if same => Settled::Decided {
+                    current: Some(CurrentSession {
+                        session,
+                        seq: slot.seq,
+                    }),
+                    moved: true,
+                },
+                (None, None) => Settled::Decided {
+                    current: None,
+                    moved: true,
+                },
                 _ => Settled::Retry,
             };
         }
@@ -403,7 +547,7 @@ impl HostAuth {
             Some(local @ DesktopSession::AuthDisabledLocal(_)) => Some((local, true)),
             Some(DesktopSession::Account(_)) | None => None,
         };
-        Settled::Decided(match next {
+        let current = match next {
             Some((session, rebound)) => {
                 if rebound {
                     slot.seq += 1;
@@ -420,7 +564,11 @@ impl HostAuth {
                 }
                 None
             }
-        })
+        };
+        Settled::Decided {
+            current,
+            moved: false,
+        }
     }
 
     /// Write `next` and advance `seq` only if `seq` is still `expected`.

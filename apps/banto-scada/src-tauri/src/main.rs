@@ -1,5 +1,8 @@
 //! One embedded read-only host. Hub services and PLC connections stay external.
-use scada_host::{local_bootstrap, Bootstrapper, HubStatus};
+mod auth;
+
+use auth::AuthState;
+use scada_host::{local_bootstrap, local_data_dir, Bootstrapper, HubStatus};
 use scada_model::Project;
 use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
 use serde::Serialize;
@@ -182,6 +185,9 @@ mod tests {
 #[cfg(test)]
 mod native_tests;
 
+#[cfg(test)]
+mod auth_tests;
+
 #[tauri::command]
 async fn hub_catalog(
     state: State<'_, NativeHost>,
@@ -207,21 +213,41 @@ async fn hub_catalog(
         .ok_or("obsolete_catalog".to_owned())
 }
 
+/// Every command of the desktop host, registered once for the app and its
+/// IPC tests.
+fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
+    builder.invoke_handler(tauri::generate_handler![
+        hub_connect,
+        hub_disconnect,
+        hub_saved_endpoint,
+        hub_read_start,
+        hub_read_stop,
+        hub_catalog,
+        auth::auth_status,
+        auth::auth_phase,
+        auth::auth_setup,
+        auth::auth_login,
+        auth::auth_logout,
+        auth::auth_resolve,
+        auth::auth_change_password,
+        auth::auth_transition_to_operational
+    ])
+}
+
 fn main() {
     let bootstrap = local_bootstrap().expect("SCADA settings store unavailable");
-    tauri::Builder::default()
+    // A failed auth start does not stop the app: reading and editing still
+    // work, and each auth command reports why (host-gate design §6).
+    let auth = match local_data_dir() {
+        Ok(dir) => tauri::async_runtime::block_on(AuthState::start(&dir)),
+        Err(_) => AuthState::unavailable("no_data_dir"),
+    };
+    commands(tauri::Builder::default())
         .manage(NativeHost {
             bootstrap,
             active: Mutex::new(Active::default()),
         })
-        .invoke_handler(tauri::generate_handler![
-            hub_connect,
-            hub_disconnect,
-            hub_saved_endpoint,
-            hub_read_start,
-            hub_read_stop,
-            hub_catalog
-        ])
+        .manage(auth)
         .run(tauri::generate_context!())
         .expect("SCADA desktop failed");
 }

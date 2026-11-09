@@ -345,7 +345,10 @@ async fn a_stale_check_never_answers_with_a_role_it_did_not_read() {
     // A stale read that agrees with the slot is answered from the slot.
     assert_eq!(
         auth.settle(Some(local_session(Role::Admin)), stale),
-        Settled::Decided(Some(admin))
+        Settled::Decided {
+            current: Some(admin),
+            moved: true,
+        }
     );
 }
 
@@ -404,5 +407,91 @@ async fn a_login_whose_account_changed_during_the_password_check_does_not_succee
     assert!(matches!(
         auth.current().await.unwrap().unwrap().session,
         DesktopSession::AuthDisabledLocal(_)
+    ));
+}
+
+#[tokio::test]
+async fn resolve_reports_the_generation_it_checked_and_the_one_it_left() {
+    let (_db, auth, admin) = with_admin().await;
+    let empty = auth.resolve().await.unwrap();
+    assert_eq!(
+        (empty.session, empty.checked, empty.current, empty.stale),
+        (None, 0, 0, false)
+    );
+
+    let logged_in = login(&auth, "admin").await;
+    let resolved = auth.resolve().await.unwrap();
+    assert_eq!(resolved.session, Some(logged_in.session));
+    assert_eq!(
+        (resolved.checked, resolved.current, resolved.stale),
+        (logged_in.seq, logged_in.seq, false)
+    );
+
+    // A reset ends the session: this call clears it (`current` = `checked` + 1).
+    auth.users()
+        .reset_password(admin.id, "another-horse-2")
+        .await
+        .unwrap();
+    let ended = auth.resolve().await.unwrap();
+    assert_eq!(ended.session, None);
+    assert_eq!(
+        (ended.checked, ended.current, ended.stale),
+        (logged_in.seq, logged_in.seq + 1, false)
+    );
+}
+
+#[tokio::test]
+async fn a_resolve_overtaken_by_a_re_bind_is_stale_and_writes_nothing() {
+    let (_db, auth, _) = with_admin().await;
+    let logged_in = login(&auth, "admin").await;
+    // Read as of the generation before the login: the slot has moved since.
+    assert_eq!(
+        auth.settle(Some(logged_in.session.clone()), logged_in.seq - 1),
+        Settled::Decided {
+            current: Some(logged_in.clone()),
+            moved: true,
+        }
+    );
+    assert_eq!(auth.seq(), logged_in.seq);
+}
+
+#[tokio::test]
+async fn changing_the_own_password_re_binds_this_session_to_the_new_epoch() {
+    let (db, auth, admin) = with_admin().await;
+    let before = login(&auth, "admin").await;
+    let seq = auth
+        .change_own_password(PASSWORD, "another-horse-2")
+        .await
+        .unwrap();
+    assert_eq!(seq, before.seq + 1);
+    let after = auth.current().await.unwrap().unwrap();
+    assert_eq!(after.seq, seq);
+    assert_eq!(after.session.identity().id, admin.id);
+    assert_eq!(after.session.identity().auth_epoch, admin.auth_epoch + 1);
+    assert!(audit_rows(&db)
+        .await
+        .iter()
+        .any(|(action, resource, _)| action == "password_change" && resource == "users"));
+
+    // A wrong current password changes nothing.
+    assert!(matches!(
+        auth.change_own_password(PASSWORD, "third-horse-3").await,
+        Err(BantoError::Validation { .. })
+    ));
+    assert_eq!(auth.current().await.unwrap(), Some(after));
+}
+
+#[tokio::test]
+async fn only_an_account_session_changes_its_own_password() {
+    let db = TempDb::new();
+    let auth = HostAuth::open(db.path()).await.unwrap();
+    assert!(matches!(
+        auth.change_own_password(PASSWORD, "another-horse-2").await,
+        Err(BantoError::Unauthorized)
+    ));
+    set_disabled(&auth, true, Role::Admin).await;
+    assert!(matches!(
+        auth.change_own_password(PASSWORD, "another-horse-2").await,
+        Err(BantoError::Forbidden)
     ));
 }
