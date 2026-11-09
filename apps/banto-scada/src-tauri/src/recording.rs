@@ -7,7 +7,7 @@
 //! `{"seq", "reply"}` or `{"kind": ...}`. A new subscription of
 //! `recording_attach` delivers its frames as `scada:recording` events to the
 //! webview that attached it, until that webview starts loading another page
-//! or is destroyed ([`Pages`]).
+//! or is destroyed ([`Pages`]); the subscription is then ended as well.
 //! Without a recording owner (the product host until C5), every command
 //! answers `{"kind": "recordingUnavailable", "reason": ...}`.
 use scada_host::desktop_recording::{
@@ -17,36 +17,66 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::future::Future;
 use std::sync::Mutex;
-use tauri::{AppHandle, Emitter, EventTarget, Runtime, State, Webview};
+use tauri::{AppHandle, Emitter, EventTarget, Manager, Runtime, State, Webview};
 use tokio::sync::watch;
 
 /// The current page of each webview, by label. An event emitted with no
 /// listener still succeeds, so a pump cannot tell a reloaded or closed
 /// webview from its emits: the page load and destroy hooks end the page
-/// instead, which stops every pump it started.
+/// instead, which stops every pump it started and ends their subscriptions.
+/// Each page gets its own ID, so a subscription attached again from the
+/// next page of the same webview is taken over at once.
 #[derive(Default)]
-pub struct Pages(Mutex<HashMap<String, watch::Sender<()>>>);
+pub struct Pages(Mutex<PageTable>);
+
+#[derive(Default)]
+struct PageTable {
+    next: u64,
+    current: HashMap<String, Page>,
+}
+
+struct Page {
+    id: u64,
+    ended: watch::Sender<()>,
+}
 
 impl Pages {
-    /// Completes when the current page of `label` ends.
-    fn ended(&self, label: &str) -> impl Future<Output = ()> + Send + 'static {
-        let mut receiver = self
-            .0
-            .lock()
-            .expect("pages mutex poisoned")
-            .entry(label.to_owned())
-            .or_insert_with(|| watch::channel(()).0)
-            .subscribe();
-        async move {
+    /// The current page of `label`, and a future that completes when it
+    /// ends.
+    fn current(&self, label: &str) -> (u64, impl Future<Output = ()> + Send + 'static) {
+        let mut table = self.0.lock().expect("pages mutex poisoned");
+        let PageTable { next, current } = &mut *table;
+        let page = current.entry(label.to_owned()).or_insert_with(|| {
+            *next += 1;
+            Page {
+                id: *next,
+                ended: watch::channel(()).0,
+            }
+        });
+        let mut receiver = page.ended.subscribe();
+        (page.id, async move {
             // Only the sender's drop ends it: nothing is ever sent.
             while receiver.changed().await.is_ok() {}
-        }
+        })
     }
 
-    /// End the current page of `label` (a new page load, or the webview
-    /// destroyed): its pumps stop and release their subscriptions.
-    pub fn end(&self, label: &str) {
-        self.0.lock().expect("pages mutex poisoned").remove(label);
+    /// End the current page of `label`; its ID if it had one.
+    fn end(&self, label: &str) -> Option<u64> {
+        self.0
+            .lock()
+            .expect("pages mutex poisoned")
+            .current
+            .remove(label)
+            .map(|page| page.id)
+    }
+}
+
+/// The page of `label` ended (a new page load, or the webview destroyed):
+/// its pumps stop and its subscriptions are ended, before the next page can
+/// attach. Called by the page hooks of `commands`.
+pub fn end_page<R: Runtime, M: Manager<R>>(manager: &M, label: &str) {
+    if let Some(page) = manager.state::<Pages>().end(label) {
+        manager.state::<DesktopRecording>().end_page(page);
     }
 }
 
@@ -119,8 +149,8 @@ pub async fn recording_attach<R: Runtime>(
     let label = webview.label().to_owned();
     // Taken before the attach: a page that ends meanwhile stops the pump
     // at once rather than leaving it to the next page.
-    let ended = pages.ended(&label);
-    let (result, pump) = state.attach(request).await?;
+    let (page, ended) = pages.current(&label);
+    let (result, pump) = state.attach(request, page).await?;
     if let Some(pump) = pump {
         let target = EventTarget::labeled(label);
         tauri::async_runtime::spawn(pump.run(

@@ -10,7 +10,7 @@ use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
 use serde::Serialize;
 use std::collections::HashSet;
 use tauri::webview::PageLoadEvent;
-use tauri::{AppHandle, Emitter, Manager, Runtime, State, WindowEvent};
+use tauri::{AppHandle, Emitter, Runtime, State, WindowEvent};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
@@ -227,12 +227,12 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
         .manage(recording::Pages::default())
         .on_page_load(|webview, payload| {
             if payload.event() == PageLoadEvent::Started {
-                webview.state::<recording::Pages>().end(webview.label());
+                recording::end_page(webview, webview.label());
             }
         })
         .on_window_event(|window, event| {
             if matches!(event, WindowEvent::Destroyed) {
-                window.state::<recording::Pages>().end(window.label());
+                recording::end_page(window, window.label());
             }
         })
         .invoke_handler(tauri::generate_handler![

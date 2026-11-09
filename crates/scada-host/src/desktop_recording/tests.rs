@@ -42,6 +42,8 @@ impl Drop for TempDir {
 }
 
 const PASSWORD: &str = "correct-horse-1";
+/// The page that attaches in most tests.
+const PAGE: u64 = 1;
 
 struct Fixture {
     recording: DesktopRecording,
@@ -183,7 +185,10 @@ async fn a_host_without_a_recording_owner_answers_why() {
         error_of(recording.call_inspection(json!({})).await),
         unavailable
     );
-    assert_eq!(error_of(recording.attach(json!({})).await), unavailable);
+    assert_eq!(
+        error_of(recording.attach(json!({}), PAGE).await),
+        unavailable
+    );
     assert_eq!(error_of(recording.control(json!({})).await), unavailable);
 }
 
@@ -268,7 +273,7 @@ async fn the_pump_delivers_to_the_attaching_generation_and_ends_at_a_new_one() {
     let f = operational().await;
     let (attached, pump) = f
         .recording
-        .attach(attach(&f.scope, "attach-1"))
+        .attach(attach(&f.scope, "attach-1"), PAGE)
         .await
         .unwrap();
     let reference = attached.reply["outcome"]["subscriptionRef"]
@@ -280,7 +285,7 @@ async fn the_pump_delivers_to_the_attaching_generation_and_ends_at_a_new_one() {
     // A replayed attach answers the same reply and starts no second pump.
     let (again, second) = f
         .recording
-        .attach(attach(&f.scope, "attach-1"))
+        .attach(attach(&f.scope, "attach-1"), PAGE)
         .await
         .unwrap();
     assert_eq!(again, attached);
@@ -326,7 +331,7 @@ async fn the_pump_delivers_to_the_attaching_generation_and_ends_at_a_new_one() {
     // The pump released the subscription; its replayed attach is refused
     // without a session.
     assert_eq!(
-        error_of(f.recording.attach(attach(&f.scope, "attach-1")).await),
+        error_of(f.recording.attach(attach(&f.scope, "attach-1"), PAGE).await),
         json!({"kind": "unauthorized"})
     );
 }
@@ -336,7 +341,7 @@ async fn an_auth_db_read_failure_holds_the_frame_until_the_next_delivery() {
     let f = operational().await;
     let (attached, pump) = f
         .recording
-        .attach(attach(&f.scope, "attach-1"))
+        .attach(attach(&f.scope, "attach-1"), PAGE)
         .await
         .unwrap();
     preflight(&f, "held-change").await;
@@ -367,7 +372,7 @@ async fn a_detach_ends_the_pump_and_a_released_subscription_gets_a_new_one() {
     let f = initializing().await;
     let (attached, pump) = f
         .recording
-        .attach(attach(&f.scope, "attach-1"))
+        .attach(attach(&f.scope, "attach-1"), PAGE)
         .await
         .unwrap();
     let reference = attached.reply["outcome"]["subscriptionRef"]
@@ -378,7 +383,7 @@ async fn a_detach_ends_the_pump_and_a_released_subscription_gets_a_new_one() {
     drop(pump);
     let (_, pump) = f
         .recording
-        .attach(attach(&f.scope, "attach-1"))
+        .attach(attach(&f.scope, "attach-1"), PAGE)
         .await
         .unwrap();
     let (mut events, task) = spawn(pump.expect("released"));
@@ -399,22 +404,32 @@ async fn a_detach_ends_the_pump_and_a_released_subscription_gets_a_new_one() {
         .unwrap();
 }
 
+/// Run `pump` until the returned sender is dropped (the page ends).
+fn spawn_page(
+    pump: FramePump,
+) -> (
+    tokio::sync::oneshot::Sender<()>,
+    mpsc::UnboundedReceiver<RecordingEvent>,
+    tokio::task::JoinHandle<()>,
+) {
+    let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
+    let (sender, events) = mpsc::unbounded_channel();
+    let task = tokio::spawn(pump.run(move |event| sender.send(event).is_ok(), async {
+        let _ = stopped.await;
+    }));
+    (stop, events, task)
+}
+
 #[tokio::test]
-async fn the_end_of_the_attaching_page_stops_the_pump_and_releases_it() {
+async fn the_end_of_the_attaching_page_ends_its_subscription_in_the_registry() {
     let f = initializing().await;
-    let (_, pump) = f
+    let (attached, pump) = f
         .recording
-        .attach(attach(&f.scope, "attach-1"))
+        .attach(attach(&f.scope, "attach-1"), PAGE)
         .await
         .unwrap();
-    let (stop, stopped) = tokio::sync::oneshot::channel::<()>();
-    let (sender, mut events) = mpsc::unbounded_channel();
-    let task = tokio::spawn(
-        pump.unwrap()
-            .run(move |event| sender.send(event).is_ok(), async {
-                let _ = stopped.await;
-            }),
-    );
+    let reference = attached.reply["outcome"]["subscriptionRef"].clone();
+    let (stop, mut events, task) = spawn_page(pump.unwrap());
     tokio::time::sleep(Duration::from_millis(50)).await;
     drop(stop);
     timeout(Duration::from_secs(10), task)
@@ -423,11 +438,107 @@ async fn the_end_of_the_attaching_page_stops_the_pump_and_releases_it() {
         .unwrap();
     // Nothing was delivered, no `ended` either: the page is gone.
     assert!(events.try_recv().is_err());
-    // The subscription is released for a later page's replayed attach.
+    // The subscription is over: a later page replaying its attach is told so.
     let (_, pump) = f
         .recording
-        .attach(attach(&f.scope, "attach-1"))
+        .attach(attach(&f.scope, "attach-1"), PAGE + 1)
         .await
         .unwrap();
-    assert!(pump.is_some());
+    let (mut events, _task) = spawn(pump.expect("the claim was released"));
+    assert_eq!(
+        wire(&next(&mut events).await),
+        json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
+    );
+}
+
+#[tokio::test]
+async fn pages_that_end_free_their_live_subscriptions() {
+    let f = initializing().await;
+    // More pages than the registry's live subscriptions, one after another:
+    // each ended page frees its slot for the next one.
+    for page in 0..8 {
+        let id = format!("attach-{page}");
+        let (_, pump) = f
+            .recording
+            .attach(attach(&f.scope, &id), page)
+            .await
+            .unwrap_or_else(|error| panic!("page {page}: {}", wire(&error)));
+        let (stop, _events, task) = spawn_page(pump.unwrap());
+        drop(stop);
+        timeout(Duration::from_secs(10), task)
+            .await
+            .unwrap()
+            .unwrap();
+    }
+}
+
+#[tokio::test]
+async fn another_open_page_takes_the_subscription_over_at_once() {
+    let f = initializing().await;
+    let (_, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"), PAGE)
+        .await
+        .unwrap();
+    let (old_stop, mut old_events, old_task) = spawn_page(pump.unwrap());
+    // The same page again starts no second pump.
+    let (_, again) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"), PAGE)
+        .await
+        .unwrap();
+    assert!(again.is_none());
+
+    // Another webview's page replays the attach while the first page is
+    // open: delivery moves to the new page at once.
+    let (_, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"), PAGE + 1)
+        .await
+        .unwrap();
+    let (mut events, _task) = spawn(pump.expect("the new page takes over"));
+    // The old pump stops without ending the subscription, even when its
+    // page end arrives afterwards.
+    timeout(Duration::from_secs(10), old_task)
+        .await
+        .unwrap()
+        .unwrap();
+    drop(old_stop);
+    preflight(&f, "takeover-change").await;
+    let RecordingEvent::Frames { state, .. } = next(&mut events).await else {
+        panic!("the new page receives the frames");
+    };
+    assert!(state.is_some());
+    assert!(old_events.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn a_replay_from_the_next_page_finds_the_ended_subscription_before_the_old_pump_stops() {
+    let f = initializing().await;
+    let (attached, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"), PAGE)
+        .await
+        .unwrap();
+    let reference = attached.reply["outcome"]["subscriptionRef"].clone();
+    // The page ends, but its pump has not noticed (its stop never fires).
+    let (_old_stop, mut old_events, old_task) = spawn_page(pump.unwrap());
+    f.recording.end_page(PAGE);
+
+    // The next page's replay ends the subscription and is told so.
+    let (_, pump) = f
+        .recording
+        .attach(attach(&f.scope, "attach-1"), PAGE + 1)
+        .await
+        .unwrap();
+    let (mut events, _task) = spawn(pump.expect("the next page gets a pump"));
+    assert_eq!(
+        wire(&next(&mut events).await),
+        json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
+    );
+    timeout(Duration::from_secs(10), old_task)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(old_events.try_recv().is_err());
 }

@@ -13,16 +13,18 @@
 //! - **Results**: `{"seq": <generation>, "reply": <wire reply>}`. The UI
 //!   drops a reply of a generation other than its current one.
 //! - **Errors**: `{"kind": ...}` ([`RecordingCommandError`]).
-//! - **Subscriptions**: a new subscription of `recording_attach` gets one
-//!   [`FramePump`]. It polls the gate (the registry folds native evidence
+//! - **Subscriptions**: a subscription of `recording_attach` gets one
+//!   [`FramePump`] for the page that attached it. It polls the gate (the registry folds native evidence
 //!   into its latest-one slots only when asked) and re-validates the desktop
 //!   session at every delivery, so a revocation is found without waiting for
 //!   the next command. An auth DB read failure holds the frame in the
 //!   registry's slot until the next delivery; any other refusal ends the
-//!   subscription with a [`RecordingEvent::Ended`].
+//!   subscription with a [`RecordingEvent::Ended`]. When the page ends
+//!   ([`DesktopRecording::end_page`], or the pump's `stop`), its
+//!   subscriptions are ended in the registry too, freeing their live slots.
 //! - **Without a recording owner** (the product host until C5), every
 //!   command answers `{"kind": "recordingUnavailable", "reason": ...}`.
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -161,10 +163,31 @@ pub struct DesktopRecording {
 
 struct Host {
     gate: Arc<RecordingGate>,
-    /// The subscriptions with a running pump, so a replayed attach does not
-    /// start a second one.
-    pumped: Arc<Mutex<BTreeSet<String>>>,
+    pumps: Arc<tokio::sync::Mutex<Pumps>>,
+    /// The pages the host reported ended ([`DesktopRecording::end_page`]).
+    /// Read by a claim, so a subscription of an ended page is ended even if
+    /// its pump has not noticed yet. One ID per page load.
+    ended_pages: Arc<Mutex<BTreeSet<u64>>>,
     interval: Duration,
+}
+
+/// Which pump delivers each subscription. A replayed attach from the same
+/// page starts no second pump. One from another page takes the claim over
+/// at once, so it never waits on the old page's pump to notice anything:
+/// if the old page ended, the subscription is ended and the new pump says
+/// so; if the old page is still open (another webview), delivery moves to
+/// the new page. Every delivery checks its claim under this lock, so a pump
+/// taken over delivers nothing more.
+#[derive(Default)]
+struct Pumps {
+    next: u64,
+    claims: BTreeMap<String, Claim>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct Claim {
+    page: u64,
+    token: u64,
 }
 
 fn parse<T, E>(
@@ -186,7 +209,8 @@ impl DesktopRecording {
         Self {
             host: Ok(Host {
                 gate,
-                pumped: Arc::default(),
+                pumps: Arc::default(),
+                ended_pages: Arc::default(),
                 interval,
             }),
         }
@@ -202,6 +226,19 @@ impl DesktopRecording {
         self.host
             .as_ref()
             .map_err(|reason| RecordingCommandError::Unavailable(reason))
+    }
+
+    /// The page `page` ended (its webview loaded another page or was
+    /// destroyed). Called synchronously from the host's page hooks, before
+    /// the next page can attach, so its subscriptions are ended whichever of
+    /// its pump or the next page's replayed attach comes first.
+    pub fn end_page(&self, page: u64) {
+        if let Ok(host) = &self.host {
+            host.ended_pages
+                .lock()
+                .expect("ended pages mutex poisoned")
+                .insert(page);
+        }
     }
 
     fn gate(&self) -> Result<&RecordingGate, RecordingCommandError> {
@@ -308,19 +345,23 @@ impl DesktopRecording {
         Ok(RecordingResult::of(bound, |reply| reply.as_value().clone()))
     }
 
-    /// `recording_attach` (read). A subscription with no running pump gets
-    /// one: the caller runs it ([`FramePump::run`]) to deliver its events. A
-    /// replayed attach of a subscription whose pump runs gets none.
+    /// `recording_attach` (read) from the page `page` of a webview (an ID the
+    /// host gives each page load). The page gets a pump for the
+    /// subscription unless one of its own already runs: the caller runs it
+    /// ([`FramePump::run`]) to deliver its events. A replay from another
+    /// page takes the subscription over from the earlier page's pump.
     pub async fn attach(
         &self,
         request: Value,
+        page: u64,
     ) -> Result<(RecordingResult, Option<FramePump>), RecordingCommandError> {
         let host = self.host()?;
         let request = parse(request, RecordingWireAttachRequest::from_value)?;
         let bound = host.gate.attach(request).await?;
-        let pump = bound.reply.as_value()["outcome"]["subscriptionRef"]
-            .as_str()
-            .and_then(|reference| FramePump::claim(host, reference));
+        let pump = match bound.reply.as_value()["outcome"]["subscriptionRef"].as_str() {
+            Some(reference) => FramePump::claim(host, reference, page).await,
+            None => None,
+        };
         Ok((
             RecordingResult::of(bound, |reply| reply.as_value().clone()),
             pump,
@@ -337,13 +378,15 @@ impl DesktopRecording {
     }
 }
 
-/// The delivery loop of one subscription. Dropping it (or the future of
-/// [`Self::run`]) releases the subscription, so a later replayed attach
-/// starts a new pump.
+/// The delivery loop of one subscription for one page. When the page ends
+/// ([`Self::run`]'s `stop`) or its webview is gone, the subscription is
+/// ended in the registry as well, freeing its live slot. Dropping a pump
+/// that never ran only releases its claim.
 pub struct FramePump {
     gate: Arc<RecordingGate>,
-    pumped: Arc<Mutex<BTreeSet<String>>>,
+    pumps: Arc<tokio::sync::Mutex<Pumps>>,
     reference: String,
+    claim: Claim,
     interval: Duration,
 }
 
@@ -354,17 +397,43 @@ enum Delivery {
     /// Held: the auth DB could not be read, or the phase refuses the
     /// registry for now. The frame stays in the registry's slot.
     Hold,
-    /// Nothing more will be delivered.
-    Stop,
+    /// The subscription is over (ended, detached, closed).
+    Done,
+    /// The page cannot receive events any more.
+    Gone,
+    /// Another page took the subscription over.
+    TakenOver,
 }
 
 impl FramePump {
-    fn claim(host: &Host, reference: &str) -> Option<Self> {
-        let mut pumped = host.pumped.lock().expect("pump set mutex poisoned");
-        pumped.insert(reference.to_owned()).then(|| Self {
+    async fn claim(host: &Host, reference: &str, page: u64) -> Option<Self> {
+        let mut pumps = host.pumps.lock().await;
+        if let Some(existing) = pumps.claims.get(reference) {
+            if existing.page == page {
+                return None;
+            }
+            // The subscription of an ended page is over, even if its pump
+            // has not stopped yet; the new pump reports it ended.
+            let ended = host
+                .ended_pages
+                .lock()
+                .expect("ended pages mutex poisoned")
+                .contains(&existing.page);
+            if ended {
+                host.gate.end_subscription(reference);
+            }
+        }
+        pumps.next += 1;
+        let claim = Claim {
+            page,
+            token: pumps.next,
+        };
+        pumps.claims.insert(reference.to_owned(), claim);
+        Some(Self {
             gate: host.gate.clone(),
-            pumped: host.pumped.clone(),
+            pumps: host.pumps.clone(),
             reference: reference.to_owned(),
+            claim,
             interval: host.interval,
         })
     }
@@ -373,14 +442,20 @@ impl FramePump {
         &self.reference
     }
 
-    /// Deliver until the subscription ends, `emit` fails (`false`), or
-    /// `stop` completes. Each delivery re-validates the desktop session in
+    fn owns(&self, pumps: &Pumps) -> bool {
+        pumps.claims.get(&self.reference) == Some(&self.claim)
+    }
+
+    /// Deliver until the subscription ends, the page ends (`stop`
+    /// completes), `emit` fails (`false`), or another page takes the
+    /// subscription over. Each delivery re-validates the desktop session in
     /// the gate before it takes a frame (design §5).
     ///
     /// `stop` is the end of the page that attached: an event emitted with no
     /// listener still succeeds, so `emit` alone cannot tell a reloaded or
-    /// closed webview. Stopping drops the pump, which releases the
-    /// subscription (a frame taken meanwhile is for the page that is gone).
+    /// closed webview. A page that ends, or whose events cannot be sent,
+    /// ends its subscription in the registry too, unless another page has
+    /// taken it over (a frame taken meanwhile was for the page that is gone).
     pub async fn run(
         self,
         mut emit: impl FnMut(RecordingEvent) -> bool + Send,
@@ -390,18 +465,31 @@ impl FramePump {
             loop {
                 match self.deliver(&mut emit).await {
                     Delivery::Continue | Delivery::Hold => {}
-                    Delivery::Stop => return,
+                    other => return other,
                 }
                 tokio::time::sleep(self.interval).await;
             }
         };
-        tokio::select! {
-            () = deliver => {}
-            () = stop => {}
+        let outcome = tokio::select! {
+            outcome = deliver => outcome,
+            () = stop => Delivery::Gone,
+        };
+        let mut pumps = self.pumps.lock().await;
+        if self.owns(&pumps) {
+            pumps.claims.remove(&self.reference);
+            if matches!(outcome, Delivery::Gone) {
+                self.gate.end_subscription(&self.reference);
+            }
         }
     }
 
     async fn deliver(&self, emit: &mut (impl FnMut(RecordingEvent) -> bool + Send)) -> Delivery {
+        // Held across the take and the emit, so a takeover waits for this
+        // delivery and the frame reaches the page that owns it.
+        let pumps = self.pumps.lock().await;
+        if !self.owns(&pumps) {
+            return Delivery::TakenOver;
+        }
         let error = match self.gate.frames(&self.reference).await {
             Ok(Bound { seq, reply }) => {
                 if reply.state.is_none() && reply.control.is_none() {
@@ -416,14 +504,15 @@ impl FramePump {
                     state: reply.state.map(|frame| frame.as_value().clone()),
                     control: reply.control.map(|frame| frame.as_value().clone()),
                 });
-                return if delivered && !closed {
-                    Delivery::Continue
-                } else {
-                    Delivery::Stop
+                return match (delivered, closed) {
+                    (false, _) => Delivery::Gone,
+                    (true, true) => Delivery::Done,
+                    (true, false) => Delivery::Continue,
                 };
             }
             Err(error) => error,
         };
+        drop(pumps);
         match error {
             GateError::AuthUnavailable(_) | GateError::Phase(_) => Delivery::Hold,
             error => {
@@ -431,16 +520,21 @@ impl FramePump {
                     subscription_ref: self.reference.clone(),
                     reason: gate_kind(&error),
                 });
-                Delivery::Stop
+                Delivery::Done
             }
         }
     }
 }
 
 impl Drop for FramePump {
+    /// A pump dropped before [`Self::run`] finished (it never ran, or its
+    /// task was aborted) releases its claim if it can without waiting; the
+    /// subscription stays for a replayed attach.
     fn drop(&mut self) {
-        if let Ok(mut pumped) = self.pumped.lock() {
-            pumped.remove(&self.reference);
+        if let Ok(mut pumps) = self.pumps.try_lock() {
+            if self.owns(&pumps) {
+                pumps.claims.remove(&self.reference);
+            }
         }
     }
 }

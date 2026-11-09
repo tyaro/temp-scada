@@ -915,6 +915,21 @@ impl RecordingGate {
         Ok(resolved)
     }
 
+    /// End the subscription `reference` attached through the gate, as a
+    /// revocation does: its live slot and descriptor are freed, and later
+    /// deliveries are `Unauthorized`. For a desktop page that is gone (its
+    /// webview reloaded or closed): nothing is disclosed and native work is
+    /// untouched. Unknown or already ended references are a no-op.
+    pub(crate) fn end_subscription(&self, reference: &str) {
+        let state = &mut *self.lock();
+        if let Some(binding) = state.subscriptions.get_mut(reference) {
+            if !binding.ended {
+                binding.ended = true;
+                state.root.end_subscription(reference);
+            }
+        }
+    }
+
     /// End the registry sessions and subscriptions of every generation
     /// before `seq`, a generation the slot has reached. The slot holds one
     /// session and `seq` only grows, so those generations are over; this

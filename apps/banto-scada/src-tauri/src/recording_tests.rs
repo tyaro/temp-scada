@@ -20,7 +20,7 @@ use std::time::{Duration, Instant};
 use tauri::ipc::{CallbackFn, InvokeBody};
 use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, INVOKE_KEY};
 use tauri::webview::{InvokeRequest, WebviewWindow};
-use tauri::{test::MockRuntime, App, Listener, Manager, WebviewWindowBuilder};
+use tauri::{test::MockRuntime, App, Listener, WebviewWindowBuilder};
 
 /// A fresh app data dir under the OS temp dir, removed on drop.
 struct TempDir(PathBuf);
@@ -437,46 +437,45 @@ fn a_host_without_a_recording_owner_answers_why() {
 }
 
 #[test]
-fn the_end_of_a_page_stops_its_pumps_and_releases_the_subscription() {
+fn a_reloaded_page_ends_its_subscriptions_and_the_next_page_attaches_anew() {
     let h = host();
     let scope = &h.scope;
-    let attach = json!({"request": {"version":1, "kind":"recordingWireAttachRequest",
-        "scope":scope, "attachId":"attach-1", "afterRevision":null}});
-    h.invoke("recording_attach", attach.clone()).unwrap();
-    // What the page load and destroy hooks do (`commands`); the mock
-    // runtime emits neither event.
-    h.app.state::<recording::Pages>().end("main");
+    let attach = |id: &str| {
+        json!({"request": {"version":1, "kind":"recordingWireAttachRequest",
+            "scope":scope, "attachId":id, "afterRevision":null}})
+    };
+    let first = h.invoke("recording_attach", attach("attach-1")).unwrap();
+    let old = first["reply"]["outcome"]["subscriptionRef"].clone();
+    // What the page load hook does on a reload (`commands`); the mock
+    // runtime emits no page load or destroy event.
+    recording::end_page(&h.app, "main");
 
-    // A new page replays the attach: the old pump released the
-    // subscription, so the new page gets a pump of its own and the frames
-    // (an unreleased one would take them and emit to `main` only).
-    let second = WebviewWindowBuilder::new(&h.app, "second", Default::default())
-        .build()
+    // The next page of the same webview: the old subscription is over, so a
+    // replay of its attach is told so; a new attach delivers.
+    h.invoke("recording_attach", attach("attach-1")).unwrap();
+    assert_eq!(
+        h.next_event(),
+        json!({"kind": "ended", "subscriptionRef": old, "reason": "unauthorized"})
+    );
+    let fresh = h.invoke("recording_attach", attach("attach-2")).unwrap();
+    let reference = fresh["reply"]["outcome"]["subscriptionRef"].clone();
+    assert_ne!(reference, old);
+    let change = test_support::change("next-page").as_value().clone();
+    h.invoke("recording_workflow_reserve", json!({"request": change}))
         .unwrap();
-    let events = listen(&second);
-    let replayed = invoke_on(&second, "recording_attach", attach).unwrap();
-    let reference = replayed["reply"]["outcome"]["subscriptionRef"].clone();
-    let change = test_support::change("second-page").as_value().clone();
-    invoke_on(
-        &second,
-        "recording_workflow_reserve",
-        json!({"request": change}),
-    )
-    .unwrap();
-    let leased = invoke_on(
-        &second,
-        "recording_workflow_lease",
-        json!({"stage": "preflight", "request": lease(scope, "preflight", "mutation")}),
-    )
-    .unwrap();
-    invoke_on(
-        &second,
+    let leased = h
+        .invoke(
+            "recording_workflow_lease",
+            json!({"stage": "preflight", "request": lease(scope, "preflight", "mutation")}),
+        )
+        .unwrap();
+    h.invoke(
         "recording_admission",
         json!({"request": admission(scope, "preflight", &leased,
             json!({"kind":"preflight", "change":change}))}),
     )
     .unwrap();
-    let frame = next(&events);
+    let frame = h.next_event();
     assert_eq!(frame["kind"], "frames");
     assert_eq!(frame["subscriptionRef"], reference);
 }
