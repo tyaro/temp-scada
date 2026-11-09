@@ -96,10 +96,10 @@ fn host() -> Host {
 }
 
 /// The recording events emitted to `webview` (each pump emits to the webview
-/// that attached it only).
+/// that attached it only, `EventTarget::Webview`).
 fn listen(webview: &WebviewWindow<MockRuntime>) -> mpsc::Receiver<Value> {
     let (sender, events) = mpsc::channel();
-    webview.listen(RECORDING_EVENT, move |event| {
+    AsRef::<tauri::Webview<MockRuntime>>::as_ref(webview).listen(RECORDING_EVENT, move |event| {
         let _ = sender.send(serde_json::from_str(event.payload()).unwrap());
     });
     events
@@ -359,11 +359,18 @@ fn a_logout_ends_the_subscription_events_of_its_generation() {
     assert_eq!(attached["seq"], moved["seq"]);
     let reference = attached["reply"]["outcome"]["subscriptionRef"].clone();
 
+    // A listener of the webview window of the same label is not the
+    // webview's: it receives nothing.
+    let (sender, window_events) = mpsc::channel::<String>();
+    h.webview.listen(RECORDING_EVENT, move |event| {
+        let _ = sender.send(event.payload().to_owned());
+    });
     h.invoke("auth_logout", json!({})).unwrap();
     assert_eq!(
         h.next_event(),
         json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
     );
+    assert!(window_events.try_recv().is_err());
     assert_eq!(
         h.invoke(
             "recording_attach",

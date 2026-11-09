@@ -157,7 +157,9 @@ pub async fn recording_attach<R: Runtime>(
     let (page, ended) = pages.current(&label, &state);
     let (result, pump) = state.attach(request, page).await?;
     if let Some(pump) = pump {
-        let target = EventTarget::labeled(label);
+        // The webview only: `labeled` would also reach the listeners of the
+        // window and webview window of the same label.
+        let target = EventTarget::webview(label);
         tauri::async_runtime::spawn(pump.run(
             move |event| app.emit_to(target.clone(), RECORDING_EVENT, event).is_ok(),
             ended,
