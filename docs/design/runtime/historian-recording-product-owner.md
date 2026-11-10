@@ -451,7 +451,7 @@ C5-5aの実装で次を定めた。
   - 受信器が`resyncRequired`になったら、新しいattachIdで`afterRevision: null`のattachをし直す。成功するまで`resyncRequired: true`とする。回数は`ended`と同じ上限を共有する。
 - **観測のrepeat**: `observe`は一つのtargetに一つのquery（observationId）を作り、`pending`の間は250ms（hostの`FRAME_POLL_INTERVAL`と同じ）ごとに同じrequestを送る（台帳の`repeatObservation`で新しいattempt）。attemptの返信を失った（`transport`が`returned`以外）queryは、そのqueryをrepeatしない。新しいobservationIdのqueryを最大2回まで作り直し、それでも終端を得られなければ`query: "transportLost"`とする。observationは読取だけで、native処理を起こさない。
 - **再読込（page reload）**: hostはpageの終わりにそのpageの購読を終える（`Pages`・`end_page`）。新しいpageでは新しい台帳・受信器・portを作り、新しいattachIdでattachする。前のpageの元callのtokenは引き継がない。前のpageで予約したworkflowは、新しいcoordinatorでは続けられず、snapshotの表示（`lastKnown`／`currentSubscription`）だけになる。画面は「前の画面の作業が残っています。アプリを終了すると候補は破棄されます」と案内する。hostから保持workflowを引き継ぐ読取commandと、同じprincipalの再login後のCallInspectionによる回収は後続の区切りで扱う。§9の「再読込後のattachし直し」は表示までとする。
-- **slotがEmptyのとき**: `recording_slot`が`{"state": "empty", "reason"}`ならportもcoordinatorも作らず、`recordingAsyncOperations`へ`undefined`をpublishする（記録操作画面は「未接続」）。理由は記録管理画面の照会で示し、記録操作画面へ新しいpropで渡さない。
+- **slotがEmptyのとき**: `recording_slot`が`{"state": "empty", "reason"}`ならportもcoordinatorも作らず、`recordingAsyncOperations`へ`undefined`をpublishする（記録操作画面は「未接続」）。閉じたcoordinatorに未完了の作業がなければ、記録操作画面はそれを手放す（未完了の間は監視を続け、安全に終端した時点で手放す）。次にInstalledになったcoordinatorは「切替」を押さなくても表示される。理由は記録管理画面の照会で示し、記録操作画面へ新しいpropで渡さない。
 - **slotの読み直し**: 次の契機で`recording_slot`を読み直す。定期的なpollingはしない。
   - 起動時、sessionの変化（`ManagementAccess.sessionKey`）、ProjectのID・revisionの変化。
   - `ownerClosed`になったとき（原因が`controlFrame`・`hostClosed`・`slotEmpty`のどれでも。`ended`の`closed`、`recordingUnavailable`・`closed`の拒否を含む）。
@@ -470,7 +470,7 @@ C5-5bの実装で次を定めた。
 - **frameが元replyより先**: hostはadmissionの登録と同時にstate frameを送るので、coordinatorはadmitの返信より先に、cached frameのAcceptedからobserveを呼ぶことがある。portは台帳にそのadmissionの元replyが保存されるまでqueryを送らずに待ち（`query: "pending"`）、保存されたら束縛して送る。cached frameを台帳の証拠にしない。
 - **台帳の容量**: 元call台帳とobservation台帳は、終端を得ても最大reply予約を返さなかったため、一つのrootで予約からreconcileまでを通せなかった（admissionごとにread 2MiBのうち約520KiB、observation attemptごとに4MiBのうち約1MiB）。2026-11-10のユーザー判断で、終端（observationでは`pending`も）を保存したら予約を実寸へ置き換えて余りを返すことにした（[元call台帳](historian-recording-wire-delivery-ledger.md)§10、observation台帳§6）。§8.1の12（長時間のrootの上限）はIDの件数（各4096）と終端を得ていない予約に残る。
 - **再読込後の表示**: `AsyncOperationsState`へ`earlierWork`を加えた。ownerの最新のadmission（cached frame）がこのcoordinatorのものでなく、Acceptedで、その操作結果が未着か候補（`candidate`・`paused`）のときtrueとし、記録操作画面は「前の画面の作業が残っています。アプリを終了すると候補は破棄されます。」と示す。
-- **slotの読み直し**: 記録管理画面の操作（初回設定・再開・停止中の計画適用・停止・owner contextの付け替え）が成功したら`recording_slot`を読み直す。同じgenerationなら`seqChanged`以外では作り直さない。新しいcoordinatorは、記録操作画面の既存の切替（「選択した接続へ切替」）で選ばれるまで旧ownerの表示を残す。
+- **slotの読み直し**: 記録管理画面の操作（初回設定・再開・停止中の計画適用・停止・owner contextの付け替え）が成功したら`recording_slot`を読み直す。同じgenerationなら`seqChanged`以外では作り直さない。Emptyを挟まずに新しいcoordinatorへ置き換わったときは、記録操作画面の既存の切替（「選択した接続へ切替」）で選ばれるまで旧ownerの表示を残す。
 - **mock host**: e2eの登録処理は`__fixtures__/recording-async-port.ts`のharnessを、Tauri commandとeventの形で包んだもの（`__fixtures__/recording-native-host.ts`）である。
 
 #### 時計

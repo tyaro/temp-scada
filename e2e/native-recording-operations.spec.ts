@@ -276,6 +276,36 @@ test("a reloaded page attaches anew, shows the earlier work and sends none of it
   ).toEqual([]);
 });
 
+test("an empty slot reads as offline and the next root attaches by itself", async ({
+  page,
+}) => {
+  await ready(page);
+  await onHost(page, "setEmpty", "no_recording_run");
+  await onHost(page, "replaceRoot");
+  await expect(dialog(page)).toContainText("記録操作サービスは未接続です");
+  await expect(dialog(page)).not.toContainText("以前の対象の操作を監視");
+  await button(page, "閉じる").click();
+  // Changing the Project and coming back reads the slot, now installed again.
+  await openProject(page, {
+    ...file(),
+    buffer: Buffer.from(
+      JSON.stringify({
+        ...project,
+        manifest: {
+          ...project.manifest,
+          projectRevision: project.manifest.projectRevision + 1,
+        },
+      }),
+    ),
+  });
+  await onHost(page, "setEmpty", null);
+  await openProject(page, file());
+  await open(page);
+  await expect(button(page, "新しい変更を検査")).toBeEnabled();
+  await expect(dialog(page)).not.toContainText("以前の対象の操作を監視");
+  await expect(button(page, "選択した接続へ切替")).toBeDisabled();
+});
+
 test("after ownerClosed the slot is read again and the new root is attached", async ({
   page,
 }) => {

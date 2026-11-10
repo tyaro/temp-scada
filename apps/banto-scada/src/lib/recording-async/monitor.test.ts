@@ -144,6 +144,41 @@ it("service replacement keeps the old owner until safe terminal and explicit swi
   expect(s.m.switchToSelected()).toBe(true);
   expect(s.m.current().canPreflight).toBe(true);
 });
+it("a closed owner with nothing left reads as offline and the next owner attaches", () => {
+  const s = setup(),
+    h2 = createAsyncPortHarness(),
+    r2 = createAsyncRecordingOperationsCoordinator(h2.port, () => 100);
+  s.root.close();
+  s.m.select({ ...s.selected, client: undefined });
+  expect(s.m.current().connection).toBe("offline");
+  expect(s.m.current().state).toBeUndefined();
+  expect(s.m.current().oldOwner).toBe(false);
+  s.m.select({ ...s.selected, client: r2.client });
+  expect(s.m.current().state).toBe(r2.client.current());
+  expect(s.m.current().canPreflight).toBe(true);
+});
+it("a closed owner with a candidate stays watched until it is safe, then is let go", async () => {
+  const s = setup();
+  await candidate(s);
+  s.h.configure({ autoAck: false });
+  expect(s.m.discard(ctl())).toBe(true);
+  await flush();
+  s.root.close();
+  s.m.select({ ...s.selected, client: undefined });
+  expect(s.m.current().connection).toBe("offline");
+  expect(s.m.current().oldOwner).toBe(true);
+  expect(s.m.current().state?.closed).toBe(true);
+  s.h.ack(1);
+  await flush();
+  expect(s.m.current().state).toBeUndefined();
+  expect(s.m.current().oldOwner).toBe(false);
+});
+it("an open owner is kept when its client is withdrawn", () => {
+  const s = setup();
+  s.m.select({ ...s.selected, client: undefined });
+  expect(s.m.current().oldOwner).toBe(true);
+  expect(s.m.current().state).toBe(s.root.client.current());
+});
 it("unknown owner cannot be replaced even after several selected services", async () => {
   const s = setup();
   s.h.configure({ autoAck: false });
