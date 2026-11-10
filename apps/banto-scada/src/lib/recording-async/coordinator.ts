@@ -56,6 +56,7 @@ import {
   onPromise,
 } from "./local-validation";
 import { createIdPools, type IdRole } from "./ids";
+import type { RecordingWorkflowResumption } from "./resumption";
 import type {
   AsyncOperationsClient,
   AsyncOperationsState,
@@ -128,6 +129,7 @@ interface Intent {
 export function createAsyncRecordingOperationsCoordinator(
   port: AsyncRecordingOperationsPortV2,
   now = () => performance.now(),
+  resumption?: RecordingWorkflowResumption,
 ) {
   // Membership only: a structural `version: 2`, a Proxy or a v1 port is refused.
   if (!isAsyncRecordingPortV2(port))
@@ -160,6 +162,10 @@ export function createAsyncRecordingOperationsCoordinator(
   });
   let hostRefusal: PortHostRefusal | undefined,
     wireRefusal: RecordingWireError | undefined;
+  /** A taken-over workflow belongs to the first view bound (design C5 §7.2). */
+  const unclaimed = Object.freeze({});
+  let resumed = false,
+    reservedChange: RecordingChangeRequest | undefined;
   /** The admit whose reply was lost (transport ended without a reply). */
   let lostAdmit:
       | PortCallV2<RecordingAdmissionRequest, RecordingAdmissionReply>
@@ -313,6 +319,8 @@ export function createAsyncRecordingOperationsCoordinator(
       completion: t?.original,
       lastApplied,
       earlierWork: earlierWork(),
+      resumed,
+      reservedChange,
       read: readPhase,
       delivery: workflow?.read?.delivery,
       canPreflight: mutable && workflowFinished(),
@@ -689,6 +697,7 @@ export function createAsyncRecordingOperationsCoordinator(
     const next = parseRecordingAdmissionReply(input);
     if (!request || !sameOwnedJson(next.request, request))
       throw Error("wrong admission");
+    if (request.action.kind === "preflight") reservedChange = undefined;
     if (reply) {
       const a = reply.outcome.kind,
         b = next.outcome.kind;
@@ -727,6 +736,70 @@ export function createAsyncRecordingOperationsCoordinator(
       if (workflow) workflow.changeRef = next.outcome.handle.changeRef;
       observeOperation(next.outcome.handle);
     } else observeRead(next.outcome.handle, next);
+  }
+  /**
+   * Rebuilds the workflow from the admissions the host recorded. Only the last
+   * accepted operation is observed: its terminal gives what the earlier stages
+   * led to. No call is sent again (design C5 §7.2 "workflowの引継ぎ").
+   */
+  function restore(seed: RecordingWorkflowResumption) {
+    resumed = true;
+    const last = seed.admissions.at(-1);
+    if (!last) {
+      reservedChange = seed.change;
+      return;
+    }
+    if (!pools.reserve({ mutationAdmission: 4, callerOperation: 2 }))
+      throw Error("capacity");
+    const w: Workflow = {
+      identity: unclaimed,
+      change: seed.change,
+      operations: {},
+      credits: { mutationAdmission: 4, callerOperation: 2 },
+      attempted: {},
+    };
+    workflow = w;
+    type Accepted = Extract<
+      RecordingAdmissionReply["outcome"],
+      { kind: "accepted" }
+    >["handle"];
+    let operation: Accepted | undefined,
+      read: { handle: Accepted; reply: RecordingAdmissionReply } | undefined;
+    for (const a of seed.admissions) {
+      if (a.request.action.kind !== "reconcile")
+        w.attempted[a.request.action.kind] = true;
+      if (a.reply.outcome.kind !== "accepted") continue;
+      const handle = a.reply.outcome.handle;
+      if (handle.kind === "operation") {
+        w.changeRef = handle.changeRef;
+        operation = handle;
+        read = undefined;
+      } else read = { handle, reply: a.reply };
+    }
+    request = last.request;
+    reply = last.reply;
+    admission =
+      last.reply.outcome.kind === "accepted"
+        ? "accepted"
+        : last.reply.outcome.kind === "rejected"
+          ? "rejected"
+          : "unknown";
+    if (operation) observeOperation(operation);
+    else if (admission !== "unknown") releaseCredits();
+    if (!read) return;
+    // The read's result merges into the operation's, so it follows its terminal.
+    const { handle, reply: accepted } = read;
+    const follow = () => {
+      if (workflow !== w) return;
+      try {
+        observeRead(handle, accepted);
+      } catch {
+        invalid = true;
+      }
+      publish();
+    };
+    if (w.current?.completion) void w.current.completion.then(follow, follow);
+    else follow();
   }
   function snapshotEvidence(next: RecordingWireOwnerSnapshot) {
     if (
@@ -1308,6 +1381,10 @@ export function createAsyncRecordingOperationsCoordinator(
       )
         throw Error("Recording async owner closed");
       const view: View = { identity, active: true, qualifies };
+      if (workflow?.identity === unclaimed) {
+        workflow.identity = identity;
+        publish();
+      }
       return Object.freeze({
         preflight: (change: RecordingChangeRequest, c: IntentControl) =>
           accept(view, "preflight", change, c),
@@ -1325,6 +1402,13 @@ export function createAsyncRecordingOperationsCoordinator(
     },
   });
   clients.add(client);
+  if (resumption)
+    try {
+      restore(resumption);
+    } catch {
+      // Not taken over: the owner's frames still show that earlier work exists.
+      invalid = true;
+    }
   publish();
   let unsubscribe: (() => void) | undefined;
   try {

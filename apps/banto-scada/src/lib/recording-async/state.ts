@@ -89,6 +89,10 @@ export interface AsyncOperationsState {
   readonly lastApplied?: AppliedSuccess;
   /** The owner holds another client's unfinished workflow (cached frames only). */
   readonly earlierWork: boolean;
+  /** Created with the caller's own workflow, taken over from the host. */
+  readonly resumed: boolean;
+  /** A reservation taken over with no admission: preflight continues it. */
+  readonly reservedChange?: RecordingChangeRequest;
   readonly read:
     | "idle"
     | "awaitingAdmission"

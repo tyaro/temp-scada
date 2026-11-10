@@ -207,6 +207,11 @@ fn the_tauri_commands_alone_run_a_workflow_to_the_original_apply_reconcile() {
         reserved,
         json!({"seq": seq, "reply": {"changeId": "ipc-change"}})
     );
+    // A page that did not reserve it takes the reservation over.
+    assert_eq!(
+        h.invoke("recording_workflow_resumption", json!({})).unwrap(),
+        json!({"seq": seq, "reply": {"state": "held", "change": change, "admissions": []}})
+    );
 
     // A subscription delivers the workflow's revisions as events.
     let attached = h

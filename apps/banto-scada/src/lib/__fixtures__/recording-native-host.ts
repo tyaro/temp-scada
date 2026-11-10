@@ -23,6 +23,11 @@ export function createNativeRecordingHost(emit: Emit) {
   let subscription: string | null = null;
   let unsubscribe = () => {};
   let empty: string | null = null;
+  /** What the gate would hold: the earlier page's admissions and results. */
+  let held: {
+    resumption: unknown;
+    outcomes: { target: unknown; outcome: unknown }[];
+  } | null = null;
 
   function snapshot() {
     return h.frame.display.snapshot;
@@ -63,6 +68,10 @@ export function createNativeRecordingHost(emit: Emit) {
     );
     let outcome: unknown = { kind: "pending" };
     if (o?.settled) outcome = ((await o.promise) as any).outcome;
+    const earlier = held?.outcomes.find(
+      (x) => JSON.stringify(x.target) === JSON.stringify(target),
+    );
+    if (earlier) outcome = earlier.outcome;
     return {
       version: 1,
       kind: "recordingWireObservationReply",
@@ -80,6 +89,8 @@ export function createNativeRecordingHost(emit: Emit) {
     switch (cmd) {
       case "recording_workflow_reserve":
         return result({ changeId: args.request.changeId });
+      case "recording_workflow_resumption":
+        return result(held?.resumption ?? { state: "none" });
       case "recording_workflow_lease": {
         const request: PortLeaseRequestV2 =
           args.stage === "preflight" || args.stage === "discard"
@@ -166,6 +177,34 @@ export function createNativeRecordingHost(emit: Emit) {
     },
     patch(owner: Partial<OwnerPatch>) {
       h.emit(owner);
+    },
+    /** What the gate holds after this page: for the next page's host. */
+    async workflow() {
+      const admissions = h.admissions.filter((a) => a.accepted);
+      const outcomes = [];
+      for (const o of h.operations)
+        if (o.settled)
+          outcomes.push({
+            target: o.target,
+            outcome: ((await o.promise) as any).outcome,
+          });
+      return {
+        resumption: {
+          state: "held",
+          change: (admissions[0]?.request.action as any)?.change,
+          admissions: admissions.map((a) => ({
+            request: a.request,
+            reply: a.accepted,
+          })),
+        },
+        outcomes,
+      };
+    },
+    hold(next: typeof held) {
+      held = next;
+      // The host's operation references continue after the earlier page's.
+      for (const o of next?.outcomes ?? [])
+        h.operations.push({ target: o.target, settled: false } as never);
     },
     /** The operation ID of each accepted operation, in order. */
     operationIds: () => h.operations.map((o) => o.handle.request.operationId),
