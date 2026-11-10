@@ -1226,6 +1226,10 @@ export function createAsyncRecordingOperationsCoordinator(
         target: { kind: read ? "reconciliation" : "operation", ref: t.ref },
       });
     } catch {
+      // `take` already consumed the reservation (the ID is used, never reserved).
+      // The scope and the ref were validated before, so this is a local fault.
+      invalid = true;
+      publish();
       return false;
     }
     cancelCall = "pending";
