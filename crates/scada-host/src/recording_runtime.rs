@@ -31,9 +31,11 @@ use tokio::sync::Mutex;
 
 mod inspection;
 mod owner;
+mod resume;
 mod sdk;
 mod setup;
 pub use owner::{ExitOutcome, StopFailure};
+pub use resume::Reconfigured;
 pub use setup::{
     default_retention_policy, SetupFailure, DEFAULT_RETENTION_MS, DEFAULT_RETENTION_POLICY_ID,
     MAX_CLOCK_SKEW_MS,
@@ -517,7 +519,7 @@ impl RecordingRuntime {
         };
         let snapshot = setup::resolve(resolve, &mapping).await?;
         if new_mapping {
-            setup::complete(&mut mapping, &snapshot)?;
+            setup::complete(&mut mapping, &snapshot, &[])?;
         }
         setup::check(&mapping, &snapshot)?;
         let store = supervisor.take_store().map_err(|_| SetupFailure::Busy)?;

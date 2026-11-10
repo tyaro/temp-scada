@@ -151,3 +151,84 @@ async fn the_slot_is_read_by_a_viewer_and_the_stop_needs_an_admin_and_a_recordin
         json!({"kind": "recordingUnavailable", "reason": "store_locked"})
     );
 }
+
+#[tokio::test]
+async fn the_resume_and_the_reconfiguration_need_an_admin_and_an_applied_plan() {
+    let (_dir, auth, runtime) = gated().await;
+    let project = project();
+    // The synthetic Admin: no Hub, then no applied plan.
+    assert_eq!(
+        kind(resume(&auth, &runtime, &project, None).await),
+        "hub_not_configured"
+    );
+    assert_eq!(
+        kind(reconfigure(&auth, &runtime, &project, None).await),
+        "not_allowed"
+    );
+
+    auth.transition_to_operational("admin", PASSWORD, "管理者")
+        .await
+        .unwrap();
+    auth.users_create("viewer", PASSWORD, "閲覧者", Role::Viewer)
+        .await
+        .unwrap();
+    auth.logout().await.unwrap();
+    assert_eq!(
+        kind(resume(&auth, &runtime, &project, None).await),
+        "unauthorized"
+    );
+    assert_eq!(
+        kind(reconfigure(&auth, &runtime, &project, None).await),
+        "unauthorized"
+    );
+    assert!(auth.login("viewer", PASSWORD).await.unwrap().success);
+    assert_eq!(
+        kind(resume(&auth, &runtime, &project, None).await),
+        "forbidden"
+    );
+    assert_eq!(
+        kind(reconfigure(&auth, &runtime, &project, None).await),
+        "forbidden"
+    );
+    auth.logout().await.unwrap();
+
+    // An Admin's refusals are audited.
+    assert!(auth.login("admin", PASSWORD).await.unwrap().success);
+    assert_eq!(
+        kind(reconfigure(&auth, &runtime, &project, None).await),
+        "not_allowed"
+    );
+    let closed = RecordingRuntime::unavailable(crate::recording_runtime::STORE_LOCKED);
+    assert_eq!(
+        serde_json::to_value(
+            reconfigure(&auth, &closed, &project, None)
+                .await
+                .unwrap_err()
+        )
+        .unwrap(),
+        json!({"kind": "recordingUnavailable", "reason": "store_locked"})
+    );
+    let pool = sqlx::SqlitePool::connect_with(
+        sqlx::sqlite::SqliteConnectOptions::new().filename(_dir.0.join(crate::auth::AUTH_DB_FILE)),
+    )
+    .await
+    .unwrap();
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT action, result FROM audit_log WHERE resource = 'recording' ORDER BY id",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        rows.iter()
+            .filter(|(action, _)| action == "reconfigure" || action == "resume")
+            .map(|(a, r)| (a.as_str(), r.as_str()))
+            .collect::<Vec<_>>(),
+        vec![
+            ("resume", "failed"),
+            ("reconfigure", "failed"),
+            ("reconfigure", "failed"),
+            ("reconfigure", "failed"),
+        ]
+    );
+}

@@ -59,6 +59,9 @@ pub enum SetupFailure {
     ResolutionMismatch,
     /// A store step failed; whether it was saved is read again next time.
     StoreFailed,
+    /// The store refused the plan: the same plan ID and revision was applied
+    /// before with other content, or the DB changed after it was read.
+    PlanConflict,
     /// Recording was accepted but stopped before running.
     StartFailed,
 }
@@ -78,6 +81,7 @@ impl SetupFailure {
             Self::TagsUnresolved => "tags_unresolved",
             Self::ResolutionMismatch => "resolution_mismatch",
             Self::StoreFailed => "store_failed",
+            Self::PlanConflict => "plan_conflict",
             Self::StartFailed => "start_failed",
         }
     }
@@ -94,7 +98,7 @@ pub(super) fn now_ms() -> i64 {
         .unwrap_or(0)
 }
 
-fn new_id(prefix: &str) -> String {
+pub(super) fn new_id(prefix: &str) -> String {
     format!("{prefix}:{}", uuid::Uuid::new_v4())
 }
 
@@ -116,7 +120,7 @@ pub fn default_retention_policy() -> RetentionClockPolicy {
 }
 
 /// `desired` with its members in `memberId` order, as the store keeps it.
-fn canonical(desired: &Value) -> Value {
+pub(super) fn canonical(desired: &Value) -> Value {
     let mut value = desired.clone();
     if let Some(members) = value["group"]["members"].as_array_mut() {
         members.sort_by(|a, b| a["memberId"].as_str().cmp(&b["memberId"].as_str()));
@@ -133,7 +137,7 @@ fn value_type(member: &Value) -> Option<ValueType> {
 }
 
 /// Whether `mapping` resolves `desired` (the store's resolution rule).
-fn fits(mapping: &RecordingMapping, desired: &Value) -> bool {
+pub(super) fn fits(mapping: &RecordingMapping, desired: &Value) -> bool {
     let group = &desired["group"];
     let Some(members) = group["members"].as_array() else {
         return false;
@@ -258,12 +262,17 @@ pub(super) fn draft(desired: &Value) -> Result<RecordingMapping, SetupFailure> {
 }
 
 /// Fills a drafted mapping's source (the value's own, not the catalog
-/// label) and unit from the resolution.
+/// label) and unit from the resolution. Members in `kept` keep the identity
+/// they were registered with.
 pub(super) fn complete(
     mapping: &mut RecordingMapping,
     snapshot: &GenerationSnapshot,
+    kept: &[String],
 ) -> Result<(), SetupFailure> {
     for member in &mut mapping.members {
+        if kept.contains(&member.member_id) {
+            continue;
+        }
         let Some(BindingView::Resolved {
             tag,
             value: Some(value),

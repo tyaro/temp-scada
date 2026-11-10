@@ -10,17 +10,17 @@ use scada_model::recording_operations::RecordingChangeRequest;
 use scada_model::recording_wire::{RecordingWireAttachRequest, RecordingWireLeaseRequest};
 use scada_runtime::recording_operations::OperationsPhase;
 
-struct Owned {
-    dir: TempDir,
-    _hub: Hub,
-    auth: Arc<AuthHost>,
-    gate: Arc<RecordingGate>,
-    runtime: RecordingRuntime,
-    project: Project,
+pub(super) struct Owned {
+    pub(super) dir: TempDir,
+    pub(super) _hub: Hub,
+    pub(super) auth: Arc<AuthHost>,
+    pub(super) gate: Arc<RecordingGate>,
+    pub(super) runtime: RecordingRuntime,
+    pub(super) project: Project,
 }
 
 /// A recording started by the first setup, with its root installed.
-async fn owned() -> Owned {
+pub(super) async fn owned() -> Owned {
     let dir = TempDir::new();
     let hub = Hub::new(&both()).await;
     let auth = Arc::new(AuthHost::start(&dir.0).await.unwrap());
@@ -197,7 +197,7 @@ fn disable(scope: &Value) -> RecordingChangeRequest {
     .unwrap()
 }
 
-fn stage_lease(scope: &Value, id: &str) -> RecordingWireLeaseRequest {
+pub(super) fn stage_lease(scope: &Value, id: &str) -> RecordingWireLeaseRequest {
     RecordingWireLeaseRequest::from_value(json!({
         "version":1, "kind":"recordingWireLeaseRequest", "scope":scope,
         "leaseRequestId":format!("{id}-lease"), "admissionId":id, "role":"mutation",
@@ -206,7 +206,12 @@ fn stage_lease(scope: &Value, id: &str) -> RecordingWireLeaseRequest {
     .unwrap()
 }
 
-fn admission(scope: &Value, id: &str, lease: &Value, action: Value) -> RecordingAdmissionRequest {
+pub(super) fn admission(
+    scope: &Value,
+    id: &str,
+    lease: &Value,
+    action: Value,
+) -> RecordingAdmissionRequest {
     RecordingAdmissionRequest::from_value(json!({
         "version":1, "kind":"recordingAdmissionRequest", "ownerRef":scope["ownerRef"],
         "admissionId":id, "context":scope["context"],
@@ -241,7 +246,7 @@ async fn preflight(o: &Owned, scope: &Value) -> (RecordingChangeRequest, Value) 
     (change, accepted)
 }
 
-async fn until_phase(gate: &RecordingGate, phase: OperationsPhase) {
+pub(super) async fn until_phase(gate: &RecordingGate, phase: OperationsPhase) {
     tokio::time::timeout(Duration::from_secs(10), async {
         while gate.owner_phase() != Some(phase) {
             tokio::time::sleep(Duration::from_millis(10)).await;
