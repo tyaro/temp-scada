@@ -5,7 +5,9 @@
 ## 1. 範囲と前提
 
 - **対象**: このWindows PCの既存Hub（`127.0.0.1:8722`）と、C3で受け入れたR系PLC（`plc_slmp.group1.*`）のタグ。記録は単一group、周期1000ms。
-- **しないこと**: PLCへの書込み、Hubサービスの起動・停止・構成変更、実機側の故障注入。Bad／Staleが自然に起きなければ「未観測」と記録し、モックHubの試験（C5-2、H3b）に委ねる。HubのSIM切替でReal→SIMを起こす試験も行わない（Hubの構成変更になるため。行う場合は別途判断する）。
+- **しないこと**: PLCへの書込み、受入中のHubサービスの起動・停止・構成変更、実機側の故障注入。Bad／Staleが自然に起きなければ「未観測」と記録し、モックHubの試験（C5-2、H3b）に委ねる。HubのSIM切替でReal→SIMを起こす試験も行わない（Hubの構成変更になるため。行う場合は別途判断する）。
+- **受入前に行ったHubの変更（2026-11-10）**: カタログにSIMタグがなく§3.7を実施できなかったため、受入の開始前に、ユーザーの判断でSIM専用の接続`s7-sim`（SLMP、`simulation=true`、接続先`127.0.0.1:5200`）、`group1`（周期1000ms）、書込み不可のタグ`s7-sim.group1.SCADA_C5_SIM_D100`（D100、i16）を追加した。追加後のcatalog revisionは4、既存の`plc_slmp`・`plc_q`は`connected`、`source=real`のまま。
+- **起動元とデータの場所**: アプリ・`real_hub_read`・DB probeは、すべてWindowsの通常のterminalから起動する。パッケージ版のデスクトップアプリの配下で起動すると、`%LOCALAPPDATA%`への書込みがそのアプリの領域（`%LOCALAPPDATA%\Packages\<パッケージ>\LocalCache\Local\temp-scada`）へリダイレクトされることがある（Codexのデスクトップアプリで確認）。起動元が混ざると、DB probeが別のDBを見る。また、`hub-read.json`のない場所で接続すると、未ロックダウンのHubでは新しいreadキーが発行され、以前のキーは失効されずに残る。
 - **記録DB**: アプリdata dir（`%LOCALAPPDATA%\temp-scada`）の`historian\`と`historian-store.json`（§8の1）。これを検証用DBとして使う。既にある場合は、アプリを止めてから`historian\`・`historian-store.json`・`historian-store.lock`をまとめて別名へ退避し、新しいDBで始める（identity fileだけを残すと`store_identity_missing`になる）。認証DB・Hub資格情報（`scada-auth.sqlite3`・`hub-read.json`・`installation-id`）は触らない。
 - **権限**: 記録の開始・停止・再開・計画適用はAdmin（認証無効モードの合成Adminを含む）。照会はViewer以上。
 - **時刻**: 履歴画面の時刻入力はUTC（末尾`Z`・ミリ秒3桁）。日本時間から9時間引く。DB probe（§2.3）の時刻もUTC。
@@ -37,7 +39,7 @@ cd apps/banto-scada/src-tauri && cargo run --locked
 cargo run --locked -p scada-host --example real_hub_read -- plc_slmp.group1.D3000 plc_slmp.group1.SCADA_C3_D4000_ZERO plc_slmp.group1.SCADA_C3_M1000 plc_slmp.group1.SCADA_C3_M1500_FALSE
 ```
 
-4件が`tag_present=…:true`、`quality=good`、`source=real`で、D3000の値と行時刻が進むことを確かめる。SIM確認（§3.7）に使うタグ名を次で探し、数値か真偽値の一件を選んで記録する。
+4件が`tag_present=…:true`、`quality=good`、`source=real`で、D3000の値と行時刻が進むことを確かめる。SIM確認（§3.7）に使うタグ名を次で探し、数値か真偽値の一件を選んで記録する（§1で追加した`s7-sim.group1.SCADA_C5_SIM_D100`が`source=simulation`で出る）。
 
 ```bash
 cargo run --locked -p scada-host --example real_hub_read -- --prefix s7-sim.
