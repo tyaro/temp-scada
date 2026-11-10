@@ -442,7 +442,13 @@ v1との差分:
 - **観測のrepeat**: `observe`は一つのtargetに一つのquery（observationId）を作り、`pending`の間は250ms（hostの`FRAME_POLL_INTERVAL`と同じ）ごとに同じrequestを送る（台帳の`repeatObservation`で新しいattempt）。attemptの返信を失った（`transport`が`returned`以外）queryは、そのqueryをrepeatしない。新しいobservationIdのqueryを最大2回まで作り直し、それでも終端を得られなければ`query: "transportLost"`とする。observationは読取だけで、native処理を起こさない。
 - **再読込（page reload）**: hostはpageの終わりにそのpageの購読を終える（`Pages`・`end_page`）。新しいpageでは新しい台帳・受信器・portを作り、新しいattachIdでattachする。前のpageの元callのtokenは引き継がない。前のpageで予約したworkflowは、新しいcoordinatorでは続けられず、snapshotの表示（`lastKnown`／`currentSubscription`）だけになる。画面は「前の画面の作業が残っています。アプリを終了すると候補は破棄されます」と案内する。hostから保持workflowを引き継ぐ読取commandと、同じprincipalの再login後のCallInspectionによる回収は後続の区切りで扱う。§9の「再読込後のattachし直し」は表示までとする。
 - **slotがEmptyのとき**: `recording_slot`が`{"state": "empty", "reason"}`ならportもcoordinatorも作らず、`recordingAsyncOperations`へ`undefined`をpublishする（記録操作画面は「未接続」）。理由は記録管理画面の照会で示し、記録操作画面へ新しいpropで渡さない。
-- **slotの読み直し**: 起動時、sessionの変化（`ManagementAccess.sessionKey`）、ProjectのID・revisionの変化、`ownerClosed`・`authorizationLost`以外の`ended`、`recordingUnavailable`・`closed`の拒否、記録管理画面の操作（初回設定・停止・再開・停止中の計画適用）の完了で`recording_slot`を読み直す。定期的なpollingはしない。読み直して`generation`が変わっていれば、旧coordinatorを`close()`し、新しいportとcoordinatorを作ってpublishする。旧coordinatorは受理済みの監視を続ける（v1の`close()`と同じ）。
+- **slotの読み直し**: 次の契機で`recording_slot`を読み直す。定期的なpollingはしない。
+  - 起動時、sessionの変化（`ManagementAccess.sessionKey`）、ProjectのID・revisionの変化。
+  - `ownerClosed`になったとき（原因が`controlFrame`・`hostClosed`・`slotEmpty`のどれでも。`ended`の`closed`、`recordingUnavailable`・`closed`の拒否を含む）。
+  - `authorizationLost: "seqChanged"`になったとき（sessionKeyの変化を画面が検知しないまま、hostのsession世代が変わった場合）。
+  - `ownerClosed`・`authorizationLost`以外の理由の`ended`で、attachし直しの上限に達したとき（`subscription: "stopped"`）。
+  - 記録管理画面の操作（初回設定・停止・再開・停止中の計画適用・owner contextの付け替え）の完了。
+- **作り直し**: 読み直して`generation`が変わっていれば、旧coordinatorを`close()`し、新しいportとcoordinatorを作ってpublishする。`seqChanged`の後は、`generation`が同じでも新しいportとcoordinatorを作る（portは一つの`seq`だけを受け持つため）。slotが`Empty`ならpublishを`undefined`にする。旧coordinatorは受理済みの監視を続ける（v1の`close()`と同じ）。`seqChanged`以外の`authorizationLost`（logout・権限の喪失）は、sessionの変化で作り直すので、ここでは作り直さない。
 - **sessionと権限**: portはsessionごとに作る。未ログインでは作らない。`access`はAdminのsession（認証無効モードの合成Adminを含む）で`mutation`、それ以外で`read`とする。
 - **`NativeShell`**: `createNativeRecordingOperations`の結果を、既存のprop `recordingAsyncOperations`へ渡す。同期形の`recordingOperationsService`は渡さない（§7.2）。
 
@@ -489,7 +495,7 @@ v1との差分:
 1. **Projectの編集とowner context**: Adminの`recording_owner_rebind`で、静止したrootのcontextを現在のProjectへ付け替える。画面のボタンで明示的に行う（C5-4b）。照合（Project revision）は緩めない。
 2. **portが束縛する`seq`**: 最初の正常返信（通常はattach）の`seq`を束縛する。portはsessionごとに作り直す。
 3. **eventのroot識別**: `scada:recording`の`frames`・`ended`へ`ownerEpoch`を加える（hostの小変更、C5-5b）。
-4. **slotの変化**: 起動、session・Projectの変化、owner終了、拒否、記録管理画面の操作の完了を契機に`recording_slot`を読み直す。pollingもslotのeventも加えない。
+4. **slotの変化**: 起動、session・Projectの変化、owner終了（`ownerClosed`）、`seqChanged`、attachし直しの上限、記録管理画面の操作の完了を契機に`recording_slot`を読み直す（§7.2）。pollingもslotのeventも加えない。
 5. **再読込・session交代後のworkflow**: C5-5では表示と案内までとする。hostからの引継ぎは後続で扱い、browser storageへは保存しない。
 6. **owner状態の出し方**: `AsyncOperationsState`へ追加のreadonly field（`owner`・`hostRefusal`）を加え、既存のfieldへまとめない。
 7. **`leaseRequestId`・`cancelId`**: ID poolへ`lease`・`cancel`の役割を加えて引く。
