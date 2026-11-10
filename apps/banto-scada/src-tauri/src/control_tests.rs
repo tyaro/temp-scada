@@ -135,6 +135,23 @@ fn the_control_commands_answer_over_ipc() {
         ),
         Err(json!({"kind": "hub_not_configured"}))
     );
+    assert_eq!(
+        invoke(
+            &webview,
+            "recording_resume",
+            json!({"projectJson": project_json()})
+        ),
+        Err(json!({"kind": "hub_not_configured"}))
+    );
+    // No plan is applied: the first setup comes first.
+    assert_eq!(
+        invoke(
+            &webview,
+            "recording_reconfigure",
+            json!({"projectJson": project_json()})
+        ),
+        Err(json!({"kind": "not_allowed"}))
+    );
 
     // The slot stays empty until a recording runs, and nothing records.
     assert_eq!(

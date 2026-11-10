@@ -1,6 +1,7 @@
 //! The recording control commands of the desktop host (product-owner design
 //! §5): the management context, the inspection and the registry slot, the
-//! first setup and start, and the stop; and the exit sequence (§6). Thin adapters only: the behavior is `scada_host::recording_control`,
+//! first setup and start, the resume, the stopped reconfiguration and the
+//! stop; and the exit sequence (§6). Thin adapters only: the behavior is `scada_host::recording_control`,
 //! tested there with plain `cargo test`.
 use crate::auth::AuthState;
 use crate::NativeHost;
@@ -51,6 +52,38 @@ pub async fn recording_initial_setup(
     let client = || native.bootstrap.rest_client().ok().flatten();
     let clients = client().zip(client());
     recording_control::initial_setup(auth.get()?, &runtime, &project, clients).await
+}
+
+/// Resume the plan the store has applied (Admin), after the registry's
+/// apply or a restart: an installed root is handed off first, and the new
+/// recording gets a new root. Like the first setup, the resolution and the
+/// recording each take a new client of the saved Hub.
+#[tauri::command]
+pub async fn recording_resume(
+    auth: State<'_, AuthState>,
+    runtime: State<'_, RecordingRuntime>,
+    native: State<'_, NativeHost>,
+    project_json: String,
+) -> Result<Value, ControlError> {
+    let project = project(&project_json)?;
+    let client = || native.bootstrap.rest_client().ok().flatten();
+    let clients = client().zip(client());
+    recording_control::resume(auth.get()?, &runtime, &project, clients).await
+}
+
+/// Apply the Project's recording plan while recording is stopped and no
+/// root is installed (Admin). Never starts recording; the Hub is read only
+/// when the plan's members need a new mapping.
+#[tauri::command]
+pub async fn recording_reconfigure(
+    auth: State<'_, AuthState>,
+    runtime: State<'_, RecordingRuntime>,
+    native: State<'_, NativeHost>,
+    project_json: String,
+) -> Result<Value, ControlError> {
+    let project = project(&project_json)?;
+    let client = native.bootstrap.rest_client().ok().flatten();
+    recording_control::reconfigure(auth.get()?, &runtime, &project, client).await
 }
 
 /// The registry slot (Viewer): `{"state": "installed", "generation",
