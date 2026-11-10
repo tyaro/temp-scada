@@ -135,6 +135,14 @@ export function parsePortState(
   bool(d.authorizationLost);
   if (!receiverStatus.includes(d.receiverStatus)) throw Error("receiver");
   if (d.receiverStoppedReason !== null) short(d.receiverStoppedReason);
+  if (d.generation !== null) {
+    const g = d.generation;
+    fields(g, ["attachId", "phase", "subscriptionRef"]);
+    id(g.attachId);
+    if (!["attaching", "attached", "retired"].includes(g.phase))
+      throw Error("generation phase");
+    if (g.subscriptionRef !== null) id(g.subscriptionRef);
+  }
   if (d.highwater !== null) count(d.highwater);
   if (!relations.includes(d.snapshotRelation)) throw Error("relation");
   if ((d.snapshotRelation === "none") !== (d.snapshot === null))

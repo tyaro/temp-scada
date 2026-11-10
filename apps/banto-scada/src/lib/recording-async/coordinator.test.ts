@@ -856,6 +856,31 @@ describe("bounded local metadata and IDs", () => {
       expect(accessed).toBe(false);
     },
   );
+  it.each([
+    { attachId: "attach:1", phase: "attached" },
+    { attachId: "attach:1", phase: "open", subscriptionRef: null },
+    { attachId: "", phase: "attached", subscriptionRef: null },
+    { attachId: "attach:1", phase: "attached", subscriptionRef: 1 },
+    { attachId: "attach:1", phase: "attached", subscriptionRef: "a\n" },
+    "attach:1",
+  ])("rejects a malformed display generation %j", (generation) => {
+    const s = setup(),
+      f = s.h.frame;
+    expect(() =>
+      parsePortState(
+        { ...f, display: { ...f.display, generation: null } },
+        s.h.scope,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      parsePortState(
+        { ...f, display: { ...f.display, generation } },
+        s.h.scope,
+      ),
+    ).toThrow();
+    s.h.raw({ ...f, display: { ...f.display, generation } });
+    expect(s.client.current().invalid).toBe(true);
+  });
   it("transport ends and host refusals are closed kinds", () => {
     for (const v of [
       { kind: "returned" },
