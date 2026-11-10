@@ -151,11 +151,29 @@ export function createAsyncOperationsMonitor() {
         }
     }
   }
+  /**
+   * With no client selected (the slot is empty), a closed owner that has
+   * nothing left to watch is let go, so the view reads as offline and the next
+   * owner attaches on its own. Replacing one owner by another stays explicit.
+   */
+  function releaseFinished() {
+    if (selection?.client || !client) return;
+    const s = client.current();
+    if (!s.closed || !s.safeToSwitch) return;
+    off?.();
+    off = undefined;
+    retire();
+    client = undefined;
+    target = undefined;
+  }
   function attach(c: AsyncOperationsClient) {
     off?.();
     retire();
     client = c;
-    off = c.subscribe(publish);
+    off = c.subscribe(() => {
+      releaseFinished();
+      publish();
+    });
   }
   function bind() {
     const s = selection;
@@ -225,6 +243,7 @@ export function createAsyncOperationsMonitor() {
     select(s: Selection) {
       if (disposed) return;
       selection = s;
+      releaseFinished();
       const c = selected().client;
       if (!client && c && s.openOwner) attach(c);
       bind();

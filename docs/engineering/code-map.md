@@ -718,7 +718,7 @@ TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,ca
 
 `ids.ts`は五role各4096のchecked counter、初回workflowのmutation4／callerOperation2予約、retryの追加予約とread独立枠を持つ。`local-validation.ts`はlease／cancel metadataと完全frameを安全にowned検証する。`history/owned-json.ts`のlocalMetadata（128KiB・4096node・depth32）とlocalFrame（1MiB・32768node・depth64）は保守計数を使い、c4a admission（depth48）と既定compact（depth32）は維持する。
 
-`recording-async/monitor.ts`は一つの旧clientと現在選択を保持し、Project object／generation／openOwner／raw選択clientが変わったviewを退役させる。Workspaceからlive propsのqualificationを渡し、effect前のlease後着もcoordinatorの送信直前gateで拒否する。旧clientが正常終端になるまで自動切替せず、App disposeでもrootをcloseしない。`AsyncRecordingOperationsWorkspace.svelte`は三段階操作・受付照会・元apply結果照会・切断／不明の閉集合表示を担当する。
+`recording-async/monitor.ts`は一つの旧clientと現在選択を保持し、Project object／generation／openOwner／raw選択clientが変わったviewを退役させる。Workspaceからlive propsのqualificationを渡し、effect前のlease後着もcoordinatorの送信直前gateで拒否する。旧clientが正常終端になるまで自動切替せず、App disposeでもrootをcloseしない。選択clientの撤去後、閉じて安全に終端した旧clientだけは`releaseFinished`で手放し、未接続へ戻す（`monitor.test.ts`と`e2e/native-recording-operations.spec.ts`）。`AsyncRecordingOperationsWorkspace.svelte`は三段階操作・受付照会・元apply結果照会・切断／不明の閉集合表示を担当する。
 
 `recording-operations/RecordingOperationsEntry.svelte`は最初の有効な単独注入でsync／async modeを固定し、二重注入と異mode交換を拒否する。両Workspaceは常設し、旧monitorをunmountしない。既存同期`RecordingOperationsWorkspace.svelte`のblocked guardは新送信だけを制限する。`App.svelte`の `recordingAsyncOperations` は任意注入で、通常entryは未注入のまま。
 

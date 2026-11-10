@@ -24,8 +24,7 @@
     onclose: () => void;
   } = $props();
   let mode = $state<"sync" | "async">(),
-    heldSync = $state.raw<RecordingOperationsService>(),
-    heldAsync = $state.raw<AsyncOperationsClient>();
+    heldSync = $state.raw<RecordingOperationsService>();
   function validSync(s: RecordingOperationsService | undefined) {
     if (!s) return false;
     try {
@@ -68,7 +67,6 @@
         else if (validSync(s)) mode = "sync";
       }
       if (mode === "sync" && s !== undefined) heldSync = s;
-      if (mode === "async" && a !== undefined) heldAsync = a;
     });
   });
 </script>
@@ -87,7 +85,7 @@
   openOwner={mode === "async" ? openOwner : null}
   {project}
   {generation}
-  client={asyncClient ?? heldAsync}
+  client={asyncClient}
   blocked={blocked || asyncClient === undefined}
   {conflict}
   {onclose}
