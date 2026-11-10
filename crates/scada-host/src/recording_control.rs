@@ -19,7 +19,7 @@ use serde_json::{json, Value};
 
 use crate::auth::Role;
 use crate::desktop_auth::{CommandError, DesktopAuth};
-use crate::recording_gate::NO_RECORDING_RUN;
+use crate::recording_gate::{CloseCheck, NO_RECORDING_RUN};
 use crate::recording_runtime::{InspectFailure, RecordingRuntime, SetupFailure, StopFailure};
 
 /// The audit resource of the recording control commands.
@@ -224,6 +224,15 @@ pub async fn stop(auth: &DesktopAuth, runtime: &RecordingRuntime) -> Result<Valu
         )),
         Err(failure) => Err(ControlError::Refused(failure.as_str())),
     }
+}
+
+/// What closing the window asks of the user first (design §6.1, the
+/// confirmation dialog). No role is checked and no lock taken: the window
+/// closes whoever is signed in, and the exit sequence decides again by
+/// itself. A host whose auth did not start has no recording gate.
+pub fn close_check(auth: Option<&DesktopAuth>) -> CloseCheck {
+    auth.and_then(DesktopAuth::recording_gate)
+        .map_or(CloseCheck::Close, |gate| gate.close_check())
 }
 
 /// The exit sequence (design §6) within `limit`, under the transition lock

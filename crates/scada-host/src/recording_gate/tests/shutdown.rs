@@ -239,3 +239,55 @@ async fn a_refused_discard_is_audited_as_the_host_and_leaves_the_candidate() {
             "principal": "banto-local:auth-disabled", "error": "Forbidden"})
     );
 }
+
+#[tokio::test]
+async fn the_close_check_asks_for_a_candidate_only() {
+    let f = initializing().await;
+    // An idle root is quiescent: the window closes at once.
+    assert_eq!(f.gate.close_check(), CloseCheck::Close);
+    let p = candidate(&f, "close-change").await;
+    assert_eq!(f.gate.close_check(), CloseCheck::Candidate);
+
+    // A Paused change is left to the next start: no question.
+    let stage = WorkflowStage::PauseJoin {
+        operation_id: "pause:close".into(),
+    };
+    let lease = when_ready(|| {
+        f.gate
+            .workflow_lease(stage.clone(), stage_lease(&f.scope, "pause", "mutation"))
+    })
+    .await
+    .unwrap();
+    f.gate
+        .admission(admission(
+            &f.scope,
+            "pause",
+            &lease,
+            json!({"kind":"pauseJoin", "changeRef":handle(&p.accepted, "changeRef"),
+                "operation":operation(&p.change, "pause:close", "pauseJoin")}),
+        ))
+        .await
+        .unwrap();
+    until_phase(&f, OperationsPhase::Paused).await;
+    assert_eq!(f.gate.close_check(), CloseCheck::Close);
+
+    // Without a root (handed off) there is nothing to ask.
+    let empty = RecordingGate::empty(f.auth.clone(), NO_RECORDING_RUN);
+    assert_eq!(empty.close_check(), CloseCheck::Close);
+}
+
+#[test]
+fn the_close_check_waits_for_unsettled_work_but_not_for_a_paused_change() {
+    use OperationsPhase::*;
+    for phase in [Preflighting, Pausing, Applying, Uncertain, Blocked, Idle] {
+        assert_eq!(CloseCheck::of(Some(phase), false), CloseCheck::Waiting);
+        assert_eq!(CloseCheck::of(Some(phase), true), CloseCheck::Close);
+    }
+    assert_eq!(CloseCheck::of(Some(Paused), false), CloseCheck::Close);
+    assert_eq!(
+        CloseCheck::of(Some(Candidate), false),
+        CloseCheck::Candidate
+    );
+    // A handed-off root.
+    assert_eq!(CloseCheck::of(None, true), CloseCheck::Close);
+}

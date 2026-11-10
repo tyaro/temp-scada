@@ -9,6 +9,7 @@
   import type { Project } from "../lib/project";
   import { nativeSources } from "./sources";
   import AuthControls from "./auth/AuthControls.svelte";
+  import CloseConfirm from "./CloseConfirm.svelte";
   import type { NativeAuthClient } from "./auth/client";
   import { AuthSession } from "./auth/session.svelte";
 
@@ -206,6 +207,7 @@
   }}
   headerExtension={hubControls}
 />
+<CloseConfirm />
 
 <style>
   .native-controls {

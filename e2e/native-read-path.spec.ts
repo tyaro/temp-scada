@@ -7,7 +7,7 @@ import { openProject } from "./helpers/project-files";
 async function mockNativeHost(page: Page) {
   await page.addInitScript(() => {
     const callbacks = new Map<number, (event: unknown) => void>();
-    const listeners = new Map<number, number>();
+    const listeners = new Map<number, { event: string; handler: number }>();
     let nextId = 0;
     const host = {
       starts: [] as { projectJson: string; subscriptionId: string }[],
@@ -16,12 +16,13 @@ async function mockNativeHost(page: Page) {
       connected: false,
       rejectStart: false,
       emit(subscriptionId: string, update: unknown) {
-        for (const callbackId of listeners.values())
-          callbacks.get(callbackId)?.({
-            event: "scada:read",
-            id: 1,
-            payload: { subscriptionId, update },
-          });
+        for (const { event, handler } of listeners.values())
+          if (event === "scada:read")
+            callbacks.get(handler)?.({
+              event: "scada:read",
+              id: 1,
+              payload: { subscriptionId, update },
+            });
       },
     };
     Object.assign(window, { __nativeReadHost: host });
@@ -42,7 +43,7 @@ async function mockNativeHost(page: Page) {
         async invoke(command: string, args?: Record<string, any>) {
           if (command === "plugin:event|listen") {
             const id = ++nextId;
-            listeners.set(id, args!.handler);
+            listeners.set(id, { event: args!.event, handler: args!.handler });
             return id;
           }
           if (command === "plugin:event|unlisten") return null;

@@ -1,5 +1,6 @@
 //! One embedded read-only host. Hub services and PLC connections stay external.
 mod auth;
+mod close;
 mod control;
 mod history;
 mod recording;
@@ -16,7 +17,7 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 use tauri::webview::PageLoadEvent;
-use tauri::{AppHandle, Emitter, RunEvent, Runtime, State, WindowEvent};
+use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, State, WindowEvent};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
@@ -233,19 +234,20 @@ async fn hub_catalog(
 
 /// Every command of the desktop host, registered once for the app and its
 /// IPC tests, with the page hooks that stop the recording pumps of a page
-/// that is gone.
+/// that is gone, and the confirmation before the window closes.
 fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
     builder
         .manage(recording::Pages::default())
+        .manage(close::CloseGuard::default())
         .on_page_load(|webview, payload| {
             if payload.event() == PageLoadEvent::Started {
                 recording::end_page(webview, webview.label());
             }
         })
-        .on_window_event(|window, event| {
-            if matches!(event, WindowEvent::Destroyed) {
-                recording::end_page(window, window.label());
-            }
+        .on_window_event(|window, event| match event {
+            WindowEvent::CloseRequested { api, .. } => close::requested(window, api),
+            WindowEvent::Destroyed => recording::end_page(window, window.label()),
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             hub_connect,
@@ -254,6 +256,7 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             hub_read_start,
             hub_read_stop,
             hub_catalog,
+            close::app_close_reply,
             auth::auth_status,
             auth::auth_phase,
             auth::auth_setup,
@@ -341,6 +344,7 @@ fn on_exit<R: Runtime>() -> impl FnMut(&AppHandle<R>, RunEvent) {
         match state.compare_exchange(RUNNING, STOPPING, Ordering::SeqCst, Ordering::SeqCst) {
             Ok(_) => {
                 api.prevent_exit();
+                app.state::<close::CloseGuard>().begin_exit();
                 let app = app.clone();
                 let state = state.clone();
                 tauri::async_runtime::spawn(async move {

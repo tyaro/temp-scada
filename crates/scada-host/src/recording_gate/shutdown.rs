@@ -62,7 +62,49 @@ impl ShutdownDiscarded {
     }
 }
 
+/// What closing the window asks of the user first (design §6.1, the
+/// confirmation dialog). Read without the transition lock: it is a snapshot
+/// for the dialog, and the exit sequence decides again by itself.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CloseCheck {
+    /// Nothing unsettled (no root, a quiescent root, or a Paused change the
+    /// exit leaves to the next start): close at once.
+    Close,
+    /// A Candidate: the exit would discard it. Ask first.
+    Candidate,
+    /// Accepted work still running (a preflight, a pause/join or apply, a
+    /// read) or not yet settled: the exit waits for it, within its limit.
+    Waiting,
+}
+
+impl CloseCheck {
+    /// By the owner phase and the root's quiescence, as the exit decides:
+    /// it hands a quiescent root off, leaves a Paused change, discards a
+    /// Candidate and waits for anything else.
+    pub(crate) fn of(phase: Option<OperationsPhase>, quiescent: bool) -> Self {
+        match phase {
+            Some(OperationsPhase::Paused) => Self::Close,
+            Some(OperationsPhase::Candidate) => Self::Candidate,
+            _ if quiescent => Self::Close,
+            _ => Self::Waiting,
+        }
+    }
+}
+
 impl RecordingGate {
+    /// What closing the window asks of the user first (design §6.1).
+    pub fn close_check(&self) -> CloseCheck {
+        let state = self.lock();
+        let Ok(installed) = state.installed.as_ref() else {
+            return CloseCheck::Close;
+        };
+        CloseCheck::of(
+            installed.root.owner_phase(),
+            installed.root.quiescence().is_quiescent(),
+        )
+    }
+
     /// The installed root's native owner phase; `None` with no root.
     pub fn owner_phase(&self) -> Option<OperationsPhase> {
         self.lock()
