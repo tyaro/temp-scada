@@ -6,7 +6,17 @@
   import { createAsyncOperationsMonitor } from "./monitor";
   import { parseRecordingChangeRequest } from "../recording-operations-contract";
   import { errorLabels } from "../recording-operations/labels";
+  import type { RecordingWireError } from "../recording-wire-contract";
   import RecordingPlanView from "../recording-management/RecordingPlanView.svelte";
+  const wireErrorLabels: Record<RecordingWireError, string> = {
+    unauthorized: "記録操作には認証が必要です",
+    forbidden: "記録操作の権限がありません",
+    ownerUnavailable: "記録操作の対象を利用できません",
+    expired: "操作の期限が切れました",
+    capacity: "記録操作の上限に達しました",
+    protocolViolation: "記録操作の要求が受け付けられませんでした",
+    internal: "記録操作の内部エラーです",
+  };
   let {
     openOwner,
     project,
@@ -174,6 +184,15 @@
     {#if s && !s.connected}<p role="status">
         接続切断。発行済み操作の停止や未受理は確認できません。
       </p>{/if}
+    {#if s?.owner.ownerClosed}<p role="status">
+        記録操作の対象（owner）が終了しました。新しい操作はできません。
+      </p>{/if}
+    {#if s?.owner.authorizationLost}<p role="status">
+        記録操作の権限を確認できません。新しい操作はできません。
+      </p>{/if}
+    {#if s?.owner.resyncRequired}<p role="status">
+        記録操作の状態を再同期しています。新しい操作はできません。
+      </p>{/if}
     {#if s?.closed}<p role="status">
         操作元は新しい操作の受付を終了しています。
       </p>{/if}
@@ -204,6 +223,9 @@
           : s.inspection.outcome.kind === "unavailable"
             ? "照会できません。受付不明を保持します"
             : "元要求の受付情報を確認しました"}
+      </p>{/if}
+    {#if s?.wireRefusal}<p role="status">
+        {wireErrorLabels[s.wireRefusal]}
       </p>{/if}
     {#if s?.refusal}<p role="status">
         {s.refusal === "capacity"

@@ -405,6 +405,15 @@ v1との差分:
 - **access**: `port.access`が`read`なら、preflight・pause・apply・discard・cancel（operation）を`can*`の段階でfalseにし、portへ送らない。
 - **`intact()`**: portはfrozenで、methodを差し替えられないので、v1のmethod同一性検査は不要になる。scopeの比較だけを残す。
 
+C5-5aの実装で次を定めた。
+
+- **物理終了の失敗（`transport`が`returned`以外で`reply`なし）の扱い**: どれもportの不正（`invalid`）にはしない。leaseは`call: "uncertain"`（発行されたleaseはhostで使われずに切れる）、admitは`admission: "unknown"`で`call`を終え、次の照会を`inspectCall`（CallInspection）にする。AdmissionInspection・CallInspectionの返信喪失は照会を`idle`へ戻し、受付不明のまま再照会できる。cancelは`cancelCall: "uncertain"`とする。observationの`unavailable`と`transportLost`は`read: "deliveryUnknown"`で、operationの`settled`を進めない。
+- **portの不正**: replyの形・相関の不一致、Promiseでない値、methodの例外、`pending`のobservation終端は、v1と同じく`invalid`とする。遅れて届いた正常な元reply（CallInspectionの回収後など）は、そのcallの処理へ渡す（leaseは`uncertain`の後なら捨てる）。
+- **`AsyncOperationsState`の追加field**: `owner`（`access`・`seq`・`subscription`・`ended`と四つの別field）、`hostRefusal`（最後の`{kind}`拒否）、`wireRefusal`（wireのlease・cancelの`rejected`。`OperationError`の`refusal`と分ける）、`callInspection`（CallInspectionの返信）。記録操作画面は`ownerClosed`・`authorizationLost`・`resyncRequired`と`wireRefusal`を表示する。
+- **cached frame**: `display.snapshotRelation`が`none`のときは`snapshot`が`null`であることを検証し、snapshotを使わない。`currentSubscription`・`lastKnown`のsnapshotはv1のframeと同じく`latest`の知識だけを更新する。
+- **ID**: `lease`（`ls:`）と`cancel`（`cn:`）は送る直前に一つずつ予約して引く。上限は他の役割と同じ4096。
+- **test harness**: `__fixtures__/recording-async-port.ts`は`defineAsyncRecordingPortV2`で作ったfrozenなportを返す。methodの差し替えはharnessの`impl`で行う（portは変えられない）。`h.finish`・`h.emit`などの外向きの操作は保ったので、`recording-async-workspace.spec.ts`は注入部分を変えずにv2で通る。
+
 #### native実装（`src/native/recording/`）
 
 | file            | 内容                                                                                                                                                                                   |
@@ -518,7 +527,7 @@ v1との差分:
 | C5-3b2 確認dialog             | **実装済み（2026-11-09）**。`CloseRequested`の確認dialog（§6.1）。gateの`close_check`による判定、UIへの通知（`scada:close`）と回答（`app_close_reply`）、「破棄して終了」「キャンセル」、UIの応答なしでの続行。IPC mockのe2e                                                                                                                            |
 | C5-4 再開                     | **実装済み（2026-11-10）**。`recording_resume`（applyの後と再起動後）、`recording_reconfigure`（停止中の計画変更と無効計画からの有効化）、fresh SDK解決、gateの入替え、`interrupted`の表示                                                                                                                                                              |
 | C5-4b owner contextの付け替え | **実装済み（2026-11-10）**。`recording_owner_rebind`（§7.2）と記録管理画面のボタン。静止したrootのhandoffと同じSupervisorでの再導入、未静止での`busy`。scada-hostの一時DB＋mock Hubの試験とIPC mockのe2e                                                                                                                                                |
-| C5-5a port v2とcoordinator    | port v2（§7.2）、`defineAsyncRecordingPortV2`、coordinatorの改訂、v2 harnessへの移行（vitest・`recording-async-workspace` e2e）。TSのみで、通常Appの接続は変えない                                                                                                                                                                                      |
+| C5-5a port v2とcoordinator    | **実装済み（2026-11-10）**。port v2（§7.2）、`defineAsyncRecordingPortV2`、coordinatorの改訂、v2 harnessへの移行（vitest・`recording-async-workspace` e2e）。TSのみで、通常Appの接続は変えない                                                                                                                                                          |
 | C5-5b 記録操作の画面接続      | native実装（`src/native/recording/`）と`NativeShell`の接続、`scada:recording`への`ownerEpoch`（host）、local-v2の`mode: "native"`。IPC mockのe2eで予約からapply・reconcileまで、logoutでの`ended`、再読込後のattachし直し（表示まで）、`ownerClosed`の後のslotの読み直し                                                                                |
 | C5-6 Windows実機受入          | 実Hubを読み、検証用DBへ記録し、履歴画面と保存Trendで確かめる。UIを閉じない間の継続、停止・join・明示再開、raw／minmax、欠測・Quality・SIM、再起動後の照会、実時間の件数とDB増分を記録する（ユーザー作業）                                                                                                                                               |
 

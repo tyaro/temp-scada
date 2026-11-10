@@ -11,7 +11,15 @@ import type {
   RecordingReconciliationDelivery,
 } from "../recording-admission-contract";
 import type { AppliedSuccess } from "../recording-operations/service";
-import type { CancelDisposition } from "./port";
+import type { RecordingWireError } from "../recording-wire-contract";
+import type { RecordingWireCallInspectionReply } from "../recording-wire-contract";
+import type {
+  CancelDisposition,
+  PortAuthorizationLost,
+  PortHostRefusal,
+  PortOwnerClosed,
+  PortStateV2,
+} from "./port";
 import type { IdRole } from "./ids";
 export interface IntentControl {
   readonly intentDeadlineMonotonicMs: number;
@@ -39,6 +47,17 @@ export type AdmissionPhase =
   | "accepted"
   | "rejected"
   | "discarded";
+/** Port v2 owner facts. Each is its own field; none is ORed into `closed`/`invalid`. */
+export interface AsyncOwnerState {
+  readonly access: "mutation" | "read";
+  readonly seq: number | null;
+  readonly subscription: PortStateV2["subscription"];
+  readonly ended: string | null;
+  readonly ownerClosed: PortOwnerClosed | null;
+  readonly authorizationLost: PortAuthorizationLost | null;
+  readonly resyncRequired: boolean;
+  readonly nativeRecoveryRequired: boolean;
+}
 export interface AsyncOperationsState {
   readonly context: RecordingOperationsContext;
   readonly ownerRef: string;
@@ -48,10 +67,17 @@ export interface AsyncOperationsState {
   readonly ownerBlocked: boolean;
   readonly timedOut: boolean;
   readonly refusal?: OperationError | "capacity" | "unqualified";
+  /** A wire lease/cancel rejection. Kept apart from operation errors. */
+  readonly wireRefusal?: RecordingWireError;
+  /** The last host `{kind}` refusal of a physical call. */
+  readonly hostRefusal?: PortHostRefusal;
+  readonly owner: AsyncOwnerState;
   readonly admission: AdmissionPhase;
   readonly request?: RecordingAdmissionRequest;
   readonly reply?: RecordingAdmissionReply;
   readonly inspection?: RecordingAdmissionInspectionReply;
+  /** CallInspection of a lost admit reply. */
+  readonly callInspection?: RecordingWireCallInspectionReply;
   readonly call: "idle" | "lease" | "admit" | "uncertain";
   readonly inspectionCall: "idle" | "pending" | "uncertain";
   readonly cancelCall: "idle" | "pending" | "uncertain";

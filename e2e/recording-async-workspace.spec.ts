@@ -389,3 +389,57 @@ test("cached reconciliation unknown stays valid after later original-operation q
   await expect(dialog(page).getByRole("alert")).toHaveCount(0);
   await expect(button(page, "元要求の結果を照会")).toBeEnabled();
 });
+for (const [field, value, text] of [
+  ["ownerClosed", "controlFrame", "owner）が終了しました"],
+  ["authorizationLost", "ended", "権限を確認できません"],
+  ["resyncRequired", true, "再同期しています"],
+] as const)
+  test(`port v2 ${field} is shown and blocks the next stage`, async ({
+    page,
+  }) => {
+    await prepare(page);
+    await preflight(page);
+    await finish(page, 0);
+    await expect(button(page, "この元runを停止してjoin")).toBeEnabled();
+    await page.evaluate(
+      ({ field, value }) =>
+        (window as any).__asyncHarness.h.emit({ [field]: value }),
+      { field, value },
+    );
+    await expect(dialog(page)).toContainText(text);
+    await expect(button(page, "この元runを停止してjoin")).toBeDisabled();
+    await expect(dialog(page).getByRole("alert")).toHaveCount(0);
+  });
+test("lost admit reply is recovered by inspection without resending admit", async ({
+  page,
+}) => {
+  await prepare(page);
+  await page.evaluate(() =>
+    (window as any).__asyncHarness.h.configure({ autoAck: false }),
+  );
+  await dialog(page).getByLabel("期待mapping版", { exact: true }).fill("1");
+  await dialog(page).getByLabel("期待保持適用版", { exact: true }).fill("1");
+  await button(page, "新しい変更を検査").click();
+  await expect(
+    dialog(page).locator("[data-recording-async-admission]"),
+  ).toHaveAttribute("data-recording-async-admission", "awaitingAck");
+  await page.evaluate(() =>
+    (window as any).__asyncHarness.h.admissions[0].reject(),
+  );
+  await expect(
+    dialog(page).locator("[data-recording-async-admission]"),
+  ).toHaveAttribute("data-recording-async-admission", "unknown");
+  await expect(dialog(page).getByRole("alert")).toHaveCount(0);
+  await button(page, "元要求の受付を照会").click();
+  await finish(page, 0);
+  await expect(button(page, "この元runを停止してjoin")).toBeEnabled();
+  const counts = await page.evaluate(() => {
+    const h = (window as any).__asyncHarness.h;
+    return [
+      h.admissions.length,
+      h.callInspections.length,
+      h.inspections.length,
+    ];
+  });
+  expect(counts).toEqual([1, 1, 0]);
+});

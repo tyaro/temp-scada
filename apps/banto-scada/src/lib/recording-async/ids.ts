@@ -5,6 +5,8 @@ export const ID_ROLES = [
   "inspection",
   "callerOperation",
   "reconciliation",
+  "lease",
+  "cancel",
 ] as const;
 export type IdRole = (typeof ID_ROLES)[number];
 export function createIdPools(prefix: string) {
@@ -17,6 +19,8 @@ export function createIdPools(prefix: string) {
     inspection: "in",
     callerOperation: "op",
     reconciliation: "re",
+    lease: "ls",
+    cancel: "cn",
   };
   return {
     reserve(credits: Partial<Record<IdRole, number>>): boolean {
