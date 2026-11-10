@@ -24,6 +24,17 @@ async fn resume_installed(o: &Owned) -> u64 {
         .unwrap()
 }
 
+async fn reconfigure(
+    o: &Owned,
+    project: &Project,
+    resolve: Option<RestClient>,
+) -> Result<Reconfigured, SetupFailure> {
+    let lock = o.auth.gate().await;
+    o.runtime
+        .reconfigure(Some(&o.gate), &lock, project, resolve)
+        .await
+}
+
 async fn stop(o: &Owned) {
     let lock = o.auth.gate().await;
     assert_eq!(o.runtime.stop(&o.gate, &lock).await, Ok("joined"));
@@ -114,10 +125,7 @@ async fn a_disabled_plan_is_not_resumed_until_it_is_enabled_again() {
     let before = series(&o.runtime, &o.project);
     let mut disabled = plan(false);
     disabled["revision"] = json!(2);
-    let applied = o
-        .runtime
-        .reconfigure(&project(Some(disabled.clone())), None)
-        .await;
+    let applied = reconfigure(&o, &project(Some(disabled.clone())), None).await;
     assert_eq!(
         applied,
         Ok(Reconfigured {
@@ -127,9 +135,7 @@ async fn a_disabled_plan_is_not_resumed_until_it_is_enabled_again() {
     );
     // A repeated call finds it applied.
     assert_eq!(
-        o.runtime
-            .reconfigure(&project(Some(disabled.clone())), None)
-            .await,
+        reconfigure(&o, &project(Some(disabled.clone())), None).await,
         Ok(Reconfigured {
             changed: false,
             enabled: false
@@ -140,9 +146,7 @@ async fn a_disabled_plan_is_not_resumed_until_it_is_enabled_again() {
     let mut altered = disabled.clone();
     altered["enabled"] = json!(true);
     assert_eq!(
-        o.runtime
-            .reconfigure(&project(Some(altered.clone())), Some(o._hub.client()))
-            .await,
+        reconfigure(&o, &project(Some(altered.clone())), Some(o._hub.client())).await,
         Err(SetupFailure::PlanConflict)
     );
 
@@ -151,7 +155,7 @@ async fn a_disabled_plan_is_not_resumed_until_it_is_enabled_again() {
     altered["revision"] = json!(3);
     let subscriptions = o._hub.subscriptions.load(Ordering::SeqCst);
     assert_eq!(
-        o.runtime.reconfigure(&project(Some(altered)), None).await,
+        reconfigure(&o, &project(Some(altered)), None).await,
         Ok(Reconfigured {
             changed: true,
             enabled: true
@@ -176,23 +180,21 @@ async fn changed_members_register_a_mapping_that_keeps_the_unchanged_identities(
     fewer["group"]["members"] = json!([
         {"memberId": "member-level", "externalName": LEVEL, "valueType": "number"}]);
     assert_eq!(
-        o.runtime
-            .reconfigure(&project(Some(fewer.clone())), Some(o._hub.client()))
-            .await,
+        reconfigure(&o, &project(Some(fewer.clone())), Some(o._hub.client())).await,
         Err(SetupFailure::NotAllowed)
     );
+    // The root over the running recording stays.
+    assert_eq!(o.gate.slot().map(|i| i.generation), Ok(1));
     stop(&o).await;
     let before = series(&o.runtime, &o.project);
     // A new mapping needs the Hub.
     assert_eq!(
-        o.runtime
-            .reconfigure(&project(Some(fewer.clone())), None)
-            .await,
+        reconfigure(&o, &project(Some(fewer.clone())), None).await,
         Err(SetupFailure::HubNotConfigured)
     );
     let fewer = project(Some(fewer));
     assert_eq!(
-        o.runtime.reconfigure(&fewer, Some(o._hub.client())).await,
+        reconfigure(&o, &fewer, Some(o._hub.client())).await,
         Ok(Reconfigured {
             changed: true,
             enabled: true
@@ -219,13 +221,13 @@ async fn a_store_without_an_applied_plan_is_not_reconfigured_or_resumed() {
     let hub = Hub::new(&both()).await;
     let auth = Arc::new(AuthHost::start(&dir.0).await.unwrap());
     let runtime = RecordingRuntime::start(&dir.0, "deployment-a");
+    let lock = auth.gate().await;
     assert_eq!(
         runtime
-            .reconfigure(&project(Some(plan(true))), Some(hub.client()))
+            .reconfigure(None, &lock, &project(Some(plan(true))), Some(hub.client()))
             .await,
         Err(SetupFailure::NotAllowed)
     );
-    let lock = auth.gate().await;
     assert_eq!(
         runtime
             .resume(None, &lock, hub.client(), hub.client())
@@ -239,12 +241,17 @@ async fn a_store_without_an_applied_plan_is_not_reconfigured_or_resumed() {
 /// through the gate: preflight, pause/join and apply.
 async fn registry_apply(o: &Owned, desired: Value) {
     let scope = o.gate.slot().unwrap().scope;
+    // A disabled plan binds no mapping or retention policy.
+    let bound = match desired["enabled"] == true {
+        true => json!(1),
+        false => Value::Null,
+    };
     let change = RecordingChangeRequest::from_value(json!({
         "version":1, "kind":"recordingChangeRequest", "changeId":"resume-change",
         "context":scope["context"],
         "apply":{"requestId":"apply:resume-change", "desired":desired,
-            "expectedAppliedRevision":1, "expectedMappingRevision":1,
-            "expectedRetentionAppliedRevision":1}
+            "expectedAppliedRevision":1, "expectedMappingRevision":bound,
+            "expectedRetentionAppliedRevision":bound}
     }))
     .unwrap();
     o.gate.workflow_reserve(change.clone()).await.unwrap();
@@ -335,18 +342,42 @@ async fn the_registry_apply_is_resumed_by_taking_the_root_back() {
     assert_eq!(lent["database"]["applied"]["appliedRevision"], 2);
     assert_eq!(lent["database"]["activeSessionId"], Value::Null);
     assert_eq!(o.gate.slot().map(|i| i.generation), Ok(1));
-    // Stopped, but the root holds the Supervisor: no reconfiguration.
-    assert_eq!(
-        o.runtime
-            .reconfigure(&o.project, Some(o._hub.client()))
-            .await,
-        Err(SetupFailure::NotAllowed)
-    );
-
     assert_eq!(resume_installed(&o).await, 2);
     let after = inspect(&o.runtime, &o.project).await;
     assert_eq!(after["host"]["phase"], "running");
     assert_eq!(after["database"]["latestActivation"]["appliedRevision"], 2);
     assert_eq!(after["database"]["latestActivation"]["state"], "active");
+    wait_points(&o.runtime, &o.project, 1).await;
+}
+
+#[tokio::test]
+async fn a_disabled_registry_apply_is_reconfigured_by_taking_the_root_back() {
+    let o = owned().await;
+    let mut disabled = plan(false);
+    disabled["revision"] = json!(2);
+    registry_apply(&o, disabled).await;
+    assert_eq!(o.gate.slot().map(|i| i.generation), Ok(1));
+    assert_eq!(resume(&o).await, Err(SetupFailure::PlanDisabled));
+
+    // The stopped plan is enabled again: the root is taken back first.
+    let mut enabled = plan(true);
+    enabled["revision"] = json!(3);
+    let enabled = project(Some(enabled));
+    assert_eq!(
+        reconfigure(&o, &enabled, None).await,
+        Ok(Reconfigured {
+            changed: true,
+            enabled: true
+        })
+    );
+    assert_eq!(o.gate.slot().map(|i| i.generation), Err(NO_RECORDING_RUN));
+    let db = &inspect(&o.runtime, &enabled).await["database"];
+    assert_eq!(db["applied"]["appliedRevision"], 3);
+    assert_eq!(db["applied"]["mappingRevision"], 1);
+    let o = Owned {
+        project: enabled,
+        ..o
+    };
+    assert_eq!(resume_installed(&o).await, 2);
     wait_points(&o.runtime, &o.project, 1).await;
 }

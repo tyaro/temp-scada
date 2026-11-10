@@ -240,7 +240,9 @@ pub async fn resume(
 }
 
 /// `recording_reconfigure(projectJson)` (Admin): apply the Project's plan
-/// while recording is stopped and no root is installed (design §5). Never
+/// while recording is stopped (design §5). A root left installed over a
+/// stopped recording (after the registry's apply) is taken back first, as
+/// for the resume; a running recording is `not_allowed`. Never
 /// starts recording. `resolve` reads the Hub only when the plan's members
 /// need a new mapping. Answers `{"applied": "applied" | "unchanged",
 /// "enabled"}`. Every accepted call is audited (`reconfigure`).
@@ -256,19 +258,17 @@ pub async fn reconfigure(
     if !lock.phase().admits_registry() {
         return Err(ControlError::Refused("not_allowed"));
     }
-    // The slot is checked under the lock: an installed root holds the
-    // Supervisor, and changes then go through the registry.
-    let result = if auth.recording_gate().is_some_and(|g| g.slot().is_ok()) {
-        Err(SetupFailure::NotAllowed)
-    } else {
-        runtime.reconfigure(project, resolve).await
-    }
-    .map(|done| {
-        json!({
-            "applied": if done.changed { "applied" } else { "unchanged" },
-            "enabled": done.enabled,
-        })
-    });
+    // A root over a running recording stays (changes then go through the
+    // registry); one left over a stopped recording is taken back first.
+    let result = runtime
+        .reconfigure(auth.recording_gate().map(|g| &**g), &lock, project, resolve)
+        .await
+        .map(|done| {
+            json!({
+                "applied": if done.changed { "applied" } else { "unchanged" },
+                "enabled": done.enabled,
+            })
+        });
     audited(
         auth,
         actor.session.identity(),
