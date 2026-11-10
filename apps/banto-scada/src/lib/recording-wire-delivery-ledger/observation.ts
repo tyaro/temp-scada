@@ -188,6 +188,7 @@ export function begin(
     const attempt: ObservationAttemptRecord = {
       token: attemptToken,
       query,
+      sequence,
       R,
       reply: null,
       abandoned: false,
@@ -233,6 +234,7 @@ export function repeat(
     const attempt: ObservationAttemptRecord = {
       token: attemptToken,
       query,
+      sequence,
       R,
       reply: null,
       abandoned: false,
@@ -319,6 +321,14 @@ export function accept(
   if (reply.outcome.kind === "pending") {
     reply = query.pending ??= reply;
     c.usage.observationBytes -= attempt.R;
+    // A repeat that stayed pending holds nothing but the shared reply, so its
+    // count and record bytes return too: the 250ms repeat must not use up the
+    // ledger. Its token keeps answering getters and duplicate replies (C6).
+    if (attempt !== query.first) {
+      c.observationAttempts.delete(attempt.sequence);
+      c.usage.observationAttempts--;
+      c.usage.observationBytes -= M;
+    }
   } else c.usage.observationBytes -= Math.max(0, attempt.R - bytes(reply));
   attempt.reply = reply;
   c.dirty = true;

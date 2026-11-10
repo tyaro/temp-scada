@@ -14,7 +14,8 @@
     forbidden: "記録操作の権限がありません",
     ownerUnavailable: "記録操作の対象を利用できません",
     expired: "操作の期限が切れました",
-    capacity: "記録操作の上限に達しました",
+    capacity:
+      "記録操作の上限に達しました。解消しない場合は記録を停止して再開してください（画面の再読込では回復しません）",
     protocolViolation: "記録操作の要求が受け付けられませんでした",
     internal: "記録操作の内部エラーです",
   };
@@ -251,7 +252,7 @@
       </p>{/if}
     {#if s?.refusal}<p role="status">
         {s.refusal === "capacity"
-          ? "操作IDの上限に達しました"
+          ? "操作IDの上限に達しました。画面を再読込すると操作を続けられます（記録は止まりません）"
           : s.refusal === "unqualified"
             ? "現在の対象へ送信できません"
             : errorLabels[s.refusal]}

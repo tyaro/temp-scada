@@ -558,6 +558,7 @@ C5-5bの実装で次を定めた。
 10. **slotがEmptyの理由**: 記録操作画面は「未接続」だけとし、理由は記録管理画面に出す。propを増やさない。
 11. **local-v2の`mode`**: `"native"`を加え、native portはlocal-v2で元replyを配送する。coordinator-v2（test-only）は製品で使わない。
 12. **長時間のrootの容量**: 上限に達したら`capacity`で止め、再読込で回復する。回収はC6で扱う。（C5-5bで、終端を得た元call・observationの予約は返すことにした。§7.2「C5-5bの実装で次を定めた」）
+    - **評価と訂正（2026-11-11ユーザー判断、C6）**: 「再読込で回復」は画面側（台帳・受信器・coordinatorのID）だけに当てはまる。hostのrootの枠は記録runごとで、再読込では戻らない。rootの枠は操作の回数に比例して使われ（mutation leaseで1 rootあたり約1300 workflow）、applyが成功するとrootは入れ替わるので、hostのID回収と自動の入替えは入れない。hostの`capacity`は記録の停止と再開（新しいroot）で回復し、owner付け替えはProjectが変わったときだけ使える。画面はこの違いを案内する。時間に比例して減っていた画面のobservation attemptは回収した（[observation台帳](historian-recording-wire-observation-ledger.md)§6）。使用済みIDを再使用しない契約は変えない。
 13. **再login後の回収**: C5-5では扱わず、5と一緒に後続で扱う。（C5-7で実装。CallInspectionではなくhostの記録から回収する）
 
 ## 9. 実装順
@@ -575,5 +576,6 @@ C5-5bの実装で次を定めた。
 | C5-5b 記録操作の画面接続      | **実装済み（2026-11-10）**。native実装（`src/native/recording/`）と`NativeShell`の接続、`scada:recording`への`ownerEpoch`（host）、local-v2の`mode: "native"`。IPC mockのe2eで予約からapply・reconcileまで、logoutでの`ended`、再読込後のattachし直し（表示まで）、`ownerClosed`の後のslotの読み直し                                                    |
 | C5-6 Windows実機受入          | 実Hubを読み、検証用DBへ記録し、履歴画面と保存Trendで確かめる。UIを閉じない間の継続、停止・join・明示再開、raw／minmax、欠測・Quality・SIM、再起動後の照会、実時間の件数とDB増分を記録する（ユーザー作業）。手順・確認項目・記録様式は[C5-6受入手順](../../project/real-hub-c5-acceptance.md)                                                            |
 | C5-7 workflowの引継ぎ         | **実装済み（2026-11-11）**。`recording_workflow_resumption`と、再読込・再login後のcoordinatorの復元（§7.2「workflowの引継ぎ」）。scada-hostの試験、vitest、IPC mockのe2e                                                                                                                                                                                |
+| C6 observation attemptの回収  | **実装済み（2026-11-11）**。pendingで終わった2回目以降のattemptの件数と管理bytesを台帳へ返す。上限到達時の案内（§8.1の12）。                                                                                                                                                                                                                            |
 
 C5-1は記録registryと独立で、C5-2以降の前提（store・`RecordingRuntime`）を置く。C5-5はC5-3aの後ならC5-3b・C5-4と並行できる。C5-4bとC5-5aは並行でき、C5-5bは両方の後に行う。

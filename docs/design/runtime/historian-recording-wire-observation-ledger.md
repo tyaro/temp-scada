@@ -115,6 +115,8 @@ target／query／attemptは各最大4096 ID、未回収Observation attemptはled
 - 正常terminalの保存で、`R`のうち保存した返信の実保守bytesを超える分を返す。
 - `abandonObservationAttempt(attempt)`を加えた。物理呼出しが返信なしで終わったattemptを待たない（`awaitingObservationReply`から外し、`R`を返す）。以後そのattemptの返信は`foreignToken`で受けず、queryはrepeatしない。新しいobservationIdのqueryは送れる。返信を保存済みのattemptは`invalidRequest`。Observationは読取だけなので、待たないことでnative処理を起こさない。
 
+**C6で改めた（2026-11-11ユーザー判断）**: 上の会計でも、250msごとのrepeatはattemptの件数と管理bytes（`M`）を返さず、結果待ちが累計約17分になると`capacity`になった。そこで、正常`pending`を保存した2回目以降のattemptは、件数を`observationAttempts`から、`M`を`observationBytes`から返す（上の「返却・減算しない」のattemptとbytesはこの分を除く）。返信本文はqueryごとに一つなので失うものはない。tokenは引き続き`observationAttempt`とduplicate返信に答える。queryの初回attempt、terminalを保存したattempt、abandonしたattemptは数えたままで、これらはqueryごとの有限個である。
+
 record管理の`M`、query・attemptのID件数は従来どおり返さない。
 
 4MiBは少数のpending→terminalとoperation／reconciliation併存を検証する有限枠である。未使用予約・IDの退役／GC、実Promiseの物理枠、複数callerの総容量と運転時間はlocal-v2／実bridge・C6までに別途閉じる。上限だけを引き上げて無期限運用可能とは扱わない。

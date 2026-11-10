@@ -670,6 +670,78 @@ it("charges a terminal at its actual size and releases abandoned and pending att
     p.accounting,
   ).bytes;
   expect(ledger.current().usage.observationBytes - empty).toBe(
-    charged - R + 3 * 1024 + actual,
+    charged - R + 2 * 1024 + actual,
   );
+});
+
+it("returns the count and record bytes of a repeat that stayed pending", () => {
+  // Past the default limit of 4096: over 20 minutes of the 250ms repeat.
+  const { ledger, target, observation, terminal } = setup();
+  const pending = response(observation, { kind: "pending" });
+  const first = query(ledger, target, observation);
+  ledger.acceptObservation(first.attempt, pending);
+  const settled = ledger.current().usage;
+  expect(settled.observationAttempts).toBe(1);
+
+  let repeat = first.attempt;
+  for (let n = 0; n < 5000; n++) {
+    repeat = take(ledger.repeatObservation(first.query));
+    expect(ledger.acceptObservation(repeat, pending).ok).toBe(true);
+  }
+  expect(ledger.current().usage).toMatchObject({
+    observationAttempts: settled.observationAttempts,
+    observationBytes: settled.observationBytes,
+    awaitingObservationReply: 0,
+    pendingObservationQueries: 1,
+  });
+
+  // A returned attempt still answers: its getters, and a duplicate reply.
+  expect(take(ledger.observationAttempt(repeat)).reply).toBe(
+    take(ledger.observationAttempt(first.attempt)).reply,
+  );
+  expect(take(ledger.observation(first.query)).latestAttempt).toBe(repeat);
+  const usage = ledger.current().usage;
+  expect(ledger.acceptObservation(repeat, pending)).toMatchObject({
+    ok: true,
+    value: { disposition: "duplicate" },
+  });
+  expect(ledger.current().usage).toEqual(usage);
+
+  // The query still reaches its terminal.
+  const last = take(ledger.repeatObservation(first.query));
+  expect(
+    ledger.acceptObservation(last, response(observation, terminal.outcome)),
+  ).toMatchObject({ ok: true, value: { queryTerminalStored: true } });
+  expect(ledger.current().usage).toMatchObject({
+    observationAttempts: 2,
+    pendingObservationQueries: 0,
+  });
+}, 30000);
+
+it("keeps the first attempt, a terminal and an abandoned repeat counted", () => {
+  const { ledger, target, observation, terminal } = setup({
+    observationAttempts: 3,
+  });
+  const pending = response(observation, { kind: "pending" });
+  const first = query(ledger, target, observation);
+  ledger.acceptObservation(first.attempt, pending);
+  // A repeat with no reply is still awaited, and nothing returns for it.
+  const open = take(ledger.repeatObservation(first.query));
+  expect(ledger.current().usage.observationAttempts).toBe(2);
+  expect(ledger.repeatObservation(first.query)).toMatchObject({
+    ok: false,
+    reason: "busy",
+  });
+  take(ledger.abandonObservationAttempt(open));
+  expect(ledger.current().usage.observationAttempts).toBe(2);
+  // Only the pending repeats return, so the last slot can be reused.
+  for (let n = 0; n < 3; n++)
+    ledger.acceptObservation(
+      take(ledger.repeatObservation(first.query)),
+      pending,
+    );
+  expect(ledger.current().usage.observationAttempts).toBe(2);
+  const last = take(ledger.repeatObservation(first.query));
+  ledger.acceptObservation(last, response(observation, terminal.outcome));
+  expect(ledger.current().usage.observationAttempts).toBe(3);
 });

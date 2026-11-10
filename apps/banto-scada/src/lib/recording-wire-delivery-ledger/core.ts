@@ -146,6 +146,8 @@ export interface ObservationQueryRecord {
 export interface ObservationAttemptRecord {
   token: ObservationAttemptToken;
   query: ObservationQueryRecord;
+  /** The key of this attempt in `Core.observationAttempts`. */
+  sequence: number;
   R: number;
   reply: RecordingWireObservationReply | null;
   /** The physical call ended without a reply; no reply is awaited any more. */
