@@ -75,6 +75,17 @@ function setup() {
   };
 }
 
+it("creates the operations without a workflow when its read fails or is malformed", async () => {
+  const h = setup();
+  h.ops.update("p:1", admin);
+  await settle();
+  // The default fake refuses the command.
+  expect(h.count("recording_workflow_resumption")).toBe(1);
+  expect(isAsyncOperationsClient(h.published.at(-1))).toBe(true);
+  expect(h.published.at(-1)!.current().resumed).toBe(false);
+  expect(h.count("recording_attach")).toBe(1);
+});
+
 it("publishes no client while signed out or while the slot is empty", async () => {
   const h = setup();
   h.ops.update("p:1", { signedIn: false, admin: false, sessionKey: "null" });

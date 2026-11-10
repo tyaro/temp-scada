@@ -166,6 +166,19 @@ export function createAsyncOperationsMonitor() {
     client = undefined;
     target = undefined;
   }
+  /**
+   * After a login again, the closed client of the same page still holds the
+   * Candidate that `c` took over from the host: nothing is left to watch there.
+   */
+  function continuesHeld(c: AsyncOperationsClient) {
+    const old = client?.current();
+    if (!old?.closed || !old.change) return false;
+    const next = c.current();
+    return (
+      next.resumed &&
+      (next.change ?? next.reservedChange)?.changeId === old.change.changeId
+    );
+  }
   function attach(c: AsyncOperationsClient) {
     off?.();
     retire();
@@ -245,7 +258,8 @@ export function createAsyncOperationsMonitor() {
       selection = s;
       releaseFinished();
       const c = selected().client;
-      if (!client && c && s.openOwner) attach(c);
+      if (c && s.openOwner && (!client || (c !== client && continuesHeld(c))))
+        attach(c);
       bind();
       publish();
     },

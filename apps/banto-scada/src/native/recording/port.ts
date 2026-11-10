@@ -44,6 +44,7 @@ import {
   type CommandAnswer,
   type RecordingCommand,
   type RecordingInvoke,
+  type ResumedWorkflow,
 } from "./commands";
 import {
   listenRecording,
@@ -66,6 +67,11 @@ export interface NativePortOptions {
   listen: RecordingListen;
   scope: RecordingWireScope;
   access: "mutation" | "read";
+  /**
+   * The workflow taken over from the host: its admissions enter the ledger
+   * as stored originals, without being sent (§7.2 "workflowの引継ぎ").
+   */
+  resumed?: ResumedWorkflow;
   /** Called once per cause: the slot is read again (§7.2 "slotの読み直し"). */
   signal?: (signal: PortSignal) => void;
   setTimer?: (run: () => void, ms: number) => unknown;
@@ -135,7 +141,8 @@ export function createNativeRecordingPortV2(
   const scope = ledger.current().scope;
   take(receiver.setConnected(true));
 
-  let seq: number | null = null;
+  // The answer that carried the workflow binds the generation it holds for.
+  let seq: number | null = options.resumed?.seq ?? null;
   let subscription: PortStateV2["subscription"] = "idle";
   let ended: string | null = null;
   let ownerClosed: PortOwnerClosed | null = null;
@@ -152,6 +159,12 @@ export function createNativeRecordingPortV2(
   /** Observations whose admission reply is not stored yet. */
   let unbound: (() => boolean)[] = [];
   const admissions: OriginalCallToken[] = [];
+  for (const { request, reply } of options.resumed?.workflow.admissions ?? []) {
+    const token = take(ledger.beginOriginal(request));
+    const stored = ledger.acceptOriginal(token, reply);
+    if (!stored.ok) throw Error("resumed admission refused");
+    admissions.push(token);
+  }
   const listeners = new Set<(state: PortStateV2) => void>();
   const timers = new Set<unknown>();
   let published = build();

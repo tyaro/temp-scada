@@ -41,7 +41,7 @@ use scada_runtime::recording_registry::LeaseError;
 use serde::{Serialize, Serializer};
 use serde_json::{json, Value};
 
-use crate::recording_gate::{Bound, GateError, RecordingGate, WorkflowStage};
+use crate::recording_gate::{Bound, GateError, RecordingGate, WorkflowResumption, WorkflowStage};
 
 /// The Tauri event the frame pumps emit.
 pub const RECORDING_EVENT: &str = "scada:recording";
@@ -318,6 +318,26 @@ impl DesktopRecording {
             bound,
             |reply| json!({ "changeId": reply.change_id }),
         ))
+    }
+
+    /// `recording_workflow_resumption` (read): `{"state": "none"}`, or the
+    /// caller's own workflow with its admissions in execution order.
+    pub async fn workflow_resumption(&self) -> Result<RecordingResult, RecordingCommandError> {
+        let gate = self.gate()?;
+        let bound = gate.workflow_resumption().await?;
+        Ok(RecordingResult::of(bound, |reply| match reply {
+            WorkflowResumption::None => json!({ "state": "none" }),
+            WorkflowResumption::Held { change, admissions } => json!({
+                "state": "held",
+                "change": change.as_value(),
+                "admissions": admissions
+                    .iter()
+                    .map(|(request, reply)| {
+                        json!({ "request": request.as_value(), "reply": reply.as_value() })
+                    })
+                    .collect::<Vec<_>>(),
+            }),
+        }))
     }
 
     /// `recording_workflow_lease` (mutation): `stage` is `preflight`,

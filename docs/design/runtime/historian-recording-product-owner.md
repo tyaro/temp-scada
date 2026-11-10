@@ -450,7 +450,7 @@ C5-5aの実装で次を定めた。
   - `ended`は、`ownerEpoch`がportのscopeと同じで、`subscriptionRef`が現在の購読のときだけ扱う。受信器の世代を`retire`し、`subscription: "ended"`、`ended`へ理由を記録する。理由が`unauthorized`・`forbidden`なら`authorizationLost: "ended"`、`closed`なら`ownerClosed: "hostClosed"`とし、attachし直さない。それ以外（`invalidInput`、`capacity`など）は、新しいattachIdで一度だけattachし直す。続けて`ended`になったら`subscription: "stopped"`とし、自動ではやり直さない。
   - 受信器が`resyncRequired`になったら、新しいattachIdで`afterRevision: null`のattachをし直す。成功するまで`resyncRequired: true`とする。回数は`ended`と同じ上限を共有する。
 - **観測のrepeat**: `observe`は一つのtargetに一つのquery（observationId）を作り、`pending`の間は250ms（hostの`FRAME_POLL_INTERVAL`と同じ）ごとに同じrequestを送る（台帳の`repeatObservation`で新しいattempt）。attemptの返信を失った（`transport`が`returned`以外）queryは、そのqueryをrepeatしない。新しいobservationIdのqueryを最大2回まで作り直し、それでも終端を得られなければ`query: "transportLost"`とする。observationは読取だけで、native処理を起こさない。
-- **再読込（page reload）**: hostはpageの終わりにそのpageの購読を終える（`Pages`・`end_page`）。新しいpageでは新しい台帳・受信器・portを作り、新しいattachIdでattachする。前のpageの元callのtokenは引き継がない。前のpageで予約したworkflowは、新しいcoordinatorでは続けられず、snapshotの表示（`lastKnown`／`currentSubscription`）だけになる。画面は「前の画面の作業が残っています。アプリを終了すると候補は破棄されます」と案内する。hostから保持workflowを引き継ぐ読取commandと、同じprincipalの再login後のCallInspectionによる回収は後続の区切りで扱う。§9の「再読込後のattachし直し」は表示までとする。
+- **再読込（page reload）**: hostはpageの終わりにそのpageの購読を終える（`Pages`・`end_page`）。新しいpageでは新しい台帳・受信器・portを作り、新しいattachIdでattachする。前のpageの元callのtokenは引き継がない。前のpageで予約したworkflowは、新しいcoordinatorでは続けられず、snapshotの表示（`lastKnown`／`currentSubscription`）だけになる。画面は「前の画面の作業が残っています。アプリを終了すると候補は破棄されます」と案内する。同じprincipalの作業は、下の「workflowの引継ぎ（C5-7）」でhostから引き継ぐ。
 - **slotがEmptyのとき**: `recording_slot`が`{"state": "empty", "reason"}`ならportもcoordinatorも作らず、`recordingAsyncOperations`へ`undefined`をpublishする（記録操作画面は「未接続」）。閉じたcoordinatorに未完了の作業がなければ、記録操作画面はそれを手放す（未完了の間は監視を続け、安全に終端した時点で手放す）。次にInstalledになったcoordinatorは「切替」を押さなくても表示される。理由は記録管理画面の照会で示し、記録操作画面へ新しいpropで渡さない。
 - **slotの読み直し**: 次の契機で`recording_slot`を読み直す。定期的なpollingはしない。
   - 起動時、sessionの変化（`ManagementAccess.sessionKey`）、ProjectのID・revisionの変化。
@@ -472,6 +472,39 @@ C5-5bの実装で次を定めた。
 - **再読込後の表示**: `AsyncOperationsState`へ`earlierWork`を加えた。ownerの最新のadmission（cached frame）がこのcoordinatorのものでなく、Acceptedで、その操作結果が未着か候補（`candidate`・`paused`）のときtrueとし、記録操作画面は「前の画面の作業が残っています。アプリを終了すると候補は破棄されます。」と示す。
 - **slotの読み直し**: 記録管理画面の操作（初回設定・再開・停止中の計画適用・停止・owner contextの付け替え）が成功したら`recording_slot`を読み直す。同じgenerationなら`seqChanged`以外では作り直さない。Emptyを挟まずに新しいcoordinatorへ置き換わったときは、記録操作画面の既存の切替（「選択した接続へ切替」）で選ばれるまで旧ownerの表示を残す。
 - **mock host**: e2eの登録処理は`__fixtures__/recording-async-port.ts`のharnessを、Tauri commandとeventの形で包んだもの（`__fixtures__/recording-native-host.ts`）である。
+
+#### workflowの引継ぎ（C5-7）
+
+§8.1の5・13の実装である。再読込と再loginの後に、同じprincipalが予約したworkflowを新しいcoordinatorで続けられるようにする。browser storageへは保存しない。
+
+**host（`recording_workflow_resumption`、読取）**: gateは`HeldWorkflow`に、段階（preflight・pauseJoin・apply・discard・reconcile）ごとの最新の元requestと、dispatchが返した元replyを記録する。登録と配送は同じlockの下で行うので（§5）、返信を受け取るはずだったpageが消えていても記録は残る。
+
+```json
+{ "state": "none" }
+{ "state": "held", "change": {}, "admissions": [{ "request": {}, "reply": {} }] }
+```
+
+- `admissions`は実行順で、同じ段階をやり直すと古い記録を除いて末尾へ置く。最大5件で、大きさはregistryの予約済みの上限の中にある。
+- workflowがない、別のprincipalのworkflowである、discardが`completedDiscard`で終わった場合は`none`を返す。別のprincipalへは変更内容も存在も明かさない（`Forbidden`にしない）。
+- 認可は読取（Viewer以上）で、降格後のprincipalも結果を見られる。操作の可否は`access`で別に決まる。
+- 再loginの回収はこのcommandで行う。元callの返信はgateの記録から得られるので、前のpageの台帳tokenが必要なCallInspectionは使わない。
+
+**台帳（port）**: `createNativeRecordingPortV2`の`resumed`に受け取り、作成時に各admissionを`beginOriginal`→`acceptOriginal`で台帳へ入れ、`admissions`へ加える。`invoke`はしない（元callを再送しない）。observationは同じ台帳の束縛を使う。portの`seq`はこの返信の`seq`で束縛するので、読んだ後にsessionが変われば`seqChanged`で読み直す。
+
+**coordinator**: `createAsyncRecordingOperationsCoordinator(port, now, resumption)`。
+
+- `resumption`は読取の時点で`parseRecordingWorkflowResumption`で検査する（scope・context・段階の重複・`reply.request`・actionの`change`の一致）。不正なら引き継がず、従来の`earlierWork`の表示に戻す。
+- 最後の受理済みoperationだけを`OperationTrack`にしてobserveする。`latest`はobservationの終端で得るので、hostは結果を別に持たない。reconcileが受理済みなら、そのoperationが終端を得た後でreadをobserveする（読取の結果をoperationの結果へ統合する順序を保つ）。
+- `request`・`reply`・`admission`は最後のadmissionから復元する。`unknown`ならAdmissionInspectionへ進める。
+- 記録のある段階は`attempted`とする。新しいIDの枠として`mutationAdmission` 4・`callerOperation` 2を予約する。前のpageのIDはpoolに入らないが、poolの接頭辞が毎回新しいので衝突しない。
+- `AsyncOperationsState`へ`resumed`（host由来のworkflowを持って作られた）と`reservedChange`を加えた。
+- **予約だけの場合**（`admissions`が空）: registryのworkflowは別の`changeId`を`busy`にするので、新しい変更は始められない。coordinatorは`reservedChange`を示し、記録操作画面は計画が同じなら同じ`change`でpreflightを続ける（reserveは同じ要求なら同じ予約を返す）。計画が違うときは案内だけを出す。
+- **viewの束縛**: 引き継いだworkflowには前のviewのidentityがない。最初に`bindView`したviewのidentityを採用する。
+- `earlierWork`は、引き継いだ最後のadmissionと同じIDなら立たない。読んだ後に別のadmissionがframeに現れた場合と、別のprincipalのworkflowでは従来どおり立つ。
+
+**画面側の切替**: 再loginでは同じpageに閉じた旧coordinatorが残る。Candidateの間は`safeToSwitch`がfalseなので、monitorは「選択中のclientが`resumed`で、同じ`changeId`のworkflowを持つ」ときに自動で新しいclientへ移る。
+
+**残る制限**: 前のpageがpause/join・applyのleaseを取ったまま登録せずに消えると、registryはそのIDにleaseを束縛しているので、新しいIDの同じ段階は`protocolViolation`になる。発生はleaseの返信から登録までの間だけで、期限の後にdiscardすれば回復できる（§6.1の取り直しはdiscardだけ）。
 
 #### 時計
 
@@ -517,7 +550,7 @@ C5-5bの実装で次を定めた。
 2. **portが束縛する`seq`**: 最初の正常返信（通常はattach）の`seq`を束縛する。portはsessionごとに作り直す。
 3. **eventのroot識別**: `scada:recording`の`frames`・`ended`へ`ownerEpoch`を加える（hostの小変更、C5-5b）。
 4. **slotの変化**: 起動、session・Projectの変化、owner終了（`ownerClosed`）、`seqChanged`、attachし直しの上限、記録管理画面の操作の完了を契機に`recording_slot`を読み直す（§7.2）。pollingもslotのeventも加えない。
-5. **再読込・session交代後のworkflow**: C5-5では表示と案内までとする。hostからの引継ぎは後続で扱い、browser storageへは保存しない。
+5. **再読込・session交代後のworkflow**: C5-5では表示と案内までとする。hostからの引継ぎは後続で扱い、browser storageへは保存しない。（C5-7で実装。§7.2「workflowの引継ぎ」）
 6. **owner状態の出し方**: `AsyncOperationsState`へ追加のreadonly field（`owner`・`hostRefusal`）を加え、既存のfieldへまとめない。
 7. **`leaseRequestId`・`cancelId`**: ID poolへ`lease`・`cancel`の役割を加えて引く。
 8. **observationの返信喪失**: 新しいobservationIdのqueryを自動で最大2回作り直す。
@@ -525,7 +558,7 @@ C5-5bの実装で次を定めた。
 10. **slotがEmptyの理由**: 記録操作画面は「未接続」だけとし、理由は記録管理画面に出す。propを増やさない。
 11. **local-v2の`mode`**: `"native"`を加え、native portはlocal-v2で元replyを配送する。coordinator-v2（test-only）は製品で使わない。
 12. **長時間のrootの容量**: 上限に達したら`capacity`で止め、再読込で回復する。回収はC6で扱う。（C5-5bで、終端を得た元call・observationの予約は返すことにした。§7.2「C5-5bの実装で次を定めた」）
-13. **再login後の回収**: C5-5では扱わず、5と一緒に後続で扱う。
+13. **再login後の回収**: C5-5では扱わず、5と一緒に後続で扱う。（C5-7で実装。CallInspectionではなくhostの記録から回収する）
 
 ## 9. 実装順
 
@@ -541,5 +574,6 @@ C5-5bの実装で次を定めた。
 | C5-5a port v2とcoordinator    | **実装済み（2026-11-10）**。port v2（§7.2）、`defineAsyncRecordingPortV2`、coordinatorの改訂、v2 harnessへの移行（vitest・`recording-async-workspace` e2e）。TSのみで、通常Appの接続は変えない                                                                                                                                                          |
 | C5-5b 記録操作の画面接続      | **実装済み（2026-11-10）**。native実装（`src/native/recording/`）と`NativeShell`の接続、`scada:recording`への`ownerEpoch`（host）、local-v2の`mode: "native"`。IPC mockのe2eで予約からapply・reconcileまで、logoutでの`ended`、再読込後のattachし直し（表示まで）、`ownerClosed`の後のslotの読み直し                                                    |
 | C5-6 Windows実機受入          | 実Hubを読み、検証用DBへ記録し、履歴画面と保存Trendで確かめる。UIを閉じない間の継続、停止・join・明示再開、raw／minmax、欠測・Quality・SIM、再起動後の照会、実時間の件数とDB増分を記録する（ユーザー作業）。手順・確認項目・記録様式は[C5-6受入手順](../../project/real-hub-c5-acceptance.md)                                                            |
+| C5-7 workflowの引継ぎ         | **実装済み（2026-11-11）**。`recording_workflow_resumption`と、再読込・再login後のcoordinatorの復元（§7.2「workflowの引継ぎ」）。scada-hostの試験、vitest、IPC mockのe2e                                                                                                                                                                                |
 
 C5-1は記録registryと独立で、C5-2以降の前提（store・`RecordingRuntime`）を置く。C5-5はC5-3aの後ならC5-3b・C5-4と並行できる。C5-4bとC5-5aは並行でき、C5-5bは両方の後に行う。

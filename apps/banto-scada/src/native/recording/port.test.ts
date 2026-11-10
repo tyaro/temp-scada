@@ -12,6 +12,7 @@ import type {
 } from "../../lib/recording-async/port";
 import { createNativeRecordingPortV2, type PortSignal } from "./port";
 import { RECORDING_EVENT } from "./events";
+import type { ResumedWorkflow } from "./commands";
 
 const scope = clone(deliveryFixtures.scope);
 
@@ -114,7 +115,10 @@ async function settle() {
   for (let i = 0; i < 20; i++) await Promise.resolve();
 }
 
-function setup(access: "mutation" | "read" = "mutation") {
+function setup(
+  access: "mutation" | "read" = "mutation",
+  resumed?: ResumedWorkflow,
+) {
   const host = fakeHost(),
     clock = timers(),
     signals: PortSignal[] = [];
@@ -124,6 +128,7 @@ function setup(access: "mutation" | "read" = "mutation") {
     listen: host.listen as never,
     scope,
     access,
+    resumed,
     signal: (s) => signals.push(s),
     setTimer: clock.setTimer,
     clearTimer: clock.clearTimer,
@@ -401,6 +406,39 @@ it("repeats a pending observation and resolves on its terminal reply only", asyn
     new Set(["ob:1"]),
   );
   expect(port.current().observations[0].query).toBe("terminal");
+});
+
+it("observes a taken-over admission from the ledger without sending it, under its seq", async () => {
+  const { admission, accepted, target, terminal } = observable();
+  const { host, port, signals } = setup("mutation", {
+    seq: 7,
+    workflow: {
+      change: admission.action.change,
+      admissions: [{ request: admission, reply: accepted }],
+    },
+  } as never);
+  expect(port.current().seq).toBe(7);
+  host.setSeq(7);
+  host.handlers.recording_observation = (args) => ({
+    version: 1,
+    kind: "recordingWireObservationReply",
+    request: args.request,
+    outcome: terminal,
+  });
+  const observed = port.observe(target);
+  await settle();
+  expect((await observed.result).outcome).toEqual(terminal);
+  expect(host.calls.map((c) => c.cmd)).toEqual(["recording_observation"]);
+
+  // A later session generation is not the one that took the workflow over.
+  host.setSeq(8);
+  host.handlers.recording_admission = (args) => deliveryReply(args.request);
+  await port.admit(
+    deliveryRequest("admit", [
+      { path: "admissionId", value: "admission-9" },
+    ]) as never,
+  ).transport;
+  expect(signals).toContain("seqChanged");
 });
 
 it("makes a new query after a lost reply, at most twice, then reports transportLost", async () => {

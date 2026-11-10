@@ -5,6 +5,7 @@
   import type { AsyncOperationsClient } from "./state";
   import { createAsyncOperationsMonitor } from "./monitor";
   import { parseRecordingChangeRequest } from "../recording-operations-contract";
+  import { sameOwnedJson } from "../json-equality";
   import { errorLabels } from "../recording-operations/labels";
   import type { RecordingWireError } from "../recording-wire-contract";
   import RecordingPlanView from "../recording-management/RecordingPlanView.svelte";
@@ -94,8 +95,18 @@
       throw Error("invalid");
     return Number(v);
   }
+  const reservedDiffers = $derived(
+    !!s?.reservedChange &&
+      (!visible?.desired ||
+        !sameOwnedJson(s.reservedChange.apply.desired, visible.desired)),
+  );
   function preflight() {
     if (!enabled || !visible?.canPreflight || !visible.desired || !s) return;
+    // The registry holds this reservation: only the same change continues it.
+    if (s.reservedChange) {
+      if (!reservedDiffers) monitor.preflight(s.reservedChange, control());
+      return;
+    }
     try {
       const token = Array.from(
         crypto.getRandomValues(new Uint8Array(16)),
@@ -195,6 +206,14 @@
       </p>{/if}
     {#if s?.earlierWork}<p role="status">
         前の画面の作業が残っています。アプリを終了すると候補は破棄されます。
+      </p>{/if}
+    {#if s?.resumed && s.change && !s.earlierWork}<p role="status">
+        前の画面の作業を引き継ぎました。
+      </p>{/if}
+    {#if s?.reservedChange}<p role="status">
+        {reservedDiffers
+          ? "前の画面で予約した変更と計画が違うため続けられません。アプリを終了すると予約は解除されます。"
+          : "前の画面で予約した変更があります。検査すると同じ変更で続けます。"}
       </p>{/if}
     {#if s?.closed}<p role="status">
         操作元は新しい操作の受付を終了しています。

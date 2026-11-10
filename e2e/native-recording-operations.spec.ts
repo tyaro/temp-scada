@@ -50,6 +50,8 @@ async function mockNativeHost(page: Page) {
           // earlier page's owner frame.
           const owner = sessionStorage.getItem("__recordingOwner");
           if (owner) h.patch(JSON.parse(owner));
+          const held = sessionStorage.getItem("__recordingHeld");
+          if (held) h.hold(JSON.parse(held));
           return h;
         })),
     };
@@ -272,8 +274,113 @@ test("a reloaded page attaches anew, shows the earlier work and sends none of it
     (await calls(page))
       .filter((c) => c.page === 2)
       .map((c) => c.cmd)
-      .filter((cmd) => cmd !== "recording_slot" && cmd !== "recording_attach"),
+      .filter(
+        (cmd) =>
+          cmd !== "recording_slot" &&
+          cmd !== "recording_attach" &&
+          cmd !== "recording_workflow_resumption",
+      ),
   ).toEqual([]);
+});
+
+test("a reloaded page takes the Candidate over from the host and continues it", async ({
+  page,
+}) => {
+  await ready(page);
+  await preflight(page);
+  await onHost(page, "finish", 0);
+  await expect(button(page, "この元runを停止してjoin")).toBeEnabled();
+  await page.evaluate(async () => {
+    const h = await (window as any).__recordingNative.host();
+    const s = h.harness.frame.display.snapshot;
+    sessionStorage.setItem(
+      "__recordingOwner",
+      JSON.stringify({ admission: s.admission, operation: s.operation }),
+    );
+    sessionStorage.setItem(
+      "__recordingHeld",
+      JSON.stringify(await h.workflow()),
+    );
+  });
+  await page.reload();
+  await openProject(page, file());
+  await expect
+    .poll(
+      async () => (await attaches(page)).filter((c) => c.page === 2).length,
+      { timeout: 30_000 },
+    )
+    .toBe(1);
+  await open(page);
+  await expect(dialog(page)).toContainText("前の画面の作業を引き継ぎました。");
+  await expect(dialog(page)).not.toContainText("前の画面の作業が残っています");
+  await expect(button(page, "この元runを停止してjoin")).toBeEnabled();
+  const pageTwo = async () =>
+    (await calls(page)).filter((c) => c.page === 2).map((c) => c);
+  expect((await pageTwo()).map((c) => c.cmd)).not.toContain(
+    "recording_admission",
+  );
+
+  await button(page, "この元runを停止してjoin").click();
+  await expect
+    .poll(
+      async () =>
+        (await pageTwo()).filter((c) => c.cmd === "recording_admission").length,
+    )
+    .toBe(1);
+  const admitted = (await pageTwo()).find(
+    (c) => c.cmd === "recording_admission",
+  )!;
+  const first = (await calls(page)).find(
+    (c) => c.page === 1 && c.cmd === "recording_admission",
+  )!;
+  expect(admitted.args.request.action.kind).toBe("pauseJoin");
+  expect(admitted.args.request.admissionId).not.toBe(
+    first.args.request.admissionId,
+  );
+});
+
+test("a reloaded page continues a reservation that has no admission with the same change", async ({
+  page,
+}) => {
+  await ready(page);
+  await preflight(page);
+  const reserved = (await calls(page)).find(
+    (c) => c.cmd === "recording_workflow_reserve",
+  )!.args.request;
+  await page.evaluate((change) => {
+    sessionStorage.setItem(
+      "__recordingHeld",
+      JSON.stringify({
+        resumption: { state: "held", change, admissions: [] },
+        outcomes: [],
+      }),
+    );
+  }, reserved);
+  await page.reload();
+  await openProject(page, file());
+  await expect
+    .poll(
+      async () => (await attaches(page)).filter((c) => c.page === 2).length,
+      { timeout: 30_000 },
+    )
+    .toBe(1);
+  await open(page);
+  await expect(dialog(page)).toContainText(
+    "前の画面で予約した変更があります。検査すると同じ変更で続けます。",
+  );
+  await button(page, "新しい変更を検査").click();
+  await expect
+    .poll(
+      async () =>
+        (await calls(page)).filter(
+          (c) => c.page === 2 && c.cmd === "recording_workflow_reserve",
+        ).length,
+    )
+    .toBe(1);
+  const again = (await calls(page)).find(
+    (c) => c.page === 2 && c.cmd === "recording_workflow_reserve",
+  )!;
+  expect(again.args.request).toEqual(reserved);
 });
 
 test("an empty slot reads as offline and the next root attaches by itself", async ({

@@ -539,6 +539,159 @@ async fn a_candidate_is_discarded_through_the_held_preflight_ticket() {
     assert_eq!(f.gate.admission(discard).await.unwrap(), discarded);
 }
 
+/// The admissions of a held resumption, as (admission ID, outcome kind).
+fn resumed_admissions(resumption: &WorkflowResumption) -> Vec<(String, String)> {
+    let WorkflowResumption::Held { admissions, .. } = resumption else {
+        panic!("no held workflow: {resumption:?}");
+    };
+    admissions
+        .iter()
+        .map(|(request, reply)| {
+            (
+                request.as_value()["admissionId"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned(),
+                reply.as_value()["outcome"]["kind"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned(),
+            )
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn a_new_page_reads_its_own_workflow_with_the_stored_replies() {
+    let f = initializing().await;
+    assert_eq!(
+        f.gate.workflow_resumption().await.unwrap().reply,
+        WorkflowResumption::None
+    );
+
+    // Reserved only: the change is there, with no admission yet.
+    let reserved = test_support::change("reserved-change");
+    f.gate.workflow_reserve(reserved.clone()).await.unwrap();
+    assert_eq!(
+        f.gate.workflow_resumption().await.unwrap().reply,
+        WorkflowResumption::Held {
+            change: reserved,
+            admissions: vec![],
+        }
+    );
+}
+
+#[tokio::test]
+async fn the_resumption_holds_each_stage_in_execution_order() {
+    let f = initializing().await;
+    let p = preflighted(&f, "resume-change").await;
+    let resumption = f.gate.workflow_resumption().await.unwrap().reply;
+    let WorkflowResumption::Held { change, admissions } = &resumption else {
+        panic!("no held workflow");
+    };
+    assert_eq!(change, &p.change);
+    assert_eq!(
+        admissions,
+        &vec![(p.request.clone(), p.accepted.reply.clone())]
+    );
+
+    let operation_id = "pause:resume".to_owned();
+    let lease = when_ready!(
+        f.gate
+            .workflow_lease(
+                WorkflowStage::PauseJoin {
+                    operation_id: operation_id.clone()
+                },
+                stage_lease(&f.scope, "pause", "mutation")
+            )
+            .await
+    )
+    .unwrap();
+    let pause = admission(
+        &f.scope,
+        "pause",
+        &lease,
+        json!({"kind":"pauseJoin", "changeRef":handle(&p.accepted, "changeRef"),
+            "operation":operation(&p.change, &operation_id, "pauseJoin")}),
+    );
+    // A replay of the same request stays one record.
+    f.gate.admission(pause.clone()).await.unwrap();
+    f.gate.admission(pause).await.unwrap();
+    assert_eq!(
+        resumed_admissions(&f.gate.workflow_resumption().await.unwrap().reply),
+        vec![
+            ("preflight".to_owned(), "accepted".to_owned()),
+            ("pause".to_owned(), "accepted".to_owned()),
+        ]
+    );
+}
+
+#[tokio::test]
+async fn a_completed_discard_ends_the_resumption() {
+    let f = initializing().await;
+    let p = preflighted(&f, "discarded-change").await;
+    let lease = when_ready!(
+        f.gate
+            .workflow_lease(
+                WorkflowStage::Discard,
+                stage_lease(&f.scope, "discard", "mutation")
+            )
+            .await
+    )
+    .unwrap();
+    let discard = admission(
+        &f.scope,
+        "discard",
+        &lease,
+        json!({"kind":"discard", "changeRef":handle(&p.accepted, "changeRef"),
+            "change":p.change.as_value()}),
+    );
+    f.gate.admission(discard).await.unwrap();
+    assert_eq!(
+        f.gate.workflow_resumption().await.unwrap().reply,
+        WorkflowResumption::None
+    );
+}
+
+#[tokio::test]
+async fn the_resumption_follows_the_principal_across_logins() {
+    let f = operational().await;
+    let p = preflighted(&f, "login-change").await;
+
+    // Another principal sees nothing of it, not even a refusal.
+    f.auth.auth().logout().await;
+    login(&f.auth, "viewer").await;
+    assert_eq!(
+        f.gate.workflow_resumption().await.unwrap().reply,
+        WorkflowResumption::None
+    );
+
+    // The same principal after a new login gets its replies back, and its
+    // new generation observes the operation through them.
+    f.auth.auth().logout().await;
+    login(&f.auth, "admin").await;
+    let resumption = f.gate.workflow_resumption().await.unwrap();
+    let WorkflowResumption::Held { admissions, .. } = &resumption.reply else {
+        panic!("no held workflow");
+    };
+    assert_eq!(admissions[0].1, p.accepted.reply);
+    let observed = f
+        .gate
+        .observation(
+            RecordingWireObservationRequest::from_value(json!({
+                "version":1, "kind":"recordingWireObservationRequest", "scope":f.scope,
+                "observationId":"resumed-observation",
+                "target":{"kind":"operation",
+                    "operationRef":handle(&p.accepted, "operationRef"),
+                    "request":p.accepted.reply.as_value()["outcome"]["handle"]["request"]}
+            }))
+            .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_ne!(outcome_kind(&observed, |r| r.as_value()), "unavailable");
+}
+
 #[tokio::test]
 async fn a_withheld_admission_reply_stays_registered_for_its_principal() {
     let f = operational().await;

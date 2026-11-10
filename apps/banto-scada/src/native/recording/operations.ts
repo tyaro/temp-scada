@@ -9,7 +9,12 @@ import {
   createAsyncRecordingOperationsCoordinator,
   type AsyncOperationsClient,
 } from "../../lib/recording-async/coordinator";
-import { readSlot, type RecordingInvoke } from "./commands";
+import {
+  readResumption,
+  readSlot,
+  type RecordingInvoke,
+  type ResumedWorkflow,
+} from "./commands";
 import type { RecordingListen } from "./events";
 import {
   createNativeRecordingPortV2,
@@ -69,8 +74,9 @@ export function createNativeRecordingOperations(
     const issued = ++reads;
     const who = access;
     if (disposed || !who?.signedIn) return;
-    void readSlot(invoke).then((slot) => {
-      if (disposed || issued !== reads || who !== access) return;
+    const stale = () => disposed || issued !== reads || who !== access;
+    void readSlot(invoke).then(async (slot) => {
+      if (stale()) return;
       if (slot.state !== "installed") {
         if (live || slot.state === "empty") {
           retire();
@@ -79,13 +85,15 @@ export function createNativeRecordingOperations(
         return;
       }
       if (live && live.generation === slot.generation && !renew) return;
+      const resumed = await readResumption(invoke, slot.scope);
+      if (stale()) return;
       retire();
       let made: Live | undefined;
       const signal = (s: PortSignal) => {
         if (live !== made) return;
         read(s === "seqChanged");
       };
-      try {
+      const create = (taken: ResumedWorkflow | null) => {
         const port = createNativeRecordingPortV2({
           ...portOptions,
           invoke,
@@ -93,17 +101,31 @@ export function createNativeRecordingOperations(
           scope: slot.scope,
           access: who.admin ? "mutation" : "read",
           signal,
+          resumed: taken ?? undefined,
         });
         const coordinator = createAsyncRecordingOperationsCoordinator(
           port.port,
+          undefined,
+          taken?.workflow,
         );
+        return { port, coordinator };
+      };
+      try {
+        let built: ReturnType<typeof create>;
+        try {
+          built = create(resumed);
+        } catch {
+          // A workflow the ledger refuses is left uncontinued, as an earlier
+          // page's work: the operations themselves stay available.
+          built = create(null);
+        }
         made = live = {
           generation: slot.generation,
-          port,
-          close: coordinator.close,
+          port: built.port,
+          close: built.coordinator.close,
         };
-        publish(coordinator.client);
-        void port.start();
+        publish(built.coordinator.client);
+        void built.port.start();
       } catch {
         publish(undefined);
       }

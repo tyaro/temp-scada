@@ -143,6 +143,17 @@ pub struct WorkflowReservation {
     pub change_id: String,
 }
 
+/// The reply of `recording_workflow_resumption`: what a new page needs to
+/// continue the caller's own workflow (product-owner design §7.2 C5-7).
+#[derive(Debug, Clone, PartialEq)]
+pub enum WorkflowResumption {
+    None,
+    Held {
+        change: RecordingChangeRequest,
+        admissions: Vec<(RecordingAdmissionRequest, RecordingAdmissionReply)>,
+    },
+}
+
 /// The stage `recording_workflow_lease` issues a lease for (design §5).
 /// Pause/join and apply name the caller's operation ID of the native
 /// operation their admission carries (`action.operation.operationId`).
@@ -209,6 +220,39 @@ struct HeldWorkflow {
     /// an earlier lease (one the registry since replaced) leaves it.
     discard_lease: Option<RecordingWireLeaseRequest>,
     discard_lease_ids: BTreeSet<String>,
+    /// The latest admission of each stage with the reply its dispatch
+    /// returned, in execution order: at most one per stage, so five. It is
+    /// recorded under the lock of the dispatch, so a page that disappeared
+    /// before the reply arrived loses nothing (design §7.2 C5-7).
+    admissions: Vec<(RecordingAdmissionRequest, RecordingAdmissionReply)>,
+}
+
+impl HeldWorkflow {
+    fn record_admission(
+        &mut self,
+        request: RecordingAdmissionRequest,
+        reply: RecordingAdmissionReply,
+    ) {
+        let kind = request.as_value()["action"]["kind"].clone();
+        self.admissions
+            .retain(|(held, _)| held.as_value()["action"]["kind"] != kind);
+        self.admissions.push((request, reply));
+    }
+
+    fn resumption(&self) -> WorkflowResumption {
+        // A completed discard ended the workflow; only the root's record stays.
+        let discarded = self
+            .admissions
+            .last()
+            .is_some_and(|(_, reply)| reply.as_value()["outcome"]["kind"] == "completedDiscard");
+        if discarded {
+            return WorkflowResumption::None;
+        }
+        WorkflowResumption::Held {
+            change: self.change.clone(),
+            admissions: self.admissions.clone(),
+        }
+    }
 }
 
 /// The tickets of the held workflow, for `principal` only.
@@ -272,7 +316,8 @@ fn admit(r: Registry<'_>, request: RecordingAdmissionRequest) -> Result<Admitted
         .as_str()
         .unwrap_or_default()
         .to_owned();
-    match kind.as_str() {
+    let original = request.clone();
+    let (registered, reply) = match kind.as_str() {
         "preflight" => {
             let (ticket, registered) =
                 match root.register_preflight(session, &held.ticket, request)? {
@@ -280,8 +325,7 @@ fn admit(r: Registry<'_>, request: RecordingAdmissionRequest) -> Result<Admitted
                     PreflightRegistration::Existing(ticket) => (ticket, false),
                 };
             held.preflight = Some(ticket.clone());
-            let reply = root.dispatch_preflight(session, &ticket);
-            Ok(Admitted { registered, reply })
+            (registered, root.dispatch_preflight(session, &ticket))
         }
         "pauseJoin" => {
             let preflight = earlier(&held.preflight)?;
@@ -291,8 +335,7 @@ fn admit(r: Registry<'_>, request: RecordingAdmissionRequest) -> Result<Admitted
                     PauseRegistration::Existing(ticket) => (ticket, false),
                 };
             held.pause = Some(ticket.clone());
-            let reply = root.dispatch_pause_join(session, &ticket);
-            Ok(Admitted { registered, reply })
+            (registered, root.dispatch_pause_join(session, &ticket))
         }
         "apply" => {
             let pause = earlier(&held.pause)?;
@@ -302,8 +345,7 @@ fn admit(r: Registry<'_>, request: RecordingAdmissionRequest) -> Result<Admitted
                     ApplyRegistration::Existing(ticket) => (ticket, false),
                 };
             held.apply = Some(ticket.clone());
-            let reply = root.dispatch_apply(session, &ticket);
-            Ok(Admitted { registered, reply })
+            (registered, root.dispatch_apply(session, &ticket))
         }
         "discard" => {
             let preflight = earlier(&held.preflight)?;
@@ -312,8 +354,7 @@ fn admit(r: Registry<'_>, request: RecordingAdmissionRequest) -> Result<Admitted
                     DiscardRegistration::Registered(ticket) => (ticket, true),
                     DiscardRegistration::Existing(ticket) => (ticket, false),
                 };
-            let reply = root.dispatch_discard(session, &ticket);
-            Ok(Admitted { registered, reply })
+            (registered, root.dispatch_discard(session, &ticket))
         }
         "reconcile" => {
             let apply = earlier(&held.apply)?;
@@ -322,11 +363,14 @@ fn admit(r: Registry<'_>, request: RecordingAdmissionRequest) -> Result<Admitted
                     ReconciliationRegistration::Registered(ticket) => (ticket, true),
                     ReconciliationRegistration::Existing(ticket) => (ticket, false),
                 };
-            let reply = root.dispatch_reconciliation(session, &ticket);
-            Ok(Admitted { registered, reply })
+            (registered, root.dispatch_reconciliation(session, &ticket))
         }
-        _ => Err(LeaseError::InvalidInput),
+        _ => return Err(LeaseError::InvalidInput),
+    };
+    if let Ok(reply) = &reply {
+        held.record_admission(original, reply.clone());
     }
+    Ok(Admitted { registered, reply })
 }
 
 /// The audit `result` of a registry answer.
@@ -823,6 +867,7 @@ impl RecordingGate {
                         apply: None,
                         discard_lease: None,
                         discard_lease_ids: BTreeSet::new(),
+                        admissions: Vec::new(),
                     });
                 }
                 Ok((
@@ -846,6 +891,22 @@ impl RecordingGate {
         }
         self.bind(entered.map(|result| result.map(|(reply, _)| reply)))
             .await
+    }
+
+    /// `recording_workflow_resumption` (read): the caller's own workflow, for
+    /// a page that was not the one that ran it (a reload, or a login again).
+    /// Another principal's workflow reads as none: its change stays private
+    /// (product-owner design §7.2 C5-7).
+    pub async fn workflow_resumption(&self) -> Result<Bound<WorkflowResumption>, GateError> {
+        let entered = self
+            .enter(Need::Read, "recording_workflow_resumption", |r| {
+                Ok(r.workflow
+                    .as_ref()
+                    .filter(|held| held.principal == *r.principal)
+                    .map_or(WorkflowResumption::None, HeldWorkflow::resumption))
+            })
+            .await?;
+        self.bind(entered).await
     }
 
     /// `recording_workflow_lease` (mutation): the prepaid lease of one stage,

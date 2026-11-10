@@ -5,6 +5,10 @@
 import type { PortHostRefusal } from "../../lib/recording-async/port";
 import type { RecordingWireScope } from "../../lib/recording-wire-contract";
 import { parseRecordingWireAttachRequest } from "../../lib/recording-wire-contract";
+import {
+  parseRecordingWorkflowResumption,
+  type RecordingWorkflowResumption,
+} from "../../lib/recording-async/resumption";
 
 export type RecordingInvoke = (
   command: string,
@@ -15,6 +19,7 @@ export type RecordingInvoke = (
 export type RecordingCommand =
   | "recording_workflow_reserve"
   | "recording_workflow_lease"
+  | "recording_workflow_resumption"
   | "recording_lease"
   | "recording_admission"
   | "recording_admission_inspection"
@@ -88,6 +93,30 @@ export async function callRecording(
   )
     return Object.freeze({ kind: "failed" });
   return Object.freeze({ kind: "returned", seq, reply: own(value, "reply") });
+}
+
+/** The workflow a new page takes over, with the generation it was read under. */
+export type ResumedWorkflow = Readonly<{
+  seq: number;
+  workflow: RecordingWorkflowResumption;
+}>;
+
+/**
+ * `recording_workflow_resumption`. Anything but the caller's own held
+ * workflow is `null`: a failed read only leaves the earlier work uncontinued.
+ */
+export async function readResumption(
+  invoke: RecordingInvoke,
+  scope: RecordingWireScope,
+): Promise<ResumedWorkflow | null> {
+  const answer = await callRecording(
+    invoke,
+    "recording_workflow_resumption",
+    {},
+  );
+  if (answer.kind !== "returned") return null;
+  const workflow = parseRecordingWorkflowResumption(answer.reply, scope);
+  return workflow && Object.freeze({ seq: answer.seq, workflow });
 }
 
 /** `recording_slot`: the installed root's scope, or why there is none. */

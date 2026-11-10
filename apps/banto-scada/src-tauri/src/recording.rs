@@ -96,6 +96,11 @@ pub async fn recording_workflow_reserve(
 }
 
 #[tauri::command]
+pub async fn recording_workflow_resumption(state: State<'_, DesktopRecording>) -> Reply {
+    state.workflow_resumption().await
+}
+
+#[tauri::command]
 pub async fn recording_workflow_lease(
     state: State<'_, DesktopRecording>,
     stage: String,
