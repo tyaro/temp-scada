@@ -245,3 +245,69 @@ it("drops replies to an earlier Project or session and after dispose", async () 
   await settle();
   expect(published).toEqual([undefined, undefined]);
 });
+
+it("reads the slot and rebinds the owner only for an administrator", async () => {
+  const plain = nativeRecordingManagementService(invoke, {});
+  expect(plain.slot).toBeUndefined();
+  expect(plain.ownerRebind).toBeUndefined();
+
+  const done = vi.fn();
+  const target = project(3);
+  const service = nativeRecordingManagementService(
+    invoke,
+    {},
+    { project: target, done },
+  );
+  invoke.mockResolvedValue({
+    state: "installed",
+    generation: 2,
+    scope: {
+      ownerRef: "owner",
+      ownerEpoch: "epoch",
+      context: {
+        target: {
+          projectId: target.manifest.projectId,
+          projectRevision: 2,
+        },
+      },
+    },
+  });
+  await expect(service.slot!()).resolves.toEqual({
+    state: "installed",
+    projectId: target.manifest.projectId,
+    projectRevision: 2,
+  });
+  expect(invoke).toHaveBeenLastCalledWith("recording_slot");
+  invoke.mockResolvedValue({ state: "empty", reason: "no_recording_run" });
+  await expect(service.slot!()).resolves.toEqual({
+    state: "empty",
+    reason: "no_recording_run",
+  });
+  invoke.mockResolvedValue({ state: "installed", scope: {} });
+  await expect(service.slot!()).resolves.toEqual({
+    state: "unknown",
+    error: "failed",
+  });
+  const failing = (() =>
+    Promise.reject({ kind: "unauthorized" })) as NativeInvoke;
+  await expect(
+    nativeRecordingManagementService(failing, {}, { project: target, done })
+      .slot!(),
+  ).resolves.toEqual({ state: "unknown", error: "unauthorized" });
+
+  invoke.mockResolvedValue({ owner: "installed" });
+  await expect(service.ownerRebind!()).resolves.toEqual({
+    ok: true,
+    owner: "installed",
+  });
+  expect(invoke).toHaveBeenLastCalledWith("recording_owner_rebind", {
+    projectJson: JSON.stringify(target),
+  });
+  const busy = (() => Promise.reject({ kind: "busy" })) as NativeInvoke;
+  await expect(
+    nativeRecordingManagementService(busy, {}, { project: target, done })
+      .ownerRebind!(),
+  ).resolves.toEqual({ ok: false, error: "busy" });
+  // The rebind does not change History's series.
+  expect(done).not.toHaveBeenCalled();
+});

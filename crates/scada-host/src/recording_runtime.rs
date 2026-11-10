@@ -34,7 +34,7 @@ mod owner;
 mod resume;
 mod sdk;
 mod setup;
-pub use owner::{ExitOutcome, StopFailure};
+pub use owner::{ExitOutcome, RebindFailure, StopFailure};
 pub use resume::Reconfigured;
 pub use setup::{
     default_retention_policy, SetupFailure, DEFAULT_RETENTION_MS, DEFAULT_RETENTION_POLICY_ID,

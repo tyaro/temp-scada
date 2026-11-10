@@ -1,9 +1,10 @@
 //! The host's recording control commands (product-owner design §5), outside
 //! the recording registry: the management context, the inspection and the
-//! slot (Viewer or above), and the first setup and start and the stop
-//! (Admin, including the synthetic Admin of auth-disabled mode). Each runs under the transition lock
-//! ([`AuthHost::gate`](crate::auth_phase::AuthHost::gate)) after the role is
-//! checked again, like user management. Tauri-independent: the commands of
+//! slot (Viewer or above), and the first setup and start, the resume, the
+//! stopped reconfiguration, the stop and the owner rebind (Admin, including
+//! the synthetic Admin of auth-disabled mode). Each runs under the
+//! transition lock ([`AuthHost::gate`](crate::auth_phase::AuthHost::gate))
+//! after the role is checked again, like user management. Tauri-independent: the commands of
 //! `apps/banto-scada/src-tauri` call these and return the result unchanged.
 //!
 //! Errors are `{"kind": ...}`: Banto's auth errors (`unauthorized`,
@@ -21,7 +22,9 @@ use crate::auth::Role;
 use crate::auth_phase::PhaseGuard;
 use crate::desktop_auth::{CommandError, DesktopAuth};
 use crate::recording_gate::{CloseCheck, NO_RECORDING_RUN, OWNER_UNAVAILABLE};
-use crate::recording_runtime::{InspectFailure, RecordingRuntime, SetupFailure, StopFailure};
+use crate::recording_runtime::{
+    InspectFailure, RebindFailure, RecordingRuntime, SetupFailure, StopFailure,
+};
 
 /// The audit resource of the recording control commands.
 const RESOURCE: &str = "recording";
@@ -355,6 +358,53 @@ pub async fn stop(auth: &DesktopAuth, runtime: &RecordingRuntime) -> Result<Valu
     match result {
         Ok(phase) => Ok(json!({ "phase": phase })),
         Err(StopFailure::Unavailable) => Err(ControlError::Unavailable(
+            runtime
+                .unavailable_reason()
+                .unwrap_or(crate::recording_runtime::STORE_UNAVAILABLE),
+        )),
+        Err(failure) => Err(ControlError::Refused(failure.as_str())),
+    }
+}
+
+/// `recording_owner_rebind(projectJson)` (Admin): give the running
+/// recording a new root whose operations context is the Project's current
+/// ID and revision (design §7.2, §8.1-1), after the Project was edited. The
+/// recording is not stopped. An unsettled root is `busy` and nothing
+/// changes; without a root or a running recording it is `not_allowed`.
+/// Answers `{"owner": "installed" | "owner_unavailable"}`. Every accepted
+/// call is audited (`owner_rebind`).
+pub async fn owner_rebind(
+    auth: &DesktopAuth,
+    runtime: &RecordingRuntime,
+    project: &Project,
+) -> Result<Value, ControlError> {
+    let host = auth.auth();
+    let lock = host.gate().await;
+    let actor = host.auth().require_role(Role::Admin, RESOURCE).await?;
+    if !lock.phase().admits_registry() {
+        return Err(ControlError::Refused("not_allowed"));
+    }
+    let result = match auth.recording_gate() {
+        Some(gate) => runtime.rebind_owner(gate, &lock, project).await,
+        None => Err(RebindFailure::NotAllowed),
+    };
+    let (detail, outcome) = match &result {
+        Ok(owner) => (json!({ "owner": owner }), "ok"),
+        Err(failure) => (json!({ "error": failure.as_str() }), "failed"),
+    };
+    host.auth()
+        .record(
+            actor.session.identity(),
+            "owner_rebind",
+            RESOURCE,
+            project.recording_plan_id(),
+            Some(detail.clone()),
+            outcome,
+        )
+        .await;
+    match result {
+        Ok(_) => Ok(detail),
+        Err(RebindFailure::Unavailable) => Err(ControlError::Unavailable(
             runtime
                 .unavailable_reason()
                 .unwrap_or(crate::recording_runtime::STORE_UNAVAILABLE),

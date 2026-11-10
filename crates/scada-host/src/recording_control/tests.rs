@@ -232,3 +232,56 @@ async fn the_resume_and_the_reconfiguration_need_an_admin_and_an_applied_plan() 
         ]
     );
 }
+
+#[tokio::test]
+async fn the_owner_rebind_needs_an_admin_and_an_installed_root() {
+    let (_dir, auth, runtime) = gated().await;
+    let project = project();
+    // The synthetic Admin: no root is installed.
+    assert_eq!(
+        kind(owner_rebind(&auth, &runtime, &project).await),
+        "not_allowed"
+    );
+
+    auth.transition_to_operational("admin", PASSWORD, "管理者")
+        .await
+        .unwrap();
+    auth.users_create("viewer", PASSWORD, "閲覧者", Role::Viewer)
+        .await
+        .unwrap();
+    auth.logout().await.unwrap();
+    assert_eq!(
+        kind(owner_rebind(&auth, &runtime, &project).await),
+        "unauthorized"
+    );
+    assert!(auth.login("viewer", PASSWORD).await.unwrap().success);
+    assert_eq!(
+        kind(owner_rebind(&auth, &runtime, &project).await),
+        "forbidden"
+    );
+    auth.logout().await.unwrap();
+    assert!(auth.login("admin", PASSWORD).await.unwrap().success);
+    let closed = RecordingRuntime::unavailable(crate::recording_runtime::STORE_LOCKED);
+    assert_eq!(
+        serde_json::to_value(owner_rebind(&auth, &closed, &project).await.unwrap_err()).unwrap(),
+        json!({"kind": "recordingUnavailable", "reason": "store_locked"})
+    );
+    let pool = sqlx::SqlitePool::connect_with(
+        sqlx::sqlite::SqliteConnectOptions::new().filename(_dir.0.join(crate::auth::AUTH_DB_FILE)),
+    )
+    .await
+    .unwrap();
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT action, result FROM audit_log WHERE resource = 'recording' \
+         AND action = 'owner_rebind' ORDER BY id",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        rows.iter()
+            .map(|(a, r)| (a.as_str(), r.as_str()))
+            .collect::<Vec<_>>(),
+        vec![("owner_rebind", "failed"), ("owner_rebind", "failed")]
+    );
+}

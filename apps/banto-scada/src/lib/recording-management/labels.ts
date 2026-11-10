@@ -79,12 +79,13 @@ export const knownFlag = (value: boolean | null) =>
 
 /** The administrator's recording control actions (product-owner design §5). */
 export type RecordingControlAction =
-  "setup" | "resume" | "reconfigure" | "stop";
+  "setup" | "resume" | "reconfigure" | "stop" | "rebind";
 const actionNames: Record<RecordingControlAction, string> = {
   setup: "初回設定",
   resume: "記録の再開",
   reconfigure: "停止中の計画の適用",
   stop: "記録の停止",
+  rebind: "記録操作の対象の付け替え",
 };
 /** The host's error kinds of the recording control commands (product-owner
  * design §5); the ones whose meaning differs by command come first. */
@@ -108,6 +109,11 @@ const actionErrors: Record<RecordingControlAction, Record<string, string>> = {
   stop: {
     not_allowed: "記録を停止できません（記録していません）",
     failed: "記録の停止を確認できませんでした。状態を照会して確かめてください",
+  },
+  rebind: {
+    not_allowed:
+      "記録操作の対象を付け替えられません（記録中でないか、記録操作の受付がないか、認証の移行中です）",
+    busy: "記録操作画面の変更が終わっていません。変更を確定するか破棄してからやり直してください",
   },
 };
 const controlErrors: Record<string, string> = {

@@ -5,6 +5,7 @@
   import {
     recordingManagementSelection,
     type RecordingManagementService,
+    type RecordingSlotView,
     type RecordingManagementSelection,
   } from "./service";
   import {
@@ -83,8 +84,25 @@
       ? visible.response
       : undefined,
   );
+  // The registry slot, read with each inspection when the owner rebind is
+  // offered (design §7.2): the Project revision the running recording's
+  // operations context names.
+  let slot = $state.raw<{ owner: object; view: RecordingSlotView }>();
+  const slotShown = $derived(
+    slot && slot.owner === binding ? slot.view : undefined,
+  );
+  async function readSlot() {
+    const target = binding;
+    const read = target?.service.slot;
+    if (!current || !target || !read || !target.service.ownerRebind) return;
+    const view = await read();
+    if (binding === target) slot = { owner: target, view };
+  }
   function load() {
-    if (current && binding) controller.load(10000);
+    if (current && binding) {
+      controller.load(10000);
+      void readSlot();
+    }
   }
   // The administrator's control (design §5, §8-5): the first setup while the
   // DB has no applied plan and the Project's plan is enabled; then stopping,
@@ -128,6 +146,15 @@
       !!database &&
       database.activeSessionId !== null &&
       !operating,
+  );
+  const slotBehind = $derived(
+    slotShown?.state === "installed" &&
+      !!binding &&
+      slotShown.projectId === binding.project.manifest.projectId &&
+      slotShown.projectRevision !== binding.project.manifest.projectRevision,
+  );
+  const canRebind = $derived(
+    !!binding?.service.ownerRebind && slotBehind && !operating,
   );
   const controlsOffered = $derived(
     !!(
@@ -211,11 +238,22 @@
       (s) => s.stop,
       () => "記録を停止しました",
     );
+  const rebind = () =>
+    control(
+      "rebind",
+      canRebind,
+      (s) => s.ownerRebind,
+      (r) =>
+        r.owner === "installed"
+          ? "記録操作の対象を現在のProjectに合わせました。記録は続いています"
+          : "記録は続いていますが、記録操作の受付を準備できませんでした（registryの変更は使えません）",
+    );
   const runningLabel: Record<RecordingControlAction, string> = {
     setup: "初回設定中…",
     resume: "再開中…",
     reconfigure: "適用中…",
     stop: "停止中…",
+    rebind: "付け替え中…",
   };
   const buttonLabel = (action: RecordingControlAction, idle: string) =>
     operationShown?.running && operationShown.action === action
@@ -326,12 +364,50 @@
             >{/if}
         </div>
         {#if !response}<p>実行する前に状態を照会してください。</p>{/if}
-        {#if operationShown && operationShown.action !== "setup" && operationShown.message}<p
+        {#if operationShown && operationShown.action !== "setup" && operationShown.action !== "rebind" && operationShown.message}<p
             role={operationShown.failed ? "alert" : "status"}
             data-recording-control-result={operationShown.failed
               ? "failed"
               : "ok"}
             data-recording-control-action={operationShown.action}
+          >
+            {operationShown.message}
+          </p>{/if}
+      </section>
+    {/if}
+    {#if binding?.service.ownerRebind}
+      <section aria-label="記録操作の対象">
+        <h3>記録操作の対象</h3>
+        <p>
+          記録操作画面の変更は、記録を始めたときのProjectの版に対して受け付けます。記録中にProjectを編集したら、記録を止めずに対象を現在のProjectへ合わせます。記録操作画面の変更が途中のときはできません。
+        </p>
+        <p data-recording-slot={slotShown?.state ?? "unread"}>
+          {#if !slotShown}未照会{:else if slotShown.state === "installed"}対象のProject版:
+            {slotShown.projectRevision}（現在のProject版: {binding.project
+              .manifest.projectRevision}）{slotShown.projectId !==
+            binding.project.manifest.projectId
+              ? "。別のProjectを対象にしています"
+              : slotBehind
+                ? ""
+                : "。現在のProjectと同じです"}{:else if slotShown.state === "empty"}記録操作の受付なし（{slotShown.reason}）{:else}照会できませんでした（{slotShown.error}）{/if}
+        </p>
+        <div class="actions">
+          <button
+            type="button"
+            disabled={!canRebind}
+            data-recording-owner-rebind
+            onclick={() => void rebind()}
+            >{buttonLabel(
+              "rebind",
+              "記録操作の対象を現在のProjectに合わせる",
+            )}</button
+          >
+        </div>
+        {#if operationShown?.action === "rebind" && operationShown.message}<p
+            role={operationShown.failed ? "alert" : "status"}
+            data-recording-rebind-result={operationShown.failed
+              ? "failed"
+              : "ok"}
           >
             {operationShown.message}
           </p>{/if}

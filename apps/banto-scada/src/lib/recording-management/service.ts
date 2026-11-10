@@ -37,6 +37,18 @@ export type ReconfigureResult = RecordingControlResult<{
   enabled: boolean;
 }>;
 export type StopResult = RecordingControlResult<{ phase: "joined" }>;
+export type OwnerRebindResult = RecordingControlResult<{
+  /** Whether the new owner was installed over the running recording. */
+  owner: "installed" | "owner_unavailable";
+}>;
+/** The registry slot as the management workspace shows it (product-owner
+ * design §4, §7.2): the Project the installed owner's operations context
+ * names, or why no owner is installed. */
+export type RecordingSlotView = Readonly<
+  | { state: "installed"; projectId: string; projectRevision: number }
+  | { state: "empty"; reason: string }
+  | { state: "unknown"; error: string }
+>;
 export interface RecordingManagementService {
   readonly context: unknown;
   readonly inspect: (
@@ -57,6 +69,13 @@ export interface RecordingManagementService {
   /** Stops recording without changing its settings (product-owner design §5).
    * Administrator only. */
   readonly stop?: () => Promise<StopResult>;
+  /** Reads the registry slot. Administrator only, with `ownerRebind`. Never
+   * throws. */
+  readonly slot?: () => Promise<RecordingSlotView>;
+  /** Points the running recording's owner at the current Project (its ID and
+   * revision) after the Project was edited, without stopping the recording
+   * (product-owner design §7.2). Administrator only. */
+  readonly ownerRebind?: () => Promise<OwnerRebindResult>;
 }
 export interface RecordingManagementOwner {
   readonly project: Project;

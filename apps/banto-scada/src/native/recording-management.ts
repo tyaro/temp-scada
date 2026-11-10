@@ -1,7 +1,9 @@
 import type { Project } from "../lib/project";
 import type {
   InitialSetupResult,
+  OwnerRebindResult,
   ReconfigureResult,
+  RecordingSlotView,
   RecordingControlResult,
   RecordingManagementService,
   ResumeResult,
@@ -43,7 +45,8 @@ async function control<T extends object>(
  * §5): `inspect` is one `recording_status`, and, for an administrator,
  * `initialSetup`, `resume` and `reconfigure` are `recording_initial_setup`,
  * `recording_resume` and `recording_reconfigure` of the Project it was made
- * for, and `stop` is `recording_stop`. `done` runs after a successful first
+ * for, `stop` is `recording_stop`, `slot` is `recording_slot` and
+ * `ownerRebind` is `recording_owner_rebind` of the Project. `done` runs after a successful first
  * setup, resume or reconfiguration, which may change History's series. The
  * host answers an inspection only after its read has finished, so an
  * aborted inspection still settles on the host's reply.
@@ -98,7 +101,53 @@ export function nativeRecordingManagementService(
         () => invoke<unknown>("recording_stop"),
         () => ({ phase: "joined" as const }),
       ),
+    slot: async (): Promise<RecordingSlotView> => {
+      let value: unknown;
+      try {
+        value = await invoke<unknown>("recording_slot");
+      } catch (error) {
+        return Object.freeze({ state: "unknown", error: errorKind(error) });
+      }
+      return slotView(value);
+    },
+    ownerRebind: (): Promise<OwnerRebindResult> =>
+      control(
+        () => invoke<unknown>("recording_owner_rebind", projectArgs()),
+        (value) => ({
+          owner:
+            value.owner === "installed"
+              ? ("installed" as const)
+              : ("owner_unavailable" as const),
+        }),
+      ),
   });
+}
+
+/** `recording_slot`'s answer as the workspace shows it: the Project of the
+ * installed owner's operations context (its target). */
+function slotView(value: unknown): RecordingSlotView {
+  const field = (v: unknown, key: string): unknown =>
+    v !== null && typeof v === "object"
+      ? Object.getOwnPropertyDescriptor(v, key)?.value
+      : undefined;
+  const state = field(value, "state");
+  if (state === "empty") {
+    const reason = field(value, "reason");
+    return Object.freeze({
+      state: "empty",
+      reason: typeof reason === "string" ? reason : "unknown",
+    });
+  }
+  const target = field(field(field(value, "scope"), "context"), "target");
+  const projectId = field(target, "projectId");
+  const projectRevision = field(target, "projectRevision");
+  if (
+    state === "installed" &&
+    typeof projectId === "string" &&
+    typeof projectRevision === "number"
+  )
+    return Object.freeze({ state: "installed", projectId, projectRevision });
+  return Object.freeze({ state: "unknown", error: "failed" });
 }
 
 /** Who may do what: the part of the auth session the service depends on. */

@@ -394,3 +394,76 @@ async fn a_refused_discard_leaves_the_recording_running_for_the_interruption() {
         ("denied", SHUTDOWN_ACTOR)
     );
 }
+
+/// The Project after an edit: the same ID and plan, the next revision.
+fn edited(project: &Project) -> Project {
+    let mut value: Value = serde_json::from_str(&project.to_json()).unwrap();
+    value["manifest"]["projectRevision"] = json!(project.revision() + 1);
+    Project::from_json(&value.to_string()).unwrap()
+}
+
+async fn rebind(o: &Owned, project: &Project) -> Result<&'static str, RebindFailure> {
+    let lock = o.auth.gate().await;
+    o.runtime.rebind_owner(&o.gate, &lock, project).await
+}
+
+#[tokio::test]
+async fn the_rebind_gives_the_running_recording_a_root_for_the_edited_project() {
+    let o = owned().await;
+    let before = o.gate.slot().unwrap();
+    let edited = edited(&o.project);
+    // An unsettled root stays as it is.
+    let (change, accepted) = preflight(&o, &before.scope).await;
+    until_phase(&o.gate, OperationsPhase::Candidate).await;
+    assert_eq!(rebind(&o, &edited).await, Err(RebindFailure::Busy));
+    assert_eq!(o.gate.slot().map(|i| i.generation), Ok(1));
+    let lease = o
+        .gate
+        .workflow_lease(
+            WorkflowStage::Discard,
+            stage_lease(&before.scope, "discard"),
+        )
+        .await
+        .unwrap();
+    let discarded = o
+        .gate
+        .admission(admission(
+            &before.scope,
+            "discard",
+            lease.reply.as_value(),
+            json!({"kind":"discard",
+                "changeRef":accepted["outcome"]["handle"]["changeRef"],
+                "change":change.as_value()}),
+        ))
+        .await
+        .unwrap();
+    assert_eq!(
+        discarded.reply.as_value()["outcome"]["kind"],
+        "completedDiscard",
+        "{}",
+        discarded.reply.as_value()
+    );
+    until_phase(&o.gate, OperationsPhase::Idle).await;
+
+    assert_eq!(rebind(&o, &edited).await, Ok("installed"));
+    let after = o.gate.slot().unwrap();
+    assert_eq!(after.generation, 2);
+    // The new context names the edited revision, over the same recording.
+    let target = &after.scope["context"]["target"];
+    assert_eq!(target["projectRevision"], edited.revision());
+    assert_eq!(target, &o.runtime.management_context(&edited).unwrap());
+    assert_eq!(
+        after.scope["context"]["recordingRunRef"],
+        before.scope["context"]["recordingRunRef"]
+    );
+    assert_ne!(after.scope["ownerEpoch"], before.scope["ownerEpoch"]);
+    let inspected = inspect(&o.runtime, &edited).await;
+    assert_eq!(inspected["host"]["phase"], "running");
+    assert_eq!(inspected["database"]["latestActivation"]["state"], "active");
+
+    // A stopped recording keeps no root to rebind.
+    let lock = o.auth.gate().await;
+    assert_eq!(o.runtime.stop(&o.gate, &lock).await, Ok("joined"));
+    drop(lock);
+    assert_eq!(rebind(&o, &edited).await, Err(RebindFailure::NotAllowed));
+}
