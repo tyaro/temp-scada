@@ -306,6 +306,7 @@ async fn the_pump_delivers_to_the_attaching_generation_and_ends_at_a_new_one() {
     preflight(&f, "pump-change").await;
     let RecordingEvent::Frames {
         subscription_ref,
+        owner_epoch,
         seq,
         state,
         control,
@@ -314,6 +315,8 @@ async fn the_pump_delivers_to_the_attaching_generation_and_ends_at_a_new_one() {
         panic!("frames first");
     };
     assert_eq!(subscription_ref, reference);
+    // The root's epoch rides on every event (product-owner design §7.2).
+    assert_eq!(owner_epoch, f.scope["ownerEpoch"].as_str().unwrap());
     assert_eq!(seq, attached.seq);
     assert_eq!(state.unwrap()["subscriptionRef"], reference.as_str());
     assert_eq!(control, None);
@@ -329,7 +332,7 @@ async fn the_pump_delivers_to_the_attaching_generation_and_ends_at_a_new_one() {
                 assert_eq!(
                     wire(&ended),
                     json!({"kind": "ended", "subscriptionRef": reference,
-                        "reason": "unauthorized"})
+                        "ownerEpoch": f.scope["ownerEpoch"], "reason": "unauthorized"})
                 );
                 break;
             }
@@ -407,7 +410,7 @@ async fn a_detach_ends_the_pump_and_a_released_subscription_gets_a_new_one() {
     assert_eq!(detached.seq, attached.seq);
     assert_eq!(
         wire(&next(&mut events).await),
-        json!({"kind": "ended", "subscriptionRef": reference, "reason": "invalidInput"})
+        json!({"kind": "ended", "subscriptionRef": reference, "ownerEpoch": f.scope["ownerEpoch"], "reason": "invalidInput"})
     );
     timeout(Duration::from_secs(10), task)
         .await
@@ -458,7 +461,7 @@ async fn the_end_of_the_attaching_page_ends_its_subscription_in_the_registry() {
     let (mut events, _task) = spawn(pump.expect("the claim was released"));
     assert_eq!(
         wire(&next(&mut events).await),
-        json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
+        json!({"kind": "ended", "subscriptionRef": reference, "ownerEpoch": f.scope["ownerEpoch"], "reason": "unauthorized"})
     );
 }
 
@@ -546,7 +549,7 @@ async fn a_replay_from_the_next_page_finds_the_ended_subscription_before_the_old
     let (mut events, _task) = spawn(pump.expect("the next page gets a pump"));
     assert_eq!(
         wire(&next(&mut events).await),
-        json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
+        json!({"kind": "ended", "subscriptionRef": reference, "ownerEpoch": f.scope["ownerEpoch"], "reason": "unauthorized"})
     );
     timeout(Duration::from_secs(10), old_task)
         .await
@@ -590,7 +593,7 @@ async fn a_page_that_ended_mid_delivery_receives_nothing_and_its_subscription_en
     let (mut events, _task) = spawn(pump.unwrap());
     assert_eq!(
         wire(&next(&mut events).await),
-        json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
+        json!({"kind": "ended", "subscriptionRef": reference, "ownerEpoch": f.scope["ownerEpoch"], "reason": "unauthorized"})
     );
 }
 
@@ -653,7 +656,7 @@ async fn an_attach_of_an_ended_page_that_no_open_page_holds_ends_its_subscriptio
     let (mut events, _task) = spawn(pump.unwrap());
     assert_eq!(
         wire(&next(&mut events).await),
-        json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
+        json!({"kind": "ended", "subscriptionRef": reference, "ownerEpoch": f.scope["ownerEpoch"], "reason": "unauthorized"})
     );
 }
 

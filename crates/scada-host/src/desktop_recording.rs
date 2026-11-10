@@ -145,6 +145,10 @@ pub enum RecordingEvent {
     /// subscription. The UI drops events of another generation.
     Frames {
         subscription_ref: String,
+        /// The `ownerEpoch` of the root the subscription was attached to.
+        /// References restart with each root, so the UI tells a closed
+        /// root's events from a new root's by this (design C5 §7.2).
+        owner_epoch: String,
         seq: u64,
         state: Option<Value>,
         control: Option<Value>,
@@ -154,6 +158,7 @@ pub enum RecordingEvent {
     /// registry's kind (`invalidInput` after a detach, `forbidden`, ...).
     Ended {
         subscription_ref: String,
+        owner_epoch: String,
         reason: &'static str,
     },
 }
@@ -414,11 +419,16 @@ impl DesktopRecording {
         let request = parse(request, RecordingWireAttachRequest::from_value)?;
         let bound = host.gate.attach(request).await?;
         let attached = &bound.reply;
-        let pump = match attached.reply.as_value()["outcome"]["subscriptionRef"].as_str() {
-            Some(reference) => {
-                FramePump::claim(host, (attached.generation, reference.to_owned()), page).await
+        let value = attached.reply.as_value();
+        let pump = match (
+            value["outcome"]["subscriptionRef"].as_str(),
+            value["request"]["scope"]["ownerEpoch"].as_str(),
+        ) {
+            (Some(reference), Some(epoch)) => {
+                let key = (attached.generation, reference.to_owned());
+                FramePump::claim(host, key, epoch.to_owned(), page).await
             }
-            None => None,
+            _ => None,
         };
         Ok((
             RecordingResult::of(bound, |attached| attached.reply.as_value().clone()),
@@ -445,6 +455,7 @@ pub struct FramePump {
     pumps: Arc<tokio::sync::Mutex<Pumps>>,
     live_pages: Arc<Mutex<PageState>>,
     key: Key,
+    owner_epoch: String,
     claim: Claim,
     interval: Duration,
 }
@@ -465,7 +476,7 @@ enum Delivery {
 }
 
 impl FramePump {
-    async fn claim(host: &Host, key: Key, page: u64) -> Option<Self> {
+    async fn claim(host: &Host, key: Key, owner_epoch: String, page: u64) -> Option<Self> {
         let mut pumps = host.pumps.lock().await;
         let mut pages = host.live_pages.lock().expect("live pages mutex poisoned");
         let existing = pumps.claims.get(&key).copied();
@@ -503,6 +514,7 @@ impl FramePump {
             pumps: host.pumps.clone(),
             live_pages: host.live_pages.clone(),
             key,
+            owner_epoch,
             claim,
             interval: host.interval,
         })
@@ -591,6 +603,7 @@ impl FramePump {
                 }
                 RecordingEvent::Frames {
                     subscription_ref: self.key.1.clone(),
+                    owner_epoch: self.owner_epoch.clone(),
                     seq,
                     state: reply.state.map(|frame| frame.as_value().clone()),
                     control: reply.control.map(|frame| frame.as_value().clone()),
@@ -599,6 +612,7 @@ impl FramePump {
             Err(GateError::AuthUnavailable(_) | GateError::Phase(_)) => return Delivery::Hold,
             Err(error) => RecordingEvent::Ended {
                 subscription_ref: self.key.1.clone(),
+                owner_epoch: self.owner_epoch.clone(),
                 reason: gate_kind(&error),
             },
         };

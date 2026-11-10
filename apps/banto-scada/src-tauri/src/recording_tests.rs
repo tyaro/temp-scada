@@ -373,7 +373,7 @@ fn a_logout_ends_the_subscription_events_of_its_generation() {
     h.invoke("auth_logout", json!({})).unwrap();
     assert_eq!(
         h.next_event(),
-        json!({"kind": "ended", "subscriptionRef": reference, "reason": "unauthorized"})
+        json!({"kind": "ended", "subscriptionRef": reference, "ownerEpoch": scope["ownerEpoch"], "reason": "unauthorized"})
     );
     assert!(window_events.try_recv().is_err());
     assert_eq!(
@@ -415,6 +415,7 @@ fn taking_the_root_out_ends_its_subscription_with_owner_closed() {
     };
     assert_eq!(closed["control"]["reason"], "ownerClosed");
     assert_eq!(closed["control"]["scope"], *scope);
+    assert_eq!(closed["ownerEpoch"], scope["ownerEpoch"]);
     // The registry commands end with the root.
     assert_eq!(
         h.invoke(
@@ -511,7 +512,7 @@ fn a_reloaded_page_ends_its_subscriptions_and_the_next_page_attaches_anew() {
     h.invoke("recording_attach", attach("attach-1")).unwrap();
     assert_eq!(
         h.next_event(),
-        json!({"kind": "ended", "subscriptionRef": old, "reason": "unauthorized"})
+        json!({"kind": "ended", "subscriptionRef": old, "ownerEpoch": scope["ownerEpoch"], "reason": "unauthorized"})
     );
     let fresh = h.invoke("recording_attach", attach("attach-2")).unwrap();
     let reference = fresh["reply"]["outcome"]["subscriptionRef"].clone();
