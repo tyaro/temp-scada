@@ -1,8 +1,9 @@
 //! The recording control commands of the desktop host (product-owner design
 //! §5): the management context, the inspection and the registry slot, the
-//! first setup and start, the resume, the stopped reconfiguration and the
-//! stop; and the exit sequence (§6). Thin adapters only: the behavior is `scada_host::recording_control`,
-//! tested there with plain `cargo test`.
+//! first setup and start, the resume, the stopped reconfiguration, the
+//! stop and the owner rebind; and the exit sequence (§6). Thin adapters
+//! only: the behavior is `scada_host::recording_control`, tested there with
+//! plain `cargo test`.
 use crate::auth::AuthState;
 use crate::NativeHost;
 use scada_host::recording_control::{self, ControlError};
@@ -104,6 +105,19 @@ pub async fn recording_stop(
     runtime: State<'_, RecordingRuntime>,
 ) -> Result<Value, ControlError> {
     recording_control::stop(auth.get()?, &runtime).await
+}
+
+/// Give the running recording a new root whose operations context is the
+/// Project's current ID and revision (Admin, design §7.2). The recording is
+/// not stopped; an unsettled root is `busy`.
+#[tauri::command]
+pub async fn recording_owner_rebind(
+    auth: State<'_, AuthState>,
+    runtime: State<'_, RecordingRuntime>,
+    project_json: String,
+) -> Result<Value, ControlError> {
+    let project = project(&project_json)?;
+    recording_control::owner_rebind(auth.get()?, &runtime, &project).await
 }
 
 /// How long the exit waits for the recording to stop (design §8-3). Past

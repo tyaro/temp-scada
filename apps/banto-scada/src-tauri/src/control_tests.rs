@@ -162,6 +162,15 @@ fn the_control_commands_answer_over_ipc() {
         invoke(&webview, "recording_stop", json!({})),
         Err(json!({"kind": "not_allowed"}))
     );
+    // No root to give the Project's context.
+    assert_eq!(
+        invoke(
+            &webview,
+            "recording_owner_rebind",
+            json!({"projectJson": project_json()})
+        ),
+        Err(json!({"kind": "not_allowed"}))
+    );
 }
 
 /// The confirmation before the window closes (design §6.1): an empty slot

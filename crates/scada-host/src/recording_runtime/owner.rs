@@ -45,6 +45,26 @@ impl StopFailure {
     }
 }
 
+/// Why an owner rebind did not run. `as_str` is the command's error.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RebindFailure {
+    Unavailable,
+    /// No root is installed, or its recording does not run.
+    NotAllowed,
+    /// The installed root holds unsettled work: nothing was changed.
+    Busy,
+}
+
+impl RebindFailure {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Unavailable => "unavailable",
+            Self::NotAllowed => "not_allowed",
+            Self::Busy => "busy",
+        }
+    }
+}
+
 /// How the exit sequence ended (design §6).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ExitOutcome {
@@ -189,6 +209,41 @@ impl RecordingRuntime {
         *slot = Some(handoff.supervisor);
         *lock(&ready.lent) = None;
         Ok(true)
+    }
+
+    /// `recording_owner_rebind` (design §7.2): give the installed root's
+    /// running recording a new root whose operations context is `project`'s
+    /// (its ID and revision), with a new owner epoch. The old root is taken
+    /// back by its handoff first, so an unsettled root is `busy` and stays;
+    /// the recording is not stopped. Without a root, or while its recording
+    /// does not run (after the registry's apply, the resume installs the
+    /// next root), it is `not_allowed`. Returns whether the new root was
+    /// installed (`installed`) or the slot is `owner_unavailable`.
+    pub async fn rebind_owner(
+        &self,
+        gate: &RecordingGate,
+        phase: &PhaseGuard<'_>,
+        project: &Project,
+    ) -> Result<&'static str, RebindFailure> {
+        let ready = self
+            .state
+            .as_ref()
+            .map_err(|_| RebindFailure::Unavailable)?;
+        let running = lock(&ready.lent)
+            .as_ref()
+            .is_some_and(|watch| watch.borrow().phase == RecordingPhase::Running);
+        if gate.slot().is_err() || !running {
+            return Err(RebindFailure::NotAllowed);
+        }
+        match self.take_owner(gate, phase).await {
+            Ok(true) => {}
+            Ok(false) => return Err(RebindFailure::NotAllowed),
+            Err(_) => return Err(RebindFailure::Busy),
+        }
+        Ok(match self.install_owner(gate, phase, project).await {
+            Ok(_) => "installed",
+            Err(reason) => reason,
+        })
     }
 
     /// `recording_stop` (design §5): take the Supervisor back from an
