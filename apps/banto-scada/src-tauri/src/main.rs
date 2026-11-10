@@ -280,6 +280,8 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             control::recording_initial_setup,
             control::recording_slot,
             control::recording_stop,
+            control::recording_resume,
+            control::recording_reconfigure,
             recording::recording_workflow_reserve,
             recording::recording_workflow_lease,
             recording::recording_lease,

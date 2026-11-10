@@ -125,8 +125,15 @@ async fn serve(mut stream: TcpStream, tags: Vec<(String, String)>, count: Arc<At
             .collect();
         json!({"revision": 3, "run_id": 7, "collection_mode": "configured", "tags": catalog})
     } else if text.starts_with("GET /api/v1/values") {
+        // The values of the requested tags only.
+        let line = text.lines().next().unwrap_or_default();
+        let requested: Vec<_> = tags
+            .iter()
+            .filter(|(name, _)| line.contains(name.as_str()))
+            .cloned()
+            .collect();
         json!({"revision": 3, "run_id": 7, "collection_mode": "configured", "t": 100,
-            "values": rows(&tags)})
+            "values": rows(if requested.is_empty() { &tags } else { &requested })})
     } else {
         let Ok(mut socket) = tokio_tungstenite::accept_async(stream).await else {
             return;
@@ -141,7 +148,17 @@ async fn serve(mut stream: TcpStream, tags: Vec<(String, String)>, count: Arc<At
             let reply = match frame["op"].as_str() {
                 Some("subscribe") => {
                     count.fetch_add(1, Ordering::SeqCst);
-                    json!({"op": "data", "id": 1, "t": 100, "values": rows(&tags)})
+                    // A Hub sends the subscribed tags only.
+                    let subscribed: Vec<_> = tags
+                        .iter()
+                        .filter(|(name, _)| {
+                            frame["tags"]
+                                .as_array()
+                                .is_some_and(|t| t.iter().any(|t| t == name.as_str()))
+                        })
+                        .cloned()
+                        .collect();
+                    json!({"op": "data", "id": 1, "t": 100, "values": rows(&subscribed)})
                 }
                 Some("ping") => json!({"op": "pong"}),
                 _ => continue,
@@ -521,3 +538,4 @@ async fn an_inspection_answers_only_its_own_context() {
 }
 
 mod owner;
+mod resume;

@@ -4,9 +4,11 @@ import { openProject } from "./helpers/project-files";
 
 // The desktop shell over a mocked Tauri IPC: the recording management
 // service comes from `recording_context`, its inspection is
-// `recording_status`, and an administrator's first setup is
-// `recording_initial_setup` (product-owner design §5, §8-5). The App, menu,
-// Modal and controller are production.
+// `recording_status`, and an administrator's first setup, stop,
+// reconfiguration and resume are `recording_initial_setup`,
+// `recording_stop`, `recording_reconfigure` and `recording_resume`
+// (product-owner design §5, §8-5). The App, menu, Modal and controller are
+// production.
 const plan = {
   version: 1,
   kind: "recordingPlan",
@@ -28,17 +30,39 @@ const plan = {
 };
 const planned = { ...structuredClone(sample), recordingPlan: plan };
 
-async function mockNativeHost(page: Page, role: "admin" | "viewer") {
+type Activation = "active" | "closed" | "interrupted";
+
+/** The host starts with no applied plan, or with one whose latest activation
+ * is in the given state; `failures` are the error kinds each command answers
+ * first, in order. */
+async function mockNativeHost(
+  page: Page,
+  role: "admin" | "viewer",
+  start: { activation?: Activation; failures?: Record<string, string[]> } = {},
+) {
   await page.addInitScript(
-    ({ role, plan }) => {
+    ({ role, plan, start }) => {
       let nextId = 0;
       const host = {
         role,
-        applied: false,
-        refuseNext: true,
+        applied: start.activation !== undefined,
+        activation: (start.activation ?? null) as Activation | null,
+        activations: start.activation ? 1 : 0,
+        failures: start.failures ?? {
+          recording_initial_setup: ["tags_unresolved"],
+        },
         setups: [] as string[],
+        calls: [] as string[],
         statuses: 0,
         historyContexts: 0,
+      };
+      const fail = (command: string) => {
+        const kind = host.failures[command]?.shift();
+        if (kind) throw { kind };
+      };
+      const begin = () => {
+        host.activation = "active";
+        host.activations++;
       };
       Object.assign(window, { __recordingHost: host });
       const context = (project: any) => ({
@@ -51,11 +75,12 @@ async function mockNativeHost(page: Page, role: "admin" | "viewer") {
         storeId: "store:test",
         historianNamespace: "historian:test",
       });
+      const running = () => host.activation === "active";
       const database = () =>
         host.applied
           ? {
               state: "available",
-              snapshotCommit: 5,
+              snapshotCommit: 6,
               currentMappingRevision: 1,
               currentRetentionAppliedRevision: 1,
               applied: {
@@ -65,16 +90,19 @@ async function mockNativeHost(page: Page, role: "admin" | "viewer") {
                 mappingRevision: 1,
                 retentionAppliedRevision: 1,
               },
-              latestActivation: {
-                activationId: "activation:test",
+              latestActivation: host.activation && {
+                activationId: `activation:${host.activations}`,
                 appliedRevision: 1,
                 commitVersion: 5,
-                sessionId: "session:test",
-                state: "active",
+                sessionId: `session:${host.activations}`,
+                state: host.activation,
                 committedThrough: 0,
-                endCommitVersion: null,
+                endCommitVersion: host.activation === "active" ? null : 6,
               },
-              activeSessionId: "session:test",
+              activeSessionId:
+                host.activation === "active"
+                  ? `session:${host.activations}`
+                  : null,
               activeRetentionJobId: null,
               retentionFence: { cutoffMs: null, commitVersion: 0 },
             }
@@ -132,9 +160,13 @@ async function mockNativeHost(page: Page, role: "admin" | "viewer") {
                   host: {
                     state: "observed",
                     observedAtMs: 1000,
-                    runRef: host.applied ? "run:1" : null,
-                    sessionId: host.applied ? "session:test" : null,
-                    phase: host.applied ? "running" : "idle",
+                    runRef: running() ? `run:${host.activations}` : null,
+                    sessionId: running() ? `session:${host.activations}` : null,
+                    phase: running()
+                      ? "running"
+                      : host.activation === "closed"
+                        ? "joined"
+                        : "idle",
                     stopRequested: false,
                     issue: "none",
                     cleanup: "unknown",
@@ -149,19 +181,31 @@ async function mockNativeHost(page: Page, role: "admin" | "viewer") {
                 host.setups.push(
                   JSON.parse(args.projectJson).recordingPlan.planId,
                 );
-                if (host.refuseNext) {
-                  host.refuseNext = false;
-                  throw { kind: "tags_unresolved" };
-                }
+                fail(command);
                 host.applied = true;
-                return { phase: "running" };
+                begin();
+                return { phase: "running", owner: "installed" };
+              case "recording_stop":
+                host.calls.push(command);
+                fail(command);
+                host.activation = "closed";
+                return { phase: "joined" };
+              case "recording_reconfigure":
+                host.calls.push(command);
+                fail(command);
+                return { applied: "applied", enabled: true };
+              case "recording_resume":
+                host.calls.push(command);
+                fail(command);
+                begin();
+                return { phase: "running", owner: "installed" };
             }
             throw new Error(`Unexpected command: ${command}`);
           },
         },
       });
     },
-    { role, plan },
+    { role, plan, start },
   );
 }
 
@@ -172,6 +216,7 @@ const host = (page: Page) =>
     const h = (window as any).__recordingHost;
     return {
       setups: [...h.setups],
+      calls: [...h.calls],
       statuses: h.statuses,
       historyContexts: h.historyContexts,
     };
@@ -240,6 +285,120 @@ test("an administrator inspects, retries and completes the first setup", async (
   expect(after.historyContexts).toBeGreaterThan(before);
 });
 
+test("an administrator stops, applies the plan while stopped and resumes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await mockNativeHost(page, "admin", {
+    activation: "active",
+    failures: { recording_reconfigure: ["plan_conflict"] },
+  });
+  await page.goto("/");
+  await openProject(page, file(planned));
+  await open(page);
+  const root = dialog(page);
+  const stop = root.locator("[data-recording-stop]");
+  const reconfigure = root.locator("[data-recording-reconfigure]");
+  const resume = root.locator("[data-recording-resume]");
+  const result = root.locator("[data-recording-control-result]");
+  await expect(stop).toBeDisabled();
+  await root.getByRole("button", { name: "状態を照会", exact: true }).click();
+  await expect(root.locator("[data-comparison]")).toHaveAttribute(
+    "data-comparison",
+    "matches",
+    { timeout: 30000 },
+  );
+  // While recording, only stopping is offered.
+  await expect(stop).toBeEnabled();
+  await expect(reconfigure).toBeDisabled();
+  await expect(resume).toBeDisabled();
+  await expect(
+    root.getByRole("button", { name: "初回設定と開始" }),
+  ).toBeDisabled();
+
+  await stop.click();
+  await expect(result).toHaveAttribute("data-recording-control-result", "ok");
+  await expect(result).toHaveAttribute("data-recording-control-action", "stop");
+  await expect(result).toHaveText("記録を停止しました");
+  await expect(
+    root.locator('section[aria-label="Hostの別時点観測"]'),
+  ).toContainText("join完了");
+  await expect(stop).toBeDisabled();
+  await expect(reconfigure).toBeEnabled();
+  await expect(resume).toBeEnabled();
+
+  await reconfigure.click();
+  await expect(result).toHaveAttribute(
+    "data-recording-control-result",
+    "failed",
+  );
+  await expect(root.getByRole("alert")).toHaveText(
+    "計画の版がDBと合いません。Projectの計画のrevisionを上げてから適用してください",
+  );
+  await expect(reconfigure).toBeEnabled();
+  const before = (await host(page)).historyContexts;
+  await reconfigure.click();
+  await expect(result).toHaveAttribute("data-recording-control-result", "ok");
+  await expect(result).toContainText("Projectの計画をDBに適用しました");
+  await expect(result).toContainText("「記録を再開」で開始します");
+  await expect
+    .poll(async () => (await host(page)).historyContexts)
+    .toBeGreaterThan(before);
+
+  await expect(resume).toBeEnabled();
+  await resume.click();
+  await expect(result).toHaveAttribute(
+    "data-recording-control-action",
+    "resume",
+  );
+  await expect(result).toHaveText("記録を再開しました");
+  await expect(
+    root.locator('section[aria-label="Hostの別時点観測"]'),
+  ).toContainText("run:2");
+  await expect(stop).toBeEnabled();
+  await expect(resume).toBeDisabled();
+  expect((await host(page)).calls).toEqual([
+    "recording_stop",
+    "recording_reconfigure",
+    "recording_reconfigure",
+    "recording_resume",
+  ]);
+});
+
+test("an interrupted recording is shown and resumed after a failure", async ({
+  page,
+}) => {
+  await mockNativeHost(page, "admin", {
+    activation: "interrupted",
+    failures: { recording_resume: ["hub_unavailable"] },
+  });
+  await page.goto("/");
+  await openProject(page, file(planned));
+  await open(page);
+  const root = dialog(page);
+  await root.getByRole("button", { name: "状態を照会", exact: true }).click();
+  await expect(root.locator("[data-recording-interrupted]")).toContainText(
+    "前回の記録は終了を確認できないまま中断しました",
+    { timeout: 30000 },
+  );
+  const resume = root.locator("[data-recording-resume]");
+  await expect(root.locator("[data-recording-stop]")).toBeDisabled();
+  await resume.click();
+  await expect(root.getByRole("alert")).toHaveText(
+    "Hubから現在値を取得できませんでした",
+  );
+  await expect(resume).toBeEnabled();
+  await resume.click();
+  await expect(root.locator("[data-recording-control-result]")).toHaveText(
+    "記録を再開しました",
+  );
+  await expect(root.locator("[data-recording-interrupted]")).toHaveCount(0);
+  expect((await host(page)).calls).toEqual([
+    "recording_resume",
+    "recording_resume",
+  ]);
+});
+
 test("a viewer inspects but is not offered the first setup", async ({
   page,
 }) => {
@@ -256,6 +415,11 @@ test("a viewer inspects but is not offered the first setup", async ({
   );
   await expect(
     dialog(page).getByRole("button", { name: "初回設定と開始" }),
+  ).toHaveCount(0);
+  await expect(
+    dialog(page).locator(
+      "[data-recording-stop], [data-recording-reconfigure], [data-recording-resume]",
+    ),
   ).toHaveCount(0);
   expect((await host(page)).setups).toEqual([]);
 });

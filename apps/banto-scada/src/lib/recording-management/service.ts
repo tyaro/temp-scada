@@ -18,9 +18,25 @@ export interface InspectionControl {
  * adapters must also enforce a physical gate across different Apps/controllers. */
 /** The outcome of a first setup: the recording phase reached, or the host's
  * error kind. Never throws. */
-export type InitialSetupResult = Readonly<
-  { ok: true; phase: "running" | "starting" } | { ok: false; error: string }
+export type InitialSetupResult = RecordingControlResult<{
+  phase: "running" | "starting";
+}>;
+/** The outcome of a recording control command: the host's answer, or its
+ * error kind. Never throws. */
+export type RecordingControlResult<T extends object> = Readonly<
+  ({ ok: true } & T) | { ok: false; error: string }
 >;
+export type ResumeResult = RecordingControlResult<{
+  phase: "running" | "starting";
+  /** Whether the registry's owner was installed after the start (§5). */
+  owner: "installed" | "owner_unavailable";
+}>;
+export type ReconfigureResult = RecordingControlResult<{
+  applied: "applied" | "unchanged";
+  /** Whether the plan now applied in the DB is enabled. */
+  enabled: boolean;
+}>;
+export type StopResult = RecordingControlResult<{ phase: "joined" }>;
 export interface RecordingManagementService {
   readonly context: unknown;
   readonly inspect: (
@@ -31,6 +47,16 @@ export interface RecordingManagementService {
    * design §5). Present only when the host offers it to the current session
    * (an administrator); the host checks the role again. */
   readonly initialSetup?: () => Promise<InitialSetupResult>;
+  /** Resumes the DB's applied plan with a fresh read of the Hub's tags, after
+   * an apply in the registry and after a restart (product-owner design §5).
+   * Administrator only, like `initialSetup`. */
+  readonly resume?: () => Promise<ResumeResult>;
+  /** Applies the Project's plan to the DB while recording is stopped, without
+   * starting (product-owner design §5). Administrator only. */
+  readonly reconfigure?: () => Promise<ReconfigureResult>;
+  /** Stops recording without changing its settings (product-owner design §5).
+   * Administrator only. */
+  readonly stop?: () => Promise<StopResult>;
 }
 export interface RecordingManagementOwner {
   readonly project: Project;

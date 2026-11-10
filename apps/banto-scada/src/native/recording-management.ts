@@ -1,7 +1,11 @@
 import type { Project } from "../lib/project";
 import type {
   InitialSetupResult,
+  ReconfigureResult,
+  RecordingControlResult,
   RecordingManagementService,
+  ResumeResult,
+  StopResult,
 } from "../lib/recording-management/service";
 import type { NativeInvoke } from "./history";
 
@@ -14,40 +18,86 @@ function errorKind(error: unknown): string {
   return "failed";
 }
 
+/** Calls one recording control command and maps its answer; a rejection
+ * becomes the host's error kind, and `done` runs only after a success. */
+async function control<T extends object>(
+  call: () => Promise<unknown>,
+  answer: (value: Record<string, unknown>) => T,
+  done?: () => void,
+): Promise<RecordingControlResult<T>> {
+  let value: unknown;
+  try {
+    value = await call();
+  } catch (error) {
+    return { ok: false, error: errorKind(error) };
+  }
+  done?.();
+  return {
+    ok: true,
+    ...answer(value !== null && typeof value === "object" ? { ...value } : {}),
+  };
+}
+
 /**
  * The recording management service of the desktop (product-owner design
  * §5): `inspect` is one `recording_status`, and, for an administrator,
- * `initialSetup` is `recording_initial_setup` of the Project it was made
- * for. The host answers an inspection only after its read has finished, so
- * an aborted inspection still settles on the host's reply.
+ * `initialSetup`, `resume` and `reconfigure` are `recording_initial_setup`,
+ * `recording_resume` and `recording_reconfigure` of the Project it was made
+ * for, and `stop` is `recording_stop`. `done` runs after a successful first
+ * setup, resume or reconfiguration, which may change History's series. The
+ * host answers an inspection only after its read has finished, so an
+ * aborted inspection still settles on the host's reply.
  */
 export function nativeRecordingManagementService(
   invoke: NativeInvoke,
   context: unknown,
-  setup?: { project: Project; done: () => void },
+  admin?: { project: Project; done: () => void },
 ): RecordingManagementService {
   const service: RecordingManagementService = {
     context,
     inspect: (request) => invoke<unknown>("recording_status", { request }),
   };
-  if (!setup) return Object.freeze(service);
+  if (!admin) return Object.freeze(service);
+  const projectArgs = () => ({ projectJson: JSON.stringify(admin.project) });
+  const phase = (value: Record<string, unknown>) =>
+    value.phase === "running" ? ("running" as const) : ("starting" as const);
   return Object.freeze({
     ...service,
-    async initialSetup(): Promise<InitialSetupResult> {
-      try {
-        const answer = await invoke<{ phase?: unknown }>(
-          "recording_initial_setup",
-          { projectJson: JSON.stringify(setup.project) },
-        );
-        setup.done();
-        return {
-          ok: true,
-          phase: answer?.phase === "running" ? "running" : "starting",
-        };
-      } catch (error) {
-        return { ok: false, error: errorKind(error) };
-      }
-    },
+    initialSetup: (): Promise<InitialSetupResult> =>
+      control(
+        () => invoke<unknown>("recording_initial_setup", projectArgs()),
+        (value) => ({ phase: phase(value) }),
+        admin.done,
+      ),
+    resume: (): Promise<ResumeResult> =>
+      control(
+        () => invoke<unknown>("recording_resume", projectArgs()),
+        (value) => ({
+          phase: phase(value),
+          owner:
+            value.owner === "installed"
+              ? ("installed" as const)
+              : ("owner_unavailable" as const),
+        }),
+        admin.done,
+      ),
+    reconfigure: (): Promise<ReconfigureResult> =>
+      control(
+        () => invoke<unknown>("recording_reconfigure", projectArgs()),
+        (value) => ({
+          applied:
+            value.applied === "unchanged"
+              ? ("unchanged" as const)
+              : ("applied" as const),
+          enabled: value.enabled === true,
+        }),
+        admin.done,
+      ),
+    stop: (): Promise<StopResult> =>
+      control(
+        () => invoke<unknown>("recording_stop"),
+        () => ({ phase: "joined" as const }),
+      ),
   });
 }
 
@@ -67,7 +117,8 @@ export interface ManagementAccess {
  * Viewer or above) and publishes a new service, or none while the reply is
  * pending, while no one is signed in, or when the host cannot answer.
  * Replies to an earlier Project or session are dropped. `setupDone` runs
- * after a successful first setup (the History context changes with it).
+ * after a successful first setup, resume or reconfiguration (the History
+ * context changes with them).
  */
 export function createNativeRecordingManagement(
   invoke: NativeInvoke,

@@ -18,8 +18,9 @@ use serde::{Serialize, Serializer};
 use serde_json::{json, Value};
 
 use crate::auth::Role;
+use crate::auth_phase::PhaseGuard;
 use crate::desktop_auth::{CommandError, DesktopAuth};
-use crate::recording_gate::{CloseCheck, NO_RECORDING_RUN};
+use crate::recording_gate::{CloseCheck, NO_RECORDING_RUN, OWNER_UNAVAILABLE};
 use crate::recording_runtime::{InspectFailure, RecordingRuntime, SetupFailure, StopFailure};
 
 /// The audit resource of the recording control commands.
@@ -125,19 +126,7 @@ pub async fn initial_setup(
     let plan_id = project.recording_plan_id();
     match result {
         Ok(phase) => {
-            let owner = match auth.recording_gate() {
-                Some(gate) if phase == "running" => {
-                    match runtime.install_owner(gate, &lock, project).await {
-                        Ok(_) => "installed",
-                        Err(reason) => reason,
-                    }
-                }
-                Some(gate) => {
-                    gate.set_empty_reason(&lock, crate::recording_gate::OWNER_UNAVAILABLE);
-                    crate::recording_gate::OWNER_UNAVAILABLE
-                }
-                None => crate::recording_gate::OWNER_UNAVAILABLE,
-            };
+            let owner = install(auth, runtime, &lock, project, phase).await;
             let detail = json!({ "phase": phase, "owner": owner });
             host.auth()
                 .record_ok(
@@ -161,14 +150,162 @@ pub async fn initial_setup(
                     "failed",
                 )
                 .await;
-            Err(match failure {
-                SetupFailure::Unavailable => ControlError::Unavailable(
-                    runtime
-                        .unavailable_reason()
-                        .unwrap_or(crate::recording_runtime::STORE_UNAVAILABLE),
-                ),
-                failure => ControlError::Refused(failure.as_str()),
-            })
+            Err(setup_error(runtime, failure))
+        }
+    }
+}
+
+/// The registry root over a recording a control command started (design
+/// §5): installed in the same call when it runs, else the slot is
+/// `owner_unavailable` and the recording keeps going.
+async fn install(
+    auth: &DesktopAuth,
+    runtime: &RecordingRuntime,
+    lock: &PhaseGuard<'_>,
+    project: &Project,
+    phase: &str,
+) -> &'static str {
+    match auth.recording_gate() {
+        Some(gate) if phase == "running" => {
+            match runtime.install_owner(gate, lock, project).await {
+                Ok(_) => "installed",
+                Err(reason) => reason,
+            }
+        }
+        Some(gate) => {
+            gate.set_empty_reason(lock, OWNER_UNAVAILABLE);
+            OWNER_UNAVAILABLE
+        }
+        None => OWNER_UNAVAILABLE,
+    }
+}
+
+fn setup_error(runtime: &RecordingRuntime, failure: SetupFailure) -> ControlError {
+    match failure {
+        SetupFailure::Unavailable => ControlError::Unavailable(
+            runtime
+                .unavailable_reason()
+                .unwrap_or(crate::recording_runtime::STORE_UNAVAILABLE),
+        ),
+        failure => ControlError::Refused(failure.as_str()),
+    }
+}
+
+/// `recording_resume(projectJson)` (Admin): start the plan the store has
+/// applied, after the registry's apply or a restart (design §5, §8-2, §8-7).
+/// An installed root is taken back first; a recording that runs is
+/// `not_allowed`, an unsettled root `busy`. `clients` are the Hub clients
+/// for the fresh resolution and the recording. Answers like the first
+/// setup (`{"phase", "owner"}`): the new recording gets a new root in the
+/// same call. Every accepted call is audited (`resume`).
+pub async fn resume(
+    auth: &DesktopAuth,
+    runtime: &RecordingRuntime,
+    project: &Project,
+    clients: Option<(RestClient, RestClient)>,
+) -> Result<Value, ControlError> {
+    let host = auth.auth();
+    let lock = host.gate().await;
+    let actor = host.auth().require_role(Role::Admin, RESOURCE).await?;
+    if !lock.phase().admits_registry() {
+        return Err(ControlError::Refused("not_allowed"));
+    }
+    let result = match clients {
+        None => Err(SetupFailure::HubNotConfigured),
+        Some((resolve, record)) => {
+            runtime
+                .resume(auth.recording_gate().map(|g| &**g), &lock, resolve, record)
+                .await
+        }
+    };
+    let result = match result {
+        Ok(phase) => {
+            let owner = install(auth, runtime, &lock, project, phase).await;
+            Ok(json!({ "phase": phase, "owner": owner }))
+        }
+        Err(failure) => Err(failure),
+    };
+    audited(
+        auth,
+        actor.session.identity(),
+        "resume",
+        None,
+        runtime,
+        result,
+    )
+    .await
+}
+
+/// `recording_reconfigure(projectJson)` (Admin): apply the Project's plan
+/// while recording is stopped and no root is installed (design §5). Never
+/// starts recording. `resolve` reads the Hub only when the plan's members
+/// need a new mapping. Answers `{"applied": "applied" | "unchanged",
+/// "enabled"}`. Every accepted call is audited (`reconfigure`).
+pub async fn reconfigure(
+    auth: &DesktopAuth,
+    runtime: &RecordingRuntime,
+    project: &Project,
+    resolve: Option<RestClient>,
+) -> Result<Value, ControlError> {
+    let host = auth.auth();
+    let lock = host.gate().await;
+    let actor = host.auth().require_role(Role::Admin, RESOURCE).await?;
+    if !lock.phase().admits_registry() {
+        return Err(ControlError::Refused("not_allowed"));
+    }
+    // The slot is checked under the lock: an installed root holds the
+    // Supervisor, and changes then go through the registry.
+    let result = if auth.recording_gate().is_some_and(|g| g.slot().is_ok()) {
+        Err(SetupFailure::NotAllowed)
+    } else {
+        runtime.reconfigure(project, resolve).await
+    }
+    .map(|done| {
+        json!({
+            "applied": if done.changed { "applied" } else { "unchanged" },
+            "enabled": done.enabled,
+        })
+    });
+    audited(
+        auth,
+        actor.session.identity(),
+        "reconfigure",
+        project.recording_plan_id(),
+        runtime,
+        result,
+    )
+    .await
+}
+
+/// Audits a control command's outcome (resource `recording`) and returns it.
+async fn audited(
+    auth: &DesktopAuth,
+    identity: &crate::auth::UserIdentity,
+    action: &str,
+    entity: Option<&str>,
+    runtime: &RecordingRuntime,
+    result: Result<Value, SetupFailure>,
+) -> Result<Value, ControlError> {
+    let audit = auth.auth().auth();
+    match result {
+        Ok(detail) => {
+            audit
+                .record_ok(identity, action, RESOURCE, entity, Some(detail.clone()))
+                .await;
+            Ok(detail)
+        }
+        Err(failure) => {
+            audit
+                .record(
+                    identity,
+                    action,
+                    RESOURCE,
+                    entity,
+                    Some(json!({ "error": failure.as_str() })),
+                    "failed",
+                )
+                .await;
+            Err(setup_error(runtime, failure))
         }
     }
 }
