@@ -4,8 +4,8 @@
 //! The resume starts the plan the store has applied, after the registry's
 //! apply (the root is taken back first) and after a restart, from a fresh
 //! SDK resolution. The reconfiguration applies the Project's plan while
-//! nothing records and no root is installed; it never starts recording.
-//! Both decide from what the store holds, like the first setup, so a call
+//! nothing records; it never starts recording. Both take a root left
+//! installed over a recording that no longer runs back first. Both decide from what the store holds, like the first setup, so a call
 //! whose outcome was unknown is simply called again.
 use banto_tagclient::RestClient;
 use scada_historian::store::recording_plan::{
@@ -85,12 +85,17 @@ impl RecordingRuntime {
     }
 
     /// `recording_reconfigure` (design §5): apply the Project's plan while
-    /// recording is stopped and no root is installed. Registers a new mapping
+    /// recording is stopped. A root left installed over a recording that no
+    /// longer runs (after the registry's apply) is taken back by its handoff
+    /// first, as for the resume; a recording that runs is `not_allowed` and
+    /// its root stays, an unsettled root is `busy`. Registers a new mapping
     /// when the plan's members no longer fit the registered one (members that
     /// still fit keep their identities; only then is the Hub read through
     /// `resolve`), keeps the retention policy, and never starts recording.
     pub async fn reconfigure(
         &self,
+        gate: Option<&RecordingGate>,
+        phase: &PhaseGuard<'_>,
         project: &Project,
         resolve: Option<RestClient>,
     ) -> Result<Reconfigured, SetupFailure> {
@@ -101,6 +106,16 @@ impl RecordingRuntime {
         validate_recording_plan(desired).map_err(|_| SetupFailure::InvalidPlan)?;
         let desired = desired.clone();
         let enabled = desired["enabled"] == true;
+        // A root over a running recording stays installed.
+        let lent = lock(&ready.lent).as_ref().map(|w| w.borrow().phase);
+        if lent.is_some_and(|phase| !settled(phase)) {
+            return Err(SetupFailure::NotAllowed);
+        }
+        if let Some(gate) = gate {
+            self.take_owner(gate, phase)
+                .await
+                .map_err(|_| SetupFailure::Busy)?;
+        }
         let mut slot = ready.supervisor.lock().await;
         let Some(supervisor) = slot.as_mut() else {
             // Lent to an installed root: changes go through the registry.
