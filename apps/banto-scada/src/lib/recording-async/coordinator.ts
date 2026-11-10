@@ -1,6 +1,5 @@
 /** External composition root owns this coordinator beyond App/view lifetimes. */
 import {
-  parseRecordingOperationsContext,
   parseRecordingChangeRequest,
   parseRecordingOperationRequest,
   parseRecordingOperationResult,
@@ -19,27 +18,44 @@ import {
   type RecordingAdmissionAction,
   type RecordingAdmissionRequest,
   type RecordingAdmissionReply,
+  type RecordingAdmissionInspectionRequest,
   type RecordingAdmissionInspectionReply,
   type RecordingReconciliationDelivery,
 } from "../recording-admission-contract";
+import {
+  parseRecordingWireLeaseRequest,
+  parseRecordingWireLeaseReply,
+  parseRecordingWireCancelRequest,
+  parseRecordingWireCancelReply,
+  parseRecordingWireObservationReply,
+  parseRecordingWireCallInspectionRequest,
+  parseRecordingWireCallInspectionReply,
+  type RecordingWireObservationTarget,
+  type RecordingWireCancelRequest,
+  type RecordingWireError,
+  type RecordingWireCallInspectionReply,
+  type RecordingWireOwnerSnapshot,
+} from "../recording-wire-contract";
 import { sameOwnedJson } from "../json-equality";
 import { freezeHistory } from "../history/owned-json";
 import { data, mergeResult, receiptKey } from "../recording-operations/view";
 import type { AppliedSuccess } from "../recording-operations/service";
-import type {
-  AsyncRecordingOperationsPort,
-  LocalOwnerFrame,
-  LocalCancelRequest,
+import {
+  isAsyncRecordingPortV2,
+  type AsyncRecordingOperationsPortV2,
+  type PortCallV2,
+  type PortHostRefusal,
+  type PortLeaseRequestV2,
+  type PortStateV2,
+  type PortTransportEnd,
 } from "./port";
 import {
   fields,
-  id,
-  parseLeaseReply,
-  parseCancelReply,
-  parseOwnerFrame,
+  parsePortState,
+  parseTransportEnd,
   onPromise,
 } from "./local-validation";
-import { createIdPools } from "./ids";
+import { createIdPools, type IdRole } from "./ids";
 import type {
   AsyncOperationsClient,
   AsyncOperationsState,
@@ -47,6 +63,7 @@ import type {
   IntentControl,
   ReadControl,
   AdmissionPhase,
+  AsyncOwnerState,
 } from "./state";
 export type * from "./state";
 const roots = new WeakSet<object>();
@@ -56,16 +73,6 @@ export function isAsyncOperationsClient(
 ): value is AsyncOperationsClient {
   return !!value && typeof value === "object" && clients.has(value);
 }
-const methodNames = [
-  "prepareLease",
-  "admit",
-  "inspectAdmission",
-  "observeOperation",
-  "observeReconciliation",
-  "current",
-  "subscribe",
-  "requestCancel",
-] as const;
 interface View {
   identity: object;
   active: boolean;
@@ -74,8 +81,11 @@ interface View {
 interface OperationTrack {
   ref: string;
   request: RecordingOperationRequest;
+  target: RecordingWireObservationTarget;
   completion?: Promise<unknown>;
   settled: boolean;
+  /** The observation ended without a terminal (`unavailable` or transport lost). */
+  lost?: boolean;
   original?: RecordingOperationResult;
   latest?: RecordingOperationResult;
   cancelIssued?: boolean;
@@ -83,9 +93,11 @@ interface OperationTrack {
 interface ReadTrack {
   ref: string;
   request: RecordingReconciliationRequest;
+  target: RecordingWireObservationTarget;
   reply: RecordingAdmissionReply;
   completion?: Promise<unknown>;
   settled: boolean;
+  lost?: boolean;
   delivery?: RecordingReconciliationDelivery;
   cancelIssued?: boolean;
 }
@@ -114,22 +126,18 @@ interface Intent {
 }
 /** Clock injection supports deterministic tests; it never converts native time. */
 export function createAsyncRecordingOperationsCoordinator(
-  port: AsyncRecordingOperationsPort,
+  port: AsyncRecordingOperationsPortV2,
   now = () => performance.now(),
 ) {
-  if (!port || typeof port !== "object" || roots.has(port))
+  // Membership only: a structural `version: 2`, a Proxy or a v1 port is refused.
+  if (!isAsyncRecordingPortV2(port))
+    throw Error("Recording async owner: port v2 required");
+  if (roots.has(port))
     throw Error("Recording async owner: duplicate or invalid port");
-  const context = parseRecordingOperationsContext(data(port, "context")),
-    rawOwner = data(port, "ownerRef");
-  id(rawOwner);
-  const ownerRef: string = rawOwner;
-  const methods = Object.fromEntries(
-    methodNames.map((k) => {
-      const m = data(port, k);
-      if (typeof m !== "function") throw Error("invalid port");
-      return [k, m];
-    }),
-  ) as Pick<AsyncRecordingOperationsPort, (typeof methodNames)[number]>;
+  const scope = port.scope,
+    context = scope.context,
+    ownerRef = scope.ownerRef,
+    access = port.access;
   // This tombstone is never removed on close; recreation cannot clear uncertainty.
   roots.add(port);
   const prefix = Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) =>
@@ -139,7 +147,24 @@ export function createAsyncRecordingOperationsCoordinator(
     listeners = new Set<(s: AsyncOperationsState) => void>();
   let workflow: Workflow | undefined,
     call: Intent | undefined,
-    frame: LocalOwnerFrame | undefined;
+    frame: RecordingWireOwnerSnapshot | undefined;
+  let owner: AsyncOwnerState = Object.freeze({
+    access,
+    seq: null,
+    subscription: "idle",
+    ended: null,
+    ownerClosed: null,
+    authorizationLost: null,
+    resyncRequired: false,
+    nativeRecoveryRequired: false,
+  });
+  let hostRefusal: PortHostRefusal | undefined,
+    wireRefusal: RecordingWireError | undefined;
+  /** The admit whose reply was lost (transport ended without a reply). */
+  let lostAdmit:
+      | PortCallV2<RecordingAdmissionRequest, RecordingAdmissionReply>
+      | undefined,
+    callInspection: RecordingWireCallInspectionReply | undefined;
   let closed = false,
     invalid = false,
     ownerBlocked = false,
@@ -159,24 +184,12 @@ export function createAsyncRecordingOperationsCoordinator(
   let state: AsyncOperationsState,
     notifying = false,
     qualifying = false;
+  /** The port is frozen with bound methods; only the fixed scope is compared. */
   function intact(): boolean {
-    try {
-      if (
-        data(port, "ownerRef") !== ownerRef ||
-        !sameOwnedJson(
-          parseRecordingOperationsContext(data(port, "context")),
-          context,
-        )
-      )
-        throw Error("changed context");
-      for (const k of methodNames)
-        if (data(port, k) !== methods[k]) throw Error("changed method");
-      return true;
-    } catch {
-      invalid = true;
-      publish();
-      return false;
-    }
+    if (port.scope === scope) return true;
+    invalid = true;
+    publish();
+    return false;
   }
   function fault() {
     invalid = true;
@@ -206,11 +219,17 @@ export function createAsyncRecordingOperationsCoordinator(
         workflow.read.delivery?.outcome.kind === "result")
     );
   }
+  function ownerUsable() {
+    return (
+      !owner.ownerClosed && !owner.authorizationLost && !owner.resyncRequired
+    );
+  }
   function common(ownPending?: "inspection" | "cancel") {
     return (
       !closed &&
       !invalid &&
       connected &&
+      ownerUsable() &&
       inspectCall === (ownPending === "inspection" ? "pending" : "idle") &&
       cancelCall === (ownPending === "cancel" ? "pending" : "idle") &&
       readPhase !== "readUncertain" &&
@@ -253,7 +272,8 @@ export function createAsyncRecordingOperationsCoordinator(
     const t = workflow?.current,
       r = t?.latest;
     const base = common() && idleCalls(),
-      mutable = base && !ownerBlocked && normalOperation();
+      mutable =
+        base && access === "mutation" && !ownerBlocked && normalOperation();
     return Object.freeze({
       context,
       ownerRef,
@@ -263,10 +283,14 @@ export function createAsyncRecordingOperationsCoordinator(
       ownerBlocked,
       timedOut,
       refusal,
+      wireRefusal,
+      hostRefusal,
+      owner,
       admission,
       request,
       reply,
       inspection,
+      callInspection,
       call: call?.phase ?? "idle",
       inspectionCall: inspectCall,
       cancelCall,
@@ -300,6 +324,7 @@ export function createAsyncRecordingOperationsCoordinator(
             (r.quiescence === "unknown" || r.recoveryRequired))),
       canCancel:
         common() &&
+        access === "mutation" &&
         !!t &&
         !t.cancelIssued &&
         !t.settled &&
@@ -468,6 +493,108 @@ export function createAsyncRecordingOperationsCoordinator(
         throw Error("changed read ref");
     }
   }
+  /**
+   * One physical port call. `reply` carries only the stored original reply and
+   * `transport` the physical end; a transport end without a reply is `lost`.
+   * A late reply (after CallInspection recovery) still reaches `onReply`.
+   */
+  function dispatch<Q, R>(
+    send: () => unknown,
+    expected: Q | ((request: unknown) => boolean),
+    handlers: {
+      reply: (raw: unknown) => void;
+      lost: (end: PortTransportEnd) => void;
+      fault: () => void;
+    },
+  ): PortCallV2<Q, R> {
+    const c = send();
+    fields(c, ["request", "reply", "transport"]);
+    const q = data(c, "request");
+    if (
+      typeof expected === "function"
+        ? !(expected as (request: unknown) => boolean)(q)
+        : !sameOwnedJson(q, expected)
+    )
+      throw Error("changed request");
+    let replied = false;
+    onPromise(
+      data(c, "reply"),
+      (raw) => {
+        replied = true;
+        try {
+          handlers.reply(raw);
+        } catch {
+          handlers.fault();
+        }
+      },
+      handlers.fault,
+    );
+    onPromise(
+      data(c, "transport"),
+      (raw) => {
+        let end: PortTransportEnd;
+        try {
+          end = parseTransportEnd(raw);
+        } catch {
+          handlers.fault();
+          return;
+        }
+        if (end.kind === "refused") hostRefusal = end.refusal;
+        if (end.kind !== "returned" && !replied) handlers.lost(end);
+        else if (end.kind === "refused") publish();
+      },
+      handlers.fault,
+    );
+    return c as PortCallV2<Q, R>;
+  }
+  function takeId(role: IdRole): string | undefined {
+    if (!pools.reserve({ [role]: 1 })) return undefined;
+    return pools.take(role);
+  }
+  function lose(t: OperationTrack | ReadTrack) {
+    if (t.settled || t.lost) return;
+    t.lost = true;
+    readPhase = "deliveryUnknown";
+  }
+  /** Only a terminal observation reply settles; `unavailable` is a terminal without a result. */
+  function watch(t: OperationTrack | ReadTrack, done: (v: unknown) => void) {
+    const raw = port.observe(t.target);
+    fields(raw, ["target", "result"]);
+    if (!sameOwnedJson(data(raw, "target"), t.target))
+      throw Error("wrong observation");
+    const promise = data(raw, "result");
+    onPromise(
+      promise,
+      (v) => {
+        try {
+          const r = parseRecordingWireObservationReply(v);
+          if (
+            !sameOwnedJson(r.request.scope, scope) ||
+            !sameOwnedJson(r.request.target, t.target)
+          )
+            throw Error("wrong observation");
+          if (r.outcome.kind === "pending") throw Error("not terminal");
+          if (r.outcome.kind === "unavailable") lose(t);
+          else
+            done(
+              r.outcome.kind === "operation"
+                ? r.outcome.result
+                : r.outcome.delivery,
+            );
+        } catch {
+          invalid = true;
+          if ("reply" in t) readPhase = "deliveryUnknown";
+        }
+        publish();
+      },
+      () => {
+        invalid = true;
+        if ("reply" in t) readPhase = "deliveryUnknown";
+        publish();
+      },
+    );
+    t.completion = promise as Promise<unknown>;
+  }
   function observeOperation(
     handle: Extract<
       RecordingAdmissionReply["outcome"],
@@ -491,45 +618,26 @@ export function createAsyncRecordingOperationsCoordinator(
     const t: OperationTrack = {
       ref: handle.operationRef,
       request: handle.request,
+      target: freezeHistory({
+        kind: "operation",
+        operationRef: handle.operationRef,
+        request: handle.request,
+      }),
       settled: false,
     };
     w.operations[t.request.stage] = t;
     w.current = t;
-    const raw = methods.observeOperation.call(port, t.ref);
-    fields(raw, ["operationRef", "request", "completion"]);
-    if (
-      data(raw, "operationRef") !== t.ref ||
-      !sameOwnedJson(
-        parseRecordingOperationRequest(data(raw, "request")),
-        t.request,
-      )
-    )
-      throw Error("wrong observation");
-    const promise = data(raw, "completion");
-    onPromise(
-      promise,
-      (v) => {
-        try {
-          const original = parseRecordingOperationResult(v);
-          if (!sameOwnedJson(original.request, t.request))
-            throw Error("wrong completion");
-          opResult(t, original);
-          t.original = original;
-          t.settled = true;
-          applyFrameEvidence();
-          if (workflow === w && workflowFinished() && normalOperation())
-            releaseCredits();
-        } catch {
-          invalid = true;
-        }
-        publish();
-      },
-      () => {
-        invalid = true;
-        publish();
-      },
-    );
-    t.completion = promise as Promise<unknown>;
+    watch(t, (v) => {
+      const original = parseRecordingOperationResult(v);
+      if (!sameOwnedJson(original.request, t.request))
+        throw Error("wrong completion");
+      opResult(t, original);
+      t.original = original;
+      t.settled = true;
+      applyFrameEvidence();
+      if (workflow === w && workflowFinished() && normalOperation())
+        releaseCredits();
+    });
     applyFrameEvidence();
   }
   function observeRead(
@@ -547,42 +655,21 @@ export function createAsyncRecordingOperationsCoordinator(
     const t: ReadTrack = {
       ref: handle.readRef,
       request: handle.request,
+      target: freezeHistory({
+        kind: "reconciliation",
+        readRef: handle.readRef,
+        request: handle.request,
+      }),
       reply: accepted,
       settled: false,
     };
     w.read = t;
     readPhase = "accepted";
-    const raw = methods.observeReconciliation.call(port, t.ref);
-    fields(raw, ["readRef", "request", "completion"]);
-    if (
-      data(raw, "readRef") !== t.ref ||
-      !sameOwnedJson(
-        parseRecordingReconciliationRequest(data(raw, "request")),
-        t.request,
-      )
-    )
-      throw Error("wrong observation");
-    const promise = data(raw, "completion");
-    onPromise(
-      promise,
-      (v) => {
-        try {
-          readResult(t, v);
-          t.settled = true;
-          applyFrameEvidence();
-        } catch {
-          invalid = true;
-          readPhase = "deliveryUnknown";
-        }
-        publish();
-      },
-      () => {
-        invalid = true;
-        readPhase = "deliveryUnknown";
-        publish();
-      },
-    );
-    t.completion = promise as Promise<unknown>;
+    watch(t, (v) => {
+      readResult(t, v);
+      t.settled = true;
+      applyFrameEvidence();
+    });
     applyFrameEvidence();
   }
   function integrate(input: unknown) {
@@ -628,54 +715,60 @@ export function createAsyncRecordingOperationsCoordinator(
       observeOperation(next.outcome.handle);
     } else observeRead(next.outcome.handle, next);
   }
+  function snapshotEvidence(next: RecordingWireOwnerSnapshot) {
+    if (
+      next.admission &&
+      (next.admission.request.ownerRef !== ownerRef ||
+        !sameOwnedJson(next.admission.request.context, context))
+    )
+      throw Error("foreign admission");
+    if (frame) {
+      if (next.revision === frame.revision) {
+        if (!sameOwnedJson(next, frame)) throw Error("frame contradiction");
+        return;
+      }
+      if (next.revision < frame.revision) {
+        if (!sameOwnedJson({ ...next, revision: 0 }, { ...frame, revision: 0 }))
+          throw Error("frame rollback");
+        return;
+      }
+    }
+    frame = next;
+    ownerBlocked ||= next.ownerBlocked;
+    // Cached frames update `latest` knowledge only; never a call's own reply.
+    if (
+      next.admission &&
+      request &&
+      next.admission.request.admissionId === request.admissionId
+    )
+      integrate(next.admission);
+    applyFrameEvidence();
+  }
   function incoming(input: unknown) {
     try {
-      const next = parseOwnerFrame(input);
-      if (next.ownerRef !== ownerRef || !sameOwnedJson(next.context, context))
-        throw Error("wrong frame owner");
-      if (
-        next.admission &&
-        (next.admission.request.ownerRef !== ownerRef ||
-          !sameOwnedJson(next.admission.request.context, context))
-      )
-        throw Error("foreign admission");
-      if (
-        next.operation &&
-        !sameOwnedJson(next.operation.result.request.change.context, context)
-      )
-        throw Error("foreign operation");
-      if (
-        next.reconciliation &&
-        (next.reconciliation.ownerRef !== ownerRef ||
-          !sameOwnedJson(
-            next.reconciliation.request.operation.change.context,
-            context,
-          ))
-      )
-        throw Error("foreign read");
-      if (frame) {
-        if (next.revision === frame.revision) {
-          if (!sameOwnedJson(next, frame)) throw Error("frame contradiction");
-          return;
-        }
-        if (next.revision < frame.revision) {
-          if (
-            !sameOwnedJson({ ...next, revision: 0 }, { ...frame, revision: 0 })
-          )
-            throw Error("frame rollback");
-          return;
-        }
+      const next: PortStateV2 = parsePortState(input, scope);
+      if (next.access !== access) throw Error("changed access");
+      owner = Object.freeze({
+        access,
+        seq: next.seq,
+        subscription: next.subscription,
+        ended: next.ended,
+        ownerClosed: next.ownerClosed,
+        authorizationLost: next.authorizationLost,
+        resyncRequired: next.resyncRequired,
+        nativeRecoveryRequired: next.nativeRecoveryRequired,
+      });
+      connected =
+        next.display.transportConnected && next.subscription === "attached";
+      ownerBlocked ||= next.nativeRecoveryRequired;
+      for (const o of next.observations) {
+        if (o.query !== "transportLost") continue;
+        const t = workflow?.current,
+          r = workflow?.read;
+        if (t && sameOwnedJson(o.target, t.target)) lose(t);
+        if (r && sameOwnedJson(o.target, r.target)) lose(r);
       }
-      frame = next;
-      connected = next.connected;
-      ownerBlocked ||= next.ownerBlocked;
-      if (
-        next.admission &&
-        request &&
-        next.admission.request.admissionId === request.admissionId
-      )
-        integrate(next.admission);
-      applyFrameEvidence();
+      if (next.display.snapshot) snapshotEvidence(next.display.snapshot);
     } catch {
       invalid = true;
     }
@@ -692,6 +785,102 @@ export function createAsyncRecordingOperationsCoordinator(
     }
     if (intent.action.kind === "reconcile") readPhase = "idle";
     publish();
+  }
+  function uncertain(intent: Intent) {
+    intent.phase = "uncertain";
+    clearTimeout(intent.timer);
+    publish();
+  }
+  function leaseRequest(
+    action: RecordingAdmissionAction,
+    admissionId: string,
+    leaseRequestId: string,
+    budget: number,
+  ): PortLeaseRequestV2 {
+    const lease = parseRecordingWireLeaseRequest({
+      version: 1,
+      kind: "recordingWireLeaseRequest",
+      scope,
+      leaseRequestId,
+      admissionId,
+      role: action.kind === "reconcile" ? "reconciliation" : "mutation",
+      requestedBudgetMs: budget,
+    });
+    return freezeHistory(
+      action.kind === "reconcile"
+        ? { role: "reconciliation", lease }
+        : action.kind === "preflight"
+          ? {
+              role: "mutation",
+              stage: "preflight",
+              change: action.change,
+              lease,
+            }
+          : action.kind === "discard"
+            ? { role: "mutation", stage: "discard", lease }
+            : {
+                role: "mutation",
+                stage: action.kind,
+                operationId: action.operation.operationId,
+                lease,
+              },
+    ) as PortLeaseRequestV2;
+  }
+  function admit(intent: Intent, view: View, deadlineLeaseRef: string) {
+    const { action, admissionId, control: ctl } = intent;
+    request = intent.request = parseRecordingAdmissionRequest({
+      version: 1,
+      kind: "recordingAdmissionRequest",
+      ownerRef,
+      admissionId,
+      context,
+      deadlineLeaseRef,
+      action,
+    });
+    // Commit the irreversible point before external notifications / dispatch.
+    intent.phase = "admit";
+    admission = "awaitingAck";
+    lostAdmit = undefined;
+    callInspection = undefined;
+    publish();
+    if (
+      !gate(view, action.kind === "reconcile") ||
+      !time(ctl.intentDeadlineMonotonicMs)
+    ) {
+      finishUnsent(intent);
+      return;
+    }
+    const sent = request;
+    let c: PortCallV2<RecordingAdmissionRequest, RecordingAdmissionReply>;
+    try {
+      c = dispatch(() => port.admit(sent), sent, {
+        reply(ack) {
+          integrate(ack);
+          if (lostAdmit === c) lostAdmit = undefined;
+          clearTimeout(intent.timer);
+          if (call === intent) call = undefined;
+          publish();
+        },
+        lost() {
+          // Acceptance is unknown, not a port fault: recover with CallInspection.
+          if (request === sent && admission === "awaitingAck")
+            admission = "unknown";
+          if (request === sent) lostAdmit = c;
+          clearTimeout(intent.timer);
+          if (call === intent) call = undefined;
+          publish();
+        },
+        fault() {
+          invalid = true;
+          if (admission === "awaitingAck") admission = "unknown";
+          uncertain(intent);
+        },
+      });
+    } catch {
+      invalid = true;
+      if (admission === "awaitingAck") admission = "unknown";
+      uncertain(intent);
+    }
   }
   function start(
     view: View,
@@ -711,8 +900,11 @@ export function createAsyncRecordingOperationsCoordinator(
     request = undefined;
     reply = undefined;
     inspection = undefined;
+    callInspection = undefined;
+    lostAdmit = undefined;
     timedOut = false;
     refusal = undefined;
+    wireRefusal = undefined;
     cancel = undefined;
     if (action.kind === "reconcile") readPhase = "awaitingAdmission";
     intent.timer = arm(ctl.intentDeadlineMonotonicMs, () => {
@@ -730,103 +922,60 @@ export function createAsyncRecordingOperationsCoordinator(
       finishUnsent(intent);
       return;
     }
-    const leaseRequest = freezeHistory({
-      ownerRef,
-      admissionId,
-      context,
-      requestedBudgetMs: ctl.requestedNativeBudgetMs,
-    });
+    const leaseId = takeId("lease");
+    if (!leaseId) {
+      refusal = "capacity";
+      finishUnsent(intent);
+      return;
+    }
+    let lr: PortLeaseRequestV2;
     try {
-      onPromise(
-        methods.prepareLease.call(port, leaseRequest),
-        (raw) => {
-          try {
-            const lease = parseLeaseReply(raw);
-            if (!sameOwnedJson(lease.request, leaseRequest))
-              throw Error("wrong lease");
-            if (lease.outcome.kind === "rejected") {
-              refusal = lease.outcome.error;
-              finishUnsent(intent);
-              return;
-            }
-            if (
-              call !== intent ||
-              !gate(view, action.kind === "reconcile") ||
-              !time(ctl.intentDeadlineMonotonicMs)
-            ) {
-              finishUnsent(intent);
-              return;
-            }
-            request = intent.request = parseRecordingAdmissionRequest({
-              version: 1,
-              kind: "recordingAdmissionRequest",
-              ownerRef,
-              admissionId,
-              context,
-              deadlineLeaseRef: lease.outcome.deadlineLeaseRef,
-              action,
-            });
-            // Commit the irreversible point before external notifications / dispatch.
-            intent.phase = "admit";
-            admission = "awaitingAck";
-            publish();
-            if (
-              !gate(view, action.kind === "reconcile") ||
-              !time(ctl.intentDeadlineMonotonicMs)
-            ) {
-              finishUnsent(intent);
-              return;
-            }
-            try {
-              onPromise(
-                methods.admit.call(port, request),
-                (ack) => {
-                  try {
-                    integrate(ack);
-                    clearTimeout(intent.timer);
-                    if (call === intent) call = undefined;
-                  } catch {
-                    intent.phase = "uncertain";
-                    invalid = true;
-                    if (admission === "awaitingAck") admission = "unknown";
-                    clearTimeout(intent.timer);
-                  }
-                  publish();
-                },
-                () => {
-                  intent.phase = "uncertain";
-                  invalid = true;
-                  if (admission === "awaitingAck") admission = "unknown";
-                  clearTimeout(intent.timer);
-                  publish();
-                },
-              );
-            } catch {
-              intent.phase = "uncertain";
-              invalid = true;
-              if (admission === "awaitingAck") admission = "unknown";
-              clearTimeout(intent.timer);
-              publish();
-            }
-          } catch {
-            intent.phase = "uncertain";
-            invalid = true;
-            clearTimeout(intent.timer);
-            publish();
-          }
-        },
-        () => {
-          intent.phase = "uncertain";
-          invalid = true;
-          clearTimeout(intent.timer);
-          publish();
-        },
+      lr = leaseRequest(
+        action,
+        admissionId,
+        leaseId,
+        ctl.requestedNativeBudgetMs,
       );
     } catch {
-      intent.phase = "uncertain";
       invalid = true;
-      clearTimeout(intent.timer);
-      publish();
+      uncertain(intent);
+      return;
+    }
+    try {
+      dispatch(() => port.prepareLease(lr), lr, {
+        reply(raw) {
+          if (intent.phase !== "lease") return;
+          const lease = parseRecordingWireLeaseReply(raw);
+          if (!sameOwnedJson(lease.request, lr.lease))
+            throw Error("wrong lease");
+          if (lease.outcome.kind === "rejected") {
+            wireRefusal = lease.outcome.error;
+            finishUnsent(intent);
+            return;
+          }
+          if (
+            call !== intent ||
+            !gate(view, action.kind === "reconcile") ||
+            !time(ctl.intentDeadlineMonotonicMs)
+          ) {
+            finishUnsent(intent);
+            return;
+          }
+          admit(intent, view, lease.outcome.deadlineLeaseRef);
+        },
+        lost() {
+          // A lease may have been issued; it expires unused on the host.
+          if (intent.phase === "lease") uncertain(intent);
+        },
+        fault() {
+          invalid = true;
+          if (intent.phase === "lease") uncertain(intent);
+          else publish();
+        },
+      });
+    } catch {
+      invalid = true;
+      uncertain(intent);
     }
   }
   function accept(
@@ -946,19 +1095,27 @@ export function createAsyncRecordingOperationsCoordinator(
         !request
       )
         return false;
-      if (!pools.reserve({ inspection: 1 })) {
-        refusal = "capacity";
-        publish();
-        return false;
+      // A lost admit reply is recovered from the host ledger (CallInspection),
+      // never by resending the admit. A received `unknown` uses AdmissionInspection.
+      const lost = lostAdmit;
+      let r: RecordingAdmissionInspectionRequest | undefined;
+      if (!lost) {
+        if (!pools.reserve({ inspection: 1 })) {
+          refusal = "capacity";
+          publish();
+          return false;
+        }
+        r = parseRecordingAdmissionInspectionRequest({
+          version: 1,
+          kind: "recordingAdmissionInspectionRequest",
+          inspectionId: pools.take("inspection"),
+          original: request,
+        });
       }
-      const r = parseRecordingAdmissionInspectionRequest({
-        version: 1,
-        kind: "recordingAdmissionInspectionRequest",
-        inspectionId: pools.take("inspection"),
-        original: request,
-      });
+      const original = request;
       inspectCall = "pending";
       inspection = undefined;
+      callInspection = undefined;
       inspectTimer = arm(end, () => {
         if (inspectCall === "pending") {
           timedOut = true;
@@ -972,6 +1129,7 @@ export function createAsyncRecordingOperationsCoordinator(
         !common("inspection") ||
         admission !== "unknown" ||
         call?.phase === "uncertain" ||
+        lostAdmit !== lost ||
         !time(end)
       ) {
         inspectCall = "idle";
@@ -979,35 +1137,66 @@ export function createAsyncRecordingOperationsCoordinator(
         publish();
         return true;
       }
+      const done = () => {
+        clearTimeout(inspectTimer);
+        publish();
+      };
+      const handlers = {
+        lost() {
+          // Read-only: a lost inspection reply leaves the admission unknown and retryable.
+          inspectCall = "idle";
+          done();
+        },
+        fault() {
+          inspectCall = "uncertain";
+          invalid = true;
+          done();
+        },
+      };
       try {
-        onPromise(
-          methods.inspectAdmission.call(port, r),
-          (raw) => {
-            try {
+        if (lost)
+          dispatch(
+            () => port.inspectCall(lost),
+            (q) => {
+              const v = parseRecordingWireCallInspectionRequest(q);
+              return (
+                sameOwnedJson(v.scope, scope) &&
+                sameOwnedJson(v.original, original)
+              );
+            },
+            {
+              ...handlers,
+              reply(raw) {
+                const v = parseRecordingWireCallInspectionReply(raw);
+                if (
+                  !sameOwnedJson(v.request.scope, scope) ||
+                  !sameOwnedJson(v.request.original, original)
+                )
+                  throw Error("wrong call inspection");
+                callInspection = v;
+                if (v.outcome.kind === "terminal") {
+                  integrate(v.outcome.reply);
+                  if (lostAdmit === lost) lostAdmit = undefined;
+                }
+                inspectCall = "idle";
+                done();
+              },
+            },
+          );
+        else
+          dispatch(() => port.inspectAdmission(r!), r!, {
+            ...handlers,
+            reply(raw) {
               const v = parseRecordingAdmissionInspectionReply(raw);
               if (!sameOwnedJson(v.request, r)) throw Error("wrong inspection");
               inspection = v;
               if (v.outcome.kind === "found") integrate(v.outcome.reply);
               inspectCall = "idle";
-            } catch {
-              inspectCall = "uncertain";
-              invalid = true;
-            }
-            clearTimeout(inspectTimer);
-            publish();
-          },
-          () => {
-            inspectCall = "uncertain";
-            invalid = true;
-            clearTimeout(inspectTimer);
-            publish();
-          },
-        );
+              done();
+            },
+          });
       } catch {
-        inspectCall = "uncertain";
-        invalid = true;
-        clearTimeout(inspectTimer);
-        publish();
+        handlers.fault();
       }
       return true;
     } catch {
@@ -1022,10 +1211,27 @@ export function createAsyncRecordingOperationsCoordinator(
       return false;
     const t = read ? workflow?.read : workflow?.current;
     if (!t) return false;
-    const r: LocalCancelRequest = freezeHistory({
-      ownerRef,
-      target: { kind: read ? "reconciliation" : "operation", ref: t.ref },
-    });
+    if (!pools.reserve({ cancel: 1 })) {
+      refusal = "capacity";
+      publish();
+      return false;
+    }
+    let r: RecordingWireCancelRequest;
+    try {
+      r = parseRecordingWireCancelRequest({
+        version: 1,
+        kind: "recordingWireCancelRequest",
+        scope,
+        cancelId: pools.take("cancel"),
+        target: { kind: read ? "reconciliation" : "operation", ref: t.ref },
+      });
+    } catch {
+      // `take` already consumed the reservation (the ID is used, never reserved).
+      // The scope and the ref were validated before, so this is a local fault.
+      invalid = true;
+      publish();
+      return false;
+    }
     cancelCall = "pending";
     cancel = undefined;
     publish();
@@ -1035,31 +1241,30 @@ export function createAsyncRecordingOperationsCoordinator(
       return true;
     }
     t.cancelIssued = true;
-    try {
-      onPromise(
-        methods.requestCancel.call(port, r),
-        (raw) => {
-          try {
-            const v = parseCancelReply(raw);
-            if (!sameOwnedJson(v.request, r)) throw Error("wrong cancel");
-            cancel = v.disposition;
-            cancelCall = "idle";
-          } catch {
-            cancelCall = "uncertain";
-            invalid = true;
-          }
-          publish();
-        },
-        () => {
-          cancelCall = "uncertain";
-          invalid = true;
-          publish();
-        },
-      );
-    } catch {
+    const fault = () => {
       cancelCall = "uncertain";
       invalid = true;
       publish();
+    };
+    try {
+      dispatch(() => port.requestCancel(r), r, {
+        reply(raw) {
+          const v = parseRecordingWireCancelReply(raw);
+          if (!sameOwnedJson(v.request, r)) throw Error("wrong cancel");
+          if (v.outcome.kind === "ack") cancel = v.outcome.disposition;
+          else wireRefusal = v.outcome.error;
+          cancelCall = "idle";
+          publish();
+        },
+        lost() {
+          // The cancel may have reached the host; its delivery stays uncertain.
+          cancelCall = "uncertain";
+          publish();
+        },
+        fault,
+      });
+    } catch {
+      fault();
     }
     return true;
   }
@@ -1110,10 +1315,10 @@ export function createAsyncRecordingOperationsCoordinator(
   publish();
   let unsubscribe: (() => void) | undefined;
   try {
-    const off = methods.subscribe.call(port, incoming);
+    const off = port.subscribe(incoming);
     if (typeof off !== "function") throw Error("invalid subscription");
     unsubscribe = off;
-    incoming(methods.current.call(port));
+    incoming(port.current());
   } catch {
     fault();
   }

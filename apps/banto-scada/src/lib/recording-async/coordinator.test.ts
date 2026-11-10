@@ -5,11 +5,9 @@ import { operationsProject } from "../__fixtures__/recording-operations-service"
 import { parseRecordingChangeRequest } from "../recording-operations-contract";
 import { parseRecordingAdmissionReply } from "../recording-admission-contract";
 import { createIdPools, ID_ROLES } from "./ids";
-import {
-  parseLeaseReply,
-  parseOwnerFrame,
-  parseCancelReply,
-} from "./local-validation";
+import { parsePortState, parseTransportEnd } from "./local-validation";
+import { defineAsyncRecordingPortV2, isAsyncRecordingPortV2 } from "./port";
+import type { PortStateV2 } from "./port";
 import { ownHistoryJson } from "../history/owned-json";
 let now = 100;
 const flush = async () => {
@@ -25,6 +23,13 @@ function setup() {
     client: root.client,
     view: root.client.bindView(identity),
     identity,
+  };
+}
+/** A port state with a changed cached snapshot (same scope). */
+function snap(f: PortStateV2, patch: Record<string, unknown>): PortStateV2 {
+  return {
+    ...f,
+    display: { ...f.display, snapshot: { ...f.display.snapshot!, ...patch } },
   };
 }
 function control() {
@@ -215,50 +220,100 @@ describe("external root admission and physical call ownership", () => {
       expect(s.h.admissions).toHaveLength(1);
     },
   );
-  it.each(["reject", "malformed", "throw", "thenable"])(
+  it.each(["malformed", "throw", "thenable"])(
     "admit %s is a permanent uncertain call, never a native result",
     async (kind) => {
-      const s = setup();
-      s.h.configure({ autoAck: false });
+      const h = createAsyncPortHarness();
+      h.configure({ autoAck: false });
       if (kind === "throw")
-        s.h.port.admit = () => {
+        h.impl.admit = () => {
           throw Error("PRIVATE_URL_CREDENTIAL");
         };
-      if (kind === "thenable") s.h.port.admit = (() => ({ then() {} })) as any;
-      // Capture changes in a new root, not by mutating an existing port.
-      const root =
-        kind === "throw" || kind === "thenable"
-          ? (() => {
-              const h = createAsyncPortHarness();
-              h.port.admit = s.h.port.admit;
-              return {
-                h,
-                root: createAsyncRecordingOperationsCoordinator(
-                  h.port,
-                  () => now,
-                ),
-              };
-            })()
-          : { h: s.h, root: s.root };
-      const v = root.root.client.bindView({});
-      v.preflight(change(root.h), control());
+      if (kind === "thenable") h.impl.admit = (() => ({ then() {} })) as any;
+      const root = createAsyncRecordingOperationsCoordinator(h.port, () => now),
+        v = root.client.bindView({});
+      v.preflight(change(h), control());
       await flush();
-      if (kind === "reject")
-        root.h.admissions[0].reject(Error("PRIVATE_URL_CREDENTIAL"));
       if (kind === "malformed")
-        root.h.admissions[0].resolve({ unexpected: "PRIVATE_URL_CREDENTIAL" });
+        h.admissions[0].resolve({ unexpected: "PRIVATE_URL_CREDENTIAL" });
       await flush();
-      expect(root.root.client.current().invalid).toBe(true);
-      expect(root.root.client.current().call).toBe("uncertain");
+      expect(root.client.current().invalid).toBe(true);
+      expect(root.client.current().call).toBe("uncertain");
       expect(v.inspectAdmission({ deadlineMonotonicMs: now + 500 })).toBe(
         false,
       );
-      expect(JSON.stringify(root.root.client.current())).not.toContain(
+      expect(JSON.stringify(root.client.current())).not.toContain(
         "PRIVATE_URL_CREDENTIAL",
       );
     },
   );
-  it("retains valid late inspection evidence after the original call rejects", async () => {
+  it.each(["failed", "refused"])(
+    "admit transport %s without a reply is unknown acceptance, recovered by CallInspection",
+    async (kind) => {
+      const s = setup();
+      s.h.configure({ autoAck: false });
+      s.view.preflight(change(s.h), control());
+      await flush();
+      if (kind === "failed") s.h.admissions[0].reject();
+      else s.h.admissions[0].refuse({ kind: "busy" });
+      await flush();
+      const st = s.client.current();
+      expect(st.invalid).toBe(false);
+      expect(st.call).toBe("idle");
+      expect(st.admission).toBe("unknown");
+      if (kind === "refused") expect(st.hostRefusal).toEqual({ kind: "busy" });
+      expect(st.canInspect).toBe(true);
+      expect(s.view.preflight(change(s.h, 2), control())).toBe(false);
+      expect(s.view.inspectAdmission({ deadlineMonotonicMs: now + 500 })).toBe(
+        true,
+      );
+      await flush();
+      // The lost original is recovered from the ledger, never resent.
+      expect(s.h.callInspections).toHaveLength(1);
+      expect(s.h.inspections).toHaveLength(0);
+      expect(s.h.admissions).toHaveLength(1);
+      expect(s.client.current().callInspection?.outcome.kind).toBe("terminal");
+      expect(s.client.current().admission).toBe("accepted");
+      s.h.finish(0);
+      await flush();
+      expect(s.view.pause(control())).toBe(true);
+    },
+  );
+  it("CallInspection notFound keeps the lost admit unknown and never resends it", async () => {
+    const s = setup();
+    s.h.configure({ autoAck: false, autoInspect: false });
+    s.view.preflight(change(s.h), control());
+    await flush();
+    s.h.admissions[0].reject();
+    await flush();
+    s.view.inspectAdmission({ deadlineMonotonicMs: now + 500 });
+    const c = s.h.callInspections[0];
+    c.resolve({
+      version: 1,
+      kind: "recordingWireCallInspectionReply",
+      request: c.request,
+      outcome: { kind: "notFound" },
+    });
+    await flush();
+    expect(s.client.current().admission).toBe("unknown");
+    expect(s.client.current().inspectionCall).toBe("idle");
+    expect(s.h.admissions).toHaveLength(1);
+    expect(s.view.preflight(change(s.h, 2), control())).toBe(false);
+  });
+  it("a received unknown admit uses AdmissionInspection, not CallInspection", async () => {
+    const s = setup();
+    s.h.configure({ autoAck: false });
+    s.view.preflight(change(s.h), control());
+    await flush();
+    s.h.ack(0, "unknown");
+    await flush();
+    s.view.inspectAdmission({ deadlineMonotonicMs: now + 500 });
+    await flush();
+    expect(s.h.inspections).toHaveLength(1);
+    expect(s.h.callInspections).toHaveLength(0);
+    expect(s.client.current().admission).toBe("accepted");
+  });
+  it("retains valid late inspection evidence after the original transport is lost", async () => {
     const s = setup();
     s.h.configure({ autoAck: false, autoInspect: false });
     s.view.preflight(change(s.h), control());
@@ -266,7 +321,7 @@ describe("external root admission and physical call ownership", () => {
     now = 1101;
     vi.advanceTimersByTime(1001);
     s.view.inspectAdmission({ deadlineMonotonicMs: now + 500 });
-    s.h.admissions[0].reject(Error("private"));
+    s.h.admissions[0].reject();
     await flush();
     const i = s.h.inspections[0];
     i.resolve({
@@ -279,11 +334,11 @@ describe("external root admission and physical call ownership", () => {
     s.h.finish(0);
     await flush();
     expect(s.client.current().latest?.outcome.kind).toBe("candidate");
-    expect(s.client.current().invalid).toBe(true);
-    expect(s.client.current().call).toBe("uncertain");
-    expect(s.view.pause(control())).toBe(false);
+    expect(s.client.current().invalid).toBe(false);
+    expect(s.client.current().call).toBe("idle");
+    expect(s.client.current().canPause).toBe(true);
   });
-  it("reject after accepted frame cannot discard verified result or open the gate", async () => {
+  it("a lost admit after an accepted frame keeps the verified result", async () => {
     const s = setup();
     s.h.configure({ autoAck: false });
     s.view.preflight(change(s.h), control());
@@ -291,11 +346,11 @@ describe("external root admission and physical call ownership", () => {
     s.h.emit({ admission: s.h.admissions[0].accepted });
     s.h.finish(0);
     await flush();
-    s.h.admissions[0].reject(Error("private"));
+    s.h.admissions[0].reject();
     await flush();
     expect(s.client.current().latest?.outcome.kind).toBe("candidate");
-    expect(s.client.current().canPause).toBe(false);
-    expect(s.client.current().invalid).toBe(true);
+    expect(s.client.current().admission).toBe("accepted");
+    expect(s.client.current().invalid).toBe(false);
   });
   it("contradictory admission is blocked while identical replies are idempotent", async () => {
     const s = setup();
@@ -317,13 +372,13 @@ describe("external root admission and physical call ownership", () => {
     expect(s.client.current().reply?.outcome.kind).toBe("accepted");
   });
   it.each(["lease", "inspection", "cancel", "operation", "read"])(
-    "%s reject retains the corresponding uncertain gate",
+    "%s transport loss retains the corresponding gate without a port fault",
     async (stage) => {
       const s = setup();
       if (stage === "lease") {
         s.h.configure({ autoLease: false });
         s.view.preflight(change(s.h), control());
-        s.h.leases[0].reject(Error("private"));
+        s.h.leases[0].reject();
       }
       if (stage === "inspection") {
         s.h.configure({ autoAck: false, autoInspect: false });
@@ -332,7 +387,7 @@ describe("external root admission and physical call ownership", () => {
         s.h.ack(0, "unknown");
         await flush();
         s.view.inspectAdmission({ deadlineMonotonicMs: now + 500 });
-        s.h.inspections[0].reject(Error("private"));
+        s.h.inspections[0].reject();
       }
       if (stage === "cancel" || stage === "operation") {
         s.h.configure({ autoCancel: false });
@@ -340,20 +395,52 @@ describe("external root admission and physical call ownership", () => {
         await flush();
         if (stage === "cancel") {
           s.view.cancelOperation();
-          s.h.cancels[0].reject(Error("private"));
-        } else s.h.operations[0].reject(Error("private"));
+          s.h.cancels[0].reject();
+        } else s.h.operations[0].reject();
       }
       if (stage === "read") {
         await appliedUnknown(s);
         s.view.reconcile(control());
         await flush();
-        s.h.reads[0].reject(Error("private"));
+        s.h.reads[0].reject();
       }
       await flush();
-      expect(s.client.current().invalid).toBe(true);
+      const st = s.client.current();
+      expect(st.invalid).toBe(false);
       expect(s.view.preflight(change(s.h, 2), control())).toBe(false);
-      if (stage === "read")
-        expect(s.client.current().read).toBe("deliveryUnknown");
+      expect(st.safeToSwitch).toBe(false);
+      if (stage === "lease") expect(st.call).toBe("uncertain");
+      if (stage === "inspection") {
+        expect(st.inspectionCall).toBe("idle");
+        expect(st.admission).toBe("unknown");
+        expect(st.canInspect).toBe(true);
+      }
+      if (stage === "cancel") expect(st.cancelCall).toBe("uncertain");
+      if (stage === "operation" || stage === "read")
+        expect(st.read).toBe("deliveryUnknown");
+    },
+  );
+  it.each(["operation", "read"])(
+    "%s observation unavailable is a terminal without a result",
+    async (stage) => {
+      const s = setup();
+      if (stage === "operation") {
+        s.view.preflight(change(s.h), control());
+        await flush();
+        s.h.operations[0].unavailable();
+      } else {
+        await appliedUnknown(s);
+        s.view.reconcile(control());
+        await flush();
+        s.h.reads[0].unavailable();
+      }
+      await flush();
+      const st = s.client.current();
+      expect(st.invalid).toBe(false);
+      expect(st.read).toBe("deliveryUnknown");
+      expect(st.safeToSwitch).toBe(false);
+      if (stage === "operation") expect(st.completion).toBeUndefined();
+      expect(s.view.reconcile(control())).toBe(false);
     },
   );
 });
@@ -449,7 +536,7 @@ describe("native result, frame and lifetime", () => {
     expect(s.h.cancels).toHaveLength(0);
     expect(s.h.listenerCount).toBe(1);
   });
-  it("frame-first result cannot release the completion slot; reject keeps evidence", async () => {
+  it("frame-first result cannot release the completion slot; a lost query keeps evidence", async () => {
     const s = setup();
     s.view.preflight(change(s.h), control());
     await flush();
@@ -461,28 +548,35 @@ describe("native result, frame and lifetime", () => {
     });
     expect(s.client.current().latest?.outcome.kind).toBe("candidate");
     expect(s.view.pause(control())).toBe(false);
-    s.h.operations[0].reject(Error("private"));
+    expect(s.client.current().pools.mutationAdmission.reserved).toBe(3);
+    s.h.operations[0].reject();
     await flush();
-    expect(s.client.current().invalid).toBe(true);
+    expect(s.client.current().read).toBe("deliveryUnknown");
+    expect(s.client.current().completion).toBeUndefined();
     expect(s.client.current().latest).toBeDefined();
   });
   it("same revision must have the same body and foreign owners never rebind", () => {
     const s = setup();
     s.h.raw(s.h.frame);
     expect(s.client.current().invalid).toBe(false);
-    s.h.raw({ ...s.h.frame, connected: false });
+    s.h.raw(snap(s.h.frame, { ownerBlocked: true }));
     expect(s.client.current().invalid).toBe(true);
-    const other = setup();
-    other.h.raw({ ...other.h.frame, ownerRef: "foreign:owner", revision: 2 });
+    const other = setup(),
+      f = other.h.frame;
+    other.h.raw({ ...f, scope: { ...f.scope, ownerRef: "foreign:owner" } });
     expect(other.client.current().ownerRef).toBe(other.h.ownerRef);
     expect(other.client.current().invalid).toBe(true);
+    const epoch = setup(),
+      g = epoch.h.frame;
+    epoch.h.raw({ ...g, scope: { ...g.scope, ownerEpoch: "epoch:2" } });
+    expect(epoch.client.current().invalid).toBe(true);
   });
   it("old revision with new information is rejected", () => {
     const s = setup();
     s.h.emit();
-    s.h.raw({ ...s.h.frame, revision: 1 });
+    s.h.raw(snap(s.h.frame, { revision: 1 }));
     expect(s.client.current().invalid).toBe(false);
-    s.h.raw({ ...s.h.frame, revision: 1, ownerBlocked: true });
+    s.h.raw(snap(s.h.frame, { revision: 1, ownerBlocked: true }));
     expect(s.client.current().invalid).toBe(true);
   });
   it("disconnect blocks all new sends and same-owner reconnect preserves sticky recovery", async () => {
@@ -501,14 +595,43 @@ describe("native result, frame and lifetime", () => {
     expect(s.client.current().ownerBlocked).toBe(true);
     expect(s.view.apply(control())).toBe(false);
   });
-  it("changed method/context is stopped before any new lease", async () => {
+  it("a port v2 is frozen; v1, structural and Proxy ports are refused", () => {
     const s = setup();
-    s.h.port.prepareLease = () => Promise.resolve({});
-    expect(s.view.preflight(change(s.h), control())).toBe(false);
-    expect(s.h.leases).toHaveLength(0);
-    expect(s.client.current().invalid).toBe(true);
-    s.h.emit();
-    expect(s.client.current().invalid).toBe(true);
+    expect(Object.isFrozen(s.h.port)).toBe(true);
+    expect(() => {
+      (s.h.port as any).prepareLease = () => Promise.resolve({});
+    }).toThrow();
+    expect(isAsyncRecordingPortV2(s.h.port)).toBe(true);
+    const fresh = createAsyncPortHarness();
+    const v1 = {
+      context: fresh.context,
+      ownerRef: fresh.ownerRef,
+      prepareLease: () => Promise.resolve({}),
+      admit: () => Promise.resolve({}),
+      inspectAdmission: () => Promise.resolve({}),
+      observeOperation: () => ({}),
+      observeReconciliation: () => ({}),
+      current: () => ({}),
+      subscribe: () => () => {},
+      requestCancel: () => Promise.resolve({}),
+    };
+    const structural = { ...fresh.port };
+    const proxy = new Proxy(fresh.port, {});
+    for (const p of [v1, structural, proxy, null, {}])
+      expect(() => createAsyncRecordingOperationsCoordinator(p as any)).toThrow(
+        "port v2 required",
+      );
+    expect(() => defineAsyncRecordingPortV2(v1 as any)).toThrow();
+    expect(() =>
+      defineAsyncRecordingPortV2({ ...fresh.impl, scope: fresh.scope } as any),
+    ).toThrow();
+    // The genuine port is still unused and accepted once.
+    expect(() =>
+      createAsyncRecordingOperationsCoordinator(fresh.port),
+    ).not.toThrow();
+    expect(() => createAsyncRecordingOperationsCoordinator(fresh.port)).toThrow(
+      "duplicate",
+    );
   });
   it("isolates listener exceptions, unsubscribe and reentrant actions", async () => {
     const s = setup();
@@ -616,11 +739,11 @@ describe("read and cancellation have independent completion evidence", () => {
     expect(s.client.current().completion).toBe(original);
     expect(s.view.reconcile(control())).toBe(false);
     expect(s.client.current().safeToSwitch).toBe(false);
-    r.reject(Error("private"));
+    r.reject();
     await flush();
     expect(s.client.current().read).toBe("deliveryUnknown");
     expect(s.client.current().lastApplied).toBeDefined();
-    expect(s.client.current().invalid).toBe(true);
+    expect(s.client.current().invalid).toBe(false);
   });
   it("cancel is one call for the target; requested is never completion", async () => {
     const s = setup();
@@ -630,7 +753,18 @@ describe("read and cancellation have independent completion evidence", () => {
     expect(s.view.cancelOperation()).toBe(true);
     expect(s.view.cancelOperation()).toBe(false);
     const c = s.h.cancels[0];
-    c.resolve({ request: c.request, disposition: "requested" });
+    expect(c.request.scope).toEqual(s.h.scope);
+    expect(c.request.cancelId).toMatch(/^cn:/);
+    expect(c.request.target).toEqual({
+      kind: "operation",
+      ref: s.h.operations[0].handle.operationRef,
+    });
+    c.resolve({
+      version: 1,
+      kind: "recordingWireCancelReply",
+      request: c.request,
+      outcome: { kind: "ack", disposition: "requested" },
+    });
     await flush();
     expect(s.view.cancelOperation()).toBe(false);
     expect(s.client.current().completion).toBeUndefined();
@@ -699,57 +833,76 @@ describe("bounded local metadata and IDs", () => {
     expect(() => ownHistoryJson({ v }, 1e6, 1000, "localFrame")).toThrow();
   });
   it.each(["getter", "extra", "surrogate", "cycle", "symbol", "tooLarge"])(
-    "rejects %s metadata without evaluating provider payload",
+    "rejects %s port state without evaluating provider payload",
     (kind) => {
       const s = setup(),
         input: any = { ...s.h.frame };
       let accessed = false;
       if (kind === "getter")
-        Object.defineProperty(input, "connected", {
+        Object.defineProperty(input, "resyncRequired", {
           get() {
             accessed = true;
-            return true;
+            return false;
           },
           enumerable: true,
         });
       if (kind === "extra") input.extra = true;
-      if (kind === "surrogate") input.ownerRef = "\ud800";
-      if (kind === "cycle") input.context = input;
+      if (kind === "surrogate") input.ended = "\ud800";
+      if (kind === "cycle") input.display = input;
       if (kind === "symbol") input[Symbol()] = 1;
-      if (kind === "tooLarge") input.ownerRef = "x".repeat(1024 * 1024 + 1);
-      expect(() => parseOwnerFrame(input)).toThrow();
+      if (kind === "tooLarge") input.ended = "x".repeat(8 * 1024 * 1024 + 1);
+      expect(() => parsePortState(s.h.frame, s.h.scope)).not.toThrow();
+      expect(() => parsePortState(input, s.h.scope)).toThrow();
       expect(accessed).toBe(false);
     },
   );
-  it("lease and cancellation metadata use independent strict profiles and closed errors", () => {
-    const s = setup();
-    const r = {
-      ownerRef: s.h.ownerRef,
-      admissionId: "admission:1",
-      context: s.h.context,
-      requestedBudgetMs: 1,
-    };
+  it.each([
+    { attachId: "attach:1", phase: "attached" },
+    { attachId: "attach:1", phase: "open", subscriptionRef: null },
+    { attachId: "", phase: "attached", subscriptionRef: null },
+    { attachId: "attach:1", phase: "attached", subscriptionRef: 1 },
+    { attachId: "attach:1", phase: "attached", subscriptionRef: "a\n" },
+    "attach:1",
+  ])("rejects a malformed display generation %j", (generation) => {
+    const s = setup(),
+      f = s.h.frame;
     expect(() =>
-      parseLeaseReply({
-        request: r,
-        outcome: { kind: "issued", deadlineLeaseRef: "lease:1" },
-      }),
+      parsePortState(
+        { ...f, display: { ...f.display, generation: null } },
+        s.h.scope,
+      ),
     ).not.toThrow();
     expect(() =>
-      parseLeaseReply({
-        request: { ...r, requestedBudgetMs: 10001 },
-        outcome: { kind: "rejected", error: "private" },
-      }),
+      parsePortState(
+        { ...f, display: { ...f.display, generation } },
+        s.h.scope,
+      ),
     ).toThrow();
-    expect(() =>
-      parseCancelReply({
-        request: {
-          ownerRef: s.h.ownerRef,
-          target: { kind: "operation", ref: "operation:1" },
-        },
-        disposition: "stopped",
-      }),
-    ).toThrow();
+    s.h.raw({ ...f, display: { ...f.display, generation } });
+    expect(s.client.current().invalid).toBe(true);
+  });
+  it("transport ends and host refusals are closed kinds", () => {
+    for (const v of [
+      { kind: "returned" },
+      { kind: "failed" },
+      { kind: "staleSeq", seq: 3 },
+      { kind: "refused", refusal: { kind: "busy" } },
+      { kind: "refused", refusal: { kind: "phase", phase: "stopping" } },
+      {
+        kind: "refused",
+        refusal: { kind: "recordingUnavailable", reason: "empty" },
+      },
+    ])
+      expect(() => parseTransportEnd(v)).not.toThrow();
+    for (const v of [
+      { kind: "rejected" },
+      { kind: "returned", reply: {} },
+      { kind: "staleSeq", seq: -1 },
+      { kind: "refused", refusal: { kind: "private" } },
+      { kind: "refused", refusal: { kind: "busy", detail: "x" } },
+      { kind: "refused", refusal: { kind: "phase" } },
+    ])
+      expect(() => parseTransportEnd(v)).toThrow();
   });
 });
 it.each(["rejected", "retired"])(
@@ -759,11 +912,7 @@ it.each(["rejected", "retired"])(
     await candidate(s);
     s.h.configure({ autoLease: false });
     s.view.pause(control());
-    if (kind === "rejected")
-      s.h.leases[1].resolve({
-        request: s.h.leases[1].request,
-        outcome: { kind: "rejected", error: "busy" },
-      });
+    if (kind === "rejected") s.h.rejectLease(1);
     else {
       s.view.retire();
       s.h.issueLease(1);
@@ -800,11 +949,7 @@ it("retry exhaustion preserves the first reserved discard", async () => {
   // first apply and discard credits remain reserved. No physical stop is sent.
   for (let n = 0; n < 4093; n++) {
     expect(s.view.pause(control())).toBe(true);
-    const l = s.h.leases.at(-1)!;
-    l.resolve({
-      request: l.request,
-      outcome: { kind: "rejected", error: "busy" },
-    });
+    s.h.rejectLease(s.h.leases.length - 1);
     await flush();
   }
   const p = s.client.current().pools;
@@ -821,28 +966,20 @@ it.each(["\n", "\r", "\r\n"])(
   "local refs reject trailing %j in every metadata root",
   (suffix) => {
     const s = setup(),
-      r = {
-        ownerRef: s.h.ownerRef,
-        admissionId: "admission:1",
-        context: s.h.context,
-        requestedBudgetMs: 1,
-      };
+      f = s.h.frame;
     expect(() =>
-      parseOwnerFrame({ ...s.h.frame, ownerRef: s.h.ownerRef + suffix }),
+      parsePortState(
+        { ...f, scope: { ...f.scope, ownerRef: s.h.ownerRef + suffix } },
+        { ...s.h.scope, ownerRef: s.h.ownerRef + suffix },
+      ),
     ).toThrow();
     expect(() =>
-      parseLeaseReply({
-        request: r,
-        outcome: { kind: "issued", deadlineLeaseRef: "lease:1" + suffix },
-      }),
+      parsePortState({ ...f, ended: "closed" + suffix }, s.h.scope),
     ).toThrow();
     expect(() =>
-      parseCancelReply({
-        request: {
-          ownerRef: s.h.ownerRef,
-          target: { kind: "operation", ref: "op:1" + suffix },
-        },
-        disposition: "requested",
+      parseTransportEnd({
+        kind: "refused",
+        refusal: { kind: "phase", phase: "stopping" + suffix },
       }),
     ).toThrow();
   },
@@ -853,11 +990,7 @@ it("mutation admission pool full still admits the original apply reconciliation"
   s.h.configure({ autoLease: false });
   for (let n = 0; n < 4092; n++) {
     expect(s.view.pause(control())).toBe(true);
-    const l = s.h.leases.at(-1)!;
-    l.resolve({
-      request: l.request,
-      outcome: { kind: "rejected", error: "busy" },
-    });
+    s.h.rejectLease(s.h.leases.length - 1);
     await flush();
   }
   expect(s.view.pause(control())).toBe(true);
@@ -884,10 +1017,10 @@ it("mutation admission pool full still admits the original apply reconciliation"
 }, 30000);
 it("native lease budget is measured from mock issuance, without JS clock conversion or extension", async () => {
   const h = createAsyncPortHarness(),
-    admit = h.port.admit;
-  h.port.admit = (r) => {
+    admit = h.impl.admit;
+  h.impl.admit = (r) => {
     h.advanceNative(500);
-    return admit.call(h.port, r);
+    return admit(r);
   };
   const root = createAsyncRecordingOperationsCoordinator(h.port, () => now),
     v = root.client.bindView({});
@@ -902,17 +1035,17 @@ it("native lease budget is measured from mock issuance, without JS clock convers
 });
 it("observation accessors are never evaluated and cannot create native authority", async () => {
   const h = createAsyncPortHarness(),
-    observe = h.port.observeOperation;
+    observe = h.impl.observe;
   let accessed = false;
-  h.port.observeOperation = (ref) => {
-    const raw = observe.call(h.port, ref);
-    return Object.defineProperty({ ...raw }, "completion", {
+  h.impl.observe = (target) => {
+    const raw = observe(target);
+    return Object.defineProperty({ target: raw.target }, "result", {
       get() {
         accessed = true;
-        return raw.completion;
+        return raw.result;
       },
       enumerable: true,
-    });
+    }) as typeof raw;
   };
   const root = createAsyncRecordingOperationsCoordinator(h.port, () => now),
     v = root.client.bindView({});
@@ -934,21 +1067,24 @@ it("malformed admission completion is unknown rather than a pending ACK", async 
 });
 it("a new stage cannot reuse an earlier native operation ref", async () => {
   const h = createAsyncPortHarness(),
-    admit = h.port.admit;
-  h.port.admit = async (r) => {
-    const ack = await admit.call(h.port, r);
-    if (r.action.kind !== "pauseJoin") return ack;
-    const typed = ack as any;
+    admit = h.impl.admit;
+  h.impl.admit = (r) => {
+    const c = admit(r);
+    if (r.action.kind !== "pauseJoin") return c;
     return {
-      ...typed,
-      outcome: {
-        ...typed.outcome,
-        handle: {
-          ...typed.outcome.handle,
-          operationRef: h.operations[0].handle.operationRef,
+      request: c.request,
+      transport: c.transport,
+      reply: c.reply.then((ack: any) => ({
+        ...ack,
+        outcome: {
+          ...ack.outcome,
+          handle: {
+            ...ack.outcome.handle,
+            operationRef: h.operations[0].handle.operationRef,
+          },
         },
-      },
-    };
+      })),
+    } as typeof c;
   };
   const root = createAsyncRecordingOperationsCoordinator(h.port, () => now),
     v = root.client.bindView({});
@@ -1192,4 +1328,159 @@ it("changed immutable reconciliation delivery stays invalid without losing recei
   expect(s.client.current().invalid).toBe(true);
   expect(s.client.current().delivery).toBe(known);
   expect(s.client.current().lastApplied).toBeDefined();
+});
+describe("port v2 owner state, access and lease roles", () => {
+  it.each([
+    ["ownerClosed", { ownerClosed: "controlFrame" }],
+    ["authorizationLost", { authorizationLost: "seqChanged" }],
+    ["resyncRequired", { resyncRequired: true }],
+  ] as const)(
+    "%s is its own field and closes every action",
+    async (field, patch) => {
+      const s = setup();
+      await candidate(s);
+      expect(s.client.current().canPause).toBe(true);
+      s.h.emit(patch);
+      const st = s.client.current();
+      expect(st.owner[field]).toBe(Object.values(patch)[0]);
+      for (const other of [
+        "ownerClosed",
+        "authorizationLost",
+        "resyncRequired",
+      ] as const)
+        if (other !== field)
+          expect(st.owner[other]).toBe(
+            other === "resyncRequired" ? false : null,
+          );
+      expect(st.closed).toBe(false);
+      expect(st.invalid).toBe(false);
+      expect(st.ownerBlocked).toBe(false);
+      for (const k of [
+        "canPreflight",
+        "canPause",
+        "canApply",
+        "canDiscard",
+        "canInspect",
+        "canReconcile",
+        "canCancel",
+        "canCancelRead",
+      ] as const)
+        expect(st[k]).toBe(false);
+      expect(s.view.pause(control())).toBe(false);
+      expect(s.view.discard(control())).toBe(false);
+      expect(s.h.leases).toHaveLength(1);
+    },
+  );
+  it("nativeRecoveryRequired is sticky ownerBlocked, separate from the other owner fields", async () => {
+    const s = setup();
+    await candidate(s);
+    s.h.emit({ ownerBlocked: true });
+    s.h.emit({ ownerBlocked: false });
+    const st = s.client.current();
+    expect(st.ownerBlocked).toBe(true);
+    expect(st.owner.nativeRecoveryRequired).toBe(false);
+    expect(st.owner.ownerClosed).toBeNull();
+    expect(st.canPause).toBe(false);
+    expect(st.canDiscard).toBe(false);
+  });
+  it("connected needs an attached subscription as well as the transport", async () => {
+    const s = setup();
+    await candidate(s);
+    s.h.emit({ subscription: "attaching" });
+    expect(s.client.current().connected).toBe(false);
+    expect(s.view.pause(control())).toBe(false);
+    s.h.emit({ subscription: "attached" });
+    expect(s.client.current().connected).toBe(true);
+    expect(s.client.current().owner.seq).toBe(1);
+    expect(s.view.pause(control())).toBe(true);
+  });
+  it("cached frames are used only when the display has a snapshot relation", async () => {
+    const s = setup();
+    s.h.configure({ autoAck: false });
+    s.view.preflight(change(s.h), control());
+    await flush();
+    s.h.emit({
+      admission: s.h.admissions[0].accepted!,
+      snapshotRelation: "none",
+    });
+    expect(s.client.current().admission).toBe("awaitingAck");
+    s.h.emit({ snapshotRelation: "lastKnown" });
+    expect(s.client.current().admission).toBe("accepted");
+    expect(s.client.current().call).toBe("admit");
+  });
+  it("read access never sends a mutation, but may reconcile and inspect", async () => {
+    const h = createAsyncPortHarness(undefined, { access: "read" }),
+      root = createAsyncRecordingOperationsCoordinator(h.port, () => now),
+      view = root.client.bindView({});
+    const st = root.client.current();
+    expect(st.owner.access).toBe("read");
+    expect(st.canPreflight).toBe(false);
+    expect(view.preflight(change(h), control())).toBe(false);
+    await flush();
+    expect(h.leases).toHaveLength(0);
+    expect(h.admissions).toHaveLength(0);
+  });
+  it("lease requests carry role, stage, operationId and the wire scope", async () => {
+    const s = setup();
+    await appliedUnknown(s);
+    s.view.reconcile(control());
+    await flush();
+    const [pre, pause, apply, read] = s.h.leases.map((l) => l.request);
+    const ops = s.h.admissions.map((a) => a.request.action);
+    expect(pre).toEqual({
+      role: "mutation",
+      stage: "preflight",
+      change: change(s.h),
+      lease: pre.lease,
+    });
+    for (const [l, a, stage] of [
+      [pause, ops[1], "pauseJoin"],
+      [apply, ops[2], "apply"],
+    ] as const) {
+      if (a.kind !== "pauseJoin" && a.kind !== "apply") throw Error("stage");
+      expect(l).toEqual({
+        role: "mutation",
+        stage,
+        operationId: a.operation.operationId,
+        lease: l.lease,
+      });
+    }
+    expect(read).toEqual({ role: "reconciliation", lease: read.lease });
+    for (const [l, role] of [
+      [pre, "mutation"],
+      [pause, "mutation"],
+      [apply, "mutation"],
+      [read, "reconciliation"],
+    ] as const) {
+      expect(l.lease.role).toBe(role);
+      expect(l.lease.scope).toEqual(s.h.scope);
+      expect(l.lease.leaseRequestId).toMatch(/^ls:/);
+      expect(l.lease.requestedBudgetMs).toBe(500);
+    }
+    expect(
+      new Set(s.h.leases.map((l) => l.request.lease.leaseRequestId)).size,
+    ).toBe(4);
+    expect(s.h.admissions.map((a) => a.request.admissionId)).toEqual(
+      s.h.leases.map((l) => l.request.lease.admissionId),
+    );
+    expect(s.client.current().pools.lease).toEqual({ used: 4, reserved: 0 });
+  });
+  it("discard lease has no operationId and a wire lease rejection is kept apart", async () => {
+    const s = setup();
+    await candidate(s);
+    s.h.configure({ autoLease: false });
+    s.view.discard(control());
+    expect(s.h.leases[1].request).toEqual({
+      role: "mutation",
+      stage: "discard",
+      lease: s.h.leases[1].request.lease,
+    });
+    s.h.rejectLease(1, "expired");
+    await flush();
+    const st = s.client.current();
+    expect(st.wireRefusal).toBe("expired");
+    expect(st.refusal).toBeUndefined();
+    expect(st.call).toBe("idle");
+    expect(st.canDiscard).toBe(true);
+  });
 });
