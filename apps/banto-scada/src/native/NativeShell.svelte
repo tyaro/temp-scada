@@ -1,11 +1,14 @@
 <script lang="ts">
   import { onDestroy, onMount, tick } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
+  import { getCurrentWebview } from "@tauri-apps/api/webview";
   import App from "../App.svelte";
   import type { HistoryService } from "../lib/history/workspace-model";
   import { createNativeHistory } from "./history";
   import { createNativeRecordingManagement } from "./recording-management";
   import type { RecordingManagementService } from "../lib/recording-management/service";
+  import { createNativeRecordingOperations } from "./recording/operations";
+  import type { AsyncOperationsClient } from "../lib/recording-async/coordinator";
   import type { Project } from "../lib/project";
   import { nativeSources } from "./sources";
   import AuthControls from "./auth/AuthControls.svelte";
@@ -43,10 +46,22 @@
   // The recording management service follows the Project and the session:
   // inspection needs a session, the first setup an administrator (design §5).
   let recordingManagementService = $state.raw<RecordingManagementService>();
+  // The asynchronous recording operations follow the installed recording
+  // root (`recording_slot`), the session and the Project (design §7.2). The
+  // synchronous operations service is never passed on the desktop.
+  let recordingAsyncOperations = $state.raw<AsyncOperationsClient>();
+  const nativeOperations = createNativeRecordingOperations(
+    invoke,
+    // The host emits a subscription's events to the webview that attached it.
+    (event, handler) => getCurrentWebview().listen(event, handler),
+    (client) => (recordingAsyncOperations = client),
+  );
+  onDestroy(() => nativeOperations.dispose());
   const nativeManagement = createNativeRecordingManagement(
     invoke,
     (service) => (recordingManagementService = service),
     (project) => nativeHistory.refresh(project),
+    () => nativeOperations.refresh(),
   );
   onDestroy(() => nativeManagement.dispose());
   let currentProject = $state.raw<Project>();
@@ -63,6 +78,16 @@
   });
   $effect(() => {
     if (currentProject) nativeManagement.update(currentProject, access);
+  });
+  $effect(() => {
+    if (currentProject)
+      nativeOperations.update(
+        JSON.stringify([
+          currentProject.manifest.projectId,
+          currentProject.manifest.projectRevision,
+        ]),
+        access,
+      );
   });
   let hubDetails: HTMLDetailsElement;
 
@@ -201,6 +226,7 @@
   catalogSource={sources?.catalogSource}
   {historyService}
   {recordingManagementService}
+  {recordingAsyncOperations}
   onprojectchange={(project) => {
     nativeHistory.update(project);
     currentProject = project;

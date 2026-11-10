@@ -87,6 +87,8 @@ export interface AsyncOperationsState {
   readonly latest?: RecordingOperationResult;
   readonly completion?: RecordingOperationResult;
   readonly lastApplied?: AppliedSuccess;
+  /** The owner holds another client's unfinished workflow (cached frames only). */
+  readonly earlierWork: boolean;
   readonly read:
     | "idle"
     | "awaitingAdmission"

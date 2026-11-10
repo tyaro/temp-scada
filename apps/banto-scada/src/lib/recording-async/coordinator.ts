@@ -268,6 +268,18 @@ export function createAsyncRecordingOperationsCoordinator(
     pools.release(workflow.credits);
     workflow.credits = { mutationAdmission: 0, callerOperation: 0 };
   }
+  /**
+   * The owner's latest admission is another client's (a page before a reload,
+   * or an earlier session) and its workflow still holds a candidate or is
+   * running: this client cannot continue it (design C5 §7.2 "再読込").
+   */
+  function earlierWork(): boolean {
+    const a = frame?.admission;
+    if (!a || a.outcome.kind !== "accepted") return false;
+    if (a.request.admissionId === request?.admissionId) return false;
+    const done = frame?.operation?.result.outcome.kind;
+    return done === undefined || done === "candidate" || done === "paused";
+  }
   function snapshot(): AsyncOperationsState {
     const t = workflow?.current,
       r = t?.latest;
@@ -300,6 +312,7 @@ export function createAsyncRecordingOperationsCoordinator(
       latest: r,
       completion: t?.original,
       lastApplied,
+      earlierWork: earlierWork(),
       read: readPhase,
       delivery: workflow?.read?.delivery,
       canPreflight: mutable && workflowFinished(),

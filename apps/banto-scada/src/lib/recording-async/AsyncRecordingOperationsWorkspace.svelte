@@ -193,6 +193,9 @@
     {#if s?.owner.resyncRequired}<p role="status">
         記録操作の状態を再同期しています。新しい操作はできません。
       </p>{/if}
+    {#if s?.earlierWork}<p role="status">
+        前の画面の作業が残っています。アプリを終了すると候補は破棄されます。
+      </p>{/if}
     {#if s?.closed}<p role="status">
         操作元は新しい操作の受付を終了しています。
       </p>{/if}
