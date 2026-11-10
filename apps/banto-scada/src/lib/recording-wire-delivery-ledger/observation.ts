@@ -165,8 +165,7 @@ export function begin(
       return no("invalidRequest");
     const gate = c.gate();
     if (gate) return no(gate);
-    if ([...c.observationAttempts.values()].some((a) => a.reply === null))
-      return no("busy");
+    if (c.awaitingObservation()) return no("busy");
     const Q = bytes(request),
       R = recordingWireReplyCapacity(request).reply.bytes;
     c.canAdd(c.usage.observationQueries, 1, c.limits.observationQueries);
@@ -184,12 +183,14 @@ export function begin(
       request,
       target,
       terminal: null,
+      pending: null,
     } as ObservationQueryRecord;
     const attempt: ObservationAttemptRecord = {
       token: attemptToken,
       query,
       R,
       reply: null,
+      abandoned: false,
       queryTerminalStored: false,
       targetResultStored: false,
     };
@@ -222,8 +223,7 @@ export function repeat(
   const gate = c.gate();
   if (gate) return no(gate);
   if (query.terminal) return no("busy");
-  if ([...c.observationAttempts.values()].some((a) => a.reply === null))
-    return no("busy");
+  if (c.awaitingObservation()) return no("busy");
   try {
     const R = recordingWireReplyCapacity(query.request).reply.bytes;
     c.canAdd(c.usage.observationAttempts, 1, c.limits.observationAttempts);
@@ -235,6 +235,7 @@ export function repeat(
       query,
       R,
       reply: null,
+      abandoned: false,
       queryTerminalStored: false,
       targetResultStored: false,
     };
@@ -258,7 +259,7 @@ export function accept(
   input: unknown,
 ): ObservationAcceptResult {
   const attempt = c.lookup(c.observationAttemptTokens, token);
-  if (!attempt) return observationRejected("foreignToken");
+  if (!attempt || attempt.abandoned) return observationRejected("foreignToken");
   let reply;
   try {
     reply = parseRecordingWireObservationReply(input);
@@ -313,6 +314,12 @@ export function accept(
       }),
     });
   else reply = Object.freeze({ ...reply, request: query.request });
+  // The attempt's maximum reply is released: a `pending` reply is kept once
+  // per query, a terminal one at its actual size (design C5 §7.2 "容量").
+  if (reply.outcome.kind === "pending") {
+    reply = query.pending ??= reply;
+    c.usage.observationBytes -= attempt.R;
+  } else c.usage.observationBytes -= Math.max(0, attempt.R - bytes(reply));
   attempt.reply = reply;
   c.dirty = true;
   if (reply.outcome.kind === "pending")
@@ -378,4 +385,24 @@ export function attempt(
   return record
     ? yes(Object.freeze({ request: record.query.request, reply: record.reply }))
     : no("foreignToken");
+}
+
+/**
+ * The physical call of an attempt ended without a reply (a host refusal or a
+ * failed invoke). Observation is read-only, so the attempt stops being awaited
+ * and a new query may be sent; a reply for it is no longer accepted.
+ */
+export function abandon(
+  c: Core,
+  token: ObservationAttemptToken,
+): LedgerResult<null> {
+  const attempt = c.lookup(c.observationAttemptTokens, token);
+  if (!attempt) return no("foreignToken");
+  if (attempt.reply) return no("invalidRequest");
+  if (!attempt.abandoned) {
+    attempt.abandoned = true;
+    c.usage.observationBytes -= attempt.R;
+    c.dirty = true;
+  }
+  return yes(null);
 }

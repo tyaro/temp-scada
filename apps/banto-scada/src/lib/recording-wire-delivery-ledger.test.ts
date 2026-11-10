@@ -130,7 +130,10 @@ it("read pool full and read original pending do not consume another original's f
   );
   expect(l.current().usage.awaitingMutationTerminal).toBe(1);
   expect(l.current().usage.awaitingReadTerminal).toBe(0);
-  expect(l.current().usage.readBytes).toBe(full);
+  // The read original's terminal releases its unused reply and probe reply;
+  // the pending mutation original keeps its charges (design C5 §7.2 "容量").
+  expect(l.current().usage.readBytes).toBeLessThan(full);
+  expect(l.current().usage.readBytes).toBeGreaterThanOrEqual(m.probe);
 });
 it("repeat exact bytes and one below preserve query latest and charges", () => {
   const request = q(),
@@ -446,4 +449,35 @@ it("member order is significant while object order and integer spellings are equ
     reason: "protocolViolation",
   });
   expect(take(l.original(token)).request).toEqual(request);
+});
+
+it("a stored terminal leaves only its actual size and returns the unused CallInspection credit", () => {
+  const request = q("admit"),
+    b = costs(request);
+  const { l, token } = start("admit");
+  expect(l.current().usage).toMatchObject({
+    mutationBytes: b.original,
+    readBytes: b.probe,
+    inspectionIdsReserved: 1,
+    inspectionAttemptsReserved: 1,
+  });
+  take(l.acceptOriginal(token, reply(request)));
+  const stored = oracle.receiverMetrics(reply(request)).bytes;
+  const usage = l.current().usage;
+  expect(usage).toMatchObject({
+    readBytes: 0,
+    inspectionIdsReserved: 0,
+    inspectionAttemptsReserved: 0,
+  });
+  expect(usage.mutationBytes).toBe(b.original - b.R + stored);
+  // A whole workflow's originals fit the default pools again and again.
+  const d = makeDelivery();
+  for (let n = 0; n < 64; n++) {
+    const next = patch(request, [
+      { path: "admissionId", value: `admission-${n}` },
+    ]);
+    const t = take(d.beginOriginal(next));
+    take(d.acceptOriginal(t, reply(next)));
+  }
+  expect(d.current().usage.readBytes).toBe(0);
 });

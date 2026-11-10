@@ -109,6 +109,14 @@ target／query／attemptは各最大4096 ID、未回収Observation attemptはled
 
 `current().usage`には既存項目に加え`observationBytes`、`observationTargets`、`observationQueries`、`observationAttempts`、`awaitingObservationReply`、`pendingObservationQueries`を追加する。前四者は新target／query／attemptの予約時だけ増え、返却・減算しない。`awaitingObservationReply`は新attemptで増え、そのattemptの正常返信保存でだけ減る。`pendingObservationQueries`は新queryで増え、そのqueryの初回terminal（`unavailable`を含む）でだけ減る。正常`pending`ではattempt枠だけを解放し、queryはpendingのまま。dispose／retire／timeout／外部frameではどちらのpending数も変えない。`current()`は既存と同じcommit済みcacheを返す。
 
+**C5-5bで改めた（2026-11-10ユーザー判断）**: 製品のportは`pending`の間250msごとにrepeatする（[製品owner](historian-recording-product-owner.md)§7.2）。attemptごとに約1MiBを返さない会計では4回で`capacity`になるため、次のとおり返す。
+
+- 正常`pending`の保存でそのattemptの`R`を返す。`pending`の返信本文はqueryごとに一つだけ保持し、後のattemptはそれを共有する。
+- 正常terminalの保存で、`R`のうち保存した返信の実保守bytesを超える分を返す。
+- `abandonObservationAttempt(attempt)`を加えた。物理呼出しが返信なしで終わったattemptを待たない（`awaitingObservationReply`から外し、`R`を返す）。以後そのattemptの返信は`foreignToken`で受けず、queryはrepeatしない。新しいobservationIdのqueryは送れる。返信を保存済みのattemptは`invalidRequest`。Observationは読取だけなので、待たないことでnative処理を起こさない。
+
+record管理の`M`、query・attemptのID件数は従来どおり返さない。
+
 4MiBは少数のpending→terminalとoperation／reconciliation併存を検証する有限枠である。未使用予約・IDの退役／GC、実Promiseの物理枠、複数callerの総容量と運転時間はlocal-v2／実bridge・C6までに別途閉じる。上限だけを引き上げて無期限運用可能とは扱わない。
 
 ## 7. 寿命と再入

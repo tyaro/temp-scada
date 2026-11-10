@@ -70,6 +70,7 @@ export function begin(
       credit: true,
       terminal: null,
       learnedBy: null,
+      settled: false,
     };
     const result = yes(token);
     c.originals.set(id, record);
@@ -113,6 +114,7 @@ export function accept(
   const result = accepted("stored", true, false);
   record.terminal = reply;
   record.learnedBy = "direct";
+  c.settleOriginal(record, v.bytes(reply));
   c.dirty = true;
   return result;
 }
