@@ -18,7 +18,8 @@
     hostIssueLabels,
     inspectionErrorLabels,
     knownFlag,
-    setupErrorLabel,
+    controlErrorLabel,
+    type RecordingControlAction,
   } from "./labels";
   import RecordingPlanView from "./RecordingPlanView.svelte";
   let {
@@ -85,46 +86,141 @@
   function load() {
     if (current && binding) controller.load(10000);
   }
-  // The first setup (design §8-5): offered to an administrator while the
-  // DB has no applied plan and the Project's plan is enabled.
-  let setup = $state.raw<{
+  // The administrator's control (design §5, §8-5): the first setup while the
+  // DB has no applied plan and the Project's plan is enabled; then stopping,
+  // applying the Project's plan while stopped, and resuming. The host decides
+  // finally; the buttons follow the last inspection. One runs at a time.
+  let operation = $state.raw<{
     owner: object;
+    action: RecordingControlAction;
     running: boolean;
     message?: string;
     failed?: boolean;
   }>();
-  const setupShown = $derived(setup?.owner === binding ? setup : undefined);
+  const operationShown = $derived(
+    operation?.owner === binding ? operation : undefined,
+  );
+  const operating = $derived(!!operationShown?.running);
+  const database = $derived(
+    response?.database.state === "available" ? response.database : undefined,
+  );
   const canSetup = $derived(
     !!binding?.service.initialSetup &&
-      response?.database.state === "available" &&
-      response.database.applied === null &&
+      database?.applied === null &&
       binding.desired?.enabled === true &&
-      !setupShown?.running,
+      !operating,
   );
-  async function initialSetup() {
+  const canResume = $derived(
+    !!binding?.service.resume &&
+      database?.applied?.desired.enabled === true &&
+      database.activeSessionId === null &&
+      !operating,
+  );
+  const canReconfigure = $derived(
+    !!binding?.service.reconfigure &&
+      !!database?.applied &&
+      database.activeSessionId === null &&
+      binding.desired !== undefined &&
+      !operating,
+  );
+  const canStop = $derived(
+    !!binding?.service.stop &&
+      !!database &&
+      database.activeSessionId !== null &&
+      !operating,
+  );
+  const controlsOffered = $derived(
+    !!(
+      binding?.service.resume ||
+      binding?.service.reconfigure ||
+      binding?.service.stop
+    ),
+  );
+  const startedMessage = (phase: "running" | "starting", verb: string) =>
+    phase === "running"
+      ? `記録を${verb}しました`
+      : `記録の${verb}を受け付けました（開始待ち）`;
+  async function control<R extends { ok: boolean }>(
+    action: RecordingControlAction,
+    allowed: boolean,
+    pick: (
+      service: RecordingManagementService,
+    ) => (() => Promise<R>) | undefined,
+    message: (result: Extract<R, { ok: true }>) => string,
+  ) {
     const target = binding;
-    const run = target?.service.initialSetup;
-    if (!current || !target || !run || !canSetup) return;
-    setup = { owner: target, running: true };
+    const run = target && pick(target.service);
+    if (!current || !target || !run || !allowed) return;
+    operation = { owner: target, action, running: true };
     const result = await run();
     if (binding !== target) return;
-    setup = result.ok
+    operation = result.ok
       ? {
           owner: target,
+          action,
           running: false,
-          message:
-            result.phase === "running"
-              ? "記録を開始しました"
-              : "記録の開始を受け付けました（開始待ち）",
+          message: message(result as Extract<R, { ok: true }>),
         }
       : {
           owner: target,
+          action,
           running: false,
           failed: true,
-          message: setupErrorLabel(result.error),
+          message: controlErrorLabel(
+            action,
+            (result as unknown as { error: string }).error,
+          ),
         };
     load();
   }
+  const initialSetup = () =>
+    control(
+      "setup",
+      canSetup,
+      (s) => s.initialSetup,
+      (r) => startedMessage(r.phase, "開始"),
+    );
+  const resume = () =>
+    control(
+      "resume",
+      canResume,
+      (s) => s.resume,
+      (r) =>
+        startedMessage(r.phase, "再開") +
+        (r.owner === "installed"
+          ? ""
+          : "。記録は続いていますが、記録操作の受付を準備できませんでした（registryの変更は使えません）"),
+    );
+  const reconfigure = () =>
+    control(
+      "reconfigure",
+      canReconfigure,
+      (s) => s.reconfigure,
+      (r) =>
+        (r.applied === "applied"
+          ? "Projectの計画をDBに適用しました"
+          : "DBの計画はProjectの計画と同じです（変更なし）") +
+        (r.enabled
+          ? "。記録は止まったままです。「記録を再開」で開始します"
+          : "。計画は無効（enabled: false）なので記録は開始しません"),
+    );
+  const stop = () =>
+    control(
+      "stop",
+      canStop,
+      (s) => s.stop,
+      () => "記録を停止しました",
+    );
+  const runningLabel: Record<RecordingControlAction, string> = {
+    setup: "初回設定中…",
+    resume: "再開中…",
+    reconfigure: "適用中…",
+    stop: "停止中…",
+  };
+  const buttonLabel = (action: RecordingControlAction, idle: string) =>
+    operationShown?.running && operationShown.action === action
+      ? runningLabel[action]
+      : idle;
   function close() {
     owner = undefined;
     controller.setOwner({ phase: "offline" });
@@ -177,15 +273,67 @@
             disabled={!canSetup}
             data-recording-initial-setup
             onclick={() => void initialSetup()}
-            >{setupShown?.running ? "初回設定中…" : "初回設定と開始"}</button
+            >{buttonLabel("setup", "初回設定と開始")}</button
           >
         </div>
         {#if !response}<p>実行する前に状態を照会してください。</p>{/if}
-        {#if setupShown?.message}<p
-            role={setupShown.failed ? "alert" : "status"}
-            data-recording-setup-result={setupShown.failed ? "failed" : "ok"}
+        {#if operationShown?.action === "setup" && operationShown.message}<p
+            role={operationShown.failed ? "alert" : "status"}
+            data-recording-setup-result={operationShown.failed
+              ? "failed"
+              : "ok"}
           >
-            {setupShown.message}
+            {operationShown.message}
+          </p>{/if}
+      </section>
+    {/if}
+    {#if controlsOffered}
+      <section aria-label="記録の停止と再開">
+        <h3>記録の停止と再開</h3>
+        {#if binding?.service.stop}<p>
+            記録の停止:
+            設定を変えずに記録を止めます。記録中の間だけ実行できます。
+          </p>{/if}
+        {#if binding?.service.reconfigure}<p>
+            停止中に計画を適用:
+            記録が止まっている間に、Projectの希望設定をDBへ適用します。記録は開始しません。有効な計画なら、続けて「記録を再開」を実行します。
+          </p>{/if}
+        {#if binding?.service.resume}<p>
+            記録を再開:
+            DBに適用済みの計画を、Hubのタグを読み直して再開します。記録操作画面での変更の適用後と、アプリの再起動後に使います。
+          </p>{/if}
+        <div class="actions">
+          {#if binding?.service.stop}<button
+              type="button"
+              disabled={!canStop}
+              data-recording-stop
+              onclick={() => void stop()}
+              >{buttonLabel("stop", "記録を停止")}</button
+            >{/if}
+          {#if binding?.service.reconfigure}<button
+              type="button"
+              disabled={!canReconfigure}
+              data-recording-reconfigure
+              onclick={() => void reconfigure()}
+              >{buttonLabel("reconfigure", "停止中に計画を適用")}</button
+            >{/if}
+          {#if binding?.service.resume}<button
+              type="button"
+              disabled={!canResume}
+              data-recording-resume
+              onclick={() => void resume()}
+              >{buttonLabel("resume", "記録を再開")}</button
+            >{/if}
+        </div>
+        {#if !response}<p>実行する前に状態を照会してください。</p>{/if}
+        {#if operationShown && operationShown.action !== "setup" && operationShown.message}<p
+            role={operationShown.failed ? "alert" : "status"}
+            data-recording-control-result={operationShown.failed
+              ? "failed"
+              : "ok"}
+            data-recording-control-action={operationShown.action}
+          >
+            {operationShown.message}
           </p>{/if}
       </section>
     {/if}
@@ -272,6 +420,9 @@
             <dt>記録済みsequence</dt>
             <dd>{activation.committedThrough}</dd>
           </dl>
+          {#if activation.state === "interrupted"}<p data-recording-interrupted>
+              前回の記録は終了を確認できないまま中断しました（アプリの異常終了など）。管理者が「記録を再開」で再開できます。
+            </p>{/if}
         {:else}<p>activationなし</p>{/if}
       </section>
       <section aria-label="Hostの別時点観測">

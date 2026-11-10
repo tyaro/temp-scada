@@ -77,14 +77,46 @@ export const inspectionErrorLabels: Record<InspectionError, string> = {
 export const knownFlag = (value: boolean | null) =>
   value === null ? "未提供" : value ? "必要 / あり" : "不要 / なし";
 
-/** The host's error kinds of the first setup (product-owner design §5). */
-const setupErrors: Record<string, string> = {
-  not_allowed:
-    "初回設定はできません（DBに別の適用済み設定があるか、記録が止まっていないか、認証の移行中です）",
-  busy: "別の記録操作の実行中です。少し待ってからやり直してください",
+/** The administrator's recording control actions (product-owner design §5). */
+export type RecordingControlAction =
+  "setup" | "resume" | "reconfigure" | "stop";
+const actionNames: Record<RecordingControlAction, string> = {
+  setup: "初回設定",
+  resume: "記録の再開",
+  reconfigure: "停止中の計画の適用",
+  stop: "記録の停止",
+};
+/** The host's error kinds of the recording control commands (product-owner
+ * design §5); the ones whose meaning differs by command come first. */
+const actionErrors: Record<RecordingControlAction, Record<string, string>> = {
+  setup: {
+    not_allowed:
+      "初回設定はできません（DBに別の適用済み設定があるか、記録が止まっていないか、認証の移行中です）",
+  },
+  resume: {
+    not_allowed:
+      "記録を再開できません（記録中か、記録の操作を切り替えている途中か、認証の移行中です）",
+    no_recording_plan:
+      "DBに適用済みの記録計画がありません。初回設定を使ってください",
+    plan_disabled:
+      "DBに適用済みの計画が無効（enabled: false）です。Projectで有効にし、「停止中に計画を適用」を先に実行してください",
+  },
+  reconfigure: {
+    not_allowed:
+      "停止中の計画の適用はできません（記録中か、記録の操作を切り替えている途中か、DBに適用済みの計画がありません。DBに計画がないときは初回設定を使ってください）",
+  },
+  stop: {
+    not_allowed: "記録を停止できません（記録していません）",
+    failed: "記録の停止を確認できませんでした。状態を照会して確かめてください",
+  },
+};
+const controlErrors: Record<string, string> = {
+  busy: "別の記録操作の実行中か、記録の変更が終わっていません。少し待ってからやり直してください",
   no_recording_plan: "Projectに記録の希望設定がありません",
   plan_disabled: "Projectの記録の希望設定が無効（enabled: false）です",
   invalid_plan: "Projectの記録の希望設定を確認できません",
+  plan_conflict:
+    "計画の版がDBと合いません。Projectの計画のrevisionを上げてから適用してください",
   hub_not_configured: "Hubの接続先が保存されていません",
   hub_unauthorized: "HubがAPIキーを受け付けませんでした",
   hub_unavailable: "Hubから現在値を取得できませんでした",
@@ -99,6 +131,16 @@ const setupErrors: Record<string, string> = {
   unauthorized: "ログインが必要です",
   forbidden: "管理者だけが実行できます",
 };
+export function controlErrorLabel(
+  action: RecordingControlAction,
+  kind: string,
+): string {
+  return (
+    actionErrors[action][kind] ??
+    controlErrors[kind] ??
+    `${actionNames[action]}に失敗しました（${kind}）`
+  );
+}
 export function setupErrorLabel(kind: string): string {
-  return setupErrors[kind] ?? `初回設定に失敗しました（${kind}）`;
+  return controlErrorLabel("setup", kind);
 }

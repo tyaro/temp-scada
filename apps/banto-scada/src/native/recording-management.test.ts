@@ -95,6 +95,91 @@ it.each([
   expect(done).not.toHaveBeenCalled();
 });
 
+it("resumes, reconfigures and stops only for an administrator", async () => {
+  const plain = nativeRecordingManagementService(invoke, {});
+  expect(plain.resume).toBeUndefined();
+  expect(plain.reconfigure).toBeUndefined();
+  expect(plain.stop).toBeUndefined();
+
+  const done = vi.fn();
+  const target = project();
+  const projectJson = JSON.stringify(target);
+  const service = nativeRecordingManagementService(
+    invoke,
+    {},
+    {
+      project: target,
+      done,
+    },
+  );
+  invoke.mockResolvedValue({ phase: "joined" });
+  await expect(service.stop!()).resolves.toEqual({ ok: true, phase: "joined" });
+  expect(invoke).toHaveBeenLastCalledWith("recording_stop");
+  // Stopping does not change History's series.
+  expect(done).not.toHaveBeenCalled();
+
+  invoke.mockResolvedValue({ applied: "applied", enabled: true });
+  await expect(service.reconfigure!()).resolves.toEqual({
+    ok: true,
+    applied: "applied",
+    enabled: true,
+  });
+  expect(invoke).toHaveBeenLastCalledWith("recording_reconfigure", {
+    projectJson,
+  });
+  expect(done).toHaveBeenCalledTimes(1);
+  invoke.mockResolvedValue({ applied: "unchanged", enabled: false });
+  await expect(service.reconfigure!()).resolves.toEqual({
+    ok: true,
+    applied: "unchanged",
+    enabled: false,
+  });
+  expect(done).toHaveBeenCalledTimes(2);
+
+  invoke.mockResolvedValue({ phase: "running", owner: "installed" });
+  await expect(service.resume!()).resolves.toEqual({
+    ok: true,
+    phase: "running",
+    owner: "installed",
+  });
+  expect(invoke).toHaveBeenLastCalledWith("recording_resume", { projectJson });
+  invoke.mockResolvedValue({ phase: "starting", owner: "owner_unavailable" });
+  await expect(service.resume!()).resolves.toEqual({
+    ok: true,
+    phase: "starting",
+    owner: "owner_unavailable",
+  });
+  expect(done).toHaveBeenCalledTimes(4);
+});
+
+it.each([
+  ["resume", { kind: "plan_disabled" }, "plan_disabled"],
+  ["reconfigure", { kind: "plan_conflict" }, "plan_conflict"],
+  [
+    "reconfigure",
+    { kind: "recordingUnavailable", reason: "store_locked" },
+    "recordingUnavailable",
+  ],
+  ["stop", { kind: "not_allowed" }, "not_allowed"],
+  ["stop", "broken", "failed"],
+] as const)(
+  "reports the %s error %j as %s without throwing",
+  async (action, error, kind) => {
+    const done = vi.fn();
+    const failing = (() => Promise.reject(error)) as NativeInvoke;
+    const service = nativeRecordingManagementService(
+      failing,
+      {},
+      { project: project(), done },
+    );
+    await expect(service[action]!()).resolves.toEqual({
+      ok: false,
+      error: kind,
+    });
+    expect(done).not.toHaveBeenCalled();
+  },
+);
+
 it("reads a context per Project and session, and none without a session", async () => {
   const context = { kind: "recordingManagementContext" };
   invoke.mockResolvedValue(context);
@@ -113,6 +198,9 @@ it("reads a context per Project and session, and none without a session", async 
   await vi.waitFor(() => expect(published).toHaveLength(3));
   expect(published[2]?.context).toBe(context);
   expect(published[2]?.initialSetup).toBeUndefined();
+  expect(published[2]?.resume).toBeUndefined();
+  expect(published[2]?.reconfigure).toBeUndefined();
+  expect(published[2]?.stop).toBeUndefined();
   // The same key keeps the service.
   management.update(project(1), viewer);
   expect(invoke).toHaveBeenCalledOnce();
@@ -126,6 +214,15 @@ it("reads a context per Project and session, and none without a session", async 
     phase: "starting",
   });
   expect(setupDone).toHaveBeenCalledOnce();
+  invoke.mockResolvedValue({ phase: "running", owner: "installed" });
+  await expect(service.resume!()).resolves.toMatchObject({ ok: true });
+  expect(invoke).toHaveBeenLastCalledWith("recording_resume", {
+    projectJson: JSON.stringify(project(1)),
+  });
+  expect(setupDone).toHaveBeenCalledTimes(2);
+  expect(setupDone).toHaveBeenLastCalledWith(project(1));
+  invoke.mockResolvedValue({ phase: "joined" });
+  await expect(service.stop!()).resolves.toEqual({ ok: true, phase: "joined" });
 });
 
 it("drops replies to an earlier Project or session and after dispose", async () => {
