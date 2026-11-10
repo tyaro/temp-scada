@@ -76,3 +76,12 @@ fn shared_project_recording_cases_preserve_optional_settings_and_names() {
         check(&value, case["accepted"].as_bool().unwrap(), &case["name"]);
     }
 }
+#[test]
+fn c5_6_acceptance_project_carries_an_enabled_plan() {
+    let value: Value = serde_json::from_str(include_str!(
+        "../../../examples/real-hub-recording.project.json"
+    ))
+    .unwrap();
+    assert_eq!(value["recordingPlan"]["enabled"], true);
+    check(&value, true, &json!("real-hub-recording"));
+}

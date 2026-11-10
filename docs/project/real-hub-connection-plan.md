@@ -40,7 +40,7 @@ C0でWindowsの既存Hubと認証契約を確定し、C1のTauri host、C2のモ
 
 計画採用時の文書変更に続き、C0〜C3を段階ごとのPRと[実機接続記録](real-hub-c0.md)で受け入れた。今回のC3最終確認ではQ/R系の実値`0`／`false`と製品表示を追加照合した。運用時のユーザー管理・認証、記録配送と長時間運転は完了扱いしない。
 
-C4はd2a、d2b、local-v2、[coordinator-v2](../design/runtime/historian-recording-coordinator-v2.md)のtest-only root（PR #100〜#104）と、GUI非依存の[native registry adapter](../design/runtime/historian-recording-native-registry-adapter.md)の段階配送（PR #105〜#118）まで統合済み。残りはadapter内のObservation・cancel・失効・shutdownと一貫受入、認証・host gate、製品transportの境界で分割する（[開発計画](development-plan.md#次の実装順)）。着手時に進行中の実装・マージ状況を確認し、完了済みの作業を重複実装しない。C5のHistory配送も記録操作bridgeとは別の責務で検証する。
+C4はd2a、d2b、local-v2、[coordinator-v2](../design/runtime/historian-recording-coordinator-v2.md)のtest-only root（PR #100〜#104）と、GUI非依存の[native registry adapter](../design/runtime/historian-recording-native-registry-adapter.md)の段階配送（PR #105〜#118）まで統合済み。残りはadapter内のObservation・cancel・失効・shutdownと一貫受入、認証・host gate、製品transportの境界で分割する（[開発計画](development-plan.md#次の実装順)）。着手時に進行中の実装・マージ状況を確認し、完了済みの作業を重複実装しない。C5のHistory配送も記録操作bridgeとは別の責務で検証する。C5の製品host（C5-1〜C5-5b）は実装済みで、Windows実機の受入は[C5-6受入手順](real-hub-c5-acceptance.md)で行う。
 
 コード変更に応じてRustのfmt／Clippy／workspace test、TSの型検査／unit／build、通常entrypointを通るブラウザ試験、全体整形を実施する。各PRでpush／PR CIを確認する。実機検証は対象・構成版・時刻・結果・未確認事項を記録し、秘密情報は保存しない。マージ後は統合済み枝・生成物・一時ファイルを復元可能性を確認して整理する。
 
