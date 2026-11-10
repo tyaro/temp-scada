@@ -1484,3 +1484,30 @@ describe("port v2 owner state, access and lease roles", () => {
     expect(st.canDiscard).toBe(true);
   });
 });
+describe("an earlier client's workflow (design C5 §7.2 再読込)", () => {
+  it("is shown from cached frames only, while it holds a candidate", async () => {
+    const before = setup();
+    await candidate(before);
+    expect(before.client.current().earlierWork).toBe(false);
+    const accepted = before.h.admissions[0].accepted!;
+    const result = before.h.operations[0];
+    // The next page's coordinator sees the owner's frames of the earlier workflow.
+    const after = setup();
+    expect(after.client.current().earlierWork).toBe(false);
+    after.h.emit({ admission: accepted });
+    await flush();
+    expect(after.client.current().earlierWork).toBe(true);
+    after.h.emit({
+      operation: {
+        operationRef: result.handle.operationRef,
+        result: before.h.result(0),
+      },
+    });
+    await flush();
+    expect(after.client.current()).toMatchObject({
+      earlierWork: true,
+      request: undefined,
+      completion: undefined,
+    });
+  });
+});

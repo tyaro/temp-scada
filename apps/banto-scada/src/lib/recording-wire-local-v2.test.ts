@@ -447,3 +447,26 @@ it("rejects structural sources, wrappers and proxies", () => {
     reason: "invalidSource",
   });
 });
+
+it("names the native port's delivery by mode and rejects other options", () => {
+  expect(setup().local.mode).toBe("testOnly");
+  const ledger = makeDelivery(),
+    receiver = makeReceiver();
+  const native = take(
+    createRecordingWireLocalV2(ledger, receiver, { mode: "native" }),
+  );
+  expect(native.mode).toBe("native");
+  expect(native.current()).toMatchObject({
+    mode: "native",
+    usage: { maxHandles: 256 },
+  });
+  for (const options of [
+    { mode: "other" },
+    { mode: "native", extra: 1 },
+    {},
+    { maxHandles: 257, mode: "native" },
+  ])
+    expect(
+      createRecordingWireLocalV2(ledger, receiver, options as never),
+    ).toMatchObject({ ok: false, reason: "invalidOptions" });
+});

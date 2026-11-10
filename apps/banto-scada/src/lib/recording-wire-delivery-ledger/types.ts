@@ -201,6 +201,10 @@ export interface WireDeliveryLedger {
     attempt: ObservationAttemptToken,
     reply: unknown,
   ): ObservationAcceptResult;
+  /** Stop awaiting an attempt whose physical call ended without a reply. */
+  abandonObservationAttempt(
+    attempt: ObservationAttemptToken,
+  ): LedgerResult<null>;
   observation(
     query: ObservationQueryToken,
   ): LedgerResult<ObservationQueryState>;

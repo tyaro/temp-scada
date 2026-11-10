@@ -102,6 +102,8 @@ export interface OriginalRecord {
   credit: boolean;
   terminal: OriginalReply | null;
   learnedBy: "direct" | "inspection" | null;
+  /** The terminal's actual size replaced the reserved maximum reply. */
+  settled: boolean;
 }
 export interface QueryRecord {
   token: InspectionQueryToken;
@@ -121,6 +123,8 @@ export interface AttemptRecord {
   R: number;
   outcome: AttemptOutcome | null;
   applied: boolean;
+  /** Its maximum reply was released after the original settled. */
+  released?: boolean;
 }
 export interface ObservationTargetRecord {
   token: ObservationTargetToken;
@@ -136,12 +140,16 @@ export interface ObservationQueryRecord {
   first: ObservationAttemptRecord;
   latest: ObservationAttemptRecord;
   terminal: RecordingWireObservationReply | null;
+  /** The one `pending` reply kept for every attempt of this query. */
+  pending: RecordingWireObservationReply | null;
 }
 export interface ObservationAttemptRecord {
   token: ObservationAttemptToken;
   query: ObservationQueryRecord;
   R: number;
   reply: RecordingWireObservationReply | null;
+  /** The physical call ended without a reply; no reply is awaited any more. */
+  abandoned: boolean;
   queryTerminalStored: boolean;
   targetResultStored: boolean;
 }
@@ -219,6 +227,38 @@ export class Core {
       (r) => r.pool === pool && r.terminal === null,
     ).length;
   }
+  /**
+   * A terminal is stored: only its actual size stays charged (design C5
+   * §7.2 "容量"). The unused part of the maximum reply is released, and so
+   * is the CallInspection credit when no inspection used it.
+   */
+  settleOriginal(o: OriginalRecord, replyBytes: number): void {
+    if (o.settled) return;
+    o.settled = true;
+    const unused = Math.max(0, o.R - replyBytes);
+    if (o.pool === "mutation") this.usage.mutationBytes -= unused;
+    else this.usage.readBytes -= unused;
+    if (o.credit) {
+      this.usage.readBytes -= o.I + o.R + 2048;
+      this.usage.inspectionIdsReserved--;
+      this.usage.inspectionAttemptsReserved--;
+      o.credit = false;
+    }
+    for (const a of this.attempts.values())
+      if (a.query.original === o && a.outcome) this.releaseAttempt(a);
+    this.dirty = true;
+  }
+  /** An answered CallInspection attempt of a settled original. */
+  releaseAttempt(a: AttemptRecord): void {
+    if (a.released) return;
+    a.released = true;
+    this.usage.readBytes -= a.R;
+  }
+  awaitingObservation() {
+    return [...this.observationAttempts.values()].filter(
+      (a) => a.reply === null && !a.abandoned,
+    ).length;
+  }
   pendingInspection() {
     return [...this.attempts.values()].filter((a) => a.outcome === null).length;
   }
@@ -268,9 +308,7 @@ export class Core {
         awaitingMutationTerminal: this.pending("mutation"),
         awaitingReadTerminal: this.pending("read"),
         awaitingInspectionReply: this.pendingInspection(),
-        awaitingObservationReply: [...this.observationAttempts.values()].filter(
-          (a) => a.reply === null,
-        ).length,
+        awaitingObservationReply: this.awaitingObservation(),
         pendingObservationQueries: [...this.observationQueries.values()].filter(
           (q) => q.terminal === null,
         ).length,

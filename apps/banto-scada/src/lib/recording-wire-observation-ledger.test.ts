@@ -482,12 +482,14 @@ it("reserves Observation bytes independently and one byte short is atomic", () =
   expect(short.ledger.current()).toBe(before);
 });
 
-it("reserves repeat R and attempt ID before advancing the latest attempt", () => {
+it("reserves repeat R and attempt ID before advancing the latest attempt, after a pending reply released the first R", () => {
   const { observation } = setup();
   const p = wireProfile(observation.kind);
   const Q = measureWire(observation, p.limit, p.accounting).bytes;
   const R = recordingWireReplyCapacity(observation).reply.bytes;
-  const exact = 1024 + Q + R + 2048 + R + 1024;
+  // A `pending` reply releases its attempt's maximum reply: only the
+  // repeat's own R is charged on top of the query (design C5 §7.2 "容量").
+  const exact = 1024 + Q + 2048 + R + 1024;
   const full = setup({ observationBytes: exact, observationAttempts: 2 });
   const first = query(full.ledger, full.target, full.observation);
   expect(
@@ -595,4 +597,79 @@ it("shares the owned request and identical result across Observation IDs", () =>
   expect(
     take(ledger.observationAttempt(first.attempt)).reply?.outcome,
   ).toMatchObject(terminal.outcome);
+});
+
+it("abandons an attempt whose call ended without a reply, so a new query may be sent", () => {
+  const { ledger, target, observation, terminal } = setup();
+  const first = query(ledger, target, observation);
+  const second = { ...clone(observation), observationId: "observation-2" };
+  // One reply is awaited: no other query until it arrives or is abandoned.
+  expect(ledger.beginObservation(target, second)).toMatchObject({
+    ok: false,
+    reason: "busy",
+  });
+  expect(ledger.current().usage.awaitingObservationReply).toBe(1);
+  expect(take(ledger.abandonObservationAttempt(first.attempt))).toBe(null);
+  expect(take(ledger.abandonObservationAttempt(first.attempt))).toBe(null);
+  expect(ledger.current().usage.awaitingObservationReply).toBe(0);
+  // The abandoned attempt takes no reply; its query is never repeated.
+  expect(
+    ledger.acceptObservation(
+      first.attempt,
+      response(observation, terminal.outcome),
+    ),
+  ).toMatchObject({ ok: false, reason: "foreignToken" });
+  expect(ledger.current().stoppedReason).toBe(null);
+  const next = query(ledger, target, second);
+  expect(
+    ledger.acceptObservation(next.attempt, response(second, terminal.outcome))
+      .ok,
+  ).toBe(true);
+  // An attempt that has its reply cannot be abandoned.
+  expect(ledger.abandonObservationAttempt(next.attempt)).toMatchObject({
+    ok: false,
+    reason: "invalidRequest",
+  });
+  expect(
+    ledger.abandonObservationAttempt({} as typeof next.attempt),
+  ).toMatchObject({
+    ok: false,
+    reason: "foreignToken",
+  });
+});
+
+it("charges a terminal at its actual size and releases abandoned and pending attempts", () => {
+  const { ledger, target, observation, terminal } = setup();
+  const empty = ledger.current().usage.observationBytes;
+  const first = query(ledger, target, observation);
+  const charged = ledger.current().usage.observationBytes - empty;
+  ledger.acceptObservation(
+    first.attempt,
+    response(observation, { kind: "pending" }),
+  );
+  const R = recordingWireReplyCapacity(observation).reply.bytes;
+  expect(ledger.current().usage.observationBytes - empty).toBe(charged - R);
+  const repeat = take(ledger.repeatObservation(first.query));
+  take(ledger.abandonObservationAttempt(repeat));
+  expect(ledger.current().usage.observationBytes - empty).toBe(
+    charged - R + 1024,
+  );
+  // Pending replies are kept once per query.
+  const again = take(ledger.repeatObservation(first.query));
+  ledger.acceptObservation(again, response(observation, { kind: "pending" }));
+  expect(take(ledger.observationAttempt(again)).reply).toBe(
+    take(ledger.observationAttempt(first.attempt)).reply,
+  );
+  const last = take(ledger.repeatObservation(first.query));
+  const reply = response(observation, terminal.outcome);
+  ledger.acceptObservation(last, reply);
+  const p = wireProfile(reply.kind);
+  const actual = measureWire(
+    take(ledger.observationAttempt(last)).reply,
+    p.limit,
+    p.accounting,
+  ).bytes;
+  expect(ledger.current().usage.observationBytes - empty).toBe(
+    charged - R + 3 * 1024 + actual,
+  );
 });

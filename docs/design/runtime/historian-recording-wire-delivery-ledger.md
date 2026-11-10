@@ -264,6 +264,14 @@ incoming CallInspectionReplyは最大4MiB/196608nodes/depth96の独立一時検�
 
 初回creditが未使用のまま元terminalが届いても、d2aではbytes／IDsを返却しない。closed/retired/正常終了でもGCやID再使用をしない。余剰返却は別設計とし、この制限を「長時間運用可能」と表現しない。
 
+**C5-5bで改めた（2026-11-10ユーザー判断）**: 上の会計では、admissionごとにreadへ約520KiBを先取りしたまま返さないため、製品の一つのroot（ownerEpoch）で「予約→pause/join→apply→reconcile」を一度も通せなかった（[製品owner](historian-recording-product-owner.md)§7.2「C5-5bの実装で次を定めた」）。そこで元callが終端を保存した時点（直接の返信でもCallInspectionでの回収でも）で次を返す。
+
+- 元callの最大reply予約`R`のうち、保存した終端の実保守bytesを超える分（元callのpoolから）。
+- 未使用の初回CallInspection credit（read側の`I+R+2048`、`inspectionIdsReserved`・`inspectionAttemptsReserved`の各1）。
+- その元callのCallInspection attemptのうち返信を保存したものの`R`（終端を得た後に届いたattemptの返信もその時点で返す）。
+
+終端を得ていない元callの予約・回復creditと、IDの件数（`mutationIds`・`readIds`・`inspectionIds`・`inspectionAttempts`）は従来どおり返さない。上限は総量の安全弁として残る。
+
 ## 11. 状態、lifetime、エラー
 
 current()は次の固定集計だけを返す。本文一覧やnative stageを返さない。

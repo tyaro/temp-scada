@@ -462,6 +462,17 @@ C5-5aの実装で次を定めた。
 - **sessionと権限**: portはsessionごとに作る。未ログインでは作らない。`access`はAdminのsession（認証無効モードの合成Adminを含む）で`mutation`、それ以外で`read`とする。
 - **`NativeShell`**: `createNativeRecordingOperations`の結果を、既存のprop `recordingAsyncOperations`へ渡す。同期形の`recordingOperationsService`は渡さない（§7.2）。
 
+C5-5bの実装で次を定めた。
+
+- **host**: `RecordingEvent::Frames`・`Ended`へ`ownerEpoch`（attachした購読のrootのepoch。attachの返信の`request.scope.ownerEpoch`から取る）を加えた。
+- **attachし直し**: 受信器は一度frameを受けた後の`afterRevision: null`を拒否するので、`ended`後・再同期のattachは受信器のhighwaterを`afterRevision`にする。上限は一回で、attachし直した購読がframeを適用したら回数を戻す。
+- **observationの返信喪失**: 台帳は未回収のattemptがある間、新しいqueryもrepeatも`busy`にする。返信なしで終わったattemptは台帳の`abandonObservationAttempt`で待たないことにしてから、新しいobservationIdのqueryを作る（[observation台帳](historian-recording-wire-observation-ledger.md)§6）。別targetのattemptが送信中なら250ms後にやり直す。
+- **frameが元replyより先**: hostはadmissionの登録と同時にstate frameを送るので、coordinatorはadmitの返信より先に、cached frameのAcceptedからobserveを呼ぶことがある。portは台帳にそのadmissionの元replyが保存されるまでqueryを送らずに待ち（`query: "pending"`）、保存されたら束縛して送る。cached frameを台帳の証拠にしない。
+- **台帳の容量**: 元call台帳とobservation台帳は、終端を得ても最大reply予約を返さなかったため、一つのrootで予約からreconcileまでを通せなかった（admissionごとにread 2MiBのうち約520KiB、observation attemptごとに4MiBのうち約1MiB）。2026-11-10のユーザー判断で、終端（observationでは`pending`も）を保存したら予約を実寸へ置き換えて余りを返すことにした（[元call台帳](historian-recording-wire-delivery-ledger.md)§10、observation台帳§6）。§8.1の12（長時間のrootの上限）はIDの件数（各4096）と終端を得ていない予約に残る。
+- **再読込後の表示**: `AsyncOperationsState`へ`earlierWork`を加えた。ownerの最新のadmission（cached frame）がこのcoordinatorのものでなく、Acceptedで、その操作結果が未着か候補（`candidate`・`paused`）のときtrueとし、記録操作画面は「前の画面の作業が残っています。アプリを終了すると候補は破棄されます。」と示す。
+- **slotの読み直し**: 記録管理画面の操作（初回設定・再開・停止中の計画適用・停止・owner contextの付け替え）が成功したら`recording_slot`を読み直す。同じgenerationなら`seqChanged`以外では作り直さない。新しいcoordinatorは、記録操作画面の既存の切替（「選択した接続へ切替」）で選ばれるまで旧ownerの表示を残す。
+- **mock host**: e2eの登録処理は`__fixtures__/recording-async-port.ts`のharnessを、Tauri commandとeventの形で包んだもの（`__fixtures__/recording-native-host.ts`）である。
+
 #### 時計
 
 - leaseの期限はhostの`Instant`だけで判定する。portとcoordinatorは`grantedBudgetMs`から期限を計算せず、表示にも使わない。期限切れは、hostの`expired`の拒否か、admissionの返信としてだけ知る。
@@ -513,7 +524,7 @@ C5-5aの実装で次を定めた。
 9. **observationのrepeat間隔**: `pending`の間250ms。
 10. **slotがEmptyの理由**: 記録操作画面は「未接続」だけとし、理由は記録管理画面に出す。propを増やさない。
 11. **local-v2の`mode`**: `"native"`を加え、native portはlocal-v2で元replyを配送する。coordinator-v2（test-only）は製品で使わない。
-12. **長時間のrootの容量**: 上限に達したら`capacity`で止め、再読込で回復する。回収はC6で扱う。
+12. **長時間のrootの容量**: 上限に達したら`capacity`で止め、再読込で回復する。回収はC6で扱う。（C5-5bで、終端を得た元call・observationの予約は返すことにした。§7.2「C5-5bの実装で次を定めた」）
 13. **再login後の回収**: C5-5では扱わず、5と一緒に後続で扱う。
 
 ## 9. 実装順
@@ -528,7 +539,7 @@ C5-5aの実装で次を定めた。
 | C5-4 再開                     | **実装済み（2026-11-10）**。`recording_resume`（applyの後と再起動後）、`recording_reconfigure`（停止中の計画変更と無効計画からの有効化）、fresh SDK解決、gateの入替え、`interrupted`の表示                                                                                                                                                              |
 | C5-4b owner contextの付け替え | **実装済み（2026-11-10）**。`recording_owner_rebind`（§7.2）と記録管理画面のボタン。静止したrootのhandoffと同じSupervisorでの再導入、未静止での`busy`。scada-hostの一時DB＋mock Hubの試験とIPC mockのe2e                                                                                                                                                |
 | C5-5a port v2とcoordinator    | **実装済み（2026-11-10）**。port v2（§7.2）、`defineAsyncRecordingPortV2`、coordinatorの改訂、v2 harnessへの移行（vitest・`recording-async-workspace` e2e）。TSのみで、通常Appの接続は変えない                                                                                                                                                          |
-| C5-5b 記録操作の画面接続      | native実装（`src/native/recording/`）と`NativeShell`の接続、`scada:recording`への`ownerEpoch`（host）、local-v2の`mode: "native"`。IPC mockのe2eで予約からapply・reconcileまで、logoutでの`ended`、再読込後のattachし直し（表示まで）、`ownerClosed`の後のslotの読み直し                                                                                |
+| C5-5b 記録操作の画面接続      | **実装済み（2026-11-10）**。native実装（`src/native/recording/`）と`NativeShell`の接続、`scada:recording`への`ownerEpoch`（host）、local-v2の`mode: "native"`。IPC mockのe2eで予約からapply・reconcileまで、logoutでの`ended`、再読込後のattachし直し（表示まで）、`ownerClosed`の後のslotの読み直し                                                    |
 | C5-6 Windows実機受入          | 実Hubを読み、検証用DBへ記録し、履歴画面と保存Trendで確かめる。UIを閉じない間の継続、停止・join・明示再開、raw／minmax、欠測・Quality・SIM、再起動後の照会、実時間の件数とDB増分を記録する（ユーザー作業）                                                                                                                                               |
 
 C5-1は記録registryと独立で、C5-2以降の前提（store・`RecordingRuntime`）を置く。C5-5はC5-3aの後ならC5-3b・C5-4と並行できる。C5-4bとC5-5aは並行でき、C5-5bは両方の後に行う。

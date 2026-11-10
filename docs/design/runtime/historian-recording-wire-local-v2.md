@@ -74,7 +74,7 @@ interface RecordingWireLocalV2 {
 }
 ```
 
-factoryは同一scopeの実receiverと元call台帳を受け取り、両factoryのprivate WeakSetでinstanceを検証してwrapper／Proxy／構造的な偽物を拒否する。`scope`全文（ownerRef・ownerEpoch・context）を不変に固定する。旧c4a Admission本文へepochを追加しない。scope文字列は認証・操作資格の証拠ではない。`mode: "testOnly"`は製品transportが未接続であることを示す。通常Appの第三propを追加しない。
+factoryは同一scopeの実receiverと元call台帳を受け取り、両factoryのprivate WeakSetでinstanceを検証してwrapper／Proxy／構造的な偽物を拒否する。`scope`全文（ownerRef・ownerEpoch・context）を不変に固定する。旧c4a Admission本文へepochを追加しない。scope文字列は認証・操作資格の証拠ではない。`mode: "testOnly"`は製品transportが未接続であることを示す。C5-5bで、factoryの省略可能なoption `mode`（`"testOnly"`（既定）か`"native"`）を加えた。`"native"`はdesktopのport v2（`src/native/recording/port.ts`）が使い、振る舞いは変えない（[製品owner](historian-recording-product-owner.md)§8.1の11）。通常Appの第三propを追加しない。
 
 `current()`はcommit済みcacheとして固定scope、receiverの`RecordingWireDisplay`、登録済み／未配送／配送済みhandle数を返す。displayの`ownerClosed`、`authorizationLost`、`receiverStatus`、`nativeRecoveryRequired`は別欄のまま保持する。coordinator自身の`closed`へ合成しない。`pump()`だけがreceiver表示を取り直す。表示やtarget結果からreplyを捏造しない。
 

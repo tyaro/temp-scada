@@ -54,7 +54,7 @@ async function control<T extends object>(
 export function nativeRecordingManagementService(
   invoke: NativeInvoke,
   context: unknown,
-  admin?: { project: Project; done: () => void },
+  admin?: { project: Project; done: () => void; changed?: () => void },
 ): RecordingManagementService {
   const service: RecordingManagementService = {
     context,
@@ -62,6 +62,13 @@ export function nativeRecordingManagementService(
   };
   if (!admin) return Object.freeze(service);
   const projectArgs = () => ({ projectJson: JSON.stringify(admin.project) });
+  // Every successful operation may install or take out the recording root:
+  // the asynchronous operations read `recording_slot` again (design §7.2).
+  const changed = () => admin.changed?.();
+  const done = () => {
+    admin.done();
+    changed();
+  };
   const phase = (value: Record<string, unknown>) =>
     value.phase === "running" ? ("running" as const) : ("starting" as const);
   return Object.freeze({
@@ -70,7 +77,7 @@ export function nativeRecordingManagementService(
       control(
         () => invoke<unknown>("recording_initial_setup", projectArgs()),
         (value) => ({ phase: phase(value) }),
-        admin.done,
+        done,
       ),
     resume: (): Promise<ResumeResult> =>
       control(
@@ -82,7 +89,7 @@ export function nativeRecordingManagementService(
               ? ("installed" as const)
               : ("owner_unavailable" as const),
         }),
-        admin.done,
+        done,
       ),
     reconfigure: (): Promise<ReconfigureResult> =>
       control(
@@ -94,12 +101,13 @@ export function nativeRecordingManagementService(
               : ("applied" as const),
           enabled: value.enabled === true,
         }),
-        admin.done,
+        done,
       ),
     stop: (): Promise<StopResult> =>
       control(
         () => invoke<unknown>("recording_stop"),
         () => ({ phase: "joined" as const }),
+        changed,
       ),
     slot: async (): Promise<RecordingSlotView> => {
       let value: unknown;
@@ -119,6 +127,7 @@ export function nativeRecordingManagementService(
               ? ("installed" as const)
               : ("owner_unavailable" as const),
         }),
+        changed,
       ),
   });
 }
@@ -173,6 +182,7 @@ export function createNativeRecordingManagement(
   invoke: NativeInvoke,
   publish: (service: RecordingManagementService | undefined) => void,
   setupDone: (project: Project) => void,
+  ownerChanged?: () => void,
 ) {
   let key: string | undefined;
   let generation = 0;
@@ -203,7 +213,11 @@ export function createNativeRecordingManagement(
               invoke,
               context,
               access.admin
-                ? { project, done: () => setupDone(project) }
+                ? {
+                    project,
+                    done: () => setupDone(project),
+                    changed: ownerChanged,
+                  }
                 : undefined,
             ),
           );

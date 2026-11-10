@@ -146,6 +146,7 @@ export function createRecordingWireDeliveryLedger(
     repeatObservation: (t) => read(() => observation.repeat(c, t)),
     acceptObservation: (t, r) =>
       guard(() => observation.accept(c, t, r), observationBusy),
+    abandonObservationAttempt: (t) => read(() => observation.abandon(c, t)),
     observation: (t) => read(() => observation.query(c, t)),
     observationAttempt: (t) => read(() => observation.attempt(c, t)),
     current: () => published,

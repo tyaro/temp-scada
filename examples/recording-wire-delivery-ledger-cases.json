@@ -2330,7 +2330,7 @@
       ]
     },
     {
-      "name": "unused first credit never refunded",
+      "name": "an unused first credit is returned when the terminal is stored",
       "steps": [
         {
           "op": "begin",
@@ -2346,8 +2346,8 @@
           "op": "current",
           "state": {
             "usage": {
-              "inspectionIdsReserved": 1,
-              "inspectionAttemptsReserved": 1
+              "inspectionIdsReserved": 0,
+              "inspectionAttemptsReserved": 0
             }
           }
         },
@@ -2366,8 +2366,8 @@
           "op": "current",
           "state": {
             "usage": {
-              "inspectionIdsReserved": 1,
-              "inspectionAttemptsReserved": 1
+              "inspectionIdsReserved": 0,
+              "inspectionAttemptsReserved": 0
             }
           }
         }
@@ -3346,12 +3346,18 @@
       }
     },
     {
-      "name": "reserved query ID cannot be stolen by new original",
+      "name": "a pending original keeps its query ID until its terminal is stored",
       "steps": [
         {
           "op": "begin",
           "base": "lease",
           "id": "o"
+        },
+        {
+          "op": "begin",
+          "base": "cancel",
+          "id": "blocked",
+          "result": "capacity"
         },
         {
           "op": "direct",
@@ -3360,15 +3366,8 @@
         },
         {
           "op": "begin",
-          "base": "lease",
-          "id": "new",
-          "patch": [
-            {
-              "path": "leaseRequestId",
-              "value": "new"
-            }
-          ],
-          "result": "capacity"
+          "base": "cancel",
+          "id": "c"
         }
       ],
       "limits": {

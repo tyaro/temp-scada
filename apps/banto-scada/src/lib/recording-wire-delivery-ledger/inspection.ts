@@ -201,6 +201,9 @@ export function accept(
     outcome = Object.freeze({ kind: "terminal", reply: o.terminal });
   // Stage one stores the normal attempt even if its original reply conflicts in stage two.
   a.outcome = outcome;
+  // Once the original has its terminal, no attempt's maximum reply is
+  // awaited any more (a terminal reply is charged once, to its original).
+  if (o.settled) c.releaseAttempt(a);
   c.dirty = true;
   if (outcome.kind === "terminal") {
     q.terminal ??= outcome.reply;
@@ -208,6 +211,7 @@ export function accept(
     if (!o.terminal) {
       o.terminal = outcome.reply;
       o.learnedBy = "inspection";
+      c.settleOriginal(o, v.bytes(outcome.reply));
     }
     a.applied = true;
   }

@@ -1,4 +1,8 @@
-/** Same-realm delivery only. A settled Promise proves a stored reply, not transport quiescence. */
+/**
+ * Same-realm delivery only. A settled Promise proves a stored reply, not transport quiescence.
+ * `mode: "native"` is the desktop port's delivery (product-owner design C5 §7.2, §8.1-11);
+ * the default `testOnly` is unchanged. The mode changes no behavior: it names the user.
+ */
 import { sameOwnedJson } from "./json-equality";
 import { isRecordingWireDeliveryLedger } from "./recording-wire-delivery-ledger";
 import { isRecordingWireReceiver } from "./recording-wire-receiver";
@@ -44,9 +48,14 @@ export type LocalV2Handle<Q, R> = Readonly<{
   request: Q;
   completion: Promise<R>;
 }>;
+export type LocalV2Mode = "testOnly" | "native";
+export type LocalV2Options = Readonly<{
+  maxHandles?: number;
+  mode?: LocalV2Mode;
+}>;
 export type LocalV2State = Readonly<{
   version: 2;
-  mode: "testOnly";
+  mode: LocalV2Mode;
   scope: RecordingWireScope;
   display: RecordingWireDisplay;
   usage: Readonly<{
@@ -58,7 +67,7 @@ export type LocalV2State = Readonly<{
 }>;
 export interface RecordingWireLocalV2 {
   readonly version: 2;
-  readonly mode: "testOnly";
+  readonly mode: LocalV2Mode;
   readonly scope: RecordingWireScope;
   watchOriginal(
     token: OriginalCallToken,
@@ -143,8 +152,11 @@ const no = (reason: LocalV2Reason): LocalV2Result<never> =>
 function reason(value: string): LocalV2Reason {
   return value === "busy" || value === "foreignToken" ? value : "sourceFailure";
 }
-function limit(input: unknown): number {
-  if (input === undefined) return 256;
+function parseOptions(input: unknown): {
+  maxHandles: number;
+  mode: LocalV2Mode;
+} {
+  if (input === undefined) return { maxHandles: 256, mode: "testOnly" };
   if (
     !input ||
     typeof input !== "object" ||
@@ -152,32 +164,37 @@ function limit(input: unknown): number {
   )
     throw Error("invalid options");
   const keys = Reflect.ownKeys(input);
-  if (keys.length !== 1 || keys[0] !== "maxHandles")
+  if (keys.length < 1 || keys.some((k) => k !== "maxHandles" && k !== "mode"))
     throw Error("invalid options");
-  const d = Object.getOwnPropertyDescriptor(input, "maxHandles");
+  const value = (key: string): unknown => {
+    const d = Object.getOwnPropertyDescriptor(input, key);
+    if (!d) return undefined;
+    if (!d.enumerable || !("value" in d)) throw Error("invalid options");
+    return d.value;
+  };
+  const maxHandles = value("maxHandles") ?? 256,
+    mode = value("mode") ?? "testOnly";
   if (
-    !d ||
-    !d.enumerable ||
-    !("value" in d) ||
-    !Number.isSafeInteger(d.value) ||
-    d.value < 0 ||
-    d.value > 256
+    !Number.isSafeInteger(maxHandles) ||
+    (maxHandles as number) < 0 ||
+    (maxHandles as number) > 256 ||
+    (mode !== "testOnly" && mode !== "native")
   )
     throw Error("invalid options");
-  return d.value;
+  return { maxHandles: maxHandles as number, mode };
 }
 
 export function createRecordingWireLocalV2(
   ledger: WireDeliveryLedger,
   receiver: WireReceiver,
-  options?: Readonly<{ maxHandles: number }>,
+  options?: LocalV2Options,
 ): Readonly<
   | { ok: true; value: RecordingWireLocalV2 }
   | { ok: false; reason: "invalidOptions" | "invalidSource" | "scopeMismatch" }
 > {
-  let maxHandles: number;
+  let maxHandles: number, mode: LocalV2Mode;
   try {
-    maxHandles = limit(options);
+    ({ maxHandles, mode } = parseOptions(options));
   } catch {
     return Object.freeze({ ok: false, reason: "invalidOptions" });
   }
@@ -205,7 +222,7 @@ export function createRecordingWireLocalV2(
     for (const record of records.values()) if (!record.delivered) pending++;
     return Object.freeze({
       version: 2 as const,
-      mode: "testOnly" as const,
+      mode,
       scope,
       display,
       usage: Object.freeze({
@@ -363,7 +380,7 @@ export function createRecordingWireLocalV2(
   }
   const adapter: RecordingWireLocalV2 = Object.freeze({
     version: 2,
-    mode: "testOnly",
+    mode,
     scope,
     watchOriginal: (t: OriginalCallToken) =>
       watch("original", t, () => readOriginal(t)),
