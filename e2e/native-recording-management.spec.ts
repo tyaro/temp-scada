@@ -7,8 +7,9 @@ import { openProject } from "./helpers/project-files";
 // `recording_status`, and an administrator's first setup, stop,
 // reconfiguration and resume are `recording_initial_setup`,
 // `recording_stop`, `recording_reconfigure` and `recording_resume`
-// (product-owner design §5, §8-5). The App, menu, Modal and controller are
-// production.
+// (product-owner design §5, §8-5), and the owner rebind reads
+// `recording_slot` and calls `recording_owner_rebind` (§7.2). The App, menu,
+// Modal and controller are production.
 const plan = {
   version: 1,
   kind: "recordingPlan",
@@ -38,11 +39,17 @@ type Activation = "active" | "closed" | "interrupted";
 async function mockNativeHost(
   page: Page,
   role: "admin" | "viewer",
-  start: { activation?: Activation; failures?: Record<string, string[]> } = {},
+  start: {
+    activation?: Activation;
+    failures?: Record<string, string[]>;
+    /** The Project revision of the installed owner's context. */
+    slotRevision?: number;
+  } = {},
 ) {
   await page.addInitScript(
-    ({ role, plan, start }) => {
+    ({ role, plan, start, projectId }) => {
       let nextId = 0;
+      Object.assign(window, { __recordingProjectId: projectId });
       const host = {
         role,
         applied: start.activation !== undefined,
@@ -55,6 +62,7 @@ async function mockNativeHost(
         calls: [] as string[],
         statuses: 0,
         historyContexts: 0,
+        slotRevision: start.slotRevision ?? null,
       };
       const fail = (command: string) => {
         const kind = host.failures[command]?.shift();
@@ -199,13 +207,37 @@ async function mockNativeHost(
                 fail(command);
                 begin();
                 return { phase: "running", owner: "installed" };
+              case "recording_slot":
+                return running() && host.slotRevision !== null
+                  ? {
+                      state: "installed",
+                      generation: 1,
+                      scope: {
+                        ownerRef: "owner:test",
+                        ownerEpoch: "epoch:test",
+                        context: {
+                          target: {
+                            projectId: (window as any).__recordingProjectId,
+                            projectRevision: host.slotRevision,
+                          },
+                        },
+                      },
+                    }
+                  : { state: "empty", reason: "no_recording_run" };
+              case "recording_owner_rebind": {
+                host.calls.push(command);
+                fail(command);
+                const project = JSON.parse(args.projectJson);
+                host.slotRevision = project.manifest.projectRevision;
+                return { owner: "installed" };
+              }
             }
             throw new Error(`Unexpected command: ${command}`);
           },
         },
       });
     },
-    { role, plan, start },
+    { role, plan, start, projectId: sample.manifest.projectId },
   );
 }
 
@@ -365,6 +397,53 @@ test("an administrator stops, applies the plan while stopped and resumes", async
   ]);
 });
 
+test("an administrator points the running recording at the edited Project", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await mockNativeHost(page, "admin", {
+    activation: "active",
+    slotRevision: 1,
+    failures: { recording_owner_rebind: ["busy"] },
+  });
+  const edited = structuredClone(planned);
+  edited.manifest.projectRevision = 2;
+  await page.goto("/");
+  await openProject(page, file(edited));
+  await open(page);
+  const root = dialog(page);
+  const rebind = root.locator("[data-recording-owner-rebind]");
+  const slot = root.locator("[data-recording-slot]");
+  await expect(rebind).toBeDisabled();
+  await expect(slot).toHaveText("未照会");
+  await root.getByRole("button", { name: "状態を照会", exact: true }).click();
+  await expect(slot).toHaveAttribute("data-recording-slot", "installed", {
+    timeout: 30000,
+  });
+  await expect(slot).toHaveText("対象のProject版: 1（現在のProject版: 2）");
+  await expect(rebind).toBeEnabled();
+
+  await rebind.click();
+  await expect(root.getByRole("alert")).toHaveText(
+    "記録操作画面の変更が終わっていません。変更を確定するか破棄してからやり直してください",
+  );
+  await expect(rebind).toBeEnabled();
+  await rebind.click();
+  await expect(root.locator("[data-recording-rebind-result]")).toHaveText(
+    "記録操作の対象を現在のProjectに合わせました。記録は続いています",
+  );
+  // The slot is read again and now names the current revision.
+  await expect(slot).toContainText("対象のProject版: 2（現在のProject版: 2）");
+  await expect(slot).toContainText("現在のProjectと同じです");
+  await expect(rebind).toBeDisabled();
+  // The recording kept running.
+  await expect(root.locator("[data-recording-stop]")).toBeEnabled();
+  expect((await host(page)).calls).toEqual([
+    "recording_owner_rebind",
+    "recording_owner_rebind",
+  ]);
+});
+
 test("an interrupted recording is shown and resumed after a failure", async ({
   page,
 }) => {
@@ -418,7 +497,7 @@ test("a viewer inspects but is not offered the first setup", async ({
   ).toHaveCount(0);
   await expect(
     dialog(page).locator(
-      "[data-recording-stop], [data-recording-reconfigure], [data-recording-resume]",
+      "[data-recording-stop], [data-recording-reconfigure], [data-recording-resume], [data-recording-owner-rebind]",
     ),
   ).toHaveCount(0);
   expect((await host(page)).setups).toEqual([]);
