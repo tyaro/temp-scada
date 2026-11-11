@@ -26,16 +26,20 @@ for (const theme of ["light", "dark"] as const)
       buffer: Buffer.from(JSON.stringify(payload)),
     });
     const status = page.locator('details[aria-label^="読取状態："]').first();
+    // While editing, the summary sits in the status row below the canvas and
+    // the opened list overlays the canvas without resizing it (UX P1-3).
+    const canvasBox = () => page.locator(".canvas-workspace").boundingBox();
+    const initialCanvas = await canvasBox();
     const assertLayout = async () => {
-      const tabs = await page
-        .getByRole("navigation", { name: "画面タブ" })
-        .boundingBox();
-      const disclosure = await status.boundingBox();
-      const canvas = await page.locator(".canvas-workspace").boundingBox();
-      expect(disclosure!.y).toBeGreaterThanOrEqual(tabs!.y + tabs!.height);
-      expect(canvas!.y).toBeGreaterThanOrEqual(
-        disclosure!.y + disclosure!.height,
+      const summary = await status.locator("summary").boundingBox();
+      const row = await page.locator(".status-row").boundingBox();
+      const canvas = await canvasBox();
+      expect(summary!.y).toBeGreaterThanOrEqual(row!.y - 1);
+      expect(summary!.y + summary!.height).toBeLessThanOrEqual(
+        row!.y + row!.height + 1,
       );
+      expect(row!.y).toBeGreaterThanOrEqual(canvas!.y + canvas!.height - 1);
+      expect(canvas).toEqual(initialCanvas);
     };
     await assertLayout();
     await expect(status.locator("summary")).toContainText("表示参照 28件");

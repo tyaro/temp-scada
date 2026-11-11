@@ -4096,15 +4096,16 @@
           </p>{/if}
       </div>
     {/if}
-    {#key `${workspaceGeneration}:${screen.id}`}
-      <SlotReadStatus
-        {screen}
-        screens={project.screens}
-        symbols={project.symbols}
-        equipmentContext={readContext.equipmentContext}
-        alert={mode === "preview"}
-      />
-    {/key}
+    {#if mode === "preview"}
+      {#key `${workspaceGeneration}:${screen.id}`}
+        <SlotReadStatus
+          {screen}
+          screens={project.screens}
+          symbols={project.symbols}
+          equipmentContext={readContext.equipmentContext}
+        />
+      {/key}
+    {/if}
     <div class="canvas-stack" bind:clientHeight={canvasStackHeight}>
       <div class="canvas-area">
         {#key workspaceGeneration}
@@ -4228,6 +4229,19 @@
       {/if}
       <div class="status-row">
         <p role="status" data-testid="project-status">{message}</p>
+        {#if mode === "edit"}
+          <!-- 編集中は読取状態を図面の上に置かず、ステータス行へまとめる（UX精査 P1-3）。 -->
+          {#key `${workspaceGeneration}:${screen.id}`}
+            <SlotReadStatus
+              {screen}
+              screens={project.screens}
+              symbols={project.symbols}
+              equipmentContext={readContext.equipmentContext}
+              alert={false}
+              inline
+            />
+          {/key}
+        {/if}
         {#if mode === "edit" && showReferences && references.length}
           <button
             class="references-toggle"
@@ -4658,6 +4672,7 @@
     box-shadow: 0 3px 12px #316e8414;
   }
   .status-row {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 8px;
