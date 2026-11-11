@@ -3334,6 +3334,12 @@
     >
   </div>
   <div class="header-status">
+    {#if mode === "edit"}<span
+        class="selection-count"
+        title="Ctrl / ⌘ / Shift + クリックで選択を追加・解除"
+        >{selectedIds.length} 件選択{#if hiddenSelectionCount}（非表示 {hiddenSelectionCount}
+          件）{/if}</span
+      >{/if}
     <div
       class="save-state"
       data-testid="save-state"
@@ -3418,11 +3424,7 @@
     </Menu>
   </div>
 </header>
-<EditToolbar
-  groups={mode === "edit" ? editToolbarGroups : []}
-  selectionCount={selectedIds.length}
-  {hiddenSelectionCount}
->
+<EditToolbar groups={mode === "edit" ? editToolbarGroups : []}>
   {#snippet modes()}
     <div class="mode-tools" role="group" aria-label="表示の操作">
       {#if mode === "preview"}<button
@@ -4433,6 +4435,12 @@
     gap: 6px;
     min-width: 0;
     margin-left: auto;
+  }
+  .selection-count {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--banto-text-muted);
+    white-space: nowrap;
   }
   .save-label {
     flex: 0 1 auto;

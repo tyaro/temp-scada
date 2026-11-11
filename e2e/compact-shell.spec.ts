@@ -197,6 +197,7 @@ test("the header row holds mode and save state so the 1440px toolbar stays on on
     header.getByRole("group", { name: "表示モード", exact: true }),
   ).toBeVisible();
   await expect(header.getByTestId("save-state")).toBeVisible();
+  await expect(header).toContainText("0 件選択");
   const height = async (selector: string) =>
     (await page.locator(selector).boundingBox())!.height;
   expect(await height(".app-header")).toBeLessThanOrEqual(36);
