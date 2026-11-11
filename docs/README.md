@@ -57,6 +57,7 @@ docs/
 - [SCADA フロントエンド UX 設計](design/editor/frontend-ux-design.md)
 - [SCADA Designer UI 改訂提案](design/editor/designer-ui-revision.md)
 - [サイドチャット試作の Designer 適用レビュー](design/editor/prototype-design-review.md)
+- [UX/UI 精査（2026-11-11）](design/editor/ux-review-2026-11-11.md)
 - [Designerメニューの可用高さとスクロール](design/editor/designer-menu-viewport.md)
 - [プロパティパネルの浮動化・初回設計](design/editor/inspector-floating-design.md)
 - [左作業パネルの浮動配置](design/editor/sidebar-floating-design.md)
