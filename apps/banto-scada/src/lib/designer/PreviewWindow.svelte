@@ -292,7 +292,7 @@
     flex-shrink: 0;
     min-height: 34px;
     border-bottom: 1px solid var(--banto-border);
-    background: var(--banto-bg-subtle, var(--banto-bg));
+    background: var(--banto-surface-subtle);
   }
   button {
     color: inherit;
