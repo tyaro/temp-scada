@@ -558,7 +558,7 @@ C5-5bの実装で次を定めた。
 10. **slotがEmptyの理由**: 記録操作画面は「未接続」だけとし、理由は記録管理画面に出す。propを増やさない。
 11. **local-v2の`mode`**: `"native"`を加え、native portはlocal-v2で元replyを配送する。coordinator-v2（test-only）は製品で使わない。
 12. **長時間のrootの容量**: 上限に達したら`capacity`で止め、再読込で回復する。回収はC6で扱う。（C5-5bで、終端を得た元call・observationの予約は返すことにした。§7.2「C5-5bの実装で次を定めた」）
-    - **評価と訂正（2026-11-11ユーザー判断、C6）**: 「再読込で回復」は画面側（台帳・受信器・coordinatorのID）だけに当てはまる。hostのrootの枠は記録runごとで、再読込では戻らない。rootの枠は操作の回数に比例して使われ（mutation leaseで1 rootあたり約1300 workflow）、applyが成功するとrootは入れ替わるので、hostのID回収と自動の入替えは入れない。hostの`capacity`は記録の停止と再開（新しいroot）で回復し、owner付け替えはProjectが変わったときだけ使える。画面はこの違いを案内する。時間に比例して減っていた画面のobservation attemptは回収した（[observation台帳](historian-recording-wire-observation-ledger.md)§6）。使用済みIDを再使用しない契約は変えない。
+    - **評価と訂正（2026-11-11ユーザー判断、C6）**: 「再読込で回復」は画面側（台帳・受信器・coordinatorのID）だけに当てはまる。hostのrootの枠は記録runごとで、再読込では戻らない。registryのworkflowは1 rootにつき1件で（終わっても解放しない）、rootの枠はその1件の操作とやり直しの分しか使われないので、hostのID回収と自動の入替えは入れない。hostの`capacity`は記録の停止と再開（新しいroot）で回復し、owner付け替えはProjectが変わったときだけ使える。画面はこの違いを案内する。時間に比例して減っていた画面のobservation attemptは回収した（[observation台帳](historian-recording-wire-observation-ledger.md)§6）。使用済みIDを再使用しない契約は変えない。
 13. **再login後の回収**: C5-5では扱わず、5と一緒に後続で扱う。（C5-7で実装。CallInspectionではなくhostの記録から回収する）
 
 ## 9. 実装順
