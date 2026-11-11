@@ -210,10 +210,8 @@ test("crop draft is explicit, invalid preview disappears, Escape and target tran
     0,
   );
   await button(p, "表示プレビュー").click();
-  await expect(
-    p.getByRole("dialog", { name: "未適用の入力があります", exact: true }),
-  ).toBeVisible();
-  await button(p, "キャンセル").click();
+  // 離れたら確定: 不正な値は確認なしで止まり、入力は残る
+  await expect(p.getByRole("dialog")).toHaveCount(0);
   await expect(x).toHaveValue("50");
   await x.press("Escape");
   await expect(x).toHaveValue("0");
@@ -248,7 +246,6 @@ test("crop draft can explicitly apply before replacement without invalidating th
     .locator(".sheet [data-image-frame]")
     .getAttribute("href");
   await replace(p, await source(p, "image/png", true));
-  await button(p, "適用して続行").click();
   await expect(p.locator(".sheet [data-image-frame]")).not.toHaveAttribute(
     "href",
     oldHref!,

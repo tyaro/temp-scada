@@ -182,25 +182,14 @@ test("same bytes keep declaration and history; invalid images and locked placeme
   await button(p, "ロック：image · 0").click();
   await expect(button(p, "画像を差し替え…")).toBeDisabled();
 });
-test("unapplied name is protected before replacement and continues after explicit apply", async ({
+test("unapplied name is applied on leave before replacement continues", async ({
   page: p,
 }) => {
   const { id, next } = await start(p),
     oldHref = await picture(p, id).getAttribute("href");
   await p.getByLabel("配置名", { exact: true }).fill("更新後の写真");
   await replace(p, next);
-  const prompt = p.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await expect(prompt).toBeVisible();
-  await button(p, "キャンセル").click();
-  await expect(picture(p, id)).toHaveAttribute("href", oldHref!);
-  await expect(p.getByLabel("配置名", { exact: true })).toHaveValue(
-    "更新後の写真",
-  );
-  await replace(p, next);
-  await button(p, "適用して続行").click();
+  // 離れたら確定: 名前は確認なしで適用されてから差し替えが続く
   await expect(picture(p, id)).not.toHaveAttribute("href", oldHref!);
   expect((await saved(p)).project.screens[0].objects[0].name).toBe(
     "更新後の写真",

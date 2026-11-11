@@ -39,16 +39,10 @@ test("shared definition context opening keeps the canvas, library selection and 
   await page.keyboard.press("Escape");
   await expect(row(page, "バルブ")).toBeFocused();
   await action(page, "バルブ", "共有定義を編集（すべての参照配置に反映）");
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
-    "給水工程",
-  );
-  await expect(row(page, "ポンプ")).toHaveAttribute("aria-pressed", "true");
-  await action(page, "バルブ", "共有定義を編集（すべての参照配置に反映）");
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 確認なしで画面名を適用してから定義の編集へ入る。
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("img", { name: "バルブ", exact: true }),
   ).toBeVisible();
@@ -118,7 +112,7 @@ test("duplicate and delete act on the context definition without redirecting sha
   ).toHaveLength(0);
 });
 
-test("context placement uses the visible canvas center, draft protection and one-step history", async ({
+test("context placement uses the visible canvas center, pending draft application and one-step history", async ({
   page,
 }) => {
   await start(page);
@@ -141,10 +135,10 @@ test("context placement uses the visible canvas center, draft protection and one
   });
   await page.getByLabel("画面名", { exact: true }).fill("未適用");
   await action(page, "バルブ", "現在の画面へ配置");
-  await page
-    .getByRole("dialog", { name: "未適用の入力があります" })
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  // 離れたら確定: 画面名は確認なしで適用され、配置とは別の履歴になる。
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   const project = await save(page);
   const valve = project.symbols.find((d: any) => d.name === "バルブ");
   const placed = project.screens[0].objects.at(-1);
@@ -155,13 +149,13 @@ test("context placement uses the visible canvas center, draft protection and one
   await button(page, "元に戻す").click();
   await expect(
     page
-      .getByRole("img", { name: "循環設備（静的サンプル）", exact: true })
+      .getByRole("img", { name: "未適用", exact: true })
       .locator("[data-symbol-id]"),
   ).toHaveCount(2);
   await button(page, "やり直す").click();
   await expect(
     page
-      .getByRole("img", { name: "循環設備（静的サンプル）", exact: true })
+      .getByRole("img", { name: "未適用", exact: true })
       .locator(`[data-object-id="${placed.id}"]`),
   ).toBeVisible();
 });

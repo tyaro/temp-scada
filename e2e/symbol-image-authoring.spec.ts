@@ -236,7 +236,7 @@ for (const replacing of [false, true])
     await expect(button(p, "元に戻す")).toBeDisabled();
   });
 
-test("definition crop draft survives cancelled navigation and does not submit during IME", async ({
+test("definition crop draft does not submit during IME and is applied on leaving", async ({
   page: p,
 }) => {
   const bytes = await start(p);
@@ -245,12 +245,6 @@ test("definition crop draft survives cancelled navigation and does not submit du
   const crop = p.getByRole("form", { name: "画像のトリミング", exact: true });
   const width = crop.locator('[name="cropWidth"]');
   await width.fill("60");
-  await button(p, "画面へ戻る").click();
-  await expect(
-    p.getByRole("dialog", { name: "未適用の入力があります", exact: true }),
-  ).toBeVisible();
-  await button(p, "キャンセル").click();
-  await expect(width).toHaveValue("60");
   await width.dispatchEvent("compositionstart");
   await width.fill("40");
   await width.dispatchEvent("keydown", { key: "Enter", isComposing: true });
@@ -261,4 +255,11 @@ test("definition crop draft survives cancelled navigation and does not submit du
   await button(p, "元に戻す").click();
   await expect(mainCanvas(p).locator("[data-image-crop]")).toHaveCount(0);
   await expect(images(p)).toHaveCount(2);
+  // 離れたら確定: 書きかけの切出しは確認なしで適用してから画面へ戻る。
+  await width.fill("30");
+  await button(p, "画面へ戻る").click();
+  await expect(
+    p.getByRole("dialog", { name: "未適用の入力があります", exact: true }),
+  ).toHaveCount(0);
+  await expect(button(p, "元に戻す")).toBeEnabled();
 });

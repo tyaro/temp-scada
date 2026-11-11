@@ -129,18 +129,8 @@ test("lock toggles protect drafts and invalid input; apply and lock are separate
     .click();
   const name = page.getByLabel("配置名", { exact: true });
   await name.fill("保持する名前");
+  // 離れたら確定: 名前は確認なしで適用されてからロックされ、履歴は2手になる
   await button(page, "ロック：rectangle · 3").click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(name).toHaveValue("保持する名前");
-  await expect(name).toBeEnabled();
-  await button(page, "ロック：rectangle · 3").click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
   await expect(name).toHaveValue("保持する名前");
   await expect(name).toBeDisabled();
   await button(page, "元に戻す").click();
@@ -151,9 +141,6 @@ test("lock toggles protect drafts and invalid input; apply and lock are separate
   await expect(button(page, "元に戻す")).toBeDisabled();
   await page.getByLabel("width", { exact: true }).fill("-1");
   await button(page, "ロック：rectangle · 3").click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
   await expect(name).toBeEnabled();
   await expect(page.getByLabel("width", { exact: true })).toHaveValue("-1");
   await expect(button(page, "ロック：rectangle · 3")).toHaveAttribute(

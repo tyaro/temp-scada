@@ -93,7 +93,7 @@ for (const theme of ["light", "dark"] as const)
     await expect(button(page, "元に戻す")).toBeDisabled();
     await button(page, "やり直す").click();
   });
-test("invalid values, IME and other pending forms preserve drafts and selection guards", async ({
+test("invalid values, IME and other pending forms apply together on leaving", async ({
   page,
 }) => {
   await start(page);
@@ -102,26 +102,33 @@ test("invalid values, IME and other pending forms preserve drafts and selection 
   await apply(page).click();
   await expect(size(page)).toHaveValue("513");
   await expect(button(page, "元に戻す")).toBeDisabled();
+  // 不正な値はダイアログなしで止まり、選択は変わらない。
+  await row(
+    page,
+    sample.screens[0].objects.find((o) => o.shape.type !== "text")!.id,
+  ).click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
+  await expect(size(page)).toHaveValue("513");
   await size(page).fill("18");
   await size(page).dispatchEvent("compositionstart");
   await size(page).press("Enter");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await size(page).dispatchEvent("compositionend");
+  await page.getByLabel("適用する不透明度（%）", { exact: true }).fill("50");
+  // 離れたら確定: 別のフォームの書きかけも確認なしで一緒に適用される。
   await row(
     page,
     sample.screens[0].objects.find((o) => o.shape.type !== "text")!.id,
   ).click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(size(page)).toHaveValue("18");
-  await page.getByLabel("適用する不透明度（%）", { exact: true }).fill("50");
-  await apply(page).click();
-  await expect(prompt).toBeVisible();
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(button(page, "元に戻す")).toBeDisabled();
-  await page.getByLabel("適用する不透明度（%）", { exact: true }).fill("");
-  await size(page).press("Enter");
-  await expect(size(page)).toHaveValue("");
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
+  const result = await saved(page);
+  expect(
+    result.screens[0].objects.find((o: any) => o.id === ids[0]),
+  ).toMatchObject({ opacity: 0.5, shape: { style: { fontSize: 18 } } });
 });
 test("mixed non-Text and locked selections cannot be partially styled, hidden Text stays hidden", async ({
   page,

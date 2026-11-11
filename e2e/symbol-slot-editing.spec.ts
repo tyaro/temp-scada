@@ -122,8 +122,9 @@ test("slot drafts survive duplicate rejection, other row actions and IME, then u
     name: "未適用の入力があります",
     exact: true,
   });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 不正（重複）な宣言はダイアログなしで止まり、書きかけが残る。
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByTestId("project-status")).toContainText("重複");
   await expect(pressure.getByLabel("slot名", { exact: true })).toHaveValue(
     "running",
   );
@@ -137,6 +138,7 @@ test("slot drafts survive duplicate rejection, other row actions and IME, then u
   await button(page, "元に戻す").click();
   await expect(row).toBeVisible();
   await create.getByLabel("slot名", { exact: true }).fill("pending");
+  // 新規作成（読取slotを追加）の書きかけは確認する。
   await button(page, "画面へ戻る").click();
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
@@ -164,9 +166,7 @@ test("applying a rename before delayed Text insertion never recreates the old de
     name: "未適用の入力があります",
     exact: true,
   });
-  await dialog
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(dialog).toHaveCount(0);
   await expect(pressure).toHaveCount(0);
   const enabled = panel.getByRole("region", {
     name: "slot宣言 enabled",

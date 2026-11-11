@@ -31,16 +31,6 @@ for (const theme of ["light", "dark"] as const)
     );
     await expect(text).toHaveAttribute("fill", "#d97706");
     await colors.getByLabel("取得不能の文字色").fill("#2563eb");
-    // Another operation must preserve the color draft.
-    await page.getByRole("button", { name: "画面へ戻る", exact: true }).click();
-    const prompt = page.getByRole("dialog", {
-      name: "未適用の入力があります",
-      exact: true,
-    });
-    await expect(prompt).toBeVisible();
-    await prompt
-      .getByRole("button", { name: "キャンセル", exact: true })
-      .click();
     await expect(colors.getByLabel("取得不能の文字色")).toHaveValue("#2563eb");
     await colors
       .getByRole("button", { name: "状態別の文字色を適用", exact: true })
@@ -66,13 +56,10 @@ for (const theme of ["light", "dark"] as const)
       "running",
     );
     await expect(text).toHaveAttribute("fill", "#2563eb");
-    // Two dirty forms must not partly apply when the first one removes bool eligibility.
+    // 離れたら確定: Two dirty forms must not partly apply when the first one removes bool eligibility.
     await form.getByLabel("表示元", { exact: true }).selectOption("current");
     await colors.getByLabel("状態別の文字色を使用").selectOption("disabled");
     await page.getByRole("button", { name: "画面へ戻る", exact: true }).click();
-    await prompt
-      .getByRole("button", { name: "適用して続行", exact: true })
-      .click();
     await expect(
       page
         .getByRole("alert")

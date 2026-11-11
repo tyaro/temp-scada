@@ -130,25 +130,17 @@ test("self and descendant targets are forbidden at hover and drop; root and curr
   await button(page, "元に戻す").click();
   expect((await saved(page)).screens).toEqual(before.screens);
 });
-test("draft cancellation and application preserve the captured folder and independent Undo", async ({
+test("draft application on leave preserves the captured folder and independent Undo", async ({
   page,
 }) => {
   const before = await start(page);
   const name = page.getByLabel("配置名", { exact: true });
   await name.fill("未適用Text");
-  let data = await begin(page, b);
-  await folder(page, c).dispatchEvent("drop", { dataTransfer: data });
-  await guard(page)
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(name).toHaveValue("未適用Text");
-  await expect(button(page, "元に戻す")).toBeDisabled();
-  data = await begin(page, b);
+  // 離れたら確定: 確認なしで名前が適用されてからフォルダーが移る
+  const data = await begin(page, b);
   await folder(page, c).dispatchEvent("drop", { dataTransfer: data });
   await source(page, b).dispatchEvent("dragend", { dataTransfer: data });
-  await guard(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(guard(page)).toHaveCount(0);
   expect(
     (await saved(page)).screens[0].folders.find((f: any) => f.id === b)
       .parentId,
@@ -198,9 +190,7 @@ test("name and icon are the only folder drag source; invalid input blocks commit
   await page.getByLabel("x", { exact: true }).fill("bad");
   const data = await begin(page, b);
   await folder(page, c).dispatchEvent("drop", { dataTransfer: data });
-  await guard(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(guard(page)).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
   await expect(page.getByLabel("x", { exact: true })).toHaveValue("bad");
   await page.getByLabel("x", { exact: true }).press("Escape");

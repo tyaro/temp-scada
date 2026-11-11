@@ -98,7 +98,8 @@ export function createDraftGuard(
         saved.set(control, state(control));
         change();
       },
-      // Tag references are applied explicitly (designer policy), never on leave.
+      // Tag references (designer policy) and forms that create something new
+      // are applied explicitly, never on leave.
       explicit: () =>
         form.hasAttribute("data-explicit-apply") ||
         controls(form).some(
@@ -119,6 +120,11 @@ export function createDraftGuard(
       },
     };
   }
+  function resolvePending() {
+    if ([...dirty].some((form) => registry.get(form)?.explicit()))
+      prompting = true;
+    else void apply();
+  }
   let resolving = false;
   function allow(action: () => void): boolean {
     if (applying) return true;
@@ -131,16 +137,23 @@ export function createDraftGuard(
     }
     if (!dirty.size) return true;
     pending = action;
-    if ([...dirty].some((form) => registry.get(form)?.explicit()))
-      prompting = true;
-    else void apply();
+    resolvePending();
     return false;
   }
   function beforeSubmit(form: HTMLFormElement): boolean {
     if (applying) return true;
     if (pending) return false;
     if ([...dirty].some((item) => item !== form)) {
-      pending = () => {};
+      // Submitting one form also leaves the others: apply all of them together.
+      // A dirty clicked form is applied with the others; a clean one is
+      // submitted again afterwards so the clicked action still happens.
+      const clean = !dirty.has(form);
+      pending = () => {
+        if (clean && form.isConnected) form.requestSubmit();
+      };
+      // Leave this submit event first: the browser ignores requestSubmit() on
+      // a form that is still firing its submit event (microtasks run inside it).
+      setTimeout(resolvePending);
       return false;
     }
     return true;

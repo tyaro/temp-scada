@@ -147,10 +147,8 @@ test("hidden invalid properties reopen for native and model validation", async (
     .getByRole("button", { name: "プロパティを隠す", exact: true })
     .click();
   await page.keyboard.press("Control+s");
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 確認なしで適用を試み、不正なら欄を開いてフォーカスする
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(inspector(page)).toBeVisible();
   await expect(width).toHaveValue("0");
   await expect(width).toBeFocused();
@@ -161,9 +159,6 @@ test("hidden invalid properties reopen for native and model validation", async (
     .getByRole("button", { name: "プロパティを隠す", exact: true })
     .click();
   await page.keyboard.press("Control+s");
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
   await expect(inspector(page)).toBeVisible();
   await expect(page.getByLabel("頂点", { exact: true })).toHaveValue(
     "0,0\n0,0",

@@ -29,7 +29,9 @@ test("favorites keep palette drafts and Project/history unchanged, persist and r
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "text · 5", exact: true })
     .click();
-  await page.getByLabel("テキスト", { exact: true }).fill("保持する入力");
+  // 離れたら確定: ダイアログが出るのはタグ指定（明示適用）の未適用入力のとき
+  const tag = page.getByLabel("表示タグ（外部名）", { exact: true });
+  await tag.fill("pending.tag");
   await selectPanel(page, "部品");
   await page
     .getByRole("searchbox", { name: "部品を検索", exact: true })
@@ -42,9 +44,7 @@ test("favorites keep palette drafts and Project/history unchanged, persist and r
       exact: true,
     }),
   ).toBeVisible();
-  await expect(page.getByLabel("テキスト", { exact: true })).toHaveValue(
-    "保持する入力",
-  );
+  await expect(tag).toHaveValue("pending.tag");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await dock(page)
     .getByRole("button", { name: "お気に入り：四角形を配置", exact: true })

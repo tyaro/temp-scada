@@ -235,7 +235,7 @@ test("drop snaps the center, permits an Alt bypass, and ignores cancelled, exter
   await expect(page.locator(".drop-marker")).toHaveCount(0);
 });
 
-test("deferred drops preserve the chosen point and respect draft cancellation", async ({
+test("deferred drops preserve the chosen point and apply the pending input on leave", async ({
   page,
 }) => {
   await page.goto("/");
@@ -247,26 +247,14 @@ test("deferred drops preserve the chosen point and respect draft cancellation", 
     exact: true,
   });
   const point = await centerAt(page, 400, 300);
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  for (const apply of [false, true]) {
-    const dataTransfer = await beginDrag(page, source);
-    await canvas(page).dispatchEvent("drop", { dataTransfer, ...point });
-    await source.dispatchEvent("dragend", { dataTransfer });
-    await expect(prompt).toBeVisible();
-    await prompt
-      .getByRole("button", {
-        name: apply ? "適用して続行" : "キャンセル",
-        exact: true,
-      })
-      .click();
-    if (!apply)
-      await expect(
-        page
-          .getByRole("img", { name: "プロセス画面", exact: true })
-          .locator("[data-object-id]"),
-      ).toHaveCount(3);
-    await dataTransfer.dispose();
-  }
+  // 離れたら確定: 確認なしで画面名が適用されてから、取得済みの位置へ配置される
+  const dataTransfer = await beginDrag(page, source);
+  await canvas(page).dispatchEvent("drop", { dataTransfer, ...point });
+  await source.dispatchEvent("dragend", { dataTransfer });
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
+  await dataTransfer.dispose();
   await expect(
     page
       .getByRole("img", { name: "配置先の工程", exact: true })

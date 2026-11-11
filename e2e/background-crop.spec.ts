@@ -176,9 +176,10 @@ test("background crop drafts, same-hash and different-hash imports preserve inte
   await page
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 離れたら確定: 書きかけの切り抜きは確認なしで適用され、Undoで戻せる
+  await page.getByRole("button", { name: "編集", exact: true }).click();
   await expect(cropForm(page).locator('[name="cropWidth"]')).toHaveValue("40");
-  await cropForm(page).locator('[name="cropWidth"]').press("Escape");
+  await page.getByRole("button", { name: "元に戻す", exact: true }).click();
   await expect(cropForm(page).locator('[name="cropWidth"]')).toHaveValue("50");
   const other = await pngFixture(page, {
     width: 400,
@@ -283,7 +284,7 @@ test("a background crop draft can apply before same-original import without canc
   await page
     .getByLabel("背景画像を取り込む", { exact: true })
     .setInputFiles({ name: "same.png", mimeType: "image/png", buffer: bytes });
-  await page.getByRole("button", { name: "適用して続行", exact: true }).click();
+  // 離れたら確定: 確認なしで切り抜きが適用されてから取込が続く
   await expect(
     page.getByLabel("背景画像を取り込む", { exact: true }),
   ).toBeEnabled();

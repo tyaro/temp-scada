@@ -137,14 +137,12 @@ test("display-source draft guards navigation and metadata cut preserves clipboar
   const source = form.getByRole("combobox", { name: "表示元", exact: true });
   await source.selectOption("@name");
   await button(page, "画面へ戻る").click();
-  const dialog = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 離れたら確定: 表示元は確認なしで適用されてから画面へ戻る。定義へ入り直して確かめる
+  await selectPanel(page, "プロジェクト");
+  await button(page, "定義を編集").click();
+  await selectPanel(page, "レイヤー");
+  await page.locator(`button[data-layer-id="${object.id}"]`).click();
   await expect(source).toHaveValue("@name");
-  await form.getByRole("button", { name: "変更を適用", exact: true }).click();
   await expect(
     canvas(page).locator('[data-equipment-property="name"]'),
   ).toHaveCount(2);

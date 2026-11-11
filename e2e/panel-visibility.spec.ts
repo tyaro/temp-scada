@@ -94,10 +94,10 @@ test("hidden invalid screen settings reveal the inspector before validation focu
   await selectPanel(page, "部品");
   await menu(page, "補助パネルをすべて隠す");
   await page.keyboard.press("Control+s");
-  await page
-    .getByRole("dialog", { name: "未適用の入力があります" })
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 確認なしで適用を試み、不正なら隠れた Inspector を開いて欄にフォーカスする
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(inspector(page)).toBeVisible();
   await expect(inspector(page).locator(".screen-settings")).toBeVisible();
   await expect(page.getByLabel("画面の幅", { exact: true })).toBeFocused();

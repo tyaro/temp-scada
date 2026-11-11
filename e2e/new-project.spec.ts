@@ -62,7 +62,7 @@ test("new blank project is an editable clean baseline, exports current schema an
   await expect(canvas.locator("[data-object-id]")).toHaveCount(0);
 });
 
-test("new-project cancellation preserves drafts and selection; applying input still requires content replacement", async ({
+test("new-project applies the pending input on leave and still requires content replacement", async ({
   page,
 }) => {
   await page.goto("/");
@@ -75,16 +75,8 @@ test("new-project cancellation preserves drafts and selection; applying input st
   const color = page.getByLabel(/^(?:色|塗りの色)$/, { exact: true });
   await color.fill("#aabbcc");
   await page.keyboard.press("Control+n");
-  await expect(draft(page)).toBeVisible();
-  await draft(page)
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(color).toHaveValue("#aabbcc");
-  await expect(rectangle).toHaveAttribute("aria-pressed", "true");
-  await page.keyboard.press("Control+n");
-  await draft(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 未適用の入力の確認は出ず、適用してから内容の置き換え確認が出る
+  await expect(draft(page)).toHaveCount(0);
   await expect(replacement(page)).toBeVisible();
   await replacement(page)
     .getByRole("button", { name: "キャンセル", exact: true })
@@ -132,9 +124,10 @@ test("Ctrl+O validates the selected file before touching a draft; chooser cancel
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(sample)),
   });
-  await expect(draft(page)).toBeVisible();
-  await draft(page)
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
+  // 離れたら確定: 未適用の入力の確認は出ず、適用後の変更に対する置き換え確認が出る
+  await expect(draft(page)).toHaveCount(0);
+  await replacement(page)
+    .getByRole("button", { name: "破棄して開く", exact: true })
     .click();
   await expect(name).toHaveValue("プロセス画面");
   await expect(state(page)).toContainText("読込後の変更なし");

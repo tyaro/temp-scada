@@ -38,6 +38,7 @@
     <form
       use:drafts.track={{ slotName: "", slotType: "number" }}
       data-editor-form="symbol-slot"
+      data-explicit-apply
       data-slot-action="create"
       data-symbol-id={definition.id}
       data-target-key={`${generation}:${definition.id}`}

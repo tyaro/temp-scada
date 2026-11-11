@@ -331,6 +331,7 @@
         <form
           use:drafts.track={values}
           data-editor-form="equipment"
+          data-explicit-apply={selected ? undefined : ""}
           data-equipment-id={selected?.id ?? ""}
           data-copy-equipment-id={copySourceId}
           data-target-key={`${generation}:${project.manifest.projectId}`}

@@ -102,17 +102,14 @@ for (const theme of ["light", "dark"] as const)
     await page
       .getByRole("button", { name: "関連機器の読取詳細を開く", exact: true })
       .click();
-    await page
-      .getByRole("dialog", { name: "未適用の入力があります", exact: true })
-      .getByRole("button", { name: "適用して続行", exact: true })
-      .click();
+    // 離れたら確定: 関連付けは確認なしで適用されてから読取詳細が開く
     const window = page.locator(`[data-preview-popup="${item.id}"]`);
     await expect(
       window.locator('[data-equipment-slot="pressure"]'),
     ).toHaveAttribute("data-slot-state", "unassigned");
     await expect(window).toContainText("PT-901");
   });
-test("structural draft survives cancel, discards correctly and applies as one Undo; invalid roles retain input", async ({
+test("structural draft applies on leave and undoes as one step; invalid roles retain input", async ({
   page,
 }) => {
   const library = await start(page),
@@ -128,22 +125,15 @@ test("structural draft survives cancel, discards correctly and applies as one Un
     .click();
   await editor.getByLabel("slot名", { exact: true }).last().fill("temperature");
   await library.getByRole("button", { name: "機器一覧", exact: true }).click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(editor.getByLabel("slot名", { exact: true }).last()).toHaveValue(
-    "temperature",
-  );
-  await library.getByRole("button", { name: "機器一覧", exact: true }).click();
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  // 離れたら確定: 書きかけのslotは確認なしで適用される（破棄の経路は無く、Undoで戻す）
   await library.getByRole("button", { name: "機器種別", exact: true }).click();
   await editor
     .getByLabel("編集する機器種別", { exact: true })
     .selectOption(sample.equipmentTypes[0].id);
+  await expect(editor.locator("[data-equipment-type-slot]")).toHaveCount(
+    initialRows + 1,
+  );
+  await page.getByRole("button", { name: "元に戻す", exact: true }).click();
   await expect(editor.locator("[data-equipment-type-slot]")).toHaveCount(
     initialRows,
   );
@@ -177,14 +167,6 @@ test("structural draft survives cancel, discards correctly and applies as one Un
     .last()
     .click();
   await library.getByRole("button", { name: "機器一覧", exact: true }).click();
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(editor.locator("[data-equipment-type-slot]")).toHaveCount(
-    initialRows,
-  );
-  await library.getByRole("button", { name: "機器一覧", exact: true }).click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
   expect((await saved(page)).equipmentTypes[0].slots).toHaveLength(initialRows);
 });
 
@@ -218,15 +200,12 @@ test("empty custom kind can be renamed and deleted with Undo, and IME does not s
   await role.dispatchEvent("compositionstart");
   await role.press("Enter");
   await role.dispatchEvent("compositionend");
-  await library.getByRole("button", { name: "機器一覧", exact: true }).click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await expect(prompt).toBeVisible();
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
+  // 離れたら確定: 確認での破棄は無いため、書きかけの行を消してから離れる
+  await editor
+    .getByRole("button", { name: "slotを削除", exact: true })
+    .last()
     .click();
+  await library.getByRole("button", { name: "機器一覧", exact: true }).click();
   await library.getByRole("button", { name: "機器種別", exact: true }).click();
   await editor.getByLabel("編集する機器種別", { exact: true }).selectOption(id);
   await expect(editor.locator("[data-equipment-type-slot]")).toHaveCount(0);
@@ -246,7 +225,7 @@ test("empty custom kind can be renamed and deleted with Undo, and IME does not s
   ).toEqual([]);
 });
 
-test("immediate navigation after a structural change cannot drop the draft, and cancelling type selection restores the selected option", async ({
+test("immediate navigation after a structural change cannot drop the draft, and changing type selection applies it", async ({
   page,
 }) => {
   const library = await start(page),
@@ -265,21 +244,16 @@ test("immediate navigation after a structural change cannot drop the draft, and 
       .find((button) => button.textContent?.trim() === "機器一覧")!
       .click();
   });
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 離れたら確定: 直後に離れても書きかけは落ちない。slot名が空で不正なので離れずに止まる
   await expect(editor.locator("[data-equipment-type-slot]")).toHaveCount(
     initialRows + 1,
   );
+  await editor.getByLabel("slot名", { exact: true }).last().fill("temperature");
   await selector.selectOption("");
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(selector).toHaveValue(sample.equipmentTypes[0].id);
-  await selector.selectOption("");
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
   await expect(selector).toHaveValue("");
   await expect(editor.locator("[data-equipment-type-slot]")).toHaveCount(0);
+  await selector.selectOption(sample.equipmentTypes[0].id);
+  await expect(editor.locator("[data-equipment-type-slot]")).toHaveCount(
+    initialRows + 1,
+  );
 });

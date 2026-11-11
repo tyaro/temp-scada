@@ -63,22 +63,16 @@ test("screen background is staged, undoable and persistent while themes, objects
   await expect(page.locator("[data-grid]")).toHaveCount(0);
 });
 
-test("new screens start white and screen switching protects pending background input", async ({
+test("new screens start white and screen switching applies pending background input", async ({
   page,
 }) => {
   await start(page);
   await page.getByLabel("画面の背景色", { exact: true }).fill("#fff1f2");
   await button(page, "画面を追加").click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(page.getByLabel("画面の背景色", { exact: true })).toHaveValue(
-    "#fff1f2",
-  );
-  await expect(paper(page)).toHaveAttribute("fill", "#0b1220");
-  await button(page, "画面を追加").click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 確認なしで元の画面の背景として適用され、新しい画面へ移る。
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(paper(page)).toHaveAttribute("fill", "#ffffff");
   await chooseTheme(page, "dark");
   await selectPanel(page, "部品");
@@ -97,10 +91,10 @@ test("new screens start white and screen switching protects pending background i
   await button(page, "選択解除").click();
   await page.getByLabel("画面の背景色", { exact: true }).fill("#ff0000");
   await button(page, "表示プレビュー").click();
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
-  await expect(paper(page)).toHaveAttribute("fill", "#ffffff");
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
+  await expect(paper(page)).toHaveAttribute("fill", "#ff0000");
 });
 
 test("invalid backgrounds and the previous schema leave the current project intact", async ({

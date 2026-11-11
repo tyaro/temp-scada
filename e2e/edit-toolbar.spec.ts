@@ -90,21 +90,15 @@ test("toolbar alignment and menu alignment share draft protection and one-step h
           return { x: m.e, y: m.f };
         }),
       );
-  const before = await positions();
   await page.getByLabel("移動量 X", { exact: true }).fill("10");
   await menu(page, "補助パネルをすべて隠す");
+  // 離れたら確定: 書きかけの移動量は確認なしで適用されてから左揃えになる
   await button(page, "左揃え").click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  expect(await positions()).toEqual(before);
-  await button(page, "左揃え").click();
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
   const aligned = await positions();
   expect(aligned[0].x).toBe(aligned[1].x);
   await button(page, "元に戻す").click();
-  expect(await positions()).toEqual(before);
+  const applied = await positions();
+  expect(applied).not.toEqual(aligned);
   await page
     .getByRole("menubar")
     .getByRole("menuitem", { name: "編集", exact: true })
@@ -112,7 +106,7 @@ test("toolbar alignment and menu alignment share draft protection and one-step h
   await page.getByRole("menuitem", { name: "左揃え", exact: true }).click();
   expect(await positions()).toEqual(aligned);
   await button(page, "元に戻す").click();
-  expect(await positions()).toEqual(before);
+  expect(await positions()).toEqual(applied);
 });
 
 test("toolbar keyboard navigation skips unavailable actions and preserves editor inputs", async ({

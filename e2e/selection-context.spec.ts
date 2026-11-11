@@ -81,7 +81,7 @@ test("canvas and layer context menus keep multiple selection and share toolbar c
 });
 
 for (const source of ["canvas", "layer"])
-  test(`right-clicking an unselected ${source} target resolves drafts before changing selection`, async ({
+  test(`right-clicking an unselected ${source} target applies drafts before changing selection`, async ({
     page,
   }) => {
     await edit(page);
@@ -93,26 +93,10 @@ for (const source of ["canvas", "layer"])
       source === "canvas"
         ? svg(page).locator("[data-object-id]").nth(1)
         : list(page).getByRole("button", { name: "ellipse · 4", exact: true });
-    const prompt = page.getByRole("dialog", {
-      name: "未適用の入力があります",
-      exact: true,
-    });
     await target.click({ button: "right" });
-    await expect(prompt).toBeVisible();
-    await expect(menu(page, "ellipse · 4")).toHaveCount(0);
-    await prompt
-      .getByRole("button", { name: "キャンセル", exact: true })
-      .click();
     await expect(
-      list(page).getByRole("button", { name: "rectangle · 3", exact: true }),
-    ).toHaveAttribute("aria-pressed", "true");
-    await expect(
-      page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
-    ).toHaveValue("#aabbcc");
-    await target.click({ button: "right" });
-    await prompt
-      .getByRole("button", { name: "適用して続行", exact: true })
-      .click();
+      page.getByRole("dialog", { name: "未適用の入力があります" }),
+    ).toHaveCount(0);
     await expect(menu(page, "ellipse · 4")).toBeVisible();
     await expect(
       list(page).getByRole("button", { name: "ellipse · 4", exact: true }),

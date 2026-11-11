@@ -47,8 +47,8 @@ test("range selection commits a focused number before starting, keeps invalid in
     name: "未適用の入力があります",
     exact: true,
   });
-  await expect(prompt).toBeVisible();
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 不正な値はダイアログなしで止まり、選択は変わらない。
+  await expect(prompt).not.toBeVisible();
   await expect(page.getByLabel("x", { exact: true })).toHaveValue("NaN");
   await page.getByLabel("x", { exact: true }).press("Escape");
   await page.getByLabel("x", { exact: true }).dispatchEvent("compositionstart");

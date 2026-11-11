@@ -112,15 +112,14 @@ test("mode drafts preserve fill, disabled color never corrupts other properties,
   expect(await paints(svgSymbol(canvas(page), placements[1].id))).toEqual(
     expectedPaints,
   );
+  // 離れたら確定: 別の配置を選ぶと未適用のモードが確認なしで適用される。
   await row(page, placements[0].id).click();
-  await prompt(page)
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(mode(page)).toHaveValue("monochrome");
-  await modeApply(page).click();
+  await expect(prompt(page)).toHaveCount(0);
   expect(await paints(svgSymbol(canvas(page), placements[1].id))).toEqual(
     expectedPaints.map(() => placements[1].fill),
   );
+  await row(page, placements[1].id).click();
+  await expect(mode(page)).toHaveValue("monochrome");
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
   ).toBeEnabled();
@@ -157,9 +156,6 @@ test("common color needs explicit monochrome conversion and undoes mode plus col
   });
   await expect(apply).toBeDisabled();
   await row(page, placements[2].id).click();
-  await prompt(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
   await expect(prompt(page)).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
   expect(await paints(svgSymbol(canvas(page), placements[1].id))).toEqual(
@@ -186,9 +182,7 @@ test("mode and object drafts apply together only after validation, without impli
   await mode(page).selectOption("definition");
   await page.getByLabel("配置名", { exact: true }).fill("配色を確認する配置");
   await row(page, placements[1].id).click();
-  await prompt(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(prompt(page)).toHaveCount(0);
   let result = await exported(page);
   expect(
     result.screens[0].objects.find((o: any) => o.id === placements[0].id),
@@ -204,9 +198,7 @@ test("mode and object drafts apply together only after validation, without impli
   await mode(page).selectOption("definition");
   await page.getByLabel("width", { exact: true }).fill("0");
   await row(page, placements[1].id).click();
-  await prompt(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(prompt(page)).toHaveCount(0);
   await expect(prompt(page)).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
   expect(await paints(svgSymbol(canvas(page), placements[0].id))).toEqual(
@@ -326,22 +318,19 @@ test("native same/cross-project clipboard and screen duplication preserve mode a
     paintedObjects(sample.symbols[0]),
   );
 });
-test("file menu opens the color sample through existing draft protection", async ({
+test("file menu opens the color sample after applying a pending draft", async ({
   page,
 }) => {
   await start(page, minimal);
   await row(page, minimal.screens[0].objects[0].id).click();
   await page.getByLabel("配置名", { exact: true }).fill("保持する入力");
   await fileCommand(page, "Symbol配色サンプルを開く");
-  await prompt(page)
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(page.getByLabel("配置名", { exact: true })).toHaveValue(
-    "保持する入力",
-  );
-  await fileCommand(page, "Symbol配色サンプルを開く");
-  await prompt(page)
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
+  // 離れたら確定: 確認なしで名前を適用してからサンプルを開く。
+  await expect(prompt(page)).toHaveCount(0);
+  // 適用した名前は未書き出しの変更なので、置き換えの確認が続く。
+  await page
+    .getByRole("dialog", { name: "Project を置き換えますか" })
+    .getByRole("button", { name: "破棄して開く", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: sample.manifest.name, exact: true }),

@@ -57,7 +57,7 @@ test("Project name applies metadata only, preserves drafts, trims no-ops and rou
   await expect(page.locator("h1")).toHaveText("原水供給設備");
   await expect(name).toHaveValue("原水供給設備");
 });
-test("Project draft is guarded across replacement, rejects invalid names and never submits IME Enter", async ({
+test("Project draft rejects invalid names on replacement and never submits IME Enter", async ({
   page,
 }) => {
   await start(page);
@@ -72,19 +72,13 @@ test("Project draft is guarded across replacement, rejects invalid names and nev
     .evaluate((form: HTMLFormElement) => form.requestSubmit());
   await expect(page.locator("h1")).toHaveText(sample.manifest.name);
   await name.dispatchEvent("compositionend");
-  await fileCommand(page, "新しいProject");
-  await draft(page)
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(name).toHaveValue("変換中");
   await name.fill("   ");
   await button(page, "プロジェクト名を適用").click();
   await expect(name).toHaveValue("   ");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await fileCommand(page, "新しいProject");
-  await draft(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 不正な名前はダイアログなしで止まり、置換は行われない。
+  await expect(draft(page)).toHaveCount(0);
   await expect(page.locator("h1")).toHaveText(sample.manifest.name);
   await expect(name).toBeFocused();
   await name.fill("更新名");
@@ -116,15 +110,8 @@ test("F2 reveals the selected placement name, preserves its draft and targets th
   const ellipse = layer(page, "ellipse · 4");
   await ellipse.focus();
   await page.keyboard.press("F2");
-  await draft(page)
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(ellipse).toBeFocused();
-  await expect(placementName(page)).toHaveValue("未確定ポンプ");
-  await page.keyboard.press("F2");
-  await draft(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 確認なしで適用してから対象の名前欄へ移る。
+  await expect(draft(page)).toHaveCount(0);
   await expect(layer(page, "未確定ポンプ")).toBeVisible();
   await expect(ellipse).toHaveAttribute("aria-pressed", "true");
   await expect(placementName(page)).toBeFocused();
@@ -167,11 +154,13 @@ test("F2 uses the focused screen tab instead of the active screen and reveals hi
     .getByRole("button", { name: "画面 2", exact: true })
     .focus();
   await page.keyboard.press("F2");
-  await draft(page)
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  // 離れたら確定: 書きかけの画面名は確認なしで適用される。
+  await expect(draft(page)).toHaveCount(0);
   await expect(name).toBeFocused();
   await expect(name).toHaveValue("画面 2");
+  await expect(
+    tabs.getByRole("button", { name: "未適用工程", exact: true }),
+  ).toBeVisible();
 });
 test("F2 leaves locked and multiple selections unchanged and ignores IME, repeats, modifiers, inputs and preview", async ({
   page,
@@ -225,9 +214,11 @@ test("F1 opens a single existing guide, restores focus, and cannot stack on anot
 }) => {
   await start(page);
   await selectPanel(page, "レイヤー");
-  const rectangle = layer(page, "rectangle · 3");
+  const rectangle = layer(page, "text · 5");
   await rectangle.click();
-  await placementName(page).fill("保持する入力");
+  // 確認のダイアログが出るのは表示タグ（外部名）の書きかけだけ。
+  const tag = page.getByLabel("表示タグ（外部名）", { exact: true });
+  await tag.fill("Pending.Tag");
   await rectangle.focus();
   await page.keyboard.press("F1");
   const help = page.getByRole("dialog", {
@@ -239,7 +230,7 @@ test("F1 opens a single existing guide, restores focus, and cannot stack on anot
   await expect(page.getByRole("dialog")).toHaveCount(1);
   await page.keyboard.press("Escape");
   await expect(rectangle).toBeFocused();
-  await expect(placementName(page)).toHaveValue("保持する入力");
+  await expect(tag).toHaveValue("Pending.Tag");
   await layer(page, "ellipse · 4").click();
   await expect(draft(page)).toBeVisible();
   await page.keyboard.press("F1");

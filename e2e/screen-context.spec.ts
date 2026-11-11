@@ -38,16 +38,9 @@ test("screen context opening preserves the active screen and draft; rename resol
   await page.keyboard.press("Escape");
   await expect(target).toBeFocused();
   await action(page, "画面 2", "名前変更");
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(row(page, "画面 3")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
-    "仕上工程",
-  );
-  await action(page, "画面 2", "名前変更");
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(row(page, "仕上工程")).toBeVisible();
   await expect(row(page, "画面 2")).toHaveAttribute("aria-pressed", "true");
   const input = page.getByLabel("画面名", { exact: true });
@@ -161,7 +154,7 @@ test("screen menus close after project replacement and respect the screen limit"
   await expect(button(page, "元に戻す")).toBeDisabled();
 });
 
-test("screen actions protect object drafts and keep selection when another screen is removed", async ({
+test("screen actions apply object drafts and keep selection when another screen is removed", async ({
   page,
 }) => {
   await start(page);
@@ -173,10 +166,10 @@ test("screen actions protect object drafts and keep selection when another scree
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
   await selectPanel(page, "プロジェクト");
   await action(page, "画面 2", "画面を削除");
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  // 離れたら確定: 図形の書きかけは確認なしで適用される。
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await page
     .getByRole("dialog", { name: "画面を削除しますか" })
     .getByRole("button", { name: "削除", exact: true })
@@ -191,7 +184,7 @@ test("screen actions protect object drafts and keep selection when another scree
   ).toHaveCount(1);
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
-  ).not.toHaveValue("#aabbcc");
+  ).toHaveValue("#aabbcc");
   // 画面名は未選択のときだけ Inspector に出るので、選択を外してから右クリックする。
   await button(page, "選択解除").click();
   const input = page.getByLabel("画面名", { exact: true });
@@ -243,7 +236,7 @@ test("screen tab duplicate keeps its more trigger and clears the previous contex
   await expect(trigger).toBeFocused();
 });
 
-test("screen tab action restores its more trigger after a draft dialog applies and changes revision", async ({
+test("screen tab action restores its more trigger after a draft applies and changes revision", async ({
   page,
 }) => {
   await start(page);
@@ -267,18 +260,10 @@ test("screen tab action restores its more trigger after a draft dialog applies a
     popup.getByRole("menuitem", { name: "画面を複製", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Enter");
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await expect(prompt).toBeVisible();
-  await expect
-    .poll(() => prompt.evaluate((el) => el.contains(document.activeElement)))
-    .toBe(true);
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
-  await expect(prompt).toBeHidden();
+  // 離れたら確定: ダイアログなしで適用され、トリガーに焦点が戻る。
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(
     tabs.getByRole("button", { name: "仕上工程", exact: true }),
   ).toBeVisible();

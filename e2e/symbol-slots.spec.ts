@@ -70,7 +70,7 @@ for (const theme of ["light", "dark"] as const)
     });
     expect(saved.manifest.schemaVersion).toBe("0.37.0");
   });
-test("slot selection is draft protected, applies with Undo and refuses clipboard cut", async ({
+test("slot selection is applied on leaving, undoes in one step and refuses clipboard cut", async ({
   page,
 }) => {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
@@ -84,15 +84,15 @@ test("slot selection is draft protected, applies with Undo and refuses clipboard
   const slot = form.getByRole("combobox", { name: "表示元", exact: true });
   await expect(slot).toHaveValue("running");
   await slot.selectOption("current");
-  await button(page, "画面へ戻る").click();
-  const dialog = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 離れたら確定: 別の図形を選ぶと確認なしで slot の選択が適用される。
+  await page
+    .locator(`button[data-layer-id="${sample.symbols[0].objects[0].id}"]`)
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります", exact: true }),
+  ).toHaveCount(0);
+  await page.locator(`button[data-layer-id="${object.id}"]`).click();
   await expect(slot).toHaveValue("current");
-  await form.getByRole("button", { name: "変更を適用", exact: true }).click();
   await button(page, "元に戻す").click();
   await expect(slot).toHaveValue("running");
   await page.evaluate(() =>

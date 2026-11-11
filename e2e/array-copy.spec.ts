@@ -67,7 +67,7 @@ for (const theme of ["light", "dark"] as const)
     await button(page, "やり直す").click();
     expect((await exported(page)).screens).toEqual(next.screens);
   });
-test("context action resolves pending input before opening and preserves separate Undo", async ({
+test("context action applies pending input before opening and preserves separate Undo", async ({
   page,
 }) => {
   await open(page);
@@ -77,19 +77,7 @@ test("context action resolves pending input before opening and preserves separat
     .locator(`button[data-layer-id="${sample.screens[0].objects[0].id}"]`)
     .click({ button: "right" });
   await page.getByRole("menuitem", { name: "配列複製", exact: true }).click();
-  const pending = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await expect(pending).toBeVisible();
-  await pending
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(dialog(page)).toBeHidden();
-  await button(page, "配列複製").click();
-  await pending
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 未適用の色は確認なしで適用されてから配列複製が開く
   await expect(dialog(page)).toBeVisible();
   await dialog(page)
     .getByRole("button", { name: "配列を複製", exact: true })
@@ -213,3 +201,4 @@ test("definition array uses its own 100-placement budget and edits only shared c
   await button(page, "元に戻す").click();
   expect((await exported(page)).symbols).toEqual(project.symbols);
 });
+// 離れたら確定: 未適用の色は確認なしで適用されてから配列複製が開く

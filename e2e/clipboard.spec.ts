@@ -137,8 +137,12 @@ test("text controls retain native clipboard and Delete; draft cancel preserves m
   await page.keyboard.press("Delete");
   await expect(input).toHaveValue("");
   await expect(shapes(page)).toHaveCount(3);
+  // 離れたら確定: ダイアログが出るのはタグ指定（明示適用）の未適用入力のとき
+  const tag = page.getByLabel("表示タグ（外部名）", { exact: true });
+  await tag.fill("pending.tag");
   await command(page, "切り取り");
   await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(tag).toHaveValue("pending.tag");
   await expect(input).toHaveValue("");
   await expect(shapes(page)).toHaveCount(3);
   await command(page, "コピー");

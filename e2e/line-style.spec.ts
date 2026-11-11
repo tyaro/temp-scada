@@ -213,13 +213,14 @@ test("staged style participates in input protection; cancelled transitions keep 
     "stroke-dasharray",
   );
   await button(page, "表示プレビュー").click();
-  const guard = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await guard.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 離れたら確定: 未適用の線種は確認なしで適用されてからプレビューへ移る
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await button(page, "編集").click();
   await expect(page.getByLabel("線種", { exact: true })).toHaveValue("dotted");
-  await expect(paint(page, a, "polyline")).not.toHaveAttribute(
+  await expect(paint(page, a, "polyline")).toHaveAttribute(
     "stroke-dasharray",
+    "0 12",
   );
-  await button(page, "変更を適用").click();
   await row(page, b).click();
   await expect(page.getByLabel("線種", { exact: true })).toBeDisabled();
   await row(page, a).click({ modifiers: ["Shift"] });

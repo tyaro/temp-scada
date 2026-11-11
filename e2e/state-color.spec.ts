@@ -33,16 +33,20 @@ for (const theme of ["light", "dark"] as const) {
     await expect(paint).toHaveAttribute("stroke", "#d97706");
     await form.getByLabel("配色元Text", { exact: true }).selectOption("");
     await page.getByRole("button", { name: "画面へ戻る", exact: true }).click();
-    await page
-      .getByRole("dialog", { name: "未適用の入力があります", exact: true })
-      .getByRole("button", { name: "キャンセル", exact: true })
-      .click();
+    // 離れたら確定: 確認なしで追従解除が適用され、画面へ戻る。
+    await expect(
+      page.getByRole("dialog", { name: "未適用の入力があります", exact: true }),
+    ).toHaveCount(0);
+    await selectPanel(page, "プロジェクト");
+    await expect(
+      page.getByRole("button", { name: "定義を編集", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "定義を編集", exact: true }).click();
+    await selectPanel(page, "レイヤー");
+    await page.locator(`button[data-layer-id="${line.id}"]`).click();
     await expect(form.getByLabel("配色元Text", { exact: true })).toHaveValue(
       "",
     );
-    await form
-      .getByRole("button", { name: "状態色の追従を適用", exact: true })
-      .click();
     await expect(paint).toHaveAttribute("stroke", line.fill!);
     await page.getByRole("button", { name: "元に戻す", exact: true }).click();
     await expect(paint).toHaveAttribute("stroke", "#d97706");
@@ -81,10 +85,9 @@ for (const theme of ["light", "dark"] as const) {
     await shapePaint.getByLabel("塗り", { exact: true }).selectOption("false");
     await follow.getByLabel("配色元Text", { exact: true }).selectOption("");
     await page.getByRole("button", { name: "画面へ戻る", exact: true }).click();
-    await page
-      .getByRole("dialog", { name: "未適用の入力があります", exact: true })
-      .getByRole("button", { name: "適用して続行", exact: true })
-      .click();
+    await expect(
+      page.getByRole("dialog", { name: "未適用の入力があります", exact: true }),
+    ).toHaveCount(0);
     await expect(follow.getByLabel("配色元Text", { exact: true })).toHaveValue(
       "",
     );

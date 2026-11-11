@@ -107,6 +107,7 @@
       bind:this={form}
       use:drafts.track={{ name: selected?.name ?? "", slots: savedSlots }}
       data-editor-form="equipment-type"
+      data-explicit-apply={selected ? undefined : ""}
       data-type-id={selected?.id ?? ""}
       data-target-key={scope}
       aria-label="機器種別を保存"

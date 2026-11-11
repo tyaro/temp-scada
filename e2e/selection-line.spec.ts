@@ -149,17 +149,13 @@ test("invalid line input blocks other pending forms before any model change", as
     name: "未適用の入力があります",
     exact: true,
   });
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(prompt).toHaveCount(0);
   await expect(prompt).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
   await expect(width(page)).toHaveValue("0");
   await width(page).fill("3");
   await row(page, other.id).click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(prompt).toHaveCount(0);
   const result = await exported(page);
   for (const original of lines)
     expect(

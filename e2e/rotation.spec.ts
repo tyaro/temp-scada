@@ -140,13 +140,9 @@ test("four toolbar turns preserve origin and dimensions; blur normalizes and inv
   await angle(page).press("Enter");
   await expect(angle(page)).toHaveAttribute("aria-invalid", "true");
   await button(page, "左へ90°回転").click();
-  const guard = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await guard
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(angle(page)).toHaveValue("1e");
   await expect(object(page).locator("[data-object-rotation]")).toHaveAttribute(
     "transform",

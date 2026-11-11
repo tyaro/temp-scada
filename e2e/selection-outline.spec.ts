@@ -164,10 +164,8 @@ test("invalid outline drafts block other form changes without partial applicatio
   await width(page).fill("0");
   await page.getByLabel("移動量 X", { exact: true }).fill("4");
   await page.getByRole("button", { name: "まとめて移動", exact: true }).click();
-  await expect(prompt(page)).toBeVisible();
-  await prompt(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 不正な値があると確認なしで止まり、どちらも適用しない。
+  await expect(prompt(page)).toHaveCount(0);
   await expect(shape(page)).toHaveAttribute("stroke-width", "2");
   await expect(
     canvas(page).locator(`[data-object-id="${ids[0]}"]`),
@@ -176,13 +174,37 @@ test("invalid outline drafts block other form changes without partial applicatio
     `translate(${minimal.screens[0].objects[0].x} ${minimal.screens[0].objects[0].y})`,
   );
   await expect(width(page)).toHaveValue("0");
+});
+test("submitting one outline form while another form is dirty applies both without a prompt", async ({
+  page,
+}) => {
+  await start(page);
+  await select(page);
+  await width(page).fill("3");
+  await page.getByLabel("移動量 X", { exact: true }).fill("4");
+  await page.getByRole("button", { name: "まとめて移動", exact: true }).click();
+  await expect(prompt(page)).toHaveCount(0);
+  await expect(shape(page)).toHaveAttribute("stroke-width", "3");
+  await expect(
+    canvas(page).locator(`[data-object-id="${ids[0]}"]`),
+  ).toHaveAttribute(
+    "transform",
+    `translate(${minimal.screens[0].objects[0].x + 4} ${minimal.screens[0].objects[0].y})`,
+  );
+});
+test("leaving an outline draft for another row applies it before the selection changes", async ({
+  page,
+}) => {
+  await start(page);
+  await select(page);
   await width(page).fill("3");
   await row(page, minimal.screens[0].objects[2].id).click();
-  await prompt(page)
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
-  await select(page);
-  await expect(shape(page)).toHaveAttribute("stroke-width", "2");
+  await expect(prompt(page)).toHaveCount(0);
+  await expect(shape(page)).toHaveAttribute("stroke-width", "3");
+  await expect(row(page, minimal.screens[0].objects[2].id)).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 });
 test("locked mixtures disable the whole outline form", async ({ page }) => {
   const project = fixture();

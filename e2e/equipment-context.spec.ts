@@ -97,13 +97,7 @@ test("equipment context action resolves a pending association before opening the
     .selectOption(project.equipment[1].id);
   await row.press("Shift+F10");
   await action(page, "関連機器の台帳設定を開く").click();
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(page.getByLabel("関連付ける機器", { exact: true })).toHaveValue(
-    project.equipment[1].id,
-  );
-  await row.press("Shift+F10");
-  await action(page, "関連機器の台帳設定を開く").click();
-  await page.getByRole("button", { name: "適用して続行", exact: true }).click();
+  // 離れたら確定: 関連付けは確認なしで適用されてから対象の台帳が開く
   await expect(
     page
       .getByRole("form", { name: "機器情報と割付", exact: true })

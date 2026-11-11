@@ -155,13 +155,6 @@ test("pattern kind and fill type preserve drafts; background clearing is explici
   await form(page).getByLabel("模様の太さ", { exact: true }).fill("7");
   await page.getByLabel("配置名", { exact: true }).fill("未適用");
   await row(page, sample.screens[0].objects[1].id).click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
   await expect(node(page).locator("pattern")).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
   await expect(page.getByLabel("配置名", { exact: true })).toHaveValue(
@@ -169,9 +162,6 @@ test("pattern kind and fill type preserve drafts; background clearing is explici
   );
   await form(page).getByLabel("模様の太さ", { exact: true }).fill("4");
   await row(page, sample.screens[0].objects[1].id).click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
   await row(page).click();
   expect(
     (await saved(page)).screens[0].objects[0].shape.paint.fill.paint.background,

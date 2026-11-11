@@ -84,18 +84,8 @@ test("vertical context action resolves color draft separately and keeps one geom
     .locator(`button[data-layer-id="${project.screens[0].objects[0].id}"]`)
     .click({ button: "right" });
   await page.getByRole("menuitem", { name: vertical, exact: true }).click();
-  const dialog = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(color).toHaveValue("#123456");
-  await expect(button(page, "元に戻す")).toBeDisabled();
-  await button(page, vertical).click();
-  await dialog
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 色は確認なしで適用されてから整列が実行される
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   expect((await exported(page)).screens[0].objects[1].y).toBe(150);
   await button(page, "元に戻す").click();
   const colored = await exported(page);

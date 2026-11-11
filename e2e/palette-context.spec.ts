@@ -128,32 +128,19 @@ for (const zoom of [0.25, 1, 4])
     await expect(objects).toHaveCount(4);
   });
 
-test("context placement uses the existing apply/discard/cancel protection", async ({
-  page,
-}) => {
+test("context placement applies pending input on leave", async ({ page }) => {
   await edit(page);
   await button(page, "Rectangle を追加").click();
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
   const objects = page
     .getByRole("img", { name: "プロセス画面", exact: true })
     .locator("[data-object-id]");
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  for (const resolution of ["キャンセル", "適用して続行"]) {
-    await button(page, "操作：バルブ（組込）").click();
-    await menu(page, "バルブ（組込）")
-      .getByRole("menuitem", { name: "現在の画面へ配置", exact: true })
-      .click();
-    await prompt.getByRole("button", { name: resolution, exact: true }).click();
-    if (resolution === "キャンセル") {
-      await expect(objects).toHaveCount(4);
-      await expect(
-        page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
-      ).toHaveValue("#aabbcc");
-    }
-  }
+  // 離れたら確定: 未適用の色は確認なしで適用されてから配置される
+  await button(page, "操作：バルブ（組込）").click();
+  await menu(page, "バルブ（組込）")
+    .getByRole("menuitem", { name: "現在の画面へ配置", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(objects).toHaveCount(5);
   const project = await save(page);
   expect(

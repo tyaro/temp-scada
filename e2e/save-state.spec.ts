@@ -40,7 +40,7 @@ test("content dirty state follows undo/redo and export requests, not revision or
   await button("やり直す").click();
   await expect(state).toContainText("書き出し要求後の変更なし");
 });
-test("unapplied selection input can be cancelled, applied or discarded without losing the selection", async ({
+test("unapplied selection input is applied on leaving without losing the selection", async ({
   page,
 }) => {
   await page.goto("/");
@@ -59,18 +59,11 @@ test("unapplied selection input can be cancelled, applied or discarded without l
   await expect(page.getByTestId("save-state")).toContainText(
     "未適用の入力あり",
   );
+  // 離れたら確定: 確認なしで適用され、選択だけが移る。
   await ellipse.click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await expect(prompt).toBeVisible();
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(rectangle).toHaveAttribute("aria-pressed", "true");
   await expect(
-    page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
-  ).toHaveValue("#aabbcc");
-  await ellipse.click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(ellipse).toHaveAttribute("aria-pressed", "true");
   await expect(
     page
@@ -80,12 +73,7 @@ test("unapplied selection input can be cancelled, applied or discarded without l
       .locator("rect")
       .first(),
   ).toHaveAttribute("fill", "#aabbcc");
-  await rectangle.click();
-  await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#123456");
-  await ellipse.click();
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  // 同じ値に戻した入力は未適用ではなく、そのまま離れられる。
   await rectangle.click();
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
@@ -93,7 +81,9 @@ test("unapplied selection input can be cancelled, applied or discarded without l
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#112233");
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
   await ellipse.click();
-  await expect(prompt).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
 });
 test("invalid native and model input stops the pending operation and remains editable", async ({
   page,
@@ -109,10 +99,9 @@ test("invalid native and model input stops the pending operation and remains edi
     .click();
   await page.getByLabel("width", { exact: true }).fill("0");
   await button("表示プレビュー").click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(page.getByLabel("width", { exact: true })).toHaveValue("0");
   await expect(button("元に戻す")).toBeDisabled();
   await page.getByLabel("width", { exact: true }).fill("260");
@@ -120,9 +109,9 @@ test("invalid native and model input stops the pending operation and remains edi
   await button("配管を追加").click();
   await page.getByLabel("頂点", { exact: true }).fill("0,0\n0,0");
   await button("表示プレビュー").click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(page.getByTestId("project-status")).toContainText(
     "線には異なる2点が必要",
   );
@@ -132,11 +121,9 @@ test("invalid native and model input stops the pending operation and remains edi
   await expect(page.getByTestId("save-state")).toContainText(
     "未適用の入力あり",
   );
+  // 不正な入力はダイアログなしで止まり、元の操作は行われない。
   await button("表示プレビュー").click();
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
-  await expect(page.getByRole("group", { name: "編集履歴" })).toHaveCount(0);
+  await expect(page.getByLabel("頂点", { exact: true })).toBeVisible();
 });
 test("multiple forms are resolved before preview, and Ctrl+S in an input exports its applied value", async ({
   page,
@@ -158,10 +145,7 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
     .fill("変更したプロジェクト");
   await button("表示プレビュー").click();
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await expect(prompt).toContainText("2 件");
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(prompt).toHaveCount(0);
   await expect(page.getByTestId("save-state")).not.toContainText(
     "未適用の入力あり",
   );
@@ -173,12 +157,9 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
     .click();
   const color = page.getByLabel(/^(?:色|塗りの色)$/, { exact: true });
   await color.fill("#445566");
-  await color.press("Control+s");
-  await expect(prompt).toBeVisible();
   const downloading = page.waitForEvent("download");
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await color.press("Control+s");
+  await expect(prompt).toHaveCount(0);
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );
@@ -309,11 +290,9 @@ test("resize handles preserve staged appearance and restart after confirmation",
     box.y + box.height / 2 + 20,
   );
   await page.mouse.up();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await expect(prompt).toBeVisible();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
   ).toHaveValue("#aabbcc");
@@ -339,15 +318,12 @@ test("invalid model input preserves every dirty form before applying any command
   await button("配管を追加").click();
   await selectPanel(page, "プロジェクト");
   const projectName = page.getByLabel("プロジェクト名", { exact: true });
-  const originalName = await projectName.inputValue();
   await projectName.fill("未適用のプロジェクト");
   await page.getByLabel("頂点", { exact: true }).fill("0,0\n0,0");
   await button("表示プレビュー").click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await expect(prompt).toContainText("2 件");
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(page.getByTestId("project-status")).toContainText(
     "線には異なる2点が必要",
   );
@@ -358,16 +334,10 @@ test("invalid model input preserves every dirty form before applying any command
   await expect(
     page.getByRole("img", { name: "プロセス画面", exact: true }),
   ).toBeVisible();
+  // 不正な頂点があると保存も止まり、書きかけは一つも適用されない。
   await fileCommand(page, "Project を保存");
-  const downloading = page.waitForEvent("download");
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
-  const saved = JSON.parse(
-    await readFile((await (await downloading).path())!, "utf8"),
+  await expect(projectName).toHaveValue("未適用のプロジェクト");
+  await expect(page.getByLabel("頂点", { exact: true })).toHaveValue(
+    "0,0\n0,0",
   );
-  expect(saved.manifest.name).toBe(originalName);
-  expect(saved.manifest.projectRevision).toBe(2);
-  await button("元に戻す").click();
-  await expect(button("元に戻す")).toBeDisabled();
 });

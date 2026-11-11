@@ -66,7 +66,7 @@ test("names are guarded drafts, searchable without hiding the canvas, and undoab
   await search.fill("rectangle · 3");
   await expect(named).toBeVisible();
 });
-test("names keep native text editing and draft cancel/discard; normalized no-ops add no history", async ({
+test("names keep native text editing and leaving a draft applies it; normalized no-ops add no history", async ({
   page,
 }) => {
   await start(page);
@@ -84,19 +84,21 @@ test("names keep native text editing and draft cancel/discard; normalized no-ops
   await layers(page)
     .getByRole("button", { name: "ellipse · 4", exact: true })
     .click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 離れたら確定: 確認なしで適用され、1手のUndoで戻せる。
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
+  await expect(name(page)).toHaveValue("");
+  await layers(page)
+    .getByRole("button", { name: "保存しない名前", exact: true })
+    .click();
   await expect(name(page)).toHaveValue("保存しない名前");
+  await button(page, "元に戻す").click();
+  await expect(name(page)).toHaveValue("");
+  await expect(button(page, "元に戻す")).toBeDisabled();
   await layers(page)
     .getByRole("button", { name: "ellipse · 4", exact: true })
     .click();
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
-  await expect(name(page)).toHaveValue("");
   await name(page).fill("   ");
   await button(page, "変更を適用").click();
   await expect(name(page)).toHaveValue("");

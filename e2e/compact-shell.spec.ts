@@ -127,19 +127,14 @@ test("toolbar mode changes retain draft protection and save status remains visib
   await page
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 離れたら確定: 未適用の入力は確認なしで適用されてプレビューへ移る
   await expect(
-    page.getByRole("button", { name: "編集", exact: true }),
+    page.getByRole("button", { name: "表示プレビュー", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await page.keyboard.press("Control+s");
+  await expect(state).not.toContainText("未適用の入力あり");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
   const downloading = page.waitForEvent("download");
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await page.keyboard.press("Control+s");
   await downloading;
   await expect(state).toContainText("書き出し要求後の変更なし");
   await expect(state).not.toContainText("未適用の入力あり");
