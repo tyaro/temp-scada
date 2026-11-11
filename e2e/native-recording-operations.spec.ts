@@ -222,6 +222,29 @@ test("a reservation goes through pause/join and apply to reconcile, stage by sta
   ).toBeGreaterThanOrEqual(4);
 });
 
+test("a second change on the same root is refused without hanging the panel", async ({
+  page,
+}) => {
+  await ready(page);
+  await preflight(page);
+  await onHost(page, "finish", 0, "conflict");
+  await expect(button(page, "新しい変更を検査")).toBeEnabled();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await button(page, "新しい変更を検査").click();
+    await expect(dialog(page)).toContainText(
+      "新しい変更を始めるには、記録を停止して再開してください",
+    );
+    await expect(
+      dialog(page).locator("[data-recording-async-admission]"),
+    ).toHaveAttribute("data-recording-async-admission", "idle");
+    await expect(button(page, "新しい変更を検査")).toBeEnabled();
+  }
+  const admissions = (await calls(page)).filter(
+    (c) => c.cmd === "recording_admission",
+  );
+  expect(admissions).toHaveLength(1);
+});
+
 test("a subscription ended unauthorized disables the operations and is not attached again", async ({
   page,
 }) => {

@@ -408,6 +408,7 @@ v1との差分:
 C5-5aの実装で次を定めた。
 
 - **物理終了の失敗（`transport`が`returned`以外で`reply`なし）の扱い**: どれもportの不正（`invalid`）にはしない。leaseは`call: "uncertain"`（発行されたleaseはhostで使われずに切れる）、admitは`admission: "unknown"`で`call`を終え、次の照会を`inspectCall`（CallInspection）にする。AdmissionInspection・CallInspectionの返信喪失は照会を`idle`へ戻し、受付不明のまま再照会できる。cancelは`cancelCall: "uncertain"`とする。observationの`unavailable`と`transportLost`は`read: "deliveryUnknown"`で、operationの`settled`を進めない。
+- **leaseの拒否（K2、2026-11-11）**: hostがleaseの段階（`recording_workflow_reserve`・`recording_workflow_lease`）を拒否したら、leaseは発行されていないので、coordinatorは呼出しを未送信として終え、`hostRefusal`を画面に示す。registryのworkflowは1 rootにつき1件で解放しないので、同じrootの二つ目の変更はここで`busy`になる。transportの失敗では発行の有無が分からないので、従来どおり`uncertain`のままとする。
 - **portの不正**: replyの形・相関の不一致、Promiseでない値、methodの例外、`pending`のobservation終端は、v1と同じく`invalid`とする。遅れて届いた正常な元reply（CallInspectionの回収後など）は、そのcallの処理へ渡す（leaseは`uncertain`の後なら捨てる）。
 - **`AsyncOperationsState`の追加field**: `owner`（`access`・`seq`・`subscription`・`ended`と四つの別field）、`hostRefusal`（最後の`{kind}`拒否）、`wireRefusal`（wireのlease・cancelの`rejected`。`OperationError`の`refusal`と分ける）、`callInspection`（CallInspectionの返信）。記録操作画面は`ownerClosed`・`authorizationLost`・`resyncRequired`と`wireRefusal`を表示する。
 - **cached frame**: `display.snapshotRelation`が`none`のときは`snapshot`が`null`であることを検証し、snapshotを使わない。`currentSubscription`・`lastKnown`のsnapshotはv1のframeと同じく`latest`の知識だけを更新する。
@@ -558,7 +559,7 @@ C5-5bの実装で次を定めた。
 10. **slotがEmptyの理由**: 記録操作画面は「未接続」だけとし、理由は記録管理画面に出す。propを増やさない。
 11. **local-v2の`mode`**: `"native"`を加え、native portはlocal-v2で元replyを配送する。coordinator-v2（test-only）は製品で使わない。
 12. **長時間のrootの容量**: 上限に達したら`capacity`で止め、再読込で回復する。回収はC6で扱う。（C5-5bで、終端を得た元call・observationの予約は返すことにした。§7.2「C5-5bの実装で次を定めた」）
-    - **評価と訂正（2026-11-11ユーザー判断、C6）**: 「再読込で回復」は画面側（台帳・受信器・coordinatorのID）だけに当てはまる。hostのrootの枠は記録runごとで、再読込では戻らない。rootの枠は操作の回数に比例して使われ（mutation leaseで1 rootあたり約1300 workflow）、applyが成功するとrootは入れ替わるので、hostのID回収と自動の入替えは入れない。hostの`capacity`は記録の停止と再開（新しいroot）で回復し、owner付け替えはProjectが変わったときだけ使える。画面はこの違いを案内する。時間に比例して減っていた画面のobservation attemptは回収した（[observation台帳](historian-recording-wire-observation-ledger.md)§6）。使用済みIDを再使用しない契約は変えない。
+    - **評価と訂正（2026-11-11ユーザー判断、C6）**: 「再読込で回復」は画面側（台帳・受信器・coordinatorのID）だけに当てはまる。hostのrootの枠は記録runごとで、再読込では戻らない。registryのworkflowは1 rootにつき1件で（終わっても解放しない）、rootの枠はその1件の操作とやり直しの分しか使われないので、hostのID回収と自動の入替えは入れない。hostの`capacity`は記録の停止と再開（新しいroot）で回復し、owner付け替えはProjectが変わったときだけ使える。画面はこの違いを案内する。時間に比例して減っていた画面のobservation attemptは回収した（[observation台帳](historian-recording-wire-observation-ledger.md)§6）。使用済みIDを再使用しない契約は変えない。
 13. **再login後の回収**: C5-5では扱わず、5と一緒に後続で扱う。（C5-7で実装。CallInspectionではなくhostの記録から回収する）
 
 ## 9. 実装順

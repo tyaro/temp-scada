@@ -247,6 +247,13 @@
             ? "照会できません。受付不明を保持します"
             : "元要求の受付情報を確認しました"}
       </p>{/if}
+    {#if s?.hostRefusal && s.admission === "idle"}<p role="status">
+        {s.hostRefusal.kind === "busy"
+          ? "変更を受け付けられませんでした。別の変更が処理中か、この記録の変更がすでに終わっています。新しい変更を始めるには、記録を停止して再開してください"
+          : s.hostRefusal.kind === "capacity"
+            ? wireErrorLabels.capacity
+            : "記録操作が拒否されました"}
+      </p>{/if}
     {#if s?.wireRefusal}<p role="status">
         {wireErrorLabels[s.wireRefusal]}
       </p>{/if}

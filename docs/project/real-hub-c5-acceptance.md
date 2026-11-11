@@ -304,6 +304,14 @@ registryのworkflowで適用できるのは、登録済みmappingに完全に合
 - 3.8は未観測、6-7（任意）は未実施（版3の計画が適用済みと同じで候補ができなかった）、9-5（任意）は合格。
 - 記録中にProjectを保存して「記録操作の対象を現在のProjectに合わせる」を行った後（6-2）や、スロットが空にならずownerが替わった後は、従来どおり「選択した接続へ切替」が要る。これは[製品hostの記録owner](../design/runtime/historian-recording-product-owner.md)の設計どおりの動作である。
 
+### C5-7 再読込からのworkflow継続と中断sessionの表示 2026-11-11 JST
+
+- 環境: commit `80720ce`、Hub 0.3.0-alpha.1、catalog 107タグ。起動と操作の方法は上の実施環境と同じ。
+- 中断session: Windows Updateの再起動で途切れたsession `ca2831cc`（14312行）は、起動前のDB probeで`active`、起動後は`interrupted`。画面の最新activationは「中断」で、「管理者が『記録を再開』で再開できます」の案内が出た。合格。
+- workflowの継続: 無効化する計画（版6）で、検査→再読込→停止とjoin→再読込→破棄を同じ変更のまま実行した。再読込ごとに「前の画面の作業を引き継ぎました。」が出て、次の段階のボタンが有効だった。合格。破棄の後はDB適用版4のままで、DB active sessionなし、gaps=0。session `467aa330`（220行）と`c59e4cce`（41行）は`closed`。
+- 確認中に見つけた事象はK2。
+
 ## 7. 既知の事象
 
+- **K2（修正済み、2026-11-11）: 一つのrootで二つ目の変更を始めると「受付準備中です」のまま止まった**。registryのworkflowは1 rootにつき1件で、終わっても解放しない。そのため、検査が競合で終わった後や破棄の後も「新しい変更を検査」が押せるのに、hostは別の変更の予約を`busy`で拒否し、画面は進まず操作ボタンがすべて無効になる。修正後は、hostがleaseの段階で拒否したら呼出しを未送信として終え、理由と「記録を停止して再開してください」の案内を出す。実機で、破棄の後の検査が止まらず案内が出ること、その後に記録を停止できることを確認した。rootの一件だけという制限は変えていないので、新しい変更を始めるには記録の停止と再開で新しいrootを作る。
 - **K1（修正済み、2026-11-10）: workflowで無効計画を適用した後、再起動まで停止中の計画適用ができなかった**。registryのapplyの後、記録は止まるがrootは導入されたまま（slotは`Installed`）残る。修正前の`recording_reconfigure`はslotが`Installed`なら`not_allowed`で、rootを外せる`recording_resume`（無効計画では`plan_disabled`）と`recording_stop`（記録が動いていないので`not_allowed`）は画面ではどちらも無効になり、再起動まで回復しなかった。修正後の`recording_reconfigure`は、`recording_resume`と同じく、記録が動いていない静止したrootをhandoffで先に外してから適用する（記録中のrootは外さず`not_allowed`、未確定の変更を持つrootは`busy`）。
