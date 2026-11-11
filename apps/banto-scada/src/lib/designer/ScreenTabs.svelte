@@ -9,6 +9,8 @@
     contextKey,
     onopen,
     actions,
+    onadd,
+    canAdd = true,
   }: {
     screens: Screen[];
     activeId: string | null;
@@ -16,6 +18,8 @@
     contextKey: string;
     onopen: (id: string) => void;
     actions: (id: string) => ContextAction[];
+    onadd?: () => void;
+    canAdd?: boolean;
   } = $props();
   let root = $state<HTMLElement>();
   $effect(() => {
@@ -88,6 +92,15 @@
         items={actions(screen.id)}>{@render row()}</ContextActions
       >{:else}{@render row()}{/if}
   {/each}
+  {#if editable && onadd}
+    <button
+      class="add"
+      aria-label="画面を追加（画面タブ）"
+      title={canAdd ? "画面を追加" : "画面は 100 件までです"}
+      disabled={!canAdd}
+      onclick={onadd}>＋</button
+    >
+  {/if}
 </nav>
 
 <style>
@@ -132,6 +145,14 @@
     background: var(--studio-selection);
     border-bottom-color: var(--banto-primary);
     font-weight: 600;
+  }
+  button.add {
+    padding: 5px 10px;
+    font-size: 14px;
+  }
+  button.add:disabled {
+    cursor: default;
+    opacity: 0.5;
   }
   .dot {
     width: 5px;

@@ -26,10 +26,7 @@ async function setup(page: Page, locked = false, destination = false) {
     buffer: Buffer.from(JSON.stringify(fixture(locked, destination))),
   });
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  await page
-    .locator("summary")
-    .filter({ hasText: "Project のタグ参照" })
-    .click();
+  await page.locator(".references-toggle").click();
   await page
     .getByRole("button", { name: `${from} を一括置換`, exact: true })
     .click();
@@ -81,9 +78,9 @@ for (const theme of ["light", "dark"] as const)
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(saved)),
     });
-    await expect(
-      page.locator("summary").filter({ hasText: "Project のタグ参照" }),
-    ).toContainText("1 タグ / 2 配置");
+    await expect(page.locator(".references-toggle")).toHaveAccessibleName(
+      /1 タグ \/ 2 配置/,
+    );
   });
 test("invalid, no-op, IME and cancel never apply, and locked placements reject the entire replacement", async ({
   page,
@@ -207,7 +204,7 @@ test("merging into an existing saved reference lists the destination and require
   await form
     .getByRole("button", { name: "全1配置を置換", exact: true })
     .click();
-  await expect(
-    page.locator("summary").filter({ hasText: "Project のタグ参照" }),
-  ).toContainText("1 タグ / 2 配置");
+  await expect(page.locator(".references-toggle")).toHaveAccessibleName(
+    /1 タグ \/ 2 配置/,
+  );
 });

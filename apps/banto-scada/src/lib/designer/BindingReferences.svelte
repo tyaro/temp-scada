@@ -18,10 +18,8 @@
     references,
     onopen,
     onclose,
-    expanded = $bindable(false),
+    expanded = false,
     sized = false,
-    onbeforetoggle,
-    onaftertoggle,
   }: {
     project: Project;
     scope: string;
@@ -37,8 +35,6 @@
     onclose: () => void;
     expanded?: boolean;
     sized?: boolean;
-    onbeforetoggle?: () => void;
-    onaftertoggle?: () => void;
   } = $props();
   let replacing = $state<string | null>(null);
   function beginReplacement(from: string) {
@@ -47,35 +43,13 @@
     };
     if (drafts.allow(start)) start();
   }
-  let togglePending = false;
   let search = $state("");
   const filtered = $derived(searchReferences(references, search));
-  const usageCount = $derived(
-    references.reduce((count, reference) => count + reference.usages.length, 0),
-  );
 </script>
 
+<!-- 開閉はステータス行の「タグ参照 n」ボタンが受け持つ。閉じているときは隠すだけにして、検索語と置換の途中を保つ。 -->
 {#if references.length}
-  <details
-    class="references"
-    class:sized
-    bind:open={expanded}
-    ontoggle={(event) => {
-      // Native details toggles are queued separately from the summary click.
-      expanded = event.currentTarget.open;
-      if (togglePending) {
-        togglePending = false;
-        onaftertoggle?.();
-      }
-    }}
-  >
-    <summary
-      onclick={() => {
-        togglePending = true;
-        onbeforetoggle?.();
-      }}
-      >Project のタグ参照 · {references.length} タグ / {usageCount} 配置</summary
-    >
+  <div class="references" class:sized hidden={!expanded}>
     <section aria-label="Project のタグ参照">
       <button class="close" onclick={onclose}>タグ参照一覧を隠す</button>
       <p>
@@ -152,7 +126,7 @@
         </div>
       {:else}<p>一致するタグ参照がありません。</p>{/if}
     </section>
-  </details>
+  </div>
 {/if}
 
 <style>
@@ -164,7 +138,7 @@
     float: right;
   }
   .references {
-    margin-top: 16px;
+    margin-top: 0;
     border: 1px solid var(--banto-border);
     border-radius: 6px;
     background: var(--banto-surface);
@@ -178,13 +152,8 @@
     max-height: none;
     overflow: visible;
   }
-  summary {
-    padding: 12px;
-    font-size: 13px;
-    cursor: pointer;
-  }
   section {
-    padding: 0 12px 12px;
+    padding: 8px 12px 12px;
     min-width: 0;
   }
   p {
@@ -230,8 +199,7 @@
     border-color: var(--banto-primary);
   }
   button:focus-visible,
-  input:focus-visible,
-  summary:focus-visible {
+  input:focus-visible {
     outline: none;
     box-shadow: var(--banto-focus-ring);
   }

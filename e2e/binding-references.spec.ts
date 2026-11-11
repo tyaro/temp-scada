@@ -35,10 +35,10 @@ test("groups references across screens, searches without editing, navigates with
     buffer: Buffer.from(JSON.stringify(fixture)),
   });
   await button("編集").click();
-  const summary = page
-    .locator("summary")
-    .filter({ hasText: "Project のタグ参照" });
-  await expect(summary).toHaveText("Project のタグ参照 · 2 タグ / 3 配置");
+  const summary = page.locator(".references-toggle");
+  await expect(summary).toHaveAccessibleName(
+    "Project のタグ参照 · 2 タグ / 3 配置",
+  );
   await summary.click();
   const panel = page.getByRole("region", {
     name: "Project のタグ参照",
@@ -92,11 +92,17 @@ test("groups references across screens, searches without editing, navigates with
     page.getByRole("img", { name: "原水監視", exact: true }),
   ).toBeVisible();
   await expect(input).toHaveValue("PLC01.Fast.Tank01.Level");
-  await expect(summary).toHaveText("Project のタグ参照 · 3 タグ / 3 配置");
+  await expect(summary).toHaveAccessibleName(
+    "Project のタグ参照 · 3 タグ / 3 配置",
+  );
   await button("元に戻す").click();
-  await expect(summary).toHaveText("Project のタグ参照 · 2 タグ / 3 配置");
+  await expect(summary).toHaveAccessibleName(
+    "Project のタグ参照 · 2 タグ / 3 配置",
+  );
   await button("やり直す").click();
-  await expect(summary).toHaveText("Project のタグ参照 · 3 タグ / 3 配置");
+  await expect(summary).toHaveAccessibleName(
+    "Project のタグ参照 · 3 タグ / 3 配置",
+  );
   const downloading = page.waitForEvent("download");
   await fileCommand(page, "Project を保存");
   const saved = JSON.parse(
@@ -121,9 +127,7 @@ test("the reference panel fits a small screen and resets search after importing 
   };
   await input.setInputFiles(file);
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  const summary = page
-    .locator("summary")
-    .filter({ hasText: "Project のタグ参照" });
+  const summary = page.locator(".references-toggle");
   await summary.click();
   await page.getByLabel("タグ参照を検索").fill("missing");
   expect(

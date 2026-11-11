@@ -118,8 +118,8 @@ test("tag reference visibility retains search and disclosure, individual changes
     buffer: Buffer.from(JSON.stringify(sample)),
   });
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  const details = page.locator("details.references");
-  await details.locator("summary").click();
+  const details = page.locator("div.references");
+  await page.locator(".references-toggle").click();
   await page
     .getByLabel("タグ参照を検索", { exact: true })
     .fill("存在しない参照");
@@ -128,7 +128,7 @@ test("tag reference visibility retains search and disclosure, individual changes
     .click();
   await expect(details).toBeHidden();
   await menu(page, "タグ参照一覧を表示");
-  await expect(details).toHaveAttribute("open", "");
+  await expect(details).toBeVisible();
   await expect(page.getByLabel("タグ参照を検索", { exact: true })).toHaveValue(
     "存在しない参照",
   );

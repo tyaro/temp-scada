@@ -274,7 +274,8 @@ test("changing context actions keeps initial focus and arrow navigation in visib
     await row.press("Shift+F10");
     await checkOrder(menu(page, "rectangle · 3"), "プロパティを表示");
     await expect(row).toBeFocused();
-    await at(page, 920, 500);
+    // 右下はミニマップが重なるので、図面の空いた右上を使う。
+    await at(page, 850, 150);
     await checkOrder(menu(page, "キャンバス"), "Rectangle を挿入");
   }
 });

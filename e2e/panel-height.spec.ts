@@ -16,7 +16,7 @@ async function start(page: Page) {
     .getByLabel("Project を開く", { exact: true })
     .setInputFiles("examples/tag-binding.project.json");
   await button(page, "編集").click();
-  await page.locator("details.references > summary").click();
+  await page.locator(".references-toggle").click();
   await expect(divider(page)).toBeVisible();
 }
 async function menu(page: Page, name: string) {
@@ -82,7 +82,7 @@ test("height resize preserves drafts, search and Project while persisting only U
     .getByLabel("Project を開く", { exact: true })
     .setInputFiles("examples/tag-binding.project.json");
   await button(page, "編集").click();
-  await page.locator("details.references > summary").click();
+  await page.locator(".references-toggle").click();
   await expect(divider(page)).toHaveAttribute("aria-valuenow", "288");
 });
 for (const zoom of [0.25, 1, 4])
@@ -105,7 +105,7 @@ for (const zoom of [0.25, 1, 4])
       await expect
         .poll(async () => Math.abs((await center(page))[axis] - before[axis]))
         .toBeLessThan(2 / zoom);
-    await page.locator("details.references > summary").click();
+    await page.locator(".references-toggle").click();
     await expect(divider(page)).toHaveCount(0);
     for (const axis of ["x", "y"] as const)
       await expect
@@ -218,18 +218,15 @@ test("long reference lists scroll within the resized panel and keep every usage 
     buffer: Buffer.from(JSON.stringify(many)),
   });
   // File reads are asynchronous; wait for the new Project before opening its reset disclosure.
-  await expect(page.locator("details.references > summary")).toContainText(
-    "35 タグ / 36 配置",
+  await expect(page.locator(".references-toggle")).toHaveAccessibleName(
+    /35 タグ \/ 36 配置/,
   );
-  await expect(page.locator("details.references")).not.toHaveAttribute(
-    "open",
-    "",
-  );
-  await page.locator("details.references > summary").click();
+  await expect(page.locator("div.references")).toBeHidden();
+  await page.locator(".references-toggle").click();
   await expect(divider(page)).toBeVisible();
   await divider(page).focus();
   await page.keyboard.press("Home");
-  const panel = page.locator("details.references");
+  const panel = page.locator("div.references");
   await expect
     .poll(() => panel.evaluate((el) => el.scrollHeight > el.clientHeight))
     .toBe(true);

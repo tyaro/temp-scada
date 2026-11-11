@@ -82,7 +82,7 @@ html[data-theme="dark"] #app {
   position: relative;
   padding: 0;
 }
-#app .canvas-stack > [role="status"] {
+#app .canvas-stack .status-row > [role="status"] {
   padding: 3px 14px;
   margin: 0;
   font-size: 11px;

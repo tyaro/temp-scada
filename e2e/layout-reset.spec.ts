@@ -143,7 +143,7 @@ test("restored preferences persist and the expanded reference panel keeps its se
   page,
 }) => {
   await start(page, true);
-  await page.locator("details.references > summary").click();
+  await page.locator(".references-toggle").click();
   await page.getByLabel("タグ参照を検索", { exact: true }).fill("Tank");
   await expect(divider(page, "タグ参照パネルの高さ")).toHaveAttribute(
     "aria-valuenow",
@@ -168,7 +168,7 @@ test("restored preferences persist and the expanded reference panel keeps its se
     .setInputFiles("examples/tag-binding.project.json");
   await button(page, "編集").click();
   await expectDefaults(page);
-  await page.locator("details.references > summary").click();
+  await page.locator(".references-toggle").click();
   await expect(divider(page, "タグ参照パネルの高さ")).toHaveAttribute(
     "aria-valuenow",
     "240",
