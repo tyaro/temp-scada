@@ -51,8 +51,10 @@
     selected = $state(""),
     search = $state("");
   let active = true,
-    opener: HTMLElement | null = null;
-  const origins = new Map<string, HTMLElement>();
+    opener: FocusOrigin | null = null;
+  // 図面上の Symbol（SVG）から開いたときも、閉じたら元の Symbol へフォーカスを戻す。
+  type FocusOrigin = HTMLElement | SVGElement;
+  const origins = new Map<string, FocusOrigin>();
   const trendTokens = new Map<string, object>();
   const controllers = $state<
     Record<string, { cancel: () => void } | undefined>
@@ -169,7 +171,7 @@
     if (candidate && !candidate.reason)
       openTarget(candidate.id, pickerKind, candidate.cost);
   }
-  export function showEquipment(id: string, origin: HTMLElement) {
+  export function showEquipment(id: string, origin: FocusOrigin) {
     if (!active || !project.equipment?.some((item) => item.id === id)) return;
     for (const controller of Object.values(controllers)) controller?.cancel();
     opener = origin;
@@ -196,7 +198,11 @@
     origins.delete(popupKey({ targetId: id, kind }));
     if (restore)
       void tick().then(() => {
-        if (active) restoreFocus(origin, () => opener);
+        if (active)
+          restoreFocus(
+            origin as HTMLElement | undefined,
+            () => opener as HTMLElement | null,
+          );
       });
   }
 </script>
@@ -241,7 +247,7 @@
     ? "画面を小窓で表示確認"
     : "機器の読取詳細を開く"}
   onclose={() => (picker = false)}
-  focusFallback={() => opener}
+  focusFallback={() => opener as HTMLElement | null}
 >
   <p>
     プレビュー専用の読取表示です。位置やサイズは保存せず、画面切替・編集復帰・Project読込で閉じます。

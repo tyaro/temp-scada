@@ -2,6 +2,7 @@
   import type { TrendDefinition } from "./trend-definitions";
   import { resolveConnectionObjects, connectedVertex } from "./connections";
   import type { EquipmentContext } from "./symbol-slots";
+  import { previewEquipmentLink } from "./equipment-read-details";
   import { untrack } from "svelte";
   import {
     getBounds,
@@ -40,6 +41,7 @@
     symbols = [],
     trends = [],
     onopentrend,
+    onopenequipment,
     screens = [],
     equipmentContext,
     images,
@@ -59,6 +61,8 @@
     symbols?: SymbolDefinition[];
     trends?: readonly TrendDefinition[];
     onopentrend?: (objectId: string) => void;
+    /** 表示プレビューで、機器を関連付けた Symbol を押したときに呼ぶ。編集中は呼ばない。 */
+    onopenequipment?: (equipmentId: string, origin: SVGElement) => void;
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
@@ -81,6 +85,17 @@
     ) => string[];
     onmove?: (ids: string[], dx: number, dy: number) => void;
   } = $props();
+  // 表示プレビューで、機器を関連付けた Symbol を読取詳細の小窓への入口にする。
+  // 関連付けのない Symbol と、存在しない機器を指す Symbol は無反応のまま。
+  function equipmentLink(object: ScreenObject) {
+    return editable || !onopenequipment
+      ? undefined
+      : previewEquipmentLink(object.shape, equipmentContext?.equipment);
+  }
+  function openEquipment(id: string, event: Event) {
+    event.stopPropagation();
+    onopenequipment?.(id, event.currentTarget as SVGElement);
+  }
   const background = $derived(
     "background" in screen ? screen.background : "#0b1220",
   );
@@ -585,10 +600,13 @@
 <svg
   bind:this={svgElement}
   style:--canvas-accent={colors.selection}
-  role={onopentrend &&
-  !editable &&
+  role={(onopentrend &&
+    !editable &&
+    screen.objects.some(
+      (object) => object.visible !== false && object.shape.type === "trend",
+    )) ||
   screen.objects.some(
-    (object) => object.visible !== false && object.shape.type === "trend",
+    (object) => object.visible !== false && !!equipmentLink(object),
   )
     ? "group"
     : "img"}
@@ -632,6 +650,8 @@
     .filter((object) => object.visible !== false)
     .sort((a, b) => a.order - b.order) as object (object.id)}
     {@const visual = previewObject(object)}
+    {@const linked = equipmentLink(object)}
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex (tabindex は機器を関連付けた Symbol の button role と同時にだけ付く) -->
     <g
       transform={position(visual)}
       pointer-events={editable && object.locked ? "none" : undefined}
@@ -639,7 +659,24 @@
       data-selected={editable && selectedIds.includes(object.id)
         ? "true"
         : undefined}
+      data-equipment-link={linked?.id}
+      class:equipment-link={!!linked}
+      role={linked ? "button" : undefined}
+      tabindex={linked ? 0 : undefined}
+      aria-label={linked
+        ? `${linked.code} ${linked.name}の読取詳細を開く`
+        : undefined}
+      onclick={linked ? (event) => openEquipment(linked.id, event) : undefined}
+      onkeydown={linked
+        ? (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              openEquipment(linked.id, event);
+            }
+          }
+        : undefined}
     >
+      {#if linked}<title>{`${linked.code} ${linked.name}`}</title>{/if}
       {#if visual.shape.type === "text" && textDescriptions[object.id]}<title
           >{textDescriptions[object.id]}</title
         >{/if}
@@ -677,6 +714,18 @@
               textDescriptions[object.id] = value;
             }}
             {trends}
+          />
+        {/if}
+        {#if linked}
+          {@const hit = getLocalBounds(visual)}
+          <rect
+            class="equipment-hit"
+            width={hit.width}
+            height={hit.height}
+            x={hit.x}
+            y={hit.y}
+            fill="transparent"
+            pointer-events="all"
           />
         {/if}
       </g>
@@ -778,6 +827,17 @@
 </svg>
 
 <style>
+  .equipment-link {
+    cursor: pointer;
+  }
+  .equipment-link:focus {
+    outline: none;
+  }
+  .equipment-link:focus-visible .equipment-hit {
+    stroke: var(--banto-primary, #2563eb);
+    stroke-width: 3px;
+    vector-effect: non-scaling-stroke;
+  }
   .vertex {
     cursor: crosshair;
   }

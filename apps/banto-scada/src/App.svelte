@@ -1396,7 +1396,7 @@
   let previewFullscreenActive = $state(false);
   let previewPopups = $state<{
     showPicker: (origin: HTMLElement, kind?: "screen" | "equipment") => void;
-    showEquipment: (id: string, origin: HTMLElement) => void;
+    showEquipment: (id: string, origin: HTMLElement | SVGElement) => void;
   }>();
   let equipmentDetailsButton = $state<HTMLButtonElement>();
   let equipmentLibrary = $state<EquipmentLibrary>();
@@ -3491,6 +3491,7 @@
         <button
           bind:this={equipmentDetailsButton}
           disabled={menuBlocked || !project.equipment?.length}
+          title="一覧から機器を選んで開きます。図面上の機器を押しても開けます。"
           onclick={(event) =>
             previewPopups?.showPicker(event.currentTarget, "equipment")}
           >機器の読取詳細</button
@@ -3935,6 +3936,9 @@
       {#key workspaceGeneration}
         <CanvasWorkspace
           onopentrend={(objectId) => openTrendHistory(screen.id, objectId)}
+          onopenequipment={mode === "preview" && !menuBlocked
+            ? (id, origin) => previewPopups?.showEquipment(id, origin)
+            : undefined}
           equipmentContext={readContext.equipmentContext}
           readings={readContext.readings}
           bind:this={canvasWorkspace}
