@@ -964,6 +964,7 @@
       screenViewRequest !== null ||
       arrayCopy.request !== null ||
       folderRequest !== null ||
+      deleteConfirm !== null ||
       inspectorController?.isTagPickerOpen() ||
       equipmentLibrary?.isTagPickerOpen() ||
       (event.target instanceof Element &&

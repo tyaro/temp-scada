@@ -45,10 +45,22 @@ test("screen CRUD, history fallback and multiple-screen file round-trip", async 
   ).toHaveCount(2);
   const confirm = page.getByRole("dialog", { name: "画面を削除しますか" });
   await button("画面を削除").click();
+  // 確認を開いている間は、後ろの図面への編集ショートカットを通さない。
+  await confirm
+    .getByRole("button", { name: "キャンセル", exact: true })
+    .focus();
+  for (const key of ["Control+z", "Control+y", "Control+d"])
+    await page.keyboard.press(key);
+  await expect(confirm).toBeVisible();
   await confirm
     .getByRole("button", { name: "キャンセル", exact: true })
     .click();
   await expect(screens.locator("button[aria-pressed]")).toHaveCount(3);
+  await expect(
+    page
+      .getByRole("img", { name: "洗浄工程 コピー", exact: true })
+      .locator("[data-object-id]"),
+  ).toHaveCount(2);
   await button("画面を削除").click();
   await confirm.getByRole("button", { name: "削除", exact: true }).click();
   await expect(screens.locator("button[aria-pressed]")).toHaveCount(2);
