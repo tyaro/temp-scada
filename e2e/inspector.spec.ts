@@ -1,16 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel, chooseTheme } from "./helpers/designer";
+import { selectPanel, chooseTheme, chooseMenuItem } from "./helpers/designer";
 
 const inspector = (page: Page) =>
   page.getByRole("complementary", { name: "プロパティパネル", exact: true });
 const viewport = (page: Page) =>
   page.getByRole("region", { name: "キャンバス操作領域", exact: true });
 async function showInspector(page: Page) {
-  await page.getByRole("button", { name: "メニュー", exact: true }).click();
-  await page
-    .getByRole("menu", { name: "常設メニュー", exact: true })
-    .getByRole("menuitem", { name: "プロパティを表示", exact: true })
-    .click();
+  await chooseMenuItem(page, "表示", "プロパティを表示");
 }
 async function center(page: Page) {
   return viewport(page).evaluate((el) => {
@@ -44,7 +40,9 @@ test("hiding properties releases its width, retains drafts and restores through 
     .click();
   await expect(inspector(page)).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "メニュー", exact: true }),
+    page
+      .getByRole("menubar", { name: "Designer メニューバー" })
+      .getByRole("menuitem", { name: "ファイル", exact: true }),
   ).toBeFocused();
   await expect
     .poll(async () => (await viewport(page).boundingBox())!.width)

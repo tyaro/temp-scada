@@ -25,25 +25,37 @@ export async function chooseTheme(page: Page, value: string) {
     .click();
 }
 
-/** File operations remain available with the menubar or sidebar hidden. */
-export async function fileCommand(page: Page, name: string) {
+/** Menubar group, or the header ☰ (shown only while the menubar is hidden). */
+export async function chooseMenuItem(
+  page: Page,
+  group: "ファイル" | "表示" | "記録" | "ヘルプ",
+  name: string,
+) {
   const bar = page.getByRole("menubar", {
     name: "Designer メニューバー",
     exact: true,
   });
+  const permanent = page.getByRole("button", { name: "メニュー", exact: true });
+  // Either the menubar or, when it is hidden, the header ☰ is the entry point.
+  await bar.or(permanent).waitFor();
   if (await bar.isVisible()) {
-    await bar.getByRole("menuitem", { name: "ファイル", exact: true }).click();
+    await bar.getByRole("menuitem", { name: group, exact: true }).click();
     await page
-      .getByRole("menu", { name: "ファイル", exact: true })
+      .getByRole("menu", { name: group, exact: true })
       .getByRole("menuitem", { name, exact: true })
       .click();
   } else {
-    await page.getByRole("button", { name: "メニュー", exact: true }).click();
+    await permanent.click();
     await page
       .getByRole("menu", { name: "常設メニュー", exact: true })
       .getByRole("menuitem", { name, exact: true })
       .click();
   }
+}
+
+/** File operations remain available with the menubar or sidebar hidden. */
+export async function fileCommand(page: Page, name: string) {
+  await chooseMenuItem(page, "ファイル", name);
 }
 
 /** Main canvas root; minimap and Popup projections have separate roots. */

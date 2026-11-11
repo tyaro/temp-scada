@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel, chooseTheme } from "./helpers/designer";
+import { selectPanel, chooseTheme, chooseMenuItem } from "./helpers/designer";
 
 const toolbar = (page: Page) =>
   page.getByRole("toolbar", {
@@ -15,8 +15,7 @@ async function edit(page: Page) {
   await page.getByRole("button", { name: "編集", exact: true }).click();
 }
 async function menu(page: Page, name: string) {
-  await page.getByRole("button", { name: "メニュー", exact: true }).click();
-  await page.getByRole("menuitem", { name, exact: true }).click();
+  await chooseMenuItem(page, "表示", name);
 }
 async function selectTwo(page: Page) {
   await selectPanel(page, "レイヤー");

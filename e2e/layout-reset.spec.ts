@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/minimal.project.json" with { type: "json" };
-import { selectPanel, chooseTheme } from "./helpers/designer";
+import { selectPanel, chooseTheme, chooseMenuItem } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const sidebar = (page: Page) =>
@@ -14,11 +14,7 @@ const divider = (page: Page, name: string) =>
   page.getByRole("separator", { name, exact: true });
 const storage = "banto.ui.scada.designer.";
 async function menu(page: Page, name: string) {
-  await button(page, "メニュー").click();
-  await page
-    .getByRole("menu", { name: "常設メニュー", exact: true })
-    .getByRole("menuitem", { name, exact: true })
-    .click();
+  await chooseMenuItem(page, "表示", name);
 }
 async function start(page: Page, bindings = false) {
   await page.setViewportSize({ width: 1920, height: 1080 });
@@ -98,7 +94,11 @@ test("standard layout restores hidden regions without resolving drafts, changing
   await expect(sidebar(page)).toHaveCount(0);
   await menu(page, "標準レイアウトに戻す");
   await expectDefaults(page);
-  await expect(button(page, "メニュー")).toBeFocused();
+  await expect(
+    page
+      .getByRole("menubar", { name: "Designer メニューバー" })
+      .getByRole("menuitem", { name: "ファイル", exact: true }),
+  ).toBeFocused();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
@@ -158,7 +158,10 @@ test("restored preferences persist and the expanded reference panel keeps its se
     "Tank",
   );
   await page.reload();
-  await button(page, "メニュー").click();
+  await page
+    .getByRole("menubar", { name: "Designer メニューバー" })
+    .getByRole("menuitem", { name: "表示", exact: true })
+    .click();
   await expect(
     page.getByRole("menuitem", { name: "標準レイアウトに戻す", exact: true }),
   ).toHaveAttribute("aria-disabled", "true");

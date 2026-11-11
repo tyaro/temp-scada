@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel, chooseTheme } from "./helpers/designer";
+import { selectPanel, chooseTheme, chooseMenuItem } from "./helpers/designer";
 import sample from "../examples/tag-binding.project.json" with { type: "json" };
 
 const sidebar = (page: Page) =>
@@ -9,11 +9,7 @@ const inspector = (page: Page) =>
 const viewport = (page: Page) =>
   page.getByRole("region", { name: "キャンバス操作領域", exact: true });
 async function menu(page: Page, name: string) {
-  await page.getByRole("button", { name: "メニュー", exact: true }).click();
-  await page
-    .getByRole("menu", { name: "常設メニュー", exact: true })
-    .getByRole("menuitem", { name, exact: true })
-    .click();
+  await chooseMenuItem(page, "表示", name);
 }
 async function edit(page: Page) {
   await page.goto("/");
@@ -54,7 +50,9 @@ test("restore returns the previous panel subset, search, tab, selection and unap
     .poll(async () => (await viewport(page).boundingBox())!.width)
     .toBeGreaterThan(width + 500);
   await expect(
-    page.getByRole("button", { name: "メニュー", exact: true }),
+    page
+      .getByRole("menubar", { name: "Designer メニューバー" })
+      .getByRole("menuitem", { name: "ファイル", exact: true }),
   ).toBeFocused();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect(await page.locator("main").getAttribute("data-project-revision")).toBe(
@@ -137,7 +135,10 @@ test("tag reference visibility retains search and disclosure, individual changes
   ).toBeFocused();
   await menu(page, "補助パネルをすべて隠す");
   await menu(page, "左パネルを表示");
-  await page.getByRole("button", { name: "メニュー", exact: true }).click();
+  await page
+    .getByRole("menubar", { name: "Designer メニューバー" })
+    .getByRole("menuitem", { name: "表示", exact: true })
+    .click();
   await expect(
     page.getByRole("menuitem", {
       name: "補助パネルを元の表示に戻す",
@@ -227,7 +228,10 @@ for (const theme of ["light", "dark"])
       .getByRole("button", { name: "表示プレビュー", exact: true })
       .click();
     await expect(sidebar(page)).toBeVisible();
-    await page.getByRole("button", { name: "メニュー", exact: true }).click();
+    await page
+      .getByRole("menubar", { name: "Designer メニューバー" })
+      .getByRole("menuitem", { name: "表示", exact: true })
+      .click();
     await expect(
       page.getByRole("menuitem", {
         name: "補助パネルを元の表示に戻す",

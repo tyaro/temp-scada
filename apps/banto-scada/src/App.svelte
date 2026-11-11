@@ -211,12 +211,13 @@
   function toggleMenubar() {
     showMenubar = !showMenubar;
     void setMenubarVisible(showMenubar);
-    if (!showMenubar)
-      void tick().then(() =>
-        document
-          .querySelector<HTMLButtonElement>("[data-permanent-menu]")
-          ?.focus(),
-      );
+    // ☰ is shown only while the menubar is hidden, so both directions move
+    // focus to whichever [data-permanent-menu] now exists.
+    void tick().then(() =>
+      document
+        .querySelector<HTMLButtonElement>("[data-permanent-menu]")
+        ?.focus(),
+    );
   }
   function chooseTheme(value: "light" | "dark" | "system") {
     theme = value;
@@ -3566,49 +3567,50 @@
     {#if !headerExtension}{@render browserHubStatus()}{/if}
   </div>
   <div class="header-actions">
-    <Menu label="常設メニュー" placement="bottom-end">
-      {#snippet trigger(props)}
-        <button
-          {...props}
-          data-permanent-menu
-          aria-label="メニュー"
-          title="メニュー">☰</button
-        >
-      {/snippet}
-      <MenuGroup label="ファイル">
-        {#each menuGroups[0].items as item}
+    <!-- メニューバー表示中は同じ項目の重複になるので、☰ は隠しているときだけ出す。 -->
+    {#if !showMenubar}<Menu label="常設メニュー" placement="bottom-end">
+        {#snippet trigger(props)}
+          <button
+            {...props}
+            data-permanent-menu
+            aria-label="メニュー"
+            title="メニュー">☰</button
+          >
+        {/snippet}
+        <MenuGroup label="ファイル">
+          {#each menuGroups[0].items as item}
+            <MenuItem
+              label={item.label}
+              disabled={item.disabled}
+              onSelect={item.run}
+            />
+          {/each}
+        </MenuGroup>
+        <MenuGroup label="表示">
+          {#each menuGroups[2].items as item}
+            <MenuItem
+              label={item.label}
+              disabled={item.disabled}
+              onSelect={item.run}
+            />
+          {/each}
+        </MenuGroup>
+        <MenuGroup label="記録">
+          {#each menuGroups.find((g) => g.label === "記録")?.items ?? [] as item}
+            <MenuItem
+              label={item.label}
+              disabled={item.disabled}
+              onSelect={item.run}
+            />
+          {/each}
+        </MenuGroup>
+        <MenuGroup label="ヘルプ">
           <MenuItem
-            label={item.label}
-            disabled={item.disabled}
-            onSelect={item.run}
+            label="操作ガイド・アプリ情報"
+            onSelect={() => (helpOpen = true)}
           />
-        {/each}
-      </MenuGroup>
-      <MenuGroup label="表示">
-        {#each menuGroups[2].items as item}
-          <MenuItem
-            label={item.label}
-            disabled={item.disabled}
-            onSelect={item.run}
-          />
-        {/each}
-      </MenuGroup>
-      <MenuGroup label="記録">
-        {#each menuGroups.find((g) => g.label === "記録")?.items ?? [] as item}
-          <MenuItem
-            label={item.label}
-            disabled={item.disabled}
-            onSelect={item.run}
-          />
-        {/each}
-      </MenuGroup>
-      <MenuGroup label="ヘルプ">
-        <MenuItem
-          label="操作ガイド・アプリ情報"
-          onSelect={() => (helpOpen = true)}
-        />
-      </MenuGroup>
-    </Menu>
+        </MenuGroup>
+      </Menu>{/if}
     <Menu label="テーマ" placement="bottom-end">
       {#snippet trigger(props)}
         <button
