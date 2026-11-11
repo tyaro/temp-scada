@@ -19,7 +19,11 @@ export interface ProjectFilesHost {
   allow(run: () => void): boolean;
   /** App adopts Project and resets the editor; it calls adopted at the existing baseline boundary. */
   adopt(next: Project, source: ProjectSource, store: AssetStore): void;
-  report(kind: "info" | "error" | "success", text: string): void;
+  report(
+    kind: "info" | "error" | "success",
+    text: string,
+    options?: { toast?: boolean },
+  ): void;
 }
 
 /** Own file candidates and save baselines; App remains the only Project/history owner. */
@@ -157,6 +161,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
         packaged
           ? `${snapshot.manifest.name}：画像同梱packageのダウンロードを開始しました。保存先でファイルを確認してください。`
           : `${snapshot.manifest.name}：Project JSON のダウンロードを開始しました。保存先でファイルを確認してください。`,
+        { toast: true },
       );
     } catch (e) {
       host.report(

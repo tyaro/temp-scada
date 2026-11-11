@@ -49,6 +49,7 @@ test("sample renders, downloads, reloads, and invalid import preserves current s
     buffer: Buffer.from('{"screens":[]}'),
   });
   await expect(page.getByTestId("project-status")).toContainText("読込エラー");
+  await expect(page.locator(".toast-host")).toContainText("読込エラー");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "読込テスト",
   );
