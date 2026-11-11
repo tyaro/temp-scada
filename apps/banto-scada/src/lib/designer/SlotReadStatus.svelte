@@ -9,6 +9,7 @@
     equipmentContext,
     compact = false,
     alert = true,
+    inline = false,
   }: {
     screen: Screen | SymbolDefinition;
     screens: Screen[];
@@ -17,6 +18,11 @@
     compact?: boolean;
     /** Show unreadable values as a warning (the preview, UX review P1-4). */
     alert?: boolean;
+    /**
+     * Sit in the editor status row: the summary is one line and the opened
+     * list overlays the canvas above it instead of pushing it down (UX P1-3).
+     */
+    inline?: boolean;
   } = $props();
   const rows = $derived(
     slotStatusRows(screen, screens, symbols, equipmentContext),
@@ -52,6 +58,7 @@
   <details
     class="slot-read-status"
     class:compact
+    class:inline
     bind:open
     aria-label={`読取状態：${screen.name}`}
     onkeydown={(event) => {
@@ -92,61 +99,64 @@
         >{/if}
     </summary>
     {#if open}
-      <div class="description">
-        図面内の表示参照を集計します。取得不能とSIMは重複することがあります。
-      </div>
-      <!-- svelte-ignore a11y_no_noninteractive_tabindex (Keyboard users need a focusable scroll region for the read-only list.) -->
-      <div
-        class="rows"
-        tabindex="0"
-        role="region"
-        aria-label="slotの読取状態一覧"
-      >
-        <ul>
-          {#each visibleRows as row (row.key)}
-            <li
-              data-slot-status-key={row.key}
-              data-slot-state={row.display.state}
-              data-slot-simulated={row.simulated}
+      <div class="panel">
+        <div class="description">
+          図面内の表示参照を集計します。取得不能とSIMは重複することがあります。
+        </div>
+        <!-- svelte-ignore a11y_no_noninteractive_tabindex (Keyboard users need a focusable scroll region for the read-only list.) -->
+        <div
+          class="rows"
+          tabindex="0"
+          role="region"
+          aria-label="slotの読取状態一覧"
+        >
+          <ul>
+            {#each visibleRows as row (row.key)}
+              <li
+                data-slot-status-key={row.key}
+                data-slot-state={row.display.state}
+                data-slot-simulated={row.simulated}
+              >
+                <div class="identity">{row.path.join(" › ")}</div>
+                <div>
+                  <strong>{row.equipment}</strong> · <code>{row.slotName}</code>
+                </div>
+                <div class="value">
+                  {row.display.text}
+                  {#if row.display.state === "good"}<span
+                      >· {row.display.label}</span
+                    >{/if}{#if row.display.reason}<span>
+                      · {row.display.reason}</span
+                    >{/if}
+                </div>
+                {#if row.display.provenance}
+                  {@const origin = row.display.provenance}
+                  <small
+                    >source {origin.valueSource} · mode {origin.collectionMode} ·
+                    catalog
+                    {origin.catalogRevision} · run {origin.runId ?? "none"} · t {origin.sourceTimestampMs}</small
+                  >
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        </div>
+        {#if rows.length > PAGE_SIZE}
+          <nav aria-label="読取状態のページ">
+            <button
+              type="button"
+              disabled={currentPage === 0}
+              onclick={() => (page = currentPage - 1)}>前へ</button
             >
-              <div class="identity">{row.path.join(" › ")}</div>
-              <div>
-                <strong>{row.equipment}</strong> · <code>{row.slotName}</code>
-              </div>
-              <div class="value">
-                {row.display.text}
-                {#if row.display.state === "good"}<span
-                    >· {row.display.label}</span
-                  >{/if}{#if row.display.reason}<span>
-                    · {row.display.reason}</span
-                  >{/if}
-              </div>
-              {#if row.display.provenance}
-                {@const origin = row.display.provenance}
-                <small
-                  >source {origin.valueSource} · mode {origin.collectionMode} · catalog
-                  {origin.catalogRevision} · run {origin.runId ?? "none"} · t {origin.sourceTimestampMs}</small
-                >
-              {/if}
-            </li>
-          {/each}
-        </ul>
+            <span>{currentPage + 1} / {lastPage + 1} ページ</span>
+            <button
+              type="button"
+              disabled={currentPage === lastPage}
+              onclick={() => (page = currentPage + 1)}>次へ</button
+            >
+          </nav>
+        {/if}
       </div>
-      {#if rows.length > PAGE_SIZE}
-        <nav aria-label="読取状態のページ">
-          <button
-            type="button"
-            disabled={currentPage === 0}
-            onclick={() => (page = currentPage - 1)}>前へ</button
-          >
-          <span>{currentPage + 1} / {lastPage + 1} ページ</span>
-          <button
-            type="button"
-            disabled={currentPage === lastPage}
-            onclick={() => (page = currentPage + 1)}>次へ</button
-          >
-        </nav>
-      {/if}
     {/if}
   </details>
 {/if}
@@ -263,5 +273,32 @@
   }
   .compact {
     margin-bottom: 0;
+  }
+  .inline {
+    border-bottom: 0;
+    padding: 0;
+    margin: 0;
+    font-size: 11px;
+    flex: none;
+  }
+  .inline summary {
+    padding: 2px 8px;
+    white-space: nowrap;
+    border-radius: 3px;
+  }
+  .inline summary:hover {
+    background: var(--banto-surface-hover);
+  }
+  /* The positioned ancestor is the status row, so the list spans the canvas width. */
+  .inline .panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    z-index: 5;
+    font-size: 12px;
+    background: var(--banto-surface);
+    border-top: 1px solid var(--banto-border);
+    box-shadow: 0 -4px 12px rgb(0 0 0 / 0.15);
   }
 </style>
