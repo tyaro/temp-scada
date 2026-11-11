@@ -442,7 +442,7 @@
   .auth-popover {
     position: absolute;
     top: calc(100% + 5px);
-    right: 0;
+    left: 0;
     width: min(360px, calc(100vw - 24px));
     max-height: calc(100vh - 80px);
     overflow: auto;

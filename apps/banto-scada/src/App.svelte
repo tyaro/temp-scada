@@ -139,6 +139,7 @@
     toastStore,
   } from "./lib/banto/setup";
   import DesignerMenubar from "./lib/designer/DesignerMenubar.svelte";
+  import { applyWindowTitle, windowTitle } from "./lib/window-title";
   let theme = $state(getThemeMode());
   let showRulers = $state(getRulersVisible());
   function toggleRulers() {
@@ -1306,6 +1307,11 @@
     collectHistoryAssets(project.assets, history, assetStore);
   }
   $effect(collectAssets);
+  $effect(() => {
+    applyWindowTitle(windowTitle(project.manifest.name)).catch((error) =>
+      console.warn("ウィンドウタイトルを更新できませんでした", error),
+    );
+  });
   let replacementImageInput: HTMLInputElement;
   let placementFileInput: HTMLInputElement;
   const imageImport = createImageImportController({
@@ -3306,8 +3312,7 @@
   class="app-header"
   class:fullscreen-preview={mode === "preview" && previewFullscreenActive}
 >
-  <span class="studio-brand">SCADA<span>/ studio</span></span>
-  <h1 title={project.manifest.name}>{project.manifest.name}</h1>
+  <h1 class="sr-only">{project.manifest.name}</h1>
   {#if headerExtension}<div class="header-extension">
       {@render headerExtension()}
     </div>{/if}
@@ -4462,16 +4467,6 @@
     border-bottom: 1px solid var(--banto-border);
     background: var(--banto-surface);
   }
-  .app-header h1 {
-    flex: 1;
-    min-width: 0;
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
   .header-extension {
     flex-shrink: 0;
   }
@@ -4480,6 +4475,7 @@
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
+    margin-left: auto;
   }
   .header-actions button {
     width: auto;

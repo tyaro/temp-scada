@@ -2,5 +2,9 @@
   "identifier": "default",
   "description": "Read-only SCADA desktop",
   "windows": ["main"],
-  "permissions": ["core:default", "core:event:default"]
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:allow-set-title"
+  ]
 }
