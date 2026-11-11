@@ -4,6 +4,43 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## C5-7の引継ぎとC6の最初の回収（PR #159〜#161、2026-11-10〜11）
+
+- workflowの引継ぎ（#159）: 再読込・再login後に、同じprincipalのworkflowをhostから復元する。
+- observation attemptの回収（#160、C6）: pendingで終わった2回目以降のattemptの件数と管理bytesを台帳へ返す。250msごとの再照会で、結果待ちが累計約17分になると`capacity`になっていた。上限到達時の案内は、画面（再読込）とhost（記録の停止と再開）で分けた。hostのID回収とrootの自動入替えは、2026-11-11のユーザー判断で入れない。
+- K2の修正（#161）: 1 rootにworkflowは1件で、二つ目の変更を始めると画面が「受付準備中です」のまま止まった。hostがleaseの段階で拒否したら呼出しを未送信として終え、理由と「記録を停止して再開」の案内を出す。1 root 1件の制限は変えていない。
+
+Windows実機（Tauri＋実Hub）で、再読込をまたぐ検査→停止とjoin→破棄の継続、Windows Updateの再起動で途切れたsessionの`interrupted`表示、K2の修正後の案内を確認した。記録は[受入記録](../project/real-hub-c5-acceptance.md)の§6・§7にある。上限到達時の文言は実画面で確認していない。
+
+## C5 製品hostの記録・履歴接続とWindows実機受入（PR #143〜#158、2026-11-09〜11）
+
+[製品hostの記録ownerと画面接続](../design/runtime/historian-recording-product-owner.md)（#143）に沿って、次の順に接続した。
+
+- C5-1（#144）: 記録DBのopenと履歴画面への接続。
+- C5-2（#145）: 記録の照会と、初回設定・開始。
+- C5-3（#146〜#148）: 開始後のgate導入と、停止・終了のhandoff。終了時のCandidate破棄と、閉じる前の確認dialog。
+- C5-4（#149、#151）: 再開、停止中の計画適用、記録中のowner contextの付け替え。
+- C5-5（#150、#152、#153）: 記録操作portのv2への改訂と、desktopのnative portへの接続。
+- C5-6（#154、#155、#157、#158）: 受入手順・受入用Project・DB probeと、受入中に見つけた事象の修正。K1は無効計画の適用後に再起動まで停止中の計画適用ができなかった事象、もう一つは記録スロットが空のときの記録操作画面の表示である。#156で操作ガイドとREADMEを接続後の内容へ更新した。
+
+2026-11-10〜11に、実Hub 0.3.0-alpha.1を読み、検証用DBへ1秒周期・5系列（実4、SIM1）で記録して[C5-6受入](../project/real-hub-c5-acceptance.md)を行った。必須項目は合格で、C5を完了とした。実時間試験は7427.131秒で各系列+7427行、期待との差0 tick、gaps=0、約1174 byte/行だった。30日保持の見込みは約15.2 GBで、容量の検証ではない。Qualityの自然発生（3.8）は未観測、任意の6-7は未実施である。
+
+## 記録registryの認証・host gate（PR #131〜#142、2026-11-08〜09）
+
+2026-11-07のユーザー判断で認証延期を解除し、[認証・host gate](../design/runtime/historian-recording-host-gate.md)（#131）に沿って実装した。記録変更はSCADAのTauri host内のBantoユーザーで認証し、Adminだけに許す。監視・照会はViewer以上に許す。Hubへのread接続は`read`スコープのAPIキーのままで、記録変更の権限とは別である。
+
+- 基盤: BantoのサービスでdesktopのsessionをRust側で再検証する`HostAuth`（#132）、製品session issuerと静止照会（#133）、rootの世代ごとのownerRef・epochの生成と保存（#134）、認証のフェーズ記録と運用への移行（#135）。
+- 入口: 読取系（#136）、workflowとticket保持（#137）、認証の変更と購読frameの配送（#138）。
+- desktop: 認証command（#139）、記録registryのTauri commandと購読event（#140）、利用者管理と認証設定のcommand（#141）、移行・ログイン・利用者管理・認証設定の画面（#142）。
+
+## C4 native registry adapterの残工程と受入1〜6（PR #119〜#130、2026-11-07）
+
+#119で統合済みの作業と残り工程を整理し、[採用設計](../design/runtime/historian-recording-native-registry-adapter.md)§7の受入1〜6を閉じた。
+
+- Observation（#120）と受理後notDispatchedの観測（#121）で受入1。元cancel call（#122）で受入3。
+- 複数read retry（#123）、OwnerSnapshotと購読（#124）、管理側shutdown（#125）、session単位の認可失効（#126）。
+- Rust生成wire DTOの既存TS validator検査（#127）、元callのread-only終端照会`inspect_call`（#128、受入2）、全poolのexact／1不足と最大replyの保存（#129、受入5）、handoff後の読取照会の継続（#130、受入6）。
+
 ## C4 native registry adapterの段階配送（PR #105〜#118、2026-11-06〜07）
 
 [採用設計](../design/runtime/historian-recording-native-registry-adapter.md)（PR #105）に沿い、GUI非依存のnative rootが実`RecordingOperationsOwner`を所有し、一workflowの各段階を実nativeへ一回ずつ配送するところまでをworkへ統合した。

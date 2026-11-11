@@ -18,7 +18,7 @@ I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)�
 
 C2の検証として、通常entrypointのNativeShellからTauri command／eventを模したIPCを通し、数値0、Bad／Stale／Unbound、Project置換と旧通知拒否、切断・再接続、認証拒否、catalog失敗、WebView再読込をChromiumで確認した。認証失効時は読取sourceを外し、値とヘッダーの接続表示を消す。Tauri MockRuntimeとループバックのモックHubを使うnative試験では、製品のcommand／event・Bootstrapper・固定SDK・ReadHost／CatalogHostを一体で通し、数値0／bool false、Bad／Stale、認証拒否、owner再生成後の再接続を確認した。ブラウザ試験のモックはIPC境界、native試験のモックはHubとTauri runtimeである。実Windows GUIプロセスの終了・再起動も確認済み。
 
-記録・履歴の実接続はC4〜C5、連続運用受入はC6。prep2d2bの純粋Observation台帳は実装済みで、初回読取接続の前提にしない。
+記録・履歴の実接続はC4〜C5で完了し（2026-11-11、[C5受入記録](real-hub-c5-acceptance.md)）、連続運用受入はC6で未完了。prep2d2bの純粋Observation台帳は実装済みで、初回読取接続の前提にしない。
 
 ## 記録wireの元call配送台帳（H5d4c4c-prep2d2a、2026-11-05）
 
