@@ -42,7 +42,12 @@ test("Banto theme persists, follows OS changes and leaves Project colors unchang
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await selectPanel(page, "部品");
   await page.getByRole("button", { name: "Rectangle を追加" }).click();
-  await expect(page.locator(".toast-host")).toContainText("変更を適用しました");
+  await expect(page.getByTestId("project-status")).toContainText(
+    "変更を適用しました",
+  );
+  await expect(page.locator(".toast-host")).not.toContainText(
+    "変更を適用しました",
+  );
   await expect(
     page.getByRole("heading", { name: "プロパティ", exact: true }),
   ).toBeVisible();

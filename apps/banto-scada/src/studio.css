@@ -190,3 +190,23 @@ html[data-theme="dark"] #app {
     margin-left: auto;
   }
 }
+
+/* トーストは Inspector に重ねず、背景も不透明にする（Banto の success tint は半透明）。 */
+.toast-anchor {
+  display: contents;
+}
+:root .toast-host .toast.success {
+  background:
+    linear-gradient(var(--banto-success-tint), var(--banto-success-tint)),
+    var(--banto-surface-overlay);
+}
+:root .toast-host .toast.error {
+  background:
+    linear-gradient(var(--banto-danger-tint), var(--banto-danger-tint)),
+    var(--banto-surface-overlay);
+}
+:root .toast-host .toast.warning {
+  background:
+    linear-gradient(var(--banto-warning-tint), var(--banto-warning-tint)),
+    var(--banto-surface-overlay);
+}

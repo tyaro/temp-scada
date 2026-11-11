@@ -131,6 +131,10 @@
   } from "@banto/ui";
   import { notify, type NotificationKind } from "@banto/admin-core";
   import {
+    shouldShowToast,
+    type ReportOptions,
+  } from "./lib/designer/toast-policy";
+  import {
     getThemeMode,
     getPanelWidths,
     getReferenceHeight,
@@ -416,7 +420,7 @@
         layerTreeBindings.endLayerDrag();
       },
       report(message) {
-        report("success", message);
+        report("success", message, { toast: true });
       },
     },
     floatingPanels,
@@ -457,7 +461,7 @@
         layerTreeBindings.endLayerDrag();
       },
       report(message) {
-        report("success", message);
+        report("success", message, { toast: true });
       },
     },
     floatingPanels,
@@ -480,7 +484,9 @@
     showRulers = DEFAULT_PANEL_LAYOUT.rulers;
     previousPanels = null;
     void resetDesignerLayoutPreferences();
-    report("success", "パネルの表示とサイズを標準に戻しました。");
+    report("success", "パネルの表示とサイズを標準に戻しました。", {
+      toast: true,
+    });
     void tick().then(() =>
       document
         .querySelector<HTMLButtonElement>("[data-permanent-menu]")
@@ -859,6 +865,7 @@
       report(
         "info",
         direction === "undo" ? "元に戻しました。" : "やり直しました。",
+        { toast: false },
       );
     } catch (e) {
       report(
@@ -1663,9 +1670,13 @@
       event.returnValue = "";
     }
   }
-  function report(kind: NotificationKind, text: string) {
+  function report(
+    kind: NotificationKind,
+    text: string,
+    options?: ReportOptions,
+  ) {
     message = text;
-    notify(kind, text);
+    if (shouldShowToast(kind, options)) notify(kind, text);
   }
   let selected = $derived(screen.objects.find((o) => o.id === selectedId));
 
@@ -4376,7 +4387,16 @@
     >
   </div>
 </Modal>
-<ToastHost store={toastStore} />
+<div
+  class="toast-anchor"
+  style:--banto-toast-right={showInspector &&
+  mode === "edit" &&
+  !floatingInspector.floating
+    ? `${rightWidth + 16}px`
+    : undefined}
+>
+  <ToastHost store={toastStore} />
+</div>
 
 <style>
   .canvas-navigation {
