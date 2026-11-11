@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/minimal.project.json" with { type: "json" };
-import { chooseTheme } from "./helpers/designer";
+import { chooseTheme, chooseMenuItem } from "./helpers/designer";
 import {
   openProject,
   downloadProject,
@@ -60,14 +60,7 @@ const dialog = (page: Page) =>
   page.getByRole("dialog", { name: "履歴トレンド", exact: true });
 const trend = (page: Page) => dialog(page).locator("[data-history-phase]");
 async function open(page: Page) {
-  const bar = page.getByRole("menubar", { name: "Designer メニューバー" });
-  if (await bar.isVisible())
-    await bar.getByRole("menuitem", { name: "記録", exact: true }).click();
-  else
-    await page.getByRole("button", { name: "メニュー", exact: true }).click();
-  await page
-    .getByRole("menuitem", { name: "履歴トレンド", exact: true })
-    .click();
+  await chooseMenuItem(page, "記録", "履歴トレンド");
   await expect(dialog(page)).toBeVisible();
 }
 async function form(page: Page, mode = "raw", all = false) {

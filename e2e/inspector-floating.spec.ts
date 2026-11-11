@@ -1,15 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel, chooseTheme } from "./helpers/designer";
+import { selectPanel, chooseTheme, chooseMenuItem } from "./helpers/designer";
 const key = "banto.ui.scada.designer.inspector-placement";
 const panel = (page: Page) => page.locator("#designer-inspector-panel");
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 async function menu(page: Page, name: string) {
-  await button(page, "メニュー").click();
-  await page
-    .getByRole("menu", { name: "常設メニュー", exact: true })
-    .getByRole("menuitem", { name, exact: true })
-    .click();
+  await chooseMenuItem(page, "表示", name);
 }
 async function start(page: Page) {
   await page.setViewportSize({ width: 1920, height: 1080 });
@@ -336,11 +332,18 @@ test("a menu appearing during a pointer gesture cancels it and receives Escape",
   await page.mouse.move(box.x + 20, box.y + 12);
   await page.mouse.down();
   await page.mouse.move(box.x - 80, box.y + 32, { steps: 3 });
-  await button(page, "メニュー").evaluate((el) => el.click());
-  await expect(page.getByRole("menu", { name: "常設メニュー" })).toBeVisible();
+  await page
+    .getByRole("menubar", { name: "Designer メニューバー" })
+    .getByRole("menuitem", { name: "表示", exact: true })
+    .evaluate((el) => (el as HTMLElement).click());
+  await expect(
+    page.getByRole("menu", { name: "表示", exact: true }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   await page.mouse.up();
-  await expect(page.getByRole("menu", { name: "常設メニュー" })).toHaveCount(0);
+  await expect(
+    page.getByRole("menu", { name: "表示", exact: true }),
+  ).toHaveCount(0);
   expect(await panel(page).boundingBox()).toEqual(old);
   await expect(button(page, "元に戻す")).toBeDisabled();
 });

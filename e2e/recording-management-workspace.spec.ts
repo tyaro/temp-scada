@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/minimal.project.json" with { type: "json" };
 import fixtures from "../examples/recording-management-cases.json" with { type: "json" };
-import { chooseTheme } from "./helpers/designer";
+import { chooseTheme, chooseMenuItem } from "./helpers/designer";
 import {
   openProject,
   downloadBytes,
@@ -50,14 +50,7 @@ const dialog = (page: Page) =>
 const phase = (page: Page) =>
   dialog(page).locator("[data-recording-management-phase]");
 async function open(page: Page) {
-  const bar = page.getByRole("menubar", { name: "Designer メニューバー" });
-  if (await bar.isVisible())
-    await bar.getByRole("menuitem", { name: "記録", exact: true }).click();
-  else
-    await page.getByRole("button", { name: "メニュー", exact: true }).click();
-  await page
-    .getByRole("menuitem", { name: "記録管理状態", exact: true })
-    .click();
+  await chooseMenuItem(page, "記録", "記録管理状態");
   await expect(dialog(page)).toBeVisible();
 }
 const load = async (page: Page) =>

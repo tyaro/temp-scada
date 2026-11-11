@@ -13,6 +13,8 @@
 
   // Banto owns popup positioning, light dismiss, vertical navigation and Escape.
   // Designer adds the horizontal menubar navigation across those menus.
+  // The first trigger carries data-permanent-menu: while the menubar is shown
+  // the header ☰ is hidden, and focus fallbacks land on the menubar instead.
   function navigate(event: KeyboardEvent) {
     if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey)
       return;
@@ -57,6 +59,7 @@
             role="menuitem"
             tabindex={active === index ? 0 : -1}
             data-menu-trigger={index}
+            data-permanent-menu={index === 0 ? "" : undefined}
             onfocus={() => (active = index)}>{group.label}</button
           >
         {/snippet}

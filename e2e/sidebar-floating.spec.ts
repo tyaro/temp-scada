@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel, chooseTheme } from "./helpers/designer";
+import { selectPanel, chooseTheme, chooseMenuItem } from "./helpers/designer";
 const key = "banto.ui.scada.designer.sidebar-placement";
 const inspectorKey = "banto.ui.scada.designer.inspector-placement";
 const panel = (page: Page) => page.locator("#designer-project-panel");
@@ -7,11 +7,7 @@ const inspector = (page: Page) => page.locator("#designer-inspector-panel");
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 async function menu(page: Page, name: string) {
-  await button(page, "メニュー").click();
-  await page
-    .getByRole("menu", { name: "常設メニュー", exact: true })
-    .getByRole("menuitem", { name, exact: true })
-    .click();
+  await chooseMenuItem(page, "表示", name);
 }
 async function start(page: Page) {
   await page.setViewportSize({ width: 1920, height: 1080 });

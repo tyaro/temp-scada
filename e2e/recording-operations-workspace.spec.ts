@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/minimal.project.json" with { type: "json" };
 import fixtures from "../examples/recording-operations-cases.json" with { type: "json" };
-import { chooseTheme } from "./helpers/designer";
+import { chooseTheme, chooseMenuItem } from "./helpers/designer";
 import {
   openProject,
   downloadBytes,
@@ -41,14 +41,7 @@ const dialog = (page: Page) =>
 const button = (page: Page, name: string) =>
   dialog(page).getByRole("button", { name, exact: true });
 async function open(page: Page) {
-  const bar = page.getByRole("menubar", { name: "Designer メニューバー" });
-  if (await bar.isVisible())
-    await bar.getByRole("menuitem", { name: "記録", exact: true }).click();
-  else
-    await page.getByRole("button", { name: "メニュー", exact: true }).click();
-  await page
-    .getByRole("menuitem", { name: "記録計画の操作", exact: true })
-    .click();
+  await chooseMenuItem(page, "記録", "記録計画の操作");
   await expect(dialog(page)).toBeVisible();
 }
 const phase = (page: Page, value: string) =>

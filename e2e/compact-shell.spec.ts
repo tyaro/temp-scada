@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { chooseTheme, selectPanel } from "./helpers/designer";
+import { chooseTheme, selectPanel, chooseMenuItem } from "./helpers/designer";
 
 for (const theme of ["light", "dark"])
   test(`compact header and global toolbar keep every requested control in ${theme}`, async ({
@@ -120,10 +120,7 @@ test("toolbar mode changes retain draft protection and save status remains visib
     .getByRole("button", { name: "Rectangle を追加", exact: true })
     .click();
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
-  await page.getByRole("button", { name: "メニュー", exact: true }).click();
-  await page
-    .getByRole("menuitem", { name: "補助パネルをすべて隠す", exact: true })
-    .click();
+  await chooseMenuItem(page, "表示", "補助パネルをすべて隠す");
   const state = page.getByTestId("save-state");
   await expect(state).toBeVisible();
   await expect(state).toContainText("未適用の入力あり · 1 フォーム");

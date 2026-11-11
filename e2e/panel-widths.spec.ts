@@ -1,4 +1,9 @@
-import { fileCommand, selectPanel, chooseTheme } from "./helpers/designer";
+import {
+  chooseMenuItem,
+  fileCommand,
+  selectPanel,
+  chooseTheme,
+} from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 const button = (page: Page, name: string) =>
@@ -131,10 +136,7 @@ test("keyboard resizing is bounded and the display menu restores standard widths
   await right.focus();
   await page.keyboard.press("ArrowLeft");
   await expect(right).toHaveAttribute("aria-valuenow", "296");
-  await button(page, "メニュー").click();
-  await page
-    .getByRole("menuitem", { name: "パネルの幅を標準に戻す", exact: true })
-    .click();
+  await chooseMenuItem(page, "表示", "パネルの幅を標準に戻す");
   await expect(right).toHaveAttribute("aria-valuenow", "288");
   await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
     "入力を保持",
@@ -172,10 +174,7 @@ for (const theme of ["light", "dark"] as const)
     );
     await button(page, "プロパティを隠す").click();
     await expect(divider(page, "right")).toHaveCount(0);
-    await button(page, "メニュー").click();
-    await page
-      .getByRole("menuitem", { name: "補助パネルをすべて隠す", exact: true })
-      .click();
+    await chooseMenuItem(page, "表示", "補助パネルをすべて隠す");
     await expect(page.getByRole("separator", { name: /幅$/ })).toHaveCount(0);
     await button(page, "表示プレビュー").click();
     await expect(page.getByRole("separator", { name: /幅$/ })).toHaveCount(0);

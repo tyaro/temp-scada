@@ -1,4 +1,4 @@
-import { fileCommand, chooseTheme } from "./helpers/designer";
+import { fileCommand, chooseTheme, chooseMenuItem } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/tag-binding.project.json" with { type: "json" };
@@ -20,11 +20,7 @@ async function start(page: Page) {
   await expect(divider(page)).toBeVisible();
 }
 async function menu(page: Page, name: string) {
-  await button(page, "メニュー").click();
-  await page
-    .getByRole("menu", { name: "常設メニュー", exact: true })
-    .getByRole("menuitem", { name, exact: true })
-    .click();
+  await chooseMenuItem(page, "表示", name);
 }
 async function drag(page: Page, dy: number, cancel = false) {
   const box = (await divider(page).boundingBox())!;

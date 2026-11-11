@@ -1,4 +1,4 @@
-import { chooseTheme } from "./helpers/designer";
+import { chooseTheme, chooseMenuItem } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 const trigger = (p: Page) =>
   p.getByRole("button", { name: "メニュー", exact: true });
@@ -8,6 +8,12 @@ async function start(p: Page) {
   await p.setViewportSize({ width: 960, height: 480 });
   await p.goto("/");
   await p.getByRole("button", { name: "編集", exact: true }).click();
+  await hideMenubar(p);
+}
+// The header ☰ only exists while the menubar is hidden.
+async function hideMenubar(p: Page) {
+  await chooseMenuItem(p, "表示", "メニューバーを隠す");
+  await expect(trigger(p)).toBeVisible();
 }
 async function bounds(p: Page) {
   const b = (await popup(p).boundingBox())!;
@@ -50,6 +56,7 @@ test("an open menu remeasures available height using Banto positioning on resize
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await hideMenubar(page);
   await trigger(page).click();
   await expect(popup(page)).toBeVisible();
   await page.setViewportSize({ width: 960, height: 480 });

@@ -96,6 +96,33 @@ test("hidden menubar releases header space, persists and restores through the pe
   await expect(bar).toBeVisible();
 });
 
+test("header permanent menu exists only while the menubar is hidden and takes focus when it appears", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const bar = page.getByRole("menubar", { name: "Designer メニューバー" });
+  const permanent = page.getByRole("button", { name: "メニュー", exact: true });
+  await expect(bar).toBeVisible();
+  await expect(permanent).toHaveCount(0);
+  await bar.getByRole("menuitem", { name: "表示", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "メニューバーを隠す", exact: true })
+    .click();
+  await expect(bar).toHaveCount(0);
+  await expect(permanent).toBeVisible();
+  await expect(permanent).toBeFocused();
+  await permanent.click();
+  await page
+    .getByRole("menu", { name: "常設メニュー", exact: true })
+    .getByRole("menuitem", { name: "メニューバーを表示", exact: true })
+    .click();
+  await expect(bar).toBeVisible();
+  await expect(permanent).toHaveCount(0);
+  await expect(
+    bar.getByRole("menuitem", { name: "ファイル", exact: true }),
+  ).toBeFocused();
+});
+
 test("menu commands share draft protection, edit history and preview restrictions", async ({
   page,
 }) => {
