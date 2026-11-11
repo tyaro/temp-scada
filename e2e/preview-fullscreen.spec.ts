@@ -120,3 +120,19 @@ test("unavailable browser API disables fullscreen confirmation with a reason", a
     "このブラウザでは全画面表示を利用できません。",
   );
 });
+
+test("F11 toggles full screen only in the display preview", async ({
+  page: p,
+}) => {
+  await start(p);
+  await button(p, "編集").click();
+  await p.keyboard.press("F11");
+  expect(await active(p)).toBe(false);
+  await button(p, "表示プレビュー").click();
+  await p.keyboard.press("F11");
+  await expect.poll(() => active(p)).toBe(true);
+  await expect(p.locator(".app-header")).not.toBeVisible();
+  await p.keyboard.press("F11");
+  await expect.poll(() => active(p)).toBe(false);
+  await expect(p.locator(".app-header")).toBeVisible();
+});

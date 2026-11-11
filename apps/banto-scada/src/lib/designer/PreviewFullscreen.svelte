@@ -40,7 +40,23 @@
       document.removeEventListener("fullscreenchange", controller.sync);
   });
   onDestroy(controller.dispose);
+  function shortcut(event: KeyboardEvent) {
+    if (
+      event.key !== "F11" ||
+      event.isComposing ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.altKey ||
+      event.shiftKey ||
+      (scope === null && !status.active)
+    )
+      return;
+    event.preventDefault();
+    if (!event.repeat) void controller.toggle();
+  }
 </script>
+
+<svelte:window onkeydown={shortcut} />
 
 {#if scope !== null || status.active}
   <button
@@ -50,8 +66,8 @@
     title={!status.supported
       ? "このブラウザでは全画面表示を利用できません。"
       : status.active
-        ? "ブラウザのEsc操作でも終了できます。"
-        : "表示確認を全画面で開きます。Escで戻ります。"}
+        ? "F11、またはブラウザのEsc操作でも終了できます。"
+        : "表示確認を全画面で開きます（F11）。F11またはEscで戻ります。"}
     onclick={() => void controller.toggle()}
   >
     {status.busy
