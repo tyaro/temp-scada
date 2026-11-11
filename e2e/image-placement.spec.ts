@@ -202,7 +202,8 @@ test("background and duplicated images share one original through remove and Und
         o.shape.assetId === project.screens[0].backgroundImage.assetId,
     ),
   ).toBe(true);
-  await selectPanel(page, "プロジェクト");
+  // 背景画像の設定は未選択のときだけ Inspector に出る。
+  await button(page, "選択解除").click();
   await button(page, "背景画像を解除").click();
   await selectPanel(page, "レイヤー");
   await button(page, "image · 0").click();

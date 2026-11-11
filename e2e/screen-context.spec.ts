@@ -192,6 +192,8 @@ test("screen actions protect object drafts and keep selection when another scree
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
   ).not.toHaveValue("#aabbcc");
+  // 画面名は未選択のときだけ Inspector に出るので、選択を外してから右クリックする。
+  await button(page, "選択解除").click();
   const input = page.getByLabel("画面名", { exact: true });
   await input.click({ button: "right" });
   await expect(menu(page, "プロセス画面")).not.toBeVisible();

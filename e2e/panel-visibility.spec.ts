@@ -86,7 +86,7 @@ test("restore returns the previous panel subset, search, tab, selection and unap
   ).not.toHaveValue("#aabbcc");
 });
 
-test("hidden invalid screen settings reveal the project tab before validation focus", async ({
+test("hidden invalid screen settings reveal the inspector before validation focus", async ({
   page,
 }) => {
   await edit(page);
@@ -98,10 +98,8 @@ test("hidden invalid screen settings reveal the project tab before validation fo
     .getByRole("dialog", { name: "未適用の入力があります" })
     .getByRole("button", { name: "適用して続行", exact: true })
     .click();
-  await expect(sidebar(page)).toBeVisible();
-  await expect(
-    page.getByRole("tab", { name: "プロジェクト", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
+  await expect(inspector(page)).toBeVisible();
+  await expect(inspector(page).locator(".screen-settings")).toBeVisible();
   await expect(page.getByLabel("画面の幅", { exact: true })).toBeFocused();
   await expect(page.getByLabel("画面の幅", { exact: true })).toHaveValue("0");
 });

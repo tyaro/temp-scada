@@ -152,16 +152,19 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
     .click();
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#112233");
   await selectPanel(page, "プロジェクト");
-  await page.getByLabel("画面名", { exact: true }).fill("変更した画面");
+  // 画面設定は図形の選択中は隠れるので、選択に依らないプロジェクト名を 2 つ目のフォームにする。
+  await page
+    .getByLabel("プロジェクト名", { exact: true })
+    .fill("変更したプロジェクト");
   await button("表示プレビュー").click();
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
   await expect(prompt).toContainText("2 件");
   await prompt
     .getByRole("button", { name: "適用して続行", exact: true })
     .click();
-  await expect(
-    page.getByRole("img", { name: "変更した画面", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByTestId("save-state")).not.toContainText(
+    "未適用の入力あり",
+  );
   await button("編集").click();
   await selectPanel(page, "レイヤー");
   await page
@@ -179,7 +182,7 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );
-  expect(saved.screens[0].name).toBe("変更した画面");
+  expect(saved.manifest.name).toBe("変更したプロジェクト");
   expect(saved.screens[0].objects[0].shape.paint.fill.paint.color).toBe(
     "#445566",
   );
@@ -335,7 +338,9 @@ test("invalid model input preserves every dirty form before applying any command
   await selectPanel(page, "部品");
   await button("配管を追加").click();
   await selectPanel(page, "プロジェクト");
-  await page.getByLabel("画面名", { exact: true }).fill("未適用の画面");
+  const projectName = page.getByLabel("プロジェクト名", { exact: true });
+  const originalName = await projectName.inputValue();
+  await projectName.fill("未適用のプロジェクト");
   await page.getByLabel("頂点", { exact: true }).fill("0,0\n0,0");
   await button("表示プレビュー").click();
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
@@ -346,9 +351,7 @@ test("invalid model input preserves every dirty form before applying any command
   await expect(page.getByTestId("project-status")).toContainText(
     "線には異なる2点が必要",
   );
-  await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
-    "未適用の画面",
-  );
+  await expect(projectName).toHaveValue("未適用のプロジェクト");
   await expect(page.getByLabel("頂点", { exact: true })).toHaveValue(
     "0,0\n0,0",
   );
@@ -363,7 +366,7 @@ test("invalid model input preserves every dirty form before applying any command
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );
-  expect(saved.screens[0].name).toBe("プロセス画面");
+  expect(saved.manifest.name).toBe(originalName);
   expect(saved.manifest.projectRevision).toBe(2);
   await button("元に戻す").click();
   await expect(button("元に戻す")).toBeDisabled();

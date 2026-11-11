@@ -48,7 +48,7 @@ for (const theme of ["light", "dark"])
     await search.fill("ポンプ");
     const searchRef = await search.elementHandle();
     await selectPanel(page, "プロジェクト");
-    const name = page.getByLabel("画面名", { exact: true });
+    const name = page.getByLabel("プロジェクト名", { exact: true });
     await name.fill("未適用の画面名");
     const input = await name.elementHandle(),
       form = await name.evaluateHandle((el) => el.closest("form")),
@@ -149,7 +149,7 @@ test("overlapping panels raise by pointer and focus without replacing input DOM"
   );
   await start(page);
   await selectPanel(page, "プロジェクト");
-  const name = page.getByLabel("画面名", { exact: true }),
+  const name = page.getByLabel("プロジェクト名", { exact: true }),
     x = page.getByLabel("x", { exact: true });
   await name.fill("未適用");
   await x.focus();

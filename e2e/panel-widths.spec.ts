@@ -58,22 +58,23 @@ test("dragging panel borders preserves drafts and saves widths separately from P
     .click();
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
   await selectPanel(page, "プロジェクト");
-  await page.getByLabel("画面名", { exact: true }).fill("未適用の画面名");
+  // 画面設定は図形の選択中は隠れるので、選択に依らないプロジェクト名の下書きで確かめる。
+  const projectName = page.getByLabel("プロジェクト名", { exact: true });
+  const originalName = await projectName.inputValue();
+  await projectName.fill("未適用の画面名");
   const saveState = await page.getByTestId("save-state").innerText();
   await drag(page, "left", 100);
   await drag(page, "right", -80);
   await expect(divider(page, "left")).toHaveAttribute("aria-valuenow", "340");
   await expect(divider(page, "right")).toHaveAttribute("aria-valuenow", "368");
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
-    "未適用の画面名",
-  );
+  await expect(projectName).toHaveValue("未適用の画面名");
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
   ).toHaveValue("#aabbcc");
   expect(await page.getByTestId("save-state").innerText()).toBe(saveState);
   await expect(button(page, "元に戻す")).toBeDisabled();
-  await page.getByLabel("画面名", { exact: true }).fill("プロセス画面");
+  await projectName.fill(originalName);
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#164e63");
   const pending = page.waitForEvent("download");
   await fileCommand(page, "Project を保存");
