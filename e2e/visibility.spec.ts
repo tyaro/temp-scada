@@ -254,6 +254,9 @@ test("shared child visibility reaches all previews and thumbnails while the defi
     .getByRole("button", { name: "ポンプ · 10", exact: true })
     .click();
   await button(page, "参照する Symbol 定義を編集").click();
+  // Symbol 定義の編集に入っても左タブは切り替わらない（F-1）。サムネイルは
+  // プロジェクトタブの Symbol ライブラリにある。
+  await selectPanel(page, "プロジェクト");
   await expect(
     button(page, "共有定義：ポンプ").locator("polyline"),
   ).toHaveCount(project.symbols[0].objects.length - 1);
