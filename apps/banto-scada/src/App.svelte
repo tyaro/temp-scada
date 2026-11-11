@@ -2382,23 +2382,40 @@
   }
   /** 画面タブ・画面一覧の見出し・⋮・画面管理の「画面を追加」が共有する入口。 */
   function addScreen() {
-    if (project.screens.length >= 100) return;
-    if (
-      !edit({
-        type: "create-screen",
-        name: `画面 ${project.screens.length + 1}`,
-        width: screen.width,
-        height: screen.height,
-      })
-    )
-      return;
-    const id = screenId;
-    // 左の画面一覧が底までスクロールしていても、新しい画面の行を見せる。
-    void tick().then(() =>
-      document
-        .querySelector(`.project-sidebar [data-screen-id="${CSS.escape(id)}"]`)
-        ?.scrollIntoView({ block: "nearest" }),
-    );
+    const generation = workspaceGeneration;
+    const run = () => {
+      if (generation !== workspaceGeneration || project.screens.length >= 100)
+        return;
+      // Symbol 定義の編集中に「＋」を押したら、openScreen と同じく未適用の入力を
+      // 確かめてから定義の編集を抜け、新しい画面を開く。抜けないと `screen` が
+      // 定義を指したままになり、以後の編集が共有の定義へ入る。
+      if (editingSymbolId) {
+        if (!drafts.allow(run)) return;
+        editingSymbolId = null;
+        selectedIds = [];
+      }
+      const base =
+        project.screens.find((s) => s.id === screenId) ?? project.screens[0];
+      if (
+        !edit({
+          type: "create-screen",
+          name: `画面 ${project.screens.length + 1}`,
+          width: base.width,
+          height: base.height,
+        })
+      )
+        return;
+      const id = screenId;
+      // 左の画面一覧が底までスクロールしていても、新しい画面の行を見せる。
+      void tick().then(() =>
+        document
+          .querySelector(
+            `.project-sidebar [data-screen-id="${CSS.escape(id)}"]`,
+          )
+          ?.scrollIntoView({ block: "nearest" }),
+      );
+    };
+    run();
   }
   function screenContextItems(id: string): ContextAction[] {
     const command = (action: EditCommand) => () =>
