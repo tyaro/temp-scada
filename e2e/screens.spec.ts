@@ -43,16 +43,19 @@ test("screen CRUD, history fallback and multiple-screen file round-trip", async 
       .getByRole("img", { name: "洗浄工程 コピー", exact: true })
       .locator("[data-object-id]"),
   ).toHaveCount(2);
-  page.once("dialog", (d) => d.dismiss());
+  const confirm = page.getByRole("dialog", { name: "画面を削除しますか" });
   await button("画面を削除").click();
+  await confirm
+    .getByRole("button", { name: "キャンセル", exact: true })
+    .click();
   await expect(screens.locator("button[aria-pressed]")).toHaveCount(3);
-  page.once("dialog", (d) => d.accept());
   await button("画面を削除").click();
+  await confirm.getByRole("button", { name: "削除", exact: true }).click();
   await expect(screens.locator("button[aria-pressed]")).toHaveCount(2);
   await expect(
     page.getByRole("img", { name: "プロセス画面", exact: true }),
   ).toBeVisible();
-  await button("元に戻す").click();
+  await page.keyboard.press("Control+z");
   await expect(screens.locator("button[aria-pressed]")).toHaveCount(3);
   const downloading = page.waitForEvent("download");
   await fileCommand(page, "Project を保存");

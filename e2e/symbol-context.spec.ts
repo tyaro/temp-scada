@@ -83,14 +83,18 @@ test("duplicate and delete act on the context definition without redirecting sha
     .click();
   await selectPanel(page, "プロジェクト");
   await row(page, "ポンプ").click();
-  page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain("「バルブ コピー」");
-    await dialog.dismiss();
+  await action(page, "バルブ コピー", "共有定義を削除");
+  const confirm = page.getByRole("dialog", {
+    name: "Symbol 定義を削除しますか",
   });
-  await action(page, "バルブ コピー", "共有定義を削除");
+  await expect(confirm).toContainText("「バルブ コピー」");
+  await expect(confirm).toContainText("Ctrl+Z");
+  await confirm
+    .getByRole("button", { name: "キャンセル", exact: true })
+    .click();
   await expect(row(page, "バルブ コピー")).toBeVisible();
-  page.once("dialog", (dialog) => dialog.accept());
   await action(page, "バルブ コピー", "共有定義を削除");
+  await confirm.getByRole("button", { name: "削除", exact: true }).click();
   await expect(row(page, "バルブ コピー")).toHaveCount(0);
   await expect(row(page, "ポンプ")).toBeFocused();
   await expect(row(page, "ポンプ")).toHaveAttribute("aria-pressed", "true");

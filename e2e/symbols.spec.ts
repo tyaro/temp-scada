@@ -101,12 +101,29 @@ test("custom definition creation, duplication, placement, guarded deletion and u
       .getByRole("img", { name: "Symbol 1 コピー", exact: true })
       .locator("[data-object-id]"),
   ).toHaveCount(2);
-  page.once("dialog", (d) => d.dismiss());
+  const confirm = page.getByRole("dialog", {
+    name: "Symbol 定義を削除しますか",
+  });
   await button("定義を削除").click();
+  await confirm
+    .getByRole("button", { name: "キャンセル", exact: true })
+    .click();
   await expect(page.getByRole("note")).toBeVisible();
-  page.once("dialog", (d) => d.accept());
   await button("定義を削除").click();
+  await confirm.getByRole("button", { name: "削除", exact: true }).click();
   await expect(page.getByRole("note")).toHaveCount(0);
+  const list = page.getByRole("navigation", { name: "共有 Symbol 一覧" });
+  const before = await list
+    .getByRole("button", { name: /^共有定義：/ })
+    .count();
+  await page.keyboard.press("Control+z");
+  await expect(list.getByRole("button", { name: /^共有定義：/ })).toHaveCount(
+    before + 1,
+  );
+  await page.keyboard.press("Control+Shift+z");
+  await expect(list.getByRole("button", { name: /^共有定義：/ })).toHaveCount(
+    before,
+  );
   await button("定義を編集").click();
   await button("画面へ戻る").click();
   await button("画面に配置").click();

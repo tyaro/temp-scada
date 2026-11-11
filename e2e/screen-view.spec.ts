@@ -252,12 +252,15 @@ test("used source deletion reports owners and retains the shared references", as
   page: p,
 }) => {
   await start(p);
-  p.on("dialog", (dialog) => dialog.accept());
   await selectPanel(p, "プロジェクト");
   await p
     .locator(`button[data-screen-id="${source.id}"]`)
     .click({ button: "right" });
   await p.getByRole("menuitem", { name: "画面を削除", exact: true }).click();
+  await p
+    .getByRole("dialog", { name: "画面を削除しますか" })
+    .getByRole("button", { name: "削除", exact: true })
+    .click();
   await expect(p.getByTestId("project-status")).toContainText("使用中");
   await expect(p.getByTestId("project-status")).toContainText(host.name);
   expect((await save(p)).screens).toHaveLength(2);
