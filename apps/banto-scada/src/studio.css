@@ -40,21 +40,6 @@ html[data-theme="dark"] #app {
   gap: 14px;
   background: var(--studio-chrome);
 }
-#app .studio-brand {
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-#app .studio-brand span {
-  font-weight: 400;
-  margin-left: 3px;
-}
-#app .app-header h1 {
-  font-size: 12px;
-  font-weight: 500;
-  border-left: 1px solid var(--banto-border);
-  padding-left: 14px;
-}
 #app .app-header [role="menubar"] {
   padding: 0;
   border: 0;

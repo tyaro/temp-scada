@@ -284,7 +284,7 @@
   .hub-popover {
     position: absolute;
     top: calc(100% + 5px);
-    right: 0;
+    left: 0;
     width: min(340px, calc(100vw - 24px));
     padding: 12px;
     border: 1px solid var(--banto-border);

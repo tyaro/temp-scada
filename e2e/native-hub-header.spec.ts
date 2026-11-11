@@ -37,7 +37,7 @@ test("native Hub controls stay in the header and reveal connection details", asy
   await expect(
     page.getByRole("status").filter({ hasText: "Hub接続: offline / test" }),
   ).toBeVisible();
-  await page.locator(".studio-brand").click();
+  await page.locator(".app-header").click({ position: { x: 800, y: 4 } });
   await expect(page.locator("#hub-endpoint")).toBeHidden();
   await summary.click();
   await page.getByLabel("Hub 接続先").press("Escape");

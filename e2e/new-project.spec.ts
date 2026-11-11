@@ -21,6 +21,7 @@ test("new blank project is an editable clean baseline, exports current schema an
   await page.goto("/");
   await fileCommand(page, "新しいProject");
   await expect(page.locator("h1")).toHaveText("新しいProject");
+  await expect(page).toHaveTitle("新しいProject - Banto SCADA");
   await expect(button(page, "編集")).toHaveAttribute("aria-pressed", "true");
   const canvas = page.getByRole("img", { name: "画面1", exact: true });
   await expect(canvas.locator("[data-object-id]")).toHaveCount(0);

@@ -54,8 +54,6 @@ test("hidden menubar releases header space, persists and restores through the pe
   await name.fill("未適用の画面名");
   const bar = page.getByRole("menubar");
   const before = (await page.locator("main").boundingBox())!;
-  const titleWidth = (await page.locator(".app-header h1").boundingBox())!
-    .width;
   await bar.getByRole("menuitem", { name: "表示", exact: true }).click();
   await page
     .getByRole("menuitem", { name: "メニューバーを隠す", exact: true })
@@ -67,9 +65,6 @@ test("hidden menubar releases header space, persists and restores through the pe
   expect((await page.locator("main").boundingBox())!.y).toBeLessThanOrEqual(
     before.y,
   );
-  expect(
-    (await page.locator(".app-header h1").boundingBox())!.width,
-  ).toBeGreaterThan(titleWidth);
   await expect(name).toHaveValue("未適用の画面名");
   await expect(page.getByTestId("save-state")).toContainText(
     "未適用の入力あり",
