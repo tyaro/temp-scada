@@ -20,14 +20,12 @@
     hiddenSelectionCount = 0,
     modes,
     controls,
-    status,
   }: {
     groups: ToolbarGroup[];
     selectionCount: number;
     hiddenSelectionCount?: number;
     modes: Snippet;
     controls: Snippet;
-    status: Snippet;
   } = $props();
   let root: HTMLDivElement;
   let active = $state("");
@@ -95,7 +93,6 @@
       >{selectionCount} 件選択{#if hiddenSelectionCount}（非表示 {hiddenSelectionCount}
         件）{/if}</span
     >{/if}
-  {@render status()}
 </div>
 
 <style>
