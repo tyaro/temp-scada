@@ -1414,6 +1414,9 @@
     isTagPickerOpen: () => boolean;
   }>();
   const references = $derived(bindingReferences(project));
+  const referenceUsageCount = $derived(
+    references.reduce((count, reference) => count + reference.usages.length, 0),
+  );
   function openBinding(usage: BindingUsage) {
     transition(() => {
       setInspectorVisibility(true);
@@ -2377,6 +2380,43 @@
         edit({ type: "remove-screen", screenId: id });
     });
   }
+  /** 画面タブ・画面一覧の見出し・⋮・画面管理の「画面を追加」が共有する入口。 */
+  function addScreen() {
+    const generation = workspaceGeneration;
+    const run = () => {
+      if (generation !== workspaceGeneration || project.screens.length >= 100)
+        return;
+      // Symbol 定義の編集中に「＋」を押したら、openScreen と同じく未適用の入力を
+      // 確かめてから定義の編集を抜け、新しい画面を開く。抜けないと `screen` が
+      // 定義を指したままになり、以後の編集が共有の定義へ入る。
+      if (editingSymbolId) {
+        if (!drafts.allow(run)) return;
+        editingSymbolId = null;
+        selectedIds = [];
+      }
+      const base =
+        project.screens.find((s) => s.id === screenId) ?? project.screens[0];
+      if (
+        !edit({
+          type: "create-screen",
+          name: `画面 ${project.screens.length + 1}`,
+          width: base.width,
+          height: base.height,
+        })
+      )
+        return;
+      const id = screenId;
+      // 左の画面一覧が底までスクロールしていても、新しい画面の行を見せる。
+      void tick().then(() =>
+        document
+          .querySelector(
+            `.project-sidebar [data-screen-id="${CSS.escape(id)}"]`,
+          )
+          ?.scrollIntoView({ block: "nearest" }),
+      );
+    };
+    run();
+  }
   function screenContextItems(id: string): ContextAction[] {
     const command = (action: EditCommand) => () =>
       withScreen(id, () => edit(action));
@@ -2406,6 +2446,11 @@
         label: "画面を削除",
         disabled: project.screens.length === 1,
         run: () => removeScreen(id),
+      },
+      {
+        label: "画面を追加",
+        disabled: project.screens.length >= 100,
+        run: addScreen,
       },
     ];
   }
@@ -3578,6 +3623,8 @@
   contextKey={contextScope}
   onopen={openScreen}
   actions={screenContextItems}
+  onadd={addScreen}
+  canAdd={project.screens.length < 100}
 />
 <main
   use:measureWorkspace
@@ -3621,6 +3668,15 @@
           {project.manifest.name}
         </div>
         <TreeSection label="画面" count={project.screens.length}>
+          {#snippet action()}
+            {#if mode === "edit"}<button
+                class="tree-add"
+                aria-label="画面を追加（画面一覧）"
+                title="画面を追加"
+                disabled={project.screens.length >= 100}
+                onclick={addScreen}>＋</button
+              >{/if}
+          {/snippet}
           <nav aria-label="画面一覧">
             {#each project.screens as item (item.id)}
               {#snippet row()}
@@ -3733,13 +3789,7 @@
             {#if !activeDefinition}
               <button
                 disabled={project.screens.length >= 100}
-                onclick={() =>
-                  edit({
-                    type: "create-screen",
-                    name: `画面 ${project.screens.length + 1}`,
-                    width: screen.width,
-                    height: screen.height,
-                  })}>画面を追加</button
+                onclick={addScreen}>画面を追加</button
               >
               <button
                 disabled={project.screens.length >= 100}
@@ -3956,78 +4006,114 @@
       />
     {/key}
     <div class="canvas-stack" bind:clientHeight={canvasStackHeight}>
-      {#key workspaceGeneration}
-        <CanvasWorkspace
-          onopentrend={(objectId) => openTrendHistory(screen.id, objectId)}
-          onopenequipment={mode === "preview" && !menuBlocked
-            ? (id, origin) => previewPopups?.showEquipment(id, origin)
-            : undefined}
-          equipmentContext={readContext.equipmentContext}
-          readings={readContext.readings}
-          bind:this={canvasWorkspace}
-          onviewchange={(view) => (canvasView = view)}
-          oncontextrequest={requestSelectionContext}
-          {screen}
-          symbols={project.symbols}
-          screens={project.screens}
-          images={assetImages}
-          editable={mode === "edit"}
-          {selectedIds}
-          {showGrid}
-          {showRulers}
-          {snapEnabled}
-          {gridSize}
-          placing={positionPlacement}
-          placeReady={!!armedPart}
-          onplacepoint={placeArmed}
-          oncancelplacement={() => stopPlacement(true)}
-          {canDropPart}
-          ondropPart={dropPalettePart}
-          onresize={(id, geometry) =>
-            edit({
-              type: "update",
-              screenId: screen.id,
-              objectId: id,
-              patch: geometry,
-            })}
-          onvertexmove={(id, index, point) =>
-            edit({
-              type: "move-vertex",
-              screenId: screen.id,
-              objectId: id,
-              index,
-              point,
-            })}
-          onbeforeedit={() => drafts.allow(() => {})}
-          onselect={selectCanvasObjects}
-          onrangeselect={selectRange}
-          onnudge={nudgeSelection}
-          onmove={(ids, dx, dy) =>
-            edit({
-              type: "move-many",
-              screenId: screen.id,
-              objectIds: ids,
-              dx,
-              dy,
-            })}
-          trends={project.trends}
-        />
-      {/key}
-      {#if mode === "preview"}
-        {#key `${workspaceGeneration}:${screen.id}:${mode}`}
-          <PreviewPopups
-            onopentrend={openTrendHistory}
-            onretiretrend={retirePopupTrend}
-            bind:this={previewPopups}
+      <div class="canvas-area">
+        {#key workspaceGeneration}
+          <CanvasWorkspace
+            onopentrend={(objectId) => openTrendHistory(screen.id, objectId)}
+            onopenequipment={mode === "preview" && !menuBlocked
+              ? (id, origin) => previewPopups?.showEquipment(id, origin)
+              : undefined}
             equipmentContext={readContext.equipmentContext}
             readings={readContext.readings}
-            {project}
+            bind:this={canvasWorkspace}
+            onviewchange={(view) => (canvasView = view)}
+            oncontextrequest={requestSelectionContext}
+            {screen}
+            symbols={project.symbols}
+            screens={project.screens}
             images={assetImages}
-            onopenusage={openPreviewEquipmentUsage}
-            onmessage={(message) => report("error", message)}
+            editable={mode === "edit"}
+            {selectedIds}
+            {showGrid}
+            {showRulers}
+            {snapEnabled}
+            {gridSize}
+            placing={positionPlacement}
+            placeReady={!!armedPart}
+            onplacepoint={placeArmed}
+            oncancelplacement={() => stopPlacement(true)}
+            {canDropPart}
+            ondropPart={dropPalettePart}
+            onresize={(id, geometry) =>
+              edit({
+                type: "update",
+                screenId: screen.id,
+                objectId: id,
+                patch: geometry,
+              })}
+            onvertexmove={(id, index, point) =>
+              edit({
+                type: "move-vertex",
+                screenId: screen.id,
+                objectId: id,
+                index,
+                point,
+              })}
+            onbeforeedit={() => drafts.allow(() => {})}
+            onselect={selectCanvasObjects}
+            onrangeselect={selectRange}
+            onnudge={nudgeSelection}
+            onmove={(ids, dx, dy) =>
+              edit({
+                type: "move-many",
+                screenId: screen.id,
+                objectIds: ids,
+                dx,
+                dy,
+              })}
+            trends={project.trends}
           />
         {/key}
-      {/if}
+        {#if mode === "preview"}
+          {#key `${workspaceGeneration}:${screen.id}:${mode}`}
+            <PreviewPopups
+              onopentrend={openTrendHistory}
+              onretiretrend={retirePopupTrend}
+              bind:this={previewPopups}
+              equipmentContext={readContext.equipmentContext}
+              readings={readContext.readings}
+              {project}
+              images={assetImages}
+              onopenusage={openPreviewEquipmentUsage}
+              onmessage={(message) => report("error", message)}
+            />
+          {/key}
+        {/if}
+        {#if mode === "edit" && (showSidebar || showInspector || showReferences)}
+          <div class="canvas-navigation" class:has-map={showMinimap}>
+            <FavoritesDock
+              images={assetImages}
+              items={favoriteItems}
+              {positionPlacement}
+              {isArmed}
+              onarm={armPart}
+              onimmediate={placeFavorite}
+              contextKey={`${contextScope}:${favoriteKeys.join(",")}`}
+              onplace={choosePart}
+              onremove={toggleFavorite}
+              onbrowse={browseParts}
+              onstartdrag={beginPartDrag}
+              onenddrag={() => (paletteDrag = null)}
+            />
+            {#if showMinimap}
+              {#key `${workspaceGeneration}:${screen.id}`}
+                <Minimap
+                  equipmentContext={readContext.equipmentContext}
+                  readings={readContext.readings}
+                  {screen}
+                  symbols={project.symbols}
+                  screens={project.screens}
+                  images={assetImages}
+                  view={canvasView}
+                  oncenter={(point) => canvasWorkspace?.centerOn(point)}
+                  onfit={() => canvasWorkspace?.zoom(null)}
+                  trends={project.trends}
+                />
+              {/key}
+            {/if}
+          </div>
+        {/if}
+      </div>
       {#if mode === "edit" && positionPlacement}
         <div class="placement-bar" role="status" aria-label="連続配置の状態">
           <span
@@ -4040,41 +4126,25 @@
           >
         </div>
       {/if}
-      {#if mode === "edit" && (showSidebar || showInspector || showReferences)}
-        <div class="canvas-navigation" class:has-map={showMinimap}>
-          <FavoritesDock
-            images={assetImages}
-            items={favoriteItems}
-            {positionPlacement}
-            {isArmed}
-            onarm={armPart}
-            onimmediate={placeFavorite}
-            contextKey={`${contextScope}:${favoriteKeys.join(",")}`}
-            onplace={choosePart}
-            onremove={toggleFavorite}
-            onbrowse={browseParts}
-            onstartdrag={beginPartDrag}
-            onenddrag={() => (paletteDrag = null)}
-          />
-          {#if showMinimap}
-            {#key `${workspaceGeneration}:${screen.id}`}
-              <Minimap
-                equipmentContext={readContext.equipmentContext}
-                readings={readContext.readings}
-                {screen}
-                symbols={project.symbols}
-                screens={project.screens}
-                images={assetImages}
-                view={canvasView}
-                oncenter={(point) => canvasWorkspace?.centerOn(point)}
-                onfit={() => canvasWorkspace?.zoom(null)}
-                trends={project.trends}
-              />
-            {/key}
-          {/if}
-        </div>
-      {/if}
-      <p role="status" data-testid="project-status">{message}</p>
+      <div class="status-row">
+        <p role="status" data-testid="project-status">{message}</p>
+        {#if mode === "edit" && showReferences && references.length}
+          <button
+            class="references-toggle"
+            aria-expanded={referencesExpanded}
+            aria-controls="designer-references-panel"
+            aria-label={`Project のタグ参照 · ${references.length} タグ / ${referenceUsageCount} 配置`}
+            title={`Project のタグ参照 · ${references.length} タグ / ${referenceUsageCount} 配置`}
+            onclick={() => {
+              canvasWorkspace?.preparePanelResize();
+              referencesExpanded = !referencesExpanded;
+            }}
+            >タグ参照 {references.length}
+            <span aria-hidden="true">{referencesExpanded ? "▾" : "▴"}</span
+            ></button
+          >
+        {/if}
+      </div>
       {#if mode === "edit"}
         <div
           hidden={!showReferences}
@@ -4113,10 +4183,8 @@
               editable={mode === "edit"}
               {drafts}
               onedit={edit}
-              bind:expanded={referencesExpanded}
+              expanded={referencesExpanded}
               sized={canSizeReferences && referencesExpanded}
-              onbeforetoggle={() => canvasWorkspace?.preparePanelResize(true)}
-              onaftertoggle={() => canvasWorkspace?.finishPanelResize()}
               {references}
               onopen={openBinding}
               onclose={() =>
@@ -4411,18 +4479,93 @@
   !floatingInspector.floating
     ? `${rightWidth + 16}px`
     : undefined}
+  style:--banto-toast-bottom={mode === "edit" ? "40px" : undefined}
 >
   <ToastHost store={toastStore} />
 </div>
 
 <style>
-  .canvas-navigation {
+  .canvas-area {
+    position: relative;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    min-width: 0;
+  }
+  /* ドックとミニマップは専用帯を持たず図面の上に重ねる。空いた所は図面へ素通しにする。 */
+  .canvas-navigation {
+    position: absolute;
+    left: 0;
+    right: 14px;
+    bottom: 14px;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
     justify-content: space-between;
     gap: 8px;
     min-width: 0;
     padding-right: 8px;
+    pointer-events: none;
+  }
+  .canvas-navigation > :global(*) {
+    pointer-events: auto;
+  }
+  .canvas-navigation > :global(.minimap) {
+    margin-left: auto;
+    border: 1px solid var(--banto-border);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--banto-surface) 92%, transparent);
+    box-shadow: 0 3px 12px #316e8414;
+  }
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .status-row > [role="status"] {
+    flex: 1;
+    min-width: 0;
+  }
+  .references-toggle {
+    flex: none;
+    width: auto;
+    white-space: nowrap;
+    margin-right: 8px;
+    padding: 1px 8px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--banto-text-muted);
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .references-toggle:hover,
+  .references-toggle[aria-expanded="true"] {
+    border-color: var(--banto-border);
+    color: var(--banto-text);
+  }
+  .references-toggle:focus-visible {
+    outline: none;
+    box-shadow: var(--banto-focus-ring);
+  }
+  .tree-add {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 3px;
+    background: transparent;
+    color: var(--banto-primary);
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .tree-add:hover {
+    background: color-mix(in srgb, var(--banto-primary) 8%, transparent);
+  }
+  .tree-add:disabled {
+    opacity: 0.5;
+    cursor: default;
   }
   .canvas-navigation > :global(.favorites-dock) {
     margin-left: auto;
@@ -4837,8 +4980,13 @@
       padding: 12px 16px;
     }
     main > section > :not(.canvas-stack),
-    .canvas-stack > :not(:global(.canvas-workspace)) {
+    .canvas-stack > :not(.canvas-area),
+    .canvas-area > :not(:global(.canvas-workspace)) {
       flex-shrink: 0;
+    }
+    .canvas-area {
+      flex: 1;
+      min-height: 0;
     }
     .canvas-stack {
       display: flex;

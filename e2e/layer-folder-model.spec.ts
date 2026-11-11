@@ -6,6 +6,9 @@ import { selectPanel } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const canvas = (page: Page) => page.locator(".sheet > svg");
+// 図面に重なるドック・ミニマップ・トーストは比較から外す。
+const overlays =
+  ".canvas-navigation, .toast-host { visibility: hidden !important; }";
 function fixture() {
   const project: any = structuredClone(sample);
   [project.screens[0], project.symbols[0]].forEach((owner, i) => {
@@ -39,12 +42,15 @@ test("folder metadata does not change rendering, and Inspector edits retain memb
   await start(page);
   await load(page, sample);
   await page.evaluate(() => document.fonts.ready);
-  const before = await canvas(page).screenshot({ animations: "disabled" });
+  const before = await canvas(page).screenshot({
+    animations: "disabled",
+    style: overlays,
+  });
   const project = fixture();
   await load(page, project);
-  expect(await canvas(page).screenshot({ animations: "disabled" })).toEqual(
-    before,
-  );
+  expect(
+    await canvas(page).screenshot({ animations: "disabled", style: overlays }),
+  ).toEqual(before);
   await selectPanel(page, "レイヤー");
   const id = project.screens[0].objects[0].id;
   await page.locator(`button[data-layer-id="${id}"]`).click();

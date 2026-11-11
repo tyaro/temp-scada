@@ -223,10 +223,7 @@ test("named Symbol and Text usage search navigates by IDs even with equal names"
   await expect(
     page.getByLabel("参照する Symbol 定義", { exact: true }),
   ).toBeVisible();
-  await page
-    .locator("summary")
-    .filter({ hasText: "Project のタグ参照" })
-    .click();
+  await page.locator(".references-toggle").click();
   await page.getByLabel("タグ参照を検索", { exact: true }).fill("送水設備");
   const references = page.getByRole("region", {
     name: "Project のタグ参照",

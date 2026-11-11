@@ -284,7 +284,7 @@ test("hidden tag usages remain visible and navigate to Inspector without silentl
   text.name = "隠れた液位";
   text.shape.binding = { externalName: "Exact.Hidden.Tag" };
   await start(page, project);
-  await page.locator("details.references > summary").click();
+  await page.locator(".references-toggle").click();
   const refs = page.getByRole("region", {
     name: "Project のタグ参照",
     exact: true,
