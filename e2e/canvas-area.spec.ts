@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { selectPanel } from "./helpers/designer";
 import sample from "../examples/tag-binding.project.json" with { type: "json" };
 
 const button = (page: Page, name: string) =>
@@ -155,6 +156,26 @@ test("adds a screen from the tab plus, the tree heading and the screen menu", as
   await tab.first().click({ button: "right" });
   await page.getByRole("menuitem", { name: "画面を追加", exact: true }).click();
   await expect(tab).toHaveCount(count + 3);
+  await expect(tab.last()).toHaveAttribute("aria-current", "page");
+});
+
+test("adding a screen while editing a Symbol definition leaves the definition", async ({
+  page,
+}) => {
+  await open(page, 1440, 900);
+  await selectPanel(page, "部品");
+  await button(page, "ポンプを追加").click();
+  await selectPanel(page, "プロジェクト");
+  await button(page, "定義を編集").first().click();
+  await expect(button(page, "画面へ戻る")).toBeVisible();
+  const tabs = page.getByRole("navigation", { name: "画面タブ" });
+  const tab = tabs.locator("[data-screen-tab]");
+  const count = await tab.count();
+  await tabs
+    .getByRole("button", { name: "画面を追加（画面タブ）", exact: true })
+    .click();
+  await expect(button(page, "画面へ戻る")).toHaveCount(0);
+  await expect(tab).toHaveCount(count + 1);
   await expect(tab.last()).toHaveAttribute("aria-current", "page");
 });
 
