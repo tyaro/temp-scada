@@ -295,7 +295,7 @@
     width: 100%;
     height: 240px;
     overflow: visible;
-    background: var(--banto-surface-alt);
+    background: var(--banto-surface-subtle);
     touch-action: none;
     user-select: none;
   }
@@ -319,8 +319,8 @@
     cursor: pointer;
   }
   button[aria-pressed="true"] {
-    background: var(--banto-primary);
-    color: var(--banto-primary-contrast, white);
+    background: var(--banto-primary-solid);
+    color: var(--banto-on-solid);
   }
   :is(svg, rect, button):focus-visible {
     outline: 2px solid var(--banto-primary);

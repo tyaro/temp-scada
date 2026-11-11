@@ -349,7 +349,7 @@
     display: block;
     width: 100%;
     height: 80px;
-    background: var(--banto-surface-alt);
+    background: var(--banto-surface-subtle);
   }
   .actions {
     display: flex;
@@ -374,8 +374,8 @@
     font-size: 11px;
   }
   button[aria-pressed="true"] {
-    background: var(--banto-primary);
-    color: var(--banto-primary-contrast, white);
+    background: var(--banto-primary-solid);
+    color: var(--banto-on-solid);
   }
   :is(input, button):focus-visible {
     outline: none;
