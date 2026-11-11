@@ -4069,27 +4069,31 @@
   <section aria-label="画面プレビュー" bind:this={editorRegion}>
     {#if activeDefinition}
       <div class="definition-banner" role="note">
-        <strong
-          >Symbol 定義を編集中 · {symbolUsage(project, activeDefinition.id)} 配置で共有</strong
-        >
-        <p>
-          確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。bool状態別の文字色は両方の配置で優先します。別の形にする場合は定義を複製してください。
-        </p>
+        <div class="definition-banner-row">
+          <strong
+            >Symbol 定義を編集中 · {symbolUsage(project, activeDefinition.id)} 配置で共有</strong
+          >
+          <details class="definition-banner-help">
+            <summary>説明</summary>
+            <p>
+              確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。bool状態別の文字色は両方の配置で優先します。別の形にする場合は定義を複製してください。
+            </p>
+          </details>
+          <button
+            onclick={() =>
+              transition(() => {
+                const definitionId = editingSymbolId ?? undefined;
+                const returning = definitionReturn === screenId;
+                editingSymbolId = null;
+                definitionReturn = null;
+                if (returning) restoreEditView(definitionId);
+                else selectedIds = [];
+              })}>画面へ戻る</button
+          >
+        </div>
         {#if symbolStrokeOverflow > 0}<p role="status">
             枠線が表示領域外へ出ている図形が{symbolStrokeOverflow}件あります。配置では領域外が切れます。図形の位置・寸法または定義の表示領域を変更してください。
           </p>{/if}
-
-        <button
-          onclick={() =>
-            transition(() => {
-              const definitionId = editingSymbolId ?? undefined;
-              const returning = definitionReturn === screenId;
-              editingSymbolId = null;
-              definitionReturn = null;
-              if (returning) restoreEditView(definitionId);
-              else selectedIds = [];
-            })}>画面へ戻る</button
-        >
       </div>
     {/if}
     {#key `${workspaceGeneration}:${screen.id}`}
@@ -4960,6 +4964,35 @@
   .definition-banner button {
     width: auto;
     margin-bottom: 0;
+  }
+  /* UX精査 P1-3: 図面の高さを取らないよう、見出しと「画面へ戻る」を1行にし説明は畳む。 */
+  .definition-banner-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  .definition-banner-row > strong {
+    flex: 1;
+    min-width: 0;
+  }
+  .definition-banner-row > button {
+    padding: 3px 12px;
+    min-height: 0;
+  }
+  .definition-banner-help > summary {
+    cursor: pointer;
+    color: var(--banto-text-muted);
+    white-space: nowrap;
+  }
+  .definition-banner-help[open] {
+    flex-basis: 100%;
+    order: 3;
+  }
+  .definition-banner-help > p,
+  .definition-banner > p {
+    margin: 6px 0 0;
   }
   button:focus-visible,
   input:focus-visible {

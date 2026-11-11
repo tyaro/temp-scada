@@ -179,6 +179,31 @@ test("adding a screen while editing a Symbol definition leaves the definition", 
   await expect(tab.last()).toHaveAttribute("aria-current", "page");
 });
 
+test("Symbol definition banner is one row with the description folded (P1-3)", async ({
+  page,
+}) => {
+  await open(page, 1280, 800);
+  await selectPanel(page, "部品");
+  await button(page, "ポンプを追加").click();
+  await selectPanel(page, "プロジェクト");
+  await button(page, "定義を編集").first().click();
+  const banner = page.locator(".definition-banner");
+  const back = button(page, "画面へ戻る");
+  await expect(back).toBeVisible();
+  const help = banner.locator("details.definition-banner-help");
+  await expect(help.locator("p")).toBeHidden();
+  const closed = (await banner.boundingBox())!;
+  expect(closed.height).toBeLessThanOrEqual(60);
+  const title = (await banner.locator("strong").boundingBox())!;
+  const backBox = (await back.boundingBox())!;
+  expect(
+    Math.abs(title.y + title.height / 2 - (backBox.y + backBox.height / 2)),
+  ).toBeLessThan(8);
+  await help.locator("summary").click();
+  await expect(help.locator("p")).toBeVisible();
+  expect((await banner.boundingBox())!.height).toBeGreaterThan(closed.height);
+});
+
 test("edit and preview keep the canvas top and height close (L-4)", async ({
   page,
 }) => {
