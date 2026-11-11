@@ -128,9 +128,7 @@ test("locked selections reject the whole action and explicit hidden selection st
   await expect(button(page, horizontal)).toBeDisabled();
   await button(page, "ロック解除：rectangle · 3").click();
   await expect(button(page, horizontal)).toBeEnabled();
-  await expect(
-    page.getByRole("toolbar", { name: "共通編集ツールバー", exact: true }),
-  ).toContainText("非表示 1");
+  await expect(page.locator(".app-header")).toContainText("非表示 1");
   await button(page, horizontal).click();
   const result = await exported(page);
   expect(result.screens[0].objects[2]).toMatchObject({

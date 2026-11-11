@@ -172,9 +172,7 @@ test("hidden mixed selection rejects canvas movement/delete/cut, while explicit 
   await layers(page)
     .getByRole("button", { name: "ellipse · 4", exact: true })
     .click({ modifiers: ["Shift"] });
-  await expect(
-    page.getByRole("toolbar", { name: "共通編集ツールバー" }),
-  ).toContainText("非表示 1 件");
+  await expect(page.locator(".app-header")).toContainText("非表示 1 件");
   const ellipse = canvas(page).locator(
       `[data-object-id="${sample.screens[0].objects[1].id}"]`,
     ),
