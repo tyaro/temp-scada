@@ -265,6 +265,13 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 - 画面の追加はAppの`addScreen`が唯一の入口で、`ScreenTabs`の「＋」（`onadd`）、`TreeSection`の`action`（画面見出しの「＋」）、画面の⋮メニュー、画面管理のボタンから呼ぶ。
 - `e2e/canvas-area.spec.ts`が1280×800／1440×900の寸法・重ね・素通し・タグ参照の開閉・画面の追加・編集⇄プレビューの高さ差を確認する。
 
+## 往復での選択と表示位置の保持（UX精査 F-1）
+
+- 編集→表示プレビュー→編集と、画面→Symbol 定義→「画面へ戻る」の往復で、Appの`rememberEditView`／`restoreEditView`が画面ごとの選択ID・倍率・表示中心を控えて戻す。控えは`workspaceGeneration`ごとで、Project の読込で捨てる。選択と表示位置は Undo 履歴に入れない。
+- 判定は`designer/return-view.ts`の純関数（`rememberReturnView`・`restoredSelection`）。存在しない配置を落とし、定義から戻るときはその定義を参照する配置（入口）を選ぶ。グループは丸ごと選ぶ。表示中心は`CanvasWorkspace.centerOn`で戻す。
+- `openDefinition`は左タブを切り替えない。
+- `return-view.test.ts`と`e2e/roundtrip-selection.spec.ts`を変更時の入口にする。
+
 ## 複数配置の不透明度
 
 `set-opacity`を`commands.ts`のobject分類から`object-handler.ts`の共通lock／group guardを経て`selection-handler.ts`へ送る。全対象・値検証後に既存opacityだけを更新する。`designer/SelectionOpacity.svelte`／`forms/selection-opacity.ts`は既存の選択snapshot・draft guardを使い、成功時にこの入力だけを解除する。`selection-opacity.test.ts`／`e2e/selection-opacity.spec.ts`で値・所有者・参照・拒否・Undo・IME・複数フォームを検証する。実画面は`scripts/capture-selection-opacity.mjs`で記録する。
