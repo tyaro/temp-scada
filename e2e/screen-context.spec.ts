@@ -78,14 +78,17 @@ test("screen context commands act on an inactive row, preserve the current scree
       .getByRole("img", { name: "プロセス画面 コピー", exact: true })
       .locator("[data-object-id]"),
   ).toHaveCount(3);
-  page.once("dialog", async (dialog) => {
-    expect(dialog.message()).toContain("「画面 2」");
-    await dialog.dismiss();
-  });
   await action(page, "画面 2", "画面を削除");
+  const confirm = page.getByRole("dialog", { name: "画面を削除しますか" });
+  await expect(confirm).toContainText("「画面 2」と図形");
+  await expect(confirm).toContainText("Ctrl+Z");
+  await confirm
+    .getByRole("button", { name: "キャンセル", exact: true })
+    .click();
+  await expect(confirm).toHaveCount(0);
   await expect(row(page, "画面 2")).toBeVisible();
-  page.once("dialog", (dialog) => dialog.accept());
   await action(page, "画面 2", "画面を削除");
+  await confirm.getByRole("button", { name: "削除", exact: true }).click();
   await expect(row(page, "画面 2")).toHaveCount(0);
   await expect(row(page, "プロセス画面 コピー")).toHaveAttribute(
     "aria-pressed",
@@ -171,9 +174,12 @@ test("screen actions protect object drafts and keep selection when another scree
   await selectPanel(page, "プロジェクト");
   await action(page, "画面 2", "画面を削除");
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  page.once("dialog", (dialog) => dialog.accept());
   await prompt
     .getByRole("button", { name: "入力を破棄して続行", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "画面を削除しますか" })
+    .getByRole("button", { name: "削除", exact: true })
     .click();
   await expect(row(page, "画面 2")).toHaveCount(0);
   await expect(row(page, "プロセス画面")).toHaveAttribute(

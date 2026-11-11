@@ -168,6 +168,13 @@
   let showMenubar = $state(getMenubarVisible());
   let projectFileInput = $state<HTMLInputElement>();
   let helpOpen = $state(false);
+  /** 画面・Symbol 定義の削除確認（Banto の Modal）。 */
+  let deleteConfirm = $state<{
+    kind: "screen" | "symbol";
+    id: string;
+    name: string;
+    count: number;
+  } | null>(null);
   let historyOpen = $state(false);
   let recordingOperationsOpen = $state.raw<object | null>(null);
   function openRecordingOperations() {
@@ -957,6 +964,7 @@
       screenViewRequest !== null ||
       arrayCopy.request !== null ||
       folderRequest !== null ||
+      deleteConfirm !== null ||
       inspectorController?.isTagPickerOpen() ||
       equipmentLibrary?.isTagPickerOpen() ||
       (event.target instanceof Element &&
@@ -1571,21 +1579,32 @@
   function deleteDefinition(id: string) {
     withDefinition(id, () => {
       const definition = project.symbols.find((s) => s.id === id)!;
-      if (
-        symbolUsage(project, id) === 0 &&
-        window.confirm(`「${definition.name}」の Symbol 定義を削除しますか？`)
-      ) {
-        if (edit({ type: "remove-symbol", symbolId: id }))
-          void tick().then(() => {
-            const target =
-              document.querySelector<HTMLButtonElement>(
-                'nav[aria-label="共有 Symbol 一覧"] button[aria-pressed="true"]',
-              ) ??
-              document.querySelector<HTMLButtonElement>("[data-create-symbol]");
-            target?.focus({ preventScroll: true });
-          });
-      }
+      if (symbolUsage(project, id) === 0)
+        deleteConfirm = {
+          kind: "symbol",
+          id,
+          name: definition.name,
+          count: definition.objects.length,
+        };
     });
+  }
+  function confirmDelete() {
+    const target = deleteConfirm;
+    deleteConfirm = null;
+    if (!target) return;
+    if (target.kind === "screen") {
+      edit({ type: "remove-screen", screenId: target.id });
+      return;
+    }
+    if (edit({ type: "remove-symbol", symbolId: target.id }))
+      void tick().then(() => {
+        const next =
+          document.querySelector<HTMLButtonElement>(
+            'nav[aria-label="共有 Symbol 一覧"] button[aria-pressed="true"]',
+          ) ??
+          document.querySelector<HTMLButtonElement>("[data-create-symbol]");
+        next?.focus({ preventScroll: true });
+      });
   }
   function openSymbolUsage(
     usage: SymbolUsage & { equipmentId?: string },
@@ -2437,11 +2456,13 @@
   function removeScreen(id: string) {
     withScreen(id, () => {
       const target = project.screens.find((s) => s.id === id)!;
-      if (
-        project.screens.length > 1 &&
-        window.confirm(`「${target.name}」と画面内の図形を削除しますか？`)
-      )
-        edit({ type: "remove-screen", screenId: id });
+      if (project.screens.length > 1)
+        deleteConfirm = {
+          kind: "screen",
+          id,
+          name: target.name,
+          count: target.objects.length,
+        };
     });
   }
   /** 画面タブ・画面一覧の見出し・⋮・画面管理の「画面を追加」が共有する入口。 */
@@ -4519,6 +4540,36 @@
   <button onclick={() => (helpOpen = false)}>閉じる</button>
 </Modal>
 <Modal
+  open={deleteConfirm !== null}
+  title={deleteConfirm?.kind === "symbol"
+    ? "Symbol 定義を削除しますか"
+    : "画面を削除しますか"}
+  width="480px"
+  onclose={() => (deleteConfirm = null)}
+>
+  {#if deleteConfirm}
+    <div data-delete-confirm>
+      <p>
+        {#if deleteConfirm.kind === "screen"}
+          「{deleteConfirm.name}」と図形 {deleteConfirm.count} 個を削除します。
+        {:else}
+          Symbol 定義「{deleteConfirm.name}」（図形 {deleteConfirm.count}
+          個）を削除します。この定義を使う配置はありません。
+        {/if}
+        元に戻す（Ctrl+Z）で復元できます。
+      </p>
+      <div class="delete-confirm-actions">
+        <button type="button" class="danger" onclick={confirmDelete}
+          >削除</button
+        >
+        <button type="button" onclick={() => (deleteConfirm = null)}
+          >キャンセル</button
+        >
+      </div>
+    </div>
+  {/if}
+</Modal>
+<Modal
   open={replacement !== null}
   title="Project を置き換えますか"
   onclose={projectFiles.cancelReplacement}
@@ -4558,6 +4609,17 @@
 </div>
 
 <style>
+  .delete-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .delete-confirm-actions button.danger {
+    border: 1px solid var(--banto-danger-solid);
+    border-radius: 4px;
+    background: var(--banto-danger-solid);
+    color: #fff;
+  }
   .canvas-area {
     position: relative;
     display: flex;
