@@ -291,6 +291,11 @@
   import PanelResizeHandle from "./lib/designer/PanelResizeHandle.svelte";
   import { DEFAULT_PANEL_LAYOUT } from "./lib/designer/panel-layout";
   import {
+    rememberReturnView,
+    restoredSelection,
+    type ReturnViews,
+  } from "./lib/designer/return-view";
+  import {
     DEFAULT_PANEL_WIDTHS,
     PANEL_WIDTH_LIMITS,
     panelWidthMaximum,
@@ -1495,11 +1500,70 @@
     };
     run();
   }
+  // F-1: 編集 → 表示プレビュー → 編集、画面 → Symbol 定義 → 画面 の往復で戻す画面ごとの状態。
+  // 選択と表示位置は Project の変更ではないので Undo 履歴に入れない。
+  let returnViews: { generation: number; views: ReturnViews } = {
+    generation: -1,
+    views: {},
+  };
+  let definitionReturn: string | null = null;
+  function rememberEditView() {
+    if (mode !== "edit" || activeDefinition) return;
+    const zoom = canvasView.zoom;
+    returnViews = {
+      generation: workspaceGeneration,
+      views: rememberReturnView(
+        returnViews.generation === workspaceGeneration ? returnViews.views : {},
+        screen.id,
+        {
+          selectedIds,
+          zoom,
+          center:
+            zoom === null ? null : (canvasWorkspace?.visibleCenter() ?? null),
+        },
+      ),
+    };
+  }
+  function restoreEditView(definitionId?: string) {
+    const saved =
+      returnViews.generation === workspaceGeneration
+        ? returnViews.views[screen.id]
+        : undefined;
+    if (!saved || mode !== "edit" || activeDefinition) {
+      selectedIds = [];
+      return;
+    }
+    selectedIds = restoredSelection(screen, saved.selectedIds, definitionId);
+    const { zoom, center } = saved;
+    if (zoom === null || !center) return;
+    const generation = workspaceGeneration,
+      ownerId = screen.id;
+    // 図面の再描画と CanvasWorkspace のスクロール復元が落ち着いてから表示中心を戻す。
+    void tick().then(() =>
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (
+            generation !== workspaceGeneration ||
+            mode !== "edit" ||
+            activeDefinition ||
+            screen.id !== ownerId
+          )
+            return;
+          if (canvasView.zoom !== zoom) canvasWorkspace?.zoom(zoom);
+          canvasWorkspace?.centerOn(center);
+        }),
+      ),
+    );
+  }
   function openDefinition(id: string) {
     withDefinition(id, () => {
       setAuxPanelVisibility({ sidebar: true });
+      // F-1: 左タブは切り替えない。画面から入るときは戻る先の選択と表示位置を控える。
+      if (!activeDefinition) {
+        rememberEditView();
+        definitionReturn = mode === "edit" ? screen.id : null;
+      }
       editingSymbolId = id;
-      activePanel = "project";
       libraryId = id;
       selectedIds = [];
     });
@@ -2843,9 +2907,13 @@
   }
   function changeMode(next: "edit" | "preview") {
     transition(() => {
+      const switching = mode !== next;
+      if (switching && next === "preview") rememberEditView();
       mode = next;
       if (next === "preview") editingSymbolId = null;
-      selectedIds = [];
+      definitionReturn = null;
+      if (switching && next === "edit") restoreEditView();
+      else selectedIds = [];
     });
   }
   function openSelectedEquipment(
@@ -2894,6 +2962,7 @@
         });
         return;
       }
+      rememberEditView();
       mode = "preview";
       selectedIds = [];
       void tick().then(() => {
@@ -3990,8 +4059,12 @@
         <button
           onclick={() =>
             transition(() => {
+              const definitionId = editingSymbolId ?? undefined;
+              const returning = definitionReturn === screenId;
               editingSymbolId = null;
-              selectedIds = [];
+              definitionReturn = null;
+              if (returning) restoreEditView(definitionId);
+              else selectedIds = [];
             })}>画面へ戻る</button
         >
       </div>
