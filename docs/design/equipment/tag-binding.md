@@ -47,8 +47,8 @@ Project は schema / minRuntimeVersion `0.4.0`。旧 `0.2.0` / `0.3.0` の移行
 | invalid                           | `-- · 値が不正`        |
 | resolved + Good + 有限数          | 数値（0 と負数を含む） |
 | resolved + Good + null / 非有限数 | `-- · 値が不正`        |
-| resolved + Stale                  | `-- · Stale`           |
-| resolved + Bad                    | `-- · Bad`             |
+| resolved + Stale                  | `-- · 更新停止`        |
+| resolved + Bad                    | `-- · 不良`            |
 
 Stale / Bad の直前値は表示しない。文字で状態を示し、色だけで判断させない。ある配置の未解決が別の配置の描画を止めない。外部名と値は SVG のテキストとして描画し、HTML として挿入しない。
 

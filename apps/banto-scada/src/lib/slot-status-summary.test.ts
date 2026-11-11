@@ -157,7 +157,7 @@ it("counts false and zero as Good, preserves SIM/quality and drops reset/old-fra
     unavailable: 5,
     simulated: 2,
   });
-  expect(rows()[0].display.text).toBe("SIM · -- · Bad");
+  expect(rows()[0].display.text).toBe("SIM · -- · 不良");
   expect(rows(good)[0].display.state).toBe("disconnected");
   session.reset(project);
   expect(slotStatusCounts(rows())).toEqual({

@@ -31,6 +31,7 @@
     recordingOperationsService,
     recordingAsyncOperations,
     headerExtension,
+    connectionStatus,
     onprojectchange,
   }: {
     readSource?: ReadSource;
@@ -40,6 +41,9 @@
     recordingOperationsService?: RecordingOperationsService;
     recordingAsyncOperations?: AsyncOperationsClient;
     headerExtension?: Snippet;
+    /** A read-only connection badge for the full-screen preview, where the
+     * header (and `headerExtension`) is hidden (UX review L-3). */
+    connectionStatus?: Snippet;
     /** Each replacement of the validated Project (the desktop shell keys its
      * History service on it). */
     onprojectchange?: (project: Project) => void;
@@ -3335,6 +3339,12 @@
     onchange={load}
   />
 {/key}
+{#snippet browserHubStatus()}
+  {#if !readSource}<StatusBadge
+      variant={mode === "preview" ? "warning" : "neutral"}
+      label="Hub 未接続"
+    />{/if}
+{/snippet}
 {#snippet recordingStatus()}
   {#if recordingIndicator}<button
       type="button"
@@ -3404,7 +3414,7 @@
         >{/if}
     </div>
     {#if recordingIndicator}{@render recordingStatus()}{/if}
-    {#if !readSource}<StatusBadge variant="neutral" label="Hub 未接続" />{/if}
+    {#if !headerExtension}{@render browserHubStatus()}{/if}
   </div>
   <div class="header-actions">
     <Menu label="常設メニュー" placement="bottom-end">
@@ -3467,7 +3477,10 @@
     </Menu>
   </div>
 </header>
-<EditToolbar groups={mode === "edit" ? editToolbarGroups : []}>
+<EditToolbar
+  groups={mode === "edit" ? editToolbarGroups : []}
+  label={mode === "edit" ? "共通編集ツールバー" : "表示確認ツールバー"}
+>
   {#snippet modes()}
     <div class="mode-tools" role="group" aria-label="表示の操作">
       {#if mode === "preview"}<button
@@ -3506,6 +3519,14 @@
       onactive={(active) => (previewFullscreenActive = active)}
       onmessage={(message) => report("error", message)}
     />
+    {#if mode === "preview" && previewFullscreenActive}<div
+        class="fullscreen-status"
+        role="group"
+        aria-label="接続と記録の状態"
+      >
+        {#if connectionStatus}{@render connectionStatus()}{:else}{@render browserHubStatus()}{/if}
+        {@render recordingStatus()}
+      </div>{/if}
     {#if mode === "edit"}
       <CanvasControls
         view={canvasView}
@@ -3907,6 +3928,7 @@
         screens={project.screens}
         symbols={project.symbols}
         equipmentContext={readContext.equipmentContext}
+        alert={mode === "preview"}
       />
     {/key}
     <div class="canvas-stack" bind:clientHeight={canvasStackHeight}>
@@ -4486,6 +4508,12 @@
     gap: 6px;
     min-width: 0;
     margin-left: auto;
+  }
+  .fullscreen-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
   }
   .recording-status {
     display: inline-flex;

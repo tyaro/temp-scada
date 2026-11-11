@@ -593,7 +593,7 @@ for (const theme of ["light", "dark"] as const)
         expect(view.map((row: any) => row.state)).toEqual([name, name]);
         for (const row of view)
           expect(row.text).toContain(
-            `-- · ${name === "stale" ? "Stale" : "Bad"}`,
+            `-- · ${name === "stale" ? "更新停止" : "不良"}`,
           );
       }
     for (const name of [

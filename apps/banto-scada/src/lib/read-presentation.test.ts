@@ -35,8 +35,8 @@ it.each(examples)("accepts the Rust display fixture: $name", (fixture) => {
   const expected = {
     good: "0",
     simulation: "SIM · 12.5",
-    stale: "SIM · -- · Stale",
-    bad: "-- · Bad",
+    stale: "SIM · -- · 更新停止",
+    bad: "-- · 不良",
     waiting: "-- · 未解決",
     disconnected: "-- · 未接続",
   }[fixture.name];

@@ -25,8 +25,8 @@ const labels: Record<UnavailableStatus, string> = {
   disconnected: "未接続",
   unresolved: "未解決",
   invalid: "値が不正",
-  stale: "Stale",
-  bad: "Bad",
+  stale: "更新停止",
+  bad: "不良",
 };
 export type SlotPresentation = {
   label: string;

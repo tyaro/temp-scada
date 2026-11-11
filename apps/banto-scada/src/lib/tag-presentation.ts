@@ -14,8 +14,8 @@ const labels = {
   disconnected: "未接続",
   unresolved: "未解決",
   invalid: "値が不正",
-  stale: "Stale",
-  bad: "Bad",
+  stale: "更新停止",
+  bad: "不良",
   good: "Good",
 };
 /** 不成立時に静的テキストや直前値へフォールバックして正常値に見せない。 */

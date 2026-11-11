@@ -8,17 +8,24 @@
     symbols,
     equipmentContext,
     compact = false,
+    alert = true,
   }: {
     screen: Screen | SymbolDefinition;
     screens: Screen[];
     symbols: SymbolDefinition[];
     equipmentContext?: EquipmentContext;
     compact?: boolean;
+    /** Show unreadable values as a warning (the preview, UX review P1-4). */
+    alert?: boolean;
   } = $props();
   const rows = $derived(
     slotStatusRows(screen, screens, symbols, equipmentContext),
   );
   const counts = $derived(slotStatusCounts(rows));
+  const warning = $derived(alert && counts.unavailable > 0);
+  const allUnavailable = $derived(
+    warning && counts.unavailable === counts.total,
+  );
   const PAGE_SIZE = 20;
   let open = $state(false);
   let page = $state(0);
@@ -62,9 +69,27 @@
       }
     }}
   >
-    <summary bind:this={toggle}>
+    <summary
+      bind:this={toggle}
+      class:warning
+      data-slot-read-alert={allUnavailable ? "all" : warning ? "some" : "none"}
+    >
+      {#if warning}<svg
+          class="warning-icon"
+          aria-hidden="true"
+          viewBox="0 0 16 16"
+          ><path d="M8 1.5 15 14H1Z" /><path
+            class="mark"
+            d="M8 6v4M8 11.6v.4"
+          /></svg
+        >{/if}
       表示参照 {counts.total}件
-      <span>取得不能 {counts.unavailable}件 · SIM {counts.simulated}件</span>
+      <span class="counts"
+        >取得不能 {counts.unavailable}件 · SIM {counts.simulated}件</span
+      >
+      {#if allUnavailable}<strong class="all-unavailable"
+          >この画面の値はすべて取得できていません</strong
+        >{/if}
     </summary>
     {#if open}
       <div class="description">
@@ -141,9 +166,35 @@
     padding: 3px 6px;
     line-height: 1.5;
   }
-  summary span {
+  summary .counts {
     margin-left: 8px;
     color: var(--banto-text-muted);
+  }
+  summary.warning {
+    border-left: 3px solid var(--banto-warning);
+    background: var(--banto-warning-tint);
+  }
+  summary.warning,
+  summary.warning .counts {
+    color: var(--banto-warning-tint-text);
+    font-weight: 600;
+  }
+  .warning-icon {
+    width: 13px;
+    height: 13px;
+    margin-right: 4px;
+    vertical-align: -2px;
+    fill: var(--banto-warning);
+  }
+  .warning-icon .mark {
+    fill: none;
+    stroke: var(--banto-bg, #fff);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+  }
+  .all-unavailable {
+    margin-left: 10px;
+    font-weight: 600;
   }
   .description {
     color: var(--banto-text-muted);

@@ -719,9 +719,9 @@
     justify-content: flex-end;
   }
   button.danger {
-    border: 1px solid var(--banto-danger, #b42318);
+    border: 1px solid var(--banto-danger-solid);
     border-radius: 4px;
-    background: var(--banto-danger, #b42318);
+    background: var(--banto-danger-solid);
     color: #fff;
   }
 </style>

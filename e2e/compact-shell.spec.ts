@@ -13,8 +13,8 @@ for (const theme of ["light", "dark"])
     await expect(header).not.toContainText("ローカルファイル編集");
     await expect(header.getByRole("combobox")).toHaveCount(0);
     const toolbar = page.getByRole("toolbar", {
-      name: "共通編集ツールバー",
-      exact: true,
+      // The same toolbar is named for the mode (編集 / 表示確認).
+      name: /^(共通編集|表示確認)ツールバー$/,
     });
     await page.getByRole("button", { name: "編集", exact: true }).click();
     for (const label of [
@@ -111,8 +111,8 @@ test("toolbar mode changes retain draft protection and save status remains visib
 }) => {
   await page.goto("/");
   const toolbar = page.getByRole("toolbar", {
-    name: "共通編集ツールバー",
-    exact: true,
+    // The same toolbar is named for the mode (編集 / 表示確認).
+    name: /^(共通編集|表示確認)ツールバー$/,
   });
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await selectPanel(page, "部品");

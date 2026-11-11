@@ -2,7 +2,10 @@ import { test, expect, type Page } from "@playwright/test";
 import { selectPanel, chooseTheme } from "./helpers/designer";
 
 const toolbar = (page: Page) =>
-  page.getByRole("toolbar", { name: "共通編集ツールバー", exact: true });
+  page.getByRole("toolbar", {
+    // The same toolbar is named for the mode (編集 / 表示確認).
+    name: /^(共通編集|表示確認)ツールバー$/,
+  });
 const button = (page: Page, name: string) =>
   toolbar(page).getByRole("button", { name, exact: true });
 const svg = (page: Page) =>
