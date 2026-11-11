@@ -30,12 +30,12 @@ it("renders current and degraded readings through the same SVG primitive without
     [
       { state: "resolved", quality: "stale", numericValue: 123.45 },
       "stale",
-      "-- · Stale",
+      "-- · 更新停止",
     ],
     [
       { state: "resolved", quality: "bad", numericValue: 123.45 },
       "bad",
-      "-- · Bad",
+      "-- · 不良",
     ],
     [{ state: "unresolved" }, "unresolved", "-- · 未解決"],
     [

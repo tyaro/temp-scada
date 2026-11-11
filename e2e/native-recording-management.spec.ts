@@ -347,8 +347,23 @@ test("an administrator stops, applies the plan while stopped and resumes", async
   await expect(
     root.getByRole("button", { name: "初回設定と開始" }),
   ).toBeDisabled();
+  await expect(root.locator("[data-recording-summary]")).toHaveAttribute(
+    "data-recording-summary",
+    "recording",
+  );
+  const headerStatus = page.locator("[data-recording-status]");
+  await expect(headerStatus).toContainText(/記録中 · 照会 \d\d:\d\d/);
 
+  // Stopping asks first; cancelling leaves the recording running.
+  const confirm = page.getByRole("dialog", { name: "記録を停止しますか" });
   await stop.click();
+  await expect(confirm).toContainText("欠測");
+  await confirm.getByRole("button", { name: "キャンセル" }).click();
+  await expect(confirm).toBeHidden();
+  expect((await host(page)).calls).toEqual([]);
+  await expect(stop).toBeEnabled();
+  await stop.click();
+  await confirm.getByRole("button", { name: "記録を停止する" }).click();
   await expect(result).toHaveAttribute("data-recording-control-result", "ok");
   await expect(result).toHaveAttribute("data-recording-control-action", "stop");
   await expect(result).toHaveText("記録を停止しました");
@@ -356,6 +371,11 @@ test("an administrator stops, applies the plan while stopped and resumes", async
     root.locator('section[aria-label="Hostの別時点観測"]'),
   ).toContainText("join完了");
   await expect(stop).toBeDisabled();
+  await expect(root.locator("[data-recording-summary]")).toHaveAttribute(
+    "data-recording-summary",
+    "stopped",
+  );
+  await expect(headerStatus).toContainText("記録停止中");
   await expect(reconfigure).toBeEnabled();
   await expect(resume).toBeEnabled();
 
@@ -461,6 +481,10 @@ test("an interrupted recording is shown and resumed after a failure", async ({
     { timeout: 30000 },
   );
   const resume = root.locator("[data-recording-resume]");
+  await expect(root.locator("[data-recording-summary]")).toHaveAttribute(
+    "data-recording-summary",
+    "interrupted",
+  );
   await expect(root.locator("[data-recording-stop]")).toBeDisabled();
   await resume.click();
   await expect(root.getByRole("alert")).toHaveText(
@@ -484,7 +508,14 @@ test("a viewer inspects but is not offered the first setup", async ({
   await mockNativeHost(page, "viewer");
   await page.goto("/");
   await openProject(page, file(planned));
-  await open(page);
+  // The header badge opens the dialog and says nothing was read yet.
+  const headerStatus = page.locator("[data-recording-status]");
+  await expect(headerStatus).toContainText("記録 未照会");
+  await headerStatus.click();
+  await expect(dialog(page)).toBeVisible();
+  await expect(
+    dialog(page).locator("[data-recording-summary]"),
+  ).toHaveAttribute("data-recording-summary", "unread");
   await dialog(page)
     .getByRole("button", { name: "状態を照会", exact: true })
     .click();

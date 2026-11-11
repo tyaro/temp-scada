@@ -446,9 +446,9 @@ test("host and projected numeric text consume the same reading snapshot and Qual
   );
   expect(result).toHaveLength(3);
   expect(result[0].filter((x: any) => x.text === "42.5")).toHaveLength(3);
-  expect(result[1].filter((x: any) => x.text?.includes("Stale"))).toHaveLength(
-    3,
-  );
+  expect(
+    result[1].filter((x: any) => x.text?.includes("更新停止")),
+  ).toHaveLength(3);
   expect(result[2].filter((x: any) => x.text?.includes("未接続"))).toHaveLength(
     3,
   );

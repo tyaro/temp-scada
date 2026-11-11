@@ -39,7 +39,7 @@
       "quality": "stale",
       "numericValue": null
     },
-    "display": "-- · Stale"
+    "display": "-- · 更新停止"
   },
   {
     "name": "Bad は直前値を渡さない",
@@ -50,7 +50,7 @@
       "quality": "bad",
       "numericValue": null
     },
-    "display": "-- · Bad"
+    "display": "-- · 不良"
   },
   {
     "name": "未知の Quality",

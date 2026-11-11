@@ -40,6 +40,11 @@ for (const theme of ["light", "dark"] as const)
     await assertLayout();
     await expect(status.locator("summary")).toContainText("表示参照 28件");
     await expect(status.locator("summary")).toContainText("取得不能 28件");
+    // While editing, unread values are expected and stay neutral.
+    await expect(status.locator("summary")).toHaveAttribute(
+      "data-slot-read-alert",
+      "none",
+    );
     await expect(status.locator("[data-slot-status-key]")).toHaveCount(0);
     await status.locator("summary").click();
     await expect(status.locator("[data-slot-status-key]")).toHaveCount(20);
@@ -73,6 +78,14 @@ for (const theme of ["light", "dark"] as const)
     await page
       .getByRole("button", { name: "表示プレビュー", exact: true })
       .click();
+    // In the preview, every value unread is a warning in words, not only grey.
+    await expect(status.locator("summary")).toHaveAttribute(
+      "data-slot-read-alert",
+      "all",
+    );
+    await expect(status.locator("summary")).toContainText(
+      "この画面の値はすべて取得できていません",
+    );
     await page
       .getByRole("button", { name: "画面を小窓で表示確認", exact: true })
       .click();

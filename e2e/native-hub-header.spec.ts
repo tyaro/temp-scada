@@ -22,6 +22,8 @@ test("native Hub controls stay in the header and reveal connection details", asy
   const summary = page.locator(".app-header .hub-connection summary");
   await expect(summary).toContainText("Hub");
   await expect(summary).toContainText("要確認");
+  // One Hub state in the header: the browser-only badge is not repeated.
+  await expect(page.locator(".app-header")).not.toContainText("Hub 未接続");
   await expect(page.locator("#hub-endpoint")).toBeHidden();
   await expect(page.locator("main")).toBeVisible();
   const hubBounds = await summary.boundingBox();
@@ -48,4 +50,17 @@ test("native Hub controls stay in the header and reveal connection details", asy
   await expect(
     page.getByRole("status").filter({ hasText: "切断しました" }),
   ).toBeVisible();
+
+  // Full screen hides the header; the toolbar keeps a read-only Hub badge.
+  await page.keyboard.press("Escape");
+  await page
+    .getByRole("button", { name: "表示プレビュー", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "全画面で表示確認", exact: true })
+    .click();
+  await expect(page.locator(".app-header")).toBeHidden();
+  await expect(
+    page.getByRole("group", { name: "接続と記録の状態" }),
+  ).toContainText("Hub 未接続");
 });

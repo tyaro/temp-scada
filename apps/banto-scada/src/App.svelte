@@ -13,6 +13,10 @@
   import type { RecordingOperationsService } from "./lib/recording-operations/service";
   import RecordingManagementWorkspace from "./lib/recording-management/RecordingManagementWorkspace.svelte";
   import type { RecordingManagementService } from "./lib/recording-management/service";
+  import {
+    inspectedAtLabel,
+    type RecordingSummary,
+  } from "./lib/recording-management/summary";
   import HistoryWorkspace from "./lib/history/HistoryWorkspace.svelte";
   import TrendDefinitionsDialog from "./lib/designer/TrendDefinitionsDialog.svelte";
   import RecordingPlanDialog from "./lib/designer/RecordingPlanDialog.svelte";
@@ -27,6 +31,7 @@
     recordingOperationsService,
     recordingAsyncOperations,
     headerExtension,
+    connectionStatus,
     onprojectchange,
   }: {
     readSource?: ReadSource;
@@ -36,6 +41,9 @@
     recordingOperationsService?: RecordingOperationsService;
     recordingAsyncOperations?: AsyncOperationsClient;
     headerExtension?: Snippet;
+    /** A read-only connection badge for the full-screen preview, where the
+     * header (and `headerExtension`) is hidden (UX review L-3). */
+    connectionStatus?: Snippet;
     /** Each replacement of the validated Project (the desktop shell keys its
      * History service on it). */
     onprojectchange?: (project: Project) => void;
@@ -165,6 +173,29 @@
   function openRecordingManagement() {
     if (!menuBlocked) recordingManagementOpen = Object.freeze({});
   }
+  // The last inspection's recording state, kept for the header (UX review
+  // P0-1). There is no automatic inspection: the badge says when it was read,
+  // and a different service (another Project or session) forgets it.
+  let lastRecordingSummary = $state.raw<{
+    service: RecordingManagementService;
+    summary: RecordingSummary;
+    inspectedAt: number;
+  }>();
+  const recordingIndicator = $derived(
+    recordingManagementService
+      ? lastRecordingSummary?.service === recordingManagementService
+        ? {
+            variant: lastRecordingSummary.summary.variant,
+            label: `${lastRecordingSummary.summary.label} · 照会 ${inspectedAtLabel(lastRecordingSummary.inspectedAt)}`,
+            title: `${lastRecordingSummary.summary.label}（${inspectedAtLabel(lastRecordingSummary.inspectedAt)} の照会時点）: ${lastRecordingSummary.summary.detail}。記録管理状態を開く`,
+          }
+        : {
+            variant: "neutral" as const,
+            label: "記録 未照会",
+            title: "記録の状態は未照会です。記録管理状態を開く",
+          }
+      : undefined,
+  );
   let historySvgOpener: SVGElement | null = null;
   function toggleMenubar() {
     showMenubar = !showMenubar;
@@ -3308,6 +3339,27 @@
     onchange={load}
   />
 {/key}
+{#snippet browserHubStatus()}
+  {#if !readSource}<StatusBadge
+      variant={mode === "preview" ? "warning" : "neutral"}
+      label="Hub 未接続"
+    />{/if}
+{/snippet}
+{#snippet recordingStatus()}
+  {#if recordingIndicator}<button
+      type="button"
+      class="recording-status"
+      data-recording-status
+      aria-label={recordingIndicator.title}
+      title={recordingIndicator.title}
+      disabled={menuBlocked}
+      onclick={openRecordingManagement}
+      ><StatusBadge
+        variant={recordingIndicator.variant}
+        label={recordingIndicator.label}
+      /></button
+    >{/if}
+{/snippet}
 <header
   class="app-header"
   class:fullscreen-preview={mode === "preview" && previewFullscreenActive}
@@ -3361,7 +3413,8 @@
       {#if lastExport}<span class="sr-only">最終書き出し要求 {lastExport}</span
         >{/if}
     </div>
-    {#if !readSource}<StatusBadge variant="neutral" label="Hub 未接続" />{/if}
+    {#if recordingIndicator}{@render recordingStatus()}{/if}
+    {#if !headerExtension}{@render browserHubStatus()}{/if}
   </div>
   <div class="header-actions">
     <Menu label="常設メニュー" placement="bottom-end">
@@ -3424,7 +3477,10 @@
     </Menu>
   </div>
 </header>
-<EditToolbar groups={mode === "edit" ? editToolbarGroups : []}>
+<EditToolbar
+  groups={mode === "edit" ? editToolbarGroups : []}
+  label={mode === "edit" ? "共通編集ツールバー" : "表示確認ツールバー"}
+>
   {#snippet modes()}
     <div class="mode-tools" role="group" aria-label="表示の操作">
       {#if mode === "preview"}<button
@@ -3463,6 +3519,14 @@
       onactive={(active) => (previewFullscreenActive = active)}
       onmessage={(message) => report("error", message)}
     />
+    {#if mode === "preview" && previewFullscreenActive}<div
+        class="fullscreen-status"
+        role="group"
+        aria-label="接続と記録の状態"
+      >
+        {#if connectionStatus}{@render connectionStatus()}{:else}{@render browserHubStatus()}{/if}
+        {@render recordingStatus()}
+      </div>{/if}
     {#if mode === "edit"}
       <CanvasControls
         view={canvasView}
@@ -3864,6 +3928,7 @@
         screens={project.screens}
         symbols={project.symbols}
         equipmentContext={readContext.equipmentContext}
+        alert={mode === "preview"}
       />
     {/key}
     <div class="canvas-stack" bind:clientHeight={canvasStackHeight}>
@@ -4189,6 +4254,14 @@
   generation={workspaceGeneration}
   service={recordingManagementService}
   onclose={() => (recordingManagementOpen = null)}
+  onsummary={({ summary, inspectedAt }) => {
+    if (recordingManagementService)
+      lastRecordingSummary = {
+        service: recordingManagementService,
+        summary,
+        inspectedAt,
+      };
+  }}
 />
 <HistoryWorkspace
   open={historyOpen && (!historyPreset || !!currentHistoryPreset)}
@@ -4435,6 +4508,29 @@
     gap: 6px;
     min-width: 0;
     margin-left: auto;
+  }
+  .fullscreen-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+  }
+  .recording-status {
+    display: inline-flex;
+    flex-shrink: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    cursor: pointer;
+    font: inherit;
+  }
+  .recording-status:focus-visible {
+    outline: none;
+    box-shadow: var(--banto-focus-ring);
+  }
+  .recording-status:disabled {
+    cursor: default;
   }
   .selection-count {
     flex-shrink: 0;

@@ -13,6 +13,7 @@
   import { nativeSources } from "./sources";
   import AuthControls from "./auth/AuthControls.svelte";
   import CloseConfirm from "./CloseConfirm.svelte";
+  import { StatusBadge } from "@banto/ui";
   import type { NativeAuthClient } from "./auth/client";
   import { AuthSession } from "./auth/session.svelte";
 
@@ -183,6 +184,26 @@
   });
 </script>
 
+{#snippet hubBadge()}
+  <span data-hub-status title={status}
+    ><StatusBadge
+      variant={busy
+        ? "neutral"
+        : connected
+          ? "success"
+          : error
+            ? "danger"
+            : "warning"}
+      label={busy
+        ? "Hub 処理中"
+        : connected
+          ? `Hub 接続中（${tagCount} 件）`
+          : error
+            ? "Hub 要確認"
+            : "Hub 未接続"}
+    /></span
+  >
+{/snippet}
 {#snippet hubControls()}
   <div class="native-controls">
     <AuthControls session={authSession} />
@@ -232,6 +253,7 @@
     currentProject = project;
   }}
   headerExtension={hubControls}
+  connectionStatus={hubBadge}
 />
 <CloseConfirm />
 

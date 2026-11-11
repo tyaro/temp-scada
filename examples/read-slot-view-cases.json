@@ -224,7 +224,7 @@
         }
       ]
     },
-    "display": "-- · Stale"
+    "display": "-- · 更新停止"
   },
   {
     "name": "Bad removes retained number",
@@ -267,7 +267,7 @@
         }
       ]
     },
-    "display": "-- · Bad"
+    "display": "-- · 不良"
   },
   {
     "name": "missing tag is unresolved",
@@ -508,7 +508,7 @@
         }
       ]
     },
-    "display": "SIM · -- · Stale"
+    "display": "SIM · -- · 更新停止"
   },
   {
     "name": "computed source",

@@ -18,8 +18,10 @@
     groups,
     modes,
     controls,
+    label = "共通編集ツールバー",
   }: {
     groups: ToolbarGroup[];
+    label?: string;
     modes: Snippet;
     controls: Snippet;
   } = $props();
@@ -56,7 +58,7 @@
 <div
   bind:this={root}
   role="toolbar"
-  aria-label="共通編集ツールバー"
+  aria-label={label}
   aria-orientation="horizontal"
   onkeydown={navigate}
   tabindex="-1"

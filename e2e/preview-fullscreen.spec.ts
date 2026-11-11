@@ -39,6 +39,14 @@ for (const theme of ["light", "dark"])
     await expect(p.locator(".app-header")).not.toBeVisible();
     await expect(p.locator(".project-sidebar")).not.toBeVisible();
     await expect(p.locator("[data-preview-popup]")).toHaveCount(1);
+    // The header is gone, so the toolbar keeps the connection state.
+    const toolbar = p.getByRole("toolbar", {
+      name: "表示確認ツールバー",
+      exact: true,
+    });
+    await expect(
+      toolbar.getByRole("group", { name: "接続と記録の状態" }),
+    ).toContainText("Hub 未接続");
     await button(p, "画面を小窓で表示確認").click();
     const chooser = p.getByRole("dialog", {
       name: "画面を小窓で表示確認",
@@ -53,6 +61,11 @@ for (const theme of ["light", "dark"])
     await expect(p.locator(".app-header")).toBeVisible();
     await expect(p.locator(".project-sidebar")).toBeVisible();
     await expect(p.locator("[data-preview-popup]")).toHaveCount(1);
+    await expect(
+      p.getByRole("group", { name: "接続と記録の状態" }),
+    ).toHaveCount(0);
+    // Outside full screen the header holds the one Hub badge.
+    await expect(p.locator(".app-header")).toContainText("Hub 未接続");
     const download = p.waitForEvent("download");
     await p.keyboard.press("Control+s");
     expect(
