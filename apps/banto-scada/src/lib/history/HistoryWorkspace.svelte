@@ -18,6 +18,14 @@
     type HistoryPresentation,
   } from "./presentation";
   import TrendView from "./TrendView.svelte";
+  import {
+    formatDuration,
+    formatOffset,
+    localInputToUtc,
+    localOffsetMinutes,
+    recentRange,
+    utcToLocalInput,
+  } from "./time-input";
 
   let {
     open,
@@ -148,6 +156,16 @@
     if (context) controller.setSource(service?.source);
     form = { ...form, ...patch };
   }
+  // Local-time entry is display-only sugar: the UTC text fields stay the source.
+  const offset = $derived(localOffsetMinutes(Date.now()));
+  function setRecent(durationMs: number) {
+    const range = recentRange(Date.now(), durationMs);
+    change(preset ? { to: range.to } : range);
+  }
+  function setLocal(key: "from" | "to", value: string) {
+    const utc = localInputToUtc(value, offset);
+    if (utc !== undefined) change({ [key]: utc });
+  }
   function toggle(id: string, checked: boolean) {
     change({
       selected: checked
@@ -185,6 +203,12 @@
 >
   <div class="history-workspace">
     <p role="status">{connection}</p>
+    {#if current && owner?.selection.phase === "offline"}
+      <p class="hint" data-history-offline-guide>
+        履歴を見るには、Hub に接続し、記録を開始している必要があります。Hub
+        の接続状態を確認し、「記録計画の操作」から記録を開始してください。
+      </p>
+    {/if}
     {#if preset}
       <section aria-label="保存トレンドの設定">
         <strong>{definition?.name ?? "保存トレンド"}</strong>
@@ -195,7 +219,8 @@
               : ""}{pen.seriesId} · {pen.color}
           </p>{/each}
         <p>
-          期間 {definition?.windowMs} ms · {definition?.mode} · 系列ごとの点数上限
+          期間 {definition ? formatDuration(definition.windowMs) : "不明"} · {definition?.mode}
+          · 系列ごとの点数上限
           {definition?.maxPointsPerSeries}
         </p>
         <p>系列一覧の一致は記録済み・保持中であることを保証しません。</p>
@@ -240,7 +265,43 @@
           </div>
           <p>選択 {form.selected.length} / 8系列</p>
         {/if}
+        <div class="quick" role="group" aria-label="期間の指定">
+          {#if preset}
+            <button type="button" onclick={() => setRecent(0)}
+              >いまを終了にする</button
+            >
+          {:else}
+            <button type="button" onclick={() => setRecent(600_000)}
+              >直近10分</button
+            >
+            <button type="button" onclick={() => setRecent(3_600_000)}
+              >直近1時間</button
+            >
+          {/if}
+          <small
+            >ローカル時刻は {formatOffset(offset)} として UTC に変換します</small
+          >
+        </div>
         <div class="conditions">
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">開始（ローカル時刻） </span><input
+              class="banto-field-control"
+              type="datetime-local"
+              step="1"
+              value={utcToLocalInput(from, offset)}
+              readonly={!!preset}
+              onchange={(event) => setLocal("from", event.currentTarget.value)}
+            /></label
+          >
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">終了（ローカル時刻） </span><input
+              class="banto-field-control"
+              type="datetime-local"
+              step="1"
+              value={utcToLocalInput(form.to, offset)}
+              onchange={(event) => setLocal("to", event.currentTarget.value)}
+            /></label
+          >
           <label class="banto-field banto-field--stacked"
             ><span class="banto-field-label">開始UTC </span><input
               class="banto-field-control"
@@ -286,7 +347,8 @@
         </div>
       </fieldset>
       <p class="hint">
-        UTC（末尾Z・ミリ秒3桁）で指定します。終了時刻を含まない1時間以内、各系列2000点・合計8000点まで取得できます。
+        ローカル時刻の入力は UTC
+        に変換して下のUTC欄へ反映されます。UTC欄は直接入力もできます（末尾Z・ミリ秒3桁）。終了時刻を含まない1時間以内、各系列2000点・合計8000点まで取得できます。
       </p>
       {#if draft?.issue}<p class="hint" role="status">{draft.issue}</p>{/if}
       <div class="actions">
@@ -357,6 +419,13 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.75rem;
+  }
+  .quick {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0;
   }
   .hint {
     font-size: 0.85rem;
