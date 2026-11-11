@@ -21,6 +21,9 @@ export function createDraftGuard(
   const dirty = new Set<HTMLFormElement>();
   let dirtyCount = $state(0);
   let pending = $state<(() => void) | null>(null);
+  // The confirmation dialog only for drafts that need an explicit apply (tags).
+  // Other drafts are applied when the user leaves them (UX P1-2「離れたら確定」).
+  let prompting = $state(false);
   let applying = false;
   const registry = new Map<
     HTMLFormElement,
@@ -28,6 +31,7 @@ export function createDraftGuard(
       reset: () => void;
       restore: () => void;
       accept: (control: Control) => void;
+      explicit: () => boolean;
     }
   >();
   function track(form: HTMLFormElement, values?: Record<string, string>) {
@@ -94,6 +98,13 @@ export function createDraftGuard(
         saved.set(control, state(control));
         change();
       },
+      // Tag references are applied explicitly (designer policy), never on leave.
+      explicit: () =>
+        form.hasAttribute("data-explicit-apply") ||
+        controls(form).some(
+          (element) =>
+            element.hasAttribute("data-explicit-apply") && changed(element),
+        ),
     });
     form.addEventListener("input", change);
     form.addEventListener("change", change);
@@ -120,6 +131,9 @@ export function createDraftGuard(
     }
     if (!dirty.size) return true;
     pending = action;
+    if ([...dirty].some((form) => registry.get(form)?.explicit()))
+      prompting = true;
+    else void apply();
     return false;
   }
   function beforeSubmit(form: HTMLFormElement): boolean {
@@ -136,6 +150,7 @@ export function createDraftGuard(
     if (!action) return;
     const forms = [...dirty];
     pending = null;
+    prompting = false;
     await tick();
     const invalid = forms.find(
       (form) => form.isConnected && !form.checkValidity(),
@@ -171,6 +186,7 @@ export function createDraftGuard(
     if (!action) return;
     for (const form of [...dirty]) registry.get(form)?.restore();
     pending = null;
+    prompting = false;
     await tick();
     action();
   }
@@ -184,9 +200,15 @@ export function createDraftGuard(
     submitted: (form: HTMLFormElement) => registry.get(form)?.reset(),
     apply,
     discard,
-    cancel: () => (pending = null),
+    cancel: () => {
+      pending = null;
+      prompting = false;
+    },
     get pending() {
       return pending !== null;
+    },
+    get prompting() {
+      return prompting;
     },
     get count() {
       return dirtyCount;

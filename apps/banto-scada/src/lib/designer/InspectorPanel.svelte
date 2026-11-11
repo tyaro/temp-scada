@@ -1064,6 +1064,7 @@
                         class="banto-field-control"
                         bind:this={tagInput}
                         name="externalName"
+                        data-explicit-apply
                         aria-label="表示タグ（外部名）"
                         maxlength="1024"
                         placeholder="PLC01.Fast.Tank01.Level"

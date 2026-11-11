@@ -5,12 +5,12 @@
 </script>
 
 <Modal
-  open={guard.pending}
+  open={guard.prompting}
   title="未適用の入力があります"
   onclose={guard.cancel}
 >
   <p>
-    {guard.count} 件のフォームに未適用の入力があります。入力を適用するか、破棄して操作を続けてください。
+    タグの指定に未適用の入力があります（{guard.count} 件のフォーム）。タグは明示して適用します。入力を適用するか、破棄して操作を続けてください。
   </p>
   <p>キャンバスのドラッグ操作は、入力の解決後にもう一度行ってください。</p>
   <div class="actions">

@@ -419,6 +419,7 @@
                   class="banto-field-control"
                   onkeydown={inputKey}
                   name={`tag:${slot.name}`}
+                  data-explicit-apply
                   maxlength="512"
                   placeholder="PLC01.Fast.Fan01.Run"
                 /></label
