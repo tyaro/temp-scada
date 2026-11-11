@@ -991,6 +991,7 @@ export function createAsyncRecordingOperationsCoordinator(
     timedOut = false;
     refusal = undefined;
     wireRefusal = undefined;
+    hostRefusal = undefined;
     cancel = undefined;
     if (action.kind === "reconcile") readPhase = "awaitingAdmission";
     intent.timer = arm(ctl.intentDeadlineMonotonicMs, () => {
@@ -1049,9 +1050,12 @@ export function createAsyncRecordingOperationsCoordinator(
           }
           admit(intent, view, lease.outcome.deadlineLeaseRef);
         },
-        lost() {
-          // A lease may have been issued; it expires unused on the host.
-          if (intent.phase === "lease") uncertain(intent);
+        lost(end) {
+          if (intent.phase !== "lease") return;
+          // A host refusal issued nothing, so the call ends here unsent.
+          // Otherwise a lease may exist; it expires unused on the host.
+          if (end.kind === "refused") finishUnsent(intent);
+          else uncertain(intent);
         },
         fault() {
           invalid = true;

@@ -408,6 +408,7 @@ v1との差分:
 C5-5aの実装で次を定めた。
 
 - **物理終了の失敗（`transport`が`returned`以外で`reply`なし）の扱い**: どれもportの不正（`invalid`）にはしない。leaseは`call: "uncertain"`（発行されたleaseはhostで使われずに切れる）、admitは`admission: "unknown"`で`call`を終え、次の照会を`inspectCall`（CallInspection）にする。AdmissionInspection・CallInspectionの返信喪失は照会を`idle`へ戻し、受付不明のまま再照会できる。cancelは`cancelCall: "uncertain"`とする。observationの`unavailable`と`transportLost`は`read: "deliveryUnknown"`で、operationの`settled`を進めない。
+- **leaseの拒否（K2、2026-11-11）**: hostがleaseの段階（`recording_workflow_reserve`・`recording_workflow_lease`）を拒否したら、leaseは発行されていないので、coordinatorは呼出しを未送信として終え、`hostRefusal`を画面に示す。registryのworkflowは1 rootにつき1件で解放しないので、同じrootの二つ目の変更はここで`busy`になる。transportの失敗では発行の有無が分からないので、従来どおり`uncertain`のままとする。
 - **portの不正**: replyの形・相関の不一致、Promiseでない値、methodの例外、`pending`のobservation終端は、v1と同じく`invalid`とする。遅れて届いた正常な元reply（CallInspectionの回収後など）は、そのcallの処理へ渡す（leaseは`uncertain`の後なら捨てる）。
 - **`AsyncOperationsState`の追加field**: `owner`（`access`・`seq`・`subscription`・`ended`と四つの別field）、`hostRefusal`（最後の`{kind}`拒否）、`wireRefusal`（wireのlease・cancelの`rejected`。`OperationError`の`refusal`と分ける）、`callInspection`（CallInspectionの返信）。記録操作画面は`ownerClosed`・`authorizationLost`・`resyncRequired`と`wireRefusal`を表示する。
 - **cached frame**: `display.snapshotRelation`が`none`のときは`snapshot`が`null`であることを検証し、snapshotを使わない。`currentSubscription`・`lastKnown`のsnapshotはv1のframeと同じく`latest`の知識だけを更新する。

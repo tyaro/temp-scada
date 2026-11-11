@@ -60,6 +60,7 @@ export function createNativeRecordingHost(emit: Emit) {
   }
   install();
   const result = (reply: unknown) => ({ seq, reply });
+  let reservedChange: string | undefined;
   const observation = async (request: any) => {
     const target = request.target;
     const all = [...h.operations, ...h.reads];
@@ -88,6 +89,9 @@ export function createNativeRecordingHost(emit: Emit) {
     if (empty) throw { kind: "recordingUnavailable", reason: empty };
     switch (cmd) {
       case "recording_workflow_reserve":
+        // The registry holds one workflow per root and never releases it.
+        reservedChange ??= args.request.changeId;
+        if (args.request.changeId !== reservedChange) throw { kind: "busy" };
         return result({ changeId: args.request.changeId });
       case "recording_workflow_resumption":
         return result(held?.resumption ?? { state: "none" });

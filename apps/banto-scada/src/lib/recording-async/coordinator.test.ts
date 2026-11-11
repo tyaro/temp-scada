@@ -279,6 +279,35 @@ describe("external root admission and physical call ownership", () => {
       expect(s.view.pause(control())).toBe(true);
     },
   );
+  it("a host refusal of the lease ends the call unsent and shows why", async () => {
+    const s = setup();
+    s.h.configure({ autoLease: false });
+    expect(s.view.preflight(change(s.h), control())).toBe(true);
+    await flush();
+    s.h.leases[0].refuse({ kind: "busy" });
+    await flush();
+    const st = s.client.current();
+    expect(st.call).toBe("idle");
+    expect(st.admission).toBe("idle");
+    expect(st.hostRefusal).toEqual({ kind: "busy" });
+    expect(st.canPreflight).toBe(true);
+    expect(s.h.admissions).toHaveLength(0);
+    // Another try starts clean, and is a new lease.
+    expect(s.view.preflight(change(s.h, 2), control())).toBe(true);
+    expect(s.client.current().hostRefusal).toBeUndefined();
+    await flush();
+    expect(s.h.leases).toHaveLength(2);
+  });
+  it("a lost lease stays uncertain: it may have been issued", async () => {
+    const s = setup();
+    s.h.configure({ autoLease: false });
+    expect(s.view.preflight(change(s.h), control())).toBe(true);
+    await flush();
+    s.h.leases[0].reject();
+    await flush();
+    expect(s.client.current().canPreflight).toBe(false);
+    expect(s.client.current().admission).toBe("preparingLease");
+  });
   it("CallInspection notFound keeps the lost admit unknown and never resends it", async () => {
     const s = setup();
     s.h.configure({ autoAck: false, autoInspect: false });
