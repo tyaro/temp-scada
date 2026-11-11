@@ -45,7 +45,7 @@ const button = (p: Page, name: string) =>
 async function open(p: Page) {
   const bar = p.getByRole("menubar", { name: "Designer メニューバー" });
   if (await bar.isVisible())
-    await bar.getByRole("menuitem", { name: "表示", exact: true }).click();
+    await bar.getByRole("menuitem", { name: "記録", exact: true }).click();
   else await p.getByRole("button", { name: "メニュー", exact: true }).click();
   await p
     .getByRole("menuitem", { name: "記録計画の操作", exact: true })

@@ -13,6 +13,7 @@
   let {
     open,
     project,
+    readonly = false,
     error = "",
     onsave,
     onremove,
@@ -20,6 +21,8 @@
   }: {
     open: boolean;
     project: Project;
+    /** Preview: show the saved plan without editing or saving. */
+    readonly?: boolean;
     error?: string;
     onsave: (plan: DesiredRecordingPlan) => void;
     onremove: () => void;
@@ -83,148 +86,151 @@
   {onclose}
 >
   <p>
-    Projectに希望設定だけを保存します。記録の開始・停止・設定適用は行いません。
+    {#if readonly}表示プレビューでは閲覧のみです。編集は編集モードで行います。{:else}Projectに希望設定だけを保存します。記録の開始・停止・設定適用は行いません。{/if}
   </p>
   <form
     onsubmit={(event) => {
       event.preventDefault();
-      if (validation.plan) onsave(validation.plan);
+      if (!readonly && validation.plan) onsave(validation.plan);
     }}
   >
-    <div class="fields">
-      <label class="banto-field banto-field--stacked"
-        ><span class="banto-field-label">計画ID</span><input
-          class="banto-field-control"
-          bind:value={draft.planId}
-          maxlength="64"
-          spellcheck="false"
-        /></label
-      >
-      <label class="banto-field banto-field--stacked"
-        ><span class="banto-field-label">希望設定の版</span><input
-          class="banto-field-control"
-          bind:value={draft.revision}
-          inputmode="numeric"
-          maxlength="64"
-        /></label
-      >
-      <label class="banto-field banto-field--stacked"
-        ><span class="banto-field-label">グループID</span><input
-          class="banto-field-control"
-          bind:value={draft.groupId}
-          maxlength="64"
-          spellcheck="false"
-        /></label
-      >
-      <label class="banto-field banto-field--stacked"
-        ><span class="banto-field-label">論理Hub参照</span><input
-          class="banto-field-control"
-          bind:value={draft.hubRef}
-          maxlength="64"
-          spellcheck="false"
-        /></label
-      >
-      <label class="banto-field banto-field--stacked"
-        ><span class="banto-field-label">記録周期（ミリ秒）</span><input
-          class="banto-field-control"
-          bind:value={draft.periodMs}
-          inputmode="numeric"
-          maxlength="64"
-        /></label
-      >
-      <label class="check"
-        ><input
-          type="checkbox"
-          bind:checked={draft.enabled}
-        />記録を希望する</label
-      >
-    </div>
-    <p>
-      周期は100〜3,600,000ミリ秒、系列は1〜8件です。論理Hub参照とタグ外部名は手入力し、接続確認は行いません。
-    </p>
-    {#if saved}
+    <fieldset class="plain" disabled={readonly}>
+      <div class="fields">
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">計画ID</span><input
+            class="banto-field-control"
+            bind:value={draft.planId}
+            maxlength="64"
+            spellcheck="false"
+          /></label
+        >
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">希望設定の版</span><input
+            class="banto-field-control"
+            bind:value={draft.revision}
+            inputmode="numeric"
+            maxlength="64"
+          /></label
+        >
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">グループID</span><input
+            class="banto-field-control"
+            bind:value={draft.groupId}
+            maxlength="64"
+            spellcheck="false"
+          /></label
+        >
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">論理Hub参照</span><input
+            class="banto-field-control"
+            bind:value={draft.hubRef}
+            maxlength="64"
+            spellcheck="false"
+          /></label
+        >
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">記録周期（ミリ秒）</span><input
+            class="banto-field-control"
+            bind:value={draft.periodMs}
+            inputmode="numeric"
+            maxlength="64"
+          /></label
+        >
+        <label class="check"
+          ><input
+            type="checkbox"
+            bind:checked={draft.enabled}
+          />記録を希望する</label
+        >
+      </div>
       <p>
-        保存済みの版: {saved.revision}。同じ計画IDで内容を変える場合は新しい版を指定してください。表示順だけの変更は同じ版で保存できます。
+        周期は100〜3,600,000ミリ秒、系列は1〜8件です。論理Hub参照とタグ外部名は手入力し、接続確認は行いません。
       </p>
+      {#if saved}
+        <p>
+          保存済みの版: {saved.revision}。同じ計画IDで内容を変える場合は新しい版を指定してください。表示順だけの変更は同じ版で保存できます。
+        </p>
+        <button
+          type="button"
+          disabled={!canAdvance}
+          onclick={() => {
+            if (saved.revision < Number.MAX_SAFE_INTEGER)
+              draft.revision = String(saved.revision + 1);
+          }}>次の版を使う</button
+        >
+        {#if saved.revision === Number.MAX_SAFE_INTEGER}<p>
+            この計画IDでは版の上限に達しています。内容を変えるには別の計画IDを明示してください。
+          </p>{/if}
+      {/if}
+      <div role="group" aria-label="記録する系列">
+        {#each draft.members as member, index}
+          <fieldset>
+            <legend>系列 {index + 1}</legend>
+            <div class="fields">
+              <label class="banto-field banto-field--stacked"
+                ><span class="banto-field-label">メンバーID {index + 1}</span
+                ><input
+                  class="banto-field-control"
+                  bind:value={member.memberId}
+                  maxlength="64"
+                  spellcheck="false"
+                /></label
+              >
+              <label class="banto-field banto-field--stacked"
+                ><span class="banto-field-label">値の型 {index + 1}</span
+                ><select
+                  class="banto-field-control"
+                  aria-label={`値の型 ${index + 1}`}
+                  bind:value={member.valueType}
+                  ><option value="number">数値</option><option value="bool"
+                    >真偽値</option
+                  ></select
+                ></label
+              >
+              <label class="external banto-field banto-field--stacked"
+                ><span class="banto-field-label">タグ外部名 {index + 1}</span
+                ><textarea
+                  class="banto-field-control"
+                  rows="2"
+                  value={member.externalName}
+                  maxlength="1024"
+                  spellcheck="false"
+                  oninput={(e) => (member.externalName = e.currentTarget.value)}
+                ></textarea></label
+              >
+            </div>
+            <div class="actions">
+              <button
+                type="button"
+                disabled={index === 0}
+                onclick={() => move(index, -1)}>系列{index + 1}を上へ</button
+              >
+              <button
+                type="button"
+                disabled={index === draft.members.length - 1}
+                onclick={() => move(index, 1)}>系列{index + 1}を下へ</button
+              >
+              <button
+                type="button"
+                disabled={draft.members.length === 1}
+                onclick={() =>
+                  (draft.members = draft.members.filter((_, i) => i !== index))}
+                >系列{index + 1}を削除</button
+              >
+            </div>
+          </fieldset>
+        {/each}
+      </div>
       <button
         type="button"
-        disabled={!canAdvance}
-        onclick={() => {
-          if (saved.revision < Number.MAX_SAFE_INTEGER)
-            draft.revision = String(saved.revision + 1);
-        }}>次の版を使う</button
+        disabled={draft.members.length >= 8}
+        onclick={() =>
+          (draft.members = [
+            ...draft.members,
+            { memberId: newId(), externalName: "", valueType: "number" },
+          ])}>系列を追加</button
       >
-      {#if saved.revision === Number.MAX_SAFE_INTEGER}<p>
-          この計画IDでは版の上限に達しています。内容を変えるには別の計画IDを明示してください。
-        </p>{/if}
-    {/if}
-    <div role="group" aria-label="記録する系列">
-      {#each draft.members as member, index}
-        <fieldset>
-          <legend>系列 {index + 1}</legend>
-          <div class="fields">
-            <label class="banto-field banto-field--stacked"
-              ><span class="banto-field-label">メンバーID {index + 1}</span
-              ><input
-                class="banto-field-control"
-                bind:value={member.memberId}
-                maxlength="64"
-                spellcheck="false"
-              /></label
-            >
-            <label class="banto-field banto-field--stacked"
-              ><span class="banto-field-label">値の型 {index + 1}</span><select
-                class="banto-field-control"
-                aria-label={`値の型 ${index + 1}`}
-                bind:value={member.valueType}
-                ><option value="number">数値</option><option value="bool"
-                  >真偽値</option
-                ></select
-              ></label
-            >
-            <label class="external banto-field banto-field--stacked"
-              ><span class="banto-field-label">タグ外部名 {index + 1}</span
-              ><textarea
-                class="banto-field-control"
-                rows="2"
-                value={member.externalName}
-                maxlength="1024"
-                spellcheck="false"
-                oninput={(e) => (member.externalName = e.currentTarget.value)}
-              ></textarea></label
-            >
-          </div>
-          <div class="actions">
-            <button
-              type="button"
-              disabled={index === 0}
-              onclick={() => move(index, -1)}>系列{index + 1}を上へ</button
-            >
-            <button
-              type="button"
-              disabled={index === draft.members.length - 1}
-              onclick={() => move(index, 1)}>系列{index + 1}を下へ</button
-            >
-            <button
-              type="button"
-              disabled={draft.members.length === 1}
-              onclick={() =>
-                (draft.members = draft.members.filter((_, i) => i !== index))}
-              >系列{index + 1}を削除</button
-            >
-          </div>
-        </fieldset>
-      {/each}
-    </div>
-    <button
-      type="button"
-      disabled={draft.members.length >= 8}
-      onclick={() =>
-        (draft.members = [
-          ...draft.members,
-          { memberId: newId(), externalName: "", valueType: "number" },
-        ])}>系列を追加</button
-    >
+    </fieldset>
     {#if validation.error}<p role="status">{validation.error}</p>{/if}
     {#if error || localError}<p role="alert">{error || localError}</p>{/if}
     <p>
@@ -234,18 +240,20 @@
       版は配布先で予約されません。適用時に競合した場合は、新しい版または別の計画IDを明示して保存してください。
     </p>
     <div class="actions">
-      <button type="submit" disabled={!validation.plan}>Projectに保存</button>
-      <button
-        type="button"
-        disabled={!dirty}
-        onclick={() => {
-          draft = structuredClone(initial);
-          localError = "";
-        }}>入力を戻す</button
-      >
-      <button type="button" disabled={!saved || dirty} onclick={onremove}
-        >Projectから除去</button
-      >
+      {#if !readonly}<button type="submit" disabled={!validation.plan}
+          >Projectに保存</button
+        >{/if}
+      {#if !readonly}<button
+          type="button"
+          disabled={!dirty}
+          onclick={() => {
+            draft = structuredClone(initial);
+            localError = "";
+          }}>入力を戻す</button
+        >
+        <button type="button" disabled={!saved || dirty} onclick={onremove}
+          >Projectから除去</button
+        >{/if}
       <button type="button" onclick={onclose}>閉じる</button>
     </div>
   </form>
@@ -287,6 +295,12 @@
   }
   .external {
     grid-column: 1 / -1;
+  }
+  fieldset.plain {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
   }
   fieldset {
     border: 1px solid var(--banto-border);

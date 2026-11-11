@@ -666,11 +666,6 @@ export function createDesignerActions(host: DesignerActionsHost) {
             run: host.files.focusProjectName,
           },
           {
-            label: "記録希望設定",
-            disabled: host.editing.editBlocked || host.selection.definition,
-            run: host.files.openRecordingPlan,
-          },
-          {
             label: "工程図サンプルを開く",
             disabled: host.view.menuBlocked,
             run: host.files.openProcessSample,
@@ -874,21 +869,6 @@ export function createDesignerActions(host: DesignerActionsHost) {
             run: () => host.view.changeMode("preview"),
           },
           {
-            label: "記録計画の操作",
-            disabled: host.view.menuBlocked,
-            run: host.view.openRecordingOperations,
-          },
-          {
-            label: "記録管理状態",
-            disabled: host.view.menuBlocked,
-            run: host.view.openRecordingManagement,
-          },
-          {
-            label: "履歴トレンド",
-            disabled: host.view.menuBlocked,
-            run: host.view.openHistory,
-          },
-          {
             label: "テーマ：ライト",
             run: () => host.view.chooseTheme("light"),
           },
@@ -952,6 +932,31 @@ export function createDesignerActions(host: DesignerActionsHost) {
               : "スナップを有効にする",
             disabled: host.editing.editBlocked,
             run: () => (host.view.snapEnabled = !host.view.snapEnabled),
+          },
+        ],
+      },
+      {
+        label: "記録",
+        items: [
+          {
+            label: "記録希望設定",
+            disabled: host.view.menuBlocked || host.selection.definition,
+            run: host.files.openRecordingPlan,
+          },
+          {
+            label: "記録管理状態",
+            disabled: host.view.menuBlocked,
+            run: host.view.openRecordingManagement,
+          },
+          {
+            label: "記録計画の操作",
+            disabled: host.view.menuBlocked,
+            run: host.view.openRecordingOperations,
+          },
+          {
+            label: "履歴トレンド",
+            disabled: host.view.menuBlocked,
+            run: host.view.openHistory,
           },
         ],
       },

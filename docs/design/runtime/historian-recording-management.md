@@ -289,7 +289,7 @@ Rustの`recording_management`は`validate_recording_management(&Value)`と、pri
 
 `controller.ts`の`createRecordingManagementController()`は`setOwner(selection)`、明示`load(timeoutMs)`、`cancel(expectedToken?)`、`subscribe`、`dispose`を提供する。open／Project／generation／serviceの新しい組合せは別ownerで、交換は状態を即時退役させる。期限はload時のperformance.nowから一回だけ作り、待機時間も含む。timer・dispatch・応答検査後に同じ絶対期限を確認する。requestIdはcontroller内の単調safe counterで発行し、owner交換でresetせず、上限ではwrapせず発行を拒否する。別App共通の重複排除キーとしてrequestId単独を使わない。Promise brandのない値や任意thenable、同期throw／rejectionは有限serviceFailureへ分類し、raw本文を表示しない。
 
-常設`RecordingManagementWorkspace.svelte`がModalの外でcontrollerを保持し、effect前のrender／action資格検査で旧応答を隠す。「表示→記録管理状態」の明示openと「状態を照会」を分け、再照会で最新一待機を置換できる。DB・activation・別観測Host・保持／回復gate・SDK・desired比較を独立表示する。閉じる／Project交換／App破棄はreadへのabort要求だけである。別Appへ移る場合の物理上限は将来adapter自身のgateで保証する。
+常設`RecordingManagementWorkspace.svelte`がModalの外でcontrollerを保持し、effect前のrender／action資格検査で旧応答を隠す。「記録→記録管理状態」の明示openと「状態を照会」を分け、再照会で最新一待機を置換できる。DB・activation・別観測Host・保持／回復gate・SDK・desired比較を独立表示する。閉じる／Project交換／App破棄はreadへのabort要求だけである。別Appへ移る場合の物理上限は将来adapter自身のgateで保証する。
 
 `controller.test.ts`は制御Promiseと単調時計で、取消後のcleanup・期限切れ・全文要求不一致・subscriber／abort再入・owner交換を直接検証する。`e2e/recording-management-workspace.spec.ts`は通常Appの両theme、未接続、注入service、寿命・部分観測、保存不変を確認する。native adapterや実DBを管理画面へ接続した受入ではない。次のd4は操作capability／receipt／不確定commitの詳細設計から進める。
 

@@ -483,12 +483,22 @@
     padding: 0.4rem 0.75rem;
   }
   label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin: 0.4rem;
+    display: grid;
+    gap: 0.3rem;
+    margin: 0.4rem 0;
+    max-width: 14rem;
+    text-align: left;
   }
   input {
-    width: 8rem;
+    min-width: 0;
+    width: 100%;
+    color: var(--banto-text);
+    background: var(--banto-surface);
+    border: 1px solid var(--banto-border);
+    padding: 0.4rem;
+    border-radius: 4px;
+  }
+  input:disabled {
+    opacity: 0.6;
   }
 </style>

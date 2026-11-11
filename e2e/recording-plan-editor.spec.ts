@@ -15,7 +15,7 @@ const saved = async (p: Page) =>
 async function open(p: Page) {
   await p
     .getByRole("menubar")
-    .getByRole("menuitem", { name: "ファイル", exact: true })
+    .getByRole("menuitem", { name: "記録", exact: true })
     .click();
   await p.getByRole("menuitem", { name: "記録希望設定", exact: true }).click();
 }
@@ -277,4 +277,21 @@ test("resolves pending Project form edits before capturing the recording editor 
   const result = await saved(page);
   expect(result.manifest.name).toBe("未適用のProject名");
   expect(result.recordingPlan).toBeUndefined();
+});
+
+test("opens the saved plan read-only from the Record menu in preview", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await load(page);
+  await open(page);
+  await expect(dialog(page)).toContainText("閲覧のみ");
+  await expect(
+    dialog(page).getByLabel("論理Hub参照", { exact: true }),
+  ).toBeDisabled();
+  await expect(
+    dialog(page).getByRole("button", { name: "Projectに保存", exact: true }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(dialog(page)).toHaveCount(0);
 });

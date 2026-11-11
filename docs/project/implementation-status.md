@@ -244,7 +244,7 @@ Rust workspace560件（新規16）、既存共通Chromium3件、Clippy `-D warni
 
 ## 記録計画の明示操作workspace（H5d4b、2026-11-03）
 
-[Astra詳細契約](../design/runtime/historian-recording-operations.md#11-h5d4bのservicemonitorと通常app)に従い、d3読取serviceと別の任意注入操作service、App常設monitor、「表示→記録計画の操作」を実装した。通常起動は未接続で、test-only外部ownerを注入して受け入れる。期待版を明示し、検査・元runの停止とjoin・同じimmutable候補の適用を別clickで実行する。Replay/errorで停止せず、適用後に自動再開しない。
+[Astra詳細契約](../design/runtime/historian-recording-operations.md#11-h5d4bのservicemonitorと通常app)に従い、d3読取serviceと別の任意注入操作service、App常設monitor、「記録→記録計画の操作」を実装した。通常起動は未接続で、test-only外部ownerを注入して受け入れる。期待版を明示し、検査・元runの停止とjoin・同じimmutable候補の適用を別clickで実行する。Replay/errorで停止せず、適用後に自動再開しない。
 
 monitorは一workflow・mutation待機なし・一reconcileを保持する。閉じる・Project／service交換・disposeで取消を送らず、期限後もlate結果を保持する。型付き未dispatch拒否と不明例外を分け、receipt・静止確認・回復latchを単調統合する。旧対象が未完了／不明なら新対象への送信を停止する。正常な旧候補だけは元対象へ明示discardし、静止後に現在対象へ再接続できる。旧結果は元要求ラベル付きで保持する。
 
@@ -264,7 +264,7 @@ Rust workspace544件（新規7）、TS全4,785件（新規2,173）、関連Chrom
 
 ## 記録管理状態の明示照会（H5d3b、2026-11-03）
 
-[Astra詳細契約](../design/runtime/historian-recording-management.md)に従い、「表示→記録管理状態」から開くreadonly workspaceとoptional serviceを実装した。通常起動は未接続。openでは照会せず、明示ボタンからDB適用設定、最新activation／session、別時点Host、保持／回復gate、SDKと希望設定との差を表示する。DB照会失敗は部分観測、unknown／nullは未提供として保持する。
+[Astra詳細契約](../design/runtime/historian-recording-management.md)に従い、「記録→記録管理状態」から開くreadonly workspaceとoptional serviceを実装した。通常起動は未接続。openでは照会せず、明示ボタンからDB適用設定、最新activation／session、別時点Host、保持／回復gate、SDKと希望設定との差を表示する。DB照会失敗は部分観測、unknown／nullは未提供として保持する。
 
 App常設controllerは実行中1・最新待機1に限定し、取消・期限切れ・close／reopen・同ID版Project置換・service交換でもPromise終了まで物理枠を保持する。load時の絶対単調deadlineを待機・dispatch・検証後まで引き継ぐ。要求全文照合とowner資格で古い応答を隠し、subscriber／abort listenerの同期再入でも新状態を上書きしない。応答は既存owned検証を通し、任意error本文を表示しない。
 
@@ -284,7 +284,7 @@ Rust workspace537件（新規6）、TS全2,578件（新規617）、型検査0err
 
 ## 記録希望設定の編集（H5d2、2026-11-03）
 
-[Astra設計](../design/runtime/historian-recording-project.md)に沿い、「ファイル→記録希望設定」とProject設定からBanto Modalを開き、単一planの作成・変更・除去と1〜8memberの編集・順序変更を提供する。保存・除去は既存editor commandとUndo／Redoへ一括接続する。完全no-opでProject revisionと履歴を増やさず、表示順だけの変更はdesired版を維持する。
+[Astra設計](../design/runtime/historian-recording-project.md)に沿い、「記録→記録希望設定」とProject設定からBanto Modalを開き、単一planの作成・変更・除去と1〜8memberの編集・順序変更を提供する。保存・除去は既存editor commandとUndo／Redoへ一括接続する。完全no-opでProject revisionと履歴を増やさず、表示順だけの変更はdesired版を維持する。
 
 元設定の全文・順・版をcommand側で照合し、同計画IDの内容変更は大きい版を要求する。数値はraw整数文字列から安全な範囲だけを受理し、無操作の外部名の改行・空白・Unicodeを保持する。Project object・世代・画面・modeとrequestを捕捉し、置換後の古い保存／除去を拒否する。未保存入力のEsc・背後shortcutを保護し、既存Projectフォームの未適用入力も解決してから開く。
 
@@ -876,7 +876,7 @@ TypeScript全体1,443件（新規36件）・型検査0error／0warning・build�
 
 ## 通常Appの履歴検索workspace（H4b2、2026-11-02）
 
-H4b1は[PR #36](https://github.com/tyaro/temp-scada/pull/36)でマージ済み（`9d273aead1814088b34d7149d9d0e72bc3ab9332`）、[全体CI 41362821595](https://github.com/tyaro/temp-scada/actions/runs/41362821595)成功。Astra主設計の[H4b2](../design/runtime/historian-history-workspace.md)を実装した。通常Appの「表示→履歴トレンド」からBanto Modalで系列・UTC範囲・raw／minmax・点数を指定して明示検索できる。既定は未接続を説明し、sample系列や自動検索を作らない。
+H4b1は[PR #36](https://github.com/tyaro/temp-scada/pull/36)でマージ済み（`9d273aead1814088b34d7149d9d0e72bc3ab9332`）、[全体CI 41362821595](https://github.com/tyaro/temp-scada/actions/runs/41362821595)成功。Astra主設計の[H4b2](../design/runtime/historian-history-workspace.md)を実装した。通常Appの「記録→履歴トレンド」からBanto Modalで系列・UTC範囲・raw／minmax・点数を指定して明示検索できる。既定は未接続を説明し、sample系列や自動検索を作らない。
 
 任意HistoryServiceのcontextは1MiB以下のowned／frozen plain JSONとして検証し、最大256件の一意なopaque系列IDとlabelを受け取る。現在ProjectのID／revision一致に加え、Project object・workspace世代・service identityで表示と取得を守る。form編集・close・Project／service変更で結果を退役し、同じcontrollerをModal開閉の外で保持して、Abort無視のread終了まで物理一枠を空けない。履歴Modal中は背後の編集shortcutを遮断する。H1のID grammar・最終query検証を共用し、UTCはcanonical文字列のround tripで検査する。
 

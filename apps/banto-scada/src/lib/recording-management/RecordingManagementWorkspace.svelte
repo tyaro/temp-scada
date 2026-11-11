@@ -34,6 +34,7 @@
     generation,
     service,
     onclose,
+    onopenplan,
     onsummary,
   }: {
     openOwner: object | null;
@@ -41,6 +42,8 @@
     generation: number;
     service?: RecordingManagementService;
     onclose: () => void;
+    /** Opens the Project recording plan (revision mismatch recovery, F-7). */
+    onopenplan?: () => void;
     /** The last inspection's one-line state, for the header (P0-1). */
     onsummary?: (value: {
       summary: RecordingSummary;
@@ -148,6 +151,7 @@
     running: boolean;
     message?: string;
     failed?: boolean;
+    error?: string;
   }>();
   const operationShown = $derived(
     operation?.owner === binding ? operation : undefined,
@@ -227,6 +231,7 @@
           action,
           running: false,
           failed: true,
+          error: (result as unknown as { error: string }).error,
           message: controlErrorLabel(
             action,
             (result as unknown as { error: string }).error,
@@ -322,6 +327,10 @@
     class="recording-management"
     data-recording-management-phase={visible?.phase ?? "checking"}
   >
+    <p data-recording-usage>
+      通常の変更はここで「停止 → 適用 →
+      再開」します。記録を止めずに差し替える場合は、メニューの「記録」→「記録計画の操作」を使います。
+    </p>
     <p role="status">
       {visible
         ? inspectionPhaseLabels[visible.phase]
@@ -383,7 +392,16 @@
               : "ok"}
           >
             {operationShown.message}
-          </p>{/if}
+          </p>
+          {#if operationShown.error === "plan_conflict" && onopenplan}<div
+              class="actions"
+            >
+              <button
+                type="button"
+                data-recording-open-plan
+                onclick={onopenplan}>記録希望設定を開く</button
+              >
+            </div>{/if}{/if}
       </section>
     {/if}
     {#if controlsOffered}
@@ -432,7 +450,16 @@
             data-recording-control-action={operationShown.action}
           >
             {operationShown.message}
-          </p>{/if}
+          </p>
+          {#if operationShown.error === "plan_conflict" && onopenplan}<div
+              class="actions"
+            >
+              <button
+                type="button"
+                data-recording-open-plan
+                onclick={onopenplan}>記録希望設定を開く</button
+              >
+            </div>{/if}{/if}
       </section>
     {/if}
     {#if binding?.service.ownerRebind}

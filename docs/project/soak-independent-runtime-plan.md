@@ -421,7 +421,7 @@ TS1,443件（新規36件）・型検査・build・関連Chromium12件が成功�
 
 ## H4b2の実装と残り（2026-11-02）
 
-H4b1は[PR #36](https://github.com/tyaro/temp-scada/pull/36)でマージ済み（`9d273aead1814088b34d7149d9d0e72bc3ab9332`）、[全体CI 41362821595](https://github.com/tyaro/temp-scada/actions/runs/41362821595)成功。Astra主設計の[H4b2](../design/runtime/historian-history-workspace.md)を実装した。通常Appの「表示→履歴トレンド」からBanto Modalで系列・UTC範囲・raw／minmax・点数を指定して明示検索できる。既定は未接続を説明し、sample系列や自動検索を作らない。
+H4b1は[PR #36](https://github.com/tyaro/temp-scada/pull/36)でマージ済み（`9d273aead1814088b34d7149d9d0e72bc3ab9332`）、[全体CI 41362821595](https://github.com/tyaro/temp-scada/actions/runs/41362821595)成功。Astra主設計の[H4b2](../design/runtime/historian-history-workspace.md)を実装した。通常Appの「記録→履歴トレンド」からBanto Modalで系列・UTC範囲・raw／minmax・点数を指定して明示検索できる。既定は未接続を説明し、sample系列や自動検索を作らない。
 
 任意HistoryServiceのcontextは1MiB以下のowned／frozen plain JSONとして検証し、最大256件の一意なopaque系列IDとlabelを受け取る。現在ProjectのID／revision一致に加え、Project object・workspace世代・service identityで表示と取得を守る。form編集・close・Project／service変更で結果を退役し、同じcontrollerをModal開閉の外で保持して、Abort無視のread終了まで物理一枠を空けない。履歴Modal中は背後の編集shortcutを遮断する。H1のID grammar・最終query検証を共用し、UTCはcanonical文字列のround tripで検査する。
 
