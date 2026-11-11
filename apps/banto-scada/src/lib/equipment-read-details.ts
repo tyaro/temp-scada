@@ -42,3 +42,15 @@ export function equipmentReadDetails(
     simulated: rows.filter((row) => row.simulated).length,
   };
 }
+
+/**
+ * 表示プレビューで、図面上の Symbol を読取詳細の小窓への入口にするときの対象機器。
+ * 関連付けのない Symbol、存在しない機器を指す Symbol、Symbol 以外は undefined（無反応）。
+ */
+export function previewEquipmentLink(
+  shape: { type: string; equipmentId?: string },
+  equipment: EquipmentContext["equipment"],
+) {
+  if (shape.type !== "symbol" || !shape.equipmentId) return undefined;
+  return equipment?.find((item) => item.id === shape.equipmentId);
+}

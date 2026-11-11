@@ -41,6 +41,7 @@
     symbols,
     trends = [],
     onopentrend,
+    onopenequipment,
     screens = [],
     equipmentContext,
     readings,
@@ -71,6 +72,7 @@
     symbols: SymbolDefinition[];
     trends?: readonly TrendDefinition[];
     onopentrend?: (objectId: string) => void;
+    onopenequipment?: (equipmentId: string, origin: SVGElement) => void;
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     readings?: TagReadings;
@@ -938,6 +940,7 @@
         {#key screen.id}
           <Renderer
             {onopentrend}
+            {onopenequipment}
             bind:this={renderer}
             {screen}
             {symbols}
