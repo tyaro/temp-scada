@@ -257,7 +257,7 @@ const host = (page: Page) =>
 async function open(page: Page) {
   await page
     .getByRole("menubar", { name: "Designer メニューバー" })
-    .getByRole("menuitem", { name: "表示", exact: true })
+    .getByRole("menuitem", { name: "記録", exact: true })
     .click();
   await page
     .getByRole("menuitem", { name: "記録管理状態", exact: true })
@@ -388,6 +388,24 @@ test("an administrator stops, applies the plan while stopped and resumes", async
     "計画の版がDBと合いません。Projectの計画のrevisionを上げてから適用してください",
   );
   await expect(reconfigure).toBeEnabled();
+  // The mismatch error offers the way out: the recording plan (read-only here
+  // because the Project is in preview).
+  await expect(root.locator("[data-recording-usage]")).toContainText(
+    "記録計画の操作",
+  );
+  const openPlan = root.getByRole("button", { name: "記録希望設定を開く" });
+  await expect(openPlan).toBeVisible();
+  await openPlan.click();
+  const plan = page.getByRole("dialog", { name: "記録希望設定", exact: true });
+  await expect(plan).toBeVisible();
+  await expect(plan).toContainText("閲覧のみ");
+  await expect(plan.getByRole("button", { name: "Projectに保存" })).toHaveCount(
+    0,
+  );
+  await page.keyboard.press("Escape");
+  await open(page);
+  await root.getByRole("button", { name: "状態を照会", exact: true }).click();
+  await expect(reconfigure).toBeEnabled({ timeout: 30000 });
   const before = (await host(page)).historyContexts;
   await reconfigure.click();
   await expect(result).toHaveAttribute("data-recording-control-result", "ok");

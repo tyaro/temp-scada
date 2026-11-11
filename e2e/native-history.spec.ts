@@ -111,7 +111,7 @@ const trend = (page: Page) => dialog(page).locator("[data-history-phase]");
 async function open(page: Page) {
   await page
     .getByRole("menubar", { name: "Designer メニューバー" })
-    .getByRole("menuitem", { name: "表示", exact: true })
+    .getByRole("menuitem", { name: "記録", exact: true })
     .click();
   await page
     .getByRole("menuitem", { name: "履歴トレンド", exact: true })

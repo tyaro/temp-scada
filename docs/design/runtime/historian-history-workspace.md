@@ -4,7 +4,7 @@
 
 ## 今回ユーザーに提供するもの
 
-通常Appの「表示→履歴トレンド」からBanto Modalを開き、明示したUTC範囲・Historian系列・raw／minmax・点数予算で検索できる入口を追加する。edit／previewのどちらでも、既存のmodal／操作確認と競合しない時に使える。menuを隠した場合の既存代替入口にも同じactionを使う。
+通常Appの「記録→履歴トレンド」からBanto Modalを開き、明示したUTC範囲・Historian系列・raw／minmax・点数予算で検索できる入口を追加する。edit／previewのどちらでも、既存のmodal／操作確認と競合しない時に使える。menuを隠した場合の既存代替入口にも同じactionを使う。
 
 既定のAppはHistory service未接続であり、入口を無効化して隠すのではなく、ダイアログに未接続を表示する。demo系列、架空DB、Hub catalogからの自動ID対応は追加しない。検証時は通常Appにinprocess serviceを注入し、fixture専用画面だけで完了としない。
 

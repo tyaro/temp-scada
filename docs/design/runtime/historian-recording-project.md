@@ -159,7 +159,7 @@ Rust workspace531件（新規2）、TS1,934件（新規156）、関連Chromium25
 
 ## H5d2の実装と受入（2026-11-03）
 
-通常Appの「ファイル→記録希望設定」とProject設定へ編集Modalを追加した。owned draftのraw整数入力と外部名の無操作保持、1〜8member、同IDの増版・別IDの明示編集、Bantoのdirty入力保護を提供する。commandはsaveの`expected: DesiredRecordingPlan | null`（nullは未設定作成）、removeの`expected: DesiredRecordingPlan`で元の全文・順・版を照合し、H5a検証と増版をUI外でも強制する。memberのcode-unit順比較で意味を判定し、完全no-opは順を含む固定field比較とする。
+通常Appの「記録→記録希望設定」とProject設定へ編集Modalを追加した。owned draftのraw整数入力と外部名の無操作保持、1〜8member、同IDの増版・別IDの明示編集、Bantoのdirty入力保護を提供する。commandはsaveの`expected: DesiredRecordingPlan | null`（nullは未設定作成）、removeの`expected: DesiredRecordingPlan`で元の全文・順・版を照合し、H5a検証と増版をUI外でも強制する。memberのcode-unit順比較で意味を判定し、完全no-opは順を含む固定field比較とする。
 
 AppはProject object/generation/screen/modeに加えて開いたrequestをcallbackへ捕捉し、古いsave/remove/closeが新ownerへ作用しないようにする。Bantoのopen→closed遷移でfocusを戻すため、論理資格と最後の表示view一枠を分離する。再openは新しいkeyでdraftを作り直し、Project置換時はviewも破棄する。保存・除去は単一のUndo単位で、Undoは当時のdesired版を復元する。新しいnative API・DB変更・schema更新・service接続は導入していない。次はd3の管理状態表示用DTOとservice境界を詳細化する。
 

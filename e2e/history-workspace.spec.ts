@@ -62,7 +62,7 @@ const trend = (page: Page) => dialog(page).locator("[data-history-phase]");
 async function open(page: Page) {
   const bar = page.getByRole("menubar", { name: "Designer メニューバー" });
   if (await bar.isVisible())
-    await bar.getByRole("menuitem", { name: "表示", exact: true }).click();
+    await bar.getByRole("menuitem", { name: "記録", exact: true }).click();
   else
     await page.getByRole("button", { name: "メニュー", exact: true }).click();
   await page
@@ -134,7 +134,7 @@ test("normal entry explains offline, traps focus and restores it on Escape, incl
   await expect(
     page
       .getByRole("menubar")
-      .getByRole("menuitem", { name: "表示", exact: true }),
+      .getByRole("menuitem", { name: "記録", exact: true }),
   ).toBeFocused();
   await page
     .getByRole("menubar")

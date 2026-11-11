@@ -309,7 +309,7 @@ OwnerViewの`active`は現在または最後に受理したstageのhandleであ�
 
 旧対象の正常settled candidate／pausedには「以前の候補を破棄」を提供する。現在Projectのpause／apply資格を復活させず、元entryの捕捉済みservice/changeだけへ送る。物理処理中・不明・回復必要・不正応答では破棄不可。旧ownerがidleまたは正常completedになった後の「現在の対象を確認」は新bindingのcached viewへ明示再接続する。完了済みの旧結果はラベル付きで最大一件保持し、次のworkflowを受理した時に置き換える。
 
-通常Appの「表示→記録計画の操作」で、期待適用版／mapping版／保持適用版を利用者が明示入力する。空欄はnullであり最新headを推測しない。有効な希望設定にはmapping・保持期待版が必要で、disabledでは両方nullに固定する。128bitの`crypto.getRandomValues()`によるworkflow IDを使い、secure-context専用のrandomUUIDには依存しない。IDは認可情報ではない。検査・pause/join・同候補applyを別clickとし、元requestの結果照会は手動のみ。Project保存・Undo・記録再開を変更しない。
+通常Appの「記録→記録計画の操作」で、期待適用版／mapping版／保持適用版を利用者が明示入力する。空欄はnullであり最新headを推測しない。有効な希望設定にはmapping・保持期待版が必要で、disabledでは両方nullに固定する。128bitの`crypto.getRandomValues()`によるworkflow IDを使い、secure-context専用のrandomUUIDには依存しない。IDは認可情報ではない。検査・pause/join・同候補applyを別clickとし、元requestの結果照会は手動のみ。Project保存・Undo・記録再開を変更しない。
 
 単体では外部ownerの存続、通知とcompletionの逆順、同期再入、閉じる／対象交換、未知のdispatch、既知receipt・latch保持を検証する。通常Appはtest-only providerを注入し、両theme・期限・取消・手動照会・旧候補破棄・remountと保存不変を検証する。native supervisorへのhandle対応、受理前registry、物理完了・実receipt readと隔離DBの受入はd4cへ残す。
 

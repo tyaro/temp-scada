@@ -2045,6 +2045,8 @@
     project: Project;
     generation: number;
     screenId: string;
+    /** Preview opens the plan for reading only (UX review F-7). */
+    readonly: boolean;
   };
   let recordingRequest = $state.raw<RecordingEditRequest | null>(null);
   // Keep one closed view for Banto's open -> closed focus transition. A new
@@ -2052,19 +2054,20 @@
   let recordingView = $state.raw<RecordingEditRequest | null>(null);
   let recordingError = $state("");
   function openRecordingPlan() {
-    if (menuBlocked || mode !== "edit" || activeDefinition) return;
+    if (menuBlocked || activeDefinition) return;
     const generation = workspaceGeneration,
-      id = screen.id;
+      id = screen.id,
+      readonly = mode !== "edit";
     withScreen(id, () => {
       if (
         generation !== workspaceGeneration ||
-        mode !== "edit" ||
+        (mode !== "edit") !== readonly ||
         activeDefinition
       )
         return;
       stopPlacement();
       recordingError = "";
-      recordingRequest = { project, generation, screenId: id };
+      recordingRequest = { project, generation, screenId: id, readonly };
       recordingView = recordingRequest;
     });
   }
@@ -2073,7 +2076,7 @@
       recordingRequest.project === project &&
       recordingRequest.generation === workspaceGeneration &&
       recordingRequest.screenId === screen.id &&
-      mode === "edit" &&
+      recordingRequest.readonly === (mode !== "edit") &&
       !activeDefinition
       ? recordingRequest
       : null,
@@ -3455,6 +3458,15 @@
           />
         {/each}
       </MenuGroup>
+      <MenuGroup label="記録">
+        {#each menuGroups.find((g) => g.label === "記録")?.items ?? [] as item}
+          <MenuItem
+            label={item.label}
+            disabled={item.disabled}
+            onSelect={item.run}
+          />
+        {/each}
+      </MenuGroup>
       <MenuGroup label="ヘルプ">
         <MenuItem
           label="操作ガイド・アプリ情報"
@@ -4236,6 +4248,7 @@
     <RecordingPlanDialog
       open={currentRecordingRequest === request}
       project={request.project}
+      readonly={request.readonly}
       error={recordingError}
       onsave={(plan) => saveRecordingPlan(request, plan)}
       onremove={() => removeRecordingPlan(request)}
@@ -4269,6 +4282,10 @@
   generation={workspaceGeneration}
   service={recordingManagementService}
   onclose={() => (recordingManagementOpen = null)}
+  onopenplan={() => {
+    recordingManagementOpen = null;
+    openRecordingPlan();
+  }}
   onsummary={({ summary, inspectedAt }) => {
     if (recordingManagementService)
       lastRecordingSummary = {
