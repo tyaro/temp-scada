@@ -16,18 +16,12 @@
   import type { Snippet } from "svelte";
   let {
     groups,
-    selectionCount,
-    hiddenSelectionCount = 0,
     modes,
     controls,
-    status,
   }: {
     groups: ToolbarGroup[];
-    selectionCount: number;
-    hiddenSelectionCount?: number;
     modes: Snippet;
     controls: Snippet;
-    status: Snippet;
   } = $props();
   let root: HTMLDivElement;
   let active = $state("");
@@ -89,13 +83,6 @@
     </div>
   {/each}
   {@render controls()}
-  {#if groups.length}<span
-      class="selection"
-      title="Ctrl / ⌘ / Shift + クリックで選択を追加・解除"
-      >{selectionCount} 件選択{#if hiddenSelectionCount}（非表示 {hiddenSelectionCount}
-        件）{/if}</span
-    >{/if}
-  {@render status()}
 </div>
 
 <style>
@@ -148,11 +135,5 @@
     stroke-width: 1.6;
     stroke-linecap: round;
     stroke-linejoin: round;
-  }
-  .selection {
-    font-size: 12px;
-    color: var(--banto-text-muted);
-    margin-left: 6px;
-    white-space: nowrap;
   }
 </style>

@@ -3317,6 +3317,52 @@
       {@render headerExtension()}
     </div>{/if}
   {#if showMenubar}<DesignerMenubar groups={menuGroups} />{/if}
+  <div class="mode-tools" role="group" aria-label="表示モード">
+    <button
+      class:active={mode === "edit"}
+      aria-pressed={mode === "edit"}
+      disabled={menuBlocked}
+      onclick={() => changeMode("edit")}
+      title="編集モード">編集</button
+    >
+    <button
+      class:active={mode === "preview"}
+      aria-pressed={mode === "preview"}
+      disabled={menuBlocked}
+      onclick={() => changeMode("preview")}
+      title="表示プレビュー">表示プレビュー</button
+    >
+  </div>
+  <div class="header-status">
+    {#if mode === "edit"}<span
+        class="selection-count"
+        title="Ctrl / ⌘ / Shift + クリックで選択を追加・解除"
+        >{selectedIds.length} 件選択{#if hiddenSelectionCount}（非表示 {hiddenSelectionCount}
+          件）{/if}</span
+      >{/if}
+    <div
+      class="save-state"
+      data-testid="save-state"
+      role="group"
+      aria-label="保存状態"
+      title={`${saveLabel}${drafts.dirty ? ` · 未適用の入力あり · ${drafts.count} フォーム` : ""}${lastExport ? ` · 最終書き出し要求 ${lastExport}` : ""}`}
+    >
+      <div class="save-label">
+        <StatusBadge
+          variant={projectChanged ? "warning" : "neutral"}
+          label={saveLabel}
+        />
+      </div>
+      <span class="draft-state" aria-live="polite"
+        >{drafts.dirty
+          ? `未適用の入力あり · ${drafts.count} フォーム`
+          : ""}</span
+      >
+      {#if lastExport}<span class="sr-only">最終書き出し要求 {lastExport}</span
+        >{/if}
+    </div>
+    {#if !readSource}<StatusBadge variant="neutral" label="Hub 未接続" />{/if}
+  </div>
   <div class="header-actions">
     <Menu label="常設メニュー" placement="bottom-end">
       {#snippet trigger(props)}
@@ -3378,27 +3424,9 @@
     </Menu>
   </div>
 </header>
-<EditToolbar
-  groups={mode === "edit" ? editToolbarGroups : []}
-  selectionCount={selectedIds.length}
-  {hiddenSelectionCount}
->
+<EditToolbar groups={mode === "edit" ? editToolbarGroups : []}>
   {#snippet modes()}
-    <div class="mode-tools" role="group" aria-label="表示モード">
-      <button
-        class:active={mode === "edit"}
-        aria-pressed={mode === "edit"}
-        disabled={menuBlocked}
-        onclick={() => changeMode("edit")}
-        title="編集モード">編集</button
-      >
-      <button
-        class:active={mode === "preview"}
-        aria-pressed={mode === "preview"}
-        disabled={menuBlocked}
-        onclick={() => changeMode("preview")}
-        title="表示プレビュー">表示プレビュー</button
-      >
+    <div class="mode-tools" role="group" aria-label="表示の操作">
       {#if mode === "preview"}<button
           disabled={menuBlocked}
           onclick={(event) => previewPopups?.showPicker(event.currentTarget)}
@@ -3453,30 +3481,6 @@
         onstep={(value) => canvasWorkspace?.stepZoom(value)}
       />
     {/if}
-  {/snippet}
-  {#snippet status()}
-    <div
-      class="save-state"
-      data-testid="save-state"
-      role="group"
-      aria-label="保存状態"
-      title={`${saveLabel}${drafts.dirty ? ` · 未適用の入力あり · ${drafts.count} フォーム` : ""}${lastExport ? ` · 最終書き出し要求 ${lastExport}` : ""}`}
-    >
-      <div class="save-label">
-        <StatusBadge
-          variant={projectChanged ? "warning" : "neutral"}
-          label={saveLabel}
-        />
-      </div>
-      <span class="draft-state" aria-live="polite"
-        >{drafts.dirty
-          ? `未適用の入力あり · ${drafts.count} フォーム`
-          : ""}</span
-      >
-      {#if lastExport}<span class="sr-only">最終書き出し要求 {lastExport}</span
-        >{/if}
-    </div>
-    {#if !readSource}<StatusBadge variant="neutral" label="Hub 未接続" />{/if}
   {/snippet}
 </EditToolbar>
 <ScreenTabs
@@ -4414,17 +4418,32 @@
     color: var(--banto-text-muted);
   }
   .save-state {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 24px 14px;
-    flex: 0 0 220px;
-    width: 220px;
-    height: 38px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 1 340px;
+    min-width: 0;
+    height: 28px;
     font-size: 11px;
     color: var(--banto-text-muted);
+  }
+  .header-status {
+    display: flex;
+    flex: 0 1 auto;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
     margin-left: auto;
   }
+  .selection-count {
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--banto-text-muted);
+    white-space: nowrap;
+  }
   .save-label {
+    flex: 0 1 auto;
     min-width: 0;
     overflow: hidden;
   }
@@ -4441,6 +4460,7 @@
     margin-right: 4px;
   }
   .draft-state {
+    flex: 1 1 0;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
@@ -4475,7 +4495,6 @@
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
-    margin-left: auto;
   }
   .header-actions button {
     width: auto;

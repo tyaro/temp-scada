@@ -16,7 +16,7 @@ for (const theme of ["light", "dark"])
       name: "共通編集ツールバー",
       exact: true,
     });
-    await toolbar.getByRole("button", { name: "編集", exact: true }).click();
+    await page.getByRole("button", { name: "編集", exact: true }).click();
     for (const label of [
       "グリッド表示",
       "グリッドにスナップ",
@@ -31,14 +31,16 @@ for (const theme of ["light", "dark"])
       "縮小",
       "拡大",
       "全体表示",
-      "編集",
-      "表示プレビュー",
     ]) {
       await expect(
         toolbar.getByRole("button", { name, exact: true }),
       ).toBeVisible();
     }
-    await expect(toolbar.getByTestId("save-state")).toBeVisible();
+    for (const name of ["編集", "表示プレビュー"])
+      await expect(
+        header.getByRole("button", { name, exact: true }),
+      ).toBeVisible();
+    await expect(header.getByTestId("save-state")).toBeVisible();
     await expect(
       page
         .getByRole("region", { name: "画面プレビュー", exact: true })
@@ -81,14 +83,14 @@ for (const theme of ["light", "dark"])
     await expect(toolbar.getByLabel("表示倍率", { exact: true })).toHaveValue(
       "fit",
     );
-    await toolbar
+    await page
       .getByRole("button", { name: "表示プレビュー", exact: true })
       .click();
     await expect(
       canvas.getByRole("heading", { name: "プロセス画面" }),
     ).toHaveCount(0);
     await expect(canvas).not.toContainText("SCREEN ·");
-    await toolbar.getByRole("button", { name: "編集", exact: true }).click();
+    await page.getByRole("button", { name: "編集", exact: true }).click();
     expect(
       (await page
         .getByRole("region", { name: "キャンバス操作領域", exact: true })
@@ -112,7 +114,7 @@ test("toolbar mode changes retain draft protection and save status remains visib
     name: "共通編集ツールバー",
     exact: true,
   });
-  await toolbar.getByRole("button", { name: "編集", exact: true }).click();
+  await page.getByRole("button", { name: "編集", exact: true }).click();
   await selectPanel(page, "部品");
   await page
     .getByRole("button", { name: "Rectangle を追加", exact: true })
@@ -122,10 +124,10 @@ test("toolbar mode changes retain draft protection and save status remains visib
   await page
     .getByRole("menuitem", { name: "補助パネルをすべて隠す", exact: true })
     .click();
-  const state = toolbar.getByTestId("save-state");
+  const state = page.getByTestId("save-state");
   await expect(state).toBeVisible();
   await expect(state).toContainText("未適用の入力あり · 1 フォーム");
-  await toolbar
+  await page
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
   const prompt = page.getByRole("dialog", {
@@ -134,7 +136,7 @@ test("toolbar mode changes retain draft protection and save status remains visib
   });
   await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
   await expect(
-    toolbar.getByRole("button", { name: "編集", exact: true }),
+    page.getByRole("button", { name: "編集", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Control+s");
   const downloading = page.waitForEvent("download");
@@ -144,13 +146,13 @@ test("toolbar mode changes retain draft protection and save status remains visib
   await downloading;
   await expect(state).toContainText("書き出し要求後の変更なし");
   await expect(state).not.toContainText("未適用の入力あり");
-  await toolbar
+  await page
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
   await expect(toolbar).toBeVisible();
   await expect(state).toBeVisible();
   await expect(
-    toolbar.getByRole("button", { name: "表示プレビュー", exact: true }),
+    page.getByRole("button", { name: "表示プレビュー", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(
     toolbar.getByRole("group", { name: "編集履歴", exact: true }),
@@ -182,4 +184,26 @@ test("theme icon exposes all modes by keyboard and leaves current editing intact
     "未適用の画面名",
   );
   await expect(page.getByRole("dialog")).toHaveCount(0);
+});
+
+test("the header row holds mode and save state so the 1440px toolbar stays on one row", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const header = page.locator(".app-header");
+  await expect(
+    header.getByRole("group", { name: "表示モード", exact: true }),
+  ).toBeVisible();
+  await expect(header.getByTestId("save-state")).toBeVisible();
+  await expect(header).toContainText("0 件選択");
+  const height = async (selector: string) =>
+    (await page.locator(selector).boundingBox())!.height;
+  expect(await height(".app-header")).toBeLessThanOrEqual(36);
+  expect(await height('[role="toolbar"]')).toBeLessThanOrEqual(48);
+  await page.screenshot({
+    path: "test-results/header-1440.png",
+    clip: { x: 0, y: 0, width: 1440, height: 120 },
+  });
 });

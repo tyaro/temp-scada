@@ -181,9 +181,6 @@ html[data-theme="dark"] #app {
   #app .app-header {
     flex-wrap: wrap;
   }
-  #app .app-header h1 {
-    flex-basis: 25%;
-  }
   #app .app-header [role="menubar"] {
     order: 4;
     width: 100%;

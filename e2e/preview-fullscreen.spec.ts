@@ -59,7 +59,7 @@ for (const theme of ["light", "dark"])
       JSON.parse(await readFile((await (await download).path())!, "utf8")),
     ).toEqual(sample);
   });
-test("native fullscreen exit event restores the editor shell; edit and Project replacement end owned fullscreen", async ({
+test("native fullscreen exit event restores the editor shell; the exit button and Project replacement end owned fullscreen", async ({
   page: p,
 }) => {
   await start(p);
@@ -70,9 +70,11 @@ test("native fullscreen exit event restores the editor shell; edit and Project r
   await expect(p.locator(".app-header")).toBeVisible();
   await button(p, "全画面で表示確認").click();
   await expect.poll(() => active(p)).toBe(true);
-  await button(p, "編集").click();
+  await expect(button(p, "編集")).toHaveCount(0);
+  await button(p, "全画面を終了").click();
   await expect.poll(() => active(p)).toBe(false);
   await expect(p.locator(".app-header")).toBeVisible();
+  await button(p, "編集").click();
   await expect(button(p, "全画面で表示確認")).toHaveCount(0);
   await button(p, "表示プレビュー").click();
   await button(p, "全画面で表示確認").click();
