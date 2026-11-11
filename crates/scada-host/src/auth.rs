@@ -1,6 +1,6 @@
 //! Desktop authentication of the embedded SCADA host (host-gate design §2-§4).
 //!
-//! Users, settings and the audit log are Banto v6.10.0's
+//! Users, settings and the audit log are Banto v7.0.0's
 //! `banto-admin-services`; this module only owns the webview's single
 //! [`DesktopSession`] slot and re-validates it on every check, ported from
 //! Banto admin-template's `current_session` / `require_role`.

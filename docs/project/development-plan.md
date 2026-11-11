@@ -110,7 +110,7 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 
 ## 共有部品の扱い
 
-Banto v6.10.0を使い、汎用機能の共通化は上流へ還元する。SCADAはPLCへ直接接続せず、Hubを外部サービスとして利用する。ドライバ・式評価を複製しない。`banto-tagclient`は固定commit依存で利用済み。`banto-expr`は式機能を導入するときに動作確認済みcommitへ固定する。
+Banto v7.0.0を使い、汎用機能の共通化は上流へ還元する。SCADAはPLCへ直接接続せず、Hubを外部サービスとして利用する。ドライバ・式評価を複製しない。`banto-tagclient`は固定commit依存で利用済み。`banto-expr`は式機能を導入するときに動作確認済みcommitへ固定する。
 
 v6.10.0ではフォーム入力の内部ID・既定背景とグリッドのセルエラー表示が変わる。現行SCADAは`@banto/forms`と`@banto/grid-svelte`を直接利用していないため、これらの移行作業は発生しない。`@banto/theme/css`の下線型入力は既存フォームにopt-inで適用し、旧CSSとの競合、明暗、操作回帰を画面で確認する。上流の[移行注意](https://github.com/tyaro/banto/blob/v6.10.0/CHANGELOG.md#6100---2026-11-05)を採用時に照合する。
 
@@ -120,7 +120,7 @@ Banto v6.9.0への依存更新では公開APIの必須移行はなく、既存�
 
 PR #9の残課題（2026-10-23・日本時間）は、Chromium 148のcontext menu即closeと過去の4並列画像比較差分の原因調査（ともに原因未特定）、floatingのorigin消失時に常設メニューへ戻すfallback経路のE2E追加、200px幅の左はみ出し（x=−4／幅204px）のBantoへの報告（Issue未起票）。[検証結果と残課題](../history/implementation-history.md#menu-review-phase-b)を参照する。
 
-SCADAはBanto v6.10.0で先行し、参照スナップショットのIndustrialはv6.7.0のまま。統合時にこの版差を照合する。寸法トークンは今回は採用せず、採用前に既存の`--banto-*`参照（レビュー時点で約58ファイル）との重複・移行範囲を整理する。
+SCADAはBanto v7.0.0で先行し、参照スナップショットのIndustrialはv6.7.0のまま。統合時にこの版差を照合する。寸法トークンは今回は採用せず、採用前に既存の`--banto-*`参照（レビュー時点で約58ファイル）との重複・移行範囲を整理する。
 
 認証はIndustrial側の修正中につき延期。ローカル編集はログイン不要。運用時のユーザー管理必須と、再起動後の読取監視の要望は[運用・ログイン方針](../design/runtime/access-policy.md)を維持する。リリース前の旧Project互換性を必須とせず、変更後のTS／Rust／schema／サンプル／検証を揃える。
 

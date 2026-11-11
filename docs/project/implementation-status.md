@@ -394,7 +394,7 @@ DB format 2へ明示更新し、format 1や版不一致は自動変更せず拒�
 
 | 項目       | 現在の契約                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| アプリ基盤 | Banto v6.10.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                         |
+| アプリ基盤 | Banto v7.0.0を固定。Svelte 5／TypeScript／Vite。認証統合は延期                                                                          |
 | Project    | `schemaVersion`／`minRuntimeVersion`は**0.36.0**。TS／Rustで共通JSON Schemaと参照・幾何・予算の意味検証                                 |
 | 保存       | 資産なしはJSON。PNG／JPEG原本付きは最小`.bantoscada` ZIP（`banto-scada.image-project` profile 1）。設計上の正式directory／ZIP全体は後続 |
 | 旧形式     | 0.1.0のみ既存の検証付き読込経路で現行へ移行。0.2.0〜0.34.0や未知の形式は拒否。リリース前の互換性を保証しない                            |
@@ -402,7 +402,7 @@ DB format 2へ明示更新し、format 1や版不一致は自動変更せず拒�
 | 所有者     | Projectは設定と参照。原本bytesはAssetStore。UI選択・倍率・draft・小窓位置はProject外。値・Qualityを保存やUndoへ入れない                 |
 | 共有SDK    | industrialの固定revを使う読取投影とモックHub検証。PLC直接接続・SDKや式評価の複製はしない                                                |
 
-Banto v6.10.0の依存更新は完了。既存フォームの入力欄・select・検索欄をthemeの新UIへ移す判断は[Issue #75](../reviews/banto-contribution-candidates.md#banto-495の共通uiをscadaへ採用する判断issue-75)に記録した。入力値の確定、適用／取消、IME、Undoの処理は維持する。共通フォーム・編集gridは未採用。
+Banto v7.0.0の依存更新は完了（破壊的変更4件はいずれもSCADAの使用箇所に該当しない。日付ピッカー・寸法トークンは採用していない）。既存フォームの入力欄・select・検索欄をthemeの新UIへ移す判断は[Issue #75](../reviews/banto-contribution-candidates.md#banto-495の共通uiをscadaへ採用する判断issue-75)に記録した。入力値の確定、適用／取消、IME、Undoの処理は維持する。共通フォーム・編集gridは未採用。
 
 Banto Menu #427／#430へ可用高・内部scroll・初回focusを移管し、PR #9で局所adapterを撤去済み。レビュー修正ではcontextKeyによる再生成をMenuGroup／項目だけへ狭め、Menu／popover／⋮ triggerを保持する。focus回帰試験を追加し、Chromium 156とChrome 155で関連13spec・76件が成功した。200px幅では左端−4pxの既知制約が残る。[責務と検証範囲](../design/editor/designer-menu-viewport.md)を参照する。
 
