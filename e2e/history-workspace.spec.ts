@@ -115,6 +115,7 @@ test("normal entry explains offline, traps focus and restores it on Escape, incl
   await expect(page.locator(".history-trend")).toHaveCount(0);
   await open(page);
   await expect(dialog(page)).toContainText("履歴サービスは未接続です");
+  await expect(dialog(page)).toContainText("Hub に接続し、記録を開始");
   await expect(
     dialog(page).getByRole("button", { name: "取得", exact: true }),
   ).toBeDisabled();
@@ -378,4 +379,42 @@ test("same-ID/revision Project replacement retires an active response", async ({
   await expect(trend(page)).toHaveAttribute("data-history-phase", "cancelled");
   await reply(page, 1);
   await expect(trend(page)).toHaveAttribute("data-history-phase", "cancelled");
+});
+
+test.describe("local time entry", () => {
+  test.use({ timezoneId: "Asia/Tokyo" });
+  test("local time inputs and recent buttons fill the UTC fields", async ({
+    page,
+  }) => {
+    await inject(page);
+    await page.goto("/");
+    await open(page);
+    const root = dialog(page);
+    await expect(root).toContainText("UTC+09:00");
+    await root.getByLabel("開始（ローカル時刻）").fill("2026-11-02T09:00");
+    await root.getByLabel("終了（ローカル時刻）").fill("2026-11-02T09:30");
+    await expect(root.getByLabel("開始UTC", { exact: true })).toHaveValue(
+      "2026-11-02T00:00:00.000Z",
+    );
+    await expect(root.getByLabel("終了UTC", { exact: true })).toHaveValue(
+      "2026-11-02T00:30:00.000Z",
+    );
+    await root.getByRole("button", { name: "直近10分", exact: true }).click();
+    const from = Date.parse(
+      await root.getByLabel("開始UTC", { exact: true }).inputValue(),
+    );
+    const to = Date.parse(
+      await root.getByLabel("終了UTC", { exact: true }).inputValue(),
+    );
+    expect(to - from).toBe(600_000);
+    await root.getByRole("button", { name: "直近1時間", exact: true }).click();
+    const from2 = Date.parse(
+      await root.getByLabel("開始UTC", { exact: true }).inputValue(),
+    );
+    expect(
+      Date.parse(
+        await root.getByLabel("終了UTC", { exact: true }).inputValue(),
+      ) - from2,
+    ).toBe(3_600_000);
+  });
 });

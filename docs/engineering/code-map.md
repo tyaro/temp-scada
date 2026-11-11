@@ -544,6 +544,8 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 
 `lib/history/workspace-model.ts`がinprocess HistoryService／context契約、1MiBのplain JSON所有、H1 ID grammarを共用するAJV検証、Project ID／revision照合、canonical UTCとform予算からのH1 query生成を担当する。Hub tag名や最新metadataから系列IDを推測しない。
 
+`lib/history/time-input.ts`が履歴の時刻入力の純関数（UTCとローカル時刻の相互変換、直近N分の範囲、期間の単位付き表示）を担当する。offsetは引数で受けTZに依存しない。内部・IPCの値はUTCのまま。
+
 `lib/history/HistoryWorkspace.svelte`がModalの外に一つのcontrollerを保持し、Project object／workspaceGeneration／service identity／openのtupleと即時derived guardで表示・取得の寿命を扱う。form編集・close・差替えはsourceを一度undefinedにして旧結果を退役するが、未終了Promiseの物理slotは維持する。Appはoptional historyService、open flag、Project採用時closeと編集shortcut遮断を所有する。`designer-actions.ts`の表示menuに共通actionを追加し、常設menuも同じ入口を使う。
 
 `workspace-model.test.ts`の新規39件がcontext所有・制限・UTC・選択とquery予算を検証する。`e2e/history-workspace.spec.ts`の新規8件は通常Appを保ちテストentryでserviceだけを注入し、両テーマ・未接続・寿命・検索・Project書出し不変を受け入れる。既存History／menu／Projectの24件も回帰した。正式wire API／adapter、永続Trend shape、Project schemaはこの工程で変更しない。[設計と限界](../design/runtime/historian-history-workspace.md)を参照する。

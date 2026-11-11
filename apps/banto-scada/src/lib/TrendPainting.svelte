@@ -35,7 +35,7 @@
     >{definition?.pens.length ?? 0}系列 · {definition?.mode ?? ""}</text
   >
   <text x="14" y="86" fill="var(--banto-text-muted, #5a7290)" font-size="12"
-    >{onopen ? "履歴を開く（終了UTCを指定）" : "履歴トレンド"}</text
+    >{onopen ? "履歴を開く（終了時刻を指定）" : "履歴トレンド"}</text
   >
   {#if onopen}
     <g
