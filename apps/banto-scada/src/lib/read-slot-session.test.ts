@@ -372,3 +372,49 @@ it("accepts tag waiting after live, removes old values, and rejects invalid Unbo
   );
   expect(read().text).toBe("0");
 });
+
+it("plans a state slot as a number read so mixed state and bool frames are accepted", () => {
+  const base = parseProject(JSON.stringify(sample));
+  const type = base.equipmentTypes!.find(
+    (item) => item.id === base.equipment![0].typeId,
+  )!;
+  type.slots.push({
+    name: "status",
+    type: "state",
+    direction: "read",
+    stateDisplay: {
+      source: "value",
+      rows: [{ match: 0, text: "停止", color: "#64748b" }],
+      otherwise: { text: "", color: "#64748b" },
+    },
+  });
+  (base.symbols[0].readSlots ??= []).push({
+    name: "status",
+    type: "state",
+    direction: "read",
+  });
+  for (const equipment of base.equipment!) equipment.bindings = [];
+  const row = fixtures[0].view.slots[0];
+  base.equipment![0].bindings = [
+    { slotName: row.key.slotName, externalName: row.externalName },
+    { slotName: "status", externalName: "Demo.Status" },
+  ];
+  const project = parseProject(JSON.stringify(base));
+  const view: any = structuredClone(fixtures[0].view);
+  const status = structuredClone(fixtures[2].view.slots[0]);
+  status.key.slotName = "status";
+  status.externalName = "Demo.Status";
+  expect(status.expectedType).toBe("number");
+  view.slots.push(status);
+  const session = createReadSlotSession(project);
+  expect(session.receive(session.generation, view).accepted).toBe(true);
+  const read = (slot: string) =>
+    resolveSymbolSlot(
+      project.symbols[0],
+      slot,
+      project.equipment![0].id,
+      equipmentReadContext(project, session.frame),
+    );
+  expect(read(row.key.slotName).state).not.toBe("invalid");
+  expect(read("status").text).toBe("0");
+});

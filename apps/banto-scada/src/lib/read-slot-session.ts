@@ -2,6 +2,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-runtime/schema/read-slot-view.schema.json";
 import { parseProject, type Project } from "./project";
 import type { EquipmentContext } from "./symbol-slots";
+import { slotReadType } from "./equipment";
 import {
   slotPresentation,
   isSimulatedSlot,
@@ -77,7 +78,8 @@ function plan(project: Project): Index<PlanRow> {
       const slot = type.slots.find((slot) => slot.name === binding.slotName)!;
       const row = {
         key: { equipmentId: equipment.id, slotName: slot.name },
-        expectedType: slot.type,
+        // Rust plans a state slot as a Number read of its word.
+        expectedType: slotReadType(slot.type),
         externalName: binding.externalName,
       };
       put(index, row.key, row);
