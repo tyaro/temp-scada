@@ -1,7 +1,7 @@
 import type { EndpointConnection, ConnectionEnd } from "../connections";
 import type { BindingReplacementRequest } from "../binding-replacement";
 import type { PaintAlphaPatch } from "../selection-paint-alpha";
-import type { EquipmentSlot, EquipmentBinding } from "../equipment";
+import type { EquipmentSlot, EquipmentBinding, SlotType } from "../equipment";
 import type { TrendDefinition } from "../trend-definitions";
 import type { DesiredRecordingPlan } from "../recording-plan";
 import type { ImageFit } from "../image-fit";
@@ -356,14 +356,14 @@ export type SymbolCommand =
       type: "add-symbol-slot";
       symbolId: string;
       name: string;
-      slotType: "bool" | "number";
+      slotType: SlotType;
     }
   | {
       type: "update-symbol-slot";
       symbolId: string;
       slotName: string;
       name: string;
-      slotType: "bool" | "number";
+      slotType: SlotType;
     }
   | { type: "remove-symbol-slot"; symbolId: string; slotName: string }
   | {
@@ -371,7 +371,7 @@ export type SymbolCommand =
       symbolId: string;
       requireExisting?: boolean;
       slotName: string;
-      slotType: "bool" | "number";
+      slotType: SlotType;
     }
   | { type: "create-symbol"; name: string; width: number; height: number }
   | {

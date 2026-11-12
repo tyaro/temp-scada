@@ -68,5 +68,69 @@
     "target": "/screens/0/objects/11/shape",
     "key": "equipmentId",
     "value": "0199f700-0000-7000-8000-000000000002"
+  },
+  {
+    "name": "symbol declares state slot",
+    "valid": true,
+    "target": "/symbols/0",
+    "key": "readSlots",
+    "value": [
+      {
+        "name": "status",
+        "type": "state",
+        "direction": "read"
+      }
+    ]
+  },
+  {
+    "name": "symbol slot cannot own state display",
+    "valid": false,
+    "target": "/symbols/0",
+    "key": "readSlots",
+    "value": [
+      {
+        "name": "status",
+        "type": "state",
+        "direction": "read",
+        "stateDisplay": {
+          "source": "value",
+          "rows": [
+            {
+              "match": 0,
+              "text": "停止",
+              "color": "#64748b"
+            },
+            {
+              "match": 1,
+              "text": "運転",
+              "color": "#16a34a"
+            },
+            {
+              "match": 2,
+              "text": "故障",
+              "color": "#dc2626"
+            }
+          ],
+          "otherwise": {
+            "text": "不定",
+            "color": "#f59e0b"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "symbol slot cannot allow unassigned",
+    "valid": false,
+    "target": "/symbols/0",
+    "key": "readSlots",
+    "value": [
+      {
+        "name": "running",
+        "type": "bool",
+        "direction": "read",
+        "allowUnassigned": true
+      }
+    ]
   }
 ]

@@ -13,6 +13,17 @@ pub(crate) fn validate<'a>(project: &'a Value, ids: &mut HashSet<&'a str>) -> Re
             if !names.insert(slot["name"].as_str().unwrap()) {
                 return Err("slot名が重複しています".into());
             }
+            let mut matches = HashSet::new();
+            for row in slot["stateDisplay"]["rows"]
+                .as_array()
+                .into_iter()
+                .flatten()
+            {
+                // JSON 1.0 is a schema integer too, so compare by numeric value.
+                if !matches.insert(row["match"].as_f64().unwrap() as i64) {
+                    return Err("状態の行の値（ビット）が重複しています".into());
+                }
+            }
         }
     }
     let equipment_ids: HashSet<_> = project["equipment"]
@@ -75,6 +86,7 @@ pub(crate) fn validate<'a>(project: &'a Value, ids: &mut HashSet<&'a str>) -> Re
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Wire read type. A `state` slot reads its integer word as `Number`.
 pub enum EquipmentReadType {
     Bool,
     Number,
@@ -150,6 +162,26 @@ mod tests {
                 result.err()
             );
         }
+    }
+    #[test]
+    fn state_slot_reads_its_word_as_number() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/equipment-cases.json")).unwrap();
+        let case = cases
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|case| case["name"] == "word state by value")
+            .unwrap();
+        let mut project: Value =
+            serde_json::from_str(include_str!("../../../examples/minimal.project.json")).unwrap();
+        project["equipmentTypes"] = case["equipmentTypes"].clone();
+        project["equipment"] = case["equipment"].clone();
+        let bindings = crate::Project::from_json(&project.to_string())
+            .unwrap()
+            .equipment_read_bindings();
+        assert_eq!(bindings.len(), 1);
+        assert_eq!(bindings[0].slot_type, EquipmentReadType::Number);
     }
     #[test]
     fn adopted_unassigned_and_unadopted_are_distinct() {

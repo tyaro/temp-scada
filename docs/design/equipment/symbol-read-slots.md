@@ -4,7 +4,7 @@
 
 ## 保存契約
 
-`SymbolDefinition.readSlots`は省略可能な読取宣言で、最大64件。`name`は機器slotと同じASCII識別子、`type`は`bool`／`number`、`direction`は`read`。同一Symbol内の名前重複を拒否する。共有定義には機器IDや外部タグ名を持たせない。
+`SymbolDefinition.readSlots`は省略可能な読取宣言で、最大64件。`name`は機器slotと同じASCII識別子、`type`は`bool`／`number`／`state`、`direction`は`read`。状態の文字・色・未割付の許可は持たない（機器種別のslotだけが持つ。[機器種別の編集](equipment-type-editing.md)）。同一Symbol内の名前重複を拒否する。共有定義には機器IDや外部タグ名を持たせない。
 
 共有定義内のTextは`shape.slotBinding: { slotName }`で宣言を参照する。画面上のTextへの設定、宣言の欠落、直接タグ`binding`との併用、未知プロパティはTS／Rust共通検証で拒否する。子Textが参照する宣言を失うProjectは保存できない。未使用の宣言は保持できる。既存の直接数値Textの契約は維持する。
 

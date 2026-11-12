@@ -2,7 +2,7 @@
   import { tick, untrack } from "svelte";
   import type { Project } from "../project";
   import type { EditCommand } from "../editor";
-  import type { EquipmentSlot } from "../equipment";
+  import type { EquipmentSlot, SlotType } from "../equipment";
   import type { createDraftGuard } from "./drafts.svelte";
   let {
     project,
@@ -38,9 +38,7 @@
   let composing = false;
   let form = $state<HTMLFormElement>();
   const serialized = $derived(
-    JSON.stringify(
-      rows.map(({ name, type, direction }) => ({ name, type, direction })),
-    ),
+    JSON.stringify(rows.map(({ key: _, originalName: __, ...slot }) => slot)),
   );
   $effect(() => {
     scope;
@@ -71,6 +69,28 @@
   }
   function update(key: number, patch: Partial<EquipmentSlot>) {
     rows = rows.map((row) => (row.key === key ? { ...row, ...patch } : row));
+    mark();
+  }
+  /** Drop the display that no longer fits; a new state slot starts with only "otherwise". */
+  function retype(key: number, type: SlotType) {
+    rows = rows.map((row) => {
+      if (row.key !== key) return row;
+      const { boolDisplay, stateDisplay, ...rest } = row;
+      return {
+        ...rest,
+        type,
+        ...(type === "bool" && boolDisplay ? { boolDisplay } : {}),
+        ...(type === "state"
+          ? {
+              stateDisplay: stateDisplay ?? {
+                source: "value",
+                rows: [],
+                otherwise: { text: "", color: "#64748b" },
+              },
+            }
+          : {}),
+      };
+    });
     mark();
   }
   function inputKey(event: KeyboardEvent) {
@@ -183,12 +203,10 @@
               value={row.type}
               disabled={count > 0}
               onchange={(event) =>
-                update(row.key, {
-                  type: event.currentTarget.value as "bool" | "number",
-                })}
+                retype(row.key, event.currentTarget.value as SlotType)}
               ><option value="bool">bool</option><option value="number"
                 >number</option
-              ></select
+              ><option value="state">state</option></select
             ></label
           >
           <span>採用機器 {count}件</span>

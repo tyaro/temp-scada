@@ -5,6 +5,7 @@ export {
   type SlotStatus,
 } from "./slot-presentation";
 import type { Project, SymbolDefinition } from "./project";
+import { slotReadType, type SlotReadType, type SlotType } from "./equipment";
 
 /** Shared declarations describe roles, never equipment-specific tag names. */
 export function validateSymbolSlots(project: Project) {
@@ -43,7 +44,7 @@ export type EquipmentContext = Pick<Project, "equipmentTypes" | "equipment"> & {
   readSlot?: (
     equipmentId: string,
     slotName: string,
-    expectedType: "bool" | "number",
+    expectedType: SlotReadType,
     externalName: string,
   ) => SlotPresentation;
 };
@@ -66,7 +67,7 @@ export function resolveSymbolSlot(
 export function resolveEquipmentSlot(
   equipmentId: string | undefined,
   slotName: string,
-  expectedType: "bool" | "number",
+  expectedType: SlotType,
   context?: EquipmentContext,
 ): SlotPresentation {
   const equipment = context?.equipment?.find((item) => item.id === equipmentId);
@@ -84,7 +85,7 @@ export function resolveEquipmentSlot(
     context?.readSlot?.(
       equipment.id,
       slotName,
-      expectedType,
+      slotReadType(expectedType),
       binding.externalName,
     ) ?? slotPresentation("disconnected")
   );

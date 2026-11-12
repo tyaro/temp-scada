@@ -1,9 +1,33 @@
 import type { SymbolUsage } from "./symbol-usages";
 import type { Project } from "./project";
-export interface EquipmentSlot {
+export type SlotType = "bool" | "number" | "state";
+/** Wire read type: a `state` slot reads its integer word as a number. */
+export type SlotReadType = "bool" | "number";
+export function slotReadType(type: SlotType): SlotReadType {
+  return type === "bool" ? "bool" : "number";
+}
+export interface SlotStateLabel {
+  text: string;
+  color: string;
+}
+/** Rows are evaluated top first; `bits` matches when that bit (0-31) is set. */
+export interface SlotStateDisplay {
+  source: "value" | "bits";
+  rows: (SlotStateLabel & { match: number })[];
+  otherwise: SlotStateLabel;
+}
+/** A Symbol definition declares only the role name and type. */
+export interface SymbolReadSlot {
   name: string;
-  type: "bool" | "number";
+  type: SlotType;
   direction: "read";
+}
+/** State definitions live only on the equipment type. */
+export interface EquipmentSlot extends SymbolReadSlot {
+  /** Saved only as true: an unassigned slot then reads as "none", not as an error. */
+  allowUnassigned?: true;
+  boolDisplay?: { true: SlotStateLabel; false: SlotStateLabel };
+  stateDisplay?: SlotStateDisplay;
 }
 export interface EquipmentType {
   id: string;
@@ -32,6 +56,9 @@ export function validateEquipment(project: Project, ids: Set<string>) {
     for (const slot of type.slots) {
       if (names.has(slot.name)) throw new Error("slot名が重複しています");
       names.add(slot.name);
+      const matches = new Set(slot.stateDisplay?.rows.map((row) => row.match));
+      if (matches.size !== (slot.stateDisplay?.rows.length ?? 0))
+        throw new Error("状態の行の値（ビット）が重複しています");
     }
   }
   const equipmentIds = new Set(project.equipment?.map((item) => item.id));

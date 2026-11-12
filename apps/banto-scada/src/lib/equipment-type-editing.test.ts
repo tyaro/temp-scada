@@ -66,3 +66,75 @@ it("keeps adopted null slots protected and rejects changes without a partial typ
   ).toThrow("採用中slot");
   expect(serializeProject(project)).toBe(before);
 });
+it("keeps state and bool displays and allowUnassigned through the form and the edit", () => {
+  const stateful = [
+    {
+      name: "status",
+      type: "state",
+      direction: "read",
+      stateDisplay: {
+        source: "bits",
+        rows: [{ match: 3, text: "故障", color: "#dc2626" }],
+        otherwise: { text: "停止", color: "#64748b" },
+      },
+    },
+    {
+      name: "fault",
+      type: "bool",
+      direction: "read",
+      allowUnassigned: true,
+      boolDisplay: {
+        true: { text: "故障", color: "#dc2626" },
+        false: { text: "", color: "#64748b" },
+      },
+    },
+  ];
+  const command = equipmentTypeFormCommand(
+    input(
+      "",
+      JSON.stringify([...stateful, { ...slots[0], allowUnassigned: false }]),
+    ),
+    project,
+    3,
+  );
+  expect(command).toEqual({
+    type: "create-equipment-type",
+    name: "圧力計",
+    slots: [...stateful, slots[0]],
+  });
+  const next = applyCommand(project, command, "edit");
+  expect(next.equipmentTypes!.at(-1)!.slots).toEqual([...stateful, slots[0]]);
+});
+it("rejects state rows the schema or the duplicate check refuses when the edit is applied", () => {
+  for (const [rows, reason] of [
+    [[{ match: 32, text: "x", color: "#000000" }], /31/],
+    [
+      [
+        { match: 1, text: "a", color: "#000000" },
+        { match: 1, text: "b", color: "#000000" },
+      ],
+      /重複/,
+    ],
+  ] as const) {
+    const command = equipmentTypeFormCommand(
+      input(
+        "",
+        JSON.stringify([
+          {
+            name: "status",
+            type: "state",
+            direction: "read",
+            stateDisplay: {
+              source: "bits",
+              rows,
+              otherwise: { text: "", color: "#64748b" },
+            },
+          },
+        ]),
+      ),
+      project,
+      3,
+    );
+    expect(() => applyCommand(project, command, "edit")).toThrow(reason);
+  }
+});

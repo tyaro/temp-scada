@@ -36,12 +36,21 @@ export function equipmentTypeFormCommand(
       !("name" in row) ||
       typeof row.name !== "string" ||
       !("type" in row) ||
-      (row.type !== "bool" && row.type !== "number") ||
+      (row.type !== "bool" && row.type !== "number" && row.type !== "state") ||
       !("direction" in row) ||
       row.direction !== "read"
     )
       throw new Error("読取slotの名前と型を確認してください");
-    return { name: row.name, type: row.type, direction: "read" };
+    // The display shapes are checked by the schema when the edit is applied.
+    const extra = row as Partial<EquipmentSlot>;
+    return {
+      name: row.name,
+      type: row.type,
+      direction: "read",
+      ...(extra.allowUnassigned === true ? { allowUnassigned: true } : {}),
+      ...(extra.boolDisplay ? { boolDisplay: extra.boolDisplay } : {}),
+      ...(extra.stateDisplay ? { stateDisplay: extra.stateDisplay } : {}),
+    };
   });
   const seen = new Set<string>();
   for (const slot of slots) {

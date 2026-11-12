@@ -163,7 +163,7 @@
             "type": "array",
             "maxItems": 64,
             "items": {
-              "$ref": "#/$defs/equipmentSlot"
+              "$ref": "#/$defs/symbolReadSlot"
             }
           }
         },
@@ -1158,6 +1158,117 @@
       "required": ["id", "memberIds"],
       "additionalProperties": false
     },
+    "symbolReadSlot": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
+          "not": {
+            "pattern": "[^A-Za-z0-9_]"
+          }
+        },
+        "type": {
+          "enum": ["bool", "number", "state"]
+        },
+        "direction": {
+          "const": "read"
+        }
+      },
+      "required": ["name", "type", "direction"],
+      "additionalProperties": false
+    },
+    "slotStateLabel": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 64,
+          "not": {
+            "pattern": "[\r\n  ]"
+          }
+        },
+        "color": {
+          "$ref": "#/$defs/color",
+          "maxLength": 7,
+          "type": "string"
+        }
+      },
+      "required": ["text", "color"],
+      "additionalProperties": false
+    },
+    "slotBoolDisplay": {
+      "type": "object",
+      "properties": {
+        "true": {
+          "$ref": "#/$defs/slotStateLabel"
+        },
+        "false": {
+          "$ref": "#/$defs/slotStateLabel"
+        }
+      },
+      "required": ["true", "false"],
+      "additionalProperties": false
+    },
+    "slotStateDisplay": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "enum": ["value", "bits"]
+        },
+        "rows": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "properties": {
+              "match": {
+                "type": "integer",
+                "minimum": -2147483648,
+                "maximum": 4294967295
+              },
+              "text": {
+                "$ref": "#/$defs/slotStateLabel/properties/text"
+              },
+              "color": {
+                "$ref": "#/$defs/slotStateLabel/properties/color"
+              }
+            },
+            "required": ["match", "text", "color"],
+            "additionalProperties": false
+          }
+        },
+        "otherwise": {
+          "$ref": "#/$defs/slotStateLabel"
+        }
+      },
+      "required": ["source", "rows", "otherwise"],
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "source": {
+            "const": "bits"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "match": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 31
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "equipmentSlot": {
       "type": "object",
       "properties": {
@@ -1169,14 +1280,56 @@
           }
         },
         "type": {
-          "enum": ["bool", "number"]
+          "enum": ["bool", "number", "state"]
         },
         "direction": {
           "const": "read"
+        },
+        "allowUnassigned": {
+          "const": true
+        },
+        "boolDisplay": {
+          "$ref": "#/$defs/slotBoolDisplay"
+        },
+        "stateDisplay": {
+          "$ref": "#/$defs/slotStateDisplay"
         }
       },
       "required": ["name", "type", "direction"],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "state"
+              }
+            }
+          },
+          "then": {
+            "required": ["stateDisplay"]
+          },
+          "else": {
+            "not": {
+              "required": ["stateDisplay"]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "bool"
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "required": ["boolDisplay"]
+            }
+          }
+        }
+      ]
     },
     "equipmentType": {
       "type": "object",

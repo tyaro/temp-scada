@@ -1,5 +1,6 @@
 import type { SymbolCommand } from "../../editor/commands";
 import type { Project } from "../../project";
+import type { SlotType } from "../../equipment";
 export function symbolSlotFormCommand(
   input: {
     connected: boolean;
@@ -28,12 +29,12 @@ export function symbolSlotFormCommand(
   if (!definition) throw new Error("共有定義が見つかりません");
   const name = String(input.data.get("slotName") ?? "");
   const slotType = input.data.get("slotType");
-  if (slotType !== "bool" && slotType !== "number")
+  if (slotType !== "bool" && slotType !== "number" && slotType !== "state")
     throw new Error("読取slotの型を選択してください");
   const fields = {
     symbolId: definition.id,
     name,
-    slotType: slotType as "bool" | "number",
+    slotType: slotType as SlotType,
   };
   if (input.action === "create") return { type: "add-symbol-slot", ...fields };
   if (
