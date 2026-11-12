@@ -6,7 +6,7 @@ import { validateSymbolSlots } from "./symbol-slots";
 import {
   validateEquipment,
   type EquipmentType,
-  type EquipmentSlot,
+  type SymbolReadSlot,
   type EquipmentInstance,
 } from "./equipment";
 import { validateGroups } from "./geometric-groups";
@@ -177,7 +177,7 @@ export interface Screen {
   objects: ScreenObject[];
 }
 export interface SymbolDefinition {
-  readSlots?: EquipmentSlot[];
+  readSlots?: SymbolReadSlot[];
   folders: LayerFolder[];
   id: string;
   name: string;

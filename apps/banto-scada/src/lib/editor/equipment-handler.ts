@@ -24,7 +24,7 @@ export function applyEquipmentCommand(
       (next.equipmentTypes ??= []).push({
         id: newId(),
         name: command.name.trim(),
-        slots: command.slots.map((slot) => ({ ...slot })),
+        slots: structuredClone(command.slots),
       });
       return;
     case "update-equipment-type": {
@@ -47,7 +47,7 @@ export function applyEquipmentCommand(
         }
       }
       type.name = command.name.trim();
-      type.slots = command.slots.map((slot) => ({ ...slot }));
+      type.slots = structuredClone(command.slots);
       return;
     }
     case "remove-equipment-type":

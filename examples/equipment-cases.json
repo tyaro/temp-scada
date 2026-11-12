@@ -1291,5 +1291,708 @@
         ]
       }
     ]
+  },
+  {
+    "name": "word state by value",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [
+                {
+                  "match": 0,
+                  "text": "停止",
+                  "color": "#64748b"
+                },
+                {
+                  "match": 1,
+                  "text": "運転",
+                  "color": "#16a34a"
+                },
+                {
+                  "match": 2,
+                  "text": "故障",
+                  "color": "#dc2626"
+                }
+              ],
+              "otherwise": {
+                "text": "不定",
+                "color": "#f59e0b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "word state by bits and optional bool",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "bits",
+              "rows": [
+                {
+                  "match": 3,
+                  "text": "故障",
+                  "color": "#dc2626"
+                },
+                {
+                  "match": 0,
+                  "text": "運転",
+                  "color": "#16a34a"
+                }
+              ],
+              "otherwise": {
+                "text": "停止",
+                "color": "#64748b"
+              }
+            }
+          },
+          {
+            "name": "fault",
+            "type": "bool",
+            "direction": "read",
+            "allowUnassigned": true,
+            "boolDisplay": {
+              "true": {
+                "text": "故障",
+                "color": "#dc2626"
+              },
+              "false": {
+                "text": "",
+                "color": "#64748b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          },
+          {
+            "slotName": "fault",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "state with no rows keeps otherwise",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [],
+              "otherwise": {
+                "text": "—",
+                "color": "#64748b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "state requires display",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read"
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "bit index above 31",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "bits",
+              "rows": [
+                {
+                  "match": 32,
+                  "text": "x",
+                  "color": "#000000"
+                }
+              ],
+              "otherwise": {
+                "text": "停止",
+                "color": "#64748b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "negative bit index",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "bits",
+              "rows": [
+                {
+                  "match": -1,
+                  "text": "x",
+                  "color": "#000000"
+                }
+              ],
+              "otherwise": {
+                "text": "停止",
+                "color": "#64748b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "value above u32",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [
+                {
+                  "match": 4294967296,
+                  "text": "x",
+                  "color": "#000000"
+                }
+              ],
+              "otherwise": {
+                "text": "不定",
+                "color": "#f59e0b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "fractional match",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [
+                {
+                  "match": 1.5,
+                  "text": "x",
+                  "color": "#000000"
+                }
+              ],
+              "otherwise": {
+                "text": "不定",
+                "color": "#f59e0b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "duplicate state value",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [
+                {
+                  "match": 1,
+                  "text": "a",
+                  "color": "#000000"
+                },
+                {
+                  "match": 1,
+                  "text": "b",
+                  "color": "#000000"
+                }
+              ],
+              "otherwise": {
+                "text": "不定",
+                "color": "#f59e0b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "multiline state text",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [
+                {
+                  "match": 0,
+                  "text": "停止",
+                  "color": "#64748b"
+                },
+                {
+                  "match": 1,
+                  "text": "運転",
+                  "color": "#16a34a"
+                },
+                {
+                  "match": 2,
+                  "text": "故障",
+                  "color": "#dc2626"
+                }
+              ],
+              "otherwise": {
+                "text": "a\nb",
+                "color": "#000000"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "state display on bool",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "fault",
+            "type": "bool",
+            "direction": "read",
+            "allowUnassigned": true,
+            "boolDisplay": {
+              "true": {
+                "text": "故障",
+                "color": "#dc2626"
+              },
+              "false": {
+                "text": "",
+                "color": "#64748b"
+              }
+            },
+            "stateDisplay": {
+              "source": "value",
+              "rows": [
+                {
+                  "match": 0,
+                  "text": "停止",
+                  "color": "#64748b"
+                },
+                {
+                  "match": 1,
+                  "text": "運転",
+                  "color": "#16a34a"
+                },
+                {
+                  "match": 2,
+                  "text": "故障",
+                  "color": "#dc2626"
+                }
+              ],
+              "otherwise": {
+                "text": "不定",
+                "color": "#f59e0b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": []
+      }
+    ]
+  },
+  {
+    "name": "bool display on number",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "number",
+            "direction": "read",
+            "boolDisplay": {
+              "true": {
+                "text": "故障",
+                "color": "#dc2626"
+              },
+              "false": {
+                "text": "",
+                "color": "#64748b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "bool display on state",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [
+                {
+                  "match": 0,
+                  "text": "停止",
+                  "color": "#64748b"
+                },
+                {
+                  "match": 1,
+                  "text": "運転",
+                  "color": "#16a34a"
+                },
+                {
+                  "match": 2,
+                  "text": "故障",
+                  "color": "#dc2626"
+                }
+              ],
+              "otherwise": {
+                "text": "不定",
+                "color": "#f59e0b"
+              }
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "故障",
+                "color": "#dc2626"
+              },
+              "false": {
+                "text": "",
+                "color": "#64748b"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "allow unassigned is only saved as true",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "status",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [
+                {
+                  "match": 0,
+                  "text": "停止",
+                  "color": "#64748b"
+                },
+                {
+                  "match": 1,
+                  "text": "運転",
+                  "color": "#16a34a"
+                },
+                {
+                  "match": 2,
+                  "text": "故障",
+                  "color": "#dc2626"
+                }
+              ],
+              "otherwise": {
+                "text": "不定",
+                "color": "#f59e0b"
+              }
+            },
+            "allowUnassigned": false
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "M-101",
+        "name": "送水ポンプ",
+        "bindings": [
+          {
+            "slotName": "status",
+            "externalName": "plc.pump.M101_STS"
+          }
+        ]
+      }
+    ]
   }
 ]

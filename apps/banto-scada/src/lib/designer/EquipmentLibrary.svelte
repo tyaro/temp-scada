@@ -3,7 +3,11 @@
   import { compatibleTag, type CatalogTag } from "./tag-catalog";
   import { sampleSelection, type CatalogSelection } from "../catalog-session";
   import EquipmentTypes from "./EquipmentTypes.svelte";
-  import { equipmentUsages, type EquipmentUsage } from "../equipment";
+  import {
+    equipmentUsages,
+    slotReadType,
+    type EquipmentUsage,
+  } from "../equipment";
   import { tick } from "svelte";
   import type { Project } from "../project";
   import type { EditCommand } from "../editor";
@@ -155,7 +159,9 @@
       view === "instances" &&
       picker.input.isConnected &&
       kind.slots.some(
-        (slot) => slot.name === picker!.slot && slot.type === picker!.expected,
+        (slot) =>
+          slot.name === picker!.slot &&
+          slotReadType(slot.type) === picker!.expected,
       ) &&
       picker.catalog === catalogSelection.catalog &&
       catalogSelection.isCurrent()
@@ -430,7 +436,8 @@
                   type="button"
                   aria-label={`${slot.name}のタグを選択`}
                   disabled={!catalogSelection.available}
-                  onclick={(event) => pickSlot(event, slot.name, slot.type)}
+                  onclick={(event) =>
+                    pickSlot(event, slot.name, slotReadType(slot.type))}
                   >タグを選択</button
                 >
               {/if}

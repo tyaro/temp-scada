@@ -68,7 +68,7 @@
           aria-label="slot型"
           ><option value="number">number</option><option value="bool"
             >bool</option
-          ></select
+          ><option value="state">state</option></select
         ></label
       >
       <button type="submit" disabled={(definition.readSlots?.length ?? 0) >= 64}
@@ -116,7 +116,7 @@
                 aria-label="slot型"
                 ><option value="number">number</option><option value="bool"
                   >bool</option
-                ></select
+                ><option value="state">state</option></select
               ></label
             >
             <button type="submit">宣言を適用</button>
