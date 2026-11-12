@@ -98,7 +98,10 @@ export function draftCell(
   saved: BindingCell,
   text: string,
 ): BindingDraft {
-  return { text, origin: drafts.get(key)?.origin ?? saved };
+  // Test the draft, not its origin: an unadopted origin is null and must not
+  // fall back to the newer saved value.
+  const first = drafts.get(key);
+  return { text, origin: first ? first.origin : saved };
 }
 /** Cells whose draft differs from the value seen when editing, in table order. */
 export function bindingTableChanges(

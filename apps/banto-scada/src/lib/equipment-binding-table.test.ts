@@ -161,6 +161,34 @@ describe("assign-equipment-tags", () => {
       applyCommand(moved, { type: "assign-equipment-tags", changes }, "edit"),
     ).toThrow("表を開き直してください");
   });
+  it("keeps an unadopted origin when the slot is adopted elsewhere before retyping", () => {
+    const opened = fresh();
+    const drafts = typed(opened, [["current", "A"]]);
+    const moved = applyCommand(
+      opened,
+      {
+        type: "update-equipment",
+        equipmentId: FAN,
+        code: "FAN-101",
+        name: opened.equipment![0].name,
+        bindings: [
+          { slotName: "running", externalName: null },
+          { slotName: "current", externalName: "Other.Current" },
+        ],
+      },
+      "edit",
+    );
+    const key = cellKey(FAN, "current");
+    drafts.set(
+      key,
+      draftCell(drafts, key, bindingCell(moved.equipment![0], "current"), "B"),
+    );
+    const changes = bindingTableChanges(moved, drafts);
+    expect(changes[0].before).toBeNull();
+    expect(() =>
+      applyCommand(moved, { type: "assign-equipment-tags", changes }, "edit"),
+    ).toThrow("表を開き直してください");
+  });
   it("keeps cells of removed equipment so applying reports them", () => {
     const opened = fresh();
     const drafts = typed(opened, [["current", "A"]]);
