@@ -702,7 +702,7 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 
 `lib/recording-operations/service.ts`はd3と独立したoptional操作service、opaque handle／cached owner view、未dispatch同期拒否とProject対象bindingを定義する。`view.ts`はbounded JSONだけの所有検証、元request／receiptの一致、単調な結果統合を担当する。`monitor.ts`はApp寿命の一workflow（最大3stage）と一read、発行前の同期gate、期限表示、明示取消、旧ownerの保持と安全な明示discard／再接続を担当する。nativeの物理gate・run所有とregistryはproviderの責務であり、ここで実装しない。
 
-`RecordingOperationsWorkspace.svelte`は即時render／action資格、期待版入力、三段階の独立button、元対象ラベルと手動reconcileを所有する。`labels.ts`は有限error／phaseの表示文言である。`App.svelte`の別prop・常設workspaceと`designer-actions.ts`の表示menuだけに接続し、通常`main.ts`は未接続のまま。`__fixtures__/recording-operations-service.ts`はUIから独立して受理handleとcompletionを保持するtest-only provider。`monitor.test.ts`と`e2e/recording-operations-workspace.spec.ts`で再入、逆順通知、旧対象、安全な破棄、期限後結果、手動照会とremountを検証する。d4aのpure validator、d3 inspection、Project保存を拡張解釈しない。
+`RecordingOperationsWorkspace.svelte`は即時render／action資格、期待版入力、三段階の独立button、元対象ラベルと手動reconcileを所有する。三段階は`OperationSteps.svelte`の番号付き手順（1 検査・2 停止とjoin・3 適用・4 再開は記録管理状態へ）で示し、次に押す1つだけを主ボタンにする。次の段の判定は`steps.ts`（`steps.test.ts`）で、同期版・非同期版が共用する。照会・切替と破棄・取消は手順の外に分け、破棄・取消は右寄せの危険色にする。`labels.ts`は有限error／phaseの表示文言である。`App.svelte`の別prop・常設workspaceと`designer-actions.ts`の表示menuだけに接続し、通常`main.ts`は未接続のまま。`__fixtures__/recording-operations-service.ts`はUIから独立して受理handleとcompletionを保持するtest-only provider。`monitor.test.ts`と`e2e/recording-operations-workspace.spec.ts`で再入、逆順通知、旧対象、安全な破棄、期限後結果、手動照会とremountを検証する。d4aのpure validator、d3 inspection、Project保存を拡張解釈しない。
 
 ## 元apply全文に対するnative receipt読取（H5d4c1）
 

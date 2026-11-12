@@ -101,6 +101,43 @@ for (const theme of ["light", "dark"] as const)
     await button(page, "閉じる").click();
     expect(await downloadBytes(await downloadProject(page))).toEqual(before);
   });
+// UX review 2026-11-11 P1-7: numbered steps, only the next one primary,
+// and step 4 hands over to the recording management dialog.
+test("the steps mark the next one and hand the resume to recording management", async ({
+  page,
+}) => {
+  await prepare(page);
+  const step = (n: number) =>
+    dialog(page).locator(`[data-operation-step="${n}"]`);
+  const primary = dialog(page).locator("button.primary");
+  await expect(step(1)).toHaveAttribute("data-step-state", "current");
+  await expect(primary).toHaveText(["新しい変更を検査"]);
+  await preflight(page);
+  await finish(page, 0);
+  await expect(step(2)).toHaveAttribute("data-step-state", "current");
+  await expect(step(1)).toHaveAttribute("data-step-state", "done");
+  await expect(primary).toHaveText(["この元runを停止してjoin"]);
+  await button(page, "この元runを停止してjoin").click();
+  await finish(page, 1);
+  await expect(step(3)).toHaveAttribute("data-step-state", "current");
+  await expect(primary).toHaveText(["同候補を適用"]);
+  // Discarding and cancelling sit apart from the steps.
+  await expect(
+    dialog(page)
+      .getByRole("group", { name: "破棄と取消" })
+      .getByRole("button", { name: "変更候補を破棄", exact: true }),
+  ).toBeEnabled();
+  await button(page, "同候補を適用").click();
+  await finish(page, 2);
+  await expect(step(4)).toHaveAttribute("data-step-state", "current");
+  await expect(step(3)).toHaveAttribute("data-step-state", "done");
+  await expect(primary).toHaveText(["記録管理状態を開く"]);
+  await button(page, "記録管理状態を開く").click();
+  await expect(dialog(page)).toBeHidden();
+  await expect(
+    page.getByRole("dialog", { name: "記録管理状態", exact: true }),
+  ).toBeVisible();
+});
 test("unknown normal admission is recovered only by explicit inspection", async ({
   page,
 }) => {

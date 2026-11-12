@@ -11,6 +11,8 @@
   import { createRecordingOperationsMonitor } from "./monitor";
   import { phaseLabels, errorLabels } from "./labels";
   import RecordingPlanView from "../recording-management/RecordingPlanView.svelte";
+  import OperationSteps from "./OperationSteps.svelte";
+  import { outcomeProgress } from "./steps";
   import ExpectedRevisionFields from "./ExpectedRevisionFields.svelte";
   import {
     expectedRevisionsFor,
@@ -24,6 +26,7 @@
     blocked = false,
     conflict,
     expectedRevisions,
+    onopenmanagement,
     onclose,
   }: {
     openOwner: object | null;
@@ -33,6 +36,8 @@
     blocked?: boolean;
     conflict?: string;
     expectedRevisions?: ExpectedRevisions;
+    /** Closes this dialog and opens the recording management dialog. */
+    onopenmanagement?: () => void;
     onclose: () => void;
   } = $props();
   const monitor = createRecordingOperationsMonitor();
@@ -184,37 +189,47 @@
             : "この段階では非対応"}
       </p>{/if}
     <p>
-      検査・元runの停止とjoin・同候補の適用は、それぞれボタンで実行します。適用後の記録再開は行いません。
+      検査してから元runを停止・joinし、同じ候補を適用します。通常の変更は記録管理状態の「停止
+      → 適用 → 再開」を使います。
     </p>
-    {#if visible?.binding}
-      {@const c = visible.binding.context}
-      <section aria-label="操作元">
-        <h3>操作元</h3>
-        <p>Project: {c.target.projectId} / {c.target.projectRevision}</p>
-        <p>deployment: {c.target.deploymentId} · store: {c.target.storeId}</p>
-        <p>元run: {c.recordingRunRef} · session: {c.sessionId}</p>
-      </section>
-    {/if}
     <section aria-label="Projectの希望設定">
       <h3>Projectの希望設定</h3>
       {#if project.recordingPlan}<RecordingPlanView
           plan={project.recordingPlan}
         />{:else}<p>希望設定なし（停止命令ではありません）</p>{/if}
     </section>
-    {#key owner}<ExpectedRevisionFields
-        expected={matchedExpected}
-        bind:applied
-        bind:mapping
-        bind:retention
-        disabled={blocked || !visible?.canPreflight}
-        unbound={!binding?.desired?.enabled}
-        error={draftError}
-      />{/key}
-    <button
-      type="button"
-      disabled={blocked || !binding || !visible?.canPreflight}
-      onclick={preflight}>新しい変更を検査</button
+    <OperationSteps
+      input={{
+        canPreflight: !!visible?.canPreflight,
+        canPause: !!visible?.canPause,
+        canApply: !!visible?.canApply,
+        progress:
+          visible?.phase === "candidate" || visible?.phase === "paused"
+            ? outcomeProgress(visible.phase)
+            : outcomeProgress(visible?.latest?.outcome.kind),
+      }}
+      disabled={blocked || !current || !binding}
+      onpreflight={preflight}
+      onpause={() => {
+        if (current && !blocked && binding) monitor.pauseJoin(binding, 10000);
+      }}
+      onapply={() => {
+        if (current && !blocked && binding) monitor.apply(binding, 10000);
+      }}
+      {onopenmanagement}
     >
+      {#snippet inspect()}
+        {#key owner}<ExpectedRevisionFields
+            expected={matchedExpected}
+            bind:applied
+            bind:mapping
+            bind:retention
+            disabled={blocked || !visible?.canPreflight}
+            unbound={!binding?.desired?.enabled}
+            error={draftError}
+          />{/key}
+      {/snippet}
+    </OperationSteps>
     {#if visible?.previous?.latest}
       {@const previous = visible.previous.latest}
       <section aria-label="以前の対象の完了結果">
@@ -233,62 +248,52 @@
       </section>
     {/if}
     <div class="actions">
-      <button
-        type="button"
-        disabled={blocked || !visible?.canDiscardOriginal}
-        onclick={() => {
-          if (current && !blocked) monitor.discardOriginal();
-        }}>以前の候補を破棄</button
-      >
-      <button
-        type="button"
-        disabled={blocked || !binding || !visible?.canPause}
-        onclick={() => {
-          if (current && !blocked && binding) monitor.pauseJoin(binding, 10000);
-        }}>この元runを停止してjoin</button
-      >
-      <button
-        type="button"
-        disabled={blocked || !binding || !visible?.canApply}
-        onclick={() => {
-          if (current && !blocked && binding) monitor.apply(binding, 10000);
-        }}>同候補を適用</button
-      >
-      <button
-        type="button"
-        disabled={blocked || !binding || !visible?.canDiscard}
-        onclick={() => {
-          if (current && !blocked && binding) monitor.discard(binding);
-        }}>変更候補を破棄</button
-      >
-      <button
-        type="button"
-        disabled={blocked || !visible?.canReconcile}
-        onclick={() => {
-          if (current && !blocked) monitor.reconcile(10000);
-        }}>元要求の結果を照会</button
-      >
-      <button
-        type="button"
-        disabled={blocked || !visible?.canCancel}
-        onclick={() => {
-          if (current && !blocked) monitor.requestCancel();
-        }}>操作の取消を要求</button
-      >
-      <button
-        type="button"
-        disabled={blocked || !visible?.canCancelRead}
-        onclick={() => {
-          if (current && !blocked) monitor.requestCancel(true);
-        }}>照会の取消を要求</button
-      >
-      <button
-        type="button"
-        disabled={blocked || !visible?.canSwitch}
-        onclick={() => {
-          if (current && !blocked) monitor.switchToSelected();
-        }}>現在の対象を確認</button
-      >
+      <div class="group" role="group" aria-label="照会と切替">
+        <button
+          type="button"
+          disabled={blocked || !visible?.canReconcile}
+          onclick={() => {
+            if (current && !blocked) monitor.reconcile(10000);
+          }}>元要求の結果を照会</button
+        >
+        <button
+          type="button"
+          disabled={blocked || !visible?.canSwitch}
+          onclick={() => {
+            if (current && !blocked) monitor.switchToSelected();
+          }}>現在の対象を確認</button
+        >
+      </div>
+      <div class="group danger" role="group" aria-label="破棄と取消">
+        <button
+          type="button"
+          disabled={blocked || !binding || !visible?.canDiscard}
+          onclick={() => {
+            if (current && !blocked && binding) monitor.discard(binding);
+          }}>変更候補を破棄</button
+        >
+        <button
+          type="button"
+          disabled={blocked || !visible?.canDiscardOriginal}
+          onclick={() => {
+            if (current && !blocked) monitor.discardOriginal();
+          }}>以前の候補を破棄</button
+        >
+        <button
+          type="button"
+          disabled={blocked || !visible?.canCancel}
+          onclick={() => {
+            if (current && !blocked) monitor.requestCancel();
+          }}>操作の取消を要求</button
+        >
+        <button
+          type="button"
+          disabled={blocked || !visible?.canCancelRead}
+          onclick={() => {
+            if (current && !blocked) monitor.requestCancel(true);
+          }}>照会の取消を要求</button
+        >
+      </div>
     </div>
     {#if visible?.view?.request}
       <section aria-label="受理済みの変更">
@@ -336,6 +341,15 @@
             .lastApplied.receipt.appliedRevision}
         </p>
       </section>{/if}
+    {#if visible?.binding}
+      {@const c = visible.binding.context}
+      <section aria-label="操作元">
+        <h3>操作元</h3>
+        <p>Project: {c.target.projectId} / {c.target.projectRevision}</p>
+        <p>deployment: {c.target.deploymentId} · store: {c.target.storeId}</p>
+        <p>元run: {c.recordingRunRef} · session: {c.sessionId}</p>
+      </section>
+    {/if}
   </div>
 </Modal>
 
@@ -349,7 +363,22 @@
   .actions {
     display: flex;
     flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+  }
+  .group {
+    display: flex;
+    flex-wrap: wrap;
     gap: 0.5rem;
+  }
+  .group.danger {
+    margin-left: auto;
+    justify-content: flex-end;
+  }
+  .danger button:not(:disabled) {
+    border: 1px solid var(--banto-danger-solid);
+    border-radius: 4px;
+    color: var(--banto-danger-solid);
   }
   section {
     border: 1px solid var(--banto-border);
