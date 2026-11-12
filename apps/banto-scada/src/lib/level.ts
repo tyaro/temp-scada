@@ -31,6 +31,18 @@ export type LevelDisplay = {
   | { state: "unavailable"; label: string; fraction?: never }
 );
 
+/**
+ * Where a value sits between the limits, 0..1. When the span overflows
+ * (limits near ±Number.MAX_VALUE) both sides are halved first; halving is
+ * not used otherwise, since it would lose subnormal spans.
+ */
+export function levelFraction(value: number, min: number, max: number) {
+  const fraction = Number.isFinite(max - min)
+    ? (value - min) / (max - min)
+    : (value / 2 - min / 2) / (max / 2 - min / 2);
+  return Math.min(1, Math.max(0, fraction));
+}
+
 function fromValue(
   shape: Pick<LevelShape, "min" | "max">,
   value: number,
@@ -47,7 +59,7 @@ function fromValue(
   return {
     state: "good",
     simulated,
-    fraction: (value - shape.min) / (shape.max - shape.min),
+    fraction: levelFraction(value, shape.min, shape.max),
     description: `${prefix}${formatNumber(value)}（${range}）`,
   };
 }

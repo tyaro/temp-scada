@@ -10,6 +10,7 @@ import {
 import { applyCommand } from "./editor";
 import {
   levelFillRect,
+  levelFraction,
   levelFromReading,
   levelFromSlot,
   validateLevelShape,
@@ -142,6 +143,27 @@ describe("level display", () => {
       state: "unavailable",
       label: "未割付",
     });
+  });
+  it("keeps the fraction finite for limits whose span overflows", () => {
+    const huge = { min: -1e308, max: 1e308 };
+    for (const [value, fraction] of [
+      [0, 0.5],
+      [1e308, 1],
+      [-1e308, 0],
+      [5e307, 0.75],
+    ] as const) {
+      const display = levelFromReading(huge, {
+        state: "resolved",
+        quality: "good",
+        numericValue: value,
+      });
+      expect(display).toMatchObject({ state: "good" });
+      expect(display.fraction).toBeCloseTo(fraction, 12);
+    }
+    expect(
+      levelFraction(Number.MAX_VALUE, -Number.MAX_VALUE, Number.MAX_VALUE),
+    ).toBe(1);
+    expect(levelFraction(5e-324, 0, 1e-323)).toBe(0.5);
   });
   it("grows upward or rightward", () => {
     expect(levelFillRect(40, 100, "up", 0.25)).toEqual({
