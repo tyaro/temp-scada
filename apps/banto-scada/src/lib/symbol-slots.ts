@@ -5,7 +5,12 @@ export {
   type SlotStatus,
 } from "./slot-presentation";
 import type { Project, SymbolDefinition } from "./project";
-import { slotReadType, type SlotReadType, type SlotType } from "./equipment";
+import {
+  slotReadType,
+  type EquipmentSlot,
+  type SlotReadType,
+  type SlotType,
+} from "./equipment";
 
 /** Shared declarations describe roles, never equipment-specific tag names. */
 export function validateSymbolSlots(project: Project) {
@@ -89,6 +94,26 @@ export function resolveEquipmentSlot(
       binding.externalName,
     ) ?? slotPresentation("disconnected")
   );
+}
+
+/**
+ * The equipment-type slot behind a Symbol role, only when it exists with the
+ * declared type; the reading itself is resolved by `resolveSymbolSlot`.
+ */
+export function symbolEquipmentSlot(
+  definition: SymbolDefinition,
+  slotName: string,
+  equipmentId?: string,
+  context?: EquipmentContext,
+): EquipmentSlot | undefined {
+  const requirement = definition.readSlots?.find(
+    (slot) => slot.name === slotName,
+  );
+  const equipment = context?.equipment?.find((item) => item.id === equipmentId);
+  const slot = context?.equipmentTypes
+    ?.find((item) => item.id === equipment?.typeId)
+    ?.slots.find((item) => item.name === slotName);
+  return requirement && slot?.type === requirement.type ? slot : undefined;
 }
 
 /** All children remain references, including hidden and locked Text. */

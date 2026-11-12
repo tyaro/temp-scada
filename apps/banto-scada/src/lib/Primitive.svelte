@@ -5,6 +5,7 @@
   } from "./equipment-property";
   import { slotPresentation, type SlotPresentation } from "./symbol-slots";
   import { boolSlotState } from "./slot-presentation";
+  import { slotStateText, type SlotStateEvaluation } from "./slot-state";
   import { patternGeometry } from "./pattern-paint";
   import { linearGradientEndpoints } from "./linear-gradient";
   import { lineDash, lineCap } from "./line-style";
@@ -17,6 +18,7 @@
     color,
     readings,
     slotDisplay,
+    slotState,
     equipmentPropertyDisplay,
     stateColor,
     onsummary,
@@ -25,6 +27,8 @@
     color?: string;
     readings?: TagReadings;
     slotDisplay?: SlotPresentation;
+    /** Defined state of the slot; a known state replaces the raw value text. */
+    slotState?: SlotStateEvaluation;
     equipmentPropertyDisplay?: EquipmentPropertyPresentation;
     stateColor?: string;
     onsummary?: (description: string) => void;
@@ -86,6 +90,18 @@
       : presentNumeric(
           binding ? readings?.get(binding.externalName) : undefined,
         ),
+  );
+  /**
+   * The defined state replaces the reading when it is known, or when a Good
+   * reading cannot be a state (e.g. a fractional word reads as invalid).
+   * Other unknown readings keep their own text and reason.
+   */
+  const definedState = $derived(
+    slotBinding &&
+      slotState &&
+      (slotState.state === "known" || presentation.state === "good")
+      ? slotState
+      : undefined,
   );
   const textColor = $derived.by(() => {
     if (object.shape.type === "text" && object.shape.boolColors) {
@@ -246,7 +262,9 @@
         text={metadata
           ? metadata.text
           : bound
-            ? presentation.text
+            ? definedState
+              ? slotStateText(definedState)
+              : presentation.text
             : object.shape.text}
         equipmentProperty={metadata}
         width={object.width}
@@ -255,8 +273,18 @@
         color={textColor}
         numeric={bound}
         tagName={slotBinding?.slotName ?? binding?.externalName}
-        tagState={bound ? presentation.state : undefined}
-        tagLabel={bound ? presentation.label : undefined}
+        tagState={bound
+          ? definedState?.state === "unknown"
+            ? definedState.reason
+            : presentation.state
+          : undefined}
+        tagLabel={bound
+          ? definedState?.state === "known" && definedState.none
+            ? "未割付（なしとして表示）"
+            : definedState?.state === "unknown"
+              ? slotPresentation(definedState.reason).label
+              : presentation.label
+          : undefined}
         provenance={slotBinding
           ? slotDisplay?.provenance
           : presentation.provenance}

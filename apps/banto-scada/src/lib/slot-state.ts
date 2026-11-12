@@ -116,3 +116,23 @@ export function evaluateSlotState(
     ? known(display.otherwise, simulated)
     : known(display.rows[row], simulated, { row });
 }
+
+/**
+ * The state evaluation a slot-bound Text shows, only when the equipment-type
+ * slot defines one (`state`, or `bool` with `boolDisplay`). An unknown result
+ * keeps the reading's own text (reason and SIM), so only known states replace
+ * the raw value text.
+ */
+export function definedSlotState(
+  slot: EquipmentSlot | undefined,
+  reading: SlotPresentation,
+): SlotStateEvaluation | undefined {
+  if (!slot || (slot.type !== "state" && !slot.boolDisplay)) return undefined;
+  return evaluateSlotState(slot, reading);
+}
+
+/** Display text of an evaluation with the SIM prefix; an empty label (color only) stays empty. */
+export function slotStateText(evaluation: SlotStateEvaluation): string {
+  if (!evaluation.simulated) return evaluation.text;
+  return evaluation.text === "" ? "SIM" : `SIM · ${evaluation.text}`;
+}
