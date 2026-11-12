@@ -242,6 +242,11 @@ test("exports the saved names missing from the Hub tag list as a Hub tag CSV", a
     // In the tag list, so left out before any split.
     { slotName: "current", externalName: "Demo.Water.Pump01.Pressure" },
   ];
+  project.equipment[1].bindings = [
+    // Only the tag part may hold dots: split at the first two.
+    { slotName: "running", externalName: "Demo.Water.Pump02.Run" },
+    { slotName: "current", externalName: "Pump02Current" },
+  ];
   const dialog = await open(page, "light", project);
   const exportButton = dialog.getByRole("button", {
     name: "Hub 登録用 CSV を書き出す",
@@ -263,14 +268,15 @@ test("exports the saved names missing from the Hub tag list as a Hub tag CSV", a
   const csv = await readFile((await download.path())!, "utf8");
   expect(csv).toBe(
     "\uFEFFconnection,group,name,address,dataType,stringLength,stringEncoding,unit,decimals,rawLo,rawHi,engLo,engHi,enabled,writable,tagKind,expression,retain,comment\r\n" +
-      "Demo,Pump01,Running,,bit,,,,,,,,,true,false,plc,,false,P-101 循環ポンプ / running\r\n",
+      "Demo,Pump01,Running,,bit,,,,,,,,,true,false,plc,,false,P-101 循環ポンプ / running\r\n" +
+      "Demo,Water,Pump02.Run,,bit,,,,,,,,,true,false,plc,,false,P-102 予備ポンプ / running\r\n",
   );
   await expect(dialog).toContainText(
-    "Hub 登録用 CSV に1件を書き出しました。Hub のタグ一覧に既にある1件を除きました。接続.グループ.タグに分けられない1件を除きました",
+    "Hub 登録用 CSV に2件を書き出しました。Hub のタグ一覧に既にある1件を除きました。接続.グループ.タグに分けられない1件を除きました",
   );
   const skipped = dialog.getByRole("table", { name: "書き出さなかった名前" });
   await expect(skipped.getByRole("row")).toHaveCount(2);
-  // Four parts cannot be told apart, so the name is not split.
+  // Without two dots the name has no connection and group.
   await expect(skipped).toContainText("P-102");
-  await expect(skipped).toContainText("Demo.Water.Pump02.Run");
+  await expect(skipped).toContainText("Pump02Current");
 });

@@ -1,7 +1,6 @@
 import { isBlankName, type CatalogIndex } from "./equipment-binding-table";
 import type { SlotType } from "./equipment";
 import type { Project } from "./project";
-import type { TagCatalog } from "./designer/tag-catalog";
 
 /**
  * Columns of the Hub tag CSV import, in order. The Hub checks the header for an
@@ -41,23 +40,6 @@ export function hubDataType(type: SlotType) {
   return type === "bool" ? "bit" : type === "state" ? "u16" : "";
 }
 
-/** A connection and group pair the Hub tag list already has. */
-export interface HubGroup {
-  connection: string;
-  group: string;
-}
-/**
- * Connection and group pairs from the tag list's explicit metadata: a group
- * under a parent group is `connection` / `group` (catalog-session.ts).
- */
-export function hubGroups(catalog: TagCatalog): HubGroup[] {
-  const names = new Map(catalog.groups.map((group) => [group.id, group.name]));
-  return catalog.groups.flatMap((group) => {
-    const connection =
-      group.parentId === undefined ? undefined : names.get(group.parentId);
-    return connection === undefined ? [] : [{ connection, group: group.name }];
-  });
-}
 function checkParts(parts: string[]): string | null {
   if (parts.some((part) => isBlankName(part))) return "空の部分がある";
   if (parts.some((part) => part !== part.trim()))
@@ -68,36 +50,27 @@ function checkParts(parts: string[]): string | null {
 }
 /**
  * Splits a Hub external name `connection.group.tag` for the export only. Other
- * features never split external names (catalog-selection.md). A part may hold
- * dots in the Hub, so a known connection and group from the tag list decide
- * the split first; without one, only a name with exactly two dots is split.
- * A name whose parts cannot be told apart is not exported.
+ * features never split external names (catalog-selection.md). Connection and
+ * group names never hold a dot (2026-11-12 user decision), so the first two
+ * dots split the name and the tag part may hold more dots. A name that cannot
+ * be split is not exported.
  */
 export function splitHubName(
   name: string,
-  groups: readonly HubGroup[] = [],
 ): { parts: [string, string, string] } | { reason: string } {
   if (name.includes(",") || CONTROL.test(name))
     return { reason: "カンマや制御文字を含む" };
-  const known = new Map<string, [string, string, string]>();
-  for (const { connection, group } of groups) {
-    const head = `${connection}.${group}.`;
-    if (name.startsWith(head) && name.length > head.length)
-      known.set(JSON.stringify([connection, group]), [
-        connection,
-        group,
-        name.slice(head.length),
-      ]);
-  }
-  if (known.size > 1)
-    return { reason: "タグ一覧の接続.グループに複数の分け方で一致する" };
-  const parts = known.size
-    ? [...known.values()][0]
-    : (name.split(".") as [string, string, string]);
-  if (parts.length !== 3)
+  const first = name.indexOf(".");
+  const second = first < 0 ? -1 : name.indexOf(".", first + 1);
+  if (second < 0)
     return {
-      reason: `タグ一覧の接続.グループに一致せず、「.」が${parts.length - 1}個（2個なら分けられる）`,
+      reason: `「.」が${first < 0 ? 0 : 1}個（接続.グループ.タグの2個以上が必要）`,
     };
+  const parts: [string, string, string] = [
+    name.slice(0, first),
+    name.slice(first + 1, second),
+    name.slice(second + 1),
+  ];
   const problem = checkParts(parts);
   return problem ? { reason: problem } : { parts };
 }
@@ -144,7 +117,6 @@ interface Use {
 export function hubTagCsv(
   project: Project,
   index: CatalogIndex | null,
-  groups: readonly HubGroup[] = [],
 ): HubTagCsvExport {
   const types = new Map(
     (project.equipmentTypes ?? []).map((type) => [type.id, type]),
@@ -163,7 +135,7 @@ export function hubTagCsv(
         registered.add(name);
         continue;
       }
-      const split = splitHubName(name, groups);
+      const split = splitHubName(name);
       if ("reason" in split) {
         invalid.push({
           equipmentCode: item.code,
@@ -187,7 +159,7 @@ export function hubTagCsv(
   const rows: string[][] = [[...HUB_TAG_CSV_COLUMNS]];
   for (const [name, list] of uses) {
     const [connection, group, tag] = (
-      splitHubName(name, groups) as { parts: [string, string, string] }
+      splitHubName(name) as { parts: [string, string, string] }
     ).parts;
     const first = list[0];
     const types = new Set(list.map((use) => hubDataType(use.type)));
