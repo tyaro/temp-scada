@@ -69,7 +69,7 @@ for (const theme of ["light", "dark"])
     await expect(projection(p).locator("[data-source-object-id]")).toHaveCount(
       source.objects.length,
     );
-    await number(p, "width", "760");
+    await number(p, "幅", "760");
     await number(p, "回転角度", "25");
     await number(p, "不透明度（%）", "65");
     await expect(
@@ -95,7 +95,7 @@ for (const theme of ["light", "dark"])
       `0 0 ${source.width} ${source.height}`,
     );
     await p.locator(`button[data-layer-id="${source.objects[0].id}"]`).click();
-    await number(p, "x", "75");
+    await number(p, "X", "75");
     await p.locator(`[data-screen-tab="${host.id}"]`).click();
     await expect(
       projection(p).locator(

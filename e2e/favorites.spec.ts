@@ -75,12 +75,12 @@ test("favorites keep palette drafts and Project/history unchanged, persist and r
     },
     { x: area.x + area.width / 2, y: area.y + area.height / 2 },
   );
-  for (const [field, size] of [
-    ["x", "width"],
-    ["y", "height"],
+  for (const [field, label, size] of [
+    ["x", "X", "幅"],
+    ["y", "Y", "高さ"],
   ] as const) {
     const actual =
-      Number(await page.getByLabel(field, { exact: true }).inputValue()) +
+      Number(await page.getByLabel(label, { exact: true }).inputValue()) +
       Number(await page.getByLabel(size, { exact: true }).inputValue()) / 2;
     expect(Math.abs(actual - center[field])).toBeLessThan(1 / center.scale);
   }

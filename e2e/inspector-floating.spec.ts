@@ -37,7 +37,7 @@ for (const theme of ["light", "dark"])
   }) => {
     await start(page);
     await chooseTheme(page, theme);
-    const x = page.getByLabel("x", { exact: true }),
+    const x = page.getByLabel("X", { exact: true }),
       paint = page.getByLabel(/^(?:色|塗りの色)$/, { exact: true });
     await x.fill("1e");
     await paint.fill("#aabbcc");
@@ -86,7 +86,7 @@ test("pointer move and resize preserve focused numeric draft; Escape only cancel
 }) => {
   await start(page);
   await float(page);
-  const x = page.getByLabel("x", { exact: true });
+  const x = page.getByLabel("X", { exact: true });
   await x.fill("125.5");
   const before = (await panel(page).boundingBox())!;
   await move(page, -120, 20, true);
@@ -277,7 +277,7 @@ test("IME stays in the same field while pointer placement changes; keyboard resi
 }) => {
   await start(page);
   await float(page);
-  const x = page.getByLabel("x", { exact: true });
+  const x = page.getByLabel("X", { exact: true });
   await x.fill("125");
   await x.dispatchEvent("compositionstart");
   const ref = await x.elementHandle();

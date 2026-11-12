@@ -34,7 +34,7 @@ test("names are guarded drafts, searchable without hiding the canvas, and undoab
     .click();
   const canvas = page.getByRole("img", { name: "プロセス画面", exact: true });
   await name(page).fill("  P-101 原水ポンプ A  ");
-  await page.getByLabel("x", { exact: true }).focus();
+  await page.getByLabel("X", { exact: true }).focus();
   await expect(
     layers(page).getByRole("button", { name: "rectangle · 3", exact: true }),
   ).toBeVisible();

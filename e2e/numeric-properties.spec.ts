@@ -29,24 +29,24 @@ test("Enter and blur commit only one numeric field once, keep focus and support 
   page,
 }) => {
   await start(page);
-  await field(page, "x").fill("125.5");
-  await field(page, "x").press("Enter");
+  await field(page, "X").fill("125.5");
+  await field(page, "X").press("Enter");
   await expect(shape(page)).toHaveAttribute(
     "transform",
     "translate(125.5 170)",
   );
-  await expect(field(page, "x")).toBeFocused();
-  await field(page, "y").click();
+  await expect(field(page, "X")).toBeFocused();
+  await field(page, "Y").click();
   await expect(page.getByTestId("save-state")).not.toContainText(
     "未適用の入力あり",
   );
   await button(page, "元に戻す").click();
-  await expect(field(page, "x")).toHaveValue("100");
+  await expect(field(page, "X")).toHaveValue("100");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await button(page, "やり直す").click();
-  await expect(field(page, "x")).toHaveValue("125.5");
-  await field(page, "y").fill("210");
-  await field(page, "width").click();
+  await expect(field(page, "X")).toHaveValue("125.5");
+  await field(page, "Y").fill("210");
+  await field(page, "幅").click();
   await expect(shape(page)).toHaveAttribute(
     "transform",
     "translate(125.5 210)",
@@ -61,8 +61,8 @@ test("committing numbers keeps staged tag and text, and discarding them keeps co
   await start(page, "text · 5");
   await field(page, "表示タグ（外部名）").fill("PLC01.Fast.Pending.Value");
   await field(page, "テキスト").fill("未適用の文字");
-  await field(page, "x").fill("240");
-  await field(page, "x").press("Enter");
+  await field(page, "X").fill("240");
+  await field(page, "X").press("Enter");
   await expect(field(page, "表示タグ（外部名）")).toHaveValue(
     "PLC01.Fast.Pending.Value",
   );
@@ -82,7 +82,7 @@ test("committing numbers keeps staged tag and text, and discarding them keeps co
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "text · 5", exact: true })
     .click();
-  await expect(field(page, "x")).toHaveValue("240");
+  await expect(field(page, "X")).toHaveValue("240");
   await expect(field(page, "表示タグ（外部名）")).toHaveValue("");
   await expect(field(page, "テキスト")).not.toHaveValue("未適用の文字");
 });
@@ -90,38 +90,38 @@ test("invalid strings survive other field commits; Esc cancels without history o
   page,
 }) => {
   await start(page);
-  await field(page, "x").fill("1e");
-  await field(page, "y").fill("230");
-  await field(page, "y").press("Enter");
-  await expect(field(page, "x")).toHaveValue("1e");
-  await expect(field(page, "x")).toHaveAttribute("aria-invalid", "true");
+  await field(page, "X").fill("1e");
+  await field(page, "Y").fill("230");
+  await field(page, "Y").press("Enter");
+  await expect(field(page, "X")).toHaveValue("1e");
+  await expect(field(page, "X")).toHaveAttribute("aria-invalid", "true");
   await expect(shape(page)).toHaveAttribute("transform", "translate(100 230)");
-  await field(page, "x").focus();
-  await field(page, "x").press("Escape");
-  await field(page, "width").click();
-  await expect(field(page, "x")).toHaveValue("100");
-  await expect(field(page, "x")).not.toHaveAttribute("aria-invalid", "true");
+  await field(page, "X").focus();
+  await field(page, "X").press("Escape");
+  await field(page, "幅").click();
+  await expect(field(page, "X")).toHaveValue("100");
+  await expect(field(page, "X")).not.toHaveAttribute("aria-invalid", "true");
   await button(page, "元に戻す").click();
-  await expect(field(page, "y")).toHaveValue("170");
+  await expect(field(page, "Y")).toHaveValue("170");
   await expect(button(page, "元に戻す")).toBeDisabled();
 });
 test("model-invalid values remain staged and block leaving until fixed or discarded", async ({
   page,
 }) => {
   await start(page);
-  await field(page, "width").fill("0");
-  await field(page, "width").press("Enter");
-  await expect(field(page, "width")).toHaveAttribute("aria-invalid", "true");
+  await field(page, "幅").fill("0");
+  await field(page, "幅").press("Enter");
+  await expect(field(page, "幅")).toHaveAttribute("aria-invalid", "true");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await button(page, "表示プレビュー").click();
   // 離れたら確定: 不正なモデル値は確認なしで止まり、入力は残る
   await expect(
     page.getByRole("dialog", { name: "未適用の入力があります" }),
   ).toHaveCount(0);
-  await expect(field(page, "width")).toHaveValue("0");
+  await expect(field(page, "幅")).toHaveValue("0");
   await expect(button(page, "編集")).toHaveAttribute("aria-pressed", "true");
-  await field(page, "width").fill("80");
-  await field(page, "width").press("Enter");
+  await field(page, "幅").fill("80");
+  await field(page, "幅").press("Enter");
   await expect(page.getByTestId("save-state")).not.toContainText(
     "未適用の入力あり",
   );
@@ -134,14 +134,14 @@ test("blur applies to the original target before selecting another object; same-
   page,
 }) => {
   await start(page);
-  await field(page, "x").fill("320");
+  await field(page, "X").fill("320");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "ellipse · 4", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(shape(page)).toHaveAttribute("transform", "translate(320 170)");
-  await expect(field(page, "x")).not.toHaveValue("320");
+  await expect(field(page, "X")).not.toHaveValue("320");
   const json = await saved(page);
   json.screens[0].objects[0].x = 111;
   page.on("dialog", (dialog) => dialog.accept());
@@ -154,7 +154,7 @@ test("blur applies to the original target before selecting another object; same-
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await expect(field(page, "x")).toHaveValue("111");
+  await expect(field(page, "X")).toHaveValue("111");
   await expect(page.getByTestId("save-state")).not.toContainText(
     "未適用の入力あり",
   );
@@ -164,7 +164,7 @@ test("IME Enter does not submit unrelated fields and a deferred blur is resolved
 }) => {
   await start(page, "text · 5");
   await field(page, "表示タグ（外部名）").fill("PLC01.Fast.Pending.Value");
-  const x = field(page, "x");
+  const x = field(page, "X");
   await x.focus();
   await x.dispatchEvent("compositionstart");
   await x.fill("350");
@@ -185,12 +185,12 @@ test("Ctrl+S commits the focused number and equivalent values do not add history
   page,
 }) => {
   await start(page);
-  await field(page, "x").fill("100.0");
-  await field(page, "x").press("Enter");
+  await field(page, "X").fill("100.0");
+  await field(page, "X").press("Enter");
   await expect(button(page, "元に戻す")).toBeDisabled();
-  await field(page, "x").fill("234");
+  await field(page, "X").fill("234");
   const download = page.waitForEvent("download");
-  await field(page, "x").press("Control+s");
+  await field(page, "X").press("Control+s");
   const json = JSON.parse(
     await readFile((await (await download).path())!, "utf8"),
   );
@@ -205,7 +205,7 @@ test("canvas drag commits the focused X before reading geometry, with separate u
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
   const scale = (await svg.boundingBox())!.width / 960;
   const box = (await shape(page).boundingBox())!;
-  await field(page, "x").fill("200");
+  await field(page, "X").fill("200");
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(
@@ -215,11 +215,11 @@ test("canvas drag commits the focused X before reading geometry, with separate u
   );
   await page.mouse.up();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(field(page, "x")).toHaveValue("240");
+  await expect(field(page, "X")).toHaveValue("240");
   await button(page, "元に戻す").click();
-  await expect(field(page, "x")).toHaveValue("200");
+  await expect(field(page, "X")).toHaveValue("200");
   await button(page, "元に戻す").click();
-  await expect(field(page, "x")).toHaveValue("100");
+  await expect(field(page, "X")).toHaveValue("100");
   await expect(button(page, "元に戻す")).toBeDisabled();
 });
 test("resize uses the committed width instead of the pointerdown closure's old dimensions", async ({
@@ -231,7 +231,7 @@ test("resize uses the committed width instead of the pointerdown closure's old d
   const handle = page.locator('[data-resize-handle="se"]');
   await handle.scrollIntoViewIfNeeded();
   const box = (await handle.boundingBox())!;
-  await field(page, "width").fill("300");
+  await field(page, "幅").fill("300");
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
   await page.mouse.move(
@@ -241,18 +241,18 @@ test("resize uses the committed width instead of the pointerdown closure's old d
   );
   await page.mouse.up();
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(field(page, "width")).toHaveValue("320");
+  await expect(field(page, "幅")).toHaveValue("320");
   await button(page, "元に戻す").click();
-  await expect(field(page, "width")).toHaveValue("300");
+  await expect(field(page, "幅")).toHaveValue("300");
   await button(page, "元に戻す").click();
-  await expect(field(page, "width")).toHaveValue("260");
+  await expect(field(page, "幅")).toHaveValue("260");
 });
 test("canvas editing still guards a staged tag and invalid numbers, and blocks composition", async ({
   page,
 }) => {
   await start(page, "text · 5");
   await field(page, "表示タグ（外部名）").fill("PLC01.Fast.Pending.Value");
-  await field(page, "x").fill("220");
+  await field(page, "X").fill("220");
   await shape(page).click({ position: { x: 20, y: 20 } });
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
   await expect(prompt).toBeVisible();
@@ -260,20 +260,20 @@ test("canvas editing still guards a staged tag and invalid numbers, and blocks c
   await expect(field(page, "表示タグ（外部名）")).toHaveValue(
     "PLC01.Fast.Pending.Value",
   );
-  await expect(field(page, "x")).toHaveValue("220");
+  await expect(field(page, "X")).toHaveValue("220");
   await field(page, "表示タグ（外部名）").fill("");
-  await field(page, "x").fill("bad");
+  await field(page, "X").fill("bad");
   await shape(page).click({ position: { x: 20, y: 20 } });
   // 離れたら確定: 不正な数値は確認なしで止まり、入力は残る
   await expect(prompt).toHaveCount(0);
-  await expect(field(page, "x")).toHaveValue("bad");
-  await field(page, "x").press("Escape");
-  await field(page, "x").dispatchEvent("compositionstart");
-  await field(page, "x").fill("330");
+  await expect(field(page, "X")).toHaveValue("bad");
+  await field(page, "X").press("Escape");
+  await field(page, "X").dispatchEvent("compositionstart");
+  await field(page, "X").fill("330");
   await shape(page).click({ position: { x: 20, y: 20 } });
   await expect(prompt).toHaveCount(0);
-  await expect(field(page, "x")).toHaveValue("330");
-  await field(page, "x").dispatchEvent("compositionend");
-  await field(page, "x").press("Enter");
-  await expect(field(page, "x")).toHaveValue("330");
+  await expect(field(page, "X")).toHaveValue("330");
+  await field(page, "X").dispatchEvent("compositionend");
+  await field(page, "X").press("Enter");
+  await expect(field(page, "X")).toHaveValue("330");
 });

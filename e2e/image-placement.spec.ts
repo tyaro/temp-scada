@@ -116,19 +116,23 @@ for (const theme of ["light", "dark"])
     await expect(
       page.getByLabel("色の不透明度（%）", { exact: true }),
     ).toHaveCount(0);
-    await expect(page.getByLabel("width", { exact: true })).toHaveValue("240");
+    await expect(page.getByLabel("画像枠の幅", { exact: true })).toHaveValue(
+      "240",
+    );
     await paintPixels(page);
-    await number(page, "height", "240");
+    await number(page, "画像枠の高さ", "240");
     // A contain frame has selectable whitespace above the source image.
     const area = await images(page).first().boundingBox();
     await page.mouse.click(area!.x + area!.width / 2, area!.y + 5);
     await expect(page.locator('.sheet [data-selected="true"]')).toHaveCount(1);
-    const y = Number(await page.getByLabel("y", { exact: true }).inputValue());
+    const y = Number(await page.getByLabel("Y", { exact: true }).inputValue());
     await number(page, "回転角度", "33");
     await number(page, "不透明度（%）", "45");
     await button(page, "元比率へ戻す").click();
-    await expect(page.getByLabel("height", { exact: true })).toHaveValue("120");
-    await expect(page.getByLabel("y", { exact: true })).toHaveValue(
+    await expect(page.getByLabel("画像枠の高さ", { exact: true })).toHaveValue(
+      "120",
+    );
+    await expect(page.getByLabel("Y", { exact: true })).toHaveValue(
       String(y + 60),
     );
     await page.getByLabel("配置名", { exact: true }).fill("原水設備の写真");
@@ -303,11 +307,13 @@ test("image drag, frame resize, lock and visibility use the existing editing con
     steps: 4,
   });
   await page.mouse.up();
-  await expect(page.getByLabel("width", { exact: true })).not.toHaveValue(
+  await expect(page.getByLabel("画像枠の幅", { exact: true })).not.toHaveValue(
     "240",
   );
   await page.keyboard.press("Control+z");
-  await expect(page.getByLabel("width", { exact: true })).toHaveValue("240");
+  await expect(page.getByLabel("画像枠の幅", { exact: true })).toHaveValue(
+    "240",
+  );
   await number(page, "不透明度（%）", "0");
   await selectPanel(page, "レイヤー");
   await button(page, "image · 0").click();
@@ -317,10 +323,10 @@ test("image drag, frame resize, lock and visibility use the existing editing con
     "0",
   );
   await button(page, "ロック：image · 0").click();
-  await expect(page.getByLabel("x", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("X", { exact: true })).toBeDisabled();
   await expect(button(page, "元比率へ戻す")).toBeDisabled();
   await button(page, "ロックを解除").click();
-  await expect(page.getByLabel("x", { exact: true })).toBeEnabled();
+  await expect(page.getByLabel("X", { exact: true })).toBeEnabled();
   await button(page, "非表示：image · 0").click();
   await expect(images(page)).toHaveCount(0);
   await expect(page.locator(".minimap image[data-image-frame]")).toHaveCount(0);

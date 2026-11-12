@@ -54,7 +54,7 @@ for (const theme of ["light", "dark"] as const)
     await expect(shape(page)).toHaveAttribute("stroke", "#2563eb");
     await expect(shape(page)).toHaveAttribute("stroke-width", "6");
     await expect(page.getByLabel("色", { exact: true })).toHaveCount(0);
-    await expect(page.getByLabel("width", { exact: true })).toHaveValue(
+    await expect(page.getByLabel("幅", { exact: true })).toHaveValue(
       String(rect.width),
     );
     const outline = page.locator(

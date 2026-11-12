@@ -63,14 +63,12 @@ for (const zoom of [0.25, 1, 4])
     await clickAt(page, 173, 213);
     await expect(svg(page).locator("[data-object-id]")).toHaveCount(4);
     expect(
-      Number(await page.getByLabel("x", { exact: true }).inputValue()) +
-        Number(await page.getByLabel("width", { exact: true }).inputValue()) /
-          2,
+      Number(await page.getByLabel("X", { exact: true }).inputValue()) +
+        Number(await page.getByLabel("幅", { exact: true }).inputValue()) / 2,
     ).toBeCloseTo(180, 4);
     expect(
-      Number(await page.getByLabel("y", { exact: true }).inputValue()) +
-        Number(await page.getByLabel("height", { exact: true }).inputValue()) /
-          2,
+      Number(await page.getByLabel("Y", { exact: true }).inputValue()) +
+        Number(await page.getByLabel("高さ", { exact: true }).inputValue()) / 2,
     ).toBeCloseTo(220, 4);
     await expect(button(page, "連続配置ツール")).toHaveAttribute(
       "aria-pressed",
@@ -80,8 +78,8 @@ for (const zoom of [0.25, 1, 4])
     await expect(svg(page).locator("[data-object-id]")).toHaveCount(5);
     expect(
       Math.abs(
-        Number(await page.getByLabel("x", { exact: true }).inputValue()) +
-          Number(await page.getByLabel("width", { exact: true }).inputValue()) /
+        Number(await page.getByLabel("X", { exact: true }).inputValue()) +
+          Number(await page.getByLabel("幅", { exact: true }).inputValue()) /
             2 -
           213,
       ),
@@ -123,11 +121,11 @@ test("continuous placement protects pending text and invalid numbers, and does n
     .getByRole("button", { name: "入力を破棄して続行", exact: true })
     .click();
   await expect(svg(page).locator("[data-object-id]")).toHaveCount(4);
-  await page.getByLabel("width", { exact: true }).fill("0");
+  await page.getByLabel("幅", { exact: true }).fill("0");
   await clickAt(page, 300, 300);
-  await expect(page.getByLabel("width", { exact: true })).toHaveValue("0");
+  await expect(page.getByLabel("幅", { exact: true })).toHaveValue("0");
   await expect(svg(page).locator("[data-object-id]")).toHaveCount(4);
-  await page.getByLabel("width", { exact: true }).press("Escape");
+  await page.getByLabel("幅", { exact: true }).press("Escape");
   await clickAt(page, 300, 300);
   await expect(svg(page).locator("[data-object-id]")).toHaveCount(5);
 });
@@ -238,7 +236,7 @@ test("composition blocks placement and Undo removing an armed shared definition 
     .click();
   await selectPanel(page, "部品");
   await arm(page);
-  const x = page.getByLabel("x", { exact: true });
+  const x = page.getByLabel("X", { exact: true });
   await x.focus();
   await x.dispatchEvent("compositionstart");
   await x.fill("125");

@@ -96,8 +96,8 @@ for (const theme of ["light", "dark"]) {
       "fill",
       /^url\(#/,
     );
-    await page.getByLabel("width", { exact: true }).fill("300");
-    await page.getByLabel("width", { exact: true }).press("Enter");
+    await page.getByLabel("幅", { exact: true }).fill("300");
+    await page.getByLabel("幅", { exact: true }).press("Enter");
     const ref = await node(page).locator(":scope > rect").getAttribute("fill");
     expect(ref).toMatch(/^url\(#/);
     expect(

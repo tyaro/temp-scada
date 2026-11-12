@@ -86,8 +86,8 @@ test("pipe vertices snap in screen coordinates, support keyboard and cancel with
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await selectPanel(page, "部品");
   await page.getByRole("button", { name: "配管を追加", exact: true }).click();
-  await page.getByLabel("x", { exact: true }).fill("13");
-  await page.getByLabel("y", { exact: true }).fill("17");
+  await page.getByLabel("X", { exact: true }).fill("13");
+  await page.getByLabel("Y", { exact: true }).fill("17");
   await page.getByRole("button", { name: "変更を適用", exact: true }).click();
   await page.getByLabel("グリッドにスナップ", { exact: true }).check();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
@@ -166,8 +166,8 @@ test("a degenerate arrow line preview never crashes and rejected edits keep hist
   await page.getByRole("button", { name: "変更を適用", exact: true }).click();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
   const lineOrigin = {
-    x: Number(await page.getByLabel("x", { exact: true }).inputValue()),
-    y: Number(await page.getByLabel("y", { exact: true }).inputValue()),
+    x: Number(await page.getByLabel("X", { exact: true }).inputValue()),
+    y: Number(await page.getByLabel("Y", { exact: true }).inputValue()),
   };
   await drag(
     page,

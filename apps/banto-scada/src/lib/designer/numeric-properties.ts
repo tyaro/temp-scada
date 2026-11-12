@@ -77,3 +77,34 @@ export function objectFormValues(
   }
   return values;
 }
+
+/**
+ * Inspector の位置・サイズ欄の見出し（UX精査 P1-2: 英日混在をやめて日本語に揃える）。
+ * accessible はスクリーンリーダー・試験で使う名前。
+ */
+export function geometryLabel(
+  field: string,
+  shapeType: string,
+): { visible: string; accessible: string } {
+  const image = shapeType === "image";
+  switch (field) {
+    case "x":
+      return { visible: "X", accessible: "X" };
+    case "y":
+      return { visible: "Y", accessible: "Y" };
+    case "width":
+      return image
+        ? { visible: "画像枠の幅", accessible: "画像枠の幅" }
+        : { visible: "幅", accessible: "幅" };
+    case "height":
+      return image
+        ? { visible: "画像枠の高さ", accessible: "画像枠の高さ" }
+        : { visible: "高さ", accessible: "高さ" };
+    case "rotation":
+      return { visible: "回転（°）", accessible: "回転角度" };
+    case "opacity":
+      return { visible: "不透明度（%）", accessible: "不透明度（%）" };
+    default:
+      return { visible: field, accessible: field };
+  }
+}

@@ -49,7 +49,7 @@ for (const theme of ["light", "dark"] as const)
     await chooseTheme(page, theme);
     await create(page);
     await expect(page.getByLabel("グループ名", { exact: true })).toBeVisible();
-    await expect(page.getByLabel("x", { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel("X", { exact: true })).toHaveCount(0);
     await page
       .getByLabel("グループ名", { exact: true })
       .fill(" 原水ポンプユニット ");
@@ -223,7 +223,7 @@ test("F2 edits the group and Undo refreshes the committed draft name", async ({
   await expect(mainCanvas(page).locator('[data-selected="true"]')).toHaveCount(
     2,
   );
-  await expect(page.getByLabel("x", { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel("X", { exact: true })).toHaveCount(0);
   await input.fill("前回の確定名");
   await input.press("Enter");
   await expect(groupRow(page)).toContainText("前回の確定名");

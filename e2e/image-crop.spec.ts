@@ -188,10 +188,12 @@ for (const theme of ["light", "dark"])
     await p.locator("button[data-layer-id]").first().click();
     await p.getByLabel("回転角度", { exact: true }).fill("37");
     await p.getByLabel("回転角度", { exact: true }).press("Enter");
-    const y = Number(await p.getByLabel("y", { exact: true }).inputValue());
+    const y = Number(await p.getByLabel("Y", { exact: true }).inputValue());
     await button(p, "切出し範囲の比率に合わせる").click();
-    await expect(p.getByLabel("height", { exact: true })).toHaveValue("240");
-    await expect(p.getByLabel("y", { exact: true })).toHaveValue(
+    await expect(p.getByLabel("画像枠の高さ", { exact: true })).toHaveValue(
+      "240",
+    );
+    await expect(p.getByLabel("Y", { exact: true })).toHaveValue(
       String(y - 60),
     );
     await expect(p.getByLabel("回転角度", { exact: true })).toHaveValue("37");
@@ -203,7 +205,7 @@ test("crop draft is explicit, invalid preview disappears, Escape and target tran
   const x = form(p).locator('[name="cropX"]');
   await x.fill("50");
   await form(p).locator('[name="cropWidth"]').fill("0");
-  await p.getByLabel("x", { exact: true }).focus();
+  await p.getByLabel("X", { exact: true }).focus();
   await expect(cropFrame(p)).toHaveCount(0);
   await expect(form(p).getByRole("status")).toBeVisible();
   await expect(form(p).getByLabel("切出し結果", { exact: true })).toHaveCount(

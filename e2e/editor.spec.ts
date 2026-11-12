@@ -10,10 +10,10 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
   await page.getByRole("button", { name: "Rectangle を追加" }).click();
   const svg = page.getByRole("img", { name: "プロセス画面" });
   await expect(svg.locator("[data-object-id]")).toHaveCount(4);
-  await page.getByLabel("x", { exact: true }).fill("230.5");
-  await page.getByLabel("y", { exact: true }).fill("400");
-  await page.getByLabel("width", { exact: true }).fill("180");
-  await page.getByLabel("height", { exact: true }).fill("70");
+  await page.getByLabel("X", { exact: true }).fill("230.5");
+  await page.getByLabel("Y", { exact: true }).fill("400");
+  await page.getByLabel("幅", { exact: true }).fill("180");
+  await page.getByLabel("高さ", { exact: true }).fill("70");
 
   await page.getByRole("button", { name: "変更を適用" }).click();
   await page.getByLabel("塗りの色", { exact: true }).fill("#ff9900");
@@ -36,8 +36,8 @@ test("edit, drag in design coordinates, save and reproduce in preview", async ({
     { steps: 5 },
   );
   await page.mouse.up();
-  const x = Number(await page.getByLabel("x", { exact: true }).inputValue());
-  const y = Number(await page.getByLabel("y", { exact: true }).inputValue());
+  const x = Number(await page.getByLabel("X", { exact: true }).inputValue());
+  const y = Number(await page.getByLabel("Y", { exact: true }).inputValue());
   expect(x).toBeCloseTo(270.5, 0);
   expect(y).toBeCloseTo(380, 0);
   const transform = await added.getAttribute("transform");

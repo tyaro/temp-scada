@@ -26,9 +26,9 @@ for (const zoom of ["0.25", "1", "4"]) {
       y: el.scrollTop,
     }));
     await page.keyboard.press("ArrowRight");
-    await expect(page.getByLabel("x", { exact: true })).toHaveValue("101");
+    await expect(page.getByLabel("X", { exact: true })).toHaveValue("101");
     await page.keyboard.press("Shift+ArrowDown");
-    await expect(page.getByLabel("y", { exact: true })).toHaveValue("180");
+    await expect(page.getByLabel("Y", { exact: true })).toHaveValue("180");
     expect(
       await area(page).evaluate((el) => ({
         x: el.scrollLeft,
@@ -36,9 +36,9 @@ for (const zoom of ["0.25", "1", "4"]) {
       })),
     ).toEqual(before);
     await page.keyboard.press("Control+z");
-    await expect(page.getByLabel("y", { exact: true })).toHaveValue("170");
+    await expect(page.getByLabel("Y", { exact: true })).toHaveValue("170");
     await page.keyboard.press("Control+z");
-    await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");
+    await expect(page.getByLabel("X", { exact: true })).toHaveValue("100");
     await expect(button(page, "元に戻す")).toBeDisabled();
   });
 }
@@ -46,8 +46,8 @@ test("snapped group nudges preserve relative geometry and Shift advances ten gri
   page,
 }) => {
   await start(page);
-  await page.getByLabel("x", { exact: true }).fill("3");
-  await page.getByLabel("x", { exact: true }).press("Enter");
+  await page.getByLabel("X", { exact: true }).fill("3");
+  await page.getByLabel("X", { exact: true }).press("Enter");
   await page
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "ellipse · 4", exact: true })
@@ -88,24 +88,24 @@ test("pending text applies before the captured nudge, and IME does not edit", as
   await area(page).focus();
   // 離れたら確定: 確認なしでテキストが適用されてから取得済みの移動が続く
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("101");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("101");
   await button(page, "元に戻す").click();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("100");
   await expect(input).toHaveValue("未適用のテキスト");
   await area(page).dispatchEvent("keydown", {
     key: "ArrowRight",
     isComposing: true,
     bubbles: true,
   });
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("100");
 });
 test("layer navigation, native numeric input, resize handles, preview and pan keep their key behavior", async ({
   page,
 }) => {
   await start(page);
   await page.keyboard.press("ArrowRight"); // focus stays in the layer list
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");
-  const x = page.getByLabel("x", { exact: true });
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("100");
+  const x = page.getByLabel("X", { exact: true });
   await x.focus();
   await x.press("ArrowUp");
   await x.press("Enter");
@@ -116,7 +116,7 @@ test("layer navigation, native numeric input, resize handles, preview and pan ke
   });
   await handle.focus();
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByLabel("width", { exact: true })).toHaveValue("261");
+  await expect(page.getByLabel("幅", { exact: true })).toHaveValue("261");
   await expect(x).toHaveValue("100");
   await button(page, "パンツール").click();
   await area(page).focus();
@@ -147,7 +147,7 @@ test("shared definition editing uses the same design-unit movement and continuou
     .getByRole("button", { name: "polyline · 0", exact: true })
     .first();
   await row.click();
-  const x = page.getByLabel("x", { exact: true });
+  const x = page.getByLabel("X", { exact: true });
   const before = Number(await x.inputValue());
   await area(page).focus();
   await page.keyboard.press("ArrowRight");

@@ -447,7 +447,7 @@ for (const theme of ["light", "dark"] as const)
     const original = (await saved(page)).screens[0].objects[4];
     expect(original.shape.text).toBe(project.screens[0].objects[4].shape.text);
     expect(original.shape.style.wrap).toBe("word");
-    const width = page.getByLabel("width", { exact: true });
+    const width = page.getByLabel("幅", { exact: true });
     await width.fill("300");
     await width.press("Enter");
     await expect
@@ -520,8 +520,8 @@ test("word wrap handles a single paragraph, empty text and height overflow witho
   expect(
     Number(await box(page).getAttribute("data-text-line-count")),
   ).toBeGreaterThan(1);
-  await page.getByLabel("height", { exact: true }).fill("23");
-  await page.getByLabel("height", { exact: true }).press("Enter");
+  await page.getByLabel("高さ", { exact: true }).fill("23");
+  await page.getByLabel("高さ", { exact: true }).press("Enter");
   await expect(box(page)).toHaveAttribute("data-text-layout", "ellipsis");
   await expect(box(page)).toHaveAttribute(
     "aria-label",

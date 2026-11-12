@@ -156,8 +156,8 @@ test("wheel cancels a shape drag before changing the view and never commits its 
   await page.keyboard.up("Control");
   await page.mouse.up();
   await expect.poll(() => scale(page)).toBeCloseTo(1.1, 3);
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");
-  await expect(page.getByLabel("y", { exact: true })).toHaveValue("170");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("100");
+  await expect(page.getByLabel("Y", { exact: true })).toHaveValue("170");
   await expect(button(page, "元に戻す")).toBeDisabled();
 });
 test("Shift wheel normalizes line/page deltas and preview retains its fit view", async ({

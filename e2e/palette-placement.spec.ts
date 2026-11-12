@@ -118,13 +118,13 @@ for (const zoom of [0.25, 1, 4]) {
       },
       { x: target.x + drop.x, y: target.y + drop.y },
     );
-    const x = Number(await page.getByLabel("x", { exact: true }).inputValue());
-    const y = Number(await page.getByLabel("y", { exact: true }).inputValue());
+    const x = Number(await page.getByLabel("X", { exact: true }).inputValue());
+    const y = Number(await page.getByLabel("Y", { exact: true }).inputValue());
     const width = Number(
-      await page.getByLabel("width", { exact: true }).inputValue(),
+      await page.getByLabel("幅", { exact: true }).inputValue(),
     );
     const height = Number(
-      await page.getByLabel("height", { exact: true }).inputValue(),
+      await page.getByLabel("高さ", { exact: true }).inputValue(),
     );
     expect(Math.abs(x + width / 2 - expected.x)).toBeLessThan(2 / zoom);
     expect(Math.abs(y + height / 2 - expected.y)).toBeLessThan(2 / zoom);
@@ -197,13 +197,11 @@ test("drop snaps the center, permits an Alt bypass, and ignores cancelled, exter
       altKey,
     });
     await source.dispatchEvent("dragend", { dataTransfer });
-    const x = Number(await page.getByLabel("x", { exact: true }).inputValue());
-    const y = Number(await page.getByLabel("y", { exact: true }).inputValue());
-    const w = Number(
-      await page.getByLabel("width", { exact: true }).inputValue(),
-    );
+    const x = Number(await page.getByLabel("X", { exact: true }).inputValue());
+    const y = Number(await page.getByLabel("Y", { exact: true }).inputValue());
+    const w = Number(await page.getByLabel("幅", { exact: true }).inputValue());
     const h = Number(
-      await page.getByLabel("height", { exact: true }).inputValue(),
+      await page.getByLabel("高さ", { exact: true }).inputValue(),
     );
     expect(Math.abs(x + w / 2 - (altKey ? 333 : 350))).toBeLessThan(2);
     expect(Math.abs(y + h / 2 - (altKey ? 217 : 200))).toBeLessThan(2);
@@ -260,10 +258,8 @@ test("deferred drops preserve the chosen point and apply the pending input on le
       .getByRole("img", { name: "配置先の工程", exact: true })
       .locator("[data-object-id]"),
   ).toHaveCount(4);
-  const x = Number(await page.getByLabel("x", { exact: true }).inputValue());
-  const w = Number(
-    await page.getByLabel("width", { exact: true }).inputValue(),
-  );
+  const x = Number(await page.getByLabel("X", { exact: true }).inputValue());
+  const w = Number(await page.getByLabel("幅", { exact: true }).inputValue());
   expect(Math.abs(x + w / 2 - 400)).toBeLessThan(2);
   await page.getByRole("button", { name: "元に戻す", exact: true }).click();
   await expect(

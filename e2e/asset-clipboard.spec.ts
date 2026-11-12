@@ -203,7 +203,7 @@ test("cut becomes copy-only when editing changes during an asynchronous clipboar
     .toBe("function");
   await selectPanel(page, "レイヤー");
   await button(page, "設備画像").click();
-  const x = page.getByLabel("x", { exact: true });
+  const x = page.getByLabel("X", { exact: true });
   await x.fill("150");
   await x.press("Enter");
   await page.evaluate(() => (window as any).releaseWrite());

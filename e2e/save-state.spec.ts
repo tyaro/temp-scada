@@ -97,14 +97,14 @@ test("invalid native and model input stops the pending operation and remains edi
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await page.getByLabel("width", { exact: true }).fill("0");
+  await page.getByLabel("幅", { exact: true }).fill("0");
   await button("表示プレビュー").click();
   await expect(
     page.getByRole("dialog", { name: "未適用の入力があります" }),
   ).toHaveCount(0);
-  await expect(page.getByLabel("width", { exact: true })).toHaveValue("0");
+  await expect(page.getByLabel("幅", { exact: true })).toHaveValue("0");
   await expect(button("元に戻す")).toBeDisabled();
-  await page.getByLabel("width", { exact: true }).fill("260");
+  await page.getByLabel("幅", { exact: true }).fill("260");
   await selectPanel(page, "部品");
   await button("配管を追加").click();
   await page.getByLabel("頂点", { exact: true }).fill("0,0\n0,0");
@@ -296,7 +296,7 @@ test("resize handles preserve staged appearance and restart after confirmation",
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
   ).toHaveValue("#aabbcc");
-  await expect(page.getByLabel("width", { exact: true })).toHaveValue("260");
+  await expect(page.getByLabel("幅", { exact: true })).toHaveValue("260");
   await expect(page.getByTestId("save-state")).not.toContainText(
     "未適用の入力あり",
   );

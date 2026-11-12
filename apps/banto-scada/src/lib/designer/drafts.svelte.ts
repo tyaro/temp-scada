@@ -1,4 +1,4 @@
-import { tick } from "svelte";
+import { tick, untrack } from "svelte";
 type Control = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
 function controls(form: HTMLFormElement): Control[] {
   return [...form.elements].filter(
@@ -20,6 +20,8 @@ export function createDraftGuard(
   // レジストリの実体は通常の Set に置き、古い reactive snapshot から入力状態を復活させない。
   const dirty = new Set<HTMLFormElement>();
   let dirtyCount = $state(0);
+  // 未適用のフォームの入れ替わり（件数は同じ）も表示へ届けるための版。
+  let dirtyRevision = $state(0);
   let pending = $state<(() => void) | null>(null);
   // The confirmation dialog only for drafts that need an explicit apply (tags).
   // Other drafts are applied when the user leaves them (UX P1-2「離れたら確定」).
@@ -51,6 +53,8 @@ export function createDraftGuard(
       if (controls(form).some(changed)) dirty.add(form);
       else dirty.delete(form);
       dirtyCount = dirty.size;
+      // 作用（action の update）の中から呼ばれても依存にしない。
+      untrack(() => dirtyRevision++);
     }
     function reset() {
       saved.clear();
@@ -228,6 +232,11 @@ export function createDraftGuard(
     },
     get dirty() {
       return dirtyCount > 0;
+    },
+    /** このフォームに未適用の入力があるか（表示の強調用、リアクティブ）。 */
+    isDirty(form: HTMLFormElement | undefined): boolean {
+      void dirtyRevision;
+      return form ? dirty.has(form) : false;
     },
   };
 }

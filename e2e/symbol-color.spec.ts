@@ -106,8 +106,8 @@ test("mode drafts preserve fill, disabled color never corrupts other properties,
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
   ).toBeDisabled();
-  await page.getByLabel("x", { exact: true }).fill("480");
-  await page.getByLabel("x", { exact: true }).press("Enter");
+  await page.getByLabel("X", { exact: true }).fill("480");
+  await page.getByLabel("X", { exact: true }).press("Enter");
   await mode(page).selectOption("monochrome");
   expect(await paints(svgSymbol(canvas(page), placements[1].id))).toEqual(
     expectedPaints,
@@ -135,7 +135,7 @@ test("mode drafts preserve fill, disabled color never corrupts other properties,
   await expect(mode(page)).toHaveValue("definition");
   await modeApply(page).click();
   await button(page, "元に戻す").click();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue(
     String(placements[1].x),
   );
   await expect(button(page, "元に戻す")).toBeDisabled();
@@ -196,7 +196,7 @@ test("mode and object drafts apply together only after validation, without impli
   await expect(button(page, "元に戻す")).toBeDisabled();
   await row(page, placements[0].id).click();
   await mode(page).selectOption("definition");
-  await page.getByLabel("width", { exact: true }).fill("0");
+  await page.getByLabel("幅", { exact: true }).fill("0");
   await row(page, placements[1].id).click();
   await expect(prompt(page)).toHaveCount(0);
   await expect(prompt(page)).toHaveCount(0);

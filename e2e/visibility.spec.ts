@@ -59,13 +59,13 @@ test("hide affects drawing, minimap and preview while layers retain editable met
   await layers(page)
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await expect(page.getByLabel("x", { exact: true })).toBeEnabled();
+  await expect(page.getByLabel("X", { exact: true })).toBeEnabled();
   await expect(canvas(page).locator("[data-resize-handle]")).toHaveCount(0);
   await expect(
     page.getByRole("status").filter({ hasText: "1 件が非表示" }),
   ).toBeVisible();
-  await page.getByLabel("x", { exact: true }).fill("125");
-  await page.getByLabel("x", { exact: true }).press("Enter");
+  await page.getByLabel("X", { exact: true }).fill("125");
+  await page.getByLabel("X", { exact: true }).press("Enter");
   await expect(
     canvas(page).locator(`[data-object-id="${rectangleId}"]`),
   ).toHaveCount(0);
@@ -101,12 +101,12 @@ test("all-hidden diagrams remain valid, explain recovery, and allow showing a lo
   await layers(page)
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await expect(page.getByLabel("x", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("X", { exact: true })).toBeDisabled();
   await button(page, "配置を再表示").click();
   await expect(
     canvas(page).locator(`[data-object-id="${rectangleId}"]`),
   ).toBeVisible();
-  await expect(page.getByLabel("x", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("X", { exact: true })).toBeDisabled();
   await expect(
     page.getByRole("status").filter({ hasText: "表示中の配置がありません" }),
   ).toHaveCount(0);

@@ -113,10 +113,10 @@ for (const zoom of [0.25, 1, 4])
     const number = async (name: string) =>
       Number(await page.getByLabel(name, { exact: true }).inputValue());
     expect(
-      Math.abs((await number("x")) + (await number("width")) / 2 - center.x),
+      Math.abs((await number("X")) + (await number("幅")) / 2 - center.x),
     ).toBeLessThan(2 / zoom);
     expect(
-      Math.abs((await number("y")) + (await number("height")) / 2 - center.y),
+      Math.abs((await number("Y")) + (await number("高さ")) / 2 - center.y),
     ).toBeLessThan(2 / zoom);
     const objects = page
       .getByRole("img", { name: "プロセス画面", exact: true })

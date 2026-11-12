@@ -118,8 +118,8 @@ for (const theme of ["light", "dark"] as const)
     test.setTimeout(90000);
     await start(page);
     await chooseTheme(page, theme);
-    await number(page, "x", 100);
-    await number(page, "y", 70);
+    await number(page, "X", 100);
+    await number(page, "Y", 70);
     for (const cropped of [false, true]) {
       if (cropped) {
         const crop = page.getByRole("form", {
@@ -141,8 +141,8 @@ for (const theme of ["light", "dark"] as const)
         [240, 90],
         [90, 240],
       ]) {
-        await number(page, "width", w);
-        await number(page, "height", h);
+        await number(page, "画像枠の幅", w);
+        await number(page, "画像枠の高さ", h);
         for (const fit of ["contain", "cover", "stretch"]) {
           await applyFit(page, fit);
           await pixels(page, w, h, fit, cropped);
@@ -224,10 +224,10 @@ test("cover fitting preserves rotation and applies placement opacity once", asyn
   page,
 }) => {
   await start(page);
-  await number(page, "x", 100);
-  await number(page, "y", 100);
-  await number(page, "width", 140);
-  await number(page, "height", 200);
+  await number(page, "X", 100);
+  await number(page, "Y", 100);
+  await number(page, "画像枠の幅", 140);
+  await number(page, "画像枠の高さ", 200);
   await applyFit(page, "cover");
   await number(page, "回転角度", 37);
   await number(page, "不透明度（%）", 50);
