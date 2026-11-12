@@ -106,6 +106,7 @@
   import { stateColorCommand } from "./lib/designer/forms/state-color";
   import SlotReadStatus from "./lib/designer/SlotReadStatus.svelte";
   import { stateTextColorCommand } from "./lib/designer/forms/state-text-color";
+  import { numericFormatCommand } from "./lib/designer/forms/numeric-format";
   import { symbolColorModeCommand } from "./lib/designer/forms/symbol-color-mode";
   import { backgroundCropCommand } from "./lib/designer/forms/background-crop";
   import { backgroundImageCommand } from "./lib/designer/forms/background-image";
@@ -2707,6 +2708,20 @@
         },
       );
     }
+    if (form.dataset.editorForm === "numeric-format")
+      return numericFormatCommand(
+        {
+          data,
+          objectId: form.dataset.objectId,
+          targetKey: form.dataset.targetKey,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selected,
+        },
+      );
     if (form.dataset.editorForm === "state-text-color")
       return stateTextColorCommand(
         {

@@ -10,6 +10,7 @@ import type { ImageCrop } from "../image-crop";
 import type {
   EquipmentPropertyField,
   StateTextColors,
+  NumericFormat,
   StateColor,
   BackgroundImage,
   ImageAsset,
@@ -38,6 +39,7 @@ export interface ObjectPatch {
   slotBinding?: { slotName: string } | null;
   equipmentProperty?: { field: EquipmentPropertyField } | null;
   stateColors?: StateTextColors | null;
+  format?: NumericFormat | null;
   stateColor?: StateColor | null;
   symbolId?: string;
   equipmentId?: string | null;

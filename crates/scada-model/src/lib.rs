@@ -667,6 +667,40 @@ mod tests {
         assert_eq!(Project::from_json(&project.to_json()).unwrap().0, project.0);
     }
     #[test]
+    fn shared_numeric_format_contract() {
+        let base: Value = serde_json::from_str(include_str!(
+            "../../../examples/read-presentation.project.json"
+        ))
+        .unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/numeric-format-cases.json"))
+                .unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_object_mut()
+                .unwrap()
+                .insert(case["key"].as_str().unwrap().into(), case["value"].clone());
+            let parsed = Project::from_json(&input.to_string());
+            assert_eq!(
+                parsed.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}",
+                case["name"]
+            );
+            if let Ok(project) = parsed {
+                assert_eq!(
+                    Project::from_json(&project.to_json()).unwrap().0,
+                    project.0,
+                    "{}",
+                    case["name"]
+                );
+            }
+        }
+    }
+    #[test]
     fn shared_symbol_read_slot_contract() {
         let base: Value =
             serde_json::from_str(include_str!("../../../examples/symbol-slots.project.json"))

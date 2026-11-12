@@ -108,6 +108,7 @@ export function applySingleObjectCommand(
       slotBinding,
       equipmentProperty,
       stateColors,
+      format,
       stateColor,
       symbolId,
       equipmentId,
@@ -234,6 +235,25 @@ export function applySingleObjectCommand(
         throw new Error("タグは画面の Text に割り当ててください");
       if (binding === null) delete object.shape.binding;
       else object.shape.binding = binding;
+    }
+    if (format !== undefined) {
+      if (object.shape.type !== "text")
+        throw new Error("数値の書式はTextにだけ設定できます");
+      if (format === null) delete object.shape.format;
+      else object.shape.format = { ...format };
+    }
+    // A Text that no longer shows a value has no number to format.
+    if (
+      object.shape.type === "text" &&
+      object.shape.format &&
+      !object.shape.binding &&
+      !object.shape.slotBinding
+    ) {
+      if (format)
+        throw new Error(
+          "数値の書式はタグかslotを表示するTextだけに設定できます",
+        );
+      delete object.shape.format;
     }
     if (textStyle !== undefined || fontSize !== undefined) {
       if (object.shape.type !== "text")

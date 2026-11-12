@@ -1,0 +1,107 @@
+[
+  {
+    "name": "tag-bound text with decimals and unit",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": true,
+    "value": { "decimals": 1, "unit": "m3/h" }
+  },
+  {
+    "name": "decimals only",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": true,
+    "value": { "decimals": 0 }
+  },
+  {
+    "name": "unit only",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": true,
+    "value": { "unit": "℃" }
+  },
+  {
+    "name": "slot-bound text in a symbol definition",
+    "target": "/symbols/0/objects/6/shape",
+    "key": "format",
+    "valid": true,
+    "value": { "decimals": 2, "unit": "kPa" }
+  },
+  {
+    "name": "maximum decimals",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": true,
+    "value": { "decimals": 6 }
+  },
+  {
+    "name": "static text refused",
+    "target": "/screens/0/objects/1/shape",
+    "key": "format",
+    "valid": false,
+    "value": { "decimals": 1 }
+  },
+  {
+    "name": "empty format refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": false,
+    "value": {}
+  },
+  {
+    "name": "too many decimals refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": false,
+    "value": { "decimals": 7 }
+  },
+  {
+    "name": "negative decimals refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": false,
+    "value": { "decimals": -1 }
+  },
+  {
+    "name": "fractional decimals refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": false,
+    "value": { "decimals": 1.5 }
+  },
+  {
+    "name": "empty unit refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": false,
+    "value": { "unit": "" }
+  },
+  {
+    "name": "unit with surrounding spaces refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": false,
+    "value": { "unit": " mm" }
+  },
+  {
+    "name": "unit with a control character refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": false,
+    "value": { "unit": "m\nm" }
+  },
+  {
+    "name": "unit longer than 16 characters refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": false,
+    "value": { "unit": "abcdefghijklmnopq" }
+  },
+  {
+    "name": "unknown format key refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "format",
+    "valid": false,
+    "value": { "decimals": 1, "thousands": true }
+  }
+]

@@ -131,9 +131,10 @@
 
 ### 5.3 段階1-B〜F
 
-- **B 数値の書式**（依存なし）:
+- **B 数値の書式**（2026-11-12 実装）:
   - 数値を出す文字に `format: { decimals, unit }` を持たせる。単位は Project に文字で保存し、編集時にタグ一覧の単位を初期値にする。
   - `presentNumeric` が書式を受ける。slot の数値も同じ書式を使う。
+  - 実装: Text の任意の `format`（schema `$defs.numericFormat`、小数桁 0〜6・単位 1〜16 文字、タグか slot の結合が要る）。Good の数値だけに使い、欠測には単位を付けない。Inspector の「数値の書式」で編集する。schemaVersion は据え置き。仕様: [数値の書式](../graphics/numeric-format.md)。試験: `numeric-format.test.ts`、`examples/numeric-format-cases.json`（Rust・TS 共通の契約）、`e2e/numeric-format.spec.ts`。
 - **C 液位**（B の書式を表示に使う場合だけ B に依存）:
   - 図形 `level` を追加する（`min`・`max`・向き（上・右）・塗りと地の色）。
   - Symbol の中では number の slot に、画面では直接結合に従う。
