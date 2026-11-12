@@ -288,7 +288,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
         : []),
       {
         id: "rotation",
-        label: "回転・反転",
+        label: "回転",
         items: [
           {
             label: "左へ90°回転",
@@ -310,12 +310,14 @@ export function createDesignerActions(host: DesignerActionsHost) {
             label: "左右反転",
             icon: "M12 2V22M9 6L3 18H9ZM15 6L21 18H15Z",
             disabled: flipBlocked(),
+            menuOnly: true,
             run: () => host.editing.flipSelection("x"),
           },
           {
             label: "上下反転",
             icon: "M2 12H22M6 9L18 3V9ZM6 15L18 21V15Z",
             disabled: flipBlocked(),
+            menuOnly: true,
             run: () => host.editing.flipSelection("y"),
           },
         ],

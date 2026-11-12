@@ -55,6 +55,14 @@ function flipProject() {
 }
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
+/** Flip lives in the edit menu and the context menu, not the toolbar. */
+const editMenu = async (page: Page, name: string) => {
+  await page
+    .getByRole("menubar")
+    .getByRole("menuitem", { name: "編集", exact: true })
+    .click();
+  return page.getByRole("menuitem", { name, exact: true });
+};
 const placement = (page: Page, id: string) =>
   mainCanvas(page).locator(`[data-object-id="${id}"]`);
 const painted = (page: Page, id: string) =>
@@ -93,8 +101,14 @@ test("flipping mirrors a rectangle and a Symbol in place, keeps Symbol Text read
 
   // Text cannot be mirrored.
   await page.locator(`button[data-layer-id="${textId}"]`).click();
-  await expect(button(page, "左右反転")).toBeDisabled();
-  await expect(button(page, "上下反転")).toBeDisabled();
+  await expect(await editMenu(page, "左右反転")).toBeDisabled();
+  await expect(
+    page.getByRole("menuitem", { name: "上下反転", exact: true }),
+  ).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("toolbar").getByRole("button", { name: "左右反転" }),
+  ).toHaveCount(0);
 
   await page.locator(`button[data-layer-id="${rectangleId}"]`).click();
   const before = await frame(page, rectangleId);
@@ -102,7 +116,7 @@ test("flipping mirrors a rectangle and a Symbol in place, keeps Symbol Text read
     "transform",
     /./,
   );
-  await button(page, "左右反転").click();
+  await (await editMenu(page, "左右反転")).click();
   await expect(painted(page, rectangleId)).toHaveAttribute(
     "transform",
     "matrix(-1 0 0 1 160 0)",
@@ -133,7 +147,7 @@ test("flipping mirrors a rectangle and a Symbol in place, keeps Symbol Text read
 
   await page.locator(`button[data-layer-id="${symbolId}"]`).click();
   const symbolBefore = await frame(page, symbolId);
-  await button(page, "上下反転").click();
+  await (await editMenu(page, "上下反転")).click();
   await expect(painted(page, symbolId)).toHaveAttribute(
     "transform",
     "matrix(1 0 0 -1 0 180)",
