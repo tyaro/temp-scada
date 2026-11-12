@@ -17,6 +17,7 @@
     inspectedAtLabel,
     type RecordingSummary,
   } from "./lib/recording-management/summary";
+  import type { ExpectedRevisions } from "./lib/recording-management/expected";
   import HistoryWorkspace from "./lib/history/HistoryWorkspace.svelte";
   import TrendDefinitionsDialog from "./lib/designer/TrendDefinitionsDialog.svelte";
   import RecordingPlanDialog from "./lib/designer/RecordingPlanDialog.svelte";
@@ -191,6 +192,7 @@
     service: RecordingManagementService;
     summary: RecordingSummary;
     inspectedAt: number;
+    expected?: ExpectedRevisions;
   }>();
   const recordingIndicator = $derived(
     recordingManagementService
@@ -4455,6 +4457,10 @@
   generation={workspaceGeneration}
   service={recordingOperationsService}
   asyncClient={recordingAsyncOperations}
+  expectedRevisions={lastRecordingSummary?.service ===
+  recordingManagementService
+    ? lastRecordingSummary?.expected
+    : undefined}
   onclose={() => (recordingOperationsOpen = null)}
 />
 <RecordingManagementWorkspace
@@ -4467,12 +4473,13 @@
     recordingManagementOpen = null;
     openRecordingPlan();
   }}
-  onsummary={({ summary, inspectedAt }) => {
+  onsummary={({ summary, inspectedAt, expected }) => {
     if (recordingManagementService)
       lastRecordingSummary = {
         service: recordingManagementService,
         summary,
         inspectedAt,
+        expected,
       };
   }}
 />
