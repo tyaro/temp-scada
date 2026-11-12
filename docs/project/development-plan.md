@@ -104,6 +104,8 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 - SDKの固定commit（P1）: `33410f6d25d36559c5ce81375e243eb6f3e85038`（`v0.3.0-alpha.1`）
 - [SCADA設計](../upstream/industrial/scada-design.md)、[上流索引](../upstream/industrial/README.md)、[Hub SDK](../upstream/industrial/banto-tagclient-design.md)、[実装時の注意](../upstream/industrial/implementation-checklist.md)
 
+上流との差分（2026-11-12、A7）: スナップショットの[Hub運用ガイド](../upstream/industrial/banto-hub-operations.md) §17 のタグ CSV の列表は `stringEncoding`・`comment` が無く古い。上流 `origin/HEAD`（`de80f76c`）の `apps/banto-hub/src/lib/banto/tagCsv.ts` の `TAG_CSV_COLUMNS` は 19 列（`connection,group,name,address,dataType,stringLength,stringEncoding,unit,decimals,rawLo,rawHi,engLo,engHi,enabled,writable,tagKind,expression,retain,comment`）で、取込みはヘッダの厳密一致（`comment` の無い 18 列も受理）。SCADA の Hub 登録用 CSV（`hub-tag-csv.ts`）は 19 列に合わせた。上流の列が変わったら同モジュールと試験を更新する。
+
 `docs/upstream/industrial`は出典付きの参照スナップショットであり編集しない。上流の「実装済み」はIndustrial側の状態。monorepoへ戻す配置方針を維持し、独立開発を一時的な例外とする。
 
 ## 外部の参考実装の取り扱い

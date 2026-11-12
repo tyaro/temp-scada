@@ -21,6 +21,12 @@
     type BindingDraft,
     type BindingTableChange,
   } from "../equipment-binding-table";
+  import { downloadBlob } from "../download";
+  import {
+    hubTagCsv,
+    hubTagCsvFileName,
+    type HubTagCsvSkip,
+  } from "../hub-tag-csv";
   let {
     open,
     project,
@@ -192,9 +198,41 @@
         : ""
     }`;
   }
+  /** Names left out of the last Hub CSV because they cannot be split. */
+  let skipped = $state<HubTagCsvSkip[]>([]);
+  /** Exports saved bindings only, so unapplied cells must be applied first. */
+  function exportHubCsv() {
+    error = "";
+    if (changes.length) {
+      skipped = [];
+      message = "";
+      error = `未適用の変更が${changes.length}件あります。Hub 登録用 CSV は保存済みの割付から作るため、先に適用するか変更を取り消してください。`;
+      return;
+    }
+    const result = hubTagCsv(project, checking ? index : null);
+    skipped = result.invalid;
+    const notes = [
+      result.checked
+        ? `Hub のタグ一覧に既にある${result.registered}件を除きました。`
+        : "タグ一覧を使えないため照合せず、割付済みの名前をすべて入れました。",
+      result.invalid.length
+        ? `接続.グループ.タグに分けられない${result.invalid.length}件を除きました（下の一覧）。`
+        : "",
+    ].join("");
+    if (!result.rows) {
+      message = `書き出す名前がありません。${notes}`;
+      return;
+    }
+    downloadBlob(
+      new Blob([result.csv], { type: "text/csv;charset=utf-8" }),
+      hubTagCsvFileName(project.manifest.name),
+    );
+    message = `Hub 登録用 CSV に${result.rows}件を書き出しました。${notes}address 列を埋めてから Hub で取り込んでください。`;
+  }
   function close() {
     drafts.clear();
     prefixes.clear();
+    skipped = [];
     step = "edit";
     message = "";
     error = "";
@@ -291,6 +329,9 @@
           ></label
         >
         <button type="button" onclick={fill}>接頭辞から入れる</button>
+        <button type="button" onclick={exportHubCsv}
+          >Hub 登録用 CSV を書き出す</button
+        >
         <p aria-live="polite">
           変更 {changes.length}件{checking
             ? ` · 未解決 ${missing}件 · 型が合わない ${incompatible}件`
@@ -303,6 +344,29 @@
           : "タグ一覧を使えないため、照合していません。"}
       </p>
       {#if message}<p aria-live="polite">{message}</p>{/if}
+      {#if error}<p role="alert" class="error">{error}</p>{/if}
+      {#if skipped.length}
+        <div class="scroll skipped">
+          <table aria-label="書き出さなかった名前">
+            <thead
+              ><tr
+                ><th scope="col">機器番号</th><th scope="col">slot</th><th
+                  scope="col">外部名</th
+                ><th scope="col">理由</th></tr
+              ></thead
+            >
+            <tbody>
+              {#each skipped as row, i (i)}
+                <tr
+                  ><td>{row.equipmentCode}</td><td>{row.slotName}</td><td
+                    >{row.externalName}</td
+                  ><td>{row.reason}</td></tr
+                >
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
       <div class="scroll">
         <table aria-label={`${kind?.name}の割付`}>
           <thead>
@@ -415,6 +479,10 @@
     overflow: auto;
     border: 1px solid var(--banto-border);
     border-radius: 4px;
+  }
+  .skipped {
+    max-height: 20vh;
+    margin-bottom: 8px;
   }
   table {
     border-collapse: collapse;

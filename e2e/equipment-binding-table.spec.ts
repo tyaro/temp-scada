@@ -232,3 +232,45 @@ test("fills tag names from row prefixes and the slot suffixes set on the type", 
     { slotName: "current", externalName: "Demo.Water.Pump01.Pressure" },
   ]);
 });
+
+test("exports the saved names missing from the Hub tag list as a Hub tag CSV", async ({
+  page,
+}) => {
+  const project = structuredClone(sample);
+  project.equipment[0].bindings = [
+    { slotName: "running", externalName: "Demo.Pump01.Running" },
+    // In the tag list, so left out before any split.
+    { slotName: "current", externalName: "Demo.Water.Pump01.Pressure" },
+  ];
+  const dialog = await open(page, "light", project);
+  const exportButton = dialog.getByRole("button", {
+    name: "Hub 登録用 CSV を書き出す",
+  });
+  // Unapplied cells stop the export until they are applied or undone.
+  await dialog.getByLabel("P-102のcurrent").fill("Demo.Water.Pump02.Current");
+  await exportButton.click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "未適用の変更が1件あります。",
+  );
+  await dialog.getByRole("button", { name: "変更を取り消す" }).click();
+
+  const pending = page.waitForEvent("download");
+  await exportButton.click();
+  const download = await pending;
+  expect(download.suggestedFilename()).toBe(
+    "hub-tags-共有Symbol _ 読取slotの状態確認.csv",
+  );
+  const csv = await readFile((await download.path())!, "utf8");
+  expect(csv).toBe(
+    "\uFEFFconnection,group,name,address,dataType,stringLength,stringEncoding,unit,decimals,rawLo,rawHi,engLo,engHi,enabled,writable,tagKind,expression,retain,comment\r\n" +
+      "Demo,Pump01,Running,,bit,,,,,,,,,true,false,plc,,false,P-101 循環ポンプ / running\r\n",
+  );
+  await expect(dialog).toContainText(
+    "Hub 登録用 CSV に1件を書き出しました。Hub のタグ一覧に既にある1件を除きました。接続.グループ.タグに分けられない1件を除きました",
+  );
+  const skipped = dialog.getByRole("table", { name: "書き出さなかった名前" });
+  await expect(skipped.getByRole("row")).toHaveCount(2);
+  // Four parts cannot be told apart, so the name is not split.
+  await expect(skipped).toContainText("P-102");
+  await expect(skipped).toContainText("Demo.Water.Pump02.Run");
+});

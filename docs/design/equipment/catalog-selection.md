@@ -6,7 +6,7 @@
 
 `CatalogHost`はSDKの`RestClient.fetch_catalog()`を明示要求ごとに一度呼ぶ。SDKの値購読とは独立し、要求タグ0件でもcatalogを参照できる。自動poll・値購読・PLC接続は行わない。Project／接続先の置換、停止、新しい取得要求はローカルtokenを更新する。完了した結果も`accept`で現在tokenを照合し、古い成功・失敗を無視する。transport adapterは旧futureも取り消す。
 
-表示DTOはProject ID／revision、catalog revision／run ID／collection modeとタグ行だけ。行はexternalName、connection、group、name、dataType、unit、enabledを持つ。アドレス・式・資格情報・現在値・書込属性は含めない。外部名はopaqueな参照として扱い、ドット分割で階層を推測しない。connection／groupの明示metadataからUI用ツリーを生成する。
+表示DTOはProject ID／revision、catalog revision／run ID／collection modeとタグ行だけ。行はexternalName、connection、group、name、dataType、unit、enabledを持つ。アドレス・式・資格情報・現在値・書込属性は含めない。外部名はopaqueな参照として扱い、ドット分割で階層を推測しない。例外はHub登録用CSVの書き出し（A7、[機器台帳](equipment-register-design.md#hub-登録用-csv-を書き出す2026-11-12a7)）だけで、Hubにまだ無い名前の接続・グループ・タグ列を作るためにちょうど3つに分けられる名前だけを分ける。connection／groupの明示metadataからUI用ツリーを生成する。
 
 SDKの重複名検査を再利用する。空名・過大文字列・未知collection mode・JS safe integer外のmetadata・過大件数はDTOへ流さずエラーとする。未知dataTypeと無効タグは一覧で確認できるが割付候補にはしない。
 
