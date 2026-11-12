@@ -1,4 +1,5 @@
 import { equipmentUsages } from "../equipment";
+import { applyBindingTableChanges } from "../equipment-binding-table";
 import type { Project } from "../project";
 import type { EquipmentType, EquipmentInstance } from "../equipment";
 import type { EquipmentCommand } from "./commands";
@@ -82,6 +83,9 @@ export function applyEquipmentCommand(
       next.equipment = next.equipment!.filter(
         (item) => item.id !== command.equipmentId,
       );
+      return;
+    case "assign-equipment-tags":
+      applyBindingTableChanges(next, command.changes);
       return;
     default:
       return unhandledCommand(command);

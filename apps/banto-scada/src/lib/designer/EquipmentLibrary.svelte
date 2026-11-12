@@ -20,6 +20,8 @@
     oncommand,
     onsubmit,
     onopenusage,
+    onopentable,
+    tableDisabled = false,
     catalogSelection = sampleSelection,
   }: {
     project: Project;
@@ -30,6 +32,9 @@
     oncommand: (command: EditCommand) => unknown;
     onsubmit: (event: SubmitEvent) => void;
     onopenusage: (usage: EquipmentUsage) => void;
+    /** Opens the bulk binding table; the caller resolves workspace drafts first. */
+    onopentable?: () => void;
+    tableDisabled?: boolean;
   } = $props();
   function hasPreset(name: string) {
     return project.equipmentTypes?.some(
@@ -279,6 +284,12 @@
           })}>計器種別を追加</button
       >
     </div>
+    {#if onopentable}
+      <button
+        disabled={tableDisabled || !project.equipment?.length}
+        onclick={() => transition(() => onopentable())}>割付の一覧表</button
+      >
+    {/if}
     <div class="banto-field banto-field--stacked">
       <input
         class="banto-field-control"

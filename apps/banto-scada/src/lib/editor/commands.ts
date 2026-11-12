@@ -2,6 +2,7 @@ import type { EndpointConnection, ConnectionEnd } from "../connections";
 import type { BindingReplacementRequest } from "../binding-replacement";
 import type { PaintAlphaPatch } from "../selection-paint-alpha";
 import type { EquipmentSlot, EquipmentBinding, SlotType } from "../equipment";
+import type { BindingTableChange } from "../equipment-binding-table";
 import type { TrendDefinition } from "../trend-definitions";
 import type { DesiredRecordingPlan } from "../recording-plan";
 import type { ImageFit } from "../image-fit";
@@ -330,7 +331,8 @@ export type EquipmentCommand =
       name: string;
       bindings: EquipmentBinding[];
     }
-  | { type: "remove-equipment"; equipmentId: string };
+  | { type: "remove-equipment"; equipmentId: string }
+  | { type: "assign-equipment-tags"; changes: BindingTableChange[] };
 export type ProjectCommand =
   | {
       type: "save-recording-plan";
@@ -471,6 +473,7 @@ const commandScopes = {
   "create-equipment": "project",
   "update-equipment": "project",
   "remove-equipment": "project",
+  "assign-equipment-tags": "project",
 
   "create-symbol": "symbol",
   "update-symbol": "symbol",
