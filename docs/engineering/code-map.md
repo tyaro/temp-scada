@@ -171,6 +171,8 @@ Symbol宣言のCRUDは`editor/symbol-handler.ts`、全Text参照の導出は`sym
 
 読取表示結果の判別共用体・欠測文言・SIM判定・boolのtrue／false／unknownへの純粋な変換は`lib/slot-presentation.ts`が担当する。Goodだけに型付きvalueを持たせる。`read-slot-session.ts`は所有コピーを返し、`TextPrimitive`はinvalid理由も表示する。`slot-presentation.test.ts`と既存session／ブラウザ検証で確認する。[動的配色への前段と残り](../design/equipment/bool-slot-state.md)を参照する。
 
+機器種別のslotの状態の定義（`boolDisplay`・`stateDisplay`・`allowUnassigned`）による文字と色の純粋な評価は`lib/slot-state.ts`の`evaluateSlotState`が担当する。入力は`SlotPresentation`で、Good以外・整数でない値・型の不一致は不明、許可された未割付はfalse／該当なしとする。`slot-state.test.ts`で確認する。表示への接続は段階1-AのA3（[フロー図の差分 §5.2](../design/editor/flow-diagram-gap-2026-11-12.md)）。
+
 状態別文字色はTextの`boolColors`として`project.ts`と共通schemaに保存し、`symbol-slots.ts`／Rustの意味検証でbool宣言へ制限する。`Primitive`が型付き状態を色へ接続し、`BoolColors.svelte`と`forms/bool-colors.ts`が独立した編集フォームを持つ。`object-form.ts`は静的／number変更時の同時解除、Appのdraft事前検証は二重入力の競合拒否を担当する。[提供範囲と検証](../design/graphics/bool-text-colors.md)を参照する。
 
 図面外の読取状態は`lib/slot-status-summary.ts`が現在の可視配置経路・使用roleを収集し、既存resolverへ状態解決を委譲する。`SlotReadStatus.svelte`は件数・20件ページング・開閉のみを所有し、Appと`PreviewWindow`が描画と同じcontextを渡す。表示プレビュー（`alert`）では取得不能が1件以上で要約行を警告色とアイコンにし、全件なら「この画面の値はすべて取得できていません」と文で出す（編集中は中立のまま）。品質の語は`slot-presentation.ts`・`tag-presentation.ts`で「更新停止」「不良」に揃える。`slot-status-summary.test.ts`、`e2e/slot-status-summary.spec.ts`、既存の同一mount検証で確認する。[範囲と後続](../design/equipment/slot-status-summary.md)を参照する。

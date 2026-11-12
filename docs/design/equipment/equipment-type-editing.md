@@ -36,7 +36,7 @@
 
 - `state` の slot は `stateDisplay` を必ず持つ。`source` は `value`（ワードの値と一致）か `bits`（ワード内のビット 0〜31 が立っている）。`rows` は `match`・`text`・`color` の行で最大64件、上の行が優先。`otherwise` は該当なしの文字と色。`match` の重複は拒否する。値の範囲は −2147483648〜4294967295。
 - `bool` の slot は、任意で `boolDisplay`（`true`／`false` それぞれの文字と色）を持てる。`number` は表示の定義を持たない。
-- `allowUnassigned: true`（true のときだけ保存）は、未割付を異常として扱わず「なし」とする指定。評価は A2 で入れる。
+- `allowUnassigned: true`（true のときだけ保存）は、未割付を異常として扱わず「なし」とする指定。評価は `lib/slot-state.ts` の `evaluateSlotState`（A2）が行う。
 - 読取の型は、`state` を数値のワードとして読む（Rust の `EquipmentReadType::Number`、TS の `slotReadType`）。
 - 文字は64文字以内で改行なし。空文字（色だけの表示）は許す。
 - A1 の時点の編集画面は、型の選択に `state` を加え、型を変えたら合わない表示を外し、既存の表示と `allowUnassigned` を保存時に保つだけ。行の編集は A4。
