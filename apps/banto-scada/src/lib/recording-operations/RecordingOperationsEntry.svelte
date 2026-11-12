@@ -16,6 +16,7 @@
     service,
     asyncClient,
     expectedRevisions,
+    onopenmanagement,
     onclose,
   }: {
     openOwner: object | null;
@@ -25,6 +26,8 @@
     asyncClient?: AsyncOperationsClient;
     /** The last recording management inspection's revisions (P1-7). */
     expectedRevisions?: ExpectedRevisions;
+    /** Closes the dialog and opens recording management (step 4, P1-7). */
+    onopenmanagement?: () => void;
     onclose: () => void;
   } = $props();
   let mode = $state<"sync" | "async">(),
@@ -84,6 +87,7 @@
   blocked={blocked || service === undefined}
   {conflict}
   {expectedRevisions}
+  {onopenmanagement}
   {onclose}
 />
 <AsyncRecordingOperationsWorkspace
@@ -94,5 +98,6 @@
   blocked={blocked || asyncClient === undefined}
   {conflict}
   {expectedRevisions}
+  {onopenmanagement}
   {onclose}
 />

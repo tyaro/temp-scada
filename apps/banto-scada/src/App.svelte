@@ -4461,6 +4461,10 @@
   recordingManagementService
     ? lastRecordingSummary?.expected
     : undefined}
+  onopenmanagement={() => {
+    recordingOperationsOpen = null;
+    openRecordingManagement();
+  }}
   onclose={() => (recordingOperationsOpen = null)}
 />
 <RecordingManagementWorkspace
