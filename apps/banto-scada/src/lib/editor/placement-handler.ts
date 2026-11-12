@@ -87,6 +87,19 @@ export function applyObjectCreation(
         arrow: "none",
       },
     });
+  } else if (command.kind === "level") {
+    screen.objects.push({
+      ...base,
+      width: 40,
+      height: 120,
+      shape: {
+        type: "level",
+        direction: "up",
+        min: 0,
+        max: 100,
+        background: "#1e293b",
+      },
+    });
   } else {
     screen.objects.push({
       ...base,

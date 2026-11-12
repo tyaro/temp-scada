@@ -82,6 +82,7 @@ docs/
 
 - [slot表示Textの「状態の色に従う」指定](design/graphics/bool-text-colors.md)
 - [数値の書式（小数桁・単位）](design/graphics/numeric-format.md)
+- [液位（level 図形）](design/graphics/level.md)
 - [単色と枠線のα](design/graphics/color-alpha-design.md)
 - [実線・破線・点線](design/graphics/line-style-design.md)
 - [矩形・楕円の2色線形グラデーション](design/graphics/linear-gradient-design.md)

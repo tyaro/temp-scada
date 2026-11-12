@@ -9,6 +9,7 @@
   import { linearGradientEndpoints } from "./linear-gradient";
   import { lineDash, lineCap } from "./line-style";
   import TextPrimitive from "./TextPrimitive.svelte";
+  import { levelFillRect, levelFromReading, levelFromSlot } from "./level";
   import MultilineTextPrimitive from "./MultilineTextPrimitive.svelte";
   import type { ScreenObject } from "./project";
   import {
@@ -110,6 +111,16 @@
       ? slotState
       : undefined,
   );
+  const level = $derived.by(() => {
+    if (object.shape.type !== "level") return undefined;
+    const shape = object.shape;
+    return shape.slotBinding
+      ? levelFromSlot(shape, slotDisplay ?? slotPresentation("unbound"))
+      : levelFromReading(
+          shape,
+          shape.binding ? readings?.get(shape.binding.externalName) : undefined,
+        );
+  });
   const textColor = $derived(stateColor ?? color ?? object.fill!);
   const lineColor = $derived(stateColor ?? color ?? object.fill!);
   const shape = $derived("width" in object ? null : object.shape);
@@ -276,7 +287,72 @@
           : presentation.provenance}
         tagDetail={slotBinding ? slotDisplay?.reason : undefined}
         {onsummary}
-      />{/if}{/if}
+      />{/if}
+  {:else if object.shape.type === "level" && level}
+    {@const width = object.width}
+    {@const height = object.height}
+    {@const up = object.shape.direction === "up"}
+    {@const marker = level.state === "unavailable" ? "#9ca3af" : "#f59e0b"}
+    <g
+      data-level-state={level.state}
+      data-level-simulated={level.simulated ? "" : undefined}
+      ><title
+        >液位 · {object.shape.slotBinding?.slotName ??
+          object.shape.binding?.externalName ??
+          "未割当"} · {level.description}</title
+      >
+      {#if object.shape.background}<rect
+          {width}
+          {height}
+          fill={object.shape.background}
+        />{/if}
+      {#if level.fraction !== undefined}
+        <rect
+          data-level-fill
+          {...levelFillRect(
+            width,
+            height,
+            object.shape.direction,
+            level.fraction,
+          )}
+          fill={color ?? object.fill}
+          fill-opacity={(level.simulated ? 0.55 : 1) * (object.colorAlpha ?? 1)}
+        />
+        {#if level.simulated}<rect
+            x="0.5"
+            y="0.5"
+            width={Math.max(0, width - 1)}
+            height={Math.max(0, height - 1)}
+            fill="none"
+            stroke={color ?? object.fill}
+            stroke-dasharray="4 3"
+          />{/if}
+      {:else}
+        <rect
+          data-level-marker
+          x="0.5"
+          y="0.5"
+          width={Math.max(0, width - 1)}
+          height={Math.max(0, height - 1)}
+          fill="none"
+          stroke={marker}
+          stroke-dasharray={level.state === "unavailable" ? "4 3" : undefined}
+        />
+        {#if level.state !== "unavailable"}
+          {@const size = Math.max(4, Math.min(width, height) * 0.3)}
+          {@const high = level.state === "high"}
+          <polygon
+            fill={marker}
+            points={up
+              ? high
+                ? `${width / 2},0 ${width / 2 - size / 2},${size} ${width / 2 + size / 2},${size}`
+                : `${width / 2},${height} ${width / 2 - size / 2},${height - size} ${width / 2 + size / 2},${height - size}`
+              : high
+                ? `${width},${height / 2} ${width - size},${height / 2 - size / 2} ${width - size},${height / 2 + size / 2}`
+                : `0,${height / 2} ${size},${height / 2 - size / 2} ${size},${height / 2 + size / 2}`}
+          />{/if}
+      {/if}
+    </g>{/if}
 {:else if shape}
   <polyline
     points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}

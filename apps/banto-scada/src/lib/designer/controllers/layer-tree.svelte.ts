@@ -19,6 +19,7 @@ import type {
 } from "../../project";
 import type { EditCommand } from "../../editor";
 import { placementLabel } from "../../placement-label";
+import { shapeTagBinding } from "../../shape-bindings";
 import { folderNeighbour, type FolderDirection } from "../../folder-order";
 import { layerOrderSnapshot } from "../../relative-layer-order";
 
@@ -70,9 +71,8 @@ export function createLayerTreeController(host: LayerTreeHost) {
       placementLabel({ ...object, name: undefined }, host.symbols),
       object.shape.type,
       object.id,
-      ...(object.shape.type === "text"
-        ? [object.shape.text, object.shape.binding?.externalName ?? ""]
-        : []),
+      ...(object.shape.type === "text" ? [object.shape.text] : []),
+      shapeTagBinding(object.shape)?.externalName ?? "",
     ].join(" ");
   }
   function revealLayerObject(id: string) {

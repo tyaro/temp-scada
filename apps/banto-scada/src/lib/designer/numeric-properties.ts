@@ -60,6 +60,16 @@ export function objectFormValues(
         ? `@${object.shape.equipmentProperty.field}`
         : (object.shape.slotBinding?.slotName ?? "");
   }
+  if (object.shape.type === "level") {
+    values.levelDirection = object.shape.direction;
+    values.levelMin = String(object.shape.min);
+    values.levelMax = String(object.shape.max);
+    values.levelBackgroundMode = object.shape.background ? "color" : "none";
+    values.levelBackground = object.shape.background ?? "#1e293b";
+    if (!definition)
+      values.externalName = object.shape.binding?.externalName ?? "";
+    else values.slotName = object.shape.slotBinding?.slotName ?? "";
+  }
   if (object.shape.type === "symbol") {
     values.symbolId = object.shape.symbolId;
     if (!definition) values.equipmentId = object.shape.equipmentId ?? "";

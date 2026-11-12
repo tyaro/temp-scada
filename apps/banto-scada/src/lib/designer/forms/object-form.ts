@@ -82,6 +82,33 @@ export function objectFormCommand(
       patch.binding = externalName === "" ? null : { externalName };
     }
   }
+  if (selected.shape.type === "level") {
+    const direction = String(data.get("levelDirection") ?? "");
+    if (direction !== "up" && direction !== "right")
+      throw new Error("液位の向きを選択してください。");
+    const min = parseNumericProperty(String(data.get("levelMin") ?? ""));
+    const max = parseNumericProperty(String(data.get("levelMax") ?? ""));
+    if (!(min < max))
+      throw new Error("液位の下限は上限より小さくしてください。");
+    const background =
+      data.get("levelBackgroundMode") === "color"
+        ? String(data.get("levelBackground") ?? "")
+        : "";
+    patch.level = {
+      direction,
+      min,
+      max,
+      ...(background ? { background } : {}),
+    };
+    if (context.definition && data.has("slotName")) {
+      const slotName = String(data.get("slotName") ?? "");
+      patch.slotBinding = slotName ? { slotName } : null;
+    }
+    if (!context.definition) {
+      const externalName = String(data.get("externalName") ?? "");
+      patch.binding = externalName === "" ? null : { externalName };
+    }
+  }
   if (selected.shape.type === "symbol") {
     patch.symbolId = String(data.get("symbolId"));
     if (!context.definition && data.has("equipmentId"))

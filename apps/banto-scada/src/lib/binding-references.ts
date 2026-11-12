@@ -1,4 +1,5 @@
 import type { Project } from "./project";
+import { shapeTagBinding } from "./shape-bindings";
 export interface BindingUsage {
   name?: string;
   visible?: boolean;
@@ -19,8 +20,9 @@ export function bindingReferences(project: Project): BindingReference[] {
     for (const object of [...screen.objects].sort(
       (a, b) => a.order - b.order,
     )) {
-      if (object.shape.type !== "text" || !object.shape.binding) continue;
-      const externalName = object.shape.binding.externalName;
+      const binding = shapeTagBinding(object.shape);
+      if (!binding) continue;
+      const externalName = binding.externalName;
       let group = groups.get(externalName);
       if (!group) {
         group = { externalName, usages: [] };
@@ -33,7 +35,7 @@ export function bindingReferences(project: Project): BindingReference[] {
         screenName: screen.name,
         objectId: object.id,
         order: object.order,
-        text: object.shape.text,
+        text: object.shape.type === "text" ? object.shape.text : "",
       });
     }
   }

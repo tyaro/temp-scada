@@ -55,6 +55,12 @@
     {:else if object.shape.type === "text"}<path
         d="M4 5h16M12 5v15M8 20h8M4 5v3M20 5v3"
       />
+    {:else if object.shape.type === "level"}<rect
+        x="8"
+        y="3"
+        width="8"
+        height="18"
+      /><path d="M8 13h8v8H8z" fill="currentColor" />
     {:else if object.shape.type === "polyline"}<path
         d="M3 19h7V6h11M17 2l4 4-4 4"
       />

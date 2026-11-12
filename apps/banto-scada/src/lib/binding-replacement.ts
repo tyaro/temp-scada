@@ -1,5 +1,6 @@
 import { bindingReferences, type BindingUsage } from "./binding-references";
 import { groupFor } from "./geometric-groups";
+import { shapeTagBinding } from "./shape-bindings";
 import { parseProject, serializeProject, type Project } from "./project";
 
 export interface BindingReplacementRequest {
@@ -30,11 +31,8 @@ export function previewBindingReplacement(
   const blocked: BindingReplacementPreview["blocked"] = [];
   for (const screen of candidate.screens) {
     for (const object of screen.objects) {
-      if (
-        object.shape.type !== "text" ||
-        object.shape.binding?.externalName !== from
-      )
-        continue;
+      const binding = shapeTagBinding(object.shape);
+      if (binding?.externalName !== from) continue;
       if (object.locked || groupFor(screen, object.id))
         blocked.push({
           screenId: screen.id,
@@ -43,7 +41,7 @@ export function previewBindingReplacement(
             ? "ロックを解除してください"
             : "グループを解除してから編集してください",
         });
-      object.shape.binding.externalName = to;
+      binding.externalName = to;
     }
   }
   // Reuse the current saved-name and whole-Project contract, without trimming names.
@@ -83,10 +81,9 @@ export function applyBindingReplacement(
           .join("、"),
     );
   for (const screen of candidate.screens)
-    for (const object of screen.objects)
-      if (
-        object.shape.type === "text" &&
-        object.shape.binding?.externalName === request.from
-      )
-        object.shape.binding.externalName = request.to;
+    for (const object of screen.objects) {
+      const binding = shapeTagBinding(object.shape);
+      if (binding?.externalName === request.from)
+        binding.externalName = request.to;
+    }
 }

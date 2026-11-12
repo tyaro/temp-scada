@@ -8,6 +8,7 @@
     type EquipmentContext,
   } from "./symbol-slots";
   import { definedSlotState } from "./slot-state";
+  import { shapeSlotName } from "./shape-bindings";
   import type { ScreenObject, SymbolDefinition } from "./project";
   import type { TagReadings } from "./tag-presentation";
   import { objectTransform } from "./rotation";
@@ -69,10 +70,7 @@
               fit={child.shape.fit}
             />{/if}
         {:else}
-          {@const slotName =
-            child.shape.type === "text"
-              ? child.shape.slotBinding?.slotName
-              : undefined}
+          {@const slotName = shapeSlotName(child.shape)}
           {@const slotDisplay =
             slotName === undefined
               ? undefined
@@ -99,7 +97,9 @@
               equipmentContext,
             )}
             {slotDisplay}
-            slotState={slotName === undefined || !slotDisplay
+            slotState={slotName === undefined ||
+            !slotDisplay ||
+            child.shape.type !== "text"
               ? undefined
               : definedSlotState(
                   symbolEquipmentSlot(

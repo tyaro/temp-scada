@@ -212,8 +212,9 @@ export function copyObjectSnapshot(
   if (
     objects.some(
       (object) =>
-        object.shape.type === "text" &&
-        (object.shape.slotBinding || object.shape.equipmentProperty),
+        (object.shape.type === "level" && object.shape.slotBinding) ||
+        (object.shape.type === "text" &&
+          (object.shape.slotBinding || object.shape.equipmentProperty)),
     )
   )
     throw new Error(
