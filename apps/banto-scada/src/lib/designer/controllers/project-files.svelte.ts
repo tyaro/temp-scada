@@ -1,4 +1,5 @@
 import { untrack } from "svelte";
+import { downloadBlob } from "../../download";
 import { AssetStore } from "../../image-assets";
 import { readProjectFile, writeProjectPackage } from "../../project-package";
 import { serializeProject, type Project } from "../../project";
@@ -142,15 +143,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       const blob = packaged
         ? await writeProjectPackage(snapshot, store)
         : new Blob([serializeProject(snapshot)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      try {
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = packaged ? "project.bantoscada" : "project.json";
-        link.click();
-      } finally {
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }
+      downloadBlob(blob, packaged ? "project.bantoscada" : "project.json");
       if (generation === host.generation) {
         baseline = projectContent(snapshot);
         baselineSource = "download";

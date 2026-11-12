@@ -126,7 +126,8 @@
   - 保存するのは従来どおり slot ごとのタグ名。見つからないタグは表で示し、手で直せる。
   - 実装: slot の任意の `tagSuffix`（schema `$defs.equipmentSlot`、TS `EquipmentSlot`、機器種別の編集の「タグ名の末尾」）。接頭辞は保存せず、割付の一覧表の「接頭辞」列と「接頭辞から入れる」で入れる（純関数 `prefixFill`）。`allowUnassigned` の slot で一覧にない名前は空欄（採用・未割付）にする。規則は[機器台帳](../equipment/equipment-register-design.md#接頭辞から入れる2026-11-12a5b)。schemaVersion は据え置き。試験: `equipment-binding-table.test.ts`、`equipment-type-editing.test.ts`、`examples/equipment-cases.json`（Rust・TS 共通の契約）、`e2e/equipment-binding-table.spec.ts`。
 - **A6 画面上の直接結合**（優先度を下げる）: 機器を介さない文字・配管は、bool の色と文字だけに絞る。多値の表示は機器を介することを基本にする。
-- **A7 Hub 登録用の一覧の書き出し**（A5b の後）: 機器種別と割付から、統一した命名規則のタグ名で Hub に登録する一覧（CSV か JSON）を書き出す。
+- **A7 Hub 登録用の一覧の書き出し**（2026-11-12 実装）: 機器種別と割付から、統一した命名規則のタグ名で Hub に登録する一覧（CSV か JSON）を書き出す。
+  - 実装: 割付の一覧表の「Hub 登録用 CSV を書き出す」。Hub のタグ CSV 取込みと同じ 19 列・BOM・CRLF で、タグ一覧にない名前（新規登録分）だけを書き出す。外部名は書き出しでだけ `接続.グループ.タグ` に分け、分けられない名前は一覧で示して除く。address は空欄で、利用者が埋めてから Hub で取り込む。規則は[機器台帳](../equipment/equipment-register-design.md#hub-登録用-csv-を書き出す2026-11-12a7)。試験: `hub-tag-csv.test.ts`、`e2e/equipment-binding-table.spec.ts`。
 
 ### 5.3 段階1-B〜F
 

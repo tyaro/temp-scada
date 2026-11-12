@@ -232,3 +232,52 @@ test("fills tag names from row prefixes and the slot suffixes set on the type", 
     { slotName: "current", externalName: "Demo.Water.Pump01.Pressure" },
   ]);
 });
+
+test("exports the saved names as a Hub tag CSV without checking them against sample candidates", async ({
+  page,
+}) => {
+  const project = structuredClone(sample);
+  project.equipment[0].bindings = [
+    { slotName: "running", externalName: "Demo.Pump01.Running" },
+    // A sample candidate, not a Hub tag: still written (no Hub tag list here).
+    { slotName: "current", externalName: "Demo.Water.Pump01.Pressure" },
+  ];
+  project.equipment[1].bindings = [
+    // Only the tag part may hold dots: split at the first two.
+    { slotName: "running", externalName: "Demo.Water.Pump02.Run" },
+    { slotName: "current", externalName: "Pump02Current" },
+  ];
+  const dialog = await open(page, "light", project);
+  const exportButton = dialog.getByRole("button", {
+    name: "Hub 登録用 CSV を書き出す",
+  });
+  // Unapplied cells stop the export until they are applied or undone.
+  await dialog.getByLabel("P-102のcurrent").fill("Demo.Water.Pump02.Current");
+  await exportButton.click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "未適用の変更が1件あります。",
+  );
+  await dialog.getByRole("button", { name: "変更を取り消す" }).click();
+
+  const pending = page.waitForEvent("download");
+  await exportButton.click();
+  const download = await pending;
+  expect(download.suggestedFilename()).toBe(
+    "hub-tags-共有Symbol _ 読取slotの状態確認.csv",
+  );
+  const csv = await readFile((await download.path())!, "utf8");
+  expect(csv).toBe(
+    "\uFEFFconnection,group,name,address,dataType,stringLength,stringEncoding,unit,decimals,rawLo,rawHi,engLo,engHi,enabled,writable,tagKind,expression,retain,comment\r\n" +
+      "Demo,Pump01,Running,,bit,,,,,,,,,true,false,plc,,false,P-101 循環ポンプ / running\r\n" +
+      "Demo,Water,Pump01.Pressure,,,,,,,,,,,true,false,plc,,false,P-101 循環ポンプ / current\r\n" +
+      "Demo,Water,Pump02.Run,,bit,,,,,,,,,true,false,plc,,false,P-102 予備ポンプ / running\r\n",
+  );
+  await expect(dialog).toContainText(
+    "Hub 登録用 CSV に3件を書き出しました。サンプル候補は Hub のタグ一覧ではないため照合せず、割付済みの名前をすべて入れました。接続.グループ.タグに分けられない1件を除きました",
+  );
+  const skipped = dialog.getByRole("table", { name: "書き出さなかった名前" });
+  await expect(skipped.getByRole("row")).toHaveCount(2);
+  // Without two dots the name has no connection and group.
+  await expect(skipped).toContainText("P-102");
+  await expect(skipped).toContainText("Pump02Current");
+});
