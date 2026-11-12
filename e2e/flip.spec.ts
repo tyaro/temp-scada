@@ -191,3 +191,43 @@ test("flipping mirrors a rectangle and a Symbol in place, keeps Symbol Text read
   expect(preview.det).toBeGreaterThan(0);
   expect(preview.d).toBeGreaterThan(0);
 });
+
+test("a selection that contains a group member cannot be flipped", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await fixtureEntry(page);
+  await page.goto("/");
+  await button(page, "編集").click();
+  const project = flipProject();
+  const secondId = "0199f6aa-0000-7000-8000-000000000a02";
+  project.screens[0].objects.push({
+    ...structuredClone(
+      project.screens[0].objects.find((o: any) => o.id === rectangleId),
+    ),
+    id: secondId,
+    order: 901,
+    y: 120,
+  });
+  await openProject(page, {
+    name: "flip-group.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await selectPanel(page, "レイヤー");
+  await page.locator(`button[data-layer-id="${rectangleId}"]`).click();
+  await page
+    .locator(`button[data-layer-id="${secondId}"]`)
+    .click({ modifiers: ["Shift"] });
+  await button(page, "グループ化").click();
+  // The group alone, then the group mixed with another placement.
+  await expect(await editMenu(page, "左右反転")).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await page
+    .locator(`button[data-layer-id="${symbolId}"]`)
+    .click({ modifiers: ["Shift"] });
+  await expect(await editMenu(page, "左右反転")).toBeDisabled();
+  await expect(
+    page.getByRole("menuitem", { name: "上下反転", exact: true }),
+  ).toBeDisabled();
+});

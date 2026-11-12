@@ -173,10 +173,19 @@ export function createDesignerActions(host: DesignerActionsHost) {
       },
     ];
   }
-  /** Unlocked mirrorable placements only; an active group keeps its own rotation command. */
+  /**
+   * Unlocked mirrorable placements only. Any selected group member blocks the
+   * flip (a group alone or mixed with others), since members would mirror
+   * around their own pivots and change the group's artwork.
+   */
   function flipBlocked(): boolean {
     const ids = host.editing.selectedIds;
-    if (host.editing.mutationBlocked || !ids.length || host.groups?.groupId)
+    if (
+      host.editing.mutationBlocked ||
+      !ids.length ||
+      host.groups?.groupId ||
+      host.groups?.containsGroups
+    )
       return true;
     const selected = host.editing.objects.filter((object) =>
       ids.includes(object.id),
