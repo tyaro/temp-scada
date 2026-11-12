@@ -2,7 +2,7 @@
   import { Modal } from "@banto/ui";
   import { SvelteMap } from "svelte/reactivity";
   import type { Project } from "../project";
-  import type { CatalogSelection } from "../catalog-session";
+  import { sampleSelection, type CatalogSelection } from "../catalog-session";
   import {
     bindingCell,
     bindingTableChanges,
@@ -209,12 +209,16 @@
       error = `未適用の変更が${changes.length}件あります。Hub 登録用 CSV は保存済みの割付から作るため、先に適用するか変更を取り消してください。`;
       return;
     }
-    const result = hubTagCsv(project, checking ? index : null);
+    // Sample candidates are not the Hub's tag list: leave nothing out by them.
+    const hubChecked = checking && catalogSelection !== sampleSelection;
+    const result = hubTagCsv(project, hubChecked ? index : null);
     skipped = result.invalid;
     const notes = [
       result.checked
         ? `Hub のタグ一覧に既にある${result.registered}件を除きました。`
-        : "タグ一覧を使えないため照合せず、割付済みの名前をすべて入れました。",
+        : checking
+          ? "サンプル候補は Hub のタグ一覧ではないため照合せず、割付済みの名前をすべて入れました。"
+          : "タグ一覧を使えないため照合せず、割付済みの名前をすべて入れました。",
       result.invalid.length
         ? `接続.グループ.タグに分けられない${result.invalid.length}件を除きました（下の一覧）。`
         : "",

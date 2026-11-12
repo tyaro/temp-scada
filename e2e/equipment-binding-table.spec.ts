@@ -233,13 +233,13 @@ test("fills tag names from row prefixes and the slot suffixes set on the type", 
   ]);
 });
 
-test("exports the saved names missing from the Hub tag list as a Hub tag CSV", async ({
+test("exports the saved names as a Hub tag CSV without checking them against sample candidates", async ({
   page,
 }) => {
   const project = structuredClone(sample);
   project.equipment[0].bindings = [
     { slotName: "running", externalName: "Demo.Pump01.Running" },
-    // In the tag list, so left out before any split.
+    // A sample candidate, not a Hub tag: still written (no Hub tag list here).
     { slotName: "current", externalName: "Demo.Water.Pump01.Pressure" },
   ];
   project.equipment[1].bindings = [
@@ -269,10 +269,11 @@ test("exports the saved names missing from the Hub tag list as a Hub tag CSV", a
   expect(csv).toBe(
     "\uFEFFconnection,group,name,address,dataType,stringLength,stringEncoding,unit,decimals,rawLo,rawHi,engLo,engHi,enabled,writable,tagKind,expression,retain,comment\r\n" +
       "Demo,Pump01,Running,,bit,,,,,,,,,true,false,plc,,false,P-101 循環ポンプ / running\r\n" +
+      "Demo,Water,Pump01.Pressure,,,,,,,,,,,true,false,plc,,false,P-101 循環ポンプ / current\r\n" +
       "Demo,Water,Pump02.Run,,bit,,,,,,,,,true,false,plc,,false,P-102 予備ポンプ / running\r\n",
   );
   await expect(dialog).toContainText(
-    "Hub 登録用 CSV に2件を書き出しました。Hub のタグ一覧に既にある1件を除きました。接続.グループ.タグに分けられない1件を除きました",
+    "Hub 登録用 CSV に3件を書き出しました。サンプル候補は Hub のタグ一覧ではないため照合せず、割付済みの名前をすべて入れました。接続.グループ.タグに分けられない1件を除きました",
   );
   const skipped = dialog.getByRole("table", { name: "書き出さなかった名前" });
   await expect(skipped.getByRole("row")).toHaveCount(2);
