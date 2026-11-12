@@ -86,24 +86,33 @@ test("slot-bound Text shows the equipment-type state definition", async ({
     target.style.cssText =
       "position:fixed;left:0;top:0;width:960px;height:700px";
     document.body.append(target);
-    const app = mount(ScreenPainting, {
-      target,
-      props: {
-        screen: project.screens[0],
-        screens: project.screens,
-        symbols: project.symbols,
-        equipmentContext: {
-          equipmentTypes: project.equipmentTypes,
-          equipment: project.equipment,
-          readSlot: (_id: string, _slot: string, _type: string, name: string) =>
-            values[name],
+    const render = () =>
+      mount(ScreenPainting, {
+        target,
+        props: {
+          screen: project.screens[0],
+          screens: project.screens,
+          symbols: project.symbols,
+          equipmentContext: {
+            equipmentTypes: project.equipmentTypes,
+            equipment: project.equipment,
+            readSlot: (
+              _id: string,
+              _slot: string,
+              _type: string,
+              name: string,
+            ) => values[name],
+          },
         },
-      },
-    });
-    await tick();
-    await new Promise((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(resolve)),
-    );
+      });
+    const flush = async () => {
+      await tick();
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      );
+    };
+    let app = render();
+    await flush();
     const read = (equipmentId: string, childId: string) =>
       [...target.querySelectorAll("[data-symbol-id]")]
         .filter((svg) =>
@@ -127,8 +136,27 @@ test("slot-bound Text shows the equipment-type state definition", async ({
       p102Mode: read(p102.id, value.id),
     };
     unmount(app);
+    // A Good but fractional SIM word cannot be a state: invalid, not raw text.
+    values["P102.Mode"] = {
+      state: "good",
+      label: "Good",
+      text: "SIM · 1.5",
+      value: { type: "number", value: 1.5 },
+      provenance: { ...provenance, valueSource: "simulation" },
+    };
+    app = render();
+    await flush();
+    const invalid = {
+      text: read(p102.id, value.id),
+      state: [
+        ...target.querySelectorAll(
+          `[data-symbol-child-id="${value.id}"] [data-tag-state]`,
+        ),
+      ].map((node) => node.getAttribute("data-tag-state")),
+    };
+    unmount(app);
     target.remove();
-    return result;
+    return { ...result, invalid };
   }, structuredClone(sample));
   // Bad keeps the reason; an allowed unassigned state is "none" (otherwise).
   expect(texts.p101Run.every((text) => text === "-- · 不良")).toBe(true);
@@ -138,4 +166,9 @@ test("slot-bound Text shows the equipment-type state definition", async ({
   expect(texts.p102Mode.every((text) => text === "故障")).toBe(true);
   expect(texts.p102Mode.length).toBeGreaterThan(0);
   expect(texts.p101Mode.length).toBeGreaterThan(0);
+  expect(texts.invalid.text.length).toBeGreaterThan(0);
+  expect(
+    texts.invalid.text.every((text) => text === "SIM · -- · 値が不正"),
+  ).toBe(true);
+  expect(texts.invalid.state).toContain("invalid");
 });

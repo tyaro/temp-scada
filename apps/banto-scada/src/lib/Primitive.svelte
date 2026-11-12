@@ -91,6 +91,18 @@
           binding ? readings?.get(binding.externalName) : undefined,
         ),
   );
+  /**
+   * The defined state replaces the reading when it is known, or when a Good
+   * reading cannot be a state (e.g. a fractional word reads as invalid).
+   * Other unknown readings keep their own text and reason.
+   */
+  const definedState = $derived(
+    slotBinding &&
+      slotState &&
+      (slotState.state === "known" || presentation.state === "good")
+      ? slotState
+      : undefined,
+  );
   const textColor = $derived.by(() => {
     if (object.shape.type === "text" && object.shape.boolColors) {
       const state = boolSlotState(
@@ -250,8 +262,8 @@
         text={metadata
           ? metadata.text
           : bound
-            ? slotBinding && slotState?.state === "known"
-              ? slotStateText(slotState)
+            ? definedState
+              ? slotStateText(definedState)
               : presentation.text
             : object.shape.text}
         equipmentProperty={metadata}
@@ -261,11 +273,17 @@
         color={textColor}
         numeric={bound}
         tagName={slotBinding?.slotName ?? binding?.externalName}
-        tagState={bound ? presentation.state : undefined}
+        tagState={bound
+          ? definedState?.state === "unknown"
+            ? definedState.reason
+            : presentation.state
+          : undefined}
         tagLabel={bound
-          ? slotBinding && slotState?.state === "known" && slotState.none
+          ? definedState?.state === "known" && definedState.none
             ? "未割付（なしとして表示）"
-            : presentation.label
+            : definedState?.state === "unknown"
+              ? slotPresentation(definedState.reason).label
+              : presentation.label
           : undefined}
         provenance={slotBinding
           ? slotDisplay?.provenance

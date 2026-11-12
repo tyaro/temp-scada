@@ -131,7 +131,7 @@ export function definedSlotState(
   return evaluateSlotState(slot, reading);
 }
 
-/** Display text of a known state; an empty label (color only) stays empty. */
+/** Display text of an evaluation with the SIM prefix; an empty label (color only) stays empty. */
 export function slotStateText(evaluation: SlotStateEvaluation): string {
   if (!evaluation.simulated) return evaluation.text;
   return evaluation.text === "" ? "SIM" : `SIM · ${evaluation.text}`;
