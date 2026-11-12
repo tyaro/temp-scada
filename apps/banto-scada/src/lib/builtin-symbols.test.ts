@@ -52,6 +52,34 @@ describe("built-in parts", () => {
     },
   );
 
+  // Pipes attach to the frame's edge midpoints (connection-geometry.ts symbolAnchorPoint).
+  // The pump and valve predate this rule and are left as they are.
+  it.each(
+    BUILTIN_PARTS.filter(
+      (part) => part.template !== "pump" && part.template !== "valve",
+    ).map((part) => [part.template]),
+  )("%s puts every pipe opening on an edge midpoint", (template) => {
+    const { width, height, objects } = builtinDefinition(template);
+    const anchors = [
+      [width / 2, 0],
+      [width, height / 2],
+      [width / 2, height],
+      [0, height / 2],
+    ];
+    const openings = objects.flatMap((object) =>
+      object.shape.type === "polyline" && object.shape.strokeWidth === 5
+        ? [object.shape.points]
+        : [],
+    );
+    for (const points of openings)
+      expect(
+        [points[0], points.at(-1)!].some((p) =>
+          anchors.some(([x, y]) => p.x === x && p.y === y),
+        ),
+        JSON.stringify(points),
+      ).toBe(true);
+  });
+
   it.each(BUILTIN_PARTS.map((part) => [part.template]))(
     "%s is placed at its own size and survives a save round trip",
     (template) => {
