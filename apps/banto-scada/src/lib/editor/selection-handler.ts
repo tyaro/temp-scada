@@ -16,6 +16,7 @@ import { parseLineStyle, setLineStyle } from "../line-style";
 import type { SelectionCommand } from "./commands";
 import { applyFolderAssignment } from "./folder-handler";
 import { unhandledCommand } from "./unhandled-command";
+import { flipPlacements } from "../flip";
 
 /** The caller has checked locks; this handler validates the whole selection before edits. */
 export function applySelectionCommand(
@@ -335,6 +336,8 @@ export function applySelectionCommand(
       if (command.convertDefinitionSymbols && object.shape.type === "symbol")
         object.shape.colorMode = "monochrome";
     });
+  } else if (command.type === "flip") {
+    flipPlacements(objects, command.axis);
   } else if (command.type === "move-many") {
     if (!Number.isFinite(command.dx) || !Number.isFinite(command.dy))
       throw new Error("移動量は有限の数値にしてください");

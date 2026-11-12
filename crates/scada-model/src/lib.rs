@@ -1381,6 +1381,48 @@ mod tests {
         assert!(Project::from_json(&old.to_string()).is_err());
     }
     #[test]
+    fn flip_shares_the_browser_contract() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/flip-cases.json")).unwrap();
+        let sample = |name: &str| -> Value {
+            serde_json::from_str(match name {
+                "shape-paint" => include_str!("../../../examples/shape-paint.project.json"),
+                "process" => include_str!("../../../examples/process.project.json"),
+                "symbol-image" => include_str!("../../../examples/symbol-image.project.json"),
+                "trend" => include_str!("../../../examples/trend.project.json"),
+                other => panic!("unknown sample {other}"),
+            })
+            .unwrap()
+        };
+        for case in cases["placements"].as_array().unwrap() {
+            let mut value = sample(case["sample"].as_str().unwrap());
+            let owners = case["owner"].as_str().unwrap();
+            if let Some(object) = case.get("object") {
+                value[owners][0]["objects"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(object.clone());
+            } else {
+                let object = value[owners]
+                    .as_array_mut()
+                    .unwrap()
+                    .iter_mut()
+                    .flat_map(|owner| owner["objects"].as_array_mut().unwrap().iter_mut())
+                    .find(|o| o["shape"]["type"] == case["shape"])
+                    .unwrap();
+                for (key, flag) in case["set"].as_object().unwrap() {
+                    object[key] = flag.clone();
+                }
+            }
+            assert_eq!(
+                Project::from_json(&value.to_string()).is_ok(),
+                case["valid"] == true,
+                "{}",
+                case["name"]
+            );
+        }
+    }
+    #[test]
     fn shape_paint_shares_the_browser_contract() {
         let pattern =
             Project::from_json(include_str!("../../../examples/pattern-paint.project.json"))

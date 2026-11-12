@@ -8,7 +8,8 @@ import {
 import { snapCoordinate, vertexPosition } from "./snap";
 
 type Bounds = Geometry;
-type Placement = { x: number; y: number; rotation?: number };
+type Flip = { flipX?: boolean; flipY?: boolean };
+type Placement = { x: number; y: number; rotation?: number } & Flip;
 type Layout = Placement & { width: number; height: number };
 type Line = Placement & { shape: { points: Point[] } };
 
@@ -39,6 +40,60 @@ export function rotatePoint(point: Point, pivot: Point, angle: number): Point {
   );
   return { x: pivot.x + delta.x, y: pivot.y + delta.y };
 }
+export function isFlipped(object: Flip): boolean {
+  return object.flipX === true || object.flipY === true;
+}
+/** Placement without rotation or mirroring keeps every legacy fast path. */
+function isIdentity(object: Placement): boolean {
+  return !normalizeRotation(object.rotation ?? 0) && !isFlipped(object);
+}
+function mirrorVector(point: Point, flip: Flip): Point {
+  return {
+    x: flip.flipX === true ? -point.x : point.x,
+    y: flip.flipY === true ? -point.y : point.y,
+  };
+}
+/** Linear part local → owner: mirror first, then rotate. */
+export function placementVector(object: Placement, vector: Point): Point {
+  return rotateVector(mirrorVector(vector, object), object.rotation ?? 0);
+}
+/** Inverse of `placementVector`. */
+export function placementVectorInverse(
+  object: Placement,
+  vector: Point,
+): Point {
+  return mirrorVector(rotateVector(vector, -(object.rotation ?? 0)), object);
+}
+/** Mirror around the pivot, then rotate around it (local coordinates). */
+export function placePoint(
+  point: Point,
+  pivot: Point,
+  object: Placement,
+): Point {
+  if (!isFlipped(object))
+    return rotatePoint(point, pivot, object.rotation ?? 0);
+  const delta = placementVector(object, {
+    x: point.x - pivot.x,
+    y: point.y - pivot.y,
+  });
+  return { x: pivot.x + delta.x, y: pivot.y + delta.y };
+}
+/**
+ * Text keeps a readable orientation inside a mirrored Symbol: its position is
+ * mirrored by the parent, and the glyphs are mirrored back around the Text body
+ * center (odd parity per axis only).
+ */
+export function readableChild<T extends Flip & { shape: { type: string } }>(
+  child: T,
+  parent: Flip,
+): T {
+  if (child.shape.type !== "text" || !isFlipped(parent)) return child;
+  return {
+    ...child,
+    flipX: (child.flipX === true) !== (parent.flipX === true),
+    flipY: (child.flipY === true) !== (parent.flipY === true),
+  };
+}
 export function rotationPivot(object: Layout | Line): Point {
   if ("width" in object) return { x: object.width / 2, y: object.height / 2 };
   const xs = object.shape.points.map((p) => p.x),
@@ -49,22 +104,35 @@ export function rotationPivot(object: Layout | Line): Point {
   };
 }
 export function objectToWorld(object: Layout | Line, point: Point): Point {
-  const local = rotatePoint(point, rotationPivot(object), object.rotation ?? 0);
+  const local = placePoint(point, rotationPivot(object), object);
   return { x: object.x + local.x, y: object.y + local.y };
 }
 export function worldToObject(object: Layout | Line, point: Point): Point {
-  return rotatePoint(
-    { x: point.x - object.x, y: point.y - object.y },
-    rotationPivot(object),
-    -(object.rotation ?? 0),
-  );
+  const local = { x: point.x - object.x, y: point.y - object.y };
+  const pivot = rotationPivot(object);
+  if (!isFlipped(object))
+    return rotatePoint(local, pivot, -(object.rotation ?? 0));
+  const delta = placementVectorInverse(object, {
+    x: local.x - pivot.x,
+    y: local.y - pivot.y,
+  });
+  return { x: pivot.x + delta.x, y: pivot.y + delta.y };
 }
-/** Rotate the conservative painted rectangle; keep the result local to x/y. */
+/** Mirror and rotate the conservative painted rectangle; keep the result local to x/y. */
 export function rotatedBounds(
   bounds: Bounds,
   pivot: Point,
   angle: number,
+  flip: Flip = {},
 ): Bounds {
+  if (isFlipped(flip))
+    bounds = {
+      x: flip.flipX === true ? 2 * pivot.x - bounds.x - bounds.width : bounds.x,
+      y:
+        flip.flipY === true ? 2 * pivot.y - bounds.y - bounds.height : bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+    };
   if (normalizeRotation(angle) === 0) return { ...bounds };
   const points = [
     { x: bounds.x, y: bounds.y },
@@ -89,8 +157,8 @@ export function resizeRotated(
   delta: Point,
   step: number | null,
 ): Geometry {
-  const angle = normalizeRotation(original.rotation ?? 0);
-  if (!angle) return resizeGeometry(original, handle, delta, step);
+  if (isIdentity(original))
+    return resizeGeometry(original, handle, delta, step);
   if (![delta.x, delta.y].every(Number.isFinite))
     throw new Error("有限の移動量が必要です");
   if (!delta.x && !delta.y)
@@ -106,9 +174,9 @@ export function resizeRotated(
   });
   let change = delta;
   if (handle.length === 1) {
-    const normal = rotateVector(
+    const normal = placementVector(
+      original,
       handle === "e" || handle === "w" ? { x: 1, y: 0 } : { x: 0, y: 1 },
-      angle,
     );
     let distance = delta.x * normal.x + delta.y * normal.y;
     if (Math.abs(distance) < 1e-12)
@@ -131,7 +199,7 @@ export function resizeRotated(
       x: snapCoordinate(start.x + delta.x, step) - start.x,
       y: snapCoordinate(start.y + delta.y, step) - start.y,
     };
-  const localDelta = rotateVector(change, -angle);
+  const localDelta = placementVectorInverse(original, change);
   const raw = resizeGeometry(original, handle, localDelta, null, false);
   const beforeCenter = {
     x: original.x + original.width / 2,
@@ -141,7 +209,7 @@ export function resizeRotated(
     x: raw.x + raw.width / 2 - beforeCenter.x,
     y: raw.y + raw.height / 2 - beforeCenter.y,
   };
-  const centerDelta = rotateVector(localCenterDelta, angle);
+  const centerDelta = placementVector(original, localCenterDelta);
   return {
     x: beforeCenter.x + centerDelta.x - raw.width / 2,
     y: beforeCenter.y + centerDelta.y - raw.height / 2,
@@ -167,7 +235,7 @@ export function replaceRotatedVertex(
   const before = rotationPivot(original),
     after = rotationPivot({ ...original, shape: { points } });
   const pivotDelta = { x: before.x - after.x, y: before.y - after.y };
-  const rotatedDelta = rotateVector(pivotDelta, original.rotation ?? 0);
+  const rotatedDelta = placementVector(original, pivotDelta);
   return {
     x: original.x + (pivotDelta.x - rotatedDelta.x),
     y: original.y + (pivotDelta.y - rotatedDelta.y),
@@ -191,7 +259,7 @@ export function moveRotatedVertex(
       y: original.y,
       points: original.shape.points.map((p) => ({ ...p })),
     };
-  if (!normalizeRotation(original.rotation ?? 0))
+  if (isIdentity(original))
     return replaceRotatedVertex(
       original,
       index,
@@ -204,21 +272,31 @@ export function moveRotatedVertex(
 
 export function rotationTransform(object: Layout | Line): string | undefined {
   const angle = normalizeRotation(object.rotation ?? 0);
-  if (!angle) return undefined;
+  if (!angle && !isFlipped(object)) return undefined;
   const pivot = rotationPivot(object);
-  return `rotate(${angle} ${pivot.x} ${pivot.y})`;
+  const parts: string[] = [];
+  if (angle) parts.push(`rotate(${angle} ${pivot.x} ${pivot.y})`);
+  if (isFlipped(object)) {
+    const [sx, ex] = object.flipX === true ? [-1, 2 * pivot.x] : [1, 0];
+    const [sy, ey] = object.flipY === true ? [-1, 2 * pivot.y] : [1, 0];
+    parts.push(`matrix(${sx} 0 0 ${sy} ${ex} ${ey})`);
+  }
+  return parts.join(" ");
 }
 export function objectTransform(object: Layout | Line): string {
   const rotation = rotationTransform(object);
   return `translate(${object.x} ${object.y})${rotation ? ` ${rotation}` : ""}`;
 }
 
-/** Standard resize cursor nearest to the actual rotated handle direction. */
+/** Standard resize cursor nearest to the actual mirrored and rotated handle direction. */
 export function rotatedResizeCursor(
   handle: ResizeHandle,
   angle: number,
+  flip: Flip = {},
 ): string {
   const directions = ["e", "se", "s", "sw", "w", "nw", "n", "ne"] as const;
-  const index = directions.indexOf(handle);
+  let index = directions.indexOf(handle);
+  if (flip.flipX === true) index = (12 - index) % 8;
+  if (flip.flipY === true) index = (8 - index) % 8;
   return `${directions[Math.round(normalizeRotation(index * 45 + angle) / 45) % 8]}-resize`;
 }

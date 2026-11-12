@@ -1806,6 +1806,16 @@
       });
     });
   }
+  /** Screen-space mirror of every selected placement around its own pivot. */
+  function flipSelection(axis: "x" | "y") {
+    if (mutationBlocked || !selectedIds.length) return;
+    const ids = [...selectedIds],
+      scope = folderScope;
+    transition(() => {
+      if (scope !== folderScope || mode !== "edit") return;
+      edit({ type: "flip", screenId: screen.id, objectIds: ids, axis });
+    });
+  }
   function commitNumber(
     target: NumericTarget,
     field: NumericProperty,
@@ -3327,6 +3337,7 @@
       openArrayCopy: arrayCopy.open,
       removeSelection,
       rotateSelection,
+      flipSelection,
     },
     selection: {
       get selected() {

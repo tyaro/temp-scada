@@ -3,6 +3,7 @@ import { normalizeTextNewlines } from "../text-content";
 import { reorderUnit } from "./group-handler";
 import { type Project, type Screen, type SymbolDefinition } from "../project";
 import { normalizeRotation, replaceRotatedVertex } from "../rotation";
+import { setFlip } from "../flip";
 import { setLineStyle } from "../line-style";
 import { validateLevelShape } from "../level";
 import type { SingleObjectCommand } from "./commands";
@@ -119,6 +120,8 @@ export function applySingleObjectCommand(
       colorMode,
       paint,
       rotation,
+      flipX,
+      flipY,
       opacity,
       colorAlpha,
       fontSize,
@@ -155,6 +158,8 @@ export function applySingleObjectCommand(
       if ((object.opacity ?? 1) !== opacity) object.opacity = opacity;
     }
     if (rotation !== undefined) object.rotation = normalizeRotation(rotation);
+    if (flipX !== undefined) setFlip(object, "flipX", flipX);
+    if (flipY !== undefined) setFlip(object, "flipY", flipY);
     if (name !== undefined) {
       if (name !== null && typeof name !== "string")
         throw new Error("配置名は文字列にしてください");

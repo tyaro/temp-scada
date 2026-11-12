@@ -101,6 +101,7 @@ export function applyObjectCommand(
     command.type === "set-line-style" ||
     command.type === "set-outline-style" ||
     command.type === "move-many" ||
+    command.type === "flip" ||
     command.type === "duplicate-many" ||
     command.type === "duplicate-array" ||
     command.type === "remove-many" ||

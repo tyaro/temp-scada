@@ -5,6 +5,8 @@ import type { DesignerMenu } from "../DesignerMenubar.svelte";
 import type { FolderOperation } from "../FolderDialog.svelte";
 import type { EditCommand, AddKind } from "../../editor";
 import type { ScreenObject, Point } from "../../project";
+import { canFlip } from "../../flip";
+const FLIP_LABELS = ["左右反転", "上下反転"];
 
 interface PanelVisibility {
   sidebar: boolean;
@@ -37,6 +39,7 @@ export interface DesignerActionsHost {
     openArrayCopy(): void;
     removeSelection(): void;
     rotateSelection(delta: number): void;
+    flipSelection(axis: "x" | "y"): void;
   };
   selection: {
     readonly selected: ScreenObject | undefined;
@@ -170,6 +173,19 @@ export function createDesignerActions(host: DesignerActionsHost) {
       },
     ];
   }
+  /** Unlocked mirrorable placements only; an active group keeps its own rotation command. */
+  function flipBlocked(): boolean {
+    const ids = host.editing.selectedIds;
+    if (host.editing.mutationBlocked || !ids.length || host.groups?.groupId)
+      return true;
+    const selected = host.editing.objects.filter((object) =>
+      ids.includes(object.id),
+    );
+    return (
+      selected.length !== ids.length ||
+      selected.some((object) => object.locked || !canFlip(object))
+    );
+  }
   function editGroups(): ToolbarGroup[] {
     return [
       {
@@ -272,7 +288,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
         : []),
       {
         id: "rotation",
-        label: "回転",
+        label: "回転・反転",
         items: [
           {
             label: "左へ90°回転",
@@ -289,6 +305,18 @@ export function createDesignerActions(host: DesignerActionsHost) {
               host.editing.mutationBlocked ||
               (host.editing.selectedIds.length !== 1 && !host.groups?.groupId),
             run: () => host.editing.rotateSelection(90),
+          },
+          {
+            label: "左右反転",
+            icon: "M12 2V22M9 6L3 18H9ZM15 6L21 18H15Z",
+            disabled: flipBlocked(),
+            run: () => host.editing.flipSelection("x"),
+          },
+          {
+            label: "上下反転",
+            icon: "M2 12H22M6 9L18 3V9ZM6 15L18 21V15Z",
+            disabled: flipBlocked(),
+            run: () => host.editing.flipSelection("y"),
           },
         ],
       },
@@ -602,7 +630,12 @@ export function createDesignerActions(host: DesignerActionsHost) {
         ? [...editGroupItems("rotation"), ...editGroupItems("order")]
         : []),
       ...(host.editing.selectedIds.length > 1
-        ? editGroupItems("align")
+        ? [
+            ...editGroupItems("rotation").filter((item) =>
+              FLIP_LABELS.includes(item.label),
+            ),
+            ...editGroupItems("align"),
+          ]
         : [...editGroupItems("rotation"), ...editGroupItems("order")]),
       ...(host.selection.selected?.shape.type === "symbol"
         ? [

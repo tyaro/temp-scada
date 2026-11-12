@@ -27,6 +27,9 @@ export interface ObjectPatch {
   opacity?: number;
   colorAlpha?: number;
   rotation?: number;
+  /** Saved mirror attribute itself (local axis); false removes the key. */
+  flipX?: boolean;
+  flipY?: boolean;
   fontSize?: number;
   textStyle?: TextStyle;
   paint?: ShapePaint;
@@ -276,6 +279,13 @@ export type ObjectCommand = (
       point: Point;
     }
   | {
+      /** Mirror on screen around each placement's own pivot; one history entry. */
+      type: "flip";
+      screenId: string;
+      objectIds: string[];
+      axis: "x" | "y";
+    }
+  | {
       type: "move-many";
       screenId: string;
       objectIds: string[];
@@ -455,6 +465,7 @@ const commandScopes = {
   "move-vertex": "object",
   "set-line-connection": "object",
   "move-many": "object",
+  flip: "object",
   "duplicate-many": "object",
   "duplicate-array": "object",
   align: "object",

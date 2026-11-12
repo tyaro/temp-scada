@@ -44,6 +44,7 @@
   import type { EditCommand } from "../editor";
   import { symbolUsage } from "../editor";
   import type { createDraftGuard } from "./drafts.svelte";
+  import { canFlip } from "../flip";
   let {
     element = $bindable<HTMLElement>(),
     visible,
@@ -872,6 +873,36 @@
                     >{/if}</label
                 >
               {/each}
+              {#if canFlip(selected)}
+                <div
+                  class="flip-toggles"
+                  role="group"
+                  aria-label="保存する反転（配置の軸・角度は変えない）"
+                >
+                  {#each [["flipX", "左右反転"], ["flipY", "上下反転"]] as const as [key, label]}
+                    <!-- A button stays outside the draft form state; pending drafts block it. -->
+                    <button
+                      type="button"
+                      class="flip-toggle"
+                      data-flip-toggle={key}
+                      aria-label={`${label}（配置の軸）`}
+                      aria-pressed={selected[key] === true}
+                      disabled={selected.locked}
+                      title="保存する配置の軸の反転を切り替えます。角度は変えません。"
+                      onclick={() => {
+                        if (!selected || selected.locked || drafts.pending)
+                          return;
+                        edit({
+                          type: "update",
+                          screenId: screen.id,
+                          objectId: selected.id,
+                          patch: { [key]: selected[key] !== true },
+                        });
+                      }}>{label}</button
+                    >
+                  {/each}
+                </div>
+              {/if}
               {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "trend" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
                 <label
                   >{selected.shape.type === "symbol" &&
@@ -1635,5 +1666,15 @@
       border-left: 0;
       border-top: 1px solid var(--banto-border);
     }
+  }
+  .flip-toggles {
+    display: flex;
+    gap: 0.4rem;
+    grid-column: 1 / -1;
+  }
+  .flip-toggle[aria-pressed="true"] {
+    color: var(--banto-primary);
+    background: var(--banto-surface-hover);
+    border-color: var(--banto-primary);
   }
 </style>

@@ -11,7 +11,7 @@
   import { shapeSlotName } from "./shape-bindings";
   import type { ScreenObject, SymbolDefinition } from "./project";
   import type { TagReadings } from "./tag-presentation";
-  import { objectTransform } from "./rotation";
+  import { objectTransform, readableChild } from "./rotation";
   import { compositedOpacity } from "./opacity";
   import ImagePainting from "./ImagePainting.svelte";
   import Primitive from "./Primitive.svelte";
@@ -59,7 +59,7 @@
       .sort((a, b) => a.order - b.order) as child (child.id)}
       <g
         data-symbol-child-id={child.id}
-        transform={objectTransform(child)}
+        transform={objectTransform(readableChild(child, object))}
         opacity={compositedOpacity(child)}
         >{#if child.shape.type === "image" && "width" in child}
           {#if images?.get(child.shape.assetId)}<ImagePainting
