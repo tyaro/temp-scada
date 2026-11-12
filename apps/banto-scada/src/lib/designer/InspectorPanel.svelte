@@ -23,6 +23,7 @@
   import SelectionLine from "./SelectionLine.svelte";
   import { isStateSlotType } from "../equipment";
   import StateTextColor from "./StateTextColor.svelte";
+  import NumericFormat from "./NumericFormat.svelte";
   import SymbolColorMode from "./SymbolColorMode.svelte";
   import TagPicker from "./TagPicker.svelte";
   import { sampleSelection, type CatalogSelection } from "../catalog-session";
@@ -739,6 +740,22 @@
             </p>{/if}
           <StateTextColor
             colors={selected.shape.stateColors}
+            objectId={selected.id}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            locked={selectionLocked}
+            {drafts}
+            onsubmit={properties}
+          />
+        {/if}
+        {#if selected.shape.type === "text" && (selected.shape.binding || (selected.shape.slotBinding && (selected.shape.format || ("readSlots" in screen ? screen.readSlots : [])?.some((slot) => slot.name === (selected.shape.type === "text" ? selected.shape.slotBinding?.slotName : undefined) && slot.type === "number"))))}
+          {@const externalName = selected.shape.binding?.externalName}
+          <NumericFormat
+            format={selected.shape.format}
+            catalogUnit={externalName === undefined
+              ? undefined
+              : catalogSelection.catalog.tags.find(
+                  (tag) => tag.externalName === externalName,
+                )?.unit}
             objectId={selected.id}
             targetKey={`${generation}:${screen.id}:${activeDefinition}`}
             locked={selectionLocked}

@@ -62,6 +62,15 @@ export interface StateTextColors {
 export interface TagBinding {
   externalName: string;
 }
+/**
+ * How a tag- or slot-bound Text shows a Good number. `decimals` rounds to a
+ * fixed number of digits; `unit` is appended after a space. Unavailable
+ * readings never show the unit.
+ */
+export interface NumericFormat {
+  decimals?: number;
+  unit?: string;
+}
 export type LineStyle = "solid" | "dashed" | "dotted";
 export interface PaintColor {
   color: string;
@@ -122,6 +131,7 @@ export interface LayoutObject extends BaseObject {
         slotBinding?: { slotName: string };
         equipmentProperty?: { field: EquipmentPropertyField };
         stateColors?: StateTextColors;
+        format?: NumericFormat;
       }
     | {
         type: "symbol";

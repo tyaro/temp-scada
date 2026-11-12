@@ -315,6 +315,9 @@
                   "required": ["unknownColor"],
                   "additionalProperties": false
                 },
+                "format": {
+                  "$ref": "#/$defs/numericFormat"
+                },
                 "equipmentProperty": {
                   "type": "object",
                   "properties": {
@@ -346,6 +349,19 @@
               },
               "dependentRequired": {
                 "stateColors": ["slotBinding"]
+              },
+              "if": {
+                "required": ["format"]
+              },
+              "then": {
+                "anyOf": [
+                  {
+                    "required": ["binding"]
+                  },
+                  {
+                    "required": ["slotBinding"]
+                  }
+                ]
               }
             }
           ]
@@ -630,6 +646,33 @@
           }
         }
       ]
+    },
+    "numericFormat": {
+      "type": "object",
+      "properties": {
+        "decimals": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        },
+        "unit": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "allOf": [
+            {
+              "pattern": "^[^\\u0020\\u00a0\\u1680\\u2000-\\u200a\\u202f\\u205f\\u3000\\ufeff](?:.*[^\\u0020\\u00a0\\u1680\\u2000-\\u200a\\u202f\\u205f\\u3000\\ufeff])?$"
+            },
+            {
+              "not": {
+                "pattern": "[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]"
+              }
+            }
+          ]
+        }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
     },
     "layerFolder": {
       "type": "object",

@@ -11,7 +11,11 @@
   import TextPrimitive from "./TextPrimitive.svelte";
   import MultilineTextPrimitive from "./MultilineTextPrimitive.svelte";
   import type { ScreenObject } from "./project";
-  import { presentNumeric, type TagReadings } from "./tag-presentation";
+  import {
+    formatSlotText,
+    presentNumeric,
+    type TagReadings,
+  } from "./tag-presentation";
   let {
     object,
     color,
@@ -82,13 +86,18 @@
       : undefined,
   );
   const bound = $derived(!!binding || !!slotBinding);
-  const presentation = $derived(
-    slotBinding
-      ? (slotDisplay ?? slotPresentation("unbound"))
-      : presentNumeric(
-          binding ? readings?.get(binding.externalName) : undefined,
-        ),
+  const format = $derived(
+    object.shape.type === "text" ? object.shape.format : undefined,
   );
+  const presentation = $derived.by(() => {
+    if (!slotBinding)
+      return presentNumeric(
+        binding ? readings?.get(binding.externalName) : undefined,
+        format,
+      );
+    const display = slotDisplay ?? slotPresentation("unbound");
+    return { ...display, text: formatSlotText(display, format) };
+  });
   /**
    * The defined state replaces the reading when it is known, or when a Good
    * reading cannot be a state (e.g. a fractional word reads as invalid).

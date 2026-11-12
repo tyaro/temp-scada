@@ -175,6 +175,8 @@ Symbol宣言のCRUDは`editor/symbol-handler.ts`、全Text参照の導出は`sym
 
 「状態の色に従う」指定はTextの`stateColors`（取得不能の色だけ）として`project.ts`と共通schemaに保存し、`symbol-slots.ts`／Rustの意味検証でbool／state宣言（`equipment.ts`の`isStateSlotType`）へ制限する。色は`state-color.ts`の`stateTextColor`が`symbolEquipmentSlot`と`evaluateSlotState`で決め（既知で色あり→その色、既知で色なし→通常の色、不明→取得不能の色）、`ObjectPainting`／`SymbolThumbnail`が`resolveStateColor`の結果を`Primitive`の`stateColor`へ渡す。`StateTextColor.svelte`と`forms/state-text-color.ts`が独立した編集フォームを持つ。`object-form.ts`は静的／number変更時の同時解除、Appのdraft事前検証は二重入力の競合拒否を担当する。`state-text-color.test.ts`・`state-color.test.ts`・`e2e/state-text-color.spec.ts`・`e2e/slot-state-color.spec.ts`が回帰入口。[提供範囲と検証](../design/graphics/bool-text-colors.md)を参照する。
 
+数値の書式はTextの`format`（`project.ts`の`NumericFormat`、共通schemaの`$defs.numericFormat`）として保存し、表示は`tag-presentation.ts`の`formatNumber`（タグ）・`formatSlotText`（number slot）を`Primitive`が使う。編集は`NumericFormat.svelte`と`forms/numeric-format.ts`、結合を外したときの同時解除は`editor/single-object-handler.ts`。`numeric-format.test.ts`・`examples/numeric-format-cases.json`・`e2e/numeric-format.spec.ts`が回帰入口。[仕様](../design/graphics/numeric-format.md)を参照する。
+
 図面外の読取状態は`lib/slot-status-summary.ts`が現在の可視配置経路・使用roleを収集し、既存resolverへ状態解決を委譲する。`SlotReadStatus.svelte`は件数・20件ページング・開閉のみを所有し、Appと`PreviewWindow`が描画と同じcontextを渡す。表示プレビュー（`alert`）では取得不能が1件以上で要約行を警告色とアイコンにし、全件なら「この画面の値はすべて取得できていません」と文で出す（編集中は中立のまま）。品質の語は`slot-presentation.ts`・`tag-presentation.ts`で「更新停止」「不良」に揃える。`slot-status-summary.test.ts`、`e2e/slot-status-summary.spec.ts`、既存の同一mount検証で確認する。[範囲と後続](../design/equipment/slot-status-summary.md)を参照する。
 
 `studio.css`は取得状態一覧がある画面に限り図面タイトルを通常配置へ戻し、一覧との重なりを防ぐ。状態一覧のブラウザ検証で、折畳み時／展開時にタイトル・一覧・canvasが重ならないことを確認する。
