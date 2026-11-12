@@ -6,7 +6,11 @@ import {
   type SlotPresentation,
   type SlotValue,
 } from "./slot-presentation";
-import { evaluateSlotState } from "./slot-state";
+import {
+  definedSlotState,
+  evaluateSlotState,
+  slotStateText,
+} from "./slot-state";
 
 const provenance: SlotProvenance = {
   catalogRevision: 3,
@@ -234,4 +238,40 @@ it("has no state for a number slot", () => {
       word(1),
     ),
   ).toBeUndefined();
+});
+
+describe("definedSlotState / slotStateText", () => {
+  it("evaluates only slots with a definition", () => {
+    const plain: EquipmentSlot = {
+      name: "run",
+      type: "bool",
+      direction: "read",
+    };
+    expect(
+      definedSlotState(plain, good({ type: "bool", value: true })),
+    ).toBeUndefined();
+    expect(
+      definedSlotState(undefined, good({ type: "bool", value: true })),
+    ).toBeUndefined();
+    const labelled: EquipmentSlot = {
+      ...plain,
+      boolDisplay: {
+        true: { text: "運転", color: "#16a34a" },
+        false: { text: "停止", color: "#64748b" },
+      },
+    };
+    expect(
+      definedSlotState(labelled, good({ type: "bool", value: true })),
+    ).toMatchObject({ state: "known", text: "運転", color: "#16a34a" });
+  });
+  it("prefixes SIM and keeps an empty label as SIM only", () => {
+    const base = { state: "known" as const, color: "#000000" };
+    expect(slotStateText({ ...base, text: "運転", simulated: false })).toBe(
+      "運転",
+    );
+    expect(slotStateText({ ...base, text: "運転", simulated: true })).toBe(
+      "SIM · 運転",
+    );
+    expect(slotStateText({ ...base, text: "", simulated: true })).toBe("SIM");
+  });
 });

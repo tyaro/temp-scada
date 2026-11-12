@@ -2,7 +2,12 @@
   import type { TrendDefinition } from "./trend-definitions";
   import { resolveEquipmentProperty } from "./equipment-property";
   import { resolveStateColor } from "./state-color";
-  import { resolveSymbolSlot, type EquipmentContext } from "./symbol-slots";
+  import {
+    resolveSymbolSlot,
+    symbolEquipmentSlot,
+    type EquipmentContext,
+  } from "./symbol-slots";
+  import { definedSlotState } from "./slot-state";
   import type { ScreenObject, SymbolDefinition } from "./project";
   import type { TagReadings } from "./tag-presentation";
   import { objectTransform } from "./rotation";
@@ -63,7 +68,21 @@
               crop={child.shape.crop}
               fit={child.shape.fit}
             />{/if}
-        {:else}<Primitive
+        {:else}
+          {@const slotName =
+            child.shape.type === "text"
+              ? child.shape.slotBinding?.slotName
+              : undefined}
+          {@const slotDisplay =
+            slotName === undefined
+              ? undefined
+              : resolveSymbolSlot(
+                  definition,
+                  slotName,
+                  object.shape.equipmentId,
+                  equipmentContext,
+                )}
+          <Primitive
             object={child}
             equipmentPropertyDisplay={child.shape.type === "text" &&
             child.shape.equipmentProperty
@@ -79,14 +98,18 @@
               object.shape.equipmentId,
               equipmentContext,
             )}
-            slotDisplay={child.shape.type === "text" && child.shape.slotBinding
-              ? resolveSymbolSlot(
-                  definition,
-                  child.shape.slotBinding.slotName,
-                  object.shape.equipmentId,
-                  equipmentContext,
-                )
-              : undefined}
+            {slotDisplay}
+            slotState={slotName === undefined || !slotDisplay
+              ? undefined
+              : definedSlotState(
+                  symbolEquipmentSlot(
+                    definition,
+                    slotName,
+                    object.shape.equipmentId,
+                    equipmentContext,
+                  ),
+                  slotDisplay,
+                )}
             color={object.shape.colorMode === "definition"
               ? undefined
               : object.fill}

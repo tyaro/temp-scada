@@ -171,7 +171,7 @@ Symbol宣言のCRUDは`editor/symbol-handler.ts`、全Text参照の導出は`sym
 
 読取表示結果の判別共用体・欠測文言・SIM判定・boolのtrue／false／unknownへの純粋な変換は`lib/slot-presentation.ts`が担当する。Goodだけに型付きvalueを持たせる。`read-slot-session.ts`は所有コピーを返し、`TextPrimitive`はinvalid理由も表示する。`slot-presentation.test.ts`と既存session／ブラウザ検証で確認する。[動的配色への前段と残り](../design/equipment/bool-slot-state.md)を参照する。
 
-機器種別のslotの状態の定義（`boolDisplay`・`stateDisplay`・`allowUnassigned`）による文字と色の純粋な評価は`lib/slot-state.ts`の`evaluateSlotState`が担当する。入力は`SlotPresentation`で、Good以外・整数でない値・型の不一致は不明、許可された未割付はfalse／該当なしとする。`slot-state.test.ts`で確認する。表示への接続は段階1-AのA3（[フロー図の差分 §5.2](../design/editor/flow-diagram-gap-2026-11-12.md)）。
+機器種別のslotの状態の定義（`boolDisplay`・`stateDisplay`・`allowUnassigned`）による文字と色の純粋な評価は`lib/slot-state.ts`の`evaluateSlotState`が担当する。入力は`SlotPresentation`で、Good以外・整数でない値・型の不一致は不明、許可された未割付はfalse／該当なしとする。`slot-state.test.ts`で確認する。表示への接続（A3a、[フロー図の差分 §5.2](../design/editor/flow-diagram-gap-2026-11-12.md)）: `ObjectPainting`がSymbol内のslot結合Textごとに`symbolEquipmentSlot`（`lib/symbol-slots.ts`、宣言と同じ型の機器種別slot）と`definedSlotState`で評価し、`Primitive`は既知の状態だけ定義の文字（SIMは前置）に置き換える。不明は読取の文字（理由）のまま。`e2e/slot-state-display.spec.ts`（モックの読取）で確認する。色の追従はA3b。
 
 状態別文字色はTextの`boolColors`として`project.ts`と共通schemaに保存し、`symbol-slots.ts`／Rustの意味検証でbool宣言へ制限する。`Primitive`が型付き状態を色へ接続し、`BoolColors.svelte`と`forms/bool-colors.ts`が独立した編集フォームを持つ。`object-form.ts`は静的／number変更時の同時解除、Appのdraft事前検証は二重入力の競合拒否を担当する。[提供範囲と検証](../design/graphics/bool-text-colors.md)を参照する。
 

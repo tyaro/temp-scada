@@ -5,6 +5,7 @@
   } from "./equipment-property";
   import { slotPresentation, type SlotPresentation } from "./symbol-slots";
   import { boolSlotState } from "./slot-presentation";
+  import { slotStateText, type SlotStateEvaluation } from "./slot-state";
   import { patternGeometry } from "./pattern-paint";
   import { linearGradientEndpoints } from "./linear-gradient";
   import { lineDash, lineCap } from "./line-style";
@@ -17,6 +18,7 @@
     color,
     readings,
     slotDisplay,
+    slotState,
     equipmentPropertyDisplay,
     stateColor,
     onsummary,
@@ -25,6 +27,8 @@
     color?: string;
     readings?: TagReadings;
     slotDisplay?: SlotPresentation;
+    /** Defined state of the slot; a known state replaces the raw value text. */
+    slotState?: SlotStateEvaluation;
     equipmentPropertyDisplay?: EquipmentPropertyPresentation;
     stateColor?: string;
     onsummary?: (description: string) => void;
@@ -246,7 +250,9 @@
         text={metadata
           ? metadata.text
           : bound
-            ? presentation.text
+            ? slotBinding && slotState?.state === "known"
+              ? slotStateText(slotState)
+              : presentation.text
             : object.shape.text}
         equipmentProperty={metadata}
         width={object.width}
@@ -256,7 +262,11 @@
         numeric={bound}
         tagName={slotBinding?.slotName ?? binding?.externalName}
         tagState={bound ? presentation.state : undefined}
-        tagLabel={bound ? presentation.label : undefined}
+        tagLabel={bound
+          ? slotBinding && slotState?.state === "known" && slotState.none
+            ? "未割付（なしとして表示）"
+            : presentation.label
+          : undefined}
         provenance={slotBinding
           ? slotDisplay?.provenance
           : presentation.provenance}
