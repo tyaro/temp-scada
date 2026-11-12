@@ -4,8 +4,13 @@ import { parseProject } from "./project";
 import { applyCommand } from "./editor";
 import { emptyHistory, recordEdit, travelHistory } from "./history";
 import { sampleCatalog } from "./designer/tag-catalog";
+import type { Project } from "./project";
 import {
+  bindingCell,
   bindingTableChanges,
+  catalogIndex,
+  draftCell,
+  type BindingDraft,
   cellAfter,
   cellKey,
   cellMatch,
@@ -15,6 +20,17 @@ import {
 } from "./equipment-binding-table";
 const fresh = () => parseProject(JSON.stringify(equipmentSample));
 const FAN = "0199f700-0000-7000-8000-000000000002";
+const index = catalogIndex(sampleCatalog);
+/** Types into cells of the first equipment as the table does. */
+function typed(project: Project, cells: [string, string][]) {
+  const drafts = new Map<string, BindingDraft>();
+  const item = project.equipment![0];
+  for (const [slot, text] of cells) {
+    const key = cellKey(item.id, slot);
+    drafts.set(key, draftCell(drafts, key, bindingCell(item, slot), text));
+  }
+  return drafts;
+}
 
 describe("cell semantics", () => {
   it("assigns typed names and keeps clearing within adopted slots", () => {
@@ -30,9 +46,9 @@ describe("cell semantics", () => {
   });
   it("lists only real differences in table order", () => {
     const project = fresh();
-    const drafts = new Map([
-      [cellKey(FAN, "current"), "PLC.Fan.Current"],
-      [cellKey(FAN, "running"), ""],
+    const drafts = typed(project, [
+      ["current", "PLC.Fan.Current"],
+      ["running", ""],
     ]);
     expect(bindingTableChanges(project, drafts)).toEqual([
       {
@@ -44,18 +60,14 @@ describe("cell semantics", () => {
     ]);
   });
   it("matches names against the tag list by slot type", () => {
-    expect(cellMatch("Demo.Water.Tank01.Level", "number", sampleCatalog)).toBe(
-      "found",
-    );
-    expect(cellMatch("Demo.Water.Tank01.Level", "bool", sampleCatalog)).toBe(
+    expect(cellMatch("Demo.Water.Tank01.Level", "number", index)).toBe("found");
+    expect(cellMatch("Demo.Water.Tank01.Level", "bool", index)).toBe(
       "incompatible",
     );
-    expect(cellMatch("Demo.Water.Tank01.Level", "state", sampleCatalog)).toBe(
-      "found",
-    );
-    expect(cellMatch("No.Such.Tag", "number", sampleCatalog)).toBe("missing");
-    expect(cellMatch(" ", "number", sampleCatalog)).toBeNull();
-    expect(cellMatch(" Demo.Water.Tank01.Level", "number", sampleCatalog)).toBe(
+    expect(cellMatch("Demo.Water.Tank01.Level", "state", index)).toBe("found");
+    expect(cellMatch("No.Such.Tag", "number", index)).toBe("missing");
+    expect(cellMatch(" ", "number", index)).toBeNull();
+    expect(cellMatch(" Demo.Water.Tank01.Level", "number", index)).toBe(
       "missing",
     );
   });
@@ -95,9 +107,9 @@ describe("assign-equipment-tags", () => {
     const original = fresh();
     const changes = bindingTableChanges(
       original,
-      new Map([
-        [cellKey(FAN, "current"), "PLC.Fan.Current"],
-        [cellKey(FAN, "running"), "PLC.Fan.Run"],
+      typed(original, [
+        ["current", "PLC.Fan.Current"],
+        ["running", "PLC.Fan.Run"],
       ]),
     );
     const result = recordEdit(
@@ -117,6 +129,54 @@ describe("assign-equipment-tags", () => {
       "edit",
     );
     expect(undone.project.equipment).toEqual(original.equipment);
+  });
+  it("keeps the value seen at the first edit so a later change is not overwritten", () => {
+    const opened = fresh();
+    const drafts = typed(opened, [["running", "PLC.Fan.Run"]]);
+    const moved = applyCommand(
+      opened,
+      {
+        type: "update-equipment",
+        equipmentId: FAN,
+        code: "FAN-101",
+        name: opened.equipment![0].name,
+        bindings: [{ slotName: "running", externalName: "Other.Run" }],
+      },
+      "edit",
+    );
+    // Typing again in the same cell keeps the first origin.
+    const key = cellKey(FAN, "running");
+    drafts.set(
+      key,
+      draftCell(
+        drafts,
+        key,
+        bindingCell(moved.equipment![0], "running"),
+        "PLC.Fan.Run2",
+      ),
+    );
+    const changes = bindingTableChanges(moved, drafts);
+    expect(changes[0].before).toEqual({ externalName: null });
+    expect(() =>
+      applyCommand(moved, { type: "assign-equipment-tags", changes }, "edit"),
+    ).toThrow("表を開き直してください");
+  });
+  it("keeps cells of removed equipment so applying reports them", () => {
+    const opened = fresh();
+    const drafts = typed(opened, [["current", "A"]]);
+    const removed = { ...opened, equipment: [] };
+    const changes = bindingTableChanges(removed, drafts);
+    expect(changes).toHaveLength(1);
+    expect(() =>
+      applyCommand(
+        opened,
+        {
+          type: "assign-equipment-tags",
+          changes: [{ ...changes[0], equipmentId: "gone" }],
+        },
+        "edit",
+      ),
+    ).toThrow("機器が見つかりません");
   });
   it("rejects every change when a saved cell moved since the table opened", () => {
     const original = fresh();

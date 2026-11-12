@@ -10,10 +10,13 @@
     cellMatch,
     cellProblem,
     cellText,
+    catalogIndex,
+    draftCell,
     isGridPaste,
     parsePasteGrid,
     pasteIntoTable,
     type BindingCell,
+    type BindingDraft,
     type BindingTableChange,
   } from "../equipment-binding-table";
   let {
@@ -46,7 +49,7 @@
   const rows = $derived(
     (project.equipment ?? []).filter((item) => item.typeId === kind?.id),
   );
-  const drafts = new SvelteMap<string, string>();
+  const drafts = new SvelteMap<string, BindingDraft>();
   let step = $state<"edit" | "review" | "discard">("edit");
   let message = $state("");
   let error = $state("");
@@ -57,8 +60,9 @@
   const checking = $derived(
     catalogSelection.available && catalogSelection.isCurrent(),
   );
+  const index = $derived(catalogIndex(catalogSelection.catalog));
   function text(equipmentId: string, slotName: string, saved: BindingCell) {
-    return drafts.get(cellKey(equipmentId, slotName)) ?? cellText(saved);
+    return drafts.get(cellKey(equipmentId, slotName))?.text ?? cellText(saved);
   }
   const cells = $derived(
     rows.flatMap((item) =>
@@ -69,9 +73,7 @@
           key: cellKey(item.id, slot.name),
           value,
           problem: cellProblem(value),
-          match: checking
-            ? cellMatch(value, slot.type, catalogSelection.catalog)
-            : null,
+          match: checking ? cellMatch(value, slot.type, index) : null,
         };
       }),
     ),
@@ -81,7 +83,7 @@
     new Set(changes.map((row) => cellKey(row.equipmentId, row.slotName))),
   );
   const problems = $derived(
-    [...drafts].filter(([, value]) => cellProblem(value)).length,
+    [...drafts.values()].filter((draft) => cellProblem(draft.text)).length,
   );
   const missing = $derived(
     cells.filter((cell) => cell.match === "missing").length,
@@ -101,11 +103,7 @@
           return (
             !!slot &&
             !!change.after?.externalName &&
-            cellMatch(
-              change.after.externalName,
-              slot.type,
-              catalogSelection.catalog,
-            ) !== "found"
+            cellMatch(change.after.externalName, slot.type, index) !== "found"
           );
         }).length
       : 0,
@@ -116,8 +114,8 @@
   function equipmentOf(id: string) {
     return project.equipment?.find((item) => item.id === id);
   }
-  function setCell(key: string, value: string) {
-    drafts.set(key, value);
+  function setCell(key: string, value: string, saved: BindingCell) {
+    drafts.set(key, draftCell(drafts, key, saved, value));
     message = "";
     error = "";
   }
@@ -132,7 +130,16 @@
       row,
       column,
     );
-    for (const [key, value] of pasted) drafts.set(key, value);
+    const saved = new Map(
+      rows.flatMap((item) =>
+        kind.slots.map((slot) => [
+          cellKey(item.id, slot.name),
+          bindingCell(item, slot.name),
+        ]),
+      ),
+    );
+    for (const [key, value] of pasted)
+      drafts.set(key, draftCell(drafts, key, saved.get(key) ?? null, value));
     error = "";
     message = `${pasted.size}セルを貼り付けました。${
       dropped ? `表の外の${dropped}セルは入れていません。` : ""
@@ -272,7 +279,7 @@
                       placeholder={saved === null ? "未採用" : "未割付"}
                       value={cell?.value ?? ""}
                       oninput={(event) =>
-                        setCell(key, event.currentTarget.value)}
+                        setCell(key, event.currentTarget.value, saved)}
                       onpaste={(event) => paste(event, r, c)}
                     />
                     {#if cell?.problem}<small class="error"

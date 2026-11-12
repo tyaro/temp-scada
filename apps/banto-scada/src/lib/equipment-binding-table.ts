@@ -1,4 +1,8 @@
-import { compatibleTag, type TagCatalog } from "./designer/tag-catalog";
+import {
+  compatibleTag,
+  type CatalogTag,
+  type TagCatalog,
+} from "./designer/tag-catalog";
 import {
   slotReadType,
   type EquipmentInstance,
@@ -80,27 +84,49 @@ export function pasteIntoTable(
   );
   return { cells, dropped };
 }
-/** Cells whose draft text differs from the saved binding, in table order. */
+/**
+ * A typed cell remembers the saved value the user was looking at when they first
+ * edited it, so a later change to that binding is detected instead of overwritten.
+ */
+export interface BindingDraft {
+  text: string;
+  origin: BindingCell;
+}
+export function draftCell(
+  drafts: ReadonlyMap<string, BindingDraft>,
+  key: string,
+  saved: BindingCell,
+  text: string,
+): BindingDraft {
+  return { text, origin: drafts.get(key)?.origin ?? saved };
+}
+/** Cells whose draft differs from the value seen when editing, in table order. */
 export function bindingTableChanges(
   project: Project,
-  drafts: ReadonlyMap<string, string>,
+  drafts: ReadonlyMap<string, BindingDraft>,
 ): BindingTableChange[] {
-  const changes: BindingTableChange[] = [];
+  const changes: BindingTableChange[] = [],
+    visited = new Set<string>();
+  const push = (equipmentId: string, slotName: string, draft: BindingDraft) => {
+    const after = cellAfter(draft.origin, draft.text);
+    if (!sameCell(draft.origin, after))
+      changes.push({ equipmentId, slotName, before: draft.origin, after });
+  };
   for (const item of project.equipment ?? []) {
     const type = project.equipmentTypes?.find((row) => row.id === item.typeId);
     for (const slot of type?.slots ?? []) {
-      const text = drafts.get(cellKey(item.id, slot.name));
-      if (text === undefined) continue;
-      const before = bindingCell(item, slot.name),
-        after = cellAfter(before, text);
-      if (!sameCell(before, after))
-        changes.push({
-          equipmentId: item.id,
-          slotName: slot.name,
-          before,
-          after,
-        });
+      const key = cellKey(item.id, slot.name),
+        draft = drafts.get(key);
+      if (!draft) continue;
+      visited.add(key);
+      push(item.id, slot.name, draft);
     }
+  }
+  // Cells whose equipment or slot disappeared stay listed so applying reports it.
+  for (const [key, draft] of drafts) {
+    if (visited.has(key)) continue;
+    const [equipmentId, slotName] = key.split("\u0000");
+    push(equipmentId, slotName, draft);
   }
   return changes;
 }
@@ -110,15 +136,26 @@ export function cellProblem(text: string) {
     : null;
 }
 export type CellMatch = "found" | "missing" | "incompatible";
+export type CatalogIndex = ReadonlyMap<string, readonly CatalogTag[]>;
+/** Builds the lookup once per tag list so each cell check is a map access. */
+export function catalogIndex(catalog: TagCatalog): CatalogIndex {
+  const index = new Map<string, CatalogTag[]>();
+  for (const tag of catalog.tags) {
+    const rows = index.get(tag.externalName);
+    if (rows) rows.push(tag);
+    else index.set(tag.externalName, [tag]);
+  }
+  return index;
+}
 /** Checks an assigned name against the tag list; empty names are not checked. */
 export function cellMatch(
   text: string,
   type: SlotType,
-  catalog: TagCatalog,
+  index: CatalogIndex,
 ): CellMatch | null {
   if (isBlankName(text)) return null;
-  const tags = catalog.tags.filter((tag) => tag.externalName === text);
-  if (!tags.length) return "missing";
+  const tags = index.get(text);
+  if (!tags?.length) return "missing";
   return tags.some((tag) => compatibleTag(tag, slotReadType(type)))
     ? "found"
     : "incompatible";
