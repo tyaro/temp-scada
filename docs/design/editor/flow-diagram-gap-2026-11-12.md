@@ -107,9 +107,10 @@
   - slot に「未割付を許す」を加える。
   - 状態の定義を持てるのは機器種別の slot だけとし、Symbol 定義の `readSlots` は名前と型だけを持つ（型の対応を検査する）。
   - schema・Rust・TS・検査（ビットは 0〜31、重複、型の対応）・サンプルを揃える。
-- **A2 評価**:
-  - 純関数 `evaluateSlotState(slot, value, quality)`。
-  - 整数でない値・2^53 以上・品質不良は「不明」。「未割付を許す」の slot が未割付なら、false または「該当なし」。
+- **A2 評価**（2026-11-12 実装。`apps/banto-scada/src/lib/slot-state.ts`）:
+  - 純関数 `evaluateSlotState(slot, reading)`。`slot` は機器種別の slot、`reading` は既存の読取表示結果（`SlotPresentation`。品質と型付きの値を持つ）。
+  - 整数でない値・絶対値が 2^53 以上・Good 以外の品質・型の不一致は「不明」（理由は既存の欠測の語）。「未割付を許す」の slot が未割付なら、bool は false、state は「該当なし」（`none: true` を付ける）。
+  - `bits` は 0〜31 のビットだけを見る（負の値は 2 の補数）。結果は文字・色・当たった行の番号と SIM の有無。number の slot は対象外。
 - **A3 表示**:
   - Symbol 内の slot に結合した文字に、状態の文字と色を出す。
   - `stateColor` と `boolColors` を、状態の定義に従うように一般化する。
