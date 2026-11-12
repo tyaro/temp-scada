@@ -181,6 +181,8 @@ Symbol宣言のCRUDは`editor/symbol-handler.ts`、全Text参照の導出は`sym
 
 液位は配置の`shape`の`level`（`project.ts`の`LevelShape`、共通schemaの`primitive.shape`）。表示は`level.ts`の`levelFromReading`・`levelFromSlot`・`levelFillRect`を`Primitive`が使い、Symbol内では`ObjectPainting`がslotの解決結果を渡す。Textと液位の結合の取り出しは`shape-bindings.ts`（参照一覧・一括置換・slotの使用箇所・状態一覧が使う）。下限・上限の検査は`validateLevelShape`とRustの`Project::from_json`。編集は`forms/object-form.ts`・`numeric-properties.ts`・`editor/single-object-handler.ts`の`level`。`level.test.ts`・`examples/level-cases.json`・`e2e/level.spec.ts`が回帰入口。[仕様](../design/graphics/level.md)を参照する。
 
+組込部品（ポンプ・バルブと、フロー図用のブロワー・槽・塔・サイクロン・熱交換器・撹拌機・コンベヤ・スクリュー・モーター）は`lib/symbol-library.json`のSymbol定義（Polylineだけ、接続口は配置枠の辺の中央に置く）。一覧・名前・検索語・型`BuiltinTemplate`は`builtin-symbols.ts`に集め、部品パレット・お気に入り（`favorites.ts`）・挿入メニュー（`designer-actions.ts`）・配置（`placement-handler.ts`の`add-symbol`。配置枠は定義の幅・高さ）が使う。部品を足すときはJSONと`builtin-symbols.ts`の検索語だけを変える。`builtin-symbols.test.ts`・`e2e/builtin-parts.spec.ts`が回帰入口。
+
 図面外の読取状態は`lib/slot-status-summary.ts`が現在の可視配置経路・使用roleを収集し、既存resolverへ状態解決を委譲する。`SlotReadStatus.svelte`は件数・20件ページング・開閉のみを所有し、Appと`PreviewWindow`が描画と同じcontextを渡す。表示プレビュー（`alert`）では取得不能が1件以上で要約行を警告色とアイコンにし、全件なら「この画面の値はすべて取得できていません」と文で出す（編集中は中立のまま）。品質の語は`slot-presentation.ts`・`tag-presentation.ts`で「更新停止」「不良」に揃える。`slot-status-summary.test.ts`、`e2e/slot-status-summary.spec.ts`、既存の同一mount検証で確認する。[範囲と後続](../design/equipment/slot-status-summary.md)を参照する。
 
 `studio.css`は取得状態一覧がある画面に限り図面タイトルを通常配置へ戻し、一覧との重なりを防ぐ。状態一覧のブラウザ検証で、折畳み時／展開時にタイトル・一覧・canvasが重ならないことを確認する。

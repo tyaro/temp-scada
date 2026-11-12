@@ -4,7 +4,11 @@
   import ContextActions from "./ContextActions.svelte";
   import type { AddKind } from "../editor";
   import type { SymbolDefinition } from "../project";
-  import builtins from "../symbol-library.json";
+  import {
+    BUILTIN_PARTS,
+    builtinDefinition,
+    type BuiltinTemplate,
+  } from "../builtin-symbols";
   import SymbolThumbnail from "./SymbolThumbnail.svelte";
   import { PALETTE_MIME, type PalettePart } from "./palette-drag";
   import {
@@ -38,7 +42,7 @@
     definitions: SymbolDefinition[];
     allowSymbols?: boolean;
     onadd: (kind: AddKind) => void;
-    onbuiltin: (template: "pump" | "valve") => void;
+    onbuiltin: (template: BuiltinTemplate) => void;
     onplace: (id: string) => void;
     onstartdrag: (part: PalettePart) => string | null;
     onenddrag: () => void;
@@ -139,18 +143,12 @@
         "数値に比例して塗る液位を配置します。下限・上限・向き・地の色を設定し、タグか number slot を表示します。",
     },
   ];
-  const equipment = [
-    {
-      template: "pump" as const,
-      label: "ポンプを追加",
-      keywords: "ポンプ pump",
-    },
-    {
-      template: "valve" as const,
-      label: "バルブを追加",
-      keywords: "バルブ 弁 valve",
-    },
-  ];
+  const equipment = BUILTIN_PARTS.map((part) => ({
+    template: part.template,
+    name: part.name,
+    label: `${part.name}を追加`,
+    keywords: `${part.name} ${part.keywords}`,
+  }));
   function matches(value: string) {
     return value
       .normalize("NFKC")
@@ -276,7 +274,7 @@
             <div class="cards">
               {#each builtinResults as part}
                 <ContextActions
-                  label={`${part.template === "pump" ? "ポンプ" : "バルブ"}（組込）`}
+                  label={`${part.name}（組込）`}
                   contextKey={menuKey}
                   items={[
                     {
@@ -296,13 +294,11 @@
                       label: "部品情報",
                       run: () =>
                         (info = {
-                          name: part.template === "pump" ? "ポンプ" : "バルブ",
+                          name: part.name,
                           category: "組込シンボル",
                           description:
                             "組込テンプレートから Project の共有定義と配置を追加します。テンプレート自体は変更しません。",
-                          definition: builtins[
-                            part.template
-                          ] as unknown as SymbolDefinition,
+                          definition: builtinDefinition(part.template),
                         }),
                     },
                   ]}
@@ -327,9 +323,7 @@
                   >
                     <SymbolThumbnail
                       {images}
-                      definition={builtins[
-                        part.template
-                      ] as unknown as SymbolDefinition}
+                      definition={builtinDefinition(part.template)}
                     />
                     <span class:sr-only={view === "icons"}>{part.label}</span>
                   </button>
@@ -338,7 +332,7 @@
                       type: "builtin",
                       template: part.template,
                     })}
-                    label={part.template === "pump" ? "ポンプ" : "バルブ"}
+                    label={part.name}
                     ontoggle={() =>
                       ontoggleFavorite({
                         type: "builtin",
