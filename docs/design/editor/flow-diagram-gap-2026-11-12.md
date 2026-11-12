@@ -114,7 +114,7 @@
 - **A3 表示**（2 つの PR に分ける）:
   - A3a 文字（2026-11-12 実装）: Symbol 内の slot に結合した文字は、機器種別の slot に定義（`state`、または `boolDisplay` を持つ `bool`）があれば、既知の状態で定義の文字を出す（SIM は前置、空の文字は空のまま）。不明は従来の欠測の文字（理由）を出す。許可された未割付は「なし」（bool は false、state は該当なし）の文字を出し、詳細には「未割付（なしとして表示）」と書く。色は変えない。試験: `e2e/slot-state-display.spec.ts`（モックの読取）。
   - A3b 色（2026-11-12 実装）: Text の `boolColors`（Symbol 側の true／false／取得不能の 3 色）を廃止し、`stateColors: { unknownColor }`（「状態の色に従う」指定と取得不能の色 1 つ）に置き換えた。対象は宣言済みの `bool`／`state` slot に結合した共有Symbol内の Text。既知の状態の色は機器種別の定義だけが持ち、既知で色なし（`boolDisplay` のない bool）は通常の色、不明は `unknownColor`。図形・配管の `stateColor` はこの Text を配色元とし、同じ規則で解決する（既知で色なしは図形自身の通常の色）。サンプルの true／false の色は機器種別の `boolDisplay` へ移した。schemaVersion は 0.37.0 を据え置き、旧形式の読込・移行は作らない。試験: `e2e/slot-state-color.spec.ts`（モックの読取）、`state-color.test.ts`。仕様: [slot表示Textの状態の色](../graphics/bool-text-colors.md)。
-- **A4 編集 UI**: 機器種別の slot 編集に、状態の行の編集を加える。
+- **A4 編集 UI**（2026-11-12 実装）: 機器種別の slot 編集に、状態の行の編集を加えた。操作は[機器種別の編集](../equipment/equipment-type-editing.md)の「状態の行の編集」。試験: `e2e/slot-state-rows-edit.spec.ts`、`slot-display-edit.test.ts`。
 - **A5 割付の一覧表**:
   - 行が機器インスタンス、列が slot の表で、実タグを編集する。
   - 表計算ソフトからの貼付けと、タグ一覧との照合（未解決の表示）、適用前の差分確認を備える。

@@ -4,6 +4,8 @@
   import type { EditCommand } from "../editor";
   import type { EquipmentSlot, SlotType } from "../equipment";
   import type { createDraftGuard } from "./drafts.svelte";
+  import SlotDisplayEditor from "./SlotDisplayEditor.svelte";
+  import { emptyStateDisplay } from "../slot-display-edit";
   let {
     project,
     generation,
@@ -75,19 +77,15 @@
   function retype(key: number, type: SlotType) {
     rows = rows.map((row) => {
       if (row.key !== key) return row;
-      const { boolDisplay, stateDisplay, ...rest } = row;
+      const { boolDisplay, stateDisplay, allowUnassigned, ...rest } = row;
       return {
         ...rest,
         type,
+        // Only bool and state slots are evaluated, so only they keep "none".
+        ...(type !== "number" && allowUnassigned ? { allowUnassigned } : {}),
         ...(type === "bool" && boolDisplay ? { boolDisplay } : {}),
         ...(type === "state"
-          ? {
-              stateDisplay: stateDisplay ?? {
-                source: "value",
-                rows: [],
-                otherwise: { text: "", color: "#64748b" },
-              },
-            }
+          ? { stateDisplay: stateDisplay ?? emptyStateDisplay() }
           : {}),
       };
     });
@@ -209,6 +207,13 @@
               ><option value="state">state</option></select
             ></label
           >
+          {#if row.type !== "number"}
+            <SlotDisplayEditor
+              slot={row}
+              onchange={(patch) => update(row.key, patch)}
+              onkeydown={inputKey}
+            />
+          {/if}
           <span>採用機器 {count}件</span>
           <button
             type="button"
