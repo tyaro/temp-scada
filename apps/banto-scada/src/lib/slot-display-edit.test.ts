@@ -90,7 +90,11 @@ it("the examples and an empty definition pass the project schema", () => {
     },
   ];
   for (const slot of slots) expect(slotDisplayError(slot)).toBeUndefined();
-  project.equipmentTypes!.push({ id: "0190a4a4-0000-7000-8000-000000000a04", name: "A4", slots });
+  project.equipmentTypes!.push({
+    id: "0190a4a4-0000-7000-8000-000000000a04",
+    name: "A4",
+    slots,
+  });
   expect(() => parseProject(serializeProject(project))).not.toThrow();
 });
 
