@@ -425,6 +425,12 @@
           "minimum": 0,
           "exclusiveMaximum": 360
         },
+        "flipX": {
+          "type": "boolean"
+        },
+        "flipY": {
+          "type": "boolean"
+        },
         "opacity": {
           "$ref": "#/$defs/opacity"
         },
@@ -471,6 +477,42 @@
           },
           "else": {
             "required": ["fill"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "shape": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "const": "text"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "anyOf": [
+                {
+                  "properties": {
+                    "flipX": {
+                      "const": true
+                    }
+                  },
+                  "required": ["flipX"]
+                },
+                {
+                  "properties": {
+                    "flipY": {
+                      "const": true
+                    }
+                  },
+                  "required": ["flipY"]
+                }
+              ]
+            }
           }
         }
       ]
@@ -562,6 +604,12 @@
           "minimum": 0,
           "exclusiveMaximum": 360
         },
+        "flipX": {
+          "type": "boolean"
+        },
+        "flipY": {
+          "type": "boolean"
+        },
         "opacity": {
           "$ref": "#/$defs/opacity"
         },
@@ -636,6 +684,12 @@
           "type": "number",
           "minimum": 0,
           "exclusiveMaximum": 360
+        },
+        "flipX": {
+          "type": "boolean"
+        },
+        "flipY": {
+          "type": "boolean"
         },
         "opacity": {
           "$ref": "#/$defs/opacity"
@@ -949,6 +1003,12 @@
           "type": "number",
           "minimum": 0,
           "exclusiveMaximum": 360
+        },
+        "flipX": {
+          "type": "boolean"
+        },
+        "flipY": {
+          "type": "boolean"
         },
         "opacity": {
           "$ref": "#/$defs/opacity"

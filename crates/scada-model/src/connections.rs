@@ -19,9 +19,20 @@ fn rotate(point: Point, angle: f64) -> Point {
 fn number(object: &Value, key: &str) -> f64 {
     object[key].as_f64().unwrap()
 }
+/// Mirror around the pivot first, then rotate (same order as `rotation.ts`).
 fn world(object: &Value, point: Point, pivot: Point) -> Point {
+    let sign = |key: &str| {
+        if object.get(key) == Some(&Value::Bool(true)) {
+            -1.0
+        } else {
+            1.0
+        }
+    };
     let turned = rotate(
-        (point.0 - pivot.0, point.1 - pivot.1),
+        (
+            (point.0 - pivot.0) * sign("flipX"),
+            (point.1 - pivot.1) * sign("flipY"),
+        ),
         number(object, "rotation"),
     );
     (
@@ -126,6 +137,42 @@ pub fn validate(project: &Value) -> Result<(), String> {
 mod tests {
     use crate::Project;
     use serde_json::Value;
+    #[test]
+    fn flipped_anchor_world_matches_typescript() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/flip-cases.json")).unwrap();
+        let target = &cases["target"];
+        let (width, height) = (
+            super::number(target, "width"),
+            super::number(target, "height"),
+        );
+        for case in cases["anchors"].as_array().unwrap() {
+            let mut object = target.clone();
+            object["rotation"] = case["rotation"].clone();
+            for key in ["flipX", "flipY"] {
+                if let Some(flag) = case.get(key) {
+                    object[key] = flag.clone();
+                }
+            }
+            let local = match case["anchor"].as_str().unwrap() {
+                "top" => (width / 2.0, 0.0),
+                "right" => (width, height / 2.0),
+                "bottom" => (width / 2.0, height),
+                "left" => (0.0, height / 2.0),
+                _ => (width / 2.0, height / 2.0),
+            };
+            let world = super::world(&object, local, (width / 2.0, height / 2.0));
+            let expected = (
+                super::number(&case["world"], "x"),
+                super::number(&case["world"], "y"),
+            );
+            assert!(
+                (world.0 - expected.0).abs() < 1e-9 && (world.1 - expected.1).abs() < 1e-9,
+                "{}: {world:?}",
+                case["name"]
+            );
+        }
+    }
     #[test]
     fn shares_saved_connection_contract_with_typescript() {
         let sample: Value =

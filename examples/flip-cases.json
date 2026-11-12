@@ -1,0 +1,286 @@
+{
+  "target": {
+    "x": 100,
+    "y": 50,
+    "width": 40,
+    "height": 20
+  },
+  "placements": [
+    {
+      "name": "screen rectangle flipX",
+      "sample": "shape-paint",
+      "owner": "screens",
+      "shape": "rectangle",
+      "set": {
+        "flipX": true
+      },
+      "valid": true
+    },
+    {
+      "name": "screen rectangle both axes",
+      "sample": "shape-paint",
+      "owner": "screens",
+      "shape": "rectangle",
+      "set": {
+        "flipX": true,
+        "flipY": true
+      },
+      "valid": true
+    },
+    {
+      "name": "screen rectangle explicit false",
+      "sample": "shape-paint",
+      "owner": "screens",
+      "shape": "rectangle",
+      "set": {
+        "flipX": false
+      },
+      "valid": true
+    },
+    {
+      "name": "screen rectangle string flag",
+      "sample": "shape-paint",
+      "owner": "screens",
+      "shape": "rectangle",
+      "set": {
+        "flipX": "true"
+      },
+      "valid": false
+    },
+    {
+      "name": "screen rectangle null flag",
+      "sample": "shape-paint",
+      "owner": "screens",
+      "shape": "rectangle",
+      "set": {
+        "flipY": null
+      },
+      "valid": false
+    },
+    {
+      "name": "screen ellipse flipY",
+      "sample": "shape-paint",
+      "owner": "screens",
+      "shape": "ellipse",
+      "set": {
+        "flipY": true
+      },
+      "valid": true
+    },
+    {
+      "name": "screen symbol flipX",
+      "sample": "shape-paint",
+      "owner": "screens",
+      "shape": "symbol",
+      "set": {
+        "flipX": true
+      },
+      "valid": true
+    },
+    {
+      "name": "screen polyline flipY",
+      "sample": "process",
+      "owner": "screens",
+      "shape": "polyline",
+      "set": {
+        "flipY": true
+      },
+      "valid": true
+    },
+    {
+      "name": "screen text flipX",
+      "sample": "shape-paint",
+      "owner": "screens",
+      "shape": "text",
+      "set": {
+        "flipX": true
+      },
+      "valid": false
+    },
+    {
+      "name": "screen text flipY",
+      "sample": "shape-paint",
+      "owner": "screens",
+      "shape": "text",
+      "set": {
+        "flipY": true
+      },
+      "valid": false
+    },
+    {
+      "name": "screen text explicit false",
+      "sample": "shape-paint",
+      "owner": "screens",
+      "shape": "text",
+      "set": {
+        "flipX": false,
+        "flipY": false
+      },
+      "valid": true
+    },
+    {
+      "name": "screen trend flipX",
+      "sample": "trend",
+      "owner": "screens",
+      "shape": "trend",
+      "set": {
+        "flipX": true
+      },
+      "valid": false
+    },
+    {
+      "name": "screen level flipX",
+      "sample": "process",
+      "owner": "screens",
+      "object": {
+        "id": "0199f6aa-0000-7000-8000-000000000901",
+        "order": 900,
+        "x": 10,
+        "y": 10,
+        "width": 40,
+        "height": 120,
+        "rotation": 0,
+        "fill": "#38bdf8",
+        "flipX": true,
+        "shape": {
+          "type": "level",
+          "direction": "right",
+          "min": 0,
+          "max": 5
+        }
+      },
+      "valid": true
+    },
+    {
+      "name": "definition rectangle flipX",
+      "sample": "shape-paint",
+      "owner": "symbols",
+      "shape": "rectangle",
+      "set": {
+        "flipX": true
+      },
+      "valid": true
+    },
+    {
+      "name": "definition ellipse flipY",
+      "sample": "shape-paint",
+      "owner": "symbols",
+      "shape": "ellipse",
+      "set": {
+        "flipY": true
+      },
+      "valid": true
+    },
+    {
+      "name": "definition polyline flipX",
+      "sample": "shape-paint",
+      "owner": "symbols",
+      "shape": "polyline",
+      "set": {
+        "flipX": true
+      },
+      "valid": true
+    },
+    {
+      "name": "definition image flipY",
+      "sample": "symbol-image",
+      "owner": "symbols",
+      "shape": "image",
+      "set": {
+        "flipY": true
+      },
+      "valid": true
+    },
+    {
+      "name": "definition text flipX",
+      "sample": "shape-paint",
+      "owner": "symbols",
+      "shape": "text",
+      "set": {
+        "flipX": true
+      },
+      "valid": false
+    }
+  ],
+  "anchors": [
+    {
+      "name": "no flip center",
+      "rotation": 0,
+      "anchor": "center",
+      "world": {
+        "x": 120,
+        "y": 60
+      }
+    },
+    {
+      "name": "flipX left becomes right",
+      "rotation": 0,
+      "flipX": true,
+      "anchor": "left",
+      "world": {
+        "x": 140,
+        "y": 60
+      }
+    },
+    {
+      "name": "flipX keeps center",
+      "rotation": 0,
+      "flipX": true,
+      "anchor": "center",
+      "world": {
+        "x": 120,
+        "y": 60
+      }
+    },
+    {
+      "name": "flipY top becomes bottom",
+      "rotation": 0,
+      "flipY": true,
+      "anchor": "top",
+      "world": {
+        "x": 120,
+        "y": 70
+      }
+    },
+    {
+      "name": "both axes right becomes left",
+      "rotation": 0,
+      "flipX": true,
+      "flipY": true,
+      "anchor": "right",
+      "world": {
+        "x": 100,
+        "y": 60
+      }
+    },
+    {
+      "name": "mirror before rotate 90",
+      "rotation": 90,
+      "flipX": true,
+      "anchor": "left",
+      "world": {
+        "x": 120,
+        "y": 80
+      }
+    },
+    {
+      "name": "rotate 90 without flip",
+      "rotation": 90,
+      "anchor": "left",
+      "world": {
+        "x": 120,
+        "y": 40
+      }
+    },
+    {
+      "name": "flipY then rotate 270",
+      "rotation": 270,
+      "flipY": true,
+      "anchor": "bottom",
+      "world": {
+        "x": 110,
+        "y": 60
+      }
+    }
+  ]
+}

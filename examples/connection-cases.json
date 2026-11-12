@@ -967,5 +967,83 @@
         ]
       }
     ]
+  },
+  {
+    "name": "flipped target keeps the stale endpoint",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0/flipX",
+        "value": true
+      }
+    ]
+  },
+  {
+    "name": "flipped target with the mirrored endpoint",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0/flipX",
+        "value": true
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points/0",
+        "value": {
+          "x": 100,
+          "y": 220
+        }
+      }
+    ]
+  },
+  {
+    "name": "flipY keeps the side anchor",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0/flipY",
+        "value": true
+      }
+    ]
+  },
+  {
+    "name": "flipped pipe with stale local points",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/flipX",
+        "value": true
+      }
+    ]
+  },
+  {
+    "name": "flipped pipe with mirrored local points",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/2/flipX",
+        "value": true
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points",
+        "value": [
+          {
+            "x": 360,
+            "y": 220
+          },
+          {
+            "x": 280,
+            "y": 220
+          },
+          {
+            "x": 280,
+            "y": 320
+          },
+          {
+            "x": 180,
+            "y": 320
+          }
+        ]
+      }
+    ]
   }
 ]

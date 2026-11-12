@@ -74,6 +74,7 @@ docs/
 - [レイヤーフォルダーの設計](design/editor/layer-folders-design.md)
 - [レイヤーの兄弟内挿入](design/editor/layer-relative-order-design.md)
 - [配置の回転（次の実装工程）](design/editor/object-rotation-design.md)
+- [配置の反転（左右・上下）](design/editor/object-flip-design.md)
 - [複数配置の幅・高さを統一する](design/editor/selection-size-design.md)
 - [選択範囲の表示](design/editor/selection-view-design.md)
 - [矩形・楕円の枠線の一括編集](design/editor/selection-outline-design.md)

@@ -3,6 +3,8 @@
     label: string;
     icon: string;
     disabled?: boolean;
+    /** Menus only: kept out of the toolbar so the 1440px row does not wrap. */
+    menuOnly?: boolean;
     run: () => void;
   };
   export type ToolbarGroup = {
@@ -28,7 +30,9 @@
   let root: HTMLDivElement;
   let active = $state("");
   const enabled = $derived(
-    groups.flatMap((g) => g.items).filter((item) => !item.disabled),
+    groups
+      .flatMap((g) => g.items)
+      .filter((item) => !item.disabled && !item.menuOnly),
   );
   const tabStop = $derived(
     enabled.find((item) => item.label === active)?.label ?? enabled[0]?.label,
@@ -66,7 +70,7 @@
   {@render modes()}
   {#each groups as group (group.label)}
     <div class="group" role="group" aria-label={group.label}>
-      {#each group.items as item (item.label)}
+      {#each group.items.filter((item) => !item.menuOnly) as item (item.label)}
         <button
           type="button"
           data-edit-action

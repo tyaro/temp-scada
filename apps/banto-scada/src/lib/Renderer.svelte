@@ -15,7 +15,8 @@
   import {
     objectToWorld,
     worldToObject,
-    rotateVector,
+    placementVector,
+    isFlipped,
     rotationTransform,
     moveRotatedVertex,
     replaceRotatedVertex,
@@ -145,13 +146,13 @@
     handle: ResizeHandle;
     pointer: number;
     start: Point;
-    original: Geometry & { rotation: number };
+    original: Geometry & { rotation: number; flipX?: boolean; flipY?: boolean };
     current: Geometry;
   } | null>(null);
   function resizeKey(
     event: KeyboardEvent,
     id: string,
-    geometry: Geometry & { rotation: number },
+    geometry: Geometry & { rotation: number; flipX?: boolean; flipY?: boolean },
     handle: ResizeHandle,
   ) {
     if (
@@ -188,11 +189,13 @@
     geometry = {
       x: current.x,
       rotation: current.rotation,
+      flipX: current.flipX,
+      flipY: current.flipY,
       y: current.y,
       width: current.width,
       height: current.height,
     };
-    if (current.rotation) {
+    if (current.rotation || isFlipped(current)) {
       const p = handlePoint(geometry, handle);
       const edge = objectToWorld(current, {
         x: p.x - current.x,
@@ -204,9 +207,9 @@
       };
       if (snapEnabled) {
         if (handle.length === 1) {
-          const normal = rotateVector(
+          const normal = placementVector(
+            current,
             handle === "e" || handle === "w" ? { x: 1, y: 0 } : { x: 0, y: 1 },
-            current.rotation,
           );
           const projected = delta.x * normal.x + delta.y * normal.y;
           if (Math.abs(projected) < 1e-12) return;
@@ -359,7 +362,7 @@
       connectedVertex(current, index)
     )
       return;
-    if (current.rotation) {
+    if (current.rotation || isFlipped(current)) {
       const start = objectToWorld(current, current.shape.points[index]);
       const amount = event.shiftKey ? 10 : 1;
       const target = { ...start };
@@ -428,6 +431,8 @@
         x: object.x,
         y: object.y,
         rotation: object.rotation,
+        flipX: object.flipX,
+        flipY: object.flipY,
         width: object.width,
         height: object.height,
       };
@@ -683,6 +688,9 @@
       <g
         transform={rotationTransform(visual)}
         data-object-rotation={visual.rotation}
+        data-object-flip={isFlipped(visual)
+          ? `${visual.flipX ? "x" : ""}${visual.flipY ? "y" : ""}`
+          : undefined}
         opacity={compositedOpacity(visual)}
       >
         {#if "width" in visual && visual.shape.type === "screenView"}
@@ -783,7 +791,7 @@
             stroke={background}
             stroke-width="1.5"
             vector-effect="non-scaling-stroke"
-            style:cursor={rotatedResizeCursor(handle, visual.rotation)}
+            style:cursor={rotatedResizeCursor(handle, visual.rotation, visual)}
             class="resize-handle"
             role="button"
             tabindex="0"

@@ -40,6 +40,9 @@ interface BaseObject {
   opacity?: number;
   colorAlpha?: number;
   rotation: number;
+  /** Mirror around the rotation pivot before rotating; saved only when true. Not for text/trend. */
+  flipX?: boolean;
+  flipY?: boolean;
   folderId?: string;
   name?: string;
   locked?: boolean;
@@ -514,6 +517,7 @@ export function getBounds(object: ScreenObject) {
     getLocalBounds(object),
     rotationPivot(object),
     object.rotation,
+    object,
   );
 }
 export function strokeOverflowIds(

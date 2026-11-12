@@ -3,7 +3,7 @@ import {
   objectToWorld,
   worldToObject,
   rotationPivot,
-  rotateVector,
+  placementVector,
 } from "./rotation";
 
 export const CONNECTION_ANCHORS = [
@@ -112,7 +112,7 @@ export function followPolylineEndpoints(
   const before = rotationPivot(original);
   const after = rotationPivot({ ...original, shape: { points: nextPoints } });
   const delta = { x: before.x - after.x, y: before.y - after.y };
-  const rotated = rotateVector(delta, original.rotation);
+  const rotated = placementVector(original, delta);
   const result = {
     ...original,
     x: original.x + delta.x - rotated.x,
