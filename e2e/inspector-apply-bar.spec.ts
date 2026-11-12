@@ -47,6 +47,19 @@ for (const [width, height] of [
         { exact: true },
       ),
     ).toBeVisible();
+    // 詳細の説明はキーボードで開け、数値欄の説明として読み上げられる。
+    const help = inspector(page).getByText("適用前にほかの図形や画面へ移ると", {
+      exact: false,
+    });
+    await expect(help).toBeHidden();
+    await inspector(page)
+      .locator("summary", { hasText: "数値は Enter" })
+      .focus();
+    await page.keyboard.press("Enter");
+    await expect(help).toBeVisible();
+    await expect(
+      inspector(page).getByLabel("不透明度（%）", { exact: true }),
+    ).toHaveAccessibleDescription(/0%でもレイヤーから選択できます/);
     for (const label of ["X", "Y", "幅", "高さ", "回転角度"])
       await expect(
         inspector(page).getByLabel(label, { exact: true }),

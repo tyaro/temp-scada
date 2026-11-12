@@ -775,25 +775,30 @@
                 placeholder="未設定なら種類・表示順で表示"
               /></label
             >
-            <!-- UX精査 P1-2: 規則の説明は1行に絞り、詳細は title へ移す。 -->
-            <p
-              class="numeric-hint"
-              title="数値の欄は Enter またはフォーカス移動で確定し、Esc で取り消します。配置名・テキスト・タグなどは「変更を適用」で確定します。適用前にほかの図形や画面へ移ると、そのまま適用します。"
-            >
-              数値は Enter、ほかは「変更を適用」で確定 · Esc で取消
-            </p>
+            <!-- UX精査 P1-2: 規則の説明は1行に絞り、詳細は折りたたみへ移す（キーボード・タッチでも開ける。入力欄は aria-describedby で結ぶ）。 -->
+            <details class="numeric-hint hint-details">
+              <summary
+                >数値は Enter、ほかは「変更を適用」で確定 · Esc で取消</summary
+              >
+              <p id="inspector-commit-help">
+                数値の欄は Enter またはフォーカス移動で確定し、Esc
+                で取り消します。配置名・テキスト・タグなどは「変更を適用」で確定します。適用前にほかの図形や画面へ移ると、そのまま適用します。不透明度は0〜100%で、0%でもレイヤーから選択できます。
+              </p>
+            </details>
             {#if activeDefinition}<p class="numeric-hint">
                 共有定義内の名前は同じ定義を使う全配置で共用します。
               </p>{/if}
             {#if selected.shape.type === "image"}
               {@const assetId = selected.shape.assetId}
               {@const asset = project.assets.find((a) => a.id === assetId)!}
-              <p
-                class="numeric-hint"
-                title="選択した表示方式で枠内に描画します。余白を含む枠全体が選択範囲です。"
-              >
-                原本：{asset.name} · {asset.width} × {asset.height} px
-              </p>
+              <details class="numeric-hint hint-details">
+                <summary
+                  >原本：{asset.name} · {asset.width} × {asset.height} px</summary
+                >
+                <p id="inspector-image-frame-help">
+                  選択した表示方式で枠内に描画します。余白を含む枠全体が選択範囲です。
+                </p>
+              </details>
               <button
                 type="button"
                 disabled={imageBusy}
@@ -817,11 +822,7 @@
             <div class="fields">
               {#each "width" in selected ? ["x", "y", "width", "height", "rotation", "opacity"] : ["x", "y", "rotation", "opacity"] as field}
                 {@const label = geometryLabel(field, selected.shape.type)}
-                <label
-                  class="banto-field banto-field--stacked"
-                  title={field === "opacity"
-                    ? "0〜100%。0%でもレイヤーから選択できます。"
-                    : undefined}
+                <label class="banto-field banto-field--stacked"
                   ><span class="banto-field-label">{label.visible}</span><input
                     class="banto-field-control"
                     name={field}
@@ -830,9 +831,16 @@
                     inputmode="decimal"
                     required
                     aria-invalid={numericErrors[field] ? "true" : undefined}
-                    aria-describedby={numericErrors[field]
-                      ? `numeric-${field}-error`
-                      : undefined}
+                    aria-describedby={[
+                      numericErrors[field] ? `numeric-${field}-error` : "",
+                      "inspector-commit-help",
+                      selected.shape.type === "image" &&
+                      (field === "width" || field === "height")
+                        ? "inspector-image-frame-help"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                     onfocus={focusNumber}
                     oninput={clearNumber}
                     onkeydown={numberKey}
@@ -1006,12 +1014,12 @@
                     ><option value="right">右</option></select
                   ></label
                 >
-                <p
-                  class="full-width numeric-hint"
-                  title="静的テキストは改行・枠幅での折返しに対応します。文字サイズは枠の変更では変わりません。タグ・機器情報の表示は1行です。"
-                >
-                  Enter で改行、Ctrl／⌘＋Enter で確定
-                </p>
+                <details class="full-width numeric-hint hint-details">
+                  <summary>Enter で改行、Ctrl／⌘＋Enter で確定</summary>
+                  <p id="inspector-text-help">
+                    静的テキストは改行・枠幅での折返しに対応します。文字サイズは枠の変更では変わりません。タグ・機器情報の表示は1行です。
+                  </p>
+                </details>
                 <label class="banto-field banto-field--stacked"
                   ><span class="banto-field-label">折返し</span><select
                     class="banto-field-control"
@@ -1027,6 +1035,7 @@
                     class="banto-field-control"
                     name="text"
                     aria-label="テキスト"
+                    aria-describedby="inspector-text-help"
                     rows="4"
                     wrap="off"
                     maxlength="1000"
@@ -1407,6 +1416,22 @@
     grid-column: 1 / -1;
   }
   .numeric-hint {
+    font-size: 12px;
+  }
+  .hint-details {
+    margin: 8px 0;
+    color: var(--banto-text-muted);
+  }
+  .hint-details > summary {
+    cursor: pointer;
+    line-height: 1.6;
+  }
+  .hint-details > summary:focus-visible {
+    outline: none;
+    box-shadow: var(--banto-focus-ring);
+  }
+  .hint-details > p {
+    margin: 4px 0 0;
     font-size: 12px;
   }
   .full-width,
