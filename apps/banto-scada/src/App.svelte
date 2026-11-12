@@ -63,6 +63,8 @@
     selectionUnits,
   } from "./lib/geometric-groups";
   import EquipmentLibrary from "./lib/designer/EquipmentLibrary.svelte";
+  import EquipmentBindingTable from "./lib/designer/EquipmentBindingTable.svelte";
+  import type { BindingTableChange } from "./lib/equipment-binding-table";
   import SymbolSlots from "./lib/designer/SymbolSlots.svelte";
   import {
     symbolSlotFormCommand,
@@ -970,6 +972,7 @@
     }
     if (
       screenViewRequest !== null ||
+      bindingTableOpen ||
       arrayCopy.request !== null ||
       folderRequest !== null ||
       deleteConfirm !== null ||
@@ -1998,6 +2001,19 @@
       );
       return false;
     }
+  }
+  let bindingTableOpen = $state(false);
+  function openBindingTable() {
+    if (!editBlocked && !activeDefinition) bindingTableOpen = true;
+  }
+  function applyBindingTable(changes: BindingTableChange[]): string | null {
+    let message: string | null = null;
+    const applied = edit(
+      { type: "assign-equipment-tags", changes },
+      undefined,
+      (error) => (message = error),
+    );
+    return applied ? null : (message ?? "未適用の入力を先に確定してください");
   }
   function screenProperties(event: SubmitEvent) {
     submitForm(event);
@@ -3214,6 +3230,7 @@
       !!recordingManagementOpen ||
       !!recordingOperationsOpen ||
       !!trendRequest ||
+      bindingTableOpen ||
       !!recordingRequest,
   );
   const editBlocked = $derived(menuBlocked || mode !== "edit");
@@ -3953,6 +3970,9 @@
                 oncommand={edit}
                 onsubmit={submitForm}
                 onopenusage={openSymbolUsage}
+                onopentable={openBindingTable}
+                tableDisabled={(editBlocked && !bindingTableOpen) ||
+                  !!activeDefinition}
               />{/key}
           </TreeSection>
           <TreeSection label="プロジェクト設定">
@@ -4444,6 +4464,15 @@
     />
   {/key}
 {/if}
+{#key workspaceGeneration}
+  <EquipmentBindingTable
+    open={bindingTableOpen && mode === "edit"}
+    {project}
+    {catalogSelection}
+    onapply={applyBindingTable}
+    onclose={() => (bindingTableOpen = false)}
+  />
+{/key}
 {#if currentTrendRequest}
   <TrendDefinitionsDialog
     {project}
