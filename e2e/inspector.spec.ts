@@ -140,7 +140,7 @@ test("hidden invalid properties reopen for native and model validation", async (
   await page
     .getByRole("button", { name: "Rectangle を追加", exact: true })
     .click();
-  const width = page.getByLabel("width", { exact: true });
+  const width = page.getByLabel("幅", { exact: true });
   const original = await width.inputValue();
   await width.fill("0");
   await inspector(page)

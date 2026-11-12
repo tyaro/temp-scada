@@ -204,15 +204,15 @@ test("invalid drafts prevent membership changes; reverted drafts allow the drop"
 }) => {
   await start(page);
   await row(page).click();
-  await page.getByLabel("x", { exact: true }).fill("invalid");
+  await page.getByLabel("X", { exact: true }).fill("invalid");
   await page.getByLabel("配置名", { exact: true }).focus();
   let data = await begin(page, row(page));
   await folder(page).dispatchEvent("drop", { dataTransfer: data });
   await expect(guard(page)).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("invalid");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("invalid");
   // 離れたら確定: 破棄の経路は無いので、Escapeで入力を戻してから再度ドロップする
-  await page.getByLabel("x", { exact: true }).press("Escape");
+  await page.getByLabel("X", { exact: true }).press("Escape");
   data = await begin(page, row(page));
   await folder(page).dispatchEvent("drop", { dataTransfer: data });
   expect((await saved(page)).screens[0].objects[0].folderId).toBe(folderId);

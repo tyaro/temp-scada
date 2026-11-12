@@ -110,10 +110,10 @@ for (const theme of ["light", "dark"] as const)
     await expect(gradient).toHaveAttribute("fx", "0.5");
     await expect(gradient).toHaveAttribute("spreadMethod", "pad");
     await pixels(page, 240, 80);
-    await page.getByLabel("width", { exact: true }).fill("360");
-    await page.getByLabel("width", { exact: true }).press("Enter");
-    await page.getByLabel("height", { exact: true }).fill("120");
-    await page.getByLabel("height", { exact: true }).press("Enter");
+    await page.getByLabel("幅", { exact: true }).fill("360");
+    await page.getByLabel("幅", { exact: true }).press("Enter");
+    await page.getByLabel("高さ", { exact: true }).fill("120");
+    await page.getByLabel("高さ", { exact: true }).press("Enter");
     await pixels(page, 360, 120);
     const result = await save(page);
     expect(result.manifest.schemaVersion).toBe("0.37.0");

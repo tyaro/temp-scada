@@ -96,8 +96,8 @@ for (const theme of ["light", "dark"])
     await expect
       .poll(() => vertices(p))
       .toEqual([{ x: 140, y: 260 }, ...before.slice(1)]);
-    await p.getByLabel("width", { exact: true }).fill("120");
-    await p.getByLabel("width", { exact: true }).press("Enter");
+    await p.getByLabel("幅", { exact: true }).fill("120");
+    await p.getByLabel("幅", { exact: true }).press("Enter");
     await expect
       .poll(() => vertices(p))
       .toEqual([{ x: 160, y: 280 }, ...before.slice(1)]);

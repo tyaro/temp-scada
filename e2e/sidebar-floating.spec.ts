@@ -40,7 +40,7 @@ for (const theme of ["light", "dark"])
   }) => {
     await start(page);
     await chooseTheme(page, theme);
-    const x = page.getByLabel("x", { exact: true });
+    const x = page.getByLabel("X", { exact: true });
     await x.fill("1e");
     await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
     await selectPanel(page, "部品");
@@ -150,7 +150,7 @@ test("overlapping panels raise by pointer and focus without replacing input DOM"
   await start(page);
   await selectPanel(page, "プロジェクト");
   const name = page.getByLabel("プロジェクト名", { exact: true }),
-    x = page.getByLabel("x", { exact: true });
+    x = page.getByLabel("X", { exact: true });
   await name.fill("未適用");
   await x.focus();
   await x.fill("1e");
@@ -177,7 +177,7 @@ test("keyboard resize and cancelled pointer moves retain focused draft and Proje
   await start(page);
   await float(page);
   const before = await panel(page).boundingBox();
-  const x = page.getByLabel("x", { exact: true });
+  const x = page.getByLabel("X", { exact: true });
   await x.fill("1e");
   await x.focus();
   await move(page, 150, 35, true);

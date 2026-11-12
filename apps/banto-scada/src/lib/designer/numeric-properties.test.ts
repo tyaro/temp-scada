@@ -1,5 +1,9 @@
 import { expect, it } from "vitest";
-import { parseNumericProperty, objectFormValues } from "./numeric-properties";
+import {
+  parseNumericProperty,
+  objectFormValues,
+  geometryLabel,
+} from "./numeric-properties";
 import sample from "../../../../../examples/tag-binding.project.json";
 import { parseProject } from "../project";
 it("accepts finite decimal and exponent input without accepting empty, partial or nondecimal text", () => {
@@ -34,4 +38,18 @@ it("uses committed shape-specific baselines and excludes direct binding inside d
   expect(objectFormValues(object, true)).not.toHaveProperty("externalName");
   values.text = "changed";
   expect(JSON.stringify(object)).toBe(original);
+});
+
+it("位置・サイズ欄の見出しは日本語に揃え、画像は枠と分かる名前にする", () => {
+  expect(geometryLabel("x", "rectangle")).toEqual({
+    visible: "X",
+    accessible: "X",
+  });
+  expect(geometryLabel("width", "rectangle").visible).toBe("幅");
+  expect(geometryLabel("height", "text").accessible).toBe("高さ");
+  expect(geometryLabel("width", "image").accessible).toBe("画像枠の幅");
+  expect(geometryLabel("rotation", "ellipse")).toEqual({
+    visible: "回転（°）",
+    accessible: "回転角度",
+  });
 });

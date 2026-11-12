@@ -57,18 +57,18 @@ for (const percentage of [25, 100, 400])
       .getByRole("button", { name: "rectangle · 3", exact: true })
       .click();
     await designDrag(page, svg, { x: 200, y: 250 }, { x: 40, y: -20 });
-    await expect(page.getByLabel("x", { exact: true })).toHaveValue("140");
-    await expect(page.getByLabel("y", { exact: true })).toHaveValue("150");
+    await expect(page.getByLabel("X", { exact: true })).toHaveValue("140");
+    await expect(page.getByLabel("Y", { exact: true })).toHaveValue("150");
     await button("元に戻す").click();
     await designDrag(page, svg, { x: 360, y: 350 }, { x: 40, y: 20 });
-    await expect(page.getByLabel("width", { exact: true })).toHaveValue("300");
-    await expect(page.getByLabel("height", { exact: true })).toHaveValue("200");
+    await expect(page.getByLabel("幅", { exact: true })).toHaveValue("300");
+    await expect(page.getByLabel("高さ", { exact: true })).toHaveValue("200");
     await button("元に戻す").click();
     await selectPanel(page, "部品");
     await button("配管を追加").click();
     const pipeOrigin = {
-      x: Number(await page.getByLabel("x", { exact: true }).inputValue()),
-      y: Number(await page.getByLabel("y", { exact: true }).inputValue()),
+      x: Number(await page.getByLabel("X", { exact: true }).inputValue()),
+      y: Number(await page.getByLabel("Y", { exact: true }).inputValue()),
     };
     await designDrag(
       page,
@@ -125,7 +125,7 @@ test("pan is temporary navigation, supports Space/middle button and Escape, and 
   expect(space.x - after.x).toBeCloseTo(80, 0);
   await drag(false, true);
   expect((await read()).x - space.x).toBeCloseTo(80, 0);
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("100");
   await expect(button("元に戻す")).toBeDisabled();
   expect(
     await viewport.evaluate((el) =>
@@ -225,10 +225,10 @@ test("adding parts while zoomed centers them in the visible viewport in a single
   await selectPanel(page, "部品");
   await button("Rectangle を追加").click();
   expect(
-    Number(await page.getByLabel("x", { exact: true }).inputValue()),
+    Number(await page.getByLabel("X", { exact: true }).inputValue()),
   ).toBeCloseTo(center.x - 80, 2);
   expect(
-    Number(await page.getByLabel("y", { exact: true }).inputValue()),
+    Number(await page.getByLabel("Y", { exact: true }).inputValue()),
   ).toBeCloseTo(center.y - 50, 2);
   await expect(
     page

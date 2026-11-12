@@ -149,7 +149,7 @@ test("a pointer toolbar action preserves focused numeric and text drafts includi
 }) => {
   await start(page);
   await selected(page);
-  const x = page.getByLabel("x", { exact: true });
+  const x = page.getByLabel("X", { exact: true });
   await x.fill("1500");
   await fit(page).click();
   await expect(x).toBeFocused();

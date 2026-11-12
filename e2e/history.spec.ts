@@ -74,7 +74,7 @@ test("keyboard history ignores inputs, clears redo on a new edit and is inactive
   await selectPanel(page, "部品");
   await page.getByRole("button", { name: "Rectangle を追加" }).click();
   const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
-  const x = page.getByLabel("x", { exact: true });
+  const x = page.getByLabel("X", { exact: true });
   await x.focus();
   await page.keyboard.press("Control+z");
   await expect(svg.locator("[data-object-id]")).toHaveCount(4);

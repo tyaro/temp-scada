@@ -19,7 +19,7 @@ for (const theme of ["light", "dark"] as const)
         exact: true,
       }),
       status = page.getByTestId("save-state"),
-      x = page.getByLabel("x", { exact: true });
+      x = page.getByLabel("X", { exact: true });
     const height = () =>
       toolbar.evaluate((el) => el.getBoundingClientRect().height);
     for (const [index, width] of [

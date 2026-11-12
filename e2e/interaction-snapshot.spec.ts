@@ -46,8 +46,8 @@ async function start(page: Page) {
   });
   await selectPanel(page, "レイヤー");
   await row(page, rectangleId).click();
-  await page.getByLabel("x", { exact: true }).fill("120");
-  await page.getByLabel("x", { exact: true }).press("Enter");
+  await page.getByLabel("X", { exact: true }).fill("120");
+  await page.getByLabel("X", { exact: true }).press("Enter");
 }
 async function saved(page: Page) {
   const download = page.waitForEvent("download");
@@ -148,13 +148,14 @@ for (const interaction of ["move", "resize", "vertex"] as const)
     const id = interaction === "vertex" ? lineId : rectangleId;
     await row(page, id).click();
     const field = interaction === "resize" ? "width" : "x",
+      label = field === "width" ? "幅" : "X",
       value =
         interaction === "vertex"
           ? "420"
           : interaction === "resize"
             ? "300"
             : "140";
-    await page.getByLabel(field, { exact: true }).fill(value);
+    await page.getByLabel(label, { exact: true }).fill(value);
     const source =
       interaction === "move"
         ? svg(page)

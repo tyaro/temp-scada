@@ -44,7 +44,7 @@ test("replaces a symbol reference only after apply or leaving, preserving placem
     target.id,
   );
   await expect(placement).toHaveAttribute("transform", geometry!);
-  await expect(page.getByLabel("width", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("幅", { exact: true })).toHaveValue(
     String((object as { width: number }).width),
   );
   await button("元に戻す").click();

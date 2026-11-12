@@ -54,7 +54,7 @@ for (const theme of ["light", "dark"])
     });
     expect(centered).toBeCloseTo(sample.screens[0].objects[2].width! / 2, 1);
     const before = await saved(page);
-    await numeric(page, "height", "80");
+    await numeric(page, "高さ", "80");
     await expect(painted).toHaveAttribute("font-size", "24");
     await button(page, "元に戻す").click();
     expect((await saved(page)).screens).toEqual(before.screens);
@@ -95,7 +95,7 @@ test("static overflow uses grapheme ellipsis, ink stays inside the declared fram
     page.locator(`.sheet > svg [data-object-id="${id}"] > title`),
   ).toContainText(object.shape.text);
   expect((await saved(page)).screens).toEqual(project.screens);
-  await numeric(page, "width", "700");
+  await numeric(page, "幅", "700");
   await expect(painted).toHaveText(object.shape.text);
   await expect(textBox(page)).toHaveAttribute("data-text-layout", "full");
 });
@@ -115,10 +115,10 @@ test("numeric status is preserved and overflow never paints a shortened value or
     "aria-label",
     /表示枠に収まりません.*未接続/,
   );
-  await numeric(page, "width", "5");
+  await numeric(page, "幅", "5");
   await expect(textBox(page).locator("[data-text-content]")).toHaveCount(0);
   await expect(textBox(page).locator("path")).toHaveCount(2);
-  await numeric(page, "width", "300");
+  await numeric(page, "幅", "300");
   await expect(textBox(page).locator("[data-text-content]")).toHaveText(
     "-- · 未接続",
   );
@@ -128,7 +128,7 @@ test("short height and empty text have explicit distinct behavior; resizing neve
   page,
 }) => {
   await start(page);
-  await numeric(page, "height", "10");
+  await numeric(page, "高さ", "10");
   await expect(textBox(page)).toHaveAttribute("data-text-layout", "overflow");
   await expect(textBox(page).locator("[data-text-content]")).toHaveCount(0);
   await page.getByLabel("テキスト", { exact: true }).fill("");
@@ -246,7 +246,7 @@ test("rotated text and shared definitions use the same layout without zoom-depen
   await page
     .locator(`button[data-layer-id="${sample.screens[0].objects[0].id}"]`)
     .click();
-  await numeric(page, "x", "120");
+  await numeric(page, "X", "120");
   expect(await page.evaluate(() => (window as any).__textMeasures)).toBe(0);
 });
 

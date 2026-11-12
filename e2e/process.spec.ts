@@ -23,8 +23,8 @@ test("edits pipes and reusable symbols, then reproduces the saved process screen
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await selectPanel(page, "部品");
   await page.getByRole("button", { name: "配管を追加" }).click();
-  await page.getByLabel("x", { exact: true }).fill("400");
-  await page.getByLabel("y", { exact: true }).fill("180");
+  await page.getByLabel("X", { exact: true }).fill("400");
+  await page.getByLabel("Y", { exact: true }).fill("180");
   await page
     .getByLabel("頂点", { exact: true })
     .fill("-20,0\n120,0\n120,80\n180,80");
@@ -54,10 +54,10 @@ test("edits pipes and reusable symbols, then reproduces the saved process screen
   });
   await page.mouse.up();
   expect(
-    Number(await page.getByLabel("x", { exact: true }).inputValue()),
+    Number(await page.getByLabel("X", { exact: true }).inputValue()),
   ).toBeCloseTo(440, 0);
   expect(
-    Number(await page.getByLabel("y", { exact: true }).inputValue()),
+    Number(await page.getByLabel("Y", { exact: true }).inputValue()),
   ).toBeCloseTo(200, 0);
   await page.getByRole("button", { name: "ポンプを追加" }).click();
   await page.getByRole("button", { name: "ポンプを追加" }).click();

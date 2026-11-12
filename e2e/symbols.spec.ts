@@ -22,10 +22,10 @@ test("shared definition edits update placements across screens and survive histo
   await button("Rectangle を追加").click();
   let numericChanges = 0;
   for (const [name, value] of [
-    ["x", "10"],
-    ["y", "20"],
-    ["width", "30"],
-    ["height", "25"],
+    ["X", "10"],
+    ["Y", "20"],
+    ["幅", "30"],
+    ["高さ", "25"],
   ]) {
     const input = page.getByLabel(name, { exact: true });
     if (Number(await input.inputValue()) !== Number(value)) numericChanges++;

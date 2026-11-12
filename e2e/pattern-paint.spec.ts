@@ -89,8 +89,8 @@ for (const theme of ["light", "dark"])
       (await saved(page)).screens[0].objects[0].shape.paint.fill.paint,
     ).toEqual(paint.fill.paint);
     await button(page, "元に戻す").click();
-    await page.getByLabel("width", { exact: true }).fill("300");
-    await page.getByLabel("width", { exact: true }).press("Enter");
+    await page.getByLabel("幅", { exact: true }).fill("300");
+    await page.getByLabel("幅", { exact: true }).press("Enter");
     await page.getByLabel("回転角度", { exact: true }).fill("30");
     await page.getByLabel("回転角度", { exact: true }).press("Enter");
     await expect(pattern).toHaveAttribute("width", "12");

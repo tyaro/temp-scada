@@ -31,7 +31,7 @@ test("desktop workspace keeps properties beside the canvas and scrolls tools ind
   await panel.evaluate((el) => (el.scrollTop = 0));
   const after = (await svg.boundingBox())!;
   expect(after).toEqual(before);
-  await expect(page.getByLabel("x", { exact: true })).toBeInViewport();
+  await expect(page.getByLabel("X", { exact: true })).toBeInViewport();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

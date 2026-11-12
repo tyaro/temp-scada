@@ -139,10 +139,10 @@ for (const zoom of [0.25, 1, 4])
       const n = async (name: string) =>
         Number(await page.getByLabel(name, { exact: true }).inputValue());
       expect(
-        Math.abs((await n("x")) + (await n("width")) / 2 - (alt ? 923 : 920)),
+        Math.abs((await n("X")) + (await n("幅")) / 2 - (alt ? 923 : 920)),
       ).toBeLessThan(2 / zoom);
       expect(
-        Math.abs((await n("y")) + (await n("height")) / 2 - (alt ? 503 : 500)),
+        Math.abs((await n("Y")) + (await n("高さ")) / 2 - (alt ? 503 : 500)),
       ).toBeLessThan(2 / zoom);
       await expect(svg(page).locator("[data-object-id]")).toHaveCount(4);
       await button(page, "元に戻す").click();
@@ -218,10 +218,10 @@ test("context key and named action buttons recover properties and return focus t
   const n = async (name: string) =>
     Number(await page.getByLabel(name, { exact: true }).inputValue());
   expect(
-    Math.abs((await n("x")) + (await n("width")) / 2 - center.x),
+    Math.abs((await n("X")) + (await n("幅")) / 2 - center.x),
   ).toBeLessThan(2);
   expect(
-    Math.abs((await n("y")) + (await n("height")) / 2 - center.y),
+    Math.abs((await n("Y")) + (await n("高さ")) / 2 - center.y),
   ).toBeLessThan(2);
 });
 
@@ -447,11 +447,7 @@ test("back-to-back context requests open only the last insertion point", async (
     .click();
   const n = async (name: string) =>
     Number(await page.getByLabel(name, { exact: true }).inputValue());
-  expect(Math.abs((await n("x")) + (await n("width")) / 2 - 30)).toBeLessThan(
-    2,
-  );
-  expect(Math.abs((await n("y")) + (await n("height")) / 2 - 30)).toBeLessThan(
-    2,
-  );
+  expect(Math.abs((await n("X")) + (await n("幅")) / 2 - 30)).toBeLessThan(2);
+  expect(Math.abs((await n("Y")) + (await n("高さ")) / 2 - 30)).toBeLessThan(2);
   await expect(svg(page).locator("[data-object-id]")).toHaveCount(4);
 });

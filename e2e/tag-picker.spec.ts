@@ -124,17 +124,17 @@ test("double click chooses; dialog shortcuts and same-ID project reload cannot m
   page,
 }) => {
   await start(page);
-  await page.getByLabel("x", { exact: true }).fill("101");
-  await page.getByLabel("x", { exact: true }).press("Enter");
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("101");
+  await page.getByLabel("X", { exact: true }).fill("101");
+  await page.getByLabel("X", { exact: true }).press("Enter");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("101");
   await expect(button(page, "元に戻す")).toBeEnabled();
   await button(page, "タグを選択").click();
   await expect(dialog(page)).toBeVisible();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("101");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("101");
   await page.keyboard.press("Control+z");
   await page.keyboard.press("Control+s");
   await expect(dialog(page)).toBeVisible();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("101");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("101");
   await tag(page, /搬送数/).dblclick();
   await expect(field(page)).toHaveValue("Demo.Line.WorkCount");
   await button(page, "タグを選択").click();
@@ -200,7 +200,7 @@ test("native search undo stays local while row undo cannot affect background val
   page,
 }) => {
   await start(page);
-  const x = page.getByLabel("x", { exact: true });
+  const x = page.getByLabel("X", { exact: true });
   await x.fill("101");
   await x.press("Enter");
   await button(page, "タグを選択").click();

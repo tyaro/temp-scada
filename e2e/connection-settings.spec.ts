@@ -124,8 +124,8 @@ for (const theme of ["light", "dark"])
       .selectOption("");
     await button(p, "始点の接続を適用").click();
     await select(p, pump1);
-    await p.getByLabel("x", { exact: true }).fill("140");
-    await p.getByLabel("x", { exact: true }).press("Enter");
+    await p.getByLabel("X", { exact: true }).fill("140");
+    await p.getByLabel("X", { exact: true }).press("Enter");
     const disconnected = await saved(p);
     expect(
       disconnected.screens[0].objects[2].shape.connections,

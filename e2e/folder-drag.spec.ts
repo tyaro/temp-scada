@@ -187,13 +187,13 @@ test("name and icon are the only folder drag source; invalid input blocks commit
     await folder(page, a).locator(".folder-chevron").getAttribute("draggable"),
   ).not.toBe("true");
   expect(await source(page, a).getAttribute("draggable")).toBe("true");
-  await page.getByLabel("x", { exact: true }).fill("bad");
+  await page.getByLabel("X", { exact: true }).fill("bad");
   const data = await begin(page, b);
   await folder(page, c).dispatchEvent("drop", { dataTransfer: data });
   await expect(guard(page)).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("bad");
-  await page.getByLabel("x", { exact: true }).press("Escape");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("bad");
+  await page.getByLabel("X", { exact: true }).press("Escape");
   expect((await saved(page)).screens).toEqual(before.screens);
 });
 

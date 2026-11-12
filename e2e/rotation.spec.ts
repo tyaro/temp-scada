@@ -184,7 +184,7 @@ test("rotated edge keyboard moves along its normal; a perpendicular key is a no-
   await page.keyboard.press("ArrowRight");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await page.keyboard.press("ArrowDown");
-  await expect(page.getByLabel("width", { exact: true })).toHaveValue("161");
+  await expect(page.getByLabel("幅", { exact: true })).toHaveValue("161");
   const after = await center(handle(page, "w"));
   expect(after.x).toBeCloseTo(opposite.x, 6);
   expect(after.y).toBeCloseTo(opposite.y, 6);

@@ -30,32 +30,32 @@ test("range selection commits a focused number before starting, keeps invalid in
     await page.mouse.move(points[1].x, points[1].y, { steps: 5 });
     await page.mouse.up();
   }
-  await page.getByLabel("x", { exact: true }).fill("110");
+  await page.getByLabel("X", { exact: true }).fill("110");
   await drag();
   await expect(svg.locator('[data-selected="true"]')).toHaveCount(2);
   await page.getByRole("button", { name: "元に戻す", exact: true }).click();
   await rectangle.click();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("100");
   await expect(
     page.getByRole("button", { name: "元に戻す", exact: true }),
   ).toBeDisabled();
-  await page.getByLabel("x", { exact: true }).fill("NaN");
+  await page.getByLabel("X", { exact: true }).fill("NaN");
   await drag();
   await expect(svg.locator('[data-selected="true"]')).toHaveCount(1);
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("NaN");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("NaN");
   const prompt = page.getByRole("dialog", {
     name: "未適用の入力があります",
     exact: true,
   });
   // 不正な値はダイアログなしで止まり、選択は変わらない。
   await expect(prompt).not.toBeVisible();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("NaN");
-  await page.getByLabel("x", { exact: true }).press("Escape");
-  await page.getByLabel("x", { exact: true }).dispatchEvent("compositionstart");
-  await page.getByLabel("x", { exact: true }).fill("220");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("NaN");
+  await page.getByLabel("X", { exact: true }).press("Escape");
+  await page.getByLabel("X", { exact: true }).dispatchEvent("compositionstart");
+  await page.getByLabel("X", { exact: true }).fill("220");
   await drag();
   await expect(svg.locator('[data-selected="true"]')).toHaveCount(1);
   await expect(prompt).not.toBeVisible();
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("220");
-  await page.getByLabel("x", { exact: true }).dispatchEvent("compositionend");
+  await expect(page.getByLabel("X", { exact: true })).toHaveValue("220");
+  await page.getByLabel("X", { exact: true }).dispatchEvent("compositionend");
 });

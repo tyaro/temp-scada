@@ -27,6 +27,7 @@
   import { sampleSelection, type CatalogSelection } from "../catalog-session";
   import { numericTag, type CatalogTag, type TagCatalog } from "./tag-catalog";
   import {
+    geometryLabel,
     objectFormValues,
     parseNumericProperty,
     type NumericProperty,
@@ -274,6 +275,7 @@
     request.input.dispatchEvent(new Event("input", { bubbles: true }));
     pickerOpen = false;
   }
+  let objectForm = $state<HTMLFormElement>();
   let numericErrors = $state<Record<string, string>>({});
   const targets = new WeakMap<HTMLInputElement, NumericTarget>();
   const composing = new Set<HTMLInputElement | HTMLTextAreaElement>();
@@ -745,6 +747,7 @@
           />
         {/if}
         <form
+          bind:this={objectForm}
           use:drafts.track={objectFormValues(selected, activeDefinition)}
           data-editor-form="object"
           onreset={() => (numericErrors = {})}
@@ -772,20 +775,24 @@
                 placeholder="未設定なら種類・表示順で表示"
               /></label
             >
-            <p class="numeric-hint">
-              配置名は「変更を適用」で確定します。
-              {#if activeDefinition}共有定義内の名前は同じ定義を使う全配置で共用します。{/if}
+            <!-- UX精査 P1-2: 規則の説明は1行に絞り、詳細は title へ移す。 -->
+            <p
+              class="numeric-hint"
+              title="数値の欄は Enter またはフォーカス移動で確定し、Esc で取り消します。配置名・テキスト・タグなどは「変更を適用」で確定します。適用前にほかの図形や画面へ移ると、そのまま適用します。"
+            >
+              数値は Enter、ほかは「変更を適用」で確定 · Esc で取消
             </p>
-            <p class="numeric-hint">
-              数値はEnter・フォーカス移動で確定 ·
-              Escで取消。不透明度は0〜100%、0%でもレイヤーから選択できます。
-            </p>
+            {#if activeDefinition}<p class="numeric-hint">
+                共有定義内の名前は同じ定義を使う全配置で共用します。
+              </p>{/if}
             {#if selected.shape.type === "image"}
               {@const assetId = selected.shape.assetId}
               {@const asset = project.assets.find((a) => a.id === assetId)!}
-              <p class="numeric-hint">
-                原本：{asset.name} · {asset.width} × {asset.height} px<br
-                />選択した表示方式で枠内に描画します。余白を含む枠全体が選択範囲です。
+              <p
+                class="numeric-hint"
+                title="選択した表示方式で枠内に描画します。余白を含む枠全体が選択範囲です。"
+              >
+                原本：{asset.name} · {asset.width} × {asset.height} px
               </p>
               <button
                 type="button"
@@ -809,26 +816,16 @@
             {/if}
             <div class="fields">
               {#each "width" in selected ? ["x", "y", "width", "height", "rotation", "opacity"] : ["x", "y", "rotation", "opacity"] as field}
-                <label class="banto-field banto-field--stacked"
-                  ><span class="banto-field-label"
-                    >{field === "rotation"
-                      ? "回転（°）"
-                      : field === "opacity"
-                        ? "不透明度（%）"
-                        : selected.shape.type === "image" && field === "width"
-                          ? "画像枠の幅"
-                          : selected.shape.type === "image" &&
-                              field === "height"
-                            ? "画像枠の高さ"
-                            : field}</span
-                  ><input
+                {@const label = geometryLabel(field, selected.shape.type)}
+                <label
+                  class="banto-field banto-field--stacked"
+                  title={field === "opacity"
+                    ? "0〜100%。0%でもレイヤーから選択できます。"
+                    : undefined}
+                  ><span class="banto-field-label">{label.visible}</span><input
                     class="banto-field-control"
                     name={field}
-                    aria-label={field === "rotation"
-                      ? "回転角度"
-                      : field === "opacity"
-                        ? "不透明度（%）"
-                        : field}
+                    aria-label={label.accessible}
                     type="text"
                     inputmode="decimal"
                     required
@@ -1009,8 +1006,11 @@
                     ><option value="right">右</option></select
                   ></label
                 >
-                <p class="full-width numeric-hint">
-                  静的テキストは改行・枠幅での折返しに対応します。Enterで改行、Ctrl／⌘＋Enterまたは「変更を適用」で確定します。文字サイズは枠変更で変わりません。タグ・機器情報の表示は1行です。
+                <p
+                  class="full-width numeric-hint"
+                  title="静的テキストは改行・枠幅での折返しに対応します。文字サイズは枠の変更では変わりません。タグ・機器情報の表示は1行です。"
+                >
+                  Enter で改行、Ctrl／⌘＋Enter で確定
                 </p>
                 <label class="banto-field banto-field--stacked"
                   ><span class="banto-field-label">折返し</span><select
@@ -1224,8 +1224,15 @@
                 }}>参照する Symbol 定義を編集</button
               >
             {/if}
-            <div class="actions">
+            <!-- UX精査 P1-2: 長い Inspector でも見えるよう下端に固定し、未適用があるときだけ強調する。 -->
+            <div
+              class="actions apply-bar"
+              class:dirty={drafts.isDirty(objectForm)}
+            >
               <button type="submit">変更を適用</button>
+              {#if drafts.isDirty(objectForm)}<span class="apply-state"
+                  >未適用の変更があります</span
+                >{/if}
             </div>
           </fieldset>
           {#if selected.shape.type === "symbol" && !activeDefinition}
@@ -1450,6 +1457,30 @@
   .actions button {
     width: auto;
     white-space: normal;
+  }
+  .apply-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: 12px -14px 0;
+    padding: 4px 14px;
+    background: var(--banto-surface);
+    border-top: 1px solid var(--banto-border);
+  }
+  .apply-bar button {
+    margin: 4px 0;
+  }
+  .apply-bar.dirty button {
+    border-color: var(--banto-primary-solid);
+    background: var(--banto-primary-solid);
+    color: var(--banto-on-solid);
+  }
+  .apply-bar.dirty button:hover {
+    background: var(--banto-primary-solid-hover);
+  }
+  .apply-state {
+    font-size: 12px;
+    color: var(--banto-text-muted);
   }
   @media (min-width: 701px) and (max-width: 1099px) {
     .inspector {

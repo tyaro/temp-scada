@@ -56,7 +56,7 @@ test("locked placements remain visible, exclude canvas/all/range selection, and 
   const transform = await rect.getAttribute("transform");
   await button(page, "ロック：rectangle · 3").click();
   await expect(page.getByLabel("配置名", { exact: true })).toBeDisabled();
-  await expect(page.getByLabel("x", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("X", { exact: true })).toBeDisabled();
   await expect(button(page, "選択図形を削除")).toBeDisabled();
   await expect(button(page, "選択図形を複製")).toBeDisabled();
   await expect(canvas(page).locator("[data-resize-handle]")).toHaveCount(0);
@@ -78,12 +78,12 @@ test("locked placements remain visible, exclude canvas/all/range selection, and 
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
   await button(page, "ロックを解除").click();
-  await expect(page.getByLabel("x", { exact: true })).toBeEnabled();
+  await expect(page.getByLabel("X", { exact: true })).toBeEnabled();
   await expect(canvas(page).locator("[data-resize-handle]")).toHaveCount(8);
   await button(page, "元に戻す").click();
-  await expect(page.getByLabel("x", { exact: true })).toBeDisabled();
+  await expect(page.getByLabel("X", { exact: true })).toBeDisabled();
   await button(page, "元に戻す").click();
-  await expect(page.getByLabel("x", { exact: true })).toBeEnabled();
+  await expect(page.getByLabel("X", { exact: true })).toBeEnabled();
   await expect(button(page, "元に戻す")).toBeDisabled();
 });
 test("mixed layer selection is read-only and direct keyboard mutations never partially apply", async ({
@@ -139,10 +139,10 @@ test("lock toggles protect drafts and invalid input; apply and lock are separate
   await button(page, "元に戻す").click();
   await expect(name).toHaveValue("");
   await expect(button(page, "元に戻す")).toBeDisabled();
-  await page.getByLabel("width", { exact: true }).fill("-1");
+  await page.getByLabel("幅", { exact: true }).fill("-1");
   await button(page, "ロック：rectangle · 3").click();
   await expect(name).toBeEnabled();
-  await expect(page.getByLabel("width", { exact: true })).toHaveValue("-1");
+  await expect(page.getByLabel("幅", { exact: true })).toHaveValue("-1");
   await expect(button(page, "ロック：rectangle · 3")).toHaveAttribute(
     "aria-pressed",
     "false",
