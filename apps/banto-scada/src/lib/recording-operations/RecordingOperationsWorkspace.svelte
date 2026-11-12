@@ -11,6 +11,11 @@
   import { createRecordingOperationsMonitor } from "./monitor";
   import { phaseLabels, errorLabels } from "./labels";
   import RecordingPlanView from "../recording-management/RecordingPlanView.svelte";
+  import ExpectedRevisionFields from "./ExpectedRevisionFields.svelte";
+  import {
+    expectedRevisionsFor,
+    type ExpectedRevisions,
+  } from "../recording-management/expected";
   let {
     openOwner,
     project,
@@ -18,6 +23,7 @@
     service,
     blocked = false,
     conflict,
+    expectedRevisions,
     onclose,
   }: {
     openOwner: object | null;
@@ -26,6 +32,7 @@
     service?: RecordingOperationsService;
     blocked?: boolean;
     conflict?: string;
+    expectedRevisions?: ExpectedRevisions;
     onclose: () => void;
   } = $props();
   const monitor = createRecordingOperationsMonitor();
@@ -78,6 +85,9 @@
       : undefined,
   );
   const visible = $derived(current ? presentation : undefined);
+  const matchedExpected = $derived(
+    expectedRevisionsFor(expectedRevisions, binding?.context.target),
+  );
   function revision(text: string): number | null {
     if (text === "") return null;
     if (!/^[1-9][0-9]*$/.test(text)) throw Error("invalid");
@@ -191,51 +201,20 @@
           plan={project.recordingPlan}
         />{:else}<p>希望設定なし（停止命令ではありません）</p>{/if}
     </section>
-    <section aria-label="新しい変更の期待版">
-      <h3>新しい変更の期待版</h3>
-      <p>
-        記録管理状態で確認した版を入力してください。空欄は「版なし」を意味します。
-      </p>
-      <label class="banto-field banto-field--stacked"
-        ><span class="banto-field-label">適用版</span><input
-          class="banto-field-control"
-          aria-label="期待適用版"
-          inputmode="numeric"
-          bind:value={applied}
-          disabled={blocked || !visible?.canPreflight}
-        /></label
-      >
-      <label class="banto-field banto-field--stacked"
-        ><span class="banto-field-label">mapping版</span><input
-          class="banto-field-control"
-          aria-label="期待mapping版"
-          inputmode="numeric"
-          bind:value={mapping}
-          disabled={blocked ||
-            !visible?.canPreflight ||
-            !binding?.desired?.enabled}
-        /></label
-      >
-      <label class="banto-field banto-field--stacked"
-        ><span class="banto-field-label">保持適用版</span><input
-          class="banto-field-control"
-          aria-label="期待保持適用版"
-          inputmode="numeric"
-          bind:value={retention}
-          disabled={blocked ||
-            !visible?.canPreflight ||
-            !binding?.desired?.enabled}
-        /></label
-      >
-      {#if draftError}<p role="alert">
-          期待版を確認してください。有効な希望設定にはmapping版・保持適用版が必要です。
-        </p>{/if}
-      <button
-        type="button"
-        disabled={blocked || !binding || !visible?.canPreflight}
-        onclick={preflight}>新しい変更を検査</button
-      >
-    </section>
+    {#key owner}<ExpectedRevisionFields
+        expected={matchedExpected}
+        bind:applied
+        bind:mapping
+        bind:retention
+        disabled={blocked || !visible?.canPreflight}
+        unbound={!binding?.desired?.enabled}
+        error={draftError}
+      />{/key}
+    <button
+      type="button"
+      disabled={blocked || !binding || !visible?.canPreflight}
+      onclick={preflight}>新しい変更を検査</button
+    >
     {#if visible?.previous?.latest}
       {@const previous = visible.previous.latest}
       <section aria-label="以前の対象の完了結果">

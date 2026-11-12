@@ -7,6 +7,7 @@
   import type { AsyncOperationsClient } from "../recording-async/state";
   import { isAsyncOperationsClient } from "../recording-async/coordinator";
   import RecordingOperationsWorkspace from "./RecordingOperationsWorkspace.svelte";
+  import type { ExpectedRevisions } from "../recording-management/expected";
   import AsyncRecordingOperationsWorkspace from "../recording-async/AsyncRecordingOperationsWorkspace.svelte";
   let {
     openOwner,
@@ -14,6 +15,7 @@
     generation,
     service,
     asyncClient,
+    expectedRevisions,
     onclose,
   }: {
     openOwner: object | null;
@@ -21,6 +23,8 @@
     generation: number;
     service?: RecordingOperationsService;
     asyncClient?: AsyncOperationsClient;
+    /** The last recording management inspection's revisions (P1-7). */
+    expectedRevisions?: ExpectedRevisions;
     onclose: () => void;
   } = $props();
   let mode = $state<"sync" | "async">(),
@@ -79,6 +83,7 @@
   service={mode === "sync" ? (service ?? heldSync) : undefined}
   blocked={blocked || service === undefined}
   {conflict}
+  {expectedRevisions}
   {onclose}
 />
 <AsyncRecordingOperationsWorkspace
@@ -88,5 +93,6 @@
   client={asyncClient}
   blocked={blocked || asyncClient === undefined}
   {conflict}
+  {expectedRevisions}
   {onclose}
 />

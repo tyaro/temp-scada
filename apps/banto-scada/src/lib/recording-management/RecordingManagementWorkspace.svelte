@@ -28,6 +28,7 @@
     recordingSummary,
     type RecordingSummary,
   } from "./summary";
+  import { expectedRevisionsFrom, type ExpectedRevisions } from "./expected";
   let {
     openOwner,
     project,
@@ -48,6 +49,8 @@
     onsummary?: (value: {
       summary: RecordingSummary;
       inspectedAt: number;
+      /** The revisions a new change expects (operations dialog, P1-7). */
+      expected?: ExpectedRevisions;
     }) => void;
   } = $props();
   // Remains mounted across Modal close/reopen and all Project/service changes.
@@ -115,7 +118,11 @@
         summary: recordingSummary(next),
         at: Date.now(),
       };
-      onsummary?.({ summary: inspected.summary, inspectedAt: inspected.at });
+      onsummary?.({
+        summary: inspected.summary,
+        inspectedAt: inspected.at,
+        expected: expectedRevisionsFrom(next, inspected.at),
+      });
     });
   });
   const summaryShown = $derived(
