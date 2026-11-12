@@ -23,6 +23,7 @@
   } from "../equipment-binding-table";
   import { downloadBlob } from "../download";
   import {
+    hubGroups,
     hubTagCsv,
     hubTagCsvFileName,
     type HubTagCsvSkip,
@@ -209,7 +210,11 @@
       error = `未適用の変更が${changes.length}件あります。Hub 登録用 CSV は保存済みの割付から作るため、先に適用するか変更を取り消してください。`;
       return;
     }
-    const result = hubTagCsv(project, checking ? index : null);
+    const result = hubTagCsv(
+      project,
+      checking ? index : null,
+      checking ? hubGroups(catalogSelection.catalog) : [],
+    );
     skipped = result.invalid;
     const notes = [
       result.checked

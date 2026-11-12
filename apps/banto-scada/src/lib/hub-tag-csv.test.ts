@@ -8,6 +8,7 @@ import {
   hubTagCsv,
   hubTagCsvFileName,
   serializeHubCsv,
+  hubGroups,
   splitHubName,
 } from "./hub-tag-csv";
 
@@ -86,6 +87,44 @@ describe("hub tag csv", () => {
     ])
       expect(splitHubName(name)).toHaveProperty("reason");
   });
+  it("splits by a known connection and group so parts may hold dots", () => {
+    const catalog: TagCatalog = {
+      revision: "r",
+      groups: [
+        { id: '["S7.Line1"]', name: "S7.Line1" },
+        {
+          id: '["S7.Line1","Pump.A"]',
+          parentId: '["S7.Line1"]',
+          name: "Pump.A",
+        },
+        { id: '["S7"]', name: "S7" },
+        { id: '["S7","Line1"]', parentId: '["S7"]', name: "Line1" },
+      ],
+      tags: [],
+    };
+    const groups = hubGroups(catalog);
+    expect(groups).toEqual([
+      { connection: "S7.Line1", group: "Pump.A" },
+      { connection: "S7", group: "Line1" },
+    ]);
+    expect(splitHubName("S7.Line1.Pump.A.Run.Bit", groups.slice(0, 1))).toEqual(
+      {
+        parts: ["S7.Line1", "Pump.A", "Run.Bit"],
+      },
+    );
+    expect(splitHubName("S7.Line1.Run", groups)).toEqual({
+      parts: ["S7", "Line1", "Run"],
+    });
+    // Both pairs match: the split cannot be told apart.
+    expect(splitHubName("S7.Line1.Pump.A.Run", groups)).toHaveProperty(
+      "reason",
+    );
+    // No known pair: only exactly two dots are split.
+    expect(splitHubName("Other.G.T.U", groups)).toHaveProperty("reason");
+    expect(splitHubName("Other.G.T", groups)).toEqual({
+      parts: ["Other", "G", "T"],
+    });
+  });
   it("writes typed candidate rows in equipment and slot order", () => {
     const result = hubTagCsv(
       project([
@@ -133,7 +172,7 @@ describe("hub tag csv", () => {
         equipmentCode: "P-1",
         slotName: "flow",
         externalName: "Pump1Flow",
-        reason: expect.stringContaining("2個が必要"),
+        reason: expect.stringContaining("2個なら分けられる"),
       },
     ]);
     expect(lines(result.csv)[1]).toMatch(/^PLC1,Pump1,Mode,/);
