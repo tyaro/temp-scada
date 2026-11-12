@@ -29,12 +29,8 @@ for (const theme of ["light", "dark"] as const)
         const { default: EquipmentReadDetails } = await import(detailsPath);
         const { default: Renderer } = await import(rendererPath),
           { default: ScreenPainting } = await import(paintingPath);
-        // Dynamic bool text colors must win even when a placement forces monochrome.
-        (sample.symbols[0].objects[5].shape as any).boolColors = {
-          trueColor: "#16a34a",
-          falseColor: "#64748b",
-          unknownColor: "#d97706",
-        };
+        // The sample Text follows the slot's boolDisplay colors; they must win
+        // even when a placement forces monochrome.
         (sample.symbols[0].objects[5] as any).colorAlpha = 0.4;
         (sample.symbols[0].objects[5] as any).opacity = 0.5;
         (sample.symbols[0].objects[0] as any).opacity = 0.5;

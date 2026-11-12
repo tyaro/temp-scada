@@ -8,7 +8,7 @@ import type { ImageFit } from "../image-fit";
 import type { ImageCrop } from "../image-crop";
 import type {
   EquipmentPropertyField,
-  BoolColors,
+  StateTextColors,
   StateColor,
   BackgroundImage,
   ImageAsset,
@@ -36,7 +36,7 @@ export interface ObjectPatch {
   binding?: TagBinding | null;
   slotBinding?: { slotName: string } | null;
   equipmentProperty?: { field: EquipmentPropertyField } | null;
-  boolColors?: BoolColors | null;
+  stateColors?: StateTextColors | null;
   stateColor?: StateColor | null;
   symbolId?: string;
   equipmentId?: string | null;

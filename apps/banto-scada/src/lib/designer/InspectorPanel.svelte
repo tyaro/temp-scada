@@ -21,7 +21,8 @@
   import SelectionColor from "./SelectionColor.svelte";
   import SelectionOutline from "./SelectionOutline.svelte";
   import SelectionLine from "./SelectionLine.svelte";
-  import BoolColors from "./BoolColors.svelte";
+  import { isStateSlotType } from "../equipment";
+  import StateTextColor from "./StateTextColor.svelte";
   import SymbolColorMode from "./SymbolColorMode.svelte";
   import TagPicker from "./TagPicker.svelte";
   import { sampleSelection, type CatalogSelection } from "../catalog-session";
@@ -728,17 +729,16 @@
             onsubmit={properties}
           />
         {/if}
-        {#if activeDefinition && selected.shape.type === "text" && ("readSlots" in screen ? screen.readSlots : [])?.some((slot) => slot.name === (selected.shape.type === "text" ? selected.shape.slotBinding?.slotName : undefined) && slot.type === "bool")}
+        {#if activeDefinition && selected.shape.type === "text" && ("readSlots" in screen ? screen.readSlots : [])?.some((slot) => slot.name === (selected.shape.type === "text" ? selected.shape.slotBinding?.slotName : undefined) && isStateSlotType(slot.type))}
           {@const followers = stateColorUsages(
             screen as SymbolDefinition,
             selected.id,
           )}
           {#if followers.length}<p class="numeric-hint">
-              状態色の追従先 {followers.length}件。配色とbool
-              slotの変更はすべてに反映します。配色元の削除・配色解除・number化は先に追従を解除してください。
+              状態色の追従先 {followers.length}件。取得不能の色とslotの変更はすべてに反映します。配色元の削除・指定の解除・number化は先に追従を解除してください。
             </p>{/if}
-          <BoolColors
-            colors={selected.shape.boolColors}
+          <StateTextColor
+            colors={selected.shape.stateColors}
             objectId={selected.id}
             targetKey={`${generation}:${screen.id}:${activeDefinition}`}
             locked={selectionLocked}
@@ -1063,7 +1063,7 @@
                   >
                   <p class="full-width tag-note">
                     配置に関連付けた機器から解決します。機器情報は保存した台帳を表示し、定義編集中だけ例示します。読取slotは定義編集中も機器未関連付けです。機器情報・静的テキスト・number
-                    slotへ変更すると状態別の文字色も解除します。
+                    slotへ変更すると状態の色に従う指定も解除します。
                   </p>
                 {:else}
                   <div class="full-width tag-binding">

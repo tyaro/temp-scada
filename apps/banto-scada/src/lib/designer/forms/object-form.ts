@@ -1,6 +1,6 @@
 import { normalizeTextNewlines } from "../../text-content";
 import { isEquipmentPropertyField } from "../../equipment-property";
-import type { EquipmentSlot } from "../../equipment";
+import { isStateSlotType, type EquipmentSlot } from "../../equipment";
 import type { EditCommand, ObjectPatch } from "../../editor";
 import { parsePoints, type ScreenObject } from "../../project";
 import { parseLineStyle } from "../../line-style";
@@ -70,12 +70,12 @@ export function objectFormCommand(
         patch.slotBinding = slotName ? { slotName } : null;
       }
       if (
-        selected.shape.boolColors &&
+        selected.shape.stateColors &&
         !context.readSlots?.some(
-          (slot) => slot.name === slotName && slot.type === "bool",
+          (slot) => slot.name === slotName && isStateSlotType(slot.type),
         )
       )
-        patch.boolColors = null;
+        patch.stateColors = null;
     }
     if (!context.definition) {
       const externalName = String(data.get("externalName") ?? "");

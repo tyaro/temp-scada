@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { BoolColors } from "../project";
+  import type { StateTextColors } from "../project";
   import type { createDraftGuard } from "./drafts.svelte";
   let {
     colors,
@@ -9,7 +9,7 @@
     drafts,
     onsubmit,
   }: {
-    colors?: BoolColors;
+    colors?: StateTextColors;
     objectId: string;
     targetKey: string;
     locked: boolean;
@@ -20,44 +20,28 @@
 
 <form
   use:drafts.track={{
-    boolColorsMode: colors ? "enabled" : "disabled",
-    trueColor: colors?.trueColor ?? "#15803d",
-    falseColor: colors?.falseColor ?? "#64748b",
+    stateColorsMode: colors ? "enabled" : "disabled",
     unknownColor: colors?.unknownColor ?? "#b45309",
   }}
-  data-editor-form="bool-colors"
+  data-editor-form="state-text-color"
   data-object-id={objectId}
   data-target-key={targetKey}
-  aria-label="bool slotの状態別文字色"
+  aria-label="slotの状態の色に従う"
   {onsubmit}
 >
   <fieldset disabled={locked}>
-    <legend>状態別の文字色</legend>
+    <legend>状態の色に従う</legend>
     <label class="banto-field banto-field--stacked"
       ><span class="banto-field-label">使用</span><select
         class="banto-field-control"
-        name="boolColorsMode"
-        aria-label="状態別の文字色を使用"
+        name="stateColorsMode"
+        aria-label="状態の色に従う"
         ><option value="disabled">使用しない</option><option value="enabled"
           >使用する</option
         ></select
       ></label
     >
     <div class="colors">
-      <label
-        >true<input
-          type="color"
-          name="trueColor"
-          aria-label="trueの文字色"
-        /></label
-      >
-      <label
-        >false<input
-          type="color"
-          name="falseColor"
-          aria-label="falseの文字色"
-        /></label
-      >
       <label
         >取得不能<input
           type="color"
@@ -67,9 +51,10 @@
       >
     </div>
     <p>
-      配置の単色指定より優先します。true／false・取得不能理由・SIMの文字表示は維持します。不透明度は既存設定を使います。「使用しない」を適用すると3色設定を解除します。
+      既知の状態の色は機器種別のslotの状態の定義に従い、配置の単色指定より優先します。色の定義がないbool
+      slotは通常の色のままです。未関連付け・未接続・Badなど状態が分からないときは取得不能の色にします。文字表示と不透明度は既存設定を使います。「使用しない」を適用すると指定を解除します。
     </p>
-    <button type="submit">状態別の文字色を適用</button>
+    <button type="submit">状態の色に従う指定を適用</button>
   </fieldset>
 </form>
 
@@ -97,7 +82,7 @@
   }
   .colors {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     margin-top: 10px;
   }

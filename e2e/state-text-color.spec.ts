@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import sample from "../examples/bool-colors.project.json" with { type: "json" };
+import sample from "../examples/state-text-color.project.json" with { type: "json" };
 import { chooseTheme, selectPanel, fileCommand } from "./helpers/designer";
 for (const theme of ["light", "dark"] as const)
-  test(`bool text colors apply, disable, undo and clear with slot changes in ${theme}`, async ({
+  test(`state-color following applies, disables, undoes and clears with slot changes in ${theme}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
@@ -20,31 +20,33 @@ for (const theme of ["light", "dark"] as const)
     const object = sample.symbols[0].objects[5];
     await page.locator(`button[data-layer-id="${object.id}"]`).click();
     const colors = page.getByRole("form", {
-      name: "bool slotの状態別文字色",
+      name: "slotの状態の色に従う",
       exact: true,
     });
     const text = page.locator(
       `.sheet > svg [data-object-id="${object.id}"] [data-text-content]`,
     );
-    await expect(colors.getByLabel("状態別の文字色を使用")).toHaveValue(
-      "enabled",
-    );
+    await expect(
+      colors.getByLabel("状態の色に従う", { exact: true }),
+    ).toHaveValue("enabled");
     await expect(text).toHaveAttribute("fill", "#d97706");
     await colors.getByLabel("取得不能の文字色").fill("#2563eb");
     await expect(colors.getByLabel("取得不能の文字色")).toHaveValue("#2563eb");
     await colors
-      .getByRole("button", { name: "状態別の文字色を適用", exact: true })
+      .getByRole("button", { name: "状態の色に従う指定を適用", exact: true })
       .click();
     await expect(text).toHaveAttribute("fill", "#2563eb");
-    await colors.getByLabel("状態別の文字色を使用").selectOption("disabled");
     await colors
-      .getByRole("button", { name: "状態別の文字色を適用", exact: true })
+      .getByLabel("状態の色に従う", { exact: true })
+      .selectOption("disabled");
+    await colors
+      .getByRole("button", { name: "状態の色に従う指定を適用", exact: true })
       .click();
     await expect(text).toHaveAttribute("fill", object.fill!);
     await page.getByRole("button", { name: "元に戻す", exact: true }).click();
-    await expect(colors.getByLabel("状態別の文字色を使用")).toHaveValue(
-      "enabled",
-    );
+    await expect(
+      colors.getByLabel("状態の色に従う", { exact: true }),
+    ).toHaveValue("enabled");
     await expect(text).toHaveAttribute("fill", "#2563eb");
     const form = page.locator('form[data-editor-form="object"]');
     await form.getByLabel("表示元", { exact: true }).selectOption("current");
@@ -58,13 +60,15 @@ for (const theme of ["light", "dark"] as const)
     await expect(text).toHaveAttribute("fill", "#2563eb");
     // 離れたら確定: Two dirty forms must not partly apply when the first one removes bool eligibility.
     await form.getByLabel("表示元", { exact: true }).selectOption("current");
-    await colors.getByLabel("状態別の文字色を使用").selectOption("disabled");
+    await colors
+      .getByLabel("状態の色に従う", { exact: true })
+      .selectOption("disabled");
     await page.getByRole("button", { name: "画面へ戻る", exact: true }).click();
     await expect(
       page
         .getByRole("alert")
         .getByText(
-          "読取slotの解除・numberへの変更と状態別の文字色は同時に適用できません。",
+          "読取slotの解除・numberへの変更と状態の色に従う指定は同時に適用できません。",
           { exact: false },
         ),
     ).toBeVisible();
@@ -72,20 +76,21 @@ for (const theme of ["light", "dark"] as const)
     await expect(form.getByLabel("表示元", { exact: true })).toHaveValue(
       "current",
     );
-    await expect(colors.getByLabel("状態別の文字色を使用")).toHaveValue(
-      "disabled",
-    );
+    await expect(
+      colors.getByLabel("状態の色に従う", { exact: true }),
+    ).toHaveValue("disabled");
     await expect(text).toHaveAttribute("fill", "#2563eb");
     // Restoring drafts to their committed values permits saving the unchanged model.
     await form.getByLabel("表示元", { exact: true }).selectOption("running");
-    await colors.getByLabel("状態別の文字色を使用").selectOption("enabled");
+    await colors
+      .getByLabel("状態の色に従う", { exact: true })
+      .selectOption("enabled");
     const downloading = page.waitForEvent("download");
     await fileCommand(page, "Project を保存");
     const saved = JSON.parse(
       await readFile((await (await downloading).path())!, "utf8"),
     );
-    expect(saved.symbols[0].objects[5].shape.boolColors).toEqual({
-      ...object.shape.boolColors,
+    expect(saved.symbols[0].objects[5].shape.stateColors).toEqual({
       unknownColor: "#2563eb",
     });
     expect(saved.manifest.schemaVersion).toBe("0.37.0");

@@ -55,16 +55,12 @@ it("metadata declarations roundtrip without duplicating equipment or slot IDs", 
     equipmentProperty: { field: "typeName" },
   });
 });
-it("form changes slot to metadata atomically, clears bool colors and supports no-op and Undo", () => {
+it("form changes slot to metadata atomically, clears state colors and supports no-op and Undo", () => {
   const original = fresh(),
     definition = original.symbols[0];
   const object = definition.objects[5] as LayoutObject;
   if (object.shape.type !== "text") throw new Error("fixture");
-  object.shape.boolColors = {
-    trueColor: "#00ff00",
-    falseColor: "#999999",
-    unknownColor: "#777777",
-  };
+  object.shape.stateColors = { unknownColor: "#777777" };
   const form = new Map(Object.entries(objectFormValues(object, true)));
   form.set("slotName", "@name");
   const command = objectFormCommand(
@@ -86,7 +82,7 @@ it("form changes slot to metadata atomically, clears bool colors and supports no
   const shape = result.project.symbols[0].objects[5].shape;
   expect(shape).toMatchObject({ equipmentProperty: { field: "name" } });
   expect(shape).not.toHaveProperty("slotBinding");
-  expect(shape).not.toHaveProperty("boolColors");
+  expect(shape).not.toHaveProperty("stateColors");
   expect(
     applyCommand(
       result.project,
@@ -125,11 +121,7 @@ it("rejects non-definition edits and state-color source destruction atomically",
   ).toThrow();
   const source = definition.objects[5];
   if (source.shape.type !== "text") throw new Error("fixture");
-  source.shape.boolColors = {
-    trueColor: "#00ff00",
-    falseColor: "#999999",
-    unknownColor: "#777777",
-  };
+  source.shape.stateColors = { unknownColor: "#777777" };
   const follower = definition.objects[0];
   if (follower.shape.type !== "polyline") throw new Error("fixture");
   follower.shape.stateColor = { textId: source.id };
@@ -143,7 +135,7 @@ it("rejects non-definition edits and state-color source destruction atomically",
         objectId: source.id,
         patch: {
           slotBinding: null,
-          boolColors: null,
+          stateColors: null,
           equipmentProperty: { field: "code" },
         },
       },

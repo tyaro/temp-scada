@@ -103,7 +103,7 @@
   } from "./lib/designer/forms/selection-color";
   import { stateColorCommand } from "./lib/designer/forms/state-color";
   import SlotReadStatus from "./lib/designer/SlotReadStatus.svelte";
-  import { boolColorsCommand } from "./lib/designer/forms/bool-colors";
+  import { stateTextColorCommand } from "./lib/designer/forms/state-text-color";
   import { symbolColorModeCommand } from "./lib/designer/forms/symbol-color-mode";
   import { backgroundCropCommand } from "./lib/designer/forms/background-crop";
   import { backgroundImageCommand } from "./lib/designer/forms/background-image";
@@ -240,7 +240,7 @@
   import ContextActions, {
     type ContextAction,
   } from "./lib/designer/ContextActions.svelte";
-  import type { EquipmentUsage } from "./lib/equipment";
+  import { isStateSlotType, type EquipmentUsage } from "./lib/equipment";
   import type { SymbolUsage } from "./lib/symbol-usages";
   import { selectionTarget } from "./lib/selection-view";
   import type { Project } from "./lib/project";
@@ -2690,8 +2690,8 @@
         },
       );
     }
-    if (form.dataset.editorForm === "bool-colors")
-      return boolColorsCommand(
+    if (form.dataset.editorForm === "state-text-color")
+      return stateTextColorCommand(
         {
           data,
           objectId: form.dataset.objectId,
@@ -2860,7 +2860,8 @@
       // Applying a slot change can remove the color form before the next submit.
       // Reject both dirty forms together before creating any history entry.
       const colorDraft = forms.find(
-        (form) => form.isConnected && form.dataset.editorForm === "bool-colors",
+        (form) =>
+          form.isConnected && form.dataset.editorForm === "state-text-color",
       );
       const objectDraft = forms.find(
         (form) => form.isConnected && form.dataset.editorForm === "object",
@@ -2869,11 +2870,13 @@
         const slotName = new FormData(objectDraft).get("slotName");
         const slots = ("readSlots" in screen ? screen.readSlots : []) ?? [];
         if (
-          !slots.some((slot) => slot.name === slotName && slot.type === "bool")
+          !slots.some(
+            (slot) => slot.name === slotName && isStateSlotType(slot.type),
+          )
         ) {
           validatingForm = objectDraft;
           throw new Error(
-            "読取slotの解除・numberへの変更と状態別の文字色は同時に適用できません。文字色の入力を戻してからslotを変更してください。",
+            "読取slotの解除・numberへの変更と状態の色に従う指定は同時に適用できません。指定の入力を戻してからslotを変更してください。",
           );
         }
       }
@@ -4075,7 +4078,7 @@
           <details class="definition-banner-help">
             <summary>説明</summary>
             <p>
-              確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。bool状態別の文字色は両方の配置で優先します。別の形にする場合は定義を複製してください。
+              確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。slotの状態の色に従うTextは両方の配置で状態の色を優先します。別の形にする場合は定義を複製してください。
             </p>
           </details>
           <button

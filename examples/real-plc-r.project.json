@@ -478,9 +478,7 @@
             "slotBinding": {
               "slotName": "bit"
             },
-            "boolColors": {
-              "trueColor": "#16a34a",
-              "falseColor": "#64748b",
+            "stateColors": {
               "unknownColor": "#d97706"
             }
           }
@@ -596,7 +594,11 @@
         {
           "name": "bit",
           "type": "bool",
-          "direction": "read"
+          "direction": "read",
+          "boolDisplay": {
+            "true": { "text": "true", "color": "#16a34a" },
+            "false": { "text": "false", "color": "#64748b" }
+          }
         },
         {
           "name": "word",

@@ -57,20 +57,24 @@ for (const theme of ["light", "dark"] as const) {
       page.getByText("状態色の追従先 7件。", { exact: false }),
     ).toBeVisible();
     const colors = page.getByRole("form", {
-      name: "bool slotの状態別文字色",
+      name: "slotの状態の色に従う",
       exact: true,
     });
-    await colors.getByLabel("状態別の文字色を使用").selectOption("disabled");
     await colors
-      .getByRole("button", { name: "状態別の文字色を適用", exact: true })
+      .getByLabel("状態の色に従う", { exact: true })
+      .selectOption("disabled");
+    await colors
+      .getByRole("button", { name: "状態の色に従う指定を適用", exact: true })
       .click();
     await expect(
       page.getByRole("alert").getByText("配色元Text", { exact: false }),
     ).toBeVisible();
-    await expect(colors.getByLabel("状態別の文字色を使用")).toHaveValue(
-      "disabled",
-    );
-    await colors.getByLabel("状態別の文字色を使用").selectOption("enabled");
+    await expect(
+      colors.getByLabel("状態の色に従う", { exact: true }),
+    ).toHaveValue("disabled");
+    await colors
+      .getByLabel("状態の色に従う", { exact: true })
+      .selectOption("enabled");
     await page
       .locator(`button[data-layer-id="${sample.symbols[0].objects[7].id}"]`)
       .click();

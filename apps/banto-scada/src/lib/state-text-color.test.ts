@@ -1,19 +1,19 @@
 import { expect, it } from "vitest";
-import sample from "../../../../examples/bool-colors.project.json";
-import { parseProject, serializeProject, type BoolColors } from "./project";
+import sample from "../../../../examples/state-text-color.project.json";
+import {
+  parseProject,
+  serializeProject,
+  type StateTextColors,
+} from "./project";
 import { applyCommand } from "./editor";
 import { emptyHistory, recordEdit, travelHistory } from "./history";
-import { boolColorsCommand } from "./designer/forms/bool-colors";
+import { stateTextColorCommand } from "./designer/forms/state-text-color";
 import { objectFormCommand } from "./designer/forms/object-form";
 import { objectFormValues } from "./designer/numeric-properties";
 import { copyObjects } from "./clipboard";
 const fresh = () => parseProject(JSON.stringify(sample));
-const colors: BoolColors = {
-  trueColor: "#00aa00",
-  falseColor: "#666666",
-  unknownColor: "#ffaa00",
-};
-it("persists complete bool colors, atomically updates, supports Undo and preserves slot text when disabled", () => {
+const colors: StateTextColors = { unknownColor: "#ffaa00" };
+it("persists the state-color follow setting, atomically updates, supports Undo and preserves slot text when disabled", () => {
   const project = fresh(),
     def = project.symbols[0],
     object = def.objects[5];
@@ -22,12 +22,15 @@ it("persists complete bool colors, atomically updates, supports Undo and preserv
     definitionId: def.id,
     screenId: def.id,
     objectId: object.id,
-    patch: { boolColors: colors },
+    patch: { stateColors: colors },
   };
   const edited = recordEdit(project, emptyHistory(), command, "edit");
   expect(
     parseProject(serializeProject(edited.project)).symbols[0].objects[5].shape,
-  ).toMatchObject({ boolColors: colors, slotBinding: { slotName: "running" } });
+  ).toMatchObject({
+    stateColors: colors,
+    slotBinding: { slotName: "running" },
+  });
   const undone = travelHistory(
     edited.project,
     edited.history,
@@ -37,10 +40,12 @@ it("persists complete bool colors, atomically updates, supports Undo and preserv
   expect(undone.symbols[0].objects).toEqual(def.objects);
   const disabled = applyCommand(
     edited.project,
-    { ...command, patch: { boolColors: null } },
+    { ...command, patch: { stateColors: null } },
     "edit",
   );
-  expect(disabled.symbols[0].objects[5].shape).not.toHaveProperty("boolColors");
+  expect(disabled.symbols[0].objects[5].shape).not.toHaveProperty(
+    "stateColors",
+  );
   expect(disabled.symbols[0].objects[5].shape).toMatchObject({
     slotBinding: { slotName: "running" },
   });
@@ -54,7 +59,7 @@ it("refuses inconsistent direct patches without repairing or mutating the origin
   for (const patch of [
     { slotBinding: null },
     { slotBinding: { slotName: "current" } },
-    { boolColors: { ...colors, trueColor: "red" } },
+    { stateColors: { unknownColor: "red" } },
   ])
     expect(() =>
       applyCommand(
@@ -95,12 +100,12 @@ it.each(["", "current"])(
       selected,
       readSlots: def.readSlots,
     });
-    expect(command).toMatchObject({ patch: { boolColors: null } });
+    expect(command).toMatchObject({ patch: { stateColors: null } });
     if (command.type !== "update") throw new Error("expected update");
     command.definitionId = def.id;
     const edited = recordEdit(project, emptyHistory(), command, "edit");
     expect(edited.project.symbols[0].objects[5].shape).not.toHaveProperty(
-      "boolColors",
+      "stateColors",
     );
     const restored = travelHistory(
       edited.project,
@@ -111,12 +116,12 @@ it.each(["", "current"])(
     expect(restored.symbols[0].objects).toEqual(def.objects);
   },
 );
-it("guards color form generation, owner, selection, mode and current bool declaration", () => {
+it("guards color form generation, owner, selection, mode and current bool/state declaration", () => {
   const project = fresh(),
     def = project.symbols[0],
     selected = def.objects[5];
   const data = new FormData();
-  data.set("boolColorsMode", "enabled");
+  data.set("stateColorsMode", "enabled");
   for (const [key, value] of Object.entries(colors)) data.set(key, value);
   const input = { data, objectId: selected.id, targetKey: `4:${def.id}:true` };
   const context = {
@@ -126,8 +131,8 @@ it("guards color form generation, owner, selection, mode and current bool declar
     selected,
     readSlots: def.readSlots!,
   };
-  expect(boolColorsCommand(input, context)).toMatchObject({
-    patch: { boolColors: colors },
+  expect(stateTextColorCommand(input, context)).toMatchObject({
+    patch: { stateColors: colors },
   });
   for (const change of [
     { generation: 5 },
@@ -136,11 +141,52 @@ it("guards color form generation, owner, selection, mode and current bool declar
     { selected: def.objects[6] },
     { readSlots: [] },
   ])
-    expect(() => boolColorsCommand(input, { ...context, ...change })).toThrow();
-  data.set("boolColorsMode", "other");
-  expect(() => boolColorsCommand(input, context)).toThrow();
-  data.set("boolColorsMode", "disabled");
-  expect(boolColorsCommand(input, context)).toMatchObject({
-    patch: { boolColors: null },
+    expect(() =>
+      stateTextColorCommand(input, { ...context, ...change }),
+    ).toThrow();
+  data.set("stateColorsMode", "other");
+  expect(() => stateTextColorCommand(input, context)).toThrow();
+  data.set("stateColorsMode", "disabled");
+  expect(stateTextColorCommand(input, context)).toMatchObject({
+    patch: { stateColors: null },
   });
+});
+it("keeps the setting when the slot changes to a state slot and accepts state slots in the form", () => {
+  const project = fresh(),
+    def = project.symbols[0],
+    selected = def.objects[5];
+  const readSlots = [
+    ...def.readSlots!,
+    { name: "mode", type: "state" as const, direction: "read" as const },
+  ];
+  const data = new FormData();
+  for (const [key, value] of Object.entries(objectFormValues(selected, true)))
+    data.set(key, value);
+  data.set("slotName", "mode");
+  const command = objectFormCommand(data, {
+    screenId: def.id,
+    definition: true,
+    selected,
+    readSlots,
+  });
+  expect(command).not.toMatchObject({ patch: { stateColors: null } });
+  const form = new FormData();
+  form.set("stateColorsMode", "enabled");
+  form.set("unknownColor", "#123456");
+  const stateText = {
+    ...selected,
+    shape: { ...selected.shape, slotBinding: { slotName: "mode" } },
+  } as typeof selected;
+  expect(
+    stateTextColorCommand(
+      { data: form, objectId: selected.id, targetKey: `1:${def.id}:true` },
+      {
+        generation: 1,
+        screenId: def.id,
+        definition: true,
+        selected: stateText,
+        readSlots,
+      },
+    ),
+  ).toMatchObject({ patch: { stateColors: { unknownColor: "#123456" } } });
 });

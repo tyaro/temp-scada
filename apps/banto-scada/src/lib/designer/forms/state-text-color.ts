@@ -1,11 +1,11 @@
 import type { EditCommand } from "../../editor";
-import type { EquipmentSlot } from "../../equipment";
+import { isStateSlotType, type EquipmentSlot } from "../../equipment";
 import type {
   SymbolColorModeInput,
   SymbolColorModeContext,
 } from "./symbol-color-mode";
 
-export function boolColorsCommand(
+export function stateTextColorCommand(
   input: SymbolColorModeInput,
   context: SymbolColorModeContext & { readSlots: readonly EquipmentSlot[] },
 ): EditCommand {
@@ -21,28 +21,24 @@ export function boolColorsCommand(
         slot.name ===
           (selected.shape.type === "text"
             ? selected.shape.slotBinding?.slotName
-            : undefined) && slot.type === "bool",
+            : undefined) && isStateSlotType(slot.type),
     )
   )
     throw new Error(
-      "状態別の文字色の適用先が変更されています。選択し直してください。",
+      "状態の色に従う指定の適用先が変更されています。選択し直してください。",
     );
-  const mode = input.data.get("boolColorsMode");
+  const mode = input.data.get("stateColorsMode");
   if (mode !== "enabled" && mode !== "disabled")
-    throw new Error("状態別の文字色の使用を選択してください。");
+    throw new Error("状態の色に従う指定の使用を選択してください。");
   return {
     type: "update",
     screenId: context.screenId,
     objectId: selected.id,
     patch: {
-      boolColors:
+      stateColors:
         mode === "disabled"
           ? null
-          : {
-              trueColor: String(input.data.get("trueColor")),
-              falseColor: String(input.data.get("falseColor")),
-              unknownColor: String(input.data.get("unknownColor")),
-            },
+          : { unknownColor: String(input.data.get("unknownColor")) },
     },
   };
 }

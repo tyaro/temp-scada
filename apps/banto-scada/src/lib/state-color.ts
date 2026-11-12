@@ -1,10 +1,13 @@
 import type { Project, ScreenObject, SymbolDefinition } from "./project";
-import { boolSlotState } from "./slot-presentation";
+import { isStateSlotType } from "./equipment";
+import { evaluateSlotState } from "./slot-state";
 import {
   resolveSymbolSlot,
-  slotPresentation,
+  symbolEquipmentSlot,
   type EquipmentContext,
 } from "./symbol-slots";
+/** Shown when a follower's source Text is missing or invalid (fail closed). */
+export const UNRESOLVED_STATE_COLOR = "#64748b";
 export function supportsStateColor(object: ScreenObject): boolean {
   const shape = object.shape;
   return (
@@ -18,13 +21,13 @@ export function stateColorSources(definition: SymbolDefinition) {
   return definition.objects.filter(
     (object) =>
       object.shape.type === "text" &&
-      object.shape.boolColors &&
+      object.shape.stateColors &&
       definition.readSlots?.some(
         (slot) =>
           slot.name ===
             (object.shape.type === "text"
               ? object.shape.slotBinding?.slotName
-              : undefined) && slot.type === "bool",
+              : undefined) && isStateSlotType(slot.type),
       ),
   );
 }
@@ -49,7 +52,7 @@ export function validateStateColors(project: Project) {
       if (!("stateColor" in object.shape) || !object.shape.stateColor) continue;
       if (!definition || !sources.has(object.shape.stateColor.textId))
         throw new Error(
-          "状態色の配色元Textが見つからないか、有効なbool配色ではありません",
+          "状態色の配色元Textが見つからないか、状態の色に従うTextではありません",
         );
       if (!supportsStateColor(object))
         throw new Error(
@@ -58,13 +61,45 @@ export function validateStateColors(project: Project) {
     }
   }
 }
-/** A missing source never falls back to a normal authored color. */
+/**
+ * Color of a Text that follows its slot's state colors. A known state with a
+ * defined color gives that color; a known state without one (a bool slot
+ * without `boolDisplay`) gives undefined, meaning the normal color. Anything
+ * else (no equipment, unassigned, Bad, type mismatch, no definition) gives
+ * `unknownColor`; a previous or false color is never substituted.
+ */
+export function stateTextColor(
+  text: ScreenObject,
+  definition: SymbolDefinition,
+  equipmentId?: string,
+  context?: EquipmentContext,
+): string | undefined {
+  if (text.shape.type !== "text" || !text.shape.stateColors) return undefined;
+  const { unknownColor } = text.shape.stateColors;
+  const slotName = text.shape.slotBinding?.slotName;
+  if (slotName === undefined) return unknownColor;
+  const slot = symbolEquipmentSlot(definition, slotName, equipmentId, context);
+  const evaluation = slot
+    ? evaluateSlotState(
+        slot,
+        resolveSymbolSlot(definition, slotName, equipmentId, context),
+      )
+    : undefined;
+  return evaluation?.state === "known" ? evaluation.color : unknownColor;
+}
+/**
+ * Color override for a state-following Text or a follower shape; undefined
+ * keeps the object's normal color. A follower resolves exactly as its source
+ * Text, and a missing source never falls back to a normal authored color.
+ */
 export function resolveStateColor(
   object: ScreenObject,
   definition: SymbolDefinition,
   equipmentId?: string,
   context?: EquipmentContext,
 ): string | undefined {
+  if (object.shape.type === "text")
+    return stateTextColor(object, definition, equipmentId, context);
   if (!("stateColor" in object.shape) || !object.shape.stateColor)
     return undefined;
   const reference = object.shape.stateColor;
@@ -73,22 +108,9 @@ export function resolveStateColor(
   );
   if (
     source?.shape.type !== "text" ||
-    !source.shape.boolColors ||
+    !source.shape.stateColors ||
     !source.shape.slotBinding
   )
-    return "#64748b";
-  const display = resolveSymbolSlot(
-    definition,
-    source.shape.slotBinding.slotName,
-    equipmentId,
-    context,
-  );
-  const state = boolSlotState(display ?? slotPresentation("unbound")).state;
-  return source.shape.boolColors[
-    state === "true"
-      ? "trueColor"
-      : state === "false"
-        ? "falseColor"
-        : "unknownColor"
-  ];
+    return UNRESOLVED_STATE_COLOR;
+  return stateTextColor(source, definition, equipmentId, context);
 }

@@ -1,10 +1,10 @@
 import { chromium, expect } from "@playwright/test";
 import { mkdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-const output = resolve(process.argv[2] ?? "test-results/bool-colors");
+const output = resolve(process.argv[2] ?? "test-results/state-text-color");
 await mkdir(output, { recursive: true });
 const sample = JSON.parse(
-  await readFile("examples/bool-colors.project.json", "utf8"),
+  await readFile("examples/state-text-color.project.json", "utf8"),
 );
 // Authored static text is adjusted for the dark definition canvas, not the screenshot.
 for (const object of sample.symbols[0].objects)
@@ -39,19 +39,19 @@ try {
       .locator(`button[data-layer-id="${sample.symbols[0].objects[5].id}"]`)
       .click();
     const form = page.getByRole("form", {
-      name: "bool slotの状態別文字色",
+      name: "slotの状態の色に従う",
       exact: true,
     });
-    await expect(form.getByLabel("状態別の文字色を使用")).toHaveValue(
-      "enabled",
-    );
+    await expect(
+      form.getByLabel("状態の色に従う", { exact: true }),
+    ).toHaveValue("enabled");
     await form.scrollIntoViewIfNeeded();
     await page
       .locator(".toast-host .toast button.close")
       .evaluateAll((buttons) => buttons.forEach((button) => button.click()));
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({
-      path: join(output, `bool-colors-${theme}.png`),
+      path: join(output, `state-text-color-${theme}.png`),
       animations: "disabled",
     });
     await page.close();

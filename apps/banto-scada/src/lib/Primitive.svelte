@@ -4,7 +4,6 @@
     type EquipmentPropertyPresentation,
   } from "./equipment-property";
   import { slotPresentation, type SlotPresentation } from "./symbol-slots";
-  import { boolSlotState } from "./slot-presentation";
   import { slotStateText, type SlotStateEvaluation } from "./slot-state";
   import { patternGeometry } from "./pattern-paint";
   import { linearGradientEndpoints } from "./linear-gradient";
@@ -30,6 +29,10 @@
     /** Defined state of the slot; a known state replaces the raw value text. */
     slotState?: SlotStateEvaluation;
     equipmentPropertyDisplay?: EquipmentPropertyPresentation;
+    /**
+     * Resolved state color (`resolveStateColor`); it overrides the normal
+     * color, and undefined keeps the normal color.
+     */
     stateColor?: string;
     onsummary?: (description: string) => void;
   } = $props();
@@ -60,12 +63,7 @@
       : gradient || radial || pattern
         ? `url(#${gradientId})`
         : fill?.paint.type === "solid"
-          ? (stateColor ??
-            ("stateColor" in object.shape && object.shape.stateColor
-              ? "#64748b"
-              : undefined) ??
-            color ??
-            fill.paint.color)
+          ? (stateColor ?? color ?? fill.paint.color)
           : "none",
   );
   const fillAlpha = $derived(
@@ -103,29 +101,8 @@
       ? slotState
       : undefined,
   );
-  const textColor = $derived.by(() => {
-    if (object.shape.type === "text" && object.shape.boolColors) {
-      const state = boolSlotState(
-        slotDisplay ?? slotPresentation("unbound"),
-      ).state;
-      return object.shape.boolColors[
-        state === "true"
-          ? "trueColor"
-          : state === "false"
-            ? "falseColor"
-            : "unknownColor"
-      ];
-    }
-    return color ?? object.fill!;
-  });
-  const lineColor = $derived(
-    stateColor ??
-      ("stateColor" in object.shape && object.shape.stateColor
-        ? "#64748b"
-        : undefined) ??
-      color ??
-      object.fill!,
-  );
+  const textColor = $derived(stateColor ?? color ?? object.fill!);
+  const lineColor = $derived(stateColor ?? color ?? object.fill!);
   const shape = $derived("width" in object ? null : object.shape);
   function arrowPoints() {
     if (!shape || shape.arrow !== "end") return "";
