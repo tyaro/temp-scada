@@ -6,6 +6,10 @@ export type SlotReadType = "bool" | "number";
 export function slotReadType(type: SlotType): SlotReadType {
   return type === "bool" ? "bool" : "number";
 }
+/** Slot types whose equipment-type definition can give a display state. */
+export function isStateSlotType(type: SlotType): boolean {
+  return type === "bool" || type === "state";
+}
 export interface SlotStateLabel {
   text: string;
   color: string;

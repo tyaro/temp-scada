@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 const output = resolve(process.argv[2] ?? "test-results/slot-status");
 await mkdir(output, { recursive: true });
 const sample = JSON.parse(
-  await readFile("examples/bool-colors.project.json", "utf8"),
+  await readFile("examples/state-text-color.project.json", "utf8"),
 );
 const browser = await chromium.launch({
   executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,

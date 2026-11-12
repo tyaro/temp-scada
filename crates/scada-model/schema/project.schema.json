@@ -303,26 +303,16 @@
                   "required": ["slotName"],
                   "additionalProperties": false
                 },
-                "boolColors": {
+                "stateColors": {
                   "type": "object",
                   "properties": {
-                    "trueColor": {
-                      "$ref": "#/$defs/color",
-                      "maxLength": 7,
-                      "type": "string"
-                    },
-                    "falseColor": {
-                      "$ref": "#/$defs/color",
-                      "maxLength": 7,
-                      "type": "string"
-                    },
                     "unknownColor": {
                       "$ref": "#/$defs/color",
                       "maxLength": 7,
                       "type": "string"
                     }
                   },
-                  "required": ["trueColor", "falseColor", "unknownColor"],
+                  "required": ["unknownColor"],
                   "additionalProperties": false
                 },
                 "equipmentProperty": {
@@ -350,12 +340,12 @@
                     "required": ["slotBinding", "equipmentProperty"]
                   },
                   {
-                    "required": ["boolColors", "equipmentProperty"]
+                    "required": ["stateColors", "equipmentProperty"]
                   }
                 ]
               },
               "dependentRequired": {
-                "boolColors": ["slotBinding"]
+                "stateColors": ["slotBinding"]
               }
             }
           ]

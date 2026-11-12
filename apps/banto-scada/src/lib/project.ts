@@ -52,9 +52,11 @@ interface BaseObject {
 export interface StateColor {
   textId: string;
 }
-export interface BoolColors {
-  trueColor: string;
-  falseColor: string;
+/**
+ * A slot-bound Text follows the state colors of its equipment-type slot
+ * definition. Only the color for an unknown state is stored here.
+ */
+export interface StateTextColors {
   unknownColor: string;
 }
 export interface TagBinding {
@@ -119,7 +121,7 @@ export interface LayoutObject extends BaseObject {
         binding?: TagBinding;
         slotBinding?: { slotName: string };
         equipmentProperty?: { field: EquipmentPropertyField };
-        boolColors?: BoolColors;
+        stateColors?: StateTextColors;
       }
     | {
         type: "symbol";

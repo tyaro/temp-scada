@@ -107,7 +107,7 @@ export function applySingleObjectCommand(
       binding,
       slotBinding,
       equipmentProperty,
-      boolColors,
+      stateColors,
       stateColor,
       symbolId,
       equipmentId,
@@ -221,11 +221,13 @@ export function applySingleObjectCommand(
       if (stateColor === null) delete object.shape.stateColor;
       else object.shape.stateColor = structuredClone(stateColor);
     }
-    if (boolColors !== undefined) {
+    if (stateColors !== undefined) {
       if (object.shape.type !== "text" || !definitionId)
-        throw new Error("状態別の文字色は共有定義内のTextだけに設定できます");
-      if (boolColors === null) delete object.shape.boolColors;
-      else object.shape.boolColors = structuredClone(boolColors);
+        throw new Error(
+          "状態の色に従う指定は共有定義内のTextだけに設定できます",
+        );
+      if (stateColors === null) delete object.shape.stateColors;
+      else object.shape.stateColors = structuredClone(stateColors);
     }
     if (binding !== undefined) {
       if (definitionId || object.shape.type !== "text")

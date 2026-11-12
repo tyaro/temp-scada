@@ -134,11 +134,7 @@ it("remaps bool state-color references inside each independent copy", () => {
     line = definition.objects[0];
   if (source.shape.type !== "text" || line.shape.type !== "polyline")
     throw new Error("fixture");
-  source.shape.boolColors = {
-    trueColor: "#00ff00",
-    falseColor: "#888888",
-    unknownColor: "#999999",
-  };
+  source.shape.stateColors = { unknownColor: "#999999" };
   line.shape.stateColor = { textId: source.id };
   const next = applyCommand(
     project,

@@ -7,6 +7,7 @@ import { emptyHistory, recordEdit, travelHistory } from "./history";
 import { copyObjects, parseClipboard } from "./clipboard";
 import { copySymbol } from "./editor/model-helpers";
 import { resolveStateColor, stateColorUsages } from "./state-color";
+import { slotPresentation, type SlotPresentation } from "./slot-presentation";
 import { stateColorCommand } from "./designer/forms/state-color";
 const fresh = () => parseProject(JSON.stringify(sample));
 it.each(cases)(
@@ -41,9 +42,9 @@ it("protects source and authored paint atomically and supports detach with Undo"
     patch,
   });
   for (const patch of [
-    { boolColors: null },
-    { slotBinding: { slotName: "current" }, boolColors: null },
-    { slotBinding: null, boolColors: null },
+    { stateColors: null },
+    { slotBinding: { slotName: "current" }, stateColors: null },
+    { slotBinding: null, stateColors: null },
   ])
     expect(() =>
       applyCommand(project, update(source.id, patch), "edit"),
@@ -219,4 +220,67 @@ it("guards the form target, sources and unsupported paint", () => {
   expect(stateColorCommand(input, context)).toMatchObject({
     patch: { stateColor: null },
   });
+});
+it("follows the slot definition: state row color, bool without display keeps the normal color, unknown uses unknownColor", () => {
+  const project = fresh(),
+    d = project.symbols[0],
+    text = d.objects[5],
+    line = d.objects[0];
+  const [first, second] = project.equipment!;
+  for (const equipment of project.equipment!)
+    equipment.bindings = [{ slotName: "running", externalName: "Demo.Value" }];
+  let value:
+    { type: "bool"; value: boolean } | { type: "number"; value: number } = {
+    type: "number",
+    value: 2,
+  };
+  const good = () =>
+    ({
+      state: "good",
+      label: "Good",
+      text: "raw",
+      value,
+    }) as SlotPresentation;
+  const context = {
+    ...project,
+    readSlot: (id: string) =>
+      id === first.id ? good() : slotPresentation("bad"),
+  };
+  // state slot: the matched row color, the otherwise color, and unknown.
+  d.readSlots![0] = { name: "running", type: "state", direction: "read" };
+  project.equipmentTypes![0].slots[0] = {
+    name: "running",
+    type: "state",
+    direction: "read",
+    stateDisplay: {
+      source: "value",
+      rows: [{ match: 2, text: "異常", color: "#dc2626" }],
+      otherwise: { text: "その他", color: "#0ea5e9" },
+    },
+  };
+  for (const object of [text, line])
+    expect(resolveStateColor(object, d, first.id, context)).toBe("#dc2626");
+  value = { type: "number", value: 5 };
+  expect(resolveStateColor(line, d, first.id, context)).toBe("#0ea5e9");
+  expect(resolveStateColor(line, d, second.id, context)).toBe("#d97706");
+  expect(resolveStateColor(line, d)).toBe("#d97706");
+  value = { type: "bool", value: true };
+  expect(resolveStateColor(line, d, first.id, context)).toBe("#d97706");
+  // bool slot without boolDisplay: known, so the normal color (undefined).
+  d.readSlots![0] = { name: "running", type: "bool", direction: "read" };
+  project.equipmentTypes![0].slots[0] = {
+    name: "running",
+    type: "bool",
+    direction: "read",
+  };
+  expect(resolveStateColor(text, d, first.id, context)).toBeUndefined();
+  expect(resolveStateColor(line, d, first.id, context)).toBeUndefined();
+  expect(resolveStateColor(line, d, second.id, context)).toBe("#d97706");
+  // A type-mismatched equipment-type slot is unknown, never the normal color.
+  project.equipmentTypes![0].slots[0] = {
+    name: "running",
+    type: "number",
+    direction: "read",
+  };
+  expect(resolveStateColor(line, d, first.id, context)).toBe("#d97706");
 });

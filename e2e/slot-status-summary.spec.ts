@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import sample from "../examples/bool-colors.project.json" with { type: "json" };
+import sample from "../examples/state-text-color.project.json" with { type: "json" };
 import { chooseTheme, fileCommand, selectPanel } from "./helpers/designer";
 for (const theme of ["light", "dark"] as const)
   test(`read status is independent of authored Text, paged and scoped to main/popup in ${theme}`, async ({

@@ -421,17 +421,17 @@ impl Project {
                         return Err("Symbolの読取slot宣言が見つかりません".into());
                     }
                 }
-                if shape.get("boolColors").is_some()
+                if shape.get("stateColors").is_some()
                     && !screen["readSlots"]
                         .as_array()
                         .into_iter()
                         .flatten()
                         .any(|slot| {
                             slot["name"] == shape["slotBinding"]["slotName"]
-                                && slot["type"] == "bool"
+                                && (slot["type"] == "bool" || slot["type"] == "state")
                         })
                 {
-                    return Err("状態別の文字色にはbool slotが必要です".into());
+                    return Err("状態の色に従う指定にはboolかstateのslotが必要です".into());
                 }
                 if let Some(state_color) = shape.get("stateColor") {
                     if !symbols.contains(screen["id"].as_str().unwrap()) {
@@ -445,18 +445,18 @@ impl Project {
                     if !source.is_some_and(|source| {
                         let source_shape = &source["shape"];
                         source_shape["type"] == "text"
-                            && source_shape.get("boolColors").is_some()
+                            && source_shape.get("stateColors").is_some()
                             && screen["readSlots"]
                                 .as_array()
                                 .into_iter()
                                 .flatten()
                                 .any(|slot| {
                                     slot["name"] == source_shape["slotBinding"]["slotName"]
-                                        && slot["type"] == "bool"
+                                        && (slot["type"] == "bool" || slot["type"] == "state")
                                 })
                     }) {
                         return Err(
-                            "状態色の配色元Textが見つからないか、有効なbool配色ではありません"
+                            "状態色の配色元Textが見つからないか、状態の色に従うTextではありません"
                                 .into(),
                         );
                     }

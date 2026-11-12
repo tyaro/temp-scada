@@ -490,6 +490,8 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 この区切りは型0エラー／0警告・TS852件・Rust46件・Clippy・Rust fmt・本番build・全体整形・CLIと、関連ブラウザ11件／追加修正後4件の確認が成功。両テーマの実画面を撮影し、設計書へ掲載した。
 
+2026-11-12のフロー図 段階1-A A3bで、Textの`boolColors`（3色）を廃止し、`stateColors: { unknownColor }`（「状態の色に従う」指定）へ置き換えた。bool／state slotのTextが機器種別のslotの状態の定義の色に従い、既知で色なしは通常の色、不明は取得不能の色になる。図形・配管の状態色追従も同じ規則で解決する。schemaVersionは0.37.0のまま。[現行仕様](../design/graphics/bool-text-colors.md)。
+
 ## 図面外の読取状態表示
 
 [メイン図面・読取小窓の折り畳み状態一覧](../design/equipment/slot-status-summary.md)を追加した。表示参照・取得不能・SIMの件数、配置経路・機器・slot・文字／Quality／理由・由来を図面のクリップとαから独立させる。閉じた状態では行をDOMに作らず、展開時も20件ずつ表示する。可視配置と1段埋込を対象にし、hidden／α0 Textの使用参照は保持する。図形の動的配色と実Hostは今回追加していない。Project0.26.0・Rust／schemaは変更しない。

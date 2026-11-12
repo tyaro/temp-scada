@@ -70,7 +70,7 @@
   {
     "name": "source colors required",
     "target": "/symbols/0/objects/5/shape",
-    "key": "boolColors",
+    "key": "stateColors",
     "valid": false,
     "remove": true
   },
@@ -108,6 +108,20 @@
     "value": {
       "slotName": "current"
     }
+  },
+  {
+    "name": "state slot source accepted",
+    "target": "/symbols/0/readSlots/0",
+    "key": "type",
+    "valid": true,
+    "value": "state"
+  },
+  {
+    "name": "number slot source refused",
+    "target": "/symbols/0/readSlots/0",
+    "key": "type",
+    "valid": false,
+    "value": "number"
   },
   {
     "name": "disabled fill refused",

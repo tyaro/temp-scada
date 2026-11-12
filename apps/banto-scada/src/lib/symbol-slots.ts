@@ -6,6 +6,7 @@ export {
 } from "./slot-presentation";
 import type { Project, SymbolDefinition } from "./project";
 import {
+  isStateSlotType,
   slotReadType,
   type EquipmentSlot,
   type SlotReadType,
@@ -33,12 +34,12 @@ export function validateSymbolSlots(project: Project) {
         throw new Error("slot表示は共有定義内のTextだけに設定できます");
       const slotName = object.shape.slotBinding.slotName;
       if (
-        object.shape.boolColors &&
+        object.shape.stateColors &&
         !definition.readSlots?.some(
-          (slot) => slot.name === slotName && slot.type === "bool",
+          (slot) => slot.name === slotName && isStateSlotType(slot.type),
         )
       )
-        throw new Error("状態別の文字色にはbool slotが必要です");
+        throw new Error("状態の色に従う指定にはboolかstateのslotが必要です");
       if (!slots.has(object.shape.slotBinding.slotName))
         throw new Error("Symbolの読取slot宣言が見つかりません");
     }

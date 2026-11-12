@@ -127,7 +127,7 @@
     "value": "other"
   },
   {
-    "name": "bool Text state colors",
+    "name": "bool Text follows state colors",
     "target": "/symbols/0/objects/5",
     "key": "shape",
     "valid": true,
@@ -142,53 +142,7 @@
       "slotBinding": {
         "slotName": "running"
       },
-      "boolColors": {
-        "trueColor": "#16a34a",
-        "falseColor": "#64748b",
-        "unknownColor": "#d97706"
-      }
-    }
-  },
-  {
-    "name": "state colors require trueColor",
-    "target": "/symbols/0/objects/5",
-    "key": "shape",
-    "valid": false,
-    "value": {
-      "type": "text",
-      "text": "STATIC FALLBACK",
-      "style": {
-        "fontSize": 17,
-        "fontWeight": "normal",
-        "align": "left"
-      },
-      "slotBinding": {
-        "slotName": "running"
-      },
-      "boolColors": {
-        "falseColor": "#64748b",
-        "unknownColor": "#d97706"
-      }
-    }
-  },
-  {
-    "name": "state colors require falseColor",
-    "target": "/symbols/0/objects/5",
-    "key": "shape",
-    "valid": false,
-    "value": {
-      "type": "text",
-      "text": "STATIC FALLBACK",
-      "style": {
-        "fontSize": 17,
-        "fontWeight": "normal",
-        "align": "left"
-      },
-      "slotBinding": {
-        "slotName": "running"
-      },
-      "boolColors": {
-        "trueColor": "#16a34a",
+      "stateColors": {
         "unknownColor": "#d97706"
       }
     }
@@ -209,14 +163,11 @@
       "slotBinding": {
         "slotName": "running"
       },
-      "boolColors": {
-        "trueColor": "#16a34a",
-        "falseColor": "#64748b"
-      }
+      "stateColors": {}
     }
   },
   {
-    "name": "number slot refuses bool colors",
+    "name": "number slot refuses state colors",
     "target": "/symbols/0/objects/5",
     "key": "shape",
     "valid": false,
@@ -231,15 +182,13 @@
       "slotBinding": {
         "slotName": "current"
       },
-      "boolColors": {
-        "trueColor": "#16a34a",
-        "falseColor": "#64748b",
+      "stateColors": {
         "unknownColor": "#d97706"
       }
     }
   },
   {
-    "name": "static Text refuses bool colors",
+    "name": "static Text refuses state colors",
     "target": "/symbols/0/objects/5",
     "key": "shape",
     "valid": false,
@@ -251,9 +200,7 @@
         "fontWeight": "normal",
         "align": "left"
       },
-      "boolColors": {
-        "trueColor": "#16a34a",
-        "falseColor": "#64748b",
+      "stateColors": {
         "unknownColor": "#d97706"
       }
     }
@@ -274,9 +221,7 @@
       "slotBinding": {
         "slotName": "running"
       },
-      "boolColors": {
-        "trueColor": "#16a34a",
-        "falseColor": "#64748b",
+      "stateColors": {
         "unknownColor": "red"
       }
     }
@@ -297,9 +242,7 @@
       "slotBinding": {
         "slotName": "running"
       },
-      "boolColors": {
-        "trueColor": "#16a34a",
-        "falseColor": "#64748b",
+      "stateColors": {
         "unknownColor": "#ffffff\n"
       }
     }
@@ -320,26 +263,22 @@
       "slotBinding": {
         "slotName": "running"
       },
-      "boolColors": {
-        "trueColor": "#16a34a",
-        "falseColor": "#64748b",
+      "stateColors": {
         "unknownColor": "#12345678"
       }
     }
   },
   {
-    "name": "rectangle refuses bool colors",
+    "name": "rectangle refuses state colors",
     "target": "/symbols/0/objects/0/shape",
-    "key": "boolColors",
+    "key": "stateColors",
     "valid": false,
     "value": {
-      "trueColor": "#16a34a",
-      "falseColor": "#64748b",
       "unknownColor": "#d97706"
     }
   },
   {
-    "name": "screen refuses bool colors",
+    "name": "screen refuses state colors",
     "target": "/screens/0/objects/1",
     "key": "shape",
     "valid": false,
@@ -354,9 +293,7 @@
       "slotBinding": {
         "slotName": "running"
       },
-      "boolColors": {
-        "trueColor": "#16a34a",
-        "falseColor": "#64748b",
+      "stateColors": {
         "unknownColor": "#d97706"
       }
     }
@@ -377,9 +314,7 @@
       "slotBinding": {
         "slotName": "running"
       },
-      "boolColors": {
-        "trueColor": "#16a34a",
-        "falseColor": "#64748b",
+      "stateColors": {
         "unknownColor": "#d97706",
         "futureColor": "#000000"
       }
@@ -534,9 +469,7 @@
       "equipmentProperty": {
         "field": "name"
       },
-      "boolColors": {
-        "trueColor": "#00ff00",
-        "falseColor": "#888888",
+      "stateColors": {
         "unknownColor": "#999999"
       }
     }

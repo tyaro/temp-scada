@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import sample from "../../../../examples/bool-colors.project.json";
+import sample from "../../../../examples/state-text-color.project.json";
 import fixtures from "../../../../examples/read-slot-view-cases.json";
 import { parseProject, type Screen } from "./project";
 import {
