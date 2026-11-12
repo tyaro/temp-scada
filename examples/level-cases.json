@@ -1,0 +1,326 @@
+[
+  {
+    "name": "screen level bound to a tag",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000701",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 0,
+        "max": 100,
+        "background": "#1e293b",
+        "binding": {
+          "externalName": "Demo.Number"
+        }
+      }
+    }
+  },
+  {
+    "name": "screen level without a binding",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000702",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "right",
+        "min": 0,
+        "max": 5
+      }
+    }
+  },
+  {
+    "name": "level with a negative range",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000703",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": -10,
+        "max": 10.5
+      }
+    }
+  },
+  {
+    "name": "symbol level bound to a number slot",
+    "target": "/symbols/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000704",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 0,
+        "max": 50,
+        "slotBinding": {
+          "slotName": "current"
+        }
+      }
+    }
+  },
+  {
+    "name": "equal limits refused",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000705",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 10,
+        "max": 10
+      }
+    }
+  },
+  {
+    "name": "reversed limits refused",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000706",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 100,
+        "max": 0
+      }
+    }
+  },
+  {
+    "name": "bool slot refused",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000707",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 0,
+        "max": 1,
+        "slotBinding": {
+          "slotName": "running"
+        }
+      }
+    }
+  },
+  {
+    "name": "undeclared slot refused",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000708",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 0,
+        "max": 1,
+        "slotBinding": {
+          "slotName": "missing"
+        }
+      }
+    }
+  },
+  {
+    "name": "slot on a screen refused",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000709",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 0,
+        "max": 1,
+        "slotBinding": {
+          "slotName": "current"
+        }
+      }
+    }
+  },
+  {
+    "name": "direct tag in a symbol refused",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000710",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 0,
+        "max": 1,
+        "binding": {
+          "externalName": "Demo.Number"
+        }
+      }
+    }
+  },
+  {
+    "name": "tag and slot together refused",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000711",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 0,
+        "max": 1,
+        "binding": {
+          "externalName": "Demo.Number"
+        },
+        "slotBinding": {
+          "slotName": "current"
+        }
+      }
+    }
+  },
+  {
+    "name": "unknown direction refused",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000712",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "down",
+        "min": 0,
+        "max": 1
+      }
+    }
+  },
+  {
+    "name": "missing fill color refused",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000713",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 0,
+        "max": 1
+      }
+    }
+  },
+  {
+    "name": "number format refused",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000714",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 120,
+      "rotation": 0,
+      "fill": "#38bdf8",
+      "shape": {
+        "type": "level",
+        "direction": "up",
+        "min": 0,
+        "max": 1,
+        "binding": {
+          "externalName": "Demo.Number"
+        },
+        "format": {
+          "decimals": 1
+        }
+      }
+    }
+  }
+]

@@ -116,6 +116,18 @@
               {:else if item.part.type === "basic" && item.part.kind === "line"}<path
                   d="M6 26L34 6"
                 />
+              {:else if item.part.type === "basic" && item.part.kind === "level"}<rect
+                  x="14"
+                  y="4"
+                  width="12"
+                  height="24"
+                /><rect
+                  x="14"
+                  y="16"
+                  width="12"
+                  height="12"
+                  fill="currentColor"
+                />
               {:else}<path d="M6 6h14v20h14" stroke-width="3" />{/if}
             </svg>{/if}
         </button>

@@ -363,6 +363,48 @@
                   }
                 ]
               }
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "const": "level"
+                },
+                "direction": {
+                  "enum": ["up", "right"]
+                },
+                "min": {
+                  "type": "number"
+                },
+                "max": {
+                  "type": "number"
+                },
+                "background": {
+                  "$ref": "#/$defs/color"
+                },
+                "binding": {
+                  "$ref": "#/$defs/tagBinding"
+                },
+                "slotBinding": {
+                  "type": "object",
+                  "properties": {
+                    "slotName": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
+                      "not": {
+                        "pattern": "[^A-Za-z0-9_]"
+                      }
+                    }
+                  },
+                  "required": ["slotName"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["type", "direction", "min", "max"],
+              "additionalProperties": false,
+              "not": {
+                "required": ["binding", "slotBinding"]
+              }
             }
           ]
         },

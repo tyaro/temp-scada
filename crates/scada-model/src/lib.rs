@@ -421,6 +421,25 @@ impl Project {
                         return Err("Symbolの読取slot宣言が見つかりません".into());
                     }
                 }
+                if shape["type"] == "level" {
+                    let (min, max) = (shape["min"].as_f64(), shape["max"].as_f64());
+                    if !matches!((min, max), (Some(min), Some(max)) if min.is_finite() && max.is_finite() && min < max)
+                    {
+                        return Err("液位の下限は上限より小さくしてください".into());
+                    }
+                    if let Some(binding) = shape.get("slotBinding") {
+                        if !screen["readSlots"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .any(|slot| {
+                                slot["name"] == binding["slotName"] && slot["type"] == "number"
+                            })
+                        {
+                            return Err("液位にはnumberのslotが必要です".into());
+                        }
+                    }
+                }
                 if shape.get("stateColors").is_some()
                     && !screen["readSlots"]
                         .as_array()
@@ -689,6 +708,40 @@ mod tests {
                 case["valid"].as_bool().unwrap(),
                 "{}",
                 case["name"]
+            );
+            if let Ok(project) = parsed {
+                assert_eq!(
+                    Project::from_json(&project.to_json()).unwrap().0,
+                    project.0,
+                    "{}",
+                    case["name"]
+                );
+            }
+        }
+    }
+    #[test]
+    fn shared_level_contract() {
+        let base: Value = serde_json::from_str(include_str!(
+            "../../../examples/read-presentation.project.json"
+        ))
+        .unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/level-cases.json")).unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_array_mut()
+                .unwrap()
+                .push(case["object"].clone());
+            let parsed = Project::from_json(&input.to_string());
+            assert_eq!(
+                parsed.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{} {:?}",
+                case["name"],
+                parsed.as_ref().err()
             );
             if let Ok(project) = parsed {
                 assert_eq!(

@@ -177,6 +177,8 @@ Symbol宣言のCRUDは`editor/symbol-handler.ts`、全Text参照の導出は`sym
 
 数値の書式はTextの`format`（`project.ts`の`NumericFormat`、共通schemaの`$defs.numericFormat`）として保存し、表示は`tag-presentation.ts`の`formatNumber`（タグ）・`formatSlotText`（number slot）を`Primitive`が使う。編集は`NumericFormat.svelte`と`forms/numeric-format.ts`、結合を外したときの同時解除は`editor/single-object-handler.ts`。`numeric-format.test.ts`・`examples/numeric-format-cases.json`・`e2e/numeric-format.spec.ts`が回帰入口。[仕様](../design/graphics/numeric-format.md)を参照する。
 
+液位は配置の`shape`の`level`（`project.ts`の`LevelShape`、共通schemaの`primitive.shape`）。表示は`level.ts`の`levelFromReading`・`levelFromSlot`・`levelFillRect`を`Primitive`が使い、Symbol内では`ObjectPainting`がslotの解決結果を渡す。Textと液位の結合の取り出しは`shape-bindings.ts`（参照一覧・一括置換・slotの使用箇所・状態一覧が使う）。下限・上限の検査は`validateLevelShape`とRustの`Project::from_json`。編集は`forms/object-form.ts`・`numeric-properties.ts`・`editor/single-object-handler.ts`の`level`。`level.test.ts`・`examples/level-cases.json`・`e2e/level.spec.ts`が回帰入口。[仕様](../design/graphics/level.md)を参照する。
+
 図面外の読取状態は`lib/slot-status-summary.ts`が現在の可視配置経路・使用roleを収集し、既存resolverへ状態解決を委譲する。`SlotReadStatus.svelte`は件数・20件ページング・開閉のみを所有し、Appと`PreviewWindow`が描画と同じcontextを渡す。表示プレビュー（`alert`）では取得不能が1件以上で要約行を警告色とアイコンにし、全件なら「この画面の値はすべて取得できていません」と文で出す（編集中は中立のまま）。品質の語は`slot-presentation.ts`・`tag-presentation.ts`で「更新停止」「不良」に揃える。`slot-status-summary.test.ts`、`e2e/slot-status-summary.spec.ts`、既存の同一mount検証で確認する。[範囲と後続](../design/equipment/slot-status-summary.md)を参照する。
 
 `studio.css`は取得状態一覧がある画面に限り図面タイトルを通常配置へ戻し、一覧との重なりを防ぐ。状態一覧のブラウザ検証で、折畳み時／展開時にタイトル・一覧・canvasが重ならないことを確認する。

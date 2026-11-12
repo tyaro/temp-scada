@@ -230,25 +230,26 @@
       !tagInput ||
       !selected ||
       selected.locked ||
-      selected.shape.type !== "text" ||
+      (selected.shape.type !== "text" && selected.shape.type !== "level") ||
       activeDefinition ||
       !visible ||
       drafts.pending
     )
       return;
+    const kindLabel = selected.shape.type === "level" ? "液位" : "Text";
     pickerRequest = {
       key: pickerKey,
       input: tagInput,
       catalog: catalogSelection.catalog,
       revision: catalogSelection.catalog.revision,
-      label: `${screen.name} ／ ${selected.name ? `${selected.name}（Text · ${selected.order}）` : `Text · ${selected.order}`} ／ 表示タグ`,
+      label: `${screen.name} ／ ${selected.name ? `${selected.name}（${kindLabel} · ${selected.order}）` : `${kindLabel} · ${selected.order}`} ／ 表示タグ`,
     };
     pickerOpen = true;
   }
   function chooseTag(tag: CatalogTag, revision: string) {
     const request = pickerRequest;
     if (
-      selected?.shape.type !== "text" ||
+      (selected?.shape.type !== "text" && selected?.shape.type !== "level") ||
       selected.locked ||
       activeDefinition ||
       !visible ||
@@ -1108,6 +1109,99 @@
                     {catalogSelection.notice}
                   </p>
                 {/if}
+              {/if}
+              {#if selected.shape.type === "level"}
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">向き</span><select
+                    class="banto-field-control"
+                    name="levelDirection"
+                    aria-label="液位の向き"
+                    ><option value="up">下から上</option><option value="right"
+                      >左から右</option
+                    ></select
+                  ></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">下限</span><input
+                    class="banto-field-control"
+                    name="levelMin"
+                    aria-label="液位の下限"
+                    type="text"
+                    inputmode="decimal"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">上限</span><input
+                    class="banto-field-control"
+                    name="levelMax"
+                    aria-label="液位の上限"
+                    type="text"
+                    inputmode="decimal"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">地</span><select
+                    class="banto-field-control"
+                    name="levelBackgroundMode"
+                    aria-label="液位の地"
+                    ><option value="color">色で塗る</option><option value="none"
+                      >透明</option
+                    ></select
+                  ></label
+                >
+                <label
+                  >地の色<input
+                    name="levelBackground"
+                    aria-label="液位の地の色"
+                    type="color"
+                  /></label
+                >
+                {#if activeDefinition}
+                  <label class="full-width banto-field banto-field--stacked"
+                    ><span class="banto-field-label">表示元</span><select
+                      class="banto-field-control"
+                      name="slotName"
+                      aria-label="表示元"
+                      ><option value="">なし</option>
+                      {#each (("readSlots" in screen ? screen.readSlots : []) ?? []).filter((slot) => slot.type === "number") as slot}<option
+                          value={slot.name}>{slot.name} · {slot.type}</option
+                        >{/each}</select
+                    ></label
+                  >
+                  <p class="full-width tag-note">
+                    number
+                    の読取slotだけを選べます。配置に関連付けた機器から解決します。
+                  </p>
+                {:else}
+                  <div class="full-width tag-binding">
+                    <label class="banto-field banto-field--stacked"
+                      ><span class="banto-field-label">表示タグ（外部名）</span
+                      ><input
+                        class="banto-field-control"
+                        bind:this={tagInput}
+                        name="externalName"
+                        data-explicit-apply
+                        aria-label="表示タグ（外部名）"
+                        maxlength="1024"
+                        placeholder="PLC01.Fast.Tank01.Level"
+                      /></label
+                    >
+                    <button
+                      type="button"
+                      aria-label="タグを選択"
+                      title="候補からタグを選択"
+                      disabled={!catalogSelection.available}
+                      onclick={openTagPicker}>…</button
+                    >
+                  </div>
+                  <p class="full-width tag-note">
+                    {catalogSelection.notice}
+                  </p>
+                {/if}
+                <p class="full-width tag-note">
+                  Good
+                  で範囲内の値だけを塗ります。取得できない値は灰色の破線、範囲外は橙の枠と矢印で示し、塗りません。
+                </p>
               {/if}
               {#if selected.shape.type === "trend"}
                 <label class="full-width banto-field banto-field--stacked"

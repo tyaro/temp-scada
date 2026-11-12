@@ -17,6 +17,8 @@ export function placementLabel(
         ? "埋込画面"
         : object.shape.type === "trend"
           ? "トレンド"
-          : object.shape.type;
+          : object.shape.type === "level"
+            ? "液位"
+            : object.shape.type;
   return `${kind} · ${object.order}`;
 }

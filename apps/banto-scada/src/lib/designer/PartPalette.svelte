@@ -131,6 +131,13 @@
       description:
         "配管を配置します。折れ線の頂点を編集して経路を変更できます。",
     },
+    {
+      kind: "level",
+      label: "液位を追加",
+      keywords: "液位 レベル 槽 バー level",
+      description:
+        "数値に比例して塗る液位を配置します。下限・上限・向き・地の色を設定し、タグか number slot を表示します。",
+    },
   ];
   const equipment = [
     {
@@ -486,6 +493,18 @@
                           font-size="30">A</text
                         >
                       {:else if part.kind === "line"}<path d="M8 32L52 8" />
+                      {:else if part.kind === "level"}<rect
+                          x="22"
+                          y="4"
+                          width="16"
+                          height="32"
+                        /><rect
+                          x="22"
+                          y="20"
+                          width="16"
+                          height="16"
+                          fill="currentColor"
+                        />
                       {:else}<path d="M8 8H30V32H52" stroke-width="5" />{/if}
                     </svg>
                     <span class:sr-only={view === "icons"}>{part.label}</span>

@@ -17,10 +17,12 @@ import type {
   LineStyle,
   Point,
   ShapePaint,
+  LevelShape,
   TagBinding,
   TextStyle,
 } from "../project";
-export type AddKind = "rectangle" | "ellipse" | "text" | "line" | "pipe";
+export type AddKind =
+  "rectangle" | "ellipse" | "text" | "line" | "pipe" | "level";
 export interface ObjectPatch {
   opacity?: number;
   colorAlpha?: number;
@@ -40,6 +42,8 @@ export interface ObjectPatch {
   equipmentProperty?: { field: EquipmentPropertyField } | null;
   stateColors?: StateTextColors | null;
   format?: NumericFormat | null;
+  /** Limits, direction and background of a level; no background clears it. */
+  level?: Pick<LevelShape, "direction" | "min" | "max" | "background">;
   stateColor?: StateColor | null;
   symbolId?: string;
   equipmentId?: string | null;

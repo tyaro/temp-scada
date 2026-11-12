@@ -6,7 +6,14 @@ export const DEFAULT_FAVORITES = [
   "basic:text",
 ];
 export const FAVORITES_LIMIT = 64;
-const basic = ["rectangle", "ellipse", "text", "line", "pipe"] as const;
+const basic = [
+  "rectangle",
+  "ellipse",
+  "text",
+  "line",
+  "pipe",
+  "level",
+] as const;
 const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const symbolKey = new RegExp(`^symbol:${uuid}:${uuid}$`);
@@ -63,6 +70,7 @@ export function availableFavorites(
             text: "テキスト",
             line: "線",
             pipe: "配管",
+            level: "液位",
           }[kind],
         },
       ];

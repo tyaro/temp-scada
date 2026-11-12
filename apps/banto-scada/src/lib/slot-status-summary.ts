@@ -1,4 +1,5 @@
 import type { Screen, SymbolDefinition } from "./project";
+import { shapeSlotName } from "./shape-bindings";
 import { placementLabel } from "./placement-label";
 import {
   resolveSymbolSlot,
@@ -19,11 +20,10 @@ export interface SlotStatusRow {
 function usedSlots(definition: SymbolDefinition): string[] {
   return [
     ...new Set(
-      definition.objects.flatMap((object) =>
-        object.shape.type === "text" && object.shape.slotBinding
-          ? [object.shape.slotBinding.slotName]
-          : [],
-      ),
+      definition.objects.flatMap((object) => {
+        const slotName = shapeSlotName(object.shape);
+        return slotName === undefined ? [] : [slotName];
+      }),
     ),
   ];
 }

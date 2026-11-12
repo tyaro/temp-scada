@@ -4,6 +4,7 @@ import { reorderUnit } from "./group-handler";
 import { type Project, type Screen, type SymbolDefinition } from "../project";
 import { normalizeRotation, replaceRotatedVertex } from "../rotation";
 import { setLineStyle } from "../line-style";
+import { validateLevelShape } from "../level";
 import type { SingleObjectCommand } from "./commands";
 import { newId, copySymbol } from "./model-helpers";
 import { isImageEditCommand, applyImageEdit } from "./image-handler";
@@ -109,6 +110,7 @@ export function applySingleObjectCommand(
       equipmentProperty,
       stateColors,
       format,
+      level,
       stateColor,
       symbolId,
       equipmentId,
@@ -202,8 +204,11 @@ export function applySingleObjectCommand(
       else object.shape.equipmentProperty = { ...equipmentProperty };
     }
     if (slotBinding !== undefined) {
-      if (object.shape.type !== "text" || !definitionId)
-        throw new Error("slot表示は共有定義内のTextだけに設定できます");
+      if (
+        (object.shape.type !== "text" && object.shape.type !== "level") ||
+        !definitionId
+      )
+        throw new Error("slot表示は共有定義内のTextと液位だけに設定できます");
       if (slotBinding === null) delete object.shape.slotBinding;
       else object.shape.slotBinding = slotBinding;
     }
@@ -231,10 +236,29 @@ export function applySingleObjectCommand(
       else object.shape.stateColors = structuredClone(stateColors);
     }
     if (binding !== undefined) {
-      if (definitionId || object.shape.type !== "text")
-        throw new Error("タグは画面の Text に割り当ててください");
+      if (
+        definitionId ||
+        (object.shape.type !== "text" && object.shape.type !== "level")
+      )
+        throw new Error("タグは画面の Text か液位に割り当ててください");
       if (binding === null) delete object.shape.binding;
       else object.shape.binding = binding;
+    }
+    if (level !== undefined) {
+      if (object.shape.type !== "level")
+        throw new Error("下限・上限・向きは液位にだけ設定できます");
+      const next = {
+        ...object.shape,
+        direction: level.direction,
+        min: level.min,
+        max: level.max,
+      };
+      if (level.direction !== "up" && level.direction !== "right")
+        throw new Error("液位の向きを選択してください");
+      validateLevelShape(next);
+      if (level.background === undefined) delete next.background;
+      else next.background = level.background;
+      object.shape = next;
     }
     if (format !== undefined) {
       if (object.shape.type !== "text")

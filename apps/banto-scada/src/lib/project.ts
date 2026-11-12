@@ -3,6 +3,7 @@ import { imageAssetReferences } from "./asset-references";
 import { normalizeProjectText } from "./text-content";
 import { validateStateColors } from "./state-color";
 import { validateSymbolSlots } from "./symbol-slots";
+import { validateLevelShape } from "./level";
 import {
   validateEquipment,
   type EquipmentType,
@@ -116,6 +117,19 @@ export interface TextStyle {
   align: "left" | "center" | "right";
 }
 export type EquipmentPropertyField = "code" | "name" | "typeName";
+/**
+ * A bar filled in proportion to a number between `min` and `max`. The fill
+ * color is the placement's `fill`; `background` paints the empty part.
+ */
+export interface LevelShape {
+  type: "level";
+  direction: "up" | "right";
+  min: number;
+  max: number;
+  background?: string;
+  binding?: TagBinding;
+  slotBinding?: { slotName: string };
+}
 export type SymbolColorMode = "monochrome" | "definition";
 export interface LayoutObject extends BaseObject {
   width: number;
@@ -141,7 +155,8 @@ export interface LayoutObject extends BaseObject {
       }
     | { type: "image"; assetId: string; fit: ImageFit; crop?: ImageCrop }
     | { type: "screenView"; screenId: string; fit: "contain" }
-    | { type: "trend"; trendId: string };
+    | { type: "trend"; trendId: string }
+    | LevelShape;
 }
 export interface PolylineObject extends BaseObject {
   shape: {
@@ -422,9 +437,10 @@ export function parseProject(json: string): Project {
         );
       }
 
+      if (shape.type === "level") validateLevelShape(shape);
       if (
         project.symbols.includes(owner) &&
-        shape.type === "text" &&
+        (shape.type === "text" || shape.type === "level") &&
         shape.binding
       )
         throw new Error("Symbol 定義内の直接タグ割り当てには対応していません");

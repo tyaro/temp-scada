@@ -7,6 +7,7 @@ export function compositedOpacity(object: ScreenObject): number | undefined {
     shape.type === "screenView" ||
     shape.type === "rectangle" ||
     shape.type === "ellipse" ||
+    shape.type === "level" ||
     (shape.type === "symbol" && shape.colorMode === "definition")
       ? undefined
       : object.colorAlpha;
