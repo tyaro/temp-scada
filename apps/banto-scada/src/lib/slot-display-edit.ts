@@ -97,7 +97,8 @@ export function moveStateRow(
 }
 
 export function labelProblem(label: SlotStateLabel): string | undefined {
-  if (typeof label.text !== "string" || label.text.length > 64)
+  // The schema limit counts code points, not UTF-16 units (e.g. surrogate pairs).
+  if (typeof label.text !== "string" || [...label.text].length > 64)
     return "文字は64文字以内にしてください";
   if (LINE_BREAK.test(label.text)) return "文字に改行は入れられません";
   if (typeof label.color !== "string" || !COLOR.test(label.color))

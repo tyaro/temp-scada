@@ -60,7 +60,6 @@
     class="text"
     aria-label={`${name}の文字`}
     placeholder="（文字なし）"
-    maxlength="64"
     value={value.text}
     aria-invalid={problem?.startsWith("文字") ? "true" : undefined}
     oninput={(event) => set({ text: event.currentTarget.value })}

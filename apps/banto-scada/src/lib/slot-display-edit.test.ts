@@ -62,6 +62,11 @@ it("names the problem of a row in the words shown next to it", () => {
   const long = display("value", [0]);
   long.rows[0].text = "a".repeat(65);
   expect(stateRowProblem(long, 0)).toBe("文字は64文字以内にしてください");
+  // Supplementary characters count as one each, as the schema does.
+  long.rows[0].text = "\u{20BB7}".repeat(64);
+  expect(stateRowProblem(long, 0)).toBeUndefined();
+  long.rows[0].text = "\u{20BB7}".repeat(65);
+  expect(stateRowProblem(long, 0)).toBe("文字は64文字以内にしてください");
   long.rows[0].text = "a\nb";
   expect(stateRowProblem(long, 0)).toBe("文字に改行は入れられません");
 });
