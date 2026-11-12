@@ -7,6 +7,11 @@ async function save(page: Page) {
   await fileCommand(page, "Project を保存");
   return JSON.parse(await readFile((await (await pending).path())!, "utf8"));
 }
+async function leaving(page: Page) {
+  return page.evaluate(() =>
+    window.dispatchEvent(new Event("beforeunload", { cancelable: true })),
+  );
+}
 async function open(page: Page, theme: string) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
@@ -106,7 +111,10 @@ test("closing with unapplied cells asks before discarding", async ({
   page,
 }) => {
   const dialog = await open(page, "light");
+  expect(await leaving(page)).toBe(true);
   await dialog.getByLabel("P-101のcurrent").fill("Demo.Water.Pump01.Pressure");
+  // Unapplied cells are protected from reload like other unapplied input.
+  expect(await leaving(page)).toBe(false);
   await page.keyboard.press("Escape");
   await expect(dialog.getByRole("alert")).toContainText(
     "未適用の変更が1件あります",
@@ -121,6 +129,7 @@ test("closing with unapplied cells asks before discarding", async ({
   await expect(
     page.getByRole("button", { name: "割付の一覧表", exact: true }),
   ).toBeFocused();
+  expect(await leaving(page)).toBe(true);
   const saved = await save(page);
   expect(saved.equipment).toEqual(sample.equipment);
 });

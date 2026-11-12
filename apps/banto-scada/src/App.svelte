@@ -1762,7 +1762,7 @@
     );
   }
   function beforeLeave(event: BeforeUnloadEvent) {
-    if (projectChanged || drafts.dirty) {
+    if (projectChanged || drafts.dirty || bindingTableDirty) {
       event.preventDefault();
       event.returnValue = "";
     }
@@ -2003,6 +2003,7 @@
     }
   }
   let bindingTableOpen = $state(false);
+  let bindingTableDirty = $state(false);
   function openBindingTable() {
     if (!editBlocked && !activeDefinition) bindingTableOpen = true;
   }
@@ -4467,6 +4468,7 @@
 {#key workspaceGeneration}
   <EquipmentBindingTable
     open={bindingTableOpen && mode === "edit"}
+    bind:dirty={bindingTableDirty}
     {project}
     {catalogSelection}
     onapply={applyBindingTable}

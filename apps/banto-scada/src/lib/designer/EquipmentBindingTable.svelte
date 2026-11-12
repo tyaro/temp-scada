@@ -22,6 +22,7 @@
     catalogSelection,
     onapply,
     onclose,
+    dirty = $bindable(false),
   }: {
     /** Kept mounted and toggled so the overlay returns focus to its opener. */
     open: boolean;
@@ -30,6 +31,8 @@
     /** Returns an error message, or null when the edit was applied. */
     onapply: (changes: BindingTableChange[]) => string | null;
     onclose: () => void;
+    /** Unapplied cells; the App adds this to its page-unload protection. */
+    dirty?: boolean;
   } = $props();
   const types = $derived(
     (project.equipmentTypes ?? []).filter((type) =>
@@ -48,6 +51,9 @@
   let message = $state("");
   let error = $state("");
   const changes = $derived(bindingTableChanges(project, drafts));
+  $effect.pre(() => {
+    dirty = changes.length > 0;
+  });
   const checking = $derived(
     catalogSelection.available && catalogSelection.isCurrent(),
   );
