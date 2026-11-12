@@ -53,7 +53,7 @@ test("usage inspection and search are read-only, preserve drafts and return focu
   await expect(button(page, "共有定義：ポンプ")).toBeFocused();
 });
 
-test("jumping out of definition editing protects drafts, selects the placement and keeps its zoom", async ({
+test("jumping out of definition editing applies drafts, selects the placement and keeps its zoom", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1600, height: 1000 });
@@ -71,17 +71,10 @@ test("jumping out of definition editing protects drafts, selects the placement a
     exact: true,
   });
   await target.click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(page.getByRole("note")).toBeVisible();
-  await expect(usages(page)).toBeVisible();
-  await expect(page.getByLabel("Symbol 名", { exact: true })).toHaveValue(
-    "循環ポンプ",
-  );
-  await target.click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 確認なしで Symbol 名を適用してから使用先へ移る。
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(page.getByRole("note")).toHaveCount(0);
   await expect(
     page.getByRole("img", { name: "予備系統", exact: true }),
@@ -148,10 +141,9 @@ test("a reference changed while applying drafts cancels the old navigation targe
   await usages(page)
     .getByRole("button", { name: /を表示$/ })
     .click();
-  await page
-    .getByRole("dialog", { name: "未適用の入力があります" })
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(
     page
       .getByRole("status")

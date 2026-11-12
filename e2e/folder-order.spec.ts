@@ -126,21 +126,7 @@ test("folder reorder protects a pending property name and Undo separates apply f
     .click();
   await page.getByLabel("配置名", { exact: true }).fill("未適用の名前");
   await action(page, ids[2], "同じ階層で一つ上へ");
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect
-    .poll(() => order(page))
-    .toEqual([ids[0], ids[1], ids[3], ids[2], ids[4]]);
-  await expect(page.getByLabel("配置名", { exact: true })).toHaveValue(
-    "未適用の名前",
-  );
-  await action(page, ids[2], "同じ階層で一つ上へ");
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 名前は確認なしで適用されてから並び順が変わる
   await expect
     .poll(() => order(page))
     .toEqual([ids[2], ids[0], ids[1], ids[3], ids[4]]);

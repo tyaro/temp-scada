@@ -99,12 +99,14 @@ test("ControlOrMeta range adds and blank click preserves selection; Escape cance
     page.getByRole("button", { name: "元に戻す", exact: true }),
   ).toBeDisabled();
 });
-test("ControlOrMeta selection preserves explicit name drafts on cancel and resumes additively after apply", async ({
+test("ControlOrMeta selection preserves explicit tag drafts on cancel and resumes additively after apply", async ({
   page,
 }) => {
   await start(page);
-  await row(page, 0).click();
-  await page.getByLabel("配置名", { exact: true }).fill("未適用の名前");
+  // 明示適用の欄（表示タグ）だけが確認を出す。他の欄は離れたら確定する。
+  const tag = page.getByLabel("表示タグ（外部名）", { exact: true });
+  await row(page, 2).click();
+  await tag.fill("Pending.Tag");
   await row(page, 1).click({ modifiers: ["ControlOrMeta"] });
   const prompt = page.getByRole("dialog", {
     name: "未適用の入力があります",
@@ -112,15 +114,13 @@ test("ControlOrMeta selection preserves explicit name drafts on cancel and resum
   });
   await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
   await expect(selected(page)).toHaveCount(1);
-  await expect(page.getByLabel("配置名", { exact: true })).toHaveValue(
-    "未適用の名前",
-  );
+  await expect(tag).toHaveValue("Pending.Tag");
   await row(page, 1).click({ modifiers: ["ControlOrMeta"] });
   await prompt
     .getByRole("button", { name: "適用して続行", exact: true })
     .click();
   await expect(selected(page)).toHaveCount(2);
   await page.getByRole("button", { name: "元に戻す", exact: true }).click();
-  await row(page, 0).click();
-  await expect(page.getByLabel("配置名", { exact: true })).toHaveValue("");
+  await row(page, 2).click();
+  await expect(tag).toHaveValue("");
 });

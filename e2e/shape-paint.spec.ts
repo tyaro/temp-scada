@@ -101,37 +101,29 @@ for (const theme of ["light", "dark"] as const)
       .click();
     await expect(shape(page)).toHaveAttribute("stroke", "#2563eb");
   });
-test("paint drafts participate in cancellation and prevalidation without numeric partial commits", async ({
+test("paint drafts are prevalidated and applied on leaving without numeric partial commits", async ({
   page,
 }) => {
   await start(page);
   await stroke(page, "true", "0");
   await page.getByLabel("配置名", { exact: true }).fill("未確定");
   await row(page, ellipse.id).click();
-  await expect(prompt(page)).toBeVisible();
-  await prompt(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 不正な値はダイアログなしで止まり、選択も他の書きかけもそのまま残る。
+  await expect(prompt(page)).toHaveCount(0);
   await expect(shape(page)).toHaveAttribute("stroke", "none");
   await expect(row(page, rect.id)).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByLabel("配置名", { exact: true })).toHaveValue(
     "未確定",
   );
   await form(page).getByLabel("枠線の幅", { exact: true }).fill("4");
+  // 離れたら確定: 修正した値と配置名は確認なしで適用される。
   await row(page, ellipse.id).click();
-  await prompt(page)
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(form(page).getByLabel("枠線の幅", { exact: true })).toHaveValue(
-    "4",
-  );
-  await row(page, ellipse.id).click();
-  await prompt(page)
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  await expect(prompt(page)).toHaveCount(0);
   await row(page, rect.id).click();
-  await expect(shape(page)).toHaveAttribute("stroke", "none");
-  await expect(page.getByLabel("配置名", { exact: true })).toHaveValue("");
+  await expect(shape(page)).toHaveAttribute("stroke-width", "4");
+  await expect(page.getByLabel("配置名", { exact: true })).toHaveValue(
+    "未確定",
+  );
 });
 test("bulk color targets enabled paint channels and explains fully disabled shapes", async ({
   page,

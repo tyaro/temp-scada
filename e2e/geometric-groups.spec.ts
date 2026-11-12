@@ -89,7 +89,7 @@ for (const theme of ["light", "dark"] as const)
     await page.keyboard.press("Control+z");
     await expect(groupRow(page)).toHaveCount(1);
   });
-test("keyboard grouping respects text input and dirty group-name cancellation", async ({
+test("keyboard grouping respects text input and a dirty group name applies before ungrouping", async ({
   page,
 }) => {
   await start(page);
@@ -102,17 +102,12 @@ test("keyboard grouping respects text input and dirty group-name cancellation", 
   await input.press("Control+Shift+g");
   await expect(groupRow(page)).toHaveCount(1);
   await groupRow(page).click({ button: "right" });
-  // Selection is unchanged; choosing an operation must still protect the form.
+  // 離れたら確定: 書きかけの名前は確認なしで適用されてからグループが解除される
   await page
     .getByRole("menuitem", { name: "グループ解除", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(input).toHaveValue("未適用の名前");
-  await expect(groupRow(page)).toHaveCount(1);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(groupRow(page)).toHaveCount(0);
 });
 test("layer and canvas select whole units; mixed lock is excluded from Ctrl+A and can be unlocked", async ({
   page,
@@ -237,14 +232,10 @@ test("F2 edits the group and Undo refreshes the committed draft name", async ({
   await expect(input).toHaveValue("タンク設備");
   await input.fill("前回の確定名");
   await row(page, sample.screens[0].objects[2].id).click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await expect(prompt).toBeVisible();
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(input).toHaveValue("前回の確定名");
-  await expect(groupRow(page)).toHaveAttribute("aria-pressed", "true");
+  // 離れたら確定: 書きかけの名前は確認なしで適用されてから選択が移る
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(groupRow(page)).toContainText("前回の確定名");
+  await expect(groupRow(page)).toHaveAttribute("aria-pressed", "false");
 });
 test("IME confirmation cannot submit the group name; hiding clears the unit selection", async ({
   page,

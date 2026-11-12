@@ -106,20 +106,18 @@ test("continuous placement protects pending text and invalid numbers, and does n
     .getByRole("navigation", { name: "図形一覧" })
     .getByRole("button", { name: "text · 5", exact: true })
     .click();
-  await page.getByLabel("テキスト", { exact: true }).fill("保持する入力");
+  // 離れたら確定: ダイアログが出るのはタグ指定（明示適用）の未適用入力のとき
+  const tag = page.getByLabel("表示タグ（外部名）", { exact: true });
+  await tag.fill("pending.tag");
   await selectPanel(page, "部品");
   await arm(page);
-  await expect(page.getByLabel("テキスト", { exact: true })).toHaveValue(
-    "保持する入力",
-  );
+  await expect(tag).toHaveValue("pending.tag");
   await clickAt(page, 160, 90);
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
   await expect(prompt).toBeVisible();
   await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
   await expect(svg(page).locator("[data-object-id]")).toHaveCount(3);
-  await expect(page.getByLabel("テキスト", { exact: true })).toHaveValue(
-    "保持する入力",
-  );
+  await expect(tag).toHaveValue("pending.tag");
   await clickAt(page, 160, 90);
   await prompt
     .getByRole("button", { name: "入力を破棄して続行", exact: true })
@@ -127,9 +125,6 @@ test("continuous placement protects pending text and invalid numbers, and does n
   await expect(svg(page).locator("[data-object-id]")).toHaveCount(4);
   await page.getByLabel("width", { exact: true }).fill("0");
   await clickAt(page, 300, 300);
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
   await expect(page.getByLabel("width", { exact: true })).toHaveValue("0");
   await expect(svg(page).locator("[data-object-id]")).toHaveCount(4);
   await page.getByLabel("width", { exact: true }).press("Escape");

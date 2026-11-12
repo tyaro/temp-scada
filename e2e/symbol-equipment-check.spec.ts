@@ -22,7 +22,7 @@ async function start(page: Page, project: any) {
   return check;
 }
 for (const theme of ["light", "dark"] as const)
-  test(`configuration check follows both pending selectors, cancel, discard, apply and Undo in ${theme}`, async ({
+  test(`configuration check follows both pending selectors, leaving applies them, and Undo in ${theme}`, async ({
     page,
   }) => {
     const project: any = structuredClone(sample);
@@ -76,7 +76,17 @@ for (const theme of ["light", "dark"] as const)
     await page
       .getByRole("button", { name: "表示プレビュー", exact: true })
       .click();
-    await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+    // 離れたら確定: 確認なしで選択が適用されてプレビューへ移る。
+    await expect(
+      page.getByRole("dialog", { name: "未適用の入力があります" }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: "編集", exact: true }).click();
+    await selectPanel(page, "レイヤー");
+    await page
+      .locator(`button[data-layer-id="${project.screens[0].objects[0].id}"]`)
+      .click();
+    if (!(await check.locator("details").getAttribute("open")))
+      await check.locator("summary").click();
     await expect(definition).toHaveValue(other.id);
     await expect(row("enabled")).toHaveAttribute(
       "data-equipment-check-state",
@@ -88,6 +98,8 @@ for (const theme of ["light", "dark"] as const)
     );
     await page.getByRole("button", { name: "変更を適用", exact: true }).click();
     await expect(equipment).toHaveValue(project.equipment[1].id);
+    // 離れたときの適用と、ここでの適用が別の履歴なので 2 手戻す。
+    await page.getByRole("button", { name: "元に戻す", exact: true }).click();
     await page.getByRole("button", { name: "元に戻す", exact: true }).click();
     await expect(equipment).toHaveValue(project.equipment[0].id);
     await expect(row("running")).toHaveAttribute(
@@ -103,9 +115,9 @@ for (const theme of ["light", "dark"] as const)
     await page
       .getByRole("button", { name: "表示プレビュー", exact: true })
       .click();
-    await page
-      .getByRole("button", { name: "入力を破棄して続行", exact: true })
-      .click();
+    await expect(
+      page.getByRole("dialog", { name: "未適用の入力があります" }),
+    ).toHaveCount(0);
     await page.getByRole("button", { name: "編集", exact: true }).click();
     await selectPanel(page, "レイヤー");
     await page
@@ -113,16 +125,14 @@ for (const theme of ["light", "dark"] as const)
       .click();
     if (!(await check.locator("details").getAttribute("open")))
       await check.locator("summary").click();
-    await expect(row("running")).toHaveAttribute(
+    // 書きかけだった選択は適用済みで、Undo で戻せる。
+    await expect(row("current")).toHaveAttribute(
       "data-equipment-check-state",
-      "unassigned",
+      "typeMismatch",
     );
     await expect(
-      check.locator('[data-equipment-check-slot="enabled"]'),
-    ).toHaveCount(0);
-    await expect(
       page.getByRole("button", { name: "元に戻す", exact: true }),
-    ).toBeDisabled();
+    ).toBeEnabled();
   });
 test("locked selectors still provide read-only configuration and empty equipment stays unbound", async ({
   page,

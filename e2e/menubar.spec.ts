@@ -144,16 +144,12 @@ test("menu commands share draft protection, edit history and preview restriction
   await x.fill("#aabbcc");
   await bar.getByRole("menuitem", { name: "編集", exact: true }).click();
   await page.getByRole("menuitem", { name: "元に戻す", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(x).toHaveValue("#aabbcc");
+  // 離れたら確定: 書きかけの色を適用してから1手戻す（図形は残る）
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(x).not.toHaveValue("#aabbcc");
   await expect(svg.locator("[data-object-id]")).toHaveCount(4);
   await bar.getByRole("menuitem", { name: "編集", exact: true }).click();
   await page.getByRole("menuitem", { name: "元に戻す", exact: true }).click();
-  await dialog
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
   await expect(svg.locator("[data-object-id]")).toHaveCount(3);
 });
 
@@ -231,22 +227,19 @@ test("file operations use menus with the menubar and sidebar hidden, preserving 
   const secondChooser = page.waitForEvent("filechooser");
   await fileCommand(page, "Project を開く");
   await (await secondChooser).setFiles("examples/process-light.project.json");
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
-    "未適用の画面名",
-  );
+  // 離れたら確定: 未適用の入力の確認は出ず、適用後の変更に対する置き換え確認だけが出る
   await expect(
-    page.getByRole("img", { name: "プロセス画面", exact: true }),
-  ).toBeVisible();
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("dialog", { name: "Project を置き換えますか", exact: true })
+    .getByRole("button", { name: "破棄して開く", exact: true })
+    .click();
+  await expect(page.getByTestId("project-status")).toContainText(
+    "Project を読み込みました。",
+  );
   const pending = page.waitForEvent("download");
   await fileCommand(page, "Project を保存");
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
   const download = await pending;
   expect(download.suggestedFilename()).toMatch(/\.json$/);
   await expect(page.getByTestId("save-state")).toContainText(

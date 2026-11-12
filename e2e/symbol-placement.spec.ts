@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/process.project.json" with { type: "json" };
 
-test("replaces a symbol reference only after apply, preserving placement and respecting draft cancellation", async ({
+test("replaces a symbol reference only after apply or leaving, preserving placement", async ({
   page,
 }) => {
   await page.goto("/");
@@ -32,11 +32,13 @@ test("replaces a symbol reference only after apply, preserving placement and res
     "data-symbol-id",
     sourceId,
   );
+  // 離れたら確定: プレビューへ移ると確認なしで参照の差し替えが適用される。
   await button("表示プレビュー").click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(selector).toHaveValue(target.id);
-  await button("変更を適用").click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
+  await button("編集").click();
+  await placement.click();
   await expect(placement.locator("[data-symbol-id]")).toHaveAttribute(
     "data-symbol-id",
     target.id,

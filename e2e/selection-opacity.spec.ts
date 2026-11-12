@@ -82,7 +82,7 @@ for (const theme of ["light", "dark"] as const)
       result.screens[0].objects.slice(0, 2).every((o: any) => o.opacity === 0),
     ).toBe(true);
   });
-test("invalid and composing values preserve the draft, selection changes are guarded, and other form drafts remain separate", async ({
+test("invalid and composing values preserve the draft, selection changes apply drafts together", async ({
   page,
 }) => {
   await start(page);
@@ -91,38 +91,29 @@ test("invalid and composing values preserve the draft, selection changes are gua
   await apply(page).click();
   await expect(input(page)).toHaveValue("101");
   await expect(button(page, "元に戻す")).toBeDisabled();
+  // 不正な値はダイアログなしで止まり、選択は変わらない。
+  await row(page, sample.screens[0].objects[2].id).click();
+  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
+  await expect(prompt).toHaveCount(0);
+  await expect(input(page)).toHaveValue("101");
   await input(page).fill("25");
   await input(page).dispatchEvent("compositionstart");
   await input(page).press("Enter");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await input(page).dispatchEvent("compositionend");
-  await row(page, sample.screens[0].objects[2].id).click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(input(page)).toHaveValue("25");
-  await page.getByLabel("適用する色", { exact: true }).fill("#123456");
-  await apply(page).click();
-  await expect(prompt).toBeVisible();
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(input(page)).toHaveValue("25");
-  await expect(button(page, "元に戻す")).toBeDisabled();
-  await page.getByLabel("適用する色", { exact: true }).fill("");
-  await apply(page).click();
-  await expect(input(page)).toHaveValue("");
   await page.getByLabel("適用する色", { exact: true }).fill("#123456");
   await expect(page.getByTestId("save-state")).toContainText(
     "未適用の入力あり",
   );
+  // 離れたら確定: 別のフォームの書きかけも確認なしで一緒に適用される。
   await row(page, sample.screens[0].objects[2].id).click();
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  await expect(prompt).toHaveCount(0);
   const result = await saved(page);
   expect(
     result.screens[0].objects.slice(0, 2).map((o: any) => o.opacity),
   ).toEqual([0.25, 0.25]);
-  expect(result.screens[0].objects[0].shape.paint).toEqual(
-    sample.screens[0].objects[0].shape.paint,
+  expect(result.screens[0].objects[0].shape.paint.fill.paint.color).toBe(
+    "#123456",
   );
 });
 test("definition-colored Symbols keep modes and internal colors; embedded Views retain source identity", async ({

@@ -31,17 +31,10 @@ test("screen strip uses guarded switching, manual keyboard activation and existi
   await expect(current).toHaveAttribute("aria-current", "page");
   await page.getByLabel("画面名", { exact: true }).fill("保護する画面名");
   await second.click();
-  const dialog = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(current).toHaveAttribute("aria-current", "page");
-  await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
-    "保護する画面名",
-  );
-  await second.click();
-  await dialog
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 確認なしで画面名を適用してから切り替わる。
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(second).toHaveAttribute("aria-current", "page");
   await expect(
     strip(page).getByRole("button", { name: "保護する画面名", exact: true }),

@@ -139,7 +139,7 @@ test("short height and empty text have explicit distinct behavior; resizing neve
     28,
   );
 });
-test("invalid size, IME, staged formatting and multiline paste use existing input protection", async ({
+test("invalid size, IME, staged formatting applied on leaving and multiline paste", async ({
   page,
 }) => {
   await start(page);
@@ -173,9 +173,13 @@ test("invalid size, IME, staged formatting and multiline paste use existing inpu
   await page
     .locator(`button[data-layer-id="${sample.screens[0].objects[0].id}"]`)
     .click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await expect(prompt).toBeVisible();
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 離れたら確定: 確認なしで書式が適用される。
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
+  await page
+    .locator(`button[data-layer-id="${sample.screens[0].objects[2].id}"]`)
+    .click();
   await expect(page.getByLabel("文字の太さ", { exact: true })).toHaveValue(
     "bold",
   );

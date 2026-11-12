@@ -59,18 +59,8 @@ test("cancel retains a pending equipment edit; apply opens the newly committed e
   await start(page);
   const association = page.getByLabel("関連付ける機器", { exact: true });
   await association.selectOption(sample.equipment[1].id);
+  // 離れたら確定: 関連付けは確認なしで適用されてから新しい機器の読取詳細が開く
   await opener(page).click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(association).toHaveValue(sample.equipment[1].id);
-  await expect(page.locator("[data-preview-popup]")).toHaveCount(0);
-  await opener(page).click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
   await expect(
     page.locator(`[data-preview-popup="${sample.equipment[1].id}"]`),
   ).toBeVisible();
@@ -90,22 +80,21 @@ test("cancel retains a pending equipment edit; apply opens the newly committed e
   );
   expect(await page.evaluate(() => (window as any).__resizeErrors)).toEqual([]);
 });
-test("discard opens the original equipment and an unbound Symbol explains the disabled entry", async ({
+test("pending association applies on leave and an unbound Symbol explains the disabled entry", async ({
   page,
 }) => {
   await start(page);
+  // 離れたら確定: 破棄の経路は無くなり、未適用の関連付けは適用されて新しい機器が開く
   await page
     .getByLabel("関連付ける機器", { exact: true })
     .selectOption(sample.equipment[1].id);
   await opener(page).click();
-  await page
-    .getByRole("dialog", { name: "未適用の入力があります", exact: true })
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
   await expect(
-    page.locator(`[data-preview-popup="${sample.equipment[0].id}"]`),
+    page.locator(`[data-preview-popup="${sample.equipment[1].id}"]`),
   ).toBeVisible();
-  expect(await saved(page)).toEqual(sample);
+  expect((await saved(page)).screens[0].objects[0].shape.equipmentId).toBe(
+    sample.equipment[1].id,
+  );
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await page
     .locator(`button[data-layer-id="${sample.screens[0].objects[4].id}"]`)
@@ -121,10 +110,6 @@ test("applying removal of the equipment association stays in edit mode with no s
   await start(page);
   await page.getByLabel("関連付ける機器", { exact: true }).selectOption("");
   await opener(page).click();
-  await page
-    .getByRole("dialog", { name: "未適用の入力があります", exact: true })
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
   await expect(opener(page)).toBeDisabled();
   await expect(
     page.getByRole("button", { name: "編集", exact: true }),

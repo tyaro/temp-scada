@@ -244,9 +244,10 @@ test("reference change is guarded; copy and cut carry source screens and Undo re
   await p.locator(`button[data-layer-id="${view.id}"]`).click();
   await p.getByLabel("配置名", { exact: true }).fill("未適用");
   await btn(p, "参照する画面を開く").click();
-  await expect(p.getByRole("dialog")).toContainText("未適用");
-  await btn(p, "キャンセル").click();
-  await expect(projection(p)).toBeVisible();
+  await expect(p.getByRole("dialog")).toHaveCount(0);
+  await expect(p.getByLabel("画面名", { exact: true })).toHaveValue(
+    "循環設備・参照元",
+  );
 });
 test("used source deletion reports owners and retains the shared references", async ({
   page: p,

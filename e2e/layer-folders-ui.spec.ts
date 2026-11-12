@@ -183,15 +183,7 @@ test("folder dialogs protect existing drafts, IME and background shortcuts", asy
   await row(page, objectId).click();
   await page.getByLabel("配置名", { exact: true }).fill("保持する配置名");
   await button(page, "ルートにフォルダーを作成").click();
-  const guard = dialog(page, "未適用の入力があります");
-  await guard.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(page.getByLabel("配置名", { exact: true })).toHaveValue(
-    "保持する配置名",
-  );
-  await button(page, "ルートにフォルダーを作成").click();
-  await guard
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 確認なしで配置名が適用されてから作成ダイアログが開く
   const create = dialog(page, "フォルダーを作成");
   const name = create.getByLabel("フォルダー名", { exact: true });
   await name.fill("変換中");

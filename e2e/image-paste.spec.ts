@@ -300,7 +300,7 @@ test("an image awaiting decode cannot revive after leaving and returning to the 
   await expect(button(page, "元に戻す")).toBeDisabled();
 });
 
-test("paste captures event data before draft confirmation; cancel preserves input and discard resumes the same image", async ({
+test("paste captures event data and applies the pending name before resuming the same image", async ({
   page,
 }) => {
   await start(page);
@@ -309,21 +309,12 @@ test("paste captures event data before draft confirmation; cancel preserves inpu
   await expect(images(page)).toHaveCount(1);
   await page.getByLabel("配置名", { exact: true }).fill("未適用の名前");
   await nativePaste(page, data);
-  const dialog = page.getByRole("dialog").filter({ hasText: "未適用" });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(images(page)).toHaveCount(1);
-  await expect(page.getByLabel("配置名", { exact: true })).toHaveValue(
-    "未適用の名前",
-  );
-  await nativePaste(page, data);
-  await dialog
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  // 離れたら確定: 名前は確認なしで適用されてから、取得済みの貼り付けが続く
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(images(page)).toHaveCount(2);
   const project = await archived(page);
   expect(project.assets).toHaveLength(1);
-  expect(project.screens[0].objects.every((o: any) => !o.name)).toBe(true);
+  expect(project.screens[0].objects[0].name).toBe("未適用の名前");
 });
 test("delayed menu clipboard read cannot resume after leaving and returning to the same mode", async ({
   page,

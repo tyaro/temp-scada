@@ -142,13 +142,6 @@ test("connection draft survives cancelled navigation and composing Enter or subm
     anchor = form(p, "始点").getByLabel("始点の接続位置", { exact: true });
   await target.selectOption(pump2);
   await anchor.selectOption("top");
-  await button(p, "表示プレビュー").click();
-  await expect(
-    p.getByRole("dialog", { name: "未適用の入力があります", exact: true }),
-  ).toBeVisible();
-  await button(p, "キャンセル").click();
-  await expect(target).toHaveValue(pump2);
-  await expect(anchor).toHaveValue("top");
   await expect(form(p, "始点")).toContainText("接続中：ポンプ1 · 配置1／右");
   await anchor.dispatchEvent("compositionstart");
   await anchor.dispatchEvent("keydown", { key: "Enter", isComposing: true });
@@ -157,6 +150,14 @@ test("connection draft survives cancelled navigation and composing Enter or subm
   await expect(form(p, "始点")).toContainText("接続中：ポンプ1 · 配置1／右");
   await anchor.dispatchEvent("compositionend");
   await button(p, "始点の接続を適用").click();
+  await expect(form(p, "始点")).toContainText("接続中：ポンプ2 · 配置2／上");
+  await button(p, "元に戻す").click();
+  await expect(form(p, "始点")).toContainText("接続中：ポンプ1 · 配置1／右");
+  // 離れたら確定: 未適用の接続は確認なしで適用されてからプレビューへ移る
+  await target.selectOption(pump2);
+  await anchor.selectOption("top");
+  await button(p, "表示プレビュー").click();
+  await button(p, "編集").click();
   await expect(form(p, "始点")).toContainText("接続中：ポンプ2 · 配置2／上");
   await button(p, "元に戻す").click();
   await expect(form(p, "始点")).toContainText("接続中：ポンプ1 · 配置1／右");
@@ -204,7 +205,6 @@ test("Apply-and-continue rejects all dirty forms before mutation while a connect
   await target.selectOption(pump2);
   await target.dispatchEvent("compositionstart");
   await button(p, "表示プレビュー").click();
-  await button(p, "適用して続行").click();
   await expect(p.getByTestId("project-status")).toContainText("文字変換");
   await expect(button(p, "元に戻す")).toBeDisabled();
   await expect(name).toHaveValue("未適用の配管名");
@@ -215,7 +215,6 @@ test("Apply-and-continue rejects all dirty forms before mutation while a connect
   );
   await target.dispatchEvent("compositionend");
   await button(p, "表示プレビュー").click();
-  await button(p, "適用して続行").click();
   await expect(button(p, "編集")).toBeVisible();
   const result = await saved(p);
   expect(result.screens[0].objects[2].name).toBe("未適用の配管名");

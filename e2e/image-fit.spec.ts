@@ -159,11 +159,9 @@ test("fit drafts, Undo, clipboard and archive preserve modes, crop and original 
   await page
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
   await expect(selector).toHaveValue("cover");
-  await fitForm(page)
-    .getByRole("button", { name: "表示方式を適用", exact: true })
-    .click();
   await page.getByRole("button", { name: "元に戻す", exact: true }).click();
   await expect(selector).toHaveValue("contain");
   await page.getByRole("button", { name: "やり直す", exact: true }).click();

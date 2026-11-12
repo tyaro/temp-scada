@@ -74,7 +74,7 @@ test("reverse drag, Shift union, empty clicks and cancellation preserve existing
   await expect(selected(page)).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
 });
-test("range selection respects staged input and a cancelled confirmation keeps the selection", async ({
+test("range selection applies staged input before the selection changes", async ({
   page,
 }) => {
   await start(page);
@@ -84,19 +84,13 @@ test("range selection respects staged input and a cancelled confirmation keeps t
     .getByRole("button", { name: "text · 5", exact: true })
     .click();
   await page.getByLabel("テキスト", { exact: true }).fill("保持する入力");
+  // 離れたら確定: 範囲選択の前に入力が適用され、選択は範囲のものになる。
   await range(page);
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(selected(page)).toHaveCount(1);
-  await expect(page.getByLabel("テキスト", { exact: true })).toHaveValue(
-    "保持する入力",
-  );
-  await range(page);
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(selected(page)).toHaveCount(2);
-  await expect(button(page, "元に戻す")).toBeDisabled();
+  await expect(button(page, "元に戻す")).toBeEnabled();
 });
 test("pointer cancellation and scrolling cancel the box; pan, preview and placement retain their own interaction", async ({
   page,

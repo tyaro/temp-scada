@@ -2,7 +2,7 @@ import { fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
-test("screen order is explicit, protected by draft handling and preserved by undo and file reload", async ({
+test("screen order is explicit, applied with pending drafts and preserved by undo and file reload", async ({
   page,
 }) => {
   await page.goto("/");
@@ -22,18 +22,11 @@ test("screen order is explicit, protected by draft handling and preserved by und
   ]);
   await expect(button("画面を下へ")).toBeDisabled();
   await page.getByLabel("画面名", { exact: true }).fill("仕上工程");
+  // 離れたら確定: 画面名が確認なしで適用され、そのまま並べ替わる。
   await button("画面を上へ").click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(screens.locator("button[aria-pressed]")).toHaveText([
-    "プロセス画面",
-    "画面 2",
-    "画面 3",
-  ]);
-  await button("画面を上へ").click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "プロセス画面",
     "仕上工程",

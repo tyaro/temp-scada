@@ -177,19 +177,11 @@ test("drop protects exact pending inputs and separates apply from relative order
     original = ids(s);
   const name = page.getByLabel("配置名", { exact: true });
   await name.fill("並べ替え前の入力");
-  let data = await begin(page, row(page, original[0]));
-  await at(page, orderRow(page, original[2]), "after", data, "drop");
-  await guard(page)
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(name).toHaveValue("並べ替え前の入力");
-  await expect(undo(page)).toBeDisabled();
-  data = await begin(page, row(page, original[0]));
+  // 離れたら確定: 確認なしで入力が適用されてから相対順序が変わる
+  const data = await begin(page, row(page, original[0]));
   await at(page, orderRow(page, original[2]), "after", data, "drop");
   await row(page, original[0]).dispatchEvent("dragend", { dataTransfer: data });
-  await guard(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(guard(page)).toHaveCount(0);
   expect(ids((await saved(page)).screens[0])).toEqual([
     original[1],
     original[2],

@@ -255,20 +255,10 @@ test("resolves pending Project form edits before capturing the recording editor 
     .getByLabel("プロジェクト名", { exact: true });
   await input.fill("未適用のProject名");
   await open(page);
-  const pending = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await expect(pending).toBeVisible();
-  await expect(dialog(page)).toHaveCount(0);
-  await pending
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(input).toHaveValue("未適用のProject名");
-  await open(page);
-  await pending
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 確認なしで適用され、そのまま編集ダイアログが開く。
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(dialog(page)).toBeVisible();
   await dialog(page)
     .getByRole("button", { name: "閉じる", exact: true })

@@ -32,7 +32,6 @@ test("project branches keep mounted drafts and reopen invalid settings and renam
   await layers(page)
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
-  await button(page, "適用して続行").click();
   await expect(name).toBeVisible();
   await expect(name).toHaveValue("");
   await expect(name).toBeFocused();

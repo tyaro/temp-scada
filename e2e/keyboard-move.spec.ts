@@ -75,7 +75,7 @@ test("snapped group nudges preserve relative geometry and Shift advances ten gri
     "translate(577 190)",
   ]);
 });
-test("draft confirmation cancels or applies the captured nudge, and IME does not edit", async ({
+test("pending text applies before the captured nudge, and IME does not edit", async ({
   page,
 }) => {
   await start(page);
@@ -86,13 +86,8 @@ test("draft confirmation cancels or applies the captured nudge, and IME does not
   const input = page.getByLabel("テキスト", { exact: true });
   await input.fill("未適用のテキスト");
   await area(page).focus();
+  // 離れたら確定: 確認なしでテキストが適用されてから取得済みの移動が続く
   await page.keyboard.press("ArrowRight");
-  await button(page, "キャンセル").click();
-  await expect(input).toHaveValue("未適用のテキスト");
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");
-  await area(page).focus();
-  await page.keyboard.press("ArrowRight");
-  await button(page, "適用して続行").click();
   await expect(page.getByLabel("x", { exact: true })).toHaveValue("101");
   await button(page, "元に戻す").click();
   await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");

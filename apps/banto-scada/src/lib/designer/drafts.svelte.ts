@@ -21,6 +21,9 @@ export function createDraftGuard(
   const dirty = new Set<HTMLFormElement>();
   let dirtyCount = $state(0);
   let pending = $state<(() => void) | null>(null);
+  // The confirmation dialog only for drafts that need an explicit apply (tags).
+  // Other drafts are applied when the user leaves them (UX P1-2「離れたら確定」).
+  let prompting = $state(false);
   let applying = false;
   const registry = new Map<
     HTMLFormElement,
@@ -28,6 +31,7 @@ export function createDraftGuard(
       reset: () => void;
       restore: () => void;
       accept: (control: Control) => void;
+      explicit: () => boolean;
     }
   >();
   function track(form: HTMLFormElement, values?: Record<string, string>) {
@@ -94,6 +98,14 @@ export function createDraftGuard(
         saved.set(control, state(control));
         change();
       },
+      // Tag references (designer policy) and forms that create something new
+      // are applied explicitly, never on leave.
+      explicit: () =>
+        form.hasAttribute("data-explicit-apply") ||
+        controls(form).some(
+          (element) =>
+            element.hasAttribute("data-explicit-apply") && changed(element),
+        ),
     });
     form.addEventListener("input", change);
     form.addEventListener("change", change);
@@ -108,6 +120,11 @@ export function createDraftGuard(
       },
     };
   }
+  function resolvePending() {
+    if ([...dirty].some((form) => registry.get(form)?.explicit()))
+      prompting = true;
+    else void apply();
+  }
   let resolving = false;
   function allow(action: () => void): boolean {
     if (applying) return true;
@@ -120,13 +137,23 @@ export function createDraftGuard(
     }
     if (!dirty.size) return true;
     pending = action;
+    resolvePending();
     return false;
   }
   function beforeSubmit(form: HTMLFormElement): boolean {
     if (applying) return true;
     if (pending) return false;
     if ([...dirty].some((item) => item !== form)) {
-      pending = () => {};
+      // Submitting one form also leaves the others: apply all of them together.
+      // A dirty clicked form is applied with the others; a clean one is
+      // submitted again afterwards so the clicked action still happens.
+      const clean = !dirty.has(form);
+      pending = () => {
+        if (clean && form.isConnected) form.requestSubmit();
+      };
+      // Leave this submit event first: the browser ignores requestSubmit() on
+      // a form that is still firing its submit event (microtasks run inside it).
+      setTimeout(resolvePending);
       return false;
     }
     return true;
@@ -136,6 +163,7 @@ export function createDraftGuard(
     if (!action) return;
     const forms = [...dirty];
     pending = null;
+    prompting = false;
     await tick();
     const invalid = forms.find(
       (form) => form.isConnected && !form.checkValidity(),
@@ -171,6 +199,7 @@ export function createDraftGuard(
     if (!action) return;
     for (const form of [...dirty]) registry.get(form)?.restore();
     pending = null;
+    prompting = false;
     await tick();
     action();
   }
@@ -184,9 +213,15 @@ export function createDraftGuard(
     submitted: (form: HTMLFormElement) => registry.get(form)?.reset(),
     apply,
     discard,
-    cancel: () => (pending = null),
+    cancel: () => {
+      pending = null;
+      prompting = false;
+    },
     get pending() {
       return pending !== null;
+    },
+    get prompting() {
+      return prompting;
     },
     get count() {
       return dirtyCount;

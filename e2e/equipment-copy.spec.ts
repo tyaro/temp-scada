@@ -118,14 +118,7 @@ test("copy registration protects source drafts, cancellation and unsaved candida
   await library
     .getByRole("button", { name: "この機器を元に別の機器を登録", exact: true })
     .click();
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(editing.getByLabel("機器名", { exact: true })).toHaveValue(
-    "適用後の登録元",
-  );
-  await library
-    .getByRole("button", { name: "この機器を元に別の機器を登録", exact: true })
-    .click();
-  await page.getByRole("button", { name: "適用して続行", exact: true }).click();
+  // 離れたら確定: 登録元の書きかけは確認なしで適用されてから複製登録へ進む
   const form = page.getByRole("form", { name: "機器を登録", exact: true });
   await expect(form.getByLabel("機器名", { exact: true })).toHaveValue(
     "適用後の登録元",
@@ -137,15 +130,14 @@ test("copy registration protects source drafts, cancellation and unsaved candida
       exact: true,
     })
     .click();
+  // 新規作成の書きかけは確認する。キャンセルすると入力が残る
+  await expect(page.getByRole("dialog")).toContainText("新規作成");
   await page.getByRole("button", { name: "キャンセル", exact: true }).click();
   await expect(form.getByLabel("機器番号", { exact: true })).toHaveValue(
     "P-104",
   );
   await library
-    .getByRole("button", {
-      name: "登録元の機器へ戻る",
-      exact: true,
-    })
+    .getByRole("button", { name: "登録元の機器へ戻る", exact: true })
     .click();
   await page
     .getByRole("button", { name: "入力を破棄して続行", exact: true })

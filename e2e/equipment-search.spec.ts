@@ -62,21 +62,7 @@ test("equipment search and bounded pages preserve the current draft and never en
   ).toBeVisible();
   await search.fill("fan-001");
   await choices.first().click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(form.getByLabel("機器番号", { exact: true })).toHaveValue(
-    "FAN-053",
-  );
-  await expect(form.getByLabel("機器名", { exact: true })).toHaveValue(
-    "未適用の名前",
-  );
-  await choices.first().click();
-  await prompt
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  // 離れたら確定: 書きかけの機器名は確認なしで適用されてから別の機器へ移る
   await expect(form.getByLabel("機器番号", { exact: true })).toHaveValue(
     "FAN-001",
   );
@@ -93,7 +79,16 @@ test("equipment search and bounded pages preserve the current draft and never en
   await fileCommand(page, "Project を保存");
   expect(
     JSON.parse(await readFile((await (await pending).path())!, "utf8")),
-  ).toEqual(project);
+  ).toEqual({
+    ...project,
+    equipment: project.equipment.map((e) =>
+      e.code === "FAN-053" ? { ...e, name: "未適用の名前" } : e,
+    ),
+    manifest: {
+      ...project.manifest,
+      projectRevision: project.manifest.projectRevision + 1,
+    },
+  });
   await search.fill("fan-053");
   await load();
   await expect(search).toHaveValue("");

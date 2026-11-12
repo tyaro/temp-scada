@@ -68,10 +68,9 @@ test("switching panels preserves hidden screen drafts, selection, viewport and h
   await page
     .getByRole("button", { name: "Rectangle を追加", exact: true })
     .click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(
     page
       .getByRole("img", { name: "未適用の工程名", exact: true })
@@ -100,9 +99,7 @@ test("applying invalid hidden screen input reveals its panel before reporting th
     .getByRole("button", { name: "Rectangle を追加", exact: true })
     .click();
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(prompt).toHaveCount(0);
   await expect(
     page.locator("#designer-inspector-panel .screen-settings"),
   ).toBeVisible();
@@ -116,9 +113,7 @@ test("applying invalid hidden screen input reveals its panel before reporting th
   await page
     .getByRole("button", { name: "Rectangle を追加", exact: true })
     .click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(prompt).toHaveCount(0);
   await expect(
     page.locator("#designer-inspector-panel .screen-settings"),
   ).toBeVisible();

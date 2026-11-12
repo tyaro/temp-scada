@@ -81,13 +81,8 @@ test("vertical context action validates pending color before mutation, applies i
   const color = page.getByLabel("適用する色", { exact: true });
   await color.fill("#12");
   await button(page, vertical).click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 不正な色は確認なしで止まり、エラーが出て欄が残る
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
   await expect(color).toHaveValue("#12");
   await color.fill("#123456");
@@ -95,9 +90,6 @@ test("vertical context action validates pending color before mutation, applies i
   await page
     .getByRole("menu", { name: "選択図形（3 件） の操作", exact: true })
     .getByRole("menuitem", { name: vertical, exact: true })
-    .click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
     .click();
   const result = await exported(page);
   const expected = structuredClone(sample);

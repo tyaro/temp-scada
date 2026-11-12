@@ -351,16 +351,8 @@ test("multiline clipboard and file round trips keep blank rows with one undo per
   await row.click();
   await page.getByLabel("テキスト", { exact: true }).fill("未適用\nメモ");
   await page.locator(`button[data-layer-id="${clipped.id}"]`).click();
-  const dialog = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(page.getByLabel("テキスト", { exact: true })).toHaveValue(
-    "未適用\nメモ",
-  );
-  await page.getByLabel("テキスト", { exact: true }).press("Control+Enter");
+  // 離れたら確定: 確認なしで複数行のテキストが適用されてから選択が移る
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   const project = await saved(page);
   await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "roundtrip.json",

@@ -174,28 +174,20 @@ test("locked selections reject the whole drag and eye, lock, more and folder but
     ).not.toBe("true");
   }
 });
-test("drafts are prompted at drop, cancellation keeps text, and applying commits the captured IDs", async ({
+test("pending drafts are applied at drop and the captured IDs are committed", async ({
   page,
 }) => {
   await start(page);
   await row(page).click();
   const name = page.getByLabel("配置名", { exact: true });
   await name.fill("未適用の名前");
-  let data = await begin(page, row(page));
+  const data = await begin(page, row(page));
   await expect(guard(page)).toHaveCount(0);
-  await folder(page).dispatchEvent("drop", { dataTransfer: data });
-  await guard(page)
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(name).toHaveValue("未適用の名前");
-  await expect(button(page, "元に戻す")).toBeDisabled();
-  data = await begin(page, row(page));
+  // 離れたら確定: 確認なしで名前が適用されてから、取得済みの移動が続く
   await folder(page).dispatchEvent("drop", { dataTransfer: data });
   // Native dragend must not erase the already captured drop intent.
   await row(page).dispatchEvent("dragend", { dataTransfer: data });
-  await guard(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(guard(page)).toHaveCount(0);
   const result = await saved(page);
   expect(result.screens[0].objects[0]).toMatchObject({
     name: "未適用の名前",
@@ -207,7 +199,7 @@ test("drafts are prompted at drop, cancellation keeps text, and applying commits
     folderId: nestedId,
   });
 });
-test("invalid drafts prevent membership changes; discarded drafts allow the drop", async ({
+test("invalid drafts prevent membership changes; reverted drafts allow the drop", async ({
   page,
 }) => {
   await start(page);
@@ -216,16 +208,13 @@ test("invalid drafts prevent membership changes; discarded drafts allow the drop
   await page.getByLabel("配置名", { exact: true }).focus();
   let data = await begin(page, row(page));
   await folder(page).dispatchEvent("drop", { dataTransfer: data });
-  await guard(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(guard(page)).toHaveCount(0);
   await expect(button(page, "元に戻す")).toBeDisabled();
   await expect(page.getByLabel("x", { exact: true })).toHaveValue("invalid");
+  // 離れたら確定: 破棄の経路は無いので、Escapeで入力を戻してから再度ドロップする
+  await page.getByLabel("x", { exact: true }).press("Escape");
   data = await begin(page, row(page));
   await folder(page).dispatchEvent("drop", { dataTransfer: data });
-  await guard(page)
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
   expect((await saved(page)).screens[0].objects[0].folderId).toBe(folderId);
 });
 test("external tokens, cancelled drags, source tab changes and coordinate-less object-row drops never edit", async ({

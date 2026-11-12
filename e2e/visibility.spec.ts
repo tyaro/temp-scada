@@ -120,7 +120,7 @@ test("all-hidden diagrams remain valid, explain recovery, and allow showing a lo
     true,
   );
 });
-test("hide protects drafts and keeps apply versus visibility as separate Undo operations", async ({
+test("hide applies drafts and keeps apply versus visibility as separate Undo operations", async ({
   page,
 }) => {
   await start(page);
@@ -130,19 +130,10 @@ test("hide protects drafts and keeps apply versus visibility as separate Undo op
   const name = page.getByLabel("配置名", { exact: true });
   await name.fill("保持するタンク");
   await button(page, "非表示：rectangle · 3").click();
-  const prompt = page.getByRole("dialog", {
-    name: "未適用の入力があります",
-    exact: true,
-  });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(name).toHaveValue("保持するタンク");
+  // 離れたら確定: 確認なしで配置名を適用してから非表示にする。
   await expect(
-    canvas(page).locator(`[data-object-id="${rectangleId}"]`),
-  ).toBeVisible();
-  await button(page, "非表示：rectangle · 3").click();
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+    page.getByRole("dialog", { name: "未適用の入力があります", exact: true }),
+  ).toHaveCount(0);
   await expect(
     canvas(page).locator(`[data-object-id="${rectangleId}"]`),
   ).toHaveCount(0);

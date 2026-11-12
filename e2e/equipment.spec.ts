@@ -97,26 +97,31 @@ test("equipment drafts guard switching, Undo and invalid duplicate codes", async
   await library
     .getByRole("button", { name: "機器を新規登録", exact: true })
     .click();
-  await expect(
-    page.getByRole("button", { name: "キャンセル", exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(form.getByLabel("機器名", { exact: true })).toHaveValue(
-    "未適用の名称",
-  );
-  await form
-    .getByRole("button", { name: "機器情報と割付を適用", exact: true })
-    .click();
+  // 通常の未適用入力は離れるときに自動で適用する（ダイアログなし）。
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const create = page.getByRole("form", { name: "機器を登録", exact: true });
+  await expect(create).toBeVisible();
   await page.getByRole("button", { name: "元に戻す", exact: true }).click();
+  await library
+    .getByRole("button", { name: "FAN-101 · 誘引送風機", exact: true })
+    .click();
   await expect(form.getByLabel("機器名", { exact: true })).toHaveValue(
     "誘引送風機",
   );
   await library
     .getByRole("button", { name: "機器を新規登録", exact: true })
     .click();
-  const create = page.getByRole("form", { name: "機器を登録", exact: true });
   await create.getByLabel("機器番号", { exact: true }).fill("FAN-101");
   await create.getByLabel("機器名", { exact: true }).fill("重複");
+  // 新規登録の書きかけは確認する。キャンセルすると入力が残る。
+  await library
+    .getByRole("button", { name: "FAN-101 · 誘引送風機", exact: true })
+    .click();
+  await expect(page.getByRole("dialog")).toContainText("未適用");
+  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(create.getByLabel("機器名", { exact: true })).toHaveValue(
+    "重複",
+  );
   await create.getByRole("button", { name: "機器を登録", exact: true }).click();
   await expect(
     library.getByRole("button", { name: "FAN-101 · 重複", exact: true }),

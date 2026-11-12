@@ -114,10 +114,10 @@ test("model-invalid values remain staged and block leaving until fixed or discar
   await expect(field(page, "width")).toHaveAttribute("aria-invalid", "true");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await button(page, "表示プレビュー").click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 離れたら確定: 不正なモデル値は確認なしで止まり、入力は残る
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   await expect(field(page, "width")).toHaveValue("0");
   await expect(button(page, "編集")).toHaveAttribute("aria-pressed", "true");
   await field(page, "width").fill("80");
@@ -264,8 +264,8 @@ test("canvas editing still guards a staged tag and invalid numbers, and blocks c
   await field(page, "表示タグ（外部名）").fill("");
   await field(page, "x").fill("bad");
   await shape(page).click({ position: { x: 20, y: 20 } });
-  await expect(prompt).toBeVisible();
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
+  // 離れたら確定: 不正な数値は確認なしで止まり、入力は残る
+  await expect(prompt).toHaveCount(0);
   await expect(field(page, "x")).toHaveValue("bad");
   await field(page, "x").press("Escape");
   await field(page, "x").dispatchEvent("compositionstart");

@@ -82,29 +82,21 @@ test("mixed colors stay unspecified until Apply, allow clearing and invalid text
   await button(page, "やり直す").click();
   await expect(colorForm(page)).toContainText("現在の色：#aabbcc");
 });
-test("color and movement drafts are prevalidated together and target changes preserve or resolve the whole draft", async ({
+test("color and movement drafts are prevalidated together and target changes apply the whole draft or stop on invalid input", async ({
   page,
 }) => {
   await start(page);
   await selectTwo(page);
   await code(page).fill("#123456");
-  await row(page, "text · 5").click();
-  await prompt(page)
-    .getByRole("button", { name: "キャンセル", exact: true })
-    .click();
-  await expect(code(page)).toHaveValue("#123456");
   await page.getByLabel("移動量 X", { exact: true }).fill("1e309");
   await row(page, "text · 5").click();
-  await prompt(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  // 不正な値はダイアログなしで止まり、書きかけの全体と選択が残る。
+  await expect(prompt(page)).toHaveCount(0);
   await expect(code(page)).toHaveValue("#123456");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await page.getByLabel("移動量 X", { exact: true }).fill("10");
   await row(page, "text · 5").click();
-  await prompt(page)
-    .getByRole("button", { name: "適用して続行", exact: true })
-    .click();
+  await expect(prompt(page)).toHaveCount(0);
   await expect(code(page)).toHaveCount(0);
   const result = await exported(page);
   expect(
@@ -120,10 +112,10 @@ test("color and movement drafts are prevalidated together and target changes pre
   await expect(button(page, "元に戻す")).toBeDisabled();
   await selectTwo(page);
   await code(page).fill("#000000");
+  // 離れたら確定: 破棄はせず適用され、Undo で戻せる。
   await row(page, "text · 5").click();
-  await prompt(page)
-    .getByRole("button", { name: "入力を破棄して続行", exact: true })
-    .click();
+  await expect(prompt(page)).toHaveCount(0);
+  await button(page, "元に戻す").click();
   await expect(button(page, "元に戻す")).toBeDisabled();
 });
 test("locked selections are read only while hidden unlocked targets can be explicitly colored without reappearing", async ({

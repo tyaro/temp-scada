@@ -99,6 +99,7 @@
   bind:this={form}
   use:drafts.track
   data-editor-form="binding-replacement"
+  data-explicit-apply
   aria-label="タグ参照名の一括置換"
   onsubmit={inspect}
   onreset={reset}

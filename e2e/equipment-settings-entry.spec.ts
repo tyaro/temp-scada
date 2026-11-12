@@ -71,26 +71,24 @@ for (const theme of ["light", "dark"] as const)
       JSON.parse(await readFile((await (await pending).path())!, "utf8")),
     ).toEqual(project);
   });
-for (const resolution of ["適用して続行", "入力を破棄して続行"] as const)
-  test(`settings entry rereads the equipment after ${resolution}`, async ({
-    page,
-  }) => {
+// 離れたら確定: 未適用の関連付けは確認なしで適用され、適用後の機器を読み直す
+test("settings entry rereads the equipment after applying the pending association", async ({
+  page,
+}) => {
+  {
     await start(page);
     const association = page.getByLabel("関連付ける機器", { exact: true });
     await association.selectOption(sample.equipment[1].id);
     await entry(page).click();
-    await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-    await expect(association).toHaveValue(sample.equipment[1].id);
-    await entry(page).click();
-    await page.getByRole("button", { name: resolution, exact: true }).click();
     const form = page.getByRole("form", {
       name: "機器情報と割付",
       exact: true,
     });
     await expect(form.getByLabel("機器番号", { exact: true })).toHaveValue(
-      sample.equipment[resolution === "適用して続行" ? 1 : 0].code,
+      sample.equipment[1].code,
     );
-  });
+  }
+});
 test("settings entry protects an existing ledger draft and refuses a removed association", async ({
   page,
 }) => {
@@ -107,19 +105,11 @@ test("settings entry protects an existing ledger draft and refuses a removed ass
   await form.getByLabel("機器名", { exact: true }).fill("保護する入力");
   await selectPanel(page, "レイヤー");
   await entry(page).click();
-  await page.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await selectPanel(page, "プロジェクト");
-  await expect(form.getByLabel("機器名", { exact: true })).toHaveValue(
-    "保護する入力",
-  );
-  await entry(page).click();
-  await page.getByRole("button", { name: "適用して続行", exact: true }).click();
   await expect(form.getByLabel("機器番号", { exact: true })).toHaveValue(
     project.equipment[0].code,
   );
   await page.getByLabel("関連付ける機器", { exact: true }).selectOption("");
   await entry(page).click();
-  await page.getByRole("button", { name: "適用して続行", exact: true }).click();
   await expect(entry(page)).toBeDisabled();
   await expect(page.getByTestId("project-status")).toHaveText(
     "機器の関連付けを確認してください。",

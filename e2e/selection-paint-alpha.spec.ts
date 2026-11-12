@@ -90,7 +90,7 @@ for (const theme of ["light", "dark"] as const)
       page.getByLabel("塗りの不透明度（%）", { exact: true }),
     ).toHaveValue("0");
   });
-test("invalid and composing input is preserved and guarded separately from other forms", async ({
+test("invalid and composing input is preserved when invalid and applied with other forms on leaving", async ({
   page,
 }) => {
   await start(page);
@@ -98,23 +98,21 @@ test("invalid and composing input is preserved and guarded separately from other
   await apply(page).click();
   await expect(fill(page)).toHaveValue("101");
   await expect(button(page, "元に戻す")).toBeDisabled();
+  // 不正な値はダイアログなしで止まり、選択は変わらない。
+  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
+  await row(page, 2).click();
+  await expect(prompt).toHaveCount(0);
+  await expect(fill(page)).toHaveValue("101");
   await fill(page).fill("25");
   await fill(page).dispatchEvent("compositionstart");
   await fill(page).press("Enter");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await fill(page).dispatchEvent("compositionend");
-  await row(page, 2).click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(fill(page)).toHaveValue("25");
   await page.getByLabel("適用する色", { exact: true }).fill("#abcdef");
-  await apply(page).click();
-  await expect(prompt).toBeVisible();
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await page.getByLabel("適用する色", { exact: true }).fill("");
-  await apply(page).click();
-  await expect(fill(page)).toHaveValue("");
-  await expect(form(page)).toContainText("単色塗りの現在値：25%");
+  // 離れたら確定: 別のフォームの書きかけも確認なしで適用される。
+  await row(page, 2).click();
+  await expect(prompt).toHaveCount(0);
+  await expect(button(page, "元に戻す")).toBeEnabled();
 });
 test("unsupported selections disable each channel and hidden/locked targets stay explicit", async ({
   page,

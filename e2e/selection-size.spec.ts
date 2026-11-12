@@ -77,7 +77,7 @@ for (const theme of ["light", "dark"] as const)
     await button(page, "やり直す").click();
     await expect(form(page)).toContainText("現在の幅：160");
   });
-test("invalid values and IME preserve drafts; selection and other pending forms require confirmation", async ({
+test("invalid values and IME preserve drafts; leaving applies other pending forms together", async ({
   page,
 }) => {
   await start(page);
@@ -86,36 +86,31 @@ test("invalid values and IME preserve drafts; selection and other pending forms 
   await apply(page).click();
   await expect(width(page)).toHaveValue("0");
   await expect(button(page, "元に戻す")).toBeDisabled();
+  // 不正な値はダイアログなしで止まり、選択は変わらない。
+  await row(page, sample.screens[0].objects[2].id).click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
+  await expect(width(page)).toHaveValue("0");
   await width(page).fill("120");
   await width(page).dispatchEvent("compositionstart");
   await width(page).press("Enter");
   await expect(button(page, "元に戻す")).toBeDisabled();
   await width(page).dispatchEvent("compositionend");
   await height(page).fill("80");
-  await row(page, sample.screens[0].objects[2].id).click();
-  const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(width(page)).toHaveValue("120");
-  await expect(height(page)).toHaveValue("80");
   await page.getByLabel("適用する不透明度（%）", { exact: true }).fill("50");
-  await apply(page).click();
-  await expect(prompt).toBeVisible();
-  await prompt.getByRole("button", { name: "キャンセル", exact: true }).click();
-  await expect(button(page, "元に戻す")).toBeDisabled();
-  await page.getByLabel("適用する不透明度（%）", { exact: true }).fill("");
-  await apply(page).click();
-  await expect(width(page)).toHaveValue("");
-  await expect(height(page)).toHaveValue("");
+  // 離れたら確定: 別のフォームの書きかけも確認なしで一緒に適用される。
+  await row(page, sample.screens[0].objects[2].id).click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
   const result = await saved(page);
   expect(
     result.screens[0].objects
       .slice(0, 2)
-      .every((o: any) => o.width === 120 && o.height === 80),
-  ).toBe(true);
-  expect(
-    result.screens[0].objects
-      .slice(0, 2)
-      .every((o: any) => o.opacity === undefined),
+      .every(
+        (o: any) => o.width === 120 && o.height === 80 && o.opacity === 0.5,
+      ),
   ).toBe(true);
 });
 test("line-containing selections are refused as a whole; hidden placements and locks are explicit", async ({

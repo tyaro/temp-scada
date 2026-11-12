@@ -331,6 +331,7 @@
         <form
           use:drafts.track={values}
           data-editor-form="equipment"
+          data-explicit-apply={selected ? undefined : ""}
           data-equipment-id={selected?.id ?? ""}
           data-copy-equipment-id={copySourceId}
           data-target-key={`${generation}:${project.manifest.projectId}`}
@@ -419,6 +420,7 @@
                   class="banto-field-control"
                   onkeydown={inputKey}
                   name={`tag:${slot.name}`}
+                  data-explicit-apply
                   maxlength="512"
                   placeholder="PLC01.Fast.Fan01.Run"
                 /></label
