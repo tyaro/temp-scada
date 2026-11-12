@@ -144,17 +144,12 @@ test("F2 reveals the selected placement name, preserves its draft and targets th
     ),
   ).toBe(5);
 });
-test("F2 uses the focused screen tab instead of the active screen and reveals hidden Project settings", async ({
+test("F2 uses the focused screen tab instead of the active screen and reveals hidden screen settings", async ({
   page,
 }) => {
   await start(page);
   await button(page, "画面を追加").click();
-  await page
-    .locator("details")
-    .filter({ has: page.locator("summary", { hasText: "プロジェクト設定" }) })
-    .locator("summary")
-    .first()
-    .click();
+  await button(page, "プロパティを隠す").click();
   await expect(page.getByLabel("画面名", { exact: true })).toBeHidden();
   const tabs = page.getByRole("navigation", { name: "画面タブ", exact: true });
   const first = tabs.getByRole("button", { name: "プロセス画面", exact: true });

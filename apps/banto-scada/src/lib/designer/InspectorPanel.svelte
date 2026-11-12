@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import FloatingPanelHeader from "./FloatingPanelHeader.svelte";
   import SelectionTextStyle from "./SelectionTextStyle.svelte";
   import SelectionSize from "./SelectionSize.svelte";
@@ -71,6 +72,8 @@
     imageBusy,
     images,
     catalogSelection = sampleSelection,
+    screenSettings,
+    showScreenSettings = false,
   }: {
     element?: HTMLElement;
     catalogSelection?: CatalogSelection;
@@ -107,6 +110,10 @@
     onreplaceimage: (id: string) => void;
     imageBusy: boolean;
     images: ReadonlyMap<string, { url: string; width: number; height: number }>;
+    /** Settings of the open screen or Symbol definition, shown while nothing is selected. */
+    screenSettings?: Snippet;
+    /** Show the settings even with a selection (revealing an unapplied or invalid field). */
+    showScreenSettings?: boolean;
   } = $props();
   const group = $derived(selectedGroup(screen, selectedIds));
   const containsGroups = $derived(
@@ -1233,6 +1240,18 @@
     {:else}<p>
         図形をクリック、または一覧から選んでください。図形はドラッグして移動できます。
       </p>{/if}
+    {#if screenSettings}
+      <!-- UX精査 §5.5(b): 未選択時は画面（Symbol 定義）の設定を出す。選択中も消さずに
+           隠すだけにして、未適用の入力を保つ。 -->
+      <section
+        class="screen-settings"
+        aria-label={activeDefinition ? "Symbol 設定" : "画面設定"}
+        hidden={selectedIds.length > 0 && !showScreenSettings}
+      >
+        <h2>{activeDefinition ? "Symbol 設定" : "画面設定"}</h2>
+        {@render screenSettings()}
+      </section>
+    {/if}
   </div>
   {#if layout?.floating && layout.rect}
     <button
@@ -1332,6 +1351,10 @@
     border-radius: 3px;
     touch-action: none;
     cursor: nwse-resize;
+  }
+  .screen-settings > h2 {
+    font-size: 13px;
+    margin: 12px 0 6px;
   }
   .panel-content {
     padding: 14px;

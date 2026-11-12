@@ -119,7 +119,8 @@ for (const theme of ["light", "dark"])
       await input.press("Enter");
     }
     await button(p, "選択図形を複製").click();
-    await selectPanel(p, "プロジェクト");
+    // 背景画像の設定は未選択のときだけ Inspector に出る。
+    await button(p, "選択解除").click();
     let chooser = p.waitForEvent("filechooser");
     await button(p, "背景画像を選択…").click();
     await (

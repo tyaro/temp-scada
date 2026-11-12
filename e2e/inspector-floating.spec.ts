@@ -42,7 +42,9 @@ for (const theme of ["light", "dark"])
     await x.fill("1e");
     await paint.fill("#aabbcc");
     await selectPanel(page, "プロジェクト");
-    await page.getByLabel("画面名", { exact: true }).fill("未適用の画面名");
+    await page
+      .getByLabel("プロジェクト名", { exact: true })
+      .fill("未適用の画面名");
     const ref = await x.elementHandle(),
       form = await x.evaluateHandle((el) => el.closest("form")),
       root = await panel(page).elementHandle();
@@ -72,9 +74,9 @@ for (const theme of ["light", "dark"])
     );
     await expect(x).toHaveValue("1e");
     await expect(paint).toHaveValue("#aabbcc");
-    await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
-      "未適用の画面名",
-    );
+    await expect(
+      page.getByLabel("プロジェクト名", { exact: true }),
+    ).toHaveValue("未適用の画面名");
     expect(await page.getByTestId("save-state").innerText()).toBe(dirty);
     await expect(button(page, "元に戻す")).toBeDisabled();
     await expect(page.getByRole("dialog")).toHaveCount(0);

@@ -48,7 +48,9 @@ test("switching panels preserves hidden screen drafts, selection, viewport and h
   await page.getByLabel("表示倍率", { exact: true }).selectOption("1");
   const canvas = page.getByRole("img", { name: "プロセス画面", exact: true });
   const before = await canvas.boundingBox();
-  await selectPanel(page, "プロジェクト");
+  // 画面設定は未選択のときだけ Inspector に出る（未適用の入力があると選択も変えられない）ので、
+  // 選択を外してから下書きを作る。
+  await page.getByRole("button", { name: "選択解除", exact: true }).click();
   await page.getByLabel("画面名", { exact: true }).fill("未適用の工程名");
   for (const name of ["部品", "レイヤー", "プロジェクト"] as const)
     await selectPanel(page, name);
@@ -56,7 +58,6 @@ test("switching panels preserves hidden screen drafts, selection, viewport and h
   await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
     "未適用の工程名",
   );
-  await expect(page.getByLabel("x", { exact: true })).toHaveValue("100");
   await expect(page.getByTestId("save-state")).toContainText("1 フォーム");
   await expect(
     page.getByRole("button", { name: "元に戻す", exact: true }),
@@ -103,8 +104,8 @@ test("applying invalid hidden screen input reveals its panel before reporting th
     .getByRole("button", { name: "適用して続行", exact: true })
     .click();
   await expect(
-    page.getByRole("tab", { name: "プロジェクト", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
+    page.locator("#designer-inspector-panel .screen-settings"),
+  ).toBeVisible();
   await expect(name).toBeFocused();
   await expect(name).toHaveValue("");
   await expect(
@@ -119,8 +120,8 @@ test("applying invalid hidden screen input reveals its panel before reporting th
     .getByRole("button", { name: "適用して続行", exact: true })
     .click();
   await expect(
-    page.getByRole("tab", { name: "プロジェクト", exact: true }),
-  ).toHaveAttribute("aria-selected", "true");
+    page.locator("#designer-inspector-panel .screen-settings"),
+  ).toBeVisible();
   await expect(page.getByTestId("save-state")).toContainText(
     "未適用の入力あり",
   );

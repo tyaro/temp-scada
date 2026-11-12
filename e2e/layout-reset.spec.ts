@@ -81,7 +81,10 @@ test("standard layout restores hidden regions without resolving drafts, changing
     .click();
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
   await selectPanel(page, "プロジェクト");
-  await page.getByLabel("画面名", { exact: true }).fill("未適用の画面名");
+  // 画面設定は図形の選択中は隠れるので、選択に依らないプロジェクト名の下書きで確かめる。
+  await page
+    .getByLabel("プロジェクト名", { exact: true })
+    .fill("未適用の画面名");
   const tagBranch = page
     .locator("details.tree-section")
     .filter({ has: page.locator("summary", { hasText: "タグ参照" }) });
@@ -103,7 +106,7 @@ test("standard layout restores hidden regions without resolving drafts, changing
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
   ).toHaveValue("#aabbcc");
-  await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
+  await expect(page.getByLabel("プロジェクト名", { exact: true })).toHaveValue(
     "未適用の画面名",
   );
   await expect(page.getByLabel("レイヤーを検索", { exact: true })).toHaveValue(
@@ -125,7 +128,9 @@ test("standard layout restores hidden regions without resolving drafts, changing
   ).toBeVisible();
   await selectPanel(page, "プロジェクト");
   await expect(tagBranch).not.toHaveAttribute("open", "");
-  await page.getByLabel("画面名", { exact: true }).fill(sample.screens[0].name);
+  await page
+    .getByLabel("プロジェクト名", { exact: true })
+    .fill(sample.manifest.name);
   await page
     .getByLabel(/^(?:色|塗りの色)$/, { exact: true })
     .fill(sample.screens[0].objects[0].shape.paint.fill.paint.color);

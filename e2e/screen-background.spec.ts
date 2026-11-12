@@ -93,6 +93,8 @@ test("new screens start white and screen switching protects pending background i
   await expect(paper(page)).toHaveAttribute("fill", "#0b1220");
   await button(page, "画面へ戻る").click();
   await expect(paper(page)).toHaveAttribute("fill", "#ffffff");
+  // 戻ると追加した Text が選択されたままなので、画面設定を出すために選択を外す。
+  await button(page, "選択解除").click();
   await page.getByLabel("画面の背景色", { exact: true }).fill("#ff0000");
   await button(page, "表示プレビュー").click();
   await prompt

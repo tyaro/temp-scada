@@ -20,7 +20,11 @@ test("project branches keep mounted drafts and reopen invalid settings and renam
 }) => {
   await start(page);
   const settings = section(page, "プロジェクト設定");
-  const name = page.getByRole("textbox", { name: "画面名", exact: true });
+  const name = page.getByRole("textbox", {
+    name: "プロジェクト名",
+    exact: true,
+  });
+  const screenName = page.getByRole("textbox", { name: "画面名", exact: true });
   await name.fill("");
   await settings.locator("summary").click();
   await expect(name).toBeHidden();
@@ -32,16 +36,23 @@ test("project branches keep mounted drafts and reopen invalid settings and renam
   await expect(name).toBeVisible();
   await expect(name).toHaveValue("");
   await expect(name).toBeFocused();
-  await name.fill("変更した画面");
-  await button(page, "画面設定を適用").click();
+  await name.fill("変更したプロジェクト");
+  await button(page, "プロジェクト名を適用").click();
   await settings.locator("summary").click();
+  // 画面名は Inspector の画面設定にあり、名前変更はそこへフォーカスする。
+  await selectPanel(page, "レイヤー");
+  await layers(page)
+    .getByRole("button", { name: "rectangle · 3", exact: true })
+    .click();
+  await selectPanel(page, "プロジェクト");
+  await expect(screenName).toBeHidden();
   await page
     .getByRole("navigation", { name: "画面一覧" })
-    .getByRole("button", { name: "変更した画面", exact: true })
+    .getByRole("button", { name: "プロセス画面", exact: true })
     .click({ button: "right" });
   await page.getByRole("menuitem", { name: "名前変更", exact: true }).click();
-  await expect(name).toBeVisible();
-  await expect(name).toBeFocused();
+  await expect(screenName).toBeVisible();
+  await expect(screenName).toBeFocused();
 });
 test("layer search keeps selection, drafts, stacking order, context actions and tab state", async ({
   page,

@@ -261,6 +261,13 @@
     type DesignerPanel,
   } from "./lib/designer/DesignerSidebar.svelte";
   let activePanel = $state<DesignerPanel>("project");
+  // Screen settings live in the unselected Inspector (UX §5.5(b)); a reveal
+  // keeps them shown over the current selection until the selection changes.
+  let revealScreenSettings = $state(false);
+  $effect(() => {
+    selectedIds;
+    revealScreenSettings = false;
+  });
   function expandTreeAncestors(element: Element) {
     for (
       let parent = element.parentElement;
@@ -276,15 +283,13 @@
       return;
     }
     expandTreeAncestors(form);
-    if (
-      [
-        "screen",
-        "project",
-        "equipment",
-        "equipment-type",
-        "background-image",
-        "background-crop",
-      ].includes(form.dataset.editorForm ?? "")
+    if (form.closest("#designer-inspector-panel .screen-settings")) {
+      revealScreenSettings = true;
+      setInspectorVisibility(true);
+    } else if (
+      ["project", "equipment", "equipment-type"].includes(
+        form.dataset.editorForm ?? "",
+      )
     ) {
       setAuxPanelVisibility({ sidebar: true });
       activePanel = "project";
@@ -2431,8 +2436,9 @@
       screenId = id;
       editingSymbolId = null;
       if (rename) {
-        setAuxPanelVisibility({ sidebar: true });
-        activePanel = "project";
+        // 画面名は未選択時の Inspector にある（UX §5.5(b)）。
+        setInspectorVisibility(true);
+        revealScreenSettings = true;
         void tick().then(() => {
           if (
             generation !== workspaceGeneration ||
@@ -3510,6 +3516,101 @@
       /></button
     >{/if}
 {/snippet}
+{#snippet screenSettingsPanel()}
+  {#key screen}
+    <form
+      use:drafts.track
+      data-editor-form="screen"
+      oncompositionstart={(event) => composingForms.add(event.currentTarget)}
+      oncompositionend={(event) => composingForms.delete(event.currentTarget)}
+      onsubmit={screenProperties}
+      aria-label="画面設定"
+    >
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label"
+          >{activeDefinition ? "Symbol 名" : "画面名"}</span
+        ><input
+          class="banto-field-control"
+          onkeydown={nameFormKey}
+          name="name"
+          value={screen.name}
+          required
+          maxlength="200"
+        /></label
+      >
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label"
+          >{activeDefinition ? "定義の幅" : "画面の幅"}</span
+        ><input
+          class="banto-field-control"
+          name="width"
+          type="number"
+          step="any"
+          min="1"
+          value={screen.width}
+          required
+        /></label
+      >
+      <label class="banto-field banto-field--stacked"
+        ><span class="banto-field-label"
+          >{activeDefinition ? "定義の高さ" : "画面の高さ"}</span
+        ><input
+          class="banto-field-control"
+          name="height"
+          type="number"
+          step="any"
+          min="1"
+          value={screen.height}
+          required
+        /></label
+      >
+      {#if !activeDefinition}
+        <label
+          >画面の背景色<input
+            name="background"
+            type="color"
+            value={"background" in screen ? screen.background : "#ffffff"}
+            required
+          /></label
+        >
+        <p class="hint">アプリのテーマと図形の色は変わりません。</p>
+      {/if}
+      <button type="submit"
+        >{activeDefinition ? "Symbol 設定を適用" : "画面設定を適用"}</button
+      >
+    </form>
+  {/key}
+  {#if !activeDefinition}
+    {#key `${workspaceGeneration}:${screen.id}`}
+      <BackgroundImageSettings
+        image={backgroundScreen?.backgroundImage}
+        url={assetImages.get(backgroundScreen?.backgroundImage?.assetId ?? "")
+          ?.url}
+        asset={project.assets.find(
+          (asset) => asset.id === backgroundScreen?.backgroundImage?.assetId,
+        )}
+        targetKey={`${workspaceGeneration}:${screen.id}`}
+        {drafts}
+        busy={imageImport.busy || busy || !!replacement || !!drafts.pending}
+        onimport={imageImport.importBackground}
+        onremove={imageImport.removeBackground}
+        onsubmit={properties}
+      />
+    {/key}
+  {/if}
+  {#if activeDefinition}
+    {#key `${workspaceGeneration}:${activeDefinition.id}`}<SymbolSlots
+        definition={activeDefinition}
+        generation={workspaceGeneration}
+        {drafts}
+        onsubmit={submitForm}
+        oncommand={edit}
+      />{/key}
+  {/if}
+  <p class="hint">
+    サイズ変更は表示領域のみを変更します。図形の位置・サイズは変わりません。
+  </p>
+{/snippet}
 <header
   class="app-header"
   class:fullscreen-preview={mode === "preview" && previewFullscreenActive}
@@ -3877,8 +3978,8 @@
                 <button type="submit">プロジェクト名を適用</button>
               </form>
             {/key}
-            <h2>{activeDefinition ? "Symbol 設定" : "画面管理"}</h2>
             {#if !activeDefinition}
+              <h2>画面管理</h2>
               <button
                 disabled={project.screens.length >= 100}
                 onclick={addScreen}>画面を追加</button
@@ -3915,110 +4016,6 @@
                 onclick={() => removeScreen(screen.id)}>画面を削除</button
               >
             {/if}
-            {#key screen}
-              <form
-                use:drafts.track
-                data-editor-form="screen"
-                oncompositionstart={(event) =>
-                  composingForms.add(event.currentTarget)}
-                oncompositionend={(event) =>
-                  composingForms.delete(event.currentTarget)}
-                onsubmit={screenProperties}
-                aria-label="画面設定"
-              >
-                <label class="banto-field banto-field--stacked"
-                  ><span class="banto-field-label"
-                    >{activeDefinition ? "Symbol 名" : "画面名"}</span
-                  ><input
-                    class="banto-field-control"
-                    onkeydown={nameFormKey}
-                    name="name"
-                    value={screen.name}
-                    required
-                    maxlength="200"
-                  /></label
-                >
-                <label class="banto-field banto-field--stacked"
-                  ><span class="banto-field-label"
-                    >{activeDefinition ? "定義の幅" : "画面の幅"}</span
-                  ><input
-                    class="banto-field-control"
-                    name="width"
-                    type="number"
-                    step="any"
-                    min="1"
-                    value={screen.width}
-                    required
-                  /></label
-                >
-                <label class="banto-field banto-field--stacked"
-                  ><span class="banto-field-label"
-                    >{activeDefinition ? "定義の高さ" : "画面の高さ"}</span
-                  ><input
-                    class="banto-field-control"
-                    name="height"
-                    type="number"
-                    step="any"
-                    min="1"
-                    value={screen.height}
-                    required
-                  /></label
-                >
-                {#if !activeDefinition}
-                  <label
-                    >画面の背景色<input
-                      name="background"
-                      type="color"
-                      value={"background" in screen
-                        ? screen.background
-                        : "#ffffff"}
-                      required
-                    /></label
-                  >
-                  <p class="hint">アプリのテーマと図形の色は変わりません。</p>
-                {/if}
-                <button type="submit"
-                  >{activeDefinition
-                    ? "Symbol 設定を適用"
-                    : "画面設定を適用"}</button
-                >
-              </form>
-            {/key}
-            {#if !activeDefinition}
-              {#key `${workspaceGeneration}:${screen.id}`}
-                <BackgroundImageSettings
-                  image={backgroundScreen?.backgroundImage}
-                  url={assetImages.get(
-                    backgroundScreen?.backgroundImage?.assetId ?? "",
-                  )?.url}
-                  asset={project.assets.find(
-                    (asset) =>
-                      asset.id === backgroundScreen?.backgroundImage?.assetId,
-                  )}
-                  targetKey={`${workspaceGeneration}:${screen.id}`}
-                  {drafts}
-                  busy={imageImport.busy ||
-                    busy ||
-                    !!replacement ||
-                    !!drafts.pending}
-                  onimport={imageImport.importBackground}
-                  onremove={imageImport.removeBackground}
-                  onsubmit={properties}
-                />
-              {/key}
-            {/if}
-            {#if activeDefinition}
-              {#key `${workspaceGeneration}:${activeDefinition.id}`}<SymbolSlots
-                  definition={activeDefinition}
-                  generation={workspaceGeneration}
-                  {drafts}
-                  onsubmit={submitForm}
-                  oncommand={edit}
-                />{/key}
-            {/if}
-            <p class="hint">
-              サイズ変更は表示領域のみを変更します。図形の位置・サイズは変わりません。
-            </p>
           </TreeSection>
         {/if}
       {/snippet}
@@ -4344,6 +4341,8 @@
       images={assetImages}
       onreplaceimage={imageImport.openReplacement}
       imageBusy={imageImport.busy || busy || !!replacement}
+      screenSettings={screenSettingsPanel}
+      showScreenSettings={revealScreenSettings}
     />
   {/if}
   {#if mode === "edit" && windowWidth >= 1100}
