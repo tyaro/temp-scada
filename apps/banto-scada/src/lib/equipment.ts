@@ -30,6 +30,11 @@ export interface SymbolReadSlot {
 export interface EquipmentSlot extends SymbolReadSlot {
   /** Saved only as true: an unassigned slot then reads as "none", not as an error. */
   allowUnassigned?: true;
+  /**
+   * Default end of the tag name; the binding table joins it after a per-row
+   * prefix. Opaque like a tag name: never trimmed, not blank, 512 chars at most.
+   */
+  tagSuffix?: string;
   boolDisplay?: { true: SlotStateLabel; false: SlotStateLabel };
   stateDisplay?: SlotStateDisplay;
 }

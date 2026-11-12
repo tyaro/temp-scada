@@ -105,6 +105,39 @@ it("keeps state and bool displays and allowUnassigned through the form and the e
   const next = applyCommand(project, command, "edit");
   expect(next.equipmentTypes!.at(-1)!.slots).toEqual([...stateful, slots[0]]);
 });
+it("keeps a tag suffix as typed, drops an empty one and refuses a blank or long one", () => {
+  const command = equipmentTypeFormCommand(
+    input(
+      "",
+      JSON.stringify([
+        { ...slots[0], tagSuffix: " .Pressure " },
+        { name: "running", type: "bool", direction: "read", tagSuffix: "" },
+      ]),
+    ),
+    project,
+    3,
+  );
+  const saved = [
+    { ...slots[0], tagSuffix: " .Pressure " },
+    { name: "running", type: "bool", direction: "read" },
+  ];
+  expect(command).toMatchObject({ slots: saved });
+  const next = applyCommand(project, command, "edit");
+  expect(next.equipmentTypes!.at(-1)!.slots).toEqual(saved);
+  expect(parseProject(serializeProject(next))).toEqual(next);
+  for (const [tagSuffix, reason] of [
+    [" 　", /空白だけ/],
+    ["x".repeat(513), /512文字以内/],
+    [1, /入力が不正/],
+  ] as const)
+    expect(() =>
+      equipmentTypeFormCommand(
+        input("", JSON.stringify([{ ...slots[0], tagSuffix }])),
+        project,
+        3,
+      ),
+    ).toThrow(reason);
+});
 it("rejects state rows the schema or the duplicate check refuses, in the form and when applied", () => {
   for (const [rows, formReason, applyReason] of [
     [[{ match: 32, text: "x", color: "#000000" }], /0〜31/, /31/],

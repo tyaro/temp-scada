@@ -15,6 +15,8 @@
     isGridPaste,
     parsePasteGrid,
     pasteIntoTable,
+    prefixFill,
+    PREFIX_COLUMN,
     type BindingCell,
     type BindingDraft,
     type BindingTableChange,
@@ -50,6 +52,8 @@
     (project.equipment ?? []).filter((item) => item.typeId === kind?.id),
   );
   const drafts = new SvelteMap<string, BindingDraft>();
+  /** Per-equipment prefix for the fill; only an input of this table, never saved. */
+  const prefixes = new SvelteMap<string, string>();
   let step = $state<"edit" | "review" | "discard">("edit");
   let message = $state("");
   let error = $state("");
@@ -119,6 +123,7 @@
     message = "";
     error = "";
   }
+  /** `column` 0 is the prefix column; slot columns follow it. */
   function paste(event: ClipboardEvent, row: number, column: number) {
     const data = event.clipboardData?.getData("text/plain") ?? "";
     if (!isGridPaste(data) || !kind) return;
@@ -126,7 +131,7 @@
     const { cells: pasted, dropped } = pasteIntoTable(
       parsePasteGrid(data),
       rows.map((item) => item.id),
-      kind.slots.map((slot) => slot.name),
+      [PREFIX_COLUMN, ...kind.slots.map((slot) => slot.name)],
       row,
       column,
     );
@@ -138,15 +143,58 @@
         ]),
       ),
     );
-    for (const [key, value] of pasted)
-      drafts.set(key, draftCell(drafts, key, saved.get(key) ?? null, value));
+    for (const [key, value] of pasted) {
+      const [equipmentId, column] = key.split("\u0000");
+      if (column === PREFIX_COLUMN) prefixes.set(equipmentId, value);
+      else
+        drafts.set(key, draftCell(drafts, key, saved.get(key) ?? null, value));
+    }
     error = "";
     message = `${pasted.size}セルを貼り付けました。${
       dropped ? `表の外の${dropped}セルは入れていません。` : ""
     }`;
   }
+  function fill() {
+    if (!kind) return;
+    error = "";
+    if (!kind.slots.some((slot) => slot.tagSuffix !== undefined)) {
+      message =
+        "タグ名の末尾を持つslotがありません。機器種別の編集でslotに末尾を設定してください。";
+      return;
+    }
+    const result = prefixFill(
+      kind.slots,
+      rows.map((item) => item.id),
+      prefixes,
+      checking ? index : null,
+    );
+    if (!result.cells.size) {
+      message = "接頭辞が入っている行がありません。";
+      return;
+    }
+    const saved = new Map(
+      rows.flatMap((item) =>
+        kind.slots.map((slot) => [
+          cellKey(item.id, slot.name),
+          bindingCell(item, slot.name),
+        ]),
+      ),
+    );
+    // A blanked cell is a missing name of an allowUnassigned slot: adopt it unassigned.
+    for (const [key, value] of result.cells)
+      drafts.set(
+        key,
+        draftCell(drafts, key, saved.get(key) ?? null, value, value === ""),
+      );
+    message = `${result.filled}件を入れました。${
+      result.blanked
+        ? `未割付を許すslotで見つからない${result.blanked}件は空欄にしました。`
+        : ""
+    }`;
+  }
   function close() {
     drafts.clear();
+    prefixes.clear();
     step = "edit";
     message = "";
     error = "";
@@ -222,6 +270,9 @@
     <p>
       行が機器、列がslotです。表計算ソフトの範囲（タブ区切り）を貼り付けると、選んだセルから右下へ入ります。空にしたセルは採用・未割付になります。未採用への切替は機器ごとの割付で行います。
     </p>
+    <p>
+      接頭辞は保存しません。「接頭辞から入れる」で、接頭辞のある行の「タグ名の末尾」を持つslotに「接頭辞＋末尾」を入れます（区切り文字は接頭辞に含めます）。
+    </p>
     {#if !types.length}
       <p>機器が登録されていません。</p>
     {:else}
@@ -239,6 +290,7 @@
               >{/each}</select
           ></label
         >
+        <button type="button" onclick={fill}>接頭辞から入れる</button>
         <p aria-live="polite">
           変更 {changes.length}件{checking
             ? ` · 未解決 ${missing}件 · 型が合わない ${incompatible}件`
@@ -257,6 +309,7 @@
             <tr>
               <th scope="col">機器番号</th>
               <th scope="col">機器名</th>
+              <th scope="col">接頭辞<small>保存しない</small></th>
               {#each kind?.slots ?? [] as slot (slot.name)}
                 <th scope="col">{slot.name}<small>{slot.type}</small></th>
               {/each}
@@ -267,6 +320,18 @@
               <tr>
                 <th scope="row">{item.code}</th>
                 <td>{item.name}</td>
+                <td>
+                  <input
+                    aria-label={`${item.code}の接頭辞`}
+                    maxlength="1024"
+                    value={prefixes.get(item.id) ?? ""}
+                    oninput={(event) => {
+                      prefixes.set(item.id, event.currentTarget.value);
+                      message = "";
+                    }}
+                    onpaste={(event) => paste(event, r, 0)}
+                  />
+                </td>
                 {#each kind?.slots ?? [] as slot, c (slot.name)}
                   {@const key = cellKey(item.id, slot.name)}
                   {@const cell = cellByKey.get(key)}
@@ -276,11 +341,13 @@
                       aria-label={`${item.code}の${slot.name}`}
                       aria-invalid={cell?.problem ? "true" : undefined}
                       maxlength="1024"
-                      placeholder={saved === null ? "未採用" : "未割付"}
+                      placeholder={saved === null && !drafts.get(key)?.unassign
+                        ? "未採用"
+                        : "未割付"}
                       value={cell?.value ?? ""}
                       oninput={(event) =>
                         setCell(key, event.currentTarget.value, saved)}
-                      onpaste={(event) => paste(event, r, c)}
+                      onpaste={(event) => paste(event, r, c + 1)}
                     />
                     {#if cell?.problem}<small class="error"
                         >{cell.problem}</small

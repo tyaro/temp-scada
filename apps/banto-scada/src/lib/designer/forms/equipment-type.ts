@@ -2,6 +2,7 @@ import type { Project } from "../../project";
 import type { EquipmentCommand } from "../../editor/commands";
 import type { EquipmentSlot } from "../../equipment";
 import { slotDisplayError } from "../../slot-display-edit";
+import { tagSuffixProblem } from "../../equipment-binding-table";
 export function equipmentTypeFormCommand(
   input: {
     connected: boolean;
@@ -51,11 +52,15 @@ export function equipmentTypeFormCommand(
         !extra.stateDisplay.otherwise)
     )
       throw new Error("状態の定義の入力が不正です");
+    if (extra.tagSuffix !== undefined && typeof extra.tagSuffix !== "string")
+      throw new Error("タグ名の末尾の入力が不正です");
     return {
       name: row.name,
       type: row.type,
       direction: "read",
       ...(extra.allowUnassigned === true ? { allowUnassigned: true } : {}),
+      // An empty field means no suffix; other text is kept as typed.
+      ...(extra.tagSuffix ? { tagSuffix: extra.tagSuffix } : {}),
       ...(extra.boolDisplay ? { boolDisplay: extra.boolDisplay } : {}),
       ...(extra.stateDisplay ? { stateDisplay: extra.stateDisplay } : {}),
     };
@@ -71,7 +76,8 @@ export function equipmentTypeFormCommand(
       );
     if (seen.has(slot.name)) throw new Error("slot名が重複しています");
     seen.add(slot.name);
-    const problem = slotDisplayError(slot);
+    const problem =
+      tagSuffixProblem(slot.tagSuffix ?? "") ?? slotDisplayError(slot);
     if (problem) throw new Error(problem);
   }
   const name = String(data.get("name") ?? "");

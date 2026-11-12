@@ -6,6 +6,7 @@ import {
 import {
   slotReadType,
   type EquipmentInstance,
+  type EquipmentSlot,
   type SlotType,
 } from "./equipment";
 import type { Project } from "./project";
@@ -42,11 +43,16 @@ export function cellText(cell: BindingCell) {
 /**
  * A typed name adopts and assigns the slot; names are opaque and never trimmed.
  * A blank cell keeps the slot adopted but unassigned; the table never un-adopts
- * (that stays in the per-equipment form).
+ * (that stays in the per-equipment form). `unassign` adopts an unadopted slot
+ * as unassigned (the prefix fill blanks a missing name of an allowUnassigned slot).
  */
-export function cellAfter(before: BindingCell, text: string): BindingCell {
+export function cellAfter(
+  before: BindingCell,
+  text: string,
+  unassign = false,
+): BindingCell {
   if (!isBlankName(text)) return { externalName: text };
-  return before === null ? null : { externalName: null };
+  return before === null && !unassign ? null : { externalName: null };
 }
 export function sameCell(a: BindingCell, b: BindingCell) {
   return a === null
@@ -91,17 +97,24 @@ export function pasteIntoTable(
 export interface BindingDraft {
   text: string;
   origin: BindingCell;
+  /** Set only by the prefix fill; typing or pasting into the cell clears it. */
+  unassign?: true;
 }
 export function draftCell(
   drafts: ReadonlyMap<string, BindingDraft>,
   key: string,
   saved: BindingCell,
   text: string,
+  unassign = false,
 ): BindingDraft {
   // Test the draft, not its origin: an unadopted origin is null and must not
   // fall back to the newer saved value.
   const first = drafts.get(key);
-  return { text, origin: first ? first.origin : saved };
+  return {
+    text,
+    origin: first ? first.origin : saved,
+    ...(unassign ? { unassign: true as const } : {}),
+  };
 }
 /** Cells whose draft differs from the value seen when editing, in table order. */
 export function bindingTableChanges(
@@ -111,7 +124,7 @@ export function bindingTableChanges(
   const changes: BindingTableChange[] = [],
     visited = new Set<string>();
   const push = (equipmentId: string, slotName: string, draft: BindingDraft) => {
-    const after = cellAfter(draft.origin, draft.text);
+    const after = cellAfter(draft.origin, draft.text, draft.unassign);
     if (!sameCell(draft.origin, after))
       changes.push({ equipmentId, slotName, before: draft.origin, after });
   };
@@ -136,6 +149,14 @@ export function bindingTableChanges(
 export function cellProblem(text: string) {
   return !isBlankName(text) && [...text].length > MAX_EXTERNAL_NAME
     ? `タグ名は${MAX_EXTERNAL_NAME}文字以内です`
+    : null;
+}
+/** Same rule as a tag name; an empty field means "no suffix" and is not saved. */
+export function tagSuffixProblem(text: string) {
+  if (text === "") return null;
+  if (isBlankName(text)) return "タグ名の末尾は空白だけにできません";
+  return [...text].length > MAX_EXTERNAL_NAME
+    ? `タグ名の末尾は${MAX_EXTERNAL_NAME}文字以内です`
     : null;
 }
 export type CellMatch = "found" | "missing" | "incompatible";
@@ -205,4 +226,46 @@ export function applyBindingTableChanges(
       );
     }
   }
+}
+/** Column key of the per-row prefix; never a slot name (slot names are identifiers). */
+export const PREFIX_COLUMN = "";
+export interface PrefixFill {
+  /** Cell text to draft, by cell key. Empty means a blanked (unassigned) cell. */
+  cells: Map<string, string>;
+  /** Names put into cells. */
+  filled: number;
+  /** allowUnassigned cells left blank because the name is not in the tag list. */
+  blanked: number;
+}
+/**
+ * Builds `prefix + tagSuffix` for every slot with a suffix on every row with a
+ * prefix (plain concatenation; the separator belongs to the prefix). With a tag
+ * list, a name missing from it blanks an allowUnassigned slot; any other name
+ * is kept, and shown unresolved by the table. Without a list nothing is checked.
+ */
+export function prefixFill(
+  slots: readonly EquipmentSlot[],
+  equipmentIds: readonly string[],
+  prefixes: ReadonlyMap<string, string>,
+  index: CatalogIndex | null,
+): PrefixFill {
+  const cells = new Map<string, string>();
+  let filled = 0,
+    blanked = 0;
+  for (const id of equipmentIds) {
+    const prefix = prefixes.get(id) ?? "";
+    if (isBlankName(prefix)) continue;
+    for (const slot of slots) {
+      if (slot.tagSuffix === undefined) continue;
+      const name = prefix + slot.tagSuffix;
+      if (index && slot.allowUnassigned && !index.get(name)?.length) {
+        cells.set(cellKey(id, slot.name), "");
+        blanked++;
+      } else {
+        cells.set(cellKey(id, slot.name), name);
+        filled++;
+      }
+    }
+  }
+  return { cells, filled, blanked };
 }
