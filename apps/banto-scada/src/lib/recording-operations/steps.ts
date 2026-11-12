@@ -38,10 +38,23 @@ export function operationStepDone(
   return next === undefined ? step <= input.progress : step < next;
 }
 
-/** The progress of a result outcome kind (async and sync results alike). */
+/**
+ * The progress of a result (async and sync results alike), or of a bare
+ * phase. An apply counts only once quiescence is confirmed and no recovery is
+ * required: commit evidence alone does not end the operation, so the dialog
+ * stays on result and recovery handling instead of pointing at the resume.
+ */
 export function outcomeProgress(
-  kind: string | undefined,
+  result:
+    | string
+    | undefined
+    | Readonly<{
+        outcome: Readonly<{ kind: string }>;
+        quiescence: string;
+        recoveryRequired: boolean;
+      }>,
 ): OperationStepInput["progress"] {
+  const kind = typeof result === "object" ? result.outcome.kind : result;
   switch (kind) {
     case "candidate":
       return 1;
@@ -49,7 +62,10 @@ export function outcomeProgress(
       return 2;
     case "applied":
     case "replay":
-      return 3;
+      return typeof result === "object" &&
+        (result.quiescence !== "confirmed" || result.recoveryRequired)
+        ? 2
+        : 3;
     default:
       return 0;
   }

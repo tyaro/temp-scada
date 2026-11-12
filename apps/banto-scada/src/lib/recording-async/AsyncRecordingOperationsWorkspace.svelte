@@ -306,7 +306,7 @@
         canPreflight: !!visible?.canPreflight,
         canPause: !!visible?.canPause,
         canApply: !!visible?.canApply,
-        progress: outcomeProgress(s?.latest?.outcome.kind),
+        progress: outcomeProgress(s?.latest),
       }}
       disabled={!enabled}
       onpreflight={preflight}

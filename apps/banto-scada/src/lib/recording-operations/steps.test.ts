@@ -56,4 +56,20 @@ describe("outcomeProgress", () => {
     expect(outcomeProgress("failed")).toBe(0);
     expect(outcomeProgress(undefined)).toBe(0);
   });
+
+  it("does not count an apply before quiescence is confirmed", () => {
+    const applied = (quiescence: string, recoveryRequired: boolean) => ({
+      outcome: { kind: "applied" },
+      quiescence,
+      recoveryRequired,
+    });
+    expect(outcomeProgress(applied("confirmed", false))).toBe(3);
+    expect(outcomeProgress(applied("unknown", true))).toBe(2);
+    expect(outcomeProgress(applied("confirmed", true))).toBe(2);
+    expect(
+      nextOperationStep(
+        input({ progress: outcomeProgress(applied("unknown", true)) }),
+      ),
+    ).toBeUndefined();
+  });
 });

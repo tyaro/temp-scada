@@ -206,7 +206,7 @@
         progress:
           visible?.phase === "candidate" || visible?.phase === "paused"
             ? outcomeProgress(visible.phase)
-            : outcomeProgress(visible?.latest?.outcome.kind),
+            : outcomeProgress(visible?.latest),
       }}
       disabled={blocked || !current || !binding}
       onpreflight={preflight}
