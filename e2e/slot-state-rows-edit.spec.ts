@@ -140,6 +140,13 @@ test("a broken row is refused with where it is and the input is kept", async ({
   await slot.getByLabel("状態の元の値", { exact: true }).selectOption("bits");
   await slot.getByLabel("行1のビット", { exact: true }).fill("40");
   await expect(slot.getByRole("alert")).toHaveText("ビットは0〜31です");
+  // A negative value typed key by key keeps its leading "-".
+  await slot.getByLabel("状態の元の値", { exact: true }).selectOption("value");
+  const second = slot.getByLabel("行2の値", { exact: true });
+  await second.fill("");
+  await second.pressSequentially("-5");
+  await expect(second).toHaveValue("-5");
+  await slot.getByLabel("状態の元の値", { exact: true }).selectOption("bits");
   await editor
     .getByRole("button", { name: "機器種別を作成", exact: true })
     .click();

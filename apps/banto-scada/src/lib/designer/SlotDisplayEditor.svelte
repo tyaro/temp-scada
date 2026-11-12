@@ -12,6 +12,7 @@
     labelProblem,
     moveStateRow,
     nextMatch,
+    parseMatch,
     stateRowProblem,
   } from "../slot-display-edit";
   /** Edits the display definitions of one bool/state slot of an equipment type. */
@@ -27,6 +28,11 @@
   const id = $props.id();
   const display = $derived(slot.stateDisplay);
   const unit = $derived(display?.source === "bits" ? "ビット" : "値");
+  /**
+   * What is typed in a row's value while it has focus, so a partial entry
+   * such as "-" is not replaced by the parsed value. Cleared on leaving.
+   */
+  let typing = $state<{ index: number; text: string }>();
   function setState(next: SlotStateDisplay) {
     onchange({ stateDisplay: next });
   }
@@ -147,19 +153,24 @@
           <div class="row" data-state-row={index}>
             <input
               class="match"
-              type="number"
-              step="1"
-              min={display.source === "bits" ? 0 : undefined}
-              max={display.source === "bits" ? 31 : undefined}
+              inputmode="numeric"
               aria-label={`${name}の${unit}`}
-              value={Number.isFinite(row.match) ? row.match : ""}
+              value={typing?.index === index
+                ? typing.text
+                : Number.isFinite(row.match)
+                  ? String(row.match)
+                  : ""}
               aria-invalid={problem &&
               !problem.startsWith("文字") &&
               !problem.startsWith("色")
                 ? "true"
                 : undefined}
-              oninput={(event) =>
-                setRow(index, { match: event.currentTarget.valueAsNumber })}
+              oninput={(event) => {
+                const text = event.currentTarget.value;
+                typing = { index, text };
+                setRow(index, { match: parseMatch(text) });
+              }}
+              onblur={() => (typing = undefined)}
               {onkeydown}
             />
             {@render label(name, row, (patch) => setRow(index, patch))}

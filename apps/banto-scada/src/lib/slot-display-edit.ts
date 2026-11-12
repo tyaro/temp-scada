@@ -73,7 +73,18 @@ export function nextMatch(display: SlotStateDisplay): number | undefined {
   }
   if (!used.size) return 0;
   const next = Math.max(...used) + 1;
-  return next <= WORD_MAX ? next : undefined;
+  if (next <= WORD_MAX) return next;
+  // The largest word is taken: offer the smallest unused value from 0 up
+  // (at most 64 rows, so one is found within that many steps).
+  for (let value = 0; value <= WORD_MAX; value++)
+    if (!used.has(value)) return value;
+  return undefined;
+}
+
+/** A typed row value: a whole decimal integer, or NaN while it is not one yet. */
+export function parseMatch(text: string): number {
+  const trimmed = text.trim();
+  return /^[-+]?\d+$/.test(trimmed) ? Number(trimmed) : Number.NaN;
 }
 
 export function addStateRow(display: SlotStateDisplay): SlotStateDisplay {

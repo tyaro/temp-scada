@@ -7,6 +7,7 @@ import {
   exampleStateDisplay,
   moveStateRow,
   nextMatch,
+  parseMatch,
   slotDisplayError,
   stateRowProblem,
 } from "./slot-display-edit";
@@ -28,6 +29,11 @@ function display(
 it("suggests the next value or the lowest unused bit for a new row", () => {
   expect(nextMatch(display("value", []))).toBe(0);
   expect(nextMatch(display("value", [3, 1]))).toBe(4);
+  // With the largest word taken, the smallest unused value is offered.
+  expect(nextMatch(display("value", [4294967295, 0, 1]))).toBe(2);
+  expect(
+    addStateRow(display("value", [4294967295])).rows.map((row) => row.match),
+  ).toEqual([4294967295, 0]);
   expect(nextMatch(display("bits", [0, 2]))).toBe(1);
   const full = Array.from({ length: 32 }, (_, bit) => bit);
   expect(nextMatch(display("bits", full))).toBeUndefined();
@@ -35,6 +41,13 @@ it("suggests the next value or the lowest unused bit for a new row", () => {
   const added = addStateRow(display("value", [5]));
   expect(added.rows.map((row) => row.match)).toEqual([5, 6]);
   expect(added.rows[1].color).toMatch(/^#[0-9a-f]{6}$/);
+});
+
+it("reads a typed value only once it is a whole number", () => {
+  expect(parseMatch("-5")).toBe(-5);
+  expect(parseMatch(" 12 ")).toBe(12);
+  for (const text of ["", "-", "1.5", "1e3", "abc"])
+    expect(parseMatch(text)).toBeNaN();
 });
 
 it("moves rows to change priority and keeps the ends in place", () => {
