@@ -105,36 +105,40 @@ it("keeps state and bool displays and allowUnassigned through the form and the e
   const next = applyCommand(project, command, "edit");
   expect(next.equipmentTypes!.at(-1)!.slots).toEqual([...stateful, slots[0]]);
 });
-it("rejects state rows the schema or the duplicate check refuses when the edit is applied", () => {
-  for (const [rows, reason] of [
-    [[{ match: 32, text: "x", color: "#000000" }], /31/],
+it("rejects state rows the schema or the duplicate check refuses, in the form and when applied", () => {
+  for (const [rows, formReason, applyReason] of [
+    [[{ match: 32, text: "x", color: "#000000" }], /0〜31/, /31/],
     [
       [
         { match: 1, text: "a", color: "#000000" },
         { match: 1, text: "b", color: "#000000" },
       ],
+      /同じビットの行が上にあります/,
       /重複/,
     ],
   ] as const) {
-    const command = equipmentTypeFormCommand(
-      input(
-        "",
-        JSON.stringify([
-          {
-            name: "status",
-            type: "state",
-            direction: "read",
-            stateDisplay: {
-              source: "bits",
-              rows,
-              otherwise: { text: "", color: "#64748b" },
-            },
-          },
-        ]),
+    const slots = [
+      {
+        name: "status",
+        type: "state" as const,
+        direction: "read" as const,
+        stateDisplay: {
+          source: "bits" as const,
+          rows: rows.map((row) => ({ ...row })),
+          otherwise: { text: "", color: "#64748b" },
+        },
+      },
+    ];
+    expect(() =>
+      equipmentTypeFormCommand(input("", JSON.stringify(slots)), project, 3),
+    ).toThrow(formReason);
+    // A command that bypasses the form is still refused by the domain.
+    expect(() =>
+      applyCommand(
+        project,
+        { type: "create-equipment-type", name: "状態", slots },
+        "edit",
       ),
-      project,
-      3,
-    );
-    expect(() => applyCommand(project, command, "edit")).toThrow(reason);
+    ).toThrow(applyReason);
   }
 });

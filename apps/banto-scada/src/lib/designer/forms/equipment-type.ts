@@ -1,6 +1,7 @@
 import type { Project } from "../../project";
 import type { EquipmentCommand } from "../../editor/commands";
 import type { EquipmentSlot } from "../../equipment";
+import { slotDisplayError } from "../../slot-display-edit";
 export function equipmentTypeFormCommand(
   input: {
     connected: boolean;
@@ -41,8 +42,15 @@ export function equipmentTypeFormCommand(
       row.direction !== "read"
     )
       throw new Error("読取slotの名前と型を確認してください");
-    // The display shapes are checked by the schema when the edit is applied.
+    // The remaining shape is checked by the schema when the edit is applied.
     const extra = row as Partial<EquipmentSlot>;
+    if (
+      extra.stateDisplay &&
+      (typeof extra.stateDisplay !== "object" ||
+        !Array.isArray(extra.stateDisplay.rows) ||
+        !extra.stateDisplay.otherwise)
+    )
+      throw new Error("状態の定義の入力が不正です");
     return {
       name: row.name,
       type: row.type,
@@ -63,6 +71,8 @@ export function equipmentTypeFormCommand(
       );
     if (seen.has(slot.name)) throw new Error("slot名が重複しています");
     seen.add(slot.name);
+    const problem = slotDisplayError(slot);
+    if (problem) throw new Error(problem);
   }
   const name = String(data.get("name") ?? "");
   return typeId
