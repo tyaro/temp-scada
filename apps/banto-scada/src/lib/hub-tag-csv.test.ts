@@ -82,6 +82,10 @@ describe("hub tag csv", () => {
       "a,b.c.d",
       "a.b.c\u0007",
       `a.b.${"c".repeat(101)}`,
+      'a.b.=HYPERLINK("https://example.com")',
+      "+a.b.c",
+      "a.-b.c",
+      "a.b.@c",
     ])
       expect(splitHubName(name)).toHaveProperty("reason");
   });
@@ -161,6 +165,25 @@ describe("hub tag csv", () => {
     // Different slot types leave the data type to the user.
     expect(lines(result.csv)[1]).toBe(
       "PLC1,Common,Alarm,,,,,,,,,,,true,false,plc,,false,P-1 主 / run ほか2件",
+    );
+  });
+  it("keeps a formula-like comment as text and counts rows without a data type", () => {
+    const result = hubTagCsv(
+      project([
+        [
+          "=P-1",
+          "主",
+          [
+            ["run", "PLC1.Pump1.Run"],
+            ["flow", "PLC1.Pump1.Flow"],
+          ],
+        ],
+      ]),
+      null,
+    );
+    expect(result.untyped).toBe(1);
+    expect(lines(result.csv)[1]).toBe(
+      "PLC1,Pump1,Run,,bit,,,,,,,,,true,false,plc,,false,'=P-1 主 / run",
     );
   });
   it("names the file after the project with unsafe characters replaced", () => {

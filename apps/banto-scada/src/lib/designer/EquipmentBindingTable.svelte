@@ -231,7 +231,10 @@
       new Blob([result.csv], { type: "text/csv;charset=utf-8" }),
       hubTagCsvFileName(project.manifest.name),
     );
-    message = `Hub 登録用 CSV に${result.rows}件を書き出しました。${notes}address 列を埋めてから Hub で取り込んでください。`;
+    const fill = result.untyped
+      ? `address 列と、dataType 列が空の${result.untyped}件（数値など）は dataType 列も埋めてから`
+      : "address 列を埋めてから";
+    message = `Hub 登録用 CSV に${result.rows}件を書き出しました。${notes}${fill} Hub で取り込んでください。`;
   }
   function close() {
     drafts.clear();

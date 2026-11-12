@@ -46,7 +46,16 @@ function checkParts(parts: string[]): string | null {
     return "部分の前後に空白がある（Hubの取込みで削られる）";
   if (parts.some((part) => Array.from(part).length > MAX_PART))
     return `${MAX_PART}文字を超える部分がある`;
+  // Excel may read such a cell as a formula even when quoted. Renaming would
+  // change the tag name, so the name is not exported.
+  if (parts.some((part) => FORMULA_START.test(part)))
+    return "先頭が = + - @ の部分がある（表計算ソフトで数式として読まれる）";
   return null;
+}
+const FORMULA_START = /^[=+\-@]/;
+/** Free text such as the comment: a leading `'` keeps it from being a formula. */
+function textCell(text: string) {
+  return FORMULA_START.test(text) ? `'${text}` : text;
 }
 /**
  * Splits a Hub external name `connection.group.tag` for the export only. Other
@@ -101,6 +110,8 @@ export interface HubTagCsvExport {
   invalid: HubTagCsvSkip[];
   /** False when no tag list was given: every name is written, unchecked. */
   checked: boolean;
+  /** Rows whose dataType is blank (number slots, mixed types): the user fills it. */
+  untyped: number;
 }
 interface Use {
   code: string;
@@ -157,12 +168,16 @@ export function hubTagCsv(
     }
   }
   const rows: string[][] = [[...HUB_TAG_CSV_COLUMNS]];
+  let untyped = 0;
   for (const [name, list] of uses) {
     const [connection, group, tag] = (
       splitHubName(name) as { parts: [string, string, string] }
     ).parts;
     const first = list[0];
     const types = new Set(list.map((use) => hubDataType(use.type)));
+    // Slots of different types sharing a name leave the choice to the user.
+    const dataType = types.size === 1 ? [...types][0] : "";
+    if (!dataType) untyped += 1;
     const comment = `${first.code} ${first.name} / ${first.slotName}${
       list.length > 1 ? ` ほか${list.length - 1}件` : ""
     }`;
@@ -171,8 +186,7 @@ export function hubTagCsv(
       group,
       name: tag,
       address: "",
-      // Slots of different types sharing a name leave the choice to the user.
-      dataType: types.size === 1 ? [...types][0] : "",
+      dataType,
       stringLength: "",
       stringEncoding: "",
       unit: "",
@@ -186,7 +200,7 @@ export function hubTagCsv(
       tagKind: "plc",
       expression: "",
       retain: "false",
-      comment: Array.from(comment).slice(0, MAX_COMMENT).join(""),
+      comment: Array.from(textCell(comment)).slice(0, MAX_COMMENT).join(""),
     };
     rows.push(HUB_TAG_CSV_COLUMNS.map((column) => cells[column]));
   }
@@ -196,6 +210,7 @@ export function hubTagCsv(
     registered: registered.size,
     invalid,
     checked: index !== null,
+    untyped,
   };
 }
 
