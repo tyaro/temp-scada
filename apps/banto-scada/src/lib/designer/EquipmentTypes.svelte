@@ -6,6 +6,7 @@
   import type { createDraftGuard } from "./drafts.svelte";
   import SlotDisplayEditor from "./SlotDisplayEditor.svelte";
   import { emptyStateDisplay } from "../slot-display-edit";
+  import { tagSuffixProblem } from "../equipment-binding-table";
   let {
     project,
     generation,
@@ -206,6 +207,24 @@
                 >number</option
               ><option value="state">state</option></select
             ></label
+          >
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">タグ名の末尾</span><input
+              class="banto-field-control"
+              aria-label="タグ名の末尾"
+              title="割付の一覧表で機器ごとの接頭辞の後ろにつなげます（空欄なら使いません）"
+              placeholder="（なし）"
+              maxlength="1024"
+              value={row.tagSuffix ?? ""}
+              aria-invalid={tagSuffixProblem(row.tagSuffix ?? "")
+                ? "true"
+                : undefined}
+              oninput={(event) =>
+                update(row.key, {
+                  tagSuffix: event.currentTarget.value || undefined,
+                })}
+              onkeydown={inputKey}
+            /></label
           >
           {#if row.type !== "number"}
             <SlotDisplayEditor

@@ -12,7 +12,7 @@ async function leaving(page: Page) {
     window.dispatchEvent(new Event("beforeunload", { cancelable: true })),
   );
 }
-async function open(page: Page, theme: string) {
+async function open(page: Page, theme: string, project: unknown = sample) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await chooseTheme(page, theme);
@@ -20,7 +20,7 @@ async function open(page: Page, theme: string) {
   await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
     name: "binding-table.json",
     mimeType: "application/json",
-    buffer: Buffer.from(JSON.stringify(sample)),
+    buffer: Buffer.from(JSON.stringify(project)),
   });
   await page
     .getByRole("region", { name: "機器台帳", exact: true })
@@ -48,7 +48,8 @@ for (const theme of ["light", "dark"] as const) {
   }) => {
     const dialog = await open(page, theme);
     const table = dialog.getByRole("table", { name: "モーターの割付" });
-    await expect(table.getByRole("textbox")).toHaveCount(4);
+    // Two prefix cells and four slot cells.
+    await expect(table.getByRole("textbox")).toHaveCount(6);
     await expect(dialog.getByLabel("P-101のrunning")).toHaveValue("");
     await expect(dialog.getByLabel("P-101のrunning")).toHaveAttribute(
       "placeholder",
@@ -146,4 +147,88 @@ test("over-long names block the review until fixed", async ({ page }) => {
   await expect(
     dialog.getByRole("button", { name: "差分を確認（1件）" }),
   ).toBeEnabled();
+});
+
+test("fills tag names from row prefixes and the slot suffixes set on the type", async ({
+  page,
+}) => {
+  // P-101 has no running binding, so a blanked running cell adopts it unassigned.
+  const project = structuredClone(sample);
+  project.equipment[0].bindings = [];
+  await open(page, "light", project);
+  await page.keyboard.press("Escape");
+  const library = page.getByRole("region", { name: "機器台帳", exact: true });
+  await library.getByRole("button", { name: "機器種別", exact: true }).click();
+  const editor = page.getByRole("region", {
+    name: "機器種別の編集",
+    exact: true,
+  });
+  await editor
+    .getByLabel("編集する機器種別", { exact: true })
+    .selectOption(sample.equipmentTypes[0].id);
+  const [running, current] = [
+    editor.locator("[data-equipment-type-slot]").nth(0),
+    editor.locator("[data-equipment-type-slot]").nth(1),
+  ];
+  await running.getByLabel("タグ名の末尾", { exact: true }).fill("Running");
+  await running.getByLabel(/未割付を許す/).check();
+  await current.getByLabel("タグ名の末尾", { exact: true }).fill("Pressure");
+  await editor
+    .getByRole("button", { name: "機器種別を適用", exact: true })
+    .click();
+  await expect(
+    editor.getByLabel("タグ名の末尾", { exact: true }).first(),
+  ).toHaveValue("Running");
+
+  await library.getByRole("button", { name: "機器一覧", exact: true }).click();
+  await library
+    .getByRole("button", { name: "割付の一覧表", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "割付の一覧表" });
+  // A vertical paste fills the prefixes of following rows.
+  await paste(
+    page,
+    "P-101の接頭辞",
+    "Demo.Water.Pump09.\r\nDemo.Water.Pump01.\r\n",
+  );
+  await expect(dialog.getByLabel("P-102の接頭辞")).toHaveValue(
+    "Demo.Water.Pump01.",
+  );
+  await dialog.getByRole("button", { name: "接頭辞から入れる" }).click();
+  await expect(dialog).toContainText(
+    "3件を入れました。未割付を許すslotで見つからない1件は空欄にしました。",
+  );
+  await expect(dialog.getByLabel("P-101のrunning")).toHaveValue("");
+  await expect(dialog.getByLabel("P-101のrunning")).toHaveAttribute(
+    "placeholder",
+    "未割付",
+  );
+  // A missing name of a slot that must be assigned is kept and shown.
+  await expect(dialog.getByLabel("P-101のcurrent")).toHaveValue(
+    "Demo.Water.Pump09.Pressure",
+  );
+  await expect(dialog.getByText("未解決", { exact: true })).toHaveCount(1);
+  await expect(dialog.getByLabel("P-102のrunning")).toHaveValue(
+    "Demo.Water.Pump01.Running",
+  );
+  await expect(dialog).toContainText("変更 4件");
+
+  await dialog.getByRole("button", { name: "差分を確認（4件）" }).click();
+  await expect(
+    dialog.getByRole("table", { name: "割付の変更点" }).getByRole("row"),
+  ).toHaveCount(5);
+  await dialog.getByRole("button", { name: "4件を適用" }).click();
+  await expect(dialog).toBeHidden();
+  const saved = await save(page);
+  expect(
+    saved.equipmentTypes[0].slots.map((slot: any) => slot.tagSuffix),
+  ).toEqual(["Running", "Pressure"]);
+  expect(saved.equipment[0].bindings).toEqual([
+    { slotName: "running", externalName: null },
+    { slotName: "current", externalName: "Demo.Water.Pump09.Pressure" },
+  ]);
+  expect(saved.equipment[1].bindings).toEqual([
+    { slotName: "running", externalName: "Demo.Water.Pump01.Running" },
+    { slotName: "current", externalName: "Demo.Water.Pump01.Pressure" },
+  ]);
 });

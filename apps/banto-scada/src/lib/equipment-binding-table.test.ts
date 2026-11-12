@@ -17,7 +17,10 @@ import {
   isGridPaste,
   parsePasteGrid,
   pasteIntoTable,
+  prefixFill,
+  tagSuffixProblem,
 } from "./equipment-binding-table";
+import type { EquipmentSlot } from "./equipment";
 const fresh = () => parseProject(JSON.stringify(equipmentSample));
 const FAN = "0199f700-0000-7000-8000-000000000002";
 const index = catalogIndex(sampleCatalog);
@@ -251,5 +254,83 @@ describe("assign-equipment-tags", () => {
           "edit",
         ),
       ).toThrow();
+  });
+});
+
+describe("prefix fill", () => {
+  const slots: EquipmentSlot[] = [
+    { name: "running", type: "bool", direction: "read", tagSuffix: "Running" },
+    { name: "current", type: "number", direction: "read" },
+    {
+      name: "fault",
+      type: "bool",
+      direction: "read",
+      allowUnassigned: true,
+      tagSuffix: "Fault",
+    },
+    {
+      name: "pressure",
+      type: "number",
+      direction: "read",
+      allowUnassigned: true,
+      tagSuffix: "Pressure",
+    },
+  ];
+  const prefixes = new Map([
+    ["a", "Demo.Water.Pump01."],
+    ["b", " "],
+    ["c", "s7.line1.P101_"],
+  ]);
+  it("joins prefix and suffix for suffixed slots of rows with a prefix", () => {
+    const result = prefixFill(slots, ["a", "b", "c", "d"], prefixes, null);
+    expect([...result.cells]).toEqual([
+      [cellKey("a", "running"), "Demo.Water.Pump01.Running"],
+      [cellKey("a", "fault"), "Demo.Water.Pump01.Fault"],
+      [cellKey("a", "pressure"), "Demo.Water.Pump01.Pressure"],
+      [cellKey("c", "running"), "s7.line1.P101_Running"],
+      [cellKey("c", "fault"), "s7.line1.P101_Fault"],
+      [cellKey("c", "pressure"), "s7.line1.P101_Pressure"],
+    ]);
+    expect(result).toMatchObject({ filled: 6, blanked: 0 });
+  });
+  it("blanks only allowUnassigned names missing from the tag list", () => {
+    const result = prefixFill(slots, ["a", "c"], prefixes, index);
+    expect([...result.cells]).toEqual([
+      [cellKey("a", "running"), "Demo.Water.Pump01.Running"],
+      [cellKey("a", "fault"), ""],
+      [cellKey("a", "pressure"), "Demo.Water.Pump01.Pressure"],
+      // Missing but not allowed unassigned: kept and shown unresolved.
+      [cellKey("c", "running"), "s7.line1.P101_Running"],
+      [cellKey("c", "fault"), ""],
+      [cellKey("c", "pressure"), ""],
+    ]);
+    expect(result).toMatchObject({ filled: 3, blanked: 3 });
+  });
+  it("adopts a blanked unadopted slot as unassigned until it is typed again", () => {
+    const project = fresh();
+    const item = project.equipment![0];
+    const key = cellKey(item.id, "current");
+    const drafts = new Map<string, BindingDraft>();
+    drafts.set(key, draftCell(drafts, key, null, "", true));
+    expect(cellAfter(null, "", true)).toEqual({ externalName: null });
+    expect(bindingTableChanges(project, drafts)).toEqual([
+      {
+        equipmentId: item.id,
+        slotName: "current",
+        before: null,
+        after: { externalName: null },
+      },
+    ]);
+    drafts.set(key, draftCell(drafts, key, null, ""));
+    expect(bindingTableChanges(project, drafts)).toEqual([]);
+  });
+  it("checks a suffix like a tag name", () => {
+    expect(tagSuffixProblem("")).toBeNull();
+    expect(tagSuffixProblem(" RUN")).toBeNull();
+    expect(tagSuffixProblem(" 　")).toBe("タグ名の末尾は空白だけにできません");
+    expect(tagSuffixProblem("x".repeat(512))).toBeNull();
+    expect(tagSuffixProblem("x".repeat(513))).toBe(
+      "タグ名の末尾は512文字以内です",
+    );
   });
 });

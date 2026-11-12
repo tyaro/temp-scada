@@ -1994,5 +1994,195 @@
         ]
       }
     ]
+  },
+  {
+    "name": "slot tag suffix",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "送風機",
+        "slots": [
+          {
+            "name": "running",
+            "type": "bool",
+            "direction": "read",
+            "tagSuffix": " RUN"
+          },
+          {
+            "name": "current",
+            "type": "number",
+            "direction": "read",
+            "tagSuffix": ".Current"
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "FAN-101",
+        "name": "誘引送風機",
+        "bindings": [
+          {
+            "slotName": "running",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "empty tag suffix",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "送風機",
+        "slots": [
+          {
+            "name": "running",
+            "type": "bool",
+            "direction": "read",
+            "tagSuffix": ""
+          },
+          {
+            "name": "current",
+            "type": "number",
+            "direction": "read",
+            "tagSuffix": ".Current"
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "FAN-101",
+        "name": "誘引送風機",
+        "bindings": [
+          {
+            "slotName": "running",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "blank tag suffix",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "送風機",
+        "slots": [
+          {
+            "name": "running",
+            "type": "bool",
+            "direction": "read",
+            "tagSuffix": " 　"
+          },
+          {
+            "name": "current",
+            "type": "number",
+            "direction": "read",
+            "tagSuffix": ".Current"
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "FAN-101",
+        "name": "誘引送風機",
+        "bindings": [
+          {
+            "slotName": "running",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "tag suffix at 512 characters",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "送風機",
+        "slots": [
+          {
+            "name": "running",
+            "type": "bool",
+            "direction": "read",
+            "tagSuffix": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          {
+            "name": "current",
+            "type": "number",
+            "direction": "read",
+            "tagSuffix": ".Current"
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "FAN-101",
+        "name": "誘引送風機",
+        "bindings": [
+          {
+            "slotName": "running",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "tag suffix over 512 characters",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000001",
+        "name": "送風機",
+        "slots": [
+          {
+            "name": "running",
+            "type": "bool",
+            "direction": "read",
+            "tagSuffix": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          {
+            "name": "current",
+            "type": "number",
+            "direction": "read",
+            "tagSuffix": ".Current"
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000002",
+        "typeId": "0199f700-0000-7000-8000-000000000001",
+        "code": "FAN-101",
+        "name": "誘引送風機",
+        "bindings": [
+          {
+            "slotName": "running",
+            "externalName": null
+          }
+        ]
+      }
+    ]
   }
 ]
