@@ -440,6 +440,21 @@ impl Project {
                         }
                     }
                 }
+                if shape["type"] == "table" {
+                    let (rows, columns) = (
+                        shape["rows"].as_array().map_or(0, Vec::len),
+                        shape["columns"].as_array().map_or(0, Vec::len),
+                    );
+                    let cells = shape["cells"].as_array();
+                    if !cells.is_some_and(|cells| {
+                        cells.len() == rows
+                            && cells
+                                .iter()
+                                .all(|row| row.as_array().is_some_and(|row| row.len() == columns))
+                    }) {
+                        return Err("表のセルの数を行と列の数に合わせてください".into());
+                    }
+                }
                 if shape.get("stateColors").is_some()
                     && !screen["readSlots"]
                         .as_array()
@@ -727,6 +742,40 @@ mod tests {
         .unwrap();
         let cases: Vec<Value> =
             serde_json::from_str(include_str!("../../../examples/level-cases.json")).unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_array_mut()
+                .unwrap()
+                .push(case["object"].clone());
+            let parsed = Project::from_json(&input.to_string());
+            assert_eq!(
+                parsed.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{} {:?}",
+                case["name"],
+                parsed.as_ref().err()
+            );
+            if let Ok(project) = parsed {
+                assert_eq!(
+                    Project::from_json(&project.to_json()).unwrap().0,
+                    project.0,
+                    "{}",
+                    case["name"]
+                );
+            }
+        }
+    }
+    #[test]
+    fn shared_table_contract() {
+        let base: Value = serde_json::from_str(include_str!(
+            "../../../examples/read-presentation.project.json"
+        ))
+        .unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/table-cases.json")).unwrap();
         for case in cases {
             let mut input = base.clone();
             input

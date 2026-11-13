@@ -7,6 +7,7 @@ import { setFlip } from "../flip";
 import { setLineStyle } from "../line-style";
 import { parseLineArrow } from "../line-arrow";
 import { validateLevelShape } from "../level";
+import { validateTableShape } from "../table";
 import type { SingleObjectCommand } from "./commands";
 import { newId, copySymbol } from "./model-helpers";
 import { isImageEditCommand, applyImageEdit } from "./image-handler";
@@ -113,6 +114,7 @@ export function applySingleObjectCommand(
       stateColors,
       format,
       level,
+      table,
       stateColor,
       symbolId,
       equipmentId,
@@ -264,6 +266,15 @@ export function applySingleObjectCommand(
       validateLevelShape(next);
       if (level.background === undefined) delete next.background;
       else next.background = level.background;
+      object.shape = next;
+    }
+    if (table !== undefined) {
+      if (object.shape.type !== "table")
+        throw new Error("行・列・セルは表にだけ設定できます");
+      const next = { type: "table" as const, ...structuredClone(table) };
+      validateTableShape(next);
+      if (next.border === undefined) delete next.border;
+      if (next.background === undefined) delete next.background;
       object.shape = next;
     }
     if (format !== undefined) {

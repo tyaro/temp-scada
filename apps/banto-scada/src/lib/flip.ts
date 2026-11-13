@@ -1,10 +1,11 @@
 import type { ScreenObject } from "./project";
 import { normalizeRotation } from "./rotation";
 
-/** Text keeps reading direction and Trend keeps its axes; neither can be mirrored. */
+/** Text and tables keep reading direction and Trend keeps its axes; none can be mirrored. */
 export function canFlip(object: Pick<ScreenObject, "shape">): boolean {
   return (
     object.shape.type !== "text" &&
+    object.shape.type !== "table" &&
     object.shape.type !== "trend" &&
     object.shape.type !== "screenView"
   );

@@ -12,6 +12,7 @@
   import TextPrimitive from "./TextPrimitive.svelte";
   import { levelFillRect, levelFromReading, levelFromSlot } from "./level";
   import MultilineTextPrimitive from "./MultilineTextPrimitive.svelte";
+  import TablePrimitive from "./TablePrimitive.svelte";
   import type { ScreenObject } from "./project";
   import {
     formatSlotText,
@@ -278,6 +279,14 @@
         tagDetail={slotBinding ? slotDisplay?.reason : undefined}
         {onsummary}
       />{/if}
+  {:else if object.shape.type === "table"}<TablePrimitive
+      shape={object.shape}
+      width={object.width}
+      height={object.height}
+      textColor={object.fill!}
+      {color}
+      textAlpha={object.colorAlpha}
+    />
   {:else if object.shape.type === "level" && level}
     {@const width = object.width}
     {@const height = object.height}

@@ -149,9 +149,9 @@
   - 始点・両端の矢印を加える（2026-11-13 実装。`arrow` を `none`／`start`／`end`／`both` に広げた。schemaVersion は据え置き。仕様: [線種の「矢印の向き」](../graphics/line-style-design.md#矢印の向き2026-11-13追記)。試験: `line-arrow.test.ts`、`examples/line-arrow-cases.json`（Rust・TS 共通の契約）、`e2e/line-arrow.spec.ts`）。
   - T 字の接続には分岐の点を描く（2026-11-13 実装。画面直下の表示中の Polyline 同士で、端点が別の線の途中に 0.5 以内で乗るか、3 つ以上の端点が集まるときに、通る側の線の色の塗りの円を後に描かれる線の直後に描く。保存せず描画時に計算し、選択・外接矩形には含めない。schemaVersion は据え置き。仕様: [配管の分岐の点](../graphics/line-junction.md)。試験: `line-junction.test.ts`、`e2e/line-junction.spec.ts`）。
   - 交差のまたぎを描く（描画時に計算し、画面ごとに形を選べる）（2026-11-13 実装。画面の任意の `lineHops`（`"arc"`＝弧でまたぐ、`"cut"`＝弧を描かず下の線を切る。無いときはまたがない）を画面設定の「交差のまたぎ」で選ぶ。画面直下の表示中の Polyline 同士が互いの途中で真に交差するとき、後に描かれる線に半円のまたぎ（上へ、垂直な線は右へ膨らむ）を描く。端点・T 字・分岐の点・平行は除き、近いまたぎはまとめる。`"cut"` では、弧は描かず、またがれる線を交差点の前後（弧と同じ半径）で描かない（分岐の点の下は切らない）。保存の points は変えず、描画時に polyline を直線＋円弧（＋途切れ）の path に置き換える。schemaVersion は据え置き。仕様: [配管の交差のまたぎ](../graphics/line-hop.md)。試験: `line-hop.test.ts`、`examples/line-hop-cases.json`（Rust・TS 共通の契約）、`e2e/line-hop.spec.ts`）。
-- **F 表**（A・B に依存）:
-  - 図形 `table` を追加する（行・列・列幅・罫線・セルの色）。
-  - セルは固定文字か、タグ結合（B の書式・A の状態表を使う）。工程表・SV／PV 表を描けるようにする。
+- **F 表**（A・B に依存。2 つの PR に分ける）:
+  - 図形 `table` を追加する（行・列・列幅・罫線・セルの色）（2026-11-13 第1段を実装。列幅・行の高さは比で持ち、セルは固定の文字と任意の塗り・文字色。罫線・地は任意。Inspector ではセルの文字・色をタブ区切りで入力し、表計算ソフトから貼り付けられる。文字を含むので反転は拒否。schemaVersion は据え置き。仕様: [表](../graphics/table.md)。試験: `table.test.ts`、`examples/table-cases.json`（Rust・TS 共通の契約）、`e2e/table.spec.ts`）。
+  - セルは固定文字か、タグ結合（B の書式・A の状態表を使う）。工程表・SV／PV 表を描けるようにする（第2段、未実装）。
 
 ### 5.4 段階2 画面の枠と画面切替（計画は段階1の後に詳しくする）
 

@@ -1,0 +1,942 @@
+[
+  {
+    "name": "screen table with fills, colors and border",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000801",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "工程",
+              "fill": "#334155"
+            },
+            {
+              "text": "開始",
+              "fill": "#334155"
+            },
+            {
+              "text": "完了",
+              "fill": "#334155"
+            }
+          ],
+          [
+            {
+              "text": "搾汁"
+            },
+            {
+              "text": "08:00",
+              "color": "#22c55e"
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "minimal 1x1 table without border or background",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000802",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "table inside a symbol definition",
+    "target": "/symbols/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000803",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "工程",
+              "fill": "#334155"
+            },
+            {
+              "text": "開始",
+              "fill": "#334155"
+            },
+            {
+              "text": "完了",
+              "fill": "#334155"
+            }
+          ],
+          [
+            {
+              "text": "搾汁"
+            },
+            {
+              "text": "08:00",
+              "color": "#22c55e"
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "rotated table",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000804",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 90,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "工程",
+              "fill": "#334155"
+            },
+            {
+              "text": "開始",
+              "fill": "#334155"
+            },
+            {
+              "text": "完了",
+              "fill": "#334155"
+            }
+          ],
+          [
+            {
+              "text": "搾汁"
+            },
+            {
+              "text": "08:00",
+              "color": "#22c55e"
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "256 supplementary characters in a cell",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000840",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+            },
+            {
+              "text": ""
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "cells with fewer rows than rows",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000805",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1, 1, 1],
+        "cells": [
+          [
+            {
+              "text": "工程",
+              "fill": "#334155"
+            },
+            {
+              "text": "開始",
+              "fill": "#334155"
+            },
+            {
+              "text": "完了",
+              "fill": "#334155"
+            }
+          ],
+          [
+            {
+              "text": "搾汁"
+            },
+            {
+              "text": "08:00",
+              "color": "#22c55e"
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "a row with fewer cells than columns",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000806",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "a"
+            },
+            {
+              "text": "b"
+            },
+            {
+              "text": "c"
+            }
+          ],
+          [
+            {
+              "text": "a"
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "zero column weight",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000807",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [0, 1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "工程",
+              "fill": "#334155"
+            },
+            {
+              "text": "開始",
+              "fill": "#334155"
+            },
+            {
+              "text": "完了",
+              "fill": "#334155"
+            }
+          ],
+          [
+            {
+              "text": "搾汁"
+            },
+            {
+              "text": "08:00",
+              "color": "#22c55e"
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "weight above 1000",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000808",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1001, 1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "工程",
+              "fill": "#334155"
+            },
+            {
+              "text": "開始",
+              "fill": "#334155"
+            },
+            {
+              "text": "完了",
+              "fill": "#334155"
+            }
+          ],
+          [
+            {
+              "text": "搾汁"
+            },
+            {
+              "text": "08:00",
+              "color": "#22c55e"
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "no columns",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000809",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [],
+        "rows": [1, 1],
+        "cells": [[], []],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "tab in cell text",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000810",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "a\tb"
+            },
+            {
+              "text": ""
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "newline in cell text",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000811",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "a\nb"
+            },
+            {
+              "text": ""
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "cell text longer than 256",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000812",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            },
+            {
+              "text": ""
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "invalid cell fill",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000813",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "fill": "red"
+            },
+            {
+              "text": ""
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "unknown cell key",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000814",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": {
+                "externalName": "Demo.Number"
+              }
+            },
+            {
+              "text": ""
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "border width zero",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000815",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "工程",
+              "fill": "#334155"
+            },
+            {
+              "text": "開始",
+              "fill": "#334155"
+            },
+            {
+              "text": "完了",
+              "fill": "#334155"
+            }
+          ],
+          [
+            {
+              "text": "搾汁"
+            },
+            {
+              "text": "08:00",
+              "color": "#22c55e"
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 0
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "table style with wrap",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000816",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "工程",
+              "fill": "#334155"
+            },
+            {
+              "text": "開始",
+              "fill": "#334155"
+            },
+            {
+              "text": "完了",
+              "fill": "#334155"
+            }
+          ],
+          [
+            {
+              "text": "搾汁"
+            },
+            {
+              "text": "08:00",
+              "color": "#22c55e"
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center",
+          "wrap": "word"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "table flipped",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000817",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "工程",
+              "fill": "#334155"
+            },
+            {
+              "text": "開始",
+              "fill": "#334155"
+            },
+            {
+              "text": "完了",
+              "fill": "#334155"
+            }
+          ],
+          [
+            {
+              "text": "搾汁"
+            },
+            {
+              "text": "08:00",
+              "color": "#22c55e"
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      },
+      "flipX": true
+    }
+  },
+  {
+    "name": "257 supplementary characters in a cell",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000841",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+            },
+            {
+              "text": ""
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  }
+]

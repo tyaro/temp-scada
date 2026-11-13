@@ -1,5 +1,10 @@
 import { placementColor } from "../project";
 import type { ScreenObject } from "../project";
+import {
+  formatTableColors,
+  formatTableText,
+  formatTableWeights,
+} from "../table";
 export type NumericProperty =
   | "colorAlpha"
   | "opacity"
@@ -69,6 +74,22 @@ export function objectFormValues(
     if (!definition)
       values.externalName = object.shape.binding?.externalName ?? "";
     else values.slotName = object.shape.slotBinding?.slotName ?? "";
+  }
+  if (object.shape.type === "table") {
+    const shape = object.shape;
+    values.tableText = formatTableText(shape);
+    values.tableColumns = formatTableWeights(shape.columns);
+    values.tableRows = formatTableWeights(shape.rows);
+    values.tableFills = formatTableColors(shape, "fill");
+    values.tableColors = formatTableColors(shape, "color");
+    values.tableFontSize = String(shape.style.fontSize);
+    values.tableFontWeight = shape.style.fontWeight;
+    values.tableAlign = shape.style.align;
+    values.tableBorderMode = shape.border ? "line" : "none";
+    values.tableBorderColor = shape.border?.color ?? "#94a3b8";
+    values.tableBorderWidth = String(shape.border?.width ?? 1);
+    values.tableBackgroundMode = shape.background ? "color" : "none";
+    values.tableBackground = shape.background ?? "#0f172a";
   }
   if (object.shape.type === "symbol") {
     values.symbolId = object.shape.symbolId;

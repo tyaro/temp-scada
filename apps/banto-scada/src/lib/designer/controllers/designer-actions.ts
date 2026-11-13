@@ -517,6 +517,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
                 { kind: "line", label: "線を挿入" },
                 { kind: "pipe", label: "配管を挿入" },
                 { kind: "level", label: "液位を挿入" },
+                { kind: "table", label: "表を挿入" },
               ] as const
             ).map((part) => ({
               label: part.label,
@@ -946,6 +947,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
               { kind: "line", label: "線を追加" },
               { kind: "pipe", label: "配管を追加" },
               { kind: "level", label: "液位を追加" },
+              { kind: "table", label: "表を追加" },
             ] as const
           ).map((part) => ({
             label: part.label,
