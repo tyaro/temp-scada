@@ -350,7 +350,8 @@
     stroke-dasharray={lineDash(shape.lineStyle, shape.strokeWidth)}
     fill="none"
   />
-  {#each arrowHeads(shape) as points (points)}<polygon
+  <!-- 往復する配管では始点・終点の矢印が同じ座標になるので、座標をキーにしない。 -->
+  {#each arrowHeads(shape) as points}<polygon
       {points}
       fill={lineColor}
     />{/each}

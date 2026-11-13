@@ -60,6 +60,33 @@ it("draws heads at the requested ends, skipping coincident vertices", () => {
   expect(arrowHeads({ points: [], strokeWidth: 2, arrow: "both" })).toEqual([]);
 });
 
+it("draws both heads of a returning pipe even when they coincide", () => {
+  const shape = {
+    points: [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 0, y: 0 },
+    ],
+    strokeWidth: 2,
+    arrow: "both" as const,
+  };
+  expect(arrowHeads(shape)).toEqual(["0,0 8,-4 8,4", "0,0 8,-4 8,4"]);
+  const { body } = render(Primitive, {
+    props: {
+      object: {
+        id: "0199f100-0000-7000-8000-00000000f001",
+        order: 0,
+        x: 0,
+        y: 0,
+        rotation: 0,
+        fill: "#83bfcd",
+        shape: { type: "polyline", ...shape },
+      },
+    },
+  });
+  expect(body.match(/<polygon/g)?.length).toBe(2);
+});
+
 it("pads bounds for any arrow and renders one polygon per head", () => {
   const object = (arrow: PolylineObject["shape"]["arrow"]): PolylineObject => ({
     id: "l",

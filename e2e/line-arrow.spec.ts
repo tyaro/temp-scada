@@ -42,5 +42,14 @@ test("draws arrows at the start, end or both ends of a pipe", async ({
   }
   await page.getByRole("button", { name: "元に戻す" }).first().click();
   await expect(pipe.locator("polygon")).toHaveCount(1);
+
+  // 往復する配管では両端の矢印が同じ座標になる（キーの重複で描画を止めない）。
+  await page.getByLabel("頂点", { exact: true }).fill("0,0\n100,0\n0,0");
+  await arrow.selectOption("both");
+  await page.getByRole("button", { name: "変更を適用" }).click();
+  await expect(pipe.locator("polygon")).toHaveCount(2);
+  await arrow.selectOption("end");
+  await page.getByRole("button", { name: "変更を適用" }).click();
+  await expect(pipe.locator("polygon")).toHaveCount(1);
   expect(errors).toEqual([]);
 });
