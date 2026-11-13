@@ -152,6 +152,12 @@ describe("mirror transform", () => {
       flipY: false,
     });
     expect(readableChild(text, {})).toBe(text);
+    const table = { shape: { type: "table" } };
+    expect(readableChild(table, { flipY: true })).toEqual({
+      ...table,
+      flipX: false,
+      flipY: true,
+    });
     const rectangle = { shape: { type: "rectangle" } };
     expect(readableChild(rectangle, { flipX: true })).toBe(rectangle);
   });

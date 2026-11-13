@@ -92,6 +92,9 @@ describe("table text input", () => {
     expect(parseTableWeights("", 3, "列幅")).toEqual([1, 1, 1]);
     expect(parseTableWeights("2, 1", 3, "列幅")).toEqual([2, 1, 1]);
     expect(parseTableWeights("2 1 1 4", 2, "列幅")).toEqual([2, 1]);
+    // 書き出しが指数表記になる小さな比も読み戻せる。
+    expect(formatTableWeights([1e-7, 1])).toBe("1e-7, 1");
+    expect(parseTableWeights("1e-7, 1E+2", 2, "列幅")).toEqual([1e-7, 100]);
     expect(() => parseTableWeights("0", 1, "列幅")).toThrow("列幅「0」");
     expect(() => parseTableWeights("-1", 1, "列幅")).toThrow();
     expect(() => parseTableWeights("1001", 1, "列幅")).toThrow();

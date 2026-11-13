@@ -79,7 +79,7 @@ export function placePoint(
   return { x: pivot.x + delta.x, y: pivot.y + delta.y };
 }
 /**
- * Text keeps a readable orientation inside a mirrored Symbol: its position is
+ * Text and tables keep a readable orientation inside a mirrored Symbol: the position is
  * mirrored by the parent, and the glyphs are mirrored back around the Text body
  * center (odd parity per axis only).
  */
@@ -87,7 +87,11 @@ export function readableChild<T extends Flip & { shape: { type: string } }>(
   child: T,
   parent: Flip,
 ): T {
-  if (child.shape.type !== "text" || !isFlipped(parent)) return child;
+  if (
+    (child.shape.type !== "text" && child.shape.type !== "table") ||
+    !isFlipped(parent)
+  )
+    return child;
   return {
     ...child,
     flipX: (child.flipX === true) !== (parent.flipX === true),

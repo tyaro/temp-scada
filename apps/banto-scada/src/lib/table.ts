@@ -170,7 +170,7 @@ export function parseTableWeights(
   const weights = tokens.map((token) => {
     const value = Number(token);
     if (
-      !/^[+]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(token) ||
+      !/^[+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(token) ||
       !Number.isFinite(value) ||
       value <= 0 ||
       value > TABLE_LIMITS.weight
