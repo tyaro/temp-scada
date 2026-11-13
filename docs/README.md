@@ -86,6 +86,8 @@ docs/
 - [液位（level 図形）](design/graphics/level.md)
 - [単色と枠線のα](design/graphics/color-alpha-design.md)
 - [実線・破線・点線](design/graphics/line-style-design.md)
+- [配管の分岐の点](design/graphics/line-junction.md)
+- [配管の交差のまたぎ](design/graphics/line-hop.md)
 - [矩形・楕円の2色線形グラデーション](design/graphics/linear-gradient-design.md)
 - [静的Textの明示改行](design/graphics/multiline-text-design.md)
 - [配置全体の不透明度](design/graphics/opacity-design.md)

@@ -15,6 +15,7 @@ export function screenFormCommand(
           type: "update-screen" as const,
           screenId: context.screenId,
           background: String(data.get("background")),
+          lineHops: data.get("lineHops") === "on",
         }),
     name: String(data.get("name")),
     width: Number(data.get("width")),

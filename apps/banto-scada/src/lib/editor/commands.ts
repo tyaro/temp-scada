@@ -85,6 +85,8 @@ export type ScreenCommand =
   | {
       type: "update-screen";
       background?: string;
+      /** 交差のまたぎの入切。省略は変えない。 */
+      lineHops?: boolean;
       screenId: string;
       name: string;
       width: number;

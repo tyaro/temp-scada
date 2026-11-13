@@ -9,6 +9,7 @@
   import ObjectPainting from "./ObjectPainting.svelte";
   import LineJunctionDots from "./LineJunctionDots.svelte";
   import { screenJunctions } from "./line-junction";
+  import { screenHopPaths } from "./line-hop";
   import ScreenView from "./ScreenView.svelte";
   let {
     screen,
@@ -34,6 +35,9 @@
   } = $props();
   const clipId = $props.id();
   const junctions = $derived(screenJunctions(screen.objects));
+  const hops = $derived(
+    screenHopPaths(screen.objects, screen.lineHops === true),
+  );
 </script>
 
 <svg
@@ -79,6 +83,7 @@
         {:else}<ObjectPainting
             {onopentrend}
             {object}
+            hopPath={hops.get(object.id)}
             {symbols}
             {images}
             {readings}

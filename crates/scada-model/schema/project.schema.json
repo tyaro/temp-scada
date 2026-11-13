@@ -95,6 +95,9 @@
           "backgroundImage": {
             "$ref": "#/$defs/backgroundImage"
           },
+          "lineHops": {
+            "const": true
+          },
           "groups": {
             "type": "array",
             "maxItems": 500,

@@ -27,6 +27,7 @@
     equipmentPropertyDisplay,
     stateColor,
     onsummary,
+    hopPath,
   }: {
     object: ScreenObject;
     color?: string;
@@ -41,6 +42,8 @@
      */
     stateColor?: string;
     onsummary?: (description: string) => void;
+    /** 交差のまたぎを含む Polyline のパス（ローカル座標）。あれば polyline の代わりに描く。 */
+    hopPath?: string;
   } = $props();
   const gradientId = $props.id();
   const fill = $derived(
@@ -340,6 +343,22 @@
           />{/if}
       {/if}
     </g>{/if}
+{:else if shape && hopPath}
+  <!-- 交差のまたぎ（line-hop.ts）。保存の points は変えず、描画だけ直線＋半円の弧にする。 -->
+  <path
+    data-line-hop={object.id}
+    d={hopPath}
+    stroke={lineColor}
+    stroke-width={shape.strokeWidth}
+    stroke-linejoin="round"
+    stroke-linecap={lineCap(shape.lineStyle)}
+    stroke-dasharray={lineDash(shape.lineStyle, shape.strokeWidth)}
+    fill="none"
+  />
+  {#each arrowHeads(shape) as points}<polygon
+      {points}
+      fill={lineColor}
+    />{/each}
 {:else if shape}
   <polyline
     points={shape.points.map((p) => `${p.x},${p.y}`).join(" ")}

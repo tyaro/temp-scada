@@ -3623,6 +3623,14 @@
           /></label
         >
         <p class="hint">アプリのテーマと図形の色は変わりません。</p>
+        <label
+          ><input
+            name="lineHops"
+            type="checkbox"
+            checked={"background" in screen && screen.lineHops === true}
+          />交差のまたぎ</label
+        >
+        <p class="hint">配管が交わる所で、後に描く配管を半円でまたがせます。</p>
       {/if}
       <button type="submit"
         >{activeDefinition ? "Symbol 設定を適用" : "画面設定を適用"}</button

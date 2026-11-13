@@ -26,6 +26,7 @@
     readings,
     onsummary,
     onopentrend,
+    hopPath,
   }: {
     object: ScreenObject;
     symbols?: SymbolDefinition[];
@@ -39,6 +40,8 @@
     readings?: TagReadings;
     onsummary?: (value: string) => void;
     onopentrend?: (objectId: string) => void;
+    /** 交差のまたぎのパス（画面直下の Polyline だけ）。 */
+    hopPath?: string;
   } = $props();
 </script>
 
@@ -138,6 +141,7 @@
   {/if}
 {:else}<Primitive
     {object}
+    {hopPath}
     equipmentPropertyDisplay={ownerDefinition &&
     object.shape.type === "text" &&
     object.shape.equipmentProperty

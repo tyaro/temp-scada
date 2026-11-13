@@ -53,6 +53,8 @@ export function applyScreenCommand(
   if (command.type === "update-screen") {
     if (command.background !== undefined)
       Object.assign(screen, { background: command.background });
+    if (command.lineHops === true) Object.assign(screen, { lineHops: true });
+    else if (command.lineHops === false) delete (screen as Screen).lineHops;
     Object.assign(screen, {
       name: screenName(command.name),
       width: command.width,

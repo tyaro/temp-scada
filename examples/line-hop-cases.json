@@ -1,0 +1,30 @@
+{
+  "description": "画面の交差のまたぎ（lineHops）の保存形。true のときだけ保存し、false・その他の値は不正。Symbol 定義には置けない。Rust と TypeScript で共有する。",
+  "cases": [
+    { "name": "省略は切", "owner": "screens", "set": {}, "valid": true },
+    {
+      "name": "true は入",
+      "owner": "screens",
+      "set": { "lineHops": true },
+      "valid": true
+    },
+    {
+      "name": "false は保存しない",
+      "owner": "screens",
+      "set": { "lineHops": false },
+      "valid": false
+    },
+    {
+      "name": "真偽値以外は不正",
+      "owner": "screens",
+      "set": { "lineHops": "on" },
+      "valid": false
+    },
+    {
+      "name": "Symbol 定義には置けない",
+      "owner": "symbols",
+      "set": { "lineHops": true },
+      "valid": false
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import { compositedOpacity } from "./opacity";
  * 画面直下の Polyline 同士の分岐の点（T 字・3 本以上の端点の集まり）を描画時に計算する。
  * 保存モデルは変えない。仕様: docs/design/graphics/line-junction.md
  *
- * 後で交差のまたぎを足すときも、`worldLines` と `SegmentIndex` を同じく使う。
+ * 交差のまたぎ（line-hop.ts）も、`worldLines` と `SegmentIndex` を同じく使う。
  */
 
 /** 端点が線に乗っているとみなす距離（画面座標）。格子の 1 単位の半分。 */
@@ -52,6 +52,8 @@ const cellKey = (cx: number, cy: number) => `${cx},${cy}`;
 
 export interface IndexedSegment {
   line: number;
+  /** 線の中の線分の番号（始点の頂点の番号）。 */
+  index: number;
   a: Point;
   b: Point;
 }
@@ -91,7 +93,7 @@ export class SegmentIndex {
       for (let i = 1; i < line.points.length; i++) {
         const a = line.points[i - 1],
           b = line.points[i];
-        const id = this.segments.push({ line: index, a, b }) - 1;
+        const id = this.segments.push({ line: index, index: i - 1, a, b }) - 1;
         for (const key of segmentCells(a, b, margin)) {
           const list = this.cells.get(key);
           if (list) list.push(id);
@@ -105,6 +107,13 @@ export class SegmentIndex {
     return (this.cells.get(cellKey(cell(point.x), cell(point.y))) ?? []).map(
       (id) => this.segments[id],
     );
+  }
+  /** 線分 a–b が通る格子の線分（重複なし。交わる線分はすべて含む）。 */
+  alongSegment(a: Point, b: Point): IndexedSegment[] {
+    const ids = new Set<number>();
+    for (const key of segmentCells(a, b, 0))
+      for (const id of this.cells.get(key) ?? []) ids.add(id);
+    return [...ids].map((id) => this.segments[id]);
   }
 }
 

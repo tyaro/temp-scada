@@ -202,6 +202,8 @@ export interface Screen {
   backgroundImage?: BackgroundImage;
   folders: LayerFolder[];
   background: string;
+  /** 画面直下の配管の交差にまたぎを描く（true のときだけ保存）。 */
+  lineHops?: true;
   id: string;
   name: string;
   width: number;
