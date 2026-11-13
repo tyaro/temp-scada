@@ -2,6 +2,8 @@ import { placementColor } from "../project";
 import type { ScreenObject } from "../project";
 import {
   formatTableColors,
+  formatTableFormats,
+  formatTableTags,
   formatTableText,
   formatTableWeights,
 } from "../table";
@@ -82,6 +84,8 @@ export function objectFormValues(
     values.tableRows = formatTableWeights(shape.rows);
     values.tableFills = formatTableColors(shape, "fill");
     values.tableColors = formatTableColors(shape, "color");
+    values.tableTags = formatTableTags(shape);
+    values.tableFormats = formatTableFormats(shape);
     values.tableFontSize = String(shape.style.fontSize);
     values.tableFontWeight = shape.style.fontWeight;
     values.tableAlign = shape.style.align;

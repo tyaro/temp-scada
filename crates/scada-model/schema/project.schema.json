@@ -450,9 +450,14 @@
                           "pattern": "^[^\t\n\r]*$"
                         },
                         "fill": { "$ref": "#/$defs/color" },
-                        "color": { "$ref": "#/$defs/color" }
+                        "color": { "$ref": "#/$defs/color" },
+                        "binding": { "$ref": "#/$defs/tagBinding" },
+                        "format": { "$ref": "#/$defs/numericFormat" }
                       },
                       "required": ["text"],
+                      "dependentRequired": {
+                        "format": ["binding"]
+                      },
                       "additionalProperties": false
                     }
                   }

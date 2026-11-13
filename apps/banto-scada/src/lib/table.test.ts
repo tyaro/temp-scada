@@ -6,9 +6,13 @@ import { applyCommand } from "./editor";
 import {
   buildTableCells,
   formatTableColors,
+  formatTableFormats,
+  formatTableTags,
   formatTableText,
   formatTableWeights,
   parseTableColors,
+  parseTableFormats,
+  parseTableTags,
   parseTableText,
   parseTableWeights,
   tableCellBoxes,
@@ -17,6 +21,13 @@ import {
 import { objectFormCommand } from "./designer/forms/object-form";
 import { objectFormValues } from "./designer/numeric-properties";
 import { canFlip } from "./flip";
+import { shapeTagBindings } from "./shape-bindings";
+import { bindingReferences } from "./binding-references";
+import {
+  applyBindingReplacement,
+  previewBindingReplacement,
+} from "./binding-replacement";
+import { copyObjects } from "./clipboard";
 
 it.each(cases)("table contract: $name", ({ target, valid, object }) => {
   const value = structuredClone(sample),
@@ -219,5 +230,182 @@ describe("table editing", () => {
         "edit",
       ),
     ).toThrow("セルの数");
+  });
+});
+
+describe("table cell bindings", () => {
+  const boundCase = cases.find(
+    (c) => c.name === "screen table with bound cells and formats",
+  )!;
+  const boundShape = boundCase.object.shape as TableShape;
+  function withBoundTable() {
+    const value = structuredClone(sample);
+    value.screens[0].objects.push(structuredClone(boundCase.object) as any);
+    return parseProject(JSON.stringify(value));
+  }
+  it("reads and writes the tag and format grids", () => {
+    expect(formatTableTags(boundShape)).toBe("\tDemo.Number\n\tDemo.Other");
+    expect(formatTableFormats(boundShape)).toBe("\t1 ℃");
+    expect(parseTableTags(" \tDemo.Number \n", 2, 2)).toEqual([
+      [undefined, { externalName: "Demo.Number" }],
+      [undefined, undefined],
+    ]);
+    expect(parseTableFormats("1 ℃\t2\tkg\tm 3", 1, 4)).toEqual([
+      [
+        { decimals: 1, unit: "℃" },
+        { decimals: 2 },
+        { unit: "kg" },
+        { unit: "m 3" },
+      ],
+    ]);
+    const texts = parseTableText(formatTableText(boundShape));
+    const [rows, columns] = [texts.length, texts[0].length];
+    expect(
+      buildTableCells(
+        texts,
+        [],
+        [],
+        parseTableTags(formatTableTags(boundShape), rows, columns),
+        parseTableFormats(formatTableFormats(boundShape), rows, columns),
+      ),
+    ).toEqual(boundShape.cells);
+  });
+  it("rejects a format without a tag, bad formats and grids larger than the table", () => {
+    expect(() =>
+      buildTableCells([["a"]], [], [], [], [[{ decimals: 1 }]]),
+    ).toThrow("タグのないセル");
+    expect(() => parseTableFormats("7 ℃", 1, 1)).toThrow("0〜6");
+    expect(() => parseTableFormats("1 " + "x".repeat(17), 1, 1)).toThrow(
+      "16文字",
+    );
+    expect(() => parseTableTags("a\tb", 1, 1)).toThrow("列が表の列");
+    expect(() => parseTableFormats("1\n1", 1, 1)).toThrow("行が表の行");
+    expect(() => parseTableTags("x".repeat(1025), 1, 1)).toThrow("1024文字");
+  });
+  it("lists every bound cell as a tag binding", () => {
+    expect(shapeTagBindings(boundShape)).toEqual([
+      { externalName: "Demo.Number" },
+      { externalName: "Demo.Other" },
+    ]);
+    const same = structuredClone(boundShape);
+    same.cells[1][1].binding = { externalName: "Demo.Number" };
+    expect(shapeTagBindings(same)).toHaveLength(2);
+    const project = withBoundTable();
+    project.screens[0].objects.at(-1)!.shape = same;
+    const usages = bindingReferences(project)
+      .find((ref) => ref.externalName === "Demo.Number")!
+      .usages.filter((usage) => usage.objectId === boundCase.object.id);
+    // 同じタグを読む2つのセルは、参照一覧では1つの配置にまとめる。
+    expect(usages).toHaveLength(1);
+  });
+  it("renames the tag of every matching cell", () => {
+    const project = withBoundTable();
+    const request = {
+      from: "Demo.Other",
+      to: "Demo.Renamed",
+      expectedProject: serializeProject(project),
+    };
+    const preview = previewBindingReplacement(
+      project,
+      request.from,
+      request.to,
+    );
+    expect(preview.usages.map((usage) => usage.objectId)).toContain(
+      boundCase.object.id,
+    );
+    applyBindingReplacement(project, request);
+    const shape = project.screens[0].objects.at(-1)!.shape as TableShape;
+    expect(shape.cells[1][1].binding).toEqual({ externalName: "Demo.Renamed" });
+    expect(shape.cells[0][1].binding).toEqual({ externalName: "Demo.Number" });
+  });
+  it("applies the tag and format grids from the Inspector form on a screen only", () => {
+    const project = withBoundTable();
+    const object = project.screens[0].objects.at(-1)!;
+    const values = objectFormValues(object, false);
+    expect(values.tableTags).toBe("\tDemo.Number\n\tDemo.Other");
+    expect(values.tableFormats).toBe("\t1 ℃");
+    const data = new Map(Object.entries(values));
+    data.set("tableTags", "\tDemo.Number");
+    data.set("tableFormats", "\t2 kPa");
+    const form = {
+      get: (key: string) => data.get(key) ?? null,
+      has: (key: string) => data.has(key),
+    };
+    const after = applyCommand(
+      project,
+      objectFormCommand(form, {
+        screenId: project.screens[0].id,
+        definition: false,
+        selected: object,
+      }),
+      "edit",
+    );
+    const shape = after.screens[0].objects.at(-1)!.shape as TableShape;
+    expect(shape.cells).toEqual([
+      [
+        { text: "温度" },
+        {
+          text: "--",
+          binding: { externalName: "Demo.Number" },
+          format: { decimals: 2, unit: "kPa" },
+        },
+      ],
+      [{ text: "流量" }, { text: "" }],
+    ]);
+    data.set("tableFormats", "1");
+    expect(() =>
+      objectFormCommand(form, {
+        screenId: project.screens[0].id,
+        definition: false,
+        selected: object,
+      }),
+    ).toThrow("タグのないセル");
+    // Symbol 定義の編集では、セルのタグ・書式の欄を読まない。
+    const definition = objectFormCommand(form, {
+      screenId: project.symbols[0].id,
+      definition: true,
+      selected: object,
+    });
+    expect(
+      definition.type === "update" &&
+        definition.patch.table?.cells.flat().some((cell) => cell.binding),
+    ).toBe(false);
+  });
+  it("rejects pasting a bound table into a Symbol definition", () => {
+    const project = withBoundTable();
+    const text = copyObjects(
+      project,
+      project.screens[0].id,
+      [boundCase.object.id],
+      "test",
+    );
+    expect(() =>
+      applyCommand(
+        project,
+        {
+          type: "paste",
+          screenId: project.screens[0].id,
+          definitionId: project.symbols[0].id,
+          text,
+          origin: "test",
+          center: { x: 50, y: 50 },
+        },
+        "edit",
+      ),
+    ).toThrow("タグ付きのText・液位・表");
+    const pasted = applyCommand(
+      project,
+      {
+        type: "paste",
+        screenId: project.screens[0].id,
+        text,
+        origin: "test",
+        center: { x: 50, y: 50 },
+      },
+      "edit",
+    );
+    expect(pasted.screens[0].objects).toHaveLength(
+      project.screens[0].objects.length + 1,
+    );
   });
 });

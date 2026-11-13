@@ -2,6 +2,7 @@
   import type { TableShape } from "./project";
   import { tableCellBoxes, tableEdges } from "./table";
   import { TEXT_FONT } from "./text-layout";
+  import { presentNumeric, type TagReadings } from "./tag-presentation";
   let {
     shape,
     width,
@@ -9,8 +10,11 @@
     textColor,
     color,
     textAlpha,
+    readings,
   }: {
     shape: TableShape;
+    /** 画面の表のセルが結合したタグの読取（外部名ごと）。 */
+    readings?: TagReadings;
     width: number;
     height: number;
     /** セルに文字色がないときの色（配置の色）。 */
@@ -59,6 +63,11 @@
       fill={shape.background}
     />{/if}
   {#each boxes as box (`${box.row}:${box.column}`)}
+    {@const binding = box.cell.binding}
+    {@const presentation = binding
+      ? presentNumeric(readings?.get(binding.externalName), box.cell.format)
+      : undefined}
+    {@const text = presentation ? presentation.text : box.cell.text}
     <svg
       x={box.x}
       y={box.y}
@@ -66,13 +75,18 @@
       height={box.height}
       overflow="hidden"
       data-table-cell={`${box.row}:${box.column}`}
+      data-table-cell-tag={binding?.externalName}
+      data-table-cell-state={presentation?.state}
     >
+      {#if binding && presentation}<title
+          >{binding.externalName} · {presentation.label}</title
+        >{/if}
       {#if box.cell.fill}<rect
           width={box.width}
           height={box.height}
           fill={box.cell.fill}
         />{/if}
-      {#if box.cell.text}<text
+      {#if text}<text
           data-table-text
           x={textX(box.width)}
           y={box.height / 2}
@@ -82,7 +96,7 @@
           font-size={shape.style.fontSize}
           font-weight={shape.style.fontWeight}
           fill={color ?? box.cell.color ?? textColor}
-          fill-opacity={textAlpha}>{box.cell.text}</text
+          fill-opacity={textAlpha}>{text}</text
         >{/if}
     </svg>
   {/each}

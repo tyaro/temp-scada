@@ -1,4 +1,13 @@
-import type { TableCell, TableShape } from "./project";
+import type {
+  NumericFormat,
+  TableCell,
+  TableShape,
+  TagBinding,
+} from "./project";
+import {
+  MAX_FORMAT_DECIMALS,
+  MAX_UNIT_LENGTH,
+} from "./designer/forms/numeric-format";
 
 /** 表の大きさの上限（schema と Rust の検査と同じ値）。 */
 export const TABLE_LIMITS = {
@@ -7,9 +16,22 @@ export const TABLE_LIMITS = {
   cellText: 256,
   weight: 1000,
   borderWidth: 32,
+  externalName: 1024,
 } as const;
 
 const COLOR = /^#[0-9a-fA-F]{6}$/;
+/** C0/C1 の制御文字と行・段落の区切り（schema の単位と同じ）。 */
+function hasControl(text: string) {
+  return [...text].some((char) => {
+    const code = char.codePointAt(0)!;
+    return (
+      code < 0x20 ||
+      (code >= 0x7f && code <= 0x9f) ||
+      code === 0x2028 ||
+      code === 0x2029
+    );
+  });
+}
 /** schema の maxLength・Rust と同じく、文字数は Unicode のコードポイントで数える。 */
 const codePoints = (text: string) => [...text].length;
 const CELL_TEXT = /^[^\t\n\r]*$/;
@@ -49,6 +71,10 @@ export function validateTableShape(shape: TableShape) {
         (cell.color !== undefined && !COLOR.test(cell.color))
       )
         throw new Error("表のセルの色は #rrggbb で指定してください");
+      if (cell.binding !== undefined && !/\S/.test(cell.binding.externalName))
+        throw new Error("表のセルのタグの外部名を入れてください");
+      if (cell.format !== undefined && cell.binding === undefined)
+        throw new Error("表のセルの書式はタグのあるセルだけに付けられます");
     }
 }
 
@@ -127,14 +153,16 @@ export function parseTableText(text: string): string[][] {
 }
 
 /**
- * セルの色の行列（タブ区切り）。空のセルは色なし。文字の表より大きい色の表は誤り。
+ * 文字の表に重ねる行列（タブ区切り）を読む。空のセルは undefined。
+ * 文字の表より大きい表は誤り。各セルは trim してから `read` に渡す。
  */
-export function parseTableColors(
+function parseTableGrid<T>(
   text: string,
   rows: number,
   columns: number,
   label: string,
-): (string | undefined)[][] {
+  read: (token: string, where: string) => T,
+): (T | undefined)[][] {
   const lines = text.trim() === "" ? [] : splitLines(text);
   if (lines.length > rows)
     throw new Error(`${label}の行が表の行（${rows}行）より多くなっています`);
@@ -144,14 +172,77 @@ export function parseTableColors(
   return Array.from({ length: rows }, (_, r) =>
     Array.from({ length: columns }, (_, c) => {
       const token = (grid[r]?.[c] ?? "").trim();
-      if (token === "") return undefined;
-      if (!COLOR.test(token))
-        throw new Error(
-          `${label}の${r + 1}行${c + 1}列「${token}」は #rrggbb で書いてください`,
-        );
-      return token.toLowerCase();
+      return token === ""
+        ? undefined
+        : read(token, `${label}の${r + 1}行${c + 1}列「${token}」`);
     }),
   );
+}
+
+/**
+ * セルの色の行列（タブ区切り）。空のセルは色なし。文字の表より大きい色の表は誤り。
+ */
+export function parseTableColors(
+  text: string,
+  rows: number,
+  columns: number,
+  label: string,
+): (string | undefined)[][] {
+  return parseTableGrid(text, rows, columns, label, (token, where) => {
+    if (!COLOR.test(token))
+      throw new Error(`${where}は #rrggbb で書いてください`);
+    return token.toLowerCase();
+  });
+}
+
+/** セルのタグ（外部名）の行列。空のセルは結合なし。 */
+export function parseTableTags(
+  text: string,
+  rows: number,
+  columns: number,
+): (TagBinding | undefined)[][] {
+  return parseTableGrid(text, rows, columns, "セルのタグ", (token, where) => {
+    if (codePoints(token) > TABLE_LIMITS.externalName)
+      throw new Error(
+        `${where}は${TABLE_LIMITS.externalName}文字以内にしてください`,
+      );
+    return { externalName: token };
+  });
+}
+
+/**
+ * セルの書式の行列。各セルは「小数桁 単位」「小数桁」「単位」。先頭の語が
+ * 整数なら小数桁（0〜6）、残りを単位とする。空のセルは書式なし。
+ */
+export function parseTableFormats(
+  text: string,
+  rows: number,
+  columns: number,
+): (NumericFormat | undefined)[][] {
+  return parseTableGrid(text, rows, columns, "セルの書式", (token, where) => {
+    const match = /^(\d+)(?:\s+(.*))?$/u.exec(token);
+    const format: NumericFormat = {};
+    let unit = token;
+    if (match) {
+      const decimals = Number(match[1]);
+      if (decimals > MAX_FORMAT_DECIMALS)
+        throw new Error(
+          `${where}の小数桁は0〜${MAX_FORMAT_DECIMALS}の整数にしてください`,
+        );
+      format.decimals = decimals;
+      unit = (match[2] ?? "").trim();
+    }
+    if (unit !== "") {
+      if (codePoints(unit) > MAX_UNIT_LENGTH)
+        throw new Error(
+          `${where}の単位は${MAX_UNIT_LENGTH}文字以内にしてください`,
+        );
+      if (hasControl(unit))
+        throw new Error(`${where}の単位に制御文字は使えません`);
+      format.unit = unit;
+    }
+    return format;
+  });
 }
 
 /**
@@ -193,34 +284,75 @@ export function formatTableText(shape: TableShape): string {
   return shape.cells.length > 1 && text.endsWith("\n") ? `${text}\n` : text;
 }
 
+/** 入力欄用: セルごとの文字をタブ区切りにし、末尾の空のセル・行を落とす。 */
+function formatTableGrid(
+  shape: TableShape,
+  token: (cell: TableCell) => string,
+): string {
+  const lines = shape.cells.map((row) => row.map(token).join("\t"));
+  while (lines.length > 0 && /^\t*$/.test(lines[lines.length - 1])) lines.pop();
+  return lines.map((line) => line.replace(/\t+$/, "")).join("\n");
+}
+
 /** 入力欄用: セルの色をタブ区切りにする。色が1つもなければ空。 */
 export function formatTableColors(
   shape: TableShape,
   key: "fill" | "color",
 ): string {
-  if (!shape.cells.some((row) => row.some((cell) => cell[key]))) return "";
-  const lines = shape.cells.map((row) =>
-    row.map((cell) => cell[key] ?? "").join("\t"),
+  return formatTableGrid(shape, (cell) => cell[key] ?? "");
+}
+
+/** 入力欄用: セルのタグ（外部名）をタブ区切りにする。 */
+export function formatTableTags(shape: TableShape): string {
+  return formatTableGrid(shape, (cell) => cell.binding?.externalName ?? "");
+}
+
+/** 入力欄用: セルの書式を「小数桁 単位」でタブ区切りにする。 */
+export function formatTableFormats(shape: TableShape): string {
+  return formatTableGrid(shape, (cell) =>
+    [cell.format?.decimals, cell.format?.unit]
+      .filter((part) => part !== undefined)
+      .join(" "),
   );
-  while (lines.length > 0 && /^\t*$/.test(lines[lines.length - 1])) lines.pop();
-  return lines.map((line) => line.replace(/\t+$/, "")).join("\n");
 }
 
 export function formatTableWeights(weights: readonly number[]): string {
   return weights.every((weight) => weight === 1) ? "" : weights.join(", ");
 }
 
-/** 文字・色の行列から cells を組み立てる（色のない key は保存しない）。 */
+/**
+ * 文字・色・タグ・書式の行列から cells を組み立てる（値のない key は保存しない）。
+ * タグのないセルの書式は誤り。
+ */
 export function buildTableCells(
   texts: string[][],
   fills: (string | undefined)[][],
   colors: (string | undefined)[][],
+  tags: (TagBinding | undefined)[][] = [],
+  formats: (NumericFormat | undefined)[][] = [],
 ): TableCell[][] {
   return texts.map((row, r) =>
-    row.map((text, c) => ({
-      text,
-      ...(fills[r]?.[c] ? { fill: fills[r][c] } : {}),
-      ...(colors[r]?.[c] ? { color: colors[r][c] } : {}),
-    })),
+    row.map((text, c) => {
+      const binding = tags[r]?.[c];
+      const format = formats[r]?.[c];
+      if (format && !binding)
+        throw new Error(
+          `セルの書式の${r + 1}行${c + 1}列はタグのないセルです。書式はタグのあるセルだけに付けてください`,
+        );
+      return {
+        text,
+        ...(fills[r]?.[c] ? { fill: fills[r][c] } : {}),
+        ...(colors[r]?.[c] ? { color: colors[r][c] } : {}),
+        ...(binding ? { binding } : {}),
+        ...(format && Object.keys(format).length ? { format } : {}),
+      };
+    }),
+  );
+}
+
+/** 表の結合したセルのタグ（行優先の順）。 */
+export function tableCellBindings(shape: TableShape): TagBinding[] {
+  return shape.cells.flatMap((row) =>
+    row.flatMap((cell) => (cell.binding ? [cell.binding] : [])),
   );
 }

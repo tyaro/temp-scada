@@ -1,5 +1,5 @@
 import type { Project } from "./project";
-import { shapeTagBinding } from "./shape-bindings";
+import { shapeTagBindings } from "./shape-bindings";
 export interface BindingUsage {
   name?: string;
   visible?: boolean;
@@ -20,23 +20,26 @@ export function bindingReferences(project: Project): BindingReference[] {
     for (const object of [...screen.objects].sort(
       (a, b) => a.order - b.order,
     )) {
-      const binding = shapeTagBinding(object.shape);
-      if (!binding) continue;
-      const externalName = binding.externalName;
-      let group = groups.get(externalName);
-      if (!group) {
-        group = { externalName, usages: [] };
-        groups.set(externalName, group);
+      // 表は同じタグを複数のセルで読むことがある。配置ごとに1件にする。
+      const names = new Set(
+        shapeTagBindings(object.shape).map((binding) => binding.externalName),
+      );
+      for (const externalName of names) {
+        let group = groups.get(externalName);
+        if (!group) {
+          group = { externalName, usages: [] };
+          groups.set(externalName, group);
+        }
+        group.usages.push({
+          ...(object.name ? { name: object.name } : {}),
+          ...(object.visible === false ? { visible: false } : {}),
+          screenId: screen.id,
+          screenName: screen.name,
+          objectId: object.id,
+          order: object.order,
+          text: object.shape.type === "text" ? object.shape.text : "",
+        });
       }
-      group.usages.push({
-        ...(object.name ? { name: object.name } : {}),
-        ...(object.visible === false ? { visible: false } : {}),
-        screenId: screen.id,
-        screenName: screen.name,
-        objectId: object.id,
-        order: object.order,
-        text: object.shape.type === "text" ? object.shape.text : "",
-      });
     }
   }
   return [...groups.values()];

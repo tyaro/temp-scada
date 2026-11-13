@@ -140,6 +140,12 @@ export interface TableCell {
   text: string;
   fill?: string;
   color?: string;
+  /**
+   * The tag the cell reads (screen tables only). A bound cell shows the
+   * reading with `format` instead of `text`; `format` requires `binding`.
+   */
+  binding?: TagBinding;
+  format?: NumericFormat;
 }
 /**
  * A grid of fixed-text cells. `columns` and `rows` are relative weights that
@@ -477,6 +483,12 @@ export function parseProject(json: string): Project {
         project.symbols.includes(owner) &&
         (shape.type === "text" || shape.type === "level") &&
         shape.binding
+      )
+        throw new Error("Symbol 定義内の直接タグ割り当てには対応していません");
+      if (
+        project.symbols.includes(owner) &&
+        shape.type === "table" &&
+        shape.cells.some((row) => row.some((cell) => cell.binding))
       )
         throw new Error("Symbol 定義内の直接タグ割り当てには対応していません");
       if (ids.has(object.id)) throw new Error("ID が重複しています");

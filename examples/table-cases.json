@@ -695,9 +695,7 @@
           [
             {
               "text": "",
-              "binding": {
-                "externalName": "Demo.Number"
-              }
+              "note": "x"
             },
             {
               "text": ""
@@ -936,6 +934,311 @@
           "width": 1
         },
         "background": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "screen table with bound cells and formats",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000850",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "温度"
+            },
+            {
+              "text": "--",
+              "binding": {
+                "externalName": "Demo.Number"
+              },
+              "format": {
+                "decimals": 1,
+                "unit": "℃"
+              }
+            }
+          ],
+          [
+            {
+              "text": "流量"
+            },
+            {
+              "text": "",
+              "binding": {
+                "externalName": "Demo.Other"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "bound cell with only decimals",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000851",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": {
+                "externalName": "Demo.Number"
+              },
+              "format": {
+                "decimals": 0
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "format without binding",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000852",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "format": {
+                "decimals": 1
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "bound cell inside a symbol definition",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000853",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": {
+                "externalName": "Demo.Number"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "empty external name in a cell",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000854",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": {
+                "externalName": ""
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "blank external name in a cell",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000855",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": {
+                "externalName": "   "
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "cell format decimals above 6",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000856",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": {
+                "externalName": "Demo.Number"
+              },
+              "format": {
+                "decimals": 7
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "unknown key in cell binding",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000857",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": {
+                "externalName": "Demo.Number",
+                "slotName": "x"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
       }
     }
   }

@@ -7,7 +7,7 @@ import {
   type ScreenObject,
 } from "../project";
 import { parseClipboard } from "../clipboard";
-import { shapeTagBinding } from "../shape-bindings";
+import { shapeTagBindings } from "../shape-bindings";
 import type { PasteCommand } from "./commands";
 import { newId, registerAsset, renewOwnerIds } from "./model-helpers";
 
@@ -29,11 +29,11 @@ export function applyPasteCommand(
       (o) =>
         o.shape.type === "symbol" ||
         o.shape.type === "screenView" ||
-        shapeTagBinding(o.shape),
+        shapeTagBindings(o.shape).length > 0,
     )
   )
     throw new Error(
-      "Symbol定義には埋込画面・Symbol配置・タグ付きのTextと液位を貼り付けできません",
+      "Symbol定義には埋込画面・Symbol配置・タグ付きのText・液位・表を貼り付けできません",
     );
   if (
     !Number.isFinite(command.center.x) ||

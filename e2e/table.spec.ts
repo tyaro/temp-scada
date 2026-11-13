@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/read-presentation.project.json" with { type: "json" };
+import fixtures from "../examples/read-display-cases.json" with { type: "json" };
 import {
   chooseTheme,
   fileCommand,
@@ -206,4 +207,141 @@ test("a table is added from the part palette and cannot be flipped", async ({
   await expect(
     page.getByRole("menuitem", { name: "左右反転", exact: true }),
   ).toBeDisabled();
+});
+
+/** Same test-only read source as numeric-format.spec.ts. */
+async function fixtureEntry(page: Page) {
+  await page.route("**/src/main.ts*", async (route) => {
+    const response = await route.fetch();
+    const original = await response.text();
+    const mount =
+      /if \("__TAURI_INTERNALS__" in window\) \{[\s\S]*?\} else \{\s*mount\(App,\s*\{\s*target:\s*document\.getElementById\("app"\)\s*\}\);\s*\}/;
+    expect(original).toMatch(mount);
+    const injected = `
+      import { createSubscriber } from "/node_modules/.vite/deps/svelte_reactivity.js";
+      const trackSource = createSubscriber(() => () => {});
+      const h = window.__readHarness = {};
+      const source = {subscribe(project, begin) {
+        h.delivery = begin();
+        return () => {};
+      }};
+      mount(App, {target: document.getElementById("app"), props: {get readSource() {trackSource(); return source;}}});
+    `;
+    await route.fulfill({ response, body: original.replace(mount, injected) });
+  });
+}
+
+async function send(
+  page: Page,
+  sequence: number,
+  name: "good" | "stale",
+  numericValue?: number,
+) {
+  const update = structuredClone(
+    fixtures.find((fixture) => fixture.name === name)!.update,
+  ) as any;
+  update.sequence = sequence;
+  // カタログにないタグは未解決として届く（Text plan に全タグが要る）。
+  update.text.readings["Demo.Missing"] = { state: "unresolved" };
+  if (numericValue !== undefined) {
+    update.text.readings["Demo.Number"].numericValue = numericValue;
+    for (const row of update.slots.slots)
+      if (row.externalName === "Demo.Number")
+        row.reading.value = { type: "number", value: numericValue };
+  }
+  return page.evaluate(
+    (update) => (window as any).__readHarness.delivery.receive(update),
+    update,
+  );
+}
+
+test("bound table cells show the reading with their format and missing readings", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await fixtureEntry(page);
+  await page.goto("/");
+  const project = tableProject();
+  const cells = project.screens[0].objects.at(-1).shape.cells;
+  cells[1][1] = {
+    text: "08:00",
+    color: "#22c55e",
+    binding: { externalName: "Demo.Number" },
+    format: { decimals: 2, unit: "m3/h" },
+  };
+  cells[1][2] = { text: "", binding: { externalName: "Demo.Missing" } };
+  await openProject(page, {
+    name: "table-binding.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await page
+    .getByRole("button", { name: "表示プレビュー", exact: true })
+    .click();
+  const table = mainCanvas(page).locator(
+    `[data-object-id="${tableId}"] [data-table]`,
+  );
+  const value = table.locator('[data-table-cell="1:1"]');
+  const missing = table.locator('[data-table-cell="1:2"]');
+  await expect(value).toHaveAttribute("data-table-cell-tag", "Demo.Number");
+  await expect(missing).toHaveAttribute("data-table-cell-tag", "Demo.Missing");
+  // 固定の文字のセルにはタグの属性を付けない。
+  await expect(
+    table.locator('[data-table-cell="1:0"][data-table-cell-tag]'),
+  ).toHaveCount(0);
+
+  expect(await send(page, 1, "good", 12.346)).toBe(true);
+  await expect(value.locator("[data-table-text]")).toHaveText("12.35 m3/h");
+  await expect(value).toHaveAttribute("data-table-cell-state", "good");
+  // 文字色の規則は第1段のまま（セルの文字色）。
+  await expect(value.locator("[data-table-text]")).toHaveAttribute(
+    "fill",
+    "#22c55e",
+  );
+  await expect(value.locator("title")).toHaveText("Demo.Number · Good");
+  // 値のないタグは保存した文字に戻らず、欠測として出す。
+  await expect(missing.locator("[data-table-text]")).toHaveText("-- · 未解決");
+  await expect(missing).toHaveAttribute("data-table-cell-state", "unresolved");
+  await expect(missing.locator("title")).toHaveText("Demo.Missing · 未解決");
+
+  expect(await send(page, 2, "stale")).toBe(true);
+  // 更新停止は単位を出さない（Text の数値表示と同じ）。
+  await expect(value.locator("[data-table-text]")).toHaveText(
+    "SIM · -- · 更新停止",
+  );
+  await expect(value).toHaveAttribute("data-table-cell-state", "stale");
+  await expect(page.locator(".error")).toHaveCount(0);
+});
+
+test("the Inspector binds table cells to tags with a format", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await open(page);
+  await selectPanel(page, "レイヤー");
+  await page.locator(`button[data-layer-id="${tableId}"]`).click();
+  const form = page.locator('form[data-editor-form="object"]');
+  await expect(form.getByLabel("セルのタグ", { exact: true })).toHaveValue("");
+  await form.getByLabel("セルのタグ", { exact: true }).fill("\n\tDemo.Number");
+  // タグのないセルの書式は拒否する。
+  await form.getByLabel("セルの書式", { exact: true }).fill("1");
+  await form.getByRole("button", { name: "変更を適用" }).click();
+  await expect(page.getByText(/タグのないセル/).first()).toBeVisible();
+  await form.getByLabel("セルの書式", { exact: true }).fill("\n\t1 ℃");
+  await form.getByRole("button", { name: "変更を適用" }).click();
+  await expect(form.getByLabel("セルの書式", { exact: true })).toHaveValue(
+    "\n\t1 ℃",
+  );
+  const project = await save(page);
+  const saved = project.screens[0].objects.find(
+    (object: { id: string }) => object.id === tableId,
+  );
+  expect(saved.shape.cells[1][1]).toEqual({
+    text: "08:00",
+    color: "#22c55e",
+    binding: { externalName: "Demo.Number" },
+    format: { decimals: 1, unit: "℃" },
+  });
 });
