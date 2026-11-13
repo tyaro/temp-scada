@@ -20,7 +20,7 @@
 
 - 配置の共通項目（`id`・`order`・`x`・`y`・`width`・`height`・`rotation`・`name`・`locked`・`visible`・`folderId`・`opacity`）は screenView と同じ。配置直下の `fill`・`colorAlpha`、反転（`flipX`・`flipY`）は持たない（文字を含むので表と同じく反転しない）。
 - 検査（Rust `validate_nav_buttons`、TS `parseProject`）: `kind: "screen"` の行き先の画面が存在すること。自身の画面を行き先にしてよい（強調の対象になる）。非表示のボタンも検査する。
-- 枠の画面（ヘッダー・フッター）を行き先から除く検査は 2-C で加える。
+- 運転表示の枠のヘッダー・フッターの画面は行き先にできない（[運転表示の枠](operator-frame.md)の検査）。開始画面は行き先にしてよい。
 - schemaVersion は 0.37.0 を据え置いた。旧形式の読込・移行はない。
 
 ## 表示と操作

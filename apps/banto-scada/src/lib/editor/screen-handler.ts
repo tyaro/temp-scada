@@ -1,4 +1,5 @@
 import type { Project, Screen } from "../project";
+import { operatorFrameRole } from "../operator-frame";
 import { projectScreenReferences } from "../screen-references";
 import type { ScreenCommand } from "./commands";
 import {
@@ -109,6 +110,11 @@ export function applyScreenCommand(
     if (buttons.length)
       throw new Error(
         `この画面は画面切替ボタンの行き先です：${buttons.slice(0, 5).join("、")}${buttons.length > 5 ? " ほか" : ""}。先にボタンを削除するか行き先を変更してください。`,
+      );
+    const role = operatorFrameRole(next.operatorFrame, screen.id);
+    if (role)
+      throw new Error(
+        `この画面は運転表示の${role}です。先に運転表示の設定で外してください。`,
       );
     next.screens = next.screens.filter((s) => s.id !== screen.id);
     return "finish";

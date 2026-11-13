@@ -1,3 +1,4 @@
+import { validateOperatorFrame } from "./operator-frame";
 import { validateConnections, type LineConnections } from "./connections";
 import { imageAssetReferences } from "./asset-references";
 import { normalizeProjectText } from "./text-content";
@@ -295,7 +296,14 @@ export interface SymbolDefinition {
   height: number;
   objects: ScreenObject[];
 }
+/** 運転表示の枠。中身がすべて空なら保存しない。仕様: docs/design/graphics/operator-frame.md */
+export interface OperatorFrame {
+  startScreenId?: string;
+  headerScreenId?: string;
+  footerScreenId?: string;
+}
 export interface Project {
+  operatorFrame?: OperatorFrame;
   recordingPlan?: DesiredRecordingPlan;
   trends?: TrendDefinition[];
   equipmentTypes?: EquipmentType[];
@@ -427,6 +435,7 @@ export function parseProject(json: string): Project {
         !screenIds.has(object.shape.target.screenId)
       )
         throw new Error("画面切替ボタンの行き先の画面が見つかりません");
+  validateOperatorFrame(project.operatorFrame, project);
   const ids = new Set([project.manifest.projectId]);
   const symbolIds = new Set(project.symbols.map((s) => s.id));
   const hashes = new Set<string>(),

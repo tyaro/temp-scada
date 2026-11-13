@@ -201,6 +201,7 @@
 - **2-B 時計**: primitive の `clock`。書式の純関数（`clock-format.ts`、時刻を引数で受けて試験できる形）・描画・Inspector・挿入。e2e は Playwright の時計の固定（`page.clock`）で確認する。
   - 実装（2026-11-13）: 保存は `format: "date" | "time" | "dateTime"`・`seconds?: true`（true だけ保存）・`style`（fontSize・fontWeight・align。Text の `wrap` は持たない）。文字色は配置の `fill`。端末のローカル時刻を `YYYY/MM/DD`・`HH:mm`（`HH:mm:ss`）で出し、時計が描かれている間だけ動く共有タイマー（`clock-ticker.svelte.ts`）で1秒ごとに更新する。反転は Text と同じく不可。仕様: [時計](../graphics/clock.md)。試験: `clock-format.test.ts`、`examples/clock-cases.json`（Rust・TS 共通の契約）、`e2e/clock.spec.ts`。
 - **2-C 運転表示の枠と運転表示**: Project の `operatorFrame`（schema・Rust・TS・検査）、画面設定とは別の「運転表示の設定」（開始・ヘッダー・フッター画面の選択）、`OperatorView`（枠の配置・拡大縮小・現在の画面の強調・履歴・戻る・進む）、プレビューの入口。e2e `operator-view.spec.ts`。
+  - 実装（2026-11-14、前半）: Project 直下の任意の `operatorFrame`（`startScreenId`・`headerScreenId`・`footerScreenId`、中身がすべて空なら保存しない）を schema・Rust・TS に加え、指定した画面の存在・3画面が別・ヘッダー／フッターの画面を画面切替ボタンの行き先にしないことを検査する。枠で使っている画面は削除を止めて理由を示す（画面の id は改名で変わらない）。サイドバー「プロジェクト設定」の「運転表示の設定」で選び、1つの編集コマンド `set-operator-frame` で適用する（元に戻せる）。画面切替ボタンの Inspector の行き先からヘッダー・フッターの画面を除き、貼付けでは行き先を外す。`OperatorView`・プレビューの入口・サンプル Project の例は後半。schemaVersion は据え置き。仕様: [運転表示の枠](../graphics/operator-frame.md)。試験: `operator-frame.test.ts`、`examples/operator-frame-cases.json`（Rust・TS 共通の契約）、`e2e/operator-frame.spec.ts`。
 - 順序は 2-A → 2-B → 2-C（2-B は 2-A と独立）。サンプル Project にヘッダー・フッターの例を加えるのは 2-C。
 
 #### 5.4.4 確認したこと（2026-11-13 ユーザーが案のまま承認）

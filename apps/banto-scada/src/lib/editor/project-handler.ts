@@ -1,3 +1,4 @@
+import { normalizeOperatorFrame } from "../operator-frame";
 import { applyBindingReplacement } from "../binding-replacement";
 import { applyEquipmentCommand } from "./equipment-handler";
 import { applyTrendCommand } from "./trend-handler";
@@ -26,6 +27,12 @@ export function applyProjectCommand(
       const name = command.name.trim();
       if (!name) throw new Error("プロジェクト名を入力してください");
       next.manifest.name = name;
+      return;
+    }
+    case "set-operator-frame": {
+      const frame = normalizeOperatorFrame(command.frame);
+      if (frame) next.operatorFrame = frame;
+      else delete next.operatorFrame;
       return;
     }
     default:

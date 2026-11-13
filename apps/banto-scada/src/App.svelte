@@ -115,6 +115,7 @@
     acknowledgeObjectForm,
   } from "./lib/designer/forms/object-form";
   import { screenFormCommand } from "./lib/designer/forms/screen-form";
+  import { operatorFrameFormCommand } from "./lib/designer/forms/operator-frame-form";
   import {
     projectFormCommand,
     acknowledgeProjectForm,
@@ -2860,6 +2861,8 @@
         },
       );
     if (form.dataset.editorForm === "project") return projectFormCommand(data);
+    if (form.dataset.editorForm === "operator-frame")
+      return operatorFrameFormCommand(data);
     if (form.dataset.editorForm === "screen")
       return screenFormCommand(data, {
         screenId: screen.id,
@@ -4047,6 +4050,39 @@
               </form>
             {/key}
             {#if !activeDefinition}
+              <h2>運転表示の設定</h2>
+              {#key `${workspaceGeneration}:${project.manifest.projectRevision}`}
+                <form
+                  use:drafts.track
+                  data-editor-form="operator-frame"
+                  aria-label="運転表示の設定"
+                  onsubmit={submitForm}
+                >
+                  {#each [["startScreenId", "開始画面"], ["headerScreenId", "ヘッダー画面"], ["footerScreenId", "フッター画面"]] as [key, label]}
+                    <label class="banto-field banto-field--stacked"
+                      ><span class="banto-field-label">{label}</span><select
+                        class="banto-field-control"
+                        name={key}
+                        aria-label={label}
+                        disabled={editBlocked}
+                        ><option value="">なし</option>
+                        {#each project.screens as target (target.id)}<option
+                            value={target.id}
+                            selected={project.operatorFrame?.[
+                              key as keyof typeof project.operatorFrame
+                            ] === target.id}>{target.name}</option
+                          >{/each}</select
+                      ></label
+                    >
+                  {/each}
+                  <p class="hint">
+                    開始・ヘッダー・フッターは別の画面にします。ヘッダー・フッターの画面は画面切替ボタンの行き先にできません。
+                  </p>
+                  <button type="submit" disabled={editBlocked}
+                    >運転表示の設定を適用</button
+                  >
+                </form>
+              {/key}
               <h2>画面管理</h2>
               <button
                 disabled={project.screens.length >= 100}

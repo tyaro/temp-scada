@@ -198,6 +198,16 @@
         "$ref": "#/$defs/equipmentInstance"
       }
     },
+    "operatorFrame": {
+      "type": "object",
+      "properties": {
+        "startScreenId": { "$ref": "#/$defs/id" },
+        "headerScreenId": { "$ref": "#/$defs/id" },
+        "footerScreenId": { "$ref": "#/$defs/id" }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    },
     "recordingPlan": {
       "$ref": "https://temp-scada.invalid/schema/recording-plan-v1.json"
     },

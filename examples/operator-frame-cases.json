@@ -1,0 +1,92 @@
+[
+  {
+    "name": "frame with existing screens",
+    "valid": true,
+    "extraScreens": ["0199f600-0000-7000-8000-000000000a01"],
+    "operatorFrame": {
+      "startScreenId": "0199f200-0000-7000-8000-000000000002",
+      "headerScreenId": "0199f600-0000-7000-8000-000000000500",
+      "footerScreenId": "0199f600-0000-7000-8000-000000000a01"
+    }
+  },
+  {
+    "name": "header only",
+    "valid": true,
+    "operatorFrame": {
+      "headerScreenId": "0199f600-0000-7000-8000-000000000500"
+    }
+  },
+  {
+    "name": "no frame",
+    "valid": true,
+    "operatorFrame": null
+  },
+  {
+    "name": "empty frame",
+    "valid": false,
+    "operatorFrame": {}
+  },
+  {
+    "name": "missing header screen",
+    "valid": false,
+    "operatorFrame": {
+      "headerScreenId": "0199f600-0000-7000-8000-000000000999"
+    }
+  },
+  {
+    "name": "missing start screen",
+    "valid": false,
+    "operatorFrame": { "startScreenId": "0199f600-0000-7000-8000-000000000999" }
+  },
+  {
+    "name": "start equals header",
+    "valid": false,
+    "operatorFrame": {
+      "startScreenId": "0199f200-0000-7000-8000-000000000002",
+      "headerScreenId": "0199f200-0000-7000-8000-000000000002"
+    }
+  },
+  {
+    "name": "header equals footer",
+    "valid": false,
+    "operatorFrame": {
+      "headerScreenId": "0199f600-0000-7000-8000-000000000500",
+      "footerScreenId": "0199f600-0000-7000-8000-000000000500"
+    }
+  },
+  {
+    "name": "unknown key",
+    "valid": false,
+    "operatorFrame": { "sideScreenId": "0199f600-0000-7000-8000-000000000500" }
+  },
+  {
+    "name": "nav button to header screen",
+    "valid": false,
+    "navButton": { "screenId": "0199f600-0000-7000-8000-000000000500" },
+    "operatorFrame": {
+      "headerScreenId": "0199f600-0000-7000-8000-000000000500"
+    }
+  },
+  {
+    "name": "nav button to footer screen",
+    "valid": false,
+    "navButton": { "screenId": "0199f600-0000-7000-8000-000000000500" },
+    "operatorFrame": {
+      "footerScreenId": "0199f600-0000-7000-8000-000000000500"
+    }
+  },
+  {
+    "name": "nav button to start screen",
+    "valid": true,
+    "navButton": { "screenId": "0199f600-0000-7000-8000-000000000500" },
+    "operatorFrame": { "startScreenId": "0199f600-0000-7000-8000-000000000500" }
+  },
+  {
+    "name": "nav button to a non-frame screen",
+    "valid": true,
+    "navButton": { "screenId": "0199f600-0000-7000-8000-000000000500" },
+    "operatorFrame": {
+      "headerScreenId": "0199f200-0000-7000-8000-000000000002"
+    }
+  }
+]
