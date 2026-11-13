@@ -293,7 +293,7 @@
       revealScreenSettings = true;
       setInspectorVisibility(true);
     } else if (
-      ["project", "equipment", "equipment-type"].includes(
+      ["project", "operator-frame", "equipment", "equipment-type"].includes(
         form.dataset.editorForm ?? "",
       )
     ) {

@@ -124,3 +124,23 @@ test("pending operator frame selections survive an unrelated numeric edit", asyn
     saved.screens[0].objects.find((object: any) => object.id === target.id).x,
   ).toBe(target.x + 10);
 });
+
+test("invalid operator frame drafts reveal the project panel on save", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await open(page);
+  for (const name of ["開始画面", "ヘッダー画面"])
+    await form(page).getByLabel(name, { exact: true }).selectOption({
+      label: main.name,
+    });
+  await selectPanel(page, "レイヤー");
+  await expect(
+    form(page).getByLabel("ヘッダー画面", { exact: true }),
+  ).toBeHidden();
+  await page.keyboard.press("Control+s");
+  await expect(
+    form(page).getByLabel("ヘッダー画面", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByTestId("project-status")).toContainText("別の画面");
+});
