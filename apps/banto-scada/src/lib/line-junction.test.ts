@@ -6,6 +6,7 @@ import {
   junctionTolerance,
   lineJunctions,
   screenJunctions,
+  segmentCells,
   worldLines,
 } from "./line-junction";
 import ScreenPainting from "./ScreenPainting.svelte";
@@ -222,6 +223,35 @@ describe("lineJunctions", () => {
     const result = screenJunctions(objects);
     expect(performance.now() - started).toBeLessThan(200);
     expect([...result.values()].flat()).toHaveLength(500);
+  });
+});
+
+describe("segmentCells", () => {
+  it("covers only cells along a long diagonal, not its bounding box", () => {
+    // 外接矩形なら (1000000/64)^2 ≒ 2.4 億格子。線分に沿う格子だけなら数万。
+    const keys = segmentCells({ x: 0, y: 0 }, { x: 1000000, y: 1000000 }, 0.5);
+    expect(keys.length).toBeLessThan(100000);
+    expect(keys).toContain("0,0");
+    expect(keys).toContain("15625,15625");
+    expect(keys).not.toContain("0,15625");
+  });
+
+  it("finds a junction on the middle of a long diagonal pipe", () => {
+    const main = pipe([
+        [0, 0],
+        [1000000, 1000000],
+      ]),
+      branch = pipe([
+        [500000, 500000],
+        [500000, 600000],
+      ]);
+    expect(junctions(main, branch)).toHaveLength(1);
+  });
+
+  it("includes cells reached only through the margin and vertical segments", () => {
+    expect(segmentCells({ x: 63.8, y: 10 }, { x: 63.8, y: 200 }, 0.5)).toEqual(
+      expect.arrayContaining(["0,0", "0,3", "1,0", "1,3"]),
+    );
   });
 });
 

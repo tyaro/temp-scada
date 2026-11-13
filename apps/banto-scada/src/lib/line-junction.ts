@@ -56,6 +56,32 @@ export interface IndexedSegment {
   b: Point;
 }
 
+/**
+ * 線分から `margin` 以内にかかる格子だけを返す（外接矩形の全格子は返さない）。
+ * 列ごとに、その列の x 範囲（±margin）にある線分の y 範囲を求め、±margin の行を足す。
+ * 長い斜めの線分でも格子の数は長さに比例する。
+ */
+export function segmentCells(a: Point, b: Point, margin: number): string[] {
+  const keys: string[] = [];
+  const left = a.x <= b.x ? a : b,
+    right = a.x <= b.x ? b : a;
+  const dx = right.x - left.x;
+  const yAt = (x: number) => left.y + ((x - left.x) / dx) * (right.y - left.y);
+  for (let cx = cell(left.x - margin); cx <= cell(right.x + margin); cx++) {
+    const x0 = Math.max(left.x, cx * cellSize - margin),
+      x1 = Math.min(right.x, (cx + 1) * cellSize + margin);
+    const ya = dx === 0 ? a.y : yAt(x0),
+      yb = dx === 0 ? b.y : yAt(x1);
+    for (
+      let cy = cell(Math.min(ya, yb) - margin);
+      cy <= cell(Math.max(ya, yb) + margin);
+      cy++
+    )
+      keys.push(cellKey(cx, cy));
+  }
+  return keys;
+}
+
 /** 線分を格子に入れ、点の近くの線分だけを調べる（全組合せの O(n^2) を避ける）。 */
 export class SegmentIndex {
   readonly segments: IndexedSegment[] = [];
@@ -66,17 +92,11 @@ export class SegmentIndex {
         const a = line.points[i - 1],
           b = line.points[i];
         const id = this.segments.push({ line: index, a, b }) - 1;
-        const x0 = cell(Math.min(a.x, b.x) - margin),
-          x1 = cell(Math.max(a.x, b.x) + margin),
-          y0 = cell(Math.min(a.y, b.y) - margin),
-          y1 = cell(Math.max(a.y, b.y) + margin);
-        for (let cx = x0; cx <= x1; cx++)
-          for (let cy = y0; cy <= y1; cy++) {
-            const key = cellKey(cx, cy),
-              list = this.cells.get(key);
-            if (list) list.push(id);
-            else this.cells.set(key, [id]);
-          }
+        for (const key of segmentCells(a, b, margin)) {
+          const list = this.cells.get(key);
+          if (list) list.push(id);
+          else this.cells.set(key, [id]);
+        }
       }
     });
   }
