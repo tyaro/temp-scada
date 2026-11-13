@@ -401,6 +401,8 @@
   } from "./lib/designer/numeric-properties";
   import PreviewFullscreen from "./lib/designer/PreviewFullscreen.svelte";
   import PreviewPopups from "./lib/designer/PreviewPopups.svelte";
+  import OperatorView from "./lib/operator/OperatorView.svelte";
+  import { operatorStartScreen } from "./lib/operator/operator-layout";
   import ArrayCopyDialog from "./lib/designer/ArrayCopyDialog.svelte";
   import { createArrayCopyController } from "./lib/designer/controllers/array-copy.svelte";
   import ScreenViewDialog from "./lib/designer/ScreenViewDialog.svelte";
@@ -917,6 +919,7 @@
   }
   function shortcut(event: KeyboardEvent) {
     if (
+      operatorStart !== null ||
       historyOpen ||
       recordingManagementOpen ||
       recordingOperationsOpen ||
@@ -1290,7 +1293,7 @@
     );
   }
   function nativeClipboard(event: ClipboardEvent) {
-    if (clipboardScope(event.target))
+    if (operatorStart === null && clipboardScope(event.target))
       clipboard.action(event.type as "copy" | "cut" | "paste", event);
   }
   function nudgeSelection(direction: Point, large: boolean) {
@@ -1427,6 +1430,39 @@
 
   let editorRegion = $state<HTMLElement>();
   let previewFullscreenActive = $state(false);
+  // 運転表示（プレビューの入口から開く）。開いている間は開始画面の id を持つ。
+  let operatorStart = $state<string | null>(null);
+  let operatorEntryButton = $state<HTMLButtonElement>();
+  let operatorGeneration = 0;
+  function openOperatorView() {
+    const start = operatorStartScreen(
+      project.operatorFrame,
+      project.screens,
+      screen.id,
+    );
+    if (!start) {
+      report(
+        "error",
+        "運転表示を開けません。ヘッダー・フッター以外の画面を追加してください。",
+      );
+      return;
+    }
+    operatorGeneration = workspaceGeneration;
+    operatorStart = start;
+  }
+  function closeOperatorView() {
+    if (operatorStart === null) return;
+    operatorStart = null;
+    void tick().then(() => operatorEntryButton?.focus());
+  }
+  // 表示確認を離れたとき・Project を差し替えたときは閉じる。
+  $effect(() => {
+    if (
+      operatorStart !== null &&
+      (mode !== "preview" || workspaceGeneration !== operatorGeneration)
+    )
+      operatorStart = null;
+  });
   let previewPopups = $state<{
     showPicker: (origin: HTMLElement, kind?: "screen" | "equipment") => void;
     showEquipment: (id: string, origin: HTMLElement | SVGElement) => void;
@@ -3825,6 +3861,12 @@
             previewPopups?.showPicker(event.currentTarget, "equipment")}
           >機器の読取詳細</button
         >
+        <button
+          bind:this={operatorEntryButton}
+          disabled={menuBlocked}
+          title="ヘッダー・フッターの枠と主画面だけを出し、画面切替ボタンで画面を移ります。Escで戻ります。"
+          onclick={openOperatorView}>運転表示</button
+        >
       {/if}
       {#if mode === "edit"}<button
           aria-label="キャンバスの操作"
@@ -3845,7 +3887,9 @@
   {/snippet}
   {#snippet controls()}
     <PreviewFullscreen
-      scope={mode === "preview" ? String(workspaceGeneration) : null}
+      scope={mode === "preview" && operatorStart === null
+        ? String(workspaceGeneration)
+        : null}
       onactive={(active) => (previewFullscreenActive = active)}
       onmessage={(message) => report("error", message)}
     />
@@ -4218,7 +4262,9 @@
               ? (id, origin) => previewPopups?.showEquipment(id, origin)
               : undefined}
             onnavigate={mode === "preview" && !menuBlocked
-              ? (id) => openScreen(id)
+              ? (target) => {
+                  if (target.kind === "screen") openScreen(target.screenId);
+                }
               : undefined}
             equipmentContext={readContext.equipmentContext}
             readings={readContext.readings}
@@ -4743,6 +4789,17 @@
     >
   </div>
 </Modal>
+{#if operatorStart !== null}
+  <OperatorView
+    {project}
+    startScreenId={operatorStart}
+    images={assetImages}
+    readings={readContext.readings}
+    equipmentContext={readContext.equipmentContext}
+    onclose={closeOperatorView}
+    onmessage={(message) => report("error", message)}
+  />
+{/if}
 <div
   class="toast-anchor"
   style:--banto-toast-right={showInspector &&

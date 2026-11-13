@@ -17,7 +17,11 @@
   import Primitive from "./Primitive.svelte";
   import TrendPainting from "./TrendPainting.svelte";
   import NavButtonPainting from "./NavButtonPainting.svelte";
-  import { navButtonDisabled, navButtonIsCurrent } from "./nav-button";
+  import {
+    navButtonDisabled,
+    navButtonIsCurrent,
+    type NavHistoryState,
+  } from "./nav-button";
   let {
     object,
     symbols = [],
@@ -31,6 +35,7 @@
     hopPath,
     currentScreenId,
     preview = false,
+    navHistory,
   }: {
     object: ScreenObject;
     symbols?: SymbolDefinition[];
@@ -50,6 +55,8 @@
     currentScreenId?: string;
     /** 表示確認（プレビュー）。押せない画面切替ボタンを薄く描く。 */
     preview?: boolean;
+    /** 運転表示の履歴。戻る・進むのボタンを、動けるときだけ濃く描く。 */
+    navHistory?: NavHistoryState;
   } = $props();
 </script>
 
@@ -166,7 +173,7 @@
     width={object.width}
     height={object.height}
     current={navButtonIsCurrent(object.shape, currentScreenId)}
-    disabled={navButtonDisabled(object.shape, preview)}
+    disabled={navButtonDisabled(object.shape, preview, navHistory)}
   />
 {:else if "width" in object && object.shape.type === "image"}
   {#if images?.get(object.shape.assetId)}

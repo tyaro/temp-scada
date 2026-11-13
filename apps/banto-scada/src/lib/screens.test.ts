@@ -1,5 +1,7 @@
 import { expect, it } from "vitest";
-import sample from "../../../../examples/process.project.json";
+import { processSampleWithoutFrame } from "./__fixtures__/process-sample";
+// 画面が1つの前提なので、運転表示の枠の画面を除く。
+const sample = processSampleWithoutFrame();
 import { parseProject, serializeProject } from "./project";
 import { applyCommand, type EditCommand } from "./editor";
 import { emptyHistory, recordEdit, travelHistory } from "./history";
