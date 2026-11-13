@@ -1267,7 +1267,8 @@
                     表計算ソフトの範囲をそのまま貼り付けられます。入力欄の中では
                     Tab でタブを入れ、Shift＋Tab
                     で前の欄へ移ります。列の数は最も長い行に合わせます。色の表は
-                    #rrggbb を同じ並びで書き、空のセルは色なしです。{#if !activeDefinition}タグを書いたセルは文字の代わりにタグの値を出します。書式は「小数桁;単位」で書き（例:
+                    #rrggbb を同じ並びで書き、空のセルは色なしです。{#if activeDefinition}slotを書いたセルは文字の代わりにslotの値（状態の定義があれば状態の文字）を出します。slot名は宣言済みの読取slotだけです。書式は「小数桁;単位」で書き（例:
+                      1;℃、2;、;kPa）、slotのあるセルだけに付けます。取得不能の色を書いたセルは状態の色に従い、boolかstateのslotのセルだけに書けます。{:else}タグを書いたセルは文字の代わりにタグの値を出します。書式は「小数桁;単位」で書き（例:
                       1;℃、2;、;kPa）、タグのあるセルだけに付けます。{/if}Ctrl／⌘＋Enter
                     で確定します。
                   </p>
@@ -1322,7 +1323,42 @@
                     placeholder="空欄は配置の色"
                     onkeydown={tableAreaKey}></textarea></label
                 >
-                {#if !activeDefinition}
+                {#if activeDefinition}
+                  <label class="full-width banto-field banto-field--stacked"
+                    ><span class="banto-field-label">セルのslot</span><textarea
+                      class="banto-field-control table-grid-input"
+                      name="tableSlots"
+                      aria-label="セルのslot"
+                      aria-describedby="inspector-table-help"
+                      rows="3"
+                      wrap="off"
+                      placeholder="空欄は固定の文字（例: running）"
+                      onkeydown={tableAreaKey}></textarea></label
+                  >
+                  <label class="full-width banto-field banto-field--stacked"
+                    ><span class="banto-field-label">セルの書式</span><textarea
+                      class="banto-field-control table-grid-input"
+                      name="tableFormats"
+                      aria-label="セルの書式"
+                      aria-describedby="inspector-table-help"
+                      rows="3"
+                      wrap="off"
+                      placeholder="小数桁;単位（例: 1;℃）。空欄はそのまま"
+                      onkeydown={tableAreaKey}></textarea></label
+                  >
+                  <label class="full-width banto-field banto-field--stacked"
+                    ><span class="banto-field-label">セルの取得不能の色</span
+                    ><textarea
+                      class="banto-field-control table-grid-input"
+                      name="tableUnknownColors"
+                      aria-label="セルの取得不能の色"
+                      aria-describedby="inspector-table-help"
+                      rows="3"
+                      wrap="off"
+                      placeholder="空欄は状態の色に従わない（例: #64748b）"
+                      onkeydown={tableAreaKey}></textarea></label
+                  >
+                {:else}
                   <label class="full-width banto-field banto-field--stacked"
                     ><span class="banto-field-label">セルのタグ</span><textarea
                       class="banto-field-control table-grid-input"

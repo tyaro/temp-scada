@@ -213,6 +213,10 @@ export function copyObjectSnapshot(
     objects.some(
       (object) =>
         (object.shape.type === "level" && object.shape.slotBinding) ||
+        (object.shape.type === "table" &&
+          object.shape.cells.some((row) =>
+            row.some((cell) => cell.slotBinding),
+          )) ||
         (object.shape.type === "text" &&
           (object.shape.slotBinding || object.shape.equipmentProperty)),
     )

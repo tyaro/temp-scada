@@ -5,7 +5,7 @@ export {
   type SlotStatus,
 } from "./slot-presentation";
 import type { Project, SymbolDefinition } from "./project";
-import { shapeSlotName } from "./shape-bindings";
+import { shapeSlotNames } from "./shape-bindings";
 import {
   isStateSlotType,
   slotReadType,
@@ -37,6 +37,23 @@ export function validateSymbolSlots(project: Project) {
           )
         )
           throw new Error("液位にはnumberのslotが必要です");
+        continue;
+      }
+      if (object.shape.type === "table") {
+        for (const cell of object.shape.cells.flat()) {
+          if (!cell.slotBinding) continue;
+          if (!definition)
+            throw new Error("表のセルのslotは共有定義内の表だけに設定できます");
+          const slotName = cell.slotBinding.slotName;
+          const slot = definition.readSlots?.find(
+            (slot) => slot.name === slotName,
+          );
+          if (!slot) throw new Error("Symbolの読取slot宣言が見つかりません");
+          if (cell.stateColors && !isStateSlotType(slot.type))
+            throw new Error(
+              "状態の色に従う指定にはboolかstateのslotが必要です",
+            );
+        }
         continue;
       }
       if (object.shape.type !== "text") continue;
@@ -135,7 +152,7 @@ export function symbolSlotUsages(
   definition: SymbolDefinition,
   slotName: string,
 ) {
-  return definition.objects.filter(
-    (object) => shapeSlotName(object.shape) === slotName,
+  return definition.objects.filter((object) =>
+    shapeSlotNames(object.shape).includes(slotName),
   );
 }

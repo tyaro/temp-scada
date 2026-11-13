@@ -474,15 +474,36 @@ impl Project {
                             .flatten()
                             .flat_map(|row| row.as_array().into_iter().flatten())
                     };
-                    if table_cells()
-                        .any(|cell| cell.get("format").is_some() && cell.get("binding").is_none())
-                    {
-                        return Err("表のセルの書式はタグのあるセルだけに付けられます".into());
+                    if table_cells().any(|cell| {
+                        cell.get("format").is_some()
+                            && cell.get("binding").is_none()
+                            && cell.get("slotBinding").is_none()
+                    }) {
+                        return Err("表のセルの書式はタグかslotのあるセルだけに付けられます".into());
                     }
-                    if symbols.contains(screen["id"].as_str().unwrap())
-                        && table_cells().any(|cell| cell.get("binding").is_some())
-                    {
+                    let in_symbol = symbols.contains(screen["id"].as_str().unwrap());
+                    if in_symbol && table_cells().any(|cell| cell.get("binding").is_some()) {
                         return Err("Symbol 定義内の直接タグ割り当てには対応していません".into());
+                    }
+                    let read_slots = || screen["readSlots"].as_array().into_iter().flatten();
+                    for cell in table_cells() {
+                        let Some(binding) = cell.get("slotBinding") else {
+                            continue;
+                        };
+                        if !in_symbol {
+                            return Err("表のセルのslotは共有定義内の表だけに設定できます".into());
+                        }
+                        let Some(slot) =
+                            read_slots().find(|slot| slot["name"] == binding["slotName"])
+                        else {
+                            return Err("Symbolの読取slot宣言が見つかりません".into());
+                        };
+                        if cell.get("stateColors").is_some()
+                            && slot["type"] != "bool"
+                            && slot["type"] != "state"
+                        {
+                            return Err("状態の色に従う指定にはboolかstateのslotが必要です".into());
+                        }
                     }
                 }
                 if shape.get("stateColors").is_some()

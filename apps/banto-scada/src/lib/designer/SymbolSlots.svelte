@@ -81,7 +81,7 @@
         {#if usages.length}
           <strong>{slot.name} · {slot.type} / read</strong>
           <p>
-            Text {usages.length} 件で使用中。改名・型変更・削除は、先にTextの割付を解除してください。
+            Text・表 {usages.length} 件で使用中。改名・型変更・削除は、先にTextや表のセルの割付を解除してください。
           </p>
         {:else}
           <form

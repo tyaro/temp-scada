@@ -1,10 +1,11 @@
 import type { Project, ScreenObject, SymbolDefinition } from "./project";
-import { isStateSlotType } from "./equipment";
+import { isStateSlotType, type EquipmentSlot } from "./equipment";
 import { evaluateSlotState } from "./slot-state";
 import {
   resolveSymbolSlot,
   symbolEquipmentSlot,
   type EquipmentContext,
+  type SlotPresentation,
 } from "./symbol-slots";
 /** Shown when a follower's source Text is missing or invalid (fail closed). */
 export const UNRESOLVED_STATE_COLOR = "#64748b";
@@ -78,13 +79,22 @@ export function stateTextColor(
   const { unknownColor } = text.shape.stateColors;
   const slotName = text.shape.slotBinding?.slotName;
   if (slotName === undefined) return unknownColor;
-  const slot = symbolEquipmentSlot(definition, slotName, equipmentId, context);
-  const evaluation = slot
-    ? evaluateSlotState(
-        slot,
-        resolveSymbolSlot(definition, slotName, equipmentId, context),
-      )
-    : undefined;
+  return slotStateColor(
+    unknownColor,
+    symbolEquipmentSlot(definition, slotName, equipmentId, context),
+    resolveSymbolSlot(definition, slotName, equipmentId, context),
+  );
+}
+/**
+ * The state color rule shared by a Text and a table cell: a known state gives
+ * its color (undefined = the normal color), anything else `unknownColor`.
+ */
+export function slotStateColor(
+  unknownColor: string,
+  slot: EquipmentSlot | undefined,
+  display: SlotPresentation,
+): string | undefined {
+  const evaluation = slot ? evaluateSlotState(slot, display) : undefined;
   return evaluation?.state === "known" ? evaluation.color : unknownColor;
 }
 /**

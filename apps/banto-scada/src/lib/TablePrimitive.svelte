@@ -3,6 +3,7 @@
   import { tableCellBoxes, tableEdges } from "./table";
   import { TEXT_FONT } from "./text-layout";
   import { presentNumeric, type TagReadings } from "./tag-presentation";
+  import { tableCellSlotView, type TableSlotResolver } from "./table-cell-slot";
   let {
     shape,
     width,
@@ -11,10 +12,13 @@
     color,
     textAlpha,
     readings,
+    slots,
   }: {
     shape: TableShape;
     /** 画面の表のセルが結合したタグの読取（外部名ごと）。 */
     readings?: TagReadings;
+    /** Symbol 定義内の表のセルが結合した slot の読取（Symbol 配置ごと）。 */
+    slots?: TableSlotResolver;
     width: number;
     height: number;
     /** セルに文字色がないときの色（配置の色）。 */
@@ -67,7 +71,12 @@
     {@const presentation = binding
       ? presentNumeric(readings?.get(binding.externalName), box.cell.format)
       : undefined}
-    {@const text = presentation ? presentation.text : box.cell.text}
+    {@const slotView = tableCellSlotView(box.cell, slots)}
+    {@const text = slotView
+      ? slotView.text
+      : presentation
+        ? presentation.text
+        : box.cell.text}
     <svg
       x={box.x}
       y={box.y}
@@ -76,9 +85,11 @@
       overflow="hidden"
       data-table-cell={`${box.row}:${box.column}`}
       data-table-cell-tag={binding?.externalName}
-      data-table-cell-state={presentation?.state}
+      data-table-cell-slot={slotView?.slotName}
+      data-table-cell-state={slotView?.state ?? presentation?.state}
     >
-      {#if binding && presentation}<title
+      {#if slotView}<title>{slotView.slotName} · {slotView.label}</title
+        >{:else if binding && presentation}<title
           >{binding.externalName} · {presentation.label}</title
         >{/if}
       {#if box.cell.fill}<rect
@@ -95,7 +106,7 @@
           font-family={TEXT_FONT}
           font-size={shape.style.fontSize}
           font-weight={shape.style.fontWeight}
-          fill={color ?? box.cell.color ?? textColor}
+          fill={slotView?.stateColor ?? color ?? box.cell.color ?? textColor}
           fill-opacity={textAlpha}>{text}</text
         >{/if}
     </svg>

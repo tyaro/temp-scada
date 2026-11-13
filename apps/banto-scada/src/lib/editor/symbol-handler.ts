@@ -73,7 +73,7 @@ export function applySymbolCommand(
       slot.type !== command.slotType;
     if (changed && symbolSlotUsages(definition, slot.name).length)
       throw new Error(
-        "Textで使用中の読取slotは改名・型変更・削除できません。先にTextの割付を解除してください。",
+        "Textや表で使用中の読取slotは改名・型変更・削除できません。先にTextや表のセルの割付を解除してください。",
       );
     if (command.type === "remove-symbol-slot") {
       definition.readSlots = definition.readSlots!.filter(

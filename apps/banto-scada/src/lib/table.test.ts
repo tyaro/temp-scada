@@ -2,16 +2,19 @@ import { describe, expect, it } from "vitest";
 import sample from "../../../../examples/read-presentation.project.json";
 import cases from "../../../../examples/table-cases.json";
 import { parseProject, serializeProject, type TableShape } from "./project";
-import { applyCommand } from "./editor";
+import { applyCommand, type EditCommand } from "./editor";
 import {
   buildTableCells,
   formatTableColors,
   formatTableFormats,
+  formatTableSlots,
   formatTableTags,
   formatTableText,
+  formatTableUnknownColors,
   formatTableWeights,
   parseTableColors,
   parseTableFormats,
+  parseTableSlots,
   parseTableTags,
   parseTableText,
   parseTableWeights,
@@ -21,7 +24,9 @@ import {
 import { objectFormCommand } from "./designer/forms/object-form";
 import { objectFormValues } from "./designer/numeric-properties";
 import { canFlip } from "./flip";
-import { shapeTagBindings } from "./shape-bindings";
+import { shapeSlotNames, shapeTagBindings } from "./shape-bindings";
+import { symbolSlotUsages } from "./symbol-slots";
+import { slotStatusRows } from "./slot-status-summary";
 import { bindingReferences } from "./binding-references";
 import {
   applyBindingReplacement,
@@ -406,7 +411,8 @@ describe("table cell bindings", () => {
         selected: object,
       }),
     ).toThrow("タグのないセル");
-    // Symbol 定義の編集では、セルのタグ・書式の欄を読まない。
+    // Symbol 定義の編集では、セルのタグの欄を読まない。
+    data.set("tableFormats", "");
     const definition = objectFormCommand(form, {
       screenId: project.symbols[0].id,
       definition: true,
@@ -453,5 +459,120 @@ describe("table cell bindings", () => {
     expect(pasted.screens[0].objects).toHaveLength(
       project.screens[0].objects.length + 1,
     );
+  });
+});
+
+describe("table cell slots", () => {
+  const slotCase = cases.find(
+    (c) => c.name === "symbol table with slot cells, format and state colors",
+  )!;
+  const slotShape = slotCase.object.shape as TableShape;
+  function withSlotTable() {
+    const value = structuredClone(sample);
+    value.symbols[0].objects.push(structuredClone(slotCase.object) as any);
+    return parseProject(JSON.stringify(value));
+  }
+  it("lists the slots of every bound cell", () => {
+    expect(shapeSlotNames(slotShape)).toEqual(["running", "current"]);
+    const project = withSlotTable();
+    const definition = project.symbols[0];
+    expect(
+      symbolSlotUsages(definition, "current").map((object) => object.id),
+    ).toContain(slotCase.object.id);
+  });
+  it("keeps a slot used only by a table cell from being removed", () => {
+    const value = structuredClone(sample);
+    // 表だけが current を読む Symbol 定義にする。
+    value.symbols[0].objects = value.symbols[0].objects.filter(
+      (object: any) => object.shape.slotBinding?.slotName !== "current",
+    );
+    value.symbols[0].objects.push(structuredClone(slotCase.object) as any);
+    const project = parseProject(JSON.stringify(value));
+    expect(() =>
+      applyCommand(
+        project,
+        {
+          type: "remove-symbol-slot",
+          symbolId: project.symbols[0].id,
+          slotName: "current",
+        },
+        "edit",
+      ),
+    ).toThrow("表で使用中");
+  });
+  it("lists a slot read only by a table cell in the slot status", () => {
+    const value = structuredClone(sample);
+    value.symbols[0].objects = value.symbols[0].objects.filter(
+      (object: any) => object.shape.slotBinding?.slotName !== "current",
+    );
+    value.symbols[0].objects.push(structuredClone(slotCase.object) as any);
+    const project = parseProject(JSON.stringify(value));
+    const rows = slotStatusRows(
+      project.symbols[0],
+      project.screens,
+      project.symbols,
+    );
+    expect(rows.map((row) => row.slotName)).toContain("current");
+  });
+  it("reads and writes the slot and unknown color grids", () => {
+    expect(formatTableSlots(slotShape)).toBe("\trunning\n\tcurrent");
+    expect(formatTableUnknownColors(slotShape)).toBe("\t#64748b");
+    expect(formatTableFormats(slotShape)).toBe("\n\t1;A");
+    expect(parseTableSlots(" running \t", 1, 2, ["running"])).toEqual([
+      [{ slotName: "running" }, undefined],
+    ]);
+    expect(() => parseTableSlots("missing", 1, 1, ["running"])).toThrow(
+      "宣言済みの読取slotではありません",
+    );
+  });
+  it("applies the slot grids from the Inspector form in a Symbol definition", () => {
+    const project = withSlotTable();
+    const definition = project.symbols[0];
+    const object = definition.objects.at(-1)!;
+    const values = objectFormValues(object, true);
+    const data = new Map(Object.entries(values));
+    const form = {
+      get: (key: string) => data.get(key) ?? null,
+      has: (key: string) => data.has(key),
+    };
+    const context = {
+      screenId: project.screens[0].id,
+      definition: true,
+      readSlots: definition.readSlots,
+      selected: object,
+    };
+    const after = applyCommand(
+      project,
+      {
+        ...objectFormCommand(form, context),
+        definitionId: definition.id,
+      } as EditCommand,
+      "edit",
+    );
+    expect(
+      (after.symbols[0].objects.at(-1)!.shape as TableShape).cells,
+    ).toEqual(slotShape.cells);
+    data.set("tableSlots", "\trunning\n\tmissing");
+    expect(() => objectFormCommand(form, context)).toThrow(
+      "宣言済みの読取slotではありません",
+    );
+    data.set("tableSlots", "\trunning\n\tcurrent");
+    data.set("tableUnknownColors", "\t#64748b\n\t#64748b");
+    expect(() => objectFormCommand(form, context)).toThrow(
+      "boolかstateのslotのセルではありません",
+    );
+    data.set("tableUnknownColors", "#64748b");
+    expect(() => objectFormCommand(form, context)).toThrow(
+      "boolかstateのslotのセルではありません",
+    );
+    data.set("tableUnknownColors", "");
+    data.set("tableFormats", "1;A");
+    expect(() => objectFormCommand(form, context)).toThrow("slotのないセル");
+  });
+  it("rejects copying a table with slot cells on its own", () => {
+    const project = withSlotTable();
+    expect(() =>
+      copyObjects(project, project.symbols[0].id, [slotCase.object.id], "test"),
+    ).toThrow("slot表示単体");
   });
 });

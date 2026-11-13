@@ -33,7 +33,7 @@ for (const theme of ["light", "dark"] as const)
     await expect(
       used.getByRole("button", { name: "宣言を削除", exact: true }),
     ).toBeDisabled();
-    await expect(used).toContainText("Text 1 件で使用中");
+    await expect(used).toContainText("Text・表 1 件で使用中");
     const create = panel.getByRole("form", {
       name: "読取slotを追加",
       exact: true,
@@ -71,7 +71,7 @@ for (const theme of ["light", "dark"] as const)
     await expect(
       enabled.getByRole("button", { name: "宣言を削除", exact: true }),
     ).toBeDisabled();
-    await expect(enabled).toContainText("Text 1 件で使用中");
+    await expect(enabled).toContainText("Text・表 1 件で使用中");
     const waiting = page.waitForEvent("download");
     await fileCommand(page, "Project を保存");
     const saved = JSON.parse(
