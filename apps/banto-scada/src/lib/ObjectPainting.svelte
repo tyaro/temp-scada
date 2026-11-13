@@ -8,7 +8,7 @@
     type EquipmentContext,
   } from "./symbol-slots";
   import { definedSlotState } from "./slot-state";
-  import { shapeSlotName } from "./shape-bindings";
+  import { shapeSlotNames } from "./shape-bindings";
   import type { ScreenObject, SymbolDefinition } from "./project";
   import type { TagReadings } from "./tag-presentation";
   import { objectTransform, readableChild } from "./rotation";
@@ -73,7 +73,10 @@
               fit={child.shape.fit}
             />{/if}
         {:else}
-          {@const slotName = shapeSlotName(child.shape)}
+          {@const slotName =
+            child.shape.type === "table"
+              ? undefined
+              : shapeSlotNames(child.shape)[0]}
           {@const slotDisplay =
             slotName === undefined
               ? undefined
@@ -100,6 +103,26 @@
               equipmentContext,
             )}
             {slotDisplay}
+            tableSlots={child.shape.type === "table"
+              ? (slotName) => ({
+                  display: resolveSymbolSlot(
+                    definition,
+                    slotName,
+                    object.shape.type === "symbol"
+                      ? object.shape.equipmentId
+                      : undefined,
+                    equipmentContext,
+                  ),
+                  slot: symbolEquipmentSlot(
+                    definition,
+                    slotName,
+                    object.shape.type === "symbol"
+                      ? object.shape.equipmentId
+                      : undefined,
+                    equipmentContext,
+                  ),
+                })
+              : undefined}
             slotState={slotName === undefined ||
             !slotDisplay ||
             child.shape.type !== "text"

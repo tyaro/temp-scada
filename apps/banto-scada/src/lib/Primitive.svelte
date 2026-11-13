@@ -13,6 +13,7 @@
   import { levelFillRect, levelFromReading, levelFromSlot } from "./level";
   import MultilineTextPrimitive from "./MultilineTextPrimitive.svelte";
   import TablePrimitive from "./TablePrimitive.svelte";
+  import type { TableSlotResolver } from "./table-cell-slot";
   import type { ScreenObject } from "./project";
   import {
     formatSlotText,
@@ -25,6 +26,7 @@
     readings,
     slotDisplay,
     slotState,
+    tableSlots,
     equipmentPropertyDisplay,
     stateColor,
     onsummary,
@@ -36,6 +38,8 @@
     slotDisplay?: SlotPresentation;
     /** Defined state of the slot; a known state replaces the raw value text. */
     slotState?: SlotStateEvaluation;
+    /** Symbol 定義内の表のセルが結合した slot の読取。 */
+    tableSlots?: TableSlotResolver;
     equipmentPropertyDisplay?: EquipmentPropertyPresentation;
     /**
      * Resolved state color (`resolveStateColor`); it overrides the normal
@@ -287,6 +291,7 @@
       {color}
       textAlpha={object.colorAlpha}
       {readings}
+      slots={tableSlots}
     />
   {:else if object.shape.type === "level" && level}
     {@const width = object.width}

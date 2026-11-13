@@ -153,7 +153,7 @@
   - 図形 `table` を追加する（行・列・列幅・罫線・セルの色）（2026-11-13 第1段を実装。列幅・行の高さは比で持ち、セルは固定の文字と任意の塗り・文字色。罫線・地は任意。Inspector ではセルの文字・色をタブ区切りで入力し、表計算ソフトから貼り付けられる。文字を含むので反転は拒否。schemaVersion は据え置き。仕様: [表](../graphics/table.md)。試験: `table.test.ts`、`examples/table-cases.json`（Rust・TS 共通の契約）、`e2e/table.spec.ts`）。
   - セルは固定文字か、タグ結合（B の書式・A の状態表を使う）。工程表・SV／PV 表を描けるようにする（第2段）。
     - 2a: 画面の表のセルをタグに結合する（2026-11-13 実装。セルの任意の `binding`（外部名）と `format`（数値の書式、タグのあるセルだけ）。結合したセルは `text` の代わりに書式付きの値・品質を Text の数値表示と同じ規則で出す。Symbol 定義内のセルのタグは拒否。Inspector の「セルのタグ」「セルの書式」をタブ区切りで入力する。Rust `text_bindings`・TS `shapeTagBindings` が表のセルの結合を返し、読取・参照一覧・一括置換・貼り付けが表に対応。schemaVersion は据え置き。試験: `table.test.ts`、`examples/table-cases.json`、`e2e/table.spec.ts`）。
-    - 2b: Symbol 内の表のセルを slot に結合する（状態の文字・色）（未実装）。
+    - 2b: Symbol 内の表のセルを slot に結合する（状態の文字・色）（2026-11-13 実装。セルの任意の `slotBinding`（宣言済みの読取 slot、Symbol 定義の中の表だけ、`binding` と同時は不可）と `stateColors`（bool・state の slot のセルだけ）。`format` は `binding` か `slotBinding` のあるセル。表示は slot に結合した Text と同じ規則（状態の定義があれば状態の文字、なければ書式付きの読取、状態の色はセル単位で単色配置の色より優先）。Inspector は定義の編集中に「セルのslot」「セルの書式」「セルの取得不能の色」を出す。`shapeSlotNames` で slot の使用箇所・状態一覧・改名や削除の拒否が表のセルに対応。schemaVersion は据え置き。試験: `table.test.ts`、`table-cell-slot.test.ts`、`examples/table-cases.json`、`e2e/table.spec.ts`）。第2段はこれで完了。
 
 ### 5.4 段階2 画面の枠と画面切替（計画は段階1の後に詳しくする）
 

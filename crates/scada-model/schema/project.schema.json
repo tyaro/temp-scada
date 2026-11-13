@@ -293,30 +293,10 @@
                   "$ref": "#/$defs/textStyle"
                 },
                 "slotBinding": {
-                  "type": "object",
-                  "properties": {
-                    "slotName": {
-                      "type": "string",
-                      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
-                      "not": {
-                        "pattern": "[^A-Za-z0-9_]"
-                      }
-                    }
-                  },
-                  "required": ["slotName"],
-                  "additionalProperties": false
+                  "$ref": "#/$defs/slotBinding"
                 },
                 "stateColors": {
-                  "type": "object",
-                  "properties": {
-                    "unknownColor": {
-                      "$ref": "#/$defs/color",
-                      "maxLength": 7,
-                      "type": "string"
-                    }
-                  },
-                  "required": ["unknownColor"],
-                  "additionalProperties": false
+                  "$ref": "#/$defs/stateTextColors"
                 },
                 "format": {
                   "$ref": "#/$defs/numericFormat"
@@ -389,18 +369,7 @@
                   "$ref": "#/$defs/tagBinding"
                 },
                 "slotBinding": {
-                  "type": "object",
-                  "properties": {
-                    "slotName": {
-                      "type": "string",
-                      "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
-                      "not": {
-                        "pattern": "[^A-Za-z0-9_]"
-                      }
-                    }
-                  },
-                  "required": ["slotName"],
-                  "additionalProperties": false
+                  "$ref": "#/$defs/slotBinding"
                 }
               },
               "required": ["type", "direction", "min", "max"],
@@ -452,12 +421,15 @@
                         "fill": { "$ref": "#/$defs/color" },
                         "color": { "$ref": "#/$defs/color" },
                         "binding": { "$ref": "#/$defs/tableCellBinding" },
-                        "format": { "$ref": "#/$defs/numericFormat" }
+                        "format": { "$ref": "#/$defs/numericFormat" },
+                        "slotBinding": { "$ref": "#/$defs/slotBinding" },
+                        "stateColors": { "$ref": "#/$defs/stateTextColors" }
                       },
                       "required": ["text"],
                       "dependentRequired": {
-                        "format": ["binding"]
+                        "stateColors": ["slotBinding"]
                       },
+                      "not": { "required": ["binding", "slotBinding"] },
                       "additionalProperties": false
                     }
                   }
@@ -828,6 +800,32 @@
     "color": {
       "type": "string",
       "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "slotBinding": {
+      "type": "object",
+      "properties": {
+        "slotName": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]{0,63}$",
+          "not": {
+            "pattern": "[^A-Za-z0-9_]"
+          }
+        }
+      },
+      "required": ["slotName"],
+      "additionalProperties": false
+    },
+    "stateTextColors": {
+      "type": "object",
+      "properties": {
+        "unknownColor": {
+          "$ref": "#/$defs/color",
+          "maxLength": 7,
+          "type": "string"
+        }
+      },
+      "required": ["unknownColor"],
+      "additionalProperties": false
     },
     "placementName": {
       "type": "string",

@@ -142,9 +142,17 @@ export interface TableCell {
   color?: string;
   /**
    * The tag the cell reads (screen tables only). A bound cell shows the
-   * reading with `format` instead of `text`; `format` requires `binding`.
+   * reading with `format` instead of `text`.
    */
   binding?: TagBinding;
+  /**
+   * The declared read slot the cell shows (tables inside a Symbol definition
+   * only; never together with `binding`). Shown like a slot-bound Text.
+   */
+  slotBinding?: { slotName: string };
+  /** State text colors (a cell bound to a bool or state slot only). */
+  stateColors?: StateTextColors;
+  /** Numeric format; requires `binding` or `slotBinding`. */
   format?: NumericFormat;
 }
 /**

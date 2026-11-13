@@ -10,6 +10,7 @@ import {
   buildTableCells,
   parseTableColors,
   parseTableFormats,
+  parseTableSlots,
   parseTableTags,
   parseTableText,
   parseTableWeights,
@@ -172,17 +173,36 @@ export function objectFormCommand(
           columns,
           "セルの文字色",
         ),
-        // Symbol 定義の表のセルはタグに結合しない（2b で slot に結合する）。
+        // Symbol 定義の表のセルはタグの代わりに宣言済みの読取 slot に結合する。
         context.definition
           ? []
           : parseTableTags(String(data.get("tableTags") ?? ""), rows, columns),
+        parseTableFormats(
+          String(data.get("tableFormats") ?? ""),
+          rows,
+          columns,
+        ),
         context.definition
-          ? []
-          : parseTableFormats(
-              String(data.get("tableFormats") ?? ""),
-              rows,
-              columns,
-            ),
+          ? {
+              slots: parseTableSlots(
+                String(data.get("tableSlots") ?? ""),
+                rows,
+                columns,
+                (context.readSlots ?? []).map((slot) => slot.name),
+              ),
+              unknownColors: parseTableColors(
+                String(data.get("tableUnknownColors") ?? ""),
+                rows,
+                columns,
+                "セルの取得不能の色",
+              ),
+              isStateSlot: (slotName) =>
+                context.readSlots?.some(
+                  (slot) =>
+                    slot.name === slotName && isStateSlotType(slot.type),
+                ) ?? false,
+            }
+          : undefined,
       ),
       style: { fontSize, fontWeight, align },
       ...(border ? { border } : {}),

@@ -1311,5 +1311,386 @@
         }
       }
     }
+  },
+  {
+    "name": "symbol table with slot cells, format and state colors",
+    "target": "/symbols/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000830",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1, 1],
+        "rows": [1, 1],
+        "cells": [
+          [
+            {
+              "text": "運転"
+            },
+            {
+              "text": "",
+              "slotBinding": {
+                "slotName": "running"
+              },
+              "stateColors": {
+                "unknownColor": "#64748b"
+              }
+            }
+          ],
+          [
+            {
+              "text": "電流"
+            },
+            {
+              "text": "-",
+              "slotBinding": {
+                "slotName": "current"
+              },
+              "format": {
+                "decimals": 1,
+                "unit": "A"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "symbol table with a bool slot cell without state colors",
+    "target": "/symbols/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000831",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "slotBinding": {
+                "slotName": "running"
+              },
+              "color": "#ffffff"
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "slot cell in a screen table",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000832",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "slotBinding": {
+                "slotName": "running"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "cell with both binding and slotBinding",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000833",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": {
+                "externalName": "Demo.Number"
+              },
+              "slotBinding": {
+                "slotName": "current"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "cell with an undeclared slot",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000834",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "slotBinding": {
+                "slotName": "missing"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "state colors on a number slot cell",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000835",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "slotBinding": {
+                "slotName": "current"
+              },
+              "stateColors": {
+                "unknownColor": "#64748b"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "state colors without a slot",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000836",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "stateColors": {
+                "unknownColor": "#64748b"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "format without binding or slot in a symbol table",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000837",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "format": {
+                "decimals": 1
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "invalid slot name in a cell",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000838",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "slotBinding": {
+                "slotName": "1running"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "invalid unknown color in a cell",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000839",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "slotBinding": {
+                "slotName": "running"
+              },
+              "stateColors": {
+                "unknownColor": "gray"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
   }
 ]

@@ -77,8 +77,20 @@ export function validateTableShape(shape: TableShape) {
         if (!CELL_TEXT.test(cell.binding.externalName))
           throw new Error("表のセルのタグの外部名にタブ・改行は使えません");
       }
-      if (cell.format !== undefined && cell.binding === undefined)
-        throw new Error("表のセルの書式はタグのあるセルだけに付けられます");
+      if (cell.binding !== undefined && cell.slotBinding !== undefined)
+        throw new Error("表のセルにタグとslotを同時には結合できません");
+      if (
+        cell.format !== undefined &&
+        cell.binding === undefined &&
+        cell.slotBinding === undefined
+      )
+        throw new Error(
+          "表のセルの書式はタグかslotのあるセルだけに付けられます",
+        );
+      if (cell.stateColors !== undefined && cell.slotBinding === undefined)
+        throw new Error(
+          "表のセルの取得不能の色はslotのあるセルだけに付けられます",
+        );
     }
 }
 
@@ -225,6 +237,22 @@ export function parseTableTags(
 }
 
 /**
+ * セルの slot 名の行列。空のセルは結合なし。`declared` にない slot 名は誤り。
+ */
+export function parseTableSlots(
+  text: string,
+  rows: number,
+  columns: number,
+  declared: readonly string[],
+): ({ slotName: string } | undefined)[][] {
+  return parseTableGrid(text, rows, columns, "セルのslot", (token, where) => {
+    if (!declared.includes(token))
+      throw new Error(`${where}は宣言済みの読取slotではありません`);
+    return { slotName: token };
+  });
+}
+
+/**
  * セルの書式の行列。各セルは「小数桁;単位」。最初の `;` で分け、左が空なら
  * 小数桁なし（0〜6の整数のみ）、右が空なら単位なし。空のセルは書式なし。
  */
@@ -323,6 +351,16 @@ export function formatTableTags(shape: TableShape): string {
   return formatTableGrid(shape, (cell) => cell.binding?.externalName ?? "");
 }
 
+/** 入力欄用: セルの slot 名をタブ区切りにする。 */
+export function formatTableSlots(shape: TableShape): string {
+  return formatTableGrid(shape, (cell) => cell.slotBinding?.slotName ?? "");
+}
+
+/** 入力欄用: セルの取得不能の色（状態の色に従うセル）をタブ区切りにする。 */
+export function formatTableUnknownColors(shape: TableShape): string {
+  return formatTableGrid(shape, (cell) => cell.stateColors?.unknownColor ?? "");
+}
+
 /** 入力欄用: セルの書式を「小数桁;単位」でタブ区切りにする。 */
 export function formatTableFormats(shape: TableShape): string {
   return formatTableGrid(shape, (cell) =>
@@ -336,9 +374,18 @@ export function formatTableWeights(weights: readonly number[]): string {
   return weights.every((weight) => weight === 1) ? "" : weights.join(", ");
 }
 
+/** Symbol 定義内の表のセルの slot と取得不能の色の行列。 */
+export interface TableSlotGrids {
+  slots: ({ slotName: string } | undefined)[][];
+  unknownColors: (string | undefined)[][];
+  /** slot が bool か state なら true（取得不能の色を書けるセル）。 */
+  isStateSlot: (slotName: string) => boolean;
+}
+
 /**
- * 文字・色・タグ・書式の行列から cells を組み立てる（値のない key は保存しない）。
- * タグのないセルの書式は誤り。
+ * 文字・色・タグ・書式（Symbol 定義では slot・取得不能の色）の行列から cells を
+ * 組み立てる（値のない key は保存しない）。タグも slot もないセルの書式、
+ * bool・state 以外の slot のセルの取得不能の色は誤り。
  */
 export function buildTableCells(
   texts: string[][],
@@ -346,23 +393,47 @@ export function buildTableCells(
   colors: (string | undefined)[][],
   tags: (TagBinding | undefined)[][] = [],
   formats: (NumericFormat | undefined)[][] = [],
+  slotGrids?: TableSlotGrids,
 ): TableCell[][] {
   return texts.map((row, r) =>
     row.map((text, c) => {
       const binding = tags[r]?.[c];
+      const slotBinding = slotGrids?.slots[r]?.[c];
+      const unknownColor = slotGrids?.unknownColors[r]?.[c];
       const format = formats[r]?.[c];
-      if (format && !binding)
+      const where = `${r + 1}行${c + 1}列`;
+      if (format && !binding && !slotBinding)
         throw new Error(
-          `セルの書式の${r + 1}行${c + 1}列はタグのないセルです。書式はタグのあるセルだけに付けてください`,
+          slotGrids
+            ? `セルの書式の${where}はslotのないセルです。書式はslotのあるセルだけに付けてください`
+            : `セルの書式の${where}はタグのないセルです。書式はタグのあるセルだけに付けてください`,
+        );
+      if (
+        unknownColor &&
+        !(slotBinding && slotGrids?.isStateSlot(slotBinding.slotName))
+      )
+        throw new Error(
+          `セルの取得不能の色の${where}はboolかstateのslotのセルではありません`,
         );
       return {
         text,
         ...(fills[r]?.[c] ? { fill: fills[r][c] } : {}),
         ...(colors[r]?.[c] ? { color: colors[r][c] } : {}),
         ...(binding ? { binding } : {}),
+        ...(slotBinding ? { slotBinding } : {}),
+        ...(unknownColor ? { stateColors: { unknownColor } } : {}),
         ...(format && Object.keys(format).length ? { format } : {}),
       };
     }),
+  );
+}
+
+/** 表のセルが結合した slot 名（行優先の順、重複を含む）。 */
+export function tableCellSlotNames(shape: TableShape): string[] {
+  return shape.cells.flatMap((row) =>
+    row.flatMap((cell) =>
+      cell.slotBinding ? [cell.slotBinding.slotName] : [],
+    ),
   );
 }
 

@@ -1,5 +1,5 @@
 import type { ScreenObject, TagBinding } from "./project";
-import { tableCellBindings } from "./table";
+import { tableCellBindings, tableCellSlotNames } from "./table";
 
 /** Shapes that read one value: a Text and a level. */
 type ReadingShape = Extract<ScreenObject["shape"], { type: "text" | "level" }>;
@@ -18,9 +18,12 @@ export function shapeTagBindings(shape: ScreenObject["shape"]): TagBinding[] {
   return binding ? [binding] : [];
 }
 
-/** The slot a Text or level inside a shared Symbol reads. */
-export function shapeSlotName(
-  shape: ScreenObject["shape"],
-): string | undefined {
-  return readingShape(shape)?.slotBinding?.slotName;
+/**
+ * The slots a shape inside a shared Symbol reads: none or one for a Text or
+ * level, and every slot-bound cell of a table (row by row, repeats kept).
+ */
+export function shapeSlotNames(shape: ScreenObject["shape"]): string[] {
+  if (shape.type === "table") return tableCellSlotNames(shape);
+  const slotName = readingShape(shape)?.slotBinding?.slotName;
+  return slotName === undefined ? [] : [slotName];
 }

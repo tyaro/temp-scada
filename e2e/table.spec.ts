@@ -2,6 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/read-presentation.project.json" with { type: "json" };
 import fixtures from "../examples/read-display-cases.json" with { type: "json" };
+import stateSample from "../examples/state-color.project.json" with { type: "json" };
 import {
   chooseTheme,
   fileCommand,
@@ -344,4 +345,184 @@ test("the Inspector binds table cells to tags with a format", async ({
     binding: { externalName: "Demo.Number" },
     format: { decimals: 1, unit: "℃" },
   });
+});
+
+// 2b: Symbol 定義の中の表のセルは slot に結合し、Text と同じ規則で状態の文字・色と
+// 書式付きの数値を出す。取得不能の色はセル単位。
+test("slot-bound table cells in a Symbol show the state text, colors and numbers", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const cells = await page.evaluate(async (sample) => {
+    const { mount, unmount, tick } =
+      await import("/node_modules/.vite/deps/svelte.js");
+    const { parseProject } = await import("/src/lib/project.ts");
+    const { slotPresentation } = await import("/src/lib/slot-presentation.ts");
+    const { default: ScreenPainting } =
+      await import("/src/lib/ScreenPainting.svelte");
+    const definition = (sample as any).symbols[0];
+    const tableId = "0199f6aa-0000-7000-8000-000000000890";
+    definition.objects.push({
+      id: tableId,
+      order: 900,
+      x: 0,
+      y: 0,
+      width: 120,
+      height: 40,
+      rotation: 0,
+      fill: "#111827",
+      shape: {
+        type: "table",
+        columns: [1, 1],
+        rows: [1],
+        cells: [
+          [
+            {
+              text: "",
+              slotBinding: { slotName: "running" },
+              stateColors: { unknownColor: "#d97706" },
+            },
+            {
+              text: "",
+              slotBinding: { slotName: "current" },
+              format: { decimals: 1, unit: "A" },
+            },
+          ],
+        ],
+        style: { fontSize: 10, fontWeight: "normal", align: "center" },
+      },
+    });
+    (sample as any).equipmentTypes[0].slots = [
+      {
+        name: "running",
+        type: "bool",
+        direction: "read",
+        boolDisplay: {
+          true: { text: "運転", color: "#16a34a" },
+          false: { text: "停止", color: "#64748b" },
+        },
+      },
+      { name: "current", type: "number", direction: "read" },
+    ];
+    const [p101, p102] = (sample as any).equipment;
+    for (const [equipment, tag] of [
+      [p101, "P101"],
+      [p102, "P102"],
+    ])
+      equipment.bindings = [
+        { slotName: "running", externalName: `${tag}.Run` },
+        { slotName: "current", externalName: `${tag}.Current` },
+      ];
+    const project = parseProject(JSON.stringify(sample));
+    const good = (value: any) => ({
+      state: "good",
+      label: "Good",
+      text: String(value.value),
+      value,
+      provenance: {
+        valueSource: "real",
+        collectionMode: "configured",
+        catalogRevision: 1,
+        runId: null,
+        sourceTimestampMs: 0,
+      },
+    });
+    const values: Record<string, any> = {
+      "P101.Run": slotPresentation("bad"),
+      "P101.Current": good({ type: "number", value: 12.345 }),
+      "P102.Run": good({ type: "bool", value: true }),
+      "P102.Current": slotPresentation("disconnected"),
+    };
+    const target = document.createElement("div");
+    target.style.cssText =
+      "position:fixed;left:0;top:0;width:960px;height:700px";
+    document.body.append(target);
+    const app = mount(ScreenPainting, {
+      target,
+      props: {
+        screen: project.screens[0],
+        screens: project.screens,
+        symbols: project.symbols,
+        equipmentContext: {
+          equipmentTypes: project.equipmentTypes,
+          equipment: project.equipment,
+          readSlot: (_id: string, _slot: string, _type: string, name: string) =>
+            values[name],
+        },
+      },
+    });
+    await tick();
+    const read = (equipmentId: string, cell: string) =>
+      [...target.querySelectorAll("[data-symbol-id]")]
+        .filter((svg) =>
+          project.screens[0].objects.some(
+            (object: any) =>
+              object.shape.equipmentId === equipmentId &&
+              svg.closest(`[data-projected-object-id="${object.id}"]`),
+          ),
+        )
+        .map((svg) => {
+          const node = svg.querySelector(
+            `[data-symbol-child-id="${tableId}"] [data-table-cell="${cell}"]`,
+          );
+          return {
+            slot: node?.getAttribute("data-table-cell-slot"),
+            state: node?.getAttribute("data-table-cell-state"),
+            title: node?.querySelector("title")?.textContent,
+            text: node?.querySelector("[data-table-text]")?.textContent,
+            fill: node
+              ?.querySelector("[data-table-text]")
+              ?.getAttribute("fill"),
+          };
+        });
+    const result = {
+      p101Run: read(p101.id, "0:0"),
+      p101Current: read(p101.id, "0:1"),
+      p102Run: read(p102.id, "0:0"),
+      p102Current: read(p102.id, "0:1"),
+      bad: slotPresentation("bad"),
+      disconnected: slotPresentation("disconnected"),
+    };
+    unmount(app);
+    target.remove();
+    return result;
+  }, structuredClone(stateSample));
+  for (const key of [
+    "p101Run",
+    "p101Current",
+    "p102Run",
+    "p102Current",
+  ] as const)
+    expect(cells[key].length).toBeGreaterThan(0);
+  // Bad bool: 読取の文字と、セルの取得不能の色。
+  for (const cell of cells.p101Run)
+    expect(cell).toMatchObject({
+      slot: "running",
+      state: "bad",
+      text: cells.bad.text,
+      title: `running · ${cells.bad.label}`,
+      fill: "#d97706",
+    });
+  // bool true: boolDisplay の文字と色。
+  for (const cell of cells.p102Run)
+    expect(cell).toMatchObject({
+      slot: "running",
+      state: "good",
+      text: "運転",
+      fill: "#16a34a",
+    });
+  // number: 書式付きの数値。状態の色に従わないセルは通常の色。
+  for (const cell of cells.p101Current) {
+    expect(cell).toMatchObject({
+      slot: "current",
+      state: "good",
+      text: "12.3 A",
+    });
+    expect(cell.fill).not.toBe("#d97706");
+  }
+  for (const cell of cells.p102Current)
+    expect(cell).toMatchObject({
+      state: "disconnected",
+      text: cells.disconnected.text,
+    });
 });

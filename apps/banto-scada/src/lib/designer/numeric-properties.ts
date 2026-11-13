@@ -3,8 +3,10 @@ import type { ScreenObject } from "../project";
 import {
   formatTableColors,
   formatTableFormats,
+  formatTableSlots,
   formatTableTags,
   formatTableText,
+  formatTableUnknownColors,
   formatTableWeights,
 } from "../table";
 export type NumericProperty =
@@ -86,6 +88,8 @@ export function objectFormValues(
     values.tableColors = formatTableColors(shape, "color");
     values.tableTags = formatTableTags(shape);
     values.tableFormats = formatTableFormats(shape);
+    values.tableSlots = formatTableSlots(shape);
+    values.tableUnknownColors = formatTableUnknownColors(shape);
     values.tableFontSize = String(shape.style.fontSize);
     values.tableFontWeight = shape.style.fontWeight;
     values.tableAlign = shape.style.align;
