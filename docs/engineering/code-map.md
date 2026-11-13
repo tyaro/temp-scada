@@ -181,6 +181,8 @@ Symbol宣言のCRUDは`editor/symbol-handler.ts`、全Text参照の導出は`sym
 
 配管の矢印（`arrow`: none／start／end／both）の検査と矢印の多角形は`lib/line-arrow.ts`（`parseLineArrow`・`arrowHeads`・`arrowSize`）が担当し、`Primitive`の描画、`project.ts`の`getLayoutBounds`、Inspector・一括変更フォームと`editor`の検査が使う。`line-arrow.test.ts`・`examples/line-arrow-cases.json`・`e2e/line-arrow.spec.ts`が回帰入口。
 
+配管の分岐の点（T 字・3 本以上の端点の集まり）は保存せず、`lib/line-junction.ts`（`worldLines`・`SegmentIndex`・`lineJunctions`・`screenJunctions`）が画面直下の表示中の Polyline の world 座標から描画時に計算する。`Renderer`（Symbol 定義では計算しない）・`ScreenPainting`・`ScreenView`が`$derived`で求め、`LineJunctionDots.svelte`を各配置の`<g>`の直後に置く。選択・外接矩形には含めない。交差のまたぎも同じモジュールに足す。`line-junction.test.ts`・`e2e/line-junction.spec.ts`が回帰入口。[仕様](../design/graphics/line-junction.md)を参照する。
+
 液位は配置の`shape`の`level`（`project.ts`の`LevelShape`、共通schemaの`primitive.shape`）。表示は`level.ts`の`levelFromReading`・`levelFromSlot`・`levelFillRect`を`Primitive`が使い、Symbol内では`ObjectPainting`がslotの解決結果を渡す。Textと液位の結合の取り出しは`shape-bindings.ts`（参照一覧・一括置換・slotの使用箇所・状態一覧が使う）。下限・上限の検査は`validateLevelShape`とRustの`Project::from_json`。編集は`forms/object-form.ts`・`numeric-properties.ts`・`editor/single-object-handler.ts`の`level`。`level.test.ts`・`examples/level-cases.json`・`e2e/level.spec.ts`が回帰入口。[仕様](../design/graphics/level.md)を参照する。
 
 組込部品（ポンプ・バルブと、フロー図用のブロワー・槽・塔・サイクロン・熱交換器・撹拌機・コンベヤ・スクリュー・モーター）は`lib/symbol-library.json`のSymbol定義（Polylineだけ、接続口は配置枠の辺の中央に置く）。一覧・名前・検索語・型`BuiltinTemplate`は`builtin-symbols.ts`に集め、部品パレット・お気に入り（`favorites.ts`）・挿入メニュー（`designer-actions.ts`）・配置（`placement-handler.ts`の`add-symbol`。配置枠は定義の幅・高さ）が使う。部品を足すときはJSONと`builtin-symbols.ts`の検索語だけを変える。`builtin-symbols.test.ts`・`e2e/builtin-parts.spec.ts`が回帰入口。

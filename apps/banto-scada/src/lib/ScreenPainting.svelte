@@ -7,6 +7,8 @@
   import { compositedOpacity } from "./opacity";
   import ScreenBackground from "./ScreenBackground.svelte";
   import ObjectPainting from "./ObjectPainting.svelte";
+  import LineJunctionDots from "./LineJunctionDots.svelte";
+  import { screenJunctions } from "./line-junction";
   import ScreenView from "./ScreenView.svelte";
   let {
     screen,
@@ -31,6 +33,7 @@
     readings?: TagReadings;
   } = $props();
   const clipId = $props.id();
+  const junctions = $derived(screenJunctions(screen.objects));
 </script>
 
 <svg
@@ -83,6 +86,7 @@
             {trends}
           />{/if}
       </g>
+      <LineJunctionDots junctions={junctions.get(object.id)} />
     {/each}
   </g>
 </svg>
