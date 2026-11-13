@@ -1,3 +1,4 @@
+import { frameScreenIds } from "../operator-frame";
 import { remapConnections } from "../connections";
 import {
   getBounds,
@@ -124,7 +125,9 @@ export function applyPasteCommand(
       const mapped =
         screenReferences.get(id) ??
         (next.screens.some((s) => s.id === id) ? id : undefined);
-      if (mapped) object.shape.target = { kind: "screen", screenId: mapped };
+      // ヘッダー・フッターの画面は行き先にできないので、行き先を外す。
+      if (mapped && !frameScreenIds(next.operatorFrame).has(mapped))
+        object.shape.target = { kind: "screen", screenId: mapped };
       else delete object.shape.target;
     }
   }

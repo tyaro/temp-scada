@@ -9,6 +9,7 @@
   import type { FloatingInspector } from "./controllers/floating-inspector.svelte";
   import SymbolEquipmentCheck from "./SymbolEquipmentCheck.svelte";
   import StateColor from "./StateColor.svelte";
+  import { frameScreenIds } from "../operator-frame";
   import { stateColorUsages } from "../state-color";
   import GroupInspector from "./GroupInspector.svelte";
   import { selectedGroup, groupFor } from "../geometric-groups";
@@ -120,6 +121,8 @@
     /** Show the settings even with a selection (revealing an unapplied or invalid field). */
     showScreenSettings?: boolean;
   } = $props();
+  /** 画面切替ボタンの行き先にできない、運転表示のヘッダー・フッターの画面。 */
+  const frameScreens = $derived(frameScreenIds(project.operatorFrame));
   const group = $derived(selectedGroup(screen, selectedIds));
   const containsGroups = $derived(
     selectedIds.some((id) => groupFor(screen, id)),
@@ -1535,7 +1538,7 @@
                     name="navTarget"
                     aria-label="画面切替ボタンの行き先"
                     ><option value="">未設定</option>
-                    {#each project.screens as target (target.id)}<option
+                    {#each project.screens.filter((s) => !frameScreens.has(s.id)) as target (target.id)}<option
                         value={`screen:${target.id}`}
                         >{target.name}{target.id === screen.id
                           ? "（この画面）"

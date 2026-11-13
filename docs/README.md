@@ -86,6 +86,7 @@ docs/
 - [液位（level 図形）](design/graphics/level.md)
 - [表（table 図形）](design/graphics/table.md)
 - [画面切替ボタン（navButton）](design/graphics/nav-button.md)
+- [運転表示の枠（operatorFrame）](design/graphics/operator-frame.md)
 - [時計（clock 図形）](design/graphics/clock.md)
 - [単色と枠線のα](design/graphics/color-alpha-design.md)
 - [実線・破線・点線](design/graphics/line-style-design.md)

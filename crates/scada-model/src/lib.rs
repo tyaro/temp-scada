@@ -577,6 +577,7 @@ impl Project {
         equipment::validate(&value, &mut ids)?;
         validate_screen_views(&value)?;
         validate_nav_buttons(&value)?;
+        validate_operator_frame(&value)?;
         Ok(Self(value))
     }
 
@@ -641,6 +642,47 @@ fn validate_nav_buttons(project: &Value) -> Result<(), String> {
             }
             if !ids.contains(shape["target"]["screenId"].as_str().unwrap()) {
                 return Err("画面切替ボタンの行き先の画面が見つかりません".into());
+            }
+        }
+    }
+    Ok(())
+}
+
+/// 運転表示の枠。指定した画面が存在し、開始・ヘッダー・フッターは別の画面で、
+/// ヘッダー・フッターの画面は画面切替ボタンの行き先にできない。
+/// 仕様: docs/design/graphics/operator-frame.md
+fn validate_operator_frame(project: &Value) -> Result<(), String> {
+    let frame = &project["operatorFrame"];
+    if frame.is_null() {
+        return Ok(());
+    }
+    let screens = project["screens"].as_array().unwrap();
+    let ids: HashSet<&str> = screens.iter().map(|s| s["id"].as_str().unwrap()).collect();
+    let mut used: Vec<&str> = Vec::new();
+    for key in ["startScreenId", "headerScreenId", "footerScreenId"] {
+        let Some(id) = frame[key].as_str() else {
+            continue;
+        };
+        if !ids.contains(id) {
+            return Err("運転表示の枠の画面が見つかりません".into());
+        }
+        if used.contains(&id) {
+            return Err("運転表示の開始・ヘッダー・フッターは別の画面にしてください".into());
+        }
+        used.push(id);
+    }
+    let framed: Vec<&str> = ["headerScreenId", "footerScreenId"]
+        .iter()
+        .filter_map(|key| frame[*key].as_str())
+        .collect();
+    for screen in screens {
+        for object in screen["objects"].as_array().unwrap() {
+            let shape = &object["shape"];
+            if shape["type"] == "navButton"
+                && shape["target"]["kind"] == "screen"
+                && framed.contains(&shape["target"]["screenId"].as_str().unwrap())
+            {
+                return Err("ヘッダー・フッターの画面は画面切替ボタンの行き先にできません".into());
             }
         }
     }
@@ -855,6 +897,62 @@ mod tests {
                 .as_array_mut()
                 .unwrap()
                 .push(case["object"].clone());
+            let parsed = Project::from_json(&input.to_string());
+            assert_eq!(
+                parsed.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{} {:?}",
+                case["name"],
+                parsed.as_ref().err()
+            );
+            if let Ok(project) = parsed {
+                assert_eq!(
+                    Project::from_json(&project.to_json()).unwrap().0,
+                    project.0,
+                    "{}",
+                    case["name"]
+                );
+            }
+        }
+    }
+    #[test]
+    fn shared_operator_frame_contract() {
+        let base: Value = serde_json::from_str(include_str!(
+            "../../../examples/read-presentation.project.json"
+        ))
+        .unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/operator-frame-cases.json"))
+                .unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            for id in case["extraScreens"].as_array().into_iter().flatten() {
+                input["screens"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(serde_json::json!({
+                        "id": id, "name": "追加画面", "width": 1920, "height": 1080,
+                        "background": "#ffffff", "objects": [], "folders": [], "groups": []
+                    }));
+            }
+            if let Some(button) = case.get("navButton") {
+                input["screens"][0]["objects"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(serde_json::json!({
+                        "id": "0199f6ab-0000-7000-8000-000000000f01", "order": 900,
+                        "x": 10, "y": 10, "width": 120, "height": 36, "rotation": 0,
+                        "shape": {
+                            "type": "navButton",
+                            "target": { "kind": "screen", "screenId": button["screenId"] },
+                            "label": "枠", "fontSize": 16,
+                            "fill": "#1e293b", "textColor": "#e2e8f0"
+                        }
+                    }));
+            }
+            if !case["operatorFrame"].is_null() {
+                input["operatorFrame"] = case["operatorFrame"].clone();
+            }
             let parsed = Project::from_json(&input.to_string());
             assert_eq!(
                 parsed.is_ok(),

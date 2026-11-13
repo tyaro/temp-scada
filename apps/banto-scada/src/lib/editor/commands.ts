@@ -389,6 +389,15 @@ export type ProjectCommand =
     }
   | { type: "remove-trend"; trendId: string }
   | { type: "update-project"; name: string }
+  | {
+      type: "set-operator-frame";
+      /** 空の欄は外す。すべて空なら `operatorFrame` を消す。 */
+      frame: {
+        startScreenId?: string;
+        headerScreenId?: string;
+        footerScreenId?: string;
+      };
+    }
   | ({ type: "replace-binding-reference" } & BindingReplacementRequest)
   | EquipmentCommand;
 export type SymbolCommand =
@@ -505,6 +514,7 @@ const commandScopes = {
   reorder: "object",
   remove: "object",
   "update-project": "project",
+  "set-operator-frame": "project",
   "replace-binding-reference": "project",
   "create-equipment-type": "project",
   "update-equipment-type": "project",

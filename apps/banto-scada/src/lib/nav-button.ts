@@ -1,4 +1,5 @@
 import type { NavButtonShape, NavTarget, Project } from "./project";
+import { frameScreenIds } from "./operator-frame";
 
 /**
  * 画面切替ボタンの純関数。仕様: docs/design/graphics/nav-button.md
@@ -10,7 +11,7 @@ const COLOR = /^#[0-9a-fA-F]{6}$/;
 /** Inspector からの内容を検査する。`project` を渡すと行き先の画面の存在も確かめる。 */
 export function validateNavButtonShape(
   shape: NavButtonShape,
-  project?: Pick<Project, "screens">,
+  project?: Pick<Project, "screens" | "operatorFrame">,
 ): void {
   const target = shape.target;
   if (target !== undefined) {
@@ -19,6 +20,10 @@ export function validateNavButtonShape(
         throw new Error("画面切替ボタンの行き先の画面を選択してください");
       if (project && !project.screens.some((s) => s.id === target.screenId))
         throw new Error("画面切替ボタンの行き先の画面が見つかりません");
+      if (project && frameScreenIds(project.operatorFrame).has(target.screenId))
+        throw new Error(
+          "ヘッダー・フッターの画面は画面切替ボタンの行き先にできません",
+        );
     } else if (target.kind !== "back" && target.kind !== "forward")
       throw new Error("画面切替ボタンの行き先を選択してください");
   }
