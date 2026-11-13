@@ -80,6 +80,18 @@ describe("built-in parts", () => {
       ).toBe(true);
   });
 
+  it("lets lines attached to the conveyor's ends meet its pulleys", () => {
+    const { width, height, objects } = builtinDefinition("conveyor");
+    const vertices = objects.flatMap((object) =>
+      object.shape.type === "polyline" ? object.shape.points : [],
+    );
+    for (const [x, y] of [
+      [0, height / 2],
+      [width, height / 2],
+    ])
+      expect(vertices).toContainEqual({ x, y });
+  });
+
   it.each(BUILTIN_PARTS.map((part) => [part.template]))(
     "%s is placed at its own size and survives a save round trip",
     (template) => {
