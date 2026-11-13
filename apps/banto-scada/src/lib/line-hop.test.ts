@@ -202,6 +202,29 @@ describe("lineHopSpans", () => {
         [0, y],
         [100, y],
       ]);
+    // 曲がり角（途中の頂点）の側は直線を残さない。
+    const near = pipe(
+      [
+        [50, -50],
+        [50, 0],
+        [50, 100],
+      ],
+      { order: 10000 },
+    );
+    // 角から 3 の所の交差は半径 3 に縮める。
+    expect(spans(crossing(3), near).get(near.id)).toEqual([
+      { segment: 1, from: 0, to: 6 },
+    ]);
+    // 角から 1 の所では縮めても最小の半分未満なので、またがない。
+    expect(spans(crossing(1), near).size).toBe(0);
+  });
+
+  it("keeps a straight run as long as an arrow at the ends of the pipe", () => {
+    const crossing = (y: number) =>
+      pipe([
+        [0, y],
+        [100, y],
+      ]);
     const near = pipe(
       [
         [50, 0],
@@ -209,12 +232,36 @@ describe("lineHopSpans", () => {
       ],
       { order: 10000 },
     );
-    // 端から 3 の所の交差は半径 3 に縮める。
-    expect(spans(crossing(3), near).get(near.id)).toEqual([
-      { segment: 0, from: 0, to: 6 },
+    // 線幅 2 の矢印の長さは 8。始点から 10 の交差は半径 10 - 8 = 2 に縮め、弧は 8 から始まる。
+    expect(spans(crossing(10), near).get(near.id)).toEqual([
+      { segment: 0, from: 8, to: 12 },
     ]);
-    // 端から 1 の所では縮めても最小の半分未満なので、またがない。
-    expect(spans(crossing(1), near).size).toBe(0);
+    // 始点から 9 では半径 1 で最小の半分未満なので、またがない。
+    expect(spans(crossing(9), near).size).toBe(0);
+  });
+
+  it("keeps a straight run at the ends of a cut pipe so a short pipe never vanishes", () => {
+    // 長さ 14 の短い横の配管の中央（x=50）を縦の配管が通る。両端に 8 ずつ残すと切れないので切らない。
+    const short = pipe([
+        [43, 50],
+        [57, 50],
+      ]),
+      hopper = pipe(
+        [
+          [50, 0],
+          [50, 100],
+        ],
+        { order: 10000 },
+      );
+    expect(cutSpans(short, hopper).size).toBe(0);
+    // 始点から 11 の交差は、切る半径を 11 - 8 = 3 に縮める（区間 8–14）。
+    const nearStart = pipe([
+      [39, 50],
+      [100, 50],
+    ]);
+    expect(cutSpans(nearStart, hopper).get(nearStart.id)).toEqual([
+      { segment: 0, from: 8, to: 14, kind: "gap" },
+    ]);
   });
 
   it("merges hops that would overlap into one semicircle", () => {

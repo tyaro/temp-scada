@@ -5,6 +5,7 @@ import type {
   ScreenObject,
 } from "./project";
 import { objectToWorld, worldToObject } from "./rotation";
+import { arrowSize } from "./line-arrow";
 import {
   closestOnSegment,
   junctionTolerance,
@@ -44,6 +45,19 @@ export interface HopSpan {
 }
 
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
+
+/**
+ * 線の始点・終点の側に残す直線の長さ。線分の端が線そのものの端（始点・終点）のときだけ、
+ * 矢印の長さ（`arrowSize`）を残す。矢印は保存の points の向きで描くので、弧・切れ目がそこまで
+ * 届くと矢印が線から浮く・弧とずれる。途中の頂点（曲がり角）の側は 0。
+ */
+function endKeep(segment: IndexedSegment, line: WorldLine) {
+  const keep = arrowSize(line.strokeWidth);
+  return {
+    start: segment.index === 0 ? keep : 0,
+    end: segment.index === line.points.length - 2 ? keep : 0,
+  };
+}
 const cross = (a: Point, b: Point) => a.x * b.y - a.y * b.x;
 const at = (a: Point, b: Point, ratio: number): Point => ({
   x: a.x + (b.x - a.x) * ratio,
@@ -189,7 +203,14 @@ export function lineHopSpans(
         const crossedLine = lines[other.line];
         const crossedLength = distance(other.a, other.b);
         const crossedAlong = distance(other.a, crossing.at);
-        const cut = hopRadius(hopper.strokeWidth, crossedLine.strokeWidth);
+        const keep = endKeep(other, crossedLine);
+        // 線の端（始点・終点）には直線を残す（短い配管が消える・矢印が浮くのを防ぐ）。
+        const cut = Math.min(
+          hopRadius(hopper.strokeWidth, crossedLine.strokeWidth),
+          keep.start ? crossedAlong - keep.start : Infinity,
+          keep.end ? crossedLength - crossedAlong - keep.end : Infinity,
+        );
+        if (cut < hopShrinkLimit) continue;
         const list = gaps.get(other) ?? [];
         list.push({
           from: Math.max(0, crossedAlong - cut),
@@ -199,10 +220,11 @@ export function lineHopSpans(
         continue;
       }
       blocked ??= covered.along(segment.a, segment.b);
+      const keep = endKeep(segment, hopper);
       const radius = Math.min(
         hopRadius(hopper.strokeWidth, lines[other.line].strokeWidth),
-        crossing.along,
-        length - crossing.along,
+        crossing.along - keep.start,
+        length - crossing.along - keep.end,
         ...blocked.map(
           (junction) =>
             Math.abs(junction.along - crossing.along) - junction.reach,
