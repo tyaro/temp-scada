@@ -106,6 +106,28 @@ export function applyObjectCreation(
         border: { color: "#94a3b8", width: 1 },
       },
     });
+  } else if (command.kind === "navButton") {
+    if (definitionId)
+      throw new Error("Symbol定義には画面切替ボタンを置けません");
+    // Root `fill` is not part of a nav button; its colors live in the shape.
+    screen.objects.push({
+      id: base.id,
+      order: base.order,
+      rotation: 0,
+      x: base.x,
+      y: base.y,
+      width: 140,
+      height: 40,
+      shape: {
+        type: "navButton",
+        label: "画面切替",
+        fontSize: 16,
+        fill: "#334155",
+        textColor: "#f8fafc",
+        currentFill: "#0ea5e9",
+        currentTextColor: "#0f172a",
+      },
+    });
   } else if (command.kind === "level") {
     screen.objects.push({
       ...base,

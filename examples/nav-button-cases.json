@@ -1,0 +1,479 @@
+[
+  {
+    "name": "button to another screen",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000802",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "button to its own screen",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000803",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f200-0000-7000-8000-000000000002"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "back button",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000804",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "back"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "forward button",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000805",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "forward"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "button without a target",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000801",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "current colors, name, opacity",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000806",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 90,
+      "name": "共通へ",
+      "locked": true,
+      "visible": false,
+      "opacity": 0.5,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0",
+        "currentFill": "#0ea5e9",
+        "currentTextColor": "#0f172a"
+      }
+    }
+  },
+  {
+    "name": "missing target screen",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000807",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199ff00-0000-7000-8000-000000000099"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "hidden button with a missing screen",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000808",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "visible": false,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199ff00-0000-7000-8000-000000000099"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "inside a Symbol definition",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000809",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "flip forbidden",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000810",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "flipX": true,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "line break in label",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000811",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "一\n二",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "back with a screen id",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000812",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "back",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "unknown target kind",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000813",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "home"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "screen target without id",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000814",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "missing fill",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000815",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "zero font size",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000816",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "共通画面",
+        "fontSize": 0,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "bad current color",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000817",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0",
+        "currentFill": "red"
+      }
+    }
+  },
+  {
+    "name": "root fill forbidden",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000818",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "fill": "#ffffff",
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "unknown shape field",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000819",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "screen",
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0",
+        "action": "write"
+      }
+    }
+  }
+]

@@ -45,6 +45,13 @@
         height="15"
         rx="1"
       /><path d="M8 22h8M12 18v4M5 7h8v7H5zM16 7h3M16 11h3" />
+    {:else if object.shape.type === "navButton"}<rect
+        x="2"
+        y="6"
+        width="20"
+        height="12"
+        rx="3"
+      /><path d="M9 12h6M13 9l3 3-3 3" />
     {:else if object.shape.type === "image"}<rect
         x="3"
         y="4"

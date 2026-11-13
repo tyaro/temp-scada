@@ -15,6 +15,7 @@ const basic = [
   "pipe",
   "level",
   "table",
+  "navButton",
 ] as const;
 const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
@@ -64,6 +65,8 @@ export function availableFavorites(
 ): FavoriteItem[] {
   return keys.flatMap((key): FavoriteItem[] => {
     const kind = basic.find((kind) => key === `basic:${kind}`);
+    // 画面切替ボタンは画面の直下だけ。Symbol 定義の編集中は出さない。
+    if (kind === "navButton" && !allowSymbols) return [];
     if (kind)
       return [
         {
@@ -77,6 +80,7 @@ export function availableFavorites(
             pipe: "配管",
             level: "液位",
             table: "表",
+            navButton: "画面切替ボタン",
           }[kind],
         },
       ];

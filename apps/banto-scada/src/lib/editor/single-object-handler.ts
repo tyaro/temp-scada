@@ -8,6 +8,7 @@ import { setLineStyle } from "../line-style";
 import { parseLineArrow } from "../line-arrow";
 import { validateLevelShape } from "../level";
 import { validateTableShape } from "../table";
+import { validateNavButtonShape } from "../nav-button";
 import type { SingleObjectCommand } from "./commands";
 import { newId, copySymbol } from "./model-helpers";
 import { isImageEditCommand, applyImageEdit } from "./image-handler";
@@ -115,6 +116,7 @@ export function applySingleObjectCommand(
       format,
       level,
       table,
+      navButton,
       stateColor,
       symbolId,
       equipmentId,
@@ -139,6 +141,7 @@ export function applySingleObjectCommand(
     if (
       (object.shape.type === "image" ||
         object.shape.type === "screenView" ||
+        object.shape.type === "navButton" ||
         object.shape.type === "trend" ||
         object.shape.type === "rectangle" ||
         object.shape.type === "ellipse") &&
@@ -276,6 +279,18 @@ export function applySingleObjectCommand(
       if (next.border === undefined) delete next.border;
       if (next.background === undefined) delete next.background;
       object.shape = next;
+    }
+    if (navButton !== undefined) {
+      if (definitionId || object.shape.type !== "navButton")
+        throw new Error("行き先・文字・色は画面切替ボタンにだけ設定できます");
+      const shape = {
+        type: "navButton" as const,
+        ...structuredClone(navButton),
+      };
+      validateNavButtonShape(shape, next);
+      for (const key of ["target", "currentFill", "currentTextColor"] as const)
+        if (shape[key] === undefined) delete shape[key];
+      object.shape = shape;
     }
     if (format !== undefined) {
       if (object.shape.type !== "text")

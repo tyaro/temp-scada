@@ -42,6 +42,7 @@
     trends = [],
     onopentrend,
     onopenequipment,
+    onnavigate,
     screens = [],
     equipmentContext,
     readings,
@@ -73,6 +74,8 @@
     trends?: readonly TrendDefinition[];
     onopentrend?: (objectId: string) => void;
     onopenequipment?: (equipmentId: string, origin: SVGElement) => void;
+    /** 表示プレビューで画面切替ボタンを押したとき。編集中は渡さない。 */
+    onnavigate?: (screenId: string) => void;
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     readings?: TagReadings;
@@ -941,6 +944,7 @@
           <Renderer
             {onopentrend}
             {onopenequipment}
+            {onnavigate}
             bind:this={renderer}
             {screen}
             {symbols}

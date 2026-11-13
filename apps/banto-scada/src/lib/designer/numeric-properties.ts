@@ -48,7 +48,9 @@ export function objectFormValues(
     x: String(object.x),
     y: String(object.y),
     rotation: String(object.rotation),
-    ...(object.shape.type === "screenView" || object.shape.type === "trend"
+    ...(object.shape.type === "screenView" ||
+    object.shape.type === "trend" ||
+    object.shape.type === "navButton"
       ? {}
       : { fill: placementColor(object) }),
   };
@@ -106,6 +108,25 @@ export function objectFormValues(
   if (object.shape.type === "screenView")
     values.sourceScreenId = object.shape.screenId;
   if (object.shape.type === "trend") values.trendId = object.shape.trendId;
+  if (object.shape.type === "navButton") {
+    const { target } = object.shape;
+    values.navTarget = !target
+      ? ""
+      : target.kind === "screen"
+        ? `screen:${target.screenId}`
+        : target.kind;
+    values.navLabel = object.shape.label;
+    values.navFontSize = String(object.shape.fontSize);
+    values.navFill = object.shape.fill;
+    values.navTextColor = object.shape.textColor;
+    values.navCurrentMode =
+      object.shape.currentFill || object.shape.currentTextColor
+        ? "color"
+        : "none";
+    values.navCurrentFill = object.shape.currentFill ?? object.shape.fill;
+    values.navCurrentTextColor =
+      object.shape.currentTextColor ?? object.shape.textColor;
+  }
   if (object.shape.type === "polyline") {
     values.points = object.shape.points
       .map((point) => `${point.x},${point.y}`)

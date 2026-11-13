@@ -149,6 +149,13 @@
       description:
         "固定の文字のセルを持つ表を配置します。セルの文字・塗り・文字色はタブ区切りで入力し、表計算ソフトから貼り付けられます。",
     },
+    {
+      kind: "navButton",
+      label: "画面切替ボタンを追加",
+      keywords: "画面切替 ボタン 遷移 ナビ メニュー navigation button",
+      description:
+        "プレビューで押すと行き先の画面へ移るボタンを配置します。画面の直下にだけ置けます。",
+    },
   ];
   const equipment = BUILTIN_PARTS.map((part) => ({
     template: part.template,
@@ -163,7 +170,11 @@
       .includes(search.trim().normalize("NFKC").toLocaleLowerCase());
   }
   const basicResults = $derived(
-    basics.filter((p) => matches(p.label + " " + p.keywords)),
+    basics.filter(
+      (p) =>
+        (allowSymbols || p.kind !== "navButton") &&
+        matches(p.label + " " + p.keywords),
+    ),
   );
   const builtinResults = $derived(
     allowSymbols
@@ -175,12 +186,18 @@
   );
   const primitiveResults = $derived(
     basicResults.filter(
-      (part) => part.kind !== "text" && part.kind !== "table",
+      (part) =>
+        part.kind !== "text" &&
+        part.kind !== "table" &&
+        part.kind !== "navButton",
     ),
   );
   const objectResults = $derived(
     basicResults.filter(
-      (part) => part.kind === "text" || part.kind === "table",
+      (part) =>
+        part.kind === "text" ||
+        part.kind === "table" ||
+        part.kind === "navButton",
     ),
   );
   function categoryCount(category: Category): number {
@@ -513,6 +530,13 @@
                       {:else if part.kind === "table"}<path
                           d="M10 6h40v28H10zM10 15h40M10 25h40M24 6v28M37 6v28"
                         />
+                      {:else if part.kind === "navButton"}<rect
+                          x="6"
+                          y="10"
+                          width="48"
+                          height="20"
+                          rx="6"
+                        /><path d="M22 20h16M33 15l5 5-5 5" />
                       {:else}<path d="M8 8H30V32H52" stroke-width="5" />{/if}
                     </svg>
                     <span class:sr-only={view === "icons"}>{part.label}</span>

@@ -94,6 +94,22 @@ export function applyScreenCommand(
         `この画面は埋込表示で使用中です：${names.join("、")}${uses.length > 5 ? " ほか" : ""}。先に参照配置を削除または変更してください。`,
       );
     }
+    // 画面切替ボタンの行き先も埋込表示と同じく、使用中なら削除を止めて示す。
+    const buttons = next.screens.flatMap((owner) =>
+      owner.id === screen.id
+        ? []
+        : owner.objects.flatMap((object) =>
+            object.shape.type === "navButton" &&
+            object.shape.target?.kind === "screen" &&
+            object.shape.target.screenId === screen.id
+              ? [`${owner.name}／${object.name ?? "画面切替ボタン"}`]
+              : [],
+          ),
+    );
+    if (buttons.length)
+      throw new Error(
+        `この画面は画面切替ボタンの行き先です：${buttons.slice(0, 5).join("、")}${buttons.length > 5 ? " ほか" : ""}。先にボタンを削除するか行き先を変更してください。`,
+      );
     next.screens = next.screens.filter((s) => s.id !== screen.id);
     return "finish";
   }
