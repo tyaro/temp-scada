@@ -20,6 +20,12 @@ export interface ObjectClipboard {
   images?: ClipboardImage[];
   origin: string;
   project: Project;
+  /**
+   * 画面切替ボタンの行き先のうち、clipboard の画面に含まれないもの（配置ID→画面ID）。
+   * fragment の中では行き先を外して検査を通し、貼付け先に同じ画面があるときだけ戻す。
+   * 仕様: docs/design/graphics/nav-button.md
+   */
+  navTargets?: Record<string, string>;
 }
 export function parseClipboard(text: string): ObjectClipboard {
   if (
@@ -34,7 +40,10 @@ export function parseClipboard(text: string): ObjectClipboard {
   const assetEnvelope =
     data.version === 2 || data.version === 3 || data.version === 4;
   if (
-    Object.keys(data).sort().join(",") !==
+    Object.keys(data)
+      .filter((key) => key !== "navTargets")
+      .sort()
+      .join(",") !==
       (assetEnvelope
         ? "format,images,origin,project,version"
         : "format,origin,project,version") ||
@@ -61,6 +70,7 @@ export function parseClipboard(text: string): ObjectClipboard {
   )
     throw new Error("clipboardの図形・宣言は4MiB以下にしてください。");
   const project = parseProject(JSON.stringify(data.project));
+  const navTargets = parseNavTargets(project, data.navTargets);
   if (
     project.trends?.length ||
     project.screens.some((s) => s.objects.some((o) => o.shape.type === "trend"))
@@ -167,7 +177,36 @@ export function parseClipboard(text: string): ObjectClipboard {
     origin: data.origin,
     project,
     ...(assetEnvelope ? { images: data.images as ClipboardImage[] } : {}),
+    ...(navTargets ? { navTargets } : {}),
   };
+}
+/** 行き先を外した画面切替ボタンだけを指す、配置ID→画面IDの表。 */
+function parseNavTargets(project: Project, value: unknown) {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("画面切替ボタンの行き先の形式が不正です");
+  const untargeted = new Set(
+    project.screens.flatMap((screen) =>
+      screen.objects.flatMap((object) =>
+        object.shape.type === "navButton" && !object.shape.target
+          ? [object.id]
+          : [],
+      ),
+    ),
+  );
+  const entries = Object.entries(value);
+  if (
+    !entries.length ||
+    entries.some(
+      ([id, screenId]) =>
+        !untargeted.has(id) ||
+        typeof screenId !== "string" ||
+        !screenId.length ||
+        screenId.length > 100,
+    )
+  )
+    throw new Error("画面切替ボタンの行き先の形式が不正です");
+  return Object.fromEntries(entries) as Record<string, string>;
 }
 export function copyObjectSnapshot(
   project: Project,
@@ -234,6 +273,29 @@ export function copyObjectSnapshot(
     );
   // Clipboard placements deliberately start at the destination root.
   for (const object of objects) delete object.folderId;
+  // 画面切替ボタンの行き先が clipboard の画面に無いときは外し、別表に控える。
+  const fragmentScreens = new Set([
+    target.id,
+    ...dependencyScreens.map((screen) => screen.id),
+  ]);
+  const navTargets: Record<string, string> = {};
+  const detachNavTarget = (object: ScreenObject): ScreenObject => {
+    if (
+      object.shape.type !== "navButton" ||
+      object.shape.target?.kind !== "screen" ||
+      fragmentScreens.has(object.shape.target.screenId)
+    )
+      return object;
+    navTargets[object.id] = object.shape.target.screenId;
+    const shape = { ...object.shape };
+    delete shape.target;
+    return { ...object, shape } as ScreenObject;
+  };
+  objects.splice(0, objects.length, ...objects.map(detachNavTarget));
+  const fragmentDependencies = dependencyScreens.map((screen) => ({
+    ...screen,
+    objects: screen.objects.map(detachNavTarget),
+  }));
   const fragment: Project = {
     manifest: { ...project.manifest },
     assets: project.assets.filter((asset) => dependencies.assets.has(asset.id)),
@@ -257,7 +319,7 @@ export function copyObjectSnapshot(
             memberIds: [...group.memberIds],
           })),
       },
-      ...dependencyScreens,
+      ...fragmentDependencies,
     ],
     symbols: project.symbols.filter((s) => dependencies.symbols.has(s.id)),
   };
@@ -265,6 +327,7 @@ export function copyObjectSnapshot(
     format: "banto-scada.objects",
     origin,
     project: parseProject(serializeProject(fragment)),
+    ...(Object.keys(navTargets).length ? { navTargets } : {}),
   };
 }
 export function copyObjects(

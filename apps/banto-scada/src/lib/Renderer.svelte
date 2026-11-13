@@ -40,12 +40,14 @@
   import { screenJunctions } from "./line-junction";
   import { screenHopPaths } from "./line-hop";
   import type { TagReadings } from "./tag-presentation";
+  import { navButtonDestination, navTargetLabel } from "./nav-button";
   let {
     screen,
     symbols = [],
     trends = [],
     onopentrend,
     onopenequipment,
+    onnavigate,
     screens = [],
     equipmentContext,
     images,
@@ -67,6 +69,8 @@
     onopentrend?: (objectId: string) => void;
     /** 表示プレビューで、機器を関連付けた Symbol を押したときに呼ぶ。編集中は呼ばない。 */
     onopenequipment?: (equipmentId: string, origin: SVGElement) => void;
+    /** 表示プレビューで、画面切替ボタンを押したときに行き先の画面IDで呼ぶ。編集中は呼ばない。 */
+    onnavigate?: (screenId: string) => void;
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
@@ -120,6 +124,23 @@
     return editable || !onopenequipment
       ? undefined
       : previewEquipmentLink(object.shape, equipmentContext?.equipment);
+  }
+  // 表示プレビューで、行き先が画面の画面切替ボタンを押せる入口にする。
+  // 戻る・進む・未設定は押せない（薄く描く。履歴は運転表示で扱う）。
+  function navLink(object: ScreenObject) {
+    if (editable || !onnavigate || object.shape.type !== "navButton")
+      return undefined;
+    const screenId = navButtonDestination(object.shape, true);
+    return screenId
+      ? {
+          screenId,
+          label: `${object.shape.label || "画面切替"}：${navTargetLabel(object.shape.target, screens)}へ移る`,
+        }
+      : undefined;
+  }
+  function navigate(screenId: string, event: Event) {
+    event.stopPropagation();
+    onnavigate?.(screenId);
   }
   function openEquipment(id: string, event: Event) {
     event.stopPropagation();
@@ -639,7 +660,9 @@
       (object) => object.visible !== false && object.shape.type === "trend",
     )) ||
   screen.objects.some(
-    (object) => object.visible !== false && !!equipmentLink(object),
+    (object) =>
+      object.visible !== false &&
+      (!!equipmentLink(object) || !!navLink(object)),
   )
     ? "group"
     : "img"}
@@ -684,7 +707,8 @@
     .sort((a, b) => a.order - b.order) as object (object.id)}
     {@const visual = previewObject(object)}
     {@const linked = equipmentLink(object)}
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex (tabindex は機器を関連付けた Symbol の button role と同時にだけ付く) -->
+    {@const nav = navLink(object)}
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex (tabindex は機器を関連付けた Symbol・画面切替ボタンの button role と同時にだけ付く) -->
     <g
       transform={position(visual)}
       pointer-events={editable && object.locked ? "none" : undefined}
@@ -693,18 +717,24 @@
         ? "true"
         : undefined}
       data-equipment-link={linked?.id}
-      class:equipment-link={!!linked}
-      role={linked ? "button" : undefined}
-      tabindex={linked ? 0 : undefined}
+      data-nav-link={nav?.screenId}
+      class:equipment-link={!!linked || !!nav}
+      role={linked || nav ? "button" : undefined}
+      tabindex={linked || nav ? 0 : undefined}
       aria-label={linked
         ? `${linked.code} ${linked.name}の読取詳細を開く`
-        : undefined}
-      onclick={linked ? (event) => openEquipment(linked.id, event) : undefined}
-      onkeydown={linked
+        : nav?.label}
+      onclick={linked
+        ? (event) => openEquipment(linked.id, event)
+        : nav
+          ? (event) => navigate(nav.screenId, event)
+          : undefined}
+      onkeydown={linked || nav
         ? (event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
-              openEquipment(linked.id, event);
+              if (linked) openEquipment(linked.id, event);
+              else if (nav) navigate(nav.screenId, event);
             }
           }
         : undefined}
@@ -741,6 +771,8 @@
           <ObjectPainting
             onopentrend={!editable ? onopentrend : undefined}
             object={visual}
+            currentScreenId={"background" in screen ? screen.id : undefined}
+            preview={!editable}
             hopPath={hops.get(object.id)}
             ownerDefinition={"background" in screen ? undefined : screen}
             {symbols}

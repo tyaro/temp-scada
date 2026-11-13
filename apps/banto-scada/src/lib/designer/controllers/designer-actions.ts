@@ -518,10 +518,13 @@ export function createDesignerActions(host: DesignerActionsHost) {
                 { kind: "pipe", label: "配管を挿入" },
                 { kind: "level", label: "液位を挿入" },
                 { kind: "table", label: "表を挿入" },
+                { kind: "navButton", label: "画面切替ボタンを挿入" },
               ] as const
             ).map((part) => ({
               label: part.label,
-              disabled: host.editing.editBlocked,
+              disabled:
+                host.editing.editBlocked ||
+                (part.kind === "navButton" && !!host.selection.definition),
               run: () =>
                 host.editing.edit({
                   type: "add",
@@ -948,10 +951,13 @@ export function createDesignerActions(host: DesignerActionsHost) {
               { kind: "pipe", label: "配管を追加" },
               { kind: "level", label: "液位を追加" },
               { kind: "table", label: "表を追加" },
+              { kind: "navButton", label: "画面切替ボタンを追加" },
             ] as const
           ).map((part) => ({
             label: part.label,
-            disabled: host.editing.editBlocked,
+            disabled:
+              host.editing.editBlocked ||
+              (part.kind === "navButton" && !!host.selection.definition),
             run: () => host.files.add(part.kind),
           })),
           ...BUILTIN_PARTS.map(({ template, name }) => ({

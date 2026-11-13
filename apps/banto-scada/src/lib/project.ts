@@ -169,6 +169,25 @@ export interface TableShape {
   border?: { color: string; width: number };
   background?: string;
 }
+/** 画面切替ボタンの行き先。仕様: docs/design/graphics/nav-button.md */
+export type NavTarget =
+  { kind: "screen"; screenId: string } | { kind: "back" } | { kind: "forward" };
+/**
+ * 画面切替ボタン。画面の直下にだけ置ける（Symbol 定義には置かない）。
+ * `target` が無いボタンは「行き先未設定」で、押しても何もしない。
+ */
+export interface NavButtonShape {
+  type: "navButton";
+  target?: NavTarget;
+  label: string;
+  fontSize: number;
+  fill: string;
+  textColor: string;
+  /** 行き先が表示中の画面のときの塗り。無いときは `fill`。 */
+  currentFill?: string;
+  /** 行き先が表示中の画面のときの文字色。無いときは `textColor`。 */
+  currentTextColor?: string;
+}
 export type SymbolColorMode = "monochrome" | "definition";
 export interface LayoutObject extends BaseObject {
   width: number;
@@ -196,7 +215,8 @@ export interface LayoutObject extends BaseObject {
     | { type: "screenView"; screenId: string; fit: "contain" }
     | { type: "trend"; trendId: string }
     | LevelShape
-    | TableShape;
+    | TableShape
+    | NavButtonShape;
 }
 export interface PolylineObject extends BaseObject {
   shape: {
@@ -383,6 +403,15 @@ export function parseProject(json: string): Project {
         throw new Error("トレンドの参照先が見つかりません");
     }
   }
+  const screenIds = new Set(project.screens.map((screen) => screen.id));
+  for (const screen of project.screens)
+    for (const object of screen.objects)
+      if (
+        object.shape.type === "navButton" &&
+        object.shape.target?.kind === "screen" &&
+        !screenIds.has(object.shape.target.screenId)
+      )
+        throw new Error("画面切替ボタンの行き先の画面が見つかりません");
   const ids = new Set([project.manifest.projectId]);
   const symbolIds = new Set(project.symbols.map((s) => s.id));
   const hashes = new Set<string>(),

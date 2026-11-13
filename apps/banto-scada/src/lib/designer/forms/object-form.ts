@@ -3,7 +3,7 @@ import { normalizeTextNewlines } from "../../text-content";
 import { isEquipmentPropertyField } from "../../equipment-property";
 import { isStateSlotType, type EquipmentSlot } from "../../equipment";
 import type { EditCommand, ObjectPatch } from "../../editor";
-import { parsePoints, type ScreenObject } from "../../project";
+import { parsePoints, type NavTarget, type ScreenObject } from "../../project";
 import { parseLineStyle } from "../../line-style";
 import { parseNumericProperty } from "../numeric-properties";
 import {
@@ -218,6 +218,36 @@ export function objectFormCommand(
     patch.sourceScreenId = String(data.get("sourceScreenId"));
   if (selected.shape.type === "trend")
     patch.trendId = String(data.get("trendId"));
+  if (selected.shape.type === "navButton") {
+    const targetValue = String(data.get("navTarget") ?? "");
+    const target: NavTarget | undefined =
+      targetValue === "back" || targetValue === "forward"
+        ? { kind: targetValue }
+        : targetValue.startsWith("screen:")
+          ? { kind: "screen", screenId: targetValue.slice("screen:".length) }
+          : targetValue === ""
+            ? undefined
+            : (() => {
+                throw new Error("画面切替ボタンの行き先を選択してください。");
+              })();
+    const current = data.get("navCurrentMode") === "color";
+    patch.navButton = {
+      ...(target ? { target } : {}),
+      label: normalizeTextNewlines(String(data.get("navLabel") ?? "")).replace(
+        /\n/g,
+        " ",
+      ),
+      fontSize: parseNumericProperty(String(data.get("navFontSize") ?? "")),
+      fill: String(data.get("navFill") ?? ""),
+      textColor: String(data.get("navTextColor") ?? ""),
+      ...(current
+        ? {
+            currentFill: String(data.get("navCurrentFill") ?? ""),
+            currentTextColor: String(data.get("navCurrentTextColor") ?? ""),
+          }
+        : {}),
+    };
+  }
   if (selected.shape.type === "polyline") {
     patch.lineStyle = parseLineStyle(data.get("lineStyle"));
     patch.points = parsePoints(String(data.get("points")));

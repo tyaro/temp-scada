@@ -22,11 +22,19 @@ import type {
   ShapePaint,
   LevelShape,
   TableShape,
+  NavButtonShape,
   TagBinding,
   TextStyle,
 } from "../project";
 export type AddKind =
-  "rectangle" | "ellipse" | "text" | "line" | "pipe" | "level" | "table";
+  | "rectangle"
+  | "ellipse"
+  | "text"
+  | "line"
+  | "pipe"
+  | "level"
+  | "table"
+  | "navButton";
 export interface ObjectPatch {
   opacity?: number;
   colorAlpha?: number;
@@ -53,6 +61,8 @@ export interface ObjectPatch {
   level?: Pick<LevelShape, "direction" | "min" | "max" | "background">;
   /** Whole content of a table; a missing border or background clears it. */
   table?: Omit<TableShape, "type">;
+  /** Whole content of a nav button; a missing target or current color clears it. */
+  navButton?: Omit<NavButtonShape, "type">;
   stateColor?: StateColor | null;
   symbolId?: string;
   equipmentId?: string | null;

@@ -16,6 +16,8 @@
   import ImagePainting from "./ImagePainting.svelte";
   import Primitive from "./Primitive.svelte";
   import TrendPainting from "./TrendPainting.svelte";
+  import NavButtonPainting from "./NavButtonPainting.svelte";
+  import { navButtonDisabled, navButtonIsCurrent } from "./nav-button";
   let {
     object,
     symbols = [],
@@ -27,6 +29,8 @@
     onsummary,
     onopentrend,
     hopPath,
+    currentScreenId,
+    preview = false,
   }: {
     object: ScreenObject;
     symbols?: SymbolDefinition[];
@@ -42,6 +46,10 @@
     onopentrend?: (objectId: string) => void;
     /** 交差のまたぎのパス（画面直下の Polyline だけ）。 */
     hopPath?: string;
+    /** 表示中の画面。画面切替ボタンの強調に使う。 */
+    currentScreenId?: string;
+    /** 表示確認（プレビュー）。押せない画面切替ボタンを薄く描く。 */
+    preview?: boolean;
   } = $props();
 </script>
 
@@ -151,6 +159,14 @@
     definition={trends.find(
       (row) => object.shape.type === "trend" && row.id === object.shape.trendId,
     )}
+  />
+{:else if "width" in object && object.shape.type === "navButton"}
+  <NavButtonPainting
+    shape={object.shape}
+    width={object.width}
+    height={object.height}
+    current={navButtonIsCurrent(object.shape, currentScreenId)}
+    disabled={navButtonDisabled(object.shape, preview)}
   />
 {:else if "width" in object && object.shape.type === "image"}
   {#if images?.get(object.shape.assetId)}

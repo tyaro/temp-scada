@@ -576,6 +576,7 @@ impl Project {
         connections::validate(&value)?;
         equipment::validate(&value, &mut ids)?;
         validate_screen_views(&value)?;
+        validate_nav_buttons(&value)?;
         Ok(Self(value))
     }
 
@@ -621,6 +622,25 @@ fn validate_groups<'a>(project: &'a Value, ids: &mut HashSet<&'a str>) -> Result
                 if objects[start + index].get("folderId") != folder {
                     return Err("グループは同じフォルダーの配置を指定してください".into());
                 }
+            }
+        }
+    }
+    Ok(())
+}
+
+/// 画面切替ボタンの行き先の画面が存在すること。自身の画面を行き先にしてよい。
+/// 仕様: docs/design/graphics/nav-button.md
+fn validate_nav_buttons(project: &Value) -> Result<(), String> {
+    let screens = project["screens"].as_array().unwrap();
+    let ids: HashSet<&str> = screens.iter().map(|s| s["id"].as_str().unwrap()).collect();
+    for screen in screens {
+        for object in screen["objects"].as_array().unwrap() {
+            let shape = &object["shape"];
+            if shape["type"] != "navButton" || shape["target"]["kind"] != "screen" {
+                continue;
+            }
+            if !ids.contains(shape["target"]["screenId"].as_str().unwrap()) {
+                return Err("画面切替ボタンの行き先の画面が見つかりません".into());
             }
         }
     }
@@ -793,6 +813,40 @@ mod tests {
         .unwrap();
         let cases: Vec<Value> =
             serde_json::from_str(include_str!("../../../examples/level-cases.json")).unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_array_mut()
+                .unwrap()
+                .push(case["object"].clone());
+            let parsed = Project::from_json(&input.to_string());
+            assert_eq!(
+                parsed.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{} {:?}",
+                case["name"],
+                parsed.as_ref().err()
+            );
+            if let Ok(project) = parsed {
+                assert_eq!(
+                    Project::from_json(&project.to_json()).unwrap().0,
+                    project.0,
+                    "{}",
+                    case["name"]
+                );
+            }
+        }
+    }
+    #[test]
+    fn shared_nav_button_contract() {
+        let base: Value = serde_json::from_str(include_str!(
+            "../../../examples/read-presentation.project.json"
+        ))
+        .unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/nav-button-cases.json")).unwrap();
         for case in cases {
             let mut input = base.clone();
             input

@@ -4179,6 +4179,9 @@
             onopenequipment={mode === "preview" && !menuBlocked
               ? (id, origin) => previewPopups?.showEquipment(id, origin)
               : undefined}
+            onnavigate={mode === "preview" && !menuBlocked
+              ? (id) => openScreen(id)
+              : undefined}
             equipmentContext={readContext.equipmentContext}
             readings={readContext.readings}
             bind:this={canvasWorkspace}

@@ -29,11 +29,12 @@ export function applyPasteCommand(
       (o) =>
         o.shape.type === "symbol" ||
         o.shape.type === "screenView" ||
+        o.shape.type === "navButton" ||
         shapeTagBindings(o.shape).length > 0,
     )
   )
     throw new Error(
-      "Symbol定義には埋込画面・Symbol配置・タグ付きのText・液位・表を貼り付けできません",
+      "Symbol定義には埋込画面・画面切替ボタン・Symbol配置・タグ付きのText・液位・表を貼り付けできません",
     );
   if (
     !Number.isFinite(command.center.x) ||
@@ -41,6 +42,13 @@ export function applyPasteCommand(
     !Number.isFinite(command.offset ?? 0)
   )
     throw new Error("貼り付け先は有限の座標にしてください");
+  // clipboard の外に控えた行き先を戻す。貼付け先に無い画面は remapReferences で外す。
+  for (const source of fragment.project.screens)
+    for (const object of source.objects) {
+      const screenId = fragment.navTargets?.[object.id];
+      if (screenId && object.shape.type === "navButton")
+        object.shape.target = { kind: "screen", screenId };
+    }
   const sameWorkspace =
     fragment.origin === command.origin &&
     fragment.project.manifest.projectId === originalProjectId;
@@ -108,6 +116,17 @@ export function applyPasteCommand(
       object.shape.assetId = assetReferences.get(object.shape.assetId)!;
     if (object.shape.type === "screenView")
       object.shape.screenId = screenReferences.get(object.shape.screenId)!;
+    if (
+      object.shape.type === "navButton" &&
+      object.shape.target?.kind === "screen"
+    ) {
+      const id = object.shape.target.screenId;
+      const mapped =
+        screenReferences.get(id) ??
+        (next.screens.some((s) => s.id === id) ? id : undefined);
+      if (mapped) object.shape.target = { kind: "screen", screenId: mapped };
+      else delete object.shape.target;
+    }
   }
   for (const definition of importedSymbols) {
     for (const object of definition.objects) remapReferences(object);

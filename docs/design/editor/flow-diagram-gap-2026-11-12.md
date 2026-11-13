@@ -197,6 +197,7 @@
 #### 5.4.3 PR の区切り
 
 - **2-A 画面切替ボタン**: schema（`$defs.navButtonInstance`、画面の objects の oneOf に追加）・Rust 検査・TS 型・描画（ボタンの部品）・Inspector（行き先の画面の選択、文字、色、現在の画面の色）・挿入メニュー・パレット・貼付け（貼付け先の Project に行き先がないときは行き先を外す）・画面の削除時の扱い（行き先を失ったボタンは検査で示す）。プレビューで押して画面を移る。契約 `examples/nav-button-cases.json`、e2e `nav-button.spec.ts`。
+  - 実装（2026-11-13）: `target` は省略可能にし、貼付け先に行き先の画面がないときは `target` を外して「行き先未設定」のボタンにする（コピー時は clipboard の外の行き先を envelope の `navTargets` に控える）。画面の削除は埋込表示と同じく、行き先になっている間は止めて使用中のボタンを示す。戻る・進む・未設定はプレビューで薄く表示し押せない。仕様: [画面切替ボタン](../graphics/nav-button.md)。試験: `nav-button.test.ts`、`examples/nav-button-cases.json`（Rust・TS 共通の契約）、`e2e/nav-button.spec.ts`。
 - **2-B 時計**: primitive の `clock`。書式の純関数（`clock-format.ts`、時刻を引数で受けて試験できる形）・描画・Inspector・挿入。e2e は Playwright の時計の固定（`page.clock`）で確認する。
 - **2-C 運転表示の枠と運転表示**: Project の `operatorFrame`（schema・Rust・TS・検査）、画面設定とは別の「運転表示の設定」（開始・ヘッダー・フッター画面の選択）、`OperatorView`（枠の配置・拡大縮小・現在の画面の強調・履歴・戻る・進む）、プレビューの入口。e2e `operator-view.spec.ts`。
 - 順序は 2-A → 2-B → 2-C（2-B は 2-A と独立）。サンプル Project にヘッダー・フッターの例を加えるのは 2-C。

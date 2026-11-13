@@ -157,6 +157,7 @@
             ];
           return object.shape.type === "image" ||
             object.shape.type === "screenView" ||
+            object.shape.type === "navButton" ||
             object.shape.type === "trend"
             ? []
             : [object.fill!.toLowerCase()];
@@ -597,6 +598,7 @@
                 selectedIds.includes(o.id) &&
                 (o.shape.type === "image" ||
                   o.shape.type === "screenView" ||
+                  o.shape.type === "navButton" ||
                   o.shape.type === "trend"),
             ).length}
             {paintDisabledCount}
@@ -928,7 +930,7 @@
                   {/each}
                 </div>
               {/if}
-              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "trend" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
+              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "navButton" && selected.shape.type !== "trend" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
                 <label
                   >{selected.shape.type === "symbol" &&
                   selected.shape.colorMode === "definition"
@@ -1471,6 +1473,81 @@
                   </select></label
                 >
               {/if}
+              {#if selected.shape.type === "navButton"}
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">行き先</span><select
+                    class="banto-field-control"
+                    name="navTarget"
+                    aria-label="画面切替ボタンの行き先"
+                    ><option value="">未設定</option>
+                    {#each project.screens as target (target.id)}<option
+                        value={`screen:${target.id}`}
+                        >{target.name}{target.id === screen.id
+                          ? "（この画面）"
+                          : ""}</option
+                      >{/each}
+                    <option value="back">戻る（運転表示の履歴）</option>
+                    <option value="forward">進む（運転表示の履歴）</option>
+                  </select></label
+                >
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字</span><input
+                    class="banto-field-control"
+                    name="navLabel"
+                    aria-label="ボタンの文字"
+                    type="text"
+                    maxlength="200"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字サイズ</span><input
+                    class="banto-field-control"
+                    name="navFontSize"
+                    aria-label="ボタンの文字サイズ"
+                    type="text"
+                    inputmode="decimal"
+                  /></label
+                >
+                <label
+                  >塗り<input
+                    name="navFill"
+                    aria-label="ボタンの塗り"
+                    type="color"
+                  /></label
+                >
+                <label
+                  >文字色<input
+                    name="navTextColor"
+                    aria-label="ボタンの文字色"
+                    type="color"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">現在の画面のとき</span
+                  ><select
+                    class="banto-field-control"
+                    name="navCurrentMode"
+                    aria-label="現在の画面のときの強調"
+                    ><option value="color">色を変える</option><option
+                      value="none">通常の色のまま</option
+                    ></select
+                  ></label
+                >
+                <label
+                  >現在の塗り<input
+                    name="navCurrentFill"
+                    aria-label="現在の画面のときの塗り"
+                    type="color"
+                  /></label
+                >
+                <label
+                  >現在の文字色<input
+                    name="navCurrentTextColor"
+                    aria-label="現在の画面のときの文字色"
+                    type="color"
+                  /></label
+                >
+              {/if}
               {#if selected.shape.type === "screenView"}
                 <label class="full-width banto-field banto-field--stacked"
                   ><span class="banto-field-label">参照する画面</span><select
@@ -1544,6 +1621,23 @@
                     openScreen(selected.shape.screenId);
                 }}>参照する画面を開く</button
               >
+            {/if}
+            {#if selected.shape.type === "navButton"}
+              <p>
+                プレビューで押すと行き先の画面へ移ります。編集中は押しても選択だけです。戻る・進むは運転表示（後続）の履歴で使い、プレビューでは押せません。
+              </p>
+              {#if selected.shape.target?.kind === "screen"}
+                <button
+                  type="button"
+                  onclick={() => {
+                    if (
+                      selected?.shape.type === "navButton" &&
+                      selected.shape.target?.kind === "screen"
+                    )
+                      openScreen(selected.shape.target.screenId);
+                  }}>行き先の画面を開く</button
+                >
+              {/if}
             {/if}
             {#if selected.shape.type === "trend"}
               <button

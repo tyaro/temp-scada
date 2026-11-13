@@ -82,6 +82,9 @@
                 },
                 {
                   "$ref": "#/$defs/trendInstance"
+                },
+                {
+                  "$ref": "#/$defs/navButtonInstance"
                 }
               ]
             }
@@ -1308,6 +1311,122 @@
             }
           },
           "required": ["type", "screenId", "fit"],
+          "additionalProperties": false
+        },
+        "name": {
+          "$ref": "#/$defs/placementName"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "folderId": {
+          "$ref": "#/$defs/id"
+        },
+        "rotation": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360
+        },
+        "opacity": {
+          "$ref": "#/$defs/opacity"
+        }
+      },
+      "required": [
+        "id",
+        "order",
+        "x",
+        "y",
+        "width",
+        "height",
+        "shape",
+        "rotation"
+      ],
+      "additionalProperties": false
+    },
+    "navTarget": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "screen" },
+            "screenId": { "$ref": "#/$defs/id" }
+          },
+          "required": ["kind", "screenId"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "enum": ["back", "forward"] }
+          },
+          "required": ["kind"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "navButtonInstance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "shape": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "navButton"
+            },
+            "target": {
+              "$ref": "#/$defs/navTarget"
+            },
+            "label": {
+              "type": "string",
+              "maxLength": 200,
+              "not": {
+                "pattern": "[\\r\\n\\u2028\\u2029]"
+              }
+            },
+            "fontSize": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 512
+            },
+            "fill": {
+              "$ref": "#/$defs/color"
+            },
+            "textColor": {
+              "$ref": "#/$defs/color"
+            },
+            "currentFill": {
+              "$ref": "#/$defs/color"
+            },
+            "currentTextColor": {
+              "$ref": "#/$defs/color"
+            }
+          },
+          "required": ["type", "label", "fontSize", "fill", "textColor"],
           "additionalProperties": false
         },
         "name": {
