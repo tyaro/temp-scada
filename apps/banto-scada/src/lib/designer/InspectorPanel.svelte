@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import FloatingPanelHeader from "./FloatingPanelHeader.svelte";
+  import { lineArrowLabels, lineArrows } from "../line-arrow";
   import SelectionTextStyle from "./SelectionTextStyle.svelte";
   import SelectionSize from "./SelectionSize.svelte";
   import SelectionOpacity from "./SelectionOpacity.svelte";
@@ -1012,9 +1013,9 @@
                     class="banto-field-control"
                     name="arrow"
                     aria-label="矢印"
-                    ><option value="none">なし</option><option value="end"
-                      >終点</option
-                    ></select
+                    >{#each lineArrows as value (value)}<option {value}
+                        >{lineArrowLabels[value]}</option
+                      >{/each}</select
                   ></label
                 >
               {/if}

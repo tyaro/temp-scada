@@ -16,6 +16,7 @@ import type {
   BackgroundImage,
   ImageAsset,
   LineStyle,
+  LineArrow,
   Point,
   ShapePaint,
   LevelShape,
@@ -56,7 +57,7 @@ export interface ObjectPatch {
   colorMode?: "monochrome" | "definition";
   points?: Point[];
   strokeWidth?: number;
-  arrow?: "none" | "end";
+  arrow?: LineArrow;
   lineStyle?: LineStyle;
 }
 export interface OutlineStylePatch {
@@ -221,7 +222,7 @@ export type ObjectCommand = (
       objectIds: string[];
       patch: {
         strokeWidth?: number;
-        arrow?: "none" | "end";
+        arrow?: LineArrow;
         lineStyle?: LineStyle;
       };
     }

@@ -1,3 +1,4 @@
+import { parseLineArrow } from "../../line-arrow";
 import { normalizeTextNewlines } from "../../text-content";
 import { isEquipmentPropertyField } from "../../equipment-property";
 import { isStateSlotType, type EquipmentSlot } from "../../equipment";
@@ -122,7 +123,7 @@ export function objectFormCommand(
     patch.lineStyle = parseLineStyle(data.get("lineStyle"));
     patch.points = parsePoints(String(data.get("points")));
     patch.strokeWidth = Number(data.get("strokeWidth"));
-    patch.arrow = data.get("arrow") === "end" ? "end" : "none";
+    patch.arrow = parseLineArrow(data.get("arrow"));
   }
   return {
     type: "update",

@@ -1,0 +1,11 @@
+[
+  { "name": "none", "value": "none", "valid": true },
+  { "name": "start", "value": "start", "valid": true },
+  { "name": "end", "value": "end", "valid": true },
+  { "name": "both", "value": "both", "valid": true },
+  { "name": "missing", "missing": true, "valid": false },
+  { "name": "unknown", "value": "middle", "valid": false },
+  { "name": "empty", "value": "", "valid": false },
+  { "name": "null", "value": null, "valid": false },
+  { "name": "boolean", "value": true, "valid": false }
+]

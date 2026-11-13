@@ -1607,6 +1607,38 @@ mod tests {
         }
     }
     #[test]
+    fn line_arrows_share_the_browser_contract() {
+        let sample: Value =
+            serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/line-arrow-cases.json")).unwrap();
+        let mut checked = 0;
+        for owner in ["screens", "symbols"] {
+            for i in 0..sample[owner][0]["objects"].as_array().unwrap().len() {
+                if sample[owner][0]["objects"][i]["shape"]["type"] != "polyline" {
+                    continue;
+                }
+                for case in cases.as_array().unwrap() {
+                    let mut value = sample.clone();
+                    let shape = &mut value[owner][0]["objects"][i]["shape"];
+                    if case.get("missing").is_some() {
+                        shape.as_object_mut().unwrap().remove("arrow");
+                    } else {
+                        shape["arrow"] = case["value"].clone();
+                    }
+                    assert_eq!(
+                        Project::from_json(&value.to_string()).is_ok(),
+                        case["valid"].as_bool().unwrap(),
+                        "{owner}/{i}: {}",
+                        case["name"]
+                    );
+                }
+                checked += 1;
+            }
+        }
+        assert!(checked >= 2, "screen and definition lines");
+    }
+    #[test]
     fn text_styles_share_the_browser_contract() {
         let cases: Value =
             serde_json::from_str(include_str!("../../../examples/text-style-cases.json")).unwrap();

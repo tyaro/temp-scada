@@ -13,6 +13,7 @@ import {
   type SymbolDefinition,
 } from "../project";
 import { parseLineStyle, setLineStyle } from "../line-style";
+import { parseLineArrow } from "../line-arrow";
 import type { SelectionCommand } from "./commands";
 import { applyFolderAssignment } from "./folder-handler";
 import { unhandledCommand } from "./unhandled-command";
@@ -219,8 +220,7 @@ export function applySelectionCommand(
         strokeWidth > 64)
     )
       throw new Error("線幅は0より大きく64以下の有限の数値で指定してください");
-    if (arrow !== undefined && arrow !== "none" && arrow !== "end")
-      throw new Error("矢印はなし・終端のいずれかで指定してください");
+    if (arrow !== undefined) parseLineArrow(arrow);
     if (objects.some((object) => object.shape.type !== "polyline"))
       throw new Error(
         "線・配管だけを選択してください。選択内の線だけを暗黙に変更しません。",

@@ -12,7 +12,7 @@ function fixture() {
   const objectIds = lines.map((object) => object.id);
   const command = (patch: {
     strokeWidth?: number;
-    arrow?: "none" | "end";
+    arrow?: "none" | "start" | "end" | "both";
   }): EditCommand => ({
     type: "set-line-style",
     screenId: owner.id,
@@ -79,7 +79,7 @@ it("rejects invalid widths, arrows, partial target sets and non-line mixtures wi
       applyCommand(project, command({ strokeWidth: value as number }), "edit"),
     ).toThrow();
   for (const patch of [
-    { arrow: "start" },
+    { arrow: "middle" },
     { arrow: "" },
     { strokeWidth: 4, fill: "#ffffff" },
     [],

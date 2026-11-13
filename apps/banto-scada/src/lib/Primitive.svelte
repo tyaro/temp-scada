@@ -6,6 +6,7 @@
   import { slotPresentation, type SlotPresentation } from "./symbol-slots";
   import { slotStateText, type SlotStateEvaluation } from "./slot-state";
   import { patternGeometry } from "./pattern-paint";
+  import { arrowHeads } from "./line-arrow";
   import { linearGradientEndpoints } from "./linear-gradient";
   import { lineDash, lineCap } from "./line-style";
   import TextPrimitive from "./TextPrimitive.svelte";
@@ -124,20 +125,6 @@
   const textColor = $derived(stateColor ?? color ?? object.fill!);
   const lineColor = $derived(stateColor ?? color ?? object.fill!);
   const shape = $derived("width" in object ? null : object.shape);
-  function arrowPoints() {
-    if (!shape || shape.arrow !== "end") return "";
-    const end = shape.points.at(-1)!;
-    const before = [...shape.points]
-      .reverse()
-      .find((p) => p.x !== end.x || p.y !== end.y);
-    // ドラッグ途中は未確定なので、一時的に全頂点が重なる場合も描画を保つ。
-    if (!before) return "";
-    const length = Math.hypot(end.x - before.x, end.y - before.y);
-    const ux = (end.x - before.x) / length,
-      uy = (end.y - before.y) / length;
-    const size = Math.max(8, shape.strokeWidth * 3);
-    return `${end.x},${end.y} ${end.x - ux * size - (uy * size) / 2},${end.y - uy * size + (ux * size) / 2} ${end.x - ux * size + (uy * size) / 2},${end.y - uy * size - (ux * size) / 2}`;
-  }
 </script>
 
 {#if gradient && endpoints}
@@ -363,8 +350,9 @@
     stroke-dasharray={lineDash(shape.lineStyle, shape.strokeWidth)}
     fill="none"
   />
-  {#if shape.arrow === "end"}<polygon
-      points={arrowPoints()}
+  <!-- 往復する配管では始点・終点の矢印が同じ座標になるので、座標をキーにしない。 -->
+  {#each arrowHeads(shape) as points}<polygon
+      {points}
       fill={lineColor}
-    />{/if}
+    />{/each}
 {/if}
