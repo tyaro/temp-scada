@@ -6,6 +6,7 @@ import {
   junctionTolerance,
   lineJunctions,
   screenJunctions,
+  SegmentIndex,
   segmentCells,
   worldLines,
 } from "./line-junction";
@@ -118,6 +119,16 @@ describe("lineJunctions", () => {
         ]),
       ),
     ).toEqual([]);
+    // 線の上の位置（投影点）が相手の端から許容値以内なら途中ではない（端点からの距離は 0.57 でも）。
+    expect(
+      junctions(
+        a,
+        pipe([
+          [0.4, 0.4],
+          [0.4, 60],
+        ]),
+      ),
+    ).toEqual([]);
     // 交差（どちらの端点も相手に乗らない）はまたぎの対象で、分岐の点は描かない。
     expect(
       junctions(
@@ -202,7 +213,7 @@ describe("lineJunctions", () => {
     expect(screenJunctions([main, hidden]).size).toBe(0);
   });
 
-  it("stays fast on a screen with many pipes", () => {
+  it("checks only nearby segments on a screen with many pipes", () => {
     const objects: PolylineObject[] = [];
     for (let i = 0; i < 500; i++) {
       const y = i * 10;
@@ -219,10 +230,18 @@ describe("lineJunctions", () => {
         ]),
       );
     }
-    const started = performance.now();
     const result = screenJunctions(objects);
-    expect(performance.now() - started).toBeLessThan(200);
     expect([...result.values()].flat()).toHaveLength(500);
+    // 時間ではなく、端点ごとに調べる線分の数で全組合せでないことを確かめる（CI の負荷に左右されない）。
+    const lines = worldLines(objects),
+      index = new SegmentIndex(lines);
+    const candidates = lines
+      .flatMap((line) => [line.points[0], line.points.at(-1)!])
+      .map((point) => index.near(point).length);
+    expect(Math.max(...candidates)).toBeLessThanOrEqual(20);
+    expect(candidates.reduce((sum, n) => sum + n, 0)).toBeLessThan(
+      objects.length * 20,
+    );
   });
 });
 
