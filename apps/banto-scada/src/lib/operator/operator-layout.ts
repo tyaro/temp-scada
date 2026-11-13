@@ -89,6 +89,7 @@ export function operatorLayout(
 /**
  * 運転表示の開始画面。枠の開始画面があればそれ、なければ入口を押したときの Designer の画面。
  * Designer の画面がヘッダー・フッターの画面なら、枠に使っていない最初の画面にする。
+ * 枠に使っていない画面がなければ undefined（運転表示を開けない）。
  */
 export function operatorStartScreen(
   frame: OperatorFrame | undefined,
@@ -101,8 +102,6 @@ export function operatorStartScreen(
   const framed = [frame?.headerScreenId, frame?.footerScreenId];
   if (exists(designerScreenId) && !framed.includes(designerScreenId))
     return designerScreenId;
-  return (
-    screens.find((s) => !framed.includes(s.id))?.id ??
-    (exists(designerScreenId) ? designerScreenId : screens[0]?.id)
-  );
+  // 枠以外の画面がなければ開かない（ヘッダー・フッターを主画面に重ねて出さない）。
+  return screens.find((s) => !framed.includes(s.id))?.id;
 }

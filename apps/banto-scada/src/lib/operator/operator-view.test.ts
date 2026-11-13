@@ -113,4 +113,13 @@ describe("operator start screen", () => {
       operatorStartScreen({ headerScreenId: "head" }, screens, "head"),
     ).toBe("main");
   });
+  it("does not open when only frame screens exist", () => {
+    expect(
+      operatorStartScreen(
+        { headerScreenId: "head", footerScreenId: "foot" },
+        [{ id: "head" }, { id: "foot" }],
+        "head",
+      ),
+    ).toBeUndefined();
+  });
 });

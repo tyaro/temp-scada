@@ -37,7 +37,7 @@ Project 直下の任意の `operatorFrame`。
 Designer のプレビューと分けた表示確認の一形態。枠（ヘッダー・フッター）と主画面だけを出し、画面切替ボタンで画面を移る。正式な Runtime（起動時の mode と Host の境界、[統合設計](../scada-integrated-design.md)§10）でも権限の切替でもない。書込み・外部 Action はない。
 
 - 入口: 表示プレビューのツールバーの「運転表示」。Designer の UI の上に全面で重ね、裏の UI は `inert` にする（Tab で裏へ移らない。Designer のキー操作・コピー・貼付けも止める）。上端の帯に現在の画面名、全画面の切替（既存の `PreviewFullscreen`・`preview-fullscreen.ts` を流用。全画面にするかは利用者が選ぶ）、「運転表示を終了（Esc）」を置く。Esc か終了ボタンで戻り、入口のボタンへフォーカスを戻す。全画面中の Esc はブラウザが全画面の終了に使うので、運転表示を閉じるにはもう一度 Esc を押す。編集モードへの切替・Project の差し替えでも閉じる。
-- 開始画面: `startScreenId`。無ければ入口を押したときの Designer の画面。それがヘッダー・フッターの画面なら、枠に使っていない最初の画面（`operatorStartScreen`）。
+- 開始画面: `startScreenId`。無ければ入口を押したときの Designer の画面。それがヘッダー・フッターの画面なら、枠に使っていない最初の画面（`operatorStartScreen`）。枠に使っていない画面がなければ運転表示を開かず、理由を示す。
 - 履歴: 運転表示が自前の「現在の画面」と履歴を持つ（`operator/operator-history.ts`。最大50。新しい画面へ移ると進む側を捨て、上限を超えたら古い方から落とす。現在と同じ画面へは積まない）。Designer の `screenId`・選択・画面タブは変えない。
 - 配置（`operator/operator-layout.ts` の `operatorLayout`）: ヘッダー・フッターは screenView として埋め込まず、主画面の上下に別の `Renderer` で描く（枠の中の画面切替ボタンを押せる）。幅が違うときはヘッダー・フッターを主画面の幅に合わせて拡大縮小し（縦横比は保つ）、上・主画面・下を縦に並べた全体を窓に収める（contain、中央寄せ）。主画面が変わると枠の高さも変わる。
 - 画面切替ボタン: 主画面・ヘッダー・フッターのどれでも、行き先が画面なら履歴に積んで移り、戻る・進むは履歴で移る（動けないときは薄く描き押せない）。現在の画面の強調は 3 つとも運転表示の現在の画面に対して効く（`Renderer` の `currentScreenId`・`navHistory`、`nav-button.ts` の `navButtonAction`）。

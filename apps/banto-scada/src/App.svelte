@@ -1440,7 +1440,13 @@
       project.screens,
       screen.id,
     );
-    if (!start) return;
+    if (!start) {
+      report(
+        "error",
+        "運転表示を開けません。ヘッダー・フッター以外の画面を追加してください。",
+      );
+      return;
+    }
     operatorGeneration = workspaceGeneration;
     operatorStart = start;
   }
