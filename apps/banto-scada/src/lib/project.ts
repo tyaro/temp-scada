@@ -5,6 +5,7 @@ import { validateStateColors } from "./state-color";
 import { validateSymbolSlots } from "./symbol-slots";
 import { validateLevelShape } from "./level";
 import { validateTableShape } from "./table";
+import { validateClockShape } from "./clock-format";
 import {
   validateEquipment,
   type EquipmentType,
@@ -188,6 +189,19 @@ export interface NavButtonShape {
   /** 行き先が表示中の画面のときの文字色。無いときは `textColor`。 */
   currentTextColor?: string;
 }
+/** What a clock shows: the date, the time of day, or both. */
+export type ClockFormat = "date" | "time" | "dateTime";
+/**
+ * The terminal's current date and time as text. The text color is the
+ * placement's `fill`. `seconds` is stored only when true and applies to the
+ * time part.
+ */
+export interface ClockShape {
+  type: "clock";
+  format: ClockFormat;
+  seconds?: true;
+  style: Pick<TextStyle, "fontSize" | "fontWeight" | "align">;
+}
 export type SymbolColorMode = "monochrome" | "definition";
 export interface LayoutObject extends BaseObject {
   width: number;
@@ -216,6 +230,7 @@ export interface LayoutObject extends BaseObject {
     | { type: "trend"; trendId: string }
     | LevelShape
     | TableShape
+    | ClockShape
     | NavButtonShape;
 }
 export interface PolylineObject extends BaseObject {
@@ -516,6 +531,7 @@ export function parseProject(json: string): Project {
 
       if (shape.type === "level") validateLevelShape(shape);
       if (shape.type === "table") validateTableShape(shape);
+      if (shape.type === "clock") validateClockShape(shape);
       if (
         project.symbols.includes(owner) &&
         (shape.type === "text" || shape.type === "level") &&

@@ -132,6 +132,11 @@
                   height="14"
                   rx="4"
                 /><path d="M15 16h10M21 12l4 4-4 4" />
+              {:else if item.part.type === "basic" && item.part.kind === "clock"}<circle
+                  cx="20"
+                  cy="16"
+                  r="10"
+                /><path d="M20 10v6l4 3" />
               {:else if item.part.type === "basic" && item.part.kind === "table"}<path
                   d="M6 6h28v20H6zM6 13h28M6 20h28M15 6v20M25 6v20"
                 />

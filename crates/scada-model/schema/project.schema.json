@@ -468,6 +468,30 @@
               },
               "required": ["type", "columns", "rows", "cells", "style"],
               "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": { "const": "clock" },
+                "format": { "enum": ["date", "time", "dateTime"] },
+                "seconds": { "const": true },
+                "style": {
+                  "type": "object",
+                  "properties": {
+                    "fontSize": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "maximum": 512
+                    },
+                    "fontWeight": { "enum": ["normal", "bold"] },
+                    "align": { "enum": ["left", "center", "right"] }
+                  },
+                  "required": ["fontSize", "fontWeight", "align"],
+                  "additionalProperties": false
+                }
+              },
+              "required": ["type", "format", "style"],
+              "additionalProperties": false
             }
           ]
         },
@@ -549,7 +573,7 @@
                 "type": "object",
                 "properties": {
                   "type": {
-                    "enum": ["text", "table"]
+                    "enum": ["text", "table", "clock"]
                   }
                 }
               }

@@ -8,6 +8,7 @@ import { setLineStyle } from "../line-style";
 import { parseLineArrow } from "../line-arrow";
 import { validateLevelShape } from "../level";
 import { validateTableShape } from "../table";
+import { validateClockShape } from "../clock-format";
 import { validateNavButtonShape } from "../nav-button";
 import type { SingleObjectCommand } from "./commands";
 import { newId, copySymbol } from "./model-helpers";
@@ -116,6 +117,7 @@ export function applySingleObjectCommand(
       format,
       level,
       table,
+      clock,
       navButton,
       stateColor,
       symbolId,
@@ -269,6 +271,14 @@ export function applySingleObjectCommand(
       validateLevelShape(next);
       if (level.background === undefined) delete next.background;
       else next.background = level.background;
+      object.shape = next;
+    }
+    if (clock !== undefined) {
+      if (object.shape.type !== "clock")
+        throw new Error("日時の書式は時計にだけ設定できます");
+      const next = { type: "clock" as const, ...structuredClone(clock) };
+      if (next.seconds !== true) delete next.seconds;
+      validateClockShape(next);
       object.shape = next;
     }
     if (table !== undefined) {

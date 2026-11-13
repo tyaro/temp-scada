@@ -908,6 +908,40 @@ mod tests {
         }
     }
     #[test]
+    fn shared_clock_contract() {
+        let base: Value = serde_json::from_str(include_str!(
+            "../../../examples/read-presentation.project.json"
+        ))
+        .unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/clock-cases.json")).unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_array_mut()
+                .unwrap()
+                .push(case["object"].clone());
+            let parsed = Project::from_json(&input.to_string());
+            assert_eq!(
+                parsed.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{} {:?}",
+                case["name"],
+                parsed.as_ref().err()
+            );
+            if let Ok(project) = parsed {
+                assert_eq!(
+                    Project::from_json(&project.to_json()).unwrap().0,
+                    project.0,
+                    "{}",
+                    case["name"]
+                );
+            }
+        }
+    }
+    #[test]
     fn text_bindings_include_bound_table_cells() {
         let mut input: Value = serde_json::from_str(include_str!(
             "../../../examples/read-presentation.project.json"

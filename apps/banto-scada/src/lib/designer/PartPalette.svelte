@@ -150,6 +150,13 @@
         "固定の文字のセルを持つ表を配置します。セルの文字・塗り・文字色はタブ区切りで入力し、表計算ソフトから貼り付けられます。",
     },
     {
+      kind: "clock",
+      label: "時計を追加",
+      keywords: "時計 日時 日付 時刻 クロック 現在時刻 clock date time",
+      description:
+        "端末の現在の日付・時刻を出す文字を配置します。書式（日付・時刻・日付と時刻）と秒の有無を選び、1秒ごとに更新します。",
+    },
+    {
       kind: "navButton",
       label: "画面切替ボタンを追加",
       keywords: "画面切替 ボタン 遷移 ナビ メニュー navigation button",
@@ -189,6 +196,7 @@
       (part) =>
         part.kind !== "text" &&
         part.kind !== "table" &&
+        part.kind !== "clock" &&
         part.kind !== "navButton",
     ),
   );
@@ -197,6 +205,7 @@
       (part) =>
         part.kind === "text" ||
         part.kind === "table" ||
+        part.kind === "clock" ||
         part.kind === "navButton",
     ),
   );
@@ -530,6 +539,11 @@
                       {:else if part.kind === "table"}<path
                           d="M10 6h40v28H10zM10 15h40M10 25h40M24 6v28M37 6v28"
                         />
+                      {:else if part.kind === "clock"}<circle
+                          cx="30"
+                          cy="20"
+                          r="14"
+                        /><path d="M30 11v9l6 4" />
                       {:else if part.kind === "navButton"}<rect
                           x="6"
                           y="10"

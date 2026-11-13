@@ -62,6 +62,11 @@
     {:else if object.shape.type === "text"}<path
         d="M4 5h16M12 5v15M8 20h8M4 5v3M20 5v3"
       />
+    {:else if object.shape.type === "clock"}<circle
+        cx="12"
+        cy="12"
+        r="8"
+      /><path d="M12 7v5l3 2" />
     {:else if object.shape.type === "table"}<path
         d="M3 5h18v14H3zM3 10h18M3 15h18M9 5v14M15 5v14"
       />

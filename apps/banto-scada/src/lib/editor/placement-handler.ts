@@ -46,7 +46,9 @@ export function applyObjectCreation(
     y: 40,
     fill: canvasColors(definitionId ? "#0b1220" : targetScreen!.background)[
       command.type === "add" &&
-      (command.kind === "text" || command.kind === "table")
+      (command.kind === "text" ||
+        command.kind === "table" ||
+        command.kind === "clock")
         ? "newText"
         : "newShape"
     ],
@@ -86,6 +88,17 @@ export function applyObjectCreation(
               ],
         strokeWidth: command.kind === "line" ? 2 : 8,
         arrow: "none",
+      },
+    });
+  } else if (command.kind === "clock") {
+    screen.objects.push({
+      ...base,
+      width: 220,
+      height: 32,
+      shape: {
+        type: "clock",
+        format: "dateTime",
+        style: { fontSize: 18, fontWeight: "normal", align: "left" },
       },
     });
   } else if (command.kind === "table") {
