@@ -510,6 +510,10 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 2026-11-13のフロー図 段階2-Aで、画面の直下にだけ置ける配置`navButton`（行き先は画面・戻る・進む、文字・文字サイズ・塗り・文字色と任意の現在の画面の色）を追加した。行き先の画面の存在をRust・TSで検査し、自身の画面も行き先にできる。行き先が表示中の画面のボタンは現在の画面の色で描く。表示プレビューで押す（クリック・Enter・Space）と行き先の画面へ移り、画面タブも追従する。編集中は選択だけで移らない。戻る・進む・未設定はプレビューでは押せず薄く描く（履歴は2-Cの運転表示）。行き先になっている画面は削除できず、行き先の画面がないProjectへの貼付けでは行き先を外す。schemaVersionは0.37.0のまま。[仕様](../design/graphics/nav-button.md)。Tauri実機は未確認。
 
+## 時計
+
+2026-11-13のフロー図 段階2-Bで、現在の日時を出す文字の図形`clock`（書式は日付・時刻・日付と時刻、`seconds: true`で秒、`style`はfontSize・fontWeight・align）を追加した。端末のローカル時刻を`YYYY/MM/DD`・`HH:mm`（`HH:mm:ss`）で出し、購読者がいる間だけ動く共有タイマーで1秒ごとに更新する。primitiveなのでSymbol定義の中にも置け、文字を含むので反転できない。schema・Rust・TS・描画・Inspector・挿入メニュー・部品パネル・お気に入りを加え、schemaVersionは0.37.0のまま。[仕様](../design/graphics/clock.md)。`clock-format.test.ts`、`examples/clock-cases.json`（Rust・TS共通の契約）、`e2e/clock.spec.ts`（`page.clock`で時刻を固定）で確認。Tauri実機は未確認。
+
 ## 図面外の読取状態表示
 
 [メイン図面・読取小窓の折り畳み状態一覧](../design/equipment/slot-status-summary.md)を追加した。表示参照・取得不能・SIMの件数、配置経路・機器・slot・文字／Quality／理由・由来を図面のクリップとαから独立させる。閉じた状態では行をDOMに作らず、展開時も20件ずつ表示する。可視配置と1段埋込を対象にし、hidden／α0 Textの使用参照は保持する。図形の動的配色と実Hostは今回追加していない。Project0.26.0・Rust／schemaは変更しない。

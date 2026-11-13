@@ -13,6 +13,7 @@
   import { levelFillRect, levelFromReading, levelFromSlot } from "./level";
   import MultilineTextPrimitive from "./MultilineTextPrimitive.svelte";
   import TablePrimitive from "./TablePrimitive.svelte";
+  import ClockPrimitive from "./ClockPrimitive.svelte";
   import type { TableSlotResolver } from "./table-cell-slot";
   import type { ScreenObject } from "./project";
   import {
@@ -283,6 +284,12 @@
         tagDetail={slotBinding ? slotDisplay?.reason : undefined}
         {onsummary}
       />{/if}
+  {:else if object.shape.type === "clock"}<ClockPrimitive
+      shape={object.shape}
+      width={object.width}
+      height={object.height}
+      color={textColor}
+    />
   {:else if object.shape.type === "table"}<TablePrimitive
       shape={object.shape}
       width={object.width}

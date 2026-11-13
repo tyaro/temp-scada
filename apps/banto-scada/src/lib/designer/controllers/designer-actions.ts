@@ -518,6 +518,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
                 { kind: "pipe", label: "配管を挿入" },
                 { kind: "level", label: "液位を挿入" },
                 { kind: "table", label: "表を挿入" },
+                { kind: "clock", label: "時計を挿入" },
                 { kind: "navButton", label: "画面切替ボタンを挿入" },
               ] as const
             ).map((part) => ({
@@ -951,6 +952,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
               { kind: "pipe", label: "配管を追加" },
               { kind: "level", label: "液位を追加" },
               { kind: "table", label: "表を追加" },
+              { kind: "clock", label: "時計を追加" },
               { kind: "navButton", label: "画面切替ボタンを追加" },
             ] as const
           ).map((part) => ({

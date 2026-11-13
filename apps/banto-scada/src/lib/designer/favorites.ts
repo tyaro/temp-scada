@@ -15,6 +15,7 @@ const basic = [
   "pipe",
   "level",
   "table",
+  "clock",
   "navButton",
 ] as const;
 const uuid =
@@ -80,6 +81,7 @@ export function availableFavorites(
             pipe: "配管",
             level: "液位",
             table: "表",
+            clock: "時計",
             navButton: "画面切替ボタン",
           }[kind],
         },

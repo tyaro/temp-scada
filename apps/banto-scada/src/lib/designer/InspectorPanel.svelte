@@ -948,7 +948,8 @@
                     {selected.shape.type === "symbol"
                       ? "単色"
                       : selected.shape.type === "text" ||
-                          selected.shape.type === "table"
+                          selected.shape.type === "table" ||
+                          selected.shape.type === "clock"
                         ? "文字"
                         : selected.shape.type === "polyline"
                           ? "線"
@@ -1260,6 +1261,60 @@
                 <p class="full-width tag-note">
                   Good
                   で範囲内の値だけを塗ります。取得できない値は灰色の破線、範囲外は橙の枠と矢印で示し、塗りません。
+                </p>
+              {/if}
+              {#if selected.shape.type === "clock"}
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">表示</span><select
+                    class="banto-field-control"
+                    name="clockFormat"
+                    aria-label="時計の表示"
+                    ><option value="date">日付（YYYY/MM/DD）</option><option
+                      value="time">時刻（HH:mm）</option
+                    ><option value="dateTime">日付と時刻</option></select
+                  ></label
+                >
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">秒</span><select
+                    class="banto-field-control"
+                    name="clockSeconds"
+                    aria-label="時計の秒"
+                    ><option value="off">秒を出さない</option><option value="on"
+                      >秒を出す（HH:mm:ss）</option
+                    ></select
+                  ></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字サイズ</span><input
+                    class="banto-field-control"
+                    name="clockFontSize"
+                    aria-label="時計の文字サイズ"
+                    type="text"
+                    inputmode="decimal"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字の太さ</span><select
+                    class="banto-field-control"
+                    name="clockFontWeight"
+                    aria-label="時計の文字の太さ"
+                    ><option value="normal">標準</option><option value="bold"
+                      >太字</option
+                    ></select
+                  ></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字揃え</span><select
+                    class="banto-field-control"
+                    name="clockAlign"
+                    aria-label="時計の文字揃え"
+                    ><option value="left">左</option><option value="center"
+                      >中央</option
+                    ><option value="right">右</option></select
+                  ></label
+                >
+                <p class="full-width tag-note">
+                  端末の現在時刻を1秒ごとに更新します（編集中もプレビューも同じ表示です）。
                 </p>
               {/if}
               {#if selected.shape.type === "table"}

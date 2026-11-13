@@ -81,6 +81,13 @@ export function objectFormValues(
       values.externalName = object.shape.binding?.externalName ?? "";
     else values.slotName = object.shape.slotBinding?.slotName ?? "";
   }
+  if (object.shape.type === "clock") {
+    values.clockFormat = object.shape.format;
+    values.clockSeconds = object.shape.seconds ? "on" : "off";
+    values.clockFontSize = String(object.shape.style.fontSize);
+    values.clockFontWeight = object.shape.style.fontWeight;
+    values.clockAlign = object.shape.style.align;
+  }
   if (object.shape.type === "table") {
     const shape = object.shape;
     values.tableText = formatTableText(shape);

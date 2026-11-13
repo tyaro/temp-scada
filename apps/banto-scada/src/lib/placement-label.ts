@@ -21,8 +21,10 @@ export function placementLabel(
             ? "液位"
             : object.shape.type === "table"
               ? "表"
-              : object.shape.type === "navButton"
-                ? "画面切替"
-                : object.shape.type;
+              : object.shape.type === "clock"
+                ? "時計"
+                : object.shape.type === "navButton"
+                  ? "画面切替"
+                  : object.shape.type;
   return `${kind} · ${object.order}`;
 }

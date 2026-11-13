@@ -3,8 +3,14 @@ import { normalizeTextNewlines } from "../../text-content";
 import { isEquipmentPropertyField } from "../../equipment-property";
 import { isStateSlotType, type EquipmentSlot } from "../../equipment";
 import type { EditCommand, ObjectPatch } from "../../editor";
-import { parsePoints, type NavTarget, type ScreenObject } from "../../project";
+import {
+  parsePoints,
+  type ClockFormat,
+  type NavTarget,
+  type ScreenObject,
+} from "../../project";
 import { parseLineStyle } from "../../line-style";
+import { CLOCK_FORMATS } from "../../clock-format";
 import { parseNumericProperty } from "../numeric-properties";
 import {
   buildTableCells,
@@ -118,6 +124,28 @@ export function objectFormCommand(
       const externalName = String(data.get("externalName") ?? "");
       patch.binding = externalName === "" ? null : { externalName };
     }
+  }
+  if (selected.shape.type === "clock") {
+    const format = String(data.get("clockFormat") ?? ""),
+      fontWeight = String(data.get("clockFontWeight") ?? ""),
+      align = String(data.get("clockAlign") ?? "");
+    if (!(CLOCK_FORMATS as readonly string[]).includes(format))
+      throw new Error("時計の表示を選択してください。");
+    if (
+      (fontWeight !== "normal" && fontWeight !== "bold") ||
+      (align !== "left" && align !== "center" && align !== "right")
+    )
+      throw new Error("時計の文字書式を選択してください。");
+    const fontSize = parseNumericProperty(
+      String(data.get("clockFontSize") ?? ""),
+    );
+    if (!(fontSize > 0 && fontSize <= 512))
+      throw new Error("時計の文字サイズは0より大きく512以下にしてください。");
+    patch.clock = {
+      format: format as ClockFormat,
+      ...(data.get("clockSeconds") === "on" ? { seconds: true as const } : {}),
+      style: { fontSize, fontWeight, align },
+    };
   }
   if (selected.shape.type === "table") {
     const texts = parseTableText(String(data.get("tableText") ?? ""));

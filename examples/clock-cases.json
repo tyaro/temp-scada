@@ -1,0 +1,389 @@
+[
+  {
+    "name": "screen clock with date and time",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000901",
+      "order": 901,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "dateTime",
+        "seconds": true,
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left"
+        }
+      }
+    }
+  },
+  {
+    "name": "date only clock",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000902",
+      "order": 902,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "date",
+        "style": {
+          "fontSize": 24,
+          "fontWeight": "bold",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "time clock without seconds",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000903",
+      "order": 903,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "time",
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "right"
+        }
+      }
+    }
+  },
+  {
+    "name": "clock inside a symbol definition",
+    "target": "/symbols/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000904",
+      "order": 904,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "time",
+        "seconds": true,
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left"
+        }
+      }
+    }
+  },
+  {
+    "name": "rotated clock with color alpha",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000905",
+      "order": 905,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 90,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "dateTime",
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left"
+        }
+      },
+      "colorAlpha": 0.5
+    }
+  },
+  {
+    "name": "unknown format",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000906",
+      "order": 906,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "week",
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left"
+        }
+      }
+    }
+  },
+  {
+    "name": "missing format",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000907",
+      "order": 907,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left"
+        }
+      }
+    }
+  },
+  {
+    "name": "seconds false is not stored",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000908",
+      "order": 908,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "time",
+        "seconds": false,
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left"
+        }
+      }
+    }
+  },
+  {
+    "name": "missing style",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000909",
+      "order": 909,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "time"
+      }
+    }
+  },
+  {
+    "name": "font size zero",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000910",
+      "order": 910,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "time",
+        "style": {
+          "fontSize": 0,
+          "fontWeight": "normal",
+          "align": "left"
+        }
+      }
+    }
+  },
+  {
+    "name": "font size above 512",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000911",
+      "order": 911,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "time",
+        "style": {
+          "fontSize": 513,
+          "fontWeight": "normal",
+          "align": "left"
+        }
+      }
+    }
+  },
+  {
+    "name": "style with wrap",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000912",
+      "order": 912,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "time",
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left",
+          "wrap": "none"
+        }
+      }
+    }
+  },
+  {
+    "name": "unknown key on clock",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000913",
+      "order": 913,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "time",
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left"
+        },
+        "text": "x"
+      }
+    }
+  },
+  {
+    "name": "clock with a tag binding",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000914",
+      "order": 914,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "time",
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left"
+        },
+        "binding": {
+          "externalName": "A"
+        }
+      }
+    }
+  },
+  {
+    "name": "clock flipped",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000915",
+      "order": 915,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "clock",
+        "format": "time",
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left"
+        }
+      },
+      "flipX": true
+    }
+  },
+  {
+    "name": "clock without fill",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000916",
+      "order": 916,
+      "x": 10,
+      "y": 10,
+      "width": 160,
+      "height": 32,
+      "rotation": 0,
+      "shape": {
+        "type": "clock",
+        "format": "time",
+        "style": {
+          "fontSize": 18,
+          "fontWeight": "normal",
+          "align": "left"
+        }
+      }
+    }
+  }
+]

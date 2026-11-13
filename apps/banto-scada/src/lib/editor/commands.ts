@@ -22,6 +22,7 @@ import type {
   ShapePaint,
   LevelShape,
   TableShape,
+  ClockShape,
   NavButtonShape,
   TagBinding,
   TextStyle,
@@ -34,6 +35,7 @@ export type AddKind =
   | "pipe"
   | "level"
   | "table"
+  | "clock"
   | "navButton";
 export interface ObjectPatch {
   opacity?: number;
@@ -61,6 +63,8 @@ export interface ObjectPatch {
   level?: Pick<LevelShape, "direction" | "min" | "max" | "background">;
   /** Whole content of a table; a missing border or background clears it. */
   table?: Omit<TableShape, "type">;
+  /** Format, seconds and text style of a clock. */
+  clock?: Omit<ClockShape, "type">;
   /** Whole content of a nav button; a missing target or current color clears it. */
   navButton?: Omit<NavButtonShape, "type">;
   stateColor?: StateColor | null;
