@@ -1,9 +1,11 @@
 import type { Point, PolylineObject, ScreenObject } from "./project";
 import { objectToWorld, worldToObject } from "./rotation";
 import {
+  closestOnSegment,
   junctionTolerance,
   lineJunctions,
   SegmentIndex,
+  segmentCells,
   worldLines,
   type LineJunction,
   type WorldLine,
@@ -81,15 +83,36 @@ function junctionCover(junctions: readonly LineJunction[]) {
         else cells.set(key, [junction]);
       }
   }
-  return (point: Point) =>
-    (
-      cells.get(
-        `${Math.floor(point.x / size)},${Math.floor(point.y / size)}`,
-      ) ?? []
-    ).some(
-      (junction) =>
-        distance(junction, point) <= junction.diameter / 2 + junctionTolerance,
-    );
+  return {
+    covers: (point: Point) =>
+      (
+        cells.get(
+          `${Math.floor(point.x / size)},${Math.floor(point.y / size)}`,
+        ) ?? []
+      ).some(
+        (junction) =>
+          distance(junction, point) <=
+          junction.diameter / 2 + junctionTolerance,
+      ),
+    /**
+     * 線分 a–b に円（半径＋許容値）がかかる分岐の点の、a からの距離と半径。
+     * 円は格子の範囲（半径＋許容値）に入れてあるので、線分の通る格子だけを見ればよい。
+     */
+    along(a: Point, b: Point): { along: number; reach: number }[] {
+      const seen = new Set<LineJunction>(),
+        result: { along: number; reach: number }[] = [];
+      for (const key of segmentCells(a, b, 0))
+        for (const junction of cells.get(key) ?? []) {
+          if (seen.has(junction)) continue;
+          seen.add(junction);
+          const reach = junction.diameter / 2 + junctionTolerance;
+          const on = closestOnSegment(junction, a, b);
+          if (distance(junction, on) > reach) continue;
+          result.push({ along: distance(a, on), reach });
+        }
+      return result;
+    },
+  };
 }
 
 /**
@@ -107,16 +130,23 @@ export function lineHopSpans(
     const hopper = lines[segment.line];
     const length = distance(segment.a, segment.b);
     const spans: { from: number; to: number }[] = [];
+    // この線分にかかる分岐の点。またぎはその手前で止め、点の下の直線を消さない。
+    let blocked: { along: number; reach: number }[] | undefined;
     for (const other of index.alongSegment(segment.a, segment.b)) {
       // 後に描かれる線の側だけでまたぐ（同じ線どうしは見ない）。
       if (other.line >= segment.line) continue;
       const crossing = properCrossing(segment.a, segment.b, other.a, other.b);
       if (!crossing) continue;
-      if (covered(crossing.at)) continue;
+      if (covered.covers(crossing.at)) continue;
+      blocked ??= covered.along(segment.a, segment.b);
       const radius = Math.min(
         hopRadius(hopper.strokeWidth, lines[other.line].strokeWidth),
         crossing.along,
         length - crossing.along,
+        ...blocked.map(
+          (junction) =>
+            Math.abs(junction.along - crossing.along) - junction.reach,
+        ),
       );
       if (radius < hopShrinkLimit) continue;
       spans.push({
@@ -130,7 +160,13 @@ export function lineHopSpans(
     const merged = [spans[0]];
     for (const span of spans.slice(1)) {
       const last = merged.at(-1)!;
-      if (span.from - last.to < hopMinRadius)
+      // 間に分岐の点があれば、まとめると点の下の直線が消えるのでまとめない。
+      const junctionBetween = (blocked ?? []).some(
+        (junction) =>
+          junction.along > last.to - junction.reach &&
+          junction.along < span.from + junction.reach,
+      );
+      if (span.from - last.to < hopMinRadius && !junctionBetween)
         last.to = Math.max(last.to, span.to);
       else merged.push(span);
     }

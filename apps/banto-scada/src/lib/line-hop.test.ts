@@ -236,6 +236,49 @@ describe("lineHopSpans", () => {
     ]);
   });
 
+  it("stops a hop before a nearby junction dot on the hopper", () => {
+    // 太い縦の配管を細い横の配管がまたぐ（半径 12）。横の配管の x=58 に枝の T 字（点の半径 3）。
+    // またぎが点の下の直線を消さないよう、半径を |58-50| - (3 + 0.5) = 4.5 に縮める。
+    const crossed = pipe(
+        [
+          [50, 0],
+          [50, 100],
+        ],
+        {},
+        6,
+      ),
+      hopper = pipe([
+        [0, 50],
+        [100, 50],
+      ]),
+      branch = pipe([
+        [58, 50],
+        [58, 90],
+      ]);
+    const [span, ...rest] = spans(crossed, hopper, branch).get(hopper.id)!;
+    expect(rest).toEqual([]);
+    expect(span.segment).toBe(0);
+    expect(span.from).toBeCloseTo(45.5, 9);
+    expect(span.to).toBeCloseTo(54.5, 9);
+  });
+
+  it("skips a hop squeezed too small by a junction dot", () => {
+    const crossed = pipe([
+        [50, 0],
+        [50, 100],
+      ]),
+      hopper = pipe([
+        [0, 50],
+        [100, 50],
+      ]),
+      branch = pipe([
+        [54, 50],
+        [54, 90],
+      ]);
+    // 点の半径 3＋許容値 0.5 で、残りは 0.5。最小の半分（2）未満なのでまたがない。
+    expect(spans(crossed, hopper, branch).get(hopper.id)).toBeUndefined();
+  });
+
   it("indexes each hop by its segment", () => {
     const hopper = pipe(
       [
