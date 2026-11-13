@@ -10,6 +10,8 @@ export const TABLE_LIMITS = {
 } as const;
 
 const COLOR = /^#[0-9a-fA-F]{6}$/;
+/** schema の maxLength・Rust と同じく、文字数は Unicode のコードポイントで数える。 */
+const codePoints = (text: string) => [...text].length;
 const CELL_TEXT = /^[^\t\n\r]*$/;
 
 /**
@@ -37,7 +39,7 @@ export function validateTableShape(shape: TableShape) {
       if (
         typeof cell.text !== "string" ||
         !CELL_TEXT.test(cell.text) ||
-        cell.text.length > TABLE_LIMITS.cellText
+        codePoints(cell.text) > TABLE_LIMITS.cellText
       )
         throw new Error(
           `表のセルの文字は改行・タブを含まない${TABLE_LIMITS.cellText}文字以内にしてください`,
@@ -114,7 +116,7 @@ export function parseTableText(text: string): string[][] {
     throw new Error(`表の列は${TABLE_LIMITS.columns}列までです`);
   for (const row of grid)
     for (const cell of row)
-      if (cell.length > TABLE_LIMITS.cellText)
+      if (codePoints(cell) > TABLE_LIMITS.cellText)
         throw new Error(
           `表のセルの文字は${TABLE_LIMITS.cellText}文字以内にしてください`,
         );
@@ -183,9 +185,12 @@ export function parseTableWeights(
 
 /** 入力欄用: セルの文字をタブ区切りにする。 */
 export function formatTableText(shape: TableShape): string {
-  return shape.cells
+  const text = shape.cells
     .map((row) => row.map((cell) => cell.text).join("\t"))
     .join("\n");
+  // 1列の表の最後の行が空だと末尾が改行になり、読み込みで貼付けの改行として
+  // 捨てられる。改行を1つ足して、行の数を保つ。
+  return shape.cells.length > 1 && text.endsWith("\n") ? `${text}\n` : text;
 }
 
 /** 入力欄用: セルの色をタブ区切りにする。色が1つもなければ空。 */

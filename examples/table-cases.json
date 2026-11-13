@@ -206,6 +206,49 @@
     }
   },
   {
+    "name": "256 supplementary characters in a cell",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000840",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+            },
+            {
+              "text": ""
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
+    }
+  },
+  {
     "name": "cells with fewer rows than rows",
     "target": "/screens/0/objects",
     "valid": false,
@@ -851,6 +894,49 @@
         "background": "#0f172a"
       },
       "flipX": true
+    }
+  },
+  {
+    "name": "257 supplementary characters in a cell",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000841",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [2, 1, 1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+            },
+            {
+              "text": ""
+            },
+            {
+              "text": ""
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "border": {
+          "color": "#94a3b8",
+          "width": 1
+        },
+        "background": "#0f172a"
+      }
     }
   }
 ]

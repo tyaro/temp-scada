@@ -69,6 +69,9 @@ describe("table text input", () => {
       "32列まで",
     );
     expect(() => parseTableText("x".repeat(257))).toThrow("256文字");
+    // 文字数はコードポイントで数える（schema の maxLength と同じ）。
+    expect(parseTableText("😀".repeat(256))[0][0]).toHaveLength(512);
+    expect(() => parseTableText("😀".repeat(257))).toThrow("256文字");
   });
   it("reads color grids that fit the table", () => {
     expect(parseTableColors("#AABBCC\t\n\t#000000", 3, 2, "塗り")).toEqual([
@@ -108,6 +111,18 @@ describe("table text input", () => {
     expect(formatTableColors(shape, "fill")).toBe("#334155\t#334155\t#334155");
     expect(formatTableColors(shape, "color")).toBe("\n\t#22c55e");
     expect(formatTableWeights([1, 1])).toBe("");
+    // 1列で最後の行が空の表も、行の数を保って戻る。
+    for (const texts of [["A", "", ""], ["", ""], ["A", ""], [""]]) {
+      const single = {
+        ...shape,
+        columns: [1],
+        rows: texts.map(() => 1),
+        cells: texts.map((text) => [{ text }]),
+      };
+      expect(parseTableText(formatTableText(single))).toEqual(
+        texts.map((text) => [text]),
+      );
+    }
     expect(formatTableWeights([2, 1])).toBe("2, 1");
   });
 });
