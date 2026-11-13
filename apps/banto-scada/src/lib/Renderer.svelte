@@ -36,6 +36,8 @@
   import ScreenView from "./ScreenView.svelte";
   import ScreenBackground from "./ScreenBackground.svelte";
   import ObjectPainting from "./ObjectPainting.svelte";
+  import LineJunctionDots from "./LineJunctionDots.svelte";
+  import { screenJunctions } from "./line-junction";
   import type { TagReadings } from "./tag-presentation";
   let {
     screen,
@@ -86,6 +88,12 @@
     ) => string[];
     onmove?: (ids: string[], dx: number, dy: number) => void;
   } = $props();
+  // 分岐の点は画面直下の線だけ（Symbol 定義の中は対象外）。ドラッグ中もプレビューの位置に従う。
+  const junctions = $derived(
+    "background" in screen
+      ? screenJunctions(screen.objects.map((object) => previewObject(object)))
+      : new Map(),
+  );
   // 表示プレビューで、機器を関連付けた Symbol を読取詳細の小窓への入口にする。
   // 関連付けのない Symbol と、存在しない機器を指す Symbol は無反応のまま。
   function equipmentLink(object: ScreenObject) {
@@ -770,6 +778,7 @@
           />{/if}
       {/if}
     </g>
+    <LineJunctionDots junctions={junctions.get(object.id)} />
   {/each}
   {#if editable && selectedIds.length === 1}
     {@const object = screen.objects.find((o) => o.id === selectedIds[0])}
