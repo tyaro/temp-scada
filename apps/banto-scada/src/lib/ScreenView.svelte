@@ -9,6 +9,7 @@
   import ObjectPainting from "./ObjectPainting.svelte";
   import LineJunctionDots from "./LineJunctionDots.svelte";
   import { screenJunctions } from "./line-junction";
+  import { screenHopPaths } from "./line-hop";
   let {
     source,
     width,
@@ -33,6 +34,7 @@
   } = $props();
   const clipId = $props.id();
   const junctions = $derived(screenJunctions(source.objects));
+  const hops = $derived(screenHopPaths(source.objects, source.lineHops));
 </script>
 
 <svg
@@ -61,6 +63,7 @@
       >
         <ObjectPainting
           object={child}
+          hopPath={hops.get(child.id)}
           {symbols}
           {images}
           {readings}

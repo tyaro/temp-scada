@@ -50,7 +50,7 @@ T 字に分かれる配管の分岐を、交差（つながっていない）と
 
 ## 後の拡張
 
-交差のまたぎは、同じ `worldLines`（world 座標の線）と `SegmentIndex`（線分の格子）を使ってこのモジュールに足す。
+交差のまたぎは、同じ `worldLines`（world 座標の線）と `SegmentIndex`（線分の格子。`alongSegment` を追加）を使い、隣の `line-hop.ts` に実装した（[配管の交差のまたぎ](line-hop.md)）。
 
 ## 受入
 

@@ -197,11 +197,18 @@ export interface GeometricGroup {
   name?: string;
   memberIds: string[];
 }
+/**
+ * 交差のまたぎの形。`"arc"` は弧でまたぎ、下の線（またがれる線）はそのまま描く。
+ * `"cut"` は弧を描かず、下の線（またがれる線）を交差点の前後で切る。仕様: docs/design/graphics/line-hop.md
+ */
+export type LineHopStyle = "arc" | "cut";
 export interface Screen {
   groups: GeometricGroup[];
   backgroundImage?: BackgroundImage;
   folders: LayerFolder[];
   background: string;
+  /** 画面直下の配管の交差のまたぎの形。無いときはまたがない。 */
+  lineHops?: LineHopStyle;
   id: string;
   name: string;
   width: number;

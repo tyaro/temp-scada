@@ -1,4 +1,10 @@
 import type { EditCommand } from "../../editor";
+import type { LineHopStyle } from "../../project";
+
+/** 「交差のまたぎ」の選択肢。空はまたがない。 */
+function lineHopsValue(value: unknown): LineHopStyle | false {
+  return value === "arc" || value === "cut" ? value : false;
+}
 
 export interface ScreenFormContext {
   screenId: string;
@@ -15,6 +21,7 @@ export function screenFormCommand(
           type: "update-screen" as const,
           screenId: context.screenId,
           background: String(data.get("background")),
+          lineHops: lineHopsValue(data.get("lineHops")),
         }),
     name: String(data.get("name")),
     width: Number(data.get("width")),

@@ -38,6 +38,7 @@
   import ObjectPainting from "./ObjectPainting.svelte";
   import LineJunctionDots from "./LineJunctionDots.svelte";
   import { screenJunctions } from "./line-junction";
+  import { screenHopPaths } from "./line-hop";
   import type { TagReadings } from "./tag-presentation";
   let {
     screen,
@@ -101,6 +102,18 @@
       ? { ...preview, x: preview.x + drag.dx, y: preview.y + drag.dy }
       : preview;
   }
+  // 交差のまたぎも同じく画面直下の線だけ。画面の `lineHops` があるときだけ計算する。
+  const hopStyle = $derived(
+    "background" in screen ? screen.lineHops : undefined,
+  );
+  const hops = $derived(
+    hopStyle
+      ? screenHopPaths(
+          screen.objects.map((object) => draggedObject(object)),
+          hopStyle,
+        )
+      : new Map<string, string>(),
+  );
   // 表示プレビューで、機器を関連付けた Symbol を読取詳細の小窓への入口にする。
   // 関連付けのない Symbol と、存在しない機器を指す Symbol は無反応のまま。
   function equipmentLink(object: ScreenObject) {
@@ -728,6 +741,7 @@
           <ObjectPainting
             onopentrend={!editable ? onopentrend : undefined}
             object={visual}
+            hopPath={hops.get(object.id)}
             ownerDefinition={"background" in screen ? undefined : screen}
             {symbols}
             {images}

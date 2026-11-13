@@ -17,6 +17,7 @@ import type {
   ImageAsset,
   LineStyle,
   LineArrow,
+  LineHopStyle,
   Point,
   ShapePaint,
   LevelShape,
@@ -85,6 +86,8 @@ export type ScreenCommand =
   | {
       type: "update-screen";
       background?: string;
+      /** 交差のまたぎの形。false はまたがない（`lineHops` を消す）。省略は変えない。 */
+      lineHops?: LineHopStyle | false;
       screenId: string;
       name: string;
       width: number;

@@ -1,0 +1,47 @@
+{
+  "description": "画面の交差のまたぎ（lineHops）の保存形。\"arc\"（弧でまたぐ）か \"cut\"（弧を描かず、下の線を切る）。省略はまたがない。true・false・その他の文字列は不正。Symbol 定義には置けない。Rust と TypeScript で共有する。",
+  "cases": [
+    {
+      "name": "省略はまたがない",
+      "owner": "screens",
+      "set": {},
+      "valid": true
+    },
+    {
+      "name": "arc は弧でまたぐ",
+      "owner": "screens",
+      "set": { "lineHops": "arc" },
+      "valid": true
+    },
+    {
+      "name": "cut は弧を描かず、下の線を切る",
+      "owner": "screens",
+      "set": { "lineHops": "cut" },
+      "valid": true
+    },
+    {
+      "name": "true は廃止",
+      "owner": "screens",
+      "set": { "lineHops": true },
+      "valid": false
+    },
+    {
+      "name": "false は保存しない",
+      "owner": "screens",
+      "set": { "lineHops": false },
+      "valid": false
+    },
+    {
+      "name": "ほかの文字列は不正",
+      "owner": "screens",
+      "set": { "lineHops": "gap" },
+      "valid": false
+    },
+    {
+      "name": "Symbol 定義には置けない",
+      "owner": "symbols",
+      "set": { "lineHops": "arc" },
+      "valid": false
+    }
+  ]
+}

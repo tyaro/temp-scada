@@ -95,6 +95,9 @@
           "backgroundImage": {
             "$ref": "#/$defs/backgroundImage"
           },
+          "lineHops": {
+            "enum": ["arc", "cut"]
+          },
           "groups": {
             "type": "array",
             "maxItems": 500,

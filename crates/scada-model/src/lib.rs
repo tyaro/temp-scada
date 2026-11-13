@@ -1381,6 +1381,26 @@ mod tests {
         assert!(Project::from_json(&old.to_string()).is_err());
     }
     #[test]
+    fn line_hops_share_the_browser_contract() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/line-hop-cases.json")).unwrap();
+        let base: Value =
+            serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
+        for case in cases["cases"].as_array().unwrap() {
+            let mut value = base.clone();
+            let owner = case["owner"].as_str().unwrap();
+            for (key, entry) in case["set"].as_object().unwrap() {
+                value[owner][0][key] = entry.clone();
+            }
+            assert_eq!(
+                Project::from_json(&value.to_string()).is_ok(),
+                case["valid"] == true,
+                "{}",
+                case["name"]
+            );
+        }
+    }
+    #[test]
     fn flip_shares_the_browser_contract() {
         let cases: Value =
             serde_json::from_str(include_str!("../../../examples/flip-cases.json")).unwrap();
