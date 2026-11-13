@@ -5,7 +5,7 @@ import {
   type SymbolDefinition,
 } from "../project";
 import { canvasColors } from "../canvas-colors";
-import builtins from "../symbol-library.json";
+import { builtinDefinition } from "../builtin-symbols";
 import type {
   ObjectCreationCommand,
   ScreenViewPlacementCommand,
@@ -51,15 +51,13 @@ export function applyObjectCreation(
   if (command.type === "add-symbol") {
     if (definitionId)
       throw new Error("Symbol 定義の入れ子には対応していません");
-    const definition = builtins[
-      command.template
-    ] as unknown as SymbolDefinition;
+    const definition = builtinDefinition(command.template);
     if (!next.symbols.some((s) => s.id === definition.id))
       next.symbols.push(JSON.parse(JSON.stringify(definition)));
     screen.objects.push({
       ...base,
-      width: 100,
-      height: 100,
+      width: definition.width,
+      height: definition.height,
       shape: {
         type: "symbol",
         colorMode: "monochrome",

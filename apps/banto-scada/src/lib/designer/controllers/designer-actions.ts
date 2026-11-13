@@ -6,6 +6,7 @@ import type { FolderOperation } from "../FolderDialog.svelte";
 import type { EditCommand, AddKind } from "../../editor";
 import type { ScreenObject, Point } from "../../project";
 import { canFlip } from "../../flip";
+import { BUILTIN_PARTS } from "../../builtin-symbols";
 const FLIP_LABELS = ["左右反転", "上下反転"];
 
 interface PanelVisibility {
@@ -951,8 +952,8 @@ export function createDesignerActions(host: DesignerActionsHost) {
             disabled: host.editing.editBlocked,
             run: () => host.files.add(part.kind),
           })),
-          ...(["pump", "valve"] as const).map((template) => ({
-            label: template === "pump" ? "ポンプを追加" : "バルブを追加",
+          ...BUILTIN_PARTS.map(({ template, name }) => ({
+            label: `${name}を追加`,
             disabled: host.editing.editBlocked || !!host.selection.definition,
             run: () => {
               host.editing.edit({

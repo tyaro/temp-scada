@@ -143,7 +143,8 @@
 - **D 部品と反転**（依存なし。反転と部品は別の PR にする）:
   - `BaseObject` に左右・上下反転を加える。回転・選択枠・接続点・Symbol の中の扱いを揃える。
   - 組込み部品（`symbol-library.json`）に、ブロワー・槽・塔・サイクロン・熱交換器・撹拌機・コンベヤ・スクリュー・モーターを追加する。
-  - 反転（2026-11-13 実装）: 配置の任意の `flipX`／`flipY`（true のときだけ保存）。矩形・楕円・Polyline・Symbol・Image・液位と Symbol 定義の内部図形が対象で、Text・トレンドは拒否する。pivot で鏡映してから回転し、描画・選択外形・接続点・リサイズ・頂点移動は `rotation.ts` の同じ変換を使う（Rust の配管端点の照合も同じ）。反転した Symbol の中の Text は文字を読める向きに戻す。ツールバー・編集メニュー・右クリックの「左右反転」「上下反転」は画面上の反転（軸を切り替えて角度を負に）で、複数選択も 1 履歴。schemaVersion は据え置き。仕様: [配置の反転](object-flip-design.md)。試験: `flip.test.ts`、`examples/flip-cases.json`（Rust・TS 共通の契約）、`examples/connection-cases.json` の反転ケース、`e2e/flip.spec.ts`。部品の追加は未着手。
+  - 反転（2026-11-13 実装）: 配置の任意の `flipX`／`flipY`（true のときだけ保存）。矩形・楕円・Polyline・Symbol・Image・液位と Symbol 定義の内部図形が対象で、Text・トレンドは拒否する。pivot で鏡映してから回転し、描画・選択外形・接続点・リサイズ・頂点移動は `rotation.ts` の同じ変換を使う（Rust の配管端点の照合も同じ）。反転した Symbol の中の Text は文字を読める向きに戻す。ツールバー・編集メニュー・右クリックの「左右反転」「上下反転」は画面上の反転（軸を切り替えて角度を負に）で、複数選択も 1 履歴。schemaVersion は据え置き。仕様: [配置の反転](object-flip-design.md)。試験: `flip.test.ts`、`examples/flip-cases.json`（Rust・TS 共通の契約）、`examples/connection-cases.json` の反転ケース、`e2e/flip.spec.ts`。
+  - 部品（2026-11-13 実装）: `symbol-library.json` にブロワー・槽・塔・サイクロン・熱交換器・撹拌機・コンベヤ・スクリュー・モーターを加えた。既存のポンプ・バルブと同じく Polyline だけの線画（配置の単色で塗り替わる）で、配管をつなぐ口は配置枠の辺の中央に置き、接続点（辺の中央）と合わせた。塔（60×160）・サイクロン（100×120）・コンベヤとスクリュー（160×60）は縦横比が違うので、配置枠は定義の幅・高さで作る（従来は 100×100 固定）。部品の一覧・名前・検索語（例: 「集じん」「column」）は `builtin-symbols.ts` に集め、部品パレット・お気に入り・挿入メニューが同じ一覧を使う。撹拌機は槽に重ねて使う。組込の槽は液位を持たず、液位は利用者が槽に重ねる（画面ではタグ、共有定義を編集すれば number slot）。schemaVersion は据え置き。試験: `builtin-symbols.test.ts`（全部品の配置・保存往復・枠内・ID の重複なし）、`e2e/builtin-parts.spec.ts`。
 - **E 配管**（画面上の状態色だけ A5 に依存）:
   - 始点・両端の矢印を加える。
   - T 字の接続には分岐の点を描く。

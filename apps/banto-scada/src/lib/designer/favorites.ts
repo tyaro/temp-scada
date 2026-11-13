@@ -1,5 +1,6 @@
 import type { PalettePart } from "./palette-drag";
 import type { SymbolDefinition } from "../project";
+import { builtinName, isBuiltinTemplate } from "../builtin-symbols";
 export const DEFAULT_FAVORITES = [
   "builtin:pump",
   "builtin:valve",
@@ -34,8 +35,7 @@ export function parseFavorites(raw: string | null | undefined): string[] {
         value.filter(
           (key): key is string =>
             typeof key === "string" &&
-            (key === "builtin:pump" ||
-              key === "builtin:valve" ||
+            (builtinTemplate(key) !== undefined ||
               basic.some((kind) => key === `basic:${kind}`) ||
               symbolKey.test(key)),
         ),
@@ -44,6 +44,10 @@ export function parseFavorites(raw: string | null | undefined): string[] {
   } catch {
     return [...DEFAULT_FAVORITES];
   }
+}
+function builtinTemplate(key: string) {
+  const name = key.startsWith("builtin:") ? key.slice(8) : undefined;
+  return name !== undefined && isBuiltinTemplate(name) ? name : undefined;
 }
 export type FavoriteItem = {
   key: string;
@@ -75,16 +79,15 @@ export function availableFavorites(
         },
       ];
     if (!allowSymbols) return [];
-    if (key === "builtin:pump" || key === "builtin:valve") {
-      const template = key === "builtin:pump" ? "pump" : "valve";
+    const template = builtinTemplate(key);
+    if (template)
       return [
         {
           key,
           part: { type: "builtin", template },
-          label: template === "pump" ? "ポンプ" : "バルブ",
+          label: builtinName(template),
         },
       ];
-    }
     const definition = definitions.find(
       (definition) =>
         key ===

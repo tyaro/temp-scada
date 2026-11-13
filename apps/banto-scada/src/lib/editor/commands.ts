@@ -1,4 +1,5 @@
 import type { EndpointConnection, ConnectionEnd } from "../connections";
+import type { BuiltinTemplate } from "../builtin-symbols";
 import type { BindingReplacementRequest } from "../binding-replacement";
 import type { PaintAlphaPatch } from "../selection-paint-alpha";
 import type { EquipmentSlot, EquipmentBinding, SlotType } from "../equipment";
@@ -308,7 +309,7 @@ export type ObjectCommand = (
   | {
       type: "add-symbol";
       screenId: string;
-      template: "pump" | "valve";
+      template: BuiltinTemplate;
       center?: Point;
     }
   | { type: "update"; screenId: string; objectId: string; patch: ObjectPatch }

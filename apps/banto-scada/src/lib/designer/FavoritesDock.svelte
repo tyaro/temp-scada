@@ -5,8 +5,7 @@
   import { PALETTE_MIME } from "./palette-drag";
   import ContextActions from "./ContextActions.svelte";
   import SymbolThumbnail from "./SymbolThumbnail.svelte";
-  import builtins from "../symbol-library.json";
-  import type { SymbolDefinition } from "../project";
+  import { builtinDefinition } from "../builtin-symbols";
   let {
     images,
     items,
@@ -82,9 +81,7 @@
         >
           {#if item.part.type === "builtin"}<SymbolThumbnail
               {images}
-              definition={builtins[
-                item.part.template
-              ] as unknown as SymbolDefinition}
+              definition={builtinDefinition(item.part.template)}
             />
           {:else if item.definition}<SymbolThumbnail
               {images}
