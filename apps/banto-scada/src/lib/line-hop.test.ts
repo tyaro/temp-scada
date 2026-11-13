@@ -4,7 +4,7 @@ import type { Point, PolylineObject, Screen } from "./project";
 import cases from "../../../../examples/line-hop-cases.json";
 import process from "../../../../examples/process.project.json";
 import { parseProject } from "./project";
-import { worldLines } from "./line-junction";
+import { SegmentIndex, worldLines } from "./line-junction";
 import {
   hopMinRadius,
   hopPath,
@@ -297,7 +297,7 @@ describe("lineHopSpans", () => {
     ]);
   });
 
-  it("stays fast with 1000 pipes, without checking every pair", () => {
+  it("checks only nearby segments with 1000 pipes, not every pair", () => {
     // 500 個の十字（横と縦の短い配管）を並べる。交差は 500。
     const objects: PolylineObject[] = [];
     for (let i = 0; i < 500; i++) {
@@ -314,10 +314,16 @@ describe("lineHopSpans", () => {
         ]),
       );
     }
-    const started = performance.now();
-    const result = screenHopPaths(objects, true);
-    expect(performance.now() - started).toBeLessThan(200);
-    expect(result.size).toBe(500);
+    expect(screenHopPaths(objects, true).size).toBe(500);
+    // 時間ではなく、線分ごとに調べる候補の線分の数で全組合せでないことを確かめる（CI の負荷に左右されない）。
+    const index = new SegmentIndex(worldLines(objects));
+    const candidates = index.segments.map(
+      (segment) => index.alongSegment(segment.a, segment.b).length,
+    );
+    expect(Math.max(...candidates)).toBeLessThanOrEqual(10);
+    expect(candidates.reduce((sum, n) => sum + n, 0)).toBeLessThan(
+      objects.length * 10,
+    );
   });
 });
 
