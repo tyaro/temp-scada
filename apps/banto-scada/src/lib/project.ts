@@ -18,7 +18,7 @@ import type { ImageFit } from "./image-fit";
 import { imageCropViewBox, type ImageCrop } from "./image-crop";
 import type { ImageMetadata } from "./image-assets";
 import { rotatedBounds, rotationPivot } from "./rotation";
-import { arrowSize } from "./line-arrow";
+import { arrowHeadPoints, arrowSize } from "./line-arrow";
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-model/schema/project.schema.json";
 import legacySchema from "../../../../crates/scada-model/schema/legacy.project.schema.json";
@@ -493,12 +493,13 @@ export function getLayoutBounds(object: ScreenObject) {
     object.shape.arrow !== "none"
       ? arrowSize(object.shape.strokeWidth)
       : object.shape.strokeWidth / 2;
-  return {
-    x: Math.min(...xs) - pad,
-    y: Math.min(...ys) - pad,
-    width: Math.max(...xs) - Math.min(...xs) + 2 * pad,
-    height: Math.max(...ys) - Math.min(...ys) + 2 * pad,
-  };
+  // 斜めの矢印は三角形の頂点が余白（arrowSize）より外へ出るので、頂点も含める。
+  const heads = arrowHeadPoints(object.shape).flat(),
+    minX = Math.min(Math.min(...xs) - pad, ...heads.map((p) => p.x)),
+    minY = Math.min(Math.min(...ys) - pad, ...heads.map((p) => p.y)),
+    maxX = Math.max(Math.max(...xs) + pad, ...heads.map((p) => p.x)),
+    maxY = Math.max(Math.max(...ys) + pad, ...heads.map((p) => p.y));
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 /** Painted outline, used by selection, alignment, range and placement anchors. */
 export function getLocalBounds(object: ScreenObject) {

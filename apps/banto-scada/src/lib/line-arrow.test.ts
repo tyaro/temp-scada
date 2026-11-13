@@ -4,7 +4,7 @@ import sample from "../../../../examples/process.project.json";
 import cases from "../../../../examples/line-arrow-cases.json";
 import { parseProject, getLayoutBounds, type PolylineObject } from "./project";
 import { applyCommand } from "./editor";
-import { arrowHeads, parseLineArrow } from "./line-arrow";
+import { arrowHeadPoints, arrowHeads, parseLineArrow } from "./line-arrow";
 import { selectionLineCommand } from "./designer/forms/selection-line";
 import Primitive from "./Primitive.svelte";
 
@@ -118,6 +118,42 @@ it("pads bounds for any arrow and renders one polygon per head", () => {
   ] as const) {
     const { body } = render(Primitive, { props: { object: object(arrow) } });
     expect(body.match(/<polygon/g)?.length ?? 0).toBe(count);
+  }
+});
+
+it("keeps diagonal arrowheads inside the layout bounds", () => {
+  for (const arrow of ["start", "end", "both"] as const) {
+    const shape = {
+      type: "polyline" as const,
+      points: [
+        { x: 0, y: 0 },
+        { x: 1, y: 2 },
+      ],
+      strokeWidth: 64,
+      arrow,
+    };
+    const bounds = getLayoutBounds({
+      id: "0199f100-0000-7000-8000-00000000f002",
+      order: 0,
+      x: 0,
+      y: 0,
+      rotation: 0,
+      fill: "#123456",
+      shape,
+    });
+    const vertices = arrowHeadPoints(shape).flat();
+    expect(vertices.length).toBeGreaterThan(0);
+    // 余白（arrowSize = 192）だけの矩形 x: -192〜193, y: -192〜194 からは頂点がはみ出していた
+    // （例: 始点の矢印の y ≈ 214.7）。
+    expect(
+      vertices.some((p) => p.x < -192 || p.x > 193 || p.y < -192 || p.y > 194),
+    ).toBe(true);
+    for (const p of vertices) {
+      expect(p.x).toBeGreaterThanOrEqual(bounds.x);
+      expect(p.y).toBeGreaterThanOrEqual(bounds.y);
+      expect(p.x).toBeLessThanOrEqual(bounds.x + bounds.width);
+      expect(p.y).toBeLessThanOrEqual(bounds.y + bounds.height);
+    }
   }
 });
 
