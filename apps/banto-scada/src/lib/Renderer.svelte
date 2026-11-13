@@ -89,11 +89,18 @@
     onmove?: (ids: string[], dx: number, dy: number) => void;
   } = $props();
   // 分岐の点は画面直下の線だけ（Symbol 定義の中は対象外）。ドラッグ中もプレビューの位置に従う。
+  // 接続のプレビューがないドラッグは `position()` が移動量を足すので、ここでも同じ量を足す。
   const junctions = $derived(
     "background" in screen
-      ? screenJunctions(screen.objects.map((object) => previewObject(object)))
+      ? screenJunctions(screen.objects.map((object) => draggedObject(object)))
       : new Map(),
   );
+  function draggedObject(object: ScreenObject): ScreenObject {
+    const preview = previewObject(object);
+    return editable && !connectionPreviews && drag?.ids.includes(object.id)
+      ? { ...preview, x: preview.x + drag.dx, y: preview.y + drag.dy }
+      : preview;
+  }
   // 表示プレビューで、機器を関連付けた Symbol を読取詳細の小窓への入口にする。
   // 関連付けのない Symbol と、存在しない機器を指す Symbol は無反応のまま。
   function equipmentLink(object: ScreenObject) {

@@ -55,6 +55,29 @@ test("draws a junction dot where a pipe ends on another pipe, but not for a cont
   );
   await page.getByRole("button", { name: "編集", exact: true }).click();
 
+  // ドラッグ中は移動した位置で計算する（枝を離すと点が消え、取り消すと戻る）。
+  const at = (x: number, y: number) =>
+    svg.evaluate(
+      (el, { x, y }) => {
+        const p = new DOMPoint(x, y).matrixTransform(
+          (el as SVGSVGElement).getScreenCTM()!,
+        );
+        return { x: p.x, y: p.y };
+      },
+      { x, y },
+    );
+  const from = await at(140, 80),
+    to = await at(140, 130);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 5 });
+  // 下へ離すと T 字でなくなる（取り消しで戻る）。
+  await expect(dot).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(dot).toHaveCount(1);
+  await expect(dot).toHaveAttribute("cx", "140");
+
   // 端点同士の継ぎ足しでは描かない。
   const vertices = page.getByLabel("頂点", { exact: true });
   await expect(vertices).toHaveValue("100,0\n100,80");
