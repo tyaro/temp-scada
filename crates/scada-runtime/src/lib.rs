@@ -76,6 +76,8 @@ pub enum NumericReading {
     Resolved {
         quality: Quality,
         numeric_value: Option<f64>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        bool_value: Option<bool>,
     },
 }
 
@@ -179,13 +181,22 @@ fn project_index(
     };
     view.metadata_ready = true;
     for (name, reading) in &mut view.readings {
-        let (projected, provenance) = index.read(name, ReadSlotType::Number);
+        let expected = if index.is_bit(name) {
+            ReadSlotType::Bool
+        } else {
+            ReadSlotType::Number
+        };
+        let (projected, provenance) = index.read(name, expected);
         *reading = match projected {
             ReadSlotReading::Unresolved => NumericReading::Unresolved,
             ReadSlotReading::Resolved { quality, value } => NumericReading::Resolved {
                 quality,
                 numeric_value: match value {
                     Some(ReadSlotValue::Number(value)) => Some(value),
+                    _ => None,
+                },
+                bool_value: match value {
+                    Some(ReadSlotValue::Bool(value)) => Some(value),
                     _ => None,
                 },
             },
@@ -330,7 +341,7 @@ mod tests {
             let mut catalog = catalog();
             match change {
                 0 => catalog.tags[0].data_type = "string".into(),
-                1 => catalog.tags[0].data_type = "bit".into(),
+                1 => catalog.tags[0].data_type = "text".into(),
                 2 => catalog.tags[0].data_type = "future".into(),
                 _ => catalog.tags[0].enabled = false,
             }
@@ -339,6 +350,50 @@ mod tests {
                 NumericReading::Invalid
             );
         }
+    }
+    #[test]
+    fn bit_tags_are_read_as_bool_with_the_same_quality_rules() {
+        let mut catalog = catalog();
+        catalog.tags[0].data_type = "bit".into();
+        let mut snapshot = snapshot();
+        for (quality, value, expected) in [
+            (ValueQuality::Good, Some(1.0), Some(true)),
+            (ValueQuality::Good, Some(0.0), Some(false)),
+        ] {
+            snapshot.values[0].q = quality;
+            snapshot.values[0].v = value;
+            let reading = view(&plan(), &snapshot, &catalog).readings[name()].clone();
+            assert_eq!(
+                reading,
+                NumericReading::Resolved {
+                    quality: Quality::Good,
+                    numeric_value: None,
+                    bool_value: expected,
+                }
+            );
+        }
+        let json = serde_json::to_value(NumericReading::Resolved {
+            quality: Quality::Good,
+            numeric_value: None,
+            bool_value: Some(true),
+        })
+        .unwrap();
+        assert_eq!(json["boolValue"], json!(true));
+        assert!(json["numericValue"].is_null());
+        for quality in [ValueQuality::Bad, ValueQuality::Stale] {
+            snapshot.values[0].q = quality.clone();
+            snapshot.values[0].v = Some(1.0);
+            let json =
+                serde_json::to_value(&view(&plan(), &snapshot, &catalog).readings[name()]).unwrap();
+            assert!(json.get("boolValue").is_none(), "{quality:?}");
+            assert!(json["numericValue"].is_null());
+        }
+        snapshot.values[0].q = ValueQuality::Good;
+        snapshot.values[0].v = Some(2.0);
+        assert_eq!(
+            view(&plan(), &snapshot, &catalog).readings[name()],
+            NumericReading::Invalid
+        );
     }
     #[test]
     fn simulation_provenance_is_retained_and_non_finite_values_are_invalid() {

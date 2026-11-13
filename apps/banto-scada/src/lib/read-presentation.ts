@@ -185,6 +185,13 @@ export function createReadPresentationSession(project: Project) {
           ) {
             const reading = text.readings[row.externalName];
             const origin = text.provenance[row.externalName];
+            // A bit tag read as bool by the Text is a type mismatch for a
+            // number slot: only that pairing may differ in state.
+            const bitVsNumberSlot =
+              reading.state === "resolved" &&
+              reading.numericValue === null &&
+              row.reading.state === "invalid";
+            if (bitVsNumberSlot) continue;
             if (reading.state !== row.reading.state)
               throw Error("同じタグの状態が一致しません");
             if (

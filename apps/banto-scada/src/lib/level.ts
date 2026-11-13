@@ -81,6 +81,8 @@ export function levelFromReading(
   const presentation = presentNumeric(reading);
   if (presentation.state !== "good" || reading?.state !== "resolved")
     return unavailable(presentation.label);
+  // A bit tag is not a level: same missing display as an invalid value.
+  if (reading.boolValue !== undefined) return unavailable("値が不正");
   return fromValue(
     shape,
     reading.numericValue!,

@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import { presentNumeric, type NumericReading } from "./tag-presentation";
+import { levelFromReading } from "./level";
 it("shows only finite Good values, including zero and negative numbers", () => {
   for (const numericValue of [0, -4.5, 12.34])
     expect(
@@ -59,4 +60,38 @@ it("renders the reading DTO fixtures also checked by the Rust SDK adapter", () =
       presentNumeric(fixture.reading as NumericReading).text,
       fixture.name,
     ).toBe(fixture.display);
+});
+it("shows a Good bit reading as true or false and keeps the SIM prefix", () => {
+  for (const boolValue of [true, false])
+    expect(
+      presentNumeric(
+        { state: "resolved", quality: "good", numericValue: null, boolValue },
+        { decimals: 2, unit: "kW" },
+      ),
+    ).toEqual({ state: "good", label: "Good", text: String(boolValue) });
+  const simulated = presentNumeric({
+    state: "resolved",
+    quality: "good",
+    numericValue: null,
+    boolValue: false,
+    provenance: {
+      catalogRevision: 1,
+      runId: 1,
+      collectionMode: "all_simulation",
+      valueSource: "simulation",
+      sourceTimestampMs: 1,
+    },
+  } as NumericReading);
+  expect(simulated.text).toBe("SIM · false");
+  for (const quality of ["stale", "bad"] as const)
+    expect(
+      presentNumeric({ state: "resolved", quality, numericValue: null }).text,
+    ).toContain("--");
+});
+it("a level treats a bit reading as an invalid value", () => {
+  const view = levelFromReading(
+    { min: 0, max: 100 },
+    { state: "resolved", quality: "good", numericValue: null, boolValue: true },
+  );
+  expect(view.description).toBe("-- · 値が不正");
 });

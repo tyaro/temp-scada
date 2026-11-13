@@ -80,6 +80,12 @@ impl<'a> SnapshotIndex<'a> {
         })
     }
 
+    pub(crate) fn is_bit(&self, name: &str) -> bool {
+        self.tags
+            .get(name)
+            .is_some_and(|tag| tag.data_type == "bit")
+    }
+
     pub(crate) fn read(
         &self,
         name: &str,

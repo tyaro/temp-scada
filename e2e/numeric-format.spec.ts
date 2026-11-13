@@ -152,3 +152,53 @@ test("the Inspector applies and removes a format, starting from the tag list uni
     .click();
   await expect(form).toContainText("タグ一覧の単位（°C）を初期値");
 });
+
+test("a screen-level Text bound to a bit tag shows true or false", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await fixtureEntry(page);
+  await page.goto("/");
+  await openProject(page, {
+    name: "bit-text.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(sample)),
+  });
+  await page
+    .getByRole("button", { name: "表示プレビュー", exact: true })
+    .click();
+  const number = mainCanvas(page)
+    .locator('[data-tag-name="Demo.Number"]')
+    .first();
+  for (const [sequence, boolValue] of [
+    [1, true],
+    [2, false],
+  ] as const) {
+    const update = structuredClone(
+      fixtures.find((fixture) => fixture.name === "good")!.update,
+    ) as any;
+    update.sequence = sequence;
+    // The tag is a bit: the Text reads it as bool; a number slot on the
+    // same tag is a type mismatch.
+    update.text.readings["Demo.Number"] = {
+      state: "resolved",
+      quality: "good",
+      numericValue: null,
+      boolValue,
+    };
+    for (const row of update.slots.slots)
+      if (row.externalName === "Demo.Number") {
+        row.reading = { state: "invalid", reason: "typeMismatch" };
+        row.provenance = null;
+      }
+    expect(
+      await page.evaluate(
+        (update) => (window as any).__readHarness.delivery.receive(update),
+        update,
+      ),
+    ).toBe(true);
+    await expect(number.locator("[data-text-content]")).toHaveText(
+      String(boolValue),
+    );
+  }
+});
