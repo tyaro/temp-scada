@@ -6,6 +6,12 @@ import type { EditCommand, ObjectPatch } from "../../editor";
 import { parsePoints, type ScreenObject } from "../../project";
 import { parseLineStyle } from "../../line-style";
 import { parseNumericProperty } from "../numeric-properties";
+import {
+  buildTableCells,
+  parseTableColors,
+  parseTableText,
+  parseTableWeights,
+} from "../../table";
 
 export interface ObjectFormContext {
   screenId: string;
@@ -109,6 +115,66 @@ export function objectFormCommand(
       const externalName = String(data.get("externalName") ?? "");
       patch.binding = externalName === "" ? null : { externalName };
     }
+  }
+  if (selected.shape.type === "table") {
+    const texts = parseTableText(String(data.get("tableText") ?? ""));
+    const rows = texts.length,
+      columns = texts[0].length;
+    const fontWeight = String(data.get("tableFontWeight") ?? ""),
+      align = String(data.get("tableAlign") ?? "");
+    if (
+      (fontWeight !== "normal" && fontWeight !== "bold") ||
+      (align !== "left" && align !== "center" && align !== "right")
+    )
+      throw new Error("表の文字書式を選択してください。");
+    const fontSize = parseNumericProperty(
+      String(data.get("tableFontSize") ?? ""),
+    );
+    if (!(fontSize > 0 && fontSize <= 512))
+      throw new Error("表の文字サイズは0より大きく512以下にしてください。");
+    let border: { color: string; width: number } | undefined;
+    if (data.get("tableBorderMode") === "line") {
+      const width = parseNumericProperty(
+        String(data.get("tableBorderWidth") ?? ""),
+      );
+      if (!(width > 0 && width <= 32))
+        throw new Error("表の罫線の太さは0より大きく32以下にしてください。");
+      border = { color: String(data.get("tableBorderColor") ?? ""), width };
+    }
+    const background =
+      data.get("tableBackgroundMode") === "color"
+        ? String(data.get("tableBackground") ?? "")
+        : "";
+    patch.table = {
+      columns: parseTableWeights(
+        String(data.get("tableColumns") ?? ""),
+        columns,
+        "列幅の比",
+      ),
+      rows: parseTableWeights(
+        String(data.get("tableRows") ?? ""),
+        rows,
+        "行の高さの比",
+      ),
+      cells: buildTableCells(
+        texts,
+        parseTableColors(
+          String(data.get("tableFills") ?? ""),
+          rows,
+          columns,
+          "セルの塗り",
+        ),
+        parseTableColors(
+          String(data.get("tableColors") ?? ""),
+          rows,
+          columns,
+          "セルの文字色",
+        ),
+      ),
+      style: { fontSize, fontWeight, align },
+      ...(border ? { border } : {}),
+      ...(background ? { background } : {}),
+    };
   }
   if (selected.shape.type === "symbol") {
     patch.symbolId = String(data.get("symbolId"));

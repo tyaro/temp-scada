@@ -4,6 +4,7 @@ import { normalizeProjectText } from "./text-content";
 import { validateStateColors } from "./state-color";
 import { validateSymbolSlots } from "./symbol-slots";
 import { validateLevelShape } from "./level";
+import { validateTableShape } from "./table";
 import {
   validateEquipment,
   type EquipmentType,
@@ -134,6 +135,26 @@ export interface LevelShape {
   binding?: TagBinding;
   slotBinding?: { slotName: string };
 }
+/** A table cell: fixed text with an optional fill and text color. */
+export interface TableCell {
+  text: string;
+  fill?: string;
+  color?: string;
+}
+/**
+ * A grid of fixed-text cells. `columns` and `rows` are relative weights that
+ * divide the placement's width and height; `cells` is rows x columns. The
+ * text color is the placement's `fill` unless a cell has its own `color`.
+ */
+export interface TableShape {
+  type: "table";
+  columns: number[];
+  rows: number[];
+  cells: TableCell[][];
+  style: Pick<TextStyle, "fontSize" | "fontWeight" | "align">;
+  border?: { color: string; width: number };
+  background?: string;
+}
 export type SymbolColorMode = "monochrome" | "definition";
 export interface LayoutObject extends BaseObject {
   width: number;
@@ -160,7 +181,8 @@ export interface LayoutObject extends BaseObject {
     | { type: "image"; assetId: string; fit: ImageFit; crop?: ImageCrop }
     | { type: "screenView"; screenId: string; fit: "contain" }
     | { type: "trend"; trendId: string }
-    | LevelShape;
+    | LevelShape
+    | TableShape;
 }
 export interface PolylineObject extends BaseObject {
   shape: {
@@ -450,6 +472,7 @@ export function parseProject(json: string): Project {
       }
 
       if (shape.type === "level") validateLevelShape(shape);
+      if (shape.type === "table") validateTableShape(shape);
       if (
         project.symbols.includes(owner) &&
         (shape.type === "text" || shape.type === "level") &&

@@ -142,6 +142,13 @@
       description:
         "数値に比例して塗る液位を配置します。下限・上限・向き・地の色を設定し、タグか number slot を表示します。",
     },
+    {
+      kind: "table",
+      label: "表を追加",
+      keywords: "表 テーブル 工程表 一覧 セル table grid",
+      description:
+        "固定の文字のセルを持つ表を配置します。セルの文字・塗り・文字色はタブ区切りで入力し、表計算ソフトから貼り付けられます。",
+    },
   ];
   const equipment = BUILTIN_PARTS.map((part) => ({
     template: part.template,
@@ -167,10 +174,14 @@
     allowSymbols ? definitions.filter((d) => matches(d.name)) : [],
   );
   const primitiveResults = $derived(
-    basicResults.filter((part) => part.kind !== "text"),
+    basicResults.filter(
+      (part) => part.kind !== "text" && part.kind !== "table",
+    ),
   );
   const objectResults = $derived(
-    basicResults.filter((part) => part.kind === "text"),
+    basicResults.filter(
+      (part) => part.kind === "text" || part.kind === "table",
+    ),
   );
   function categoryCount(category: Category): number {
     return category === "basic"
@@ -498,6 +509,9 @@
                           width="16"
                           height="16"
                           fill="currentColor"
+                        />
+                      {:else if part.kind === "table"}<path
+                          d="M10 6h40v28H10zM10 15h40M10 25h40M24 6v28M37 6v28"
                         />
                       {:else}<path d="M8 8H30V32H52" stroke-width="5" />{/if}
                     </svg>

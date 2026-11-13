@@ -380,6 +380,30 @@
       return;
     textarea.form?.requestSubmit();
   }
+  /** 表の入力欄: Tab はタブを入れる（Shift＋Tab は前の欄へ）。Ctrl／⌘＋Enter で確定。 */
+  function tableAreaKey(event: KeyboardEvent) {
+    const textarea = event.currentTarget as HTMLTextAreaElement;
+    if (
+      event.key === "Tab" &&
+      !event.shiftKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !event.isComposing &&
+      !composing.has(textarea)
+    ) {
+      event.preventDefault();
+      textarea.setRangeText(
+        "\t",
+        textarea.selectionStart,
+        textarea.selectionEnd,
+        "end",
+      );
+      textarea.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
+    textAreaKey(event);
+  }
   function compositionStart(event: CompositionEvent) {
     composing.add(
       event.currentTarget as HTMLInputElement | HTMLTextAreaElement,
@@ -921,7 +945,8 @@
                   ><span class="banto-field-label">
                     {selected.shape.type === "symbol"
                       ? "単色"
-                      : selected.shape.type === "text"
+                      : selected.shape.type === "text" ||
+                          selected.shape.type === "table"
                         ? "文字"
                         : selected.shape.type === "polyline"
                           ? "線"
@@ -1235,6 +1260,141 @@
                   で範囲内の値だけを塗ります。取得できない値は灰色の破線、範囲外は橙の枠と矢印で示し、塗りません。
                 </p>
               {/if}
+              {#if selected.shape.type === "table"}
+                <details class="full-width numeric-hint hint-details">
+                  <summary>セルはタブ区切り、行は改行</summary>
+                  <p id="inspector-table-help">
+                    表計算ソフトの範囲をそのまま貼り付けられます。入力欄の中では
+                    Tab でタブを入れ、Shift＋Tab
+                    で前の欄へ移ります。列の数は最も長い行に合わせます。色の表は
+                    #rrggbb
+                    を同じ並びで書き、空のセルは色なしです。Ctrl／⌘＋Enter
+                    で確定します。
+                  </p>
+                </details>
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">セルの文字</span><textarea
+                    class="banto-field-control table-grid-input"
+                    name="tableText"
+                    aria-label="セルの文字"
+                    aria-describedby="inspector-table-help"
+                    rows="5"
+                    wrap="off"
+                    oncompositionstart={compositionStart}
+                    oncompositionend={compositionEnd}
+                    onkeydown={tableAreaKey}></textarea></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">列幅の比</span><input
+                    class="banto-field-control"
+                    name="tableColumns"
+                    aria-label="列幅の比"
+                    placeholder="空欄はすべて1（例: 2, 1, 1）"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">行の高さの比</span><input
+                    class="banto-field-control"
+                    name="tableRows"
+                    aria-label="行の高さの比"
+                    placeholder="空欄はすべて1"
+                  /></label
+                >
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">セルの塗り</span><textarea
+                    class="banto-field-control table-grid-input"
+                    name="tableFills"
+                    aria-label="セルの塗り"
+                    aria-describedby="inspector-table-help"
+                    rows="3"
+                    wrap="off"
+                    placeholder="空欄は塗りなし（例: #334155）"
+                    onkeydown={tableAreaKey}></textarea></label
+                >
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">セルの文字色</span><textarea
+                    class="banto-field-control table-grid-input"
+                    name="tableColors"
+                    aria-label="セルの文字色"
+                    aria-describedby="inspector-table-help"
+                    rows="3"
+                    wrap="off"
+                    placeholder="空欄は配置の色"
+                    onkeydown={tableAreaKey}></textarea></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字サイズ</span><input
+                    class="banto-field-control"
+                    name="tableFontSize"
+                    aria-label="表の文字サイズ"
+                    type="text"
+                    inputmode="decimal"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字の太さ</span><select
+                    class="banto-field-control"
+                    name="tableFontWeight"
+                    aria-label="表の文字の太さ"
+                    ><option value="normal">標準</option><option value="bold"
+                      >太字</option
+                    ></select
+                  ></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字揃え</span><select
+                    class="banto-field-control"
+                    name="tableAlign"
+                    aria-label="表の文字揃え"
+                    ><option value="left">左</option><option value="center"
+                      >中央</option
+                    ><option value="right">右</option></select
+                  ></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">罫線</span><select
+                    class="banto-field-control"
+                    name="tableBorderMode"
+                    aria-label="表の罫線"
+                    ><option value="line">引く</option><option value="none"
+                      >なし</option
+                    ></select
+                  ></label
+                >
+                <label
+                  >罫線の色<input
+                    name="tableBorderColor"
+                    aria-label="表の罫線の色"
+                    type="color"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">罫線の太さ</span><input
+                    class="banto-field-control"
+                    name="tableBorderWidth"
+                    aria-label="表の罫線の太さ"
+                    type="text"
+                    inputmode="decimal"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">地</span><select
+                    class="banto-field-control"
+                    name="tableBackgroundMode"
+                    aria-label="表の地"
+                    ><option value="none">透明</option><option value="color"
+                      >色で塗る</option
+                    ></select
+                  ></label
+                >
+                <label
+                  >地の色<input
+                    name="tableBackground"
+                    aria-label="表の地の色"
+                    type="color"
+                  /></label
+                >
+              {/if}
               {#if selected.shape.type === "trend"}
                 <label class="full-width banto-field banto-field--stacked"
                   ><span class="banto-field-label">参照するトレンド</span
@@ -1477,6 +1637,10 @@
     flex: 0 0 32px;
     height: 34px;
     padding: 0;
+  }
+  .table-grid-input {
+    font-family: ui-monospace, monospace;
+    tab-size: 8;
   }
   .tag-note {
     font-size: 11px;

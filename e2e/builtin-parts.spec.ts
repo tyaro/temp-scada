@@ -25,8 +25,8 @@ test("finds flow-diagram parts by alias and places them at their own size", asyn
   await expect(
     palette(page).getByRole("button", { name: /を追加$/ }),
   ).toHaveCount(
-    // 基本図形 6 + 組込 11
-    17,
+    // 基本図形 7（表を含む） + 組込 11
+    18,
   );
 
   await search.fill("集じん");

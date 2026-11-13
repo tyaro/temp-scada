@@ -125,6 +125,9 @@
                   height="12"
                   fill="currentColor"
                 />
+              {:else if item.part.type === "basic" && item.part.kind === "table"}<path
+                  d="M6 6h28v20H6zM6 13h28M6 20h28M15 6v20M25 6v20"
+                />
               {:else}<path d="M6 6h14v20h14" stroke-width="3" />{/if}
             </svg>{/if}
         </button>

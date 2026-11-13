@@ -45,7 +45,10 @@ export function applyObjectCreation(
     x: 40,
     y: 40,
     fill: canvasColors(definitionId ? "#0b1220" : targetScreen!.background)[
-      command.type === "add" && command.kind === "text" ? "newText" : "newShape"
+      command.type === "add" &&
+      (command.kind === "text" || command.kind === "table")
+        ? "newText"
+        : "newShape"
     ],
   };
   if (command.type === "add-symbol") {
@@ -83,6 +86,24 @@ export function applyObjectCreation(
               ],
         strokeWidth: command.kind === "line" ? 2 : 8,
         arrow: "none",
+      },
+    });
+  } else if (command.kind === "table") {
+    screen.objects.push({
+      ...base,
+      width: 240,
+      height: 90,
+      shape: {
+        type: "table",
+        columns: [1, 1, 1],
+        rows: [1, 1, 1],
+        cells: [
+          [{ text: "項目" }, { text: "SV" }, { text: "PV" }],
+          [{ text: "" }, { text: "" }, { text: "" }],
+          [{ text: "" }, { text: "" }, { text: "" }],
+        ],
+        style: { fontSize: 14, fontWeight: "normal", align: "center" },
+        border: { color: "#94a3b8", width: 1 },
       },
     });
   } else if (command.kind === "level") {

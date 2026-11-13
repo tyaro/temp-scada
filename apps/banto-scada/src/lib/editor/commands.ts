@@ -21,11 +21,12 @@ import type {
   Point,
   ShapePaint,
   LevelShape,
+  TableShape,
   TagBinding,
   TextStyle,
 } from "../project";
 export type AddKind =
-  "rectangle" | "ellipse" | "text" | "line" | "pipe" | "level";
+  "rectangle" | "ellipse" | "text" | "line" | "pipe" | "level" | "table";
 export interface ObjectPatch {
   opacity?: number;
   colorAlpha?: number;
@@ -50,6 +51,8 @@ export interface ObjectPatch {
   format?: NumericFormat | null;
   /** Limits, direction and background of a level; no background clears it. */
   level?: Pick<LevelShape, "direction" | "min" | "max" | "background">;
+  /** Whole content of a table; a missing border or background clears it. */
+  table?: Omit<TableShape, "type">;
   stateColor?: StateColor | null;
   symbolId?: string;
   equipmentId?: string | null;
