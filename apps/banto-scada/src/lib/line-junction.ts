@@ -189,10 +189,11 @@ export function lineJunctions(lines: readonly WorldLine[]): LineJunction[] {
         if (segment.line === line || through.has(segment.line)) continue;
         const on = closestOnSegment(point, segment.a, segment.b);
         if (distance(point, on) > tolerance) continue;
+        // 「途中」かは線の上の位置（投影点）で見る。端点から測ると、端の斜め近くに誤って点が出る。
         const other = lines[segment.line].points;
         if (
-          distance(point, other[0]) <= tolerance ||
-          distance(point, other.at(-1)!) <= tolerance
+          distance(on, other[0]) <= tolerance ||
+          distance(on, other.at(-1)!) <= tolerance
         )
           continue;
         through.set(segment.line, on);
