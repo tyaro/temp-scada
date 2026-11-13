@@ -199,7 +199,7 @@ export interface GeometricGroup {
 }
 /**
  * 交差のまたぎの形。`"arc"` は弧でまたぎ、下の線（またがれる線）はそのまま描く。
- * `"cut"` は弧でまたぎ、下の線を交差の付近で切る。仕様: docs/design/graphics/line-hop.md
+ * `"cut"` は弧を描かず、下の線（またがれる線）を交差点の前後で切る。仕様: docs/design/graphics/line-hop.md
  */
 export type LineHopStyle = "arc" | "cut";
 export interface Screen {

@@ -18,7 +18,7 @@ const hopChoice = (page: Page) =>
   page.getByLabel("交差のまたぎ", { exact: true });
 async function setLineHops(
   page: Page,
-  label: "なし" | "弧でまたぐ" | "弧でまたぎ、下の線を切る",
+  label: "なし" | "弧でまたぐ" | "下の線を切る",
 ) {
   await selectPanel(page, "プロジェクト");
   await hopChoice(page).selectOption({ label });
@@ -72,18 +72,18 @@ test("draws a hop where pipes cross, optionally cutting the crossed pipe, and sa
   // 弧でまたぐときは、またがれる線を切らない。
   await expect(cut).toHaveCount(0);
 
-  // 下の線を切る形にすると、横の線を交差点（ローカル (100, 40)）の ±7 で切る。弧はそのまま。
+  // 下の線を切る形にすると、横の線を交差点（ローカル (100, 40)）の ±4 で切る。縦の線は弧を描かず直線のまま。
   await button(page, "選択解除").click();
-  await setLineHops(page, "弧でまたぎ、下の線を切る");
-  await expect(cut).toHaveAttribute("d", "M 0 40 L 93 40 M 107 40 L 200 40");
-  await expect(hop).toHaveAttribute("d", hopD);
+  await setLineHops(page, "下の線を切る");
+  await expect(cut).toHaveAttribute("d", "M 0 40 L 96 40 M 104 40 L 200 40");
+  await expect(hop).toHaveCount(0);
   await selectPanel(page, "プロジェクト");
   await expect(hopChoice(page)).toHaveValue("cut");
 
   // 表示プレビューでも同じ。
   await button(page, "表示プレビュー").click();
   await expect(svg.locator(`path[data-line-hop="${crossingId}"]`)).toHaveCount(
-    1,
+    0,
   );
   await expect(svg.locator(`path[data-line-hop="${crossedId}"]`)).toHaveCount(
     1,
@@ -99,7 +99,7 @@ test("draws a hop where pipes cross, optionally cutting the crossed pipe, and sa
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
   });
-  await expect(hop).toHaveCount(1);
+  await expect(hop).toHaveCount(0);
   await expect(cut).toHaveCount(1);
 
   // 弧に戻すと切らない。1 操作で戻せる。
@@ -108,6 +108,7 @@ test("draws a hop where pipes cross, optionally cutting the crossed pipe, and sa
   await expect(hop).toHaveCount(1);
   await button(page, "元に戻す").click();
   await expect(cut).toHaveCount(1);
+  await expect(hop).toHaveCount(0);
   await button(page, "やり直す").click();
   await expect(cut).toHaveCount(0);
   expect((await save(page)).screens[0].lineHops).toBe("arc");

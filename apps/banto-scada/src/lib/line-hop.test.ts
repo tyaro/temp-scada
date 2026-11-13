@@ -442,20 +442,19 @@ describe("cut style", () => {
       [x, 100],
     ]);
 
-  it("cuts the crossed pipe around the crossing, keeping the hop", () => {
-    // 半径 4 ＋ またぐ線の線幅/2（1）＋ 余白（またがれる線の線幅 2）＝ 7。
+  it("cuts the crossed pipe around the crossing and draws the hopper straight", () => {
+    // 切る半径は弧の半径と同じ hopRadius(2, 2) ＝ 4。交差点 x=50 の前後 4 ずつ。
     const crossed = horizontal(),
       hopper = vertical();
     const result = cutSpans(crossed, hopper);
     expect(result.get(crossed.id)).toEqual([
-      { segment: 0, from: 43, to: 57, kind: "gap" },
+      { segment: 0, from: 46, to: 54, kind: "gap" },
     ]);
-    expect(result.get(hopper.id)).toEqual([{ segment: 0, from: 46, to: 54 }]);
+    // またぐ線には弧（区間）を作らない。
+    expect(result.has(hopper.id)).toBe(false);
     const paths = screenHopPaths([crossed, hopper], "cut");
-    expect(paths.get(crossed.id)).toBe("M 0 50 L 43 50 M 57 50 L 100 50");
-    expect(paths.get(hopper.id)).toBe(
-      "M 50 0 L 50 46 A 4 4 0 0 1 50 54 L 50 100",
-    );
+    expect(paths.get(crossed.id)).toBe("M 0 50 L 46 50 M 54 50 L 100 50");
+    expect(paths.has(hopper.id)).toBe(false);
   });
 
   it("does not cut with the arc style", () => {
@@ -467,6 +466,35 @@ describe("cut style", () => {
     );
   });
 
+  it("cuts by the same radius as the arc, from the wider stroke", () => {
+    // 線幅 2 と 6 なら hopRadius ＝ 12。弧のときの半径と同じ。
+    const crossed = horizontal(50, {}),
+      hopper = pipe(
+        [
+          [50, 0],
+          [50, 100],
+        ],
+        {},
+        6,
+      );
+    const radius = hopRadius(6, 2);
+    expect(radius).toBe(12);
+    expect(cutSpans(crossed, hopper).get(crossed.id)).toEqual([
+      { segment: 0, from: 50 - radius, to: 50 + radius, kind: "gap" },
+    ]);
+    const arcCrossed = horizontal(50, {}),
+      arcHopper = pipe(
+        [
+          [50, 0],
+          [50, 100],
+        ],
+        {},
+        6,
+      );
+    const [arc] = spans(arcCrossed, arcHopper).get(arcHopper.id)!;
+    expect(arc.to - arc.from).toBe(radius * 2);
+  });
+
   it("cuts by the same length whatever the crossing angle", () => {
     const crossed = horizontal(),
       hopper = pipe([
@@ -474,7 +502,7 @@ describe("cut style", () => {
         [80, 100],
       ]);
     expect(cutSpans(crossed, hopper).get(crossed.id)).toEqual([
-      { segment: 0, from: 43, to: 57, kind: "gap" },
+      { segment: 0, from: 46, to: 54, kind: "gap" },
     ]);
   });
 
@@ -486,25 +514,23 @@ describe("cut style", () => {
       ]),
       hopper = vertical();
     expect(cutSpans(crossed, hopper).get(crossed.id)).toEqual([
-      { segment: 0, from: 43, to: 53, kind: "gap" },
+      { segment: 0, from: 46, to: 53, kind: "gap" },
     ]);
     expect(screenHopPaths([crossed, hopper], "cut").get(crossed.id)).toBe(
-      "M 0 50 L 43 50 M 53 50 L 53 100",
+      "M 0 50 L 46 50 M 53 50 L 53 100",
     );
   });
 
   it("keeps the crossed pipe under a junction dot", () => {
-    // 横の配管の x=56 に枝の T 字（点の半径 3＋0.5）。切る区間 43–57 にかかるので切らない（弧は描く）。
+    // 横の配管の x=56 に枝の T 字（点の半径 3＋0.5 ＝ 52.5–59.5）。切る区間 46–54 にかかるので切らない。
     const crossed = horizontal(),
       hopper = vertical(),
       branch = pipe([
         [56, 50],
         [56, 90],
       ]);
-    const result = cutSpans(crossed, hopper, branch);
-    expect(result.get(crossed.id)).toBeUndefined();
-    expect(result.get(hopper.id)).toEqual([{ segment: 0, from: 46, to: 54 }]);
-    // 点が切る区間の外なら切る。
+    expect(cutSpans(crossed, hopper, branch).has(crossed.id)).toBe(false);
+    // 点が切る区間の外（58.5–65.5）なら切る。
     const far = pipe([
       [62, 50],
       [62, 90],
@@ -512,69 +538,56 @@ describe("cut style", () => {
     const other = horizontal(),
       over = vertical();
     expect(cutSpans(other, over, far).get(other.id)).toEqual([
-      { segment: 0, from: 43, to: 57, kind: "gap" },
+      { segment: 0, from: 46, to: 54, kind: "gap" },
     ]);
   });
 
   it("merges overlapping and close cuts", () => {
     const crossed = horizontal();
+    // 46–54 と 56–64。間の直線が 2（最小半径 4 未満）なので 1 つにまとめる。
     expect(
       cutSpans(crossed, vertical(50), vertical(60)).get(crossed.id),
-    ).toEqual([{ segment: 0, from: 43, to: 67, kind: "gap" }]);
-    // 間の直線が 2（最小半径 4 未満）なら 1 つにまとめる。
+    ).toEqual([{ segment: 0, from: 46, to: 64, kind: "gap" }]);
+    // 46–54 と 58–66。間が 4 ちょうどなら分ける。
     const again = horizontal();
-    expect(cutSpans(again, vertical(50), vertical(66)).get(again.id)).toEqual([
-      { segment: 0, from: 43, to: 73, kind: "gap" },
+    expect(cutSpans(again, vertical(50), vertical(62)).get(again.id)).toEqual([
+      { segment: 0, from: 46, to: 54, kind: "gap" },
+      { segment: 0, from: 58, to: 66, kind: "gap" },
     ]);
     const apart = horizontal();
     expect(cutSpans(apart, vertical(20), vertical(80)).get(apart.id)).toEqual([
-      { segment: 0, from: 13, to: 27, kind: "gap" },
-      { segment: 0, from: 73, to: 87, kind: "gap" },
+      { segment: 0, from: 16, to: 24, kind: "gap" },
+      { segment: 0, from: 76, to: 84, kind: "gap" },
     ]);
   });
 
-  it("cuts clear of a merged hop", () => {
-    // 2 本の縦の配管を横の配管がまたぎ、弧が 46–60 の 1 つ（中心 53、半径 7）にまとまる。
-    // x=50 の線は交差点から弧の円まで √(7² − 3²) なので、その先まで切る。
-    const first = vertical(50),
-      second = vertical(56),
-      hopper = horizontal();
-    const result = cutSpans(first, second, hopper);
-    const [arc, ...others] = result.get(hopper.id)!;
-    expect(others).toEqual([]);
-    expect(arc.from).toBeCloseTo(46, 9);
-    expect(arc.to).toBeCloseTo(60, 9);
-    const [gap] = result.get(first.id)!;
-    const reach = Math.sqrt(49 - 9) + 1 + 2;
-    expect(gap.from).toBeCloseTo(50 - reach, 9);
-    expect(gap.to).toBeCloseTo(50 + reach, 9);
-  });
-
-  it("does not cut where the hop is skipped", () => {
-    // またぐ線の端に近く、弧を省略した交差では切らない。
+  it("cuts even where the hopper ends close to the crossing", () => {
+    // 弧なら端に近くて省く交差でも、切る形は弧を描かないので交差点の前後を切る。
     const crossed = horizontal(),
       hopper = pipe([
         [50, 48.8],
         [50, 100],
       ]);
-    expect(cutSpans(crossed, hopper).size).toBe(0);
+    expect(cutSpans(crossed, hopper).get(crossed.id)).toEqual([
+      { segment: 0, from: 46, to: 54, kind: "gap" },
+    ]);
+    expect(cutSpans(crossed, hopper).has(hopper.id)).toBe(false);
   });
 
-  it("does not cut over a hop of the crossed pipe itself", () => {
-    // 縦の配管は横の配管（y=50）をまたぎ、y=56 の配管にまたがれる。切る区間が自分の弧に重なるので切らない。
+  it("gives a pipe that is both hopper and crossed only its cuts", () => {
+    // 縦の配管は下の横の配管（y=50）をまたぎ、上の横の配管（y=56）にまたがれる。
+    // 縦の配管は直線のままで、y=56 の前後 4 だけが切られる。
     const bottom = horizontal(50),
       middle = vertical(),
       top = horizontal(56);
-    expect(cutSpans(bottom, middle, top).get(middle.id)).toEqual([
-      { segment: 0, from: 46, to: 54 },
+    const result = cutSpans(bottom, middle, top);
+    expect(result.get(middle.id)).toEqual([
+      { segment: 0, from: 52, to: 60, kind: "gap" },
     ]);
-    // 離れていれば弧と切る区間を同じ線分に描く。
-    const low = horizontal(50),
-      pipeBetween = vertical(),
-      high = horizontal(70);
-    expect(
-      screenHopPaths([low, pipeBetween, high], "cut").get(pipeBetween.id),
-    ).toBe("M 50 0 L 50 46 A 4 4 0 0 1 50 54 L 50 63 M 50 77 L 50 100");
+    expect(result.get(bottom.id)).toEqual([
+      { segment: 0, from: 46, to: 54, kind: "gap" },
+    ]);
+    expect(result.has(top.id)).toBe(false);
   });
 
   for (const [label, extra] of [
@@ -610,10 +623,10 @@ describe("cut style", () => {
         const world = objectToWorld(crossed, local);
         expect(
           Math.hypot(world.x - crossing.x, world.y - crossing.y),
-        ).toBeCloseTo(7, 3);
+        ).toBeCloseTo(4, 3);
       }
-      expect(before.x).toBeCloseTo(23, 3);
-      expect(after.x).toBeCloseTo(37, 3);
+      expect(before.x).toBeCloseTo(26, 3);
+      expect(after.x).toBeCloseTo(34, 3);
     });
 });
 
@@ -676,15 +689,16 @@ describe("painting", () => {
     const cut = body.match(
       new RegExp(`<path[^>]*data-line-hop="${first.id}"[^>]*>`),
     )?.[0];
-    expect(cut).toContain("M 0 50 L 43 50 M 57 50 L 100 50");
+    expect(cut).toContain("M 0 50 L 46 50 M 54 50 L 100 50");
     expect(cut).toContain("stroke-dasharray");
-    expect(body).toContain(`data-line-hop="${second.id}"`);
+    // またぐ線は直線のまま（弧の path を置き換えない）。
+    expect(body).not.toContain(`data-line-hop="${second.id}"`);
     // 矢印は 2 本とも保存の points のまま。
     expect(body.match(/<polygon/g)?.length).toBe(2);
     const embedded = render(ScreenView, {
       props: { source: screen, width: 200, height: 200, symbols: [] },
     });
-    expect(embedded.body).toContain("M 0 50 L 43 50 M 57 50 L 100 50");
+    expect(embedded.body).toContain("M 0 50 L 46 50 M 54 50 L 100 50");
   });
 
   it("draws the same hops in an embedded screen", () => {

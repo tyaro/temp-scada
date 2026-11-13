@@ -33,7 +33,7 @@ const hopShrinkLimit = hopMinRadius / 2;
 
 /**
  * 線の 1 つの線分の上の、描画を置き換える区間（線分の始点からの距離）。
- * 既定はまたぐ線の弧。`kind: "gap"` は、下の線を切る形（`"cut"`）で、またがれる線を描かない区間。
+ * 既定はまたぐ線の弧。`kind: "gap"` は、下の線を切る形（`"cut"`、弧は描かない）で、またがれる線を描かない区間。
  */
 export interface HopSpan {
   /** 線の中の線分の番号（始点の頂点の番号）。 */
@@ -42,12 +42,6 @@ export interface HopSpan {
   to: number;
   kind?: "gap";
 }
-
-/**
- * 下の線を切る形で、またがれる線を切る半径に足す余白の、またがれる線の線幅に対する比。
- * 実線は端が丸い（`lineCap`）ので、端が線幅/2 だけ伸びる。その分と、見える隙間の線幅/2 を足す。
- */
-const gapMarginRatio = 1;
 
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const cross = (a: Point, b: Point) => a.x * b.y - a.y * b.x;
@@ -162,20 +156,11 @@ function mergeSpans<T extends { from: number; to: number }>(
   return merged;
 }
 
-/** 下の線を切る形のための、1 つの交差の記録（またがれる線の線分の上の位置）。 */
-interface Crossed {
-  /** またぐ線の線分の上の交差点の距離。まとめた弧を探すのに使う。 */
-  along: number;
-  at: Point;
-  segment: IndexedSegment;
-  /** またがれる線の線分の上の交差点の距離。 */
-  crossedAlong: number;
-}
-
 /**
  * 交差のまたぎ。2 本の線の線分が互いの途中で真に交差するとき、後に描かれる線（`order` が大きい線）に
  * またぎの弧を置く。同じ線どうしの交差、分岐の点の円の中の交差は見ない。
- * `style` が `"cut"` なら、弧を置いた交差で、またがれる線（先に描かれる線）も弧の付近で切る（`kind: "gap"`）。
+ * `style` が `"cut"` なら弧は描かず、またぐ線は直線のまま、またがれる線（先に描かれる線）を交差点から
+ * 弧の半径と同じ距離だけ切る（`kind: "gap"`）。
  * 返り値は、`lines` の番号ごとの、線分の番号順・距離順の区間。
  */
 export function lineHopSpans(
@@ -191,7 +176,6 @@ export function lineHopSpans(
     const hopper = lines[segment.line];
     const length = distance(segment.a, segment.b);
     const spans: { from: number; to: number }[] = [];
-    const crossings: Crossed[] = [];
     // この線分にかかる分岐の点。またぎはその手前で止め、点の下の直線を消さない。
     let blocked: { along: number; reach: number }[] | undefined;
     for (const other of index.alongSegment(segment.a, segment.b)) {
@@ -200,6 +184,20 @@ export function lineHopSpans(
       const crossing = properCrossing(segment.a, segment.b, other.a, other.b);
       if (!crossing) continue;
       if (covered.covers(crossing.at)) continue;
+      if (style === "cut") {
+        // 下の線を切る形では、またぐ線は直線のまま描き、またがれる線だけを切る（弧は描かない）。
+        const crossedLine = lines[other.line];
+        const crossedLength = distance(other.a, other.b);
+        const crossedAlong = distance(other.a, crossing.at);
+        const cut = hopRadius(hopper.strokeWidth, crossedLine.strokeWidth);
+        const list = gaps.get(other) ?? [];
+        list.push({
+          from: Math.max(0, crossedAlong - cut),
+          to: Math.min(crossedLength, crossedAlong + cut),
+        });
+        gaps.set(other, list);
+        continue;
+      }
       blocked ??= covered.along(segment.a, segment.b);
       const radius = Math.min(
         hopRadius(hopper.strokeWidth, lines[other.line].strokeWidth),
@@ -215,48 +213,10 @@ export function lineHopSpans(
         from: crossing.along - radius,
         to: crossing.along + radius,
       });
-      if (style === "cut")
-        crossings.push({
-          along: crossing.along,
-          at: crossing.at,
-          segment: other,
-          crossedAlong: distance(other.a, crossing.at),
-        });
     }
     if (spans.length === 0) continue;
     const merged = mergeSpans(spans, blocked ?? []);
     arcs.set(segment, merged);
-    for (const crossed of crossings) {
-      const arc = merged.find(
-        (span) => span.from <= crossed.along && crossed.along <= span.to,
-      )!;
-      const crossedLine = lines[crossed.segment.line];
-      const crossedLength = distance(crossed.segment.a, crossed.segment.b);
-      // 交差点から、またがれる線に沿って弧の円まで行く距離（遠い側）。まとめていない弧では半径そのもの。
-      const radius = (arc.to - arc.from) / 2;
-      const center = at(segment.a, segment.b, (arc.from + arc.to) / 2 / length);
-      const u = {
-        x: (crossed.segment.b.x - crossed.segment.a.x) / crossedLength,
-        y: (crossed.segment.b.y - crossed.segment.a.y) / crossedLength,
-      };
-      const offset = {
-        x: crossed.at.x - center.x,
-        y: crossed.at.y - center.y,
-      };
-      const b = u.x * offset.x + u.y * offset.y;
-      const k = offset.x ** 2 + offset.y ** 2 - radius ** 2;
-      const reach = Math.abs(b) + Math.sqrt(Math.max(0, b * b - k));
-      const cut =
-        reach +
-        hopper.strokeWidth / 2 +
-        crossedLine.strokeWidth * gapMarginRatio;
-      const list = gaps.get(crossed.segment) ?? [];
-      list.push({
-        from: Math.max(0, crossed.crossedAlong - cut),
-        to: Math.min(crossedLength, crossed.crossedAlong + cut),
-      });
-      gaps.set(crossed.segment, list);
-    }
   }
   const result = new Map<number, HopSpan[]>();
   const add = (segment: IndexedSegment, span: HopSpan) => {

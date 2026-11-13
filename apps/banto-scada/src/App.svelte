@@ -3628,7 +3628,7 @@
             class="banto-field-control"
             name="lineHops"
             aria-label="交差のまたぎ"
-            >{#each [["", "なし"], ["arc", "弧でまたぐ"], ["cut", "弧でまたぎ、下の線を切る"]] as [value, label]}<option
+            >{#each [["", "なし"], ["arc", "弧でまたぐ"], ["cut", "下の線を切る"]] as [value, label]}<option
                 {value}
                 selected={("background" in screen && screen.lineHops
                   ? screen.lineHops
@@ -3637,7 +3637,7 @@
           ></label
         >
         <p class="hint">
-          配管が交わる所で、後に描く配管を半円でまたがせます。下の線を切ると、またがれる配管を弧の付近で描きません。
+          配管が交わる所で、後に描く配管を半円でまたがせます。「下の線を切る」では弧を描かず、またぐ配管は直線のまま、またがれる配管を交差点の前後で切ります。
         </p>
       {/if}
       <button type="submit"

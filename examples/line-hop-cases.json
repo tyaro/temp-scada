@@ -1,5 +1,5 @@
 {
-  "description": "画面の交差のまたぎ（lineHops）の保存形。\"arc\"（弧でまたぐ）か \"cut\"（弧でまたぎ、下の線を切る）。省略はまたがない。true・false・その他の文字列は不正。Symbol 定義には置けない。Rust と TypeScript で共有する。",
+  "description": "画面の交差のまたぎ（lineHops）の保存形。\"arc\"（弧でまたぐ）か \"cut\"（弧を描かず、下の線を切る）。省略はまたがない。true・false・その他の文字列は不正。Symbol 定義には置けない。Rust と TypeScript で共有する。",
   "cases": [
     {
       "name": "省略はまたがない",
@@ -14,7 +14,7 @@
       "valid": true
     },
     {
-      "name": "cut は弧でまたぎ、下の線を切る",
+      "name": "cut は弧を描かず、下の線を切る",
       "owner": "screens",
       "set": { "lineHops": "cut" },
       "valid": true
