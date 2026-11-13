@@ -91,3 +91,36 @@ test("operator frame settings save, block screen deletion and clear", async ({
   expect(await save(page)).not.toHaveProperty("operatorFrame");
   void common;
 });
+
+test("pending operator frame selections survive an unrelated numeric edit", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await open(page);
+  const target = main.objects.find((object) => object.shape.type === "text")!;
+  await page
+    .locator(`.sheet > svg [data-object-id="${target.id}"]`)
+    .first()
+    .click({ force: true });
+  const x = page.getByLabel("X", { exact: true });
+  await expect(x).toBeVisible();
+  // 未適用のまま、選択した配置の数値を Inspector で確定する。
+  await form(page).getByLabel("ヘッダー画面", { exact: true }).selectOption({
+    label: "枠用ヘッダー",
+  });
+  await x.fill(String(target.x + 10));
+  await x.press("Enter");
+  await expect(
+    form(page).getByLabel("ヘッダー画面", { exact: true }),
+  ).toHaveValue("0199f600-0000-7000-8000-000000000a01");
+  await form(page)
+    .getByRole("button", { name: "運転表示の設定を適用", exact: true })
+    .click();
+  const saved = await save(page);
+  expect(saved.operatorFrame).toEqual({
+    headerScreenId: "0199f600-0000-7000-8000-000000000a01",
+  });
+  expect(
+    saved.screens[0].objects.find((object: any) => object.id === target.id).x,
+  ).toBe(target.x + 10);
+});

@@ -4051,9 +4051,14 @@
             {/key}
             {#if !activeDefinition}
               <h2>運転表示の設定</h2>
-              {#key `${workspaceGeneration}:${project.manifest.projectRevision}`}
+              <!-- 確定値は drafts.track の update で同期し、関係のない編集で未適用の選択を消さない。 -->
+              {#key `${workspaceGeneration}:${project.manifest.projectId}`}
                 <form
-                  use:drafts.track
+                  use:drafts.track={{
+                    startScreenId: project.operatorFrame?.startScreenId ?? "",
+                    headerScreenId: project.operatorFrame?.headerScreenId ?? "",
+                    footerScreenId: project.operatorFrame?.footerScreenId ?? "",
+                  }}
                   data-editor-form="operator-frame"
                   aria-label="運転表示の設定"
                   onsubmit={submitForm}
@@ -4067,10 +4072,7 @@
                         disabled={editBlocked}
                         ><option value="">なし</option>
                         {#each project.screens as target (target.id)}<option
-                            value={target.id}
-                            selected={project.operatorFrame?.[
-                              key as keyof typeof project.operatorFrame
-                            ] === target.id}>{target.name}</option
+                            value={target.id}>{target.name}</option
                           >{/each}</select
                       ></label
                     >
