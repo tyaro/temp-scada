@@ -25,12 +25,13 @@
 
 ## 表示と操作
 
-`nav-button.ts` の純関数（`navButtonIsCurrent`・`navButtonColors`・`navButtonDestination`・`navButtonDisabled`）が決め、`NavButtonPainting.svelte` が角丸の矩形と中央寄せの文字を描く。文字はボタンの枠で切り取り（折り返さない）、当たり判定に入れない。枠より長い文字のはみ出しは見えず、押しても移らない。
+`nav-button.ts` の純関数（`navButtonIsCurrent`・`navButtonColors`・`navButtonAction`・`navButtonDisabled`）が決め、`NavButtonPainting.svelte` が角丸の矩形と中央寄せの文字を描く。文字はボタンの枠で切り取り（折り返さない）、当たり判定に入れない。枠より長い文字のはみ出しは見えず、押しても移らない。
 
-- 行き先が表示中の画面（`Renderer` の画面）のとき、現在の画面の色で描く（`data-nav-current`）。編集中も同じ。埋込画面の中のボタンは通常の色で描き、押せない（埋込は `pointer-events="none"`）。
+- 行き先が表示中の画面（`Renderer` の画面。運転表示では `Renderer` の `currentScreenId` で渡す運転表示の現在の画面）のとき、現在の画面の色で描く（`data-nav-current`）。編集中も同じ。埋込画面の中のボタンは通常の色で描き、押せない（埋込は `pointer-events="none"`）。
 - 編集中は押しても移動しない（選択だけ）。
-- 表示プレビューでは、行き先が画面のボタンが `role="button"` になり、クリック・Enter・Space でその画面へ移る。Designer の画面タブも追従する（`Renderer` の `onnavigate`→`CanvasWorkspace`→`App` の `openScreen`。機器の読取詳細の入口 `onopenequipment` と同じ形）。
-- 戻る・進む・行き先未設定は、プレビューでは押せず薄く描く（`data-nav-disabled`）。戻る・進むの履歴は 2-C の運転表示で扱う。
+- 表示プレビューでは、行き先が画面のボタンが `role="button"` になり、クリック・Enter・Space でその画面へ移る。Designer の画面タブも追従する（`Renderer` の `onnavigate`（行き先 `NavTarget` で呼ぶ）→`CanvasWorkspace`→`App` の `openScreen`。機器の読取詳細の入口 `onopenequipment` と同じ形）。
+- 戻る・進む・行き先未設定は、プレビューでは押せず薄く描く（`data-nav-disabled`）。プレビューは履歴を持たない。
+- [運転表示](operator-frame.md#運転表示operatorview)では、戻る・進むは運転表示の履歴（`Renderer` の `navHistory`）で動けるときだけ押せ、動けないときは薄く描く。
 
 ## 編集
 
@@ -54,6 +55,6 @@
 
 ## 後続・未対応
 
-- 戻る・進むの履歴、ヘッダー・フッターの枠と枠の画面を行き先から除く検査は 2-C。
+- 戻る・進むの履歴、ヘッダー・フッターの枠と枠の画面を行き先から除く検査は 2-C で実装した（[運転表示の枠](operator-frame.md)）。
 - 設備 context・開き方（別窓）・戻り先、押したときの権限・確認は持たない。
 - Tauri 実機での表示は未確認。

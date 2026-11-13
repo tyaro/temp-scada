@@ -79,8 +79,9 @@ test("new screens start white and screen switching applies pending background in
   await button(page, "Text を追加").click();
   const project = await save(page);
   expect(project.screens[0].background).toBe("#fff1f2");
-  expect(project.screens[1].background).toBe("#ffffff");
-  expect(project.screens[1].objects[0].fill).toBe("#0f172a");
+  // 追加した画面は末尾（工程図サンプルには運転表示の枠の画面もある）。
+  expect(project.screens.at(-1).background).toBe("#ffffff");
+  expect(project.screens.at(-1).objects[0].fill).toBe("#0f172a");
   await selectPanel(page, "プロジェクト");
   await button(page, "定義を編集").click();
   await expect(page.getByLabel("画面の背景色", { exact: true })).toHaveCount(0);

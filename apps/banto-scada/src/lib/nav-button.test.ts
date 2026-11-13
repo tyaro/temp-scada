@@ -11,7 +11,7 @@ import {
 import { applyCommand } from "./editor";
 import {
   navButtonColors,
-  navButtonDestination,
+  navButtonAction,
   navButtonDisabled,
   navButtonIsCurrent,
   navTargetLabel,
@@ -78,10 +78,13 @@ describe("nav button display", () => {
     });
   });
   it("moves only in the preview, and only to a screen", () => {
-    expect(navButtonDestination(shape(), true)).toBe("a");
-    expect(navButtonDestination(shape(), false)).toBeUndefined();
+    expect(navButtonAction(shape(), true)).toEqual({
+      kind: "screen",
+      screenId: "a",
+    });
+    expect(navButtonAction(shape(), false)).toBeUndefined();
     expect(
-      navButtonDestination(shape({ target: { kind: "forward" } }), true),
+      navButtonAction(shape({ target: { kind: "forward" } }), true),
     ).toBeUndefined();
     expect(navButtonDisabled(shape({ target: { kind: "back" } }), true)).toBe(
       true,
@@ -91,6 +94,17 @@ describe("nav button display", () => {
       false,
     );
     expect(navButtonDisabled(shape(), true)).toBe(false);
+  });
+  it("moves back and forward only with the operator view history", () => {
+    const back = shape({ target: { kind: "back" } }),
+      forward = shape({ target: { kind: "forward" } }),
+      history = { canBack: true, canForward: false };
+    expect(navButtonAction(back, true, history)).toEqual({ kind: "back" });
+    expect(navButtonAction(forward, true, history)).toBeUndefined();
+    expect(navButtonDisabled(back, true, history)).toBe(false);
+    expect(navButtonDisabled(forward, true, history)).toBe(true);
+    expect(navButtonAction(back, false, history)).toBeUndefined();
+    expect(navButtonDisabled(shape(), true, history)).toBe(false);
   });
   it("names the target", () => {
     const screens = [{ id: "a", name: "概要" }];

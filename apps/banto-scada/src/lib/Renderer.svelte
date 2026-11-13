@@ -11,6 +11,7 @@
     type Screen,
     type ScreenObject,
     type SymbolDefinition,
+    type NavTarget,
   } from "./project";
   import {
     objectToWorld,
@@ -40,7 +41,11 @@
   import { screenJunctions } from "./line-junction";
   import { screenHopPaths } from "./line-hop";
   import type { TagReadings } from "./tag-presentation";
-  import { navButtonDestination, navTargetLabel } from "./nav-button";
+  import {
+    navButtonAction,
+    navTargetLabel,
+    type NavHistoryState,
+  } from "./nav-button";
   let {
     screen,
     symbols = [],
@@ -48,6 +53,8 @@
     onopentrend,
     onopenequipment,
     onnavigate,
+    currentScreenId,
+    navHistory,
     screens = [],
     equipmentContext,
     images,
@@ -69,8 +76,12 @@
     onopentrend?: (objectId: string) => void;
     /** 表示プレビューで、機器を関連付けた Symbol を押したときに呼ぶ。編集中は呼ばない。 */
     onopenequipment?: (equipmentId: string, origin: SVGElement) => void;
-    /** 表示プレビューで、画面切替ボタンを押したときに行き先の画面IDで呼ぶ。編集中は呼ばない。 */
-    onnavigate?: (screenId: string) => void;
+    /** 表示確認で、画面切替ボタンを押したときに行き先で呼ぶ。編集中は呼ばない。戻る・進むは `navHistory` で動けるときだけ。 */
+    onnavigate?: (target: NavTarget) => void;
+    /** 画面切替ボタンの強調に使う表示中の画面。省略時は描く画面自身（運転表示のヘッダー・フッターは主画面を渡す）。 */
+    currentScreenId?: string;
+    /** 運転表示の履歴。省略時（プレビュー）は戻る・進むを押せない。 */
+    navHistory?: NavHistoryState;
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
@@ -126,21 +137,28 @@
       : previewEquipmentLink(object.shape, equipmentContext?.equipment);
   }
   // 表示プレビューで、行き先が画面の画面切替ボタンを押せる入口にする。
-  // 戻る・進む・未設定は押せない（薄く描く。履歴は運転表示で扱う）。
+  // 未設定と、履歴で動けない戻る・進む（プレビューでは常に）は押せない（薄く描く）。
   function navLink(object: ScreenObject) {
     if (editable || !onnavigate || object.shape.type !== "navButton")
       return undefined;
-    const screenId = navButtonDestination(object.shape, true);
-    return screenId
+    const target = navButtonAction(object.shape, true, navHistory);
+    return target
       ? {
-          screenId,
-          label: `${object.shape.label || "画面切替"}：${navTargetLabel(object.shape.target, screens)}へ移る`,
+          target,
+          key: target.kind === "screen" ? target.screenId : target.kind,
+          label: `${object.shape.label || "画面切替"}：${
+            target.kind === "back"
+              ? "前の画面へ戻る"
+              : target.kind === "forward"
+                ? "次の画面へ進む"
+                : `${navTargetLabel(target, screens)}へ移る`
+          }`,
         }
       : undefined;
   }
-  function navigate(screenId: string, event: Event) {
+  function navigate(target: NavTarget, event: Event) {
     event.stopPropagation();
-    onnavigate?.(screenId);
+    onnavigate?.(target);
   }
   function openEquipment(id: string, event: Event) {
     event.stopPropagation();
@@ -717,7 +735,7 @@
         ? "true"
         : undefined}
       data-equipment-link={linked?.id}
-      data-nav-link={nav?.screenId}
+      data-nav-link={nav?.key}
       class:equipment-link={!!linked || !!nav}
       role={linked || nav ? "button" : undefined}
       tabindex={linked || nav ? 0 : undefined}
@@ -727,14 +745,14 @@
       onclick={linked
         ? (event) => openEquipment(linked.id, event)
         : nav
-          ? (event) => navigate(nav.screenId, event)
+          ? (event) => navigate(nav.target, event)
           : undefined}
       onkeydown={linked || nav
         ? (event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
               if (linked) openEquipment(linked.id, event);
-              else if (nav) navigate(nav.screenId, event);
+              else if (nav) navigate(nav.target, event);
             }
           }
         : undefined}
@@ -771,7 +789,9 @@
           <ObjectPainting
             onopentrend={!editable ? onopentrend : undefined}
             object={visual}
-            currentScreenId={"background" in screen ? screen.id : undefined}
+            currentScreenId={currentScreenId ??
+              ("background" in screen ? screen.id : undefined)}
+            {navHistory}
             preview={!editable}
             hopPath={hops.get(object.id)}
             ownerDefinition={"background" in screen ? undefined : screen}

@@ -72,24 +72,35 @@ export function navButtonColors(
     : { fill: shape.fill, textColor: shape.textColor };
 }
 
-/**
- * プレビューで押したときに移る画面。編集中・未設定・戻る・進む（履歴は運転表示で扱う）は移らない。
- */
-export function navButtonDestination(
-  shape: Pick<NavButtonShape, "target">,
-  preview: boolean,
-): string | undefined {
-  return preview && shape.target?.kind === "screen"
-    ? shape.target.screenId
-    : undefined;
+/** 運転表示の履歴の状態。プレビューは履歴を持たない（渡さない）。 */
+export interface NavHistoryState {
+  readonly canBack: boolean;
+  readonly canForward: boolean;
 }
 
-/** プレビューで押せないボタン（未設定・戻る・進む）は薄く表示する。 */
+/**
+ * 表示確認で押したときの動き。編集中・未設定は undefined。戻る・進むは履歴を渡され、
+ * その向きへ動けるときだけ返す（プレビューは履歴を渡さないので押せない）。
+ */
+export function navButtonAction(
+  shape: Pick<NavButtonShape, "target">,
+  preview: boolean,
+  history?: NavHistoryState,
+): NavTarget | undefined {
+  const target = shape.target;
+  if (!preview || !target) return undefined;
+  if (target.kind === "screen") return target;
+  if (target.kind === "back") return history?.canBack ? target : undefined;
+  return history?.canForward ? target : undefined;
+}
+
+/** 押せないボタン（未設定、履歴で動けない戻る・進む）は表示確認で薄く表示する。 */
 export function navButtonDisabled(
   shape: Pick<NavButtonShape, "target">,
   preview: boolean,
+  history?: NavHistoryState,
 ): boolean {
-  return preview && shape.target?.kind !== "screen";
+  return preview && !navButtonAction(shape, preview, history);
 }
 
 /** 行き先の説明（レイヤー・Inspector・読み上げ用）。 */

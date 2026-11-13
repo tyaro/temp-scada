@@ -23,7 +23,7 @@
   import { wheelPixels, wheelZoom } from "../wheel-navigation";
   import Renderer from "../Renderer.svelte";
   import Ruler from "./Ruler.svelte";
-  import type { Screen, SymbolDefinition, Point } from "../project";
+  import type { NavTarget, Screen, SymbolDefinition, Point } from "../project";
   import type { Geometry } from "../resize";
   import { objectsInRange, selectionBox } from "../range-selection";
   import { snapCoordinate } from "../snap";
@@ -75,7 +75,7 @@
     onopentrend?: (objectId: string) => void;
     onopenequipment?: (equipmentId: string, origin: SVGElement) => void;
     /** 表示プレビューで画面切替ボタンを押したとき。編集中は渡さない。 */
-    onnavigate?: (screenId: string) => void;
+    onnavigate?: (target: NavTarget) => void;
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     readings?: TagReadings;

@@ -73,7 +73,8 @@ test("screen and definition duplication renew folder IDs and retain internal ref
   await button(page, "画面を複製").click();
   await button(page, "定義を複製").click();
   const result = await saved(page);
-  const copy = result.screens[1];
+  // 複製は末尾（工程図サンプルには運転表示の枠の画面もある）。
+  const copy = result.screens.at(-1);
   expect(copy.folders[0].id).not.toBe(project.screens[0].folders[0].id);
   expect(
     copy.objects.every((o: any) => o.folderId === copy.folders[0].id),

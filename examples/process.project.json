@@ -327,8 +327,138 @@
       "background": "#0b1220",
       "folders": [],
       "groups": []
+    },
+    {
+      "id": "0199f200-0000-7000-8000-000000000201",
+      "name": "運転表示ヘッダー",
+      "width": 960,
+      "height": 60,
+      "background": "#111827",
+      "objects": [
+        {
+          "id": "0199f200-0000-7000-8000-000000000211",
+          "order": 0,
+          "x": 16,
+          "y": 10,
+          "width": 120,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "screen",
+              "screenId": "0199f200-0000-7000-8000-000000000002"
+            },
+            "label": "循環設備",
+            "fontSize": 16,
+            "fill": "#334155",
+            "textColor": "#f8fafc",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0f172a"
+          }
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000212",
+          "order": 1,
+          "x": 152,
+          "y": 10,
+          "width": 120,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "back"
+            },
+            "label": "戻る",
+            "fontSize": 16,
+            "fill": "#334155",
+            "textColor": "#f8fafc",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0f172a"
+          }
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000213",
+          "order": 2,
+          "x": 288,
+          "y": 10,
+          "width": 120,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "forward"
+            },
+            "label": "進む",
+            "fontSize": 16,
+            "fill": "#334155",
+            "textColor": "#f8fafc",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0f172a"
+          }
+        },
+        {
+          "id": "0199f200-0000-7000-8000-000000000214",
+          "order": 3,
+          "x": 704,
+          "y": 16,
+          "width": 240,
+          "height": 28,
+          "rotation": 0,
+          "fill": "#e5e7eb",
+          "shape": {
+            "type": "clock",
+            "format": "dateTime",
+            "seconds": true,
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "normal",
+              "align": "right"
+            }
+          }
+        }
+      ],
+      "folders": [],
+      "groups": []
+    },
+    {
+      "id": "0199f200-0000-7000-8000-000000000202",
+      "name": "運転表示フッター",
+      "width": 960,
+      "height": 32,
+      "background": "#111827",
+      "objects": [
+        {
+          "id": "0199f200-0000-7000-8000-000000000221",
+          "order": 0,
+          "x": 16,
+          "y": 6,
+          "width": 928,
+          "height": 20,
+          "rotation": 0,
+          "fill": "#9ca3af",
+          "shape": {
+            "type": "text",
+            "text": "工程図サンプル（静的）・設備や計測値には接続していません",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        }
+      ],
+      "folders": [],
+      "groups": []
     }
   ],
+  "operatorFrame": {
+    "startScreenId": "0199f200-0000-7000-8000-000000000002",
+    "headerScreenId": "0199f200-0000-7000-8000-000000000201",
+    "footerScreenId": "0199f200-0000-7000-8000-000000000202"
+  },
   "symbols": [
     {
       "id": "0199f100-0000-7000-8000-000000001000",
