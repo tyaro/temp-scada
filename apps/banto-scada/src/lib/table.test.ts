@@ -245,18 +245,21 @@ describe("table cell bindings", () => {
   }
   it("reads and writes the tag and format grids", () => {
     expect(formatTableTags(boundShape)).toBe("\tDemo.Number\n\tDemo.Other");
-    expect(formatTableFormats(boundShape)).toBe("\t1 ℃");
-    expect(parseTableTags(" \tDemo.Number \n", 2, 2)).toEqual([
+    expect(formatTableFormats(boundShape)).toBe("\t1;℃");
+    expect(parseTableTags("   \tDemo.Number\n", 2, 2)).toEqual([
       [undefined, { externalName: "Demo.Number" }],
       [undefined, undefined],
     ]);
-    expect(parseTableFormats("1 ℃\t2\tkg\tm 3", 1, 4)).toEqual([
+    expect(parseTableFormats("1;℃\t2;\t;kg\t;m 3", 1, 4)).toEqual([
       [
         { decimals: 1, unit: "℃" },
         { decimals: 2 },
         { unit: "kg" },
         { unit: "m 3" },
       ],
+    ]);
+    expect(parseTableFormats(" 1 ; ℃ ", 1, 1)).toEqual([
+      [{ decimals: 1, unit: "℃" }],
     ]);
     const texts = parseTableText(formatTableText(boundShape));
     const [rows, columns] = [texts.length, texts[0].length];
@@ -270,16 +273,59 @@ describe("table cell bindings", () => {
       ),
     ).toEqual(boundShape.cells);
   });
+  it("round-trips ambiguous units, spaces in tags and semicolons", () => {
+    const units = ["1", "1 ℃", "10 kPa", "a;b", "℃"];
+    for (const unit of units) {
+      for (const decimals of [undefined, 0, 3]) {
+        const format = {
+          ...(decimals === undefined ? {} : { decimals }),
+          unit,
+        };
+        const shape = {
+          ...boundShape,
+          rows: [1],
+          columns: [1],
+          cells: [[{ text: "", binding: { externalName: "A" }, format }]],
+        } as TableShape;
+        const text = formatTableFormats(shape);
+        expect(text).toBe(`${decimals ?? ""};${unit}`);
+        expect(parseTableFormats(text, 1, 1)).toEqual([[format]]);
+      }
+    }
+    const decimalsOnly = { decimals: 2 };
+    const only = {
+      ...boundShape,
+      rows: [1],
+      columns: [1],
+      cells: [
+        [{ text: "", binding: { externalName: "A" }, format: decimalsOnly }],
+      ],
+    } as TableShape;
+    expect(formatTableFormats(only)).toBe("2;");
+    expect(parseTableFormats("2;", 1, 1)).toEqual([[decimalsOnly]]);
+    const spaced = {
+      ...boundShape,
+      rows: [1],
+      columns: [1],
+      cells: [[{ text: "", binding: { externalName: " PLC1.Temp " } }]],
+    } as TableShape;
+    expect(formatTableTags(spaced)).toBe(" PLC1.Temp ");
+    expect(parseTableTags(formatTableTags(spaced), 1, 1)).toEqual([
+      [{ externalName: " PLC1.Temp " }],
+    ]);
+  });
   it("rejects a format without a tag, bad formats and grids larger than the table", () => {
     expect(() =>
       buildTableCells([["a"]], [], [], [], [[{ decimals: 1 }]]),
     ).toThrow("タグのないセル");
-    expect(() => parseTableFormats("7 ℃", 1, 1)).toThrow("0〜6");
-    expect(() => parseTableFormats("1 " + "x".repeat(17), 1, 1)).toThrow(
+    expect(() => parseTableFormats("7;℃", 1, 1)).toThrow("0〜6");
+    expect(() => parseTableFormats("a;℃", 1, 1)).toThrow("0〜6");
+    expect(() => parseTableFormats("1 ℃", 1, 1)).toThrow("小数桁;単位");
+    expect(() => parseTableFormats("1;" + "x".repeat(17), 1, 1)).toThrow(
       "16文字",
     );
     expect(() => parseTableTags("a\tb", 1, 1)).toThrow("列が表の列");
-    expect(() => parseTableFormats("1\n1", 1, 1)).toThrow("行が表の行");
+    expect(() => parseTableFormats("1;\n1;", 1, 1)).toThrow("行が表の行");
     expect(() => parseTableTags("x".repeat(1025), 1, 1)).toThrow("1024文字");
   });
   it("lists every bound cell as a tag binding", () => {
@@ -323,10 +369,10 @@ describe("table cell bindings", () => {
     const object = project.screens[0].objects.at(-1)!;
     const values = objectFormValues(object, false);
     expect(values.tableTags).toBe("\tDemo.Number\n\tDemo.Other");
-    expect(values.tableFormats).toBe("\t1 ℃");
+    expect(values.tableFormats).toBe("\t1;℃");
     const data = new Map(Object.entries(values));
     data.set("tableTags", "\tDemo.Number");
-    data.set("tableFormats", "\t2 kPa");
+    data.set("tableFormats", "\t2;kPa");
     const form = {
       get: (key: string) => data.get(key) ?? null,
       has: (key: string) => data.has(key),
@@ -352,7 +398,7 @@ describe("table cell bindings", () => {
       ],
       [{ text: "流量" }, { text: "" }],
     ]);
-    data.set("tableFormats", "1");
+    data.set("tableFormats", "1;");
     expect(() =>
       objectFormCommand(form, {
         screenId: project.screens[0].id,

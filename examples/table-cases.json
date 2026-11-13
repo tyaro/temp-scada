@@ -1241,5 +1241,75 @@
         }
       }
     }
+  },
+  {
+    "name": "tab in a cell external name",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000890",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": {
+                "externalName": "PLC1\tTemp"
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
+  },
+  {
+    "name": "cell external name with surrounding spaces",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000891",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": {
+                "externalName": " PLC1.Temp "
+              }
+            }
+          ]
+        ],
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    }
   }
 ]

@@ -1342,7 +1342,7 @@
                       aria-describedby="inspector-table-help"
                       rows="3"
                       wrap="off"
-                      placeholder="小数桁 単位（例: 1 ℃）。空欄はそのまま"
+                      placeholder="小数桁;単位（例: 1;℃）。空欄はそのまま"
                       onkeydown={tableAreaKey}></textarea></label
                   >
                 {/if}

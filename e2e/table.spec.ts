@@ -326,13 +326,13 @@ test("the Inspector binds table cells to tags with a format", async ({
   await expect(form.getByLabel("セルのタグ", { exact: true })).toHaveValue("");
   await form.getByLabel("セルのタグ", { exact: true }).fill("\n\tDemo.Number");
   // タグのないセルの書式は拒否する。
-  await form.getByLabel("セルの書式", { exact: true }).fill("1");
+  await form.getByLabel("セルの書式", { exact: true }).fill("1;");
   await form.getByRole("button", { name: "変更を適用" }).click();
   await expect(page.getByText(/タグのないセル/).first()).toBeVisible();
-  await form.getByLabel("セルの書式", { exact: true }).fill("\n\t1 ℃");
+  await form.getByLabel("セルの書式", { exact: true }).fill("\n\t1;℃");
   await form.getByRole("button", { name: "変更を適用" }).click();
   await expect(form.getByLabel("セルの書式", { exact: true })).toHaveValue(
-    "\n\t1 ℃",
+    "\n\t1;℃",
   );
   const project = await save(page);
   const saved = project.screens[0].objects.find(

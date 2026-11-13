@@ -71,8 +71,12 @@ export function validateTableShape(shape: TableShape) {
         (cell.color !== undefined && !COLOR.test(cell.color))
       )
         throw new Error("表のセルの色は #rrggbb で指定してください");
-      if (cell.binding !== undefined && !/\S/.test(cell.binding.externalName))
-        throw new Error("表のセルのタグの外部名を入れてください");
+      if (cell.binding !== undefined) {
+        if (!/\S/.test(cell.binding.externalName))
+          throw new Error("表のセルのタグの外部名を入れてください");
+        if (!CELL_TEXT.test(cell.binding.externalName))
+          throw new Error("表のセルのタグの外部名にタブ・改行は使えません");
+      }
       if (cell.format !== undefined && cell.binding === undefined)
         throw new Error("表のセルの書式はタグのあるセルだけに付けられます");
     }
@@ -154,7 +158,8 @@ export function parseTableText(text: string): string[][] {
 
 /**
  * 文字の表に重ねる行列（タブ区切り）を読む。空のセルは undefined。
- * 文字の表より大きい表は誤り。各セルは trim してから `read` に渡す。
+ * 文字の表より大きい表は誤り。各セルは既定で trim してから `read` に渡す
+ * （`keepSpaces` なら前後の空白を保つ。空白だけのセルは空として扱う）。
  */
 function parseTableGrid<T>(
   text: string,
@@ -162,6 +167,7 @@ function parseTableGrid<T>(
   columns: number,
   label: string,
   read: (token: string, where: string) => T,
+  keepSpaces = false,
 ): (T | undefined)[][] {
   const lines = text.trim() === "" ? [] : splitLines(text);
   if (lines.length > rows)
@@ -171,8 +177,9 @@ function parseTableGrid<T>(
     throw new Error(`${label}の列が表の列（${columns}列）より多くなっています`);
   return Array.from({ length: rows }, (_, r) =>
     Array.from({ length: columns }, (_, c) => {
-      const token = (grid[r]?.[c] ?? "").trim();
-      return token === ""
+      const raw = grid[r]?.[c] ?? "";
+      const token = keepSpaces ? raw : raw.trim();
+      return raw.trim() === ""
         ? undefined
         : read(token, `${label}の${r + 1}行${c + 1}列「${token}」`);
     }),
@@ -195,24 +202,31 @@ export function parseTableColors(
   });
 }
 
-/** セルのタグ（外部名）の行列。空のセルは結合なし。 */
+/** セルのタグ（外部名）の行列。外部名は trim せずそのまま保つ。空白だけのセルは結合なし。 */
 export function parseTableTags(
   text: string,
   rows: number,
   columns: number,
 ): (TagBinding | undefined)[][] {
-  return parseTableGrid(text, rows, columns, "セルのタグ", (token, where) => {
-    if (codePoints(token) > TABLE_LIMITS.externalName)
-      throw new Error(
-        `${where}は${TABLE_LIMITS.externalName}文字以内にしてください`,
-      );
-    return { externalName: token };
-  });
+  return parseTableGrid(
+    text,
+    rows,
+    columns,
+    "セルのタグ",
+    (token, where) => {
+      if (codePoints(token) > TABLE_LIMITS.externalName)
+        throw new Error(
+          `${where}は${TABLE_LIMITS.externalName}文字以内にしてください`,
+        );
+      return { externalName: token };
+    },
+    true,
+  );
 }
 
 /**
- * セルの書式の行列。各セルは「小数桁 単位」「小数桁」「単位」。先頭の語が
- * 整数なら小数桁（0〜6）、残りを単位とする。空のセルは書式なし。
+ * セルの書式の行列。各セルは「小数桁;単位」。最初の `;` で分け、左が空なら
+ * 小数桁なし（0〜6の整数のみ）、右が空なら単位なし。空のセルは書式なし。
  */
 export function parseTableFormats(
   text: string,
@@ -220,17 +234,19 @@ export function parseTableFormats(
   columns: number,
 ): (NumericFormat | undefined)[][] {
   return parseTableGrid(text, rows, columns, "セルの書式", (token, where) => {
-    const match = /^(\d+)(?:\s+(.*))?$/u.exec(token);
+    const at = token.indexOf(";");
+    if (at < 0)
+      throw new Error(`${where}は「小数桁;単位」の形で書いてください`);
+    const decimalsText = token.slice(0, at).trim();
+    const unit = token.slice(at + 1).trim();
     const format: NumericFormat = {};
-    let unit = token;
-    if (match) {
-      const decimals = Number(match[1]);
-      if (decimals > MAX_FORMAT_DECIMALS)
+    if (decimalsText !== "") {
+      const decimals = /^\d+$/.test(decimalsText) ? Number(decimalsText) : NaN;
+      if (!(decimals <= MAX_FORMAT_DECIMALS))
         throw new Error(
           `${where}の小数桁は0〜${MAX_FORMAT_DECIMALS}の整数にしてください`,
         );
       format.decimals = decimals;
-      unit = (match[2] ?? "").trim();
     }
     if (unit !== "") {
       if (codePoints(unit) > MAX_UNIT_LENGTH)
@@ -307,12 +323,12 @@ export function formatTableTags(shape: TableShape): string {
   return formatTableGrid(shape, (cell) => cell.binding?.externalName ?? "");
 }
 
-/** 入力欄用: セルの書式を「小数桁 単位」でタブ区切りにする。 */
+/** 入力欄用: セルの書式を「小数桁;単位」でタブ区切りにする。 */
 export function formatTableFormats(shape: TableShape): string {
   return formatTableGrid(shape, (cell) =>
-    [cell.format?.decimals, cell.format?.unit]
-      .filter((part) => part !== undefined)
-      .join(" "),
+    cell.format === undefined
+      ? ""
+      : `${cell.format.decimals ?? ""};${cell.format.unit ?? ""}`,
   );
 }
 
