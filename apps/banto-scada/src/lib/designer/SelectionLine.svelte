@@ -1,5 +1,6 @@
 <script lang="ts">
   import { lineStyleLabels } from "../line-style";
+  import { lineArrowLabels, lineArrows } from "../line-arrow";
   import type { ScreenObject } from "../project";
   import { parseNumericProperty } from "./numeric-properties";
   import type { createDraftGuard } from "./drafts.svelte";
@@ -75,9 +76,7 @@
           ? [...widths][0]
           : "混在"} · 矢印：{arrows.size !== 1
           ? "混在"
-          : [...arrows][0] === "end"
-            ? "終端"
-            : "なし"}
+          : lineArrowLabels[[...arrows][0]]}
       </p>
       <form
         use:drafts.track
@@ -133,9 +132,14 @@
               bind:value={arrow}
               name="arrow"
               aria-label="適用する矢印"
-              ><option value="">変更なし</option><option value="none"
-                >なし</option
-              ><option value="end">終端（最後の頂点）</option></select
+              ><option value="">変更なし</option
+              >{#each lineArrows as value (value)}<option {value}
+                  >{lineArrowLabels[value]}{value === "start"
+                    ? "（最初の頂点）"
+                    : value === "end"
+                      ? "（最後の頂点）"
+                      : ""}</option
+                >{/each}</select
             ></label
           >
           <label class="banto-field banto-field--stacked"

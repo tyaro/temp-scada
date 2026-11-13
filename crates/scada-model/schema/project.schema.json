@@ -572,7 +572,7 @@
               "maximum": 64
             },
             "arrow": {
-              "enum": ["none", "end"]
+              "enum": ["none", "start", "end", "both"]
             },
             "lineStyle": {
               "$ref": "#/$defs/lineStyle"

@@ -5,6 +5,7 @@ import { type Project, type Screen, type SymbolDefinition } from "../project";
 import { normalizeRotation, replaceRotatedVertex } from "../rotation";
 import { setFlip } from "../flip";
 import { setLineStyle } from "../line-style";
+import { parseLineArrow } from "../line-arrow";
 import { validateLevelShape } from "../level";
 import type { SingleObjectCommand } from "./commands";
 import { newId, copySymbol } from "./model-helpers";
@@ -325,7 +326,7 @@ export function applySingleObjectCommand(
         object.shape.points = points;
       }
       if (strokeWidth !== undefined) object.shape.strokeWidth = strokeWidth;
-      if (arrow !== undefined) object.shape.arrow = arrow;
+      if (arrow !== undefined) object.shape.arrow = parseLineArrow(arrow);
     }
   } else return unhandledCommand(command);
   return "finish";

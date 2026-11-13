@@ -28,6 +28,10 @@ Editor／表示プレビュー／ミニマップ／Symbol・サムネイルは�
 
 複数変更は1回のUndo。省略された実線への実線指定と、JSONで明示された実線への無変更適用は履歴を増やさない。描画用dash配列は保存せず、プリセットと線幅から求める。
 
+## 矢印の向き（2026-11-13追記）
+
+Polylineの `arrow` は `none | start | end | both`（必須、schemaVersion 0.37.0据え置き）。始点は最初の頂点、終点は最後の頂点に先端を置き、端から順にたどって最初に重ならない頂点の向きへ開く。大きさは `max(8, 線幅×3)` で、矢印があれば端の数によらず同じ余白をboundsに足す。計算は `lib/line-arrow.ts`（`arrowHeads`・`parseLineArrow`）。共通fixtureは `examples/line-arrow-cases.json`、回帰は `line-arrow.test.ts`・`e2e/line-arrow.spec.ts`。
+
 ## 受入
 
 Rust／TypeScriptの共通fixtureで列挙値・省略・不正型と両所有先を検証する。ブラウザで両テーマ、単独／一括、Undo／Redo／JSON、枠線新設・解除、ロック／非表示、draft、幅・色・回転、Symbol両色モード、点線の隙間での選択、実線の矢印とミニマップを確認する。

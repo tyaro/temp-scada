@@ -145,7 +145,7 @@
   - 組込み部品（`symbol-library.json`）に、ブロワー・槽・塔・サイクロン・熱交換器・撹拌機・コンベヤ・スクリュー・モーターを追加する。
   - 反転（2026-11-13 実装）: 配置の任意の `flipX`／`flipY`（true のときだけ保存）。矩形・楕円・Polyline・Symbol・Image・液位と Symbol 定義の内部図形が対象で、Text・トレンドは拒否する。pivot で鏡映してから回転し、描画・選択外形・接続点・リサイズ・頂点移動は `rotation.ts` の同じ変換を使う（Rust の配管端点の照合も同じ）。反転した Symbol の中の Text は文字を読める向きに戻す。ツールバー・編集メニュー・右クリックの「左右反転」「上下反転」は画面上の反転（軸を切り替えて角度を負に）で、複数選択も 1 履歴。schemaVersion は据え置き。仕様: [配置の反転](object-flip-design.md)。試験: `flip.test.ts`、`examples/flip-cases.json`（Rust・TS 共通の契約）、`examples/connection-cases.json` の反転ケース、`e2e/flip.spec.ts`。部品の追加は未着手。
 - **E 配管**（画面上の状態色だけ A5 に依存）:
-  - 始点・両端の矢印を加える。
+  - 始点・両端の矢印を加える（2026-11-13 実装。`arrow` を `none`／`start`／`end`／`both` に広げた。schemaVersion は据え置き。仕様: [線種の「矢印の向き」](../graphics/line-style-design.md#矢印の向き2026-11-13追記)。試験: `line-arrow.test.ts`、`examples/line-arrow-cases.json`（Rust・TS 共通の契約）、`e2e/line-arrow.spec.ts`）。
   - T 字の接続には分岐の点を描く。
   - 交差のまたぎを描く（描画時に計算し、画面ごとに入切できる）。
 - **F 表**（A・B に依存）:

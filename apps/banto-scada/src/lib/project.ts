@@ -18,6 +18,7 @@ import type { ImageFit } from "./image-fit";
 import { imageCropViewBox, type ImageCrop } from "./image-crop";
 import type { ImageMetadata } from "./image-assets";
 import { rotatedBounds, rotationPivot } from "./rotation";
+import { arrowSize } from "./line-arrow";
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-model/schema/project.schema.json";
 import legacySchema from "../../../../crates/scada-model/schema/legacy.project.schema.json";
@@ -169,9 +170,10 @@ export interface PolylineObject extends BaseObject {
     points: Point[];
     strokeWidth: number;
     lineStyle?: LineStyle;
-    arrow: "none" | "end";
+    arrow: LineArrow;
   };
 }
+export type LineArrow = "none" | "start" | "end" | "both";
 export type ScreenObject = LayoutObject | PolylineObject;
 export interface LayerFolder {
   id: string;
@@ -488,8 +490,8 @@ export function getLayoutBounds(object: ScreenObject) {
   const xs = object.shape.points.map((p) => p.x),
     ys = object.shape.points.map((p) => p.y);
   const pad =
-    object.shape.arrow === "end"
-      ? Math.max(8, object.shape.strokeWidth * 3)
+    object.shape.arrow !== "none"
+      ? arrowSize(object.shape.strokeWidth)
       : object.shape.strokeWidth / 2;
   return {
     x: Math.min(...xs) - pad,
