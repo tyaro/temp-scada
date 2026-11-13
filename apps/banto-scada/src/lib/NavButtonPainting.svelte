@@ -36,14 +36,22 @@
     ry={radius}
     fill={colors.fill}
   />
-  {#if shape.label}<text
-      data-nav-label
-      x={width / 2}
-      y={height / 2}
-      dominant-baseline="central"
-      text-anchor="middle"
-      font-family={TEXT_FONT}
-      font-size={shape.fontSize}
-      fill={colors.textColor}>{shape.label}</text
+  <!-- 文字はボタンの枠で切り取り、押せる範囲を枠の中だけにする（文字は当たり判定に入れない）。 -->
+  {#if shape.label}<svg
+      data-nav-label-clip
+      {width}
+      {height}
+      overflow="hidden"
+      pointer-events="none"
+      ><text
+        data-nav-label
+        x={width / 2}
+        y={height / 2}
+        dominant-baseline="central"
+        text-anchor="middle"
+        font-family={TEXT_FONT}
+        font-size={shape.fontSize}
+        fill={colors.textColor}>{shape.label}</text
+      ></svg
     >{/if}
 </g>

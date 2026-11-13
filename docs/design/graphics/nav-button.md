@@ -25,7 +25,7 @@
 
 ## 表示と操作
 
-`nav-button.ts` の純関数（`navButtonIsCurrent`・`navButtonColors`・`navButtonDestination`・`navButtonDisabled`）が決め、`NavButtonPainting.svelte` が角丸の矩形と中央寄せの文字を描く。
+`nav-button.ts` の純関数（`navButtonIsCurrent`・`navButtonColors`・`navButtonDestination`・`navButtonDisabled`）が決め、`NavButtonPainting.svelte` が角丸の矩形と中央寄せの文字を描く。文字はボタンの枠で切り取り（折り返さない）、当たり判定に入れない。枠より長い文字のはみ出しは見えず、押しても移らない。
 
 - 行き先が表示中の画面（`Renderer` の画面）のとき、現在の画面の色で描く（`data-nav-current`）。編集中も同じ。埋込画面の中のボタンは通常の色で描き、押せない（埋込は `pointer-events="none"`）。
 - 編集中は押しても移動しない（選択だけ）。
@@ -50,7 +50,7 @@
 
 - 共通の契約: `examples/nav-button-cases.json`（Rust `shared_nav_button_contract`、TS `nav-button.test.ts`）。
 - 純関数・編集コマンド・フォーム・画面の削除・clipboard: `nav-button.test.ts`。
-- ブラウザ: `e2e/nav-button.spec.ts`（プレビューで押して移る・Enter で戻る・現在の画面の強調・戻るの無効、編集中は選択だけで移らない・Inspector で行き先と文字を変える、部品パネルからの追加）。
+- ブラウザ: `e2e/nav-button.spec.ts`（プレビューで押して移る・枠より長い文字のはみ出しを押しても移らない・Enter で戻る・現在の画面の強調・戻るの無効、編集中は選択だけで移らない・Inspector で行き先と文字を変える、部品パネルからの追加）。
 
 ## 後続・未対応
 

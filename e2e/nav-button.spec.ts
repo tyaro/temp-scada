@@ -10,6 +10,7 @@ const toCommon = "0199f6ab-0000-7000-8000-000000000901";
 const toSelf = "0199f6ab-0000-7000-8000-000000000902";
 const back = "0199f6ab-0000-7000-8000-000000000903";
 const toMain = "0199f6ab-0000-7000-8000-000000000904";
+const longLabel = "0199f6ab-0000-7000-8000-000000000905";
 
 function button(
   id: string,
@@ -48,6 +49,10 @@ function navProject() {
     }),
     button(toSelf, 901, 160, 840, "読取", { kind: "screen", screenId: main }),
     button(back, 902, 300, 840, "戻る", { kind: "back" }),
+    button(longLabel, 903, 500, 840, "とても長い画面切替ボタンの文字です", {
+      kind: "screen",
+      screenId: common,
+    }),
   );
   project.screens[1].objects.push(
     button(toMain, 900, 820, 190, "読取へ", { kind: "screen", screenId: main }),
@@ -97,6 +102,17 @@ test("the preview moves to the target screen and highlights the current one", as
   await expect(
     mainCanvas(page).locator(`[data-object-id="${back}"]`),
   ).not.toHaveAttribute("role", "button");
+
+  // A label longer than the button is clipped, and the overflow is not clickable.
+  const fill = await painted(page, longLabel)
+    .locator("[data-nav-fill]")
+    .boundingBox();
+  if (!fill) throw new Error("the long-label button is not painted");
+  await page.mouse.click(fill.x + fill.width + 30, fill.y + fill.height / 2);
+  await expect(tab(page, main)).toHaveAttribute("aria-current", "page");
+  await expect(
+    painted(page, longLabel).locator("[data-nav-label-clip]"),
+  ).toHaveAttribute("overflow", "hidden");
 
   const link = mainCanvas(page).getByRole("button", {
     name: "共通へ：読取共通画面へ移る",
