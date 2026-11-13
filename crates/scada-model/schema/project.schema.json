@@ -450,9 +450,14 @@
                           "pattern": "^[^\t\n\r]*$"
                         },
                         "fill": { "$ref": "#/$defs/color" },
-                        "color": { "$ref": "#/$defs/color" }
+                        "color": { "$ref": "#/$defs/color" },
+                        "binding": { "$ref": "#/$defs/tableCellBinding" },
+                        "format": { "$ref": "#/$defs/numericFormat" }
                       },
                       "required": ["text"],
+                      "dependentRequired": {
+                        "format": ["binding"]
+                      },
                       "additionalProperties": false
                     }
                   }
@@ -802,6 +807,19 @@
           "minLength": 1,
           "maxLength": 1024,
           "pattern": "\\S"
+        }
+      },
+      "required": ["externalName"],
+      "additionalProperties": false
+    },
+    "tableCellBinding": {
+      "type": "object",
+      "properties": {
+        "externalName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "allOf": [{ "pattern": "\\S" }, { "pattern": "^[^\t\n\r]*$" }]
         }
       },
       "required": ["externalName"],

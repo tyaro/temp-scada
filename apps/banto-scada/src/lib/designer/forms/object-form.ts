@@ -9,6 +9,8 @@ import { parseNumericProperty } from "../numeric-properties";
 import {
   buildTableCells,
   parseTableColors,
+  parseTableFormats,
+  parseTableTags,
   parseTableText,
   parseTableWeights,
 } from "../../table";
@@ -170,6 +172,17 @@ export function objectFormCommand(
           columns,
           "セルの文字色",
         ),
+        // Symbol 定義の表のセルはタグに結合しない（2b で slot に結合する）。
+        context.definition
+          ? []
+          : parseTableTags(String(data.get("tableTags") ?? ""), rows, columns),
+        context.definition
+          ? []
+          : parseTableFormats(
+              String(data.get("tableFormats") ?? ""),
+              rows,
+              columns,
+            ),
       ),
       style: { fontSize, fontWeight, align },
       ...(border ? { border } : {}),

@@ -286,6 +286,7 @@
       textColor={object.fill!}
       {color}
       textAlpha={object.colorAlpha}
+      {readings}
     />
   {:else if object.shape.type === "level" && level}
     {@const width = object.width}

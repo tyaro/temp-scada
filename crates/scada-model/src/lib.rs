@@ -146,6 +146,8 @@ impl Project {
         self.0.get("recordingPlan")?["planId"].as_str()
     }
 
+    /// 画面の Text・液位の結合と、表の結合したセル（行優先の順）の結合。
+    /// 表は同じ object_id で複数返すことがある。
     pub fn text_bindings(&self) -> Vec<TextBinding> {
         self.0["screens"]
             .as_array()
@@ -156,8 +158,20 @@ impl Project {
                     .as_array()
                     .unwrap()
                     .iter()
-                    .filter_map(|object| {
-                        object["shape"].get("binding").map(|binding| TextBinding {
+                    .flat_map(move |object| {
+                        let shape = &object["shape"];
+                        let bindings: Vec<&Value> = if shape["type"] == "table" {
+                            shape["cells"]
+                                .as_array()
+                                .into_iter()
+                                .flatten()
+                                .flat_map(|row| row.as_array().into_iter().flatten())
+                                .filter_map(|cell| cell.get("binding"))
+                                .collect()
+                        } else {
+                            shape.get("binding").into_iter().collect()
+                        };
+                        bindings.into_iter().map(move |binding| TextBinding {
                             screen_id: screen["id"].as_str().unwrap().into(),
                             object_id: object["id"].as_str().unwrap().into(),
                             external_name: binding["externalName"].as_str().unwrap().into(),
@@ -453,6 +467,22 @@ impl Project {
                                 .all(|row| row.as_array().is_some_and(|row| row.len() == columns))
                     }) {
                         return Err("表のセルの数を行と列の数に合わせてください".into());
+                    }
+                    let table_cells = || {
+                        cells
+                            .into_iter()
+                            .flatten()
+                            .flat_map(|row| row.as_array().into_iter().flatten())
+                    };
+                    if table_cells()
+                        .any(|cell| cell.get("format").is_some() && cell.get("binding").is_none())
+                    {
+                        return Err("表のセルの書式はタグのあるセルだけに付けられます".into());
+                    }
+                    if symbols.contains(screen["id"].as_str().unwrap())
+                        && table_cells().any(|cell| cell.get("binding").is_some())
+                    {
+                        return Err("Symbol 定義内の直接タグ割り当てには対応していません".into());
                     }
                 }
                 if shape.get("stateColors").is_some()
@@ -801,6 +831,39 @@ mod tests {
                 );
             }
         }
+    }
+    #[test]
+    fn text_bindings_include_bound_table_cells() {
+        let mut input: Value = serde_json::from_str(include_str!(
+            "../../../examples/read-presentation.project.json"
+        ))
+        .unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/table-cases.json")).unwrap();
+        let case = cases
+            .iter()
+            .find(|case| case["name"] == "screen table with bound cells and formats")
+            .unwrap();
+        input["screens"][0]["objects"]
+            .as_array_mut()
+            .unwrap()
+            .push(case["object"].clone());
+        let screen_id = input["screens"][0]["id"].as_str().unwrap().to_string();
+        let object_id = case["object"]["id"].as_str().unwrap().to_string();
+        let added: Vec<TextBinding> = Project::from_json(&input.to_string())
+            .unwrap()
+            .text_bindings()
+            .into_iter()
+            .filter(|binding| binding.object_id == object_id)
+            .collect();
+        assert_eq!(
+            added,
+            ["Demo.Number", "Demo.Other"].map(|name| TextBinding {
+                screen_id: screen_id.clone(),
+                object_id: object_id.clone(),
+                external_name: name.into(),
+            })
+        );
     }
     #[test]
     fn shared_symbol_read_slot_contract() {

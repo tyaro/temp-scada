@@ -1267,8 +1267,8 @@
                     表計算ソフトの範囲をそのまま貼り付けられます。入力欄の中では
                     Tab でタブを入れ、Shift＋Tab
                     で前の欄へ移ります。列の数は最も長い行に合わせます。色の表は
-                    #rrggbb
-                    を同じ並びで書き、空のセルは色なしです。Ctrl／⌘＋Enter
+                    #rrggbb を同じ並びで書き、空のセルは色なしです。{#if !activeDefinition}タグを書いたセルは文字の代わりにタグの値を出します。書式は「小数桁;単位」で書き（例:
+                      1;℃、2;、;kPa）、タグのあるセルだけに付けます。{/if}Ctrl／⌘＋Enter
                     で確定します。
                   </p>
                 </details>
@@ -1322,6 +1322,30 @@
                     placeholder="空欄は配置の色"
                     onkeydown={tableAreaKey}></textarea></label
                 >
+                {#if !activeDefinition}
+                  <label class="full-width banto-field banto-field--stacked"
+                    ><span class="banto-field-label">セルのタグ</span><textarea
+                      class="banto-field-control table-grid-input"
+                      name="tableTags"
+                      aria-label="セルのタグ"
+                      aria-describedby="inspector-table-help"
+                      rows="3"
+                      wrap="off"
+                      placeholder="空欄は固定の文字（例: PLC01.Tank01.Level）"
+                      onkeydown={tableAreaKey}></textarea></label
+                  >
+                  <label class="full-width banto-field banto-field--stacked"
+                    ><span class="banto-field-label">セルの書式</span><textarea
+                      class="banto-field-control table-grid-input"
+                      name="tableFormats"
+                      aria-label="セルの書式"
+                      aria-describedby="inspector-table-help"
+                      rows="3"
+                      wrap="off"
+                      placeholder="小数桁;単位（例: 1;℃）。空欄はそのまま"
+                      onkeydown={tableAreaKey}></textarea></label
+                  >
+                {/if}
                 <label class="banto-field banto-field--stacked"
                   ><span class="banto-field-label">文字サイズ</span><input
                     class="banto-field-control"
