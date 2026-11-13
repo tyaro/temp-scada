@@ -96,7 +96,7 @@
             "$ref": "#/$defs/backgroundImage"
           },
           "lineHops": {
-            "const": true
+            "enum": ["arc", "cut"]
           },
           "groups": {
             "type": "array",

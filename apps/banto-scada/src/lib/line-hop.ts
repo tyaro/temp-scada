@@ -1,4 +1,9 @@
-import type { Point, PolylineObject, ScreenObject } from "./project";
+import type {
+  LineHopStyle,
+  Point,
+  PolylineObject,
+  ScreenObject,
+} from "./project";
 import { objectToWorld, worldToObject } from "./rotation";
 import {
   closestOnSegment,
@@ -7,6 +12,7 @@ import {
   SegmentIndex,
   segmentCells,
   worldLines,
+  type IndexedSegment,
   type LineJunction,
   type WorldLine,
 } from "./line-junction";
@@ -25,16 +31,30 @@ export function hopRadius(hopWidth: number, crossedWidth: number) {
 /** 線分の端に近くて縮めた半径がこれ未満なら、またがずに交差のまま描く。 */
 const hopShrinkLimit = hopMinRadius / 2;
 
-/** またぐ線の 1 つの線分の上のまたぎ（線分の始点からの距離の区間）。 */
+/**
+ * 線の 1 つの線分の上の、描画を置き換える区間（線分の始点からの距離）。
+ * 既定はまたぐ線の弧。`kind: "gap"` は、下の線を切る形（`"cut"`）で、またがれる線を描かない区間。
+ */
 export interface HopSpan {
   /** 線の中の線分の番号（始点の頂点の番号）。 */
   segment: number;
   from: number;
   to: number;
+  kind?: "gap";
 }
+
+/**
+ * 下の線を切る形で、またがれる線を切る半径に足す余白の、またがれる線の線幅に対する比。
+ * 実線は端が丸い（`lineCap`）ので、端が線幅/2 だけ伸びる。その分と、見える隙間の線幅/2 を足す。
+ */
+const gapMarginRatio = 1;
 
 const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 const cross = (a: Point, b: Point) => a.x * b.y - a.y * b.x;
+const at = (a: Point, b: Point, ratio: number): Point => ({
+  x: a.x + (b.x - a.x) * ratio,
+  y: a.y + (b.y - a.y) * ratio,
+});
 
 /** 線分 a–b と c–d の真の交差点（端点・平行・重なりは除く）。a–b 上の距離を返す。 */
 function properCrossing(
@@ -115,21 +135,63 @@ function junctionCover(junctions: readonly LineJunction[]) {
   };
 }
 
+/** 区間の列を、重なる・間の直線が最小半径より短いものから 1 つにまとめる。間に分岐の点があればまとめない。 */
+function mergeSpans<T extends { from: number; to: number }>(
+  spans: T[],
+  blocked: readonly { along: number; reach: number }[],
+  keepApart: (last: T, span: T) => boolean = () => false,
+): T[] {
+  spans.sort((a, b) => a.from - b.from);
+  const merged = [spans[0]];
+  for (const span of spans.slice(1)) {
+    const last = merged.at(-1)!;
+    // 間に分岐の点があれば、まとめると点の下の直線が消えるのでまとめない。
+    const junctionBetween = blocked.some(
+      (junction) =>
+        junction.along > last.to - junction.reach &&
+        junction.along < span.from + junction.reach,
+    );
+    if (
+      span.from - last.to < hopMinRadius &&
+      !junctionBetween &&
+      !keepApart(last, span)
+    )
+      last.to = Math.max(last.to, span.to);
+    else merged.push(span);
+  }
+  return merged;
+}
+
+/** 下の線を切る形のための、1 つの交差の記録（またがれる線の線分の上の位置）。 */
+interface Crossed {
+  /** またぐ線の線分の上の交差点の距離。まとめた弧を探すのに使う。 */
+  along: number;
+  at: Point;
+  segment: IndexedSegment;
+  /** またがれる線の線分の上の交差点の距離。 */
+  crossedAlong: number;
+}
+
 /**
  * 交差のまたぎ。2 本の線の線分が互いの途中で真に交差するとき、後に描かれる線（`order` が大きい線）に
- * またぎを置く。同じ線どうしの交差、分岐の点の円の中の交差は見ない。
- * 返り値は、`lines` の番号ごとの、線分の番号順・距離順のまたぎ。
+ * またぎの弧を置く。同じ線どうしの交差、分岐の点の円の中の交差は見ない。
+ * `style` が `"cut"` なら、弧を置いた交差で、またがれる線（先に描かれる線）も弧の付近で切る（`kind: "gap"`）。
+ * 返り値は、`lines` の番号ごとの、線分の番号順・距離順の区間。
  */
 export function lineHopSpans(
   lines: readonly WorldLine[],
+  style: LineHopStyle = "arc",
 ): Map<number, HopSpan[]> {
   const index = new SegmentIndex(lines);
   const covered = junctionCover(lineJunctions(lines));
-  const result = new Map<number, HopSpan[]>();
+  const arcs = new Map<IndexedSegment, { from: number; to: number }[]>();
+  /** 切る区間の候補。またがれる線の線分ごと。 */
+  const gaps = new Map<IndexedSegment, { from: number; to: number }[]>();
   for (const segment of index.segments) {
     const hopper = lines[segment.line];
     const length = distance(segment.a, segment.b);
     const spans: { from: number; to: number }[] = [];
+    const crossings: Crossed[] = [];
     // この線分にかかる分岐の点。またぎはその手前で止め、点の下の直線を消さない。
     let blocked: { along: number; reach: number }[] | undefined;
     for (const other of index.alongSegment(segment.a, segment.b)) {
@@ -153,27 +215,83 @@ export function lineHopSpans(
         from: crossing.along - radius,
         to: crossing.along + radius,
       });
+      if (style === "cut")
+        crossings.push({
+          along: crossing.along,
+          at: crossing.at,
+          segment: other,
+          crossedAlong: distance(other.a, crossing.at),
+        });
     }
     if (spans.length === 0) continue;
-    // 重なる・間の直線が最小半径より短いまたぎは 1 つの半円にまとめる。
-    spans.sort((a, b) => a.from - b.from);
-    const merged = [spans[0]];
-    for (const span of spans.slice(1)) {
-      const last = merged.at(-1)!;
-      // 間に分岐の点があれば、まとめると点の下の直線が消えるのでまとめない。
-      const junctionBetween = (blocked ?? []).some(
-        (junction) =>
-          junction.along > last.to - junction.reach &&
-          junction.along < span.from + junction.reach,
-      );
-      if (span.from - last.to < hopMinRadius && !junctionBetween)
-        last.to = Math.max(last.to, span.to);
-      else merged.push(span);
+    const merged = mergeSpans(spans, blocked ?? []);
+    arcs.set(segment, merged);
+    for (const crossed of crossings) {
+      const arc = merged.find(
+        (span) => span.from <= crossed.along && crossed.along <= span.to,
+      )!;
+      const crossedLine = lines[crossed.segment.line];
+      const crossedLength = distance(crossed.segment.a, crossed.segment.b);
+      // 交差点から、またがれる線に沿って弧の円まで行く距離（遠い側）。まとめていない弧では半径そのもの。
+      const radius = (arc.to - arc.from) / 2;
+      const center = at(segment.a, segment.b, (arc.from + arc.to) / 2 / length);
+      const u = {
+        x: (crossed.segment.b.x - crossed.segment.a.x) / crossedLength,
+        y: (crossed.segment.b.y - crossed.segment.a.y) / crossedLength,
+      };
+      const offset = {
+        x: crossed.at.x - center.x,
+        y: crossed.at.y - center.y,
+      };
+      const b = u.x * offset.x + u.y * offset.y;
+      const k = offset.x ** 2 + offset.y ** 2 - radius ** 2;
+      const reach = Math.abs(b) + Math.sqrt(Math.max(0, b * b - k));
+      const cut =
+        reach +
+        hopper.strokeWidth / 2 +
+        crossedLine.strokeWidth * gapMarginRatio;
+      const list = gaps.get(crossed.segment) ?? [];
+      list.push({
+        from: Math.max(0, crossed.crossedAlong - cut),
+        to: Math.min(crossedLength, crossed.crossedAlong + cut),
+      });
+      gaps.set(crossed.segment, list);
     }
+  }
+  const result = new Map<number, HopSpan[]>();
+  const add = (segment: IndexedSegment, span: HopSpan) => {
     const list = result.get(segment.line) ?? [];
-    for (const span of merged)
-      list.push({ segment: segment.index, from: span.from, to: span.to });
+    list.push(span);
     result.set(segment.line, list);
+  };
+  for (const [segment, list] of arcs)
+    for (const span of list)
+      add(segment, { segment: segment.index, from: span.from, to: span.to });
+  for (const [segment, candidates] of gaps) {
+    const blocked = covered.along(segment.a, segment.b);
+    const arcsHere = arcs.get(segment) ?? [];
+    const overlapsArc = (from: number, to: number) =>
+      arcsHere.some((arc) => from < arc.to && arc.from < to);
+    // 分岐の点にかかる区間・この線分自身の弧に重なる区間は切らない（点の下の線・弧を消さない）。
+    const allowed = candidates.filter(
+      (gap) =>
+        !overlapsArc(gap.from, gap.to) &&
+        !blocked.some(
+          (junction) =>
+            junction.along + junction.reach > gap.from &&
+            junction.along - junction.reach < gap.to,
+        ),
+    );
+    if (allowed.length === 0) continue;
+    for (const gap of mergeSpans(allowed, blocked, (last, span) =>
+      overlapsArc(last.to, span.from),
+    ))
+      add(segment, {
+        segment: segment.index,
+        from: gap.from,
+        to: gap.to,
+        kind: "gap",
+      });
   }
   for (const list of result.values())
     list.sort((a, b) => a.segment - b.segment || a.from - b.from);
@@ -193,10 +311,6 @@ export function hopSide(a: Point, b: Point): Point {
   return n;
 }
 
-const at = (a: Point, b: Point, ratio: number): Point => ({
-  x: a.x + (b.x - a.x) * ratio,
-  y: a.y + (b.y - a.y) * ratio,
-});
 const format = (value: number) => String(Math.round(value * 1000) / 1000);
 const xy = (p: Point) => `${format(p.x)} ${format(p.y)}`;
 
@@ -212,8 +326,17 @@ export function hopPath(object: PolylineObject, spans: readonly HopSpan[]) {
     const a = points[i - 1],
       b = points[i],
       length = distance(a, b);
+    let reachedEnd = false;
     for (const span of spans) {
       if (span.segment !== i - 1) continue;
+      if (span.kind === "gap") {
+        // 下の線を切る形: 区間を描かず、区間の終わりから描き直す（線分の端で止めた区間は端へ移るだけ）。
+        if (span.from > 0) parts.push(`L ${xy(at(a, b, span.from / length))}`);
+        parts.push(`M ${xy(at(a, b, span.to / length))}`);
+        reachedEnd = span.to >= length;
+        continue;
+      }
+      reachedEnd = false;
       const start = at(a, b, span.from / length),
         end = at(a, b, span.to / length),
         middle = at(a, b, (span.from + span.to) / 2 / length),
@@ -239,24 +362,24 @@ export function hopPath(object: PolylineObject, spans: readonly HopSpan[]) {
         `A ${format(radius)} ${format(radius)} 0 0 ${sweep} ${xy(end)}`,
       );
     }
-    parts.push(`L ${xy(b)}`);
+    if (!reachedEnd) parts.push(`L ${xy(b)}`);
   }
   return parts.join(" ");
 }
 
 /**
  * 画面の配置から、またぎのある Polyline の id ごとにローカル座標の SVG パスを求める。
- * `enabled` が false（画面の `lineHops` が切）なら空。
+ * `style` が無い（画面の `lineHops` が無い）なら空。
  */
 export function screenHopPaths(
   objects: readonly ScreenObject[],
-  enabled: boolean,
+  style: LineHopStyle | undefined,
 ): Map<string, string> {
   const result = new Map<string, string>();
-  if (!enabled) return result;
+  if (!style) return result;
   const lines = worldLines(objects);
   const byId = new Map(objects.map((object) => [object.id, object]));
-  for (const [line, spans] of lineHopSpans(lines)) {
+  for (const [line, spans] of lineHopSpans(lines, style)) {
     const object = byId.get(lines[line].id);
     if (object?.shape.type !== "polyline") continue;
     result.set(object.id, hopPath(object as PolylineObject, spans));

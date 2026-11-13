@@ -3,6 +3,7 @@ import sample from "../../../../examples/process.project.json";
 import { parseProject, serializeProject } from "./project";
 import { applyCommand, type EditCommand } from "./editor";
 import { emptyHistory, recordEdit, travelHistory } from "./history";
+import { screenFormCommand } from "./designer/forms/screen-form";
 const fresh = () => parseProject(JSON.stringify(sample));
 it("creates, renames and resizes a screen without scaling placements", () => {
   const original = fresh();
@@ -258,4 +259,43 @@ it("new white screens and new shapes get readable initial colors without recolor
     "#0f766e",
   ]);
   expect(project.screens[0]).toEqual(original.screens[0]);
+});
+it("sets, switches and clears the line hop style from the screen form", () => {
+  const original = fresh();
+  const screen = original.screens[0];
+  const form = (lineHops: string) =>
+    screenFormCommand(
+      {
+        get: (key: string) =>
+          new Map([
+            ["background", screen.background],
+            ["name", screen.name],
+            ["width", String(screen.width)],
+            ["height", String(screen.height)],
+            ["lineHops", lineHops],
+          ]).get(key) ?? null,
+      },
+      { screenId: screen.id },
+    );
+  const cut = applyCommand(original, form("cut"), "edit");
+  expect(cut.screens[0].lineHops).toBe("cut");
+  const arc = applyCommand(cut, form("arc"), "edit");
+  expect(arc.screens[0].lineHops).toBe("arc");
+  // 空（なし）は消す。false を書かない。
+  const none = applyCommand(arc, form(""), "edit");
+  expect("lineHops" in none.screens[0]).toBe(false);
+  expect(parseProject(serializeProject(cut)).screens[0].lineHops).toBe("cut");
+  // 省略（Symbol 以外の更新で lineHops を渡さない）は変えない。
+  const kept = applyCommand(
+    cut,
+    {
+      type: "update-screen",
+      screenId: screen.id,
+      name: "工程 A",
+      width: screen.width,
+      height: screen.height,
+    },
+    "edit",
+  );
+  expect(kept.screens[0].lineHops).toBe("cut");
 });

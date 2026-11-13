@@ -3623,14 +3623,22 @@
           /></label
         >
         <p class="hint">アプリのテーマと図形の色は変わりません。</p>
-        <label
-          ><input
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">交差のまたぎ</span><select
+            class="banto-field-control"
             name="lineHops"
-            type="checkbox"
-            checked={"background" in screen && screen.lineHops === true}
-          />交差のまたぎ</label
+            aria-label="交差のまたぎ"
+            >{#each [["", "なし"], ["arc", "弧でまたぐ"], ["cut", "弧でまたぎ、下の線を切る"]] as [value, label]}<option
+                {value}
+                selected={("background" in screen && screen.lineHops
+                  ? screen.lineHops
+                  : "") === value}>{label}</option
+              >{/each}</select
+          ></label
         >
-        <p class="hint">配管が交わる所で、後に描く配管を半円でまたがせます。</p>
+        <p class="hint">
+          配管が交わる所で、後に描く配管を半円でまたがせます。下の線を切ると、またがれる配管を弧の付近で描きません。
+        </p>
       {/if}
       <button type="submit"
         >{activeDefinition ? "Symbol 設定を適用" : "画面設定を適用"}</button

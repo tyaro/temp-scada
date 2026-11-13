@@ -102,12 +102,15 @@
       ? { ...preview, x: preview.x + drag.dx, y: preview.y + drag.dy }
       : preview;
   }
-  // 交差のまたぎも同じく画面直下の線だけ。画面の `lineHops` が入のときだけ計算する。
+  // 交差のまたぎも同じく画面直下の線だけ。画面の `lineHops` があるときだけ計算する。
+  const hopStyle = $derived(
+    "background" in screen ? screen.lineHops : undefined,
+  );
   const hops = $derived(
-    "background" in screen && screen.lineHops === true
+    hopStyle
       ? screenHopPaths(
           screen.objects.map((object) => draggedObject(object)),
-          true,
+          hopStyle,
         )
       : new Map<string, string>(),
   );

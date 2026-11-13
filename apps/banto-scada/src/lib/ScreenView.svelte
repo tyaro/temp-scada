@@ -34,9 +34,7 @@
   } = $props();
   const clipId = $props.id();
   const junctions = $derived(screenJunctions(source.objects));
-  const hops = $derived(
-    screenHopPaths(source.objects, source.lineHops === true),
-  );
+  const hops = $derived(screenHopPaths(source.objects, source.lineHops));
 </script>
 
 <svg
