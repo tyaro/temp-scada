@@ -180,6 +180,31 @@ test("alarm blink setting and empty settings are not saved", async ({
   expect(await save(page)).not.toHaveProperty("alarms");
 });
 
+test("Enter during IME composition does not apply the alarm form", async ({
+  page,
+}) => {
+  await open(page);
+  const [first] = sample.alarms.definitions;
+  await table(page)
+    .getByRole("button", { name: `${first.name} を選ぶ`, exact: true })
+    .click();
+  const name = details(page).getByLabel("名前", { exact: true });
+  await name.fill("変換中の名前");
+  await name.dispatchEvent("compositionstart");
+  await name.press("Enter");
+  await expect(
+    table(page).getByRole("button", { name: `${first.name} を選ぶ` }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "元に戻す", exact: true }).first(),
+  ).toBeDisabled();
+  await name.dispatchEvent("compositionend");
+  await name.press("Enter");
+  await expect(
+    table(page).getByRole("button", { name: "変換中の名前 を選ぶ" }),
+  ).toBeVisible();
+});
+
 test("changing an alarm tag asks before moving to another alarm", async ({
   page,
 }) => {

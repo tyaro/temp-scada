@@ -97,6 +97,22 @@
   function choose(id: string) {
     if (id !== selectedId) guard(() => (selectedId = id));
   }
+  // IME の変換中は、確定の Enter や submit で定義を適用しない（プロジェクト名のフォームと同じ保護）。
+  let composing = false;
+  function composingKey(event: KeyboardEvent) {
+    if (
+      event.key === "Enter" &&
+      (event.isComposing || event.keyCode === 229 || composing)
+    )
+      event.preventDefault();
+  }
+  function submitDefinition(event: SubmitEvent) {
+    if (composing) {
+      event.preventDefault();
+      return;
+    }
+    onsubmit(event);
+  }
   const kindLabel = (row: AlarmDefinition) =>
     row.source.kind === "bit" ? "bit" : "しきい値";
 </script>
@@ -180,7 +196,10 @@
         data-editor-form="alarm-definition"
         data-alarm-id={row.id}
         aria-label="警報の定義の詳細"
-        {onsubmit}
+        onsubmit={submitDefinition}
+        onkeydown={composingKey}
+        oncompositionstart={() => (composing = true)}
+        oncompositionend={() => (composing = false)}
       >
         <p class="hint">種類: {kindLabel(row)}</p>
         <label class="banto-field banto-field--stacked"
