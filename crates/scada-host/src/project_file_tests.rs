@@ -76,7 +76,8 @@ fn writing_replaces_the_file_and_remembers_it() {
         .unwrap();
     assert_eq!(saved.file_name, "plant.json");
     assert_eq!(std::fs::read(&path).unwrap(), b"{\"new\":1}");
-    assert!(!dir.join("plant.json.tmp").exists());
+    // No temp file is left behind.
+    assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
     assert_eq!(
         files.target(Some(saved.file_id), ProjectFormat::Json),
         Some(path.clone())
@@ -85,6 +86,20 @@ fn writing_replaces_the_file_and_remembers_it() {
     // Saving the same path again keeps the id.
     let again = files.write(&path, ProjectFormat::Json, b"{}").unwrap();
     assert_eq!(again.file_id, saved.file_id);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
+fn writing_keeps_a_neighbouring_file_of_the_temp_name() {
+    let dir = temp_dir("neighbour");
+    let path = dir.join("plant.json");
+    let neighbour = dir.join("plant.json.tmp");
+    std::fs::write(&neighbour, b"backup").unwrap();
+    let files = ProjectFiles::default();
+    files.write(&path, ProjectFormat::Json, b"{}").unwrap();
+    assert_eq!(std::fs::read(&path).unwrap(), b"{}");
+    assert_eq!(std::fs::read(&neighbour).unwrap(), b"backup");
+    assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 2);
     std::fs::remove_dir_all(dir).unwrap();
 }
 

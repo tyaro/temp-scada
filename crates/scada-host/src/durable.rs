@@ -51,6 +51,31 @@ pub(crate) fn replace(path: &Path, body: &[u8]) -> std::io::Result<()> {
     written
 }
 
+/// Replaces `path` with `body` like [`replace`], through a temp file of a
+/// unique name that this call creates exclusively, for a path the user
+/// picked: a neighbouring file is never truncated or removed, whatever its
+/// name. On failure only the temp file of this call is removed.
+pub(crate) fn replace_unique(path: &Path, body: &[u8]) -> std::io::Result<()> {
+    let mut name = std::ffi::OsString::from(".");
+    name.push(path.file_name().ok_or(std::io::ErrorKind::InvalidInput)?);
+    name.push(format!(".{}.tmp", uuid::Uuid::new_v4().simple()));
+    let temp = path.with_file_name(name);
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temp)?;
+    let written = (|| {
+        file.write_all(body)?;
+        file.sync_all()?;
+        drop(file);
+        replace_durably(&temp, path)
+    })();
+    if written.is_err() {
+        let _ = fs::remove_file(&temp);
+    }
+    written
+}
+
 pub(crate) fn temp_path(path: &Path) -> PathBuf {
     let mut name = path.file_name().unwrap_or_default().to_owned();
     name.push(".tmp");

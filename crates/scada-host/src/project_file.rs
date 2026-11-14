@@ -110,7 +110,7 @@ pub struct Saved {
 #[derive(Default)]
 pub struct ProjectFiles {
     known: Mutex<Known>,
-    /// Held while a file is written, so two saves never share a temp file.
+    /// Held while a file is written, so two saves of one file land in order.
     writing: Mutex<()>,
 }
 
@@ -172,7 +172,8 @@ impl ProjectFiles {
         self.known.lock().unwrap().files.get(&file_id).cloned()
     }
 
-    /// Replaces `path` with `bytes` (a sibling temp file renamed over it, so
+    /// Replaces `path` with `bytes` (a new uniquely named sibling temp file
+    /// renamed over it, so
     /// a failed write leaves the old file) and remembers it.
     pub fn write(
         &self,
@@ -191,7 +192,7 @@ impl ProjectFiles {
         }
         {
             let _writing = self.writing.lock().unwrap();
-            durable::replace(path, bytes)?;
+            durable::replace_unique(path, bytes)?;
         }
         let file_id = self.known.lock().unwrap().id_of(path);
         Ok(Saved {
