@@ -195,6 +195,47 @@
     }
   },
   {
+    "name": "limit beyond exact integers",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "64bit",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.COUNTER",
+            "limits": {
+              "h": { "value": 9007199254740993, "severity": "medium" }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "limit at the largest exact integer",
+    "valid": true,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "64bit",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.COUNTER",
+            "limits": {
+              "h": { "value": 9007199254740991, "severity": "medium" },
+              "l": { "value": -9007199254740991, "severity": "medium" }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
     "name": "negative deadband",
     "valid": false,
     "alarms": {

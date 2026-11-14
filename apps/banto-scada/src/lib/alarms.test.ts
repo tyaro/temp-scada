@@ -6,6 +6,7 @@ import { applyCommand } from "./editor";
 import {
   newAlarmDefinition,
   validateAlarmTagType,
+  validateAlarms,
   type AlarmDefinition,
 } from "./alarms";
 import {
@@ -200,6 +201,15 @@ describe("alarm definition form", () => {
         threshold,
       ),
     ).toThrow("0〜600000");
+    const wide = alarmDefinitionFormCommand(
+      form({ ...values, "hh.value": "9007199254740993" }),
+      threshold,
+    );
+    expect(() =>
+      validateAlarms({
+        definitions: [(wide as { definition: AlarmDefinition }).definition],
+      }),
+    ).toThrow("±9007199254740991");
     expect(() =>
       alarmDefinitionFormCommand(form(alarmDefinitionFormValues(bit)), bit, [
         { externalName: "PLANT.P201.FAULT", type: "f32" },

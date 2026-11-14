@@ -10,6 +10,9 @@
 use serde_json::Value;
 use std::collections::HashSet;
 
+/// JavaScript の Number.MAX_SAFE_INTEGER（2^53 − 1）。これを超える整数は f64 で正確に持てない。
+const MAX_EXACT_LIMIT: f64 = 9_007_199_254_740_991.0;
+
 pub(crate) fn validate(project: &Value) -> Result<(), String> {
     let Some(definitions) = project["alarms"]["definitions"].as_array() else {
         return Ok(());
@@ -37,6 +40,16 @@ fn validate_limits(source: &Value) -> Result<(), String> {
     let values = [limit("hh"), limit("h"), limit("l"), limit("ll")];
     if values.iter().flatten().any(|value| !value.is_finite()) {
         return Err("警報の限界の値は有限の数にしてください".into());
+    }
+    // i64・u64 のタグでも限界が丸められずに保存・比較されるよう、±(2^53 − 1) に収める。
+    if values
+        .iter()
+        .flatten()
+        .any(|value| value.abs() > MAX_EXACT_LIMIT)
+    {
+        return Err(format!(
+            "警報の限界の値は ±{MAX_EXACT_LIMIT} の範囲にしてください"
+        ));
     }
     let [hh, h, l, ll] = values;
     let upper = h.or(hh);

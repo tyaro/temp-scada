@@ -90,6 +90,15 @@ function validateLimits(source: Extract<AlarmSource, { kind: "threshold" }>) {
   );
   if ([hh, h, l, ll].some((v) => v !== undefined && !Number.isFinite(v)))
     throw new Error("警報の限界の値は有限の数にしてください");
+  // i64・u64 のタグでも限界が丸められずに保存・比較されるよう、±(2^53 − 1) に収める。
+  if (
+    [hh, h, l, ll].some(
+      (v) => v !== undefined && Math.abs(v) > Number.MAX_SAFE_INTEGER,
+    )
+  )
+    throw new Error(
+      `警報の限界の値は ±${Number.MAX_SAFE_INTEGER} の範囲にしてください`,
+    );
   const upper = h ?? hh,
     lower = l ?? ll;
   if (
