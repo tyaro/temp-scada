@@ -5,6 +5,7 @@
   } from "./equipment-property";
   import { slotPresentation, type SlotPresentation } from "./symbol-slots";
   import { slotStateText, type SlotStateEvaluation } from "./slot-state";
+  import { presentScreenBool } from "./screen-bool-display";
   import { patternGeometry } from "./pattern-paint";
   import { arrowHeads } from "./line-arrow";
   import { linearGradientEndpoints } from "./linear-gradient";
@@ -114,12 +115,22 @@
    * reading cannot be a state (e.g. a fractional word reads as invalid).
    * Other unknown readings keep their own text and reason.
    */
-  const definedState = $derived(
-    slotBinding &&
-      slotState &&
-      (slotState.state === "known" || presentation.state === "good")
-      ? slotState
+  const screenBool = $derived(
+    object.shape.type === "text" && object.shape.boolDisplay && binding
+      ? presentScreenBool(
+          object.shape.boolDisplay,
+          readings?.get(binding.externalName),
+        )
       : undefined,
+  );
+  const definedState = $derived(
+    screenBool
+      ? screenBool.evaluation
+      : slotBinding &&
+          slotState &&
+          (slotState.state === "known" || presentation.state === "good")
+        ? slotState
+        : undefined,
   );
   const level = $derived.by(() => {
     if (object.shape.type !== "level") return undefined;
@@ -131,7 +142,9 @@
           shape.binding ? readings?.get(shape.binding.externalName) : undefined,
         );
   });
-  const textColor = $derived(stateColor ?? color ?? object.fill!);
+  const textColor = $derived(
+    stateColor ?? screenBool?.color ?? color ?? object.fill!,
+  );
   const lineColor = $derived(stateColor ?? color ?? object.fill!);
   const shape = $derived("width" in object ? null : object.shape);
 </script>

@@ -848,6 +848,45 @@ mod tests {
         }
     }
     #[test]
+    fn shared_screen_bool_display_contract() {
+        let base: Value = serde_json::from_str(include_str!(
+            "../../../examples/read-presentation.project.json"
+        ))
+        .unwrap();
+        let cases: Vec<Value> = serde_json::from_str(include_str!(
+            "../../../examples/screen-bool-display-cases.json"
+        ))
+        .unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            let target = input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_object_mut()
+                .unwrap();
+            target.insert(case["key"].as_str().unwrap().into(), case["value"].clone());
+            for (key, value) in case["also"].as_object().into_iter().flatten() {
+                target.insert(key.clone(), value.clone());
+            }
+            let parsed = Project::from_json(&input.to_string());
+            assert_eq!(
+                parsed.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{} {:?}",
+                case["name"],
+                parsed.as_ref().err()
+            );
+            if let Ok(project) = parsed {
+                assert_eq!(
+                    Project::from_json(&project.to_json()).unwrap().0,
+                    project.0,
+                    "{}",
+                    case["name"]
+                );
+            }
+        }
+    }
+    #[test]
     fn shared_level_contract() {
         let base: Value = serde_json::from_str(include_str!(
             "../../../examples/read-presentation.project.json"

@@ -314,6 +314,9 @@
                 "format": {
                   "$ref": "#/$defs/numericFormat"
                 },
+                "boolDisplay": {
+                  "$ref": "#/$defs/textBoolDisplay"
+                },
                 "equipmentProperty": {
                   "type": "object",
                   "properties": {
@@ -340,11 +343,24 @@
                   },
                   {
                     "required": ["stateColors", "equipmentProperty"]
+                  },
+                  {
+                    "required": ["boolDisplay", "format"]
+                  },
+                  {
+                    "required": ["boolDisplay", "slotBinding"]
+                  },
+                  {
+                    "required": ["boolDisplay", "stateColors"]
+                  },
+                  {
+                    "required": ["boolDisplay", "equipmentProperty"]
                   }
                 ]
               },
               "dependentRequired": {
-                "stateColors": ["slotBinding"]
+                "stateColors": ["slotBinding"],
+                "boolDisplay": ["binding"]
               },
               "if": {
                 "required": ["format"]
@@ -1595,6 +1611,24 @@
         }
       },
       "required": ["true", "false"],
+      "additionalProperties": false
+    },
+    "textBoolDisplay": {
+      "type": "object",
+      "properties": {
+        "true": {
+          "$ref": "#/$defs/slotStateLabel"
+        },
+        "false": {
+          "$ref": "#/$defs/slotStateLabel"
+        },
+        "unknownColor": {
+          "$ref": "#/$defs/color",
+          "maxLength": 7,
+          "type": "string"
+        }
+      },
+      "required": ["true", "false", "unknownColor"],
       "additionalProperties": false
     },
     "slotStateDisplay": {
