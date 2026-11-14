@@ -281,3 +281,126 @@ test("exports the saved names as a Hub tag CSV without checking them against sam
   await expect(skipped).toContainText("P-102");
   await expect(skipped).toContainText("Pump02Current");
 });
+
+test("imports a vendor I/O list CSV after choosing its columns", async ({
+  page,
+}) => {
+  const dialog = await open(page, "light");
+  const csv = [
+    "アドレス,機器番号,信号,PLCタグ,備考",
+    'DB1.DBX0.0, P-101 ,running,"Demo.Water.Pump01.Running",運転',
+    "DB1.DBW2,P-101,current,Demo.Water.Pump01.Pressure,",
+    "DB1.DBX0.1,P-102,running,Demo.Water.Pump02.Running,",
+    "DB1.DBX0.2,P-999,running,X,",
+    "DB1.DBX0.3,P-102,speed,Y,",
+  ].join("\r\n");
+  await dialog.getByLabel("I/O 一覧の CSV", { exact: true }).setInputFiles({
+    name: "vendor-io.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.concat([
+      Buffer.from([0xef, 0xbb, 0xbf]),
+      Buffer.from(csv, "utf8"),
+    ]),
+  });
+  const columns = dialog.getByRole("region", { name: "I/O 一覧の列" });
+  await expect(columns).toContainText("vendor-io.csv（UTF-8、5行）");
+  await expect(columns.getByLabel("機器番号の列")).toHaveValue("1");
+  await expect(columns.getByLabel("slotの列")).toHaveValue("2");
+  // "PLCタグ" is not a known header: the tag column must be chosen.
+  await expect(columns.getByLabel("タグ名の列")).toHaveValue("");
+  await expect(
+    columns.getByRole("button", { name: "表へ入れる" }),
+  ).toBeDisabled();
+  await columns.getByLabel("タグ名の列").selectOption({ label: "PLCタグ" });
+  await columns.getByRole("button", { name: "表へ入れる" }).click();
+  await expect(columns).toBeHidden();
+
+  await expect(dialog).toContainText(
+    "CSV の3件を入れました。取り込まなかった2行は下の一覧です。",
+  );
+  const skipped = dialog.getByRole("table", { name: "取り込まなかった行" });
+  await expect(skipped.getByRole("row")).toHaveCount(3);
+  await expect(skipped).toContainText("機器番号が見つかりません");
+  await expect(skipped).toContainText("機器種別にないslotです");
+  await expect(dialog.getByLabel("P-101のrunning")).toHaveValue(
+    "Demo.Water.Pump01.Running",
+  );
+  await expect(dialog.getByLabel("P-102のrunning")).toHaveValue(
+    "Demo.Water.Pump02.Running",
+  );
+  await expect(dialog).toContainText("変更 3件");
+
+  // Choosing another file clears the rows left out of the previous one.
+  await dialog.getByLabel("I/O 一覧の CSV", { exact: true }).setInputFiles({
+    name: "broken.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from('機器番号,信号,タグ名\nP-101,running,"A', "utf8"),
+  });
+  await expect(dialog.getByRole("alert")).toContainText(
+    '2行目の引用符（"）が閉じていません',
+  );
+  await expect(skipped).toBeHidden();
+
+  await dialog.getByRole("button", { name: "差分を確認（3件）" }).click();
+  await dialog.getByRole("button", { name: "3件を適用" }).click();
+  await expect(dialog).toBeHidden();
+  const saved = await save(page);
+  expect(saved.equipment[0].bindings).toEqual([
+    { slotName: "running", externalName: "Demo.Water.Pump01.Running" },
+    { slotName: "current", externalName: "Demo.Water.Pump01.Pressure" },
+  ]);
+  expect(saved.equipment[1].bindings).toEqual([
+    { slotName: "running", externalName: "Demo.Water.Pump02.Running" },
+    { slotName: "current", externalName: null },
+  ]);
+});
+
+test("a slower earlier CSV read never replaces a later choice or reappears after closing", async ({
+  page,
+}) => {
+  const dialog = await open(page, "light");
+  // Hold the read of slow.csv until the test releases it.
+  await page.evaluate(() => {
+    const read = File.prototype.arrayBuffer;
+    const state = window as unknown as { releaseSlow?: () => void };
+    File.prototype.arrayBuffer = function (this: File) {
+      if (this.name !== "slow.csv") return read.call(this);
+      return new Promise<ArrayBuffer>((resolve) => {
+        state.releaseSlow = () => void read.call(this).then(resolve);
+      });
+    };
+  });
+  const input = dialog.getByLabel("I/O 一覧の CSV", { exact: true });
+  const csv = (name: string) => ({
+    name,
+    mimeType: "text/csv",
+    buffer: Buffer.from("機器番号,信号,タグ名\nP-101,running,A\n", "utf8"),
+  });
+  const release = () =>
+    page.evaluate(() =>
+      (window as unknown as { releaseSlow: () => void }).releaseSlow(),
+    );
+  const columns = dialog.getByRole("region", { name: "I/O 一覧の列" });
+
+  await input.setInputFiles(csv("slow.csv"));
+  await input.setInputFiles(csv("fast.csv"));
+  await expect(columns).toContainText("fast.csv");
+  await release();
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 100)));
+  await expect(columns).toContainText("fast.csv");
+  await expect(columns).not.toContainText("slow.csv");
+
+  await columns.getByRole("button", { name: "やめる" }).click();
+  await input.setInputFiles(csv("slow.csv"));
+  await dialog.getByRole("button", { name: "閉じる" }).click();
+  await expect(dialog).toBeHidden();
+  await release();
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 100)));
+  await page
+    .getByRole("region", { name: "機器台帳", exact: true })
+    .getByRole("button", { name: "割付の一覧表", exact: true })
+    .click();
+  await expect(dialog).toBeVisible();
+  await expect(columns).toHaveCount(0);
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+});

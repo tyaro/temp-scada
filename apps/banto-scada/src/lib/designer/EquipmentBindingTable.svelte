@@ -27,6 +27,16 @@
     hubTagCsvFileName,
     type HubTagCsvSkip,
   } from "../hub-tag-csv";
+  import {
+    decodeIoCsv,
+    guessIoCsvColumns,
+    importIoCsv,
+    MAX_IO_CSV_BYTES,
+    MAX_IO_CSV_RECORDS,
+    parseIoCsv,
+    type IoCsvColumns,
+    type IoCsvSkip,
+  } from "../equipment-io-csv";
   let {
     open,
     project,
@@ -213,6 +223,7 @@
     const hubChecked = checking && catalogSelection !== sampleSelection;
     const result = hubTagCsv(project, hubChecked ? index : null);
     skipped = result.invalid;
+    ioSkipped = [];
     const notes = [
       result.checked
         ? `Hub のタグ一覧に既にある${result.registered}件を除きました。`
@@ -236,10 +247,98 @@
       : "address 列を埋めてから";
     message = `Hub 登録用 CSV に${result.rows}件を書き出しました。${notes}${fill} Hub で取り込んでください。`;
   }
+  let ioInput = $state<HTMLInputElement>();
+  /** A read vendor I/O list waiting for its columns to be chosen. */
+  let ioCsv = $state<{
+    fileName: string;
+    encoding: string;
+    header: string[];
+    records: { line: number; fields: string[] }[];
+    columns: Partial<IoCsvColumns>;
+  } | null>(null);
+  /** Only the first skipped rows are drawn; the count of the rest is shown. */
+  const SKIPPED_SHOWN = 200;
+  /** Rows of the last imported I/O list that were not put into the table. */
+  let ioSkipped = $state<IoCsvSkip[]>([]);
+  const ioReady = $derived(
+    !!ioCsv &&
+      ioCsv.columns.code !== undefined &&
+      ioCsv.columns.slot !== undefined &&
+      ioCsv.columns.tag !== undefined &&
+      new Set([ioCsv.columns.code, ioCsv.columns.slot, ioCsv.columns.tag])
+        .size === 3,
+  );
+  function headerLabel(name: string, i: number) {
+    return name.trim() ? name : `${i + 1}列目`;
+  }
+  /** Generation of the CSV read in flight; a newer read, "やめる" or closing voids it. */
+  let ioRead = 0;
+  function cancelIoCsv() {
+    ioRead++;
+    ioCsv = null;
+  }
+  async function readIoCsv(file: File) {
+    cancelIoCsv();
+    const read = ioRead;
+    // The rows left out of an earlier CSV must not pass for this file's.
+    ioSkipped = [];
+    error = "";
+    message = "";
+    if (file.size > MAX_IO_CSV_BYTES) {
+      error = `CSV が大きすぎます（${MAX_IO_CSV_BYTES / 1024 / 1024}MB まで）。`;
+      return;
+    }
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (read !== ioRead) return;
+      const { text, encoding } = decodeIoCsv(bytes);
+      const [header, ...records] = parseIoCsv(text, MAX_IO_CSV_RECORDS);
+      if (!header || !records.length) {
+        error =
+          "CSV に見出し行とデータ行がありません。1行目を見出しにしてください。";
+        return;
+      }
+      ioCsv = {
+        fileName: file.name,
+        encoding,
+        header: header.fields,
+        records,
+        columns: guessIoCsvColumns(header.fields),
+      };
+    } catch (cause) {
+      if (read !== ioRead) return;
+      error = `CSV を読めません: ${cause instanceof Error ? cause.message : String(cause)}`;
+    }
+  }
+  function importIo() {
+    if (!ioCsv || !ioReady) return;
+    const result = importIoCsv(
+      project,
+      ioCsv.records,
+      ioCsv.columns as IoCsvColumns,
+    );
+    for (const [key, cell] of result.cells)
+      drafts.set(key, draftCell(drafts, key, cell.saved, cell.text));
+    ioSkipped = result.skipped;
+    skipped = [];
+    const others = [...result.typeIds].filter((id) => id !== kind?.id).length;
+    message = `CSV の${result.cells.size}件を入れました。${
+      others
+        ? `ほかの機器種別${others}種にも入れています（差分の確認で見えます）。`
+        : ""
+    }${
+      result.skipped.length
+        ? `取り込まなかった${result.skipped.length}行は下の一覧です。`
+        : ""
+    }`;
+    ioCsv = null;
+  }
   function close() {
     drafts.clear();
     prefixes.clear();
     skipped = [];
+    cancelIoCsv();
+    ioSkipped = [];
     step = "edit";
     message = "";
     error = "";
@@ -313,7 +412,7 @@
     </div>
   {:else}
     <p>
-      行が機器、列がslotです。表計算ソフトの範囲（タブ区切り）を貼り付けると、選んだセルから右下へ入ります。空にしたセルは採用・未割付になります。未採用への切替は機器ごとの割付で行います。
+      行が機器、列がslotです。表計算ソフトの範囲（タブ区切り）を貼り付けると、選んだセルから右下へ入ります。1行1信号のI/O一覧はCSVで取り込めます。空にしたセルは採用・未割付になります。未採用への切替は機器ごとの割付で行います。
     </p>
     <p>
       接頭辞は保存しません。「接頭辞から入れる」で、接頭辞のある行の「タグ名の末尾」を持つslotに「接頭辞＋末尾」を入れます（区切り文字は接頭辞に含めます）。
@@ -336,6 +435,21 @@
           ></label
         >
         <button type="button" onclick={fill}>接頭辞から入れる</button>
+        <button type="button" onclick={() => ioInput?.click()}
+          >I/O 一覧の CSV を取り込む</button
+        >
+        <input
+          bind:this={ioInput}
+          class="file"
+          type="file"
+          accept=".csv,text/csv"
+          aria-label="I/O 一覧の CSV"
+          onchange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            event.currentTarget.value = "";
+            if (file) void readIoCsv(file);
+          }}
+        />
         <button type="button" onclick={exportHubCsv}
           >Hub 登録用 CSV を書き出す</button
         >
@@ -352,6 +466,74 @@
       </p>
       {#if message}<p aria-live="polite">{message}</p>{/if}
       {#if error}<p role="alert" class="error">{error}</p>{/if}
+      {#if ioCsv}
+        <section class="io" aria-label="I/O 一覧の列">
+          <p>
+            {ioCsv.fileName}（{ioCsv.encoding}、{ioCsv.records
+              .length}行）。1行が1信号です。機器番号・slot・タグ名の列を選んでください。ほかの列は使いません。機器番号とslotは前後の空白を除いて照合し、タグ名はそのまま入れます。既にある値は上書きします。
+          </p>
+          <div class="io-columns">
+            {#each [["code", "機器番号の列"], ["slot", "slotの列"], ["tag", "タグ名の列"]] as const as [role, name] (role)}
+              <label class="kind"
+                ><span>{name}</span><select
+                  class="banto-field-control"
+                  value={ioCsv.columns[role] ?? ""}
+                  onchange={(event) => {
+                    if (!ioCsv) return;
+                    const value = event.currentTarget.value;
+                    ioCsv.columns = {
+                      ...ioCsv.columns,
+                      [role]: value === "" ? undefined : Number(value),
+                    };
+                  }}
+                  ><option value="">選んでください</option
+                  >{#each ioCsv.header as column, i (i)}<option value={i}
+                      >{headerLabel(column, i)}</option
+                    >{/each}</select
+                ></label
+              >
+            {/each}
+          </div>
+          {#if !ioReady}<p class="warn">
+              3つの列を、それぞれ別の列で選んでください。
+            </p>{/if}
+          <div class="actions">
+            <button type="button" onclick={cancelIoCsv}>やめる</button>
+            <button
+              type="button"
+              class="primary"
+              disabled={!ioReady}
+              onclick={importIo}>表へ入れる</button
+            >
+          </div>
+        </section>
+      {/if}
+      {#if ioSkipped.length}
+        <div class="scroll skipped">
+          <table aria-label="取り込まなかった行">
+            <thead
+              ><tr
+                ><th scope="col">行</th><th scope="col">機器番号</th><th
+                  scope="col">slot</th
+                ><th scope="col">タグ名</th><th scope="col">理由</th></tr
+              ></thead
+            >
+            <tbody>
+              {#each ioSkipped.slice(0, SKIPPED_SHOWN) as row, i (i)}
+                <tr
+                  ><td>{row.line}</td><td>{row.code}</td><td>{row.slot}</td><td
+                    >{row.tag}</td
+                  ><td>{row.reason}</td></tr
+                >
+              {/each}
+            </tbody>
+          </table>
+        </div>
+        {#if ioSkipped.length > SKIPPED_SHOWN}<p>
+            取り込まなかった行のうち先頭の{SKIPPED_SHOWN}行だけを示しています（ほか{ioSkipped.length -
+              SKIPPED_SHOWN}行）。
+          </p>{/if}
+      {/if}
       {#if skipped.length}
         <div class="scroll skipped">
           <table aria-label="書き出さなかった名前">
@@ -486,6 +668,23 @@
     overflow: auto;
     border: 1px solid var(--banto-border);
     border-radius: 4px;
+  }
+  .file {
+    display: none;
+  }
+  .io {
+    border: 1px solid var(--banto-border);
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+  .io-columns {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .io .actions {
+    margin-top: 8px;
   }
   .skipped {
     max-height: 20vh;
