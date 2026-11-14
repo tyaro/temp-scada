@@ -3485,6 +3485,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "scada-alarm"
+version = "0.37.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "scada-historian"
 version = "0.37.0"
 dependencies = [
@@ -3508,6 +3515,7 @@ dependencies = [
  "banto-tagclient",
  "getrandom 0.3.4",
  "keyring",
+ "scada-alarm",
  "scada-historian",
  "scada-model",
  "scada-runtime",

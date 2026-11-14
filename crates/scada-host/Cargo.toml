@@ -12,6 +12,7 @@ serde_json.workspace = true
 banto-tagclient.workspace = true
 scada-historian = { path = "../scada-historian" }
 scada-model = { path = "../scada-model" }
+scada-alarm = { path = "../scada-alarm" }
 scada-runtime = { path = "../scada-runtime" }
 uuid = { version = "1", features = ["v4"] }
 getrandom = "0.3"
