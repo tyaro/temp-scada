@@ -2,7 +2,6 @@
 //! session evidence. No Historian tables or UI lifetime are shared with it.
 use std::collections::BTreeMap;
 use std::path::Path;
-use std::str::FromStr;
 
 use scada_alarm::{
     ConditionSpec, DefineError, Engine, EngineUnavailable, Input, LastState, Now, Session,
@@ -187,14 +186,11 @@ impl AlarmDb {
         }
         let dir = data_dir.join("alarms");
         durable::create_dir_durably(&dir)?;
-        let options = SqliteConnectOptions::from_str(
-            dir.join(format!("{id}.db"))
-                .to_str()
-                .ok_or(AlarmDbError::InvalidProjectId)?,
-        )?
-        .create_if_missing(true)
-        .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
-        .foreign_keys(true);
+        let options = SqliteConnectOptions::new()
+            .filename(dir.join(format!("{id}.db")))
+            .create_if_missing(true)
+            .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
+            .foreign_keys(true);
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect_with(options)
@@ -306,7 +302,7 @@ impl AlarmDb {
     pub async fn apply(
         &self,
         applied: &AppliedDefinitions,
-        session_id: &str,
+        session: Option<&Session>,
         ended: &[EventWrite],
         survivors: &[LastRow],
     ) -> Result<(), AlarmDbError> {
@@ -314,14 +310,40 @@ impl AlarmDb {
             return Err(AlarmDbError::InvalidProjectId);
         }
         let mut tx = self.pool.begin().await?;
+        let event_session = match session {
+            Some(session) => {
+                require_session(&mut tx, session).await?;
+                Some(session.id.clone())
+            }
+            None => {
+                let row = sqlx::query("SELECT session_id, stopped FROM session WHERE id = 1")
+                    .fetch_optional(&mut *tx)
+                    .await?;
+                match row {
+                    Some(row) if row.try_get::<i64, _>("stopped")? == 1 => {
+                        Some(row.try_get::<String, _>("session_id")?)
+                    }
+                    Some(_) => return Err(AlarmDbError::InvalidRow),
+                    None if ended.is_empty() && survivors.is_empty() => None,
+                    None => return Err(AlarmDbError::InvalidRow),
+                }
+            }
+        };
         for event in ended {
-            insert_event(&mut tx, session_id, event).await?;
+            insert_event(
+                &mut tx,
+                event_session.as_deref().ok_or(AlarmDbError::InvalidRow)?,
+                event,
+            )
+            .await?;
         }
         sqlx::query("DELETE FROM last_state")
             .execute(&mut *tx)
             .await?;
         for row in survivors {
-            insert_state(&mut tx, row).await?;
+            let mut row = row.clone();
+            row.session_id = event_session.clone().ok_or(AlarmDbError::InvalidRow)?;
+            insert_state(&mut tx, &row).await?;
         }
         sqlx::query("INSERT INTO applied (id, body) VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET body = excluded.body")
             .bind(serde_json::to_string(applied)?)
@@ -342,6 +364,56 @@ impl AlarmDb {
     ) -> Result<(), AlarmDbError> {
         let generation = i64::try_from(session.generation).map_err(|_| AlarmDbError::InvalidRow)?;
         let mut tx = self.pool.begin().await?;
+        let rows = sqlx::query("SELECT condition_id, evaluation_hash, endpoint, state, session_id, last_event_seq FROM last_state")
+            .fetch_all(&mut *tx)
+            .await?;
+        let mut existing = BTreeMap::new();
+        for row in rows {
+            let state: String = row.try_get("state")?;
+            let row = LastRow {
+                condition_id: row.try_get("condition_id")?,
+                evaluation_hash: row.try_get("evaluation_hash")?,
+                endpoint: row.try_get("endpoint")?,
+                state: serde_json::from_str(&state)?,
+                session_id: row.try_get("session_id")?,
+                last_event_seq: row.try_get("last_event_seq")?,
+            };
+            existing.insert(row.condition_id.clone(), row);
+        }
+        let mut accounted = std::collections::HashSet::new();
+        for row in restored {
+            let saved = existing
+                .get(&row.condition_id)
+                .ok_or(AlarmDbError::InvalidRow)?;
+            if !accounted.insert(&row.condition_id)
+                || saved.evaluation_hash != row.evaluation_hash
+                || saved.endpoint != row.endpoint
+                || saved.state != row.state
+                || saved.last_event_seq != row.last_event_seq
+            {
+                return Err(AlarmDbError::InvalidRow);
+            }
+        }
+        for event in ended {
+            let id = event
+                .condition_id
+                .as_ref()
+                .ok_or(AlarmDbError::InvalidRow)?;
+            let saved = existing.get(id).ok_or(AlarmDbError::InvalidRow)?;
+            if !accounted.insert(id)
+                || !matches!(
+                    event.kind.as_str(),
+                    "definitionChanged" | "definitionDeleted" | "connectionChanged"
+                )
+                || event.detail["previous"] != serde_json::to_value(&saved.state)?
+                || event.detail["unacked"] != json!(!saved.state.acked)
+            {
+                return Err(AlarmDbError::InvalidRow);
+            }
+        }
+        if accounted.len() != existing.len() {
+            return Err(AlarmDbError::InvalidRow);
+        }
         let previous = sqlx::query(
             "SELECT session_id, generation, stopped, engine_unavailable FROM session WHERE id = 1",
         )

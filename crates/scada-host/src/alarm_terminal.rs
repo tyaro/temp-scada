@@ -4,6 +4,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
+use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::{Connection, Row, SqliteConnection};
 
 use crate::durable;
 
@@ -52,11 +54,12 @@ pub struct AlarmTerminal {
 }
 
 impl AlarmTerminal {
-    pub fn open(data_dir: &Path) -> Result<Self, TerminalError> {
+    pub async fn open(data_dir: &Path) -> Result<Self, TerminalError> {
         let lock =
             durable::open_lock_file(data_dir, LOCK_FILE).map_err(|_| TerminalError::InUse)?;
         lock.try_lock().map_err(|_| TerminalError::InUse)?;
         let path = data_dir.join(SETTINGS_FILE);
+        let max_generation = max_db_generation(data_dir).await?;
         let settings = match durable::read_optional(&path).map_err(|_| TerminalError::Unreadable)? {
             Some(bytes) => {
                 let settings: Settings =
@@ -64,12 +67,12 @@ impl AlarmTerminal {
                 if settings.version != VERSION {
                     return Err(TerminalError::Corrupt);
                 }
-                if settings.last_generation == 0 && has_alarm_db(data_dir)? {
+                if max_generation.is_some_and(|max| max > settings.last_generation) {
                     return Err(TerminalError::Lost);
                 }
                 settings
             }
-            None if has_alarm_db(data_dir)? => return Err(TerminalError::Lost),
+            None if max_generation.is_some() => return Err(TerminalError::Lost),
             None => Settings {
                 version: VERSION,
                 last_generation: 0,
@@ -137,25 +140,57 @@ impl AlarmTerminal {
     }
 }
 
-fn has_alarm_db(data_dir: &Path) -> Result<bool, TerminalError> {
+async fn max_db_generation(data_dir: &Path) -> Result<Option<u64>, TerminalError> {
     let dir = data_dir.join("alarms");
     let entries = match fs::read_dir(dir) {
         Ok(entries) => entries,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(_) => return Err(TerminalError::Unreadable),
     };
+    let mut max = None;
     for entry in entries {
         let entry = entry.map_err(|_| TerminalError::Unreadable)?;
-        if entry.path().extension().is_some_and(|ext| ext == "db") {
-            return Ok(true);
+        let path = entry.path();
+        if path.extension().is_some_and(|ext| ext == "db") {
+            let options = SqliteConnectOptions::new().filename(&path).read_only(true);
+            let mut connection = SqliteConnection::connect_with(&options)
+                .await
+                .map_err(|_| TerminalError::Corrupt)?;
+            let version: i64 = sqlx::query_scalar("PRAGMA user_version")
+                .fetch_one(&mut connection)
+                .await
+                .map_err(|_| TerminalError::Corrupt)?;
+            if version != 1 {
+                return Err(TerminalError::Corrupt);
+            }
+            let row = sqlx::query("SELECT MAX(generation) AS max_generation FROM session")
+                .fetch_one(&mut connection)
+                .await
+                .map_err(|_| TerminalError::Corrupt)?;
+            let generation: Option<i64> = row
+                .try_get("max_generation")
+                .map_err(|_| TerminalError::Corrupt)?;
+            if let Some(generation) = generation {
+                let generation = u64::try_from(generation)
+                    .ok()
+                    .filter(|generation| *generation > 0)
+                    .ok_or(TerminalError::Corrupt)?;
+                max = Some(max.map_or(generation, |current: u64| current.max(generation)));
+            }
+            connection
+                .close()
+                .await
+                .map_err(|_| TerminalError::Unreadable)?;
         }
     }
-    Ok(false)
+    Ok(max)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::alarm_db::AlarmDb;
+    use scada_alarm::Session;
 
     fn temp_dir() -> PathBuf {
         let path = std::env::temp_dir().join(format!("alarm-terminal-{}", uuid::Uuid::new_v4()));
@@ -163,59 +198,132 @@ mod tests {
         path
     }
 
-    #[test]
-    fn generations_are_saved_before_their_sessions_and_never_reused() {
+    #[tokio::test]
+    async fn generations_are_saved_before_their_sessions_and_never_reused() {
         let dir = temp_dir();
-        let mut terminal = AlarmTerminal::open(&dir).unwrap();
+        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
         assert_eq!(terminal.reserve_generation().unwrap(), 1);
+        let db = AlarmDb::open(&dir, &uuid::Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        db.start_session(
+            &Session {
+                id: "first".into(),
+                generation: 1,
+            },
+            100,
+            &[],
+            &[],
+        )
+        .await
+        .unwrap();
+        db.close().await;
         assert_eq!(terminal.reserve_generation().unwrap(), 2); // DB write failed: gap is spent.
         drop(terminal);
-        let mut reopened = AlarmTerminal::open(&dir).unwrap();
+        let mut reopened = AlarmTerminal::open(&dir).await.unwrap();
         assert_eq!(reopened.reserve_generation().unwrap(), 3);
         drop(reopened);
         fs::remove_dir_all(dir).unwrap();
     }
 
-    #[test]
-    fn lost_or_corrupt_settings_stop_monitoring() {
+    #[tokio::test]
+    async fn lost_or_corrupt_settings_stop_monitoring() {
         let dir = temp_dir();
-        let mut terminal = AlarmTerminal::open(&dir).unwrap();
-        terminal.reserve_generation().unwrap();
+        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let generation = terminal.reserve_generation().unwrap();
+        let db = AlarmDb::open(&dir, &uuid::Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        db.start_session(
+            &Session {
+                id: "first".into(),
+                generation,
+            },
+            100,
+            &[],
+            &[],
+        )
+        .await
+        .unwrap();
+        db.close().await;
         drop(terminal);
-        fs::create_dir_all(dir.join("alarms")).unwrap();
-        fs::write(dir.join("alarms").join("project.db"), b"db").unwrap();
         fs::remove_file(dir.join(SETTINGS_FILE)).unwrap();
         assert!(matches!(
-            AlarmTerminal::open(&dir),
+            AlarmTerminal::open(&dir).await,
             Err(TerminalError::Lost)
         ));
         fs::write(dir.join(SETTINGS_FILE), b"garbled").unwrap();
         assert!(matches!(
-            AlarmTerminal::open(&dir),
+            AlarmTerminal::open(&dir).await,
             Err(TerminalError::Corrupt)
         ));
         fs::remove_dir_all(dir).unwrap();
     }
 
-    #[test]
-    fn zero_generation_cannot_be_reopened_with_an_alarm_db() {
+    #[tokio::test]
+    async fn an_applied_db_without_a_session_does_not_claim_generation_loss() {
         let dir = temp_dir();
-        let mut terminal = AlarmTerminal::open(&dir).unwrap();
+        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
         terminal.set_monitored(None).unwrap(); // an initial settings file
         drop(terminal);
-        fs::create_dir_all(dir.join("alarms")).unwrap();
-        fs::write(dir.join("alarms").join("project.db"), b"db").unwrap();
-        assert!(matches!(
-            AlarmTerminal::open(&dir),
-            Err(TerminalError::Lost)
-        ));
+        let db = AlarmDb::open(&dir, &uuid::Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        drop(terminal);
+        fs::remove_file(dir.join(SETTINGS_FILE)).unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        drop(terminal);
+        db.close().await;
         fs::remove_dir_all(dir).unwrap();
     }
 
-    #[test]
-    fn switching_and_monitor_are_durable_under_one_terminal_lock() {
+    #[tokio::test]
+    async fn a_restored_older_settings_file_cannot_reuse_a_db_generation() {
         let dir = temp_dir();
-        let mut terminal = AlarmTerminal::open(&dir).unwrap();
+        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let first = terminal.reserve_generation().unwrap();
+        let backup = fs::read(dir.join(SETTINGS_FILE)).unwrap();
+        let db = AlarmDb::open(&dir, &uuid::Uuid::new_v4().to_string())
+            .await
+            .unwrap();
+        db.start_session(
+            &Session {
+                id: "first".into(),
+                generation: first,
+            },
+            100,
+            &[],
+            &[],
+        )
+        .await
+        .unwrap();
+        let second = terminal.reserve_generation().unwrap();
+        db.start_session(
+            &Session {
+                id: "second".into(),
+                generation: second,
+            },
+            200,
+            &[],
+            &[],
+        )
+        .await
+        .unwrap();
+        drop(terminal);
+        fs::write(dir.join(SETTINGS_FILE), backup).unwrap();
+        assert!(matches!(
+            AlarmTerminal::open(&dir).await,
+            Err(TerminalError::Lost)
+        ));
+        db.close().await;
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn switching_and_monitor_are_durable_under_one_terminal_lock() {
+        let dir = temp_dir();
+        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
         let monitored = MonitoredProject {
             project_id: uuid::Uuid::new_v4().to_string(),
             path: dir.join("b.json"),
@@ -227,15 +335,15 @@ mod tests {
             }))
             .unwrap();
         assert!(matches!(
-            AlarmTerminal::open(&dir),
+            AlarmTerminal::open(&dir).await,
             Err(TerminalError::InUse)
         ));
         drop(terminal);
-        let mut terminal = AlarmTerminal::open(&dir).unwrap();
+        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
         assert_eq!(terminal.switching().unwrap().target, monitored);
         terminal.set_monitored(Some(monitored.clone())).unwrap();
         drop(terminal);
-        let terminal = AlarmTerminal::open(&dir).unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
         assert_eq!(terminal.monitored(), Some(&monitored));
         assert!(terminal.switching().is_none());
         drop(terminal);
