@@ -25,6 +25,7 @@
   import SelectionLine from "./SelectionLine.svelte";
   import { isStateSlotType } from "../equipment";
   import StateTextColor from "./StateTextColor.svelte";
+  import BoolDisplay from "./BoolDisplay.svelte";
   import NumericFormat from "./NumericFormat.svelte";
   import SymbolColorMode from "./SymbolColorMode.svelte";
   import TagPicker from "./TagPicker.svelte";
@@ -779,7 +780,18 @@
             onsubmit={properties}
           />
         {/if}
-        {#if selected.shape.type === "text" && (selected.shape.binding || (selected.shape.slotBinding && (selected.shape.format || ("readSlots" in screen ? screen.readSlots : [])?.some((slot) => slot.name === (selected.shape.type === "text" ? selected.shape.slotBinding?.slotName : undefined) && slot.type === "number"))))}
+        {#if selected.shape.type === "text" && selected.shape.binding && !activeDefinition}
+          <BoolDisplay
+            display={selected.shape.boolDisplay}
+            hasFormat={!!selected.shape.format}
+            objectId={selected.id}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            locked={selectionLocked}
+            {drafts}
+            onsubmit={properties}
+          />
+        {/if}
+        {#if selected.shape.type === "text" && !selected.shape.boolDisplay && (selected.shape.binding || (selected.shape.slotBinding && (selected.shape.format || ("readSlots" in screen ? screen.readSlots : [])?.some((slot) => slot.name === (selected.shape.type === "text" ? selected.shape.slotBinding?.slotName : undefined) && slot.type === "number"))))}
           {@const externalName = selected.shape.binding?.externalName}
           <NumericFormat
             format={selected.shape.format}

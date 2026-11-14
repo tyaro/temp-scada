@@ -115,6 +115,7 @@ export function applySingleObjectCommand(
       equipmentProperty,
       stateColors,
       format,
+      boolDisplay,
       level,
       table,
       clock,
@@ -308,6 +309,28 @@ export function applySingleObjectCommand(
       if (format === null) delete object.shape.format;
       else object.shape.format = { ...format };
     }
+    if (boolDisplay !== undefined) {
+      if (object.shape.type !== "text" || definitionId)
+        throw new Error("bool の表示は画面直下のTextにだけ設定できます");
+      if (boolDisplay === null) delete object.shape.boolDisplay;
+      else object.shape.boolDisplay = structuredClone(boolDisplay);
+    }
+    // A Text that no longer reads a tag has no bool to show.
+    if (
+      object.shape.type === "text" &&
+      object.shape.boolDisplay &&
+      !object.shape.binding
+    ) {
+      if (boolDisplay)
+        throw new Error("bool の表示はタグを表示するTextだけに設定できます");
+      delete object.shape.boolDisplay;
+    }
+    if (
+      object.shape.type === "text" &&
+      object.shape.boolDisplay &&
+      object.shape.format
+    )
+      throw new Error("bool の表示と数値の書式は同時に設定できません");
     // A Text that no longer shows a value has no number to format.
     if (
       object.shape.type === "text" &&

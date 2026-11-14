@@ -11,6 +11,7 @@ import type { ImageCrop } from "../image-crop";
 import type {
   EquipmentPropertyField,
   StateTextColors,
+  TextBoolDisplay,
   NumericFormat,
   StateColor,
   BackgroundImage,
@@ -59,6 +60,8 @@ export interface ObjectPatch {
   equipmentProperty?: { field: EquipmentPropertyField } | null;
   stateColors?: StateTextColors | null;
   format?: NumericFormat | null;
+  /** Screen-level bool display of a tag-bound Text; null removes it. */
+  boolDisplay?: TextBoolDisplay | null;
   /** Limits, direction and background of a level; no background clears it. */
   level?: Pick<LevelShape, "direction" | "min" | "max" | "background">;
   /** Whole content of a table; a missing border or background clears it. */

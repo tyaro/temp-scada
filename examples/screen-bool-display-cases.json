@@ -1,0 +1,355 @@
+[
+  {
+    "name": "tag-bound text with true and false labels",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": true,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "empty labels are allowed",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": true,
+    "value": {
+      "true": {
+        "text": "",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "uppercase colors",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": true,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#D97706"
+    }
+  },
+  {
+    "name": "maximum label length",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": true,
+    "value": {
+      "true": {
+        "text": "ああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "label too long refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "label with a line break refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停\n止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "label color not rrggbb refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "green"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "label without color refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "missing false refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "missing true refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "missing unknownColor refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      }
+    }
+  },
+  {
+    "name": "unknownColor not rrggbb refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#fff"
+    }
+  },
+  {
+    "name": "unknown key refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706",
+      "extra": 1
+    }
+  },
+  {
+    "name": "empty object refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {}
+  },
+  {
+    "name": "static text refused",
+    "target": "/screens/0/objects/1/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "slot-bound text in a symbol definition refused",
+    "target": "/symbols/0/objects/5/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "symbol placement refused",
+    "target": "/screens/0/objects/0/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "rectangle in a symbol definition refused",
+    "target": "/symbols/0/objects/7/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    }
+  },
+  {
+    "name": "with a numeric format refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    },
+    "also": {
+      "format": {
+        "decimals": 1
+      }
+    }
+  },
+  {
+    "name": "with slot binding refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    },
+    "also": {
+      "slotBinding": {
+        "slotName": "running"
+      }
+    }
+  },
+  {
+    "name": "with state colors refused",
+    "target": "/screens/0/objects/6/shape",
+    "key": "boolDisplay",
+    "valid": false,
+    "value": {
+      "true": {
+        "text": "運転",
+        "color": "#16a34a"
+      },
+      "false": {
+        "text": "停止",
+        "color": "#64748b"
+      },
+      "unknownColor": "#d97706"
+    },
+    "also": {
+      "stateColors": {
+        "unknownColor": "#d97706"
+      }
+    }
+  }
+]

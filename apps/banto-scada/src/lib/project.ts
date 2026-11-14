@@ -10,6 +10,7 @@ import { validateClockShape } from "./clock-format";
 import {
   validateEquipment,
   type EquipmentType,
+  type SlotStateLabel,
   type SymbolReadSlot,
   type EquipmentInstance,
 } from "./equipment";
@@ -65,6 +66,16 @@ export interface StateColor {
  * definition. Only the color for an unknown state is stored here.
  */
 export interface StateTextColors {
+  unknownColor: string;
+}
+/**
+ * A screen-level Text bound to a bit tag shows the bool as these labels. The
+ * form of `true` / `false` follows an equipment-type bool slot's `boolDisplay`;
+ * `unknownColor` is used for every reading that is not a Good bool.
+ */
+export interface TextBoolDisplay {
+  true: SlotStateLabel;
+  false: SlotStateLabel;
   unknownColor: string;
 }
 export interface TagBinding {
@@ -219,6 +230,7 @@ export interface LayoutObject extends BaseObject {
         equipmentProperty?: { field: EquipmentPropertyField };
         stateColors?: StateTextColors;
         format?: NumericFormat;
+        boolDisplay?: TextBoolDisplay;
       }
     | {
         type: "symbol";
