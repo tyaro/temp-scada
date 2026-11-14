@@ -10,7 +10,7 @@
   import SymbolEquipmentCheck from "./SymbolEquipmentCheck.svelte";
   import StateColor from "./StateColor.svelte";
   import { frameScreenIds } from "../operator-frame";
-  import { stateColorUsages } from "../state-color";
+  import { stateColorSources, stateColorUsages } from "../state-color";
   import GroupInspector from "./GroupInspector.svelte";
   import { selectedGroup, groupFor } from "../geometric-groups";
   import { screenViewOptions } from "../screen-references";
@@ -655,7 +655,7 @@
       {:else}<p>グループを含むため、内部の書式は解除後に編集できます。</p>{/if}
     {:else if selected}
       {#key `${generation}:${screen.id}:${selected.id}`}
-        {#if selected.shape.type === "rectangle" || selected.shape.type === "ellipse" || selected.shape.type === "polyline"}
+        {#if (selected.shape.type === "rectangle" || selected.shape.type === "ellipse" || selected.shape.type === "polyline") && (activeDefinition || selected.shape.stateColor || stateColorSources(screen).length > 0)}
           <StateColor
             owner={screen}
             object={selected}
