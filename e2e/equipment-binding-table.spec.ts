@@ -343,3 +343,53 @@ test("imports a vendor I/O list CSV after choosing its columns", async ({
     { slotName: "current", externalName: null },
   ]);
 });
+
+test("a slower earlier CSV read never replaces a later choice or reappears after closing", async ({
+  page,
+}) => {
+  const dialog = await open(page, "light");
+  // Hold the read of slow.csv until the test releases it.
+  await page.evaluate(() => {
+    const read = File.prototype.arrayBuffer;
+    const state = window as unknown as { releaseSlow?: () => void };
+    File.prototype.arrayBuffer = function (this: File) {
+      if (this.name !== "slow.csv") return read.call(this);
+      return new Promise<ArrayBuffer>((resolve) => {
+        state.releaseSlow = () => void read.call(this).then(resolve);
+      });
+    };
+  });
+  const input = dialog.getByLabel("I/O 一覧の CSV", { exact: true });
+  const csv = (name: string) => ({
+    name,
+    mimeType: "text/csv",
+    buffer: Buffer.from("機器番号,信号,タグ名\nP-101,running,A\n", "utf8"),
+  });
+  const release = () =>
+    page.evaluate(() =>
+      (window as unknown as { releaseSlow: () => void }).releaseSlow(),
+    );
+  const columns = dialog.getByRole("region", { name: "I/O 一覧の列" });
+
+  await input.setInputFiles(csv("slow.csv"));
+  await input.setInputFiles(csv("fast.csv"));
+  await expect(columns).toContainText("fast.csv");
+  await release();
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 100)));
+  await expect(columns).toContainText("fast.csv");
+  await expect(columns).not.toContainText("slow.csv");
+
+  await columns.getByRole("button", { name: "やめる" }).click();
+  await input.setInputFiles(csv("slow.csv"));
+  await dialog.getByRole("button", { name: "閉じる" }).click();
+  await expect(dialog).toBeHidden();
+  await release();
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 100)));
+  await page
+    .getByRole("region", { name: "機器台帳", exact: true })
+    .getByRole("button", { name: "割付の一覧表", exact: true })
+    .click();
+  await expect(dialog).toBeVisible();
+  await expect(columns).toHaveCount(0);
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+});

@@ -271,18 +271,25 @@
   function headerLabel(name: string, i: number) {
     return name.trim() ? name : `${i + 1}列目`;
   }
+  /** Generation of the CSV read in flight; a newer read, "やめる" or closing voids it. */
+  let ioRead = 0;
+  function cancelIoCsv() {
+    ioRead++;
+    ioCsv = null;
+  }
   async function readIoCsv(file: File) {
+    cancelIoCsv();
+    const read = ioRead;
     error = "";
     message = "";
-    ioCsv = null;
     if (file.size > MAX_IO_CSV_BYTES) {
       error = `CSV が大きすぎます（${MAX_IO_CSV_BYTES / 1024 / 1024}MB まで）。`;
       return;
     }
     try {
-      const { text, encoding } = decodeIoCsv(
-        new Uint8Array(await file.arrayBuffer()),
-      );
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (read !== ioRead) return;
+      const { text, encoding } = decodeIoCsv(bytes);
       const [header, ...records] = parseIoCsv(text, MAX_IO_CSV_RECORDS);
       if (!header || !records.length) {
         error =
@@ -297,6 +304,7 @@
         columns: guessIoCsvColumns(header.fields),
       };
     } catch (cause) {
+      if (read !== ioRead) return;
       error = `CSV を読めません: ${cause instanceof Error ? cause.message : String(cause)}`;
     }
   }
@@ -327,7 +335,7 @@
     drafts.clear();
     prefixes.clear();
     skipped = [];
-    ioCsv = null;
+    cancelIoCsv();
     ioSkipped = [];
     step = "edit";
     message = "";
@@ -488,7 +496,7 @@
               3つの列を、それぞれ別の列で選んでください。
             </p>{/if}
           <div class="actions">
-            <button type="button" onclick={() => (ioCsv = null)}>やめる</button>
+            <button type="button" onclick={cancelIoCsv}>やめる</button>
             <button
               type="button"
               class="primary"
