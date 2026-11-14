@@ -309,7 +309,7 @@ async fn run(
     if initial.connection_state() == TagClientConnectionState::Stopped
         && initial.last_error().is_some()
     {
-        let _ = stop(evaluator, sdk).await;
+        let _ = stop(evaluator, sdk, &change_tx).await;
         return Err(AlarmRuntimeError::Closed);
     }
     if let Err(error) = process_state(
@@ -322,7 +322,7 @@ async fn run(
     )
     .await
     {
-        let _ = stop(evaluator, sdk).await;
+        let _ = stop(evaluator, sdk, &change_tx).await;
         return Err(error);
     }
     loop {
@@ -331,22 +331,22 @@ async fn run(
         tokio::select! {
             state = states.changed() => {
                 if state.is_err() {
-                    let _ = stop(evaluator, sdk).await;
+                    let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(AlarmRuntimeError::Closed);
                 }
                 let current = states.borrow_and_update().clone();
                 if current.connection_state() == TagClientConnectionState::Stopped {
-                    let _ = stop(evaluator, sdk).await;
+                    let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(AlarmRuntimeError::Closed);
                 }
                 if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_live, &change_tx).await {
-                    let _ = stop(evaluator, sdk).await;
+                    let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(error);
                 }
             }
             _ = async { if let Some(deadline) = deadline { tokio::time::sleep_until(deadline.into()).await } else { std::future::pending::<()>().await } } => {
                 if let Err(error) = publish(&mut evaluator, Input::TimerExpired, &change_tx).await {
-                    let _ = stop(evaluator, sdk).await;
+                    let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(error);
                 }
             }
@@ -361,23 +361,29 @@ async fn run(
                         }
                         Err(error) => {
                             let _ = reply.send(Err(error));
-                            let _ = stop(evaluator, sdk).await;
+                            let _ = stop(evaluator, sdk, &change_tx).await;
                             return Err(AlarmRuntimeError::Closed);
                         }
                     }
                 }
                 Some(Control::Stop(reply)) => {
-                    let result = stop(evaluator, sdk).await;
+                    let result = stop(evaluator, sdk, &change_tx).await;
                     let _ = reply.send(result);
                     return Ok(());
                 }
-                None => return stop(evaluator, sdk).await,
+                None => return stop(evaluator, sdk, &change_tx).await,
             }
         }
     }
 }
 
-async fn stop(evaluator: AlarmEvaluator, sdk: TagClientHandle) -> Result<(), AlarmRuntimeError> {
+async fn stop(
+    mut evaluator: AlarmEvaluator,
+    sdk: TagClientHandle,
+    changes: &broadcast::Sender<AlarmChange>,
+) -> Result<(), AlarmRuntimeError> {
+    // A stop is also a boundary: commit every already-expired wait first.
+    let settled = publish(&mut evaluator, Input::TimerExpired, changes).await;
     let sdk_result = sdk
         .shutdown()
         .await
@@ -386,6 +392,7 @@ async fn stop(evaluator: AlarmEvaluator, sdk: TagClientHandle) -> Result<(), Ala
         .db
         .stop_session(evaluator.engine.session(), wall_ms())
         .await?;
+    settled?;
     sdk_result
 }
 
