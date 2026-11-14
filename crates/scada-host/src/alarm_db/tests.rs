@@ -21,7 +21,7 @@ fn applied(id: &str, hash: &str) -> AppliedDefinitions {
         applied_by: "未ログイン".into(),
         applied_at_ms: 100,
         definitions: json!({"definitions": []}),
-        condition_hashes: BTreeMap::new(),
+        condition_hashes: BTreeMap::from([("condition:hh".into(), "eval-hash".into())]),
         displays: BTreeMap::from([(
             "condition:hh".into(),
             ConditionDisplay {
@@ -51,6 +51,23 @@ fn state(session_id: &str) -> LastRow {
         session_id: session_id.into(),
         last_event_seq: None,
     }
+}
+
+#[test]
+fn disabled_condition_ends_as_definition_change() {
+    let plan = plan_restore(
+        Session {
+            id: "new".into(),
+            generation: 2,
+        },
+        "http://127.0.0.1:8722",
+        200,
+        &BTreeMap::new(),
+        &BTreeSet::from(["condition:hh".into()]),
+        &[state("old")],
+    )
+    .unwrap();
+    assert_eq!(plan.ended[0].kind, "definitionChanged");
 }
 
 #[tokio::test]
@@ -252,9 +269,32 @@ async fn an_old_session_cannot_ack_after_a_new_session_starts() {
         generation: 2,
     };
     db.start_session(&second, 2, &[], &[]).await.unwrap();
-    db.append(&second, &[], &[state(&second.id)], &[], None)
+    db.append(
+        &second,
+        &[EventWrite {
+            at_ms: 2,
+            condition_id: Some("condition:hh".into()),
+            kind: "occurred".into(),
+            detail: Value::Null,
+        }],
+        &[state(&second.id)],
+        &[],
+        None,
+    )
+    .await
+    .unwrap();
+    let saved_seq = db.last_states().await.unwrap()[0].last_event_seq;
+    let mut bogus_seq = state(&second.id);
+    bogus_seq.last_event_seq = Some(999_999);
+    db.append(&second, &[], &[bogus_seq], &[], None)
         .await
         .unwrap();
+    assert_eq!(db.last_states().await.unwrap()[0].last_event_seq, saved_seq);
+    assert!(matches!(
+        db.append(&second, &[], &[], &["condition:hh".into()], None)
+            .await,
+        Err(AlarmDbError::InvalidRow)
+    ));
     let mut foreign = state(&second.id);
     foreign.evaluation_hash = "different".into();
     assert!(matches!(
@@ -271,6 +311,8 @@ async fn an_old_session_cannot_ack_after_a_new_session_starts() {
     candidate
         .condition_hashes
         .insert("condition:hh".into(), "eval-hash".into());
+    let mut survivor = db.last_states().await.unwrap().remove(0);
+    survivor.session_id = "stale".into();
     assert!(matches!(
         db.apply(&candidate, Some(&first), &[], &[]).await,
         Err(AlarmDbError::InvalidRow)
@@ -288,24 +330,32 @@ async fn an_old_session_cannot_ack_after_a_new_session_starts() {
         .condition_hashes
         .insert("condition:hh".into(), "different".into());
     assert!(matches!(
-        db.apply(&wrong_hash, Some(&second), &[], &[state("stale")])
-            .await,
+        db.apply(
+            &wrong_hash,
+            Some(&second),
+            &[],
+            std::slice::from_ref(&survivor)
+        )
+        .await,
         Err(AlarmDbError::InvalidRow)
     ));
-    let mut stale = state("stale");
+    let mut stale = survivor.clone();
     stale.state.acked = true;
     assert!(matches!(
         db.apply(&candidate, Some(&second), &[], &[stale]).await,
         Err(AlarmDbError::InvalidRow)
     ));
-    db.apply(&candidate, Some(&second), &[], &[state("stale")])
-        .await
-        .unwrap();
+    db.apply(
+        &candidate,
+        Some(&second),
+        &[],
+        std::slice::from_ref(&survivor),
+    )
+    .await
+    .unwrap();
     assert_eq!(db.last_states().await.unwrap()[0].session_id, second.id);
     db.stop_session(&second, 3).await.unwrap();
-    db.apply(&candidate, None, &[], &[state("stale")])
-        .await
-        .unwrap();
+    db.apply(&candidate, None, &[], &[survivor]).await.unwrap();
     assert_eq!(db.applied().await.unwrap().unwrap().file_hash, "candidate");
     sqlx::query("UPDATE session SET stopped = 2 WHERE id = 1")
         .execute(&db.pool)
@@ -336,6 +386,19 @@ async fn an_applied_definition_from_another_project_is_not_read_as_this_project(
     let terminal = AlarmTerminal::open(&dir).await.unwrap();
     let id = project_id();
     let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let mut missing_display = applied(&id, "missing-display");
+    missing_display.displays.clear();
+    assert!(matches!(
+        db.apply(&missing_display, None, &[], &[]).await,
+        Err(AlarmDbError::InvalidRow)
+    ));
+    let mut extra_display = applied(&id, "extra-display");
+    let display = extra_display.displays["condition:hh"].clone();
+    extra_display.displays.insert("extra".into(), display);
+    assert!(matches!(
+        db.apply(&extra_display, None, &[], &[]).await,
+        Err(AlarmDbError::InvalidRow)
+    ));
     let other = applied(&project_id(), "other");
     assert!(matches!(
         db.apply(&other, None, &[], &[]).await,
@@ -528,6 +591,12 @@ async fn restore_keeps_only_matching_hash_and_endpoint_and_writes_ends_with_star
     let display = original.displays["condition:hh"].clone();
     original.displays.insert("changed".into(), display.clone());
     original.displays.insert("wrong-endpoint".into(), display);
+    original
+        .condition_hashes
+        .insert("changed".into(), "old-hash".into());
+    original
+        .condition_hashes
+        .insert("wrong-endpoint".into(), "eval-hash".into());
     db.apply(&original, None, &[], &[]).await.unwrap();
     let spec = ConditionSpec {
         source: Source::Bit {
@@ -583,6 +652,7 @@ async fn restore_keeps_only_matching_hash_and_endpoint_and_writes_ends_with_star
         "http://127.0.0.1:8722",
         200,
         &definitions,
+        &BTreeSet::new(),
         &previous,
     )
     .unwrap();

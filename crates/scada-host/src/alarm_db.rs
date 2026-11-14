@@ -1,6 +1,6 @@
 //! Per-Project SQLite ledger for alarm definitions, events, last states and
 //! session evidence. No Historian tables or UI lifetime are shared with it.
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use scada_alarm::{
     ConditionSpec, DefineError, Engine, EngineUnavailable, Input, LastState, Now, Session,
@@ -131,6 +131,7 @@ pub fn plan_restore(
     endpoint: &str,
     at_ms: i64,
     definitions: &BTreeMap<String, Definition>,
+    disabled: &BTreeSet<String>,
     previous: &[LastRow],
 ) -> Result<RestorePlan, RestoreError> {
     let mut engine = Engine::new(session.clone());
@@ -173,7 +174,7 @@ pub fn plan_restore(
         } else {
             let reason = if row.endpoint != endpoint {
                 "connectionChanged"
-            } else if definition.is_some() {
+            } else if definition.is_some() || disabled.contains(&row.condition_id) {
                 "definitionChanged"
             } else {
                 "definitionDeleted"
@@ -335,6 +336,9 @@ impl<'terminal> AlarmDb<'terminal> {
     ) -> Result<(), AlarmDbError> {
         if applied.project_id != self.project_id {
             return Err(AlarmDbError::InvalidProjectId);
+        }
+        if applied.condition_hashes.keys().ne(applied.displays.keys()) {
+            return Err(AlarmDbError::InvalidRow);
         }
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let existing = load_existing(&mut tx).await?;
@@ -502,6 +506,25 @@ impl<'terminal> AlarmDb<'terminal> {
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         require_session(&mut tx, session).await?;
         verify_applied_rows(&mut tx, &self.project_id, changed).await?;
+        let existing = load_existing(&mut tx).await?;
+        let mut changed_ids = BTreeSet::new();
+        for row in changed {
+            if !changed_ids.insert(&row.condition_id) {
+                return Err(AlarmDbError::InvalidRow);
+            }
+        }
+        let mut removed_ids = BTreeSet::new();
+        for id in removed {
+            if !removed_ids.insert(id)
+                || changed_ids.contains(id)
+                || !existing.contains_key(id)
+                || !events.iter().any(|event| {
+                    event.condition_id.as_deref() == Some(id.as_str()) && event.kind == "ended"
+                })
+            {
+                return Err(AlarmDbError::InvalidRow);
+            }
+        }
         let mut last_event = std::collections::HashMap::new();
         for event in events {
             let seq = insert_event(&mut tx, &session.id, event).await?;
@@ -514,6 +537,10 @@ impl<'terminal> AlarmDb<'terminal> {
             row.session_id = session.id.clone();
             if let Some(seq) = last_event.get(&row.condition_id) {
                 row.last_event_seq = Some(*seq);
+            } else {
+                row.last_event_seq = existing
+                    .get(&row.condition_id)
+                    .and_then(|saved| saved.last_event_seq);
             }
             insert_state(&mut tx, &row).await?;
         }

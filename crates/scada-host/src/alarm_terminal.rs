@@ -2,6 +2,7 @@
 //! A generation is spent before a session can be inserted in a Project DB.
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteConnectOptions;
@@ -50,7 +51,7 @@ pub enum TerminalError {
 pub struct AlarmTerminal {
     data_dir: PathBuf,
     _lock: fs::File,
-    settings: Settings,
+    settings: Mutex<Settings>,
 }
 
 impl AlarmTerminal {
@@ -83,33 +84,43 @@ impl AlarmTerminal {
         Ok(Self {
             data_dir: data_dir.to_owned(),
             _lock: lock,
-            settings,
+            settings: Mutex::new(settings),
         })
     }
 
     /// Persist the next number before writing a session to its Project DB.
     /// A DB failure after this call leaves a harmless gap.
-    pub fn reserve_generation(&mut self) -> Result<u64, TerminalError> {
-        let next = self
-            .settings
+    pub fn reserve_generation(&self) -> Result<u64, TerminalError> {
+        let mut settings = self.settings.lock().map_err(|_| TerminalError::Corrupt)?;
+        let next = settings
             .last_generation
             .checked_add(1)
             .ok_or(TerminalError::Exhausted)?;
-        let mut settings = self.settings.clone();
-        settings.last_generation = next;
-        let bytes = serde_json::to_vec(&settings).map_err(|_| TerminalError::Save)?;
+        let mut updated = settings.clone();
+        updated.last_generation = next;
+        let bytes = serde_json::to_vec(&updated).map_err(|_| TerminalError::Save)?;
         durable::replace(&self.data_dir.join(SETTINGS_FILE), &bytes)
             .map_err(|_| TerminalError::Save)?;
-        self.settings = settings;
+        *settings = updated;
         Ok(next)
     }
 
-    pub fn monitored(&self) -> Option<&MonitoredProject> {
-        self.settings.monitored.as_ref()
+    pub fn monitored(&self) -> Result<Option<MonitoredProject>, TerminalError> {
+        Ok(self
+            .settings
+            .lock()
+            .map_err(|_| TerminalError::Corrupt)?
+            .monitored
+            .clone())
     }
 
-    pub fn switching(&self) -> Option<&PendingSwitch> {
-        self.settings.switching.as_ref()
+    pub fn switching(&self) -> Result<Option<PendingSwitch>, TerminalError> {
+        Ok(self
+            .settings
+            .lock()
+            .map_err(|_| TerminalError::Corrupt)?
+            .switching
+            .clone())
     }
 
     pub(crate) fn data_dir(&self) -> &Path {
@@ -117,29 +128,27 @@ impl AlarmTerminal {
     }
 
     /// The later apply boundary uses this to publish an A→B decision.
-    pub fn set_switching(&mut self, switching: Option<PendingSwitch>) -> Result<(), TerminalError> {
-        let mut next = self.settings.clone();
-        next.switching = switching;
-        self.save(next)
+    pub fn set_switching(&self, switching: Option<PendingSwitch>) -> Result<(), TerminalError> {
+        self.save(|next| next.switching = switching)
     }
 
     /// Confirm the monitored Project only after its DB has committed the apply.
-    pub fn set_monitored(
-        &mut self,
-        monitored: Option<MonitoredProject>,
-    ) -> Result<(), TerminalError> {
-        let mut next = self.settings.clone();
-        next.monitored = monitored;
-        next.switching = None;
-        self.save(next)
+    pub fn set_monitored(&self, monitored: Option<MonitoredProject>) -> Result<(), TerminalError> {
+        self.save(|next| {
+            next.monitored = monitored;
+            next.switching = None;
+        })
     }
 
-    fn save(&mut self, next: Settings) -> Result<(), TerminalError> {
+    fn save(&self, update: impl FnOnce(&mut Settings)) -> Result<(), TerminalError> {
+        let mut settings = self.settings.lock().map_err(|_| TerminalError::Corrupt)?;
+        let mut next = settings.clone();
+        update(&mut next);
         // Initial creation is allowed before any session has been reserved.
         let bytes = serde_json::to_vec(&next).map_err(|_| TerminalError::Save)?;
         durable::replace(&self.data_dir.join(SETTINGS_FILE), &bytes)
             .map_err(|_| TerminalError::Save)?;
-        self.settings = next;
+        *settings = next;
         Ok(())
     }
 }
@@ -218,7 +227,7 @@ mod tests {
     #[tokio::test]
     async fn generations_are_saved_before_their_sessions_and_never_reused() {
         let dir = temp_dir();
-        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
         assert_eq!(terminal.reserve_generation().unwrap(), 1);
         let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
             .await
@@ -237,7 +246,7 @@ mod tests {
         db.close().await;
         assert_eq!(terminal.reserve_generation().unwrap(), 2); // DB write failed: gap is spent.
         drop(terminal);
-        let mut reopened = AlarmTerminal::open(&dir).await.unwrap();
+        let reopened = AlarmTerminal::open(&dir).await.unwrap();
         assert_eq!(reopened.reserve_generation().unwrap(), 3);
         drop(reopened);
         fs::remove_dir_all(dir).unwrap();
@@ -246,7 +255,7 @@ mod tests {
     #[tokio::test]
     async fn lost_or_corrupt_settings_stop_monitoring() {
         let dir = temp_dir();
-        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
         let generation = terminal.reserve_generation().unwrap();
         let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
             .await
@@ -280,7 +289,7 @@ mod tests {
     #[tokio::test]
     async fn an_applied_db_without_a_session_does_not_claim_generation_loss() {
         let dir = temp_dir();
-        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
         terminal.set_monitored(None).unwrap(); // an initial settings file
         drop(terminal);
         let terminal = AlarmTerminal::open(&dir).await.unwrap();
@@ -317,10 +326,9 @@ mod tests {
     #[tokio::test]
     async fn a_restored_older_settings_file_cannot_reuse_a_db_generation() {
         let dir = temp_dir();
-        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
         let first = terminal.reserve_generation().unwrap();
         let backup = fs::read(dir.join(SETTINGS_FILE)).unwrap();
-        let second = terminal.reserve_generation().unwrap();
         let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
             .await
             .unwrap();
@@ -335,6 +343,7 @@ mod tests {
         )
         .await
         .unwrap();
+        let second = terminal.reserve_generation().unwrap();
         db.start_session(
             &Session {
                 id: "second".into(),
@@ -359,7 +368,7 @@ mod tests {
     #[tokio::test]
     async fn switching_and_monitor_are_durable_under_one_terminal_lock() {
         let dir = temp_dir();
-        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
         let monitored = MonitoredProject {
             project_id: uuid::Uuid::new_v4().to_string(),
             path: dir.join("b.json"),
@@ -375,13 +384,13 @@ mod tests {
             Err(TerminalError::InUse)
         ));
         drop(terminal);
-        let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
-        assert_eq!(terminal.switching().unwrap().target, monitored);
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        assert_eq!(terminal.switching().unwrap().unwrap().target, monitored);
         terminal.set_monitored(Some(monitored.clone())).unwrap();
         drop(terminal);
         let terminal = AlarmTerminal::open(&dir).await.unwrap();
-        assert_eq!(terminal.monitored(), Some(&monitored));
-        assert!(terminal.switching().is_none());
+        assert_eq!(terminal.monitored().unwrap(), Some(monitored.clone()));
+        assert!(terminal.switching().unwrap().is_none());
         drop(terminal);
         fs::remove_dir_all(dir).unwrap();
     }
