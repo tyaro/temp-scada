@@ -262,7 +262,7 @@ Hub の接続先の識別は、host が保存した `HubRecord.endpoint` の文�
   2. 「最後の状態」の行ごとに、hash が適用中の定義の condition と同じで、Hub の接続先も同じなら、同じ occurrence・recurrence・acked で引き継ぐ（入力の「復元」）。待ちは捨てる。hash が違う行は §5.2 の規則で終える（未確認だったものは「未確認のまま終了」を添える）。接続先が違う行は、ふつうは適用（接続先が変わったときの `alarm_apply`）で先に終えてあり、ここでは念のための守りとして同じく終える。
   3. 引き継いだ行と新しい session の行を、「Engine の開始」と同じ transaction で書く（引き継いだ行は今回の session id に書き直すが、orderKey と occurredAt は元のまま）。
 - 引き継いだ condition は、最初の値が届くまで「初期値待ち」の評価不能として、引き継いだ状態のまま待つ。その後は §4.3 の遷移どおり: 発生中だった行は、条件が成立していれば発生中のまま（ActiveAcked はブザーを鳴らさず、ActiveUnacked は鳴らす）、成立していなければ復帰の規則で復帰する（`autoOnReturn` ならここで自動 ACK）。ReturnedUnacked だった行は、条件が成立したら再発生の規則（on delay を待ち、recurrence を 1 増やす）で発生中にする。
-- 「最後の状態」の表: condition ごとに §4.1 の値（active・occurrence・recurrence・acked・conditionUnavailable・orderKey・occurredAt）と hash・Hub の接続先・最後のイベントの通番・session id を 1 行持ち、Engine 単位の評価不能も 1 行持つ。保持の上限による削除の対象にしない。
+- 「最後の状態」の表: condition ごとに §4.1 の値（active・occurrence・recurrence・acked・conditionUnavailable・orderKey・occurredAt）と hash・Hub の接続先・最後のイベントの通番・session id を 1 行持ち、Engine 単位の評価不能は session の行に持つ。どちらも保持の上限による削除の対象にしない。
 - これにより、未確認のまま終わった警報は履歴の「前回の終了時の状態」と「停止時の状態」で判別できる。
 
 世代番号は端末全体の排他 lock の下で、次の番号を端末設定へ原子的・永続的に書いてから session DB の transaction で「Engine の開始」を書く。設定への書込みに失敗したら session を始めない。session を始めるときは、同じ起動で直近に予約し、まだ使っていない番号だけを一度消費する。DB 側が失敗した番号は欠番として再利用しない。起動時は各警報 DB の session の世代番号の最大値を読み、端末設定の最後の番号より大きければ設定の巻戻し・喪失として Engine を停止し、バックアップと明示的な復旧を要する。端末設定が無くても DB に session が一件も無ければ初回として 1 から始められる（適用だけを終えて session を始める前に終了した場合を含む）。初回の schema transaction 前に終了して残った空の DB（format 0・利用者の表なし）も session なしとして扱う。端末設定が不正、または DB の既存表を読めないときは Engine を始めない。これにより DB に残る世代番号を再利用しない。

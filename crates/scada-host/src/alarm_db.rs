@@ -136,6 +136,7 @@ pub struct RestorePlan {
     restored: Vec<LastRow>,
     ended: Vec<EventWrite>,
     definition_hashes: BTreeMap<String, String>,
+    disabled_condition_ids: BTreeSet<String>,
     endpoint: String,
 }
 
@@ -211,13 +212,7 @@ pub fn plan_restore(
             restored_row.session_id = session.id.clone();
             restored.push(restored_row);
         } else {
-            let reason = if row.endpoint != endpoint {
-                "connectionChanged"
-            } else if definition.is_some() || disabled.contains(&row.condition_id) {
-                "definitionChanged"
-            } else {
-                "definitionDeleted"
-            };
+            let reason = end_reason(row, applied).ok_or(RestoreError::DefinitionMismatch)?;
             ended.push(EventWrite {
                 at_ms,
                 condition_id: Some(row.condition_id.clone()),
@@ -231,6 +226,7 @@ pub fn plan_restore(
         restored,
         ended,
         definition_hashes,
+        disabled_condition_ids: disabled.clone(),
         endpoint: endpoint.into(),
     })
 }
@@ -392,28 +388,7 @@ impl AlarmDb {
         let existing = load_existing(&mut tx).await?;
         let displays = load_displays(&mut tx).await?;
         verify_accounting(&existing, survivors, ended)?;
-        for event in ended {
-            let id = event
-                .condition_id
-                .as_deref()
-                .ok_or(AlarmDbError::InvalidRow)?;
-            let saved = existing.get(id).ok_or(AlarmDbError::InvalidRow)?;
-            let valid_reason = if saved.endpoint != applied.endpoint {
-                event.kind == "connectionChanged"
-            } else {
-                match applied.condition_hashes.get(id) {
-                    Some(hash) if hash == &saved.evaluation_hash => false,
-                    Some(_) => event.kind == "definitionChanged",
-                    None if applied.disabled_condition_ids.contains(id) => {
-                        event.kind == "definitionChanged"
-                    }
-                    None => event.kind == "definitionDeleted",
-                }
-            };
-            if !valid_reason {
-                return Err(AlarmDbError::InvalidRow);
-            }
-        }
+        verify_end_reasons(&existing, ended, applied)?;
         for row in survivors {
             if row.endpoint != applied.endpoint
                 || applied.condition_hashes.get(&row.condition_id) != Some(&row.evaluation_hash)
@@ -476,15 +451,8 @@ impl AlarmDb {
         self._terminal
             .claim_generation(session.generation)
             .map_err(|_| AlarmDbError::InvalidRow)?;
-        self.start_session_inner(
-            &session,
-            at_ms,
-            &plan.ended,
-            &plan.restored,
-            Some(&plan.definition_hashes),
-            Some(&plan.endpoint),
-        )
-        .await?;
+        self.start_session_inner(&session, at_ms, &plan.ended, &plan.restored, Some(&plan))
+            .await?;
         Ok(plan.engine)
     }
 
@@ -496,7 +464,7 @@ impl AlarmDb {
         ended: &[EventWrite],
         restored: &[LastRow],
     ) -> Result<(), AlarmDbError> {
-        self.start_session_inner(session, at_ms, ended, restored, None, None)
+        self.start_session_inner(session, at_ms, ended, restored, None)
             .await
     }
 
@@ -506,27 +474,33 @@ impl AlarmDb {
         at_ms: i64,
         ended: &[EventWrite],
         restored: &[LastRow],
-        expected_hashes: Option<&BTreeMap<String, String>>,
-        expected_endpoint: Option<&str>,
+        expected: Option<&RestorePlan>,
     ) -> Result<(), AlarmDbError> {
         let generation = i64::try_from(session.generation).map_err(|_| AlarmDbError::InvalidRow)?;
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
-        if let Some(expected_hashes) = expected_hashes {
+        let applied = if let Some(expected) = expected {
             let body: String = sqlx::query_scalar("SELECT body FROM applied WHERE id = 1")
                 .fetch_optional(&mut *tx)
                 .await?
                 .ok_or(AlarmDbError::InvalidRow)?;
             let applied: AppliedDefinitions = serde_json::from_str(&body)?;
             if applied.project_id != self.project_id
-                || &applied.condition_hashes != expected_hashes
-                || expected_endpoint != Some(applied.endpoint.as_str())
+                || applied.condition_hashes != expected.definition_hashes
+                || applied.disabled_condition_ids != expected.disabled_condition_ids
+                || applied.endpoint != expected.endpoint
             {
                 return Err(AlarmDbError::InvalidRow);
             }
-        }
+            Some(applied)
+        } else {
+            None
+        };
         let existing = load_existing(&mut tx).await?;
         let displays = load_displays(&mut tx).await?;
         verify_accounting(&existing, restored, ended)?;
+        if let Some(applied) = &applied {
+            verify_end_reasons(&existing, ended, applied)?;
+        }
         verify_applied_rows(&mut tx, &self.project_id, restored).await?;
         let previous = sqlx::query(
             "SELECT session_id, generation, stopped, engine_unavailable FROM session WHERE id = 1",
@@ -649,6 +623,14 @@ impl AlarmDb {
             {
                 return Err(AlarmDbError::InvalidRow);
             }
+        }
+        if events.iter().any(|event| {
+            event
+                .condition_id
+                .as_ref()
+                .is_some_and(|id| !changed_ids.contains(id) && !removed_ids.contains(id))
+        }) {
+            return Err(AlarmDbError::InvalidRow);
         }
         let mut last_event = std::collections::HashMap::new();
         for event in events {
@@ -928,6 +910,39 @@ fn verify_accounting(
     }
     if accounted.len() != existing.len() {
         return Err(AlarmDbError::InvalidRow);
+    }
+    Ok(())
+}
+
+fn end_reason(saved: &LastRow, applied: &AppliedDefinitions) -> Option<&'static str> {
+    if saved.endpoint != applied.endpoint {
+        Some("connectionChanged")
+    } else {
+        match applied.condition_hashes.get(&saved.condition_id) {
+            Some(hash) if hash == &saved.evaluation_hash => None,
+            Some(_) => Some("definitionChanged"),
+            None if applied.disabled_condition_ids.contains(&saved.condition_id) => {
+                Some("definitionChanged")
+            }
+            None => Some("definitionDeleted"),
+        }
+    }
+}
+
+fn verify_end_reasons(
+    existing: &BTreeMap<String, LastRow>,
+    ended: &[EventWrite],
+    applied: &AppliedDefinitions,
+) -> Result<(), AlarmDbError> {
+    for event in ended {
+        let id = event
+            .condition_id
+            .as_ref()
+            .ok_or(AlarmDbError::InvalidRow)?;
+        let saved = existing.get(id).ok_or(AlarmDbError::InvalidRow)?;
+        if end_reason(saved, applied) != Some(event.kind.as_str()) {
+            return Err(AlarmDbError::InvalidRow);
+        }
     }
     Ok(())
 }

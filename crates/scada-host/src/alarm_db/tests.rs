@@ -263,6 +263,27 @@ async fn removed_condition_restores_from_db_and_keeps_its_last_display() {
     tx.commit().await.unwrap();
 
     let saved = db.applied().await.unwrap().unwrap();
+    let wrong_session = Session {
+        id: "next".into(),
+        generation: terminal.reserve_generation().unwrap(),
+    };
+    let mut wrong_plan = plan_restore(
+        wrong_session,
+        &saved.endpoint,
+        200,
+        &saved,
+        &BTreeMap::new(),
+        &BTreeSet::new(),
+        &db.last_states().await.unwrap(),
+    )
+    .unwrap();
+    assert_eq!(wrong_plan.ended()[0].kind, "definitionDeleted");
+    wrong_plan.ended[0].kind = "definitionChanged".into();
+    assert!(matches!(
+        db.start_session_plan(wrong_plan, 200).await,
+        Err(AlarmDbError::InvalidRow)
+    ));
+    assert_eq!(db.session().await.unwrap().unwrap().session, old);
     let next = Session {
         id: "next".into(),
         generation: terminal.reserve_generation().unwrap(),
@@ -277,7 +298,6 @@ async fn removed_condition_restores_from_db_and_keeps_its_last_display() {
         &db.last_states().await.unwrap(),
     )
     .unwrap();
-    assert_eq!(plan.ended()[0].kind, "definitionDeleted");
     let engine = db.start_session_plan(plan, 200).await.unwrap();
     assert_eq!(engine.session(), &next);
     assert!(db.last_states().await.unwrap().is_empty());
@@ -527,6 +547,23 @@ async fn an_old_session_cannot_ack_after_a_new_session_starts() {
     .await
     .unwrap();
     let saved_seq = db.last_states().await.unwrap()[0].last_event_seq;
+    assert!(matches!(
+        db.append(
+            &second,
+            &[EventWrite {
+                at_ms: 3,
+                condition_id: Some("condition:hh".into()),
+                kind: "acked".into(),
+                detail: Value::Null,
+            }],
+            &[],
+            &[],
+            None,
+        )
+        .await,
+        Err(AlarmDbError::InvalidRow)
+    ));
+    assert_eq!(db.last_states().await.unwrap()[0].last_event_seq, saved_seq);
     let mut bogus_seq = state(&second.id);
     bogus_seq.last_event_seq = Some(999_999);
     db.append(&second, &[], &[bogus_seq], &[], None)
