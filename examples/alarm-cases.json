@@ -568,7 +568,7 @@
       ]
     },
     {
-      "name": "満了の時刻を過ぎて値・評価不能が届いたら、先に持っている値で満了させてから判定する",
+      "name": "満了の時刻を過ぎて値・評価不能が届いたら、先に持っている値で満了させてから判定する（別のタグの値でも）",
       "conditions": {
         "a": {
           "source": {
@@ -614,6 +614,23 @@
             "value": 95
           },
           "onDelayMs": 1000
+        },
+        "f": {
+          "source": {
+            "kind": "threshold",
+            "tag": "F",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 1000
+        },
+        "h": {
+          "source": {
+            "kind": "threshold",
+            "tag": "H",
+            "limit": "hh",
+            "value": 95
+          }
         }
       },
       "steps": [
@@ -631,61 +648,6 @@
           }
         },
         {
-          "at": 0,
-          "input": {
-            "kind": "value",
-            "tag": "B",
-            "value": 96
-          }
-        },
-        {
-          "at": 0,
-          "input": {
-            "kind": "value",
-            "tag": "D",
-            "value": 96
-          }
-        },
-        {
-          "at": 0,
-          "input": {
-            "kind": "value",
-            "tag": "E",
-            "value": 96
-          }
-        },
-        {
-          "at": 0,
-          "input": {
-            "kind": "value",
-            "tag": "C",
-            "value": 96
-          },
-          "events": [
-            {
-              "kind": "occurred",
-              "condition": "c",
-              "occurrence": "occ-1"
-            }
-          ]
-        },
-        {
-          "at": 100,
-          "input": {
-            "kind": "value",
-            "tag": "C",
-            "value": 90
-          },
-          "states": {
-            "c": {
-              "timer": {
-                "kind": "offDelay",
-                "dueMs": 1100
-              }
-            }
-          }
-        },
-        {
           "at": 1500,
           "input": {
             "kind": "value",
@@ -696,7 +658,6 @@
             {
               "kind": "occurred",
               "condition": "a",
-              "occurrence": "occ-2",
               "atWallMs": 1700000001000,
               "judgement": {
                 "value": 96
@@ -712,7 +673,15 @@
           }
         },
         {
-          "at": 1500,
+          "at": 2000,
+          "input": {
+            "kind": "value",
+            "tag": "B",
+            "value": 96
+          }
+        },
+        {
+          "at": 3500,
           "input": {
             "kind": "value",
             "tag": "B",
@@ -722,7 +691,7 @@
             {
               "kind": "occurred",
               "condition": "b",
-              "atWallMs": 1700000001000,
+              "atWallMs": 1700000003000,
               "judgement": {
                 "value": 96
               }
@@ -730,7 +699,7 @@
             {
               "kind": "returned",
               "condition": "b",
-              "atWallMs": 1700000001500,
+              "atWallMs": 1700000003500,
               "judgement": {
                 "value": 90
               }
@@ -743,7 +712,15 @@
           }
         },
         {
-          "at": 1500,
+          "at": 4000,
+          "input": {
+            "kind": "value",
+            "tag": "D",
+            "value": 96
+          }
+        },
+        {
+          "at": 5500,
           "input": {
             "kind": "value",
             "tag": "D",
@@ -753,13 +730,13 @@
             {
               "kind": "occurred",
               "condition": "d",
-              "atWallMs": 1700000001000
+              "atWallMs": 1700000005000
             },
             {
               "kind": "unavailableStarted",
               "condition": "d",
               "reason": "bad",
-              "atWallMs": 1700000001500
+              "atWallMs": 1700000005500
             }
           ],
           "states": {
@@ -770,7 +747,37 @@
           }
         },
         {
-          "at": 2000,
+          "at": 6000,
+          "input": {
+            "kind": "value",
+            "tag": "C",
+            "value": 96
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "c"
+            }
+          ]
+        },
+        {
+          "at": 6100,
+          "input": {
+            "kind": "value",
+            "tag": "C",
+            "value": 90
+          },
+          "states": {
+            "c": {
+              "timer": {
+                "kind": "offDelay",
+                "dueMs": 7100
+              }
+            }
+          }
+        },
+        {
+          "at": 8000,
           "input": {
             "kind": "value",
             "tag": "C",
@@ -780,8 +787,7 @@
             {
               "kind": "returned",
               "condition": "c",
-              "occurrence": "occ-1",
-              "atWallMs": 1700000001100,
+              "atWallMs": 1700000007100,
               "judgement": {
                 "value": 90
               }
@@ -789,9 +795,8 @@
             {
               "kind": "reoccurred",
               "condition": "c",
-              "occurrence": "occ-1",
               "recurrence": 1,
-              "atWallMs": 1700000002000,
+              "atWallMs": 1700000008000,
               "judgement": {
                 "value": 96
               }
@@ -805,7 +810,52 @@
           }
         },
         {
-          "at": 2500,
+          "at": 8500,
+          "input": {
+            "kind": "value",
+            "tag": "F",
+            "value": 96
+          }
+        },
+        {
+          "at": 9600,
+          "input": {
+            "kind": "value",
+            "tag": "H",
+            "value": 96
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "f",
+              "atWallMs": 1700000009500
+            },
+            {
+              "kind": "occurred",
+              "condition": "h",
+              "atWallMs": 1700000009600
+            }
+          ],
+          "states": {
+            "f": {
+              "display": "activeUnacked",
+              "timer": null
+            },
+            "h": {
+              "display": "activeUnacked"
+            }
+          }
+        },
+        {
+          "at": 10000,
+          "input": {
+            "kind": "value",
+            "tag": "E",
+            "value": 96
+          }
+        },
+        {
+          "at": 11500,
           "input": {
             "kind": "engine",
             "unavailable": "disconnected"
@@ -814,12 +864,12 @@
             {
               "kind": "occurred",
               "condition": "e",
-              "atWallMs": 1700000001000
+              "atWallMs": 1700000011000
             },
             {
               "kind": "engineUnavailableStarted",
               "reason": "disconnected",
-              "atWallMs": 1700000002500
+              "atWallMs": 1700000011500
             }
           ],
           "states": {
@@ -1054,52 +1104,6 @@
           }
         },
         {
-          "at": 0,
-          "input": {
-            "kind": "value",
-            "tag": "G",
-            "value": 96
-          },
-          "events": [
-            {
-              "kind": "occurred",
-              "condition": "g",
-              "occurrence": "occ-1"
-            }
-          ]
-        },
-        {
-          "at": 0,
-          "input": {
-            "kind": "value",
-            "tag": "H",
-            "value": 96
-          },
-          "events": [
-            {
-              "kind": "occurred",
-              "condition": "h",
-              "occurrence": "occ-2"
-            }
-          ]
-        },
-        {
-          "at": 100,
-          "input": {
-            "kind": "value",
-            "tag": "G",
-            "value": 90
-          }
-        },
-        {
-          "at": 100,
-          "input": {
-            "kind": "value",
-            "tag": "H",
-            "value": 90
-          }
-        },
-        {
           "at": 1500,
           "input": {
             "kind": "end",
@@ -1110,13 +1114,11 @@
             {
               "kind": "occurred",
               "condition": "f",
-              "occurrence": "occ-3",
               "atWallMs": 1700000001000
             },
             {
               "kind": "ended",
               "condition": "f",
-              "occurrence": "occ-3",
               "recurrence": 0,
               "unacked": true,
               "atWallMs": 1700000001500
@@ -1127,11 +1129,34 @@
           }
         },
         {
-          "at": 1500,
+          "at": 2000,
+          "input": {
+            "kind": "value",
+            "tag": "G",
+            "value": 96
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "g",
+              "occurrence": "occ-2"
+            }
+          ]
+        },
+        {
+          "at": 2100,
+          "input": {
+            "kind": "value",
+            "tag": "G",
+            "value": 90
+          }
+        },
+        {
+          "at": 3500,
           "input": {
             "kind": "ack",
             "condition": "g",
-            "occurrence": "occ-1",
+            "occurrence": "occ-2",
             "recurrence": 0,
             "user": "admin"
           },
@@ -1140,12 +1165,12 @@
             {
               "kind": "returned",
               "condition": "g",
-              "atWallMs": 1700000001100
+              "atWallMs": 1700000003100
             },
             {
               "kind": "autoAcked",
               "condition": "g",
-              "atWallMs": 1700000001100
+              "atWallMs": 1700000003100
             }
           ],
           "states": {
@@ -1155,11 +1180,34 @@
           }
         },
         {
-          "at": 1500,
+          "at": 4000,
+          "input": {
+            "kind": "value",
+            "tag": "H",
+            "value": 96
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "h",
+              "occurrence": "occ-3"
+            }
+          ]
+        },
+        {
+          "at": 4100,
+          "input": {
+            "kind": "value",
+            "tag": "H",
+            "value": 90
+          }
+        },
+        {
+          "at": 5500,
           "input": {
             "kind": "ack",
             "condition": "h",
-            "occurrence": "occ-2",
+            "occurrence": "occ-3",
             "recurrence": 0,
             "user": "admin"
           },
@@ -1168,12 +1216,12 @@
             {
               "kind": "returned",
               "condition": "h",
-              "atWallMs": 1700000001100
+              "atWallMs": 1700000005100
             },
             {
               "kind": "acked",
               "condition": "h",
-              "atWallMs": 1700000001500
+              "atWallMs": 1700000005500
             }
           ],
           "states": {

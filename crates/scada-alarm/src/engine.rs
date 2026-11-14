@@ -320,41 +320,45 @@ impl Engine {
         let mut engine_unavailable = self.unavailable;
         let mut ack = None;
 
+        // どの入力でも、先に Engine 全体の満了の時刻を過ぎた待ちを、満了の時刻の順に持っている
+        // 値で確定する。タイマーの入力が遅れても、満了済みの発生・復帰が後の入力より後ろに
+        // 並ばない（別のタグの値・ACK・終了でも同じ）。
+        for (id, (_, state)) in self.settle_overdue(&mut work) {
+            next.insert(id.clone(), Some(state));
+        }
+        // 確定した後の状態（無ければ今の状態）。
+        let settled = |next: &BTreeMap<String, Option<ConditionState>>, id: &String| {
+            next.get(id)
+                .cloned()
+                .flatten()
+                .or_else(|| self.conditions.get(id).map(|c| c.state.clone()))
+        };
+
         match input {
             Input::Value { tag, sample } => {
                 if self.unavailable.is_none() {
-                    let targets = self.settle_in_due_order(&mut work, |condition| {
-                        condition.spec.source.tag() == tag
-                    });
-                    for (id, (condition, mut state)) in targets {
+                    for (id, condition) in &self.conditions {
+                        if condition.spec.source.tag() != tag {
+                            continue;
+                        }
+                        let Some(mut state) = settled(&next, id) else {
+                            continue;
+                        };
                         work.value(id, &condition.spec, &mut state, sample);
                         next.insert(id.clone(), Some(state));
                     }
                 }
             }
-            Input::TimerExpired => {
-                let targets = self.settle_in_due_order(&mut work, |condition| {
-                    condition
-                        .state
-                        .timer
-                        .is_some_and(|timer| timer.due_ms() <= now.mono_ms)
-                });
-                for (id, (_, state)) in targets {
-                    next.insert(id.clone(), Some(state));
-                }
-            }
+            Input::TimerExpired => {}
             Input::Ack {
                 condition,
                 occurrence,
                 recurrence,
                 user,
             } => {
-                let outcome = match self.conditions.get(condition) {
+                let outcome = match settled(&next, condition) {
                     None => AckOutcome::NotFound,
-                    Some(current) => {
-                        let mut state = current.state.clone();
-                        // 満了の時刻を過ぎた待ちを先に確定し、その状態で ACK を判定する。
-                        work.settle_due(condition, &current.spec, &mut state);
+                    Some(mut state) => {
                         let outcome =
                             work.ack(condition, &mut state, occurrence, *recurrence, user);
                         next.insert(condition.clone(), Some(state));
@@ -365,9 +369,10 @@ impl Engine {
             }
             Input::EngineAvailability { unavailable } => {
                 if *unavailable != self.unavailable {
-                    // 満了の時刻を過ぎた待ちは、持っている値で先に満了させる。
-                    let targets = self.settle_in_due_order(&mut work, |_| true);
-                    for (id, (_, mut state)) in targets {
+                    for id in self.conditions.keys() {
+                        let Some(mut state) = settled(&next, id) else {
+                            continue;
+                        };
                         state.timer = None;
                         if unavailable.is_none() {
                             // 持っていた値では判定しない。次の値が届くまで初期値待ち（§4.5）。
@@ -393,10 +398,10 @@ impl Engine {
                     .conditions
                     .get(condition)
                     .ok_or_else(|| StepError::UnknownCondition(condition.clone()))?;
-                // 満了の時刻を過ぎた待ちを先に確定し、その発生・復帰を残してから終える。
-                let mut settled = current.state.clone();
-                work.settle_due(condition, &current.spec, &mut settled);
-                let state = &settled;
+                // 満了済みの待ちの発生・復帰を残してから終える。
+                let settled_state =
+                    settled(&next, condition).unwrap_or_else(|| current.state.clone());
+                let state = &settled_state;
                 work.events.push(Event {
                     at_wall_ms: now.wall_ms,
                     condition: Some(condition.clone()),
@@ -456,36 +461,32 @@ impl Engine {
         })
     }
 
-    /// `filter` に合う condition の状態を写し、満了の時刻を過ぎた待ちを満了の時刻の順
-    /// （同じ時刻なら id の順）に確定する。複数の待ちが遅れて満了しても、イベントは時刻の順に並ぶ。
-    fn settle_in_due_order<'s>(
+    /// 満了の時刻を過ぎた待ちを持つ condition の状態を写し、満了の時刻の順（同じ時刻なら
+    /// id の順）に確定する。複数の待ちが遅れて満了しても、イベントは時刻の順に並ぶ。
+    fn settle_overdue<'s>(
         &'s self,
         work: &mut Work<'_>,
-        filter: impl Fn(&Condition) -> bool,
     ) -> BTreeMap<&'s String, (&'s Condition, ConditionState)> {
-        let mut targets: BTreeMap<&String, (&Condition, ConditionState)> = self
+        let mut due: Vec<(u64, &String, &Condition)> = self
             .conditions
             .iter()
-            .filter(|(_, condition)| filter(condition))
-            .map(|(id, condition)| (id, (condition, condition.state.clone())))
-            .collect();
-        let mut due: Vec<(u64, &String)> = targets
-            .iter()
-            .filter_map(|(id, (_, state))| {
-                state
+            .filter_map(|(id, condition)| {
+                condition
+                    .state
                     .timer
                     .map(Timer::due_ms)
                     .filter(|due| *due <= work.now.mono_ms)
-                    .map(|due| (due, *id))
+                    .map(|due| (due, id, condition))
             })
             .collect();
-        due.sort();
-        for (_, id) in due {
-            if let Some((condition, state)) = targets.get_mut(id) {
-                work.settle_due(id, &condition.spec, state);
-            }
+        due.sort_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
+        let mut settled = BTreeMap::new();
+        for (_, id, condition) in due {
+            let mut state = condition.state.clone();
+            work.settle_due(id, &condition.spec, &mut state);
+            settled.insert(id, (condition, state));
         }
-        targets
+        settled
     }
 
     /// `step` の結果を確定する。
