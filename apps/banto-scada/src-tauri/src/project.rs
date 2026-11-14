@@ -15,7 +15,7 @@ use scada_host::project_file::{
 use serde_json::{json, Value};
 use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::{Runtime, State, WebviewWindow};
-use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 use crate::auth::AuthState;
 
@@ -55,8 +55,36 @@ async fn pick_save<R: Runtime>(
         .save_file(move |path| {
             let _ = sender.send(path);
         });
-    let path = receiver.await.ok().flatten()?.into_path().ok()?;
-    Some(with_extension(path, format))
+    let picked = receiver.await.ok().flatten()?.into_path().ok()?;
+    let path = with_extension(picked.clone(), format);
+    // The dialog confirmed an overwrite of the picked name only: a file at
+    // the name with the extension appended is confirmed here.
+    if path != picked && path.exists() && !confirm_overwrite(window, &path).await {
+        return None;
+    }
+    Some(path)
+}
+
+async fn confirm_overwrite<R: Runtime>(window: &WebviewWindow<R>, path: &std::path::Path) -> bool {
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    let name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    window
+        .dialog()
+        .message(format!("{name} は既にあります。上書きしますか？"))
+        .title("Project を保存")
+        .kind(MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::OkCancelCustom(
+            "上書き".into(),
+            "キャンセル".into(),
+        ))
+        .parent(window)
+        .show(move |overwrite| {
+            let _ = sender.send(overwrite);
+        });
+    receiver.await.unwrap_or(false)
 }
 
 /// The refusal of the save permission, as the webview reads it.
