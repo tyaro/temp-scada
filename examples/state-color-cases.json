@@ -164,8 +164,8 @@
           "type": "polyline",
           "points": [
             {
-              "x": 80.0,
-              "y": 45.0
+              "x": 80,
+              "y": 45
             },
             {
               "x": 78.978,
@@ -173,14 +173,14 @@
             },
             {
               "x": 75.981,
-              "y": 60.0
+              "y": 60
             },
             {
               "x": 71.213,
               "y": 66.213
             },
             {
-              "x": 65.0,
+              "x": 65,
               "y": 70.981
             },
             {
@@ -188,15 +188,15 @@
               "y": 73.978
             },
             {
-              "x": 50.0,
-              "y": 75.0
+              "x": 50,
+              "y": 75
             },
             {
               "x": 42.235,
               "y": 73.978
             },
             {
-              "x": 35.0,
+              "x": 35,
               "y": 70.981
             },
             {
@@ -205,15 +205,15 @@
             },
             {
               "x": 24.019,
-              "y": 60.0
+              "y": 60
             },
             {
               "x": 21.022,
               "y": 52.765
             },
             {
-              "x": 20.0,
-              "y": 45.0
+              "x": 20,
+              "y": 45
             },
             {
               "x": 21.022,
@@ -221,14 +221,14 @@
             },
             {
               "x": 24.019,
-              "y": 30.0
+              "y": 30
             },
             {
               "x": 28.787,
               "y": 23.787
             },
             {
-              "x": 35.0,
+              "x": 35,
               "y": 19.019
             },
             {
@@ -236,15 +236,15 @@
               "y": 16.022
             },
             {
-              "x": 50.0,
-              "y": 15.0
+              "x": 50,
+              "y": 15
             },
             {
               "x": 57.765,
               "y": 16.022
             },
             {
-              "x": 65.0,
+              "x": 65,
               "y": 19.019
             },
             {
@@ -253,15 +253,15 @@
             },
             {
               "x": 75.981,
-              "y": 30.0
+              "y": 30
             },
             {
               "x": 78.978,
               "y": 37.235
             },
             {
-              "x": 80.0,
-              "y": 45.0
+              "x": 80,
+              "y": 45
             }
           ],
           "strokeWidth": 4,
@@ -290,8 +290,8 @@
           "type": "polyline",
           "points": [
             {
-              "x": 80.0,
-              "y": 45.0
+              "x": 80,
+              "y": 45
             },
             {
               "x": 78.978,
@@ -299,14 +299,14 @@
             },
             {
               "x": 75.981,
-              "y": 60.0
+              "y": 60
             },
             {
               "x": 71.213,
               "y": 66.213
             },
             {
-              "x": 65.0,
+              "x": 65,
               "y": 70.981
             },
             {
@@ -314,15 +314,15 @@
               "y": 73.978
             },
             {
-              "x": 50.0,
-              "y": 75.0
+              "x": 50,
+              "y": 75
             },
             {
               "x": 42.235,
               "y": 73.978
             },
             {
-              "x": 35.0,
+              "x": 35,
               "y": 70.981
             },
             {
@@ -331,15 +331,15 @@
             },
             {
               "x": 24.019,
-              "y": 60.0
+              "y": 60
             },
             {
               "x": 21.022,
               "y": 52.765
             },
             {
-              "x": 20.0,
-              "y": 45.0
+              "x": 20,
+              "y": 45
             },
             {
               "x": 21.022,
@@ -347,14 +347,14 @@
             },
             {
               "x": 24.019,
-              "y": 30.0
+              "y": 30
             },
             {
               "x": 28.787,
               "y": 23.787
             },
             {
-              "x": 35.0,
+              "x": 35,
               "y": 19.019
             },
             {
@@ -362,15 +362,15 @@
               "y": 16.022
             },
             {
-              "x": 50.0,
-              "y": 15.0
+              "x": 50,
+              "y": 15
             },
             {
               "x": 57.765,
               "y": 16.022
             },
             {
-              "x": 65.0,
+              "x": 65,
               "y": 19.019
             },
             {
@@ -379,15 +379,15 @@
             },
             {
               "x": 75.981,
-              "y": 30.0
+              "y": 30
             },
             {
               "x": 78.978,
               "y": 37.235
             },
             {
-              "x": 80.0,
-              "y": 45.0
+              "x": 80,
+              "y": 45
             }
           ],
           "strokeWidth": 4,
@@ -633,6 +633,784 @@
             "slotName": "current"
           }
         }
+      }
+    ]
+  },
+  {
+    "name": "screen rectangle follows a boolDisplay Text",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": true,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000a01",
+        "order": 0,
+        "x": 40,
+        "y": 20,
+        "width": 120,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "P-1",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "align": "left"
+          },
+          "binding": {
+            "externalName": "Demo.Value"
+          },
+          "boolDisplay": {
+            "true": {
+              "text": "運転",
+              "color": "#16a34a"
+            },
+            "false": {
+              "text": "停止",
+              "color": "#64748b"
+            },
+            "unknownColor": "#d97706"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a02",
+        "order": 1,
+        "x": 40,
+        "y": 80,
+        "width": 100,
+        "height": 40,
+        "rotation": 0,
+        "shape": {
+          "type": "rectangle",
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 1
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 1
+            }
+          },
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a01"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "screen ellipse follows a boolDisplay Text",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": true,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000a01",
+        "order": 0,
+        "x": 40,
+        "y": 20,
+        "width": 120,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "P-1",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "align": "left"
+          },
+          "binding": {
+            "externalName": "Demo.Value"
+          },
+          "boolDisplay": {
+            "true": {
+              "text": "運転",
+              "color": "#16a34a"
+            },
+            "false": {
+              "text": "停止",
+              "color": "#64748b"
+            },
+            "unknownColor": "#d97706"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a04",
+        "order": 1,
+        "x": 160,
+        "y": 80,
+        "width": 60,
+        "height": 40,
+        "rotation": 0,
+        "shape": {
+          "type": "ellipse",
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 1
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 1
+            }
+          },
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a01"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "screen polyline follows a boolDisplay Text",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": true,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000a01",
+        "order": 0,
+        "x": 40,
+        "y": 20,
+        "width": 120,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "P-1",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "align": "left"
+          },
+          "binding": {
+            "externalName": "Demo.Value"
+          },
+          "boolDisplay": {
+            "true": {
+              "text": "運転",
+              "color": "#16a34a"
+            },
+            "false": {
+              "text": "停止",
+              "color": "#64748b"
+            },
+            "unknownColor": "#d97706"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a03",
+        "order": 1,
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "fill": "#83bfcd",
+        "shape": {
+          "type": "polyline",
+          "points": [
+            {
+              "x": 10,
+              "y": 200
+            },
+            {
+              "x": 150,
+              "y": 200
+            }
+          ],
+          "strokeWidth": 6,
+          "arrow": "none",
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a01"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "screen follower with its source removed refused",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": false,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000a02",
+        "order": 0,
+        "x": 40,
+        "y": 80,
+        "width": 100,
+        "height": 40,
+        "rotation": 0,
+        "shape": {
+          "type": "rectangle",
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 1
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 1
+            }
+          },
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a01"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "screen source without boolDisplay refused",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": false,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000a01",
+        "order": 0,
+        "x": 40,
+        "y": 20,
+        "width": 120,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "P-1",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "align": "left"
+          },
+          "binding": {
+            "externalName": "Demo.Value"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a02",
+        "order": 1,
+        "x": 40,
+        "y": 80,
+        "width": 100,
+        "height": 40,
+        "rotation": 0,
+        "shape": {
+          "type": "rectangle",
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 1
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 1
+            }
+          },
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a01"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "screen source without a tag refused",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": false,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000a01",
+        "order": 0,
+        "x": 40,
+        "y": 20,
+        "width": 120,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "P-1",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "align": "left"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a02",
+        "order": 1,
+        "x": 40,
+        "y": 80,
+        "width": 100,
+        "height": 40,
+        "rotation": 0,
+        "shape": {
+          "type": "rectangle",
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 1
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 1
+            }
+          },
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a01"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "screen follower with disabled fill refused",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": false,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000a01",
+        "order": 0,
+        "x": 40,
+        "y": 20,
+        "width": 120,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "P-1",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "align": "left"
+          },
+          "binding": {
+            "externalName": "Demo.Value"
+          },
+          "boolDisplay": {
+            "true": {
+              "text": "運転",
+              "color": "#16a34a"
+            },
+            "false": {
+              "text": "停止",
+              "color": "#64748b"
+            },
+            "unknownColor": "#d97706"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a02",
+        "order": 1,
+        "x": 40,
+        "y": 80,
+        "width": 100,
+        "height": 40,
+        "rotation": 0,
+        "shape": {
+          "type": "rectangle",
+          "paint": {
+            "fill": {
+              "enabled": false,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 1
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 1
+            }
+          },
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a01"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "screen follower with gradient fill refused",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": false,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000a01",
+        "order": 0,
+        "x": 40,
+        "y": 20,
+        "width": 120,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "P-1",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "align": "left"
+          },
+          "binding": {
+            "externalName": "Demo.Value"
+          },
+          "boolDisplay": {
+            "true": {
+              "text": "運転",
+              "color": "#16a34a"
+            },
+            "false": {
+              "text": "停止",
+              "color": "#64748b"
+            },
+            "unknownColor": "#d97706"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a02",
+        "order": 1,
+        "x": 40,
+        "y": 80,
+        "width": 100,
+        "height": 40,
+        "rotation": 0,
+        "shape": {
+          "type": "rectangle",
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "linearGradient",
+                "angle": 0,
+                "start": {
+                  "color": "#000000",
+                  "alpha": 1
+                },
+                "end": {
+                  "color": "#ffffff",
+                  "alpha": 1
+                }
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 1
+            }
+          },
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a01"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "screen follower cannot follow itself",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": false,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000a01",
+        "order": 0,
+        "x": 40,
+        "y": 20,
+        "width": 120,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "P-1",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "align": "left"
+          },
+          "binding": {
+            "externalName": "Demo.Value"
+          },
+          "boolDisplay": {
+            "true": {
+              "text": "運転",
+              "color": "#16a34a"
+            },
+            "false": {
+              "text": "停止",
+              "color": "#64748b"
+            },
+            "unknownColor": "#d97706"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a02",
+        "order": 1,
+        "x": 40,
+        "y": 80,
+        "width": 100,
+        "height": 40,
+        "rotation": 0,
+        "shape": {
+          "type": "rectangle",
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 1
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 1
+            }
+          },
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a02"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "screen follower cannot follow a non-Text",
+    "target": "/screens/0",
+    "key": "objects",
+    "valid": false,
+    "value": [
+      {
+        "id": "0199f600-0000-7000-8000-000000000a01",
+        "order": 0,
+        "x": 40,
+        "y": 20,
+        "width": 120,
+        "height": 30,
+        "rotation": 0,
+        "fill": "#334155",
+        "shape": {
+          "type": "text",
+          "text": "P-1",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "bold",
+            "align": "left"
+          },
+          "binding": {
+            "externalName": "Demo.Value"
+          },
+          "boolDisplay": {
+            "true": {
+              "text": "運転",
+              "color": "#16a34a"
+            },
+            "false": {
+              "text": "停止",
+              "color": "#64748b"
+            },
+            "unknownColor": "#d97706"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a02",
+        "order": 1,
+        "x": 40,
+        "y": 80,
+        "width": 100,
+        "height": 40,
+        "rotation": 0,
+        "shape": {
+          "type": "rectangle",
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 1
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 1
+            }
+          },
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a01"
+          }
+        }
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a04",
+        "order": 2,
+        "x": 160,
+        "y": 80,
+        "width": 60,
+        "height": 40,
+        "rotation": 0,
+        "shape": {
+          "type": "ellipse",
+          "paint": {
+            "fill": {
+              "enabled": true,
+              "paint": {
+                "type": "solid",
+                "color": "#abcdef",
+                "alpha": 1
+              }
+            },
+            "stroke": {
+              "color": "#112233",
+              "width": 2,
+              "alpha": 1
+            }
+          },
+          "stateColor": {
+            "textId": "0199f600-0000-7000-8000-000000000a02"
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "screen follower of another screen Text refused",
+    "target": "",
+    "key": "screens",
+    "valid": false,
+    "value": [
+      {
+        "id": "0199f200-0000-7000-8000-000000000002",
+        "name": "読取slotと機器context",
+        "width": 960,
+        "height": 540,
+        "objects": [
+          {
+            "id": "0199f600-0000-7000-8000-000000000a02",
+            "order": 0,
+            "x": 40,
+            "y": 80,
+            "width": 100,
+            "height": 40,
+            "rotation": 0,
+            "shape": {
+              "type": "rectangle",
+              "paint": {
+                "fill": {
+                  "enabled": true,
+                  "paint": {
+                    "type": "solid",
+                    "color": "#abcdef",
+                    "alpha": 1
+                  }
+                },
+                "stroke": {
+                  "color": "#112233",
+                  "width": 2,
+                  "alpha": 1
+                }
+              },
+              "stateColor": {
+                "textId": "0199f600-0000-7000-8000-000000000a01"
+              }
+            }
+          }
+        ],
+        "background": "#ffffff",
+        "folders": [],
+        "groups": []
+      },
+      {
+        "id": "0199f600-0000-7000-8000-000000000a10",
+        "name": "別画面",
+        "width": 960,
+        "height": 540,
+        "objects": [
+          {
+            "id": "0199f600-0000-7000-8000-000000000a01",
+            "order": 0,
+            "x": 40,
+            "y": 20,
+            "width": 120,
+            "height": 30,
+            "rotation": 0,
+            "fill": "#334155",
+            "shape": {
+              "type": "text",
+              "text": "P-1",
+              "style": {
+                "fontSize": 16,
+                "fontWeight": "bold",
+                "align": "left"
+              },
+              "binding": {
+                "externalName": "Demo.Value"
+              },
+              "boolDisplay": {
+                "true": {
+                  "text": "運転",
+                  "color": "#16a34a"
+                },
+                "false": {
+                  "text": "停止",
+                  "color": "#64748b"
+                },
+                "unknownColor": "#d97706"
+              }
+            }
+          }
+        ],
+        "background": "#ffffff",
+        "folders": [],
+        "groups": []
       }
     ]
   }

@@ -82,6 +82,7 @@
             {onopentrend}
             {object}
             hopPath={hops.get(object.id)}
+            screenObjects={screen.objects}
             {symbols}
             {images}
             {readings}

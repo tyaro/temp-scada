@@ -10,7 +10,12 @@ import {
 import { parseClipboard } from "../clipboard";
 import { shapeTagBindings } from "../shape-bindings";
 import type { PasteCommand } from "./commands";
-import { newId, registerAsset, renewOwnerIds } from "./model-helpers";
+import {
+  newId,
+  registerAsset,
+  remapStateColor,
+  renewOwnerIds,
+} from "./model-helpers";
 
 export function applyPasteCommand(
   next: Project,
@@ -180,6 +185,7 @@ export function applyPasteCommand(
       const copy = JSON.parse(JSON.stringify(object)) as ScreenObject;
       copy.id = placementIds.get(object.id)!;
       remapConnections(copy, placementIds);
+      remapStateColor(copy, placementIds);
       copy.order = order + index;
       delete copy.folderId;
       copy.x += dx;

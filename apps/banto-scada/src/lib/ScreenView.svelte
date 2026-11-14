@@ -64,6 +64,7 @@
         <ObjectPainting
           object={child}
           hopPath={hops.get(child.id)}
+          screenObjects={source.objects}
           {symbols}
           {images}
           {readings}

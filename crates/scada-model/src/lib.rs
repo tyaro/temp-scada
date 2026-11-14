@@ -519,18 +519,24 @@ impl Project {
                     return Err("状態の色に従う指定にはboolかstateのslotが必要です".into());
                 }
                 if let Some(state_color) = shape.get("stateColor") {
-                    if !symbols.contains(screen["id"].as_str().unwrap()) {
-                        return Err("状態色の追従は共有定義内だけに設定できます".into());
-                    }
+                    let owner_in_symbol = symbols.contains(screen["id"].as_str().unwrap());
                     let source = screen["objects"]
                         .as_array()
                         .unwrap()
                         .iter()
                         .find(|item| item["id"] == state_color["textId"]);
+                    // A definition follows a state-colored slot Text; a screen follows a
+                    // bound Text with `boolDisplay` on the same screen.
                     if !source.is_some_and(|source| {
                         let source_shape = &source["shape"];
-                        source_shape["type"] == "text"
-                            && source_shape.get("stateColors").is_some()
+                        if source_shape["type"] != "text" {
+                            return false;
+                        }
+                        if !owner_in_symbol {
+                            return source_shape.get("boolDisplay").is_some()
+                                && source_shape.get("binding").is_some();
+                        }
+                        source_shape.get("stateColors").is_some()
                             && screen["readSlots"]
                                 .as_array()
                                 .into_iter()

@@ -2,6 +2,8 @@
 
 2026-10-20（日本時間）。Project 0.27.0の実装。2026-11-12のA3bで配色元を「状態の色に従う」Text（[slot表示Textの状態の色](../graphics/bool-text-colors.md)）へ置き換え、bool／stateの両方に広げた。通常Designerは実Hubに未接続であり、ここでのGood値・Quality・SIMの検証はテスト入力を使用する。
 
+2026-11-14のA6-3で、同じ規則を画面直下へ広げた。画面直下の矩形・楕円・Polylineは、同じ画面の直下にある`boolDisplay`付きのTextを配色元にでき、色は配色元Textの`boolDisplay`（Goodのbitは定義の色、それ以外は`unknownColor`、配色元が無効なら未解決色）で決まる。保護・複製の振り直し・単体clipboardの拒否も同じ。詳細は[画面直下のbool表示と配管の状態色](../graphics/screen-bool-display.md)。
+
 ## 設定と表示
 
 共有定義内の矩形・楕円・Polylineを選び、「状態表示の色に追従」で配色元Textを指定して適用する。同じ定義にある、bool／state slotに割り当て済みで「状態の色に従う」指定を持つTextを選べる。「配色元Textを選択」で設定元へ移動できる。Text側には追従先の件数を表示する。
