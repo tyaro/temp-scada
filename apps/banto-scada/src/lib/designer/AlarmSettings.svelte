@@ -191,6 +191,7 @@
       <button {disabled} onclick={() => remove(row.id)}>警報を削除</button>
     </div>
     {#key `${generation}:${row.id}`}
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions (フォーム内のIME確定をsubmitへ流さない) -->
       <form
         use:drafts.track={alarmDefinitionFormValues(row)}
         data-editor-form="alarm-definition"
