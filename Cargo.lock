@@ -1771,6 +1771,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "scada-alarm"
+version = "0.37.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "scada-historian"
 version = "0.37.0"
 dependencies = [
