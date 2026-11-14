@@ -284,6 +284,10 @@ impl AlarmDb {
             .await?;
             tx.commit().await?;
         }
+        // Format 1 is pre-release; add the lookup index to existing files too.
+        sqlx::query("CREATE INDEX IF NOT EXISTS event_condition_seq ON event(condition_id, seq DESC) WHERE display IS NOT NULL")
+            .execute(&pool)
+            .await?;
         Ok(Self {
             pool,
             project_id: project_id.into(),
@@ -448,11 +452,13 @@ impl AlarmDb {
         at_ms: i64,
     ) -> Result<Engine, AlarmDbError> {
         let session = plan.engine.session().clone();
-        self._terminal
-            .claim_generation(session.generation)
+        let claim = self
+            ._terminal
+            .claim_generation(&self.project_id, &session)
             .map_err(|_| AlarmDbError::InvalidRow)?;
         self.start_session_inner(&session, at_ms, &plan.ended, &plan.restored, Some(&plan))
             .await?;
+        claim.commit();
         Ok(plan.engine)
     }
 
@@ -561,17 +567,31 @@ impl AlarmDb {
     /// an apply while the Engine is stopped, including A→B recovery and a Hub
     /// endpoint change after a crash. A later apply can use the stopped row.
     pub async fn close_unstopped_session(&self, at_ms: i64) -> Result<(), AlarmDbError> {
+        if self
+            ._terminal
+            .active_project(&self.project_id)
+            .map_err(|_| AlarmDbError::InvalidRow)?
+        {
+            return Err(AlarmDbError::InvalidRow);
+        }
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
-        let previous =
-            sqlx::query("SELECT session_id, stopped, engine_unavailable FROM session WHERE id = 1")
-                .fetch_optional(&mut *tx)
-                .await?;
+        let previous = sqlx::query(
+            "SELECT session_id, generation, stopped, engine_unavailable FROM session WHERE id = 1",
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+        let mut closed_session = None;
         if let Some(previous) = previous {
             let stopped: i64 = previous.try_get("stopped")?;
             if !matches!(stopped, 0 | 1) {
                 return Err(AlarmDbError::InvalidRow);
             }
             if stopped == 0 {
+                let generation: i64 = previous.try_get("generation")?;
+                closed_session = Some(Session {
+                    id: previous.try_get("session_id")?,
+                    generation: u64::try_from(generation).map_err(|_| AlarmDbError::InvalidRow)?,
+                });
                 write_crash_evidence(
                     &mut tx,
                     &previous.try_get::<String, _>("session_id")?,
@@ -585,6 +605,9 @@ impl AlarmDb {
             }
         }
         tx.commit().await?;
+        if let Some(session) = closed_session {
+            self._terminal.release_session(&self.project_id, &session);
+        }
         Ok(())
     }
 
@@ -729,6 +752,7 @@ impl AlarmDb {
             .execute(&mut *tx)
             .await?;
         tx.commit().await?;
+        self._terminal.release_session(&self.project_id, session);
         Ok(())
     }
 

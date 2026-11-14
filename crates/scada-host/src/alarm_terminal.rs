@@ -4,6 +4,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use scada_alarm::Session;
+
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::{Connection, Row, SqliteConnection};
@@ -54,6 +56,30 @@ pub struct AlarmTerminal {
     data_dir: PathBuf,
     _lock: fs::File,
     settings: Mutex<Settings>,
+    active_session: Mutex<Option<(String, Session)>>,
+}
+
+/// A claim is released if the DB start fails or its future is cancelled.
+pub(crate) struct SessionClaim<'a> {
+    terminal: &'a AlarmTerminal,
+    project_id: String,
+    session: Session,
+    committed: bool,
+}
+
+impl SessionClaim<'_> {
+    pub fn commit(mut self) {
+        self.committed = true;
+    }
+}
+
+impl Drop for SessionClaim<'_> {
+    fn drop(&mut self) {
+        if !self.committed {
+            self.terminal
+                .release_session(&self.project_id, &self.session);
+        }
+    }
 }
 
 impl AlarmTerminal {
@@ -88,6 +114,7 @@ impl AlarmTerminal {
             data_dir: data_dir.to_owned(),
             _lock: lock,
             settings: Mutex::new(settings),
+            active_session: Mutex::new(None),
         })
     }
 
@@ -134,13 +161,47 @@ impl AlarmTerminal {
 
     /// Spend a number reserved by this process exactly once. A failed DB
     /// transaction leaves a gap; a restarted process must reserve again.
-    pub(crate) fn claim_generation(&self, generation: u64) -> Result<(), TerminalError> {
+    pub(crate) fn claim_generation(
+        &self,
+        project_id: &str,
+        session: &Session,
+    ) -> Result<SessionClaim<'_>, TerminalError> {
         let mut settings = self.settings.lock().map_err(|_| TerminalError::Corrupt)?;
-        if settings.pending_generation != Some(generation) {
+        let mut active = self
+            .active_session
+            .lock()
+            .map_err(|_| TerminalError::Corrupt)?;
+        if active.is_some() {
+            return Err(TerminalError::InUse);
+        }
+        if settings.pending_generation != Some(session.generation) {
             return Err(TerminalError::Lost);
         }
         settings.pending_generation = None;
-        Ok(())
+        *active = Some((project_id.to_owned(), session.clone()));
+        Ok(SessionClaim {
+            terminal: self,
+            project_id: project_id.to_owned(),
+            session: session.clone(),
+            committed: false,
+        })
+    }
+
+    pub(crate) fn release_session(&self, project_id: &str, session: &Session) {
+        if let Ok(mut active) = self.active_session.lock() {
+            if active.as_ref() == Some(&(project_id.to_owned(), session.clone())) {
+                *active = None;
+            }
+        }
+    }
+
+    pub(crate) fn active_project(&self, project_id: &str) -> Result<bool, TerminalError> {
+        Ok(self
+            .active_session
+            .lock()
+            .map_err(|_| TerminalError::Corrupt)?
+            .as_ref()
+            .is_some_and(|(active_project, _)| active_project == project_id))
     }
 
     /// The later apply boundary uses this to publish an A→B decision.
@@ -264,11 +325,53 @@ mod tests {
         .await
         .unwrap();
         db.close().await;
-        assert_eq!(terminal.reserve_generation().unwrap(), 2); // DB write failed: gap is spent.
+        assert_eq!(terminal.reserve_generation().unwrap(), 2); // A reserved number is spent even without a DB session.
         drop(terminal);
         let reopened = AlarmTerminal::open(&dir).await.unwrap();
         assert_eq!(reopened.reserve_generation().unwrap(), 3);
         drop(reopened);
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn one_process_claims_only_one_live_session_and_releases_failed_start() {
+        let dir = temp_dir();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let first = Session {
+            id: "first".into(),
+            generation: terminal.reserve_generation().unwrap(),
+        };
+        let claim = terminal.claim_generation("project-a", &first).unwrap();
+        let second = Session {
+            id: "second".into(),
+            generation: terminal.reserve_generation().unwrap(),
+        };
+        assert!(matches!(
+            terminal.claim_generation("project-b", &second),
+            Err(TerminalError::InUse)
+        ));
+        drop(claim); // A cancelled or failed DB start releases its provisional claim.
+        let claim = terminal.claim_generation("project-b", &second).unwrap();
+        claim.commit();
+        let third = Session {
+            id: "third".into(),
+            generation: terminal.reserve_generation().unwrap(),
+        };
+        assert!(matches!(
+            terminal.claim_generation("project-a", &third),
+            Err(TerminalError::InUse)
+        ));
+        terminal.release_session("project-a", &second); // A different Project cannot release it.
+        assert!(matches!(
+            terminal.claim_generation("project-a", &third),
+            Err(TerminalError::InUse)
+        ));
+        terminal.release_session("project-b", &second);
+        terminal
+            .claim_generation("project-a", &third)
+            .unwrap()
+            .commit();
+        drop(terminal);
         fs::remove_dir_all(dir).unwrap();
     }
 

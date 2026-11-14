@@ -12,6 +12,30 @@ fn project_id() -> String {
     uuid::Uuid::new_v4().to_string()
 }
 
+#[tokio::test]
+async fn existing_format_one_db_gets_historical_display_index() {
+    let dir = temp_dir();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+    let id = project_id();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
+    sqlx::query("DROP INDEX event_condition_seq")
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    db.close().await;
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
+    let index: String = sqlx::query_scalar(
+        "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'event_condition_seq'",
+    )
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
+    assert!(index.contains("WHERE display IS NOT NULL"));
+    db.close().await;
+    drop(terminal);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
 fn applied(id: &str, hash: &str) -> AppliedDefinitions {
     AppliedDefinitions {
         project_id: id.into(),
