@@ -1,6 +1,7 @@
 //! SCADA の初期 Project 契約。共通 JSON Schema をブラウザと CLI で使う。
 //! Hub 接続・Tauri・式評価・正式な .bantoscada package には依存しない。
 use serde_json::Value;
+mod alarms;
 mod connections;
 mod equipment;
 mod json_contract;
@@ -584,6 +585,7 @@ impl Project {
         validate_screen_views(&value)?;
         validate_nav_buttons(&value)?;
         validate_operator_frame(&value)?;
+        alarms::validate(&value)?;
         Ok(Self(value))
     }
 

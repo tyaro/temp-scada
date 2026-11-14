@@ -829,5 +829,37 @@
       "folders": []
     }
   ],
-  "assets": []
+  "assets": [],
+  "alarms": {
+    "definitions": [
+      {
+        "id": "0199f6a1-0000-7000-8000-000000000101",
+        "name": "T-01 温度",
+        "enabled": true,
+        "source": {
+          "kind": "threshold",
+          "tag": "Demo.Water.Tank01.Temperature",
+          "limits": {
+            "hh": { "value": 80, "severity": "high", "message": "温度 異常高" },
+            "h": { "value": 70, "severity": "medium" },
+            "l": { "value": 5, "severity": "low" }
+          },
+          "deadband": 1
+        },
+        "onDelayMs": 1000
+      },
+      {
+        "id": "0199f6a1-0000-7000-8000-000000000102",
+        "name": "P-01 停止",
+        "enabled": true,
+        "source": {
+          "kind": "bit",
+          "tag": "Demo.Water.Pump01.Running",
+          "activeWhen": false
+        },
+        "severity": "medium",
+        "message": "ポンプ 停止"
+      }
+    ]
+  }
 }

@@ -1,4 +1,5 @@
 import { validateOperatorFrame } from "./operator-frame";
+import { validateAlarms, type AlarmSettings } from "./alarms";
 import { validateConnections, type LineConnections } from "./connections";
 import { imageAssetReferences } from "./asset-references";
 import { normalizeProjectText } from "./text-content";
@@ -316,6 +317,8 @@ export interface OperatorFrame {
 }
 export interface Project {
   operatorFrame?: OperatorFrame;
+  /** 警報の定義。仕様: docs/design/runtime/alarm-stage3-design.md §3 */
+  alarms?: AlarmSettings;
   recordingPlan?: DesiredRecordingPlan;
   trends?: TrendDefinition[];
   equipmentTypes?: EquipmentType[];
@@ -448,6 +451,7 @@ export function parseProject(json: string): Project {
       )
         throw new Error("画面切替ボタンの行き先の画面が見つかりません");
   validateOperatorFrame(project.operatorFrame, project);
+  validateAlarms(project.alarms);
   const ids = new Set([project.manifest.projectId]);
   const symbolIds = new Set(project.symbols.map((s) => s.id));
   const hashes = new Set<string>(),

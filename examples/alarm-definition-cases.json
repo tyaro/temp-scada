@@ -1,0 +1,472 @@
+[
+  {
+    "name": "threshold and bit",
+    "valid": true,
+    "alarms": {
+      "blinkUnacked": true,
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "T-101 温度",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.T101.PV",
+            "limits": {
+              "hh": {
+                "value": 95,
+                "severity": "high",
+                "message": "温度 異常高"
+              },
+              "h": { "value": 85, "severity": "medium" },
+              "l": { "value": 5, "severity": "medium" },
+              "ll": { "value": 5, "severity": "low" }
+            },
+            "deadband": 1.5
+          },
+          "onDelayMs": 0,
+          "offDelayMs": 600000,
+          "ackMode": "autoOnReturn"
+        },
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000002",
+          "name": "P-201 一括故障",
+          "enabled": false,
+          "source": {
+            "kind": "bit",
+            "tag": "PLANT.P201.FAULT",
+            "activeWhen": true
+          },
+          "severity": "high",
+          "message": "ポンプ 一括故障",
+          "ackMode": "noneWithSound"
+        }
+      ]
+    },
+    "catalog": [
+      { "externalName": "PLANT.T101.PV", "type": "f32" },
+      { "externalName": "PLANT.P201.FAULT", "type": "bit" }
+    ],
+    "validWithCatalog": true
+  },
+  {
+    "name": "no alarms",
+    "valid": true,
+    "alarms": null
+  },
+  {
+    "name": "empty definitions",
+    "valid": true,
+    "alarms": { "definitions": [] }
+  },
+  {
+    "name": "upper limits only ignore deadband width",
+    "valid": true,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "上だけ",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.T101.PV",
+            "limits": {
+              "hh": { "value": 10, "severity": "high" },
+              "h": { "value": 10, "severity": "low" }
+            },
+            "deadband": 100
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "missing definitions",
+    "valid": false,
+    "alarms": { "blinkUnacked": false }
+  },
+  {
+    "name": "no limits",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "限界なし",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.T101.PV",
+            "limits": {}
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "high above high-high",
+    "valid": false,
+    "error": "HH ≥ H > L ≥ LL",
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "逆順",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.T101.PV",
+            "limits": {
+              "hh": { "value": 80, "severity": "high" },
+              "h": { "value": 85, "severity": "medium" }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "high equals low",
+    "valid": false,
+    "error": "HH ≥ H > L ≥ LL",
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "同じ値",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.T101.PV",
+            "limits": {
+              "h": { "value": 50, "severity": "medium" },
+              "l": { "value": 50, "severity": "medium" }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "low-low above low",
+    "valid": false,
+    "error": "HH ≥ H > L ≥ LL",
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "下の逆順",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.T101.PV",
+            "limits": {
+              "l": { "value": 5, "severity": "medium" },
+              "ll": { "value": 6, "severity": "high" }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "deadband reaches the gap",
+    "valid": false,
+    "error": "deadband",
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "幅",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.T101.PV",
+            "limits": {
+              "hh": { "value": 95, "severity": "high" },
+              "h": { "value": 60, "severity": "medium" },
+              "ll": { "value": 10, "severity": "low" }
+            },
+            "deadband": 50
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "limit beyond exact integers",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "64bit",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.COUNTER",
+            "limits": {
+              "h": { "value": 9007199254740993, "severity": "medium" }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "limit at the largest exact integer",
+    "valid": true,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "64bit",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.COUNTER",
+            "limits": {
+              "h": { "value": 9007199254740991, "severity": "medium" },
+              "l": { "value": -9007199254740991, "severity": "medium" }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "negative deadband",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "負",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.T101.PV",
+            "limits": { "h": { "value": 60, "severity": "medium" } },
+            "deadband": -1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "duplicate id",
+    "valid": false,
+    "error": "id が重複",
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "一つ目",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "PLANT.A", "activeWhen": true },
+          "severity": "low"
+        },
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "二つ目",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "PLANT.B", "activeWhen": false },
+          "severity": "low"
+        }
+      ]
+    }
+  },
+  {
+    "name": "duplicate name",
+    "valid": false,
+    "error": "名前が重複",
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "同名",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "PLANT.A", "activeWhen": true },
+          "severity": "low"
+        },
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000002",
+          "name": "同名",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "PLANT.B", "activeWhen": true },
+          "severity": "low"
+        }
+      ]
+    }
+  },
+  {
+    "name": "bit without severity",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "重要度なし",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "PLANT.A", "activeWhen": true }
+        }
+      ]
+    }
+  },
+  {
+    "name": "threshold with definition severity",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "直下の重要度",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.T101.PV",
+            "limits": { "h": { "value": 60, "severity": "medium" } }
+          },
+          "severity": "high"
+        }
+      ]
+    }
+  },
+  {
+    "name": "blank tag",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "空白のタグ",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "   ", "activeWhen": true },
+          "severity": "low"
+        }
+      ]
+    }
+  },
+  {
+    "name": "delay too long",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "長すぎ",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "PLANT.A", "activeWhen": true },
+          "severity": "low",
+          "onDelayMs": 600001
+        }
+      ]
+    }
+  },
+  {
+    "name": "fractional delay",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "小数",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "PLANT.A", "activeWhen": true },
+          "severity": "low",
+          "offDelayMs": 1.5
+        }
+      ]
+    }
+  },
+  {
+    "name": "unknown ack mode",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "ACK",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "PLANT.A", "activeWhen": true },
+          "severity": "low",
+          "ackMode": "auto"
+        }
+      ]
+    }
+  },
+  {
+    "name": "unknown severity",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "重要度",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "PLANT.A", "activeWhen": true },
+          "severity": "critical"
+        }
+      ]
+    }
+  },
+  {
+    "name": "name too long",
+    "valid": false,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "あいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこあいうえおかきくけこX",
+          "enabled": true,
+          "source": { "kind": "bit", "tag": "PLANT.A", "activeWhen": true },
+          "severity": "low"
+        }
+      ]
+    }
+  },
+  {
+    "name": "bit definition on a numeric tag",
+    "valid": true,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "型違い",
+          "enabled": true,
+          "source": {
+            "kind": "bit",
+            "tag": "PLANT.T101.PV",
+            "activeWhen": true
+          },
+          "severity": "low"
+        }
+      ]
+    },
+    "catalog": [{ "externalName": "PLANT.T101.PV", "type": "f32" }],
+    "validWithCatalog": false,
+    "error": "bit 型"
+  },
+  {
+    "name": "threshold definition on a string tag",
+    "valid": true,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000001",
+          "name": "文字列",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "PLANT.RECIPE",
+            "limits": { "h": { "value": 1, "severity": "low" } }
+          }
+        }
+      ]
+    },
+    "catalog": [{ "externalName": "PLANT.RECIPE", "type": "string" }],
+    "validWithCatalog": false,
+    "error": "数値型"
+  }
+]
