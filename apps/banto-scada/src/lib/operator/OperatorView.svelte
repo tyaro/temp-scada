@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, untrack } from "svelte";
+  import { onMount, untrack, type Snippet } from "svelte";
   import { hasVisibleLayerAbove } from "@banto/ui";
   import Renderer from "../Renderer.svelte";
   import PreviewFullscreen from "../designer/PreviewFullscreen.svelte";
@@ -31,6 +31,9 @@
     equipmentContext,
     onclose,
     onmessage,
+    onopentrend,
+    onretiretrend,
+    overlay,
   }: {
     project: Project;
     startScreenId: string;
@@ -42,6 +45,11 @@
     equipmentContext?: EquipmentContext;
     onclose: () => void;
     onmessage: (message: string) => void;
+    /** トレンドの配置から履歴の窓を開く（主画面・枠・画面の小窓のどれからでも）。 */
+    onopentrend?: (screenId: string, objectId: string, token?: object) => void;
+    onretiretrend?: (token: object) => void;
+    /** 運転表示の上に重ねる窓（履歴トレンド）。運転表示の中に描くので裏の inert を受けない。 */
+    overlay?: Snippet;
   } = $props();
 
   // 開始画面は開いたときに一度だけ決める（以後は履歴が持つ）。
@@ -133,6 +141,9 @@
         {navHistory}
         onnavigate={navigate}
         onopenequipment={openEquipment}
+        onopentrend={onopentrend
+          ? (objectId) => onopentrend(screen.id, objectId)
+          : undefined}
       />
     {/key}
   </div>
@@ -192,8 +203,11 @@
       {readings}
       {equipmentContext}
       {onmessage}
+      {onopentrend}
+      {onretiretrend}
     />
   </div>
+  {@render overlay?.()}
 </div>
 
 <style>

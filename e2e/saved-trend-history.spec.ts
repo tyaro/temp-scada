@@ -448,3 +448,38 @@ for (const origin of ["main", "popup"] as const)
       dialog(page).getByLabel("終了UTC", { exact: true }),
     ).toHaveValue("");
   });
+
+test("operator view opens saved history above itself and Escape closes only the window first", async ({
+  page,
+}) => {
+  await start(page);
+  await page.getByRole("button", { name: "運転表示", exact: true }).click();
+  const view = page.getByRole("region", { name: "運転表示" });
+  await expect(view).toBeVisible();
+  const action = view.getByRole("button", {
+    name: "保存温度の履歴を開く",
+    exact: true,
+  });
+  await action.click();
+  await expect(dialog(page)).toBeVisible();
+  // 運転表示の中に描くので、裏の inert を受けず操作できる。
+  await load(page);
+  await expect.poll(() => calls(page)).toBe(1);
+  await reply(page, 0);
+  await expect(
+    plot(page).locator("[data-history-point]").first(),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog(page)).toHaveCount(0);
+  await expect(view).toBeVisible();
+  await expect(action).toBeFocused();
+  // 開き直しても同じ定義の窓になる。
+  await action.click();
+  await expect(dialog(page)).toBeVisible();
+  await close(page);
+  await expect(view).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(view).toHaveCount(0);
+  // 運転表示を閉じた後も、表示プレビューから履歴を開ける。
+  await openMain(page);
+});

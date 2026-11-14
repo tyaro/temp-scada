@@ -4666,29 +4666,33 @@
       };
   }}
 />
-<HistoryWorkspace
-  open={historyOpen && (!historyPreset || !!currentHistoryPreset)}
-  preset={currentHistoryPreset}
-  onrelease={() => (historyPreset = undefined)}
-  {project}
-  generation={workspaceGeneration}
-  service={historyService}
-  onclose={() => (historyOpen = false)}
-  focusFallback={() => {
-    // Banto captures HTML openers. Its public fallback may restore SVG focus.
-    const opener = historySvgOpener;
-    historySvgOpener = null;
-    if (
-      opener?.isConnected &&
-      !opener.closest("[inert]") &&
-      opener.getClientRects().length
-    ) {
-      opener.focus();
-      return;
-    }
-    return document.querySelector<HTMLButtonElement>("[data-permanent-menu]");
-  }}
-/>
+<!-- 履歴トレンドの窓。運転表示の間はその中に描く（裏の UI は inert で、重なりも運転表示が上）。 -->
+{#snippet historyWorkspace()}
+  <HistoryWorkspace
+    open={historyOpen && (!historyPreset || !!currentHistoryPreset)}
+    preset={currentHistoryPreset}
+    onrelease={() => (historyPreset = undefined)}
+    {project}
+    generation={workspaceGeneration}
+    service={historyService}
+    onclose={() => (historyOpen = false)}
+    focusFallback={() => {
+      // Banto captures HTML openers. Its public fallback may restore SVG focus.
+      const opener = historySvgOpener;
+      historySvgOpener = null;
+      if (
+        opener?.isConnected &&
+        !opener.closest("[inert]") &&
+        opener.getClientRects().length
+      ) {
+        opener.focus();
+        return;
+      }
+      return document.querySelector<HTMLButtonElement>("[data-permanent-menu]");
+    }}
+  />
+{/snippet}
+{#if operatorStart === null}{@render historyWorkspace()}{/if}
 <Modal
   open={helpOpen}
   title="操作ガイド・アプリ情報"
@@ -4814,6 +4818,9 @@
     equipmentContext={readContext.equipmentContext}
     onclose={closeOperatorView}
     onmessage={(message) => report("error", message)}
+    onopentrend={openTrendHistory}
+    onretiretrend={retirePopupTrend}
+    overlay={historyWorkspace}
   />
 {/if}
 <div
