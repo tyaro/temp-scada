@@ -70,7 +70,7 @@ pub struct AlarmEvaluator {
 }
 
 impl AlarmEvaluator {
-    pub fn new(
+    pub async fn new(
         db: Arc<AlarmDb>,
         applied: AppliedDefinitions,
         engine: Engine,
@@ -86,6 +86,7 @@ impl AlarmEvaluator {
                     )
             })
         {
+            let _ = db.stop_session(engine.session(), wall_ms()).await;
             db.release_runtime_session(engine.session());
             return Err(AlarmRuntimeError::InvalidDefinition);
         }
@@ -266,20 +267,20 @@ impl AlarmRuntime {
         let client = match client {
             Ok(client) => client,
             Err(error) => {
-                evaluator
+                let _ = evaluator
                     .db
                     .stop_session(evaluator.engine.session(), wall_ms())
-                    .await?;
+                    .await;
                 return Err(AlarmRuntimeError::Sdk(error.kind()));
             }
         };
         let sdk = match client.start(requests) {
             Ok(sdk) => sdk,
             Err(error) => {
-                evaluator
+                let _ = evaluator
                     .db
                     .stop_session(evaluator.engine.session(), wall_ms())
-                    .await?;
+                    .await;
                 return Err(AlarmRuntimeError::Sdk(error.kind()));
             }
         };
@@ -385,21 +386,23 @@ async fn run_inner(
 ) -> Result<(), AlarmRuntimeError> {
     let mut states = sdk.state_watch();
     let mut previous = BTreeMap::new();
-    let mut was_live = false;
+    let mut was_evaluable = false;
+    let mut accepted_generation = None;
     // Process the current snapshot before waiting so a rapid initial Live is not lost.
     let initial = states.borrow_and_update().clone();
     if initial.connection_state() == TagClientConnectionState::Stopped
         && initial.last_error().is_some()
     {
         let _ = stop(evaluator, sdk, &change_tx).await;
-        return Err(AlarmRuntimeError::Closed);
+        return Err(AlarmRuntimeError::Sdk(initial.last_error().unwrap()));
     }
     if let Err(error) = process_state(
         &mut evaluator,
         &initial,
         &tags,
         &mut previous,
-        &mut was_live,
+        &mut was_evaluable,
+        &mut accepted_generation,
         &change_tx,
     )
     .await
@@ -419,9 +422,9 @@ async fn run_inner(
                 let current = states.borrow_and_update().clone();
                 if current.connection_state() == TagClientConnectionState::Stopped {
                     let _ = stop(evaluator, sdk, &change_tx).await;
-                    return Err(AlarmRuntimeError::Closed);
+                    return Err(current.last_error().map_or(AlarmRuntimeError::Closed, AlarmRuntimeError::Sdk));
                 }
-                if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_live, &change_tx).await {
+                if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
                     let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(error);
                 }
@@ -440,6 +443,9 @@ async fn run_inner(
                         Ok((change, ack)) => {
                             let _ = reply.send(ack.ok_or(AlarmRuntimeError::InvalidDefinition));
                             if let Some(change) = change { let _ = change_tx.send(change); }
+                        }
+                        Err(AlarmRuntimeError::Step(error)) => {
+                            let _ = reply.send(Err(AlarmRuntimeError::Step(error)));
                         }
                         Err(error) => {
                             let _ = reply.send(Err(error_summary(&error)));
@@ -509,26 +515,27 @@ async fn process_state(
     state: &banto_tagclient::TagClientState,
     tags: &BTreeSet<String>,
     previous: &mut BTreeMap<String, Sample>,
-    was_live: &mut bool,
+    was_evaluable: &mut bool,
+    accepted_generation: &mut Option<u64>,
     changes: &broadcast::Sender<AlarmChange>,
 ) -> Result<(), AlarmRuntimeError> {
     match state.connection_state() {
         TagClientConnectionState::Unauthorized => {
             return Err(AlarmRuntimeError::Sdk(ErrorKind::Unauthorized))
         }
-        TagClientConnectionState::Live => {
-            if !*was_live {
-                publish(
-                    evaluator,
-                    Input::EngineAvailability { unavailable: None },
-                    changes,
-                )
-                .await?;
-                previous.clear();
-            }
+        TagClientConnectionState::Live | TagClientConnectionState::Unbound => {
             let snapshot = state
                 .snapshot()
                 .ok_or(AlarmRuntimeError::InvalidDefinition)?;
+            begin_generation(
+                evaluator,
+                snapshot.generation,
+                previous,
+                was_evaluable,
+                accepted_generation,
+                changes,
+            )
+            .await?;
             for tag in tags {
                 let sample = sample(snapshot, tag);
                 if previous.get(tag) != Some(&sample) {
@@ -544,10 +551,9 @@ async fn process_state(
                     previous.insert(tag.clone(), sample);
                 }
             }
-            *was_live = true;
         }
         _ => {
-            if *was_live || evaluator.engine.unavailable().is_none() {
+            if *was_evaluable || evaluator.engine.unavailable().is_none() {
                 publish(
                     evaluator,
                     Input::EngineAvailability {
@@ -558,9 +564,46 @@ async fn process_state(
                 .await?;
             }
             previous.clear();
-            *was_live = false;
+            *was_evaluable = false;
         }
     }
+    Ok(())
+}
+
+async fn begin_generation(
+    evaluator: &mut AlarmEvaluator,
+    generation: u64,
+    previous: &mut BTreeMap<String, Sample>,
+    was_evaluable: &mut bool,
+    accepted_generation: &mut Option<u64>,
+    changes: &broadcast::Sender<AlarmChange>,
+) -> Result<(), AlarmRuntimeError> {
+    let generation_changed = accepted_generation.is_some_and(|old| old != generation);
+    // The SDK watch is latest-only. A reconnect can pass through a non-Live
+    // state while a DB write awaits; a new generation still discards waits.
+    if generation_changed && evaluator.engine.unavailable().is_none() {
+        publish(
+            evaluator,
+            Input::EngineAvailability {
+                unavailable: Some(EngineUnavailable::Disconnected),
+            },
+            changes,
+        )
+        .await?;
+    }
+    if evaluator.engine.unavailable().is_some() {
+        publish(
+            evaluator,
+            Input::EngineAvailability { unavailable: None },
+            changes,
+        )
+        .await?;
+    }
+    if !*was_evaluable || generation_changed {
+        previous.clear();
+    }
+    *was_evaluable = true;
+    *accepted_generation = Some(generation);
     Ok(())
 }
 
@@ -658,7 +701,9 @@ mod tests {
         )
         .unwrap();
         let engine = db.start_session_plan(plan, 1).await.unwrap();
-        let evaluator = AlarmEvaluator::new(db.clone(), applied, engine).unwrap();
+        let evaluator = AlarmEvaluator::new(db.clone(), applied, engine)
+            .await
+            .unwrap();
         assert!(terminal.active_project(&project_id).unwrap());
         drop(evaluator); // The SDK/Engine owner is gone before a DB stop succeeded.
         assert!(!terminal.active_project(&project_id).unwrap());
@@ -724,7 +769,9 @@ mod tests {
         )
         .unwrap();
         let engine = db.start_session_plan(plan, 1).await.unwrap();
-        let mut evaluator = AlarmEvaluator::new(db.clone(), applied, engine).unwrap();
+        let mut evaluator = AlarmEvaluator::new(db.clone(), applied, engine)
+            .await
+            .unwrap();
         let value = Input::Value {
             tag: "PLANT.FLAG".into(),
             sample: Sample {
@@ -769,6 +816,46 @@ mod tests {
         assert_eq!(ack, Some(AckOutcome::Accepted));
         assert!(change.is_some());
         assert!(db.last_states().await.unwrap()[0].state.acked);
+        for active in [false, true] {
+            evaluator
+                .input(Input::Value {
+                    tag: "PLANT.FLAG".into(),
+                    sample: Sample {
+                        resolved: true,
+                        quality: Quality::Good,
+                        value: Some(TagValue::Bool(active)),
+                        source_timestamp_ms: Some(10),
+                    },
+                })
+                .await
+                .unwrap();
+        }
+        assert!(evaluator.engine().next_due_ms().is_some());
+        let (changes, _) = broadcast::channel(4);
+        let mut previous = BTreeMap::from([(
+            "PLANT.FLAG".into(),
+            Sample {
+                resolved: true,
+                quality: Quality::Good,
+                value: Some(TagValue::Bool(true)),
+                source_timestamp_ms: Some(10),
+            },
+        )]);
+        let mut was_evaluable = true;
+        let mut generation = Some(1);
+        begin_generation(
+            &mut evaluator,
+            2,
+            &mut previous,
+            &mut was_evaluable,
+            &mut generation,
+            &changes,
+        )
+        .await
+        .unwrap();
+        assert_eq!(generation, Some(2));
+        assert!(previous.is_empty());
+        assert!(evaluator.engine().next_due_ms().is_none());
         db.stop_session(&session, wall_ms()).await.unwrap();
         let before = evaluator.engine().clone();
         assert!(matches!(
@@ -884,7 +971,9 @@ mod tests {
         )
         .unwrap();
         let engine = db.start_session_plan(plan, 1).await.unwrap();
-        let evaluator = AlarmEvaluator::new(db.clone(), applied, engine).unwrap();
+        let evaluator = AlarmEvaluator::new(db.clone(), applied, engine)
+            .await
+            .unwrap();
         let runtime = AlarmRuntime::start(
             evaluator,
             SecretApiKey::new("alarm-test-key".into()).unwrap(),
@@ -913,6 +1002,14 @@ mod tests {
         .unwrap();
         assert_eq!(hub.subscriptions.load(Ordering::SeqCst), 1);
         assert_eq!(
+            runtime
+                .ack("missing".into(), "old".into(), 0, "operator".into())
+                .await
+                .unwrap(),
+            AckOutcome::NotFound
+        );
+        assert_eq!(*runtime.status().borrow(), AlarmRuntimeStatus::Running);
+        assert_eq!(
             db.events()
                 .await
                 .unwrap()
@@ -930,6 +1027,104 @@ mod tests {
             }
         );
         assert!(db.session().await.unwrap().unwrap().stopped);
+        let db = Arc::try_unwrap(db).ok().unwrap();
+        db.close().await;
+        drop(terminal);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn unbound_catalog_marks_condition_unresolved_without_engine_disconnect() {
+        let hub = Hub::new(&[]).await;
+        let dir = std::env::temp_dir().join(format!("alarm-unbound-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let terminal = Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+        let project_id = uuid::Uuid::new_v4().to_string();
+        let db = Arc::new(AlarmDb::open(terminal.clone(), &project_id).await.unwrap());
+        let id = "alarm:missing".to_owned();
+        let definition = Definition {
+            spec: ConditionSpec {
+                source: scada_alarm::Source::Bit {
+                    tag: "PLC01.Fast.Missing".into(),
+                    active_when: true,
+                },
+                on_delay_ms: 0,
+                off_delay_ms: 0,
+                ack_mode: AckMode::Manual,
+            },
+        };
+        let applied = AppliedDefinitions {
+            project_id,
+            project_revision: 1,
+            file_hash: "saved".into(),
+            endpoint: hub.url.clone(),
+            applied_by: "未ログイン".into(),
+            applied_at_ms: 1,
+            definitions: serde_json::json!({"definitions": []}),
+            condition_hashes: BTreeMap::from([(id.clone(), definition.evaluation_hash())]),
+            disabled_condition_ids: BTreeSet::new(),
+            displays: BTreeMap::from([(
+                id.clone(),
+                ConditionDisplay {
+                    name: "Missing".into(),
+                    message: "未解決".into(),
+                    severity: "low".into(),
+                    limit_label: None,
+                },
+            )]),
+        };
+        db.apply(&applied, None, &[], &[]).await.unwrap();
+        let session = Session {
+            id: uuid::Uuid::new_v4().to_string(),
+            generation: terminal.reserve_generation().unwrap(),
+        };
+        let plan = plan_restore(
+            session,
+            &applied.endpoint,
+            1,
+            &applied,
+            &BTreeMap::from([(id.clone(), definition)]),
+            &BTreeSet::new(),
+            &[],
+        )
+        .unwrap();
+        let engine = db.start_session_plan(plan, 1).await.unwrap();
+        let evaluator = AlarmEvaluator::new(db.clone(), applied, engine)
+            .await
+            .unwrap();
+        let runtime = AlarmRuntime::start(
+            evaluator,
+            SecretApiKey::new("alarm-test-key".into()).unwrap(),
+            None,
+            Duration::from_secs(2),
+        )
+        .await
+        .unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                let engine = runtime.snapshot().await.unwrap();
+                if engine.condition(&id).unwrap().state.unavailable
+                    == Some(scada_alarm::Unavailable::Unresolved)
+                {
+                    assert_eq!(engine.unavailable(), None);
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(hub.subscriptions.load(Ordering::SeqCst), 0);
+        assert_eq!(
+            db.events()
+                .await
+                .unwrap()
+                .iter()
+                .filter(|event| event.event.kind == "unavailableStarted")
+                .count(),
+            1
+        );
+        runtime.stop().await.unwrap();
         let db = Arc::try_unwrap(db).ok().unwrap();
         db.close().await;
         drop(terminal);
