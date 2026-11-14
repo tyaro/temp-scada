@@ -1,4 +1,4 @@
-import { normalizeAlarms, uniqueAlarmName } from "../alarms";
+import { leadingChars, normalizeAlarms, uniqueAlarmName } from "../alarms";
 import type { Project } from "../project";
 import type { ProjectCommand } from "./commands";
 
@@ -38,7 +38,7 @@ export function applyAlarmCommand(next: Project, command: AlarmCommand): void {
       copy.id = command.id;
       copy.name = uniqueAlarmName(
         definitions,
-        `${copy.name.slice(0, 96)} コピー`,
+        `${leadingChars(copy.name, 96)} コピー`,
       );
       definitions.splice(at + 1, 0, copy);
       break;

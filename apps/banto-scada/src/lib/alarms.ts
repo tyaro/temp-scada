@@ -137,6 +137,14 @@ export function validateAlarmTagType(
 }
 
 /** 重ならない名前。`base` が空いていればそのまま、使われていれば番号を足す。 */
+/**
+ * 先頭から `count` 文字（コードポイント）を取る。schema の maxLength と同じ数え方で、
+ * サロゲートペアの途中で切らない。
+ */
+export function leadingChars(text: string, count: number): string {
+  return Array.from(text).slice(0, count).join("");
+}
+
 export function uniqueAlarmName(
   definitions: readonly AlarmDefinition[],
   base: string,
@@ -144,7 +152,7 @@ export function uniqueAlarmName(
   const used = new Set(definitions.map((row) => row.name));
   if (!used.has(base)) return base;
   for (let n = 2; ; n++) {
-    const name = `${base.slice(0, 100 - String(n).length - 1)} ${n}`;
+    const name = `${leadingChars(base, 100 - String(n).length - 1)} ${n}`;
     if (!used.has(name)) return name;
   }
 }

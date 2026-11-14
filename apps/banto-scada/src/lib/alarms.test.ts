@@ -91,6 +91,33 @@ describe("alarm commands", () => {
     expect(project).not.toHaveProperty("alarms");
   });
 
+  it("shortens long names without splitting a surrogate pair", () => {
+    let project = base();
+    // 95 文字の後に絵文字（UTF-16 では 2 単位）を置き、合計 100 文字にする。
+    const name = "a".repeat(95) + "🔥" + "bcde";
+    project = edit(project, {
+      type: "add-alarm-definition",
+      definition: { ...newAlarmDefinition(project, "threshold", ID_A), name },
+    });
+    for (const id of [ID_B, "0199f6a1-0000-7000-8000-0000000000c3"])
+      project = edit(project, {
+        type: "duplicate-alarm-definition",
+        definitionId: ID_A,
+        id,
+      });
+    const names = project.alarms!.definitions.map((row) => row.name);
+    expect(names.slice(1)).toEqual([
+      "a".repeat(95) + "🔥 コ 2",
+      "a".repeat(95) + "🔥 コピー",
+    ]);
+    for (const copy of names)
+      expect(Array.from(copy).length).toBeLessThanOrEqual(100);
+    // 保存した Project がそのまま読み直せる（不正なサロゲートが残らない）。
+    expect(parseProject(serializeProject(project)).alarms).toEqual(
+      project.alarms,
+    );
+  });
+
   it("rejects an update that breaks the limit order", () => {
     const project = edit(base(), {
       type: "add-alarm-definition",
