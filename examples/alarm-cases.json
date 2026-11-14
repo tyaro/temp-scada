@@ -832,6 +832,187 @@
       ]
     },
     {
+      "name": "遅れて満了する待ちが複数あれば、id の順ではなく満了の時刻の順に確定する",
+      "conditions": {
+        "a": {
+          "source": {
+            "kind": "threshold",
+            "tag": "A",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 5000
+        },
+        "b": {
+          "source": {
+            "kind": "threshold",
+            "tag": "B",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 3000
+        },
+        "t:h": {
+          "source": {
+            "kind": "threshold",
+            "tag": "T",
+            "limit": "h",
+            "value": 85
+          },
+          "onDelayMs": 1000
+        },
+        "t:hh": {
+          "source": {
+            "kind": "threshold",
+            "tag": "T",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 500
+        },
+        "e": {
+          "source": {
+            "kind": "threshold",
+            "tag": "E",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 2000
+        },
+        "f": {
+          "source": {
+            "kind": "threshold",
+            "tag": "F",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 1000
+        }
+      },
+      "steps": [
+        {
+          "at": 0,
+          "input": {
+            "kind": "value",
+            "tag": "A",
+            "value": 96
+          }
+        },
+        {
+          "at": 0,
+          "input": {
+            "kind": "value",
+            "tag": "B",
+            "value": 96
+          }
+        },
+        {
+          "at": 0,
+          "input": {
+            "kind": "value",
+            "tag": "T",
+            "value": 96
+          },
+          "states": {
+            "t:h": {
+              "display": "pending"
+            },
+            "t:hh": {
+              "display": "pending"
+            }
+          }
+        },
+        {
+          "at": 2000,
+          "input": {
+            "kind": "value",
+            "tag": "T",
+            "value": 50
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "t:hh",
+              "atWallMs": 1700000000500
+            },
+            {
+              "kind": "occurred",
+              "condition": "t:h",
+              "atWallMs": 1700000001000
+            },
+            {
+              "kind": "returned",
+              "condition": "t:h",
+              "atWallMs": 1700000002000
+            },
+            {
+              "kind": "returned",
+              "condition": "t:hh",
+              "atWallMs": 1700000002000
+            }
+          ]
+        },
+        {
+          "at": 6000,
+          "input": {
+            "kind": "timer"
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "b",
+              "atWallMs": 1700000003000
+            },
+            {
+              "kind": "occurred",
+              "condition": "a",
+              "atWallMs": 1700000005000
+            }
+          ]
+        },
+        {
+          "at": 6000,
+          "input": {
+            "kind": "value",
+            "tag": "E",
+            "value": 96
+          }
+        },
+        {
+          "at": 6000,
+          "input": {
+            "kind": "value",
+            "tag": "F",
+            "value": 96
+          }
+        },
+        {
+          "at": 9000,
+          "input": {
+            "kind": "engine",
+            "unavailable": "disconnected"
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "f",
+              "atWallMs": 1700000007000
+            },
+            {
+              "kind": "occurred",
+              "condition": "e",
+              "atWallMs": 1700000008000
+            },
+            {
+              "kind": "engineUnavailableStarted",
+              "reason": "disconnected",
+              "atWallMs": 1700000009000
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "満了の時刻を過ぎた待ちは、ACK と定義の終了の前にも確定する",
       "conditions": {
         "f": {

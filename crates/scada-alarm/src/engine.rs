@@ -323,27 +323,24 @@ impl Engine {
         match input {
             Input::Value { tag, sample } => {
                 if self.unavailable.is_none() {
-                    for (id, condition) in &self.conditions {
-                        if condition.spec.source.tag() != tag {
-                            continue;
-                        }
-                        let mut state = condition.state.clone();
+                    let targets = self.settle_in_due_order(&mut work, |condition| {
+                        condition.spec.source.tag() == tag
+                    });
+                    for (id, (condition, mut state)) in targets {
                         work.value(id, &condition.spec, &mut state, sample);
                         next.insert(id.clone(), Some(state));
                     }
                 }
             }
             Input::TimerExpired => {
-                for (id, condition) in &self.conditions {
-                    let due = condition
+                let targets = self.settle_in_due_order(&mut work, |condition| {
+                    condition
                         .state
                         .timer
-                        .is_some_and(|timer| timer.due_ms() <= now.mono_ms);
-                    if due {
-                        let mut state = condition.state.clone();
-                        work.expire(id, &condition.spec, &mut state);
-                        next.insert(id.clone(), Some(state));
-                    }
+                        .is_some_and(|timer| timer.due_ms() <= now.mono_ms)
+                });
+                for (id, (_, state)) in targets {
+                    next.insert(id.clone(), Some(state));
                 }
             }
             Input::Ack {
@@ -368,10 +365,9 @@ impl Engine {
             }
             Input::EngineAvailability { unavailable } => {
                 if *unavailable != self.unavailable {
-                    for (id, condition) in &self.conditions {
-                        let mut state = condition.state.clone();
-                        // 満了の時刻を過ぎた待ちは、持っている値で先に満了させる。
-                        work.settle_due(id, &condition.spec, &mut state);
+                    // 満了の時刻を過ぎた待ちは、持っている値で先に満了させる。
+                    let targets = self.settle_in_due_order(&mut work, |_| true);
+                    for (id, (_, mut state)) in targets {
                         state.timer = None;
                         if unavailable.is_none() {
                             // 持っていた値では判定しない。次の値が届くまで初期値待ち（§4.5）。
@@ -458,6 +454,38 @@ impl Engine {
             events: work.events,
             ack,
         })
+    }
+
+    /// `filter` に合う condition の状態を写し、満了の時刻を過ぎた待ちを満了の時刻の順
+    /// （同じ時刻なら id の順）に確定する。複数の待ちが遅れて満了しても、イベントは時刻の順に並ぶ。
+    fn settle_in_due_order<'s>(
+        &'s self,
+        work: &mut Work<'_>,
+        filter: impl Fn(&Condition) -> bool,
+    ) -> BTreeMap<&'s String, (&'s Condition, ConditionState)> {
+        let mut targets: BTreeMap<&String, (&Condition, ConditionState)> = self
+            .conditions
+            .iter()
+            .filter(|(_, condition)| filter(condition))
+            .map(|(id, condition)| (id, (condition, condition.state.clone())))
+            .collect();
+        let mut due: Vec<(u64, &String)> = targets
+            .iter()
+            .filter_map(|(id, (_, state))| {
+                state
+                    .timer
+                    .map(Timer::due_ms)
+                    .filter(|due| *due <= work.now.mono_ms)
+                    .map(|due| (due, *id))
+            })
+            .collect();
+        due.sort();
+        for (_, id) in due {
+            if let Some((condition, state)) = targets.get_mut(id) {
+                work.settle_due(id, &condition.spec, state);
+            }
+        }
+        targets
     }
 
     /// `step` の結果を確定する。
