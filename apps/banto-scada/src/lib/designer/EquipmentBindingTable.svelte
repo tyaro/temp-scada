@@ -32,6 +32,7 @@
     guessIoCsvColumns,
     importIoCsv,
     MAX_IO_CSV_BYTES,
+    MAX_IO_CSV_RECORDS,
     parseIoCsv,
     type IoCsvColumns,
     type IoCsvSkip,
@@ -255,6 +256,8 @@
     records: { line: number; fields: string[] }[];
     columns: Partial<IoCsvColumns>;
   } | null>(null);
+  /** Only the first skipped rows are drawn; the count of the rest is shown. */
+  const SKIPPED_SHOWN = 200;
   /** Rows of the last imported I/O list that were not put into the table. */
   let ioSkipped = $state<IoCsvSkip[]>([]);
   const ioReady = $derived(
@@ -284,6 +287,10 @@
       if (!header || !records.length) {
         error =
           "CSV に見出し行とデータ行がありません。1行目を見出しにしてください。";
+        return;
+      }
+      if (records.length > MAX_IO_CSV_RECORDS) {
+        error = `CSV の行が多すぎます（見出しを除いて${MAX_IO_CSV_RECORDS}行まで）。分けて取り込んでください。`;
         return;
       }
       ioCsv = {
@@ -506,7 +513,7 @@
               ></thead
             >
             <tbody>
-              {#each ioSkipped as row, i (i)}
+              {#each ioSkipped.slice(0, SKIPPED_SHOWN) as row, i (i)}
                 <tr
                   ><td>{row.line}</td><td>{row.code}</td><td>{row.slot}</td><td
                     >{row.tag}</td
@@ -516,6 +523,10 @@
             </tbody>
           </table>
         </div>
+        {#if ioSkipped.length > SKIPPED_SHOWN}<p>
+            取り込まなかった行のうち先頭の{SKIPPED_SHOWN}行だけを示しています（ほか{ioSkipped.length -
+              SKIPPED_SHOWN}行）。
+          </p>{/if}
       {/if}
       {#if skipped.length}
         <div class="scroll skipped">

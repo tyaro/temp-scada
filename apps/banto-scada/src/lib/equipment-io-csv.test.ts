@@ -51,6 +51,14 @@ describe("parseIoCsv", () => {
   it("keeps a trailing empty field and ignores a final line end", () => {
     expect(parseIoCsv("a,\n")).toEqual([{ line: 1, fields: ["a", ""] }]);
   });
+  it("rejects text after a closing quote", () => {
+    expect(() => parseIoCsv('a\n"Tag"extra,b')).toThrow("2行目の閉じた引用符");
+    expect(() => parseIoCsv('"a" ,b')).toThrow("1行目");
+    expect(parseIoCsv('"a",""\r\n"b"')).toEqual([
+      { line: 1, fields: ["a", ""] },
+      { line: 2, fields: ["b"] },
+    ]);
+  });
   it("rejects an unterminated quote", () => {
     expect(() => parseIoCsv('a\n"b,c')).toThrow("2行目");
   });

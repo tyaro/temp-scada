@@ -9,6 +9,8 @@ import type { Project } from "./project";
 
 /** A vendor I/O list larger than this is refused before decoding. */
 export const MAX_IO_CSV_BYTES = 5 * 1024 * 1024;
+/** Data records (after the header) one import accepts. */
+export const MAX_IO_CSV_RECORDS = 20000;
 
 /**
  * UTF-8 (with or without BOM) is tried first; bytes that are not valid UTF-8
@@ -32,6 +34,8 @@ export function decodeIoCsv(bytes: Uint8Array): {
 /**
  * RFC 4180 with comma separators: `"` quotes a field, `""` is a quote inside it,
  * and CRLF, LF or CR ends a record. Records whose fields are all empty are dropped.
+ * After a closing quote only a separator, a line end or the end may follow, so
+ * `"Tag"x` is rejected instead of silently becoming `Tagx`.
  * Each record keeps its 1-based line number so skipped rows can be reported.
  */
 export function parseIoCsv(text: string): { line: number; fields: string[] }[] {
@@ -39,6 +43,7 @@ export function parseIoCsv(text: string): { line: number; fields: string[] }[] {
   let fields: string[] = [],
     field = "",
     quoted = false,
+    closed = false,
     line = 1,
     start = 1;
   const endRecord = () => {
@@ -55,21 +60,28 @@ export function parseIoCsv(text: string): { line: number; fields: string[] }[] {
         if (text[i + 1] === '"') {
           field += '"';
           i++;
-        } else quoted = false;
+        } else {
+          quoted = false;
+          closed = true;
+        }
       } else {
         if (ch === "\n" || (ch === "\r" && text[i + 1] !== "\n")) line++;
         field += ch;
       }
-    } else if (ch === '"' && field === "") quoted = true;
-    else if (ch === ",") {
+    } else if (ch === ",") {
       fields.push(field);
       field = "";
+      closed = false;
     } else if (ch === "\r" || ch === "\n") {
       if (ch === "\r" && text[i + 1] === "\n") i++;
       endRecord();
+      closed = false;
       line++;
       start = line;
-    } else field += ch;
+    } else if (closed)
+      throw new Error(`${line}行目の閉じた引用符（"）の後に文字があります`);
+    else if (ch === '"' && field === "") quoted = true;
+    else field += ch;
   }
   if (quoted) throw new Error(`${start}行目の引用符（"）が閉じていません`);
   if (field !== "" || fields.length) endRecord();
