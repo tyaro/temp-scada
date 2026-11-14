@@ -8,6 +8,8 @@ export type NumericReading = (
       state: "resolved";
       quality: "good" | "stale" | "bad";
       numericValue: number | null;
+      /** bit タグで Good のときだけ。このとき numericValue は null。 */
+      boolValue?: boolean;
     }
 ) & { provenance?: SlotProvenance };
 export type TagReadings = ReadonlyMap<string, NumericReading>;
@@ -43,6 +45,7 @@ export function presentNumeric(
     state = reading.quality;
     if (
       state === "good" &&
+      reading.boolValue === undefined &&
       (reading.numericValue === null || !Number.isFinite(reading.numericValue))
     )
       state = "invalid";
@@ -55,7 +58,9 @@ export function presentNumeric(
   const simulated = origin && isSimulatedSlot(origin);
   const text =
     state === "good" && reading?.state === "resolved"
-      ? formatNumber(reading.numericValue!, format)
+      ? reading.boolValue !== undefined
+        ? String(reading.boolValue)
+        : formatNumber(reading.numericValue!, format)
       : `-- · ${label}`;
   return {
     state,

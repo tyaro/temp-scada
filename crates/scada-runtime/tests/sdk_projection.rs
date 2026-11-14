@@ -155,7 +155,8 @@ async fn partial_binding_waits_recovers_renames_and_restarts_without_old_values(
                 view.readings[TAG],
                 NumericReading::Resolved {
                     quality: Quality::Good,
-                    numeric_value: Some(0.0)
+                    numeric_value: Some(0.0),
+                    bool_value: None,
                 }
             );
             assert_eq!(view.provenance[TAG].value_source, "simulation");
@@ -311,7 +312,8 @@ async fn public_sdk_snapshot_updates_quality_and_disconnects_clear_values() {
         project_view(&plan, &live).readings[TAG],
         NumericReading::Resolved {
             quality: Quality::Good,
-            numeric_value: Some(12.5)
+            numeric_value: Some(12.5),
+            bool_value: None,
         }
     );
     let generation = live.snapshot().unwrap();
@@ -329,7 +331,8 @@ async fn public_sdk_snapshot_updates_quality_and_disconnects_clear_values() {
         project_view(&plan, &updated).readings[TAG],
         NumericReading::Resolved {
             quality: Quality::Good,
-            numeric_value: Some(27.0)
+            numeric_value: Some(27.0),
+            bool_value: None,
         }
     );
     updates.send(Some(data(27.0, "bad", 102))).await.unwrap();
@@ -341,7 +344,8 @@ async fn public_sdk_snapshot_updates_quality_and_disconnects_clear_values() {
         project_view(&plan, &bad).readings[TAG],
         NumericReading::Resolved {
             quality: Quality::Bad,
-            numeric_value: None
+            numeric_value: None,
+            bool_value: None,
         }
     );
     updates.send(None).await.unwrap();

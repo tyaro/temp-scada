@@ -290,6 +290,7 @@ mod tests {
             crate::NumericReading::Resolved {
                 quality: crate::Quality::Good,
                 numeric_value: Some(123.0),
+                bool_value: None,
             },
         );
         let fresh = host.invalidate(None);

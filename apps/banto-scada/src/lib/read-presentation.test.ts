@@ -92,6 +92,18 @@ const corruptions: [string, (value: any) => void][] = [
       v.slots.slots[0].provenance = null;
     },
   ],
+  [
+    "same tag Text without a value and slot invalid for another reason",
+    (v) => {
+      v.text.readings["Demo.Number"] = {
+        state: "resolved",
+        quality: "stale",
+        numericValue: null,
+      };
+      v.slots.slots[0].reading = { state: "invalid", reason: "missingValue" };
+      v.slots.slots[0].provenance = null;
+    },
+  ],
   ["slot corrupt type", (v) => (v.slots.slots[0].reading.value.type = "bool")],
   ["mixed generations", (v) => v.slots.slots[1].provenance.runId++],
   [
@@ -103,6 +115,20 @@ const corruptions: [string, (value: any) => void][] = [
     (v) => (v.slots.slots[0].provenance.valueSource = "db"),
   ],
 ];
+it("accepts a bit tag read as bool by the Text and as a type mismatch by a number slot", () => {
+  const { session, read } = setup();
+  const update: any = copy();
+  update.text.readings["Demo.Number"] = {
+    state: "resolved",
+    quality: "good",
+    numericValue: null,
+    boolValue: true,
+  };
+  update.slots.slots[0].reading = { state: "invalid", reason: "typeMismatch" };
+  update.slots.slots[0].provenance = null;
+  expect(session.receive(session.token, update).accepted).toBe(true);
+  expect(presentNumeric(read().readings.get("Demo.Number")).text).toBe("true");
+});
 it.each(corruptions)("rejects %s and clears both halves", (_, corrupt) => {
   const { session, read } = setup();
   session.receive(session.token, copy());

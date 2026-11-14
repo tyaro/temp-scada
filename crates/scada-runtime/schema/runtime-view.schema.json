@@ -61,6 +61,25 @@
                 "const": "resolved"
               },
               "quality": {
+                "const": "good"
+              },
+              "numericValue": {
+                "type": "null"
+              },
+              "boolValue": {
+                "type": "boolean"
+              }
+            },
+            "required": ["state", "quality", "numericValue", "boolValue"],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "const": "resolved"
+              },
+              "quality": {
                 "enum": ["bad", "stale"]
               },
               "numericValue": {

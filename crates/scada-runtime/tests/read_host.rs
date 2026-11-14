@@ -189,7 +189,8 @@ async fn one_subscription_fans_out_and_sdk_quality_disconnect_and_stop_clear_bot
         live.text.readings[TAG],
         NumericReading::Resolved {
             quality: Quality::Good,
-            numeric_value: Some(0.0)
+            numeric_value: Some(0.0),
+            bool_value: None,
         }
     );
     for row in [0, 2] {
@@ -332,7 +333,8 @@ async fn identical_project_identity_gets_new_session_and_replacement_uses_new_re
         new_frame.text.readings[OTHER],
         NumericReading::Resolved {
             quality: Quality::Good,
-            numeric_value: Some(42.0)
+            numeric_value: Some(42.0),
+            bool_value: None,
         }
     );
     let (stop, ()) = tokio::join!(host.stop(), closed(&mut new_socket));
@@ -364,7 +366,8 @@ async fn endpoint_replacement_closes_old_owner_before_starting_new_hub() {
         frame.text.readings[TAG],
         NumericReading::Resolved {
             quality: Quality::Good,
-            numeric_value: Some(55.0)
+            numeric_value: Some(55.0),
+            bool_value: None,
         }
     );
     let wire =
