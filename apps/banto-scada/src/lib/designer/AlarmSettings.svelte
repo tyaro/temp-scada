@@ -71,11 +71,13 @@
   }
   function remove(id: string) {
     guard(() => {
+      // 次に選ぶ行は削除の前の一覧から決める（直後の props はまだ更新前のことがある）。
       const at = definitions.findIndex((row) => row.id === id);
+      const rest = definitions.filter((row) => row.id !== id);
+      const next = rest[Math.min(at, rest.length - 1)]?.id ?? null;
       if (!oncommand({ type: "remove-alarm-definition", definitionId: id }))
         return;
-      const rest = project.alarms?.definitions ?? [];
-      selectedId = rest[Math.min(at, rest.length - 1)]?.id ?? null;
+      selectedId = next;
     });
   }
   function toggle(event: Event, id: string) {

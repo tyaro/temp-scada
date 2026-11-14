@@ -127,6 +127,11 @@ test("alarm settings add, edit, duplicate, toggle, delete, undo and save", async
   });
   await page.getByRole("button", { name: "警報を削除", exact: true }).click();
   await expect(table(page).locator("tbody tr")).toHaveCount(4);
+  // 削除した行の前の行（元の P-01 停止監視）が選ばれ、詳細フォームが残る。
+  await expect(table(page).locator("tr.selected")).toContainText(
+    "P-01 停止監視",
+  );
+  await expect(details(page)).toBeVisible();
 
   // Undo / Redo。
   const undo = page.getByRole("button", { name: "元に戻す", exact: true });
