@@ -5,6 +5,7 @@ pub mod auth_phase;
 pub mod desktop_auth;
 pub mod desktop_recording;
 mod durable;
+pub mod project_file;
 pub mod recording_control;
 pub mod recording_epoch;
 pub mod recording_gate;

@@ -515,6 +515,8 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 2026-11-14の段階3-B（警報）で、Project 直下の任意の`alarms`（点滅の設定と警報の定義。しきい値は HH／H／L／LL、bit は ON か OFF で発生）を schema・Rust・TS で揃え、限界の順序・deadband・名前と id の重複を検査する（タグの型は編集のときだけ）。サイドバー「プロジェクト設定」の「警報の設定」で、一覧から追加・複製・削除・有効の切替、選んだ定義を下の詳細で編集する（元に戻せる）。工程図サンプルに定義を2つ入れた。評価・表示・host は 3-C 以降。[設計](../design/runtime/alarm-stage3-design.md)§3。Tauri実機は未確認。
 
+2026-11-15の段階3-C1（警報）で、デスクトップ版の Project を開く・保存するを host の command `project_open`・`project_save` に移した。host が自分のダイアログでファイルを選び、読み書きする（webview はパスを持たず、host が返す `fileId` で指す）。保存は、開いた・保存したファイルへ同じ形式（`.json`／`.bantoscada`）なら上書き、新しい Project・サンプル・画像を足して形式が変わったときと「名前を付けて保存」（Ctrl+Shift+S）はダイアログで選ぶ。書込みは一時ファイルからの置換で、書込みの前に Admin を確かめる（開発・初期設定では認証無効の Admin なのでログイン不要）。ブラウザ版はいままでどおりダウンロード。警報の定義の適用（`apply`）は 3-C2。[設計](../design/runtime/alarm-stage3-design.md)§5.2。Tauri実機は未確認。
+
 ## 時計
 
 2026-11-13のフロー図 段階2-Bで、現在の日時を出す文字の図形`clock`（書式は日付・時刻・日付と時刻、`seconds: true`で秒、`style`はfontSize・fontWeight・align）を追加した。端末のローカル時刻を`YYYY/MM/DD`・`HH:mm`（`HH:mm:ss`）で出し、購読者がいる間だけ動く共有タイマーで1秒ごとに更新する。primitiveなのでSymbol定義の中にも置け、文字を含むので反転できない。schema・Rust・TS・描画・Inspector・挿入メニュー・部品パネル・お気に入りを加え、schemaVersionは0.37.0のまま。[仕様](../design/graphics/clock.md)。`clock-format.test.ts`、`examples/clock-cases.json`（Rust・TS共通の契約）、`e2e/clock.spec.ts`（`page.clock`で時刻を固定）で確認。Tauri実機は未確認。

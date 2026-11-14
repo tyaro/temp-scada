@@ -281,6 +281,19 @@ impl DesktopAuth {
         })
     }
 
+    /// `project_save`'s permission (alarm design §5.2): writing the Project
+    /// file is a setting change, so only an Admin may, checked before the
+    /// file is written. In development / initial setup the auth-disabled
+    /// session is the Admin, so editing needs no login; in operation the
+    /// Admin must be logged in.
+    pub async fn authorize_project_save(&self) -> Result<(), CommandError> {
+        self.auth()
+            .auth()
+            .require_role(Role::Admin, "project")
+            .await?;
+        Ok(())
+    }
+
     /// `auth_login`. A refusal (wrong credentials, auth-disabled mode, a
     /// superseded install) is `Ok` with `success: false`, as in Banto.
     pub async fn login(&self, username: &str, password: &str) -> Result<LoginResult, CommandError> {

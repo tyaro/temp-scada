@@ -447,3 +447,27 @@ async fn the_auth_mode_is_not_switched_and_a_lowered_local_role_can_raise_itself
         json!({"kind": "forbidden"})
     );
 }
+
+#[tokio::test]
+async fn only_an_admin_saves_the_project_file() {
+    // Development / initial setup: the auth-disabled session is the Admin.
+    let (_dir, desktop) = first_start().await;
+    desktop.authorize_project_save().await.unwrap();
+
+    let (_dir, desktop) = operational().await;
+    desktop.authorize_project_save().await.unwrap();
+    desktop
+        .users_create("viewer", PASSWORD, "閲覧者", Role::Viewer)
+        .await
+        .unwrap();
+    desktop.logout().await.unwrap();
+    assert_eq!(
+        wire(&desktop.authorize_project_save().await.unwrap_err()),
+        wire(&CommandError::from(BantoError::Unauthorized))
+    );
+    login_as(&desktop, "viewer", PASSWORD).await;
+    assert_eq!(
+        wire(&desktop.authorize_project_save().await.unwrap_err()),
+        wire(&CommandError::from(BantoError::Forbidden))
+    );
+}

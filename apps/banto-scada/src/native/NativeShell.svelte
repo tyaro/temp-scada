@@ -11,6 +11,7 @@
   import type { AsyncOperationsClient } from "../lib/recording-async/coordinator";
   import type { Project } from "../lib/project";
   import { nativeSources } from "./sources";
+  import { nativeProjectFiles } from "./project-file";
   import AuthControls from "./auth/AuthControls.svelte";
   import CloseConfirm from "./CloseConfirm.svelte";
   import { StatusBadge } from "@banto/ui";
@@ -21,6 +22,7 @@
   // The client is fixed for the life of the window.
   // svelte-ignore state_referenced_locally
   const authSession = new AuthSession(authClient);
+  const projectFileService = nativeProjectFiles(invoke);
 
   interface HubStatus {
     state: string;
@@ -252,6 +254,7 @@
     nativeHistory.update(project);
     currentProject = project;
   }}
+  {projectFileService}
   headerExtension={hubControls}
   connectionStatus={hubBadge}
 />

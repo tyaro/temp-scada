@@ -3,6 +3,7 @@ mod auth;
 mod close;
 mod control;
 mod history;
+mod project;
 mod recording;
 
 use auth::AuthState;
@@ -207,6 +208,9 @@ mod history_tests;
 #[cfg(test)]
 mod control_tests;
 
+#[cfg(test)]
+mod project_tests;
+
 #[tauri::command]
 async fn hub_catalog(
     state: State<'_, NativeHost>,
@@ -239,6 +243,7 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
     builder
         .manage(recording::Pages::default())
         .manage(close::CloseGuard::default())
+        .manage(project::ProjectFileState::default())
         .on_page_load(|webview, payload| {
             if payload.event() == PageLoadEvent::Started {
                 recording::end_page(webview, webview.label());
@@ -257,6 +262,8 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             hub_read_stop,
             hub_catalog,
             close::app_close_reply,
+            project::project_open,
+            project::project_save,
             auth::auth_status,
             auth::auth_phase,
             auth::auth_setup,
@@ -321,6 +328,7 @@ fn main() {
         ),
     };
     commands(tauri::Builder::default())
+        .plugin(tauri_plugin_dialog::init())
         .manage(NativeHost {
             bootstrap,
             active: Mutex::new(Active::default()),

@@ -73,6 +73,8 @@ export interface DesignerActionsHost {
     newProject(): void;
     openProjectFile(): void;
     save(): void;
+    /** The desktop's "save as" (the browser has none). */
+    readonly saveAs?: () => void;
     openPlacement(): void;
     focusProjectName(): void;
     openProcessSample(): void;
@@ -706,6 +708,15 @@ export function createDesignerActions(host: DesignerActionsHost) {
             disabled: host.view.menuBlocked,
             run: host.files.save,
           },
+          ...(host.files.saveAs
+            ? [
+                {
+                  label: "名前を付けて保存",
+                  disabled: host.view.menuBlocked,
+                  run: host.files.saveAs,
+                },
+              ]
+            : []),
           {
             label: "画像を配置",
             disabled: host.editing.editBlocked || host.files.imageBusy,
