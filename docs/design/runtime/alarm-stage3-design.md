@@ -197,6 +197,7 @@ Hub の購読は on-change 配信で、値も品質も変わらなければ何�
 - condition 単位の理由は、condition ごとに評価不能の始まりと終わりのイベントを書く。ただし「初期値待ち」は状態と表示だけで、イベントは書かない（session を始めるたびに全 condition 分のイベントが出ないようにする）。Engine 単位の評価不能が解けたら、各 condition は次の値が届くまで「初期値待ち」に戻る（持っていた値では判定しない）。Engine 単位の評価不能の間に condition 単位の理由が変わったら、Engine 単位が解けたときの理由で始まり・終わりを書く。
 - Bad を 0 や false に置き換えない。
 - SDK の `Unbound` は WebSocket が開いたまま要求した外部名を一つも解決できなかった状態なので、Engine の未接続ではなく各 condition の「未解決」とする。SDK の watch が中間の未接続状態を省略しても、公開された generation が変われば待ちを破棄し、新しい generation の値で評価を始め直す。
+- session 開始直後の SDK が `Stopped`／`Connecting` の間も Engine の「未接続」として表示・記録し、初回の `Live`／`Unbound` で回復を記録する。接続が確立する前に「監視できている」と示さないための区間で、session ごとに一度だけ起こりうる。
 - 認証の失効（SDK の Unauthorized。再接続しない）は評価不能ではなく、Engine の停止として扱う（§5.1）。
 
 ## 5. 製品hostの警報Engine
@@ -265,6 +266,7 @@ Hub の接続先の識別は、host が保存した `HubRecord.endpoint` の文�
 - 引き継いだ condition は、最初の値が届くまで「初期値待ち」の評価不能として、引き継いだ状態のまま待つ。その後は §4.3 の遷移どおり: 発生中だった行は、条件が成立していれば発生中のまま（ActiveAcked はブザーを鳴らさず、ActiveUnacked は鳴らす）、成立していなければ復帰の規則で復帰する（`autoOnReturn` ならここで自動 ACK）。ReturnedUnacked だった行は、条件が成立したら再発生の規則（on delay を待ち、recurrence を 1 増やす）で発生中にする。
 - 「最後の状態」の表: condition ごとに §4.1 の値（active・occurrence・recurrence・acked・conditionUnavailable・orderKey・occurredAt）と hash・Hub の接続先・最後のイベントの通番・session id を 1 行持ち、Engine 単位の評価不能は session の行に持つ。どちらも保持の上限による削除の対象にしない。
 - これにより、未確認のまま終わった警報は履歴の「前回の終了時の状態」と「停止時の状態」で判別できる。
+- 同じ process 内で SDK／Engine の所有者を手放したが、DB の停止書込みに失敗した場合も、DB の session は「停止なし」のまま残る。所有者の消滅で端末内の占有を解き、後の復旧は強制終了時と同じ「前回の終了時の状態」と「状態不明の期間」を書いて閉じる。この記録は正常な停止が確認できなかった証拠であり、process の終了そのものを断定しない。
 
 世代番号は端末全体の排他 lock の下で、次の番号を端末設定へ原子的・永続的に書いてから session DB の transaction で「Engine の開始」を書く。設定への書込みに失敗したら session を始めない。session を始めるときは、同じ起動で直近に予約し、まだ使っていない番号だけを一度消費する。DB 側が失敗した番号は欠番として再利用しない。起動時は各警報 DB の session の世代番号の最大値を読み、端末設定の最後の番号より大きければ設定の巻戻し・喪失として Engine を停止し、バックアップと明示的な復旧を要する。端末設定が無くても DB に session が一件も無ければ初回として 1 から始められる（適用だけを終えて session を始める前に終了した場合を含む）。初回の schema transaction 前に終了して残った空の DB（format 0・利用者の表なし）も session なしとして扱う。端末設定が不正、または DB の既存表を読めないときは Engine を始めない。これにより DB に残る世代番号を再利用しない。
 

@@ -22,6 +22,7 @@ pub enum AlarmRuntimeError {
     Sdk(ErrorKind),
     Step(scada_alarm::StepError),
     InvalidDefinition,
+    Internal,
     StorageFailure,
     ConnectionFailure,
     Closed,
@@ -75,7 +76,25 @@ impl AlarmEvaluator {
         applied: AppliedDefinitions,
         engine: Engine,
     ) -> Result<Self, AlarmRuntimeError> {
-        if applied.condition_hashes.len() != engine.conditions().len()
+        let stored = match db.applied().await {
+            Ok(stored) => stored,
+            Err(error) => {
+                db.release_runtime_session(engine.session());
+                return Err(AlarmRuntimeError::Db(error));
+            }
+        };
+        let session = match db.session().await {
+            Ok(session) => session,
+            Err(error) => {
+                db.release_runtime_session(engine.session());
+                return Err(AlarmRuntimeError::Db(error));
+            }
+        };
+        if stored.as_ref() != Some(&applied)
+            || session
+                .as_ref()
+                .is_none_or(|record| record.stopped || &record.session != engine.session())
+            || applied.condition_hashes.len() != engine.conditions().len()
             || engine.conditions().iter().any(|(id, condition)| {
                 applied.condition_hashes.get(id)
                     != Some(
@@ -187,12 +206,11 @@ impl Drop for AlarmEvaluator {
 }
 
 fn event_write(event: &Event) -> Result<EventWrite, AlarmRuntimeError> {
-    let mut detail =
-        serde_json::to_value(event).map_err(|_| AlarmRuntimeError::InvalidDefinition)?;
+    let mut detail = serde_json::to_value(event).map_err(|_| AlarmRuntimeError::Internal)?;
     let kind = detail
         .get("kind")
         .and_then(serde_json::Value::as_str)
-        .ok_or(AlarmRuntimeError::InvalidDefinition)?
+        .ok_or(AlarmRuntimeError::Internal)?
         .to_owned();
     if let Some(map) = detail.as_object_mut() {
         map.remove("kind");
@@ -369,9 +387,9 @@ async fn run(
             AlarmStopReason::StorageFailure
         }
         Err(AlarmRuntimeError::InvalidDefinition) => AlarmStopReason::InvalidDefinition,
-        Err(AlarmRuntimeError::Step(_) | AlarmRuntimeError::Closed) => {
-            AlarmStopReason::InternalError
-        }
+        Err(
+            AlarmRuntimeError::Step(_) | AlarmRuntimeError::Closed | AlarmRuntimeError::Internal,
+        ) => AlarmStopReason::InternalError,
     };
     status_tx.send_replace(AlarmRuntimeStatus::Stopped { reason });
     result
@@ -441,7 +459,7 @@ async fn run_inner(
                     let result = evaluator.input_with_ack(Input::Ack { condition, occurrence, recurrence, user }).await;
                     match result {
                         Ok((change, ack)) => {
-                            let _ = reply.send(ack.ok_or(AlarmRuntimeError::InvalidDefinition));
+                            let _ = reply.send(ack.ok_or(AlarmRuntimeError::Internal));
                             if let Some(change) = change { let _ = change_tx.send(change); }
                         }
                         Err(AlarmRuntimeError::Step(error)) => {
@@ -476,6 +494,7 @@ fn error_summary(error: &AlarmRuntimeError) -> AlarmRuntimeError {
             AlarmRuntimeError::ConnectionFailure
         }
         AlarmRuntimeError::InvalidDefinition => AlarmRuntimeError::InvalidDefinition,
+        AlarmRuntimeError::Internal => AlarmRuntimeError::Internal,
         _ => AlarmRuntimeError::Closed,
     }
 }
@@ -524,9 +543,7 @@ async fn process_state(
             return Err(AlarmRuntimeError::Sdk(ErrorKind::Unauthorized))
         }
         TagClientConnectionState::Live | TagClientConnectionState::Unbound => {
-            let snapshot = state
-                .snapshot()
-                .ok_or(AlarmRuntimeError::InvalidDefinition)?;
+            let snapshot = state.snapshot().ok_or(AlarmRuntimeError::Internal)?;
             begin_generation(
                 evaluator,
                 snapshot.generation,
@@ -709,6 +726,55 @@ mod tests {
         assert!(!terminal.active_project(&project_id).unwrap());
         db.close_unstopped_session(2).await.unwrap();
         assert!(db.session().await.unwrap().unwrap().stopped);
+        let db = Arc::try_unwrap(db).ok().unwrap();
+        db.close().await;
+        drop(terminal);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn evaluator_rejects_an_endpoint_not_in_the_applied_db_row() {
+        let dir = std::env::temp_dir().join(format!("alarm-endpoint-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let terminal = Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+        let project_id = uuid::Uuid::new_v4().to_string();
+        let db = Arc::new(AlarmDb::open(terminal.clone(), &project_id).await.unwrap());
+        let applied = AppliedDefinitions {
+            project_id: project_id.clone(),
+            project_revision: 1,
+            file_hash: "saved".into(),
+            endpoint: "http://127.0.0.1:8722".into(),
+            applied_by: "未ログイン".into(),
+            applied_at_ms: 1,
+            definitions: serde_json::json!({"definitions": []}),
+            condition_hashes: BTreeMap::new(),
+            disabled_condition_ids: BTreeSet::new(),
+            displays: BTreeMap::new(),
+        };
+        db.apply(&applied, None, &[], &[]).await.unwrap();
+        let session = Session {
+            id: "running".into(),
+            generation: terminal.reserve_generation().unwrap(),
+        };
+        let plan = plan_restore(
+            session,
+            &applied.endpoint,
+            1,
+            &applied,
+            &BTreeMap::new(),
+            &BTreeSet::new(),
+            &[],
+        )
+        .unwrap();
+        let engine = db.start_session_plan(plan, 1).await.unwrap();
+        let mut wrong = applied;
+        wrong.endpoint = "http://127.0.0.1:9999".into();
+        assert!(matches!(
+            AlarmEvaluator::new(db.clone(), wrong, engine).await,
+            Err(AlarmRuntimeError::InvalidDefinition)
+        ));
+        assert!(db.session().await.unwrap().unwrap().stopped);
+        assert!(!terminal.active_project(&project_id).unwrap());
         let db = Arc::try_unwrap(db).ok().unwrap();
         db.close().await;
         drop(terminal);
