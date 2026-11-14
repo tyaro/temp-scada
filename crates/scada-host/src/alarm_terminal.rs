@@ -112,6 +112,10 @@ impl AlarmTerminal {
         self.settings.switching.as_ref()
     }
 
+    pub(crate) fn data_dir(&self) -> &Path {
+        &self.data_dir
+    }
+
     /// The later apply boundary uses this to publish an A→B decision.
     pub fn set_switching(&mut self, switching: Option<PendingSwitch>) -> Result<(), TerminalError> {
         let mut next = self.settings.clone();
@@ -216,7 +220,7 @@ mod tests {
         let dir = temp_dir();
         let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
         assert_eq!(terminal.reserve_generation().unwrap(), 1);
-        let db = AlarmDb::open(&dir, &uuid::Uuid::new_v4().to_string())
+        let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
             .await
             .unwrap();
         db.start_session(
@@ -244,7 +248,7 @@ mod tests {
         let dir = temp_dir();
         let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
         let generation = terminal.reserve_generation().unwrap();
-        let db = AlarmDb::open(&dir, &uuid::Uuid::new_v4().to_string())
+        let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
             .await
             .unwrap();
         db.start_session(
@@ -279,15 +283,17 @@ mod tests {
         let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
         terminal.set_monitored(None).unwrap(); // an initial settings file
         drop(terminal);
-        let db = AlarmDb::open(&dir, &uuid::Uuid::new_v4().to_string())
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
             .await
             .unwrap();
+        db.close().await;
+        drop(terminal);
         let terminal = AlarmTerminal::open(&dir).await.unwrap();
         drop(terminal);
         fs::remove_file(dir.join(SETTINGS_FILE)).unwrap();
         let terminal = AlarmTerminal::open(&dir).await.unwrap();
         drop(terminal);
-        db.close().await;
         fs::remove_dir_all(dir).unwrap();
     }
 
@@ -299,8 +305,10 @@ mod tests {
         fs::File::create(dir.join("alarms").join(format!("{id}.db"))).unwrap();
         let terminal = AlarmTerminal::open(&dir).await.unwrap();
         drop(terminal);
-        let db = AlarmDb::open(&dir, &id).await.unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let db = AlarmDb::open(&terminal, &id).await.unwrap();
         db.close().await;
+        drop(terminal);
         let terminal = AlarmTerminal::open(&dir).await.unwrap();
         drop(terminal);
         fs::remove_dir_all(dir).unwrap();
@@ -312,7 +320,8 @@ mod tests {
         let mut terminal = AlarmTerminal::open(&dir).await.unwrap();
         let first = terminal.reserve_generation().unwrap();
         let backup = fs::read(dir.join(SETTINGS_FILE)).unwrap();
-        let db = AlarmDb::open(&dir, &uuid::Uuid::new_v4().to_string())
+        let second = terminal.reserve_generation().unwrap();
+        let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
             .await
             .unwrap();
         db.start_session(
@@ -326,7 +335,6 @@ mod tests {
         )
         .await
         .unwrap();
-        let second = terminal.reserve_generation().unwrap();
         db.start_session(
             &Session {
                 id: "second".into(),
@@ -338,13 +346,13 @@ mod tests {
         )
         .await
         .unwrap();
+        db.close().await;
         drop(terminal);
         fs::write(dir.join(SETTINGS_FILE), backup).unwrap();
         assert!(matches!(
             AlarmTerminal::open(&dir).await,
             Err(TerminalError::Lost)
         ));
-        db.close().await;
         fs::remove_dir_all(dir).unwrap();
     }
 

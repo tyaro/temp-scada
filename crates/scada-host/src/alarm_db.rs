@@ -1,7 +1,6 @@
 //! Per-Project SQLite ledger for alarm definitions, events, last states and
 //! session evidence. No Historian tables or UI lifetime are shared with it.
 use std::collections::BTreeMap;
-use std::path::Path;
 
 use scada_alarm::{
     ConditionSpec, DefineError, Engine, EngineUnavailable, Input, LastState, Now, Session,
@@ -12,6 +11,7 @@ use serde_json::{json, Value};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
 
+use crate::alarm_terminal::AlarmTerminal;
 use crate::durable;
 
 const FORMAT: i64 = 1;
@@ -56,6 +56,17 @@ pub struct AppliedDefinitions {
     pub definitions: Value,
     /// Evaluation hashes of the enabled conditions derived from `definitions`.
     pub condition_hashes: BTreeMap<String, String>,
+    /// Display information frozen into each condition event at write time.
+    pub displays: BTreeMap<String, ConditionDisplay>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConditionDisplay {
+    pub name: String,
+    pub message: String,
+    pub severity: String,
+    pub limit_label: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -89,6 +100,7 @@ pub struct EventRead {
     pub seq: i64,
     pub session_id: String,
     pub event: EventWrite,
+    pub display: Option<ConditionDisplay>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -181,19 +193,23 @@ pub fn plan_restore(
     })
 }
 
-pub struct AlarmDb {
+pub struct AlarmDb<'terminal> {
     pool: SqlitePool,
     project_id: String,
+    _terminal: &'terminal AlarmTerminal,
 }
 
-impl AlarmDb {
-    pub async fn open(data_dir: &Path, project_id: &str) -> Result<Self, AlarmDbError> {
+impl<'terminal> AlarmDb<'terminal> {
+    pub async fn open(
+        terminal: &'terminal AlarmTerminal,
+        project_id: &str,
+    ) -> Result<Self, AlarmDbError> {
         // A Project id becomes a filename; reject path segments and non-UUIDs.
         let id = uuid::Uuid::parse_str(project_id).map_err(|_| AlarmDbError::InvalidProjectId)?;
         if id.to_string() != project_id {
             return Err(AlarmDbError::InvalidProjectId);
         }
-        let dir = data_dir.join("alarms");
+        let dir = terminal.data_dir().join("alarms");
         durable::create_dir_durably(&dir)?;
         let options = SqliteConnectOptions::new()
             .filename(dir.join(format!("{id}.db")))
@@ -217,12 +233,12 @@ impl AlarmDb {
             if existing != 0 {
                 return Err(AlarmDbError::UnsupportedFormat);
             }
-            let mut tx = pool.begin().await?;
+            let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
             sqlx::raw_sql(
                 "CREATE TABLE IF NOT EXISTS applied (id INTEGER PRIMARY KEY CHECK (id = 1), body TEXT NOT NULL);
                  CREATE TABLE IF NOT EXISTS session (id INTEGER PRIMARY KEY CHECK (id = 1), session_id TEXT NOT NULL, generation INTEGER NOT NULL, stopped INTEGER NOT NULL, engine_unavailable TEXT);
                  CREATE TABLE IF NOT EXISTS last_state (condition_id TEXT PRIMARY KEY CHECK (condition_id <> ''), evaluation_hash TEXT NOT NULL, endpoint TEXT NOT NULL, state TEXT NOT NULL, session_id TEXT NOT NULL, last_event_seq INTEGER);
-                 CREATE TABLE IF NOT EXISTS event (seq INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL, at_ms INTEGER NOT NULL, condition_id TEXT, kind TEXT NOT NULL, detail TEXT NOT NULL);
+                 CREATE TABLE IF NOT EXISTS event (seq INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL, at_ms INTEGER NOT NULL, condition_id TEXT, kind TEXT NOT NULL, detail TEXT NOT NULL, display TEXT);
                  CREATE INDEX IF NOT EXISTS event_session_seq ON event(session_id, seq DESC);
                  PRAGMA user_version = 1;",
             )
@@ -233,6 +249,7 @@ impl AlarmDb {
         Ok(Self {
             pool,
             project_id: project_id.into(),
+            _terminal: terminal,
         })
     }
 
@@ -319,7 +336,7 @@ impl AlarmDb {
         if applied.project_id != self.project_id {
             return Err(AlarmDbError::InvalidProjectId);
         }
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let existing = load_existing(&mut tx).await?;
         verify_accounting(&existing, survivors, ended)?;
         for row in survivors {
@@ -382,9 +399,10 @@ impl AlarmDb {
         restored: &[LastRow],
     ) -> Result<(), AlarmDbError> {
         let generation = i64::try_from(session.generation).map_err(|_| AlarmDbError::InvalidRow)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let existing = load_existing(&mut tx).await?;
         verify_accounting(&existing, restored, ended)?;
+        verify_applied_rows(&mut tx, &self.project_id, restored).await?;
         let previous = sqlx::query(
             "SELECT session_id, generation, stopped, engine_unavailable FROM session WHERE id = 1",
         )
@@ -399,62 +417,14 @@ impl AlarmDb {
                 return Err(AlarmDbError::InvalidRow);
             }
             if stopped == 0 {
-                let old_id: String = previous.try_get("session_id")?;
-                let last_at: Option<i64> = sqlx::query_scalar(
-                    "SELECT at_ms FROM event WHERE session_id = ? ORDER BY seq DESC LIMIT 1",
-                )
-                .bind(&old_id)
-                .fetch_optional(&mut *tx)
-                .await?;
-                let rows = sqlx::query("SELECT condition_id, state FROM last_state")
-                    .fetch_all(&mut *tx)
-                    .await?;
-                for row in rows {
-                    let state: LastState =
-                        serde_json::from_str(&row.try_get::<String, _>("state")?)?;
-                    if state.active || !state.acked || state.unavailable.is_some() {
-                        insert_event(
-                            &mut tx,
-                            &old_id,
-                            &EventWrite {
-                                at_ms,
-                                condition_id: Some(row.try_get("condition_id")?),
-                                kind: "previousSessionState".into(),
-                                detail: serde_json::to_value(state)?,
-                            },
-                        )
-                        .await?;
-                    }
-                }
-                let unavailable: Option<String> = previous.try_get("engine_unavailable")?;
-                if let Some(unavailable) = unavailable {
-                    insert_event(
-                        &mut tx,
-                        &old_id,
-                        &EventWrite {
-                            at_ms,
-                            condition_id: None,
-                            kind: "previousEngineUnavailable".into(),
-                            detail: serde_json::from_str(&unavailable)?,
-                        },
-                    )
-                    .await?;
-                }
-                insert_event(
+                write_crash_evidence(
                     &mut tx,
-                    &old_id,
-                    &EventWrite {
-                        at_ms,
-                        condition_id: None,
-                        kind: "unknownPeriod".into(),
-                        detail: json!({"fromMs": last_at, "toMs": at_ms}),
-                    },
+                    &previous.try_get::<String, _>("session_id")?,
+                    previous.try_get("engine_unavailable")?,
+                    at_ms,
                 )
                 .await?;
             }
-        }
-        for event in ended {
-            insert_event(&mut tx, &session.id, event).await?;
         }
         sqlx::query("DELETE FROM last_state")
             .execute(&mut *tx)
@@ -475,11 +445,44 @@ impl AlarmDb {
             },
         )
         .await?;
+        for event in ended {
+            insert_event(&mut tx, &session.id, event).await?;
+        }
         sqlx::query("INSERT INTO session (id, session_id, generation, stopped, engine_unavailable) VALUES (1, ?, ?, 0, NULL) ON CONFLICT(id) DO UPDATE SET session_id = excluded.session_id, generation = excluded.generation, stopped = 0, engine_unavailable = NULL")
             .bind(&session.id)
             .bind(generation)
             .execute(&mut *tx)
             .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Close an interrupted previous Project after a committed A→B switch.
+    /// No new A session is created. A later apply can then use the stopped row.
+    pub async fn close_unstopped_session(&self, at_ms: i64) -> Result<(), AlarmDbError> {
+        let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
+        let previous =
+            sqlx::query("SELECT session_id, stopped, engine_unavailable FROM session WHERE id = 1")
+                .fetch_optional(&mut *tx)
+                .await?;
+        if let Some(previous) = previous {
+            let stopped: i64 = previous.try_get("stopped")?;
+            if !matches!(stopped, 0 | 1) {
+                return Err(AlarmDbError::InvalidRow);
+            }
+            if stopped == 0 {
+                write_crash_evidence(
+                    &mut tx,
+                    &previous.try_get::<String, _>("session_id")?,
+                    previous.try_get("engine_unavailable")?,
+                    at_ms,
+                )
+                .await?;
+                sqlx::query("UPDATE session SET stopped = 1 WHERE id = 1")
+                    .execute(&mut *tx)
+                    .await?;
+            }
+        }
         tx.commit().await?;
         Ok(())
     }
@@ -496,8 +499,9 @@ impl AlarmDb {
         removed: &[String],
         unavailable_change: Option<Option<EngineUnavailable>>,
     ) -> Result<(), AlarmDbError> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         require_session(&mut tx, session).await?;
+        verify_applied_rows(&mut tx, &self.project_id, changed).await?;
         let mut last_event = std::collections::HashMap::new();
         for event in events {
             let seq = insert_event(&mut tx, &session.id, event).await?;
@@ -534,7 +538,7 @@ impl AlarmDb {
     }
 
     pub async fn stop_session(&self, session: &Session, at_ms: i64) -> Result<(), AlarmDbError> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         require_session(&mut tx, session).await?;
         let rows = sqlx::query("SELECT condition_id, state FROM last_state")
             .fetch_all(&mut *tx)
@@ -592,13 +596,14 @@ impl AlarmDb {
 
     pub async fn events(&self) -> Result<Vec<EventRead>, AlarmDbError> {
         let rows = sqlx::query(
-            "SELECT seq, session_id, at_ms, condition_id, kind, detail FROM event ORDER BY seq",
+            "SELECT seq, session_id, at_ms, condition_id, kind, detail, display FROM event ORDER BY seq",
         )
         .fetch_all(&self.pool)
         .await?;
         rows.into_iter()
             .map(|row| {
                 let detail: String = row.try_get("detail")?;
+                let display: Option<String> = row.try_get("display")?;
                 Ok(EventRead {
                     seq: row.try_get("seq")?,
                     session_id: row.try_get("session_id")?,
@@ -608,10 +613,71 @@ impl AlarmDb {
                         kind: row.try_get("kind")?,
                         detail: serde_json::from_str(&detail)?,
                     },
+                    display: display
+                        .map(|display| serde_json::from_str(&display))
+                        .transpose()?,
                 })
             })
             .collect()
     }
+}
+
+async fn write_crash_evidence(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    old_id: &str,
+    unavailable: Option<String>,
+    at_ms: i64,
+) -> Result<(), AlarmDbError> {
+    let last_at: Option<i64> = sqlx::query_scalar(
+        "SELECT at_ms FROM event WHERE session_id = ? ORDER BY seq DESC LIMIT 1",
+    )
+    .bind(old_id)
+    .fetch_optional(&mut **tx)
+    .await?;
+    let rows = sqlx::query("SELECT condition_id, state FROM last_state")
+        .fetch_all(&mut **tx)
+        .await?;
+    for row in rows {
+        let state: LastState = serde_json::from_str(&row.try_get::<String, _>("state")?)?;
+        if state.active || !state.acked || state.unavailable.is_some() {
+            insert_event(
+                tx,
+                old_id,
+                &EventWrite {
+                    at_ms,
+                    condition_id: Some(row.try_get("condition_id")?),
+                    kind: "previousSessionState".into(),
+                    detail: serde_json::to_value(state)?,
+                },
+            )
+            .await?;
+        }
+    }
+    if let Some(unavailable) = unavailable {
+        insert_event(
+            tx,
+            old_id,
+            &EventWrite {
+                at_ms,
+                condition_id: None,
+                kind: "previousEngineUnavailable".into(),
+                detail: serde_json::from_str(&unavailable)?,
+            },
+        )
+        .await?;
+    }
+    insert_event(
+        tx,
+        old_id,
+        &EventWrite {
+            at_ms,
+            condition_id: None,
+            kind: "unknownPeriod".into(),
+            detail: json!({"fromMs": last_at, "toMs": at_ms}),
+        },
+    )
+    .await?;
+    Ok(())
 }
 
 async fn load_existing(
@@ -634,6 +700,32 @@ async fn load_existing(
         existing.insert(row.condition_id.clone(), row);
     }
     Ok(existing)
+}
+
+async fn verify_applied_rows(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    project_id: &str,
+    rows: &[LastRow],
+) -> Result<(), AlarmDbError> {
+    if rows.is_empty() {
+        return Ok(());
+    }
+    let body: String = sqlx::query_scalar("SELECT body FROM applied WHERE id = 1")
+        .fetch_optional(&mut **tx)
+        .await?
+        .ok_or(AlarmDbError::InvalidRow)?;
+    let applied: AppliedDefinitions = serde_json::from_str(&body)?;
+    if applied.project_id != project_id {
+        return Err(AlarmDbError::InvalidRow);
+    }
+    for row in rows {
+        if row.endpoint != applied.endpoint
+            || applied.condition_hashes.get(&row.condition_id) != Some(&row.evaluation_hash)
+        {
+            return Err(AlarmDbError::InvalidRow);
+        }
+    }
+    Ok(())
 }
 
 /// An apply or session start must account for every durable row exactly once.
@@ -705,14 +797,26 @@ async fn insert_event(
     session_id: &str,
     event: &EventWrite,
 ) -> Result<i64, AlarmDbError> {
+    let display = if let Some(id) = &event.condition_id {
+        let body: String = sqlx::query_scalar("SELECT body FROM applied WHERE id = 1")
+            .fetch_optional(&mut **tx)
+            .await?
+            .ok_or(AlarmDbError::InvalidRow)?;
+        let applied: AppliedDefinitions = serde_json::from_str(&body)?;
+        let display = applied.displays.get(id).ok_or(AlarmDbError::InvalidRow)?;
+        Some(serde_json::to_string(display)?)
+    } else {
+        None
+    };
     let result = sqlx::query(
-        "INSERT INTO event (session_id, at_ms, condition_id, kind, detail) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO event (session_id, at_ms, condition_id, kind, detail, display) VALUES (?, ?, ?, ?, ?, ?)",
     )
     .bind(session_id)
     .bind(event.at_ms)
     .bind(&event.condition_id)
     .bind(&event.kind)
     .bind(serde_json::to_string(&event.detail)?)
+    .bind(display)
     .execute(&mut **tx)
     .await?;
     Ok(result.last_insert_rowid())

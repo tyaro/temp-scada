@@ -1,4 +1,5 @@
 use super::*;
+use crate::alarm_terminal::AlarmTerminal;
 use scada_alarm::{AckMode, Source, Unavailable};
 
 fn temp_dir() -> std::path::PathBuf {
@@ -21,6 +22,15 @@ fn applied(id: &str, hash: &str) -> AppliedDefinitions {
         applied_at_ms: 100,
         definitions: json!({"definitions": []}),
         condition_hashes: BTreeMap::new(),
+        displays: BTreeMap::from([(
+            "condition:hh".into(),
+            ConditionDisplay {
+                name: "T-101".into(),
+                message: "高温".into(),
+                severity: "high".into(),
+                limit_label: Some("HH".into()),
+            },
+        )]),
     }
 }
 
@@ -46,11 +56,14 @@ fn state(session_id: &str) -> LastRow {
 #[tokio::test]
 async fn a_crash_records_the_previous_state_and_unknown_period_before_restoring() {
     let dir = temp_dir();
+    let terminal = AlarmTerminal::open(&dir).await.unwrap();
     let id = project_id();
-    let db = AlarmDb::open(&dir, &id).await.unwrap();
-    db.apply(&applied(&id, "file-a"), None, &[], &[])
-        .await
-        .unwrap();
+    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let mut applied = applied(&id, "file-a");
+    applied
+        .condition_hashes
+        .insert("condition:hh".into(), "eval-hash".into());
+    db.apply(&applied, None, &[], &[]).await.unwrap();
     let first = Session {
         id: "session-1".into(),
         generation: 1,
@@ -92,7 +105,7 @@ async fn a_crash_records_the_previous_state_and_unknown_period_before_restoring(
     assert!(previous[0].last_event_seq.is_some());
     db.close().await; // a process ended without a normal stop
 
-    let db = AlarmDb::open(&dir, &id).await.unwrap();
+    let db = AlarmDb::open(&terminal, &id).await.unwrap();
     let second = Session {
         id: "session-2".into(),
         generation: 2,
@@ -154,14 +167,16 @@ async fn a_crash_records_the_previous_state_and_unknown_period_before_restoring(
         1
     );
     db.close().await;
+    drop(terminal);
     std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[tokio::test]
 async fn failed_apply_leaves_definition_events_and_states_together() {
     let dir = temp_dir();
+    let terminal = AlarmTerminal::open(&dir).await.unwrap();
     let id = project_id();
-    let db = AlarmDb::open(&dir, &id).await.unwrap();
+    let db = AlarmDb::open(&terminal, &id).await.unwrap();
     let mut original = applied(&id, "original");
     original
         .condition_hashes
@@ -198,14 +213,21 @@ async fn failed_apply_leaves_definition_events_and_states_together() {
     assert_eq!(db.events().await.unwrap().len(), 1); // engineStarted only
     assert_eq!(db.last_states().await.unwrap().len(), 1);
     db.close().await;
+    drop(terminal);
     std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[tokio::test]
 async fn an_old_session_cannot_ack_after_a_new_session_starts() {
     let dir = temp_dir();
+    let terminal = AlarmTerminal::open(&dir).await.unwrap();
     let id = project_id();
-    let db = AlarmDb::open(&dir, &id).await.unwrap();
+    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let mut original = applied(&id, "original");
+    original
+        .condition_hashes
+        .insert("condition:hh".into(), "eval-hash".into());
+    db.apply(&original, None, &[], &[]).await.unwrap();
     let first = Session {
         id: "first".into(),
         generation: 1,
@@ -233,6 +255,16 @@ async fn an_old_session_cannot_ack_after_a_new_session_starts() {
     db.append(&second, &[], &[state(&second.id)], &[], None)
         .await
         .unwrap();
+    let mut foreign = state(&second.id);
+    foreign.evaluation_hash = "different".into();
+    assert!(matches!(
+        db.append(&second, &[], &[foreign], &[], None).await,
+        Err(AlarmDbError::InvalidRow)
+    ));
+    assert_eq!(
+        db.last_states().await.unwrap()[0].evaluation_hash,
+        "eval-hash"
+    );
     assert!(db.append(&first, &[], &[], &[], None).await.is_err());
     assert!(db.start_session(&first, 3, &[], &[]).await.is_err());
     let mut candidate = applied(&id, "candidate");
@@ -294,14 +326,16 @@ async fn an_old_session_cannot_ack_after_a_new_session_starts() {
         Err(AlarmDbError::InvalidRow)
     ));
     db.close().await;
+    drop(terminal);
     std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[tokio::test]
 async fn an_applied_definition_from_another_project_is_not_read_as_this_project() {
     let dir = temp_dir();
+    let terminal = AlarmTerminal::open(&dir).await.unwrap();
     let id = project_id();
-    let db = AlarmDb::open(&dir, &id).await.unwrap();
+    let db = AlarmDb::open(&terminal, &id).await.unwrap();
     let other = applied(&project_id(), "other");
     assert!(matches!(
         db.apply(&other, None, &[], &[]).await,
@@ -314,14 +348,21 @@ async fn an_applied_definition_from_another_project_is_not_read_as_this_project(
         .unwrap();
     assert!(matches!(db.applied().await, Err(AlarmDbError::InvalidRow)));
     db.close().await;
+    drop(terminal);
     std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[tokio::test]
 async fn session_start_rejects_missing_or_stale_restore_rows() {
     let dir = temp_dir();
+    let terminal = AlarmTerminal::open(&dir).await.unwrap();
     let id = project_id();
-    let db = AlarmDb::open(&dir, &id).await.unwrap();
+    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let mut original = applied(&id, "original");
+    original
+        .condition_hashes
+        .insert("condition:hh".into(), "eval-hash".into());
+    db.apply(&original, None, &[], &[]).await.unwrap();
     let old = Session {
         id: "old".into(),
         generation: 1,
@@ -349,14 +390,21 @@ async fn session_start_rejects_missing_or_stale_restore_rows() {
     assert_eq!(db.session().await.unwrap().unwrap().session, old);
     db.start_session(&new, 200, &[], &saved).await.unwrap();
     db.close().await;
+    drop(terminal);
     std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[tokio::test]
 async fn stopped_session_can_apply_and_attribute_ended_rows_to_it() {
     let dir = temp_dir();
+    let terminal = AlarmTerminal::open(&dir).await.unwrap();
     let id = project_id();
-    let db = AlarmDb::open(&dir, &id).await.unwrap();
+    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let mut original = applied(&id, "original");
+    original
+        .condition_hashes
+        .insert("condition:hh".into(), "eval-hash".into());
+    db.apply(&original, None, &[], &[]).await.unwrap();
     let session = Session {
         id: "stopped".into(),
         generation: 1,
@@ -384,15 +432,103 @@ async fn stopped_session_can_apply_and_attribute_ended_rows_to_it() {
     let last = db.events().await.unwrap().pop().unwrap();
     assert_eq!(last.session_id, session.id);
     assert_eq!(last.event.kind, "definitionDeleted");
+    assert_eq!(last.display.unwrap().name, "T-101");
     db.close().await;
+    drop(terminal);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test]
+async fn interrupted_old_project_closes_without_a_new_session_before_later_apply() {
+    let dir = temp_dir();
+    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let id = project_id();
+    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let mut original = applied(&id, "original");
+    original
+        .condition_hashes
+        .insert("condition:hh".into(), "eval-hash".into());
+    db.apply(&original, None, &[], &[]).await.unwrap();
+    let session = Session {
+        id: "old".into(),
+        generation: 1,
+    };
+    db.start_session(&session, 100, &[], &[]).await.unwrap();
+    let row = state(&session.id);
+    db.append(&session, &[], std::slice::from_ref(&row), &[], None)
+        .await
+        .unwrap();
+    db.close_unstopped_session(200).await.unwrap();
+    db.close_unstopped_session(210).await.unwrap(); // idempotent after switch retry
+    assert!(db.session().await.unwrap().unwrap().stopped);
+    let events = db.events().await.unwrap();
+    assert_eq!(
+        events
+            .iter()
+            .filter(|event| event.event.kind == "unknownPeriod")
+            .count(),
+        1
+    );
+    assert!(events
+        .iter()
+        .any(|event| event.event.kind == "previousSessionState"));
+    let mut candidate = applied(&id, "candidate");
+    candidate.displays.get_mut("condition:hh").unwrap().name = "改名後".into();
+    db.apply(
+        &candidate,
+        None,
+        &[EventWrite {
+            at_ms: 220,
+            condition_id: Some(row.condition_id),
+            kind: "definitionDeleted".into(),
+            detail: json!({"unacked": true, "previous": row.state}),
+        }],
+        &[],
+    )
+    .await
+    .unwrap();
+    let events = db.events().await.unwrap();
+    assert_eq!(
+        events
+            .iter()
+            .find(|event| event.event.kind == "previousSessionState")
+            .unwrap()
+            .display
+            .as_ref()
+            .unwrap()
+            .message,
+        "高温"
+    );
+    assert_eq!(
+        events
+            .iter()
+            .find(|event| event.event.kind == "previousSessionState")
+            .unwrap()
+            .display
+            .as_ref()
+            .unwrap()
+            .name,
+        "T-101"
+    );
+    db.close().await;
+    drop(terminal);
     std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[tokio::test]
 async fn restore_keeps_only_matching_hash_and_endpoint_and_writes_ends_with_start() {
     let dir = temp_dir();
+    let terminal = AlarmTerminal::open(&dir).await.unwrap();
     let id = project_id();
-    let db = AlarmDb::open(&dir, &id).await.unwrap();
+    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let mut original = applied(&id, "original");
+    original
+        .condition_hashes
+        .insert("condition:hh".into(), "eval-hash".into());
+    let display = original.displays["condition:hh"].clone();
+    original.displays.insert("changed".into(), display.clone());
+    original.displays.insert("wrong-endpoint".into(), display);
+    db.apply(&original, None, &[], &[]).await.unwrap();
     let spec = ConditionSpec {
         source: Source::Bit {
             tag: "PLANT.FLAG".into(),
@@ -428,15 +564,15 @@ async fn restore_keeps_only_matching_hash_and_endpoint_and_writes_ends_with_star
         generation: 1,
     };
     db.start_session(&old, 100, &[], &[]).await.unwrap();
-    db.append(
-        &old,
-        &[],
-        &[state("old"), changed, wrong_endpoint],
-        &[],
-        None,
-    )
-    .await
-    .unwrap();
+    db.append(&old, &[], &[state("old")], &[], None)
+        .await
+        .unwrap();
+    // Simulate stale rows from an interrupted older version. Production append
+    // refuses these, while the startup restore path still handles them.
+    let mut tx = db.pool.begin_with("BEGIN IMMEDIATE").await.unwrap();
+    insert_state(&mut tx, &changed).await.unwrap();
+    insert_state(&mut tx, &wrong_endpoint).await.unwrap();
+    tx.commit().await.unwrap();
     let previous = db.last_states().await.unwrap();
     let session = Session {
         id: "new".into(),
@@ -469,10 +605,11 @@ async fn restore_keeps_only_matching_hash_and_endpoint_and_writes_ends_with_star
         .map(|event| event.event.kind)
         .collect();
     assert!(kinds.ends_with(&[
+        "engineStarted".into(),
         "definitionChanged".into(),
-        "connectionChanged".into(),
-        "engineStarted".into()
+        "connectionChanged".into()
     ]));
     db.close().await;
+    drop(terminal);
     std::fs::remove_dir_all(dir).unwrap();
 }
