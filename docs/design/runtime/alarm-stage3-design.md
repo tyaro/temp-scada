@@ -93,18 +93,23 @@ Project 直下の任意の `alarms`。schemaVersion は据え置く（リリー�
 | ReturnedUnacked | 復帰したが未確認                   | ACK → Normal、再発生 → ActiveUnacked                |
 
 - 復帰は off delay を待ってから判定する。しきい値の復帰は deadband を戻ったとき。
-- 品質が Good でない（更新停止・不良・未接続）ときは、状態を変えずに condition に「評価不能」を付ける。Bad を 0 や false に置き換えない。評価不能の始まりと終わりもイベントにする。
+- 品質が Good でない（更新停止・不良・未接続）ときは、状態を変えずに condition に「評価不能」とその理由を付ける。Bad を 0 や false に置き換えない。評価不能の始まりと終わりもイベントにする。
+- 読取の更新が途絶えても、品質の変化が届くとは限らない。Engine はタグごとに最後に値を受けた時刻を持ち、受信の期限（端末の設定。既定値は 3-C で決める）を過ぎた値は Good でも評価不能（理由は「受信の途絶」）にする。古い値で警報を発生・復帰させない。
+- 評価不能の間は on／off delay の経過を止め、Pending や復帰待ちを進めない。評価不能が解けたら、新しい値でその時点から判定し直す（delay は最初から数える）。
 - 無効（`enabled: false`）の定義は評価せず、状態を Normal に戻すイベントを残す。
 - 判定に使った限界の値・deadband・読んだ値をイベントに残す。
 
 ## 5. 製品hostの警報Engine
 
 - `scada-host` に警報の runtime を置く。Hub の読取は、画面の表示の購読とは別に、警報の定義が使うタグだけを自分で購読する（Historian の記録元 `SdkRecorderSource` と同じく、UI の開閉に寿命を結ばない）。
-- 評価は読取の更新ごとに行い、delay の判定のために 1 秒ごとの時刻の tick も入れる。
+- 評価は読取の更新ごとに行い、delay と受信の期限の判定のために 1 秒ごとの時刻の tick も入れる（§4）。
 - 動くのはデスクトップ版のアプリが起動し、Hub に接続し、Project を開いている間だけ。アプリを閉じれば止まる（24/365 の常駐は後続。§8）。
 - 評価に使う定義は、Designer の編集中の内容ではなく、**保存した Project の定義**にする。定義が変わったら、id が同じで評価に関わる内容（発生元の種類・タグ・`activeWhen`・限界の値・deadband・on／off delay・有効）が変わらない condition だけ状態を引き継ぐ。名前・message・severity だけの変更は引き継ぐ。評価に関わる内容が変わった condition は、ACK を別の信号へ移さないよう「定義の変更」のイベントを残して状態を捨て、Normal から評価し直す（すでに異常なら新しい ActiveUnacked になり、ブザーも鳴る）。消えた condition は「定義の削除」のイベントを残して捨てる。
-- 警報イベントは、Historian の記録 DB とは別の SQLite（`%LOCALAPPDATA%\temp-scada` の下）に追記する。種類は発生・復帰・ACK・評価不能の始まりと終わり・定義の変更・定義の削除。保持の上限は PC の性能によるので、端末（host）の設定で「日数」か「件数」を選んで値を入れ、上限を超えた古いものから消す。Project には持たない。既定値は 3-C で決める。
-- アプリの再起動で状態は Normal から評価し直す。未確認のまま閉じた警報は、イベントの記録から「未確認のまま終了」と読めるようにする。
+- 警報イベントは、Historian の記録 DB とは別の SQLite（`%LOCALAPPDATA%\temp-scada` の下）に追記する。種類は発生・復帰・ACK・評価不能の始まりと終わり・定義の変更・定義の削除・Engine の開始と停止・前回の終了時の状態。各イベントに Engine の起動ごとの session id を付ける。保持の上限は PC の性能によるので、端末（host）の設定で「日数」か「件数」を選んで値を入れ、上限を超えた古いものから消す。Project には持たない。既定値は 3-C で決める。
+- アプリの再起動で状態は Normal から評価し直す（状態の永続と復元はしない）。そのかわり、前回の session の終わりを履歴で確かめられるようにする。
+  - 正常に止めるときは、Normal でない condition ごとに「停止時の状態」（ActiveUnacked・ActiveAcked・ReturnedUnacked、評価不能）を書いてから「Engine の停止」を書く。
+  - 起動時は「Engine の開始」を書く。前回の session に「Engine の停止」が無ければ（強制終了・電源断）、前回のイベントを再生して得た最後の状態のうち Normal でないものを「前回の終了時の状態（停止の記録なし）」として書く。
+  - これにより、未確認のまま終わった警報は履歴の「前回の終了時の状態」と「停止時の状態」で判別できる。
 - browser 版（モックの読取）は Engine を持たない。e2e 用に、IPC の境界でモックの警報 service を差し込めるようにする。
 
 IPC（Tauri command／event）:
@@ -133,7 +138,7 @@ IPC（Tauri command／event）:
 
 アラーム一覧の窓（運転表示とプレビューから開く。トレンド履歴の窓と同じく、運転表示の中に描く）:
 
-- 「現在」タブ: Normal でない condition（ActiveUnacked・ActiveAcked・ReturnedUnacked）を出す。復帰済みでも ACK するまでは残し、状態の列で「発生中」「復帰・未確認」を文字で分ける。未確認を上に、severity と時刻の順。選んで ACK、すべて ACK（ReturnedUnacked も対象）。
+- 「現在」タブ: Normal でない condition（ActiveUnacked・ActiveAcked・ReturnedUnacked）と、評価不能の condition（状態が Normal でも）を出す。評価不能は状態とは別の列に理由（更新停止・不良・未接続・受信の途絶）を文字で出し、絞り込みで評価不能だけも見られる。復帰済みでも ACK するまでは残し、状態の列で「発生中」「復帰・未確認」を文字で分ける。未確認を上に、severity と時刻の順。選んで ACK、すべて ACK（ReturnedUnacked も対象）。
 - 「履歴」タブ: 警報イベントの照会（期間・種類）。判定の限界と値を列に出す。
 - 評価が動いていない（browser 版・Hub 未接続・Project 未保存）ときは、その理由を出す。
 
