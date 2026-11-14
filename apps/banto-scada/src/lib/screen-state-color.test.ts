@@ -13,6 +13,7 @@ import {
 } from "./state-color";
 import { stateColorCommand } from "./designer/forms/state-color";
 import type { NumericReading } from "./tag-presentation";
+import { screenJunctions } from "./line-junction";
 
 const T = "0199f600-0000-7000-8000-000000000b01";
 const R = "0199f600-0000-7000-8000-000000000b02";
@@ -113,6 +114,32 @@ const update = (screenId: string, objectId: string, patch: any) => ({
 });
 
 describe("screen state color", () => {
+  it("paints the junction dot of a following pipe with its resolved color", () => {
+    const pipe = line(L, 2);
+    const branch = {
+      ...line("0199f600-0000-7000-8000-000000000b05", 4),
+      shape: {
+        type: "polyline",
+        points: [
+          { x: 80, y: 120 },
+          { x: 80, y: 200 },
+        ],
+        strokeWidth: 6,
+        arrow: "none",
+      },
+    } as ScreenObject;
+    const objects = [text(T, 0), branch, pipe];
+    const dotColor = (reading?: NumericReading) =>
+      [
+        ...screenJunctions(
+          objects,
+          new Map(reading ? [["Demo.Value", reading]] : []),
+        ).values(),
+      ].flat()[0].color;
+    expect(dotColor(good(true))).toBe("#16a34a");
+    expect(dotColor(good(false))).toBe("#64748b");
+    expect(dotColor()).toBe("#d97706");
+  });
   it("lists only bound boolDisplay Texts as sources and counts followers", () => {
     const screen = fresh().screens[0];
     expect(stateColorSources(screen).map((o) => o.id)).toEqual([T]);
