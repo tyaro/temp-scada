@@ -1983,6 +1983,23 @@
             "value": 95
           },
           "ackMode": "autoOnReturn"
+        },
+        "e": {
+          "source": {
+            "kind": "threshold",
+            "tag": "E",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 5000
+        },
+        "f": {
+          "source": {
+            "kind": "threshold",
+            "tag": "F",
+            "limit": "hh",
+            "value": 95
+          }
         }
       },
       "steps": [
@@ -2135,6 +2152,41 @@
             { "kind": "autoAcked", "condition": "d" }
           ],
           "states": { "d": { "display": "normal" } }
+        },
+        {
+          "at": 600,
+          "input": { "kind": "value", "tag": "E", "value": 96 },
+          "states": { "e": { "display": "pending" } }
+        },
+        {
+          "at": 700,
+          "input": {
+            "kind": "restore",
+            "condition": "e",
+            "row": { "active": true, "occurrence": "prev-5", "acked": false }
+          },
+          "error": "alreadyStarted"
+        },
+        {
+          "at": 800,
+          "input": { "kind": "value", "tag": "F", "quality": "bad" },
+          "events": [{ "kind": "unavailableStarted", "condition": "f" }]
+        },
+        {
+          "at": 900,
+          "input": {
+            "kind": "restore",
+            "condition": "f",
+            "row": { "active": false, "acked": true }
+          },
+          "error": "alreadyStarted"
+        },
+        {
+          "at": 5600,
+          "input": { "kind": "timer" },
+          "events": [
+            { "kind": "occurred", "condition": "e", "occurrence": "occ-1" }
+          ]
         }
       ]
     }

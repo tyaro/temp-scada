@@ -413,10 +413,8 @@ impl Engine {
                     .conditions
                     .get(condition)
                     .ok_or_else(|| StepError::UnknownCondition(condition.clone()))?;
-                if current.state.occurrence.is_some()
-                    || current.state.active
-                    || !current.state.acked
-                {
+                // 値が届いた・待ちを始めた・復元した condition には当てない（発生待ちの間も）。
+                if current.state != ConditionState::initial() {
                     return Err(StepError::AlreadyStarted(condition.clone()));
                 }
                 if (row.active || !row.acked) && row.occurrence.is_none() {
