@@ -53,6 +53,24 @@ fn state(session_id: &str) -> LastRow {
     }
 }
 
+#[tokio::test]
+async fn db_owns_terminal_lock_after_original_handle_is_dropped() {
+    let dir = temp_dir();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+    let db = AlarmDb::open(terminal.clone(), &project_id())
+        .await
+        .unwrap();
+    drop(terminal);
+    assert!(matches!(
+        AlarmTerminal::open(&dir).await,
+        Err(crate::alarm_terminal::TerminalError::InUse)
+    ));
+    db.close().await;
+    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    drop(terminal);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
 #[test]
 fn disabled_condition_ends_as_definition_change() {
     let mut applied = applied(&project_id(), "applied");
@@ -71,15 +89,15 @@ fn disabled_condition_ends_as_definition_change() {
         &[state("old")],
     )
     .unwrap();
-    assert_eq!(plan.ended[0].kind, "definitionChanged");
+    assert_eq!(plan.ended()[0].kind, "definitionChanged");
 }
 
 #[tokio::test]
 async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
     let dir = temp_dir();
-    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
     let id = project_id();
-    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let mut empty = applied(&id, "empty");
     empty.condition_hashes.clear();
     empty.displays.clear();
@@ -130,9 +148,9 @@ async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
 #[tokio::test]
 async fn a_crash_records_the_previous_state_and_unknown_period_before_restoring() {
     let dir = temp_dir();
-    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
     let id = project_id();
-    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let mut applied = applied(&id, "file-a");
     applied
         .condition_hashes
@@ -179,7 +197,7 @@ async fn a_crash_records_the_previous_state_and_unknown_period_before_restoring(
     assert!(previous[0].last_event_seq.is_some());
     db.close().await; // a process ended without a normal stop
 
-    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let second = Session {
         id: "session-2".into(),
         generation: 2,
@@ -248,9 +266,9 @@ async fn a_crash_records_the_previous_state_and_unknown_period_before_restoring(
 #[tokio::test]
 async fn failed_apply_leaves_definition_events_and_states_together() {
     let dir = temp_dir();
-    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
     let id = project_id();
-    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let mut original = applied(&id, "original");
     original
         .condition_hashes
@@ -294,9 +312,9 @@ async fn failed_apply_leaves_definition_events_and_states_together() {
 #[tokio::test]
 async fn an_old_session_cannot_ack_after_a_new_session_starts() {
     let dir = temp_dir();
-    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
     let id = project_id();
-    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let mut original = applied(&id, "original");
     original
         .condition_hashes
@@ -440,9 +458,9 @@ async fn an_old_session_cannot_ack_after_a_new_session_starts() {
 #[tokio::test]
 async fn an_applied_definition_from_another_project_is_not_read_as_this_project() {
     let dir = temp_dir();
-    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
     let id = project_id();
-    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let mut missing_display = applied(&id, "missing-display");
     missing_display.displays.clear();
     assert!(matches!(
@@ -475,9 +493,9 @@ async fn an_applied_definition_from_another_project_is_not_read_as_this_project(
 #[tokio::test]
 async fn session_start_rejects_missing_or_stale_restore_rows() {
     let dir = temp_dir();
-    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
     let id = project_id();
-    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let mut original = applied(&id, "original");
     original
         .condition_hashes
@@ -517,9 +535,9 @@ async fn session_start_rejects_missing_or_stale_restore_rows() {
 #[tokio::test]
 async fn stopped_session_can_apply_and_attribute_ended_rows_to_it() {
     let dir = temp_dir();
-    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
     let id = project_id();
-    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let mut original = applied(&id, "original");
     original
         .condition_hashes
@@ -561,9 +579,9 @@ async fn stopped_session_can_apply_and_attribute_ended_rows_to_it() {
 #[tokio::test]
 async fn interrupted_old_project_closes_without_a_new_session_before_later_apply() {
     let dir = temp_dir();
-    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
     let id = project_id();
-    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let mut original = applied(&id, "original");
     original
         .condition_hashes
@@ -638,9 +656,9 @@ async fn interrupted_old_project_closes_without_a_new_session_before_later_apply
 #[tokio::test]
 async fn restore_keeps_only_matching_hash_and_endpoint() {
     let dir = temp_dir();
-    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
     let id = project_id();
-    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let mut original = applied(&id, "original");
     original
         .condition_hashes
@@ -744,13 +762,13 @@ async fn restore_keeps_only_matching_hash_and_endpoint() {
         &previous,
     )
     .unwrap();
-    assert_eq!(plan.restored.len(), 1);
+    assert_eq!(plan.restored().len(), 1);
     let restored_state = &plan.engine.condition("condition:hh").unwrap().state;
     assert!(restored_state.active && !restored_state.acked);
     assert_eq!(restored_state.unavailable, Some(Unavailable::InitialValue));
-    assert_eq!(plan.ended.len(), 2);
-    assert_eq!(plan.ended[0].kind, "definitionChanged");
-    assert_eq!(plan.ended[1].kind, "connectionChanged");
+    assert_eq!(plan.ended().len(), 2);
+    assert_eq!(plan.ended()[0].kind, "definitionChanged");
+    assert_eq!(plan.ended()[1].kind, "connectionChanged");
     db.close().await;
     drop(terminal);
     std::fs::remove_dir_all(dir).unwrap();

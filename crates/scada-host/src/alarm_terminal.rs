@@ -232,9 +232,9 @@ mod tests {
     #[tokio::test]
     async fn generations_are_saved_before_their_sessions_and_never_reused() {
         let dir = temp_dir();
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         assert_eq!(terminal.reserve_generation().unwrap(), 1);
-        let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
+        let db = AlarmDb::open(terminal.clone(), &uuid::Uuid::new_v4().to_string())
             .await
             .unwrap();
         db.start_session(
@@ -260,9 +260,9 @@ mod tests {
     #[tokio::test]
     async fn lost_or_corrupt_settings_stop_monitoring() {
         let dir = temp_dir();
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         let generation = terminal.reserve_generation().unwrap();
-        let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
+        let db = AlarmDb::open(terminal.clone(), &uuid::Uuid::new_v4().to_string())
             .await
             .unwrap();
         db.start_session(
@@ -294,19 +294,19 @@ mod tests {
     #[tokio::test]
     async fn an_applied_db_without_a_session_does_not_claim_generation_loss() {
         let dir = temp_dir();
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         terminal.set_monitored(None).unwrap(); // an initial settings file
         drop(terminal);
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
-        let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+        let db = AlarmDb::open(terminal.clone(), &uuid::Uuid::new_v4().to_string())
             .await
             .unwrap();
         db.close().await;
         drop(terminal);
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         drop(terminal);
         fs::remove_file(dir.join(SETTINGS_FILE)).unwrap();
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         drop(terminal);
         fs::remove_dir_all(dir).unwrap();
     }
@@ -317,13 +317,13 @@ mod tests {
         let id = uuid::Uuid::new_v4().to_string();
         fs::create_dir_all(dir.join("alarms")).unwrap();
         fs::File::create(dir.join("alarms").join(format!("{id}.db"))).unwrap();
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         drop(terminal);
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
-        let db = AlarmDb::open(&terminal, &id).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+        let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
         db.close().await;
         drop(terminal);
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         drop(terminal);
         fs::remove_dir_all(dir).unwrap();
     }
@@ -331,10 +331,10 @@ mod tests {
     #[tokio::test]
     async fn a_restored_older_settings_file_cannot_reuse_a_db_generation() {
         let dir = temp_dir();
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         let first = terminal.reserve_generation().unwrap();
         let backup = fs::read(dir.join(SETTINGS_FILE)).unwrap();
-        let db = AlarmDb::open(&terminal, &uuid::Uuid::new_v4().to_string())
+        let db = AlarmDb::open(terminal.clone(), &uuid::Uuid::new_v4().to_string())
             .await
             .unwrap();
         db.start_session(
@@ -373,7 +373,7 @@ mod tests {
     #[tokio::test]
     async fn switching_and_monitor_are_durable_under_one_terminal_lock() {
         let dir = temp_dir();
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         let monitored = MonitoredProject {
             project_id: uuid::Uuid::new_v4().to_string(),
             path: dir.join("b.json"),
@@ -389,11 +389,11 @@ mod tests {
             Err(TerminalError::InUse)
         ));
         drop(terminal);
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         assert_eq!(terminal.switching().unwrap().unwrap().target, monitored);
         terminal.set_monitored(Some(monitored.clone())).unwrap();
         drop(terminal);
-        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         assert_eq!(terminal.monitored().unwrap(), Some(monitored.clone()));
         assert!(terminal.switching().unwrap().is_none());
         drop(terminal);
