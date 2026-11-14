@@ -173,8 +173,8 @@ impl ProjectFiles {
     }
 
     /// Replaces `path` with `bytes` (a new uniquely named sibling temp file
-    /// renamed over it, so
-    /// a failed write leaves the old file) and remembers it.
+    /// renamed over it, so a failed write leaves the old file) and remembers
+    /// it.
     pub fn write(
         &self,
         path: &Path,
