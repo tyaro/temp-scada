@@ -56,7 +56,7 @@ pub struct AlarmTerminal {
 impl AlarmTerminal {
     pub async fn open(data_dir: &Path) -> Result<Self, TerminalError> {
         let lock =
-            durable::open_lock_file(data_dir, LOCK_FILE).map_err(|_| TerminalError::InUse)?;
+            durable::open_lock_file(data_dir, LOCK_FILE).map_err(|_| TerminalError::Unreadable)?;
         lock.try_lock().map_err(|_| TerminalError::InUse)?;
         let path = data_dir.join(SETTINGS_FILE);
         let max_generation = max_db_generation(data_dir).await?;
@@ -160,6 +160,19 @@ async fn max_db_generation(data_dir: &Path) -> Result<Option<u64>, TerminalError
                 .fetch_one(&mut connection)
                 .await
                 .map_err(|_| TerminalError::Corrupt)?;
+            if version == 0 {
+                let tables: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
+                    .fetch_one(&mut connection)
+                    .await
+                    .map_err(|_| TerminalError::Corrupt)?;
+                if tables == 0 {
+                    connection
+                        .close()
+                        .await
+                        .map_err(|_| TerminalError::Unreadable)?;
+                    continue;
+                }
+            }
             if version != 1 {
                 return Err(TerminalError::Corrupt);
             }
@@ -275,6 +288,21 @@ mod tests {
         let terminal = AlarmTerminal::open(&dir).await.unwrap();
         drop(terminal);
         db.close().await;
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn an_empty_db_created_before_schema_commit_does_not_block_first_start() {
+        let dir = temp_dir();
+        let id = uuid::Uuid::new_v4().to_string();
+        fs::create_dir_all(dir.join("alarms")).unwrap();
+        fs::File::create(dir.join("alarms").join(format!("{id}.db"))).unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        drop(terminal);
+        let db = AlarmDb::open(&dir, &id).await.unwrap();
+        db.close().await;
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        drop(terminal);
         fs::remove_dir_all(dir).unwrap();
     }
 

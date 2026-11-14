@@ -517,7 +517,7 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 2026-11-15の段階3-C1（警報）で、デスクトップ版の Project を開く・保存するを host の command `project_open`・`project_save` に移した。host が自分のダイアログでファイルを選び、読み書きする（webview はパスを持たず、host が返す `fileId` で指す）。保存は、開いた・保存したファイルへ同じ形式（`.json`／`.bantoscada`）なら上書き、新しい Project・サンプル・画像を足して形式が変わったときと「名前を付けて保存」（Ctrl+Shift+S）はダイアログで選ぶ。書込みは一時ファイルからの置換で、書込みの前に Admin を確かめる（開発・初期設定では認証無効の Admin なのでログイン不要）。ブラウザ版はいままでどおりダウンロード。警報の定義の適用（`apply`）は 3-C2。[設計](../design/runtime/alarm-stage3-design.md)§5.2。Tauri実機で新規保存・上書き・名前を付けて保存・画像追加後の`.bantoscada`のダイアログ・置換確認を確認済み（2026-11-15）。
 
-段階3-C2a（警報）の保存基盤として、端末全体の排他 lock と永続世代番号、Project ごとの独立した警報 SQLite に適用済み定義・イベント・最後の状態・session を追加した。世代番号は DB の session より先に保存し、番号の欠番は再利用しない。起動時は全警報 DB の session 世代番号と端末設定を比べ、設定の巻戻し・喪失を拒否する（session がまだ一件も無い初回適用の DB は受け入れる）。適用・状態とイベント、強制終了後の証拠・新 session の開始はそれぞれ同一 transaction にする。最後の状態から評価 hash と接続先が合う行だけ純粋 Engine へ復元する計画を作り、外れる行の終了イベントも新 session の transaction に含める。専用 Hub 購読と評価、Tauri IPC、`project_save.apply` は 3-C2b／c で接続するため、現時点で Engine は動かない。隔離一時 DB の検証であり、Tauri 実機・実 Hub の確認ではない。[設計](../design/runtime/alarm-stage3-design.md)§5・§10。
+段階3-C2a（警報）の保存基盤として、端末全体の排他 lock と永続世代番号、Project ごとの独立した警報 SQLite に適用済み定義・イベント・最後の状態・session を追加した。世代番号は DB の session より先に保存し、番号の欠番は再利用しない。起動時は全警報 DB の session 世代番号と端末設定を比べ、設定の巻戻し・喪失を拒否する（session がまだ一件も無い初回適用の DB と、schema transaction 前の空 DB は受け入れる）。適用・状態とイベント、強制終了後の証拠・新 session の開始はそれぞれ同一 transaction にし、既存の行をすべて引継ぎか終了に分類したことを DB 内で確かめる。状態不明期間の始まりは壁時計の最大値でなく最後のイベント通番から取る。最後の状態から評価 hash と接続先が合う行だけ純粋 Engine へ復元する計画を作り、外れる行の終了イベントも新 session の transaction に含める。専用 Hub 購読と評価、Tauri IPC、`project_save.apply` は 3-C2b／c で接続するため、現時点で Engine は動かない。隔離一時 DB の検証であり、Tauri 実機・実 Hub の確認ではない。[設計](../design/runtime/alarm-stage3-design.md)§5・§10。
 
 ## 時計
 

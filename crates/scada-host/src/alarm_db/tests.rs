@@ -20,6 +20,7 @@ fn applied(id: &str, hash: &str) -> AppliedDefinitions {
         applied_by: "未ログイン".into(),
         applied_at_ms: 100,
         definitions: json!({"definitions": []}),
+        condition_hashes: BTreeMap::new(),
     }
 }
 
@@ -65,10 +66,28 @@ async fn a_crash_records_the_previous_state_and_unknown_period_before_restoring(
         }],
         &[state(&first.id)],
         &[],
-        Some(EngineUnavailable::Disconnected),
+        Some(Some(EngineUnavailable::Disconnected)),
     )
     .await
     .unwrap();
+    db.append(
+        &first,
+        &[EventWrite {
+            at_ms: 80,
+            condition_id: None,
+            kind: "clockMovedBack".into(),
+            detail: Value::Null,
+        }],
+        &[],
+        &[],
+        None,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        db.session().await.unwrap().unwrap().engine_unavailable,
+        Some(EngineUnavailable::Disconnected)
+    );
     let previous = db.last_states().await.unwrap();
     assert!(previous[0].last_event_seq.is_some());
     db.close().await; // a process ended without a normal stop
@@ -94,19 +113,20 @@ async fn a_crash_records_the_previous_state_and_unknown_period_before_restoring(
         [
             "engineStarted",
             "occurred",
+            "clockMovedBack",
             "previousSessionState",
             "previousEngineUnavailable",
             "unknownPeriod",
             "engineStarted"
         ]
     );
-    assert_eq!(events[4].event.detail, json!({"fromMs": 120, "toMs": 200}));
+    assert_eq!(events[5].event.detail, json!({"fromMs": 80, "toMs": 200}));
     db.append(
         &second,
         &[],
         &[],
         &[],
-        Some(EngineUnavailable::Disconnected),
+        Some(Some(EngineUnavailable::Disconnected)),
     )
     .await
     .unwrap();
@@ -142,33 +162,41 @@ async fn failed_apply_leaves_definition_events_and_states_together() {
     let dir = temp_dir();
     let id = project_id();
     let db = AlarmDb::open(&dir, &id).await.unwrap();
-    db.apply(&applied(&id, "original"), None, &[], &[])
-        .await
-        .unwrap();
+    let mut original = applied(&id, "original");
+    original
+        .condition_hashes
+        .insert("condition:hh".into(), "eval-hash".into());
+    db.apply(&original, None, &[], &[]).await.unwrap();
     let session = Session {
         id: "session-1".into(),
         generation: 1,
     };
     db.start_session(&session, 100, &[], &[]).await.unwrap();
-    let mut invalid = state("session-1");
-    invalid.condition_id.clear(); // DB CHECK rejects the last insert.
+    let row = state(&session.id);
+    db.append(&session, &[], std::slice::from_ref(&row), &[], None)
+        .await
+        .unwrap();
+    sqlx::query("CREATE TRIGGER fail_candidate BEFORE UPDATE ON applied BEGIN SELECT RAISE(ABORT, 'full'); END")
+        .execute(&db.pool)
+        .await
+        .unwrap();
     assert!(db
         .apply(
             &applied(&id, "candidate"),
             Some(&session),
             &[EventWrite {
                 at_ms: 200,
-                condition_id: None,
+                condition_id: Some(row.condition_id.clone()),
                 kind: "definitionChanged".into(),
-                detail: Value::Null,
+                detail: json!({"unacked": true, "previous": row.state}),
             }],
-            &[invalid],
+            &[],
         )
         .await
         .is_err());
     assert_eq!(db.applied().await.unwrap().unwrap().file_hash, "original");
     assert_eq!(db.events().await.unwrap().len(), 1); // engineStarted only
-    assert!(db.last_states().await.unwrap().is_empty());
+    assert_eq!(db.last_states().await.unwrap().len(), 1);
     db.close().await;
     std::fs::remove_dir_all(dir).unwrap();
 }
@@ -183,14 +211,34 @@ async fn an_old_session_cannot_ack_after_a_new_session_starts() {
         generation: 1,
     };
     db.start_session(&first, 1, &[], &[]).await.unwrap();
+    db.append(
+        &first,
+        &[],
+        &[],
+        &[],
+        Some(Some(EngineUnavailable::Disconnected)),
+    )
+    .await
+    .unwrap();
+    db.append(&first, &[], &[], &[], Some(None)).await.unwrap();
+    assert_eq!(
+        db.session().await.unwrap().unwrap().engine_unavailable,
+        None
+    );
     let second = Session {
         id: "second".into(),
         generation: 2,
     };
     db.start_session(&second, 2, &[], &[]).await.unwrap();
+    db.append(&second, &[], &[state(&second.id)], &[], None)
+        .await
+        .unwrap();
     assert!(db.append(&first, &[], &[], &[], None).await.is_err());
     assert!(db.start_session(&first, 3, &[], &[]).await.is_err());
-    let candidate = applied(&id, "candidate");
+    let mut candidate = applied(&id, "candidate");
+    candidate
+        .condition_hashes
+        .insert("condition:hh".into(), "eval-hash".into());
     assert!(matches!(
         db.apply(&candidate, Some(&first), &[], &[]).await,
         Err(AlarmDbError::InvalidRow)
@@ -199,12 +247,33 @@ async fn an_old_session_cannot_ack_after_a_new_session_starts() {
         db.apply(&candidate, None, &[], &[]).await,
         Err(AlarmDbError::InvalidRow)
     ));
+    assert!(matches!(
+        db.apply(&candidate, Some(&second), &[], &[]).await,
+        Err(AlarmDbError::InvalidRow)
+    ));
+    let mut wrong_hash = candidate.clone();
+    wrong_hash
+        .condition_hashes
+        .insert("condition:hh".into(), "different".into());
+    assert!(matches!(
+        db.apply(&wrong_hash, Some(&second), &[], &[state("stale")])
+            .await,
+        Err(AlarmDbError::InvalidRow)
+    ));
+    let mut stale = state("stale");
+    stale.state.acked = true;
+    assert!(matches!(
+        db.apply(&candidate, Some(&second), &[], &[stale]).await,
+        Err(AlarmDbError::InvalidRow)
+    ));
     db.apply(&candidate, Some(&second), &[], &[state("stale")])
         .await
         .unwrap();
     assert_eq!(db.last_states().await.unwrap()[0].session_id, second.id);
     db.stop_session(&second, 3).await.unwrap();
-    db.apply(&candidate, None, &[], &[]).await.unwrap();
+    db.apply(&candidate, None, &[], &[state("stale")])
+        .await
+        .unwrap();
     assert_eq!(db.applied().await.unwrap().unwrap().file_hash, "candidate");
     sqlx::query("UPDATE session SET stopped = 2 WHERE id = 1")
         .execute(&db.pool)
@@ -305,7 +374,7 @@ async fn stopped_session_can_apply_and_attribute_ended_rows_to_it() {
             at_ms: 200,
             condition_id: Some(row.condition_id),
             kind: "definitionDeleted".into(),
-            detail: json!({"unacked": true}),
+            detail: json!({"unacked": true, "previous": row.state}),
         }],
         &[],
     )

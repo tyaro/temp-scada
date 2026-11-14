@@ -54,6 +54,8 @@ pub struct AppliedDefinitions {
     /// Validated Project alarm definitions; they remain available at startup
     /// even if the Project file was edited or cannot be opened.
     pub definitions: Value,
+    /// Evaluation hashes of the enabled conditions derived from `definitions`.
+    pub condition_hashes: BTreeMap<String, String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -99,6 +101,7 @@ pub struct Definition {
 pub enum RestoreError {
     Define(DefineError),
     State(StepError),
+    UnexpectedOccurrence,
 }
 
 pub struct RestorePlan {
@@ -132,19 +135,25 @@ pub fn plan_restore(
             && definition
                 .is_some_and(|definition| definition.evaluation_hash == row.evaluation_hash)
         {
-            let transition = engine
-                .step(
-                    Now {
-                        mono_ms: 0,
-                        wall_ms: at_ms,
-                    },
-                    &Input::Restore {
-                        condition: row.condition_id.clone(),
-                        row: row.state.clone(),
-                    },
-                    &mut || unreachable!("restore cannot create an occurrence"),
-                )
-                .map_err(RestoreError::State)?;
+            let mut requested_occurrence = false;
+            let transition = engine.step(
+                Now {
+                    mono_ms: 0,
+                    wall_ms: at_ms,
+                },
+                &Input::Restore {
+                    condition: row.condition_id.clone(),
+                    row: row.state.clone(),
+                },
+                &mut || {
+                    requested_occurrence = true;
+                    String::new()
+                },
+            );
+            if requested_occurrence {
+                return Err(RestoreError::UnexpectedOccurrence);
+            }
+            let transition = transition.map_err(RestoreError::State)?;
             engine.commit(transition);
             let mut restored_row = row.clone();
             restored_row.session_id = session.id.clone();
@@ -214,6 +223,7 @@ impl AlarmDb {
                  CREATE TABLE IF NOT EXISTS session (id INTEGER PRIMARY KEY CHECK (id = 1), session_id TEXT NOT NULL, generation INTEGER NOT NULL, stopped INTEGER NOT NULL, engine_unavailable TEXT);
                  CREATE TABLE IF NOT EXISTS last_state (condition_id TEXT PRIMARY KEY CHECK (condition_id <> ''), evaluation_hash TEXT NOT NULL, endpoint TEXT NOT NULL, state TEXT NOT NULL, session_id TEXT NOT NULL, last_event_seq INTEGER);
                  CREATE TABLE IF NOT EXISTS event (seq INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL, at_ms INTEGER NOT NULL, condition_id TEXT, kind TEXT NOT NULL, detail TEXT NOT NULL);
+                 CREATE INDEX IF NOT EXISTS event_session_seq ON event(session_id, seq DESC);
                  PRAGMA user_version = 1;",
             )
             .execute(&mut *tx)
@@ -310,6 +320,15 @@ impl AlarmDb {
             return Err(AlarmDbError::InvalidProjectId);
         }
         let mut tx = self.pool.begin().await?;
+        let existing = load_existing(&mut tx).await?;
+        verify_accounting(&existing, survivors, ended)?;
+        for row in survivors {
+            if row.endpoint != applied.endpoint
+                || applied.condition_hashes.get(&row.condition_id) != Some(&row.evaluation_hash)
+            {
+                return Err(AlarmDbError::InvalidRow);
+            }
+        }
         let event_session = match session {
             Some(session) => {
                 require_session(&mut tx, session).await?;
@@ -364,56 +383,8 @@ impl AlarmDb {
     ) -> Result<(), AlarmDbError> {
         let generation = i64::try_from(session.generation).map_err(|_| AlarmDbError::InvalidRow)?;
         let mut tx = self.pool.begin().await?;
-        let rows = sqlx::query("SELECT condition_id, evaluation_hash, endpoint, state, session_id, last_event_seq FROM last_state")
-            .fetch_all(&mut *tx)
-            .await?;
-        let mut existing = BTreeMap::new();
-        for row in rows {
-            let state: String = row.try_get("state")?;
-            let row = LastRow {
-                condition_id: row.try_get("condition_id")?,
-                evaluation_hash: row.try_get("evaluation_hash")?,
-                endpoint: row.try_get("endpoint")?,
-                state: serde_json::from_str(&state)?,
-                session_id: row.try_get("session_id")?,
-                last_event_seq: row.try_get("last_event_seq")?,
-            };
-            existing.insert(row.condition_id.clone(), row);
-        }
-        let mut accounted = std::collections::HashSet::new();
-        for row in restored {
-            let saved = existing
-                .get(&row.condition_id)
-                .ok_or(AlarmDbError::InvalidRow)?;
-            if !accounted.insert(&row.condition_id)
-                || saved.evaluation_hash != row.evaluation_hash
-                || saved.endpoint != row.endpoint
-                || saved.state != row.state
-                || saved.last_event_seq != row.last_event_seq
-            {
-                return Err(AlarmDbError::InvalidRow);
-            }
-        }
-        for event in ended {
-            let id = event
-                .condition_id
-                .as_ref()
-                .ok_or(AlarmDbError::InvalidRow)?;
-            let saved = existing.get(id).ok_or(AlarmDbError::InvalidRow)?;
-            if !accounted.insert(id)
-                || !matches!(
-                    event.kind.as_str(),
-                    "definitionChanged" | "definitionDeleted" | "connectionChanged"
-                )
-                || event.detail["previous"] != serde_json::to_value(&saved.state)?
-                || event.detail["unacked"] != json!(!saved.state.acked)
-            {
-                return Err(AlarmDbError::InvalidRow);
-            }
-        }
-        if accounted.len() != existing.len() {
-            return Err(AlarmDbError::InvalidRow);
-        }
+        let existing = load_existing(&mut tx).await?;
+        verify_accounting(&existing, restored, ended)?;
         let previous = sqlx::query(
             "SELECT session_id, generation, stopped, engine_unavailable FROM session WHERE id = 1",
         )
@@ -429,11 +400,12 @@ impl AlarmDb {
             }
             if stopped == 0 {
                 let old_id: String = previous.try_get("session_id")?;
-                let last_at: Option<i64> =
-                    sqlx::query_scalar("SELECT MAX(at_ms) FROM event WHERE session_id = ?")
-                        .bind(&old_id)
-                        .fetch_one(&mut *tx)
-                        .await?;
+                let last_at: Option<i64> = sqlx::query_scalar(
+                    "SELECT at_ms FROM event WHERE session_id = ? ORDER BY seq DESC LIMIT 1",
+                )
+                .bind(&old_id)
+                .fetch_optional(&mut *tx)
+                .await?;
                 let rows = sqlx::query("SELECT condition_id, state FROM last_state")
                     .fetch_all(&mut *tx)
                     .await?;
@@ -514,13 +486,15 @@ impl AlarmDb {
 
     /// Commits state and events together; an ACK is acknowledged only after
     /// this succeeds. The caller then commits the pure Engine transition.
+    /// `unavailable_change` is `None` for no Engine-level change, or
+    /// `Some(None)` to clear an existing reason.
     pub async fn append(
         &self,
         session: &Session,
         events: &[EventWrite],
         changed: &[LastRow],
         removed: &[String],
-        unavailable: Option<EngineUnavailable>,
+        unavailable_change: Option<Option<EngineUnavailable>>,
     ) -> Result<(), AlarmDbError> {
         let mut tx = self.pool.begin().await?;
         require_session(&mut tx, session).await?;
@@ -545,14 +519,16 @@ impl AlarmDb {
                 .execute(&mut *tx)
                 .await?;
         }
-        sqlx::query("UPDATE session SET engine_unavailable = ? WHERE id = 1")
-            .bind(
-                unavailable
-                    .map(|value| serde_json::to_string(&value))
-                    .transpose()?,
-            )
-            .execute(&mut *tx)
-            .await?;
+        if let Some(unavailable) = unavailable_change {
+            sqlx::query("UPDATE session SET engine_unavailable = ? WHERE id = 1")
+                .bind(
+                    unavailable
+                        .map(|value| serde_json::to_string(&value))
+                        .transpose()?,
+                )
+                .execute(&mut *tx)
+                .await?;
+        }
         tx.commit().await?;
         Ok(())
     }
@@ -636,6 +612,72 @@ impl AlarmDb {
             })
             .collect()
     }
+}
+
+async fn load_existing(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+) -> Result<BTreeMap<String, LastRow>, AlarmDbError> {
+    let rows = sqlx::query("SELECT condition_id, evaluation_hash, endpoint, state, session_id, last_event_seq FROM last_state")
+        .fetch_all(&mut **tx)
+        .await?;
+    let mut existing = BTreeMap::new();
+    for row in rows {
+        let state: String = row.try_get("state")?;
+        let row = LastRow {
+            condition_id: row.try_get("condition_id")?,
+            evaluation_hash: row.try_get("evaluation_hash")?,
+            endpoint: row.try_get("endpoint")?,
+            state: serde_json::from_str(&state)?,
+            session_id: row.try_get("session_id")?,
+            last_event_seq: row.try_get("last_event_seq")?,
+        };
+        existing.insert(row.condition_id.clone(), row);
+    }
+    Ok(existing)
+}
+
+/// An apply or session start must account for every durable row exactly once.
+/// This also rejects a plan made before a later ACK or alarm transition.
+fn verify_accounting(
+    existing: &BTreeMap<String, LastRow>,
+    survivors: &[LastRow],
+    ended: &[EventWrite],
+) -> Result<(), AlarmDbError> {
+    let mut accounted = std::collections::HashSet::new();
+    for row in survivors {
+        let saved = existing
+            .get(&row.condition_id)
+            .ok_or(AlarmDbError::InvalidRow)?;
+        if !accounted.insert(&row.condition_id)
+            || saved.evaluation_hash != row.evaluation_hash
+            || saved.endpoint != row.endpoint
+            || saved.state != row.state
+            || saved.last_event_seq != row.last_event_seq
+        {
+            return Err(AlarmDbError::InvalidRow);
+        }
+    }
+    for event in ended {
+        let id = event
+            .condition_id
+            .as_ref()
+            .ok_or(AlarmDbError::InvalidRow)?;
+        let saved = existing.get(id).ok_or(AlarmDbError::InvalidRow)?;
+        if !accounted.insert(id)
+            || !matches!(
+                event.kind.as_str(),
+                "definitionChanged" | "definitionDeleted" | "connectionChanged"
+            )
+            || event.detail["previous"] != serde_json::to_value(&saved.state)?
+            || event.detail["unacked"] != json!(!saved.state.acked)
+        {
+            return Err(AlarmDbError::InvalidRow);
+        }
+    }
+    if accounted.len() != existing.len() {
+        return Err(AlarmDbError::InvalidRow);
+    }
+    Ok(())
 }
 
 async fn require_session(
