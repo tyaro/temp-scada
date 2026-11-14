@@ -317,6 +317,7 @@ impl Engine {
             },
             ids,
             events: Vec::new(),
+            expired_at_wall_ms: None,
         };
         let mut next: BTreeMap<String, Option<ConditionState>> = BTreeMap::new();
         let mut engine_unavailable = self.unavailable;
@@ -368,6 +369,18 @@ impl Engine {
             }
             Input::EngineAvailability { unavailable } => {
                 if *unavailable != self.unavailable {
+                    for (id, condition) in &self.conditions {
+                        let mut state = condition.state.clone();
+                        // 満了の時刻を過ぎた待ちは、持っている値で先に満了させる。
+                        work.settle_due(id, &condition.spec, &mut state);
+                        state.timer = None;
+                        if unavailable.is_none() {
+                            // 持っていた値では判定しない。次の値が届くまで初期値待ち（§4.5）。
+                            state.unavailable = Some(Unavailable::InitialValue);
+                            state.observation = None;
+                        }
+                        next.insert(id.clone(), Some(state));
+                    }
                     if let Some(old) = self.unavailable {
                         work.push(None, EventKind::EngineUnavailableEnded { reason: old });
                     }
@@ -376,16 +389,6 @@ impl Engine {
                             None,
                             EventKind::EngineUnavailableStarted { reason: *reason },
                         );
-                    }
-                    for (id, condition) in &self.conditions {
-                        let mut state = condition.state.clone();
-                        state.timer = None;
-                        if unavailable.is_none() {
-                            // 持っていた値では判定しない。次の値が届くまで初期値待ち（§4.5）。
-                            state.unavailable = Some(Unavailable::InitialValue);
-                            state.observation = None;
-                        }
-                        next.insert(id.clone(), Some(state));
                     }
                     engine_unavailable = *unavailable;
                 }
@@ -413,8 +416,8 @@ impl Engine {
                     .conditions
                     .get(condition)
                     .ok_or_else(|| StepError::UnknownCondition(condition.clone()))?;
-                // 値が届いた・待ちを始めた・復元した condition には当てない（発生待ちの間も）。
-                if current.state != ConditionState::initial() {
+                // 値を受けた・復元した condition には当てない（発生待ちの間・Normal の行の復元の後も）。
+                if current.state.started {
                     return Err(StepError::AlreadyStarted(condition.clone()));
                 }
                 if (row.active || !row.acked) && row.occurrence.is_none() {
@@ -431,6 +434,7 @@ impl Engine {
                     order_key: row.order_key,
                     occurred_at_ms: row.occurred_at_ms,
                     observation: None,
+                    started: true,
                 };
                 next.insert(condition.clone(), Some(state));
             }
@@ -478,6 +482,8 @@ struct Work<'a> {
     order_key: OrderKey,
     ids: &'a mut dyn OccurrenceIds,
     events: Vec<Event>,
+    /// 遅れて満了させる待ちのイベントに付ける、満了の時刻の壁時計。
+    expired_at_wall_ms: Option<i64>,
 }
 
 impl Work<'_> {
@@ -491,12 +497,27 @@ impl Work<'_> {
             None => (None, None, None),
         };
         self.events.push(Event {
-            at_wall_ms: self.now.wall_ms,
+            at_wall_ms: self.wall_ms(),
             condition,
             occurrence,
             recurrence,
             kind,
         });
+    }
+
+    fn wall_ms(&self) -> i64 {
+        self.expired_at_wall_ms.unwrap_or(self.now.wall_ms)
+    }
+
+    /// 満了の時刻を過ぎた待ちを、持っている値で満了させる。タイマーの入力より先に次の値や
+    /// Engine 単位の評価不能が届いても、満了の時刻までに確定していた発生・復帰を失わない。
+    fn settle_due(&mut self, id: &str, spec: &ConditionSpec, state: &mut ConditionState) {
+        if state
+            .timer
+            .is_some_and(|timer| timer.due_ms() <= self.now.mono_ms)
+        {
+            self.expire(id, spec, state);
+        }
     }
 
     fn value(
@@ -506,6 +527,8 @@ impl Work<'_> {
         state: &mut ConditionState,
         sample: &Sample,
     ) {
+        state.started = true;
+        self.settle_due(id, spec, state);
         match classify(spec, sample) {
             Err(reason) => {
                 state.timer = None;
@@ -570,18 +593,28 @@ impl Work<'_> {
     }
 
     fn expire(&mut self, id: &str, spec: &ConditionSpec, state: &mut ConditionState) {
-        match state.timer.take() {
-            Some(Timer::OnDelay { .. }) => self.occur(id, spec, state),
-            Some(Timer::OffDelay { .. }) => self.return_to_normal(id, spec, state),
-            None => {}
+        let Some(timer) = state.timer.take() else {
+            return;
+        };
+        // イベントの時刻は満了の時刻（壁時計へ単調時計の遅れを引いて換算する）。
+        let late = self.now.mono_ms.saturating_sub(timer.due_ms());
+        self.expired_at_wall_ms = Some(
+            self.now
+                .wall_ms
+                .saturating_sub(i64::try_from(late).unwrap_or(i64::MAX)),
+        );
+        match timer {
+            Timer::OnDelay { .. } => self.occur(id, spec, state),
+            Timer::OffDelay { .. } => self.return_to_normal(id, spec, state),
         }
+        self.expired_at_wall_ms = None;
     }
 
     fn occur(&mut self, id: &str, spec: &ConditionSpec, state: &mut ConditionState) {
         let judgement = judgement(spec, state);
         state.active = true;
         state.order_key = Some(self.order_key);
-        state.occurred_at_ms = Some(self.now.wall_ms);
+        state.occurred_at_ms = Some(self.wall_ms());
         if state.acked {
             // 確認済みから発生: 新しい回。
             state.occurrence = Some(self.ids.next_occurrence());

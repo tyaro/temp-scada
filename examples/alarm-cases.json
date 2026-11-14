@@ -568,12 +568,48 @@
       ]
     },
     {
-      "name": "on delay の満了の時刻を過ぎた値は、タイマーを待たずにその値で発生する",
+      "name": "満了の時刻を過ぎて値・評価不能が届いたら、先に持っている値で満了させてから判定する",
       "conditions": {
-        "t:hh": {
+        "a": {
           "source": {
             "kind": "threshold",
-            "tag": "T",
+            "tag": "A",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 1000
+        },
+        "b": {
+          "source": {
+            "kind": "threshold",
+            "tag": "B",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 1000
+        },
+        "c": {
+          "source": {
+            "kind": "threshold",
+            "tag": "C",
+            "limit": "hh",
+            "value": 95
+          },
+          "offDelayMs": 1000
+        },
+        "d": {
+          "source": {
+            "kind": "threshold",
+            "tag": "D",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 1000
+        },
+        "e": {
+          "source": {
+            "kind": "threshold",
+            "tag": "E",
             "limit": "hh",
             "value": 95
           },
@@ -583,19 +619,215 @@
       "steps": [
         {
           "at": 0,
-          "input": { "kind": "value", "tag": "T", "value": 96 },
-          "states": { "t:hh": { "display": "pending" } }
+          "input": {
+            "kind": "value",
+            "tag": "A",
+            "value": 96
+          },
+          "states": {
+            "a": {
+              "display": "pending"
+            }
+          }
         },
         {
-          "at": 1500,
-          "input": { "kind": "value", "tag": "T", "value": 97 },
+          "at": 0,
+          "input": {
+            "kind": "value",
+            "tag": "B",
+            "value": 96
+          }
+        },
+        {
+          "at": 0,
+          "input": {
+            "kind": "value",
+            "tag": "D",
+            "value": 96
+          }
+        },
+        {
+          "at": 0,
+          "input": {
+            "kind": "value",
+            "tag": "E",
+            "value": 96
+          }
+        },
+        {
+          "at": 0,
+          "input": {
+            "kind": "value",
+            "tag": "C",
+            "value": 96
+          },
           "events": [
             {
               "kind": "occurred",
-              "condition": "t:hh",
-              "judgement": { "value": 97 }
+              "condition": "c",
+              "occurrence": "occ-1"
             }
           ]
+        },
+        {
+          "at": 100,
+          "input": {
+            "kind": "value",
+            "tag": "C",
+            "value": 90
+          },
+          "states": {
+            "c": {
+              "timer": {
+                "kind": "offDelay",
+                "dueMs": 1100
+              }
+            }
+          }
+        },
+        {
+          "at": 1500,
+          "input": {
+            "kind": "value",
+            "tag": "A",
+            "value": 97
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "a",
+              "occurrence": "occ-2",
+              "atWallMs": 1700000001000,
+              "judgement": {
+                "value": 96
+              }
+            }
+          ],
+          "states": {
+            "a": {
+              "display": "activeUnacked",
+              "occurredAtMs": 1700000001000,
+              "timer": null
+            }
+          }
+        },
+        {
+          "at": 1500,
+          "input": {
+            "kind": "value",
+            "tag": "B",
+            "value": 90
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "b",
+              "atWallMs": 1700000001000,
+              "judgement": {
+                "value": 96
+              }
+            },
+            {
+              "kind": "returned",
+              "condition": "b",
+              "atWallMs": 1700000001500,
+              "judgement": {
+                "value": 90
+              }
+            }
+          ],
+          "states": {
+            "b": {
+              "display": "returnedUnacked"
+            }
+          }
+        },
+        {
+          "at": 1500,
+          "input": {
+            "kind": "value",
+            "tag": "D",
+            "quality": "bad"
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "d",
+              "atWallMs": 1700000001000
+            },
+            {
+              "kind": "unavailableStarted",
+              "condition": "d",
+              "reason": "bad",
+              "atWallMs": 1700000001500
+            }
+          ],
+          "states": {
+            "d": {
+              "display": "activeUnacked",
+              "unavailable": "bad"
+            }
+          }
+        },
+        {
+          "at": 2000,
+          "input": {
+            "kind": "value",
+            "tag": "C",
+            "value": 96
+          },
+          "events": [
+            {
+              "kind": "returned",
+              "condition": "c",
+              "occurrence": "occ-1",
+              "atWallMs": 1700000001100,
+              "judgement": {
+                "value": 90
+              }
+            },
+            {
+              "kind": "reoccurred",
+              "condition": "c",
+              "occurrence": "occ-1",
+              "recurrence": 1,
+              "atWallMs": 1700000002000,
+              "judgement": {
+                "value": 96
+              }
+            }
+          ],
+          "states": {
+            "c": {
+              "display": "activeUnacked",
+              "recurrence": 1
+            }
+          }
+        },
+        {
+          "at": 2500,
+          "input": {
+            "kind": "engine",
+            "unavailable": "disconnected"
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "e",
+              "atWallMs": 1700000001000
+            },
+            {
+              "kind": "engineUnavailableStarted",
+              "reason": "disconnected",
+              "atWallMs": 1700000002500
+            }
+          ],
+          "states": {
+            "e": {
+              "display": "activeUnacked",
+              "timer": null
+            }
+          }
         }
       ]
     },
@@ -2000,6 +2232,14 @@
             "limit": "hh",
             "value": 95
           }
+        },
+        "g": {
+          "source": {
+            "kind": "threshold",
+            "tag": "G",
+            "limit": "hh",
+            "value": 95
+          }
         }
       },
       "steps": [
@@ -2152,6 +2392,26 @@
             { "kind": "autoAcked", "condition": "d" }
           ],
           "states": { "d": { "display": "normal" } }
+        },
+        {
+          "at": 0,
+          "input": {
+            "kind": "restore",
+            "condition": "g",
+            "row": { "active": false, "acked": true }
+          },
+          "states": {
+            "g": { "display": "normal", "unavailable": "initialValue" }
+          }
+        },
+        {
+          "at": 0,
+          "input": {
+            "kind": "restore",
+            "condition": "g",
+            "row": { "active": true, "occurrence": "prev-6", "acked": false }
+          },
+          "error": "alreadyStarted"
         },
         {
           "at": 600,

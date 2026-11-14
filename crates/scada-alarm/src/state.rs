@@ -134,6 +134,9 @@ pub struct ConditionState {
     pub occurred_at_ms: Option<i64>,
     /// いまの判定に使っている値（イベントに残す）。評価不能のあいだは無い。
     pub observation: Option<Observation>,
+    /// 値を受けたか復元したか。復元は、どちらもしていない condition にだけ当てる。
+    #[serde(skip)]
+    pub(crate) started: bool,
 }
 
 impl ConditionState {
@@ -150,6 +153,7 @@ impl ConditionState {
             order_key: None,
             occurred_at_ms: None,
             observation: None,
+            started: false,
         }
     }
 
