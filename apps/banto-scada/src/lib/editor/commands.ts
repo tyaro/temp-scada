@@ -5,6 +5,7 @@ import type { PaintAlphaPatch } from "../selection-paint-alpha";
 import type { EquipmentSlot, EquipmentBinding, SlotType } from "../equipment";
 import type { BindingTableChange } from "../equipment-binding-table";
 import type { TrendDefinition } from "../trend-definitions";
+import type { AlarmDefinition } from "../alarms";
 import type { DesiredRecordingPlan } from "../recording-plan";
 import type { ImageFit } from "../image-fit";
 import type { ImageCrop } from "../image-crop";
@@ -401,6 +402,12 @@ export type ProjectCommand =
         footerScreenId?: string;
       };
     }
+  /** 警報の定義。追加は呼び出し側で id を決める（追加した行を選ぶため）。 */
+  | { type: "add-alarm-definition"; definition: AlarmDefinition }
+  | { type: "update-alarm-definition"; definition: AlarmDefinition }
+  | { type: "duplicate-alarm-definition"; definitionId: string; id: string }
+  | { type: "remove-alarm-definition"; definitionId: string }
+  | { type: "set-alarm-blink"; blinkUnacked: boolean }
   | ({ type: "replace-binding-reference" } & BindingReplacementRequest)
   | EquipmentCommand;
 export type SymbolCommand =
@@ -518,6 +525,11 @@ const commandScopes = {
   remove: "object",
   "update-project": "project",
   "set-operator-frame": "project",
+  "add-alarm-definition": "project",
+  "update-alarm-definition": "project",
+  "duplicate-alarm-definition": "project",
+  "remove-alarm-definition": "project",
+  "set-alarm-blink": "project",
   "replace-binding-reference": "project",
   "create-equipment-type": "project",
   "update-equipment-type": "project",

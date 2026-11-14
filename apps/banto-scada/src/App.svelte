@@ -117,6 +117,8 @@
   } from "./lib/designer/forms/object-form";
   import { screenFormCommand } from "./lib/designer/forms/screen-form";
   import { operatorFrameFormCommand } from "./lib/designer/forms/operator-frame-form";
+  import { alarmDefinitionFormCommand } from "./lib/designer/forms/alarm-definition-form";
+  import AlarmSettings from "./lib/designer/AlarmSettings.svelte";
   import {
     projectFormCommand,
     acknowledgeProjectForm,
@@ -295,9 +297,13 @@
       revealScreenSettings = true;
       setInspectorVisibility(true);
     } else if (
-      ["project", "operator-frame", "equipment", "equipment-type"].includes(
-        form.dataset.editorForm ?? "",
-      )
+      [
+        "project",
+        "operator-frame",
+        "alarm-definition",
+        "equipment",
+        "equipment-type",
+      ].includes(form.dataset.editorForm ?? "")
     ) {
       setAuxPanelVisibility({ sidebar: true });
       activePanel = "project";
@@ -2919,6 +2925,17 @@
     if (form.dataset.editorForm === "project") return projectFormCommand(data);
     if (form.dataset.editorForm === "operator-frame")
       return operatorFrameFormCommand(data);
+    if (form.dataset.editorForm === "alarm-definition") {
+      const base = project.alarms?.definitions.find(
+        (row) => row.id === form.dataset.alarmId,
+      );
+      if (!base) throw new Error("警報の定義が見つかりません");
+      return alarmDefinitionFormCommand(
+        data,
+        base,
+        catalogSelection.available ? catalogSelection.catalog.tags : undefined,
+      );
+    }
     if (form.dataset.editorForm === "screen")
       return screenFormCommand(data, {
         screenId: screen.id,
@@ -4149,6 +4166,18 @@
                   >
                 </form>
               {/key}
+              <h2>警報の設定</h2>
+              <AlarmSettings
+                {project}
+                generation={workspaceGeneration}
+                {drafts}
+                disabled={editBlocked}
+                tagNames={catalogSelection.available
+                  ? catalogSelection.catalog.tags.map((tag) => tag.externalName)
+                  : []}
+                oncommand={(command) => edit(command)}
+                onsubmit={submitForm}
+              />
               <h2>画面管理</h2>
               <button
                 disabled={project.screens.length >= 100}

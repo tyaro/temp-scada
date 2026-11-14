@@ -2,6 +2,7 @@ import { normalizeOperatorFrame } from "../operator-frame";
 import { applyBindingReplacement } from "../binding-replacement";
 import { applyEquipmentCommand } from "./equipment-handler";
 import { applyTrendCommand } from "./trend-handler";
+import { applyAlarmCommand } from "./alarm-handler";
 import { applyRecordingPlanCommand } from "./recording-plan-handler";
 import type { Project } from "../project";
 import type { ProjectCommand } from "./commands";
@@ -35,6 +36,13 @@ export function applyProjectCommand(
       else delete next.operatorFrame;
       return;
     }
+    case "add-alarm-definition":
+    case "update-alarm-definition":
+    case "duplicate-alarm-definition":
+    case "remove-alarm-definition":
+    case "set-alarm-blink":
+      applyAlarmCommand(next, command);
+      return;
     default:
       return applyEquipmentCommand(next, command);
   }
