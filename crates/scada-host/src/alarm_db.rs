@@ -9,6 +9,7 @@ use scada_alarm::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
 
@@ -16,6 +17,7 @@ use crate::alarm_terminal::AlarmTerminal;
 use crate::durable;
 
 const FORMAT: i64 = 1;
+const END_EVENT_KIND: &str = "ended";
 
 #[derive(Debug)]
 pub enum AlarmDbError {
@@ -57,6 +59,8 @@ pub struct AppliedDefinitions {
     pub definitions: Value,
     /// Evaluation hashes of the enabled conditions derived from `definitions`.
     pub condition_hashes: BTreeMap<String, String>,
+    /// Disabled condition ids derived from the same validated definitions.
+    pub disabled_condition_ids: BTreeSet<String>,
     /// Display information frozen into each condition event at write time.
     pub displays: BTreeMap<String, ConditionDisplay>,
 }
@@ -107,7 +111,15 @@ pub struct EventRead {
 #[derive(Clone, Debug, PartialEq)]
 pub struct Definition {
     pub spec: ConditionSpec,
-    pub evaluation_hash: String,
+}
+
+impl Definition {
+    pub fn evaluation_hash(&self) -> String {
+        format!(
+            "{:x}",
+            Sha256::digest(self.spec.evaluation_key().as_bytes())
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -154,10 +166,12 @@ pub fn plan_restore(
     if applied.endpoint != endpoint {
         return Err(RestoreError::EndpointMismatch);
     }
-    if definitions.len() != applied.condition_hashes.len()
-        || definitions.iter().any(|(id, definition)| {
-            applied.condition_hashes.get(id) != Some(&definition.evaluation_hash)
-        })
+    let definition_hashes: BTreeMap<_, _> = definitions
+        .iter()
+        .map(|(id, definition)| (id.clone(), definition.evaluation_hash()))
+        .collect();
+    if definition_hashes != applied.condition_hashes
+        || disabled != &applied.disabled_condition_ids
         || disabled.iter().any(|id| definitions.contains_key(id))
     {
         return Err(RestoreError::DefinitionMismatch);
@@ -171,11 +185,8 @@ pub fn plan_restore(
     let mut restored = Vec::new();
     let mut ended = Vec::new();
     for row in previous {
-        let definition = definitions.get(&row.condition_id);
-        if row.endpoint == endpoint
-            && definition
-                .is_some_and(|definition| definition.evaluation_hash == row.evaluation_hash)
-        {
+        let definition = definition_hashes.get(&row.condition_id);
+        if row.endpoint == endpoint && definition.is_some_and(|hash| *hash == row.evaluation_hash) {
             let mut requested_occurrence = false;
             let transition = engine.step(
                 Now {
@@ -219,7 +230,7 @@ pub fn plan_restore(
         engine,
         restored,
         ended,
-        definition_hashes: applied.condition_hashes.clone(),
+        definition_hashes,
         endpoint: endpoint.into(),
     })
 }
@@ -370,10 +381,39 @@ impl AlarmDb {
         if applied.condition_hashes.keys().ne(applied.displays.keys()) {
             return Err(AlarmDbError::InvalidRow);
         }
+        if applied
+            .disabled_condition_ids
+            .iter()
+            .any(|id| applied.condition_hashes.contains_key(id))
+        {
+            return Err(AlarmDbError::InvalidRow);
+        }
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let existing = load_existing(&mut tx).await?;
         let displays = load_displays(&mut tx).await?;
         verify_accounting(&existing, survivors, ended)?;
+        for event in ended {
+            let id = event
+                .condition_id
+                .as_deref()
+                .ok_or(AlarmDbError::InvalidRow)?;
+            let saved = existing.get(id).ok_or(AlarmDbError::InvalidRow)?;
+            let valid_reason = if saved.endpoint != applied.endpoint {
+                event.kind == "connectionChanged"
+            } else {
+                match applied.condition_hashes.get(id) {
+                    Some(hash) if hash == &saved.evaluation_hash => false,
+                    Some(_) => event.kind == "definitionChanged",
+                    None if applied.disabled_condition_ids.contains(id) => {
+                        event.kind == "definitionChanged"
+                    }
+                    None => event.kind == "definitionDeleted",
+                }
+            };
+            if !valid_reason {
+                return Err(AlarmDbError::InvalidRow);
+            }
+        }
         for row in survivors {
             if row.endpoint != applied.endpoint
                 || applied.condition_hashes.get(&row.condition_id) != Some(&row.evaluation_hash)
@@ -433,6 +473,9 @@ impl AlarmDb {
         at_ms: i64,
     ) -> Result<Engine, AlarmDbError> {
         let session = plan.engine.session().clone();
+        self._terminal
+            .claim_generation(session.generation)
+            .map_err(|_| AlarmDbError::InvalidRow)?;
         self.start_session_inner(
             &session,
             at_ms,
@@ -600,7 +643,8 @@ impl AlarmDb {
                 || changed_ids.contains(id)
                 || !existing.contains_key(id)
                 || !events.iter().any(|event| {
-                    event.condition_id.as_deref() == Some(id.as_str()) && event.kind == "ended"
+                    event.condition_id.as_deref() == Some(id.as_str())
+                        && event.kind == END_EVENT_KIND
                 })
             {
                 return Err(AlarmDbError::InvalidRow);
@@ -888,6 +932,17 @@ fn verify_accounting(
     Ok(())
 }
 
+fn allows_historical_display(kind: &str) -> bool {
+    matches!(
+        kind,
+        "definitionChanged"
+            | "definitionDeleted"
+            | "connectionChanged"
+            | "previousSessionState"
+            | "stoppedState"
+    )
+}
+
 async fn require_session(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     session: &Session,
@@ -915,8 +970,16 @@ async fn insert_event(
     displays: &BTreeMap<String, ConditionDisplay>,
 ) -> Result<i64, AlarmDbError> {
     let display = if let Some(id) = &event.condition_id {
-        let display = displays.get(id).ok_or(AlarmDbError::InvalidRow)?;
-        Some(serde_json::to_string(display)?)
+        match displays.get(id) {
+            Some(display) => Some(serde_json::to_string(display)?),
+            None if allows_historical_display(&event.kind) => {
+                sqlx::query_scalar("SELECT display FROM event WHERE condition_id = ? AND display IS NOT NULL ORDER BY seq DESC LIMIT 1")
+                    .bind(id)
+                    .fetch_optional(&mut **tx)
+                    .await?
+            }
+            None => return Err(AlarmDbError::InvalidRow),
+        }
     } else {
         None
     };

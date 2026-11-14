@@ -33,6 +33,8 @@ pub struct PendingSwitch {
 struct Settings {
     version: u32,
     last_generation: u64,
+    #[serde(skip)]
+    pending_generation: Option<u64>,
     monitored: Option<MonitoredProject>,
     switching: Option<PendingSwitch>,
 }
@@ -77,6 +79,7 @@ impl AlarmTerminal {
             None => Settings {
                 version: VERSION,
                 last_generation: 0,
+                pending_generation: None,
                 monitored: None,
                 switching: None,
             },
@@ -99,6 +102,7 @@ impl AlarmTerminal {
             .ok_or(TerminalError::Exhausted)?;
         let mut updated = settings.clone();
         updated.last_generation = next;
+        updated.pending_generation = Some(next);
         let bytes = serde_json::to_vec(&updated).map_err(|_| TerminalError::Save)?;
         durable::replace(&self.data_dir.join(SETTINGS_FILE), &bytes)
             .map_err(|_| TerminalError::Save)?;
@@ -126,6 +130,17 @@ impl AlarmTerminal {
 
     pub(crate) fn data_dir(&self) -> &Path {
         &self.data_dir
+    }
+
+    /// Spend a number reserved by this process exactly once. A failed DB
+    /// transaction leaves a gap; a restarted process must reserve again.
+    pub(crate) fn claim_generation(&self, generation: u64) -> Result<(), TerminalError> {
+        let mut settings = self.settings.lock().map_err(|_| TerminalError::Corrupt)?;
+        if settings.pending_generation != Some(generation) {
+            return Err(TerminalError::Lost);
+        }
+        settings.pending_generation = None;
+        Ok(())
     }
 
     /// The later apply boundary uses this to publish an A→B decision.

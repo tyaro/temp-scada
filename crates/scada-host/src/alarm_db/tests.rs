@@ -22,6 +22,7 @@ fn applied(id: &str, hash: &str) -> AppliedDefinitions {
         applied_at_ms: 100,
         definitions: json!({"definitions": []}),
         condition_hashes: BTreeMap::from([("condition:hh".into(), "eval-hash".into())]),
+        disabled_condition_ids: BTreeSet::new(),
         displays: BTreeMap::from([(
             "condition:hh".into(),
             ConditionDisplay {
@@ -76,6 +77,7 @@ fn disabled_condition_ends_as_definition_change() {
     let mut applied = applied(&project_id(), "applied");
     applied.condition_hashes.clear();
     applied.displays.clear();
+    applied.disabled_condition_ids.insert("condition:hh".into());
     let plan = plan_restore(
         Session {
             id: "new".into(),
@@ -90,6 +92,40 @@ fn disabled_condition_ends_as_definition_change() {
     )
     .unwrap();
     assert_eq!(plan.ended()[0].kind, "definitionChanged");
+}
+
+#[test]
+fn restore_rejects_a_hash_that_does_not_match_the_spec() {
+    let applied = applied(&project_id(), "old");
+    let definitions = BTreeMap::from([(
+        "condition:hh".into(),
+        Definition {
+            spec: ConditionSpec {
+                source: Source::Bit {
+                    tag: "PLANT.FLAG".into(),
+                    active_when: true,
+                },
+                on_delay_ms: 0,
+                off_delay_ms: 0,
+                ack_mode: AckMode::Manual,
+            },
+        },
+    )]);
+    assert!(matches!(
+        plan_restore(
+            Session {
+                id: "next".into(),
+                generation: 1
+            },
+            &applied.endpoint,
+            100,
+            &applied,
+            &definitions,
+            &BTreeSet::new(),
+            &[],
+        ),
+        Err(RestoreError::DefinitionMismatch)
+    ));
 }
 
 #[tokio::test]
@@ -116,8 +152,47 @@ async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
         &[],
     )
     .unwrap();
+    assert!(matches!(
+        db.start_session_plan(plan, 100).await,
+        Err(AlarmDbError::InvalidRow)
+    ));
+    assert!(db.session().await.unwrap().is_none());
+    assert_eq!(terminal.reserve_generation().unwrap(), 1);
+    let plan = plan_restore(
+        first.clone(),
+        &empty.endpoint,
+        100,
+        &empty,
+        &BTreeMap::new(),
+        &BTreeSet::new(),
+        &[],
+    )
+    .unwrap();
     let engine = db.start_session_plan(plan, 100).await.unwrap();
     assert_eq!(engine.session(), &first);
+    let other_id = project_id();
+    let other_db = AlarmDb::open(terminal.clone(), &other_id).await.unwrap();
+    let mut other_applied = empty.clone();
+    other_applied.project_id = other_id;
+    other_db
+        .apply(&other_applied, None, &[], &[])
+        .await
+        .unwrap();
+    let reused = plan_restore(
+        first.clone(),
+        &other_applied.endpoint,
+        110,
+        &other_applied,
+        &BTreeMap::new(),
+        &BTreeSet::new(),
+        &[],
+    )
+    .unwrap();
+    assert!(matches!(
+        other_db.start_session_plan(reused, 110).await,
+        Err(AlarmDbError::InvalidRow)
+    ));
+    other_db.close().await;
     let second = Session {
         id: "second".into(),
         generation: 2,
@@ -132,6 +207,7 @@ async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
         &[],
     )
     .unwrap();
+    assert_eq!(terminal.reserve_generation().unwrap(), 2);
     db.apply(&applied(&id, "new"), Some(&first), &[], &[])
         .await
         .unwrap();
@@ -140,6 +216,82 @@ async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
         Err(AlarmDbError::InvalidRow)
     ));
     assert_eq!(db.session().await.unwrap().unwrap().session, first);
+    db.close().await;
+    drop(terminal);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test]
+async fn removed_condition_restores_from_db_and_keeps_its_last_display() {
+    let dir = temp_dir();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+    let id = project_id();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
+    let original = applied(&id, "original");
+    db.apply(&original, None, &[], &[]).await.unwrap();
+    assert_eq!(terminal.reserve_generation().unwrap(), 1);
+    let old = Session {
+        id: "old".into(),
+        generation: 1,
+    };
+    db.start_session(&old, 100, &[], &[]).await.unwrap();
+    db.append(
+        &old,
+        &[EventWrite {
+            at_ms: 110,
+            condition_id: Some("condition:hh".into()),
+            kind: "activated".into(),
+            detail: Value::Null,
+        }],
+        &[state("old")],
+        &[],
+        None,
+    )
+    .await
+    .unwrap();
+    // A formerly applied definition with a durable row but no current
+    // definition can be found after recovery from an older data format.
+    let mut current = original.clone();
+    current.condition_hashes.clear();
+    current.displays.clear();
+    let mut tx = db.pool.begin_with("BEGIN IMMEDIATE").await.unwrap();
+    sqlx::query("UPDATE applied SET body = ? WHERE id = 1")
+        .bind(serde_json::to_string(&current).unwrap())
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+
+    let saved = db.applied().await.unwrap().unwrap();
+    let next = Session {
+        id: "next".into(),
+        generation: terminal.reserve_generation().unwrap(),
+    };
+    let plan = plan_restore(
+        next.clone(),
+        &saved.endpoint,
+        200,
+        &saved,
+        &BTreeMap::new(),
+        &BTreeSet::new(),
+        &db.last_states().await.unwrap(),
+    )
+    .unwrap();
+    assert_eq!(plan.ended()[0].kind, "definitionDeleted");
+    let engine = db.start_session_plan(plan, 200).await.unwrap();
+    assert_eq!(engine.session(), &next);
+    assert!(db.last_states().await.unwrap().is_empty());
+    let events = db.events().await.unwrap();
+    let ended = events
+        .iter()
+        .find(|event| event.event.kind == "definitionDeleted")
+        .unwrap();
+    assert_eq!(ended.display.as_ref().unwrap().name, "T-101");
+    let evidence = events
+        .iter()
+        .find(|event| event.event.kind == "previousSessionState")
+        .unwrap();
+    assert_eq!(evidence.display.as_ref().unwrap().name, "T-101");
     db.close().await;
     drop(terminal);
     std::fs::remove_dir_all(dir).unwrap();
@@ -269,10 +421,7 @@ async fn failed_apply_leaves_definition_events_and_states_together() {
     let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
     let id = project_id();
     let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
-    let mut original = applied(&id, "original");
-    original
-        .condition_hashes
-        .insert("condition:hh".into(), "eval-hash".into());
+    let original = applied(&id, "original");
     db.apply(&original, None, &[], &[]).await.unwrap();
     let session = Session {
         id: "session-1".into(),
@@ -283,13 +432,32 @@ async fn failed_apply_leaves_definition_events_and_states_together() {
     db.append(&session, &[], std::slice::from_ref(&row), &[], None)
         .await
         .unwrap();
+    assert!(matches!(
+        db.apply(
+            &original,
+            Some(&session),
+            &[EventWrite {
+                at_ms: 150,
+                condition_id: Some(row.condition_id.clone()),
+                kind: "definitionDeleted".into(),
+                detail: json!({"unacked": true, "previous": row.state.clone()}),
+            }],
+            &[],
+        )
+        .await,
+        Err(AlarmDbError::InvalidRow)
+    ));
     sqlx::query("CREATE TRIGGER fail_candidate BEFORE UPDATE ON applied BEGIN SELECT RAISE(ABORT, 'full'); END")
         .execute(&db.pool)
         .await
         .unwrap();
+    let mut candidate = applied(&id, "candidate");
+    candidate
+        .condition_hashes
+        .insert("condition:hh".into(), "new-hash".into());
     assert!(db
         .apply(
-            &applied(&id, "candidate"),
+            &candidate,
             Some(&session),
             &[EventWrite {
                 at_ms: 200,
@@ -553,8 +721,30 @@ async fn stopped_session_can_apply_and_attribute_ended_rows_to_it() {
         .await
         .unwrap();
     db.stop_session(&session, 150).await.unwrap();
+    let mut next = applied(&id, "next");
+    next.condition_hashes.clear();
+    next.displays.clear();
+    let mut disabled = next.clone();
+    disabled
+        .disabled_condition_ids
+        .insert("condition:hh".into());
+    assert!(matches!(
+        db.apply(
+            &disabled,
+            None,
+            &[EventWrite {
+                at_ms: 190,
+                condition_id: Some(row.condition_id.clone()),
+                kind: "definitionDeleted".into(),
+                detail: json!({"unacked": true, "previous": row.state.clone()}),
+            }],
+            &[],
+        )
+        .await,
+        Err(AlarmDbError::InvalidRow)
+    ));
     db.apply(
-        &applied(&id, "next"),
+        &next,
         None,
         &[EventWrite {
             at_ms: 200,
@@ -612,13 +802,16 @@ async fn interrupted_old_project_closes_without_a_new_session_before_later_apply
         .any(|event| event.event.kind == "previousSessionState"));
     let mut candidate = applied(&id, "candidate");
     candidate.displays.get_mut("condition:hh").unwrap().name = "改名後".into();
+    candidate
+        .condition_hashes
+        .insert("condition:hh".into(), "new-hash".into());
     db.apply(
         &candidate,
         None,
         &[EventWrite {
             at_ms: 220,
             condition_id: Some(row.condition_id),
-            kind: "definitionDeleted".into(),
+            kind: "definitionChanged".into(),
             detail: json!({"unacked": true, "previous": row.state}),
         }],
         &[],
@@ -660,19 +853,12 @@ async fn restore_keeps_only_matching_hash_and_endpoint() {
     let id = project_id();
     let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
     let mut original = applied(&id, "original");
-    original
-        .condition_hashes
-        .insert("condition:hh".into(), "eval-hash".into());
     let display = original.displays["condition:hh"].clone();
     original.displays.insert("changed".into(), display.clone());
     original.displays.insert("wrong-endpoint".into(), display);
     original
         .condition_hashes
         .insert("changed".into(), "old-hash".into());
-    original
-        .condition_hashes
-        .insert("wrong-endpoint".into(), "eval-hash".into());
-    db.apply(&original, None, &[], &[]).await.unwrap();
     let spec = ConditionSpec {
         source: Source::Bit {
             tag: "PLANT.FLAG".into(),
@@ -682,35 +868,43 @@ async fn restore_keeps_only_matching_hash_and_endpoint() {
         off_delay_ms: 0,
         ack_mode: AckMode::Manual,
     };
+    let hash = Definition { spec: spec.clone() }.evaluation_hash();
+    original
+        .condition_hashes
+        .insert("condition:hh".into(), hash.clone());
+    original
+        .condition_hashes
+        .insert("wrong-endpoint".into(), hash.clone());
+    db.apply(&original, None, &[], &[]).await.unwrap();
     let mut definitions = BTreeMap::new();
-    definitions.insert(
-        "condition:hh".into(),
-        Definition {
-            spec: spec.clone(),
-            evaluation_hash: "eval-hash".into(),
+    definitions.insert("condition:hh".into(), Definition { spec: spec.clone() });
+    let changed_spec = ConditionSpec {
+        source: Source::Bit {
+            tag: "PLANT.FLAG".into(),
+            active_when: false,
         },
-    );
-    definitions.insert(
-        "changed".into(),
-        Definition {
-            spec,
-            evaluation_hash: "new-hash".into(),
-        },
-    );
+        ..spec
+    };
+    let changed_hash = Definition {
+        spec: changed_spec.clone(),
+    }
+    .evaluation_hash();
+    definitions.insert("changed".into(), Definition { spec: changed_spec });
     let mut changed = state("old");
     changed.condition_id = "changed".into();
     changed.evaluation_hash = "old-hash".into();
     let mut wrong_endpoint = state("old");
     wrong_endpoint.condition_id = "wrong-endpoint".into();
+    wrong_endpoint.evaluation_hash = hash.clone();
     wrong_endpoint.endpoint = "http://other:8722".into();
     let old = Session {
         id: "old".into(),
         generation: 1,
     };
     db.start_session(&old, 100, &[], &[]).await.unwrap();
-    db.append(&old, &[], &[state("old")], &[], None)
-        .await
-        .unwrap();
+    let mut matching = state("old");
+    matching.evaluation_hash = hash;
+    db.append(&old, &[], &[matching], &[], None).await.unwrap();
     // Simulate stale rows from an interrupted older version. Production append
     // refuses these, while the startup restore path still handles them.
     let mut tx = db.pool.begin_with("BEGIN IMMEDIATE").await.unwrap();
@@ -725,7 +919,7 @@ async fn restore_keeps_only_matching_hash_and_endpoint() {
     let mut current = original.clone();
     current
         .condition_hashes
-        .insert("changed".into(), "new-hash".into());
+        .insert("changed".into(), changed_hash);
     current.condition_hashes.remove("wrong-endpoint");
     current.displays.remove("wrong-endpoint");
     assert!(matches!(
