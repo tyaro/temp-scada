@@ -197,6 +197,7 @@
             required
             maxlength="1024"
             list={listId}
+            data-explicit-apply
             {disabled}
           /></label
         >

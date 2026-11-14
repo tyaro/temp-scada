@@ -175,6 +175,32 @@ test("alarm blink setting and empty settings are not saved", async ({
   expect(await save(page)).not.toHaveProperty("alarms");
 });
 
+test("changing an alarm tag asks before moving to another alarm", async ({
+  page,
+}) => {
+  await open(page);
+  const [first, second] = sample.alarms.definitions;
+  await table(page)
+    .getByRole("button", { name: `${first.name} を選ぶ`, exact: true })
+    .click();
+  const tag = details(page).getByLabel("タグの外部名", { exact: true });
+  await tag.fill(" " + first.source.tag + " ");
+  await table(page)
+    .getByRole("button", { name: `${second.name} を選ぶ`, exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "未適用の入力があります" });
+  await expect(dialog).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "適用して続行", exact: true })
+    .click();
+  await expect(table(page).locator("tr.selected")).toContainText(second.name);
+  expect(
+    (await save(page)).alarms.definitions.find(
+      (row: { id: string }) => row.id === first.id,
+    ).source.tag,
+  ).toBe(" " + first.source.tag + " ");
+});
+
 for (const theme of ["light", "dark"])
   test(`alarm settings stay readable in ${theme}`, async ({ page }) => {
     await open(page);

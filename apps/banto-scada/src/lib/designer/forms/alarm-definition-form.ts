@@ -40,8 +40,9 @@ export function alarmDefinitionFormCommand(
 ): EditCommand {
   const name = text(data, "name");
   if (!name) throw new Error("警報の名前を入力してください");
-  const tag = text(data, "tag");
-  if (!tag) throw new Error("タグの外部名を入力してください");
+  // タグの外部名は前後の空白も名前の一部なので、そのまま保存する（空かどうかだけ trim で見る）。
+  const tag = String(data.get("tag") ?? "");
+  if (!tag.trim()) throw new Error("タグの外部名を入力してください");
   const definition: AlarmDefinition = {
     id: base.id,
     name,

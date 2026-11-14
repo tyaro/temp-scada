@@ -162,6 +162,21 @@ describe("alarm definition form", () => {
     });
   });
 
+  it("keeps the external tag name exactly, including surrounding spaces", () => {
+    const values = alarmDefinitionFormValues(bit);
+    const command = alarmDefinitionFormCommand(
+      form({ ...values, tag: " PLANT.P201.FAULT " }),
+      bit,
+      [{ externalName: " PLANT.P201.FAULT ", type: "bit" }],
+    );
+    expect(command).toMatchObject({
+      definition: { source: { tag: " PLANT.P201.FAULT " } },
+    });
+    expect(() =>
+      alarmDefinitionFormCommand(form({ ...values, tag: "  " }), bit),
+    ).toThrow("タグの外部名を入力");
+  });
+
   it("reports input errors in Japanese", () => {
     const values = alarmDefinitionFormValues(threshold);
     expect(() =>
