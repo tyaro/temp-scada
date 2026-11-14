@@ -19,13 +19,13 @@ fn number(value: &Value) -> Option<f64> {
     value.as_f64()
 }
 
-/// expected の項目がすべて actual と等しいか（数値は f64 で比べる）。
+/// expected の項目がすべて actual にあり、等しいか（数値は f64 で比べる）。`null` を期待した
+/// 項目も、actual にその項目が無ければ合わない。
 fn subset(expected: &Value, actual: &Value) -> bool {
     match (expected, actual) {
-        (Value::Object(expected), Value::Object(actual)) => expected.iter().all(|(key, value)| {
-            let actual = actual.get(key).unwrap_or(&Value::Null);
-            subset(value, actual)
-        }),
+        (Value::Object(expected), Value::Object(actual)) => expected
+            .iter()
+            .all(|(key, value)| actual.get(key).is_some_and(|actual| subset(value, actual))),
         (Value::Array(expected), Value::Array(actual)) => {
             expected.len() == actual.len() && expected.iter().zip(actual).all(|(e, a)| subset(e, a))
         }

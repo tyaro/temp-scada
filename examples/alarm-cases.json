@@ -832,6 +832,178 @@
       ]
     },
     {
+      "name": "満了の時刻を過ぎた待ちは、ACK と定義の終了の前にも確定する",
+      "conditions": {
+        "f": {
+          "source": {
+            "kind": "threshold",
+            "tag": "F",
+            "limit": "hh",
+            "value": 95
+          },
+          "onDelayMs": 1000
+        },
+        "g": {
+          "source": {
+            "kind": "threshold",
+            "tag": "G",
+            "limit": "hh",
+            "value": 95
+          },
+          "offDelayMs": 1000,
+          "ackMode": "autoOnReturn"
+        },
+        "h": {
+          "source": {
+            "kind": "threshold",
+            "tag": "H",
+            "limit": "hh",
+            "value": 95
+          },
+          "offDelayMs": 1000
+        }
+      },
+      "steps": [
+        {
+          "at": 0,
+          "input": {
+            "kind": "value",
+            "tag": "F",
+            "value": 96
+          }
+        },
+        {
+          "at": 0,
+          "input": {
+            "kind": "value",
+            "tag": "G",
+            "value": 96
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "g",
+              "occurrence": "occ-1"
+            }
+          ]
+        },
+        {
+          "at": 0,
+          "input": {
+            "kind": "value",
+            "tag": "H",
+            "value": 96
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "h",
+              "occurrence": "occ-2"
+            }
+          ]
+        },
+        {
+          "at": 100,
+          "input": {
+            "kind": "value",
+            "tag": "G",
+            "value": 90
+          }
+        },
+        {
+          "at": 100,
+          "input": {
+            "kind": "value",
+            "tag": "H",
+            "value": 90
+          }
+        },
+        {
+          "at": 1500,
+          "input": {
+            "kind": "end",
+            "condition": "f",
+            "reason": "definitionChanged"
+          },
+          "events": [
+            {
+              "kind": "occurred",
+              "condition": "f",
+              "occurrence": "occ-3",
+              "atWallMs": 1700000001000
+            },
+            {
+              "kind": "ended",
+              "condition": "f",
+              "occurrence": "occ-3",
+              "recurrence": 0,
+              "unacked": true,
+              "atWallMs": 1700000001500
+            }
+          ],
+          "states": {
+            "f": null
+          }
+        },
+        {
+          "at": 1500,
+          "input": {
+            "kind": "ack",
+            "condition": "g",
+            "occurrence": "occ-1",
+            "recurrence": 0,
+            "user": "admin"
+          },
+          "ack": "alreadyAcked",
+          "events": [
+            {
+              "kind": "returned",
+              "condition": "g",
+              "atWallMs": 1700000001100
+            },
+            {
+              "kind": "autoAcked",
+              "condition": "g",
+              "atWallMs": 1700000001100
+            }
+          ],
+          "states": {
+            "g": {
+              "display": "normal"
+            }
+          }
+        },
+        {
+          "at": 1500,
+          "input": {
+            "kind": "ack",
+            "condition": "h",
+            "occurrence": "occ-2",
+            "recurrence": 0,
+            "user": "admin"
+          },
+          "ack": "accepted",
+          "events": [
+            {
+              "kind": "returned",
+              "condition": "h",
+              "atWallMs": 1700000001100
+            },
+            {
+              "kind": "acked",
+              "condition": "h",
+              "atWallMs": 1700000001500
+            }
+          ],
+          "states": {
+            "h": {
+              "display": "normal"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "off delay: 満了で復帰し、待ちの間に成立すれば捨てる",
       "conditions": {
         "t:hh": {

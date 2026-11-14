@@ -144,11 +144,8 @@ pub enum EventKind {
 #[serde(rename_all = "camelCase")]
 pub struct Event {
     pub at_wall_ms: i64,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub condition: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub occurrence: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub recurrence: Option<u32>,
     #[serde(flatten)]
     pub kind: EventKind,
@@ -359,6 +356,8 @@ impl Engine {
                     None => AckOutcome::NotFound,
                     Some(current) => {
                         let mut state = current.state.clone();
+                        // 満了の時刻を過ぎた待ちを先に確定し、その状態で ACK を判定する。
+                        work.settle_due(condition, &current.spec, &mut state);
                         let outcome =
                             work.ack(condition, &mut state, occurrence, *recurrence, user);
                         next.insert(condition.clone(), Some(state));
@@ -398,7 +397,10 @@ impl Engine {
                     .conditions
                     .get(condition)
                     .ok_or_else(|| StepError::UnknownCondition(condition.clone()))?;
-                let state = &current.state;
+                // 満了の時刻を過ぎた待ちを先に確定し、その発生・復帰を残してから終える。
+                let mut settled = current.state.clone();
+                work.settle_due(condition, &current.spec, &mut settled);
+                let state = &settled;
                 work.events.push(Event {
                     at_wall_ms: now.wall_ms,
                     condition: Some(condition.clone()),
