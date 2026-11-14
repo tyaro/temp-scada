@@ -5,6 +5,7 @@ import { readProjectFile, writeProjectPackage } from "../../project-package";
 import { serializeProject, type Project } from "../../project";
 import { projectContent } from "../../save-state";
 import { createProject } from "../../new-project";
+import type { ProjectFileService } from "../../project-file-service";
 
 export type ProjectSource = "sample" | "file" | "new";
 export interface ProjectReadTarget {
@@ -16,6 +17,8 @@ export interface ProjectFilesHost {
   readonly generation: number;
   readonly store: AssetStore;
   readonly draftPending: boolean;
+  /** The desktop's file host; without it (the browser) a save downloads. */
+  readonly fileService?: ProjectFileService;
   chooseFile(): void;
   allow(run: () => void): boolean;
   /** App adopts Project and resets the editor; it calls adopted at the existing baseline boundary. */
@@ -31,8 +34,14 @@ export interface ProjectFilesHost {
 export function createProjectFilesController(host: ProjectFilesHost) {
   let busy = $state(false);
   let baseline = $state(untrack(() => projectContent(host.project)));
-  let baselineSource = $state<"sample" | "file" | "download" | "new">("sample");
+  let baselineSource = $state<"sample" | "file" | "download" | "saved" | "new">(
+    "sample",
+  );
   let lastExport = $state<string | null>(null);
+  const native = !!host.fileService;
+  /** The host's file of the current Project (desktop), set on adoption. */
+  let fileId = $state<number | null>(null);
+  let adoptingFileId: number | null = null;
   let projectChanged = $derived(projectContent(host.project) !== baseline);
   // A pending file candidate is replaced as a unit; keep its Project unproxied
   // when the user confirms adoption into App's immutable document state.
@@ -40,42 +49,70 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     project: Project;
     source: "sample" | "file" | "new";
     store: AssetStore;
+    fileId: number | null;
   } | null>(null);
 
   let exporting = $state(false);
   let exportingName = $state("");
   const saveLabel = $derived(
     exporting
-      ? `書出し中（${exportingName}）`
+      ? native
+        ? `保存中（${exportingName}）`
+        : `書出し中（${exportingName}）`
       : projectChanged
-        ? "未書き出しの変更あり"
+        ? native
+          ? "未保存の変更あり"
+          : "未書き出しの変更あり"
         : baselineSource === "download"
           ? "書き出し要求後の変更なし"
-          : baselineSource === "file"
-            ? "読込後の変更なし"
-            : baselineSource === "new"
-              ? "新しいProject・未書き出し"
-              : "サンプルからの変更なし",
+          : baselineSource === "saved"
+            ? "保存後の変更なし"
+            : baselineSource === "file"
+              ? "読込後の変更なし"
+              : baselineSource === "new"
+                ? native
+                  ? "新しいProject・未保存"
+                  : "新しいProject・未書き出し"
+                : "サンプルからの変更なし",
   );
+  function adoptNow(
+    next: Project,
+    source: "sample" | "file" | "new",
+    store: AssetStore,
+    nextFileId: number | null,
+  ) {
+    adoptingFileId = nextFileId;
+    try {
+      host.adopt(next, source, store);
+    } finally {
+      adoptingFileId = null;
+    }
+  }
   function requestReplacement(
     next: Project,
     source: "sample" | "file" | "new",
     generation = host.generation,
     store = new AssetStore(),
+    nextFileId: number | null = null,
   ) {
     if (generation !== host.generation) {
       store.dispose();
       return;
     }
-    if (!host.allow(() => requestReplacement(next, source, generation, store)))
+    if (
+      !host.allow(() =>
+        requestReplacement(next, source, generation, store, nextFileId),
+      )
+    )
       return;
-    if (projectChanged) replacement = { project: next, source, store };
-    else host.adopt(next, source, store);
+    if (projectChanged)
+      replacement = { project: next, source, store, fileId: nextFileId };
+    else adoptNow(next, source, store, nextFileId);
   }
   function replaceNow() {
     const next = replacement;
     replacement = null;
-    if (next) host.adopt(next.project, next.source, next.store);
+    if (next) adoptNow(next.project, next.source, next.store, next.fileId);
   }
   function cancelReplacement() {
     replacement?.store.dispose();
@@ -87,9 +124,42 @@ export function createProjectFilesController(host: ProjectFilesHost) {
   }
   function openProjectFile() {
     if (busy || host.draftPending || replacement) return;
-    host.chooseFile();
+    if (host.fileService) void openNative(host.fileService);
+    else host.chooseFile();
   }
   let fileReadRequest = 0;
+  /** The desktop: the host's dialog picks and reads the file. */
+  async function openNative(service: ProjectFileService) {
+    const generation = host.generation;
+    const request = ++fileReadRequest;
+    const current = () =>
+      request === fileReadRequest && generation === host.generation;
+    busy = true;
+    try {
+      const opened = await service.open();
+      if (!opened || !current()) return;
+      const next = await readProjectFile(opened.file);
+      if (!current()) {
+        next.store.dispose();
+        return;
+      }
+      requestReplacement(
+        next.project,
+        "file",
+        generation,
+        next.store,
+        opened.fileId,
+      );
+    } catch (e) {
+      if (!current()) return;
+      host.report(
+        "error",
+        `読込エラー: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    } finally {
+      if (request === fileReadRequest) busy = false;
+    }
+  }
   async function load(file: File | undefined, input: ProjectReadTarget) {
     if (!file || !input.connected) return;
     const generation = host.generation;
@@ -125,11 +195,23 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     if (!host.allow(save)) return;
     writeProject();
   }
-  async function writeProject() {
+  /** The desktop's "save as": always ask where to save. */
+  function saveAs() {
+    if (!host.fileService) return save();
+    if (replacement) {
+      void writeProject(true);
+      return;
+    }
+    if (!host.allow(saveAs)) return;
+    void writeProject(true);
+  }
+  async function writeProject(asNew = false) {
     if (exporting) {
       host.report(
         "info",
-        `${exportingName}の書出し中です。完了をお待ちください。`,
+        native
+          ? `${exportingName}の保存中です。完了をお待ちください。`
+          : `${exportingName}の書出し中です。完了をお待ちください。`,
       );
       return;
     }
@@ -143,6 +225,31 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       const blob = packaged
         ? await writeProjectPackage(snapshot, store)
         : new Blob([serializeProject(snapshot)], { type: "application/json" });
+      if (host.fileService) {
+        const saved = await host.fileService.save({
+          fileId: generation === host.generation ? fileId : null,
+          format: packaged ? "package" : "json",
+          name: snapshot.manifest.name,
+          saveAs: asNew,
+          content: new Uint8Array(await blob.arrayBuffer()),
+        });
+        if (!saved) {
+          host.report("info", "保存を取り消しました。");
+          return;
+        }
+        if (generation === host.generation) {
+          fileId = saved.fileId;
+          baseline = projectContent(snapshot);
+          baselineSource = "saved";
+          lastExport = new Date().toLocaleTimeString("ja-JP");
+        }
+        host.report(
+          "success",
+          `${snapshot.manifest.name}を${saved.fileName}へ保存しました。`,
+          { toast: true },
+        );
+        return;
+      }
       downloadBlob(blob, packaged ? "project.bantoscada" : "project.json");
       if (generation === host.generation) {
         baseline = projectContent(snapshot);
@@ -159,7 +266,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     } catch (e) {
       host.report(
         "error",
-        `${snapshot.manifest.name}の書き出しエラー: ${e instanceof Error ? e.message : String(e)}`,
+        `${snapshot.manifest.name}の${native ? "保存" : "書き出し"}エラー: ${e instanceof Error ? e.message : String(e)}`,
       );
     } finally {
       exporting = false;
@@ -183,10 +290,13 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     get lastExport() {
       return lastExport;
     },
+    /** Whether saves go to the desktop's file host (else a download). */
+    native,
     adopted(next: Project, source: ProjectSource) {
       baseline = projectContent(next);
       baselineSource = source;
       lastExport = null;
+      fileId = adoptingFileId;
     },
     requestReplacement,
     replaceNow,
@@ -195,6 +305,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     openProjectFile,
     load,
     save,
-    write: writeProject,
+    saveAs,
+    write: () => writeProject(),
   };
 }

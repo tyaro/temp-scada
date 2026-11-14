@@ -34,6 +34,7 @@
     headerExtension,
     connectionStatus,
     onprojectchange,
+    projectFileService,
   }: {
     readSource?: ReadSource;
     catalogSource?: CatalogSource;
@@ -48,7 +49,11 @@
     /** Each replacement of the validated Project (the desktop shell keys its
      * History service on it). */
     onprojectchange?: (project: Project) => void;
+    /** The desktop's Project file host (alarm design §5.2); the browser
+     * downloads instead. */
+    projectFileService?: ProjectFileService;
   } = $props();
+  import type { ProjectFileService } from "./lib/project-file-service";
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
     selectionPaintAlphaCommand,
@@ -1099,7 +1104,9 @@
     }
     if (key === "s") {
       event.preventDefault();
-      if (!busy && !event.repeat) projectFiles.save();
+      if (!busy && !event.repeat)
+        if (event.shiftKey) projectFiles.saveAs();
+        else projectFiles.save();
       return;
     }
     if (busy || mode !== "edit" || drafts.pending || replacement) return;
@@ -1761,6 +1768,9 @@
     get draftPending() {
       return !!drafts.pending;
     },
+    get fileService() {
+      return projectFileService;
+    },
     chooseFile: () => projectFileInput?.click(),
     allow: (run) => drafts.allow(run),
     adopt,
@@ -1799,7 +1809,9 @@
       source === "sample"
         ? "工程図サンプルを開きました。設備や計測値には接続していません。"
         : source === "new"
-          ? "新しいProjectを作成しました。JSONを書き出して保存してください。"
+          ? projectFiles.native
+            ? "新しいProjectを作成しました。保存先を選んで保存してください。"
+            : "新しいProjectを作成しました。JSONを書き出して保存してください。"
           : "Project を読み込みました。",
     );
   }
@@ -3470,6 +3482,7 @@
       newProject: projectFiles.newProject,
       openProjectFile: projectFiles.openProjectFile,
       save: projectFiles.save,
+      saveAs: projectFiles.native ? projectFiles.saveAs : undefined,
       openPlacement: imageImport.openPlacement,
       focusProjectName,
       openProcessSample: showProcessSample,
@@ -3789,7 +3802,7 @@
       data-testid="save-state"
       role="group"
       aria-label="保存状態"
-      title={`${saveLabel}${drafts.dirty ? ` · 未適用の入力あり · ${drafts.count} フォーム` : ""}${lastExport ? ` · 最終書き出し要求 ${lastExport}` : ""}`}
+      title={`${saveLabel}${drafts.dirty ? ` · 未適用の入力あり · ${drafts.count} フォーム` : ""}${lastExport ? ` · ${projectFiles.native ? "最終保存" : "最終書き出し要求"} ${lastExport}` : ""}`}
     >
       <div class="save-label">
         <StatusBadge
@@ -3802,7 +3815,9 @@
           ? `未適用の入力あり · ${drafts.count} フォーム`
           : ""}</span
       >
-      {#if lastExport}<span class="sr-only">最終書き出し要求 {lastExport}</span
+      {#if lastExport}<span class="sr-only"
+          >{projectFiles.native ? "最終保存" : "最終書き出し要求"}
+          {lastExport}</span
         >{/if}
     </div>
     {#if recordingIndicator}{@render recordingStatus()}{/if}
@@ -4821,23 +4836,37 @@
   title="Project を置き換えますか"
   onclose={projectFiles.cancelReplacement}
 >
-  <p>
-    {#if projectChanged}
-      現在の Project に未書き出しの変更があります。
-    {:else}
-      現在の内容の書き出しを要求しました。
-    {/if}
-    「{replacement?.project.manifest
-      .name}」を開く前に、書き出したファイルを確認してください。
-  </p>
-  <p>
-    書き出しても自動では置き換えません。ファイルを確認してから「破棄して開く」を選んでください。
-  </p>
+  {#if projectFiles.native}
+    <p>
+      {#if projectChanged}
+        現在の Project に未保存の変更があります。
+      {:else}
+        現在の内容を保存しました。
+      {/if}
+      「{replacement?.project.manifest.name}」を開く前に保存できます。
+    </p>
+    <p>保存しても自動では置き換えません。「破棄して開く」を選ぶと開きます。</p>
+  {:else}
+    <p>
+      {#if projectChanged}
+        現在の Project に未書き出しの変更があります。
+      {:else}
+        現在の内容の書き出しを要求しました。
+      {/if}
+      「{replacement?.project.manifest
+        .name}」を開く前に、書き出したファイルを確認してください。
+    </p>
+    <p>
+      書き出しても自動では置き換えません。ファイルを確認してから「破棄して開く」を選んでください。
+    </p>
+  {/if}
   <div class="actions">
     <button onclick={projectFiles.write}
-      >{project.assets.length
-        ? "画像同梱で書き出す"
-        : "JSON を書き出す"}</button
+      >{projectFiles.native
+        ? "保存する"
+        : project.assets.length
+          ? "画像同梱で書き出す"
+          : "JSON を書き出す"}</button
     ><button onclick={projectFiles.replaceNow}>破棄して開く</button><button
       onclick={projectFiles.cancelReplacement}>キャンセル</button
     >
