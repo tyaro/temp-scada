@@ -36,6 +36,67 @@ async fn existing_format_one_db_gets_historical_display_index() {
     std::fs::remove_dir_all(dir).unwrap();
 }
 
+#[tokio::test]
+async fn recovery_close_cannot_stop_a_session_claimed_while_waiting_for_db() {
+    let dir = temp_dir();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+    let id = project_id();
+    let db = std::sync::Arc::new(AlarmDb::open(terminal.clone(), &id).await.unwrap());
+    let old = Session {
+        id: "old".into(),
+        generation: terminal.reserve_generation().unwrap(),
+    };
+    db.start_session(&old, 1, &[], &[]).await.unwrap();
+    let mut record = applied(&id, "saved");
+    record.condition_hashes.clear();
+    record.displays.clear();
+    db.apply(&record, Some(&old), &[], &[]).await.unwrap();
+
+    // Hold the only connection while recovery requests BEGIN IMMEDIATE. The
+    // new start claims its generation before either DB request can proceed.
+    let blocker = db.pool.begin_with("BEGIN IMMEDIATE").await.unwrap();
+    let closing_db = db.clone();
+    let closing = tokio::spawn(async move { closing_db.close_unstopped_session(2).await });
+    let next = Session {
+        id: "new".into(),
+        generation: terminal.reserve_generation().unwrap(),
+    };
+    let plan = plan_restore(
+        next.clone(),
+        &record.endpoint,
+        3,
+        &record,
+        &BTreeMap::new(),
+        &BTreeSet::new(),
+        &[],
+    )
+    .unwrap();
+    let starting_db = db.clone();
+    let starting = tokio::spawn(async move { starting_db.start_session_plan(plan, 3).await });
+    tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        while !terminal.active_project(&id).unwrap() {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    blocker.commit().await.unwrap();
+
+    assert!(matches!(
+        closing.await.unwrap(),
+        Err(AlarmDbError::Terminal(
+            crate::alarm_terminal::TerminalError::InUse
+        ))
+    ));
+    assert_eq!(starting.await.unwrap().unwrap().session(), &next);
+    assert!(!db.session().await.unwrap().unwrap().stopped);
+    db.stop_session(&next, 4).await.unwrap();
+    let db = std::sync::Arc::try_unwrap(db).ok().unwrap();
+    db.close().await;
+    drop(terminal);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
 fn applied(id: &str, hash: &str) -> AppliedDefinitions {
     AppliedDefinitions {
         project_id: id.into(),
@@ -178,7 +239,9 @@ async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
     .unwrap();
     assert!(matches!(
         db.start_session_plan(plan, 100).await,
-        Err(AlarmDbError::InvalidRow)
+        Err(AlarmDbError::Terminal(
+            crate::alarm_terminal::TerminalError::Lost
+        ))
     ));
     assert!(db.session().await.unwrap().is_none());
     assert_eq!(terminal.reserve_generation().unwrap(), 1);
@@ -214,9 +277,12 @@ async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
     .unwrap();
     assert!(matches!(
         other_db.start_session_plan(reused, 110).await,
-        Err(AlarmDbError::InvalidRow)
+        Err(AlarmDbError::Terminal(
+            crate::alarm_terminal::TerminalError::InUse
+        ))
     ));
     other_db.close().await;
+    db.stop_session(&first, 150).await.unwrap();
     let second = Session {
         id: "second".into(),
         generation: 2,
@@ -232,7 +298,7 @@ async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
     )
     .unwrap();
     assert_eq!(terminal.reserve_generation().unwrap(), 2);
-    db.apply(&applied(&id, "new"), Some(&first), &[], &[])
+    db.apply(&applied(&id, "new"), None, &[], &[])
         .await
         .unwrap();
     assert!(matches!(

@@ -13,7 +13,7 @@ use sha2::{Digest, Sha256};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
 
-use crate::alarm_terminal::AlarmTerminal;
+use crate::alarm_terminal::{AlarmTerminal, TerminalError};
 use crate::durable;
 
 const FORMAT: i64 = 1;
@@ -27,6 +27,13 @@ pub enum AlarmDbError {
     Json(serde_json::Error),
     UnsupportedFormat,
     InvalidRow,
+    Terminal(TerminalError),
+}
+
+impl From<TerminalError> for AlarmDbError {
+    fn from(error: TerminalError) -> Self {
+        Self::Terminal(error)
+    }
 }
 
 impl From<std::io::Error> for AlarmDbError {
@@ -454,8 +461,7 @@ impl AlarmDb {
         let session = plan.engine.session().clone();
         let claim = self
             ._terminal
-            .claim_generation(&self.project_id, &session)
-            .map_err(|_| AlarmDbError::InvalidRow)?;
+            .claim_generation(&self.project_id, &session)?;
         self.start_session_inner(&session, at_ms, &plan.ended, &plan.restored, Some(&plan))
             .await?;
         claim.commit();
@@ -567,14 +573,10 @@ impl AlarmDb {
     /// an apply while the Engine is stopped, including A→B recovery and a Hub
     /// endpoint change after a crash. A later apply can use the stopped row.
     pub async fn close_unstopped_session(&self, at_ms: i64) -> Result<(), AlarmDbError> {
-        if self
-            ._terminal
-            .active_project(&self.project_id)
-            .map_err(|_| AlarmDbError::InvalidRow)?
-        {
-            return Err(AlarmDbError::InvalidRow);
-        }
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
+        if self._terminal.active_project(&self.project_id)? {
+            return Err(AlarmDbError::Terminal(TerminalError::InUse));
+        }
         let previous = sqlx::query(
             "SELECT session_id, generation, stopped, engine_unavailable FROM session WHERE id = 1",
         )
@@ -609,6 +611,12 @@ impl AlarmDb {
             self._terminal.release_session(&self.project_id, &session);
         }
         Ok(())
+    }
+
+    /// The in-memory Engine owner is gone even when its final DB write failed.
+    /// A later recovery will close the durable unstopped row before restarting.
+    pub(crate) fn release_runtime_session(&self, session: &Session) {
+        self._terminal.release_session(&self.project_id, session);
     }
 
     /// Commits state and events together; an ACK is acknowledged only after

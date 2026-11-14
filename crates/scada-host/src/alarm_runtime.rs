@@ -3,16 +3,16 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
-use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use banto_tagclient::{
-    BindingRequest, BindingView, ErrorKind, GenerationSnapshot, RestClient,
-    TagClientConnectionState, TagClientHandle, ValueQuality,
+    BindingRequest, BindingView, Endpoint, ErrorKind, GenerationSnapshot, PinnedHubTls, RestClient,
+    SecretApiKey, TagClientConnectionState, TagClientHandle, ValueQuality,
 };
 use scada_alarm::{
     AckOutcome, Engine, EngineUnavailable, Event, Input, Now, Quality, Sample, TagValue, Transition,
 };
-use tokio::sync::{broadcast, mpsc, oneshot};
+use tokio::sync::{broadcast, mpsc, oneshot, watch};
 
 use crate::alarm_db::{AlarmDb, AlarmDbError, AppliedDefinitions, Definition, EventWrite, LastRow};
 
@@ -22,6 +22,8 @@ pub enum AlarmRuntimeError {
     Sdk(ErrorKind),
     Step(scada_alarm::StepError),
     InvalidDefinition,
+    StorageFailure,
+    ConnectionFailure,
     Closed,
 }
 
@@ -40,6 +42,24 @@ pub struct AlarmChange {
     pub conditions: BTreeMap<String, Option<scada_alarm::ConditionState>>,
     pub engine_unavailable: Option<EngineUnavailable>,
     pub events: Vec<Event>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AlarmStopReason {
+    Requested,
+    Unauthorized,
+    ConnectionFailure,
+    StorageFailure,
+    InvalidDefinition,
+    InternalError,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(tag = "state", rename_all = "camelCase")]
+pub enum AlarmRuntimeStatus {
+    Running,
+    Stopped { reason: AlarmStopReason },
 }
 
 pub struct AlarmEvaluator {
@@ -66,6 +86,7 @@ impl AlarmEvaluator {
                     )
             })
         {
+            db.release_runtime_session(engine.session());
             return Err(AlarmRuntimeError::InvalidDefinition);
         }
         Ok(Self {
@@ -158,6 +179,12 @@ impl AlarmEvaluator {
     }
 }
 
+impl Drop for AlarmEvaluator {
+    fn drop(&mut self) {
+        self.db.release_runtime_session(self.engine.session());
+    }
+}
+
 fn event_write(event: &Event) -> Result<EventWrite, AlarmRuntimeError> {
     let mut detail =
         serde_json::to_value(event).map_err(|_| AlarmRuntimeError::InvalidDefinition)?;
@@ -203,13 +230,16 @@ enum Control {
 pub struct AlarmRuntime {
     control: mpsc::Sender<Control>,
     changes: broadcast::Sender<AlarmChange>,
+    status: watch::Receiver<AlarmRuntimeStatus>,
     task: tokio::task::JoinHandle<Result<(), AlarmRuntimeError>>,
 }
 
 impl AlarmRuntime {
     pub async fn start(
         evaluator: AlarmEvaluator,
-        client: RestClient,
+        secret: SecretApiKey,
+        pins: Option<PinnedHubTls>,
+        request_timeout: Duration,
     ) -> Result<Self, AlarmRuntimeError> {
         let tags: BTreeSet<_> = evaluator
             .engine
@@ -224,6 +254,25 @@ impl AlarmRuntime {
                 external_name: tag.clone(),
             })
             .collect();
+        // Construct the SDK client from the applied endpoint, never a caller's
+        // independent address that could mislabel durable alarm states.
+        let client = (|| {
+            let endpoint = Endpoint::new(&evaluator.applied.endpoint)?;
+            match pins {
+                Some(pins) => RestClient::with_pinned_tls(endpoint, secret, request_timeout, pins),
+                None => RestClient::with_request_timeout(endpoint, secret, request_timeout),
+            }
+        })();
+        let client = match client {
+            Ok(client) => client,
+            Err(error) => {
+                evaluator
+                    .db
+                    .stop_session(evaluator.engine.session(), wall_ms())
+                    .await?;
+                return Err(AlarmRuntimeError::Sdk(error.kind()));
+            }
+        };
         let sdk = match client.start(requests) {
             Ok(sdk) => sdk,
             Err(error) => {
@@ -237,16 +286,22 @@ impl AlarmRuntime {
         let (control, control_rx) = mpsc::channel(32);
         let (changes, _) = broadcast::channel(256);
         let change_tx = changes.clone();
-        let task = tokio::spawn(run(evaluator, sdk, control_rx, change_tx, tags));
+        let (status_tx, status) = watch::channel(AlarmRuntimeStatus::Running);
+        let task = tokio::spawn(run(evaluator, sdk, control_rx, change_tx, tags, status_tx));
         Ok(Self {
             control,
             changes,
+            status,
             task,
         })
     }
 
     pub fn changes(&self) -> broadcast::Receiver<AlarmChange> {
         self.changes.subscribe()
+    }
+
+    pub fn status(&self) -> watch::Receiver<AlarmRuntimeStatus> {
+        self.status.clone()
     }
 
     pub async fn snapshot(&self) -> Result<Engine, AlarmRuntimeError> {
@@ -295,6 +350,33 @@ impl AlarmRuntime {
 }
 
 async fn run(
+    evaluator: AlarmEvaluator,
+    sdk: TagClientHandle,
+    control_rx: mpsc::Receiver<Control>,
+    change_tx: broadcast::Sender<AlarmChange>,
+    tags: BTreeSet<String>,
+    status_tx: watch::Sender<AlarmRuntimeStatus>,
+) -> Result<(), AlarmRuntimeError> {
+    let result = run_inner(evaluator, sdk, control_rx, change_tx, tags).await;
+    let reason = match &result {
+        Ok(()) => AlarmStopReason::Requested,
+        Err(AlarmRuntimeError::Sdk(ErrorKind::Unauthorized)) => AlarmStopReason::Unauthorized,
+        Err(AlarmRuntimeError::Sdk(_) | AlarmRuntimeError::ConnectionFailure) => {
+            AlarmStopReason::ConnectionFailure
+        }
+        Err(AlarmRuntimeError::Db(_) | AlarmRuntimeError::StorageFailure) => {
+            AlarmStopReason::StorageFailure
+        }
+        Err(AlarmRuntimeError::InvalidDefinition) => AlarmStopReason::InvalidDefinition,
+        Err(AlarmRuntimeError::Step(_) | AlarmRuntimeError::Closed) => {
+            AlarmStopReason::InternalError
+        }
+    };
+    status_tx.send_replace(AlarmRuntimeStatus::Stopped { reason });
+    result
+}
+
+async fn run_inner(
     mut evaluator: AlarmEvaluator,
     sdk: TagClientHandle,
     mut control_rx: mpsc::Receiver<Control>,
@@ -360,20 +442,35 @@ async fn run(
                             if let Some(change) = change { let _ = change_tx.send(change); }
                         }
                         Err(error) => {
-                            let _ = reply.send(Err(error));
+                            let _ = reply.send(Err(error_summary(&error)));
                             let _ = stop(evaluator, sdk, &change_tx).await;
-                            return Err(AlarmRuntimeError::Closed);
+                            return Err(error);
                         }
                     }
                 }
                 Some(Control::Stop(reply)) => {
                     let result = stop(evaluator, sdk, &change_tx).await;
-                    let _ = reply.send(result);
-                    return Ok(());
+                    return match result {
+                        Ok(()) => { let _ = reply.send(Ok(())); Ok(()) }
+                        Err(error) => { let _ = reply.send(Err(error_summary(&error))); Err(error) }
+                    };
                 }
                 None => return stop(evaluator, sdk, &change_tx).await,
             }
         }
+    }
+}
+
+fn error_summary(error: &AlarmRuntimeError) -> AlarmRuntimeError {
+    match error {
+        AlarmRuntimeError::Db(_) | AlarmRuntimeError::StorageFailure => {
+            AlarmRuntimeError::StorageFailure
+        }
+        AlarmRuntimeError::Sdk(_) | AlarmRuntimeError::ConnectionFailure => {
+            AlarmRuntimeError::ConnectionFailure
+        }
+        AlarmRuntimeError::InvalidDefinition => AlarmRuntimeError::InvalidDefinition,
+        _ => AlarmRuntimeError::Closed,
     }
 }
 
@@ -527,6 +624,53 @@ mod tests {
     use std::sync::atomic::Ordering;
 
     #[tokio::test]
+    async fn dropped_engine_owner_releases_claim_for_crash_recovery() {
+        let dir = std::env::temp_dir().join(format!("alarm-owner-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let terminal = Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+        let project_id = uuid::Uuid::new_v4().to_string();
+        let db = Arc::new(AlarmDb::open(terminal.clone(), &project_id).await.unwrap());
+        let applied = AppliedDefinitions {
+            project_id: project_id.clone(),
+            project_revision: 1,
+            file_hash: "saved".into(),
+            endpoint: "http://127.0.0.1:8722".into(),
+            applied_by: "未ログイン".into(),
+            applied_at_ms: 1,
+            definitions: serde_json::json!({"definitions": []}),
+            condition_hashes: BTreeMap::new(),
+            disabled_condition_ids: BTreeSet::new(),
+            displays: BTreeMap::new(),
+        };
+        db.apply(&applied, None, &[], &[]).await.unwrap();
+        let session = Session {
+            id: "running".into(),
+            generation: terminal.reserve_generation().unwrap(),
+        };
+        let plan = plan_restore(
+            session.clone(),
+            &applied.endpoint,
+            1,
+            &applied,
+            &BTreeMap::new(),
+            &BTreeSet::new(),
+            &[],
+        )
+        .unwrap();
+        let engine = db.start_session_plan(plan, 1).await.unwrap();
+        let evaluator = AlarmEvaluator::new(db.clone(), applied, engine).unwrap();
+        assert!(terminal.active_project(&project_id).unwrap());
+        drop(evaluator); // The SDK/Engine owner is gone before a DB stop succeeded.
+        assert!(!terminal.active_project(&project_id).unwrap());
+        db.close_unstopped_session(2).await.unwrap();
+        assert!(db.session().await.unwrap().unwrap().stopped);
+        let db = Arc::try_unwrap(db).ok().unwrap();
+        db.close().await;
+        drop(terminal);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
     async fn value_timer_and_ack_are_written_before_engine_commit() {
         let dir = std::env::temp_dir().join(format!("alarm-evaluator-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
@@ -646,7 +790,38 @@ mod tests {
             Err(AlarmRuntimeError::Db(_))
         ));
         assert_eq!(evaluator.engine(), &before);
-        drop(evaluator);
+        let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+        let sdk = hub
+            .client()
+            .start(vec![BindingRequest {
+                binding_key: "PLANT.FLAG".into(),
+                external_name: "PLANT.FLAG".into(),
+            }])
+            .unwrap();
+        let (control, control_rx) = mpsc::channel(1);
+        drop(control);
+        let (changes, _) = broadcast::channel(1);
+        let (status_tx, mut status) = watch::channel(AlarmRuntimeStatus::Running);
+        let task = tokio::spawn(run(
+            evaluator,
+            sdk,
+            control_rx,
+            changes,
+            BTreeSet::from(["PLANT.FLAG".into()]),
+            status_tx,
+        ));
+        tokio::time::timeout(Duration::from_secs(3), status.changed())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            *status.borrow(),
+            AlarmRuntimeStatus::Stopped {
+                reason: AlarmStopReason::StorageFailure
+            }
+        );
+        assert!(matches!(task.await.unwrap(), Err(AlarmRuntimeError::Db(_))));
+        assert!(!terminal.active_project(&project_id).unwrap());
         let db = Arc::try_unwrap(db).ok().unwrap();
         db.close().await;
         drop(terminal);
@@ -710,7 +885,14 @@ mod tests {
         .unwrap();
         let engine = db.start_session_plan(plan, 1).await.unwrap();
         let evaluator = AlarmEvaluator::new(db.clone(), applied, engine).unwrap();
-        let runtime = AlarmRuntime::start(evaluator, hub.client()).await.unwrap();
+        let runtime = AlarmRuntime::start(
+            evaluator,
+            SecretApiKey::new("alarm-test-key".into()).unwrap(),
+            None,
+            Duration::from_secs(2),
+        )
+        .await
+        .unwrap();
         tokio::time::timeout(std::time::Duration::from_secs(5), async {
             loop {
                 if runtime
@@ -739,7 +921,14 @@ mod tests {
                 .count(),
             1
         );
+        let status = runtime.status();
         runtime.stop().await.unwrap();
+        assert_eq!(
+            *status.borrow(),
+            AlarmRuntimeStatus::Stopped {
+                reason: AlarmStopReason::Requested
+            }
+        );
         assert!(db.session().await.unwrap().unwrap().stopped);
         let db = Arc::try_unwrap(db).ok().unwrap();
         db.close().await;
