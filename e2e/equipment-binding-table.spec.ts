@@ -330,6 +330,17 @@ test("imports a vendor I/O list CSV after choosing its columns", async ({
   );
   await expect(dialog).toContainText("変更 3件");
 
+  // Choosing another file clears the rows left out of the previous one.
+  await dialog.getByLabel("I/O 一覧の CSV", { exact: true }).setInputFiles({
+    name: "broken.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from('機器番号,信号,タグ名\nP-101,running,"A', "utf8"),
+  });
+  await expect(dialog.getByRole("alert")).toContainText(
+    '2行目の引用符（"）が閉じていません',
+  );
+  await expect(skipped).toBeHidden();
+
   await dialog.getByRole("button", { name: "差分を確認（3件）" }).click();
   await dialog.getByRole("button", { name: "3件を適用" }).click();
   await expect(dialog).toBeHidden();

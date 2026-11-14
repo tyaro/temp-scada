@@ -280,6 +280,8 @@
   async function readIoCsv(file: File) {
     cancelIoCsv();
     const read = ioRead;
+    // The rows left out of an earlier CSV must not pass for this file's.
+    ioSkipped = [];
     error = "";
     message = "";
     if (file.size > MAX_IO_CSV_BYTES) {
