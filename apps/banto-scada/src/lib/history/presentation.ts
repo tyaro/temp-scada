@@ -281,3 +281,5 @@ export function createHistoryController(initialSource?: HistorySource) {
     },
   };
 }
+
+export type HistoryController = ReturnType<typeof createHistoryController>;

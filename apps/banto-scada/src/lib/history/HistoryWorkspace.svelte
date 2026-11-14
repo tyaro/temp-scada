@@ -15,6 +15,7 @@
   } from "./workspace-model";
   import {
     createHistoryController,
+    type HistoryController,
     type HistoryPresentation,
   } from "./presentation";
   import TrendView from "./TrendView.svelte";
@@ -36,6 +37,7 @@
     focusFallback,
     preset,
     onrelease,
+    controller: shared,
   }: {
     open: boolean;
     project: Project;
@@ -45,15 +47,22 @@
     onrelease?: () => void;
     onclose: () => void;
     focusFallback?: () => HTMLElement | null | undefined;
+    /**
+     * 呼び出し側が持つ controller。描き直し（運転表示の出入り）をまたいで読取の枠を
+     * 1つに保つために渡す。渡されたものは破棄せず、外れるときは source を外すだけ。
+     */
+    controller?: HistoryController;
   } = $props();
   // This owner remains mounted while the Modal body closes. Abort does not free
   // the physical read slot: the controller waits for the old Promise to settle.
-  const controller = createHistoryController();
+  const external = untrack(() => shared);
+  const controller = external ?? createHistoryController();
   let presentation = $state.raw<HistoryPresentation>(controller.state);
   const unsubscribe = controller.subscribe((next) => (presentation = next));
   onDestroy(() => {
     unsubscribe();
-    controller.dispose();
+    if (external) controller.setSource(undefined);
+    else controller.dispose();
   });
   let owner = $state.raw<{
     project: Project;
