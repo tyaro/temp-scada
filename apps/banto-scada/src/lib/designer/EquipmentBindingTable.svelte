@@ -283,14 +283,10 @@
       const { text, encoding } = decodeIoCsv(
         new Uint8Array(await file.arrayBuffer()),
       );
-      const [header, ...records] = parseIoCsv(text);
+      const [header, ...records] = parseIoCsv(text, MAX_IO_CSV_RECORDS);
       if (!header || !records.length) {
         error =
           "CSV に見出し行とデータ行がありません。1行目を見出しにしてください。";
-        return;
-      }
-      if (records.length > MAX_IO_CSV_RECORDS) {
-        error = `CSV の行が多すぎます（見出しを除いて${MAX_IO_CSV_RECORDS}行まで）。分けて取り込んでください。`;
         return;
       }
       ioCsv = {

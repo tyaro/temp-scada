@@ -59,6 +59,15 @@ describe("parseIoCsv", () => {
       { line: 2, fields: ["b"] },
     ]);
   });
+  it("rejects a quote inside an unquoted field", () => {
+    expect(() => parseIoCsv('a,b\nFAN-101,PLC"Run')).toThrow(
+      "2行目の欄の途中に引用符",
+    );
+  });
+  it("stops once the data records exceed the limit", () => {
+    expect(parseIoCsv("h\n1\n2\n\n", 2)).toHaveLength(3);
+    expect(() => parseIoCsv("h\n1\n2\n3", 2)).toThrow("見出しを除いて2行まで");
+  });
   it("rejects an unterminated quote", () => {
     expect(() => parseIoCsv('a\n"b,c')).toThrow("2行目");
   });

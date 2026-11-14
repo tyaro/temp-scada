@@ -35,10 +35,15 @@ export function decodeIoCsv(bytes: Uint8Array): {
  * RFC 4180 with comma separators: `"` quotes a field, `""` is a quote inside it,
  * and CRLF, LF or CR ends a record. Records whose fields are all empty are dropped.
  * After a closing quote only a separator, a line end or the end may follow, so
- * `"Tag"x` is rejected instead of silently becoming `Tagx`.
+ * `"Tag"x` is rejected instead of silently becoming `Tagx`; a quote inside an
+ * unquoted field (`PLC"Run`) is rejected too. Parsing stops as soon as more
+ * than `maxDataRecords` records follow the header.
  * Each record keeps its 1-based line number so skipped rows can be reported.
  */
-export function parseIoCsv(text: string): { line: number; fields: string[] }[] {
+export function parseIoCsv(
+  text: string,
+  maxDataRecords = Infinity,
+): { line: number; fields: string[] }[] {
   const records: { line: number; fields: string[] }[] = [];
   let fields: string[] = [],
     field = "",
@@ -48,8 +53,13 @@ export function parseIoCsv(text: string): { line: number; fields: string[] }[] {
     start = 1;
   const endRecord = () => {
     fields.push(field);
-    if (fields.some((value) => value !== ""))
+    if (fields.some((value) => value !== "")) {
+      if (records.length > maxDataRecords)
+        throw new Error(
+          `行が多すぎます（見出しを除いて${maxDataRecords}行まで）。分けて取り込んでください`,
+        );
       records.push({ line: start, fields });
+    }
     fields = [];
     field = "";
   };
@@ -80,8 +90,11 @@ export function parseIoCsv(text: string): { line: number; fields: string[] }[] {
       start = line;
     } else if (closed)
       throw new Error(`${line}行目の閉じた引用符（"）の後に文字があります`);
-    else if (ch === '"' && field === "") quoted = true;
-    else field += ch;
+    else if (ch === '"') {
+      if (field !== "")
+        throw new Error(`${line}行目の欄の途中に引用符（"）があります`);
+      quoted = true;
+    } else field += ch;
   }
   if (quoted) throw new Error(`${start}行目の引用符（"）が閉じていません`);
   if (field !== "" || fields.length) endRecord();
