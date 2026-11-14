@@ -33,7 +33,7 @@
     readings?: TagReadings;
   } = $props();
   const clipId = $props.id();
-  const junctions = $derived(screenJunctions(source.objects));
+  const junctions = $derived(screenJunctions(source.objects, readings));
   const hops = $derived(screenHopPaths(source.objects, source.lineHops));
 </script>
 
@@ -64,6 +64,7 @@
         <ObjectPainting
           object={child}
           hopPath={hops.get(child.id)}
+          screenObjects={source.objects}
           {symbols}
           {images}
           {readings}

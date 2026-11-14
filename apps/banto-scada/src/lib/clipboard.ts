@@ -263,13 +263,20 @@ export function copyObjectSnapshot(
     throw new Error(
       "slot表示単体・機器情報単体のコピー・切り取りは未対応です。共有Symbol全体のコピーまたは定義内の複製を使ってください。",
     );
+  // A screen follower copies with its source (paste remaps the reference);
+  // a follower alone, or any follower in a definition, would point outside.
   if (
     objects.some(
-      (object) => "stateColor" in object.shape && object.shape.stateColor,
+      (object) =>
+        "stateColor" in object.shape &&
+        object.shape.stateColor &&
+        !(
+          "background" in target && copyIds.has(object.shape.stateColor.textId)
+        ),
     )
   )
     throw new Error(
-      "状態色に追従する図形単体のコピー・切り取りは未対応です。共有Symbol全体のコピーまたは定義内の複製を使ってください。",
+      "状態色に追従する図形は、配色元のTextと一緒に選択しないとコピー・切り取りできません。共有Symbol全体のコピーまたは定義内の複製を使ってください。",
     );
   // Clipboard placements deliberately start at the destination root.
   for (const object of objects) delete object.folderId;

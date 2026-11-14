@@ -1,4 +1,11 @@
-import type { Project, ScreenObject, SymbolDefinition } from "./project";
+import type {
+  Project,
+  Screen,
+  ScreenObject,
+  SymbolDefinition,
+} from "./project";
+import { presentScreenBool } from "./screen-bool-display";
+import type { TagReadings } from "./tag-presentation";
 import { isStateSlotType, type EquipmentSlot } from "./equipment";
 import { evaluateSlotState } from "./slot-state";
 import {
@@ -18,7 +25,21 @@ export function supportsStateColor(object: ScreenObject): boolean {
       shape.paint.fill.paint.type === "solid")
   );
 }
-export function stateColorSources(definition: SymbolDefinition) {
+/** A screen's own Text with a tag and `boolDisplay` (A6-3). */
+export function isScreenStateSource(object: ScreenObject): boolean {
+  return (
+    object.shape.type === "text" &&
+    !!object.shape.boolDisplay &&
+    !!object.shape.binding
+  );
+}
+/**
+ * Texts a follower may name on the same owner: a state-colored slot Text in a
+ * shared definition, a bound `boolDisplay` Text directly on a screen.
+ */
+export function stateColorSources(owner: SymbolDefinition | Screen) {
+  if ("background" in owner) return owner.objects.filter(isScreenStateSource);
+  const definition = owner;
   return definition.objects.filter(
     (object) =>
       object.shape.type === "text" &&
@@ -32,8 +53,11 @@ export function stateColorSources(definition: SymbolDefinition) {
       ),
   );
 }
-export function stateColorUsages(definition: SymbolDefinition, textId: string) {
-  return definition.objects.filter(
+export function stateColorUsages(
+  owner: SymbolDefinition | Screen,
+  textId: string,
+) {
+  return owner.objects.filter(
     (object) =>
       "stateColor" in object.shape &&
       object.shape.stateColor?.textId === textId,
@@ -41,17 +65,12 @@ export function stateColorUsages(definition: SymbolDefinition, textId: string) {
 }
 export function validateStateColors(project: Project) {
   for (const owner of [...project.screens, ...project.symbols]) {
-    const definition = project.symbols.includes(owner as SymbolDefinition)
-      ? (owner as SymbolDefinition)
-      : undefined;
     const sources = new Set(
-      definition
-        ? stateColorSources(definition).map((source) => source.id)
-        : [],
+      stateColorSources(owner).map((source) => source.id),
     );
     for (const object of owner.objects) {
       if (!("stateColor" in object.shape) || !object.shape.stateColor) continue;
-      if (!definition || !sources.has(object.shape.stateColor.textId))
+      if (!sources.has(object.shape.stateColor.textId))
         throw new Error(
           "状態色の配色元Textが見つからないか、状態の色に従うTextではありません",
         );
@@ -123,4 +142,31 @@ export function resolveStateColor(
   )
     return UNRESOLVED_STATE_COLOR;
   return stateTextColor(source, definition, equipmentId, context);
+}
+/**
+ * Color of a screen-level follower (A6-3): the source Text's `boolDisplay`
+ * rule (a Good bit tag gives its defined color, anything else
+ * `unknownColor`); a missing or invalid source never keeps the authored color.
+ * Undefined when the object does not follow.
+ */
+export function resolveScreenStateColor(
+  object: ScreenObject,
+  screenObjects: readonly ScreenObject[] | undefined,
+  readings?: TagReadings,
+): string | undefined {
+  if (!("stateColor" in object.shape) || !object.shape.stateColor)
+    return undefined;
+  const reference = object.shape.stateColor;
+  const source = screenObjects?.find((item) => item.id === reference.textId);
+  if (
+    !source ||
+    source.shape.type !== "text" ||
+    !source.shape.boolDisplay ||
+    !source.shape.binding
+  )
+    return UNRESOLVED_STATE_COLOR;
+  return presentScreenBool(
+    source.shape.boolDisplay,
+    readings?.get(source.shape.binding.externalName),
+  ).color;
 }

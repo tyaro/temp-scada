@@ -10,7 +10,7 @@
   import SymbolEquipmentCheck from "./SymbolEquipmentCheck.svelte";
   import StateColor from "./StateColor.svelte";
   import { frameScreenIds } from "../operator-frame";
-  import { stateColorUsages } from "../state-color";
+  import { stateColorSources, stateColorUsages } from "../state-color";
   import GroupInspector from "./GroupInspector.svelte";
   import { selectedGroup, groupFor } from "../geometric-groups";
   import { screenViewOptions } from "../screen-references";
@@ -655,9 +655,9 @@
       {:else}<p>グループを含むため、内部の書式は解除後に編集できます。</p>{/if}
     {:else if selected}
       {#key `${generation}:${screen.id}:${selected.id}`}
-        {#if activeDefinition && (selected.shape.type === "rectangle" || selected.shape.type === "ellipse" || selected.shape.type === "polyline")}
+        {#if (selected.shape.type === "rectangle" || selected.shape.type === "ellipse" || selected.shape.type === "polyline") && (activeDefinition || selected.shape.stateColor || stateColorSources(screen).length > 0)}
           <StateColor
-            definition={screen as SymbolDefinition}
+            owner={screen}
             object={selected}
             targetKey={`${generation}:${screen.id}:${activeDefinition}`}
             locked={selectionLocked}
@@ -781,6 +781,12 @@
           />
         {/if}
         {#if selected.shape.type === "text" && selected.shape.binding && !activeDefinition}
+          {@const screenFollowers = selected.shape.boolDisplay
+            ? stateColorUsages(screen, selected.id)
+            : []}
+          {#if screenFollowers.length}<p class="numeric-hint">
+              状態色の追従先 {screenFollowers.length}件。bool表示の削除・タグの解除・Textの削除は先に追従を解除してください。
+            </p>{/if}
           <BoolDisplay
             display={selected.shape.boolDisplay}
             hasFormat={!!selected.shape.format}

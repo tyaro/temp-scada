@@ -1,6 +1,8 @@
 import type { Point, ScreenObject } from "./project";
 import { objectToWorld } from "./rotation";
 import { compositedOpacity } from "./opacity";
+import { resolveScreenStateColor } from "./state-color";
+import type { TagReadings } from "./tag-presentation";
 
 /**
  * 画面直下の Polyline 同士の分岐の点（T 字・3 本以上の端点の集まり）を描画時に計算する。
@@ -27,8 +29,14 @@ export interface WorldLine {
   points: Point[];
 }
 
-/** 表示されている画面直下の Polyline を world 座標にする（頂点が 2 つ未満のものは除く）。 */
-export function worldLines(objects: readonly ScreenObject[]): WorldLine[] {
+/**
+ * 表示されている画面直下の Polyline を world 座標にする（頂点が 2 つ未満のものは除く）。
+ * 色は状態色の追従（A6-3）を線と同じ規則で解決し、追従しない線は配置の色。
+ */
+export function worldLines(
+  objects: readonly ScreenObject[],
+  readings?: TagReadings,
+): WorldLine[] {
   const lines: WorldLine[] = [];
   for (const object of objects) {
     if (object.visible === false || object.shape.type !== "polyline") continue;
@@ -36,7 +44,10 @@ export function worldLines(objects: readonly ScreenObject[]): WorldLine[] {
     lines.push({
       id: object.id,
       order: object.order,
-      color: object.fill ?? "#000000",
+      color:
+        resolveScreenStateColor(object, objects, readings) ??
+        object.fill ??
+        "#000000",
       opacity: compositedOpacity(object),
       strokeWidth: object.shape.strokeWidth,
       points: object.shape.points.map((p) => objectToWorld(object, p)),
@@ -244,9 +255,10 @@ export function lineJunctions(lines: readonly WorldLine[]): LineJunction[] {
 /** 画面の配置から、Polyline の id ごとにその直後に描く分岐の点を求める。 */
 export function screenJunctions(
   objects: readonly ScreenObject[],
+  readings?: TagReadings,
 ): Map<string, LineJunction[]> {
   const result = new Map<string, LineJunction[]>();
-  for (const junction of lineJunctions(worldLines(objects))) {
+  for (const junction of lineJunctions(worldLines(objects, readings))) {
     const list = result.get(junction.afterId);
     if (list) list.push(junction);
     else result.set(junction.afterId, [junction]);

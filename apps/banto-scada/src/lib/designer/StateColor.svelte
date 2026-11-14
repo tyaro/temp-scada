@@ -1,10 +1,10 @@
 <script lang="ts">
-  import type { SymbolDefinition, ScreenObject } from "../project";
+  import type { Screen, SymbolDefinition, ScreenObject } from "../project";
   import { supportsStateColor, stateColorSources } from "../state-color";
   import { placementLabel } from "../placement-label";
   import type { createDraftGuard } from "./drafts.svelte";
   let {
-    definition,
+    owner,
     object,
     targetKey,
     locked,
@@ -12,7 +12,7 @@
     onsubmit,
     onsource,
   }: {
-    definition: SymbolDefinition;
+    owner: Screen | SymbolDefinition;
     object: ScreenObject;
     targetKey: string;
     locked: boolean;
@@ -20,7 +20,7 @@
     onsubmit: (event: SubmitEvent) => void;
     onsource: (id: string) => void;
   } = $props();
-  const sources = $derived(stateColorSources(definition));
+  const sources = $derived(stateColorSources(owner));
   const current = $derived(
     "stateColor" in object.shape ? object.shape.stateColor?.textId : undefined,
   );
@@ -52,7 +52,9 @@
         ></label
       >
       {#if !sources.length}<p>
-          先にbool slot表示Textで状態別の文字色を設定してください。
+          {"background" in owner
+            ? "先に同じ画面の、タグとbool表示を持つTextを置いてください。"
+            : "先にbool slot表示Textで状態別の文字色を設定してください。"}
         </p>{/if}
       <p>
         塗り／線・矢印の色は配色元と同じ3色を使い、配置の単色より優先します。枠線と各図形の不透明度は保持します。取得状態は図面上部で確認できます。

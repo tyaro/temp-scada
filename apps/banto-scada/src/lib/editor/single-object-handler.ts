@@ -227,17 +227,12 @@ export function applySingleObjectCommand(
       else object.shape.slotBinding = slotBinding;
     }
     if (stateColor !== undefined) {
-      if (
-        !definitionId ||
-        !(
-          object.shape.type === "rectangle" ||
-          object.shape.type === "ellipse" ||
-          object.shape.type === "polyline"
-        )
-      )
-        throw new Error(
-          "状態色の追従は共有定義内の矩形・楕円・線だけに設定できます",
-        );
+      if (!(
+        object.shape.type === "rectangle" ||
+        object.shape.type === "ellipse" ||
+        object.shape.type === "polyline"
+      ))
+        throw new Error("状態色の追従は矩形・楕円・線だけに設定できます");
       if (stateColor === null) delete object.shape.stateColor;
       else object.shape.stateColor = structuredClone(stateColor);
     }

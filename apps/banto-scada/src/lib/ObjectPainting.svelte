@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { TrendDefinition } from "./trend-definitions";
   import { resolveEquipmentProperty } from "./equipment-property";
-  import { resolveStateColor } from "./state-color";
+  import { resolveScreenStateColor, resolveStateColor } from "./state-color";
   import {
     resolveSymbolSlot,
     symbolEquipmentSlot,
@@ -28,6 +28,7 @@
     trends = [],
     equipmentContext,
     ownerDefinition,
+    screenObjects,
     images,
     readings,
     onsummary,
@@ -42,6 +43,8 @@
     trends?: readonly TrendDefinition[];
     equipmentContext?: EquipmentContext;
     ownerDefinition?: SymbolDefinition;
+    /** 画面直下の追従図形の配色元を探す、同じ画面の配置。 */
+    screenObjects?: readonly ScreenObject[];
     images?: ReadonlyMap<
       string,
       { url: string; width: number; height: number }
@@ -202,7 +205,7 @@
     {onsummary}
     stateColor={ownerDefinition
       ? resolveStateColor(object, ownerDefinition)
-      : undefined}
+      : resolveScreenStateColor(object, screenObjects, readings)}
   />{/if}
 
 <style>

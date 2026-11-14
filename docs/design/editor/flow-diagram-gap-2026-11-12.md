@@ -125,7 +125,7 @@
   - 機器インスタンスに接頭辞（`connection.group.` と名前の接頭）を1つ入れると、全 slot のタグ名を組み立て、タグ一覧と照合して A5 の表へ入れる。
   - 保存するのは従来どおり slot ごとのタグ名。見つからないタグは表で示し、手で直せる。
   - 実装: slot の任意の `tagSuffix`（schema `$defs.equipmentSlot`、TS `EquipmentSlot`、機器種別の編集の「タグ名の末尾」）。接頭辞は保存せず、割付の一覧表の「接頭辞」列と「接頭辞から入れる」で入れる（純関数 `prefixFill`）。`allowUnassigned` の slot で一覧にない名前は空欄（採用・未割付）にする。規則は[機器台帳](../equipment/equipment-register-design.md#接頭辞から入れる2026-11-12a5b)。schemaVersion は据え置き。試験: `equipment-binding-table.test.ts`、`equipment-type-editing.test.ts`、`examples/equipment-cases.json`（Rust・TS 共通の契約）、`e2e/equipment-binding-table.spec.ts`。
-- **A6 画面上の直接結合**（優先度を下げる）: 機器を介さない文字・配管は、bool の色と文字だけに絞る。多値の表示は機器を介することを基本にする。
+- **A6 画面上の直接結合**（優先度を下げる）: 機器を介さない文字・配管は、bool の色と文字だけに絞る。多値の表示は機器を介することを基本にする。**2026-11-14 に A6-1〜A6-3（画面直下の bit 読取・Text の bool 表示・図形と配管の状態色）を実装済み**: [仕様](../graphics/screen-bool-display.md)。
 - **A7 Hub 登録用の一覧の書き出し**（2026-11-12 実装）: 機器種別と割付から、統一した命名規則のタグ名で Hub に登録する一覧（CSV か JSON）を書き出す。
   - 実装: 割付の一覧表の「Hub 登録用 CSV を書き出す」。Hub のタグ CSV 取込みと同じ 19 列・BOM・CRLF で、タグ一覧にない名前（新規登録分）だけを書き出す。外部名は書き出しでだけ `接続.グループ.タグ` に分け、分けられない名前は一覧で示して除く。address は空欄で、利用者が埋めてから Hub で取り込む。規則は[機器台帳](../equipment/equipment-register-design.md#hub-登録用-csv-を書き出す2026-11-12a7)。試験: `hub-tag-csv.test.ts`、`e2e/equipment-binding-table.spec.ts`。
 
@@ -145,7 +145,7 @@
   - 組込み部品（`symbol-library.json`）に、ブロワー・槽・塔・サイクロン・熱交換器・撹拌機・コンベヤ・スクリュー・モーターを追加する。
   - 反転（2026-11-13 実装）: 配置の任意の `flipX`／`flipY`（true のときだけ保存）。矩形・楕円・Polyline・Symbol・Image・液位と Symbol 定義の内部図形が対象で、Text・トレンドは拒否する。pivot で鏡映してから回転し、描画・選択外形・接続点・リサイズ・頂点移動は `rotation.ts` の同じ変換を使う（Rust の配管端点の照合も同じ）。反転した Symbol の中の Text は文字を読める向きに戻す。ツールバー・編集メニュー・右クリックの「左右反転」「上下反転」は画面上の反転（軸を切り替えて角度を負に）で、複数選択も 1 履歴。schemaVersion は据え置き。仕様: [配置の反転](object-flip-design.md)。試験: `flip.test.ts`、`examples/flip-cases.json`（Rust・TS 共通の契約）、`examples/connection-cases.json` の反転ケース、`e2e/flip.spec.ts`。
   - 部品（2026-11-13 実装）: `symbol-library.json` にブロワー・槽・塔・サイクロン・熱交換器・撹拌機・コンベヤ・スクリュー・モーターを加えた。既存のポンプ・バルブと同じく Polyline だけの線画（配置の単色で塗り替わる）で、配管をつなぐ口は配置枠の辺の中央に置き、接続点（辺の中央）と合わせた。塔（60×160）・サイクロン（100×120）・コンベヤとスクリュー（160×60）は縦横比が違うので、配置枠は定義の幅・高さで作る（従来は 100×100 固定）。部品の一覧・名前・検索語（例: 「集じん」「column」）は `builtin-symbols.ts` に集め、部品パレット・お気に入り・挿入メニューが同じ一覧を使う。撹拌機は槽に重ねて使う。組込の槽は液位を持たず、液位は利用者が槽に重ねる（画面ではタグ、共有定義を編集すれば number slot）。schemaVersion は据え置き。試験: `builtin-symbols.test.ts`（全部品の配置・保存往復・枠内・ID の重複なし）、`e2e/builtin-parts.spec.ts`。
-- **E 配管**（画面上の状態色だけ A5 に依存）:
+- **E 配管**（画面上の状態色だけ A5 に依存。画面上の状態色は 2026-11-14 に実装済み: [仕様](../graphics/screen-bool-display.md)）:
   - 始点・両端の矢印を加える（2026-11-13 実装。`arrow` を `none`／`start`／`end`／`both` に広げた。schemaVersion は据え置き。仕様: [線種の「矢印の向き」](../graphics/line-style-design.md#矢印の向き2026-11-13追記)。試験: `line-arrow.test.ts`、`examples/line-arrow-cases.json`（Rust・TS 共通の契約）、`e2e/line-arrow.spec.ts`）。
   - T 字の接続には分岐の点を描く（2026-11-13 実装。画面直下の表示中の Polyline 同士で、端点が別の線の途中に 0.5 以内で乗るか、3 つ以上の端点が集まるときに、通る側の線の色の塗りの円を後に描かれる線の直後に描く。保存せず描画時に計算し、選択・外接矩形には含めない。schemaVersion は据え置き。仕様: [配管の分岐の点](../graphics/line-junction.md)。試験: `line-junction.test.ts`、`e2e/line-junction.spec.ts`）。
   - 交差のまたぎを描く（描画時に計算し、画面ごとに形を選べる）（2026-11-13 実装。画面の任意の `lineHops`（`"arc"`＝弧でまたぐ、`"cut"`＝弧を描かず下の線を切る。無いときはまたがない）を画面設定の「交差のまたぎ」で選ぶ。画面直下の表示中の Polyline 同士が互いの途中で真に交差するとき、後に描かれる線に半円のまたぎ（上へ、垂直な線は右へ膨らむ）を描く。端点・T 字・分岐の点・平行は除き、近いまたぎはまとめる。`"cut"` では、弧は描かず、またがれる線を交差点の前後（弧と同じ半径）で描かない（分岐の点の下は切らない）。保存の points は変えず、描画時に polyline を直線＋円弧（＋途切れ）の path に置き換える。schemaVersion は据え置き。仕様: [配管の交差のまたぎ](../graphics/line-hop.md)。試験: `line-hop.test.ts`、`examples/line-hop-cases.json`（Rust・TS 共通の契約）、`e2e/line-hop.spec.ts`）。

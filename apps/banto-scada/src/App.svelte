@@ -821,7 +821,9 @@
     parseProject,
     strokeOverflowIds,
     type Point,
+    type Screen,
     type ScreenObject,
+    type SymbolDefinition,
   } from "./lib/project";
   import {
     type EditCommand,
@@ -2740,7 +2742,6 @@
         },
       );
     if (form.dataset.editorForm === "state-color") {
-      if (!activeDefinition) throw new Error("共有定義を選び直してください");
       return stateColorCommand(
         {
           data,
@@ -2750,9 +2751,9 @@
         {
           generation: workspaceGeneration,
           screenId: screen.id,
-          definition: true,
+          definition: !!activeDefinition,
           selected,
-          owner: activeDefinition,
+          owner: screen as Screen | SymbolDefinition,
         },
       );
     }

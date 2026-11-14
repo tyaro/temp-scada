@@ -34,7 +34,7 @@
     readings?: TagReadings;
   } = $props();
   const clipId = $props.id();
-  const junctions = $derived(screenJunctions(screen.objects));
+  const junctions = $derived(screenJunctions(screen.objects, readings));
   const hops = $derived(screenHopPaths(screen.objects, screen.lineHops));
 </script>
 
@@ -82,6 +82,7 @@
             {onopentrend}
             {object}
             hopPath={hops.get(object.id)}
+            screenObjects={screen.objects}
             {symbols}
             {images}
             {readings}

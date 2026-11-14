@@ -108,7 +108,10 @@
   // 接続のプレビューがないドラッグは `position()` が移動量を足すので、ここでも同じ量を足す。
   const junctions = $derived(
     "background" in screen
-      ? screenJunctions(screen.objects.map((object) => draggedObject(object)))
+      ? screenJunctions(
+          screen.objects.map((object) => draggedObject(object)),
+          readings,
+        )
       : new Map(),
   );
   function draggedObject(object: ScreenObject): ScreenObject {
@@ -795,6 +798,7 @@
             preview={!editable}
             hopPath={hops.get(object.id)}
             ownerDefinition={"background" in screen ? undefined : screen}
+            screenObjects={"background" in screen ? screen.objects : undefined}
             {symbols}
             {images}
             {readings}
