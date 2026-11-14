@@ -89,7 +89,8 @@ impl AlarmTerminal {
     }
 
     /// Persist the next number before writing a session to its Project DB.
-    /// A DB failure after this call leaves a harmless gap.
+    /// A DB failure after this call leaves a harmless gap. This performs a
+    /// synchronous durable write; async callers run it on a blocking thread.
     pub fn reserve_generation(&self) -> Result<u64, TerminalError> {
         let mut settings = self.settings.lock().map_err(|_| TerminalError::Corrupt)?;
         let next = settings
@@ -128,11 +129,15 @@ impl AlarmTerminal {
     }
 
     /// The later apply boundary uses this to publish an A→B decision.
+    /// This performs a synchronous durable write; async callers run it on a
+    /// blocking thread.
     pub fn set_switching(&self, switching: Option<PendingSwitch>) -> Result<(), TerminalError> {
         self.save(|next| next.switching = switching)
     }
 
     /// Confirm the monitored Project only after its DB has committed the apply.
+    /// This performs a synchronous durable write; async callers run it on a
+    /// blocking thread.
     pub fn set_monitored(&self, monitored: Option<MonitoredProject>) -> Result<(), TerminalError> {
         self.save(|next| {
             next.monitored = monitored;

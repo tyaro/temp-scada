@@ -55,6 +55,9 @@ fn state(session_id: &str) -> LastRow {
 
 #[test]
 fn disabled_condition_ends_as_definition_change() {
+    let mut applied = applied(&project_id(), "applied");
+    applied.condition_hashes.clear();
+    applied.displays.clear();
     let plan = plan_restore(
         Session {
             id: "new".into(),
@@ -62,12 +65,66 @@ fn disabled_condition_ends_as_definition_change() {
         },
         "http://127.0.0.1:8722",
         200,
+        &applied,
         &BTreeMap::new(),
         &BTreeSet::from(["condition:hh".into()]),
         &[state("old")],
     )
     .unwrap();
     assert_eq!(plan.ended[0].kind, "definitionChanged");
+}
+
+#[tokio::test]
+async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
+    let dir = temp_dir();
+    let terminal = AlarmTerminal::open(&dir).await.unwrap();
+    let id = project_id();
+    let db = AlarmDb::open(&terminal, &id).await.unwrap();
+    let mut empty = applied(&id, "empty");
+    empty.condition_hashes.clear();
+    empty.displays.clear();
+    db.apply(&empty, None, &[], &[]).await.unwrap();
+    let first = Session {
+        id: "first".into(),
+        generation: 1,
+    };
+    let plan = plan_restore(
+        first.clone(),
+        &empty.endpoint,
+        100,
+        &empty,
+        &BTreeMap::new(),
+        &BTreeSet::new(),
+        &[],
+    )
+    .unwrap();
+    let engine = db.start_session_plan(plan, 100).await.unwrap();
+    assert_eq!(engine.session(), &first);
+    let second = Session {
+        id: "second".into(),
+        generation: 2,
+    };
+    let stale_plan = plan_restore(
+        second.clone(),
+        &empty.endpoint,
+        200,
+        &empty,
+        &BTreeMap::new(),
+        &BTreeSet::new(),
+        &[],
+    )
+    .unwrap();
+    db.apply(&applied(&id, "new"), Some(&first), &[], &[])
+        .await
+        .unwrap();
+    assert!(matches!(
+        db.start_session_plan(stale_plan, 200).await,
+        Err(AlarmDbError::InvalidRow)
+    ));
+    assert_eq!(db.session().await.unwrap().unwrap().session, first);
+    db.close().await;
+    drop(terminal);
+    std::fs::remove_dir_all(dir).unwrap();
 }
 
 #[tokio::test]
@@ -579,7 +636,7 @@ async fn interrupted_old_project_closes_without_a_new_session_before_later_apply
 }
 
 #[tokio::test]
-async fn restore_keeps_only_matching_hash_and_endpoint_and_writes_ends_with_start() {
+async fn restore_keeps_only_matching_hash_and_endpoint() {
     let dir = temp_dir();
     let terminal = AlarmTerminal::open(&dir).await.unwrap();
     let id = project_id();
@@ -647,10 +704,41 @@ async fn restore_keeps_only_matching_hash_and_endpoint_and_writes_ends_with_star
         id: "new".into(),
         generation: 2,
     };
+    let mut current = original.clone();
+    current
+        .condition_hashes
+        .insert("changed".into(), "new-hash".into());
+    current.condition_hashes.remove("wrong-endpoint");
+    current.displays.remove("wrong-endpoint");
+    assert!(matches!(
+        plan_restore(
+            session.clone(),
+            "http://127.0.0.1:8722",
+            200,
+            &original,
+            &definitions,
+            &BTreeSet::new(),
+            &previous,
+        ),
+        Err(RestoreError::DefinitionMismatch)
+    ));
+    assert!(matches!(
+        plan_restore(
+            session.clone(),
+            "http://other:8722",
+            200,
+            &current,
+            &definitions,
+            &BTreeSet::new(),
+            &previous,
+        ),
+        Err(RestoreError::EndpointMismatch)
+    ));
     let plan = plan_restore(
         session.clone(),
         "http://127.0.0.1:8722",
         200,
+        &current,
         &definitions,
         &BTreeSet::new(),
         &previous,
@@ -663,22 +751,6 @@ async fn restore_keeps_only_matching_hash_and_endpoint_and_writes_ends_with_star
     assert_eq!(plan.ended.len(), 2);
     assert_eq!(plan.ended[0].kind, "definitionChanged");
     assert_eq!(plan.ended[1].kind, "connectionChanged");
-    db.start_session(&session, 200, &plan.ended, &plan.restored)
-        .await
-        .unwrap();
-    assert_eq!(db.last_states().await.unwrap(), plan.restored);
-    let kinds: Vec<_> = db
-        .events()
-        .await
-        .unwrap()
-        .into_iter()
-        .map(|event| event.event.kind)
-        .collect();
-    assert!(kinds.ends_with(&[
-        "engineStarted".into(),
-        "definitionChanged".into(),
-        "connectionChanged".into()
-    ]));
     db.close().await;
     drop(terminal);
     std::fs::remove_dir_all(dir).unwrap();

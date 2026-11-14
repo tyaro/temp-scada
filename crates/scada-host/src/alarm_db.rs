@@ -114,26 +114,44 @@ pub enum RestoreError {
     Define(DefineError),
     State(StepError),
     UnexpectedOccurrence,
+    DefinitionMismatch,
+    EndpointMismatch,
 }
 
 pub struct RestorePlan {
     pub engine: Engine,
     pub restored: Vec<LastRow>,
     pub ended: Vec<EventWrite>,
+    definition_hashes: BTreeMap<String, String>,
+    endpoint: String,
 }
 
 /// Selects only the rows whose evaluation hash and Hub endpoint still match.
 /// Reconstructs the pure Engine before the DB session transaction is started.
+/// `applied` must be the record read from this Project's alarm DB, not a
+/// caller-provided Project or a recomputed copy of its hashes.
 /// The caller passes `ended` and `restored` to `start_session`; it must not
 /// expose this Engine until that transaction succeeds.
 pub fn plan_restore(
     session: Session,
     endpoint: &str,
     at_ms: i64,
+    applied: &AppliedDefinitions,
     definitions: &BTreeMap<String, Definition>,
     disabled: &BTreeSet<String>,
     previous: &[LastRow],
 ) -> Result<RestorePlan, RestoreError> {
+    if applied.endpoint != endpoint {
+        return Err(RestoreError::EndpointMismatch);
+    }
+    if definitions.len() != applied.condition_hashes.len()
+        || definitions.iter().any(|(id, definition)| {
+            applied.condition_hashes.get(id) != Some(&definition.evaluation_hash)
+        })
+        || disabled.iter().any(|id| definitions.contains_key(id))
+    {
+        return Err(RestoreError::DefinitionMismatch);
+    }
     let mut engine = Engine::new(session.clone());
     for (id, definition) in definitions {
         engine
@@ -191,6 +209,8 @@ pub fn plan_restore(
         engine,
         restored,
         ended,
+        definition_hashes: applied.condition_hashes.clone(),
+        endpoint: endpoint.into(),
     })
 }
 
@@ -393,17 +413,62 @@ impl<'terminal> AlarmDb<'terminal> {
         Ok(())
     }
 
-    /// Start a new session with the rows the caller validated and restored
-    /// through `scada-alarm`. Crash evidence and start are in one transaction.
-    pub async fn start_session(
+    /// Start only a plan built from the applied DB record. The full definition
+    /// hash set is checked again in the same transaction as the session write.
+    pub async fn start_session_plan(
+        &self,
+        plan: RestorePlan,
+        at_ms: i64,
+    ) -> Result<Engine, AlarmDbError> {
+        let session = plan.engine.session().clone();
+        self.start_session_inner(
+            &session,
+            at_ms,
+            &plan.ended,
+            &plan.restored,
+            Some(&plan.definition_hashes),
+            Some(&plan.endpoint),
+        )
+        .await?;
+        Ok(plan.engine)
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn start_session(
         &self,
         session: &Session,
         at_ms: i64,
         ended: &[EventWrite],
         restored: &[LastRow],
     ) -> Result<(), AlarmDbError> {
+        self.start_session_inner(session, at_ms, ended, restored, None, None)
+            .await
+    }
+
+    async fn start_session_inner(
+        &self,
+        session: &Session,
+        at_ms: i64,
+        ended: &[EventWrite],
+        restored: &[LastRow],
+        expected_hashes: Option<&BTreeMap<String, String>>,
+        expected_endpoint: Option<&str>,
+    ) -> Result<(), AlarmDbError> {
         let generation = i64::try_from(session.generation).map_err(|_| AlarmDbError::InvalidRow)?;
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
+        if let Some(expected_hashes) = expected_hashes {
+            let body: String = sqlx::query_scalar("SELECT body FROM applied WHERE id = 1")
+                .fetch_optional(&mut *tx)
+                .await?
+                .ok_or(AlarmDbError::InvalidRow)?;
+            let applied: AppliedDefinitions = serde_json::from_str(&body)?;
+            if applied.project_id != self.project_id
+                || &applied.condition_hashes != expected_hashes
+                || expected_endpoint != Some(applied.endpoint.as_str())
+            {
+                return Err(AlarmDbError::InvalidRow);
+            }
+        }
         let existing = load_existing(&mut tx).await?;
         verify_accounting(&existing, restored, ended)?;
         verify_applied_rows(&mut tx, &self.project_id, restored).await?;
@@ -461,8 +526,9 @@ impl<'terminal> AlarmDb<'terminal> {
         Ok(())
     }
 
-    /// Close an interrupted previous Project after a committed A→B switch.
-    /// No new A session is created. A later apply can then use the stopped row.
+    /// Close an interrupted session without starting a new one. Call before
+    /// an apply while the Engine is stopped, including A→B recovery and a Hub
+    /// endpoint change after a crash. A later apply can use the stopped row.
     pub async fn close_unstopped_session(&self, at_ms: i64) -> Result<(), AlarmDbError> {
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let previous =
