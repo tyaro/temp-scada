@@ -240,8 +240,15 @@ impl AlarmDb {
         let body: Option<String> = sqlx::query_scalar("SELECT body FROM applied WHERE id = 1")
             .fetch_optional(&self.pool)
             .await?;
-        body.map(|body| serde_json::from_str(&body).map_err(Into::into))
-            .transpose()
+        let applied: Option<AppliedDefinitions> =
+            body.map(|body| serde_json::from_str(&body)).transpose()?;
+        if applied
+            .as_ref()
+            .is_some_and(|applied| applied.project_id != self.project_id)
+        {
+            return Err(AlarmDbError::InvalidRow);
+        }
+        Ok(applied)
     }
 
     pub async fn session(&self) -> Result<Option<SessionRecord>, AlarmDbError> {
@@ -256,12 +263,16 @@ impl AlarmDb {
                 return Err(AlarmDbError::InvalidRow);
             }
             let unavailable: Option<String> = row.try_get("engine_unavailable")?;
+            let stopped: i64 = row.try_get("stopped")?;
+            if !matches!(stopped, 0 | 1) {
+                return Err(AlarmDbError::InvalidRow);
+            }
             Ok(SessionRecord {
                 session: Session {
                     id: row.try_get("session_id")?,
                     generation: generation as u64,
                 },
-                stopped: row.try_get::<i64, _>("stopped")? != 0,
+                stopped: stopped == 1,
                 engine_unavailable: unavailable
                     .map(|value| serde_json::from_str::<EngineUnavailable>(&value))
                     .transpose()?,
@@ -340,7 +351,11 @@ impl AlarmDb {
             if generation <= previous.try_get::<i64, _>("generation")? {
                 return Err(AlarmDbError::InvalidRow);
             }
-            if previous.try_get::<i64, _>("stopped")? == 0 {
+            let stopped: i64 = previous.try_get("stopped")?;
+            if !matches!(stopped, 0 | 1) {
+                return Err(AlarmDbError::InvalidRow);
+            }
+            if stopped == 0 {
                 let old_id: String = previous.try_get("session_id")?;
                 let last_at: Option<i64> =
                     sqlx::query_scalar("SELECT MAX(at_ms) FROM event WHERE session_id = ?")

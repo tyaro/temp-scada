@@ -185,6 +185,44 @@ async fn an_old_session_cannot_ack_after_a_new_session_starts() {
     db.start_session(&second, 2, &[], &[]).await.unwrap();
     assert!(db.append(&first, &[], &[], &[], None).await.is_err());
     assert!(db.start_session(&first, 3, &[], &[]).await.is_err());
+    sqlx::query("UPDATE session SET stopped = 2 WHERE id = 1")
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    assert!(matches!(db.session().await, Err(AlarmDbError::InvalidRow)));
+    assert!(matches!(
+        db.start_session(
+            &Session {
+                id: "third".into(),
+                generation: 3
+            },
+            3,
+            &[],
+            &[]
+        )
+        .await,
+        Err(AlarmDbError::InvalidRow)
+    ));
+    db.close().await;
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test]
+async fn an_applied_definition_from_another_project_is_not_read_as_this_project() {
+    let dir = temp_dir();
+    let id = project_id();
+    let db = AlarmDb::open(&dir, &id).await.unwrap();
+    let other = applied(&project_id(), "other");
+    assert!(matches!(
+        db.apply(&other, "setup", &[], &[]).await,
+        Err(AlarmDbError::InvalidProjectId)
+    ));
+    sqlx::query("INSERT INTO applied (id, body) VALUES (1, ?)")
+        .bind(serde_json::to_string(&other).unwrap())
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    assert!(matches!(db.applied().await, Err(AlarmDbError::InvalidRow)));
     db.close().await;
     std::fs::remove_dir_all(dir).unwrap();
 }
