@@ -902,6 +902,69 @@ async fn stopped_session_can_apply_and_attribute_ended_rows_to_it() {
 }
 
 #[tokio::test]
+async fn apply_confirmation_is_rechecked_with_current_rows_in_the_write_transaction() {
+    let dir = temp_dir();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+    let id = project_id();
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
+    let mut original = applied(&id, "original");
+    original
+        .condition_hashes
+        .insert("condition:hh".into(), "eval-hash".into());
+    db.apply(&original, None, &[], &[]).await.unwrap();
+    let session = Session {
+        id: "active".into(),
+        generation: 1,
+    };
+    db.start_session(&session, 100, &[], &[]).await.unwrap();
+    let row = state(&session.id);
+    db.append(&session, &[], std::slice::from_ref(&row), &[], None)
+        .await
+        .unwrap();
+    let mut candidate = applied(&id, "candidate");
+    candidate.condition_hashes.clear();
+    candidate.displays.clear();
+    let plan = plan_apply(std::slice::from_ref(&row), &candidate, 200).unwrap();
+    assert_eq!(plan.unacked.len(), 1);
+    assert!(matches!(
+        db.apply_confirmed(&candidate, Some(&session), &plan.ended, &plan.survivors, &[])
+            .await,
+        Err(AlarmDbError::ConfirmationRequired(current)) if current == plan.unacked
+    ));
+    assert_eq!(db.applied().await.unwrap(), Some(original));
+    let mut acknowledged = row.clone();
+    acknowledged.state.acked = true;
+    db.append(&session, &[], &[acknowledged], &[], None)
+        .await
+        .unwrap();
+    assert!(matches!(
+        db.apply_confirmed(
+            &candidate,
+            Some(&session),
+            &plan.ended,
+            &plan.survivors,
+            &plan.unacked,
+        )
+        .await,
+        Err(AlarmDbError::ConfirmationRequired(current)) if current.is_empty()
+    ));
+    let fresh = plan_apply(&db.last_states().await.unwrap(), &candidate, 210).unwrap();
+    db.apply_confirmed(
+        &candidate,
+        Some(&session),
+        &fresh.ended,
+        &fresh.survivors,
+        &[],
+    )
+    .await
+    .unwrap();
+    assert_eq!(db.applied().await.unwrap(), Some(candidate));
+    db.close().await;
+    drop(terminal);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test]
 async fn interrupted_old_project_closes_without_a_new_session_before_later_apply() {
     let dir = temp_dir();
     let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());

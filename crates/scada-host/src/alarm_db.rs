@@ -29,6 +29,7 @@ pub enum AlarmDbError {
     UnsupportedFormat,
     InvalidRow,
     Terminal(TerminalError),
+    ConfirmationRequired(Vec<UnackedOccurrence>),
 }
 
 impl From<TerminalError> for AlarmDbError {
@@ -114,6 +115,62 @@ pub struct EventRead {
     pub session_id: String,
     pub event: EventWrite,
     pub display: Option<ConditionDisplay>,
+}
+
+/// The exact unacknowledged rounds that a definition apply would end.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnackedOccurrence {
+    pub condition_id: String,
+    pub occurrence: String,
+    pub recurrence: u32,
+}
+
+pub struct ApplyPlan {
+    pub ended: Vec<EventWrite>,
+    pub survivors: Vec<LastRow>,
+    pub unacked: Vec<UnackedOccurrence>,
+}
+
+/// Classify durable rows against a validated candidate. The DB transaction
+/// repeats the comparison before commit, including the confirmation set.
+pub fn plan_apply(
+    current: &[LastRow],
+    applied: &AppliedDefinitions,
+    at_ms: i64,
+) -> Result<ApplyPlan, AlarmDbError> {
+    let mut ended = Vec::new();
+    let mut survivors = Vec::new();
+    let mut unacked = Vec::new();
+    for row in current {
+        if let Some(reason) = end_reason(row, applied) {
+            if !row.state.acked {
+                unacked.push(UnackedOccurrence {
+                    condition_id: row.condition_id.clone(),
+                    occurrence: row
+                        .state
+                        .occurrence
+                        .clone()
+                        .ok_or(AlarmDbError::InvalidRow)?,
+                    recurrence: row.state.recurrence,
+                });
+            }
+            ended.push(EventWrite {
+                at_ms,
+                condition_id: Some(row.condition_id.clone()),
+                kind: reason.into(),
+                detail: json!({"unacked": !row.state.acked, "previous": row.state}),
+            });
+        } else {
+            survivors.push(row.clone());
+        }
+    }
+    unacked.sort();
+    Ok(ApplyPlan {
+        ended,
+        survivors,
+        unacked,
+    })
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -404,6 +461,32 @@ impl AlarmDb {
         ended: &[EventWrite],
         survivors: &[LastRow],
     ) -> Result<(), AlarmDbError> {
+        self.apply_inner(applied, session, ended, survivors, None)
+            .await
+    }
+
+    /// Apply with an exact confirmation set, checked under the same write
+    /// transaction as the durable definition change.
+    pub async fn apply_confirmed(
+        &self,
+        applied: &AppliedDefinitions,
+        session: Option<&Session>,
+        ended: &[EventWrite],
+        survivors: &[LastRow],
+        confirmed: &[UnackedOccurrence],
+    ) -> Result<(), AlarmDbError> {
+        self.apply_inner(applied, session, ended, survivors, Some(confirmed))
+            .await
+    }
+
+    async fn apply_inner(
+        &self,
+        applied: &AppliedDefinitions,
+        session: Option<&Session>,
+        ended: &[EventWrite],
+        survivors: &[LastRow],
+        confirmed: Option<&[UnackedOccurrence]>,
+    ) -> Result<(), AlarmDbError> {
         if applied.project_id != self.project_id {
             return Err(AlarmDbError::InvalidProjectId);
         }
@@ -420,6 +503,14 @@ impl AlarmDb {
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let existing = load_existing(&mut tx).await?;
         let displays = load_displays(&mut tx).await?;
+        if let Some(confirmed) = confirmed {
+            let fresh = plan_apply(&existing.values().cloned().collect::<Vec<_>>(), applied, 0)?;
+            let mut claimed = confirmed.to_vec();
+            claimed.sort();
+            if claimed != fresh.unacked {
+                return Err(AlarmDbError::ConfirmationRequired(fresh.unacked));
+            }
+        }
         verify_accounting(&existing, survivors, ended)?;
         verify_end_reasons(&existing, ended, applied)?;
         for row in survivors {
