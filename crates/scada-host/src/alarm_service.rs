@@ -454,10 +454,16 @@ impl AlarmService {
             .as_ref()
             .is_some_and(|old| old.project_id == saved.project_id);
         let old_applied = if let Some(old) = &previous {
-            let db = AlarmDb::open(self.terminal.clone(), &old.project_id).await?;
-            let applied = db.applied().await?;
-            db.close().await;
-            applied
+            if active.project_id.as_deref() == Some(old.project_id.as_str())
+                && active.applied.is_some()
+            {
+                active.applied.clone()
+            } else {
+                let db = AlarmDb::open(self.terminal.clone(), &old.project_id).await?;
+                let applied = db.applied().await?;
+                db.close().await;
+                applied
+            }
         } else {
             None
         };
@@ -496,6 +502,11 @@ impl AlarmService {
                             let snapshot = self.snapshot_locked(&active).await?;
                             let _ = self.lagged.send(());
                             return Ok(ApplyResult::Applied { snapshot });
+                        }
+                        Err(AlarmRuntimeError::Db(AlarmDbError::ConfirmationRequired(
+                            occurrences,
+                        ))) => {
+                            return Ok(ApplyResult::ConfirmationRequired { occurrences });
                         }
                         Err(error) => return Err(error.into()),
                     }
@@ -867,6 +878,115 @@ mod tests {
             "severity":"high", "message":"running", "ackMode":"manual"
         }]});
         value
+    }
+
+    #[tokio::test]
+    async fn same_project_apply_keeps_session_and_confirms_changed_condition() {
+        let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+        let dir = std::env::temp_dir().join(format!("alarm-same-project-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("a.json");
+        let id = uuid::Uuid::now_v7().to_string();
+        let mut value = project(&id, "A");
+        std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        let service = AlarmService::open(&dir).await.unwrap();
+        assert!(matches!(
+            service
+                .apply(
+                    &path,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
+                .await
+                .unwrap(),
+            ApplyResult::Applied { .. }
+        ));
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            loop {
+                if service
+                    .snapshot()
+                    .await
+                    .unwrap()
+                    .engine
+                    .unwrap()
+                    .conditions
+                    .values()
+                    .any(|state| state.active)
+                {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let before = service.snapshot().await.unwrap();
+        let session = before.engine.unwrap().session;
+        let first_applied_at = before.applied.unwrap().applied_at_ms;
+
+        value["alarms"]["definitions"][0]["name"] = json!("Renamed");
+        std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(matches!(
+            service
+                .apply(
+                    &path,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
+                .await
+                .unwrap(),
+            ApplyResult::Applied { .. }
+        ));
+        let renamed = service.snapshot().await.unwrap();
+        assert_eq!(renamed.engine.unwrap().session, session);
+        assert_eq!(renamed.monitored.unwrap().project_id, id);
+        let renamed_applied_at = renamed.applied.unwrap().applied_at_ms;
+        assert!(renamed_applied_at > first_applied_at);
+
+        value["alarms"]["definitions"][0]["source"]["activeWhen"] = json!(false);
+        std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        let needed = match service
+            .apply(
+                &path,
+                &hub.url,
+                hub.client(),
+                "未ログイン",
+                &[],
+                ApplyMode::Saved,
+            )
+            .await
+            .unwrap()
+        {
+            ApplyResult::ConfirmationRequired { occurrences } => occurrences,
+            _ => panic!("changed active condition must request confirmation"),
+        };
+        assert_eq!(needed.len(), 1);
+        assert!(matches!(
+            service
+                .apply(
+                    &path,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &needed,
+                    ApplyMode::Saved
+                )
+                .await
+                .unwrap(),
+            ApplyResult::Applied { .. }
+        ));
+        let changed = service.snapshot().await.unwrap();
+        assert_eq!(changed.engine.unwrap().session, session);
+        assert!(changed.applied.unwrap().applied_at_ms > renamed_applied_at);
+        service.stop().await.unwrap();
+        drop(service);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[tokio::test]

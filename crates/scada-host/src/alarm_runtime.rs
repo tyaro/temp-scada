@@ -558,6 +558,7 @@ async fn run_inner(
     let mut previous = BTreeMap::new();
     let mut was_evaluable = false;
     let mut accepted_generation = None;
+    let mut awaiting_replacement_snapshot = false;
     // Process the current snapshot before waiting so a rapid initial Live is not lost.
     let initial = states.borrow_and_update().clone();
     if initial.connection_state() == TagClientConnectionState::Stopped
@@ -594,6 +595,12 @@ async fn run_inner(
                     let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(current.last_error().map_or(AlarmRuntimeError::Closed, AlarmRuntimeError::Sdk));
                 }
+                if awaiting_replacement_snapshot
+                    && !matches!(current.connection_state(), TagClientConnectionState::Live | TagClientConnectionState::Unbound | TagClientConnectionState::Unauthorized)
+                {
+                    continue;
+                }
+                awaiting_replacement_snapshot = false;
                 if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
                     let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(error);
@@ -634,6 +641,7 @@ async fn run_inner(
                                 previous.clear();
                                 was_evaluable = false;
                                 accepted_generation = None;
+                                awaiting_replacement_snapshot = true;
                                 tokio::spawn(async move {
                                     let _ = tokio::time::timeout(Duration::from_secs(5), old.shutdown()).await;
                                 });
@@ -643,9 +651,18 @@ async fn run_inner(
                             let _ = change_tx.send(change);
                             let _ = reply.send(Ok(()));
                             let current = states.borrow_and_update().clone();
-                            if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
+                            if current.connection_state() == TagClientConnectionState::Stopped {
                                 let _ = stop(evaluator, sdk, &change_tx).await;
-                                return Err(error);
+                                return Err(current.last_error().map_or(AlarmRuntimeError::Closed, AlarmRuntimeError::Sdk));
+                            }
+                            if !awaiting_replacement_snapshot
+                                || matches!(current.connection_state(), TagClientConnectionState::Live | TagClientConnectionState::Unbound | TagClientConnectionState::Unauthorized)
+                            {
+                                awaiting_replacement_snapshot = false;
+                                if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
+                                    let _ = stop(evaluator, sdk, &change_tx).await;
+                                    return Err(error);
+                                }
                             }
                         }
                         Err(error) => {
@@ -1242,7 +1259,7 @@ mod tests {
 
     #[tokio::test]
     async fn dedicated_sdk_subscription_evaluates_and_stops_its_session() {
-        let hub = Hub::new(&[("PLC01.Fast.Running", "bit")]).await;
+        let hub = Hub::new(&[("PLC01.Fast.Running", "bit"), ("PLC01.Fast.Added", "bit")]).await;
         let dir = std::env::temp_dir().join(format!("alarm-sdk-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let terminal = Arc::new(AlarmTerminal::open(&dir).await.unwrap());
@@ -1381,8 +1398,8 @@ mod tests {
         let round = &after.condition(&id).unwrap().state;
         runtime
             .apply(
-                changed_applied,
-                BTreeMap::from([(id.clone(), changed_definition)]),
+                changed_applied.clone(),
+                BTreeMap::from([(id.clone(), changed_definition.clone())]),
                 vec![UnackedOccurrence {
                     condition_id: id.clone(),
                     occurrence: round.occurrence.clone().unwrap(),
@@ -1408,6 +1425,77 @@ mod tests {
             .unwrap()
             .iter()
             .any(|event| event.event.kind == "definitionChanged"));
+        let unavailable_before = db
+            .events()
+            .await
+            .unwrap()
+            .iter()
+            .filter(|event| {
+                event.event.condition_id.as_deref() == Some(id.as_str())
+                    && event.event.kind == "unavailableStarted"
+            })
+            .count();
+        let added_id = "alarm:added".to_owned();
+        let mut added_definition = changed_definition.clone();
+        added_definition.spec.source = scada_alarm::Source::Bit {
+            tag: "PLC01.Fast.Added".into(),
+            active_when: true,
+        };
+        let mut added_applied = changed_applied;
+        added_applied.project_revision = 4;
+        added_applied.file_hash = "added-tag".into();
+        added_applied
+            .condition_hashes
+            .insert(added_id.clone(), added_definition.evaluation_hash());
+        added_applied.displays.insert(
+            added_id.clone(),
+            ConditionDisplay {
+                name: "Added".into(),
+                message: "追加".into(),
+                severity: "low".into(),
+                limit_label: None,
+            },
+        );
+        runtime
+            .apply(
+                added_applied,
+                BTreeMap::from([
+                    (id.clone(), changed_definition),
+                    (added_id.clone(), added_definition),
+                ]),
+                Vec::new(),
+                hub.client(),
+            )
+            .await
+            .unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                if runtime
+                    .snapshot()
+                    .await
+                    .unwrap()
+                    .condition(&added_id)
+                    .unwrap()
+                    .state
+                    .active
+                {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(
+            db.events()
+                .await
+                .unwrap()
+                .iter()
+                .filter(|event| event.event.condition_id.as_deref() == Some(id.as_str())
+                    && event.event.kind == "unavailableStarted")
+                .count(),
+            unavailable_before
+        );
         let status = runtime.status();
         runtime.stop().await.unwrap();
         assert_eq!(
