@@ -85,17 +85,28 @@ async fn hub_connect(
     let mut active = state.active.lock().await;
     stop_read(&mut active).await;
     active.connected = false;
-    let result = state
-        .bootstrap
-        .connect(&endpoint)
-        .await
-        .map_err(|error| error.kind().as_str().to_owned())?;
-    active.connected = result.status.is_connected();
+    let result = state.bootstrap.connect(&endpoint).await;
+    active.connected = result
+        .as_ref()
+        .is_ok_and(|connection| connection.status.is_connected());
     drop(active);
-    if result.status.is_connected() {
-        alarm::after_hub_connect(&state, &alarm, result.judged).await;
+    let credential = state
+        .bootstrap
+        .stored_credential()
+        .ok()
+        .flatten()
+        .or_else(|| {
+            result
+                .as_ref()
+                .ok()
+                .and_then(|connection| connection.judged)
+        });
+    if !state.exiting.load(Ordering::SeqCst) {
+        alarm::after_hub_connect(&state, &alarm, credential).await;
     }
-    Ok(result.status)
+    result
+        .map(|connection| connection.status)
+        .map_err(|error| error.kind().as_str().to_owned())
 }
 
 #[tauri::command]

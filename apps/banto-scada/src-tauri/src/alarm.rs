@@ -224,9 +224,8 @@ pub async fn after_hub_connect(
         if *credential != judged && service.stop().await.is_err() {
             return;
         }
-        if service.resume(Some(&endpoint), Some(client)).await.is_ok() {
-            *credential = judged;
-        }
+        *credential = judged;
+        let _ = service.resume(Some(&endpoint), Some(client)).await;
     }
 }
 
@@ -240,7 +239,14 @@ pub async fn apply_file(
     confirmed_switch_from: Option<&str>,
 ) -> Result<ApplyResult, String> {
     let service = alarm.get()?;
-    let _alarm_operation = host.alarm_operation.lock().await;
+    let _alarm_operation = if explicit {
+        host.alarm_operation.lock().await
+    } else {
+        match host.alarm_operation.try_lock() {
+            Ok(guard) => guard,
+            Err(_) => return Ok(ApplyResult::SkippedBusy),
+        }
+    };
     if host.exiting.load(std::sync::atomic::Ordering::SeqCst) {
         return Err("exiting".into());
     }

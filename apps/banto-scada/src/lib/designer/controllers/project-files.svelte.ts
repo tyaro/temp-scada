@@ -237,7 +237,8 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       !result ||
       result.status === "skippedDifferentProject" ||
       result.status === "skippedEndpointChanged" ||
-      result.status === "skippedNoHub"
+      result.status === "skippedNoHub" ||
+      result.status === "skippedBusy"
     ) {
       if (result?.status === "skippedDifferentProject")
         host.report(
@@ -248,6 +249,11 @@ export function createProjectFilesController(host: ProjectFilesHost) {
         host.report(
           "info",
           "Projectを保存しました。Hub未設定のため警報定義は適用していません。",
+        );
+      if (result?.status === "skippedBusy")
+        host.report(
+          "info",
+          "Projectを保存しました。Hubへの接続処理中のため警報定義は適用していません。接続後に明示的に適用してください。",
         );
       if (result?.status === "skippedEndpointChanged")
         host.report(

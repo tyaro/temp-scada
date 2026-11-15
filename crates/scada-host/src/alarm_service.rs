@@ -139,6 +139,7 @@ pub enum ApplyResult {
     SkippedDifferentProject,
     SkippedEndpointChanged,
     SkippedNoHub,
+    SkippedBusy,
     SwitchConfirmationRequired {
         monitored_project_id: String,
     },

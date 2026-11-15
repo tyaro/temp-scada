@@ -123,6 +123,23 @@ describe("project files on the desktop", () => {
     ]);
   });
 
+  it("reports that alarm apply was skipped while Hub connection is busy", async () => {
+    const { controller, reports } = setup({
+      open: async () => null,
+      save: async () => ({
+        fileId: 12,
+        fileName: "plant.json",
+        apply: { status: "skippedBusy" },
+      }),
+    });
+    controller.save();
+    await settle();
+    expect(reports.at(-1)).toEqual({
+      kind: "info",
+      text: "Projectを保存しました。Hubへの接続処理中のため警報定義は適用していません。接続後に明示的に適用してください。",
+    });
+  });
+
   it("keeps the opened file's id and forgets it for a new Project", async () => {
     const { service, saves } = fakeService();
     const { controller, chosen } = setup(service);

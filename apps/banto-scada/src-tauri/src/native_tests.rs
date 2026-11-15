@@ -1,6 +1,7 @@
 //! The production command owner, Tauri event bus and SDK run against a loopback Hub.
 use super::*;
 use banto_hub_bootstrap::state::memory::{MemoryKeyStore, MemoryState};
+use banto_hub_bootstrap::state::BootstrapState;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -342,11 +343,12 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
             .as_nanos()
     ));
     std::fs::create_dir_all(&dir).unwrap();
+    let saved_state = Arc::new(MemoryState::new());
     let bootstrap = Bootstrapper::new(
         "temp-scada-test",
         "11111111-2222-4333-8444-555555555555",
         Arc::new(MemoryKeyStore::new()),
-        Arc::new(MemoryState::new()),
+        saved_state.clone(),
     );
     assert!(bootstrap
         .adopt_manual_key(&hub.url, KEY.to_owned())
@@ -427,6 +429,17 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
     let rotated = service.snapshot().await.unwrap().engine.unwrap().session;
     assert_ne!(rotated.id, first.id);
     assert!(rotated.generation > first.generation);
+
+    // A failed connection can leave a newly saved Hub record behind. The old
+    // alarm session must stop even though the new Hub is unreachable.
+    let mut record = saved_state.load().unwrap().unwrap();
+    record.endpoint = "http://127.0.0.1:1".into();
+    saved_state.save(&record).unwrap();
+    assert!(!hub_connect(app.state(), app.state(), record.endpoint)
+        .await
+        .unwrap()
+        .is_connected());
+    assert!(service.snapshot().await.unwrap().engine.is_none());
 
     service.stop().await.unwrap();
     drop(service);

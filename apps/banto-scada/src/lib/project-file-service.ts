@@ -22,6 +22,7 @@ export type AlarmApplyResult =
   | { readonly status: "skippedDifferentProject" }
   | { readonly status: "skippedEndpointChanged" }
   | { readonly status: "skippedNoHub" }
+  | { readonly status: "skippedBusy" }
   | {
       readonly status: "skippedUnavailable";
       readonly reason:
