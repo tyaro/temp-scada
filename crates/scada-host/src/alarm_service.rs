@@ -222,8 +222,8 @@ impl AlarmService {
         endpoint: Option<&str>,
         client: Option<RestClient>,
     ) -> Result<AlarmSnapshot, AlarmServiceError> {
-        self.recover_switch().await?;
         let mut active = self.active.lock().await;
+        self.recover_switch().await?;
         if active.runtime.as_ref().is_some_and(|runtime| {
             !matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running)
         }) {
