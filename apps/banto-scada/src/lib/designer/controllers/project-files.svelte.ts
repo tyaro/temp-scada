@@ -492,6 +492,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       baselineSource = source;
       lastExport = null;
       fileId = adoptingFileId;
+      host.alarmRefresh?.();
     },
     requestReplacement,
     replaceNow,

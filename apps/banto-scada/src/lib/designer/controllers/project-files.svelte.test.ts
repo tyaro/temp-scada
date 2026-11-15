@@ -12,6 +12,7 @@ import type {
 /** A host whose adopt behaves as App's: it calls `adopted` on the controller. */
 function setup(service?: ProjectFileService) {
   const reports: { kind: string; text: string }[] = [];
+  const refresh = vi.fn();
   let chosen = 0;
   const state = { project: createProject(), generation: 0 };
   const controller: ReturnType<typeof createProjectFilesController> =
@@ -25,6 +26,7 @@ function setup(service?: ProjectFileService) {
       store: new AssetStore(),
       draftPending: false,
       fileService: service,
+      alarmRefresh: refresh,
       chooseFile: () => chosen++,
       allow: () => true,
       adopt(next: Project, source) {
@@ -34,7 +36,7 @@ function setup(service?: ProjectFileService) {
       },
       report: (kind, text) => reports.push({ kind, text }),
     });
-  return { controller, state, reports, chosen: () => chosen };
+  return { controller, state, reports, refresh, chosen: () => chosen };
 }
 
 function fakeService(fileName = "plant.json") {
@@ -155,6 +157,15 @@ describe("project files on the desktop", () => {
     controller.save();
     await settle();
     expect(saves[1].fileId).toBeNull();
+  });
+
+  it("refreshes alarm state after adopting a Project file", async () => {
+    const { service } = fakeService();
+    const { controller, refresh } = setup(service);
+    controller.openProjectFile();
+    await settle();
+    await settle();
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 
   it("reports a cancelled save and keeps the Project unsaved", async () => {
