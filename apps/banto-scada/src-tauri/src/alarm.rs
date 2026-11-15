@@ -201,9 +201,8 @@ pub fn start_events<R: Runtime>(app: AppHandle<R>) {
         let mut credential = alarm.credential.lock().await;
         match context {
             Ok((endpoint, client)) => {
-                if service.resume(Some(&endpoint), Some(client)).await.is_ok() {
-                    *credential = current;
-                }
+                *credential = current;
+                let _ = service.resume(Some(&endpoint), Some(client)).await;
             }
             Err(_) => {
                 let _ = service.resume(None, None).await;

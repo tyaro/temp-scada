@@ -748,15 +748,11 @@ impl AlarmService {
 
     pub async fn snapshot(&self) -> Result<AlarmSnapshot, AlarmServiceError> {
         let active = self.active.lock().await;
-        let mut snapshot = self.snapshot_locked(&active).await?;
+        let (mut snapshot, applied) = self.snapshot_locked_with_applied(&active).await?;
         drop(active);
-        if let (Some(monitored), Some(applied)) =
-            (self.terminal.monitored()?, snapshot.applied.as_ref())
-        {
+        if let (Some(monitored), Some(applied)) = (self.terminal.monitored()?, applied.as_ref()) {
             if monitored.project_id == applied.project_id {
-                let (condition, display) = self
-                    .pending_changes(&monitored.path, applied.applied_at_ms)
-                    .await;
+                let (condition, display) = self.pending_changes(&monitored.path, applied).await;
                 snapshot.pending_condition_changes = condition;
                 snapshot.pending_display_changes = display;
             }
@@ -765,18 +761,28 @@ impl AlarmService {
     }
 
     async fn snapshot_locked(&self, active: &Active) -> Result<AlarmSnapshot, AlarmServiceError> {
+        Ok(self.snapshot_locked_with_applied(active).await?.0)
+    }
+
+    async fn snapshot_locked_with_applied(
+        &self,
+        active: &Active,
+    ) -> Result<(AlarmSnapshot, Option<AppliedDefinitions>), AlarmServiceError> {
         let monitored = self.terminal.monitored()?;
         if active.reason == "switchRecoveryFailed" {
-            return Ok(AlarmSnapshot {
-                monitored: monitored.map(|monitored| MonitoredIdentity {
-                    project_id: monitored.project_id,
-                }),
-                applied: None,
-                engine: None,
-                status: active.reason.clone(),
-                pending_condition_changes: false,
-                pending_display_changes: false,
-            });
+            return Ok((
+                AlarmSnapshot {
+                    monitored: monitored.map(|monitored| MonitoredIdentity {
+                        project_id: monitored.project_id,
+                    }),
+                    applied: None,
+                    engine: None,
+                    status: active.reason.clone(),
+                    pending_condition_changes: false,
+                    pending_display_changes: false,
+                },
+                None,
+            ));
         }
         let applied = if let Some(monitored) = &monitored {
             if active.project_id.as_deref() == Some(&monitored.project_id) {
@@ -808,19 +814,22 @@ impl AlarmService {
             },
             None => active.reason.clone(),
         };
-        Ok(AlarmSnapshot {
-            monitored: monitored.map(|monitored| MonitoredIdentity {
-                project_id: monitored.project_id,
-            }),
-            applied: applied.as_ref().map(AppliedSummary::from),
-            engine,
-            status,
-            pending_condition_changes: false,
-            pending_display_changes: false,
-        })
+        Ok((
+            AlarmSnapshot {
+                monitored: monitored.map(|monitored| MonitoredIdentity {
+                    project_id: monitored.project_id,
+                }),
+                applied: applied.as_ref().map(AppliedSummary::from),
+                engine,
+                status,
+                pending_condition_changes: false,
+                pending_display_changes: false,
+            },
+            applied,
+        ))
     }
 
-    async fn pending_changes(&self, path: &Path, applied_at_ms: i64) -> (bool, bool) {
+    async fn pending_changes(&self, path: &Path, applied: &AppliedDefinitions) -> (bool, bool) {
         let Ok(metadata) = std::fs::metadata(path) else {
             return (false, false);
         };
@@ -830,19 +839,14 @@ impl AlarmService {
             if cached.path == path
                 && cached.modified == modified
                 && cached.len == metadata.len()
-                && cached.applied_at_ms == applied_at_ms
+                && cached.applied_at_ms == applied.applied_at_ms
             {
                 return (cached.condition, cached.display);
             }
         }
         let path = path.to_path_buf();
-        let applied = {
-            let active = self.active.lock().await;
-            active.applied.clone()
-        };
-        let Some(applied) = applied else {
-            return (false, false);
-        };
+        let applied_at_ms = applied.applied_at_ms;
+        let applied = applied.clone();
         let read_path = path.clone();
         let (condition, display) =
             tokio::task::spawn_blocking(move || match SavedAlarmProject::read(&read_path) {
@@ -1481,6 +1485,50 @@ mod tests {
         );
         assert!(recovered.terminal.switching().unwrap().is_none());
         drop(recovered);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn pending_changes_use_the_monitored_projects_applied_definitions() {
+        let dir = std::env::temp_dir().join(format!("alarm-pending-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("monitored.json");
+        let project_id = uuid::Uuid::now_v7().to_string();
+        let original = project(&project_id, "Original");
+        std::fs::write(&path, serde_json::to_vec(&original).unwrap()).unwrap();
+        let service = AlarmService::open(&dir).await.unwrap();
+        let saved = SavedAlarmProject::read(&path).unwrap();
+        let db = AlarmDb::open(service.terminal.clone(), &project_id)
+            .await
+            .unwrap();
+        db.apply(
+            &saved.applied(
+                "http://127.0.0.1:8722".into(),
+                "未ログイン".into(),
+                wall_ms(),
+            ),
+            None,
+            &[],
+            &[],
+        )
+        .await
+        .unwrap();
+        db.close().await;
+        service
+            .terminal
+            .set_monitored(Some(MonitoredProject {
+                project_id: project_id.clone(),
+                path: path.clone(),
+            }))
+            .unwrap();
+        let mut edited = original;
+        edited["alarms"]["definitions"][0]["name"] = json!("Edited");
+        std::fs::write(&path, serde_json::to_vec(&edited).unwrap()).unwrap();
+        let snapshot = service.snapshot().await.unwrap();
+        assert_eq!(snapshot.applied.unwrap().project_id, project_id);
+        assert!(snapshot.pending_display_changes);
+        assert!(!snapshot.pending_condition_changes);
+        drop(service);
         std::fs::remove_dir_all(dir).unwrap();
     }
 
