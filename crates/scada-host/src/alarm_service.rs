@@ -364,7 +364,19 @@ impl AlarmService {
             let running = matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running);
             let result = runtime.stop().await;
             if running {
-                result.map_err(AlarmServiceError::from)
+                match result {
+                    Ok(()) => Ok(()),
+                    Err(error) => {
+                        // A concurrent SDK exit may report its transport error after
+                        // the session stop has already committed. The DB is decisive.
+                        match active.db.as_ref() {
+                            Some(db) if db.session().await?.is_some_and(|row| row.stopped) => {
+                                Ok(())
+                            }
+                            _ => Err(error.into()),
+                        }
+                    }
+                }
             } else {
                 Ok(())
             }
