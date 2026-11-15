@@ -2,7 +2,7 @@
 //! A generation is spent before a session can be inserted in a Project DB.
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use scada_alarm::Session;
 
@@ -67,9 +67,34 @@ pub(crate) struct SessionClaim<'a> {
     committed: bool,
 }
 
+/// Owns the in-process claim for as long as the Engine owner exists.
+pub(crate) struct ActiveAlarmSession {
+    terminal: Arc<AlarmTerminal>,
+    project_id: String,
+    session: Session,
+}
+
+impl Drop for ActiveAlarmSession {
+    fn drop(&mut self) {
+        self.terminal
+            .release_session(&self.project_id, &self.session);
+    }
+}
+
 impl SessionClaim<'_> {
+    #[cfg(test)]
     pub fn commit(mut self) {
         self.committed = true;
+    }
+
+    pub fn into_active(mut self, terminal: Arc<AlarmTerminal>) -> ActiveAlarmSession {
+        let active = ActiveAlarmSession {
+            terminal,
+            project_id: self.project_id.clone(),
+            session: self.session.clone(),
+        };
+        self.committed = true;
+        active
     }
 }
 
@@ -188,10 +213,12 @@ impl AlarmTerminal {
     }
 
     pub(crate) fn release_session(&self, project_id: &str, session: &Session) {
-        if let Ok(mut active) = self.active_session.lock() {
-            if active.as_ref() == Some(&(project_id.to_owned(), session.clone())) {
-                *active = None;
-            }
+        let mut active = self
+            .active_session
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if active.as_ref() == Some(&(project_id.to_owned(), session.clone())) {
+            *active = None;
         }
     }
 

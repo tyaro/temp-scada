@@ -288,7 +288,7 @@ browser 版（モックの読取）は Engine を持たない。e2e 用に、IPC
 | `alarm_history`                            | 期間・種類で警報イベントを照会する。新しい順で、続きは通番のカーソルで取る                                                                                                                                                                                                        |
 | `alarm_settings_get`／`alarm_settings_set` | 端末の設定（保持の上限、読み直しの周期と連続失敗の期限、音のファイル）。設定は運用では Admin だけ                                                                                                                                                                                 |
 
-`alarm_changed` の突き合わせは、まず session の**世代番号**を比較する。現在より小さい event は捨て、大きい event では event の差分を当てず snapshot を取り直す。同じ世代なら session id の一致を確かめ、不一致は契約違反として snapshot を取り直す。同じ世代・id で変更の連番が現在以下なら重複として捨て、ちょうど次なら当て、飛びがあれば取り直す。初回も購読を先に張り、event をためてから snapshot を取得してこの規則で処理する。世代番号が無い停止中・未適用の snapshot は、event を当てずに次の snapshot を取得する。画面が古い世代へ巻き戻ることはない。
+`alarm_changed` の突き合わせは、まず session の**世代番号**を比較する。現在より小さい event は捨て、大きい event では event の差分を当てず snapshot を取り直す。同じ世代なら session id の一致を確かめ、不一致は契約違反として snapshot を取り直す。同じ世代・id で変更の連番が現在以下なら重複として捨て、ちょうど次なら当て、飛びがあれば取り直す。host 内の broadcast の受信で `Lagged` が出たときも差分を捨てて snapshot を取り直す。初回も購読を先に張り、event をためてから snapshot を取得してこの規則で処理する。世代番号が無い停止中・未適用の snapshot は、event を当てずに次の snapshot を取得する。画面が古い世代へ巻き戻ることはない。
 
 `alarm_ack` は認可を先に確認する。認可された要求でも Engine が止まっているか session が無ければ、各対象へ `engineStopped`（理由付き）を返し、過去の「最後の状態」を ACK せず、DB も変更しない。Engine が動いている場合だけ各対象を現在の回と照合する。Engine の停止と ACK が競合した場合は Engine の排他下で一方を先に確定し、ACK が先なら DB に書けた結果、停止が先なら `engineStopped` を返す。
 

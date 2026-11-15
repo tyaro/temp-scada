@@ -1,6 +1,7 @@
 //! Per-Project SQLite ledger for alarm definitions, events, last states and
 //! session evidence. No Historian tables or UI lifetime are shared with it.
 use std::collections::{BTreeMap, BTreeSet};
+use std::ops::Deref;
 use std::sync::Arc;
 
 use scada_alarm::{
@@ -13,7 +14,7 @@ use sha2::{Digest, Sha256};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
 
-use crate::alarm_terminal::{AlarmTerminal, TerminalError};
+use crate::alarm_terminal::{ActiveAlarmSession, AlarmTerminal, TerminalError};
 use crate::durable;
 
 const FORMAT: i64 = 1;
@@ -145,6 +146,27 @@ pub struct RestorePlan {
     definition_hashes: BTreeMap<String, String>,
     disabled_condition_ids: BTreeSet<String>,
     endpoint: String,
+}
+
+/// A committed DB session and its in-process ownership travel together.
+/// Dropping this before runtime construction releases the process claim.
+pub struct StartedAlarmSession {
+    engine: Engine,
+    active: ActiveAlarmSession,
+}
+
+impl Deref for StartedAlarmSession {
+    type Target = Engine;
+
+    fn deref(&self) -> &Engine {
+        &self.engine
+    }
+}
+
+impl StartedAlarmSession {
+    pub(crate) fn into_parts(self) -> (Engine, ActiveAlarmSession) {
+        (self.engine, self.active)
+    }
 }
 
 impl RestorePlan {
@@ -457,15 +479,18 @@ impl AlarmDb {
         &self,
         plan: RestorePlan,
         at_ms: i64,
-    ) -> Result<Engine, AlarmDbError> {
+    ) -> Result<StartedAlarmSession, AlarmDbError> {
         let session = plan.engine.session().clone();
         let claim = self
             ._terminal
             .claim_generation(&self.project_id, &session)?;
         self.start_session_inner(&session, at_ms, &plan.ended, &plan.restored, Some(&plan))
             .await?;
-        claim.commit();
-        Ok(plan.engine)
+        let active = claim.into_active(self._terminal.clone());
+        Ok(StartedAlarmSession {
+            engine: plan.engine,
+            active,
+        })
     }
 
     #[cfg(test)]
@@ -613,12 +638,6 @@ impl AlarmDb {
         Ok(())
     }
 
-    /// The in-memory Engine owner is gone even when its final DB write failed.
-    /// A later recovery will close the durable unstopped row before restarting.
-    pub(crate) fn release_runtime_session(&self, session: &Session) {
-        self._terminal.release_session(&self.project_id, session);
-    }
-
     /// Commits state and events together; an ACK is acknowledged only after
     /// this succeeds. The caller then commits the pure Engine transition.
     /// `unavailable_change` is `None` for no Engine-level change, or
@@ -760,7 +779,6 @@ impl AlarmDb {
             .execute(&mut *tx)
             .await?;
         tx.commit().await?;
-        self._terminal.release_session(&self.project_id, session);
         Ok(())
     }
 

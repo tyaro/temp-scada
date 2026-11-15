@@ -14,7 +14,10 @@ use scada_alarm::{
 };
 use tokio::sync::{broadcast, mpsc, oneshot, watch};
 
-use crate::alarm_db::{AlarmDb, AlarmDbError, AppliedDefinitions, Definition, EventWrite, LastRow};
+use crate::alarm_db::{
+    AlarmDb, AlarmDbError, AppliedDefinitions, Definition, EventWrite, LastRow, StartedAlarmSession,
+};
+use crate::alarm_terminal::ActiveAlarmSession;
 
 #[derive(Debug)]
 pub enum AlarmRuntimeError {
@@ -67,6 +70,7 @@ pub struct AlarmEvaluator {
     db: Arc<AlarmDb>,
     applied: AppliedDefinitions,
     engine: Engine,
+    _active: ActiveAlarmSession,
     origin: Instant,
 }
 
@@ -74,28 +78,22 @@ impl AlarmEvaluator {
     pub async fn new(
         db: Arc<AlarmDb>,
         applied: AppliedDefinitions,
-        engine: Engine,
+        started: StartedAlarmSession,
     ) -> Result<Self, AlarmRuntimeError> {
         let stored = match db.applied().await {
             Ok(stored) => stored,
-            Err(error) => {
-                db.release_runtime_session(engine.session());
-                return Err(AlarmRuntimeError::Db(error));
-            }
+            Err(error) => return Err(AlarmRuntimeError::Db(error)),
         };
         let session = match db.session().await {
             Ok(session) => session,
-            Err(error) => {
-                db.release_runtime_session(engine.session());
-                return Err(AlarmRuntimeError::Db(error));
-            }
+            Err(error) => return Err(AlarmRuntimeError::Db(error)),
         };
         if stored.as_ref() != Some(&applied)
             || session
                 .as_ref()
-                .is_none_or(|record| record.stopped || &record.session != engine.session())
-            || applied.condition_hashes.len() != engine.conditions().len()
-            || engine.conditions().iter().any(|(id, condition)| {
+                .is_none_or(|record| record.stopped || &record.session != started.session())
+            || applied.condition_hashes.len() != started.conditions().len()
+            || started.conditions().iter().any(|(id, condition)| {
                 applied.condition_hashes.get(id)
                     != Some(
                         &Definition {
@@ -105,14 +103,15 @@ impl AlarmEvaluator {
                     )
             })
         {
-            let _ = db.stop_session(engine.session(), wall_ms()).await;
-            db.release_runtime_session(engine.session());
+            let _ = db.stop_session(started.session(), wall_ms()).await;
             return Err(AlarmRuntimeError::InvalidDefinition);
         }
+        let (engine, active) = started.into_parts();
         Ok(Self {
             db,
             applied,
             engine,
+            _active: active,
             origin: Instant::now(),
         })
     }
@@ -196,12 +195,6 @@ impl AlarmEvaluator {
             )
             .await?;
         Ok(())
-    }
-}
-
-impl Drop for AlarmEvaluator {
-    fn drop(&mut self) {
-        self.db.release_runtime_session(self.engine.session());
     }
 }
 
@@ -315,6 +308,8 @@ impl AlarmRuntime {
         })
     }
 
+    /// A lagged receiver must discard its diffs and call `snapshot()` again.
+    /// The same rule applies to a gap in `seq` within one session generation.
     pub fn changes(&self) -> broadcast::Receiver<AlarmChange> {
         self.changes.subscribe()
     }

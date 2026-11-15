@@ -88,9 +88,14 @@ async fn recovery_close_cannot_stop_a_session_claimed_while_waiting_for_db() {
             crate::alarm_terminal::TerminalError::InUse
         ))
     ));
-    assert_eq!(starting.await.unwrap().unwrap().session(), &next);
+    let started = starting.await.unwrap().unwrap();
+    assert_eq!(started.session(), &next);
+    assert!(terminal.active_project(&id).unwrap());
     assert!(!db.session().await.unwrap().unwrap().stopped);
     db.stop_session(&next, 4).await.unwrap();
+    assert!(terminal.active_project(&id).unwrap());
+    drop(started);
+    assert!(!terminal.active_project(&id).unwrap());
     let db = std::sync::Arc::try_unwrap(db).ok().unwrap();
     db.close().await;
     drop(terminal);
@@ -257,6 +262,9 @@ async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
     .unwrap();
     let engine = db.start_session_plan(plan, 100).await.unwrap();
     assert_eq!(engine.session(), &first);
+    assert!(terminal.active_project(&id).unwrap());
+    drop(engine); // A caller that stops before constructing the runtime releases the claim.
+    assert!(!terminal.active_project(&id).unwrap());
     let other_id = project_id();
     let other_db = AlarmDb::open(terminal.clone(), &other_id).await.unwrap();
     let mut other_applied = empty.clone();
@@ -278,7 +286,7 @@ async fn session_plan_rechecks_the_full_applied_hash_set_in_its_transaction() {
     assert!(matches!(
         other_db.start_session_plan(reused, 110).await,
         Err(AlarmDbError::Terminal(
-            crate::alarm_terminal::TerminalError::InUse
+            crate::alarm_terminal::TerminalError::Lost
         ))
     ));
     other_db.close().await;
