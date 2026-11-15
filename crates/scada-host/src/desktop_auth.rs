@@ -294,6 +294,16 @@ impl DesktopAuth {
         Ok(())
     }
 
+    /// Alarm ACK is an operation (§6), with its own permission boundary.
+    /// The current policy requires Admin; local auth-disabled Admin stays login-free.
+    pub async fn authorize_alarm_ack(&self) -> Result<(), CommandError> {
+        self.auth()
+            .auth()
+            .require_role(Role::Admin, "alarm")
+            .await?;
+        Ok(())
+    }
+
     /// `auth_login`. A refusal (wrong credentials, auth-disabled mode, a
     /// superseded install) is `Ok` with `success: false`, as in Banto.
     pub async fn login(&self, username: &str, password: &str) -> Result<LoginResult, CommandError> {

@@ -307,7 +307,7 @@ browser 版（モックの読取）は Engine を持たない。e2e 用に、IPC
 ## 6. ACK とブザー停止
 
 - ACK は Engine の操作で、PLC の bit には書かない。
-- 権限（フェーズは §5.2 と同じ）: `initializing`（開発・初期設定）ではログイン不要（利用者名は「未ログイン」）。`operational`（運用）ではログイン済みの Admin だけ。認証の DB が使えないとき、`bootstrapping`・`transitioning`・フェーズの記録が無いとき、警報 DB に書けないときは拒否する（[アクセス方針](access-policy.md)）。役割の追加は後続。
+- 権限（フェーズは §5.2 と同じ）: `initializing`（開発・初期設定）ではログイン不要（利用者名は「未ログイン」）。`operational`（運用）ではログイン済みの Admin だけ。ACK は保存とは別の `authorize_alarm_ack` で検査するが、現段階の役割要件はどちらも Admin とする。認証の DB が使えないとき、`bootstrapping`・`transitioning`・フェーズの記録が無いとき、警報 DB に書けないときは拒否する（[アクセス方針](access-policy.md)）。役割の追加は後続。
 - ACK は見ている回を指す: 一覧で選んだ行の (condition id, occurrence, recurrence) を送り、表示の後に起きた新しい回や再発生は ACK しない。「すべて ACK」は、画面が持っている最新の snapshot に出ている未確認の回だけを送る。
 - ブザー停止は、その端末の音を止めるだけで、ACK ではない。どのフェーズでも権限は要らない（未ログインでも止められる）。止めた状態は host が持つ（webview の再読込や複数の窓でも揃う）。新しい回が発生するか、未確認の回が再発生すると、また鳴る。
 - 音は未確認（ActiveUnacked）の回があるあいだ鳴らす。`noneWithSound` の定義は、発生のときに一度だけ鳴らす。`none` は鳴らさない。鳴らすのは host（Rust）で、WebView の自動再生の制限を受けないようにする（3-E の前に実機で確かめる）。既定はアプリに同梱する短い音で、端末（host）の設定で別の音声ファイルに変えられる（既定に戻せる）。Project には持たない。ファイルが読めないときは同梱の音で鳴らし、理由を示す。

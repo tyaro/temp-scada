@@ -86,8 +86,33 @@ pub(crate) async fn applied_user(auth: &AuthState) -> Result<String, String> {
     })
 }
 
+async fn verify_alarm_phase(auth: &AuthState) -> Result<(), String> {
+    let phase = auth
+        .get()
+        .map_err(refusal)?
+        .phase()
+        .await
+        .map_err(refusal)?;
+    if matches!(phase.phase, "initializing" | "operational") {
+        Ok(())
+    } else {
+        Err("auth_phase_unavailable".into())
+    }
+}
+
 pub(crate) async fn authorized_user(auth: &AuthState) -> Result<String, String> {
+    verify_alarm_phase(auth).await?;
     authorize(auth).await?;
+    applied_user(auth).await
+}
+
+async fn authorized_ack_user(auth: &AuthState) -> Result<String, String> {
+    verify_alarm_phase(auth).await?;
+    auth.get()
+        .map_err(refusal)?
+        .authorize_alarm_ack()
+        .await
+        .map_err(refusal)?;
     applied_user(auth).await
 }
 
@@ -260,7 +285,7 @@ pub async fn alarm_ack(
     auth: State<'_, AuthState>,
     items: Vec<AckRequest>,
 ) -> Result<Vec<AckResult>, String> {
-    let user = authorized_user(&auth).await?;
+    let user = authorized_ack_user(&auth).await?;
     let service = alarm.get()?;
     let mut results = Vec::new();
     for item in items {
