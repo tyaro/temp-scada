@@ -81,6 +81,27 @@ describe("project files on the desktop", () => {
     expect(saves[2]).toMatchObject({ fileId: 11, saveAs: true });
   });
 
+  it("reports when the first save starts monitoring this Project", async () => {
+    const { controller, reports } = setup({
+      open: async () => null,
+      save: async () => ({
+        fileId: 12,
+        fileName: "plant.json",
+        apply: {
+          status: "applied",
+          snapshot: { status: "running" },
+          initialMonitoring: true,
+        },
+      }),
+    });
+    controller.save();
+    await settle();
+    expect(reports.at(-1)).toEqual({
+      kind: "success",
+      text: "このProjectの警報監視を開始しました。",
+    });
+  });
+
   it("keeps the opened file's id and forgets it for a new Project", async () => {
     const { service, saves } = fakeService();
     const { controller, chosen } = setup(service);

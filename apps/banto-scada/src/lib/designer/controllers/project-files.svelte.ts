@@ -252,9 +252,13 @@ export function createProjectFilesController(host: ProjectFilesHost) {
         result.snapshot?.status && result.snapshot.status !== "running"
           ? "info"
           : "success",
-        result.snapshot?.status && result.snapshot.status !== "running"
-          ? `保存済みProjectの警報定義を適用しました。Engineは停止中です（${result.snapshot.status}）。`
-          : "保存済みProjectの警報定義を適用しました。",
+        result.initialMonitoring
+          ? result.snapshot?.status && result.snapshot.status !== "running"
+            ? `このProjectを警報の監視先に設定しました。Engineは停止中です（${result.snapshot.status}）。`
+            : "このProjectの警報監視を開始しました。"
+          : result.snapshot?.status && result.snapshot.status !== "running"
+            ? `保存済みProjectの警報定義を適用しました。Engineは停止中です（${result.snapshot.status}）。`
+            : "保存済みProjectの警報定義を適用しました。",
       );
       return;
     }

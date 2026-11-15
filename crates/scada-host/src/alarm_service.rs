@@ -132,6 +132,7 @@ impl From<scada_alarm::Engine> for EngineSnapshot {
 pub enum ApplyResult {
     Applied {
         snapshot: AlarmSnapshot,
+        initial_monitoring: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         warning: Option<String>,
     },
@@ -558,7 +559,11 @@ impl AlarmService {
                                 });
                             let snapshot = self.snapshot_locked(&active).await?;
                             let _ = self.lagged.send(());
-                            return Ok(ApplyResult::Applied { snapshot, warning });
+                            return Ok(ApplyResult::Applied {
+                                snapshot,
+                                initial_monitoring: false,
+                                warning,
+                            });
                         }
                         Err(AlarmRuntimeError::Db(AlarmDbError::ConfirmationRequired(
                             occurrences,
@@ -703,6 +708,7 @@ impl AlarmService {
                 let _ = self.lagged.send(());
                 return Ok(ApplyResult::Applied {
                     snapshot,
+                    initial_monitoring: previous.is_none(),
                     warning: Some("recoveredAfterApply".into()),
                 });
             }
@@ -724,6 +730,7 @@ impl AlarmService {
         let _ = self.lagged.send(());
         Ok(ApplyResult::Applied {
             snapshot,
+            initial_monitoring: previous.is_none(),
             warning: None,
         })
     }
@@ -1124,7 +1131,10 @@ mod tests {
                 )
                 .await
                 .unwrap(),
-            ApplyResult::Applied { .. }
+            ApplyResult::Applied {
+                initial_monitoring: true,
+                ..
+            }
         ));
         let a_session = service.snapshot().await.unwrap().engine.unwrap().session;
         tokio::time::timeout(std::time::Duration::from_secs(5), async {
