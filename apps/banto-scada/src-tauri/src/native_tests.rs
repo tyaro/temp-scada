@@ -175,6 +175,7 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
         .manage(NativeHost {
             bootstrap,
             active: Mutex::new(Active::default()),
+            alarm_operation: Mutex::new(()),
         })
         .build(tauri::test::mock_context(tauri::test::noop_assets()))
         .unwrap();
@@ -272,6 +273,7 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
                 state,
             ),
             active: Mutex::new(Active::default()),
+            alarm_operation: Mutex::new(()),
         })
         .build(tauri::test::mock_context(tauri::test::noop_assets()))
         .unwrap();

@@ -179,11 +179,17 @@ pub fn start_events<R: Runtime>(app: AppHandle<R>) {
     });
     tauri::async_runtime::spawn(async move {
         let host = app.state::<NativeHost>();
-        let _active = host.active.lock().await;
+        let _alarm_operation = host.alarm_operation.lock().await;
+        let (current, context) = {
+            let _active = host.active.lock().await;
+            (
+                host.bootstrap.stored_credential().ok().flatten(),
+                hub_context(&host),
+            )
+        };
         let alarm = app.state::<AlarmState>();
         let mut credential = alarm.credential.lock().await;
-        let current = host.bootstrap.stored_credential().ok().flatten();
-        match hub_context(&host) {
+        match context {
             Ok((endpoint, client)) => {
                 if service.resume(Some(&endpoint), Some(client)).await.is_ok() {
                     *credential = current;
@@ -225,8 +231,12 @@ pub async fn apply_file(
     confirmed_switch_from: Option<&str>,
 ) -> Result<ApplyResult, String> {
     let service = alarm.get()?;
-    let _active = host.active.lock().await;
-    let (endpoint, client) = match hub_context(host) {
+    let _alarm_operation = host.alarm_operation.lock().await;
+    let context = {
+        let _active = host.active.lock().await;
+        hub_context(host)
+    };
+    let (endpoint, client) = match context {
         Ok(context) => context,
         Err(reason) if !explicit && reason == "noHub" => return Ok(ApplyResult::SkippedNoHub),
         Err(reason) => return Err(reason),

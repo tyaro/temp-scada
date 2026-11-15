@@ -16,8 +16,10 @@ export type AlarmApplyResult =
   | {
       readonly status: "applied";
       readonly snapshot?: { readonly status: string };
+      readonly warning?: "monitorPathNotSaved" | "recoveredAfterApply";
     }
   | { readonly status: "skippedDifferentProject" }
+  | { readonly status: "skippedEndpointChanged" }
   | { readonly status: "skippedNoHub" }
   | {
       readonly status: "switchConfirmationRequired";

@@ -218,6 +218,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     if (
       !result ||
       result.status === "skippedDifferentProject" ||
+      result.status === "skippedEndpointChanged" ||
       result.status === "skippedNoHub"
     ) {
       if (result?.status === "skippedDifferentProject")
@@ -230,9 +231,23 @@ export function createProjectFilesController(host: ProjectFilesHost) {
           "info",
           "Projectを保存しました。Hub未設定のため警報定義は適用していません。",
         );
+      if (result?.status === "skippedEndpointChanged")
+        host.report(
+          "info",
+          "Projectを保存しました。Hubの接続先が変わったため、警報定義は明示的に適用してください。",
+        );
       return;
     }
     if (result.status === "applied") {
+      if (result.warning) {
+        host.report(
+          "info",
+          result.warning === "monitorPathNotSaved"
+            ? "警報定義は適用しましたが、監視ファイルの記録を更新できませんでした。再起動後の状態を確認してください。"
+            : "警報定義は復旧処理で適用されました。警報の状態を確認してください。",
+        );
+        return;
+      }
       host.report(
         result.snapshot?.status && result.snapshot.status !== "running"
           ? "info"

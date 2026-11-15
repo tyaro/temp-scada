@@ -130,11 +130,20 @@ impl From<scada_alarm::Engine> for EngineSnapshot {
     tag = "status"
 )]
 pub enum ApplyResult {
-    Applied { snapshot: AlarmSnapshot },
+    Applied {
+        snapshot: AlarmSnapshot,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        warning: Option<String>,
+    },
     SkippedDifferentProject,
+    SkippedEndpointChanged,
     SkippedNoHub,
-    SwitchConfirmationRequired { monitored_project_id: String },
-    ConfirmationRequired { occurrences: Vec<UnackedOccurrence> },
+    SwitchConfirmationRequired {
+        monitored_project_id: String,
+    },
+    ConfirmationRequired {
+        occurrences: Vec<UnackedOccurrence>,
+    },
 }
 
 #[derive(Clone, Copy)]
@@ -484,6 +493,13 @@ impl AlarmService {
         } else {
             None
         };
+        if matches!(mode, ApplyMode::Saved)
+            && old_applied
+                .as_ref()
+                .is_some_and(|old| old.endpoint != endpoint)
+        {
+            return Ok(ApplyResult::SkippedEndpointChanged);
+        }
         if same_project {
             if let Some(old) = &old_applied {
                 applied.applied_at_ms = applied
@@ -512,13 +528,22 @@ impl AlarmService {
                     {
                         Ok(()) => {
                             active.applied = Some(applied);
-                            self.terminal.set_monitored(Some(MonitoredProject {
-                                project_id: saved.project_id,
-                                path: path.to_owned(),
-                            }))?;
+                            let warning = self
+                                .terminal
+                                .set_monitored(Some(MonitoredProject {
+                                    project_id: saved.project_id,
+                                    path: path.to_owned(),
+                                }))
+                                .err()
+                                .map(|error| {
+                                    eprintln!(
+                                        "alarm monitored path update failed after apply: {error:?}"
+                                    );
+                                    "monitorPathNotSaved".to_owned()
+                                });
                             let snapshot = self.snapshot_locked(&active).await?;
                             let _ = self.lagged.send(());
-                            return Ok(ApplyResult::Applied { snapshot });
+                            return Ok(ApplyResult::Applied { snapshot, warning });
                         }
                         Err(AlarmRuntimeError::Db(AlarmDbError::ConfirmationRequired(
                             occurrences,
@@ -652,6 +677,20 @@ impl AlarmService {
                     active.reason = stopped_reason(&restart_error).into();
                 }
             }
+            if current
+                .as_ref()
+                .is_some_and(|row| row.project_id == saved.project_id)
+                && active.applied.as_ref().is_some_and(|row| {
+                    row.file_hash == applied.file_hash && row.applied_at_ms == applied.applied_at_ms
+                })
+            {
+                let snapshot = self.snapshot_locked(&active).await?;
+                let _ = self.lagged.send(());
+                return Ok(ApplyResult::Applied {
+                    snapshot,
+                    warning: Some("recoveredAfterApply".into()),
+                });
+            }
             let _ = self.lagged.send(());
             return match error {
                 AlarmServiceError::ConfirmationRequired(occurrences) => {
@@ -668,7 +707,10 @@ impl AlarmService {
         }
         let snapshot = self.snapshot_locked(&active).await?;
         let _ = self.lagged.send(());
-        Ok(ApplyResult::Applied { snapshot })
+        Ok(ApplyResult::Applied {
+            snapshot,
+            warning: None,
+        })
     }
 
     pub async fn snapshot(&self) -> Result<AlarmSnapshot, AlarmServiceError> {
@@ -892,6 +934,10 @@ mod tests {
             serde_json::to_value(result).unwrap(),
             json!({"status":"switchConfirmationRequired","monitoredProjectId":"project-a"})
         );
+        assert_eq!(
+            serde_json::to_value(ApplyResult::SkippedEndpointChanged).unwrap(),
+            json!({"status":"skippedEndpointChanged"})
+        );
     }
 
     fn project(id: &str, name: &str) -> Value {
@@ -959,6 +1005,23 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resumed.engine.unwrap().session, session);
+        assert!(matches!(
+            service
+                .apply(
+                    &path,
+                    "http://changed-hub.invalid",
+                    hub.client(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
+                .await
+                .unwrap(),
+            ApplyResult::SkippedEndpointChanged
+        ));
+        let skipped = service.snapshot().await.unwrap();
+        assert_eq!(skipped.engine.unwrap().session, session);
+        assert_eq!(skipped.applied.unwrap().applied_at_ms, first_applied_at);
 
         value["alarms"]["definitions"][0]["name"] = json!("Renamed");
         std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();

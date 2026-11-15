@@ -26,6 +26,7 @@ use tokio::task::JoinHandle;
 struct NativeHost {
     bootstrap: Bootstrapper,
     active: Mutex<Active>,
+    alarm_operation: Mutex<()>,
 }
 
 #[derive(Default)]
@@ -76,6 +77,7 @@ async fn hub_connect(
     alarm: State<'_, alarm::AlarmState>,
     endpoint: String,
 ) -> Result<HubStatus, String> {
+    let _alarm_operation = state.alarm_operation.lock().await;
     let mut active = state.active.lock().await;
     stop_read(&mut active).await;
     active.connected = false;
@@ -85,10 +87,10 @@ async fn hub_connect(
         .await
         .map_err(|error| error.kind().as_str().to_owned())?;
     active.connected = result.status.is_connected();
+    drop(active);
     if result.status.is_connected() {
         alarm::after_hub_connect(&state, &alarm, result.judged).await;
     }
-    drop(active);
     Ok(result.status)
 }
 
@@ -350,6 +352,7 @@ fn main() {
         .manage(NativeHost {
             bootstrap,
             active: Mutex::new(Active::default()),
+            alarm_operation: Mutex::new(()),
         })
         .manage(auth)
         .manage(alarm)

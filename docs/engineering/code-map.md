@@ -937,7 +937,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 ## 警報の状態機械（段階3-A）
 
-3-C2c の入口は `crates/scada-host/src/alarm_project.rs`（保存済み Project の検証・条件展開）、`alarm_service.rs`（端末全体の監視対象、適用・切替・起動時復元）、`alarm_runtime.rs`（同一 session での定義更新）、`alarm_db.rs`（適用 transaction 内の未確認回の再照合と切替終端）。Tauri の `apps/banto-scada/src-tauri/src/alarm.rs` が認証済み Hub client と IPC・event を接続し、`project.rs` の `project_save.apply` が書込みと適用を別に返す。webview は `src/lib/alarm-mirror.ts` で世代番号と連番を照合し、`src/native/project-file.ts` がファイルを `fileId` だけで指す。ループバック Hub・一時 DB の統合試験、`alarm-mirror.test.ts`、Project 保存 controller 試験が回帰入口。Tauri 実機・実 Hub は未確認。
+3-C2c の入口は `crates/scada-host/src/alarm_project.rs`（保存済み Project の検証・条件展開）、`alarm_service.rs`（端末全体の監視対象、適用・切替・起動時復元）、`alarm_runtime.rs`（同一 session での定義更新）、`alarm_db.rs`（適用 transaction 内の未確認回の再照合と切替終端）。Tauri の `apps/banto-scada/src-tauri/src/alarm.rs` が認証済み Hub client と IPC・event を接続し、`main.rs` の `alarm_operation` が Hub 接続と警報適用の順を画面読取の lock と別に守る。`project.rs` の `project_save.apply` は書込みと適用を別に返す。webview は `src/lib/alarm-mirror.ts` で世代番号と連番を照合し、`src/native/project-file.ts` がファイルを `fileId` だけで指す。ループバック Hub・一時 DB の統合試験、`alarm-mirror.test.ts`、Project 保存 controller 試験が回帰入口。Tauri 実機・実 Hub は未確認。
 
 明示的な別 Project への切替は `alarm_service.rs` の `ApplyMode::Explicit` が監視中 Project id の再確認を求め、`project-files.svelte.ts` が未確認回の終了確認と別に扱う。ACK の権限は `desktop_auth.rs` の `authorize_alarm_ack`（現段階は Admin）で保存権限から独立して検査する。
 
