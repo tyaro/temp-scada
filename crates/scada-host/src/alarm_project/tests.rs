@@ -46,6 +46,32 @@ fn saved_json_expands_enabled_conditions_and_keeps_disabled_ids() {
 }
 
 #[test]
+fn present_alarm_timing_fields_reject_wrong_types() {
+    for (field, invalid) in [
+        ("onDelayMs", json!("5000")),
+        ("onDelayMs", json!(-1)),
+        ("offDelayMs", json!(1.5)),
+        ("deadband", json!("0.5")),
+    ] {
+        let mut project = example();
+        if field == "deadband" {
+            project["alarms"]["definitions"][0]["source"][field] = invalid;
+        } else {
+            project["alarms"]["definitions"][0][field] = invalid;
+        }
+        assert!(matches!(
+            parse_alarm_document(&project["alarms"]),
+            Err(AlarmProjectError::InvalidFile)
+        ));
+        assert!(SavedAlarmProject::from_bytes(
+            Path::new("saved.json"),
+            &serde_json::to_vec(&project).unwrap()
+        )
+        .is_err());
+    }
+}
+
+#[test]
 fn package_uses_checked_project_and_manifest_bytes() {
     let mut project = example();
     let manifest = project.as_object_mut().unwrap().remove("manifest").unwrap();

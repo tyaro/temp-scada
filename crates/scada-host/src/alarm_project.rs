@@ -143,8 +143,14 @@ fn parse_alarm_document(alarm_document: &Value) -> Result<ExpandedAlarms, AlarmP
                 .map_err(|_| AlarmProjectError::InvalidFile)?,
             None => AckMode::Manual,
         };
-        let on_delay_ms = item["onDelayMs"].as_u64().unwrap_or(0);
-        let off_delay_ms = item["offDelayMs"].as_u64().unwrap_or(0);
+        let on_delay_ms = match item.get("onDelayMs") {
+            None => 0,
+            Some(value) => value.as_u64().ok_or(AlarmProjectError::InvalidFile)?,
+        };
+        let off_delay_ms = match item.get("offDelayMs") {
+            None => 0,
+            Some(value) => value.as_u64().ok_or(AlarmProjectError::InvalidFile)?,
+        };
         let mut add = |condition_id: String,
                        source: Source,
                        severity: String,
@@ -187,7 +193,10 @@ fn parse_alarm_document(alarm_document: &Value) -> Result<ExpandedAlarms, AlarmP
                 None,
             ),
             Some("threshold") => {
-                let deadband = item["source"]["deadband"].as_f64().unwrap_or(0.0);
+                let deadband = match item["source"].get("deadband") {
+                    None => 0.0,
+                    Some(value) => value.as_f64().ok_or(AlarmProjectError::InvalidFile)?,
+                };
                 for (key, limit, label) in [
                     ("hh", LimitKind::Hh, "HH"),
                     ("h", LimitKind::H, "H"),
