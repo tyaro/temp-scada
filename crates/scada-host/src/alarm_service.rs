@@ -473,9 +473,9 @@ impl AlarmService {
                                 project_id: saved.project_id,
                                 path: path.to_owned(),
                             }))?;
-                            return Ok(ApplyResult::Applied {
-                                snapshot: self.snapshot_locked(&active).await?,
-                            });
+                            let snapshot = self.snapshot_locked(&active).await?;
+                            let _ = self.lagged.send(());
+                            return Ok(ApplyResult::Applied { snapshot });
                         }
                         Err(error) => return Err(error.into()),
                     }
@@ -585,6 +585,7 @@ impl AlarmService {
             if switching {
                 if let Err(recovery_error) = self.recover_switch().await {
                     active.reason = "switchRecoveryFailed".into();
+                    let _ = self.lagged.send(());
                     return Err(recovery_error);
                 }
             }
@@ -596,10 +597,14 @@ impl AlarmService {
                     })
             });
             if restart {
-                let _ = self
+                if let Err(restart_error) = self
                     .start_locked(&mut active, Some(endpoint), Some(client))
-                    .await;
+                    .await
+                {
+                    active.reason = stopped_reason(&restart_error).into();
+                }
             }
+            let _ = self.lagged.send(());
             return match error {
                 AlarmServiceError::ConfirmationRequired(occurrences) => {
                     Ok(ApplyResult::ConfirmationRequired { occurrences })
@@ -613,9 +618,9 @@ impl AlarmService {
         {
             active.reason = stopped_reason(&error).into();
         }
-        Ok(ApplyResult::Applied {
-            snapshot: self.snapshot_locked(&active).await?,
-        })
+        let snapshot = self.snapshot_locked(&active).await?;
+        let _ = self.lagged.send(());
+        Ok(ApplyResult::Applied { snapshot })
     }
 
     pub async fn snapshot(&self) -> Result<AlarmSnapshot, AlarmServiceError> {

@@ -713,16 +713,15 @@ async fn stop(
 ) -> Result<(), AlarmRuntimeError> {
     // A stop is also a boundary: commit every already-expired wait first.
     let settled = publish(&mut evaluator, Input::TimerExpired, changes).await;
-    let sdk_result = tokio::time::timeout(Duration::from_secs(5), sdk.shutdown())
-        .await
-        .map_err(|_| AlarmRuntimeError::ConnectionFailure)
-        .and_then(|result| result.map_err(|error| AlarmRuntimeError::Sdk(error.kind())));
+    tokio::spawn(async move {
+        let _ = tokio::time::timeout(Duration::from_secs(5), sdk.shutdown()).await;
+    });
     evaluator
         .db
         .stop_session(evaluator.engine.session(), wall_ms())
         .await?;
     settled?;
-    sdk_result
+    Ok(())
 }
 
 async fn publish(
