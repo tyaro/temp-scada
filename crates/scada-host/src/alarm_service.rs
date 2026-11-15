@@ -253,6 +253,9 @@ impl AlarmService {
             let _ = self.lagged.send(());
             return snapshot;
         }
+        if active.reason == "switchRecoveryFailed" {
+            active.reason = "stopped".into();
+        }
         if active.runtime.as_ref().is_some_and(|runtime| {
             matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running)
                 && active
@@ -452,6 +455,10 @@ impl AlarmService {
         if let Err(error) = self.recover_switch().await {
             active.reason = "switchRecoveryFailed".into();
             return Err(error);
+        }
+        if active.reason == "switchRecoveryFailed" {
+            active.reason = "stopped".into();
+            let _ = self.lagged.send(());
         }
         let previous = self.terminal.monitored()?;
         if matches!(mode, ApplyMode::Saved)
@@ -1469,6 +1476,37 @@ mod tests {
             "switchRecoveryFailed"
         );
         service.terminal.set_switching(None).unwrap();
+        let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+        let other_path = dir.join("other.json");
+        let other_id = uuid::Uuid::now_v7().to_string();
+        std::fs::write(
+            &other_path,
+            serde_json::to_vec(&project(&other_id, "Other")).unwrap(),
+        )
+        .unwrap();
+        service
+            .terminal
+            .set_monitored(Some(MonitoredProject {
+                project_id: uuid::Uuid::now_v7().to_string(),
+                path: dir.join("monitored.json"),
+            }))
+            .unwrap();
+        assert!(matches!(
+            service
+                .apply(
+                    &other_path,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved,
+                )
+                .await
+                .unwrap(),
+            ApplyResult::SkippedDifferentProject
+        ));
+        assert_eq!(service.snapshot().await.unwrap().status, "stopped");
+        service.terminal.set_monitored(None).unwrap();
         assert_eq!(
             service.resume(None, None).await.unwrap().status,
             "notApplied"
