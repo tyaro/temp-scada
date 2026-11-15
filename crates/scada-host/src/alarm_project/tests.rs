@@ -72,6 +72,31 @@ fn present_alarm_timing_fields_reject_wrong_types() {
 }
 
 #[test]
+fn duplicate_alarm_ids_and_expanded_condition_ids_are_rejected() {
+    let mut project = example();
+    let id = project["alarms"]["definitions"][0]["id"].clone();
+    project["alarms"]["definitions"][1]["id"] = id;
+    assert!(matches!(
+        parse_alarm_document(&project["alarms"]),
+        Err(AlarmProjectError::InvalidFile)
+    ));
+    assert!(SavedAlarmProject::from_bytes(
+        Path::new("saved.json"),
+        &serde_json::to_vec(&project).unwrap()
+    )
+    .is_err());
+
+    // The model schema requires UUIDs, but the expansion boundary must also
+    // reject a condition id colliding across enabled and disabled definitions.
+    project["alarms"]["definitions"][0]["id"] = json!("alpha");
+    project["alarms"]["definitions"][1]["id"] = json!("alpha:hh");
+    assert!(matches!(
+        parse_alarm_document(&project["alarms"]),
+        Err(AlarmProjectError::InvalidFile)
+    ));
+}
+
+#[test]
 fn package_uses_checked_project_and_manifest_bytes() {
     let mut project = example();
     let manifest = project.as_object_mut().unwrap().remove("manifest").unwrap();

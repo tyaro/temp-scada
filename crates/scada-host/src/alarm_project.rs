@@ -131,11 +131,15 @@ fn parse_alarm_document(alarm_document: &Value) -> Result<ExpandedAlarms, AlarmP
     let mut definitions = BTreeMap::new();
     let mut disabled = BTreeSet::new();
     let mut displays = BTreeMap::new();
+    let mut source_ids = BTreeSet::new();
     for item in alarm_document["definitions"]
         .as_array()
         .ok_or(AlarmProjectError::InvalidFile)?
     {
         let id = required_string(item, "id")?;
+        if !source_ids.insert(id.clone()) {
+            return Err(AlarmProjectError::InvalidFile);
+        }
         let name = required_string(item, "name")?;
         let tag = required_string(&item["source"], "tag")?;
         let ack_mode = match item.get("ackMode") {
@@ -155,7 +159,11 @@ fn parse_alarm_document(alarm_document: &Value) -> Result<ExpandedAlarms, AlarmP
                        source: Source,
                        severity: String,
                        message: String,
-                       limit_label: Option<String>| {
+                       limit_label: Option<String>|
+         -> Result<(), AlarmProjectError> {
+            if definitions.contains_key(&condition_id) || disabled.contains(&condition_id) {
+                return Err(AlarmProjectError::InvalidFile);
+            }
             if item["enabled"] == false {
                 disabled.insert(condition_id);
             } else {
@@ -178,6 +186,7 @@ fn parse_alarm_document(alarm_document: &Value) -> Result<ExpandedAlarms, AlarmP
                 );
                 definitions.insert(condition_id, definition);
             }
+            Ok(())
         };
         match item["source"]["kind"].as_str() {
             Some("bit") => add(
@@ -191,7 +200,7 @@ fn parse_alarm_document(alarm_document: &Value) -> Result<ExpandedAlarms, AlarmP
                 required_string(item, "severity")?,
                 item["message"].as_str().unwrap_or(&name).to_owned(),
                 None,
-            ),
+            )?,
             Some("threshold") => {
                 let deadband = match item["source"].get("deadband") {
                     None => 0.0,
@@ -223,7 +232,7 @@ fn parse_alarm_document(alarm_document: &Value) -> Result<ExpandedAlarms, AlarmP
                             .map(str::to_owned)
                             .unwrap_or_else(|| format!("{name} {label}")),
                         Some(label.into()),
-                    );
+                    )?;
                 }
             }
             _ => return Err(AlarmProjectError::InvalidFile),
