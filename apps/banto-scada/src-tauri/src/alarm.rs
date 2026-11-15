@@ -226,6 +226,10 @@ pub async fn after_hub_connect(
         }
         *credential = judged;
         let _ = service.resume(Some(&endpoint), Some(client)).await;
+    } else {
+        let _ = service.stop().await;
+        *credential = None;
+        let _ = service.resume(None, None).await;
     }
 }
 

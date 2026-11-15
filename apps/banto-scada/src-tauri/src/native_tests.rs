@@ -433,6 +433,7 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
     // A failed connection can leave a newly saved Hub record behind. The old
     // alarm session must stop even though the new Hub is unreachable.
     let mut record = saved_state.load().unwrap().unwrap();
+    let previous_record = record.clone();
     record.endpoint = "http://127.0.0.1:1".into();
     saved_state.save(&record).unwrap();
     assert!(!hub_connect(app.state(), app.state(), record.endpoint)
@@ -440,6 +441,23 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
         .unwrap()
         .is_connected());
     assert!(service.snapshot().await.unwrap().engine.is_none());
+
+    saved_state.save(&previous_record).unwrap();
+    assert!(hub_connect(app.state(), app.state(), hub.url.clone())
+        .await
+        .unwrap()
+        .is_connected());
+    assert!(service.snapshot().await.unwrap().engine.is_some());
+    saved_state.clear().unwrap();
+    assert!(
+        !hub_connect(app.state(), app.state(), "http://127.0.0.1:1".into())
+            .await
+            .unwrap()
+            .is_connected()
+    );
+    let without_record = service.snapshot().await.unwrap();
+    assert!(without_record.engine.is_none());
+    assert_eq!(without_record.status, "noHub");
 
     service.stop().await.unwrap();
     drop(service);
