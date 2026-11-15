@@ -585,9 +585,9 @@ impl AlarmService {
                 .map(|applied| applied.endpoint.clone()));
         }
         let db = AlarmDb::open(self.terminal.clone(), &monitored.project_id).await?;
-        let endpoint = db.applied().await?.map(|applied| applied.endpoint);
+        let applied = db.applied().await;
         db.close().await;
-        Ok(endpoint)
+        Ok(applied?.map(|applied| applied.endpoint))
     }
 
     async fn snapshot_locked(&self, active: &Active) -> Result<AlarmSnapshot, AlarmServiceError> {
@@ -597,9 +597,9 @@ impl AlarmService {
                 active.applied.clone()
             } else {
                 let db = AlarmDb::open(self.terminal.clone(), &monitored.project_id).await?;
-                let applied = db.applied().await?;
+                let applied = db.applied().await;
                 db.close().await;
-                applied
+                applied?
             }
         } else {
             None
@@ -711,9 +711,9 @@ impl AlarmService {
             .monitored()?
             .ok_or(AlarmServiceError::NoMonitoredProject)?;
         let db = AlarmDb::open(self.terminal.clone(), &monitored.project_id).await?;
-        let result = db.history(before_seq, from_ms, to_ms, kind, limit).await?;
+        let result = db.history(before_seq, from_ms, to_ms, kind, limit).await;
         db.close().await;
-        Ok(result)
+        Ok(result?)
     }
 }
 
