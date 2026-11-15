@@ -199,7 +199,7 @@ Hub の購読は on-change 配信で、値も品質も変わらなければ何�
 - condition 単位の理由は、condition ごとに評価不能の始まりと終わりのイベントを書く。ただし「初期値待ち」は状態と表示だけで、イベントは書かない（session を始めるたびに全 condition 分のイベントが出ないようにする）。Engine 単位の評価不能が解けたら、各 condition は次の値が届くまで「初期値待ち」に戻る（持っていた値では判定しない）。Engine 単位の評価不能の間に condition 単位の理由が変わったら、Engine 単位が解けたときの理由で始まり・終わりを書く。
 - Bad を 0 や false に置き換えない。
 - SDK の `Unbound` は WebSocket が開いたまま要求した外部名を一つも解決できなかった状態なので、Engine の未接続ではなく各 condition の「未解決」とする。SDK の watch が中間の未接続状態を省略しても、公開された generation が変われば待ちを破棄し、新しい generation の値で評価を始め直す。
-- 同じ Project の適用で購読タグ集合を変更するときは、新しい SDK が最初の `Live`／`Unbound` snapshot を出すまで、その SDK の接続準備状態を Engine の「未接続」として入力しない。定義を保った condition の状態や待ちを、購読の作り直しだけで失わないため。接続後は新しい snapshot の値で評価し、認証失効や接続失敗による停止は通常どおり扱う。
+- 同じ Project の適用で購読タグ集合を変更するときは、新しい SDK の接続準備状態を 2 秒まで待つ。最初の `Live`／`Unbound` snapshot が届けば、その値で評価し、購読の作り直しだけで定義を保った condition の状態や待ちを失わない。2 秒以内に届かなければ Engine の「未接続」を入力する。認証失効や接続失敗による停止は通常どおり扱う。
 - session 開始直後の SDK が `Stopped`／`Connecting` の間も Engine の「未接続」として表示・記録し、初回の `Live`／`Unbound` で回復を記録する。接続が確立する前に「監視できている」と示さないための区間で、session ごとに一度だけ起こりうる。
 - 認証の失効（SDK の Unauthorized。再接続しない）は評価不能ではなく、Engine の停止として扱う（§5.1）。
 

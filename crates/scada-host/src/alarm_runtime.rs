@@ -559,6 +559,7 @@ async fn run_inner(
     let mut was_evaluable = false;
     let mut accepted_generation = None;
     let mut awaiting_replacement_snapshot = false;
+    let mut replacement_deadline = None;
     // Process the current snapshot before waiting so a rapid initial Live is not lost.
     let initial = states.borrow_and_update().clone();
     if initial.connection_state() == TagClientConnectionState::Stopped
@@ -601,6 +602,7 @@ async fn run_inner(
                     continue;
                 }
                 awaiting_replacement_snapshot = false;
+                replacement_deadline = None;
                 if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
                     let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(error);
@@ -608,6 +610,19 @@ async fn run_inner(
             }
             _ = async { if let Some(deadline) = deadline { tokio::time::sleep_until(deadline.into()).await } else { std::future::pending::<()>().await } } => {
                 if let Err(error) = publish(&mut evaluator, Input::TimerExpired, &change_tx).await {
+                    let _ = stop(evaluator, sdk, &change_tx).await;
+                    return Err(error);
+                }
+            }
+            _ = async { if let Some(deadline) = replacement_deadline { tokio::time::sleep_until(deadline).await } else { std::future::pending::<()>().await } } => {
+                awaiting_replacement_snapshot = false;
+                replacement_deadline = None;
+                let current = states.borrow_and_update().clone();
+                if current.connection_state() == TagClientConnectionState::Stopped {
+                    let _ = stop(evaluator, sdk, &change_tx).await;
+                    return Err(current.last_error().map_or(AlarmRuntimeError::Closed, AlarmRuntimeError::Sdk));
+                }
+                if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
                     let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(error);
                 }
@@ -642,6 +657,7 @@ async fn run_inner(
                                 was_evaluable = false;
                                 accepted_generation = None;
                                 awaiting_replacement_snapshot = true;
+                                replacement_deadline = Some(tokio::time::Instant::now() + Duration::from_secs(2));
                                 tokio::spawn(async move {
                                     let _ = tokio::time::timeout(Duration::from_secs(5), old.shutdown()).await;
                                 });
@@ -659,6 +675,7 @@ async fn run_inner(
                                 || matches!(current.connection_state(), TagClientConnectionState::Live | TagClientConnectionState::Unbound | TagClientConnectionState::Unauthorized)
                             {
                                 awaiting_replacement_snapshot = false;
+                                replacement_deadline = None;
                                 if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
                                     let _ = stop(evaluator, sdk, &change_tx).await;
                                     return Err(error);
@@ -1461,10 +1478,10 @@ mod tests {
         );
         runtime
             .apply(
-                added_applied,
+                added_applied.clone(),
                 BTreeMap::from([
-                    (id.clone(), changed_definition),
-                    (added_id.clone(), added_definition),
+                    (id.clone(), changed_definition.clone()),
+                    (added_id.clone(), added_definition.clone()),
                 ]),
                 Vec::new(),
                 hub.client(),
@@ -1501,6 +1518,54 @@ mod tests {
                 .count(),
             unavailable_before
         );
+        let client = hub.client();
+        drop(hub);
+        let missing_id = "alarm:missing-after-switch".to_owned();
+        let mut missing_definition = added_definition.clone();
+        missing_definition.spec.source = scada_alarm::Source::Bit {
+            tag: "PLC01.Fast.Missing".into(),
+            active_when: true,
+        };
+        let mut disconnected_applied = added_applied;
+        disconnected_applied.project_revision = 5;
+        disconnected_applied.file_hash = "disconnected-tag".into();
+        disconnected_applied
+            .condition_hashes
+            .insert(missing_id.clone(), missing_definition.evaluation_hash());
+        disconnected_applied.displays.insert(
+            missing_id.clone(),
+            ConditionDisplay {
+                name: "Missing".into(),
+                message: "停止".into(),
+                severity: "low".into(),
+                limit_label: None,
+            },
+        );
+        runtime
+            .apply(
+                disconnected_applied,
+                BTreeMap::from([
+                    (id.clone(), changed_definition),
+                    (added_id.clone(), added_definition),
+                    (missing_id, missing_definition),
+                ]),
+                Vec::new(),
+                client,
+            )
+            .await
+            .unwrap();
+        tokio::time::timeout(Duration::from_secs(4), async {
+            loop {
+                if runtime.snapshot().await.unwrap().unavailable()
+                    == Some(EngineUnavailable::Disconnected)
+                {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
         let status = runtime.status();
         runtime.stop().await.unwrap();
         assert_eq!(
