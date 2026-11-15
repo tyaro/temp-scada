@@ -124,7 +124,7 @@ pub async fn project_save<R: Runtime>(
         return Err("invalid_request".into());
     };
     let (header, content) = unframe::<SaveRequest>(body).ok_or("invalid_request")?;
-    alarm::authorized_user(&auth).await?;
+    alarm::authorize(&auth).await?;
     let target = match header.save_as {
         true => None,
         false => files.0.target(header.file_id, header.format),
@@ -133,24 +133,28 @@ pub async fn project_save<R: Runtime>(
         Some(path) => path,
         None => match pick_save(&window, header.format, &header.name).await {
             Some(path) => {
-                alarm::authorized_user(&auth).await?;
+                alarm::authorize(&auth).await?;
                 path
             }
             None => return Ok(json!({"status": "cancelled"})),
         },
     };
-    let user = alarm::authorized_user(&auth).await?;
+    alarm::authorize(&auth).await?;
     let saved = files
         .0
         .write(&path, header.format, content)
         .map_err(|error| error.reason())?;
     let path = files.0.path(saved.file_id).ok_or("unknown_file_id")?;
-    let apply =
-        match alarm::apply_file(&alarm, &host, &path, &user, &header.confirmed, false).await {
-            Ok(result) => serde_json::to_value(result)
-                .unwrap_or(json!({"status":"failed","reason":"internal"})),
-            Err(reason) => json!({"status":"failed","reason":reason}),
-        };
+    let apply = match alarm::applied_user(&auth).await {
+        Ok(user) => alarm::apply_file(&alarm, &host, &path, &user, &header.confirmed, false).await,
+        Err(reason) => Err(reason),
+    };
+    let apply = match apply {
+        Ok(result) => {
+            serde_json::to_value(result).unwrap_or(json!({"status":"failed","reason":"internal"}))
+        }
+        Err(reason) => json!({"status":"failed","reason":reason}),
+    };
     Ok(json!({
         "status": "saved",
         "fileId": saved.file_id,

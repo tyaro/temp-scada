@@ -29,10 +29,17 @@ export type ChangeDecision = "applied" | "ignored" | "refresh";
 
 export class AlarmMirror {
   current: AlarmSnapshot | null = null;
+  private stoppedGeneration: number | null = null;
 
   acceptSnapshot(next: AlarmSnapshot): boolean {
     const oldGeneration = this.current?.engine?.session.generation;
     const nextGeneration = next.engine?.session.generation;
+    if (
+      nextGeneration !== undefined &&
+      this.stoppedGeneration !== null &&
+      nextGeneration <= this.stoppedGeneration
+    )
+      return false;
     if (
       oldGeneration !== undefined &&
       nextGeneration !== undefined &&
@@ -46,6 +53,12 @@ export class AlarmMirror {
       next.engine.seq < this.current.engine.seq
     )
       return false;
+    if (nextGeneration === undefined && oldGeneration !== undefined)
+      this.stoppedGeneration = Math.max(
+        this.stoppedGeneration ?? oldGeneration,
+        oldGeneration,
+      );
+    if (nextGeneration !== undefined) this.stoppedGeneration = null;
     this.current = next;
     return true;
   }

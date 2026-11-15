@@ -28,7 +28,7 @@ describe("nativeProjectFiles", () => {
       saveAs: false,
       content: encoder.encode("{}"),
     });
-    expect(saved).toEqual({ fileId: 4, fileName: "plant.json" });
+    expect(saved).toEqual({ fileId: 4, fileName: "plant.json", apply: null });
     expect(calls[0].command).toBe("project_save");
     const { header, body } = unframe(calls[0].args as Uint8Array);
     expect(header).toEqual({

@@ -95,4 +95,14 @@ describe("alarm event reconciliation", () => {
       }),
     ).toBe("refresh");
   });
+
+  it("does not revive a stopped engine from an earlier generation", () => {
+    const mirror = new AlarmMirror();
+    mirror.acceptSnapshot(snapshot(5, 8));
+    const stopped = { ...snapshot(5, 8), engine: null, status: "noConditions" };
+    expect(mirror.acceptSnapshot(stopped)).toBe(true);
+    expect(mirror.acceptSnapshot(snapshot(5, 9))).toBe(false);
+    expect(mirror.current?.status).toBe("noConditions");
+    expect(mirror.acceptSnapshot(snapshot(6, 1))).toBe(true);
+  });
 });

@@ -18,6 +18,7 @@ export type AlarmApplyResult =
       readonly snapshot?: { readonly status: string };
     }
   | { readonly status: "skippedDifferentProject" }
+  | { readonly status: "skippedNoHub" }
   | {
       readonly status: "confirmationRequired";
       readonly occurrences: UnackedOccurrence[];

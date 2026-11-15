@@ -214,11 +214,20 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     savedFileId: number,
   ) {
     host.alarmRefresh?.();
-    if (!result || result.status === "skippedDifferentProject") {
+    if (
+      !result ||
+      result.status === "skippedDifferentProject" ||
+      result.status === "skippedNoHub"
+    ) {
       if (result?.status === "skippedDifferentProject")
         host.report(
           "info",
           "別のProjectを保存しました。監視中のProjectは切り替わっていません。",
+        );
+      if (result?.status === "skippedNoHub")
+        host.report(
+          "info",
+          "Projectを保存しました。Hub未設定のため警報定義は適用していません。",
         );
       return;
     }

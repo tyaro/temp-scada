@@ -54,27 +54,27 @@ fn reason(error: &AlarmServiceError) -> String {
     .into()
 }
 
-pub(crate) async fn authorized_user(auth: &AuthState) -> Result<String, String> {
-    let host = auth.get().map_err(|_| "auth_unavailable".to_owned())?;
-    let phase = host
-        .phase()
-        .await
-        .map_err(|_| "authUnavailable".to_owned())?;
-    if !matches!(phase.phase, "initializing" | "operational") {
-        return Err("authPhaseUnavailable".into());
+fn refusal(error: CommandError) -> String {
+    match error {
+        CommandError::Banto(BantoError::Unauthorized) => "unauthorized",
+        CommandError::Banto(BantoError::Forbidden) => "forbidden",
+        CommandError::Unavailable(_) => "auth_unavailable",
+        _ => "auth_failed",
     }
-    host.authorize_project_save().await.map_err(|error| {
-        match error {
-            CommandError::Banto(BantoError::Unauthorized) => "unauthorized",
-            CommandError::Banto(BantoError::Forbidden) => "forbidden",
-            _ => "authUnavailable",
-        }
-        .to_owned()
-    })?;
-    let identity = host
-        .resolve()
+    .into()
+}
+
+pub(crate) async fn authorize(auth: &AuthState) -> Result<(), String> {
+    auth.get()
+        .map_err(refusal)?
+        .authorize_project_save()
         .await
-        .map_err(|_| "authUnavailable".to_owned())?;
+        .map_err(refusal)
+}
+
+pub(crate) async fn applied_user(auth: &AuthState) -> Result<String, String> {
+    let host = auth.get().map_err(refusal)?;
+    let identity = host.resolve().await.map_err(refusal)?;
     Ok(if identity.kind == Some("local") {
         "未ログイン".into()
     } else {
@@ -83,6 +83,11 @@ pub(crate) async fn authorized_user(auth: &AuthState) -> Result<String, String> 
             .map(|identity| identity.name)
             .ok_or("unauthorized")?
     })
+}
+
+pub(crate) async fn authorized_user(auth: &AuthState) -> Result<String, String> {
+    authorize(auth).await?;
+    applied_user(auth).await
 }
 
 fn hub_context(host: &NativeHost) -> Result<(String, RestClient), String> {
@@ -104,6 +109,7 @@ pub fn start_events<R: Runtime>(app: AppHandle<R>) {
         return;
     };
     let mut changes = service.changes();
+    let mut lagged = service.lagged();
     let events = app.clone();
     tauri::async_runtime::spawn(async move {
         loop {
@@ -126,6 +132,14 @@ pub fn start_events<R: Runtime>(app: AppHandle<R>) {
                 }
                 Err(_) => break,
             }
+        }
+    });
+    let lag_events = app.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Ok(()) | Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) =
+            lagged.recv().await
+        {
+            let _ = lag_events.emit("alarm_changed_lagged", ());
         }
     });
     tauri::async_runtime::spawn(async move {
@@ -173,7 +187,11 @@ pub async fn apply_file(
     explicit: bool,
 ) -> Result<ApplyResult, String> {
     let service = alarm.get()?;
-    let (endpoint, client) = hub_context(host)?;
+    let (endpoint, client) = match hub_context(host) {
+        Ok(context) => context,
+        Err(reason) if !explicit && reason == "noHub" => return Ok(ApplyResult::SkippedNoHub),
+        Err(reason) => return Err(reason),
+    };
     match service
         .apply(path, &endpoint, client, user, confirmed, explicit)
         .await
@@ -257,7 +275,7 @@ pub async fn alarm_ack(
             )) => {
                 serde_json::json!({"kind":"historyUnavailable"})
             }
-            Err(error) => return Err(reason(&error)),
+            Err(error) => serde_json::json!({"kind":"failed","reason":reason(&error)}),
         };
         results.push(AckResult {
             condition_id: item.condition_id,

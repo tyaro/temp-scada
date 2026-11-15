@@ -1784,6 +1784,7 @@
   const saveLabel = $derived(projectFiles.saveLabel);
   const lastExport = $derived(projectFiles.lastExport);
   const alarmMirror = new AlarmMirror();
+  let alarmRefreshId = 0;
   let alarmSnapshot = $state<AlarmSnapshot | null>(null);
   let alarmReadError = $state<string | null>(null);
   const alarmLabel = $derived.by(() => {
@@ -1803,13 +1804,16 @@
   async function refreshAlarm() {
     const feed = projectFileService?.alarmFeed;
     if (!feed) return;
+    const requestId = ++alarmRefreshId;
     try {
       const next = await feed.snapshot();
+      if (requestId !== alarmRefreshId) return;
       if (alarmMirror.acceptSnapshot(next)) {
         alarmSnapshot = alarmMirror.current;
         alarmReadError = null;
       }
     } catch (error) {
+      if (requestId !== alarmRefreshId) return;
       alarmReadError = String(error);
     }
   }

@@ -647,7 +647,13 @@ async fn run_inner(
                             }
                         }
                         Err(error) => {
-                            if let Some(replacement) = replacement { let _ = replacement.shutdown().await; }
+                            if let Some(replacement) = replacement {
+                                let _ = tokio::time::timeout(
+                                    Duration::from_secs(5),
+                                    replacement.shutdown(),
+                                )
+                                .await;
+                            }
                             let _ = reply.send(Err(error));
                         }
                     }

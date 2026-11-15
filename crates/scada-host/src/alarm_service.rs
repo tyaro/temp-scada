@@ -1,7 +1,7 @@
 //! One terminal-wide owner of the alarm subscription and applied Project.
 //! Callers supply only a host-resolved saved path and the protected Hub client.
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 pub use banto_tagclient::RestClient;
@@ -128,6 +128,7 @@ impl From<scada_alarm::Engine> for EngineSnapshot {
 pub enum ApplyResult {
     Applied { snapshot: AlarmSnapshot },
     SkippedDifferentProject,
+    SkippedNoHub,
     ConfirmationRequired { occurrences: Vec<UnackedOccurrence> },
 }
 
@@ -135,30 +136,46 @@ struct Active {
     runtime: Option<AlarmRuntime>,
     db: Option<Arc<AlarmDb>>,
     project_id: Option<String>,
+    applied: Option<AppliedDefinitions>,
     pump: Option<JoinHandle<()>>,
     reason: String,
+}
+
+struct PendingCache {
+    path: PathBuf,
+    modified: Option<std::time::SystemTime>,
+    len: u64,
+    applied_at_ms: i64,
+    condition: bool,
+    display: bool,
 }
 
 pub struct AlarmService {
     terminal: Arc<AlarmTerminal>,
     active: Mutex<Active>,
+    pending_cache: Mutex<Option<PendingCache>>,
     changes: broadcast::Sender<AlarmChange>,
+    lagged: broadcast::Sender<()>,
 }
 
 impl AlarmService {
     pub async fn open(data_dir: &Path) -> Result<Self, AlarmServiceError> {
         let terminal = Arc::new(AlarmTerminal::open(data_dir).await?);
         let (changes, _) = broadcast::channel(256);
+        let (lagged, _) = broadcast::channel(16);
         let service = Self {
             terminal,
             active: Mutex::new(Active {
                 runtime: None,
                 db: None,
                 project_id: None,
+                applied: None,
                 pump: None,
                 reason: "notApplied".into(),
             }),
+            pending_cache: Mutex::new(None),
             changes,
+            lagged,
         };
         service.recover_switch().await?;
         Ok(service)
@@ -168,15 +185,21 @@ impl AlarmService {
         self.changes.subscribe()
     }
 
+    pub fn lagged(&self) -> broadcast::Receiver<()> {
+        self.lagged.subscribe()
+    }
+
     async fn recover_switch(&self) -> Result<(), AlarmServiceError> {
         let Some(switching) = self.terminal.switching()? else {
             return Ok(());
         };
         let target_db = AlarmDb::open(self.terminal.clone(), &switching.target.project_id).await?;
-        let committed = target_db
-            .applied()
-            .await?
-            .is_some_and(|applied| applied.file_hash == switching.file_hash);
+        let applied = target_db.applied().await;
+        target_db.close().await;
+        let committed = applied?.is_some_and(|applied| {
+            applied.file_hash == switching.file_hash
+                && applied.applied_at_ms == switching.applied_at_ms
+        });
         if committed {
             if let Some(old) = self.terminal.monitored()? {
                 if old.project_id != switching.target.project_id {
@@ -184,6 +207,7 @@ impl AlarmService {
                     old_db.close_unstopped_session(wall_ms()).await?;
                     let confirmed = all_unacked(&old_db.last_states().await?)?;
                     old_db.end_monitoring(wall_ms(), &confirmed).await?;
+                    old_db.close().await;
                 }
             }
             self.terminal.set_monitored(Some(switching.target))?;
@@ -198,6 +222,7 @@ impl AlarmService {
         endpoint: Option<&str>,
         client: Option<RestClient>,
     ) -> Result<AlarmSnapshot, AlarmServiceError> {
+        self.recover_switch().await?;
         let mut active = self.active.lock().await;
         if active.runtime.as_ref().is_some_and(|runtime| {
             !matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running)
@@ -208,7 +233,6 @@ impl AlarmService {
                 pump.abort();
             }
             active.db = None;
-            active.project_id = None;
         }
         if active.runtime.is_none() {
             if let Err(error) = self.start_locked(&mut active, endpoint, client).await {
@@ -225,14 +249,19 @@ impl AlarmService {
         client: Option<RestClient>,
     ) -> Result<(), AlarmServiceError> {
         let Some(monitored) = self.terminal.monitored()? else {
+            active.project_id = None;
+            active.applied = None;
             active.reason = "notApplied".into();
             return Ok(());
         };
         let db = Arc::new(AlarmDb::open(self.terminal.clone(), &monitored.project_id).await?);
+        active.project_id = Some(monitored.project_id.clone());
         let Some(applied) = db.applied().await? else {
+            active.applied = None;
             active.reason = "notApplied".into();
             return Ok(());
         };
+        active.applied = Some(applied.clone());
         let Some(endpoint) = endpoint else {
             active.reason = "noHub".into();
             return Ok(());
@@ -283,13 +312,16 @@ impl AlarmService {
     ) {
         let mut receiver = runtime.changes();
         let sender = self.changes.clone();
+        let lagged = self.lagged.clone();
         active.pump = Some(tokio::spawn(async move {
             loop {
                 match receiver.recv().await {
                     Ok(change) => {
                         let _ = sender.send(change);
                     }
-                    Err(broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(broadcast::error::RecvError::Lagged(_)) => {
+                        let _ = lagged.send(());
+                    }
                     Err(_) => break,
                 }
             }
@@ -316,7 +348,6 @@ impl AlarmService {
             pump.abort();
         }
         active.db = None;
-        active.project_id = None;
         active.reason = "stopped".into();
         result
     }
@@ -345,7 +376,7 @@ impl AlarmService {
         {
             return Ok(ApplyResult::SkippedDifferentProject);
         }
-        let applied = saved.applied(endpoint.into(), applied_by.into(), wall_ms());
+        let mut applied = saved.applied(endpoint.into(), applied_by.into(), wall_ms());
         let same_project = previous
             .as_ref()
             .is_some_and(|old| old.project_id == saved.project_id);
@@ -357,6 +388,13 @@ impl AlarmService {
         } else {
             None
         };
+        if same_project {
+            if let Some(old) = &old_applied {
+                applied.applied_at_ms = applied
+                    .applied_at_ms
+                    .max(old.applied_at_ms.saturating_add(1));
+            }
+        }
         if same_project
             && !saved.definitions.is_empty()
             && old_applied
@@ -368,10 +406,16 @@ impl AlarmService {
                     // The stopped task is reaped at the common apply boundary below.
                 } else {
                     match runtime
-                        .apply(applied, saved.definitions, confirmed.to_vec(), client)
+                        .apply(
+                            applied.clone(),
+                            saved.definitions,
+                            confirmed.to_vec(),
+                            client,
+                        )
                         .await
                     {
                         Ok(()) => {
+                            active.applied = Some(applied);
                             self.terminal.set_monitored(Some(MonitoredProject {
                                 project_id: saved.project_id,
                                 path: path.to_owned(),
@@ -386,6 +430,11 @@ impl AlarmService {
             }
         }
         let target_db = Arc::new(AlarmDb::open(self.terminal.clone(), &saved.project_id).await?);
+        if let Some(previous_applied) = target_db.applied().await? {
+            applied.applied_at_ms = applied
+                .applied_at_ms
+                .max(previous_applied.applied_at_ms.saturating_add(1));
+        }
         let target_rows = target_db.last_states().await?;
         let target_plan = plan_apply(&target_rows, &applied, wall_ms())?;
         let mut unacked = target_plan.unacked.clone();
@@ -394,6 +443,7 @@ impl AlarmService {
             if old.project_id != saved.project_id {
                 let old_db = AlarmDb::open(self.terminal.clone(), &old.project_id).await?;
                 old_unacked = all_unacked(&old_db.last_states().await?)?;
+                old_db.close().await;
                 unacked.extend(old_unacked.clone());
             }
         }
@@ -416,83 +466,84 @@ impl AlarmService {
             self.terminal.set_switching(Some(PendingSwitch {
                 target: target.clone(),
                 file_hash: saved.file_hash.clone(),
+                applied_at_ms: applied.applied_at_ms,
             }))?;
         }
-        if let Err(error) = Self::stop_locked(&mut active).await {
-            if switching {
-                self.terminal.set_switching(None)?;
-            }
-            return Err(error);
-        }
-        if let Some(old) = &previous {
-            let old_db = AlarmDb::open(self.terminal.clone(), &old.project_id).await?;
-            old_db.close_unstopped_session(wall_ms()).await?;
-            if switching {
-                let fresh = all_unacked(&old_db.last_states().await?)?;
-                if fresh != old_unacked {
-                    self.terminal.set_switching(None)?;
-                    if old_applied
-                        .as_ref()
-                        .is_some_and(|old| old.endpoint == endpoint)
-                    {
-                        let _ = self
-                            .start_locked(&mut active, Some(endpoint), Some(client))
-                            .await;
+        let transition: Result<(), AlarmServiceError> = async {
+            Self::stop_locked(&mut active).await?;
+            if let Some(old) = &previous {
+                let old_db = AlarmDb::open(self.terminal.clone(), &old.project_id).await?;
+                old_db.close_unstopped_session(wall_ms()).await?;
+                if switching {
+                    let fresh = all_unacked(&old_db.last_states().await?)?;
+                    if fresh != old_unacked {
+                        let mut occurrences = fresh;
+                        occurrences.extend(target_plan.unacked.clone());
+                        occurrences.sort();
+                        return Err(AlarmServiceError::ConfirmationRequired(occurrences));
                     }
-                    let mut occurrences = fresh;
-                    occurrences.extend(target_plan.unacked);
-                    occurrences.sort();
-                    return Ok(ApplyResult::ConfirmationRequired { occurrences });
                 }
+                old_db.close().await;
             }
-        }
-        target_db.close_unstopped_session(wall_ms()).await?;
-        let plan = plan_apply(&target_db.last_states().await?, &applied, wall_ms())?;
-        let target_confirmed: Vec<_> = confirmed
-            .iter()
-            .filter(|entry| plan.unacked.contains(entry))
-            .cloned()
-            .collect();
-        if let Err(error) = target_db
-            .apply_confirmed(
-                &applied,
-                None,
-                &plan.ended,
-                &plan.survivors,
-                &target_confirmed,
-            )
-            .await
-        {
+            target_db.close_unstopped_session(wall_ms()).await?;
+            let plan = plan_apply(&target_db.last_states().await?, &applied, wall_ms())?;
+            let target_confirmed: Vec<_> = confirmed
+                .iter()
+                .filter(|entry| plan.unacked.contains(entry))
+                .cloned()
+                .collect();
+            target_db
+                .apply_confirmed(
+                    &applied,
+                    None,
+                    &plan.ended,
+                    &plan.survivors,
+                    &target_confirmed,
+                )
+                .await
+                .map_err(|error| match error {
+                    AlarmDbError::ConfirmationRequired(mut occurrences) if switching => {
+                        occurrences.extend(old_unacked.clone());
+                        occurrences.sort();
+                        AlarmServiceError::ConfirmationRequired(occurrences)
+                    }
+                    error => error.into(),
+                })?;
             if switching {
-                self.terminal.set_switching(None)?;
+                let old = previous
+                    .as_ref()
+                    .ok_or(AlarmServiceError::NoMonitoredProject)?;
+                let old_db = AlarmDb::open(self.terminal.clone(), &old.project_id).await?;
+                old_db.end_monitoring(wall_ms(), &old_unacked).await?;
+                old_db.close().await;
             }
-            if old_applied
-                .as_ref()
-                .is_some_and(|old| old.endpoint == endpoint)
-            {
+            self.terminal.set_monitored(Some(target))?;
+            Ok(())
+        }
+        .await;
+        if let Err(error) = transition {
+            if switching {
+                self.recover_switch().await?;
+            }
+            let current = self.terminal.monitored()?;
+            let restart = current.as_ref().is_some_and(|current| {
+                (current.project_id == saved.project_id && applied.endpoint == endpoint)
+                    || old_applied.as_ref().is_some_and(|old| {
+                        current.project_id == old.project_id && old.endpoint == endpoint
+                    })
+            });
+            if restart {
                 let _ = self
                     .start_locked(&mut active, Some(endpoint), Some(client))
                     .await;
             }
             return match error {
-                AlarmDbError::ConfirmationRequired(mut occurrences) if switching => {
-                    occurrences.extend(old_unacked);
-                    occurrences.sort();
-                    Err(AlarmServiceError::ConfirmationRequired(occurrences))
+                AlarmServiceError::ConfirmationRequired(occurrences) => {
+                    Ok(ApplyResult::ConfirmationRequired { occurrences })
                 }
-                error => Err(error.into()),
+                error => Err(error),
             };
         }
-        if switching {
-            let old = previous
-                .as_ref()
-                .ok_or(AlarmServiceError::NoMonitoredProject)?;
-            AlarmDb::open(self.terminal.clone(), &old.project_id)
-                .await?
-                .end_monitoring(wall_ms(), &old_unacked)
-                .await?;
-        }
-        self.terminal.set_monitored(Some(target))?;
         if let Err(error) = self
             .start_locked(&mut active, Some(endpoint), Some(client))
             .await
@@ -506,58 +557,67 @@ impl AlarmService {
 
     pub async fn snapshot(&self) -> Result<AlarmSnapshot, AlarmServiceError> {
         let active = self.active.lock().await;
-        self.snapshot_locked(&active).await
+        let mut snapshot = self.snapshot_locked(&active).await?;
+        drop(active);
+        if let (Some(monitored), Some(applied)) =
+            (self.terminal.monitored()?, snapshot.applied.as_ref())
+        {
+            if monitored.project_id == applied.project_id {
+                let (condition, display) = self
+                    .pending_changes(&monitored.path, applied.applied_at_ms)
+                    .await;
+                snapshot.pending_condition_changes = condition;
+                snapshot.pending_display_changes = display;
+            }
+        }
+        Ok(snapshot)
     }
 
     pub async fn applied_endpoint(&self) -> Result<Option<String>, AlarmServiceError> {
         let Some(monitored) = self.terminal.monitored()? else {
             return Ok(None);
         };
-        Ok(AlarmDb::open(self.terminal.clone(), &monitored.project_id)
-            .await?
-            .applied()
-            .await?
-            .map(|applied| applied.endpoint))
+        let active = self.active.lock().await;
+        if active.project_id.as_deref() == Some(&monitored.project_id) {
+            return Ok(active
+                .applied
+                .as_ref()
+                .map(|applied| applied.endpoint.clone()));
+        }
+        let db = AlarmDb::open(self.terminal.clone(), &monitored.project_id).await?;
+        let endpoint = db.applied().await?.map(|applied| applied.endpoint);
+        db.close().await;
+        Ok(endpoint)
     }
 
     async fn snapshot_locked(&self, active: &Active) -> Result<AlarmSnapshot, AlarmServiceError> {
         let monitored = self.terminal.monitored()?;
         let applied = if let Some(monitored) = &monitored {
-            Some(
-                AlarmDb::open(self.terminal.clone(), &monitored.project_id)
-                    .await?
-                    .applied()
-                    .await?,
-            )
-            .flatten()
+            if active.project_id.as_deref() == Some(&monitored.project_id) {
+                active.applied.clone()
+            } else {
+                let db = AlarmDb::open(self.terminal.clone(), &monitored.project_id).await?;
+                let applied = db.applied().await?;
+                db.close().await;
+                applied
+            }
         } else {
             None
         };
-        let (pending_condition_changes, pending_display_changes) = match (&monitored, &applied) {
-            (Some(monitored), Some(applied)) => match SavedAlarmProject::read(&monitored.path) {
-                Ok(saved) if saved.project_id == applied.project_id => (
-                    saved
-                        .applied(
-                            applied.endpoint.clone(),
-                            applied.applied_by.clone(),
-                            applied.applied_at_ms,
-                        )
-                        .condition_hashes
-                        != applied.condition_hashes
-                        || saved.disabled != applied.disabled_condition_ids,
-                    saved.displays != applied.displays,
-                ),
-                _ => (false, false),
-            },
-            _ => (false, false),
-        };
         let engine = match &active.runtime {
-            Some(runtime) => Some(runtime.snapshot().await?.into()),
+            Some(runtime) if matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running) => {
+                match runtime.snapshot().await {
+                    Ok(engine) => Some(engine.into()),
+                    Err(AlarmRuntimeError::Closed) => None,
+                    Err(error) => return Err(error.into()),
+                }
+            }
             None => None,
+            Some(_) => None,
         };
         let status = match &active.runtime {
             Some(runtime) => match *runtime.status().borrow() {
-                AlarmRuntimeStatus::Running => "running".into(),
+                AlarmRuntimeStatus::Running if engine.is_some() => "running".into(),
                 _ => "stopped".into(),
             },
             None => active.reason.clone(),
@@ -569,9 +629,58 @@ impl AlarmService {
             applied: applied.as_ref().map(AppliedSummary::from),
             engine,
             status,
-            pending_condition_changes,
-            pending_display_changes,
+            pending_condition_changes: false,
+            pending_display_changes: false,
         })
+    }
+
+    async fn pending_changes(&self, path: &Path, applied_at_ms: i64) -> (bool, bool) {
+        let Ok(metadata) = std::fs::metadata(path) else {
+            return (false, false);
+        };
+        let modified = metadata.modified().ok();
+        let mut cache = self.pending_cache.lock().await;
+        if let Some(cached) = cache.as_ref() {
+            if cached.path == path
+                && cached.modified == modified
+                && cached.len == metadata.len()
+                && cached.applied_at_ms == applied_at_ms
+            {
+                return (cached.condition, cached.display);
+            }
+        }
+        let path = path.to_path_buf();
+        let applied = {
+            let active = self.active.lock().await;
+            active.applied.clone()
+        };
+        let Some(applied) = applied else {
+            return (false, false);
+        };
+        let read_path = path.clone();
+        let (condition, display) =
+            tokio::task::spawn_blocking(move || match SavedAlarmProject::read(&read_path) {
+                Ok(saved) if saved.project_id == applied.project_id => (
+                    saved
+                        .applied(applied.endpoint, applied.applied_by, applied.applied_at_ms)
+                        .condition_hashes
+                        != applied.condition_hashes
+                        || saved.disabled != applied.disabled_condition_ids,
+                    saved.displays != applied.displays,
+                ),
+                _ => (false, false),
+            })
+            .await
+            .unwrap_or((false, false));
+        *cache = Some(PendingCache {
+            path,
+            modified,
+            len: metadata.len(),
+            applied_at_ms,
+            condition,
+            display,
+        });
+        (condition, display)
     }
 
     pub async fn ack(
@@ -601,10 +710,10 @@ impl AlarmService {
             .terminal
             .monitored()?
             .ok_or(AlarmServiceError::NoMonitoredProject)?;
-        Ok(AlarmDb::open(self.terminal.clone(), &monitored.project_id)
-            .await?
-            .history(before_seq, from_ms, to_ms, kind, limit)
-            .await?)
+        let db = AlarmDb::open(self.terminal.clone(), &monitored.project_id).await?;
+        let result = db.history(before_seq, from_ms, to_ms, kind, limit).await?;
+        db.close().await;
+        Ok(result)
     }
 }
 
@@ -690,6 +799,25 @@ mod tests {
             ApplyResult::Applied { .. }
         ));
         let a_session = service.snapshot().await.unwrap().engine.unwrap().session;
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            loop {
+                if service
+                    .snapshot()
+                    .await
+                    .unwrap()
+                    .engine
+                    .unwrap()
+                    .conditions
+                    .values()
+                    .any(|state| state.active)
+                {
+                    break;
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
         assert!(matches!(
             service
                 .apply(&b, &hub.url, hub.client(), "未ログイン", &[], false)
@@ -841,5 +969,55 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(25)).await;
         }
         panic!("temporary alarm DB handles were not released");
+    }
+
+    #[tokio::test]
+    async fn recovery_does_not_treat_a_previous_apply_of_the_same_file_as_committed() {
+        let hub = Hub::new(&[]).await;
+        let dir = std::env::temp_dir().join(format!("alarm-switch-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let a_id = uuid::Uuid::now_v7().to_string();
+        let b_id = uuid::Uuid::now_v7().to_string();
+        let a = dir.join("a.json");
+        let b = dir.join("b.json");
+        for (path, id) in [(&a, &a_id), (&b, &b_id)] {
+            let mut value = project(id, "empty");
+            value["alarms"] = json!({"definitions": []});
+            std::fs::write(path, serde_json::to_vec(&value).unwrap()).unwrap();
+        }
+        let service = AlarmService::open(&dir).await.unwrap();
+        service
+            .apply(&a, &hub.url, hub.client(), "未ログイン", &[], true)
+            .await
+            .unwrap();
+        let old = AlarmDb::open(service.terminal.clone(), &a_id)
+            .await
+            .unwrap();
+        let old_applied = old.applied().await.unwrap().unwrap();
+        old.close().await;
+        service
+            .apply(&b, &hub.url, hub.client(), "未ログイン", &[], true)
+            .await
+            .unwrap();
+        service
+            .terminal
+            .set_switching(Some(PendingSwitch {
+                target: MonitoredProject {
+                    project_id: a_id,
+                    path: a.clone(),
+                },
+                file_hash: old_applied.file_hash,
+                applied_at_ms: old_applied.applied_at_ms + 1,
+            }))
+            .unwrap();
+        drop(service);
+        let recovered = AlarmService::open(&dir).await.unwrap();
+        assert_eq!(
+            recovered.terminal.monitored().unwrap().unwrap().project_id,
+            b_id
+        );
+        assert!(recovered.terminal.switching().unwrap().is_none());
+        drop(recovered);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }
