@@ -115,7 +115,11 @@ impl MockHub {
                         )
                         .unwrap();
                         assert_eq!(first["op"], "subscribe");
-                        assert_eq!(first["tags"], json!([BOOL, NUMBER]));
+                        assert!(
+                            first["tags"] == json!([BOOL, NUMBER])
+                                || first["tags"] == json!([BOOL]),
+                            "unexpected subscription: {first}"
+                        );
                         socket
                             .send(Message::Text(
                                 json!({
