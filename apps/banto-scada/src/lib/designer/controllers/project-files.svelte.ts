@@ -251,6 +251,13 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       return;
     }
     if (result.status === "switchConfirmationRequired") {
+      if (!result.monitoredProjectId) {
+        host.report(
+          "error",
+          "監視中のProjectを確認できません。警報の状態を再取得してください。",
+        );
+        return;
+      }
       if (confirmedSwitchFrom) {
         host.report(
           "error",

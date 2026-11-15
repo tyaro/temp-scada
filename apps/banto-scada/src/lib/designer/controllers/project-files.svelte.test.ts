@@ -4,6 +4,7 @@ import { createProject } from "../../new-project";
 import { serializeProject, type Project } from "../../project";
 import { AssetStore } from "../../image-assets";
 import type {
+  AlarmApplyResult,
   ProjectFileService,
   SaveProjectFileRequest,
 } from "../../project-file-service";
@@ -177,6 +178,34 @@ describe("project files on the desktop", () => {
         { fileId: 12, confirmed: [], confirmedSwitchFrom: undefined },
         { fileId: 12, confirmed: [], confirmedSwitchFrom: "project-a" },
       ]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("stops a Project switch when the host omits its monitored Project id", async () => {
+    const confirm = vi.fn(() => true);
+    vi.stubGlobal("window", { confirm });
+    try {
+      const apply = vi.fn(
+        async () =>
+          ({ status: "switchConfirmationRequired" }) as AlarmApplyResult,
+      );
+      const { controller, reports } = setup({
+        open: async () => null,
+        save: async () => ({
+          fileId: 12,
+          fileName: "other.json",
+          apply: { status: "skippedDifferentProject" },
+        }),
+        apply,
+      });
+      controller.save();
+      await settle();
+      await controller.applyAlarm();
+      expect(apply).toHaveBeenCalledTimes(1);
+      expect(confirm).not.toHaveBeenCalled();
+      expect(reports.at(-1)?.kind).toBe("error");
     } finally {
       vi.unstubAllGlobals();
     }

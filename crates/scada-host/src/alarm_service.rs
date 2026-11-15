@@ -124,7 +124,11 @@ impl From<scada_alarm::Engine> for EngineSnapshot {
 }
 
 #[derive(Clone, Debug, Serialize)]
-#[serde(rename_all = "camelCase", tag = "status")]
+#[serde(
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase",
+    tag = "status"
+)]
 pub enum ApplyResult {
     Applied { snapshot: AlarmSnapshot },
     SkippedDifferentProject,
@@ -878,6 +882,17 @@ mod tests {
     use super::*;
     use crate::recording_runtime::setup_tests::Hub;
     use serde_json::{json, Value};
+
+    #[test]
+    fn switch_confirmation_serializes_the_project_id_for_webview() {
+        let result = ApplyResult::SwitchConfirmationRequired {
+            monitored_project_id: "project-a".into(),
+        };
+        assert_eq!(
+            serde_json::to_value(result).unwrap(),
+            json!({"status":"switchConfirmationRequired","monitoredProjectId":"project-a"})
+        );
+    }
 
     fn project(id: &str, name: &str) -> Value {
         let mut value: Value = serde_json::from_str(include_str!(
