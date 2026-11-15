@@ -64,6 +64,13 @@ fn reason(error: &AlarmServiceError) -> String {
     .into()
 }
 
+fn apply_failure_reason(error: &AlarmServiceError) -> String {
+    match error {
+        AlarmServiceError::Terminal(_) => "terminalStateFailed".into(),
+        error => reason(error),
+    }
+}
+
 fn refusal(error: CommandError) -> String {
     match error {
         CommandError::Banto(BantoError::Unauthorized) => "unauthorized",
@@ -256,7 +263,7 @@ pub async fn apply_file(
         Err(AlarmServiceError::ConfirmationRequired(occurrences)) => {
             Ok(ApplyResult::ConfirmationRequired { occurrences })
         }
-        Err(error) => Err(reason(&error)),
+        Err(error) => Err(apply_failure_reason(&error)),
     }
 }
 
@@ -371,4 +378,17 @@ pub async fn alarm_history(
         )
         .await
         .map_err(|error| reason(&error))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use scada_host::alarm_terminal::TerminalError;
+
+    #[test]
+    fn terminal_failure_during_apply_is_not_an_unavailable_engine() {
+        let error = AlarmServiceError::Terminal(TerminalError::Unreadable);
+        assert_eq!(reason(&error), "terminalUnavailable");
+        assert_eq!(apply_failure_reason(&error), "terminalStateFailed");
+    }
 }
