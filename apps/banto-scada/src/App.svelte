@@ -55,6 +55,7 @@
   } = $props();
   import type { ProjectFileService } from "./lib/project-file-service";
   import { AlarmMirror, type AlarmSnapshot } from "./lib/alarm-mirror";
+  import { AlarmRefreshQueue } from "./lib/alarm-refresh-queue";
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
     selectionPaintAlphaCommand,
@@ -1773,6 +1774,7 @@
       return projectFileService;
     },
     alarmRefresh: () => void refreshAlarm(),
+    alarmUnavailable: (reason) => (alarmUnavailableReason = reason),
     chooseFile: () => projectFileInput?.click(),
     allow: (run) => drafts.allow(run),
     adopt,
@@ -1784,10 +1786,20 @@
   const saveLabel = $derived(projectFiles.saveLabel);
   const lastExport = $derived(projectFiles.lastExport);
   const alarmMirror = new AlarmMirror();
-  let alarmRefreshId = 0;
+  let alarmRefreshQueue: AlarmRefreshQueue<AlarmSnapshot> | null = null;
   let alarmSnapshot = $state<AlarmSnapshot | null>(null);
   let alarmReadError = $state<string | null>(null);
+  let alarmUnavailableReason = $state<string | null>(null);
   const alarmLabel = $derived.by(() => {
+    const unavailable = alarmUnavailableReason ?? alarmReadError;
+    if (unavailable && alarmSnapshot?.status !== "running") {
+      if (unavailable === "terminalUnavailable")
+        return "警報: この端末ではEngineを利用できません";
+      if (unavailable === "noDataDir")
+        return "警報: 保存先がなく監視できません";
+      if (unavailable === "auth_phase_unavailable")
+        return "警報: 認証切替中で適用できません";
+    }
     if (alarmReadError) return "警報: 状態を取得できません";
     if (!alarmSnapshot) return "警報: 確認中";
     if (alarmSnapshot.status !== "running")
@@ -1801,25 +1813,22 @@
       return "警報: 表示情報に未適用の変更あり";
     return "警報: 監視中";
   });
-  async function refreshAlarm() {
-    const feed = projectFileService?.alarmFeed;
-    if (!feed) return;
-    const requestId = ++alarmRefreshId;
-    try {
-      const next = await feed.snapshot();
-      if (requestId !== alarmRefreshId) return;
-      if (alarmMirror.acceptSnapshot(next)) {
-        alarmSnapshot = alarmMirror.current;
-        alarmReadError = null;
-      }
-    } catch (error) {
-      if (requestId !== alarmRefreshId) return;
-      alarmReadError = String(error);
-    }
+  function refreshAlarm() {
+    alarmRefreshQueue?.refresh();
   }
   $effect(() => {
     const feed = projectFileService?.alarmFeed;
     if (!feed) return;
+    const queue = new AlarmRefreshQueue(
+      () => feed.snapshot(),
+      (next) => {
+        alarmReadError = null;
+        if (alarmMirror.acceptSnapshot(next))
+          alarmSnapshot = alarmMirror.current;
+      },
+      (error) => (alarmReadError = String(error)),
+    );
+    alarmRefreshQueue = queue;
     let disposed = false;
     let unsubscribe: (() => void) | undefined;
     void feed
@@ -1844,6 +1853,8 @@
       });
     return () => {
       disposed = true;
+      queue.dispose();
+      if (alarmRefreshQueue === queue) alarmRefreshQueue = null;
       unsubscribe?.();
     };
   });

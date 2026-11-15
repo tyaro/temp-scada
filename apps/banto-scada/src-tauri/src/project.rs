@@ -155,6 +155,14 @@ pub async fn project_save<R: Runtime>(
         Ok(result) => {
             serde_json::to_value(result).unwrap_or(json!({"status":"failed","reason":"internal"}))
         }
+        Err(reason)
+            if matches!(
+                reason.as_str(),
+                "terminalUnavailable" | "noDataDir" | "auth_phase_unavailable"
+            ) =>
+        {
+            json!({"status":"skippedUnavailable","reason":reason})
+        }
         Err(reason) => json!({"status":"failed","reason":reason}),
     };
     Ok(json!({

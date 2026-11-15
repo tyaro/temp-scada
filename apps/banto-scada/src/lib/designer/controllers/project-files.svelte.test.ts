@@ -102,6 +102,27 @@ describe("project files on the desktop", () => {
     });
   });
 
+  it("reports an unavailable alarm Engine once while saves still succeed", async () => {
+    const { controller, reports } = setup({
+      open: async () => null,
+      save: async () => ({
+        fileId: 12,
+        fileName: "plant.json",
+        apply: { status: "skippedUnavailable", reason: "noDataDir" },
+      }),
+    });
+    controller.save();
+    await settle();
+    controller.save();
+    await settle();
+    expect(reports.filter((report) => report.kind === "info")).toEqual([
+      {
+        kind: "info",
+        text: "Projectを保存しました。警報Engineの保存先がないため、警報定義を適用していません。",
+      },
+    ]);
+  });
+
   it("keeps the opened file's id and forgets it for a new Project", async () => {
     const { service, saves } = fakeService();
     const { controller, chosen } = setup(service);

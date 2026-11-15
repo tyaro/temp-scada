@@ -23,6 +23,7 @@ export interface ProjectFilesHost {
   /** The desktop's file host; without it (the browser) a save downloads. */
   readonly fileService?: ProjectFileService;
   alarmRefresh?(): void;
+  alarmUnavailable?(reason: string | null): void;
   chooseFile(): void;
   allow(run: () => void): boolean;
   /** App adopts Project and resets the editor; it calls adopted at the existing baseline boundary. */
@@ -58,6 +59,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
 
   let exporting = $state(false);
   let exportingName = $state("");
+  let lastUnavailableReason: string | null = null;
   const saveLabel = $derived(
     exporting
       ? native
@@ -215,6 +217,22 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     confirmedSwitchFrom?: string,
   ) {
     host.alarmRefresh?.();
+    if (result?.status === "skippedUnavailable") {
+      host.alarmUnavailable?.(result.reason);
+      if (lastUnavailableReason !== result.reason) {
+        const message =
+          result.reason === "terminalUnavailable"
+            ? "Projectを保存しました。この端末では警報Engineの領域が使用中のため、警報定義を適用していません。"
+            : result.reason === "noDataDir"
+              ? "Projectを保存しました。警報Engineの保存先がないため、警報定義を適用していません。"
+              : "Projectを保存しました。認証の切替中のため、警報定義を適用していません。";
+        host.report("info", message);
+        lastUnavailableReason = result.reason;
+      }
+      return;
+    }
+    host.alarmUnavailable?.(null);
+    lastUnavailableReason = null;
     if (
       !result ||
       result.status === "skippedDifferentProject" ||

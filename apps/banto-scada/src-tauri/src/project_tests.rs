@@ -36,9 +36,16 @@ impl Drop for TempDir {
 }
 
 fn app(auth: AuthState) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
+    app_with_alarm(auth, alarm::AlarmState::unavailable())
+}
+
+fn app_with_alarm(
+    auth: AuthState,
+    alarm: alarm::AlarmState,
+) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
     let app = commands(mock_builder())
         .manage(auth)
-        .manage(alarm::AlarmState::unavailable())
+        .manage(alarm)
         .manage(NativeHost {
             bootstrap: Bootstrapper::new(
                 "temp-scada-project-test",
@@ -55,6 +62,38 @@ fn app(auth: AuthState) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
         .build()
         .unwrap();
     (app, webview)
+}
+
+#[test]
+fn a_save_succeeds_without_an_alarm_data_directory() {
+    let data = TempDir::new();
+    let files = TempDir::new();
+    let alarm =
+        tauri::async_runtime::block_on(alarm::AlarmState::open(Err::<&str, _>("no directory")));
+    let (app, webview) = app_with_alarm(
+        tauri::async_runtime::block_on(AuthState::start(&data.0, "no_recording_run")).0,
+        alarm,
+    );
+    let path = files.0.join("plant.json");
+    std::fs::write(&path, b"{\"old\":1}").unwrap();
+    let opened = app
+        .state::<project::ProjectFileState>()
+        .0
+        .read(&path)
+        .unwrap();
+    let answer = save(
+        &webview,
+        frame(
+            &json!({"fileId": opened.file_id, "format": "json", "name": "工程", "saveAs": false}),
+            b"{\"new\":1}",
+        ),
+    )
+    .unwrap();
+    assert_eq!(
+        answer["apply"],
+        json!({"status":"skippedUnavailable","reason":"noDataDir"})
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), b"{\"new\":1}");
 }
 
 fn save(webview: &WebviewWindow<MockRuntime>, body: Vec<u8>) -> Result<Value, Value> {

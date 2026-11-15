@@ -939,6 +939,8 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 3-C2c の入口は `crates/scada-host/src/alarm_project.rs`（保存済み Project の検証・条件展開）、`alarm_service.rs`（端末全体の監視対象、適用・切替・起動時復元）、`alarm_runtime.rs`（同一 session での定義更新）、`alarm_db.rs`（適用 transaction 内の未確認回の再照合と切替終端）。Tauri の `apps/banto-scada/src-tauri/src/alarm.rs` が認証済み Hub client と IPC・event を接続し、`main.rs` の `alarm_operation` が Hub 接続と警報適用の順を画面読取の lock と別に守る。`project.rs` の `project_save.apply` は書込みと適用を別に返す。webview は `src/lib/alarm-mirror.ts` で世代番号と連番を照合し、`src/native/project-file.ts` がファイルを `fileId` だけで指す。ループバック Hub・一時 DB の統合試験、`alarm-mirror.test.ts`、Project 保存 controller 試験が回帰入口。Tauri 実機・実 Hub は未確認。
 
+`src/lib/alarm-refresh-queue.ts` は通知が重なる間も進行中の snapshot を受け取り、追加の要求を最後に1回へまとめる。`App.svelte` が `alarm-mirror.ts` の世代番号・連番判定を通して表示に反映する。`alarm-refresh-queue.test.ts` が連続通知を検証する。Engine の端末領域や認証フェーズが利用できない保存では `project_save.apply` を `skippedUnavailable` として返し、保存 controller は案内を同じ理由につき1回に抑える。
+
 明示的な別 Project への切替は `alarm_service.rs` の `ApplyMode::Explicit` が監視中 Project id の再確認を求め、`project-files.svelte.ts` が未確認回の終了確認と別に扱う。ACK の権限は `desktop_auth.rs` の `authorize_alarm_ack`（現段階は Admin）で保存権限から独立して検査する。
 
 `crates/scada-alarm`は入出力を持たない警報の状態機械で、[段階3の警報設計](../design/runtime/alarm-stage3-design.md)§4を実装する。`spec.rs`の`ConditionSpec`がconditionの評価に関わる定義（しきい値の1つの限界かbit、on／off delay、`ackMode`）と単体の検査、状態の引継ぎに使う`evaluation_key`を持つ。名前・message・severityはhostが持つ。`state.rs`の`ConditionState`が§4.1の値（`reportedUnavailable`は始まりを書いて終わりをまだ書いていない理由）と表示の状態、「最後の状態」の行`LastState`を持つ。`engine.rs`の`Engine::step`が6種の入力（値・タイマー満了・ACK・Engine単位の評価不能・定義の終了・復元）から次の状態とイベントを`Transition`で返し、`self`は変えない。hostはDBに書けたら`commit`で確定する。時刻（単調時計と壁時計）・occurrenceのid（`OccurrenceIds`）・sessionの世代番号はhostが渡し、Engineの変更の連番だけを状態に持つ。

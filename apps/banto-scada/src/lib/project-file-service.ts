@@ -23,6 +23,11 @@ export type AlarmApplyResult =
   | { readonly status: "skippedEndpointChanged" }
   | { readonly status: "skippedNoHub" }
   | {
+      readonly status: "skippedUnavailable";
+      readonly reason:
+        "terminalUnavailable" | "noDataDir" | "auth_phase_unavailable";
+    }
+  | {
       readonly status: "switchConfirmationRequired";
       readonly monitoredProjectId: string;
     }
