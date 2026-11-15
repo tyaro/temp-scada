@@ -366,7 +366,14 @@ impl AlarmService {
             if running {
                 match result {
                     Ok(()) => Ok(()),
-                    Err(error) => {
+                    Err(error)
+                        if matches!(
+                            error,
+                            AlarmRuntimeError::Sdk(_)
+                                | AlarmRuntimeError::ConnectionFailure
+                                | AlarmRuntimeError::Closed
+                        ) =>
+                    {
                         // A concurrent SDK exit may report its transport error after
                         // the session stop has already committed. The DB is decisive.
                         match active.db.as_ref() {
@@ -376,6 +383,7 @@ impl AlarmService {
                             _ => Err(error.into()),
                         }
                     }
+                    Err(error) => Err(error.into()),
                 }
             } else {
                 Ok(())
