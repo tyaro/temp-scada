@@ -54,6 +54,7 @@ fn app(dir: &TempDir) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
             ),
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
         })
         .build(mock_context(noop_assets()))
         .unwrap();

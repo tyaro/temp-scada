@@ -187,6 +187,9 @@ pub fn start_events<R: Runtime>(app: AppHandle<R>) {
     tauri::async_runtime::spawn(async move {
         let host = app.state::<NativeHost>();
         let _alarm_operation = host.alarm_operation.lock().await;
+        if host.exiting.load(std::sync::atomic::Ordering::SeqCst) {
+            return;
+        }
         let (current, context) = {
             let _active = host.active.lock().await;
             (
@@ -239,6 +242,9 @@ pub async fn apply_file(
 ) -> Result<ApplyResult, String> {
     let service = alarm.get()?;
     let _alarm_operation = host.alarm_operation.lock().await;
+    if host.exiting.load(std::sync::atomic::Ordering::SeqCst) {
+        return Err("exiting".into());
+    }
     let context = {
         let _active = host.active.lock().await;
         hub_context(host)

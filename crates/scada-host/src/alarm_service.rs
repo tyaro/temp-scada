@@ -454,12 +454,6 @@ impl AlarmService {
         mode: ApplyMode<'_>,
     ) -> Result<ApplyResult, AlarmServiceError> {
         let path = path.to_path_buf();
-        let saved = tokio::task::spawn_blocking({
-            let path = path.clone();
-            move || SavedAlarmProject::read(&path)
-        })
-        .await
-        .map_err(|_| AlarmServiceError::Project(AlarmProjectError::InvalidFile))??;
         let mut active = self.active.lock().await;
         if let Err(error) = self.recover_switch().await {
             active.reason = "switchRecoveryFailed".into();
@@ -470,6 +464,23 @@ impl AlarmService {
             let _ = self.lagged.send(());
         }
         let previous = self.terminal.monitored()?;
+        if matches!(mode, ApplyMode::Saved) && previous.is_some() {
+            let read_path = path.clone();
+            let project_id =
+                tokio::task::spawn_blocking(move || SavedAlarmProject::read_project_id(&read_path))
+                    .await
+                    .map_err(|_| AlarmServiceError::Project(AlarmProjectError::InvalidFile))??;
+            if previous
+                .as_ref()
+                .is_some_and(|old| old.project_id != project_id)
+            {
+                return Ok(ApplyResult::SkippedDifferentProject);
+            }
+        }
+        let read_path = path.clone();
+        let saved = tokio::task::spawn_blocking(move || SavedAlarmProject::read(&read_path))
+            .await
+            .map_err(|_| AlarmServiceError::Project(AlarmProjectError::InvalidFile))??;
         if matches!(mode, ApplyMode::Saved)
             && previous
                 .as_ref()
@@ -1156,6 +1167,10 @@ mod tests {
         })
         .await
         .unwrap();
+        let valid_b = serde_json::to_vec(&project(&b_id, "B")).unwrap();
+        let mut invalid_b = project(&b_id, "B");
+        invalid_b["alarms"]["definitions"][0]["severity"] = json!("invalid");
+        std::fs::write(&b, serde_json::to_vec(&invalid_b).unwrap()).unwrap();
         assert!(matches!(
             service
                 .apply(
@@ -1174,6 +1189,7 @@ mod tests {
             service.snapshot().await.unwrap().engine.unwrap().session,
             a_session
         );
+        std::fs::write(&b, valid_b).unwrap();
         assert!(matches!(
             service
                 .apply(&b, &hub.url, hub.client(), "未ログイン", &[], ApplyMode::Explicit { confirmed_switch_from: None })
@@ -1497,11 +1513,9 @@ mod tests {
         let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
         let other_path = dir.join("other.json");
         let other_id = uuid::Uuid::now_v7().to_string();
-        std::fs::write(
-            &other_path,
-            serde_json::to_vec(&project(&other_id, "Other")).unwrap(),
-        )
-        .unwrap();
+        let mut other = project(&other_id, "Other");
+        other["alarms"]["definitions"][0]["severity"] = json!("invalid");
+        std::fs::write(&other_path, serde_json::to_vec(&other).unwrap()).unwrap();
         service
             .terminal
             .set_monitored(Some(MonitoredProject {

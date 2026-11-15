@@ -147,3 +147,41 @@ fn typescript_writer_package_with_image_and_alarms_is_readable() {
         .definitions
         .contains_key("0199f6a1-0000-7000-8000-000000000001:hh"));
 }
+
+#[test]
+fn saved_identity_reads_package_manifest_without_validating_other_entries() {
+    let source = include_bytes!("../../../../examples/alarm-writer.bantoscada");
+    let mut archive = zip::ZipArchive::new(Cursor::new(source.as_slice())).unwrap();
+    let mut manifest = Vec::new();
+    archive
+        .by_name("manifest.json")
+        .unwrap()
+        .read_to_end(&mut manifest)
+        .unwrap();
+    let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    for (name, bytes) in [
+        ("manifest.json", manifest),
+        ("project.json", b"invalid".to_vec()),
+        ("checksums.json", b"{}".to_vec()),
+    ] {
+        writer
+            .start_file(name, zip::write::SimpleFileOptions::default())
+            .unwrap();
+        writer.write_all(&bytes).unwrap();
+    }
+    let broken = writer.finish().unwrap().into_inner();
+    let path = std::env::temp_dir().join(format!(
+        "alarm-identity-{}.bantoscada",
+        uuid::Uuid::new_v4()
+    ));
+    std::fs::write(&path, broken).unwrap();
+    let id = SavedAlarmProject::read_project_id(&path).unwrap();
+    assert_eq!(
+        id,
+        SavedAlarmProject::from_bytes(&path, source)
+            .unwrap()
+            .project_id
+    );
+    assert!(SavedAlarmProject::read(&path).is_err());
+    std::fs::remove_file(path).unwrap();
+}

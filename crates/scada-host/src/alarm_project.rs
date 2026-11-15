@@ -41,6 +41,51 @@ pub struct SavedAlarmProject {
 }
 
 impl SavedAlarmProject {
+    /// Read only the saved identity before a Saved-mode apply decides whether
+    /// this file belongs to the monitored Project. A package's assets and
+    /// checksums are read only when the Project is actually applied.
+    pub fn read_project_id(path: &Path) -> Result<String, AlarmProjectError> {
+        if std::fs::metadata(path)?.len() > FILE_LIMIT {
+            return Err(AlarmProjectError::InvalidFile);
+        }
+        let manifest: Value = match ProjectFormat::of(path) {
+            Some(ProjectFormat::Json) => {
+                let file = std::fs::File::open(path)?;
+                let document: Value =
+                    serde_json::from_reader(file).map_err(|_| AlarmProjectError::InvalidFile)?;
+                document["manifest"].clone()
+            }
+            Some(ProjectFormat::Package) => {
+                let file = std::fs::File::open(path)?;
+                let mut zip =
+                    zip::ZipArchive::new(file).map_err(|_| AlarmProjectError::InvalidFile)?;
+                let mut entry = zip
+                    .by_name("manifest.json")
+                    .map_err(|_| AlarmProjectError::InvalidFile)?;
+                let mut bytes = Vec::new();
+                entry
+                    .by_ref()
+                    .take(JSON_LIMIT + 1)
+                    .read_to_end(&mut bytes)
+                    .map_err(|_| AlarmProjectError::InvalidFile)?;
+                if bytes.len() as u64 > JSON_LIMIT {
+                    return Err(AlarmProjectError::InvalidFile);
+                }
+                let envelope: Value =
+                    serde_json::from_slice(&bytes).map_err(|_| AlarmProjectError::InvalidFile)?;
+                if envelope["profile"] != "banto-scada.image-project" || envelope["version"] != 1 {
+                    return Err(AlarmProjectError::InvalidFile);
+                }
+                envelope["project"].clone()
+            }
+            None => return Err(AlarmProjectError::InvalidFile),
+        };
+        manifest["projectId"]
+            .as_str()
+            .map(str::to_owned)
+            .ok_or(AlarmProjectError::InvalidFile)
+    }
+
     pub fn read(path: &Path) -> Result<Self, AlarmProjectError> {
         if std::fs::metadata(path)?.len() > FILE_LIMIT {
             return Err(AlarmProjectError::InvalidFile);

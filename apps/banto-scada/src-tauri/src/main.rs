@@ -16,7 +16,7 @@ use scada_model::Project;
 use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
 use serde::Serialize;
 use std::collections::HashSet;
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::Arc;
 use tauri::webview::PageLoadEvent;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, State, WindowEvent};
@@ -27,6 +27,7 @@ struct NativeHost {
     bootstrap: Bootstrapper,
     active: Mutex<Active>,
     alarm_operation: Mutex<()>,
+    exiting: AtomicBool,
 }
 
 #[derive(Default)]
@@ -78,6 +79,9 @@ async fn hub_connect(
     endpoint: String,
 ) -> Result<HubStatus, String> {
     let _alarm_operation = state.alarm_operation.lock().await;
+    if state.exiting.load(Ordering::SeqCst) {
+        return Err("exiting".into());
+    }
     let mut active = state.active.lock().await;
     stop_read(&mut active).await;
     active.connected = false;
@@ -353,6 +357,7 @@ fn main() {
             bootstrap,
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
         })
         .manage(auth)
         .manage(alarm)
@@ -379,10 +384,15 @@ fn on_exit<R: Runtime>() -> impl FnMut(&AppHandle<R>, RunEvent) {
             Ok(_) => {
                 api.prevent_exit();
                 app.state::<close::CloseGuard>().begin_exit();
+                app.state::<NativeHost>()
+                    .exiting
+                    .store(true, Ordering::SeqCst);
                 let app = app.clone();
                 let state = state.clone();
                 tauri::async_runtime::spawn(async move {
                     control::exit(&app).await;
+                    let host = app.state::<NativeHost>();
+                    let _alarm_operation = host.alarm_operation.lock().await;
                     if let Ok(alarm) = app.state::<alarm::AlarmState>().get() {
                         let _ = alarm.stop().await;
                     }

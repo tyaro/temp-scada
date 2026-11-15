@@ -183,6 +183,7 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
             bootstrap,
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
         })
         .build(tauri::test::mock_context(tauri::test::noop_assets()))
         .unwrap();
@@ -281,6 +282,7 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
             ),
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
         })
         .build(tauri::test::mock_context(tauri::test::noop_assets()))
         .unwrap();
@@ -358,6 +360,7 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
             bootstrap,
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
         })
         .build(tauri::test::mock_context(tauri::test::noop_assets()))
         .unwrap();
