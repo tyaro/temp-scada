@@ -761,6 +761,6 @@ fn store_reason(error: StoreError) -> &'static str {
 }
 
 #[cfg(test)]
-mod setup_tests;
+pub(crate) mod setup_tests;
 #[cfg(test)]
 mod tests;

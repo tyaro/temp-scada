@@ -37,9 +37,9 @@ impl Drop for TempDir {
 
 /// A loopback Hub serving a fixed catalog of `tags` (name, data type) to
 /// any number of SDK generations, each value `real` and good.
-struct Hub {
-    url: String,
-    subscriptions: Arc<AtomicUsize>,
+pub(crate) struct Hub {
+    pub(crate) url: String,
+    pub(crate) subscriptions: Arc<AtomicUsize>,
     task: tokio::task::JoinHandle<()>,
 }
 
@@ -50,7 +50,7 @@ impl Drop for Hub {
 }
 
 impl Hub {
-    async fn new(tags: &[(&str, &str)]) -> Self {
+    pub(crate) async fn new(tags: &[(&str, &str)]) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         let tags: Vec<(String, String)> = tags
@@ -74,7 +74,7 @@ impl Hub {
         }
     }
 
-    fn client(&self) -> RestClient {
+    pub(crate) fn client(&self) -> RestClient {
         RestClient::with_request_timeout(
             Endpoint::new(&self.url).unwrap(),
             SecretApiKey::new(KEY.into()).unwrap(),

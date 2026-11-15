@@ -1,6 +1,7 @@
 //! Per-Project SQLite ledger for alarm definitions, events, last states and
 //! session evidence. No Historian tables or UI lifetime are shared with it.
 use std::collections::{BTreeMap, BTreeSet};
+use std::ops::Deref;
 use std::sync::Arc;
 
 use scada_alarm::{
@@ -13,7 +14,7 @@ use sha2::{Digest, Sha256};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Row, SqlitePool};
 
-use crate::alarm_terminal::AlarmTerminal;
+use crate::alarm_terminal::{ActiveAlarmSession, AlarmTerminal, TerminalError};
 use crate::durable;
 
 const FORMAT: i64 = 1;
@@ -27,6 +28,13 @@ pub enum AlarmDbError {
     Json(serde_json::Error),
     UnsupportedFormat,
     InvalidRow,
+    Terminal(TerminalError),
+}
+
+impl From<TerminalError> for AlarmDbError {
+    fn from(error: TerminalError) -> Self {
+        Self::Terminal(error)
+    }
 }
 
 impl From<std::io::Error> for AlarmDbError {
@@ -138,6 +146,27 @@ pub struct RestorePlan {
     definition_hashes: BTreeMap<String, String>,
     disabled_condition_ids: BTreeSet<String>,
     endpoint: String,
+}
+
+/// A committed DB session and its in-process ownership travel together.
+/// Dropping this before runtime construction releases the process claim.
+pub struct StartedAlarmSession {
+    engine: Engine,
+    active: ActiveAlarmSession,
+}
+
+impl Deref for StartedAlarmSession {
+    type Target = Engine;
+
+    fn deref(&self) -> &Engine {
+        &self.engine
+    }
+}
+
+impl StartedAlarmSession {
+    pub(crate) fn into_parts(self) -> (Engine, ActiveAlarmSession) {
+        (self.engine, self.active)
+    }
 }
 
 impl RestorePlan {
@@ -284,6 +313,10 @@ impl AlarmDb {
             .await?;
             tx.commit().await?;
         }
+        // Format 1 is pre-release; add the lookup index to existing files too.
+        sqlx::query("CREATE INDEX IF NOT EXISTS event_condition_seq ON event(condition_id, seq DESC) WHERE display IS NOT NULL")
+            .execute(&pool)
+            .await?;
         Ok(Self {
             pool,
             project_id: project_id.into(),
@@ -446,14 +479,18 @@ impl AlarmDb {
         &self,
         plan: RestorePlan,
         at_ms: i64,
-    ) -> Result<Engine, AlarmDbError> {
+    ) -> Result<StartedAlarmSession, AlarmDbError> {
         let session = plan.engine.session().clone();
-        self._terminal
-            .claim_generation(session.generation)
-            .map_err(|_| AlarmDbError::InvalidRow)?;
+        let claim = self
+            ._terminal
+            .claim_generation(&self.project_id, &session)?;
         self.start_session_inner(&session, at_ms, &plan.ended, &plan.restored, Some(&plan))
             .await?;
-        Ok(plan.engine)
+        let active = claim.into_active(self._terminal.clone());
+        Ok(StartedAlarmSession {
+            engine: plan.engine,
+            active,
+        })
     }
 
     #[cfg(test)]
@@ -562,16 +599,26 @@ impl AlarmDb {
     /// endpoint change after a crash. A later apply can use the stopped row.
     pub async fn close_unstopped_session(&self, at_ms: i64) -> Result<(), AlarmDbError> {
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
-        let previous =
-            sqlx::query("SELECT session_id, stopped, engine_unavailable FROM session WHERE id = 1")
-                .fetch_optional(&mut *tx)
-                .await?;
+        if self._terminal.active_project(&self.project_id)? {
+            return Err(AlarmDbError::Terminal(TerminalError::InUse));
+        }
+        let previous = sqlx::query(
+            "SELECT session_id, generation, stopped, engine_unavailable FROM session WHERE id = 1",
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+        let mut closed_session = None;
         if let Some(previous) = previous {
             let stopped: i64 = previous.try_get("stopped")?;
             if !matches!(stopped, 0 | 1) {
                 return Err(AlarmDbError::InvalidRow);
             }
             if stopped == 0 {
+                let generation: i64 = previous.try_get("generation")?;
+                closed_session = Some(Session {
+                    id: previous.try_get("session_id")?,
+                    generation: u64::try_from(generation).map_err(|_| AlarmDbError::InvalidRow)?,
+                });
                 write_crash_evidence(
                     &mut tx,
                     &previous.try_get::<String, _>("session_id")?,
@@ -585,6 +632,9 @@ impl AlarmDb {
             }
         }
         tx.commit().await?;
+        if let Some(session) = closed_session {
+            self._terminal.release_session(&self.project_id, &session);
+        }
         Ok(())
     }
 
