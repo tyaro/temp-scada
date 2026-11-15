@@ -146,7 +146,9 @@ pub async fn project_save<R: Runtime>(
         .map_err(|error| error.reason())?;
     let path = files.0.path(saved.file_id).ok_or("unknown_file_id")?;
     let apply = match alarm::applied_user(&auth).await {
-        Ok(user) => alarm::apply_file(&alarm, &host, &path, &user, &header.confirmed, false).await,
+        Ok(user) => {
+            alarm::apply_file(&alarm, &host, &path, &user, &header.confirmed, false, None).await
+        }
         Err(reason) => Err(reason),
     };
     let apply = match apply {

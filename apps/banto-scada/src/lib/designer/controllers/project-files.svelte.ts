@@ -212,6 +212,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
   async function reportAlarmApply(
     result: AlarmApplyResult | undefined,
     savedFileId: number,
+    confirmedSwitchFrom?: string,
   ) {
     host.alarmRefresh?.();
     if (
@@ -249,6 +250,40 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       );
       return;
     }
+    if (result.status === "switchConfirmationRequired") {
+      if (confirmedSwitchFrom) {
+        host.report(
+          "error",
+          "監視先が変わりました。警報の状態を確認して再度適用してください。",
+        );
+        return;
+      }
+      if (
+        !window.confirm(
+          "現在のProjectの警報監視を停止し、このProjectへ切り替えますか？",
+        )
+      ) {
+        host.report("info", "警報の監視先は切り替えていません。");
+        return;
+      }
+      try {
+        await reportAlarmApply(
+          await host.fileService?.apply?.(
+            savedFileId,
+            [],
+            result.monitoredProjectId,
+          ),
+          savedFileId,
+          result.monitoredProjectId,
+        );
+      } catch (error) {
+        host.report(
+          "error",
+          `警報定義を適用できませんでした（${String(error)}）。`,
+        );
+      }
+      return;
+    }
     if (!host.fileService?.apply) return;
     const yes = window.confirm(
       `未確認 ${result.occurrences.length} 件が終了します。警報定義を適用しますか？`,
@@ -264,6 +299,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       const retried = await host.fileService.apply(
         savedFileId,
         result.occurrences,
+        confirmedSwitchFrom,
       );
       if (retried.status === "confirmationRequired") {
         host.report(
@@ -271,7 +307,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
           "警報の状態が変わりました。最新の未確認件数を確かめて再度適用してください。",
         );
       } else {
-        await reportAlarmApply(retried, savedFileId);
+        await reportAlarmApply(retried, savedFileId, confirmedSwitchFrom);
       }
     } catch (error) {
       host.report(

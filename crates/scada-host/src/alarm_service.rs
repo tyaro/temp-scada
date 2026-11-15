@@ -129,7 +129,16 @@ pub enum ApplyResult {
     Applied { snapshot: AlarmSnapshot },
     SkippedDifferentProject,
     SkippedNoHub,
+    SwitchConfirmationRequired { monitored_project_id: String },
     ConfirmationRequired { occurrences: Vec<UnackedOccurrence> },
+}
+
+#[derive(Clone, Copy)]
+pub enum ApplyMode<'a> {
+    Saved,
+    Explicit {
+        confirmed_switch_from: Option<&'a str>,
+    },
 }
 
 struct Active {
@@ -384,7 +393,7 @@ impl AlarmService {
         client: RestClient,
         applied_by: &str,
         confirmed: &[UnackedOccurrence],
-        explicit: bool,
+        mode: ApplyMode<'_>,
     ) -> Result<ApplyResult, AlarmServiceError> {
         let path = path.to_path_buf();
         let saved = tokio::task::spawn_blocking({
@@ -399,12 +408,26 @@ impl AlarmService {
             return Err(error);
         }
         let previous = self.terminal.monitored()?;
-        if !explicit
+        if matches!(mode, ApplyMode::Saved)
             && previous
                 .as_ref()
                 .is_some_and(|old| old.project_id != saved.project_id)
         {
             return Ok(ApplyResult::SkippedDifferentProject);
+        }
+        if let ApplyMode::Explicit {
+            confirmed_switch_from,
+        } = mode
+        {
+            if let Some(old) = &previous {
+                if old.project_id != saved.project_id
+                    && confirmed_switch_from != Some(old.project_id.as_str())
+                {
+                    return Ok(ApplyResult::SwitchConfirmationRequired {
+                        monitored_project_id: old.project_id.clone(),
+                    });
+                }
+            }
         }
         let mut applied = saved.applied(endpoint.into(), applied_by.into(), wall_ms());
         let same_project = previous
@@ -835,7 +858,14 @@ mod tests {
         let service = AlarmService::open(&dir).await.unwrap();
         assert!(matches!(
             service
-                .apply(&a, &hub.url, hub.client(), "未ログイン", &[], false)
+                .apply(
+                    &a,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
                 .await
                 .unwrap(),
             ApplyResult::Applied { .. }
@@ -862,7 +892,14 @@ mod tests {
         .unwrap();
         assert!(matches!(
             service
-                .apply(&b, &hub.url, hub.client(), "未ログイン", &[], false)
+                .apply(
+                    &b,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
                 .await
                 .unwrap(),
             ApplyResult::SkippedDifferentProject
@@ -871,8 +908,24 @@ mod tests {
             service.snapshot().await.unwrap().engine.unwrap().session,
             a_session
         );
+        assert!(matches!(
+            service
+                .apply(&b, &hub.url, hub.client(), "未ログイン", &[], ApplyMode::Explicit { confirmed_switch_from: None })
+                .await
+                .unwrap(),
+            ApplyResult::SwitchConfirmationRequired { monitored_project_id } if monitored_project_id == a_id
+        ));
         let needed = match service
-            .apply(&b, &hub.url, hub.client(), "未ログイン", &[], true)
+            .apply(
+                &b,
+                &hub.url,
+                hub.client(),
+                "未ログイン",
+                &[],
+                ApplyMode::Explicit {
+                    confirmed_switch_from: Some(&a_id),
+                },
+            )
             .await
             .unwrap()
         {
@@ -892,7 +945,16 @@ mod tests {
         );
         assert!(matches!(
             service
-                .apply(&b, &hub.url, hub.client(), "未ログイン", &needed, true)
+                .apply(
+                    &b,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &needed,
+                    ApplyMode::Explicit {
+                        confirmed_switch_from: Some(&a_id)
+                    }
+                )
                 .await
                 .unwrap(),
             ApplyResult::Applied { .. }
@@ -957,7 +1019,16 @@ mod tests {
         empty["alarms"] = json!({"definitions": []});
         std::fs::write(&b, serde_json::to_vec(&empty).unwrap()).unwrap();
         let needed = match resumed
-            .apply(&b, &hub.url, hub.client(), "未ログイン", &[], true)
+            .apply(
+                &b,
+                &hub.url,
+                hub.client(),
+                "未ログイン",
+                &[],
+                ApplyMode::Explicit {
+                    confirmed_switch_from: Some(&a_id),
+                },
+            )
             .await
             .unwrap()
         {
@@ -966,7 +1037,16 @@ mod tests {
         };
         assert!(matches!(
             resumed
-                .apply(&b, &hub.url, hub.client(), "未ログイン", &needed, true)
+                .apply(
+                    &b,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &needed,
+                    ApplyMode::Explicit {
+                        confirmed_switch_from: Some(&a_id)
+                    }
+                )
                 .await
                 .unwrap(),
             ApplyResult::Applied { .. }
@@ -996,7 +1076,14 @@ mod tests {
         let service = AlarmService::open(&dir).await.unwrap();
         assert!(matches!(
             service
-                .apply(&path, &hub.url, hub.client(), "未ログイン", &[], false)
+                .apply(
+                    &path,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
                 .await
                 .unwrap(),
             ApplyResult::Applied { .. }
@@ -1045,7 +1132,16 @@ mod tests {
         }
         let service = AlarmService::open(&dir).await.unwrap();
         service
-            .apply(&a, &hub.url, hub.client(), "未ログイン", &[], true)
+            .apply(
+                &a,
+                &hub.url,
+                hub.client(),
+                "未ログイン",
+                &[],
+                ApplyMode::Explicit {
+                    confirmed_switch_from: None,
+                },
+            )
             .await
             .unwrap();
         let old = AlarmDb::open(service.terminal.clone(), &a_id)
@@ -1053,8 +1149,35 @@ mod tests {
             .unwrap();
         let old_applied = old.applied().await.unwrap().unwrap();
         old.close().await;
+        assert!(matches!(
+            service
+                .apply(&b, &hub.url, hub.client(), "未ログイン", &[], ApplyMode::Explicit { confirmed_switch_from: None })
+                .await
+                .unwrap(),
+            ApplyResult::SwitchConfirmationRequired { monitored_project_id } if monitored_project_id == a_id
+        ));
+        assert_eq!(
+            service.terminal.monitored().unwrap().unwrap().project_id,
+            a_id
+        );
+        assert!(matches!(
+            service
+                .apply(&b, &hub.url, hub.client(), "未ログイン", &[], ApplyMode::Explicit { confirmed_switch_from: Some(&b_id) })
+                .await
+                .unwrap(),
+            ApplyResult::SwitchConfirmationRequired { monitored_project_id } if monitored_project_id == a_id
+        ));
         service
-            .apply(&b, &hub.url, hub.client(), "未ログイン", &[], true)
+            .apply(
+                &b,
+                &hub.url,
+                hub.client(),
+                "未ログイン",
+                &[],
+                ApplyMode::Explicit {
+                    confirmed_switch_from: Some(&a_id),
+                },
+            )
             .await
             .unwrap();
         service

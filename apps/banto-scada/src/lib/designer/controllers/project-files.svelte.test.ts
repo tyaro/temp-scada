@@ -146,6 +146,41 @@ describe("project files on the desktop", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("confirms a Project switch even when there are no unacknowledged rounds", async () => {
+    const confirm = vi.fn(() => true);
+    vi.stubGlobal("window", { confirm });
+    try {
+      const calls: unknown[] = [];
+      const { controller } = setup({
+        open: async () => null,
+        save: async () => ({
+          fileId: 12,
+          fileName: "other.json",
+          apply: { status: "skippedDifferentProject" },
+        }),
+        apply: async (fileId, confirmed, confirmedSwitchFrom) => {
+          calls.push({ fileId, confirmed, confirmedSwitchFrom });
+          return confirmedSwitchFrom
+            ? { status: "applied" }
+            : {
+                status: "switchConfirmationRequired",
+                monitoredProjectId: "project-a",
+              };
+        },
+      });
+      controller.save();
+      await settle();
+      await controller.applyAlarm();
+      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(calls).toEqual([
+        { fileId: 12, confirmed: [], confirmedSwitchFrom: undefined },
+        { fileId: 12, confirmed: [], confirmedSwitchFrom: "project-a" },
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 describe("project files in the browser", () => {

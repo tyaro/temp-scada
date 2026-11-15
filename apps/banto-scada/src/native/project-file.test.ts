@@ -10,6 +10,21 @@ import { ProjectFileError } from "../lib/project-file-service";
 const encoder = new TextEncoder();
 
 describe("nativeProjectFiles", () => {
+  it("passes switch confirmation separately from unacknowledged rounds", async () => {
+    const calls: { command: string; args: unknown }[] = [];
+    const invoke: RawInvoke = async (command, args) => {
+      calls.push({ command, args });
+      return { status: "applied" };
+    };
+    await nativeProjectFiles(invoke).apply?.(4, [], "project-a");
+    expect(calls).toEqual([
+      {
+        command: "alarm_apply",
+        args: { fileId: 4, confirmed: [], confirmedSwitchFrom: "project-a" },
+      },
+    ]);
+  });
+
   it("frames the save request as the host reads it", async () => {
     const calls: { command: string; args: unknown }[] = [];
     const invoke: RawInvoke = async (command, args) => {

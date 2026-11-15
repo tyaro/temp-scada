@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use scada_host::alarm_db::{EventRead, UnackedOccurrence};
 use scada_host::alarm_service::{
-    AlarmService, AlarmServiceError, AlarmSnapshot, AppliedSummary, ApplyResult, RestClient,
+    AlarmService, AlarmServiceError, AlarmSnapshot, AppliedSummary, ApplyMode, ApplyResult,
+    RestClient,
 };
 use scada_host::auth::BantoError;
 use scada_host::desktop_auth::CommandError;
@@ -178,6 +179,7 @@ pub async fn apply_file(
     user: &str,
     confirmed: &[UnackedOccurrence],
     explicit: bool,
+    confirmed_switch_from: Option<&str>,
 ) -> Result<ApplyResult, String> {
     let service = alarm.get()?;
     let (endpoint, client) = match hub_context(host) {
@@ -185,8 +187,15 @@ pub async fn apply_file(
         Err(reason) if !explicit && reason == "noHub" => return Ok(ApplyResult::SkippedNoHub),
         Err(reason) => return Err(reason),
     };
+    let mode = if explicit {
+        ApplyMode::Explicit {
+            confirmed_switch_from,
+        }
+    } else {
+        ApplyMode::Saved
+    };
     match service
-        .apply(path, &endpoint, client, user, confirmed, explicit)
+        .apply(path, &endpoint, client, user, confirmed, mode)
         .await
     {
         Ok(result) => Ok(result),
@@ -205,10 +214,20 @@ pub async fn alarm_apply(
     auth: State<'_, AuthState>,
     file_id: u64,
     confirmed: Vec<UnackedOccurrence>,
+    confirmed_switch_from: Option<String>,
 ) -> Result<ApplyResult, String> {
     let user = authorized_user(&auth).await?;
     let path = files.0.path(file_id).ok_or("unknownFileId")?;
-    apply_file(&alarm, &host, &path, &user, &confirmed, true).await
+    apply_file(
+        &alarm,
+        &host,
+        &path,
+        &user,
+        &confirmed,
+        true,
+        confirmed_switch_from.as_deref(),
+    )
+    .await
 }
 
 #[tauri::command]

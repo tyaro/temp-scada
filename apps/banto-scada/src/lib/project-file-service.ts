@@ -20,6 +20,10 @@ export type AlarmApplyResult =
   | { readonly status: "skippedDifferentProject" }
   | { readonly status: "skippedNoHub" }
   | {
+      readonly status: "switchConfirmationRequired";
+      readonly monitoredProjectId: string;
+    }
+  | {
       readonly status: "confirmationRequired";
       readonly occurrences: UnackedOccurrence[];
     }
@@ -57,6 +61,7 @@ export interface ProjectFileService {
   apply?(
     fileId: number,
     confirmed: readonly UnackedOccurrence[],
+    confirmedSwitchFrom?: string,
   ): Promise<AlarmApplyResult>;
   alarmFeed?: {
     snapshot(): Promise<import("./alarm-mirror").AlarmSnapshot>;

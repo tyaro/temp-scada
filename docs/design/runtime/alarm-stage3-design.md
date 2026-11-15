@@ -280,6 +280,8 @@ Project A から B へ切り替えるときは、§5.2 の確かめと権限確�
 
 切替復元に失敗しても警報 service は端末の lock を保持して開いたままにし、状態を `switchRecoveryFailed` として返す。再開・適用の前に復元を再試行し、成功するまで旧 Project の Engine を起動しない。Hub に接続し直したときは接続先が同じでも警報 Engine を再起動し、新しい認証情報で購読を作る。
 
+明示的に別 Project を適用するときは、未確認の回が 0 件でも監視先の切替を先に確かめる。host は `switchConfirmationRequired` と監視中 Project id を返して適用しない。画面は確認後、その id を `confirmedSwitchFrom` として送り直す。host は現在の監視先と一致する場合だけ切替を許し、途中で監視先が変わったら再確認を求める。切替を確認した後、終了する未確認の回があれば別に確かめる。保存時の暗黙の適用は別 Project への切替を行わない。
+
 ### 5.5 IPC
 
 browser 版（モックの読取）は Engine を持たない。e2e 用に、IPC の境界でモックの警報 service を差し込めるようにする。

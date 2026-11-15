@@ -78,10 +78,12 @@ export function nativeProjectFiles(invoke: RawInvoke): ProjectFileService {
         apply: answer.apply,
       };
     },
-    async apply(fileId, confirmed) {
-      return (await invoke("alarm_apply", { fileId, confirmed }).catch(
-        refusal,
-      )) as AlarmApplyResult;
+    async apply(fileId, confirmed, confirmedSwitchFrom) {
+      return (await invoke("alarm_apply", {
+        fileId,
+        confirmed,
+        confirmedSwitchFrom: confirmedSwitchFrom ?? null,
+      }).catch(refusal)) as AlarmApplyResult;
     },
     alarmFeed: {
       snapshot: () => invoke("alarm_snapshot") as Promise<AlarmSnapshot>,
