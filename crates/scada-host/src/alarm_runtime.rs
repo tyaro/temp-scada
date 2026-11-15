@@ -371,7 +371,40 @@ async fn run(
     tags: BTreeSet<String>,
     status_tx: watch::Sender<AlarmRuntimeStatus>,
 ) -> Result<(), AlarmRuntimeError> {
-    let result = run_inner(evaluator, sdk, control_rx, change_tx, tags).await;
+    run_with_status(
+        run_inner(evaluator, sdk, control_rx, change_tx, tags),
+        status_tx,
+    )
+    .await
+}
+
+struct StopOnDrop(watch::Sender<AlarmRuntimeStatus>);
+
+impl Drop for StopOnDrop {
+    fn drop(&mut self) {
+        // A task panic or cancellation drops the future without returning a Result.
+        self.0.send_if_modified(|status| {
+            if *status == AlarmRuntimeStatus::Running {
+                *status = AlarmRuntimeStatus::Stopped {
+                    reason: AlarmStopReason::InternalError,
+                };
+                true
+            } else {
+                false
+            }
+        });
+    }
+}
+
+async fn run_with_status<F>(
+    future: F,
+    status_tx: watch::Sender<AlarmRuntimeStatus>,
+) -> Result<(), AlarmRuntimeError>
+where
+    F: std::future::Future<Output = Result<(), AlarmRuntimeError>>,
+{
+    let guard = StopOnDrop(status_tx);
+    let result = future.await;
     let reason = match &result {
         Ok(()) => AlarmStopReason::Requested,
         Err(AlarmRuntimeError::Sdk(ErrorKind::Unauthorized)) => AlarmStopReason::Unauthorized,
@@ -386,7 +419,7 @@ async fn run(
             AlarmRuntimeError::Step(_) | AlarmRuntimeError::Closed | AlarmRuntimeError::Internal,
         ) => AlarmStopReason::InternalError,
     };
-    status_tx.send_replace(AlarmRuntimeStatus::Stopped { reason });
+    guard.0.send_replace(AlarmRuntimeStatus::Stopped { reason });
     result
 }
 
@@ -677,6 +710,23 @@ mod tests {
     use crate::recording_runtime::setup_tests::Hub;
     use scada_alarm::{AckMode, ConditionSpec, Session};
     use std::sync::atomic::Ordering;
+
+    #[tokio::test]
+    async fn task_panic_publishes_internal_error_instead_of_staying_running() {
+        let (status_tx, mut status) = watch::channel(AlarmRuntimeStatus::Running);
+        let task = tokio::spawn(run_with_status(
+            async { panic!("test-only alarm task panic") },
+            status_tx,
+        ));
+        assert!(task.await.unwrap_err().is_panic());
+        status.changed().await.unwrap();
+        assert_eq!(
+            *status.borrow(),
+            AlarmRuntimeStatus::Stopped {
+                reason: AlarmStopReason::InternalError
+            }
+        );
+    }
 
     #[tokio::test]
     async fn dropped_engine_owner_releases_claim_for_crash_recovery() {
