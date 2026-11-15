@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import symbolImage from "../../../../examples/symbol-image.project.json";
+import alarmCases from "../../../../examples/alarm-definition-cases.json";
 import recordingExample from "../../../../examples/recording.project.json";
 import { parseRecordingPlan } from "./recording-plan";
 import { zipSync, unzipSync } from "fflate";
@@ -7,6 +8,7 @@ import { AssetStore, sha256 } from "./image-assets";
 import { createProject } from "./new-project";
 import { applyCommand, newId } from "./editor";
 import { readProjectFile, writeProjectPackage } from "./project-package";
+import { parseProject } from "./project";
 const png = Uint8Array.from(
   atob(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jVhEAAAAASUVORK5CYII=",
@@ -45,6 +47,40 @@ it("keeps the portable Symbol image example aligned with its current Project and
     ).toEqual(new Uint8Array(original));
   } finally {
     result.store.dispose();
+  }
+});
+it("keeps the Rust alarm package fixture aligned with the TypeScript writer", async () => {
+  const { readFileSync } = await vi.importActual<{
+    readFileSync(path: URL): Uint8Array;
+  }>("node:fs");
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn(async () => ({ width: 2, height: 1, close() {} })),
+  );
+  const sample = readFileSync(
+    new URL("../../../../examples/symbol-image.bantoscada", import.meta.url),
+  );
+  const expected = readFileSync(
+    new URL("../../../../examples/alarm-writer.bantoscada", import.meta.url),
+  );
+  const opened = await readProjectFile(new Blob([new Uint8Array(sample)]));
+  try {
+    const project = parseProject(
+      JSON.stringify({ ...symbolImage, alarms: alarmCases[0].alarms }),
+    );
+    const generated = unzipSync(
+      new Uint8Array(
+        await (await writeProjectPackage(project, opened.store)).arrayBuffer(),
+      ),
+    );
+    const fixtureFiles = unzipSync(new Uint8Array(expected));
+    expect(Object.keys(generated).sort()).toEqual(
+      Object.keys(fixtureFiles).sort(),
+    );
+    for (const [name, bytes] of Object.entries(generated))
+      expect(bytes).toEqual(fixtureFiles[name]);
+  } finally {
+    opened.store.dispose();
   }
 });
 async function fixture() {

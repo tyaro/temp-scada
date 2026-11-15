@@ -277,7 +277,11 @@ impl AlarmService {
             if let Some(pump) = active.pump.take() {
                 pump.abort();
             }
-            active.db = None;
+            if let Some(db) = active.db.take() {
+                if let Ok(db) = Arc::try_unwrap(db) {
+                    db.close().await;
+                }
+            }
         }
         if active.runtime.is_none() {
             if let Err(error) = self.start_locked(&mut active, endpoint, client).await {
@@ -423,7 +427,11 @@ impl AlarmService {
         if let Some(pump) = active.pump.take() {
             pump.abort();
         }
-        active.db = None;
+        if let Some(db) = active.db.take() {
+            if let Ok(db) = Arc::try_unwrap(db) {
+                db.close().await;
+            }
+        }
         active.reason = "stopped".into();
         result
     }
