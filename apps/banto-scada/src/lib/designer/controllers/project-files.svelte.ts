@@ -250,6 +250,17 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       );
       return;
     }
+    if (
+      (result.status === "switchConfirmationRequired" ||
+        result.status === "confirmationRequired") &&
+      fileId !== savedFileId
+    ) {
+      host.report(
+        "info",
+        "開いているProjectが変わりました。警報の状態を確認して再度適用してください。",
+      );
+      return;
+    }
     if (result.status === "switchConfirmationRequired") {
       if (!result.monitoredProjectId) {
         host.report(
@@ -325,7 +336,8 @@ export function createProjectFilesController(host: ProjectFilesHost) {
   }
   async function applyAlarm() {
     if (!host.fileService?.apply) return;
-    if (fileId === null) {
+    const requestedFileId = fileId;
+    if (requestedFileId === null) {
       host.report(
         "info",
         "警報定義を適用するProjectファイルを先に開くか保存してください。",
@@ -333,7 +345,10 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       return;
     }
     try {
-      await reportAlarmApply(await host.fileService.apply(fileId, []), fileId);
+      await reportAlarmApply(
+        await host.fileService.apply(requestedFileId, []),
+        requestedFileId,
+      );
     } catch (error) {
       host.report(
         "error",

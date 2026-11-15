@@ -210,6 +210,37 @@ describe("project files on the desktop", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("does not confirm an apply after another Project is opened", async () => {
+    const confirm = vi.fn(() => true);
+    vi.stubGlobal("window", { confirm });
+    try {
+      let finish!: (result: AlarmApplyResult) => void;
+      const apply = vi.fn(
+        () => new Promise<AlarmApplyResult>((resolve) => (finish = resolve)),
+      );
+      const { controller, reports } = setup({
+        open: async () => null,
+        save: async () => ({ fileId: 12, fileName: "old.json" }),
+        apply,
+      });
+      controller.save();
+      await settle();
+      const pending = controller.applyAlarm();
+      controller.adopted(createProject(), "file");
+      finish({
+        status: "switchConfirmationRequired",
+        monitoredProjectId: "project-a",
+      });
+      await pending;
+      expect(apply).toHaveBeenCalledTimes(1);
+      expect(apply).toHaveBeenCalledWith(12, []);
+      expect(confirm).not.toHaveBeenCalled();
+      expect(reports.at(-1)?.text).toContain("Projectが変わりました");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 describe("project files in the browser", () => {
