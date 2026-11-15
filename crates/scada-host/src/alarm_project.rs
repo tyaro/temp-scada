@@ -7,6 +7,7 @@ use std::path::Path;
 
 use scada_alarm::{AckMode, ConditionSpec, LimitKind, Source};
 use scada_model::Project;
+use serde::Deserialize;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -15,6 +16,17 @@ use crate::project_file::{ProjectFormat, FILE_LIMIT};
 
 const JSON_LIMIT: u64 = 1024 * 1024;
 const TOTAL_LIMIT: u64 = 67 * 1024 * 1024;
+
+#[derive(Deserialize)]
+struct ProjectIdentity {
+    manifest: ManifestIdentity,
+}
+
+#[derive(Deserialize)]
+struct ManifestIdentity {
+    #[serde(rename = "projectId")]
+    project_id: String,
+}
 
 #[derive(Debug)]
 pub enum AlarmProjectError {
@@ -48,12 +60,12 @@ impl SavedAlarmProject {
         if std::fs::metadata(path)?.len() > FILE_LIMIT {
             return Err(AlarmProjectError::InvalidFile);
         }
-        let manifest: Value = match ProjectFormat::of(path) {
+        match ProjectFormat::of(path) {
             Some(ProjectFormat::Json) => {
                 let file = std::fs::File::open(path)?;
-                let document: Value =
+                let identity: ProjectIdentity =
                     serde_json::from_reader(file).map_err(|_| AlarmProjectError::InvalidFile)?;
-                document["manifest"].clone()
+                Ok(identity.manifest.project_id)
             }
             Some(ProjectFormat::Package) => {
                 let file = std::fs::File::open(path)?;
@@ -76,14 +88,13 @@ impl SavedAlarmProject {
                 if envelope["profile"] != "banto-scada.image-project" || envelope["version"] != 1 {
                     return Err(AlarmProjectError::InvalidFile);
                 }
-                envelope["project"].clone()
+                envelope["project"]["projectId"]
+                    .as_str()
+                    .map(str::to_owned)
+                    .ok_or(AlarmProjectError::InvalidFile)
             }
-            None => return Err(AlarmProjectError::InvalidFile),
-        };
-        manifest["projectId"]
-            .as_str()
-            .map(str::to_owned)
-            .ok_or(AlarmProjectError::InvalidFile)
+            None => Err(AlarmProjectError::InvalidFile),
+        }
     }
 
     pub fn read(path: &Path) -> Result<Self, AlarmProjectError> {
