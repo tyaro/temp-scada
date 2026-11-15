@@ -582,7 +582,10 @@ async fn process_state(
             )
             .await?;
             for tag in tags {
-                let sample = sample(snapshot, tag);
+                let Some(sample) = sample(snapshot, tag) else {
+                    // A resolved binding without its first value remains InitialValue.
+                    continue;
+                };
                 if previous.get(tag) != Some(&sample) {
                     publish(
                         evaluator,
@@ -652,7 +655,7 @@ async fn begin_generation(
     Ok(())
 }
 
-fn sample(snapshot: &GenerationSnapshot, tag: &str) -> Sample {
+fn sample(snapshot: &GenerationSnapshot, tag: &str) -> Option<Sample> {
     let invalid = || Sample {
         resolved: false,
         quality: Quality::Bad,
@@ -660,7 +663,7 @@ fn sample(snapshot: &GenerationSnapshot, tag: &str) -> Sample {
         source_timestamp_ms: None,
     };
     let Some(binding) = snapshot.binding(tag) else {
-        return invalid();
+        return Some(invalid());
     };
     let BindingView::Resolved {
         tag: catalog,
@@ -668,12 +671,13 @@ fn sample(snapshot: &GenerationSnapshot, tag: &str) -> Sample {
         ..
     } = binding
     else {
-        return invalid();
+        return Some(invalid());
     };
     if !catalog.enabled {
-        return invalid();
+        return Some(invalid());
     }
-    let Some(value) = value else { return invalid() };
+    // No value row means initial value waiting, not an unresolved catalog tag.
+    let value = value?;
     let quality = match &value.q {
         ValueQuality::Good => Quality::Good,
         ValueQuality::Stale => Quality::Stale,
@@ -694,12 +698,12 @@ fn sample(snapshot: &GenerationSnapshot, tag: &str) -> Sample {
             TagValue::Text(number.to_string())
         }
     });
-    Sample {
+    Some(Sample {
         resolved: true,
         quality,
         value: converted,
         source_timestamp_ms: Some(source_timestamp_ms),
-    }
+    })
 }
 
 #[cfg(test)]
@@ -710,6 +714,38 @@ mod tests {
     use crate::recording_runtime::setup_tests::Hub;
     use scada_alarm::{AckMode, ConditionSpec, Session};
     use std::sync::atomic::Ordering;
+
+    #[tokio::test]
+    async fn resolved_binding_without_first_value_stays_initial_value_waiting() {
+        let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+        let sdk = hub
+            .client()
+            .start(vec![BindingRequest {
+                binding_key: "PLANT.FLAG".into(),
+                external_name: "PLANT.FLAG".into(),
+            }])
+            .unwrap();
+        let mut states = sdk.state_watch();
+        let mut snapshot = tokio::time::timeout(Duration::from_secs(3), async {
+            loop {
+                let state = states.borrow().clone();
+                if state.connection_state() == TagClientConnectionState::Live {
+                    break state.snapshot().unwrap().as_ref().clone();
+                }
+                states.changed().await.unwrap();
+            }
+        })
+        .await
+        .unwrap();
+        assert!(sample(&snapshot, "PLANT.FLAG").is_some());
+        snapshot.values = None;
+        assert!(matches!(
+            snapshot.binding("PLANT.FLAG"),
+            Some(BindingView::Resolved { value: None, .. })
+        ));
+        assert!(sample(&snapshot, "PLANT.FLAG").is_none());
+        sdk.shutdown().await.unwrap();
+    }
 
     #[tokio::test]
     async fn task_panic_publishes_internal_error_instead_of_staying_running() {
