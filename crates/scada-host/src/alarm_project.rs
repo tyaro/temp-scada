@@ -2,7 +2,7 @@
 //! The webview supplies only a fileId; these bytes are read again by the host.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::{Cursor, Read};
+use std::io::{BufReader, Cursor, Read};
 use std::path::Path;
 
 use scada_alarm::{AckMode, ConditionSpec, LimitKind, Source};
@@ -63,8 +63,8 @@ impl SavedAlarmProject {
         match ProjectFormat::of(path) {
             Some(ProjectFormat::Json) => {
                 let file = std::fs::File::open(path)?;
-                let identity: ProjectIdentity =
-                    serde_json::from_reader(file).map_err(|_| AlarmProjectError::InvalidFile)?;
+                let identity: ProjectIdentity = serde_json::from_reader(BufReader::new(file))
+                    .map_err(|_| AlarmProjectError::InvalidFile)?;
                 Ok(identity.manifest.project_id)
             }
             Some(ProjectFormat::Package) => {

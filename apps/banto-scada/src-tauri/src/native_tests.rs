@@ -444,5 +444,11 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
     service.stop().await.unwrap();
     drop(service);
     drop(app);
-    std::fs::remove_dir_all(dir).unwrap();
+    for _ in 0..100 {
+        if std::fs::remove_dir_all(&dir).is_ok() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    panic!("temporary alarm DB handles were not released");
 }
