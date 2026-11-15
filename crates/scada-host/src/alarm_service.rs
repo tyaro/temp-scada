@@ -177,7 +177,9 @@ impl AlarmService {
             changes,
             lagged,
         };
-        service.recover_switch().await?;
+        if service.recover_switch().await.is_err() {
+            service.active.lock().await.reason = "switchRecoveryFailed".into();
+        }
         Ok(service)
     }
 
@@ -223,7 +225,12 @@ impl AlarmService {
         client: Option<RestClient>,
     ) -> Result<AlarmSnapshot, AlarmServiceError> {
         let mut active = self.active.lock().await;
-        self.recover_switch().await?;
+        if self.recover_switch().await.is_err() {
+            active.reason = "switchRecoveryFailed".into();
+            let snapshot = self.snapshot_locked(&active).await;
+            let _ = self.lagged.send(());
+            return snapshot;
+        }
         if active.runtime.as_ref().is_some_and(|runtime| {
             !matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running)
         }) {
@@ -239,7 +246,9 @@ impl AlarmService {
                 active.reason = stopped_reason(&error).into();
             }
         }
-        self.snapshot_locked(&active).await
+        let snapshot = self.snapshot_locked(&active).await;
+        let _ = self.lagged.send(());
+        snapshot
     }
 
     async fn start_locked(
@@ -311,18 +320,27 @@ impl AlarmService {
         project_id: String,
     ) {
         let mut receiver = runtime.changes();
+        let mut status = runtime.status();
         let sender = self.changes.clone();
         let lagged = self.lagged.clone();
         active.pump = Some(tokio::spawn(async move {
+            if !matches!(*status.borrow(), AlarmRuntimeStatus::Running) {
+                let _ = lagged.send(());
+                return;
+            }
             loop {
-                match receiver.recv().await {
-                    Ok(change) => {
-                        let _ = sender.send(change);
+                tokio::select! {
+                    state = status.changed() => {
+                        if state.is_err() || !matches!(*status.borrow(), AlarmRuntimeStatus::Running) {
+                            let _ = lagged.send(());
+                            break;
+                        }
                     }
-                    Err(broadcast::error::RecvError::Lagged(_)) => {
-                        let _ = lagged.send(());
-                    }
-                    Err(_) => break,
+                    change = receiver.recv() => match change {
+                        Ok(change) => { let _ = sender.send(change); }
+                        Err(broadcast::error::RecvError::Lagged(_)) => { let _ = lagged.send(()); }
+                        Err(_) => break,
+                    },
                 }
             }
         }));
@@ -354,7 +372,9 @@ impl AlarmService {
 
     pub async fn stop(&self) -> Result<(), AlarmServiceError> {
         let mut active = self.active.lock().await;
-        Self::stop_locked(&mut active).await
+        let result = Self::stop_locked(&mut active).await;
+        let _ = self.lagged.send(());
+        result
     }
 
     pub async fn apply(
@@ -366,8 +386,18 @@ impl AlarmService {
         confirmed: &[UnackedOccurrence],
         explicit: bool,
     ) -> Result<ApplyResult, AlarmServiceError> {
-        let saved = SavedAlarmProject::read(path)?;
+        let path = path.to_path_buf();
+        let saved = tokio::task::spawn_blocking({
+            let path = path.clone();
+            move || SavedAlarmProject::read(&path)
+        })
+        .await
+        .map_err(|_| AlarmServiceError::Project(AlarmProjectError::InvalidFile))??;
         let mut active = self.active.lock().await;
+        if let Err(error) = self.recover_switch().await {
+            active.reason = "switchRecoveryFailed".into();
+            return Err(error);
+        }
         let previous = self.terminal.monitored()?;
         if !explicit
             && previous
@@ -451,6 +481,9 @@ impl AlarmService {
         let mut claimed = confirmed.to_vec();
         claimed.sort();
         if claimed != unacked {
+            if let Ok(db) = Arc::try_unwrap(target_db) {
+                db.close().await;
+            }
             return Ok(ApplyResult::ConfirmationRequired {
                 occurrences: unacked,
             });
@@ -460,7 +493,7 @@ impl AlarmService {
             .is_some_and(|old| old.project_id != saved.project_id);
         let target = MonitoredProject {
             project_id: saved.project_id.clone(),
-            path: path.to_owned(),
+            path: path.clone(),
         };
         if switching {
             self.terminal.set_switching(Some(PendingSwitch {
@@ -477,6 +510,7 @@ impl AlarmService {
                 if switching {
                     let fresh = all_unacked(&old_db.last_states().await?)?;
                     if fresh != old_unacked {
+                        old_db.close().await;
                         let mut occurrences = fresh;
                         occurrences.extend(target_plan.unacked.clone());
                         occurrences.sort();
@@ -521,6 +555,9 @@ impl AlarmService {
             Ok(())
         }
         .await;
+        if let Ok(db) = Arc::try_unwrap(target_db) {
+            db.close().await;
+        }
         if let Err(error) = transition {
             if switching {
                 self.recover_switch().await?;
@@ -573,25 +610,20 @@ impl AlarmService {
         Ok(snapshot)
     }
 
-    pub async fn applied_endpoint(&self) -> Result<Option<String>, AlarmServiceError> {
-        let Some(monitored) = self.terminal.monitored()? else {
-            return Ok(None);
-        };
-        let active = self.active.lock().await;
-        if active.project_id.as_deref() == Some(&monitored.project_id) {
-            return Ok(active
-                .applied
-                .as_ref()
-                .map(|applied| applied.endpoint.clone()));
-        }
-        let db = AlarmDb::open(self.terminal.clone(), &monitored.project_id).await?;
-        let applied = db.applied().await;
-        db.close().await;
-        Ok(applied?.map(|applied| applied.endpoint))
-    }
-
     async fn snapshot_locked(&self, active: &Active) -> Result<AlarmSnapshot, AlarmServiceError> {
         let monitored = self.terminal.monitored()?;
+        if active.reason == "switchRecoveryFailed" {
+            return Ok(AlarmSnapshot {
+                monitored: monitored.map(|monitored| MonitoredIdentity {
+                    project_id: monitored.project_id,
+                }),
+                applied: None,
+                engine: None,
+                status: active.reason.clone(),
+                pending_condition_changes: false,
+                pending_display_changes: false,
+            });
+        }
         let applied = if let Some(monitored) = &monitored {
             if active.project_id.as_deref() == Some(&monitored.project_id) {
                 active.applied.clone()
@@ -695,7 +727,14 @@ impl AlarmService {
             .runtime
             .as_ref()
             .ok_or(AlarmServiceError::EngineStopped)?;
-        Ok(runtime.ack(condition, occurrence, recurrence, user).await?)
+        if !matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running) {
+            return Err(AlarmServiceError::EngineStopped);
+        }
+        match runtime.ack(condition, occurrence, recurrence, user).await {
+            Ok(outcome) => Ok(outcome),
+            Err(AlarmRuntimeError::Closed) => Err(AlarmServiceError::EngineStopped),
+            Err(error) => Err(error.into()),
+        }
     }
 
     pub async fn history(
@@ -960,7 +999,23 @@ mod tests {
             ApplyResult::Applied { .. }
         ));
         assert!(service.snapshot().await.unwrap().applied.is_some());
+        assert!(matches!(
+            service
+                .ack(
+                    "missing".into(),
+                    "occurrence".into(),
+                    1,
+                    "未ログイン".into()
+                )
+                .await,
+            Err(AlarmServiceError::EngineStopped)
+        ));
+        let mut refresh = service.lagged();
         service.stop().await.unwrap();
+        tokio::time::timeout(std::time::Duration::from_secs(1), refresh.recv())
+            .await
+            .unwrap()
+            .unwrap();
         drop(service);
         for _ in 0..20 {
             if std::fs::remove_dir_all(&dir).is_ok() {
@@ -1018,6 +1073,40 @@ mod tests {
         );
         assert!(recovered.terminal.switching().unwrap().is_none());
         drop(recovered);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn failed_switch_recovery_keeps_the_service_available_for_retry() {
+        let dir = std::env::temp_dir().join(format!("alarm-retry-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        terminal
+            .set_switching(Some(PendingSwitch {
+                target: MonitoredProject {
+                    project_id: "invalid".into(),
+                    path: dir.join("invalid.json"),
+                },
+                file_hash: "hash".into(),
+                applied_at_ms: 1,
+            }))
+            .unwrap();
+        drop(terminal);
+        let service = AlarmService::open(&dir).await.unwrap();
+        assert_eq!(
+            service.snapshot().await.unwrap().status,
+            "switchRecoveryFailed"
+        );
+        assert_eq!(
+            service.resume(None, None).await.unwrap().status,
+            "switchRecoveryFailed"
+        );
+        service.terminal.set_switching(None).unwrap();
+        assert_eq!(
+            service.resume(None, None).await.unwrap().status,
+            "notApplied"
+        );
+        drop(service);
         std::fs::remove_dir_all(dir).unwrap();
     }
 }

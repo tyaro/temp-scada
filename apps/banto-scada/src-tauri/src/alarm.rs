@@ -161,14 +161,7 @@ pub async fn after_hub_connect(host: &NativeHost, alarm: &AlarmState) {
     };
     match hub_context(host) {
         Ok((endpoint, client)) => {
-            let changed = match service.applied_endpoint().await {
-                Ok(Some(applied_endpoint)) => applied_endpoint != endpoint,
-                Ok(None) => false,
-                Err(_) => true,
-            };
-            if changed {
-                let _ = service.stop().await;
-            }
+            let _ = service.stop().await;
             let _ = service.resume(Some(&endpoint), Some(client)).await;
         }
         Err(_) => {
