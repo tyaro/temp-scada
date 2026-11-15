@@ -477,6 +477,52 @@ fn evaluation_key_ignores_display_and_tracks_evaluation() {
 }
 
 #[test]
+fn signed_zero_change_resets_live_condition_like_the_durable_hash() {
+    let spec = |value| ConditionSpec {
+        source: Source::Threshold {
+            tag: "PLANT.PV".into(),
+            limit: scada_alarm::LimitKind::H,
+            value,
+            deadband: 0.0,
+        },
+        on_delay_ms: 0,
+        off_delay_ms: 0,
+        ack_mode: AckMode::Manual,
+    };
+    let mut engine = Engine::new(Session {
+        id: "s".into(),
+        generation: 1,
+    });
+    engine.define("high", spec(-0.0)).unwrap();
+    let transition = engine
+        .step(
+            Now {
+                mono_ms: 1,
+                wall_ms: 1,
+            },
+            &Input::Value {
+                tag: "PLANT.PV".into(),
+                sample: Sample {
+                    resolved: true,
+                    quality: Quality::Good,
+                    value: Some(TagValue::Number(1.0)),
+                    source_timestamp_ms: None,
+                },
+            },
+            &mut || "occ".to_owned(),
+        )
+        .unwrap();
+    engine.commit(transition);
+    assert!(engine.condition("high").unwrap().state.active);
+    assert_ne!(spec(-0.0).evaluation_key(), spec(0.0).evaluation_key());
+    let changed = engine
+        .replace_definitions(&BTreeMap::from([("high".into(), spec(0.0))]))
+        .unwrap();
+    assert!(!changed["high"].as_ref().unwrap().active);
+    assert!(changed["high"].as_ref().unwrap().occurrence.is_none());
+}
+
+#[test]
 fn spec_validation_rejects_bad_values() {
     let threshold = |value: f64, deadband: f64, on: u64| ConditionSpec {
         source: Source::Threshold {

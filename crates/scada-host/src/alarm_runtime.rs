@@ -730,13 +730,16 @@ async fn stop(
 ) -> Result<(), AlarmRuntimeError> {
     // A stop is also a boundary: commit every already-expired wait first.
     let settled = publish(&mut evaluator, Input::TimerExpired, changes).await;
-    tokio::spawn(async move {
-        let _ = tokio::time::timeout(Duration::from_secs(5), sdk.shutdown()).await;
-    });
-    evaluator
+    let stopped = evaluator
         .db
         .stop_session(evaluator.engine.session(), wall_ms())
-        .await?;
+        .await;
+    match tokio::time::timeout(Duration::from_secs(5), sdk.shutdown()).await {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => eprintln!("alarm SDK shutdown failed: {error:?}"),
+        Err(_) => eprintln!("alarm SDK shutdown timed out after 5 seconds"),
+    }
+    stopped?;
     settled?;
     Ok(())
 }
@@ -1491,8 +1494,10 @@ mod tests {
                 .await
                 .unwrap()
                 .iter()
-                .filter(|event| event.event.condition_id.as_deref() == Some(id.as_str())
-                    && event.event.kind == "unavailableStarted")
+                .filter(
+                    |event| event.event.condition_id.as_deref() == Some(id.as_str())
+                        && event.event.kind == "unavailableStarted"
+                )
                 .count(),
             unavailable_before
         );

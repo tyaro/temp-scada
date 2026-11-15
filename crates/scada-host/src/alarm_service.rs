@@ -241,6 +241,19 @@ impl AlarmService {
             return snapshot;
         }
         if active.runtime.as_ref().is_some_and(|runtime| {
+            matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running)
+                && active
+                    .applied
+                    .as_ref()
+                    .is_some_and(|applied| endpoint.is_some_and(|value| value != applied.endpoint))
+        }) {
+            let result = Self::stop_locked(&mut active).await;
+            if let Err(error) = result {
+                let _ = self.lagged.send(());
+                return Err(error);
+            }
+        }
+        if active.runtime.as_ref().is_some_and(|runtime| {
             !matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running)
         }) {
             let runtime = active.runtime.take().expect("checked runtime");
@@ -926,6 +939,11 @@ mod tests {
         let before = service.snapshot().await.unwrap();
         let session = before.engine.unwrap().session;
         let first_applied_at = before.applied.unwrap().applied_at_ms;
+        let resumed = service
+            .resume(Some(&hub.url), Some(hub.client()))
+            .await
+            .unwrap();
+        assert_eq!(resumed.engine.unwrap().session, session);
 
         value["alarms"]["definitions"][0]["name"] = json!("Renamed");
         std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();

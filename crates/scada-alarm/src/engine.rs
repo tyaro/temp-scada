@@ -307,7 +307,7 @@ impl Engine {
             let state = self
                 .conditions
                 .get(id)
-                .filter(|old| old.spec == *spec)
+                .filter(|old| old.spec.evaluation_key() == spec.evaluation_key())
                 .map_or_else(ConditionState::initial, |old| old.state.clone());
             next.insert(
                 id.clone(),
