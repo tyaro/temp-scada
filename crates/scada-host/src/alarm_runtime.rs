@@ -634,7 +634,9 @@ async fn run_inner(
                                 previous.clear();
                                 was_evaluable = false;
                                 accepted_generation = None;
-                                let _ = tokio::time::timeout(Duration::from_secs(5), old.shutdown()).await;
+                                tokio::spawn(async move {
+                                    let _ = tokio::time::timeout(Duration::from_secs(5), old.shutdown()).await;
+                                });
                             } else {
                                 previous.clear();
                             }
@@ -648,11 +650,13 @@ async fn run_inner(
                         }
                         Err(error) => {
                             if let Some(replacement) = replacement {
-                                let _ = tokio::time::timeout(
-                                    Duration::from_secs(5),
-                                    replacement.shutdown(),
-                                )
-                                .await;
+                                tokio::spawn(async move {
+                                    let _ = tokio::time::timeout(
+                                        Duration::from_secs(5),
+                                        replacement.shutdown(),
+                                    )
+                                    .await;
+                                });
                             }
                             let _ = reply.send(Err(error));
                         }

@@ -560,7 +560,10 @@ impl AlarmService {
         }
         if let Err(error) = transition {
             if switching {
-                self.recover_switch().await?;
+                if let Err(recovery_error) = self.recover_switch().await {
+                    active.reason = "switchRecoveryFailed".into();
+                    return Err(recovery_error);
+                }
             }
             let current = self.terminal.monitored()?;
             let restart = current.as_ref().is_some_and(|current| {

@@ -3890,7 +3890,10 @@
     {#if projectFileService?.alarmFeed}
       <StatusBadge
         variant={alarmSnapshot?.status === "running" &&
-        alarmSnapshot.monitored?.projectId === project.manifest.projectId
+        alarmSnapshot.monitored?.projectId === project.manifest.projectId &&
+        !alarmSnapshot.engine?.unavailable &&
+        !alarmSnapshot.pendingConditionChanges &&
+        !alarmSnapshot.pendingDisplayChanges
           ? "neutral"
           : "warning"}
         label={alarmLabel}
