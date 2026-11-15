@@ -213,12 +213,15 @@ impl AlarmTerminal {
     }
 
     pub(crate) fn release_session(&self, project_id: &str, session: &Session) {
-        let mut active = self
-            .active_session
-            .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let (mut active, poisoned) = match self.active_session.lock() {
+            Ok(active) => (active, false),
+            Err(poisoned) => (poisoned.into_inner(), true),
+        };
         if active.as_ref() == Some(&(project_id.to_owned(), session.clone())) {
             *active = None;
+            if poisoned {
+                self.active_session.clear_poison();
+            }
         }
     }
 
@@ -398,6 +401,40 @@ mod tests {
             .claim_generation("project-a", &third)
             .unwrap()
             .commit();
+        drop(terminal);
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn owner_drop_releases_even_a_poisoned_claim_lock() {
+        let dir = temp_dir();
+        let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+        let first = Session {
+            id: "first".into(),
+            generation: terminal.reserve_generation().unwrap(),
+        };
+        let owner = terminal
+            .claim_generation("project", &first)
+            .unwrap()
+            .into_active(terminal.clone());
+        let poisoned = terminal.clone();
+        assert!(std::thread::spawn(move || {
+            let _guard = poisoned.active_session.lock().unwrap();
+            panic!("test-only poison");
+        })
+        .join()
+        .is_err());
+        assert_eq!(
+            terminal.active_project("project"),
+            Err(TerminalError::Corrupt)
+        );
+        drop(owner);
+        assert_eq!(terminal.active_project("project"), Ok(false));
+        let second = Session {
+            id: "second".into(),
+            generation: terminal.reserve_generation().unwrap(),
+        };
+        drop(terminal.claim_generation("project", &second).unwrap());
         drop(terminal);
         fs::remove_dir_all(dir).unwrap();
     }
