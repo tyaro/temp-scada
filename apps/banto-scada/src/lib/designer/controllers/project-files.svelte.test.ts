@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createProjectFilesController } from "./project-files.svelte";
 import { createProject } from "../../new-project";
 import { serializeProject, type Project } from "../../project";
@@ -109,6 +109,42 @@ describe("project files on the desktop", () => {
       text: "保存を取り消しました。",
     });
     expect(controller.lastExport).toBeNull();
+  });
+
+  it("keeps the saved file and applies only the exact rounds the user confirmed", async () => {
+    const occurrence = {
+      conditionId: "alarm:a",
+      occurrence: "round-1",
+      recurrence: 0,
+    };
+    const calls: unknown[] = [];
+    vi.stubGlobal("window", { confirm: vi.fn(() => true) });
+    try {
+      const { controller, reports } = setup({
+        open: async () => null,
+        save: async () => ({
+          fileId: 12,
+          fileName: "plant.json",
+          apply: { status: "confirmationRequired", occurrences: [occurrence] },
+        }),
+        apply: async (fileId, confirmed) => {
+          calls.push({ fileId, confirmed });
+          return { status: "applied" };
+        },
+      });
+      controller.save();
+      await settle();
+      await settle();
+      expect(calls).toEqual([{ fileId: 12, confirmed: [occurrence] }]);
+      expect(
+        reports.some((report) =>
+          report.text.includes("警報定義を適用しました"),
+        ),
+      ).toBe(true);
+      expect(controller.saveLabel).toBe("保存後の変更なし");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

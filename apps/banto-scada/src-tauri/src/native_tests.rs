@@ -171,6 +171,7 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
         .unwrap();
     assert!(adopted.status.is_connected(), "{:?}", adopted.status);
     let app = tauri::test::mock_builder()
+        .manage(alarm::AlarmState::unavailable())
         .manage(NativeHost {
             bootstrap,
             active: Mutex::new(Active::default()),
@@ -183,7 +184,9 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
             .send(serde_json::from_str(event.payload()).unwrap())
             .unwrap();
     });
-    let status = hub_connect(app.state(), hub.url.clone()).await.unwrap();
+    let status = hub_connect(app.state(), app.state(), hub.url.clone())
+        .await
+        .unwrap();
     assert!(status.is_connected());
     let project = include_str!("../../../../examples/read-presentation.project.json").to_owned();
     let catalog = hub_catalog(app.state(), project.clone()).await.unwrap();
@@ -260,6 +263,7 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
 
     // A new native owner reuses the protected key and starts with no old stream.
     let restarted = tauri::test::mock_builder()
+        .manage(alarm::AlarmState::unavailable())
         .manage(NativeHost {
             bootstrap: Bootstrapper::new(
                 "temp-scada-test",
@@ -277,10 +281,12 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
             .send(serde_json::from_str(event.payload()).unwrap())
             .unwrap();
     });
-    assert!(hub_connect(restarted.state(), hub.url.clone())
-        .await
-        .unwrap()
-        .is_connected());
+    assert!(
+        hub_connect(restarted.state(), restarted.state(), hub.url.clone())
+            .await
+            .unwrap()
+            .is_connected()
+    );
     hub_read_start(
         restarted.handle().clone(),
         restarted.state(),

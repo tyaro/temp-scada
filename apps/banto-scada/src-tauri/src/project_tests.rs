@@ -2,6 +2,7 @@
 //! overwrite of a known file without a dialog, and the refusals (alarm
 //! design §5.2). The file handling is tested in `scada_host::project_file`.
 use super::*;
+use banto_hub_bootstrap::state::memory::{MemoryKeyStore, MemoryState};
 use scada_host::project_file::frame;
 use serde_json::{json, Value};
 use std::path::PathBuf;
@@ -37,6 +38,16 @@ impl Drop for TempDir {
 fn app(auth: AuthState) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
     let app = commands(mock_builder())
         .manage(auth)
+        .manage(alarm::AlarmState::unavailable())
+        .manage(NativeHost {
+            bootstrap: Bootstrapper::new(
+                "temp-scada-project-test",
+                "11111111-2222-4333-8444-555555555555",
+                Arc::new(MemoryKeyStore::new()),
+                Arc::new(MemoryState::new()),
+            ),
+            active: Mutex::new(Active::default()),
+        })
         .build(mock_context(noop_assets()))
         .unwrap();
     let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
@@ -92,7 +103,7 @@ fn a_known_file_is_overwritten_without_a_dialog() {
     assert_eq!(
         answer,
         json!({"status": "saved", "fileId": opened.file_id, "fileName": "plant.json",
-            "apply": null})
+            "apply": {"status": "failed", "reason": "alarmUnavailable"}})
     );
     assert_eq!(std::fs::read(&path).unwrap(), b"{\"new\":1}");
 

@@ -34,6 +34,15 @@ fn saved_json_expands_enabled_conditions_and_keeps_disabled_ids() {
     let applied = saved.applied("http://127.0.0.1:8722".into(), "未ログイン".into(), 1);
     assert_eq!(applied.condition_hashes.len(), 4);
     assert_eq!(applied.file_hash, format!("{:x}", Sha256::digest(bytes)));
+    assert_eq!(
+        SavedAlarmProject::from_applied(&applied)
+            .unwrap()
+            .definitions,
+        saved.definitions
+    );
+    let mut tampered = applied;
+    tampered.condition_hashes.clear();
+    assert!(SavedAlarmProject::from_applied(&tampered).is_err());
 }
 
 #[test]

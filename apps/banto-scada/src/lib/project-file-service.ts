@@ -6,6 +6,24 @@
  */
 export type ProjectFileFormat = "json" | "package";
 
+export interface UnackedOccurrence {
+  readonly conditionId: string;
+  readonly occurrence: string;
+  readonly recurrence: number;
+}
+
+export type AlarmApplyResult =
+  | {
+      readonly status: "applied";
+      readonly snapshot?: { readonly status: string };
+    }
+  | { readonly status: "skippedDifferentProject" }
+  | {
+      readonly status: "confirmationRequired";
+      readonly occurrences: UnackedOccurrence[];
+    }
+  | { readonly status: "failed"; readonly reason: string };
+
 export interface OpenedProjectFile {
   readonly fileId: number;
   readonly file: File;
@@ -21,11 +39,13 @@ export interface SaveProjectFileRequest {
   /** Always ask where to save. */
   readonly saveAs: boolean;
   readonly content: Uint8Array;
+  readonly confirmed?: readonly UnackedOccurrence[];
 }
 
 export interface SavedProjectFile {
   readonly fileId: number;
   readonly fileName: string;
+  readonly apply?: AlarmApplyResult;
 }
 
 export interface ProjectFileService {
@@ -33,6 +53,17 @@ export interface ProjectFileService {
   open(): Promise<OpenedProjectFile | null>;
   /** null when the user cancelled the dialog. */
   save(request: SaveProjectFileRequest): Promise<SavedProjectFile | null>;
+  apply?(
+    fileId: number,
+    confirmed: readonly UnackedOccurrence[],
+  ): Promise<AlarmApplyResult>;
+  alarmFeed?: {
+    snapshot(): Promise<import("./alarm-mirror").AlarmSnapshot>;
+    subscribe(
+      change: (event: import("./alarm-mirror").AlarmChange) => void,
+      lagged: () => void,
+    ): Promise<() => void>;
+  };
 }
 
 /** A refusal of the host, with its reason code. */

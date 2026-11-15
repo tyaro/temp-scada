@@ -1,6 +1,6 @@
 # 段階3 警報の設計（製品hostの暫定Engine）
 
-状態: **設計（2026-11-14 ユーザー承認）。3-A・3-B・3-C1・3-C2a は実装済み、3-C2b 以降は未実装**。2026-11-14 作成、2026-11-15 に 3-C2 の境界を追記。[フロー図の差分](../editor/flow-diagram-gap-2026-11-12.md)§3 の段階3「8. 警報」を、製品 host に暫定で置く形で具体化する。§9 の確認事項は 2026-11-14 にすべて回答を得た。
+状態: **設計（2026-11-14 ユーザー承認）。3-A・3-B・3-C1・3-C2a・3-C2b は実装済み、3-C2c は実装中**。2026-11-14 作成、2026-11-15 に 3-C2 の境界を追記。[フロー図の差分](../editor/flow-diagram-gap-2026-11-12.md)§3 の段階3「8. 警報」を、製品 host に暫定で置く形で具体化する。§9 の確認事項は 2026-11-14 にすべて回答を得た。
 
 ## 1. 目的と範囲
 
@@ -245,6 +245,10 @@ Hub の接続先の識別は、host が保存した `HubRecord.endpoint` の文�
 - hash が同じ condition は状態を引き継ぐ。名前・message・severity だけの変更も引き継ぐ。
 - hash が変わった condition、無効にした（`enabled: false`）condition、消えた condition は、一つの規則で**終える**: 「定義の変更」（消えたものは「定義の削除」）のイベントを残し、状態と「最後の状態」の行を捨てる。復元計画は有効な condition のほかに無効な condition の id の集合を受け取り、無効化を削除と区別する。ACK を別の信号へ移さない。未確認の回だったものは、イベントに「未確認のまま終了」を添える（適用の前に画面で確かめている）。hash が変わったものと有効に戻したものは、新しい condition として Normal から評価する（すでに異常なら新しい ActiveUnacked になり、ブザーも鳴る）。
 
+3-C2c の切替では、B の適用済み定義を確定した後、A の停止済み session に残る行を `projectSwitched` の終端イベントで閉じる。B の適用失敗時は A の行を保って再開できるようにし、B の適用後に終了した場合は起動時の「切替中」から A の終端を再実行する。終端は行が無ければ再実行しても増えない。未確認の回の列は A の入力停止後にも照合する。
+
+有効な condition が 0 件の Project も適用済み定義として記録する。購読するタグが無いため Engine の session は始めず、snapshot には `noConditions` を示す。後で有効な定義を適用すれば通常の session を始める。
+
 ### 5.3 警報 DB
 
 - 警報イベントは、Historian の記録 DB とは別の SQLite（`%LOCALAPPDATA%\temp-scada` の下、Project の `projectId` ごとに別のファイル）に追記する。「最後の状態」「適用済みの定義」「session」の表も同じファイルに置き、別の Project の警報が混ざらないようにする。
@@ -289,6 +293,8 @@ browser 版（モックの読取）は Engine を持たない。e2e 用に、IPC
 | `alarm_buzzer_silence`                     | その端末のブザーを止める（§6）                                                                                                                                                                                                                                                    |
 | `alarm_history`                            | 期間・種類で警報イベントを照会する。新しい順で、続きは通番のカーソルで取る                                                                                                                                                                                                        |
 | `alarm_settings_get`／`alarm_settings_set` | 端末の設定（保持の上限、読み直しの周期と連続失敗の期限、音のファイル）。設定は運用では Admin だけ                                                                                                                                                                                 |
+
+`alarm_snapshot` と `alarm_changed` が webview へ渡す適用情報は Project id・revision・時刻・condition の表示情報に限る。監視中ファイルのパス、Hub の認証情報、別 Project の定義本体は渡さない。
 
 `alarm_changed` の突き合わせは、まず session の**世代番号**を比較する。現在より小さい event は捨て、大きい event では event の差分を当てず snapshot を取り直す。同じ世代なら session id の一致を確かめ、不一致は契約違反として snapshot を取り直す。同じ世代・id で変更の連番が現在以下なら重複として捨て、ちょうど次なら当て、飛びがあれば取り直す。host 内の broadcast の受信で `Lagged` が出たときも差分を捨てて snapshot を取り直す。初回も購読を先に張り、event をためてから snapshot を取得してこの規則で処理する。世代番号が無い停止中・未適用の snapshot は、event を当てずに次の snapshot を取得する。画面が古い世代へ巻き戻ることはない。
 

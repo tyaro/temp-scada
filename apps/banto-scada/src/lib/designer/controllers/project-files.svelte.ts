@@ -5,7 +5,10 @@ import { readProjectFile, writeProjectPackage } from "../../project-package";
 import { serializeProject, type Project } from "../../project";
 import { projectContent } from "../../save-state";
 import { createProject } from "../../new-project";
-import type { ProjectFileService } from "../../project-file-service";
+import type {
+  AlarmApplyResult,
+  ProjectFileService,
+} from "../../project-file-service";
 
 export type ProjectSource = "sample" | "file" | "new";
 export interface ProjectReadTarget {
@@ -19,6 +22,7 @@ export interface ProjectFilesHost {
   readonly draftPending: boolean;
   /** The desktop's file host; without it (the browser) a save downloads. */
   readonly fileService?: ProjectFileService;
+  alarmRefresh?(): void;
   chooseFile(): void;
   allow(run: () => void): boolean;
   /** App adopts Project and resets the editor; it calls adopted at the existing baseline boundary. */
@@ -205,6 +209,86 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     if (!host.allow(saveAs)) return;
     void writeProject(true);
   }
+  async function reportAlarmApply(
+    result: AlarmApplyResult | undefined,
+    savedFileId: number,
+  ) {
+    host.alarmRefresh?.();
+    if (!result || result.status === "skippedDifferentProject") {
+      if (result?.status === "skippedDifferentProject")
+        host.report(
+          "info",
+          "別のProjectを保存しました。監視中のProjectは切り替わっていません。",
+        );
+      return;
+    }
+    if (result.status === "applied") {
+      host.report(
+        result.snapshot?.status && result.snapshot.status !== "running"
+          ? "info"
+          : "success",
+        result.snapshot?.status && result.snapshot.status !== "running"
+          ? `保存済みProjectの警報定義を適用しました。Engineは停止中です（${result.snapshot.status}）。`
+          : "保存済みProjectの警報定義を適用しました。",
+      );
+      return;
+    }
+    if (result.status === "failed") {
+      host.report(
+        "error",
+        `Projectは保存しましたが、警報定義を適用できませんでした（${result.reason}）。`,
+      );
+      return;
+    }
+    if (!host.fileService?.apply) return;
+    const yes = window.confirm(
+      `未確認 ${result.occurrences.length} 件が終了します。警報定義を適用しますか？`,
+    );
+    if (!yes) {
+      host.report(
+        "info",
+        "Projectは保存しました。警報定義は適用していません。",
+      );
+      return;
+    }
+    try {
+      const retried = await host.fileService.apply(
+        savedFileId,
+        result.occurrences,
+      );
+      if (retried.status === "confirmationRequired") {
+        host.report(
+          "error",
+          "警報の状態が変わりました。最新の未確認件数を確かめて再度適用してください。",
+        );
+      } else {
+        await reportAlarmApply(retried, savedFileId);
+      }
+    } catch (error) {
+      host.report(
+        "error",
+        `Projectは保存しましたが、警報定義を適用できませんでした（${String(error)}）。`,
+      );
+    }
+  }
+  async function applyAlarm() {
+    if (!host.fileService?.apply) return;
+    if (fileId === null) {
+      host.report(
+        "info",
+        "警報定義を適用するProjectファイルを先に開くか保存してください。",
+      );
+      return;
+    }
+    try {
+      await reportAlarmApply(await host.fileService.apply(fileId, []), fileId);
+    } catch (error) {
+      host.report(
+        "error",
+        `警報定義を適用できませんでした（${String(error)}）。`,
+      );
+    }
+  }
   async function writeProject(asNew = false) {
     if (exporting) {
       host.report(
@@ -248,6 +332,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
           `${snapshot.manifest.name}を${saved.fileName}へ保存しました。`,
           { toast: true },
         );
+        await reportAlarmApply(saved.apply, saved.fileId);
         return;
       }
       downloadBlob(blob, packaged ? "project.bantoscada" : "project.json");
@@ -306,6 +391,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     load,
     save,
     saveAs,
+    applyAlarm,
     write: () => writeProject(),
   };
 }

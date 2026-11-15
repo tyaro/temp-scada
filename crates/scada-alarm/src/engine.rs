@@ -291,6 +291,45 @@ impl Engine {
         Ok(())
     }
 
+    /// Prepare the complete definition change in memory. The host calls this
+    /// on a clone before the DB transaction and installs the clone only after
+    /// the transaction commits. Unchanged specs keep their exact state;
+    /// changed and new specs begin at Normal/InitialValue. One apply is one
+    /// visible Engine revision, including display-only changes in the host.
+    pub fn replace_definitions(
+        &mut self,
+        specs: &BTreeMap<String, ConditionSpec>,
+    ) -> Result<BTreeMap<String, Option<ConditionState>>, DefineError> {
+        let mut next = BTreeMap::new();
+        for (id, spec) in specs {
+            spec.validate()
+                .map_err(|error| DefineError::InvalidSpec(id.clone(), error))?;
+            let state = self
+                .conditions
+                .get(id)
+                .filter(|old| old.spec == *spec)
+                .map_or_else(ConditionState::initial, |old| old.state.clone());
+            next.insert(
+                id.clone(),
+                Condition {
+                    spec: spec.clone(),
+                    state,
+                },
+            );
+        }
+        let mut changed: BTreeMap<_, _> = self
+            .conditions
+            .keys()
+            .map(|id| (id.clone(), None))
+            .collect();
+        for (id, condition) in &next {
+            changed.insert(id.clone(), Some(condition.state.clone()));
+        }
+        self.conditions = next;
+        self.seq += 1;
+        Ok(changed)
+    }
+
     /// 次に満了する待ちの時刻（単調時計）。host はこの時刻にタイマーを掛ける。
     pub fn next_due_ms(&self) -> Option<u64> {
         self.conditions

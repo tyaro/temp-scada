@@ -3,6 +3,7 @@
 pub mod alarm_db;
 pub mod alarm_project;
 pub mod alarm_runtime;
+pub mod alarm_service;
 pub mod alarm_terminal;
 pub mod auth;
 pub mod auth_phase;

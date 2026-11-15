@@ -10,12 +10,14 @@ use banto_tagclient::{
     SecretApiKey, TagClientConnectionState, TagClientHandle, ValueQuality,
 };
 use scada_alarm::{
-    AckOutcome, Engine, EngineUnavailable, Event, Input, Now, Quality, Sample, TagValue, Transition,
+    AckOutcome, EndReason, Engine, EngineUnavailable, Event, EventKind, Input, Now, Quality,
+    Sample, TagValue, Transition,
 };
 use tokio::sync::{broadcast, mpsc, oneshot, watch};
 
 use crate::alarm_db::{
-    AlarmDb, AlarmDbError, AppliedDefinitions, Definition, EventWrite, LastRow, StartedAlarmSession,
+    plan_apply, AlarmDb, AlarmDbError, AppliedDefinitions, Definition, EventWrite, LastRow,
+    StartedAlarmSession, UnackedOccurrence,
 };
 use crate::alarm_terminal::ActiveAlarmSession;
 
@@ -46,6 +48,8 @@ pub struct AlarmChange {
     pub conditions: BTreeMap<String, Option<scada_alarm::ConditionState>>,
     pub engine_unavailable: Option<EngineUnavailable>,
     pub events: Vec<Event>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub applied: Option<AppliedDefinitions>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
@@ -127,6 +131,86 @@ impl AlarmEvaluator {
         }
     }
 
+    /// Prepare the pure replacement before the DB write and install it only
+    /// after the applied record, ended rows and survivors commit together.
+    pub async fn apply(
+        &mut self,
+        applied: AppliedDefinitions,
+        definitions: &BTreeMap<String, Definition>,
+        confirmed: &[UnackedOccurrence],
+    ) -> Result<AlarmChange, AlarmRuntimeError> {
+        if applied.project_id != self.applied.project_id
+            || applied.endpoint != self.applied.endpoint
+            || applied.condition_hashes
+                != definitions
+                    .iter()
+                    .map(|(id, definition)| (id.clone(), definition.evaluation_hash()))
+                    .collect()
+        {
+            return Err(AlarmRuntimeError::InvalidDefinition);
+        }
+        let now = self.now();
+        let rows = self.db.last_states().await?;
+        let plan = plan_apply(&rows, &applied, now.wall_ms)?;
+        let mut next = self.engine.clone();
+        let specs = definitions
+            .iter()
+            .map(|(id, definition)| (id.clone(), definition.spec.clone()))
+            .collect();
+        let conditions = next
+            .replace_definitions(&specs)
+            .map_err(|_| AlarmRuntimeError::InvalidDefinition)?;
+        let events = plan
+            .ended
+            .iter()
+            .map(|write| {
+                let id = write
+                    .condition_id
+                    .as_ref()
+                    .ok_or(AlarmRuntimeError::Internal)?;
+                let row = rows
+                    .iter()
+                    .find(|row| &row.condition_id == id)
+                    .ok_or(AlarmRuntimeError::Internal)?;
+                let reason = match write.kind.as_str() {
+                    "definitionChanged" => EndReason::DefinitionChanged,
+                    "definitionDeleted" => EndReason::DefinitionDeleted,
+                    "connectionChanged" => EndReason::ConnectionChanged,
+                    _ => return Err(AlarmRuntimeError::Internal),
+                };
+                Ok(Event {
+                    at_wall_ms: write.at_ms,
+                    condition: Some(id.clone()),
+                    occurrence: row.state.occurrence.clone(),
+                    recurrence: row.state.occurrence.as_ref().map(|_| row.state.recurrence),
+                    kind: EventKind::Ended {
+                        reason,
+                        unacked: !row.state.acked,
+                    },
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        self.db
+            .apply_confirmed(
+                &applied,
+                Some(self.engine.session()),
+                &plan.ended,
+                &plan.survivors,
+                confirmed,
+            )
+            .await?;
+        self.engine = next;
+        self.applied = applied.clone();
+        Ok(AlarmChange {
+            session: self.engine.session().clone(),
+            seq: self.engine.seq(),
+            conditions,
+            engine_unavailable: self.engine.unavailable(),
+            events,
+            applied: Some(applied),
+        })
+    }
+
     /// The DB transaction precedes Engine commit and change publication for every input.
     pub async fn input(&mut self, input: Input) -> Result<Option<AlarmChange>, AlarmRuntimeError> {
         Ok(self.input_with_ack(input).await?.0)
@@ -147,6 +231,7 @@ impl AlarmEvaluator {
             conditions: transition.conditions.clone(),
             engine_unavailable: transition.engine_unavailable,
             events: transition.events.clone(),
+            applied: None,
         });
         if transition.changed {
             self.persist(&transition).await?;
@@ -228,6 +313,7 @@ fn wall_ms() -> i64 {
 
 enum Control {
     Snapshot(oneshot::Sender<Engine>),
+    Apply(Box<ApplyCommand>),
     Ack {
         condition: String,
         occurrence: String,
@@ -236,6 +322,14 @@ enum Control {
         reply: oneshot::Sender<Result<AckOutcome, AlarmRuntimeError>>,
     },
     Stop(oneshot::Sender<Result<(), AlarmRuntimeError>>),
+}
+
+struct ApplyCommand {
+    applied: AppliedDefinitions,
+    definitions: BTreeMap<String, Definition>,
+    confirmed: Vec<UnackedOccurrence>,
+    client: RestClient,
+    reply: oneshot::Sender<Result<(), AlarmRuntimeError>>,
 }
 
 /// One owner for the dedicated SDK connection and serialized Engine inputs.
@@ -253,19 +347,6 @@ impl AlarmRuntime {
         pins: Option<PinnedHubTls>,
         request_timeout: Duration,
     ) -> Result<Self, AlarmRuntimeError> {
-        let tags: BTreeSet<_> = evaluator
-            .engine
-            .conditions()
-            .values()
-            .map(|condition| condition.spec.source.tag().to_owned())
-            .collect();
-        let requests = tags
-            .iter()
-            .map(|tag| BindingRequest {
-                binding_key: tag.clone(),
-                external_name: tag.clone(),
-            })
-            .collect();
         // Construct the SDK client from the applied endpoint, never a caller's
         // independent address that could mislabel durable alarm states.
         let client = (|| {
@@ -285,6 +366,28 @@ impl AlarmRuntime {
                 return Err(AlarmRuntimeError::Sdk(error.kind()));
             }
         };
+        Self::start_with_client(evaluator, client).await
+    }
+
+    /// Start from the protected bootstrap client's saved credential. The
+    /// caller first compares its HubRecord endpoint with the applied record.
+    pub async fn start_with_client(
+        evaluator: AlarmEvaluator,
+        client: RestClient,
+    ) -> Result<Self, AlarmRuntimeError> {
+        let tags: BTreeSet<_> = evaluator
+            .engine
+            .conditions()
+            .values()
+            .map(|condition| condition.spec.source.tag().to_owned())
+            .collect();
+        let requests = tags
+            .iter()
+            .map(|tag| BindingRequest {
+                binding_key: tag.clone(),
+                external_name: tag.clone(),
+            })
+            .collect();
         let sdk = match client.start(requests) {
             Ok(sdk) => sdk,
             Err(error) => {
@@ -316,6 +419,27 @@ impl AlarmRuntime {
 
     pub fn status(&self) -> watch::Receiver<AlarmRuntimeStatus> {
         self.status.clone()
+    }
+
+    pub async fn apply(
+        &self,
+        applied: AppliedDefinitions,
+        definitions: BTreeMap<String, Definition>,
+        confirmed: Vec<UnackedOccurrence>,
+        client: RestClient,
+    ) -> Result<(), AlarmRuntimeError> {
+        let (reply, rx) = oneshot::channel();
+        self.control
+            .send(Control::Apply(Box::new(ApplyCommand {
+                applied,
+                definitions,
+                confirmed,
+                client,
+                reply,
+            })))
+            .await
+            .map_err(|_| AlarmRuntimeError::Closed)?;
+        rx.await.map_err(|_| AlarmRuntimeError::Closed)?
     }
 
     pub async fn snapshot(&self) -> Result<Engine, AlarmRuntimeError> {
@@ -425,10 +549,10 @@ where
 
 async fn run_inner(
     mut evaluator: AlarmEvaluator,
-    sdk: TagClientHandle,
+    mut sdk: TagClientHandle,
     mut control_rx: mpsc::Receiver<Control>,
     change_tx: broadcast::Sender<AlarmChange>,
-    tags: BTreeSet<String>,
+    mut tags: BTreeSet<String>,
 ) -> Result<(), AlarmRuntimeError> {
     let mut states = sdk.state_watch();
     let mut previous = BTreeMap::new();
@@ -483,6 +607,51 @@ async fn run_inner(
             }
             control = control_rx.recv() => match control {
                 Some(Control::Snapshot(reply)) => { let _ = reply.send(evaluator.engine.clone()); }
+                Some(Control::Apply(command)) => {
+                    let ApplyCommand { applied, definitions, confirmed, client, reply } = *command;
+                    if let Err(error) = publish(&mut evaluator, Input::TimerExpired, &change_tx).await {
+                        let _ = reply.send(Err(error_summary(&error)));
+                        let _ = stop(evaluator, sdk, &change_tx).await;
+                        return Err(error);
+                    }
+                    let next_tags: BTreeSet<_> = definitions.values().map(|definition| definition.spec.source.tag().to_owned()).collect();
+                    let replacement = if next_tags != tags {
+                        let requests = next_tags.iter().map(|tag| BindingRequest { binding_key: tag.clone(), external_name: tag.clone() }).collect();
+                        match client.start(requests) {
+                            Ok(handle) => Some(handle),
+                            Err(error) => {
+                                let _ = reply.send(Err(AlarmRuntimeError::Sdk(error.kind())));
+                                continue;
+                            }
+                        }
+                    } else { None };
+                    match evaluator.apply(applied, &definitions, &confirmed).await {
+                        Ok(change) => {
+                            if let Some(replacement) = replacement {
+                                let old = std::mem::replace(&mut sdk, replacement);
+                                states = sdk.state_watch();
+                                tags = next_tags;
+                                previous.clear();
+                                was_evaluable = false;
+                                accepted_generation = None;
+                                let _ = tokio::time::timeout(Duration::from_secs(5), old.shutdown()).await;
+                            } else {
+                                previous.clear();
+                            }
+                            let _ = change_tx.send(change);
+                            let _ = reply.send(Ok(()));
+                            let current = states.borrow_and_update().clone();
+                            if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
+                                let _ = stop(evaluator, sdk, &change_tx).await;
+                                return Err(error);
+                            }
+                        }
+                        Err(error) => {
+                            if let Some(replacement) = replacement { let _ = replacement.shutdown().await; }
+                            let _ = reply.send(Err(error));
+                        }
+                    }
+                }
                 Some(Control::Ack { condition, occurrence, recurrence, user, reply }) => {
                     let result = evaluator.input_with_ack(Input::Ack { condition, occurrence, recurrence, user }).await;
                     match result {
@@ -534,10 +703,10 @@ async fn stop(
 ) -> Result<(), AlarmRuntimeError> {
     // A stop is also a boundary: commit every already-expired wait first.
     let settled = publish(&mut evaluator, Input::TimerExpired, changes).await;
-    let sdk_result = sdk
-        .shutdown()
+    let sdk_result = tokio::time::timeout(Duration::from_secs(5), sdk.shutdown())
         .await
-        .map_err(|error| AlarmRuntimeError::Sdk(error.kind()));
+        .map_err(|_| AlarmRuntimeError::ConnectionFailure)
+        .and_then(|result| result.map_err(|error| AlarmRuntimeError::Sdk(error.kind())));
     evaluator
         .db
         .stop_session(evaluator.engine.session(), wall_ms())
@@ -1112,13 +1281,13 @@ mod tests {
             &applied.endpoint,
             1,
             &applied,
-            &BTreeMap::from([(id.clone(), definition)]),
+            &BTreeMap::from([(id.clone(), definition.clone())]),
             &BTreeSet::new(),
             &[],
         )
         .unwrap();
         let engine = db.start_session_plan(plan, 1).await.unwrap();
-        let evaluator = AlarmEvaluator::new(db.clone(), applied, engine)
+        let evaluator = AlarmEvaluator::new(db.clone(), applied.clone(), engine)
             .await
             .unwrap();
         let runtime = AlarmRuntime::start(
@@ -1165,6 +1334,71 @@ mod tests {
                 .count(),
             1
         );
+        let before = runtime.snapshot().await.unwrap();
+        let mut changed = runtime.changes();
+        let mut renamed = applied.clone();
+        renamed.project_revision = 2;
+        renamed.file_hash = "saved-again".into();
+        renamed.displays.get_mut(&id).unwrap().name = "Running again".into();
+        runtime
+            .apply(
+                renamed.clone(),
+                BTreeMap::from([(id.clone(), definition.clone())]),
+                Vec::new(),
+                hub.client(),
+            )
+            .await
+            .unwrap();
+        let applied_change = tokio::time::timeout(Duration::from_secs(3), changed.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(applied_change.applied, Some(renamed.clone()));
+        assert_eq!(applied_change.seq, before.seq() + 1);
+        let after = runtime.snapshot().await.unwrap();
+        assert_eq!(after.session(), before.session());
+        assert!(after.condition(&id).unwrap().state.active);
+        assert_eq!(db.applied().await.unwrap(), Some(renamed.clone()));
+        let mut changed_definition = definition;
+        if let scada_alarm::Source::Bit { active_when, .. } = &mut changed_definition.spec.source {
+            *active_when = false;
+        }
+        let mut changed_applied = renamed;
+        changed_applied.project_revision = 3;
+        changed_applied.file_hash = "changed-condition".into();
+        changed_applied
+            .condition_hashes
+            .insert(id.clone(), changed_definition.evaluation_hash());
+        let round = &after.condition(&id).unwrap().state;
+        runtime
+            .apply(
+                changed_applied,
+                BTreeMap::from([(id.clone(), changed_definition)]),
+                vec![UnackedOccurrence {
+                    condition_id: id.clone(),
+                    occurrence: round.occurrence.clone().unwrap(),
+                    recurrence: round.recurrence,
+                }],
+                hub.client(),
+            )
+            .await
+            .unwrap();
+        assert!(
+            !runtime
+                .snapshot()
+                .await
+                .unwrap()
+                .condition(&id)
+                .unwrap()
+                .state
+                .active
+        );
+        assert!(db
+            .events()
+            .await
+            .unwrap()
+            .iter()
+            .any(|event| event.event.kind == "definitionChanged"));
         let status = runtime.status();
         runtime.stop().await.unwrap();
         assert_eq!(

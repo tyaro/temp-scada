@@ -186,6 +186,7 @@ fn a_frame_round_trips_and_a_cut_frame_is_refused() {
             format: ProjectFormat::Package,
             name: "A".into(),
             save_as: false,
+            confirmed: Vec::new(),
         }
     );
     assert_eq!(body, b"PKbody");

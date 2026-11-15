@@ -63,102 +63,11 @@ impl SavedAlarmProject {
         };
         let project =
             Project::from_json(&document.to_string()).map_err(AlarmProjectError::InvalidProject)?;
-        let mut definitions = BTreeMap::new();
-        let mut disabled = BTreeSet::new();
-        let mut displays = BTreeMap::new();
         let alarm_document = document
             .get("alarms")
             .cloned()
             .unwrap_or_else(|| json!({"definitions": []}));
-        for item in alarm_document["definitions"]
-            .as_array()
-            .ok_or(AlarmProjectError::InvalidFile)?
-        {
-            let id = required_string(item, "id")?;
-            let name = required_string(item, "name")?;
-            let tag = required_string(&item["source"], "tag")?;
-            let ack_mode = match item.get("ackMode") {
-                Some(mode) => serde_json::from_value::<AckMode>(mode.clone())
-                    .map_err(|_| AlarmProjectError::InvalidFile)?,
-                None => AckMode::Manual,
-            };
-            let on_delay_ms = item["onDelayMs"].as_u64().unwrap_or(0);
-            let off_delay_ms = item["offDelayMs"].as_u64().unwrap_or(0);
-            let mut add = |condition_id: String,
-                           source: Source,
-                           severity: String,
-                           message: String,
-                           limit_label: Option<String>| {
-                if item["enabled"] == false {
-                    disabled.insert(condition_id);
-                } else {
-                    let definition = Definition {
-                        spec: ConditionSpec {
-                            source,
-                            on_delay_ms,
-                            off_delay_ms,
-                            ack_mode,
-                        },
-                    };
-                    displays.insert(
-                        condition_id.clone(),
-                        ConditionDisplay {
-                            name: name.clone(),
-                            message,
-                            severity,
-                            limit_label,
-                        },
-                    );
-                    definitions.insert(condition_id, definition);
-                }
-            };
-            match item["source"]["kind"].as_str() {
-                Some("bit") => add(
-                    id,
-                    Source::Bit {
-                        tag,
-                        active_when: item["source"]["activeWhen"]
-                            .as_bool()
-                            .ok_or(AlarmProjectError::InvalidFile)?,
-                    },
-                    required_string(item, "severity")?,
-                    item["message"].as_str().unwrap_or(&name).to_owned(),
-                    None,
-                ),
-                Some("threshold") => {
-                    let deadband = item["source"]["deadband"].as_f64().unwrap_or(0.0);
-                    for (key, limit, label) in [
-                        ("hh", LimitKind::Hh, "HH"),
-                        ("h", LimitKind::H, "H"),
-                        ("l", LimitKind::L, "L"),
-                        ("ll", LimitKind::Ll, "LL"),
-                    ] {
-                        let row = &item["source"]["limits"][key];
-                        if row.is_null() {
-                            continue;
-                        }
-                        add(
-                            format!("{id}:{key}"),
-                            Source::Threshold {
-                                tag: tag.clone(),
-                                limit,
-                                value: row["value"]
-                                    .as_f64()
-                                    .ok_or(AlarmProjectError::InvalidFile)?,
-                                deadband,
-                            },
-                            required_string(row, "severity")?,
-                            row["message"]
-                                .as_str()
-                                .map(str::to_owned)
-                                .unwrap_or_else(|| format!("{name} {label}")),
-                            Some(label.into()),
-                        );
-                    }
-                }
-                _ => return Err(AlarmProjectError::InvalidFile),
-            }
-        }
+        let (definitions, disabled, displays) = parse_alarm_document(&alarm_document)?;
         Ok(Self {
             project_id: project.id().into(),
             project_revision: project.revision(),
@@ -168,6 +77,28 @@ impl SavedAlarmProject {
             displays,
             document: alarm_document,
         })
+    }
+
+    pub fn from_applied(applied: &AppliedDefinitions) -> Result<Self, AlarmProjectError> {
+        let (definitions, disabled, displays) = parse_alarm_document(&applied.definitions)?;
+        let candidate = Self {
+            project_id: applied.project_id.clone(),
+            project_revision: applied.project_revision,
+            file_hash: applied.file_hash.clone(),
+            definitions,
+            disabled,
+            displays,
+            document: applied.definitions.clone(),
+        };
+        if candidate.applied(
+            applied.endpoint.clone(),
+            applied.applied_by.clone(),
+            applied.applied_at_ms,
+        ) != *applied
+        {
+            return Err(AlarmProjectError::InvalidFile);
+        }
+        Ok(candidate)
     }
 
     pub fn applied(&self, endpoint: String, applied_by: String, at_ms: i64) -> AppliedDefinitions {
@@ -188,6 +119,108 @@ impl SavedAlarmProject {
             displays: self.displays.clone(),
         }
     }
+}
+
+type ExpandedAlarms = (
+    BTreeMap<String, Definition>,
+    BTreeSet<String>,
+    BTreeMap<String, ConditionDisplay>,
+);
+
+fn parse_alarm_document(alarm_document: &Value) -> Result<ExpandedAlarms, AlarmProjectError> {
+    let mut definitions = BTreeMap::new();
+    let mut disabled = BTreeSet::new();
+    let mut displays = BTreeMap::new();
+    for item in alarm_document["definitions"]
+        .as_array()
+        .ok_or(AlarmProjectError::InvalidFile)?
+    {
+        let id = required_string(item, "id")?;
+        let name = required_string(item, "name")?;
+        let tag = required_string(&item["source"], "tag")?;
+        let ack_mode = match item.get("ackMode") {
+            Some(mode) => serde_json::from_value::<AckMode>(mode.clone())
+                .map_err(|_| AlarmProjectError::InvalidFile)?,
+            None => AckMode::Manual,
+        };
+        let on_delay_ms = item["onDelayMs"].as_u64().unwrap_or(0);
+        let off_delay_ms = item["offDelayMs"].as_u64().unwrap_or(0);
+        let mut add = |condition_id: String,
+                       source: Source,
+                       severity: String,
+                       message: String,
+                       limit_label: Option<String>| {
+            if item["enabled"] == false {
+                disabled.insert(condition_id);
+            } else {
+                let definition = Definition {
+                    spec: ConditionSpec {
+                        source,
+                        on_delay_ms,
+                        off_delay_ms,
+                        ack_mode,
+                    },
+                };
+                displays.insert(
+                    condition_id.clone(),
+                    ConditionDisplay {
+                        name: name.clone(),
+                        message,
+                        severity,
+                        limit_label,
+                    },
+                );
+                definitions.insert(condition_id, definition);
+            }
+        };
+        match item["source"]["kind"].as_str() {
+            Some("bit") => add(
+                id,
+                Source::Bit {
+                    tag,
+                    active_when: item["source"]["activeWhen"]
+                        .as_bool()
+                        .ok_or(AlarmProjectError::InvalidFile)?,
+                },
+                required_string(item, "severity")?,
+                item["message"].as_str().unwrap_or(&name).to_owned(),
+                None,
+            ),
+            Some("threshold") => {
+                let deadband = item["source"]["deadband"].as_f64().unwrap_or(0.0);
+                for (key, limit, label) in [
+                    ("hh", LimitKind::Hh, "HH"),
+                    ("h", LimitKind::H, "H"),
+                    ("l", LimitKind::L, "L"),
+                    ("ll", LimitKind::Ll, "LL"),
+                ] {
+                    let row = &item["source"]["limits"][key];
+                    if row.is_null() {
+                        continue;
+                    }
+                    add(
+                        format!("{id}:{key}"),
+                        Source::Threshold {
+                            tag: tag.clone(),
+                            limit,
+                            value: row["value"]
+                                .as_f64()
+                                .ok_or(AlarmProjectError::InvalidFile)?,
+                            deadband,
+                        },
+                        required_string(row, "severity")?,
+                        row["message"]
+                            .as_str()
+                            .map(str::to_owned)
+                            .unwrap_or_else(|| format!("{name} {label}")),
+                        Some(label.into()),
+                    );
+                }
+            }
+            _ => return Err(AlarmProjectError::InvalidFile),
+        }
+    }
+    Ok((definitions, disabled, displays))
 }
 
 fn required_string(value: &Value, key: &str) -> Result<String, AlarmProjectError> {
