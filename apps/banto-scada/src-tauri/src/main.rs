@@ -85,10 +85,10 @@ async fn hub_connect(
         .await
         .map_err(|error| error.kind().as_str().to_owned())?;
     active.connected = result.status.is_connected();
-    drop(active);
     if result.status.is_connected() {
-        alarm::after_hub_connect(&state, &alarm).await;
+        alarm::after_hub_connect(&state, &alarm, result.judged).await;
     }
+    drop(active);
     Ok(result.status)
 }
 

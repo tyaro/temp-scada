@@ -9,6 +9,7 @@ use scada_host::alarm_service::{
 };
 use scada_host::auth::BantoError;
 use scada_host::desktop_auth::CommandError;
+use scada_host::CredentialIdentity;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 
@@ -16,27 +17,35 @@ use crate::auth::AuthState;
 use crate::project::ProjectFileState;
 use crate::NativeHost;
 
-pub struct AlarmState(Result<Arc<AlarmService>, String>);
+pub struct AlarmState {
+    service: Result<Arc<AlarmService>, String>,
+    credential: tokio::sync::Mutex<Option<CredentialIdentity>>,
+}
 
 impl AlarmState {
     #[cfg(test)]
     pub(crate) fn unavailable() -> Self {
-        Self(Err("alarmUnavailable".into()))
+        Self {
+            service: Err("alarmUnavailable".into()),
+            credential: tokio::sync::Mutex::new(None),
+        }
     }
     pub async fn open(dir: Result<impl AsRef<Path>, impl std::fmt::Debug>) -> Self {
-        match dir {
-            Ok(dir) => Self(
-                AlarmService::open(dir.as_ref())
-                    .await
-                    .map(Arc::new)
-                    .map_err(|error| reason(&error)),
-            ),
-            Err(_) => Self(Err("noDataDir".into())),
+        let service = match dir {
+            Ok(dir) => AlarmService::open(dir.as_ref())
+                .await
+                .map(Arc::new)
+                .map_err(|error| reason(&error)),
+            Err(_) => Err("noDataDir".into()),
+        };
+        Self {
+            service,
+            credential: tokio::sync::Mutex::new(None),
         }
     }
 
     pub(crate) fn get(&self) -> Result<&Arc<AlarmService>, String> {
-        self.0.as_ref().map_err(Clone::clone)
+        self.service.as_ref().map_err(Clone::clone)
     }
 }
 
@@ -170,9 +179,15 @@ pub fn start_events<R: Runtime>(app: AppHandle<R>) {
     });
     tauri::async_runtime::spawn(async move {
         let host = app.state::<NativeHost>();
+        let _active = host.active.lock().await;
+        let alarm = app.state::<AlarmState>();
+        let mut credential = alarm.credential.lock().await;
+        let current = host.bootstrap.stored_credential().ok().flatten();
         match hub_context(&host) {
             Ok((endpoint, client)) => {
-                let _ = service.resume(Some(&endpoint), Some(client)).await;
+                if service.resume(Some(&endpoint), Some(client)).await.is_ok() {
+                    *credential = current;
+                }
             }
             Err(_) => {
                 let _ = service.resume(None, None).await;
@@ -181,12 +196,22 @@ pub fn start_events<R: Runtime>(app: AppHandle<R>) {
     });
 }
 
-pub async fn after_hub_connect(host: &NativeHost, alarm: &AlarmState) {
+pub async fn after_hub_connect(
+    host: &NativeHost,
+    alarm: &AlarmState,
+    judged: Option<CredentialIdentity>,
+) {
     let Ok(service) = alarm.get() else {
         return;
     };
+    let mut credential = alarm.credential.lock().await;
     if let Ok((endpoint, client)) = hub_context(host) {
-        let _ = service.resume(Some(&endpoint), Some(client)).await;
+        if *credential != judged && service.stop().await.is_err() {
+            return;
+        }
+        if service.resume(Some(&endpoint), Some(client)).await.is_ok() {
+            *credential = judged;
+        }
     }
 }
 
@@ -200,6 +225,7 @@ pub async fn apply_file(
     confirmed_switch_from: Option<&str>,
 ) -> Result<ApplyResult, String> {
     let service = alarm.get()?;
+    let _active = host.active.lock().await;
     let (endpoint, client) = match hub_context(host) {
         Ok(context) => context,
         Err(reason) if !explicit && reason == "noHub" => return Ok(ApplyResult::SkippedNoHub),
