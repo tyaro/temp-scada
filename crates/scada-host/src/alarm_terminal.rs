@@ -28,6 +28,7 @@ pub struct MonitoredProject {
 pub struct PendingSwitch {
     pub target: MonitoredProject,
     pub file_hash: String,
+    pub applied_at_ms: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -564,6 +565,7 @@ mod tests {
             .set_switching(Some(PendingSwitch {
                 target: monitored.clone(),
                 file_hash: "sha256".into(),
+                applied_at_ms: 123,
             }))
             .unwrap();
         assert!(matches!(

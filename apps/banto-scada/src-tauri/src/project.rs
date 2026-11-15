@@ -7,8 +7,6 @@
 //! the frame of `project_file::frame`.
 use std::path::PathBuf;
 
-use scada_host::auth::BantoError;
-use scada_host::desktop_auth::CommandError;
 use scada_host::project_file::{
     frame, suggested_file_name, unframe, with_extension, ProjectFiles, ProjectFormat, SaveRequest,
 };
@@ -17,7 +15,9 @@ use tauri::ipc::{InvokeBody, Request, Response};
 use tauri::{Runtime, State, WebviewWindow};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
+use crate::alarm::{self, AlarmState};
 use crate::auth::AuthState;
+use crate::NativeHost;
 
 /// The files the user picked in this process.
 #[derive(Default)]
@@ -87,25 +87,6 @@ async fn confirm_overwrite<R: Runtime>(window: &WebviewWindow<R>, path: &std::pa
     receiver.await.unwrap_or(false)
 }
 
-/// The refusal of the save permission, as the webview reads it.
-fn refusal(error: CommandError) -> String {
-    match error {
-        CommandError::Banto(BantoError::Unauthorized) => "unauthorized",
-        CommandError::Banto(BantoError::Forbidden) => "forbidden",
-        CommandError::Unavailable(_) => "auth_unavailable",
-        _ => "auth_failed",
-    }
-    .into()
-}
-
-async fn authorize(auth: &AuthState) -> Result<(), String> {
-    auth.get()
-        .map_err(refusal)?
-        .authorize_project_save()
-        .await
-        .map_err(refusal)
-}
-
 /// `project_open`: the user picks a Project file and the host reads it.
 /// Answers a frame whose header is `{"status": "opened", "fileId",
 /// "fileName"}` followed by the file, or `{"status": "cancelled"}`.
@@ -128,20 +109,22 @@ pub async fn project_open<R: Runtime>(
 /// file. Overwrites the file of `fileId` when it has the format, else (or
 /// for "save as") asks where to save. The permission (§5.2) is checked
 /// before the dialog and again before the write. Answers `{"status":
-/// "saved", "fileId", "fileName", "apply": null}` (`apply` is the alarm
-/// definitions' apply, 3-C2) or `{"status": "cancelled"}`.
+/// "saved", "fileId", "fileName", "apply"}` with independent save and
+/// alarm-apply results, or `{"status": "cancelled"}`.
 #[tauri::command]
 pub async fn project_save<R: Runtime>(
     window: WebviewWindow<R>,
     files: State<'_, ProjectFileState>,
     auth: State<'_, AuthState>,
+    alarm: State<'_, AlarmState>,
+    host: State<'_, NativeHost>,
     request: Request<'_>,
 ) -> Result<Value, String> {
     let InvokeBody::Raw(body) = request.body() else {
         return Err("invalid_request".into());
     };
     let (header, content) = unframe::<SaveRequest>(body).ok_or("invalid_request")?;
-    authorize(&auth).await?;
+    alarm::authorize(&auth).await?;
     let target = match header.save_as {
         true => None,
         false => files.0.target(header.file_id, header.format),
@@ -150,20 +133,42 @@ pub async fn project_save<R: Runtime>(
         Some(path) => path,
         None => match pick_save(&window, header.format, &header.name).await {
             Some(path) => {
-                authorize(&auth).await?;
+                alarm::authorize(&auth).await?;
                 path
             }
             None => return Ok(json!({"status": "cancelled"})),
         },
     };
+    alarm::authorize(&auth).await?;
     let saved = files
         .0
         .write(&path, header.format, content)
         .map_err(|error| error.reason())?;
+    let path = files.0.path(saved.file_id).ok_or("unknown_file_id")?;
+    let apply = match alarm::authorized_user(&auth).await {
+        Ok(user) => {
+            alarm::apply_file(&alarm, &host, &path, &user, &header.confirmed, false, None).await
+        }
+        Err(reason) => Err(reason),
+    };
+    let apply = match apply {
+        Ok(result) => {
+            serde_json::to_value(result).unwrap_or(json!({"status":"failed","reason":"internal"}))
+        }
+        Err(reason)
+            if matches!(
+                reason.as_str(),
+                "terminalUnavailable" | "noDataDir" | "auth_phase_unavailable"
+            ) =>
+        {
+            json!({"status":"skippedUnavailable","reason":reason})
+        }
+        Err(reason) => json!({"status":"failed","reason":reason}),
+    };
     Ok(json!({
         "status": "saved",
         "fileId": saved.file_id,
         "fileName": saved.file_name,
-        "apply": null,
+        "apply": apply,
     }))
 }

@@ -10,6 +10,21 @@ import { ProjectFileError } from "../lib/project-file-service";
 const encoder = new TextEncoder();
 
 describe("nativeProjectFiles", () => {
+  it("passes switch confirmation separately from unacknowledged rounds", async () => {
+    const calls: { command: string; args: unknown }[] = [];
+    const invoke: RawInvoke = async (command, args) => {
+      calls.push({ command, args });
+      return { status: "applied" };
+    };
+    await nativeProjectFiles(invoke).apply?.(4, [], "project-a");
+    expect(calls).toEqual([
+      {
+        command: "alarm_apply",
+        args: { fileId: 4, confirmed: [], confirmedSwitchFrom: "project-a" },
+      },
+    ]);
+  });
+
   it("frames the save request as the host reads it", async () => {
     const calls: { command: string; args: unknown }[] = [];
     const invoke: RawInvoke = async (command, args) => {
@@ -28,7 +43,7 @@ describe("nativeProjectFiles", () => {
       saveAs: false,
       content: encoder.encode("{}"),
     });
-    expect(saved).toEqual({ fileId: 4, fileName: "plant.json" });
+    expect(saved).toEqual({ fileId: 4, fileName: "plant.json", apply: null });
     expect(calls[0].command).toBe("project_save");
     const { header, body } = unframe(calls[0].args as Uint8Array);
     expect(header).toEqual({

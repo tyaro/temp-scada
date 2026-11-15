@@ -1,6 +1,7 @@
 //! The production command owner, Tauri event bus and SDK run against a loopback Hub.
 use super::*;
 use banto_hub_bootstrap::state::memory::{MemoryKeyStore, MemoryState};
+use banto_hub_bootstrap::state::BootstrapState;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -13,6 +14,7 @@ use tokio::time::timeout;
 use tokio_tungstenite::{accept_async, tungstenite::Message, WebSocketStream};
 
 const KEY: &str = "c2-test-only-read-key";
+const ROTATED_KEY: &str = "c2-test-rotated-read-key";
 const NUMBER: &str = "Demo.Number";
 const BOOL: &str = "Demo.Bool";
 
@@ -49,9 +51,11 @@ async fn request(stream: &mut TcpStream) -> String {
         assert!(bytes.len() < 16_384);
     }
     let request = String::from_utf8(bytes).unwrap();
-    assert!(request
-        .to_lowercase()
-        .contains(&format!("authorization: bearer {KEY}")));
+    let lower = request.to_lowercase();
+    assert!(
+        lower.contains(&format!("authorization: bearer {KEY}"))
+            || lower.contains(&format!("authorization: bearer {ROTATED_KEY}"))
+    );
     request
 }
 
@@ -112,7 +116,11 @@ impl MockHub {
                         )
                         .unwrap();
                         assert_eq!(first["op"], "subscribe");
-                        assert_eq!(first["tags"], json!([BOOL, NUMBER]));
+                        assert!(
+                            first["tags"] == json!([BOOL, NUMBER])
+                                || first["tags"] == json!([BOOL]),
+                            "unexpected subscription: {first}"
+                        );
                         socket
                             .send(Message::Text(
                                 json!({
@@ -171,9 +179,12 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
         .unwrap();
     assert!(adopted.status.is_connected(), "{:?}", adopted.status);
     let app = tauri::test::mock_builder()
+        .manage(alarm::AlarmState::unavailable())
         .manage(NativeHost {
             bootstrap,
             active: Mutex::new(Active::default()),
+            alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
         })
         .build(tauri::test::mock_context(tauri::test::noop_assets()))
         .unwrap();
@@ -183,7 +194,9 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
             .send(serde_json::from_str(event.payload()).unwrap())
             .unwrap();
     });
-    let status = hub_connect(app.state(), hub.url.clone()).await.unwrap();
+    let status = hub_connect(app.state(), app.state(), hub.url.clone())
+        .await
+        .unwrap();
     assert!(status.is_connected());
     let project = include_str!("../../../../examples/read-presentation.project.json").to_owned();
     let catalog = hub_catalog(app.state(), project.clone()).await.unwrap();
@@ -260,6 +273,7 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
 
     // A new native owner reuses the protected key and starts with no old stream.
     let restarted = tauri::test::mock_builder()
+        .manage(alarm::AlarmState::unavailable())
         .manage(NativeHost {
             bootstrap: Bootstrapper::new(
                 "temp-scada-test",
@@ -268,6 +282,8 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
                 state,
             ),
             active: Mutex::new(Active::default()),
+            alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
         })
         .build(tauri::test::mock_context(tauri::test::noop_assets()))
         .unwrap();
@@ -277,10 +293,12 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
             .send(serde_json::from_str(event.payload()).unwrap())
             .unwrap();
     });
-    assert!(hub_connect(restarted.state(), hub.url.clone())
-        .await
-        .unwrap()
-        .is_connected());
+    assert!(
+        hub_connect(restarted.state(), restarted.state(), hub.url.clone())
+            .await
+            .unwrap()
+            .is_connected()
+    );
     hub_read_start(
         restarted.handle().clone(),
         restarted.state(),
@@ -311,4 +329,144 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
         .await
         .owner
         .is_none());
+}
+
+#[tokio::test]
+async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
+    let hub = MockHub::start().await;
+    let dir = std::env::temp_dir().join(format!(
+        "native-alarm-reconnect-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+    let saved_state = Arc::new(MemoryState::new());
+    let bootstrap = Bootstrapper::new(
+        "temp-scada-test",
+        "11111111-2222-4333-8444-555555555555",
+        Arc::new(MemoryKeyStore::new()),
+        saved_state.clone(),
+    );
+    assert!(bootstrap
+        .adopt_manual_key(&hub.url, KEY.to_owned())
+        .await
+        .unwrap()
+        .status
+        .is_connected());
+    let app = tauri::test::mock_builder()
+        .manage(alarm::AlarmState::open(Ok::<_, ()>(&dir)).await)
+        .manage(NativeHost {
+            bootstrap,
+            active: Mutex::new(Active::default()),
+            alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
+        })
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
+    assert!(hub_connect(app.state(), app.state(), hub.url.clone())
+        .await
+        .unwrap()
+        .is_connected());
+
+    let mut project: Value = serde_json::from_str(include_str!(
+        "../../../../examples/read-presentation.project.json"
+    ))
+    .unwrap();
+    project["alarms"] = json!({"definitions": [{
+        "id": "0199f6a1-0000-7000-8000-000000000001",
+        "name": "Alarm",
+        "enabled": true,
+        "source": {"kind": "bit", "tag": BOOL, "activeWhen": true},
+        "severity": "high",
+        "message": "running",
+        "ackMode": "manual"
+    }]});
+    let path = dir.join("alarm.project.json");
+    std::fs::write(&path, serde_json::to_vec(&project).unwrap()).unwrap();
+    let service = app.state::<alarm::AlarmState>().get().unwrap().clone();
+    let host = app.state::<NativeHost>();
+    assert!(matches!(
+        service
+            .apply(
+                &path,
+                &hub.url,
+                host.bootstrap.rest_client().unwrap().unwrap(),
+                "未ログイン",
+                &[],
+                scada_host::alarm_service::ApplyMode::Explicit {
+                    confirmed_switch_from: None,
+                },
+            )
+            .await
+            .unwrap(),
+        scada_host::alarm_service::ApplyResult::Applied { .. }
+    ));
+    let first = service.snapshot().await.unwrap().engine.unwrap().session;
+
+    assert!(hub_connect(app.state(), app.state(), hub.url.clone())
+        .await
+        .unwrap()
+        .is_connected());
+    assert_eq!(
+        service.snapshot().await.unwrap().engine.unwrap().session,
+        first
+    );
+
+    assert!(host
+        .bootstrap
+        .adopt_manual_key(&hub.url, ROTATED_KEY.to_owned())
+        .await
+        .unwrap()
+        .status
+        .is_connected());
+    assert!(hub_connect(app.state(), app.state(), hub.url.clone())
+        .await
+        .unwrap()
+        .is_connected());
+    let rotated = service.snapshot().await.unwrap().engine.unwrap().session;
+    assert_ne!(rotated.id, first.id);
+    assert!(rotated.generation > first.generation);
+
+    // A failed connection can leave a newly saved Hub record behind. The old
+    // alarm session must stop even though the new Hub is unreachable.
+    let mut record = saved_state.load().unwrap().unwrap();
+    let previous_record = record.clone();
+    record.endpoint = "http://127.0.0.1:1".into();
+    saved_state.save(&record).unwrap();
+    assert!(!hub_connect(app.state(), app.state(), record.endpoint)
+        .await
+        .unwrap()
+        .is_connected());
+    assert!(service.snapshot().await.unwrap().engine.is_none());
+
+    saved_state.save(&previous_record).unwrap();
+    assert!(hub_connect(app.state(), app.state(), hub.url.clone())
+        .await
+        .unwrap()
+        .is_connected());
+    assert!(service.snapshot().await.unwrap().engine.is_some());
+    saved_state.clear().unwrap();
+    assert!(
+        !hub_connect(app.state(), app.state(), "http://127.0.0.1:1".into())
+            .await
+            .unwrap()
+            .is_connected()
+    );
+    let without_record = service.snapshot().await.unwrap();
+    assert!(without_record.engine.is_none());
+    assert_eq!(without_record.status, "noHub");
+
+    service.stop().await.unwrap();
+    drop(service);
+    drop(app);
+    for _ in 0..100 {
+        if std::fs::remove_dir_all(&dir).is_ok() {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    panic!("temporary alarm DB handles were not released");
 }

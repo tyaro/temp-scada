@@ -53,6 +53,8 @@ fn app(dir: &TempDir) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
                 Arc::new(MemoryState::new()),
             ),
             active: Mutex::new(Active::default()),
+            alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
         })
         .build(mock_context(noop_assets()))
         .unwrap();

@@ -54,6 +54,8 @@
     projectFileService?: ProjectFileService;
   } = $props();
   import type { ProjectFileService } from "./lib/project-file-service";
+  import { AlarmMirror, type AlarmSnapshot } from "./lib/alarm-mirror";
+  import { AlarmRefreshQueue } from "./lib/alarm-refresh-queue";
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
     selectionPaintAlphaCommand,
@@ -1771,6 +1773,8 @@
     get fileService() {
       return projectFileService;
     },
+    alarmRefresh: () => void refreshAlarm(),
+    alarmUnavailable: (reason) => (alarmUnavailableReason = reason),
     chooseFile: () => projectFileInput?.click(),
     allow: (run) => drafts.allow(run),
     adopt,
@@ -1781,6 +1785,79 @@
   const replacement = $derived(projectFiles.replacement);
   const saveLabel = $derived(projectFiles.saveLabel);
   const lastExport = $derived(projectFiles.lastExport);
+  const alarmMirror = new AlarmMirror();
+  let alarmRefreshQueue: AlarmRefreshQueue<AlarmSnapshot> | null = null;
+  let alarmSnapshot = $state<AlarmSnapshot | null>(null);
+  let alarmReadError = $state<string | null>(null);
+  let alarmUnavailableReason = $state<string | null>(null);
+  const alarmLabel = $derived.by(() => {
+    const unavailable = alarmUnavailableReason ?? alarmReadError;
+    if (unavailable && alarmSnapshot?.status !== "running") {
+      if (unavailable === "terminalUnavailable")
+        return "警報: この端末ではEngineを利用できません";
+      if (unavailable === "noDataDir")
+        return "警報: 保存先がなく監視できません";
+      if (unavailable === "auth_phase_unavailable")
+        return "警報: 認証切替中で適用できません";
+    }
+    if (alarmReadError) return "警報: 状態を取得できません";
+    if (!alarmSnapshot) return "警報: 確認中";
+    if (alarmSnapshot.status !== "running")
+      return `警報: ${alarmSnapshot.status}`;
+    if (alarmSnapshot.engine?.unavailable) return "警報: 監視できていません";
+    if (alarmSnapshot.monitored?.projectId !== project.manifest.projectId)
+      return "警報: 別のProjectを監視中";
+    if (alarmSnapshot.pendingConditionChanges)
+      return "警報: 保存済み定義に未適用の変更あり";
+    if (alarmSnapshot.pendingDisplayChanges)
+      return "警報: 表示情報に未適用の変更あり";
+    return "警報: 監視中";
+  });
+  function refreshAlarm() {
+    alarmRefreshQueue?.refresh();
+  }
+  $effect(() => {
+    const feed = projectFileService?.alarmFeed;
+    if (!feed) return;
+    const queue = new AlarmRefreshQueue(
+      () => feed.snapshot(),
+      (next) => {
+        alarmReadError = null;
+        if (alarmMirror.acceptSnapshot(next))
+          alarmSnapshot = alarmMirror.current;
+      },
+      (error) => (alarmReadError = String(error)),
+    );
+    alarmRefreshQueue = queue;
+    let disposed = false;
+    let unsubscribe: (() => void) | undefined;
+    void feed
+      .subscribe(
+        (change) => {
+          if (disposed) return;
+          const decision = alarmMirror.acceptChange(change);
+          if (decision === "refresh") void refreshAlarm();
+          else if (decision === "applied") alarmSnapshot = alarmMirror.current;
+        },
+        () => void refreshAlarm(),
+      )
+      .then((off) => {
+        if (disposed) off();
+        else {
+          unsubscribe = off;
+          void refreshAlarm();
+        }
+      })
+      .catch((error) => {
+        if (!disposed) alarmReadError = String(error);
+      });
+    return () => {
+      disposed = true;
+      queue.dispose();
+      if (alarmRefreshQueue === queue) alarmRefreshQueue = null;
+      unsubscribe?.();
+    };
+  });
   function adopt(
     next: Project,
     source: "sample" | "file" | "new",
@@ -3821,9 +3898,28 @@
         >{/if}
     </div>
     {#if recordingIndicator}{@render recordingStatus()}{/if}
+    {#if projectFileService?.alarmFeed}
+      <StatusBadge
+        variant={alarmSnapshot?.status === "running" &&
+        alarmSnapshot.monitored?.projectId === project.manifest.projectId &&
+        !alarmSnapshot.engine?.unavailable &&
+        !alarmSnapshot.pendingConditionChanges &&
+        !alarmSnapshot.pendingDisplayChanges
+          ? "neutral"
+          : "warning"}
+        label={alarmLabel}
+      />
+    {/if}
     {#if !headerExtension}{@render browserHubStatus()}{/if}
   </div>
   <div class="header-actions">
+    {#if projectFiles.native}
+      <button
+        type="button"
+        onclick={() => void projectFiles.applyAlarm()}
+        title="開いている保存済みProjectの警報定義を適用">警報を適用</button
+      >
+    {/if}
     <!-- メニューバー表示中は同じ項目の重複になるので、☰ は隠しているときだけ出す。 -->
     {#if !showMenubar}<Menu label="常設メニュー" placement="bottom-end">
         {#snippet trigger(props)}

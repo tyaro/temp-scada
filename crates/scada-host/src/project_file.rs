@@ -264,6 +264,8 @@ pub struct SaveRequest {
     pub name: String,
     /// "Save as": always ask where to save.
     pub save_as: bool,
+    #[serde(default)]
+    pub confirmed: Vec<crate::alarm_db::UnackedOccurrence>,
 }
 
 #[cfg(test)]

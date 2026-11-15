@@ -1,4 +1,5 @@
 //! One embedded read-only host. Hub services and PLC connections stay external.
+mod alarm;
 mod auth;
 mod close;
 mod control;
@@ -15,7 +16,7 @@ use scada_model::Project;
 use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
 use serde::Serialize;
 use std::collections::HashSet;
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::Arc;
 use tauri::webview::PageLoadEvent;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, Runtime, State, WindowEvent};
@@ -25,6 +26,8 @@ use tokio::task::JoinHandle;
 struct NativeHost {
     bootstrap: Bootstrapper,
     active: Mutex<Active>,
+    alarm_operation: Mutex<()>,
+    exiting: AtomicBool,
 }
 
 #[derive(Default)]
@@ -70,17 +73,40 @@ async fn stop_read(active: &mut Active) {
 }
 
 #[tauri::command]
-async fn hub_connect(state: State<'_, NativeHost>, endpoint: String) -> Result<HubStatus, String> {
+async fn hub_connect(
+    state: State<'_, NativeHost>,
+    alarm: State<'_, alarm::AlarmState>,
+    endpoint: String,
+) -> Result<HubStatus, String> {
+    let _alarm_operation = state.alarm_operation.lock().await;
+    if state.exiting.load(Ordering::SeqCst) {
+        return Err("exiting".into());
+    }
     let mut active = state.active.lock().await;
     stop_read(&mut active).await;
     active.connected = false;
-    let result = state
+    let result = state.bootstrap.connect(&endpoint).await;
+    active.connected = result
+        .as_ref()
+        .is_ok_and(|connection| connection.status.is_connected());
+    drop(active);
+    let credential = state
         .bootstrap
-        .connect(&endpoint)
-        .await
-        .map_err(|error| error.kind().as_str().to_owned())?;
-    active.connected = result.status.is_connected();
-    Ok(result.status)
+        .stored_credential()
+        .ok()
+        .flatten()
+        .or_else(|| {
+            result
+                .as_ref()
+                .ok()
+                .and_then(|connection| connection.judged)
+        });
+    if !state.exiting.load(Ordering::SeqCst) {
+        alarm::after_hub_connect(&state, &alarm, credential).await;
+    }
+    result
+        .map(|connection| connection.status)
+        .map_err(|error| error.kind().as_str().to_owned())
 }
 
 #[tauri::command]
@@ -264,6 +290,10 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             close::app_close_reply,
             project::project_open,
             project::project_save,
+            alarm::alarm_apply,
+            alarm::alarm_snapshot,
+            alarm::alarm_ack,
+            alarm::alarm_history,
             auth::auth_status,
             auth::auth_phase,
             auth::auth_setup,
@@ -327,13 +357,21 @@ fn main() {
             DesktopRecording::unavailable(NO_DATA_DIR),
         ),
     };
+    let alarm = tauri::async_runtime::block_on(alarm::AlarmState::open(local_data_dir()));
     commands(tauri::Builder::default())
         .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            alarm::start_events(app.handle().clone());
+            Ok(())
+        })
         .manage(NativeHost {
             bootstrap,
             active: Mutex::new(Active::default()),
+            alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
         })
         .manage(auth)
+        .manage(alarm)
         .manage(recording_runtime)
         .manage(recording)
         .build(tauri::generate_context!())
@@ -357,10 +395,18 @@ fn on_exit<R: Runtime>() -> impl FnMut(&AppHandle<R>, RunEvent) {
             Ok(_) => {
                 api.prevent_exit();
                 app.state::<close::CloseGuard>().begin_exit();
+                app.state::<NativeHost>()
+                    .exiting
+                    .store(true, Ordering::SeqCst);
                 let app = app.clone();
                 let state = state.clone();
                 tauri::async_runtime::spawn(async move {
                     control::exit(&app).await;
+                    let host = app.state::<NativeHost>();
+                    let _alarm_operation = host.alarm_operation.lock().await;
+                    if let Ok(alarm) = app.state::<alarm::AlarmState>().get() {
+                        let _ = alarm.stop().await;
+                    }
                     state.store(DONE, Ordering::SeqCst);
                     app.exit(0);
                 });

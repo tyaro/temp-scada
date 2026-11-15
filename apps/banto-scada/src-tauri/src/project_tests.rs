@@ -2,6 +2,7 @@
 //! overwrite of a known file without a dialog, and the refusals (alarm
 //! design §5.2). The file handling is tested in `scada_host::project_file`.
 use super::*;
+use banto_hub_bootstrap::state::memory::{MemoryKeyStore, MemoryState};
 use scada_host::project_file::frame;
 use serde_json::{json, Value};
 use std::path::PathBuf;
@@ -35,14 +36,129 @@ impl Drop for TempDir {
 }
 
 fn app(auth: AuthState) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
+    app_with_alarm(auth, alarm::AlarmState::unavailable())
+}
+
+fn app_with_alarm(
+    auth: AuthState,
+    alarm: alarm::AlarmState,
+) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
     let app = commands(mock_builder())
         .manage(auth)
+        .manage(alarm)
+        .manage(NativeHost {
+            bootstrap: Bootstrapper::new(
+                "temp-scada-project-test",
+                "11111111-2222-4333-8444-555555555555",
+                Arc::new(MemoryKeyStore::new()),
+                Arc::new(MemoryState::new()),
+            ),
+            active: Mutex::new(Active::default()),
+            alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
+        })
         .build(mock_context(noop_assets()))
         .unwrap();
     let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
         .build()
         .unwrap();
     (app, webview)
+}
+
+#[test]
+fn a_save_succeeds_without_an_alarm_data_directory() {
+    let data = TempDir::new();
+    let files = TempDir::new();
+    let alarm =
+        tauri::async_runtime::block_on(alarm::AlarmState::open(Err::<&str, _>("no directory")));
+    let (app, webview) = app_with_alarm(
+        tauri::async_runtime::block_on(AuthState::start(&data.0, "no_recording_run")).0,
+        alarm,
+    );
+    let path = files.0.join("plant.json");
+    std::fs::write(&path, b"{\"old\":1}").unwrap();
+    let opened = app
+        .state::<project::ProjectFileState>()
+        .0
+        .read(&path)
+        .unwrap();
+    let answer = save(
+        &webview,
+        frame(
+            &json!({"fileId": opened.file_id, "format": "json", "name": "工程", "saveAs": false}),
+            b"{\"new\":1}",
+        ),
+    )
+    .unwrap();
+    assert_eq!(
+        answer["apply"],
+        json!({"status":"skippedUnavailable","reason":"noDataDir"})
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), b"{\"new\":1}");
+}
+
+#[test]
+fn a_save_during_exit_does_not_start_alarm_monitoring() {
+    let data = TempDir::new();
+    let files = TempDir::new();
+    let alarm = tauri::async_runtime::block_on(alarm::AlarmState::open(Ok::<_, &str>(&data.0)));
+    let (app, webview) = app_with_alarm(
+        tauri::async_runtime::block_on(AuthState::start(&data.0, "no_recording_run")).0,
+        alarm,
+    );
+    let path = files.0.join("plant.json");
+    std::fs::write(&path, b"{\"old\":1}").unwrap();
+    let opened = app
+        .state::<project::ProjectFileState>()
+        .0
+        .read(&path)
+        .unwrap();
+    app.state::<NativeHost>()
+        .exiting
+        .store(true, Ordering::SeqCst);
+    let answer = save(
+        &webview,
+        frame(
+            &json!({"fileId": opened.file_id, "format": "json", "name": "工程", "saveAs": false}),
+            b"{\"new\":1}",
+        ),
+    )
+    .unwrap();
+    assert_eq!(
+        answer["apply"],
+        json!({"status":"failed","reason":"exiting"})
+    );
+    assert_eq!(std::fs::read(&path).unwrap(), b"{\"new\":1}");
+}
+
+#[test]
+fn a_save_returns_while_hub_connect_holds_the_alarm_operation() {
+    let data = TempDir::new();
+    let files = TempDir::new();
+    let alarm = tauri::async_runtime::block_on(alarm::AlarmState::open(Ok::<_, &str>(&data.0)));
+    let (app, webview) = app_with_alarm(
+        tauri::async_runtime::block_on(AuthState::start(&data.0, "no_recording_run")).0,
+        alarm,
+    );
+    let path = files.0.join("plant.json");
+    std::fs::write(&path, b"{\"old\":1}").unwrap();
+    let opened = app
+        .state::<project::ProjectFileState>()
+        .0
+        .read(&path)
+        .unwrap();
+    let host = app.state::<NativeHost>();
+    let _operation = tauri::async_runtime::block_on(host.alarm_operation.lock());
+    let answer = save(
+        &webview,
+        frame(
+            &json!({"fileId": opened.file_id, "format": "json", "name": "工程", "saveAs": false}),
+            b"{\"new\":1}",
+        ),
+    )
+    .unwrap();
+    assert_eq!(answer["apply"], json!({"status":"skippedBusy"}));
+    assert_eq!(std::fs::read(&path).unwrap(), b"{\"new\":1}");
 }
 
 fn save(webview: &WebviewWindow<MockRuntime>, body: Vec<u8>) -> Result<Value, Value> {
@@ -92,7 +208,7 @@ fn a_known_file_is_overwritten_without_a_dialog() {
     assert_eq!(
         answer,
         json!({"status": "saved", "fileId": opened.file_id, "fileName": "plant.json",
-            "apply": null})
+            "apply": {"status": "failed", "reason": "alarmUnavailable"}})
     );
     assert_eq!(std::fs::read(&path).unwrap(), b"{\"new\":1}");
 

@@ -1,7 +1,10 @@
 import {
   ProjectFileError,
+  type AlarmApplyResult,
   type ProjectFileService,
 } from "../lib/project-file-service";
+import type { AlarmChange, AlarmSnapshot } from "../lib/alarm-mirror";
+import { listen } from "@tauri-apps/api/event";
 
 /** `invoke` of `@tauri-apps/api/core` with a raw body, passed in so tests can
  * replace it. */
@@ -62,9 +65,43 @@ export function nativeProjectFiles(invoke: RawInvoke): ProjectFileService {
       const answer = (await invoke(
         "project_save",
         frame(header, content),
-      ).catch(refusal)) as { status: string; fileId: number; fileName: string };
+      ).catch(refusal)) as {
+        status: string;
+        fileId: number;
+        fileName: string;
+        apply: AlarmApplyResult;
+      };
       if (answer.status === "cancelled") return null;
-      return { fileId: answer.fileId, fileName: answer.fileName };
+      return {
+        fileId: answer.fileId,
+        fileName: answer.fileName,
+        apply: answer.apply,
+      };
+    },
+    async apply(fileId, confirmed, confirmedSwitchFrom) {
+      return (await invoke("alarm_apply", {
+        fileId,
+        confirmed,
+        confirmedSwitchFrom: confirmedSwitchFrom ?? null,
+      }).catch(refusal)) as AlarmApplyResult;
+    },
+    alarmFeed: {
+      snapshot: () => invoke("alarm_snapshot") as Promise<AlarmSnapshot>,
+      async subscribe(change, lagged) {
+        const offChange = await listen<AlarmChange>("alarm_changed", (event) =>
+          change(event.payload),
+        );
+        try {
+          const offLagged = await listen("alarm_changed_lagged", lagged);
+          return () => {
+            offChange();
+            offLagged();
+          };
+        } catch (error) {
+          offChange();
+          throw error;
+        }
+      },
     },
   };
 }

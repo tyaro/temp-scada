@@ -5,7 +5,10 @@ import { readProjectFile, writeProjectPackage } from "../../project-package";
 import { serializeProject, type Project } from "../../project";
 import { projectContent } from "../../save-state";
 import { createProject } from "../../new-project";
-import type { ProjectFileService } from "../../project-file-service";
+import type {
+  AlarmApplyResult,
+  ProjectFileService,
+} from "../../project-file-service";
 
 export type ProjectSource = "sample" | "file" | "new";
 export interface ProjectReadTarget {
@@ -19,6 +22,8 @@ export interface ProjectFilesHost {
   readonly draftPending: boolean;
   /** The desktop's file host; without it (the browser) a save downloads. */
   readonly fileService?: ProjectFileService;
+  alarmRefresh?(): void;
+  alarmUnavailable?(reason: string | null): void;
   chooseFile(): void;
   allow(run: () => void): boolean;
   /** App adopts Project and resets the editor; it calls adopted at the existing baseline boundary. */
@@ -54,6 +59,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
 
   let exporting = $state(false);
   let exportingName = $state("");
+  let lastUnavailableReason: string | null = null;
   const saveLabel = $derived(
     exporting
       ? native
@@ -205,6 +211,194 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     if (!host.allow(saveAs)) return;
     void writeProject(true);
   }
+  async function reportAlarmApply(
+    result: AlarmApplyResult | undefined,
+    savedFileId: number,
+    confirmedSwitchFrom?: string,
+  ) {
+    host.alarmRefresh?.();
+    if (result?.status === "skippedUnavailable") {
+      host.alarmUnavailable?.(result.reason);
+      if (lastUnavailableReason !== result.reason) {
+        const message =
+          result.reason === "terminalUnavailable"
+            ? "Projectを保存しました。この端末では警報Engineの領域が使用中のため、警報定義を適用していません。"
+            : result.reason === "noDataDir"
+              ? "Projectを保存しました。警報Engineの保存先がないため、警報定義を適用していません。"
+              : "Projectを保存しました。認証の切替中のため、警報定義を適用していません。";
+        host.report("info", message);
+        lastUnavailableReason = result.reason;
+      }
+      return;
+    }
+    host.alarmUnavailable?.(null);
+    lastUnavailableReason = null;
+    if (
+      !result ||
+      result.status === "skippedDifferentProject" ||
+      result.status === "skippedEndpointChanged" ||
+      result.status === "skippedNoHub" ||
+      result.status === "skippedBusy"
+    ) {
+      if (result?.status === "skippedDifferentProject")
+        host.report(
+          "info",
+          "別のProjectを保存しました。監視中のProjectは切り替わっていません。",
+        );
+      if (result?.status === "skippedNoHub")
+        host.report(
+          "info",
+          "Projectを保存しました。Hub未設定のため警報定義は適用していません。",
+        );
+      if (result?.status === "skippedBusy")
+        host.report(
+          "info",
+          "Projectを保存しました。Hubへの接続処理中のため警報定義は適用していません。接続後に明示的に適用してください。",
+        );
+      if (result?.status === "skippedEndpointChanged")
+        host.report(
+          "info",
+          "Projectを保存しました。Hubの接続先が変わったため、警報定義は明示的に適用してください。",
+        );
+      return;
+    }
+    if (result.status === "applied") {
+      if (result.warning) {
+        host.report(
+          "info",
+          result.warning === "monitorPathNotSaved"
+            ? "警報定義は適用しましたが、監視ファイルの記録を更新できませんでした。再起動後の状態を確認してください。"
+            : "警報定義は復旧処理で適用されました。警報の状態を確認してください。",
+        );
+        return;
+      }
+      host.report(
+        result.snapshot?.status && result.snapshot.status !== "running"
+          ? "info"
+          : "success",
+        result.initialMonitoring
+          ? result.snapshot?.status && result.snapshot.status !== "running"
+            ? `このProjectを警報の監視先に設定しました。Engineは停止中です（${result.snapshot.status}）。`
+            : "このProjectの警報監視を開始しました。"
+          : result.snapshot?.status && result.snapshot.status !== "running"
+            ? `保存済みProjectの警報定義を適用しました。Engineは停止中です（${result.snapshot.status}）。`
+            : "保存済みProjectの警報定義を適用しました。",
+      );
+      return;
+    }
+    if (result.status === "failed") {
+      host.report(
+        "error",
+        `Projectは保存しましたが、警報定義を適用できませんでした（${result.reason}）。`,
+      );
+      return;
+    }
+    if (
+      (result.status === "switchConfirmationRequired" ||
+        result.status === "confirmationRequired") &&
+      fileId !== savedFileId
+    ) {
+      host.report(
+        "info",
+        "開いているProjectが変わりました。警報の状態を確認して再度適用してください。",
+      );
+      return;
+    }
+    if (result.status === "switchConfirmationRequired") {
+      if (!result.monitoredProjectId) {
+        host.report(
+          "error",
+          "監視中のProjectを確認できません。警報の状態を再取得してください。",
+        );
+        return;
+      }
+      if (confirmedSwitchFrom) {
+        host.report(
+          "error",
+          "監視先が変わりました。警報の状態を確認して再度適用してください。",
+        );
+        return;
+      }
+      if (
+        !window.confirm(
+          "現在のProjectの警報監視を停止し、このProjectへ切り替えますか？",
+        )
+      ) {
+        host.report("info", "警報の監視先は切り替えていません。");
+        return;
+      }
+      try {
+        await reportAlarmApply(
+          await host.fileService?.apply?.(
+            savedFileId,
+            [],
+            result.monitoredProjectId,
+          ),
+          savedFileId,
+          result.monitoredProjectId,
+        );
+      } catch (error) {
+        host.report(
+          "error",
+          `警報定義を適用できませんでした（${String(error)}）。`,
+        );
+      }
+      return;
+    }
+    if (!host.fileService?.apply) return;
+    const yes = window.confirm(
+      `未確認 ${result.occurrences.length} 件が終了します。警報定義を適用しますか？`,
+    );
+    if (!yes) {
+      host.report(
+        "info",
+        "Projectは保存しました。警報定義は適用していません。",
+      );
+      return;
+    }
+    try {
+      const retried = await host.fileService.apply(
+        savedFileId,
+        result.occurrences,
+        confirmedSwitchFrom,
+      );
+      if (retried.status === "confirmationRequired") {
+        host.report(
+          "error",
+          "警報の状態が変わりました。最新の未確認件数を確かめて再度適用してください。",
+        );
+      } else {
+        await reportAlarmApply(retried, savedFileId, confirmedSwitchFrom);
+      }
+    } catch (error) {
+      host.report(
+        "error",
+        `Projectは保存しましたが、警報定義を適用できませんでした（${String(error)}）。`,
+      );
+    }
+  }
+  async function applyAlarm() {
+    if (!host.fileService?.apply) return;
+    const requestedFileId = fileId;
+    if (requestedFileId === null) {
+      host.report(
+        "info",
+        "警報定義を適用するProjectファイルを先に開くか保存してください。",
+      );
+      return;
+    }
+    try {
+      await reportAlarmApply(
+        await host.fileService.apply(requestedFileId, []),
+        requestedFileId,
+      );
+    } catch (error) {
+      host.report(
+        "error",
+        `警報定義を適用できませんでした（${String(error)}）。`,
+      );
+    }
+  }
   async function writeProject(asNew = false) {
     if (exporting) {
       host.report(
@@ -248,6 +442,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
           `${snapshot.manifest.name}を${saved.fileName}へ保存しました。`,
           { toast: true },
         );
+        await reportAlarmApply(saved.apply, saved.fileId);
         return;
       }
       downloadBlob(blob, packaged ? "project.bantoscada" : "project.json");
@@ -297,6 +492,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       baselineSource = source;
       lastExport = null;
       fileId = adoptingFileId;
+      host.alarmRefresh?.();
     },
     requestReplacement,
     replaceNow,
@@ -306,6 +502,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     load,
     save,
     saveAs,
+    applyAlarm,
     write: () => writeProject(),
   };
 }

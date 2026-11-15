@@ -29,6 +29,7 @@ pub enum AlarmDbError {
     UnsupportedFormat,
     InvalidRow,
     Terminal(TerminalError),
+    ConfirmationRequired(Vec<UnackedOccurrence>),
 }
 
 impl From<TerminalError> for AlarmDbError {
@@ -100,7 +101,8 @@ pub struct SessionRecord {
     pub engine_unavailable: Option<EngineUnavailable>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EventWrite {
     pub at_ms: i64,
     pub condition_id: Option<String>,
@@ -108,12 +110,69 @@ pub struct EventWrite {
     pub detail: Value,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct EventRead {
     pub seq: i64,
     pub session_id: String,
     pub event: EventWrite,
     pub display: Option<ConditionDisplay>,
+}
+
+/// The exact unacknowledged rounds that a definition apply would end.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnackedOccurrence {
+    pub condition_id: String,
+    pub occurrence: String,
+    pub recurrence: u32,
+}
+
+pub struct ApplyPlan {
+    pub ended: Vec<EventWrite>,
+    pub survivors: Vec<LastRow>,
+    pub unacked: Vec<UnackedOccurrence>,
+}
+
+/// Classify durable rows against a validated candidate. The DB transaction
+/// repeats the comparison before commit, including the confirmation set.
+pub fn plan_apply(
+    current: &[LastRow],
+    applied: &AppliedDefinitions,
+    at_ms: i64,
+) -> Result<ApplyPlan, AlarmDbError> {
+    let mut ended = Vec::new();
+    let mut survivors = Vec::new();
+    let mut unacked = Vec::new();
+    for row in current {
+        if let Some(reason) = end_reason(row, applied) {
+            if !row.state.acked {
+                unacked.push(UnackedOccurrence {
+                    condition_id: row.condition_id.clone(),
+                    occurrence: row
+                        .state
+                        .occurrence
+                        .clone()
+                        .ok_or(AlarmDbError::InvalidRow)?,
+                    recurrence: row.state.recurrence,
+                });
+            }
+            ended.push(EventWrite {
+                at_ms,
+                condition_id: Some(row.condition_id.clone()),
+                kind: reason.into(),
+                detail: json!({"unacked": !row.state.acked, "previous": row.state}),
+            });
+        } else {
+            survivors.push(row.clone());
+        }
+    }
+    unacked.sort();
+    Ok(ApplyPlan {
+        ended,
+        survivors,
+        unacked,
+    })
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -404,6 +463,32 @@ impl AlarmDb {
         ended: &[EventWrite],
         survivors: &[LastRow],
     ) -> Result<(), AlarmDbError> {
+        self.apply_inner(applied, session, ended, survivors, None)
+            .await
+    }
+
+    /// Apply with an exact confirmation set, checked under the same write
+    /// transaction as the durable definition change.
+    pub async fn apply_confirmed(
+        &self,
+        applied: &AppliedDefinitions,
+        session: Option<&Session>,
+        ended: &[EventWrite],
+        survivors: &[LastRow],
+        confirmed: &[UnackedOccurrence],
+    ) -> Result<(), AlarmDbError> {
+        self.apply_inner(applied, session, ended, survivors, Some(confirmed))
+            .await
+    }
+
+    async fn apply_inner(
+        &self,
+        applied: &AppliedDefinitions,
+        session: Option<&Session>,
+        ended: &[EventWrite],
+        survivors: &[LastRow],
+        confirmed: Option<&[UnackedOccurrence]>,
+    ) -> Result<(), AlarmDbError> {
         if applied.project_id != self.project_id {
             return Err(AlarmDbError::InvalidProjectId);
         }
@@ -420,6 +505,14 @@ impl AlarmDb {
         let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
         let existing = load_existing(&mut tx).await?;
         let displays = load_displays(&mut tx).await?;
+        if let Some(confirmed) = confirmed {
+            let fresh = plan_apply(&existing.values().cloned().collect::<Vec<_>>(), applied, 0)?;
+            let mut claimed = confirmed.to_vec();
+            claimed.sort();
+            if claimed != fresh.unacked {
+                return Err(AlarmDbError::ConfirmationRequired(fresh.unacked));
+            }
+        }
         verify_accounting(&existing, survivors, ended)?;
         verify_end_reasons(&existing, ended, applied)?;
         for row in survivors {
@@ -638,6 +731,67 @@ impl AlarmDb {
         Ok(())
     }
 
+    /// End all remaining rounds after a different Project's apply committed.
+    /// This is idempotent for startup recovery of a partially finished switch.
+    pub async fn end_monitoring(
+        &self,
+        at_ms: i64,
+        confirmed: &[UnackedOccurrence],
+    ) -> Result<(), AlarmDbError> {
+        let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
+        let row = sqlx::query("SELECT session_id, stopped FROM session WHERE id = 1")
+            .fetch_optional(&mut *tx)
+            .await?;
+        let existing = load_existing(&mut tx).await?;
+        let mut fresh = Vec::new();
+        for state in existing.values() {
+            if !state.state.acked {
+                fresh.push(UnackedOccurrence {
+                    condition_id: state.condition_id.clone(),
+                    occurrence: state
+                        .state
+                        .occurrence
+                        .clone()
+                        .ok_or(AlarmDbError::InvalidRow)?,
+                    recurrence: state.state.recurrence,
+                });
+            }
+        }
+        fresh.sort();
+        let mut claimed = confirmed.to_vec();
+        claimed.sort();
+        if claimed != fresh {
+            return Err(AlarmDbError::ConfirmationRequired(fresh));
+        }
+        if !existing.is_empty() {
+            let row = row.ok_or(AlarmDbError::InvalidRow)?;
+            if row.try_get::<i64, _>("stopped")? != 1 {
+                return Err(AlarmDbError::InvalidRow);
+            }
+            let session_id: String = row.try_get("session_id")?;
+            let displays = load_displays(&mut tx).await?;
+            for state in existing.values() {
+                insert_event(
+                    &mut tx,
+                    &session_id,
+                    &EventWrite {
+                        at_ms,
+                        condition_id: Some(state.condition_id.clone()),
+                        kind: "projectSwitched".into(),
+                        detail: json!({"unacked": !state.state.acked, "previous": state.state}),
+                    },
+                    &displays,
+                )
+                .await?;
+            }
+            sqlx::query("DELETE FROM last_state")
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// Commits state and events together; an ACK is acknowledged only after
     /// this succeeds. The caller then commits the pure Engine transition.
     /// `unavailable_change` is `None` for no Engine-level change, or
@@ -803,6 +957,42 @@ impl AlarmDb {
                     },
                     display: display
                         .map(|display| serde_json::from_str(&display))
+                        .transpose()?,
+                })
+            })
+            .collect()
+    }
+
+    pub async fn history(
+        &self,
+        before_seq: Option<i64>,
+        from_ms: Option<i64>,
+        to_ms: Option<i64>,
+        kind: Option<&str>,
+        limit: usize,
+    ) -> Result<Vec<EventRead>, AlarmDbError> {
+        let rows = sqlx::query("SELECT seq, session_id, at_ms, condition_id, kind, detail, display FROM event WHERE (? IS NULL OR seq < ?) AND (? IS NULL OR at_ms >= ?) AND (? IS NULL OR at_ms <= ?) AND (? IS NULL OR kind = ?) ORDER BY seq DESC LIMIT ?")
+            .bind(before_seq).bind(before_seq)
+            .bind(from_ms).bind(from_ms)
+            .bind(to_ms).bind(to_ms)
+            .bind(kind).bind(kind)
+            .bind(i64::try_from(limit.min(500)).map_err(|_| AlarmDbError::InvalidRow)?)
+            .fetch_all(&self.pool).await?;
+        rows.into_iter()
+            .map(|row| {
+                let detail: String = row.try_get("detail")?;
+                let display: Option<String> = row.try_get("display")?;
+                Ok(EventRead {
+                    seq: row.try_get("seq")?,
+                    session_id: row.try_get("session_id")?,
+                    event: EventWrite {
+                        at_ms: row.try_get("at_ms")?,
+                        condition_id: row.try_get("condition_id")?,
+                        kind: row.try_get("kind")?,
+                        detail: serde_json::from_str(&detail)?,
+                    },
+                    display: display
+                        .map(|body| serde_json::from_str(&body))
                         .transpose()?,
                 })
             })
@@ -1003,6 +1193,7 @@ fn allows_historical_display(kind: &str) -> bool {
         "definitionChanged"
             | "definitionDeleted"
             | "connectionChanged"
+            | "projectSwitched"
             | "previousSessionState"
             | "stoppedState"
     )

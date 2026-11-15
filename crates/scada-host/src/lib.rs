@@ -1,7 +1,9 @@
 //! Native settings and protected read credential for the embedded SCADA host.
 //! Neither the Project nor the UI receives an API key.
 pub mod alarm_db;
+pub mod alarm_project;
 pub mod alarm_runtime;
+pub mod alarm_service;
 pub mod alarm_terminal;
 pub mod auth;
 pub mod auth_phase;
@@ -24,7 +26,7 @@ use std::sync::Arc;
 pub use banto_admin_services::settings::AuthSettings;
 pub use banto_admin_services::users::UserSummary;
 use banto_hub_bootstrap::{BootstrapState, Error, ErrorKind, HubRecord, KeyStore};
-pub use banto_hub_bootstrap::{Bootstrapper, HubStatus};
+pub use banto_hub_bootstrap::{Bootstrapper, CredentialIdentity, HubStatus};
 
 pub const DEFAULT_HUB_ENDPOINT: &str = "http://127.0.0.1:8722";
 
