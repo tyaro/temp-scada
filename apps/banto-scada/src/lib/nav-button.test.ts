@@ -106,6 +106,18 @@ describe("nav button display", () => {
     expect(navButtonAction(back, false, history)).toBeUndefined();
     expect(navButtonDisabled(shape(), true, history)).toBe(false);
   });
+  it("opens the alarm list in the preview and the operator view", () => {
+    const alarms = shape({ target: { kind: "alarmList" } });
+    expect(navButtonAction(alarms, true)).toEqual({ kind: "alarmList" });
+    expect(
+      navButtonAction(alarms, true, { canBack: false, canForward: false }),
+    ).toEqual({ kind: "alarmList" });
+    expect(navButtonAction(alarms, false)).toBeUndefined();
+    expect(navButtonDisabled(alarms, true)).toBe(false);
+    expect(navButtonIsCurrent(alarms, "a")).toBe(false);
+    expect(navTargetLabel({ kind: "alarmList" }, [])).toBe("アラーム一覧");
+    expect(() => validateNavButtonShape(alarms)).not.toThrow();
+  });
   it("names the target", () => {
     const screens = [{ id: "a", name: "概要" }];
     expect(navTargetLabel(shape().target, screens)).toBe("概要");

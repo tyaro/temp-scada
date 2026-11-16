@@ -25,6 +25,52 @@ describe("nativeProjectFiles", () => {
     ]);
   });
 
+  it("names alarm_ack and alarm_history's arguments as the host reads them", async () => {
+    const calls: { command: string; args: unknown }[] = [];
+    const invoke: RawInvoke = async (command, args) => {
+      calls.push({ command, args });
+      return [];
+    };
+    const feed = nativeProjectFiles(invoke).alarmFeed!;
+    await feed.ack!([
+      { conditionId: "a:hh", occurrence: "o-1", recurrence: 2 },
+    ]);
+    await feed.history!({
+      beforeSeq: 10,
+      fromMs: 1,
+      toMs: null,
+      kind: "occurred",
+      limit: 100,
+    });
+    expect(calls).toEqual([
+      {
+        command: "alarm_ack",
+        args: {
+          items: [{ conditionId: "a:hh", occurrence: "o-1", recurrence: 2 }],
+        },
+      },
+      {
+        command: "alarm_history",
+        args: {
+          beforeSeq: 10,
+          fromMs: 1,
+          toMs: null,
+          kind: "occurred",
+          limit: 100,
+        },
+      },
+    ]);
+  });
+
+  it("turns an ACK refusal into the host's reason", async () => {
+    const invoke: RawInvoke = async () => {
+      throw "forbidden";
+    };
+    await expect(
+      nativeProjectFiles(invoke).alarmFeed!.ack!([]),
+    ).rejects.toMatchObject({ reason: "forbidden" });
+  });
+
   it("frames the save request as the host reads it", async () => {
     const calls: { command: string; args: unknown }[] = [];
     const invoke: RawInvoke = async (command, args) => {

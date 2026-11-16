@@ -202,6 +202,7 @@
     count: number;
   } | null>(null);
   let historyOpen = $state(false);
+  let alarmListOpen = $state(false);
   let recordingOperationsOpen = $state.raw<object | null>(null);
   function openRecordingOperations() {
     if (!menuBlocked) recordingOperationsOpen = Object.freeze({});
@@ -428,6 +429,7 @@
   import PreviewFullscreen from "./lib/designer/PreviewFullscreen.svelte";
   import PreviewPopups from "./lib/designer/PreviewPopups.svelte";
   import OperatorView from "./lib/operator/OperatorView.svelte";
+  import AlarmListWindow from "./lib/alarm-list/AlarmListWindow.svelte";
   import { operatorStartScreen } from "./lib/operator/operator-layout";
   import ArrayCopyDialog from "./lib/designer/ArrayCopyDialog.svelte";
   import { createArrayCopyController } from "./lib/designer/controllers/array-copy.svelte";
@@ -949,6 +951,7 @@
     if (
       operatorStart !== null ||
       historyOpen ||
+      alarmListOpen ||
       recordingManagementOpen ||
       recordingOperationsOpen ||
       trendRequest ||
@@ -1480,6 +1483,16 @@
     operatorGeneration = workspaceGeneration;
     operatorStart = start;
   }
+  // Alarm list (alarm design §7): opened from the preview and the operator view.
+  let alarmListOpener: Element | null = null;
+  function openAlarmList() {
+    if (mode !== "preview" || alarmListOpen) return;
+    alarmListOpener = document.activeElement;
+    alarmListOpen = true;
+  }
+  $effect(() => {
+    if (alarmListOpen && mode !== "preview") alarmListOpen = false;
+  });
   function closeOperatorView() {
     if (operatorStart === null) return;
     operatorStart = null;
@@ -1896,6 +1909,7 @@
     previousStore.dispose();
     project = next;
     historyOpen = false;
+    alarmListOpen = false;
     recordingManagementOpen = null;
     recordingOperationsOpen = null;
     recordingRequest = null;
@@ -3446,6 +3460,7 @@
       !!replacement ||
       floatingPanels.gesturing ||
       historyOpen ||
+      alarmListOpen ||
       !!recordingManagementOpen ||
       !!recordingOperationsOpen ||
       !!trendRequest ||
@@ -4048,6 +4063,9 @@
           title="ヘッダー・フッターの枠と主画面だけを出し、画面切替ボタンで画面を移ります。Escで戻ります。"
           onclick={openOperatorView}>運転表示</button
         >
+        <button disabled={menuBlocked} onclick={openAlarmList}
+          >アラーム一覧</button
+        >
       {/if}
       {#if mode === "edit"}<button
           aria-label="キャンバスの操作"
@@ -4458,6 +4476,7 @@
             onnavigate={mode === "preview" && !menuBlocked
               ? (target) => {
                   if (target.kind === "screen") openScreen(target.screenId);
+                  else if (target.kind === "alarmList") openAlarmList();
                 }
               : undefined}
             equipmentContext={readContext.equipmentContext}
@@ -4871,7 +4890,35 @@
     }}
   />
 {/snippet}
-{#if operatorStart === null}{@render historyWorkspace()}{/if}
+<!-- アラーム一覧の窓。履歴トレンドと同じく運転表示の間はその中に描く。 -->
+{#snippet overlays()}
+  {@render historyWorkspace()}
+  <AlarmListWindow
+    open={alarmListOpen}
+    snapshot={alarmSnapshot}
+    feed={alarmFeed}
+    readError={alarmReadError}
+    projectId={project.manifest.projectId}
+    projectRevision={project.manifest.projectRevision}
+    onclose={() => (alarmListOpen = false)}
+    onrefresh={refreshAlarm}
+    focusFallback={() => {
+      const opener = alarmListOpener;
+      alarmListOpener = null;
+      if (
+        opener instanceof SVGElement &&
+        opener.isConnected &&
+        !opener.closest("[inert]") &&
+        opener.getClientRects().length
+      ) {
+        opener.focus();
+        return;
+      }
+      return document.querySelector<HTMLButtonElement>("[data-permanent-menu]");
+    }}
+  />
+{/snippet}
+{#if operatorStart === null}{@render overlays()}{/if}
 <Modal
   open={helpOpen}
   title="操作ガイド・アプリ情報"
@@ -5013,7 +5060,8 @@
     onmessage={(message) => report("error", message)}
     onopentrend={openTrendHistory}
     onretiretrend={retirePopupTrend}
-    overlay={historyWorkspace}
+    onopenalarms={openAlarmList}
+    overlay={overlays}
   />
 {/if}
 <div

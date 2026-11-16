@@ -343,6 +343,7 @@ browser 版（モックの読取）は Engine を持たない。e2e 用に、IPC
 - 「現在」タブ: Normal でない condition（ActiveUnacked・ActiveAcked・ReturnedUnacked）と、評価不能の condition（状態が Normal でも）を出す。Engine 単位の評価不能（未接続・受信の途絶）のときは、先頭に Engine の理由の行を 1 行出し、Normal でない condition の行と ACK の操作はそのまま残す（Normal で評価不能なだけの condition は、Engine の行にまとめて並べない）。condition 単位の評価不能は状態とは別の列に §4.5 の理由を文字で出し、絞り込みで評価不能だけも見られる。復帰済みでも ACK するまでは残し、状態の列で「発生中」「復帰・未確認」を文字で分ける。未確認を上に、severity と新しい順（§4.4）。選んで ACK、すべて ACK（ReturnedUnacked も対象。§6）。ACK の結果が「別の回」なら、その行を最新に取り直して示す。
 - 「履歴」タブ: 警報イベントの照会（期間・種類）。判定の限界と値、source timestamp を列に出す。
 - Engine が動いていない（browser 版・Hub 未接続・未適用・認証の失効・DB を開けない・別のプロセスが使用中）ときと、「履歴に書けない」ときは、その理由を出す。編集中の Project と適用中の定義の revision が違うときも示す。
+- 3-E1 で決めた細部: 一覧の並びは未確認 → severity → 新しい順で、帯の「同じ定義の上位の限界を先に」は使わない（全件を出す）。「履歴に書けない」のあいだは ACK のボタンを無効にする。ACK の後は結果によらず snapshot を取り直し、受理で行が消えた condition の結果も一覧の上に残す。履歴は 100 件ずつ。詳細は [アラーム一覧の窓](../graphics/alarm-list.md)。
 
 Designer の編集モードとプレビューは、Engine の状態を読むだけで、小札と帯にも同じ状態を出す。
 

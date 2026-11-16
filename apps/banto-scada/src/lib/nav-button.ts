@@ -24,7 +24,11 @@ export function validateNavButtonShape(
         throw new Error(
           "ヘッダー・フッターの画面は画面切替ボタンの行き先にできません",
         );
-    } else if (target.kind !== "back" && target.kind !== "forward")
+    } else if (
+      target.kind !== "back" &&
+      target.kind !== "forward" &&
+      target.kind !== "alarmList"
+    )
       throw new Error("画面切替ボタンの行き先を選択してください");
   }
   if (typeof shape.label !== "string" || shape.label.length > 200)
@@ -89,7 +93,7 @@ export function navButtonAction(
 ): NavTarget | undefined {
   const target = shape.target;
   if (!preview || !target) return undefined;
-  if (target.kind === "screen") return target;
+  if (target.kind === "screen" || target.kind === "alarmList") return target;
   if (target.kind === "back") return history?.canBack ? target : undefined;
   return history?.canForward ? target : undefined;
 }
@@ -110,6 +114,7 @@ export function navTargetLabel(
 ): string {
   if (!target) return "行き先未設定";
   if (target.kind === "back") return "戻る";
+  if (target.kind === "alarmList") return "アラーム一覧";
   if (target.kind === "forward") return "進む";
   return (
     screens.find((s) => s.id === target.screenId)?.name ?? "見つからない画面"

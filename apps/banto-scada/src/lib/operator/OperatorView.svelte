@@ -33,6 +33,7 @@
     onmessage,
     onopentrend,
     onretiretrend,
+    onopenalarms,
     overlay,
   }: {
     project: Project;
@@ -48,7 +49,9 @@
     /** トレンドの配置から履歴の窓を開く（主画面・枠・画面の小窓のどれからでも）。 */
     onopentrend?: (screenId: string, objectId: string, token?: object) => void;
     onretiretrend?: (token: object) => void;
-    /** 運転表示の上に重ねる窓（履歴トレンド）。運転表示の中に描くので裏の inert を受けない。 */
+    /** アラーム一覧の窓を開く（バーのボタンと、行き先が「アラーム一覧」の画面切替ボタン）。 */
+    onopenalarms?: () => void;
+    /** 運転表示の上に重ねる窓（履歴トレンド・アラーム一覧）。運転表示の中に描くので裏の inert を受けない。 */
     overlay?: Snippet;
   } = $props();
 
@@ -83,7 +86,8 @@
   );
 
   function navigate(target: NavTarget) {
-    if (target.kind === "back") history = goBack(history);
+    if (target.kind === "alarmList") onopenalarms?.();
+    else if (target.kind === "back") history = goBack(history);
     else if (target.kind === "forward") history = goForward(history);
     else if (find(target.screenId))
       history = pushScreen(history, target.screenId);
@@ -164,6 +168,9 @@
     >
     <span class="note">表示確認（書込みなし）</span>
     <div class="actions">
+      {#if onopenalarms}<button type="button" onclick={onopenalarms}
+          >アラーム一覧</button
+        >{/if}
       <PreviewFullscreen scope="operator" onactive={() => {}} {onmessage} />
       <button type="button" onclick={onclose}>運転表示を終了（Esc）</button>
     </div>

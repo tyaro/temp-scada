@@ -88,15 +88,17 @@ export const ALARM_UNAVAILABLE_LABELS: Readonly<Record<string, string>> = {
   nonFinite: "非有限",
 };
 
-const label = (labels: Readonly<Record<string, string>>, key: string) =>
-  Object.hasOwn(labels, key) ? labels[key] : key;
+export const labelOf = (
+  labels: Readonly<Record<string, string>>,
+  key: string,
+) => (Object.hasOwn(labels, key) ? labels[key] : key);
 
-const SEVERITY_RANK: Readonly<Record<AlarmSeverity, number>> = {
+export const SEVERITY_RANK: Readonly<Record<AlarmSeverity, number>> = {
   high: 2,
   medium: 1,
   low: 0,
 };
-const severityOf = (raw: string | undefined): AlarmSeverity =>
+export const severityOf = (raw: string | undefined): AlarmSeverity =>
   raw === "high" || raw === "medium" || raw === "low" ? raw : "low";
 
 /** 同じ定義で上位にある限界（h には hh、l には ll）。 */
@@ -111,17 +113,37 @@ export function formatAlarmBannerTime(ms: number | null): string {
   return `${date.getMonth() + 1}/${date.getDate()} ${two(date.getHours())}:${two(date.getMinutes())}:${two(date.getSeconds())}`;
 }
 
-interface Candidate {
+/** 新しい順（§4.4）の比較に使う値。無い orderKey・時刻は -Infinity。 */
+export interface AlarmOrder {
   id: string;
-  state: AlarmBannerState;
-  severity: AlarmSeverity;
   generation: number;
   seq: number;
   occurredAtMs: number;
 }
 
+interface Candidate extends AlarmOrder {
+  state: AlarmBannerState;
+  severity: AlarmSeverity;
+}
+
+/** condition の orderKey と発生時刻から比較の値を作る。 */
+export function alarmOrderOf(
+  id: string,
+  condition: {
+    orderKey: { generation: number; seq: number } | null;
+    occurredAtMs: number | null;
+  },
+): AlarmOrder {
+  return {
+    id,
+    generation: condition.orderKey?.generation ?? -Infinity,
+    seq: condition.orderKey?.seq ?? -Infinity,
+    occurredAtMs: condition.occurredAtMs ?? -Infinity,
+  };
+}
+
 /** 新しい順（orderKey の降順、同じなら occurredAtMs の降順、最後は condition id）。 */
-function newerFirst(a: Candidate, b: Candidate): number {
+export function newerFirst(a: AlarmOrder, b: AlarmOrder): number {
   // 無い orderKey・時刻は -Infinity（最も古い）。差を取ると NaN になるので比べる。
   const descending = (x: number, y: number) => (x < y ? 1 : x > y ? -1 : 0);
   return (
@@ -154,13 +176,13 @@ export function alarmBannerView(
   if (snapshot.status !== "running" || !snapshot.engine)
     return fixed(
       "stopped",
-      `警報 停止中（${label(ALARM_STATUS_LABELS, snapshot.status)}）`,
+      `警報 停止中（${labelOf(ALARM_STATUS_LABELS, snapshot.status)}）`,
     );
   const engine = snapshot.engine;
   if (engine.unavailable)
     return fixed(
       "unmonitored",
-      `警報 監視できていません（${label(ALARM_ENGINE_UNAVAILABLE_LABELS, engine.unavailable)}）`,
+      `警報 監視できていません（${labelOf(ALARM_ENGINE_UNAVAILABLE_LABELS, engine.unavailable)}）`,
     );
   if (
     snapshot.monitored?.projectId !== projectId ||
@@ -182,12 +204,9 @@ export function alarmBannerView(
     const state = conditionDisplay(condition);
     if (state === "normal" || state === "pending") continue;
     candidates.push({
-      id,
+      ...alarmOrderOf(id, condition),
       state,
       severity: severityOf(displayOf(id)?.severity),
-      generation: condition.orderKey?.generation ?? -Infinity,
-      seq: condition.orderKey?.seq ?? -Infinity,
-      occurredAtMs: condition.occurredAtMs ?? -Infinity,
     });
   }
 
@@ -204,7 +223,7 @@ export function alarmBannerView(
       ([a, n], [b, m]) =>
         m - n || order(a) - order(b) || (a < b ? -1 : a > b ? 1 : 0),
     )[0];
-    unavailable = `評価不能 ${total} 件（${label(ALARM_UNAVAILABLE_LABELS, main)}）`;
+    unavailable = `評価不能 ${total} 件（${labelOf(ALARM_UNAVAILABLE_LABELS, main)}）`;
   }
 
   const unacked = (c: Candidate) => c.state !== "activeAcked";

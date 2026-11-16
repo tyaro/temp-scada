@@ -187,7 +187,10 @@ export interface TableShape {
 }
 /** 画面切替ボタンの行き先。仕様: docs/design/graphics/nav-button.md */
 export type NavTarget =
-  { kind: "screen"; screenId: string } | { kind: "back" } | { kind: "forward" };
+  | { kind: "screen"; screenId: string }
+  | { kind: "back" }
+  | { kind: "forward" }
+  | { kind: "alarmList" };
 /**
  * 画面切替ボタン。画面の直下にだけ置ける（Symbol 定義には置かない）。
  * `target` が無いボタンは「行き先未設定」で、押しても何もしない。
