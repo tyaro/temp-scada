@@ -152,9 +152,11 @@
           label: `${object.shape.label || "画面切替"}：${
             target.kind === "back"
               ? "前の画面へ戻る"
-              : target.kind === "forward"
-                ? "次の画面へ進む"
-                : `${navTargetLabel(target, screens)}へ移る`
+              : target.kind === "alarmList"
+                ? "アラーム一覧を開く"
+                : target.kind === "forward"
+                  ? "次の画面へ進む"
+                  : `${navTargetLabel(target, screens)}へ移る`
           }`,
         }
       : undefined;

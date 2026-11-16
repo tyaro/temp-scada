@@ -98,6 +98,30 @@
     }
   },
   {
+    "name": "alarm list button",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000820",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "alarmList"
+        },
+        "label": "アラーム一覧",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
     "name": "button without a target",
     "target": "/screens/0/objects",
     "valid": true,
@@ -295,6 +319,32 @@
           "screenId": "0199f600-0000-7000-8000-000000000500"
         },
         "label": "共通画面",
+        "fontSize": 16,
+        "fill": "#1e293b",
+        "textColor": "#e2e8f0"
+      }
+    }
+  },
+  {
+    "name": "alarm list with a screen id",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6ab-0000-7000-8000-000000000821",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 36,
+      "rotation": 0,
+      "shape": {
+        "type": "navButton",
+        "target": {
+          "kind": "alarmList",
+
+          "screenId": "0199f600-0000-7000-8000-000000000500"
+        },
+        "label": "アラーム一覧",
         "fontSize": 16,
         "fill": "#1e293b",
         "textColor": "#e2e8f0"

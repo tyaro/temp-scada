@@ -1515,7 +1515,7 @@
         {
           "type": "object",
           "properties": {
-            "kind": { "enum": ["back", "forward"] }
+            "kind": { "enum": ["back", "forward", "alarmList"] }
           },
           "required": ["kind"],
           "additionalProperties": false

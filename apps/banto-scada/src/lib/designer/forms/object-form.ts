@@ -293,7 +293,9 @@ export function objectFormCommand(
   if (selected.shape.type === "navButton") {
     const targetValue = String(data.get("navTarget") ?? "");
     const target: NavTarget | undefined =
-      targetValue === "back" || targetValue === "forward"
+      targetValue === "back" ||
+      targetValue === "forward" ||
+      targetValue === "alarmList"
         ? { kind: targetValue }
         : targetValue.startsWith("screen:")
           ? { kind: "screen", screenId: targetValue.slice("screen:".length) }

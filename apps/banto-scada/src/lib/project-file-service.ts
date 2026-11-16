@@ -82,6 +82,50 @@ export interface AlarmFeed {
     change: (event: import("./alarm-mirror").AlarmChange) => void,
     lagged: () => void,
   ): Promise<() => void>;
+  /** `alarm_ack`: one result per item, in order. Rejects with the refusal
+   * reason (unauthorized, forbidden, ...) when the whole request is refused. */
+  ack?(items: readonly UnackedOccurrence[]): Promise<AlarmAckResult[]>;
+  /** `alarm_history`: newest first; pass the last `seq` as `beforeSeq` for more. */
+  history?(query: AlarmHistoryQuery): Promise<AlarmEventRead[]>;
+}
+
+/** `alarm_ack`'s result of one item (`src-tauri/src/alarm.rs` `AckResult`). */
+export interface AlarmAckResult {
+  readonly conditionId: string;
+  readonly result: {
+    readonly kind:
+      | "accepted"
+      | "otherOccurrence"
+      | "alreadyAcked"
+      | "notFound"
+      | "historyUnavailable"
+      | "engineStopped"
+      | "failed";
+    readonly reason?: string;
+  };
+}
+
+export interface AlarmHistoryQuery {
+  readonly beforeSeq: number | null;
+  readonly fromMs: number | null;
+  readonly toMs: number | null;
+  readonly kind: string | null;
+  readonly limit: number;
+}
+
+/** One alarm event (`scada_host::alarm_db::EventRead`). */
+export interface AlarmEventRead {
+  readonly seq: number;
+  readonly sessionId: string;
+  readonly event: {
+    readonly atMs: number;
+    readonly conditionId: string | null;
+    readonly kind: string;
+    /** The engine event without kind / time / condition (occurrence,
+     * recurrence, judgement, user, reason, ...), or the host's own detail. */
+    readonly detail: Record<string, unknown>;
+  };
+  readonly display: import("./alarm-mirror").AlarmConditionDisplay | null;
 }
 
 /** A refusal of the host, with its reason code. */

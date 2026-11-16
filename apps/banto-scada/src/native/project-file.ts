@@ -1,6 +1,8 @@
 import {
   ProjectFileError,
+  type AlarmAckResult,
   type AlarmApplyResult,
+  type AlarmEventRead,
   type ProjectFileService,
 } from "../lib/project-file-service";
 import type { AlarmChange, AlarmSnapshot } from "../lib/alarm-mirror";
@@ -87,6 +89,22 @@ export function nativeProjectFiles(invoke: RawInvoke): ProjectFileService {
     },
     alarmFeed: {
       snapshot: () => invoke("alarm_snapshot") as Promise<AlarmSnapshot>,
+      ack: async (items) =>
+        (await invoke("alarm_ack", {
+          items: items.map(({ conditionId, occurrence, recurrence }) => ({
+            conditionId,
+            occurrence,
+            recurrence,
+          })),
+        }).catch(refusal)) as AlarmAckResult[],
+      history: async ({ beforeSeq, fromMs, toMs, kind, limit }) =>
+        (await invoke("alarm_history", {
+          beforeSeq,
+          fromMs,
+          toMs,
+          kind,
+          limit,
+        }).catch(refusal)) as AlarmEventRead[],
       async subscribe(change, lagged) {
         const offChange = await listen<AlarmChange>("alarm_changed", (event) =>
           change(event.payload),
