@@ -75,7 +75,6 @@ pub(super) struct Ticket {
 pub(super) struct Freshness {
     pub(super) config: FreshnessConfig,
     pub(super) clients: HubClients,
-    reader: Option<Arc<RestClient>>,
     /// The subscription is Live or Unbound (not the Engine's Disconnected).
     connected: bool,
     /// The subscription is Live, so it carries values worth comparing.
@@ -106,7 +105,6 @@ impl Freshness {
         Self {
             config,
             clients,
-            reader: None,
             connected: false,
             live: false,
             epoch: 0,
@@ -187,14 +185,12 @@ impl Freshness {
         self.late = false;
         self.epoch += 1;
         self.ticket = None;
-        self.reader = None;
     }
 
-    /// An apply refreshed the Hub record or credential: the next reread
-    /// makes its reader from it instead of reusing the cached one.
+    /// An apply refreshed the Hub record or credential; the next reread
+    /// uses it.
     pub(super) fn set_clients(&mut self, clients: HubClients) {
         self.clients = clients;
-        self.reader = None;
     }
 
     /// A subscription value was accepted for `tag`.
@@ -218,16 +214,11 @@ impl Freshness {
         if !self.live || self.ticket.is_some() || tags.is_empty() {
             return false;
         }
-        let reader = match &self.reader {
-            Some(reader) => reader.clone(),
-            None => match self.clients.make() {
-                Some(client) => {
-                    let reader = Arc::new(client);
-                    self.reader = Some(reader.clone());
-                    reader
-                }
-                None => return self.failure(now, wall),
-            },
+        // Made for each reread, so a changed saved Hub record or credential
+        // is checked every time instead of a cached client reading the old
+        // Hub.
+        let Some(reader) = self.clients.make() else {
+            return self.failure(now, wall);
         };
         let (tx, rx) = oneshot::channel();
         let names: Vec<String> = tags.iter().cloned().collect();
@@ -250,7 +241,6 @@ impl Freshness {
 
     /// A reread failed or timed out. Returns `true` when ReceiveLost begins.
     pub(super) fn failure(&mut self, now: Instant, wall: i64) -> bool {
-        self.reader = None;
         self.failures = self.failures.saturating_add(1);
         let (since, since_wall) = *self.streak.get_or_insert((now, wall));
         self.report.send_replace(Some(RereadFailure {
@@ -421,7 +411,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn new_clients_replace_the_cached_reader() {
+    async fn each_reread_makes_its_reader_from_the_current_clients() {
         let (mut f, _) = freshness();
         f.connected(true, false);
         let made = Arc::new(std::sync::atomic::AtomicUsize::new(0));
@@ -441,7 +431,7 @@ mod tests {
         f.start_reread(&tags, Instant::now(), 1);
         f.ticket = None;
         f.start_reread(&tags, Instant::now(), 2);
-        assert_eq!(made.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert_eq!(made.load(std::sync::atomic::Ordering::SeqCst), 2);
         f.ticket = None;
         let again = made.clone();
         f.set_clients(HubClients::new(move || {
@@ -449,7 +439,7 @@ mod tests {
             endpoint()
         }));
         f.start_reread(&tags, Instant::now(), 3);
-        assert_eq!(made.load(std::sync::atomic::Ordering::SeqCst), 11);
+        assert_eq!(made.load(std::sync::atomic::Ordering::SeqCst), 12);
     }
 
     #[tokio::test]

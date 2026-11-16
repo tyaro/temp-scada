@@ -1,6 +1,6 @@
 //! The REST reread and resubscription against a loopback Hub (3-C3b).
 
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::Ordering;
 
 use super::tests::outage_fixture;
 use super::*;
@@ -115,34 +115,12 @@ async fn resubscription_failures_mean_receive_lost_until_one_succeeds() {
     let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
     let (dir, _terminal, _db, _applied, _definitions, _session, evaluator) =
         outage_fixture("alarm-resubscribe-failure").await;
-    let made = Arc::new(AtomicUsize::new(0));
-    let allow = Arc::new(AtomicBool::new(false));
-    let inner = hub.clients();
-    let clients = {
-        let made = made.clone();
-        let allow = allow.clone();
-        // The stream and the first reader are made; then the saved Hub
-        // record no longer matches, until `allow`.
-        HubClients::new(move || {
-            let count = made.fetch_add(1, Ordering::SeqCst);
-            if count < 2 || allow.load(Ordering::SeqCst) {
-                inner.make()
-            } else {
-                None
-            }
-        })
-    };
-    let runtime = AlarmRuntime::start_with_config(evaluator, clients, fast())
+    let runtime = AlarmRuntime::start_with_config(evaluator, hub.clients(), fast())
         .await
         .unwrap();
     wait_engine(&runtime, "the subscribed value", active).await;
-    tokio::time::timeout(Duration::from_secs(10), async {
-        while made.load(Ordering::SeqCst) < 2 {
-            tokio::time::sleep(Duration::from_millis(20)).await;
-        }
-    })
-    .await
-    .expect("the first reread");
+    // Rereads differ, but no new subscription can be opened.
+    hub.stream_fail.store(true, Ordering::SeqCst);
     hub.rest_values
         .lock()
         .unwrap()
@@ -153,7 +131,7 @@ async fn resubscription_failures_mean_receive_lost_until_one_succeeds() {
     .await;
     assert_eq!(hub.subscriptions.load(Ordering::SeqCst), 1);
     hub.rest_values.lock().unwrap().clear();
-    allow.store(true, Ordering::SeqCst);
+    hub.stream_fail.store(false, Ordering::SeqCst);
     wait_engine(&runtime, "recovery", active).await;
     assert!(hub.subscriptions.load(Ordering::SeqCst) >= 2);
     runtime.stop().await.unwrap();

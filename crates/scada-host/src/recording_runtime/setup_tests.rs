@@ -46,6 +46,8 @@ pub(crate) struct Hub {
     pub(crate) rest_fail: Arc<std::sync::atomic::AtomicBool>,
     /// REST rereads report this catalog revision (another generation).
     pub(crate) rest_revision: Arc<std::sync::atomic::AtomicU64>,
+    /// New WebSocket subscriptions are refused with 503 while set.
+    pub(crate) stream_fail: Arc<std::sync::atomic::AtomicBool>,
     task: tokio::task::JoinHandle<()>,
 }
 
@@ -81,6 +83,7 @@ impl Hub {
             rest_values: rest.values,
             rest_fail: rest.fail,
             rest_revision: rest.revision,
+            stream_fail: rest.stream_fail,
             task,
         }
     }
@@ -113,6 +116,7 @@ struct Rest {
     values: Arc<std::sync::Mutex<std::collections::BTreeMap<String, f64>>>,
     fail: Arc<std::sync::atomic::AtomicBool>,
     revision: Arc<std::sync::atomic::AtomicU64>,
+    stream_fail: Arc<std::sync::atomic::AtomicBool>,
 }
 
 fn rows(tags: &[(String, String)]) -> Vec<Value> {
@@ -190,6 +194,18 @@ async fn serve(
         json!({"revision": revision, "run_id": 7, "collection_mode": "configured", "t": 100,
             "values": rows_with(if requested.is_empty() { &tags } else { &requested }, &overrides)})
     } else {
+        if rest.stream_fail.load(Ordering::SeqCst) {
+            let _ = stream
+                .write_all(
+                    b"HTTP/1.1 503 test
+Content-Length: 0
+Connection: close
+
+",
+                )
+                .await;
+            return;
+        }
         let Ok(mut socket) = tokio_tungstenite::accept_async(stream).await else {
             return;
         };
