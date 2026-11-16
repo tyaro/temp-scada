@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { Modal } from "@banto/ui";
   import type { AlarmSnapshot } from "../alarm-mirror";
   import {
@@ -90,6 +91,7 @@
   function sameOwner(a: HistoryOwner | null, b: HistoryOwner): boolean {
     return !!a && a.feed === b.feed && a.projectId === b.projectId;
   }
+  // 照会先が変わったら表示中の行・カーソルを捨てる（取り直しは下の effect）。
   $effect(() => {
     const owner = currentOwner;
     if (!historyLoaded || sameOwner(historyOwner, owner)) return;
@@ -98,7 +100,18 @@
     historyLoaded = false;
     historySubmitted = null;
     historyOwner = null;
-    if (open && tab === "history") void loadHistory(false);
+  });
+  /** 自動で照会した照会先。照会先ごとに 1 回だけ自動で照会する（失敗で繰り返さない）。 */
+  let historyAutoOwner: HistoryOwner | null = null;
+  // 「履歴」タブを開いていて、まだ行の無い照会先なら照会する。前の照会先の照会が
+  // 終わるのを待ってから始める（historyBusy が下りると再評価される）。窓を閉じて
+  // いる間に照会先が変わった場合も、履歴タブのまま開き直したときに照会する。
+  $effect(() => {
+    const owner = currentOwner;
+    if (!open || tab !== "history" || historyLoaded || historyBusy) return;
+    if (sameOwner(historyAutoOwner, owner)) return;
+    historyAutoOwner = owner;
+    untrack(() => void loadHistory(false));
   });
 
   const current = $derived(
@@ -189,6 +202,8 @@
       const answer = await feed.history(built.query);
       // 照会の間に照会先が変わったら、応答は採らない（新しい照会先で取り直す）。
       if (!sameOwner(owner, currentOwner)) return;
+      // 照会先が変わる前に取った行の続きは、捨てた行には足さない。
+      if (more && !sameOwner(historyOwner, owner)) return;
       const rows = answer.map(alarmHistoryRow);
       historyRows = more ? [...historyRows, ...rows] : rows;
       historySubmitted = filters;
@@ -196,7 +211,8 @@
       historyMore = answer.length >= ALARM_HISTORY_PAGE;
       historyLoaded = true;
     } catch (error) {
-      historyIssue = `履歴を取得できません（${reasonOf(error)}）`;
+      if (sameOwner(owner, currentOwner))
+        historyIssue = `履歴を取得できません（${reasonOf(error)}）`;
     } finally {
       historyBusy = false;
     }
@@ -217,7 +233,6 @@
 
   function showTab(next: "current" | "history") {
     tab = next;
-    if (next === "history" && !historyLoaded) void loadHistory(false);
   }
   function tabKey(event: KeyboardEvent) {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;

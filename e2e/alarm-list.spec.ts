@@ -316,6 +316,57 @@ test("the history is dropped when the monitored Project changes", async ({
   expect(queries.map((q: { beforeSeq: number | null }) => q.beforeSeq)).toEqual(
     [null, null],
   );
+
+  // 照会の途中で監視が切り替わった: 古い応答は採らず、終わってから新しい照会先で取る。
+  await page.evaluate(() => (window as any).__bantoAlarmMock.holdHistory());
+  await page.evaluate(
+    (events) => (window as any).__bantoAlarmMock.setHistory(events),
+    [event(1, "Project C の警報")],
+  );
+  await setSnapshot(page, {
+    ...snapshot({}),
+    monitored: { projectId: "third-project" },
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as any).__bantoAlarmMock.historyQueries().length,
+      ),
+    )
+    .toBe(3);
+  await setSnapshot(page, {
+    ...snapshot({}),
+    monitored: { projectId: "fourth-project" },
+  });
+  await page.evaluate(
+    (events) => (window as any).__bantoAlarmMock.setHistory(events),
+    [event(1, "Project D の警報")],
+  );
+  await page.evaluate(() => (window as any).__bantoAlarmMock.releaseHistory());
+  await expect(history).toContainText("Project D の警報");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as any).__bantoAlarmMock.historyQueries().length,
+      ),
+    )
+    .toBe(4);
+
+  // 窓を閉じている間に切り替わった: 履歴タブのまま開き直すと新しい照会先で取る。
+  await dialog(page)
+    .getByRole("button", { name: "閉じる", exact: true })
+    .click();
+  await page.evaluate(
+    (events) => (window as any).__bantoAlarmMock.setHistory(events),
+    [event(1, "Project E の警報")],
+  );
+  await setSnapshot(page, {
+    ...snapshot({}),
+    monitored: { projectId: "fifth-project" },
+  });
+  await page.getByRole("button", { name: "アラーム一覧", exact: true }).click();
+  await expect(history).toContainText("Project E の警報");
+  await expect(history).not.toContainText("Project D の警報");
 });
 
 test("the alarm list explains why it cannot monitor and filters unavailable conditions", async ({
