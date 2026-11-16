@@ -54,6 +54,9 @@ fn reason(error: &AlarmServiceError) -> String {
         AlarmServiceError::Terminal(_) => "terminalUnavailable",
         AlarmServiceError::Db(_) => "alarmDbUnavailable",
         AlarmServiceError::Project(_) => "invalidProject",
+        AlarmServiceError::Runtime(
+            scada_host::alarm_runtime::AlarmRuntimeError::HistoryUnwritable,
+        ) => "historyUnwritable",
         AlarmServiceError::Runtime(_) => "engineUnavailable",
         AlarmServiceError::NoHub => "noHub",
         AlarmServiceError::EndpointChanged => "endpointChanged",
@@ -359,7 +362,8 @@ pub async fn alarm_ack(
                 serde_json::json!({"kind":"engineStopped","reason":reason})
             }
             Err(AlarmServiceError::Runtime(
-                scada_host::alarm_runtime::AlarmRuntimeError::StorageFailure,
+                scada_host::alarm_runtime::AlarmRuntimeError::StorageFailure
+                | scada_host::alarm_runtime::AlarmRuntimeError::HistoryUnwritable,
             )) => {
                 serde_json::json!({"kind":"historyUnavailable"})
             }

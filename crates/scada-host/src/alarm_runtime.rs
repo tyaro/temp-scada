@@ -17,7 +17,7 @@ use tokio::sync::{broadcast, mpsc, oneshot, watch};
 
 use crate::alarm_db::{
     plan_apply, AlarmDb, AlarmDbError, AppliedDefinitions, Definition, EventWrite, LastRow,
-    StartedAlarmSession, UnackedOccurrence,
+    StartedAlarmSession, UnackedOccurrence, UnrecordedPeriod,
 };
 use crate::alarm_terminal::ActiveAlarmSession;
 
@@ -30,7 +30,22 @@ pub enum AlarmRuntimeError {
     Internal,
     StorageFailure,
     ConnectionFailure,
+    /// The alarm DB cannot be written now. ACK and apply are refused until a
+    /// retry records the unrecorded period (design §5.3).
+    HistoryUnwritable,
     Closed,
+}
+
+/// Interval between write retries while the alarm DB cannot be written.
+const HISTORY_RETRY: Duration = Duration::from_secs(5);
+
+/// The current history write outage. Evaluation continues; events that
+/// could not be written are counted, not queued.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryWriteFailure {
+    pub since_wall_ms: i64,
+    pub unrecorded_events: u64,
 }
 
 impl From<AlarmDbError> for AlarmRuntimeError {
@@ -76,6 +91,7 @@ pub struct AlarmEvaluator {
     engine: Engine,
     _active: ActiveAlarmSession,
     origin: Instant,
+    history: watch::Sender<Option<HistoryWriteFailure>>,
 }
 
 impl AlarmEvaluator {
@@ -117,7 +133,81 @@ impl AlarmEvaluator {
             engine,
             _active: active,
             origin: Instant::now(),
+            history: watch::channel(None).0,
         })
+    }
+
+    pub fn history_failure(&self) -> Option<HistoryWriteFailure> {
+        *self.history.borrow()
+    }
+
+    fn begin_outage(&self, at_wall_ms: i64, events: usize) {
+        let events = events as u64;
+        self.history.send_modify(|failure| match failure {
+            Some(failure) => {
+                failure.unrecorded_events = failure.unrecorded_events.saturating_add(events)
+            }
+            None => {
+                *failure = Some(HistoryWriteFailure {
+                    since_wall_ms: at_wall_ms,
+                    unrecorded_events: events,
+                })
+            }
+        });
+    }
+
+    /// Retry after an outage: one transaction writes `unrecordedPeriod` and
+    /// rewrites `last_state` from the in-memory Engine. Returns whether the
+    /// outage is over; a further storage outage keeps it for the next retry.
+    pub async fn recover_history(&mut self) -> Result<bool, AlarmRuntimeError> {
+        let Some(failure) = self.history_failure() else {
+            return Ok(true);
+        };
+        let rows = self
+            .engine
+            .conditions()
+            .iter()
+            .map(|(id, condition)| {
+                Ok(LastRow {
+                    condition_id: id.clone(),
+                    evaluation_hash: self
+                        .applied
+                        .condition_hashes
+                        .get(id)
+                        .ok_or(AlarmRuntimeError::InvalidDefinition)?
+                        .clone(),
+                    endpoint: self.applied.endpoint.clone(),
+                    state: condition.state.to_last_state(),
+                    session_id: self.engine.session().id.clone(),
+                    last_event_seq: None,
+                })
+            })
+            .collect::<Result<Vec<_>, AlarmRuntimeError>>()?;
+        let period = UnrecordedPeriod {
+            from_ms: failure.since_wall_ms,
+            to_ms: wall_ms().max(failure.since_wall_ms),
+            unrecorded_events: failure.unrecorded_events,
+        };
+        match self
+            .db
+            .record_unrecorded_period(
+                self.engine.session(),
+                period,
+                &rows,
+                self.engine.unavailable(),
+            )
+            .await
+        {
+            Ok(()) => {
+                self.history.send_replace(None);
+                Ok(true)
+            }
+            Err(error) if error.is_storage_outage() => {
+                eprintln!("alarm history is still unwritable: {error:?}");
+                Ok(false)
+            }
+            Err(error) => Err(AlarmRuntimeError::Db(error)),
+        }
     }
 
     pub fn engine(&self) -> &Engine {
@@ -139,6 +229,10 @@ impl AlarmEvaluator {
         definitions: &BTreeMap<String, Definition>,
         confirmed: &[UnackedOccurrence],
     ) -> Result<AlarmChange, AlarmRuntimeError> {
+        // The DB and the Engine must not disagree on the definitions.
+        if self.history_failure().is_some() {
+            return Err(AlarmRuntimeError::HistoryUnwritable);
+        }
         if applied.project_id != self.applied.project_id
             || applied.endpoint != self.applied.endpoint
             || applied.condition_hashes
@@ -220,6 +314,12 @@ impl AlarmEvaluator {
         &mut self,
         input: Input,
     ) -> Result<(Option<AlarmChange>, Option<AckOutcome>), AlarmRuntimeError> {
+        let is_ack = matches!(input, Input::Ack { .. });
+        // An ACK is confirmed only once it is durable; a restart must not
+        // bring an acknowledged occurrence back as unacknowledged.
+        if is_ack && self.history_failure().is_some() {
+            return Err(AlarmRuntimeError::HistoryUnwritable);
+        }
         let now = self.now();
         let transition = self
             .engine
@@ -234,7 +334,22 @@ impl AlarmEvaluator {
             applied: None,
         });
         if transition.changed {
-            self.persist(&transition).await?;
+            if self.history_failure().is_some() {
+                self.begin_outage(now.wall_ms, transition.events.len());
+            } else if let Err(error) = self.persist(&transition).await {
+                match error {
+                    AlarmRuntimeError::Db(error) if error.is_storage_outage() => {
+                        eprintln!("alarm history write failed: {error:?}");
+                        if is_ack {
+                            // Refuse the ACK; the Engine keeps its prior state.
+                            self.begin_outage(now.wall_ms, 0);
+                            return Err(AlarmRuntimeError::HistoryUnwritable);
+                        }
+                        self.begin_outage(now.wall_ms, transition.events.len());
+                    }
+                    error => return Err(error),
+                }
+            }
         }
         let ack = transition.ack;
         // Hidden observation/timer state can change without a display change.
@@ -337,6 +452,7 @@ pub struct AlarmRuntime {
     control: mpsc::Sender<Control>,
     changes: broadcast::Sender<AlarmChange>,
     status: watch::Receiver<AlarmRuntimeStatus>,
+    history: watch::Receiver<Option<HistoryWriteFailure>>,
     task: tokio::task::JoinHandle<Result<(), AlarmRuntimeError>>,
 }
 
@@ -402,11 +518,13 @@ impl AlarmRuntime {
         let (changes, _) = broadcast::channel(256);
         let change_tx = changes.clone();
         let (status_tx, status) = watch::channel(AlarmRuntimeStatus::Running);
+        let history = evaluator.history.subscribe();
         let task = tokio::spawn(run(evaluator, sdk, control_rx, change_tx, tags, status_tx));
         Ok(Self {
             control,
             changes,
             status,
+            history,
             task,
         })
     }
@@ -419,6 +537,11 @@ impl AlarmRuntime {
 
     pub fn status(&self) -> watch::Receiver<AlarmRuntimeStatus> {
         self.status.clone()
+    }
+
+    /// The current history write outage; a change asks viewers to refresh.
+    pub fn history(&self) -> watch::Receiver<Option<HistoryWriteFailure>> {
+        self.history.clone()
     }
 
     pub async fn apply(
@@ -535,9 +658,11 @@ where
         Err(AlarmRuntimeError::Sdk(_) | AlarmRuntimeError::ConnectionFailure) => {
             AlarmStopReason::ConnectionFailure
         }
-        Err(AlarmRuntimeError::Db(_) | AlarmRuntimeError::StorageFailure) => {
-            AlarmStopReason::StorageFailure
-        }
+        Err(
+            AlarmRuntimeError::Db(_)
+            | AlarmRuntimeError::StorageFailure
+            | AlarmRuntimeError::HistoryUnwritable,
+        ) => AlarmStopReason::StorageFailure,
         Err(AlarmRuntimeError::InvalidDefinition) => AlarmStopReason::InvalidDefinition,
         Err(
             AlarmRuntimeError::Step(_) | AlarmRuntimeError::Closed | AlarmRuntimeError::Internal,
@@ -560,6 +685,7 @@ async fn run_inner(
     let mut accepted_generation = None;
     let mut awaiting_replacement_snapshot = false;
     let mut replacement_deadline = None;
+    let mut history_retry: Option<tokio::time::Instant> = None;
     // Process the current snapshot before waiting so a rapid initial Live is not lost.
     let initial = states.borrow_and_update().clone();
     if initial.connection_state() == TagClientConnectionState::Stopped
@@ -583,6 +709,11 @@ async fn run_inner(
         return Err(error);
     }
     loop {
+        if evaluator.history_failure().is_none() {
+            history_retry = None;
+        } else if history_retry.is_none() {
+            history_retry = Some(tokio::time::Instant::now() + HISTORY_RETRY);
+        }
         let due = evaluator.engine.next_due_ms();
         let deadline = due.map(|ms| evaluator.origin + std::time::Duration::from_millis(ms));
         tokio::select! {
@@ -614,6 +745,13 @@ async fn run_inner(
                     return Err(error);
                 }
             }
+            _ = async { if let Some(deadline) = history_retry { tokio::time::sleep_until(deadline).await } else { std::future::pending::<()>().await } } => {
+                history_retry = None;
+                if let Err(error) = evaluator.recover_history().await {
+                    let _ = stop(evaluator, sdk, &change_tx).await;
+                    return Err(error);
+                }
+            }
             _ = async { if let Some(deadline) = replacement_deadline { tokio::time::sleep_until(deadline).await } else { std::future::pending::<()>().await } } => {
                 awaiting_replacement_snapshot = false;
                 replacement_deadline = None;
@@ -631,6 +769,10 @@ async fn run_inner(
                 Some(Control::Snapshot(reply)) => { let _ = reply.send(evaluator.engine.clone()); }
                 Some(Control::Apply(command)) => {
                     let ApplyCommand { applied, definitions, confirmed, client, reply } = *command;
+                    if evaluator.history_failure().is_some() {
+                        let _ = reply.send(Err(AlarmRuntimeError::HistoryUnwritable));
+                        continue;
+                    }
                     if let Err(error) = publish(&mut evaluator, Input::TimerExpired, &change_tx).await {
                         let _ = reply.send(Err(error_summary(&error)));
                         let _ = stop(evaluator, sdk, &change_tx).await;
@@ -706,6 +848,9 @@ async fn run_inner(
                         Err(AlarmRuntimeError::Step(error)) => {
                             let _ = reply.send(Err(AlarmRuntimeError::Step(error)));
                         }
+                        Err(AlarmRuntimeError::HistoryUnwritable) => {
+                            let _ = reply.send(Err(AlarmRuntimeError::HistoryUnwritable));
+                        }
                         Err(error) => {
                             let _ = reply.send(Err(error_summary(&error)));
                             let _ = stop(evaluator, sdk, &change_tx).await;
@@ -735,6 +880,7 @@ fn error_summary(error: &AlarmRuntimeError) -> AlarmRuntimeError {
             AlarmRuntimeError::ConnectionFailure
         }
         AlarmRuntimeError::InvalidDefinition => AlarmRuntimeError::InvalidDefinition,
+        AlarmRuntimeError::HistoryUnwritable => AlarmRuntimeError::HistoryUnwritable,
         AlarmRuntimeError::Internal => AlarmRuntimeError::Internal,
         _ => AlarmRuntimeError::Closed,
     }
@@ -747,10 +893,22 @@ async fn stop(
 ) -> Result<(), AlarmRuntimeError> {
     // A stop is also a boundary: commit every already-expired wait first.
     let settled = publish(&mut evaluator, Input::TimerExpired, changes).await;
-    let stopped = evaluator
-        .db
-        .stop_session(evaluator.engine.session(), wall_ms())
-        .await;
+    // Close an outage first so the stop record follows the unrecorded period
+    // and the rewritten last states. If it still fails, leave the session
+    // unstopped: the next start records the unknown period from the DB.
+    let recovered = match &settled {
+        Ok(()) => evaluator.recover_history().await,
+        Err(_) => Ok(evaluator.history_failure().is_none()),
+    };
+    let stopped = match recovered {
+        Ok(true) => evaluator
+            .db
+            .stop_session(evaluator.engine.session(), wall_ms())
+            .await
+            .map_err(AlarmRuntimeError::Db),
+        Ok(false) => Err(AlarmRuntimeError::HistoryUnwritable),
+        Err(error) => Err(error),
+    };
     match tokio::time::timeout(Duration::from_secs(5), sdk.shutdown()).await {
         Ok(Ok(())) => {}
         Ok(Err(error)) => eprintln!("alarm SDK shutdown failed: {error:?}"),
@@ -1271,6 +1429,239 @@ mod tests {
         );
         assert!(matches!(task.await.unwrap(), Err(AlarmRuntimeError::Db(_))));
         assert!(!terminal.active_project(&project_id).unwrap());
+        let db = Arc::try_unwrap(db).ok().unwrap();
+        db.close().await;
+        drop(terminal);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    fn flag(active: bool) -> Input {
+        Input::Value {
+            tag: "PLANT.FLAG".into(),
+            sample: Sample {
+                resolved: true,
+                quality: Quality::Good,
+                value: Some(TagValue::Bool(active)),
+                source_timestamp_ms: Some(1),
+            },
+        }
+    }
+
+    const FAIL_WRITES: &str = "CREATE TRIGGER fail_event BEFORE INSERT ON event BEGIN SELECT RAISE(ABORT, 'disk full'); END; CREATE TRIGGER fail_state BEFORE INSERT ON last_state BEGIN SELECT RAISE(ABORT, 'disk full'); END;";
+    const HEAL_WRITES: &str = "DROP TRIGGER fail_event; DROP TRIGGER fail_state;";
+
+    /// One bit condition applied and started in a fresh alarm DB.
+    async fn outage_fixture(
+        prefix: &str,
+    ) -> (
+        std::path::PathBuf,
+        Arc<AlarmTerminal>,
+        Arc<AlarmDb>,
+        AppliedDefinitions,
+        BTreeMap<String, Definition>,
+        Session,
+        AlarmEvaluator,
+    ) {
+        let dir = std::env::temp_dir().join(format!("{prefix}-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let terminal = Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+        let project_id = uuid::Uuid::new_v4().to_string();
+        let db = Arc::new(AlarmDb::open(terminal.clone(), &project_id).await.unwrap());
+        let id = "alarm:bit".to_owned();
+        let definition = Definition {
+            spec: ConditionSpec {
+                source: scada_alarm::Source::Bit {
+                    tag: "PLANT.FLAG".into(),
+                    active_when: true,
+                },
+                on_delay_ms: 0,
+                off_delay_ms: 0,
+                ack_mode: AckMode::Manual,
+            },
+        };
+        let applied = AppliedDefinitions {
+            project_id: project_id.clone(),
+            project_revision: 1,
+            file_hash: "saved-file".into(),
+            endpoint: "http://127.0.0.1:8722".into(),
+            applied_by: "未ログイン".into(),
+            applied_at_ms: 1,
+            definitions: serde_json::json!({"definitions": []}),
+            condition_hashes: BTreeMap::from([(id.clone(), definition.evaluation_hash())]),
+            disabled_condition_ids: BTreeSet::new(),
+            displays: BTreeMap::from([(
+                id.clone(),
+                ConditionDisplay {
+                    name: "Flag".into(),
+                    message: "発生".into(),
+                    severity: "high".into(),
+                    limit_label: None,
+                },
+            )]),
+        };
+        db.apply(&applied, None, &[], &[]).await.unwrap();
+        let session = Session {
+            id: uuid::Uuid::new_v4().to_string(),
+            generation: terminal.reserve_generation().unwrap(),
+        };
+        let definitions = BTreeMap::from([(id, definition)]);
+        let plan = plan_restore(
+            session.clone(),
+            &applied.endpoint,
+            1,
+            &applied,
+            &definitions,
+            &BTreeSet::new(),
+            &[],
+        )
+        .unwrap();
+        let engine = db.start_session_plan(plan, 1).await.unwrap();
+        let evaluator = AlarmEvaluator::new(db.clone(), applied.clone(), engine)
+            .await
+            .unwrap();
+        (dir, terminal, db, applied, definitions, session, evaluator)
+    }
+
+    fn ack_current(evaluator: &AlarmEvaluator, id: &str) -> Input {
+        let state = &evaluator.engine().condition(id).unwrap().state;
+        Input::Ack {
+            condition: id.into(),
+            occurrence: state.occurrence.clone().unwrap(),
+            recurrence: state.recurrence,
+            user: "operator".into(),
+        }
+    }
+
+    #[tokio::test]
+    async fn history_outage_keeps_evaluating_and_records_the_unrecorded_period() {
+        let (dir, terminal, db, applied, definitions, session, mut evaluator) =
+            outage_fixture("alarm-outage").await;
+        let id = "alarm:bit";
+        evaluator.input(flag(false)).await.unwrap();
+        db.execute_for_test(FAIL_WRITES).await;
+
+        // The occurrence is evaluated and published although it is not written.
+        let change = evaluator.input(flag(true)).await.unwrap().unwrap();
+        assert_eq!(change.events.len(), 1);
+        let failure = evaluator.history_failure().unwrap();
+        assert_eq!(failure.unrecorded_events, 1);
+        assert!(db.last_states().await.unwrap()[0]
+            .state
+            .occurrence
+            .is_none());
+        // Return then recur: counted, not queued.
+        evaluator.input(flag(false)).await.unwrap();
+        evaluator.input(flag(true)).await.unwrap();
+        let counted = evaluator.history_failure().unwrap();
+        assert_eq!(counted.since_wall_ms, failure.since_wall_ms);
+        assert_eq!(counted.unrecorded_events, 3);
+
+        // ACK and apply are refused while the history cannot be written.
+        let before = evaluator.engine().clone();
+        let ack = ack_current(&evaluator, id);
+        assert!(matches!(
+            evaluator.input_with_ack(ack.clone()).await,
+            Err(AlarmRuntimeError::HistoryUnwritable)
+        ));
+        assert_eq!(evaluator.engine(), &before);
+        assert!(matches!(
+            evaluator.apply(applied.clone(), &definitions, &[]).await,
+            Err(AlarmRuntimeError::HistoryUnwritable)
+        ));
+
+        // A retry that still fails keeps the outage and its count.
+        assert!(!evaluator.recover_history().await.unwrap());
+        assert_eq!(evaluator.history_failure(), Some(counted));
+
+        db.execute_for_test(HEAL_WRITES).await;
+        assert!(evaluator.recover_history().await.unwrap());
+        assert_eq!(evaluator.history_failure(), None);
+        let events = db.events().await.unwrap();
+        let period = events
+            .iter()
+            .find(|event| event.event.kind == "unrecordedPeriod")
+            .unwrap();
+        assert_eq!(period.event.detail["fromMs"], counted.since_wall_ms);
+        assert_eq!(period.event.detail["unrecordedEvents"], 3);
+        assert!(period.event.condition_id.is_none());
+        let rows = db.last_states().await.unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(
+            rows[0].state,
+            evaluator
+                .engine()
+                .condition(id)
+                .unwrap()
+                .state
+                .to_last_state()
+        );
+
+        // After recovery an ACK is written before it is accepted.
+        let (_, outcome) = evaluator.input_with_ack(ack).await.unwrap();
+        assert_eq!(outcome, Some(AckOutcome::Accepted));
+        assert!(db.last_states().await.unwrap()[0].state.acked);
+
+        // A write failure on the ACK itself refuses it and starts an outage.
+        evaluator.input(flag(false)).await.unwrap();
+        evaluator.input(flag(true)).await.unwrap();
+        let ack = ack_current(&evaluator, id);
+        db.execute_for_test(FAIL_WRITES).await;
+        let before = evaluator.engine().clone();
+        assert!(matches!(
+            evaluator.input_with_ack(ack).await,
+            Err(AlarmRuntimeError::HistoryUnwritable)
+        ));
+        assert_eq!(evaluator.engine(), &before);
+        assert_eq!(evaluator.history_failure().unwrap().unrecorded_events, 0);
+        db.execute_for_test(HEAL_WRITES).await;
+        assert!(evaluator.recover_history().await.unwrap());
+
+        // A lost session ownership is still fatal, not an outage.
+        db.stop_session(&session, wall_ms()).await.unwrap();
+        assert!(matches!(
+            evaluator.input(flag(false)).await,
+            Err(AlarmRuntimeError::Db(AlarmDbError::InvalidRow))
+        ));
+        assert_eq!(evaluator.history_failure(), None);
+        drop(evaluator);
+        let db = Arc::try_unwrap(db).ok().unwrap();
+        db.close().await;
+        drop(terminal);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn stop_during_an_outage_leaves_the_session_for_crash_recovery() {
+        let (dir, terminal, db, _, _, session, mut evaluator) =
+            outage_fixture("alarm-outage-stop").await;
+        db.execute_for_test(FAIL_WRITES).await;
+        evaluator.input(flag(true)).await.unwrap();
+        assert!(evaluator.history_failure().is_some());
+        let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+        let sdk = hub
+            .client()
+            .start(vec![BindingRequest {
+                binding_key: "PLANT.FLAG".into(),
+                external_name: "PLANT.FLAG".into(),
+            }])
+            .unwrap();
+        let (changes, _) = broadcast::channel(4);
+        assert!(matches!(
+            stop(evaluator, sdk, &changes).await,
+            Err(AlarmRuntimeError::HistoryUnwritable)
+        ));
+        let record = db.session().await.unwrap().unwrap();
+        assert!(!record.stopped);
+        assert_eq!(record.session, session);
+        db.execute_for_test(HEAL_WRITES).await;
+        // The next start closes it with the crash evidence and unknown period.
+        db.close_unstopped_session(wall_ms()).await.unwrap();
+        assert!(db
+            .events()
+            .await
+            .unwrap()
+            .iter()
+            .any(|event| event.event.kind == "unknownPeriod"));
         let db = Arc::try_unwrap(db).ok().unwrap();
         db.close().await;
         drop(terminal);

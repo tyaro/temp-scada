@@ -1804,6 +1804,8 @@
     if (!alarmSnapshot) return "警報: 確認中";
     if (alarmSnapshot.status !== "running")
       return `警報: ${alarmSnapshot.status}`;
+    if (alarmSnapshot.historyWriteFailure)
+      return `警報: 履歴に書けません（未記録 ${alarmSnapshot.historyWriteFailure.unrecordedEvents} 件）`;
     if (alarmSnapshot.engine?.unavailable) return "警報: 監視できていません";
     if (alarmSnapshot.monitored?.projectId !== project.manifest.projectId)
       return "警報: 別のProjectを監視中";
@@ -3903,6 +3905,7 @@
         variant={alarmSnapshot?.status === "running" &&
         alarmSnapshot.monitored?.projectId === project.manifest.projectId &&
         !alarmSnapshot.engine?.unavailable &&
+        !alarmSnapshot.historyWriteFailure &&
         !alarmSnapshot.pendingConditionChanges &&
         !alarmSnapshot.pendingDisplayChanges
           ? "neutral"

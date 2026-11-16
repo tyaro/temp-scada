@@ -71,6 +71,9 @@ pub struct AlarmSnapshot {
     pub status: String,
     pub pending_condition_changes: bool,
     pub pending_display_changes: bool,
+    /// The running Engine cannot write its history (design §5.3). ACK and
+    /// apply are refused until a retry records the unrecorded period.
+    pub history_write_failure: Option<crate::alarm_runtime::HistoryWriteFailure>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -131,7 +134,7 @@ impl From<scada_alarm::Engine> for EngineSnapshot {
 )]
 pub enum ApplyResult {
     Applied {
-        snapshot: AlarmSnapshot,
+        snapshot: Box<AlarmSnapshot>,
         initial_monitoring: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
         warning: Option<String>,
@@ -365,6 +368,7 @@ impl AlarmService {
     ) {
         let mut receiver = runtime.changes();
         let mut status = runtime.status();
+        let mut history = runtime.history();
         let sender = self.changes.clone();
         let lagged = self.lagged.clone();
         active.pump = Some(tokio::spawn(async move {
@@ -380,6 +384,9 @@ impl AlarmService {
                             break;
                         }
                     }
+                    // A write outage starting or ending is not an Engine
+                    // change; viewers fetch a new snapshot instead.
+                    Ok(()) = history.changed() => { let _ = lagged.send(()); }
                     change = receiver.recv() => match change {
                         Ok(change) => { let _ = sender.send(change); }
                         Err(broadcast::error::RecvError::Lagged(_)) => { let _ = lagged.send(()); }
@@ -572,7 +579,7 @@ impl AlarmService {
                             let snapshot = self.snapshot_locked(&active).await?;
                             let _ = self.lagged.send(());
                             return Ok(ApplyResult::Applied {
-                                snapshot,
+                                snapshot: Box::new(snapshot),
                                 initial_monitoring: false,
                                 warning,
                             });
@@ -719,7 +726,7 @@ impl AlarmService {
                 let snapshot = self.snapshot_locked(&active).await?;
                 let _ = self.lagged.send(());
                 return Ok(ApplyResult::Applied {
-                    snapshot,
+                    snapshot: Box::new(snapshot),
                     initial_monitoring: previous.is_none(),
                     warning: Some("recoveredAfterApply".into()),
                 });
@@ -741,7 +748,7 @@ impl AlarmService {
         let snapshot = self.snapshot_locked(&active).await?;
         let _ = self.lagged.send(());
         Ok(ApplyResult::Applied {
-            snapshot,
+            snapshot: Box::new(snapshot),
             initial_monitoring: previous.is_none(),
             warning: None,
         })
@@ -781,6 +788,7 @@ impl AlarmService {
                     status: active.reason.clone(),
                     pending_condition_changes: false,
                     pending_display_changes: false,
+                    history_write_failure: None,
                 },
                 None,
             ));
@@ -808,6 +816,10 @@ impl AlarmService {
             None => None,
             Some(_) => None,
         };
+        let history_write_failure = match (&active.runtime, &engine) {
+            (Some(runtime), Some(_)) => *runtime.history().borrow(),
+            _ => None,
+        };
         let status = match &active.runtime {
             Some(runtime) => match *runtime.status().borrow() {
                 AlarmRuntimeStatus::Running if engine.is_some() => "running".into(),
@@ -825,6 +837,7 @@ impl AlarmService {
                 status,
                 pending_condition_changes: false,
                 pending_display_changes: false,
+                history_write_failure,
             },
             applied,
         ))

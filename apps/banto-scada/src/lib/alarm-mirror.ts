@@ -15,6 +15,11 @@ export interface AlarmSnapshot {
   readonly status: string;
   readonly pendingConditionChanges: boolean;
   readonly pendingDisplayChanges: boolean;
+  /** The alarm DB cannot be written; ACK and apply are refused meanwhile. */
+  readonly historyWriteFailure: {
+    readonly sinceWallMs: number;
+    readonly unrecordedEvents: number;
+  } | null;
 }
 
 export interface AlarmChange {
