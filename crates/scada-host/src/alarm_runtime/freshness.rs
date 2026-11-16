@@ -70,6 +70,17 @@ pub(super) struct Ticket {
     pub(super) epoch: u64,
     pub(super) arrivals: BTreeMap<String, u64>,
     pub(super) rx: oneshot::Receiver<RereadResult>,
+    /// Dropping the ticket (invalidation) ends the request, so a new one
+    /// never runs beside it.
+    _task: AbortOnDrop,
+}
+
+struct AbortOnDrop(tokio::task::AbortHandle);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
 }
 
 pub(super) struct Freshness {
@@ -185,6 +196,8 @@ impl Freshness {
         self.late = false;
         self.epoch += 1;
         self.ticket = None;
+        // No rereads until the new subscription is Live.
+        self.live = false;
     }
 
     /// An apply refreshed the Hub record or credential; the next reread
@@ -223,7 +236,7 @@ impl Freshness {
         let (tx, rx) = oneshot::channel();
         let names: Vec<String> = tags.iter().cloned().collect();
         let timeout = self.config.reread_timeout;
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             let refs: Vec<&str> = names.iter().map(String::as_str).collect();
             let result = match tokio::time::timeout(timeout, reader.fetch_values(&refs)).await {
                 Ok(Ok(values)) => Ok(values),
@@ -235,6 +248,7 @@ impl Freshness {
             epoch: self.epoch,
             arrivals: self.arrivals.clone(),
             rx,
+            _task: AbortOnDrop(task.abort_handle()),
         });
         false
     }
@@ -440,6 +454,46 @@ mod tests {
         }));
         f.start_reread(&tags, Instant::now(), 3);
         assert_eq!(made.load(std::sync::atomic::Ordering::SeqCst), 12);
+    }
+
+    #[tokio::test]
+    async fn a_replaced_subscription_sends_no_reread_until_live() {
+        let (mut f, report) = freshness();
+        f.connected(true, false);
+        f.replaced();
+        let tags = BTreeSet::from(["A".to_owned()]);
+        // The factory makes nothing: a reread would count a failure.
+        f.start_reread(&tags, Instant::now(), 1);
+        assert_eq!(*report.borrow(), None);
+        f.connected(true, true);
+        f.start_reread(&tags, Instant::now(), 2);
+        assert_eq!(report.borrow().map(|r| r.failures), Some(1));
+    }
+
+    #[tokio::test]
+    async fn an_invalidated_reread_is_aborted() {
+        let (mut f, _) = freshness();
+        f.connected(true, false);
+        f.set_clients(HubClients::new(|| {
+            banto_tagclient::RestClient::new(
+                banto_tagclient::Endpoint::new("http://10.255.255.1:9").unwrap(),
+                banto_tagclient::SecretApiKey::new("reader-test-only-key".into()).unwrap(),
+            )
+            .ok()
+        }));
+        let tags = BTreeSet::from(["A".to_owned()]);
+        f.start_reread(&tags, Instant::now(), 1);
+        let mut ticket = f.ticket.take().unwrap();
+        let handle = ticket._task.0.clone();
+        drop(std::mem::replace(&mut ticket.rx, oneshot::channel().1));
+        drop(ticket);
+        for _ in 0..100 {
+            if handle.is_finished() {
+                break;
+            }
+            tokio::task::yield_now().await;
+        }
+        assert!(handle.is_finished());
     }
 
     #[tokio::test]
