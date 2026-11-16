@@ -183,6 +183,13 @@ impl Freshness {
         self.reader = None;
     }
 
+    /// An apply refreshed the Hub record or credential: the next reread
+    /// makes its reader from it instead of reusing the cached one.
+    pub(super) fn set_clients(&mut self, clients: HubClients) {
+        self.clients = clients;
+        self.reader = None;
+    }
+
     /// A subscription value was accepted for `tag`.
     pub(super) fn arrived(&mut self, tag: &str) {
         *self.arrivals.entry(tag.to_owned()).or_default() += 1;
@@ -404,6 +411,38 @@ mod tests {
         f.connected(false, false);
         f.start_reread(&tags, Instant::now(), 6);
         assert_eq!(*report.borrow(), None);
+    }
+
+    #[tokio::test]
+    async fn new_clients_replace_the_cached_reader() {
+        let (mut f, _) = freshness();
+        f.connected(true, false);
+        let made = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = made.clone();
+        let endpoint = || {
+            banto_tagclient::RestClient::new(
+                banto_tagclient::Endpoint::new("http://127.0.0.1:9").unwrap(),
+                banto_tagclient::SecretApiKey::new("reader-test-only-key".into()).unwrap(),
+            )
+            .ok()
+        };
+        f.set_clients(HubClients::new(move || {
+            counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            endpoint()
+        }));
+        let tags = BTreeSet::from(["A".to_owned()]);
+        f.start_reread(&tags, Instant::now(), 1);
+        f.ticket = None;
+        f.start_reread(&tags, Instant::now(), 2);
+        assert_eq!(made.load(std::sync::atomic::Ordering::SeqCst), 1);
+        f.ticket = None;
+        let again = made.clone();
+        f.set_clients(HubClients::new(move || {
+            again.fetch_add(10, std::sync::atomic::Ordering::SeqCst);
+            endpoint()
+        }));
+        f.start_reread(&tags, Instant::now(), 3);
+        assert_eq!(made.load(std::sync::atomic::Ordering::SeqCst), 11);
     }
 
     #[tokio::test]

@@ -917,7 +917,7 @@ async fn run_inner(
                     match evaluator.apply(applied, &definitions, &confirmed).await {
                         Ok(change) => {
                             // Rereads and resubscription use the refreshed credential.
-                            freshness.clients = clients;
+                            freshness.set_clients(clients);
                             if let Some(replacement) = replacement {
                                 replace_sdk(&mut sdk, &mut states, replacement);
                                 subscription_dead = false;
