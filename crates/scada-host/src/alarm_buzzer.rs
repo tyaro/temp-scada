@@ -125,8 +125,24 @@ impl Buzzer {
         if self.session.as_deref() != Some(session) {
             return Err(NeedsSync);
         }
+        let once = events.iter().any(|event| {
+            matches!(
+                event.kind,
+                EventKind::Occurred {
+                    sound: Sound::Once,
+                    ..
+                }
+            )
+        });
         if seq <= self.seq {
-            return Ok(Vec::new());
+            // 揃えた snapshot に含まれていた差分（購読で待っていたもの）。状態は揃って
+            // いるが、一度鳴らしは状態に残らないので、ここで鳴らす。差分は購読で一度
+            // しか届かないので二重には鳴らない。
+            return Ok(if once && !self.looping {
+                vec![BuzzerCommand::Once]
+            } else {
+                Vec::new()
+            });
         }
         if seq != self.seq + 1 {
             return Err(NeedsSync);
@@ -139,15 +155,6 @@ impl Buzzer {
                 None => next.remove(id),
             };
         }
-        let once = events.iter().any(|event| {
-            matches!(
-                event.kind,
-                EventKind::Occurred {
-                    sound: Sound::Once,
-                    ..
-                }
-            )
-        });
         Ok(self.replace(next, once))
     }
 
@@ -474,6 +481,31 @@ mod tests {
             buzzer.sync("s2", 0, [(&id, &state)]),
             vec![BuzzerCommand::Loop]
         );
+    }
+
+    #[test]
+    fn buzzer_plays_a_queued_once_already_covered_by_the_snapshot() {
+        // The Engine evaluated before the first snapshot was taken: the snapshot
+        // already holds the change, which still waits in the subscription.
+        let mut buzzer = Buzzer::default();
+        let id = "n".to_owned();
+        let state = acked("o1");
+        assert!(buzzer.sync("s1", 1, [(&id, &state)]).is_empty());
+        let once = [occurred("n", Sound::Once)];
+        let rows = change(&[("n", Some(acked("o1")))]);
+        assert_eq!(
+            buzzer.apply("s1", 1, &rows, &once),
+            Ok(vec![BuzzerCommand::Once])
+        );
+        // A covered change without a one-shot stays silent; a loop absorbs one.
+        assert_eq!(buzzer.apply("s1", 1, &rows, &[]), Ok(vec![]));
+        let loud = unacked("o2", 0);
+        let a = "a".to_owned();
+        assert_eq!(
+            buzzer.sync("s1", 3, [(&a, &loud)]),
+            vec![BuzzerCommand::Loop]
+        );
+        assert_eq!(buzzer.apply("s1", 2, &rows, &once), Ok(vec![]));
     }
 
     #[test]
