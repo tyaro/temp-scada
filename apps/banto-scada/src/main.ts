@@ -28,15 +28,5 @@ if ("__TAURI_INTERNALS__" in window) {
     props: { authClient: authClient! },
   });
 } else {
-  // e2e が印を置いたときだけ、開発サーバーでモックの警報 feed を差し込む（設計 §5.5）。
-  // DEV の分岐の中で動的 import するので、製品ビルドには入らない。
-  let alarmFeed: import("./lib/project-file-service").AlarmFeed | undefined;
-  if (import.meta.env.DEV && "__BANTO_ALARM_MOCK__" in window) {
-    const { installMockAlarmFeed } = await import("./lib/mock-alarm-feed");
-    alarmFeed = installMockAlarmFeed(window);
-  }
-  mount(App, {
-    target: document.getElementById("app")!,
-    props: alarmFeed ? { alarmFeed } : {},
-  });
+  mount(App, { target: document.getElementById("app")! });
 }

@@ -14,6 +14,26 @@ const status = (page: Page) => page.getByTestId("project-status");
 const badge = (page: Page) =>
   mainCanvas(page).getByRole("img", { name: /^警報の小札 / });
 
+/**
+ * テスト用のエントリーだけにモックの警報 feed を渡す（製品には global の hook が無い）。
+ * 操作する関数は `window.__bantoAlarmMock`。
+ */
+async function mockAlarmEntry(page: Page) {
+  await page.route("**/src/main.ts*", async (route) => {
+    const response = await route.fetch();
+    const original = await response.text();
+    const mount =
+      /mount\(App,\s*\{\s*target:\s*document\.getElementById\("app"\)\s*\}\);/;
+    expect(original).toMatch(mount);
+    const injected = `
+      const { createMockAlarmFeed } = await import("/src/lib/mock-alarm-feed.ts");
+      const { feed, control } = createMockAlarmFeed();
+      window.__bantoAlarmMock = control;
+      mount(App, {target: document.getElementById("app"), props: {alarmFeed: feed}});`;
+    await route.fulfill({ response, body: original.replace(mount, injected) });
+  });
+}
+
 async function openSample(page: Page, project: unknown = sample) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
@@ -147,9 +167,7 @@ function snapshot(
 test("a badge follows the mocked alarm feed through every state", async ({
   page,
 }) => {
-  await page.addInitScript(() => {
-    (window as unknown as Record<string, unknown>).__BANTO_ALARM_MOCK__ = true;
-  });
+  await mockAlarmEntry(page);
   // 未確認の点滅を有効にした Project で確かめる。
   await openSample(page, {
     ...sample,

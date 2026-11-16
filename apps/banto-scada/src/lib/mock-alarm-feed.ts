@@ -3,14 +3,12 @@ import type { AlarmFeed } from "./project-file-service";
 
 /**
  * e2e 用のモックの警報 feed（設計 alarm-stage3-design.md §5.5「IPC の境界でモックの警報
- * service を差し込めるようにする」）。ブラウザ版には Engine が無いので、開発サーバーで
- * e2e が印を置いたときだけ main.ts が動的 import で差し込む（製品ビルドには入らない）。
+ * service を差し込めるようにする」）。ブラウザ版には Engine が無いので、e2e が
+ * テスト用のエントリーだけを書き換えて `App` の `alarmFeed` に渡す（ほかの読取の fixture と
+ * 同じ経路）。製品のコードはこのモジュールを import しない。
  */
 
-/** e2e が `addInitScript` で置く印。 */
-export const ALARM_MOCK_MARKER = "__BANTO_ALARM_MOCK__";
-
-/** e2e から操作する関数（`window.__bantoAlarmMock`）。 */
+/** e2e から操作する関数（テスト用のエントリーが `window.__bantoAlarmMock` に置く）。 */
 export interface AlarmMockControl {
   /** 次に返す snapshot を差し替え、画面に取り直させる（host の Lagged と同じ経路）。 */
   setSnapshot(snapshot: AlarmSnapshot): void;
@@ -57,14 +55,4 @@ export function createMockAlarmFeed(): {
       },
     },
   };
-}
-
-/** 印があれば feed を作り、操作する関数を window に出す。 */
-export function installMockAlarmFeed(
-  target: Window & { __bantoAlarmMock?: AlarmMockControl },
-): AlarmFeed | undefined {
-  if (!(ALARM_MOCK_MARKER in target)) return undefined;
-  const { feed, control } = createMockAlarmFeed();
-  target.__bantoAlarmMock = control;
-  return feed;
 }

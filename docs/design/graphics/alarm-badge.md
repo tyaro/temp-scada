@@ -65,7 +65,7 @@
 
 ## モックの警報 feed（e2e）
 
-設計 §5.5 の「IPC の境界でモックの警報 service を差し込めるようにする」。`src/lib/mock-alarm-feed.ts` が `ProjectFileService.alarmFeed` と同じ interface（`AlarmFeed`）を満たす。`App` は `alarmFeed` を props で受け（無ければ `projectFileService?.alarmFeed`）、ブラウザ版の `main.ts` は `import.meta.env.DEV` かつ e2e が `addInitScript` で `window.__BANTO_ALARM_MOCK__` を置いたときだけ動的 import で渡す（製品ビルドに入らない）。e2e は `window.__bantoAlarmMock.setSnapshot(snapshot)`（画面に取り直させる）と `emit(change)`（`alarm_changed` 相当）で状態を変える。ヘッダーの「警報を適用」ボタンはデスクトップ版（`projectFiles.native`）だけなので、モックでは出ない。
+設計 §5.5 の「IPC の境界でモックの警報 service を差し込めるようにする」。`src/lib/mock-alarm-feed.ts` が `ProjectFileService.alarmFeed` と同じ interface（`AlarmFeed`）を満たす。`App` は `alarmFeed` を props で受け（無ければ `projectFileService?.alarmFeed`）、製品のコードはこのモジュールを import しない。e2e はほかの読取の fixture と同じく、テスト用に `main.ts` の `mount(App, …)` を書き換えて `alarmFeed` を渡し、操作する関数を `window.__bantoAlarmMock` に置く。e2e は `window.__bantoAlarmMock.setSnapshot(snapshot)`（画面に取り直させる）と `emit(change)`（`alarm_changed` 相当）で状態を変える。ヘッダーの「警報を適用」ボタンはデスクトップ版（`projectFiles.native`）だけなので、モックでは出ない。
 
 ## 検証
 
