@@ -147,7 +147,10 @@ impl Freshness {
         }
         self.connected = true;
         if self.live && !live {
+            // Unbound sends no rereads, so nothing could end the streak:
+            // it starts over, as for Disconnected.
             self.ticket = None;
+            self.clear_streak();
         }
         self.live = live;
     }
@@ -161,6 +164,10 @@ impl Freshness {
         self.connected = false;
         self.live = false;
         self.ticket = None;
+        self.clear_streak();
+    }
+
+    fn clear_streak(&mut self) {
         self.reread_lost = false;
         self.failures = 0;
         if self.streak.take().is_some() {
@@ -272,6 +279,23 @@ impl Freshness {
         self.late = true;
     }
 
+    /// The current subscription is a resubscription that has not reached
+    /// Live/Unbound yet (within its deadline or late).
+    pub(super) fn resubscription_pending(&self) -> bool {
+        self.resubscribing || self.late
+    }
+
+    /// A pending resubscription stopped. It counts as one failure (a late
+    /// one was counted at its deadline) and the next one is scheduled.
+    pub(super) fn resubscription_stopped(&mut self, now: Instant) {
+        if self.late {
+            self.late = false;
+        } else {
+            self.resubscribe_failed(now);
+        }
+        self.disconnected();
+    }
+
     pub(super) fn resubscribe_failed(&mut self, now: Instant) {
         self.resubscribing = false;
         self.resubscribe_failures = self.resubscribe_failures.saturating_add(1);
@@ -379,7 +403,49 @@ mod tests {
         // Unbound sends nothing: there are no values to compare.
         f.connected(false, false);
         f.start_reread(&tags, Instant::now(), 6);
-        assert_eq!(report.borrow().map(|r| r.failures), Some(1));
+        assert_eq!(*report.borrow(), None);
+    }
+
+    #[tokio::test]
+    async fn leaving_live_for_unbound_starts_the_streak_over() {
+        let (mut f, report) = freshness();
+        f.connected(true, false);
+        let start = Instant::now();
+        f.failure(start, 1);
+        assert!(f.failure(start + Duration::from_millis(300), 2));
+        assert_eq!(f.desired(), Some(EngineUnavailable::ReceiveLost));
+        f.connected(false, false);
+        assert_eq!(f.desired(), None);
+        assert_eq!(*report.borrow(), None);
+        // Back to Live: evaluable at once, a new streak from its own start.
+        f.connected(true, false);
+        assert_eq!(f.desired(), None);
+        assert!(!f.failure(start + Duration::from_millis(400), 3));
+    }
+
+    #[tokio::test]
+    async fn a_stopped_resubscription_counts_once_and_schedules_the_next() {
+        let (mut f, _) = freshness();
+        f.connected(true, false);
+        let start = Instant::now();
+        f.replaced();
+        f.resubscribe_started();
+        assert!(f.resubscription_pending());
+        f.resubscription_stopped(start);
+        assert!(!f.resubscription_pending());
+        assert!(f.next_resubscribe.is_some());
+        assert_eq!(f.desired(), Some(EngineUnavailable::Disconnected));
+        // A late one was counted at its deadline; stopping adds nothing.
+        f.replaced();
+        f.resubscribe_started();
+        f.resubscribe_timed_out(start);
+        assert!(f.resubscription_pending());
+        f.resubscription_stopped(start);
+        assert_eq!(f.desired(), Some(EngineUnavailable::Disconnected));
+        f.replaced();
+        f.resubscribe_started();
+        f.resubscription_stopped(start);
+        assert_eq!(f.desired(), Some(EngineUnavailable::ReceiveLost));
     }
 
     #[test]

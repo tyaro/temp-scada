@@ -702,6 +702,9 @@ async fn run_inner(
     let mut accepted_generation = None;
     let mut awaiting_replacement_snapshot = false;
     let mut replacement_deadline = None;
+    // A resubscription stopped; its watch has nothing more to say until the
+    // next resubscription replaces it.
+    let mut subscription_dead = false;
     let mut history_retry: Option<tokio::time::Instant> = None;
     // Process the current snapshot before waiting so a rapid initial Live is not lost.
     let initial = states.borrow_and_update().clone();
@@ -738,25 +741,41 @@ async fn run_inner(
     macro_rules! process_current {
         () => {{
             let current = states.borrow_and_update().clone();
-            if current.connection_state() == TagClientConnectionState::Stopped {
+            let stopped = current.connection_state() == TagClientConnectionState::Stopped;
+            if subscription_dead || (stopped && freshness.resubscription_pending()) {
+                // A stopped resubscription is one failure, retried later
+                // (design §4.5); the session goes on.
+                if !subscription_dead {
+                    awaiting_replacement_snapshot = false;
+                    replacement_deadline = None;
+                    freshness.resubscription_stopped(tokio::time::Instant::now());
+                    subscription_dead = true;
+                    previous.clear();
+                    was_evaluable = false;
+                }
+                let synced =
+                    sync_availability(&mut evaluator, &freshness, &mut previous, &change_tx).await;
+                check!(synced.map(|_| ()));
+            } else if stopped {
                 let _ = stop(evaluator, sdk, &change_tx).await;
                 return Err(current
                     .last_error()
                     .map_or(AlarmRuntimeError::Closed, AlarmRuntimeError::Sdk));
+            } else {
+                check!(
+                    process_state(
+                        &mut evaluator,
+                        &current,
+                        &tags,
+                        &mut previous,
+                        &mut was_evaluable,
+                        &mut accepted_generation,
+                        &mut freshness,
+                        &change_tx,
+                    )
+                    .await
+                );
             }
-            check!(
-                process_state(
-                    &mut evaluator,
-                    &current,
-                    &tags,
-                    &mut previous,
-                    &mut was_evaluable,
-                    &mut accepted_generation,
-                    &mut freshness,
-                    &change_tx,
-                )
-                .await
-            );
         }};
     }
     // Resubscribe after a suspected stall (design §4.5). The old subscription
@@ -770,6 +789,7 @@ async fn run_inner(
             match started {
                 Some(replacement) => {
                     replace_sdk(&mut sdk, &mut states, replacement);
+                    subscription_dead = false;
                     freshness.replaced();
                     freshness.resubscribe_started();
                     previous.clear();
@@ -800,7 +820,7 @@ async fn run_inner(
         let next_reread = freshness.next_reread;
         let next_resubscribe = freshness.next_resubscribe;
         tokio::select! {
-            state = states.changed() => {
+            state = states.changed(), if !subscription_dead => {
                 if state.is_err() {
                     let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(AlarmRuntimeError::Closed);
@@ -900,6 +920,7 @@ async fn run_inner(
                             freshness.clients = clients;
                             if let Some(replacement) = replacement {
                                 replace_sdk(&mut sdk, &mut states, replacement);
+                                subscription_dead = false;
                                 freshness.replaced();
                                 freshness.resubscribing = false;
                                 tags = next_tags;
