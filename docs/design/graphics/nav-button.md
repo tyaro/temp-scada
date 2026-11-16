@@ -10,13 +10,13 @@
 
 画面の `objects` に置ける独立の配置 `$defs.navButtonInstance`（`shape.type: "navButton"`）を加えた。screenView・トレンドと同じく画面の直下にだけ置け、Symbol 定義の中には置けない（schema の oneOf に無い）。
 
-| 項目                              | 型             | 意味                                                                                                                                                     |
-| --------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `target`                          | 行き先（任意） | `{ kind: "screen", screenId }`・`{ kind: "back" }`・`{ kind: "forward" }`・`{ kind: "alarmList" }`（アラーム一覧を開く。3-E1）。無いときは行き先未設定。 |
-| `label`                           | 文字列         | ボタンの文字。1行・200文字以内。空でもよい。                                                                                                             |
-| `fontSize`                        | 数値           | 文字サイズ（0 より大きく 512 以下）。                                                                                                                    |
-| `fill`・`textColor`               | 色             | 通常の塗りと文字色。                                                                                                                                     |
-| `currentFill`・`currentTextColor` | 色（任意）     | 行き先が表示中の画面のときの塗りと文字色。無いときは通常の色。                                                                                           |
+| 項目                              | 型             | 意味                                                                                                                                                                                                                                  |
+| --------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `target`                          | 行き先（任意） | `{ kind: "screen", screenId }`・`{ kind: "back" }`・`{ kind: "forward" }`・`{ kind: "alarmList" }`（アラーム一覧を開く。3-E1）・`{ kind: "silenceBuzzer" }`（その端末のブザーを止める。ACK ではない。3-E2）。無いときは行き先未設定。 |
+| `label`                           | 文字列         | ボタンの文字。1行・200文字以内。空でもよい。                                                                                                                                                                                          |
+| `fontSize`                        | 数値           | 文字サイズ（0 より大きく 512 以下）。                                                                                                                                                                                                 |
+| `fill`・`textColor`               | 色             | 通常の塗りと文字色。                                                                                                                                                                                                                  |
+| `currentFill`・`currentTextColor` | 色（任意）     | 行き先が表示中の画面のときの塗りと文字色。無いときは通常の色。                                                                                                                                                                        |
 
 - 配置の共通項目（`id`・`order`・`x`・`y`・`width`・`height`・`rotation`・`name`・`locked`・`visible`・`folderId`・`opacity`）は screenView と同じ。配置直下の `fill`・`colorAlpha`、反転（`flipX`・`flipY`）は持たない（文字を含むので表と同じく反転しない）。
 - 検査（Rust `validate_nav_buttons`、TS `parseProject`）: `kind: "screen"` の行き先の画面が存在すること。自身の画面を行き先にしてよい（強調の対象になる）。非表示のボタンも検査する。
@@ -31,6 +31,7 @@
 - 編集中は押しても移動しない（選択だけ）。
 - 表示プレビューでは、行き先が画面のボタンが `role="button"` になり、クリック・Enter・Space でその画面へ移る。Designer の画面タブも追従する（`Renderer` の `onnavigate`（行き先 `NavTarget` で呼ぶ）→`CanvasWorkspace`→`App` の `openScreen`。機器の読取詳細の入口 `onopenequipment` と同じ形）。
 - 行き先が「アラーム一覧」のボタンは、プレビューでも運転表示でも押せ、[アラーム一覧の窓](alarm-list.md)を開く（読み上げ「文字：アラーム一覧を開く」。現在の画面の強調はしない）。書込みを伴わない端末内の操作なので、別のボタンを設けない（設計 §7）。
+- 行き先が「ブザー停止」のボタンは、警報の host があるとき（`AlarmFeed.silenceBuzzer`。デスクトップ版・e2e のモック）だけプレビューでも運転表示でも押せ、`alarm_buzzer_silence` でその端末のブザーを止める（読み上げ「文字：ブザーを止める」）。ACK ではなくログインも要らない。host が無い（ブラウザ版）ときは押せず薄く描く（`Renderer`・`ObjectPainting` の `buzzerAvailable`、`navButtonAction` の 4 番目の引数）。
 - 戻る・進む・行き先未設定は、プレビューでは押せず薄く描く（`data-nav-disabled`）。プレビューは履歴を持たない。
 - [運転表示](operator-frame.md#運転表示operatorview)では、戻る・進むは運転表示の履歴（`Renderer` の `navHistory`）で動けるときだけ押せ、動けないときは薄く描く。
 
@@ -52,7 +53,7 @@
 
 - 共通の契約: `examples/nav-button-cases.json`（Rust `shared_nav_button_contract`、TS `nav-button.test.ts`）。
 - 純関数・編集コマンド・フォーム・画面の削除・clipboard: `nav-button.test.ts`。
-- ブラウザ: `e2e/nav-button.spec.ts`（プレビューで押して移る・枠より長い文字のはみ出しを押しても移らない・Enter で戻る・現在の画面の強調・戻るの無効、編集中は選択だけで移らない・Inspector で行き先と文字を変える、部品パネルからの追加）。行き先「アラーム一覧」でプレビュー・運転表示から窓を開くのは `e2e/alarm-list.spec.ts`。
+- ブラウザ: `e2e/nav-button.spec.ts`（プレビューで押して移る・枠より長い文字のはみ出しを押しても移らない・Enter で戻る・現在の画面の強調・戻るの無効、編集中は選択だけで移らない・Inspector で行き先と文字を変える、部品パネルからの追加）。行き先「アラーム一覧」でプレビュー・運転表示から窓を開くのと、「ブザー停止」で止める・host が無いと押せないのは `e2e/alarm-list.spec.ts`。
 
 ## 後続・未対応
 

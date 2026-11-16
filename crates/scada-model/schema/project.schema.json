@@ -1515,7 +1515,9 @@
         {
           "type": "object",
           "properties": {
-            "kind": { "enum": ["back", "forward", "alarmList"] }
+            "kind": {
+              "enum": ["back", "forward", "alarmList", "silenceBuzzer"]
+            }
           },
           "required": ["kind"],
           "additionalProperties": false

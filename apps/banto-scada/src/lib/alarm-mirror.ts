@@ -60,7 +60,14 @@ export interface AlarmSnapshot {
     readonly sinceWallMs: number;
     readonly failures: number;
   } | null;
+  /** The terminal buzzer (design §6). The desktop host always sends it;
+   * absent reads as `quiet`. */
+  readonly buzzer?: AlarmBuzzerStatus;
 }
+
+/** `ringing`: an unacked occurrence sounds; `silenced`: stopped on this
+ * terminal until a new or reoccurred one; `quiet`: nothing to sound. */
+export type AlarmBuzzerStatus = "ringing" | "silenced" | "quiet";
 
 export interface AlarmChange {
   readonly session: { readonly id: string; readonly generation: number };

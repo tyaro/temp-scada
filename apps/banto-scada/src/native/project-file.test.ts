@@ -42,6 +42,7 @@ describe("nativeProjectFiles", () => {
       kind: "occurred",
       limit: 100,
     });
+    await feed.silenceBuzzer!();
     expect(calls).toEqual([
       {
         command: "alarm_ack",
@@ -59,6 +60,7 @@ describe("nativeProjectFiles", () => {
           limit: 100,
         },
       },
+      { command: "alarm_buzzer_silence", args: undefined },
     ]);
   });
 

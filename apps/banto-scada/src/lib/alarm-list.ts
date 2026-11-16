@@ -231,6 +231,25 @@ export function alarmAckRefusalText(reason: string): string {
   }
 }
 
+/**
+ * ブザーの状態の文字（設計§6）。`feed` は警報の host がブザー停止を受けられるか
+ * （browser 版は無い）。Engine が動いていない snapshot は鳴らすものなしとして読む。
+ */
+export function alarmBuzzerText(
+  snapshot: AlarmSnapshot | null,
+  feed: boolean,
+): string {
+  if (!feed) return "ブザー: この版では鳴らしません";
+  switch (snapshot?.engine ? (snapshot.buzzer ?? "quiet") : "quiet") {
+    case "ringing":
+      return "ブザー: 鳴っています";
+    case "silenced":
+      return "ブザー: 停止中（新しい警報・再発生でまた鳴ります）";
+    default:
+      return "ブザー: 鳴らす警報はありません";
+  }
+}
+
 /** 履歴の種類（`alarm_history` の kind）と日本語ラベル。先頭は絞り込みの選択肢に出す。 */
 export const ALARM_EVENT_KINDS: readonly [string, string][] = [
   ["occurred", "発生"],

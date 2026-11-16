@@ -295,7 +295,8 @@ export function objectFormCommand(
     const target: NavTarget | undefined =
       targetValue === "back" ||
       targetValue === "forward" ||
-      targetValue === "alarmList"
+      targetValue === "alarmList" ||
+      targetValue === "silenceBuzzer"
         ? { kind: targetValue }
         : targetValue.startsWith("screen:")
           ? { kind: "screen", screenId: targetValue.slice("screen:".length) }

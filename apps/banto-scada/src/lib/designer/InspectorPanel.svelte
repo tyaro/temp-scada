@@ -1638,6 +1638,7 @@
                     <option value="back">戻る（運転表示の履歴）</option>
                     <option value="forward">進む（運転表示の履歴）</option>
                     <option value="alarmList">アラーム一覧を開く</option>
+                    <option value="silenceBuzzer">ブザー停止</option>
                   </select></label
                 >
                 <label class="full-width banto-field banto-field--stacked"

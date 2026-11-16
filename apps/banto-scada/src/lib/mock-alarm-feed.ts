@@ -31,6 +31,8 @@ export interface AlarmMockControl {
   ackRequests(): UnackedOccurrence[][];
   /** 受けた `alarm_history` の条件（呼ばれた順）。 */
   historyQueries(): AlarmHistoryQuery[];
+  /** 受けた `alarm_buzzer_silence` の回数。 */
+  silenceRequests(): number;
 }
 
 const STOPPED: AlarmSnapshot = {
@@ -55,6 +57,7 @@ export function createMockAlarmFeed(): {
   let refusal: string | null = null;
   const acks: UnackedOccurrence[][] = [];
   const queries: AlarmHistoryQuery[] = [];
+  let silences = 0;
   const subscribers = new Set<{
     change: (event: AlarmChange) => void;
     lagged: () => void;
@@ -108,6 +111,15 @@ export function createMockAlarmFeed(): {
         if (results.some((row) => row.result.kind === "accepted")) notify();
         return results;
       },
+      async silenceBuzzer() {
+        silences += 1;
+        // host と同じく、鳴っているときだけ「停止中」にする（ACK ではない）。
+        if (current.buzzer === "ringing") {
+          current.buzzer = "silenced";
+          notify();
+        }
+        return current.buzzer ?? "quiet";
+      },
       async history(query) {
         queries.push(structuredClone(query));
         return events
@@ -139,6 +151,7 @@ export function createMockAlarmFeed(): {
       },
       ackRequests: () => structuredClone(acks),
       historyQueries: () => structuredClone(queries),
+      silenceRequests: () => silences,
     },
   };
 }

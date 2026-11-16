@@ -32,7 +32,7 @@ impl AlarmState {
     }
     pub async fn open(dir: Result<impl AsRef<Path>, impl std::fmt::Debug>) -> Self {
         let service = match dir {
-            Ok(dir) => AlarmService::open(dir.as_ref())
+            Ok(dir) => AlarmService::open_with_buzzer(dir.as_ref(), crate::buzzer::player())
                 .await
                 .map(Arc::new)
                 .map_err(|error| reason(&error)),
@@ -385,6 +385,16 @@ pub async fn alarm_ack(
         });
     }
     Ok(results)
+}
+
+/// Silence this terminal's buzzer (design §6). Not an ACK: no login, no
+/// phase check and no `alarm_operation` lock, so it works while an apply or
+/// ACK is in progress.
+#[tauri::command]
+pub fn alarm_buzzer_silence(
+    alarm: State<'_, AlarmState>,
+) -> Result<scada_host::alarm_buzzer::BuzzerStatus, String> {
+    Ok(alarm.get()?.silence_buzzer())
 }
 
 #[tauri::command]

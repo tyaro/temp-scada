@@ -452,6 +452,22 @@ struct ApplyCommand {
     reply: oneshot::Sender<Result<(), AlarmRuntimeError>>,
 }
 
+/// A weak `AlarmRuntime::snapshot` for tasks that must not outlive the runtime.
+pub struct RuntimeSnapshots(mpsc::WeakSender<Control>);
+
+impl RuntimeSnapshots {
+    pub async fn snapshot(&self) -> Result<Engine, AlarmRuntimeError> {
+        let control = self.0.upgrade().ok_or(AlarmRuntimeError::Closed)?;
+        let (reply, rx) = oneshot::channel();
+        control
+            .send(Control::Snapshot(reply))
+            .await
+            .map_err(|_| AlarmRuntimeError::Closed)?;
+        drop(control);
+        rx.await.map_err(|_| AlarmRuntimeError::Closed)
+    }
+}
+
 /// One owner for the dedicated SDK connection and serialized Engine inputs.
 pub struct AlarmRuntime {
     control: mpsc::Sender<Control>,
@@ -556,6 +572,11 @@ impl AlarmRuntime {
             .await
             .map_err(|_| AlarmRuntimeError::Closed)?;
         rx.await.map_err(|_| AlarmRuntimeError::Closed)?
+    }
+
+    /// A snapshot handle that does not keep the runtime alive (the buzzer pump).
+    pub fn snapshots(&self) -> RuntimeSnapshots {
+        RuntimeSnapshots(self.control.downgrade())
     }
 
     pub async fn snapshot(&self) -> Result<Engine, AlarmRuntimeError> {

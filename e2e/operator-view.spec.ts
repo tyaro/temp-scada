@@ -100,8 +100,8 @@ test("the operator view shows the frame, keeps its own history and leaves the De
     throw new Error("frame not laid out");
   expect(Math.abs(headerBox.width - mainBox.width)).toBeLessThan(1);
   expect(Math.abs(footerBox.width - mainBox.width)).toBeLessThan(1);
-  // 960×60 のヘッダーは主画面（960×540）と同じ倍率。
-  expect(headerBox.height / mainBox.height).toBeCloseTo(60 / 540, 2);
+  // 960×100 のヘッダー（警報の帯とボタンの段を含む）は主画面（960×540）と同じ倍率。
+  expect(headerBox.height / mainBox.height).toBeCloseTo(100 / 540, 2);
   expect(Math.abs(headerBox.y + headerBox.height - mainBox.y)).toBeLessThan(1);
   expect(Math.abs(mainBox.y + mainBox.height - footerBox.y)).toBeLessThan(1);
 

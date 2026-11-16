@@ -4,6 +4,7 @@ import {
   alarmAckRefusalText,
   alarmAckResultText,
   alarmAckTargets,
+  alarmBuzzerText,
   alarmHistoryQuery,
   alarmHistoryRow,
   alarmListCurrent,
@@ -354,5 +355,33 @@ describe("history", () => {
         kind: "",
       }),
     ).toEqual({ issue: "開始は終了より前にしてください。" });
+  });
+});
+
+describe("alarmBuzzerText", () => {
+  const running = (buzzer?: AlarmSnapshot["buzzer"]) =>
+    ({
+      ...snapshot({}),
+      buzzer,
+    }) as AlarmSnapshot;
+  it("reads the host's buzzer status", () => {
+    expect(alarmBuzzerText(running("ringing"), true)).toBe(
+      "ブザー: 鳴っています",
+    );
+    expect(alarmBuzzerText(running("silenced"), true)).toContain("停止中");
+    expect(alarmBuzzerText(running("quiet"), true)).toBe(
+      "ブザー: 鳴らす警報はありません",
+    );
+    expect(alarmBuzzerText(running(), true)).toBe(
+      "ブザー: 鳴らす警報はありません",
+    );
+  });
+  it("is quiet without an Engine and unsupported without a host", () => {
+    expect(alarmBuzzerText({ ...running("ringing"), engine: null }, true)).toBe(
+      "ブザー: 鳴らす警報はありません",
+    );
+    expect(alarmBuzzerText(running("ringing"), false)).toBe(
+      "ブザー: この版では鳴らしません",
+    );
   });
 });

@@ -11,6 +11,7 @@ use serde::Serialize;
 use tokio::sync::{broadcast, Mutex};
 use tokio::task::JoinHandle;
 
+use crate::alarm_buzzer::{BuzzerDriver, BuzzerPlayer, BuzzerStatus, LogBuzzerPlayer};
 use crate::alarm_db::{
     plan_apply, plan_restore, AlarmDb, AlarmDbError, AppliedDefinitions, EventRead,
     UnackedOccurrence,
@@ -78,6 +79,8 @@ pub struct AlarmSnapshot {
     /// Rereads of the current values keep failing (design §4.5). Evaluation
     /// continues until the streak exceeds its limit (ReceiveLost).
     pub reread_failure: Option<crate::alarm_runtime::RereadFailure>,
+    /// The terminal buzzer (design §6): ringing, silenced or quiet.
+    pub buzzer: BuzzerStatus,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -170,6 +173,7 @@ struct Active {
     applied: Option<AppliedDefinitions>,
     pump: Option<JoinHandle<()>>,
     reason: String,
+    buzzer: Arc<BuzzerDriver>,
 }
 
 struct PendingCache {
@@ -187,13 +191,26 @@ pub struct AlarmService {
     pending_cache: Mutex<Option<PendingCache>>,
     changes: broadcast::Sender<AlarmChange>,
     lagged: broadcast::Sender<()>,
+    buzzer: Arc<BuzzerDriver>,
 }
 
 impl AlarmService {
+    /// Open without audio; the buzzer only logs.
     pub async fn open(data_dir: &Path) -> Result<Self, AlarmServiceError> {
+        Self::open_with_buzzer(data_dir, Arc::new(LogBuzzerPlayer)).await
+    }
+
+    /// Open with the terminal's buzzer player (design §6).
+    pub async fn open_with_buzzer(
+        data_dir: &Path,
+        player: Arc<dyn BuzzerPlayer>,
+    ) -> Result<Self, AlarmServiceError> {
         let terminal = Arc::new(AlarmTerminal::open(data_dir).await?);
         let (changes, _) = broadcast::channel(256);
         let (lagged, _) = broadcast::channel(16);
+        // A buzzer status change is not an Engine change: viewers refetch the
+        // snapshot as for `lagged`, which keeps the generation/seq rules intact.
+        let buzzer = Arc::new(BuzzerDriver::new(player, lagged.clone()));
         let service = Self {
             terminal,
             active: Mutex::new(Active {
@@ -203,10 +220,12 @@ impl AlarmService {
                 applied: None,
                 pump: None,
                 reason: "notApplied".into(),
+                buzzer: buzzer.clone(),
             }),
             pending_cache: Mutex::new(None),
             changes,
             lagged,
+            buzzer,
         };
         if service.recover_switch().await.is_err() {
             service.active.lock().await.reason = "switchRecoveryFailed".into();
@@ -286,6 +305,7 @@ impl AlarmService {
             if let Some(pump) = active.pump.take() {
                 pump.abort();
             }
+            active.buzzer.halt();
             if let Some(db) = active.db.take() {
                 if let Ok(db) = Arc::try_unwrap(db) {
                     db.close().await;
@@ -376,15 +396,27 @@ impl AlarmService {
         let mut reread = runtime.reread_failure();
         let sender = self.changes.clone();
         let lagged = self.lagged.clone();
+        let buzzer = active.buzzer.clone();
+        let token = buzzer.begin();
+        let snapshots = runtime.snapshots();
         active.pump = Some(tokio::spawn(async move {
             if !matches!(*status.borrow(), AlarmRuntimeStatus::Running) {
                 let _ = lagged.send(());
                 return;
             }
+            // The receiver is already subscribed; changes up to the snapshot's
+            // seq are skipped as duplicates by the buzzer.
+            let resync = || async {
+                if let Ok(engine) = snapshots.snapshot().await {
+                    buzzer.sync(token, &engine);
+                }
+            };
+            resync().await;
             loop {
                 tokio::select! {
                     state = status.changed() => {
                         if state.is_err() || !matches!(*status.borrow(), AlarmRuntimeStatus::Running) {
+                            buzzer.engine_stopped(token);
                             let _ = lagged.send(());
                             break;
                         }
@@ -394,9 +426,16 @@ impl AlarmService {
                     Ok(()) = history.changed() => { let _ = lagged.send(()); }
                     Ok(()) = reread.changed() => { let _ = lagged.send(()); }
                     change = receiver.recv() => match change {
-                        Ok(change) => { let _ = sender.send(change); }
-                        Err(broadcast::error::RecvError::Lagged(_)) => { let _ = lagged.send(()); }
-                        Err(_) => break,
+                        Ok(change) => {
+                            let synced = buzzer.apply(token, &change);
+                            let _ = sender.send(change);
+                            if !synced { resync().await; }
+                        }
+                        Err(broadcast::error::RecvError::Lagged(_)) => {
+                            let _ = lagged.send(());
+                            resync().await;
+                        }
+                        Err(_) => { buzzer.engine_stopped(token); break; }
                     },
                 }
             }
@@ -442,6 +481,7 @@ impl AlarmService {
         if let Some(pump) = active.pump.take() {
             pump.abort();
         }
+        active.buzzer.halt();
         if let Some(db) = active.db.take() {
             if let Ok(db) = Arc::try_unwrap(db) {
                 db.close().await;
@@ -805,6 +845,7 @@ impl AlarmService {
                     pending_display_changes: false,
                     history_write_failure: None,
                     reread_failure: None,
+                    buzzer: self.buzzer.status(),
                 },
                 None,
             ));
@@ -858,6 +899,7 @@ impl AlarmService {
                 pending_display_changes: false,
                 history_write_failure,
                 reread_failure,
+                buzzer: self.buzzer.status(),
             },
             applied,
         ))
@@ -927,6 +969,17 @@ impl AlarmService {
             Err(AlarmRuntimeError::Closed) => Err(AlarmServiceError::EngineStopped),
             Err(error) => Err(error.into()),
         }
+    }
+
+    /// Silence this terminal's buzzer (design §6). Not an ACK, and needs no
+    /// authorization or Engine lock: a new or reoccurred unacked occurrence
+    /// sounds again.
+    pub fn silence_buzzer(&self) -> BuzzerStatus {
+        self.buzzer.silence()
+    }
+
+    pub fn buzzer_status(&self) -> BuzzerStatus {
+        self.buzzer.status()
     }
 
     pub async fn history(
@@ -1152,6 +1205,91 @@ mod tests {
         assert_eq!(changed.engine.unwrap().session, session);
         assert!(changed.applied.unwrap().applied_at_ms > renamed_applied_at);
         service.stop().await.unwrap();
+        drop(service);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[derive(Default)]
+    struct Played(std::sync::Mutex<Vec<&'static str>>);
+    impl BuzzerPlayer for Played {
+        fn play_loop(&self) {
+            self.0.lock().unwrap().push("loop");
+        }
+        fn play_once(&self) {
+            self.0.lock().unwrap().push("once");
+        }
+        fn stop(&self) {
+            self.0.lock().unwrap().push("stop");
+        }
+    }
+
+    async fn wait_buzzer(service: &AlarmService, want: BuzzerStatus) {
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            while service.snapshot().await.unwrap().buzzer != want {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap_or_else(|_| panic!("buzzer never became {want:?}"));
+    }
+
+    #[tokio::test]
+    async fn buzzer_rings_for_an_unacked_occurrence_and_silence_is_not_ack() {
+        let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+        let dir = std::env::temp_dir().join(format!("alarm-buzzer-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("a.json");
+        let id = uuid::Uuid::now_v7().to_string();
+        std::fs::write(&path, serde_json::to_vec(&project(&id, "A")).unwrap()).unwrap();
+        let played = Arc::new(Played::default());
+        let service = AlarmService::open_with_buzzer(&dir, played.clone())
+            .await
+            .unwrap();
+        assert_eq!(service.buzzer_status(), BuzzerStatus::Quiet);
+        let mut notified = service.lagged();
+        assert!(matches!(
+            service
+                .apply(
+                    &path,
+                    &hub.url,
+                    hub.clients(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
+                .await
+                .unwrap(),
+            ApplyResult::Applied { .. }
+        ));
+        wait_buzzer(&service, BuzzerStatus::Ringing).await;
+        assert!(notified.try_recv().is_ok());
+        assert_eq!(service.silence_buzzer(), BuzzerStatus::Silenced);
+        let snapshot = service.snapshot().await.unwrap();
+        assert_eq!(snapshot.buzzer, BuzzerStatus::Silenced);
+        let (condition, state) = snapshot
+            .engine
+            .unwrap()
+            .conditions
+            .into_iter()
+            .next()
+            .unwrap();
+        assert!(!state.acked, "silence must not ACK");
+        assert_eq!(
+            service
+                .ack(
+                    condition,
+                    state.occurrence.unwrap(),
+                    state.recurrence,
+                    "未ログイン".into()
+                )
+                .await
+                .unwrap(),
+            AckOutcome::Accepted
+        );
+        wait_buzzer(&service, BuzzerStatus::Quiet).await;
+        service.stop().await.unwrap();
+        assert_eq!(service.buzzer_status(), BuzzerStatus::Quiet);
+        assert_eq!(*played.0.lock().unwrap(), vec!["loop", "stop"]);
         drop(service);
         std::fs::remove_dir_all(dir).unwrap();
     }

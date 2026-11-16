@@ -7,6 +7,7 @@
     alarmAckRefusalText,
     alarmAckResultText,
     alarmAckTargets,
+    alarmBuzzerText,
     alarmHistoryQuery,
     alarmHistoryRow,
     alarmListCurrent,
@@ -59,6 +60,7 @@
     >
   >(new Map());
   let ackIssue = $state<string | null>(null);
+  let buzzerIssue = $state<string | null>(null);
 
   let historyFrom = $state(""),
     historyTo = $state(""),
@@ -163,6 +165,19 @@
     }
   }
 
+  /** ブザー停止（§6）。ACK ではないので、ACK の可否・ログインに関わらず押せる。 */
+  async function silenceBuzzer() {
+    if (!feed?.silenceBuzzer) return;
+    buzzerIssue = null;
+    try {
+      await feed.silenceBuzzer();
+    } catch (error) {
+      buzzerIssue = `ブザーを止められませんでした（${reasonOf(error)}）`;
+    } finally {
+      onrefresh();
+    }
+  }
+
   function showTab(next: "current" | "history") {
     tab = next;
     if (next === "history" && !historyLoaded) void loadHistory(false);
@@ -182,6 +197,17 @@
 
 <Modal {open} title="アラーム一覧" width="1100px" {onclose} {focusFallback}>
   <div class="alarm-list" data-alarm-list>
+    <div class="toolbar buzzer">
+      <span role="status" data-alarm-buzzer
+        >{alarmBuzzerText(snapshot, !!feed?.silenceBuzzer)}</span
+      >
+      <button
+        type="button"
+        disabled={!feed?.silenceBuzzer}
+        onclick={silenceBuzzer}>ブザー停止</button
+      >
+    </div>
+    {#if buzzerIssue}<p class="notice" role="alert">{buzzerIssue}</p>{/if}
     <div
       role="tablist"
       aria-label="アラーム一覧の表示"
@@ -441,6 +467,10 @@
     flex-wrap: wrap;
     align-items: end;
     gap: 0.5rem;
+  }
+  .toolbar.buzzer {
+    align-items: center;
+    justify-content: space-between;
   }
   .notice {
     margin: 0;

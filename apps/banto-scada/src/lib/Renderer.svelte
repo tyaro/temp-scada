@@ -55,6 +55,7 @@
     onnavigate,
     currentScreenId,
     navHistory,
+    buzzerAvailable = false,
     screens = [],
     equipmentContext,
     images,
@@ -82,6 +83,8 @@
     currentScreenId?: string;
     /** 運転表示の履歴。省略時（プレビュー）は戻る・進むを押せない。 */
     navHistory?: NavHistoryState;
+    /** ブザー停止を送れる（警報の host がある）。無ければブザー停止のボタンは押せない。 */
+    buzzerAvailable?: boolean;
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     images?: ReadonlyMap<
@@ -144,7 +147,12 @@
   function navLink(object: ScreenObject) {
     if (editable || !onnavigate || object.shape.type !== "navButton")
       return undefined;
-    const target = navButtonAction(object.shape, true, navHistory);
+    const target = navButtonAction(
+      object.shape,
+      true,
+      navHistory,
+      buzzerAvailable,
+    );
     return target
       ? {
           target,
@@ -154,9 +162,11 @@
               ? "前の画面へ戻る"
               : target.kind === "alarmList"
                 ? "アラーム一覧を開く"
-                : target.kind === "forward"
-                  ? "次の画面へ進む"
-                  : `${navTargetLabel(target, screens)}へ移る`
+                : target.kind === "silenceBuzzer"
+                  ? "ブザーを止める"
+                  : target.kind === "forward"
+                    ? "次の画面へ進む"
+                    : `${navTargetLabel(target, screens)}へ移る`
           }`,
         }
       : undefined;
@@ -797,6 +807,7 @@
             currentScreenId={currentScreenId ??
               ("background" in screen ? screen.id : undefined)}
             {navHistory}
+            {buzzerAvailable}
             preview={!editable}
             hopPath={hops.get(object.id)}
             ownerDefinition={"background" in screen ? undefined : screen}

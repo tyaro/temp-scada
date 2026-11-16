@@ -27,7 +27,8 @@ export function validateNavButtonShape(
     } else if (
       target.kind !== "back" &&
       target.kind !== "forward" &&
-      target.kind !== "alarmList"
+      target.kind !== "alarmList" &&
+      target.kind !== "silenceBuzzer"
     )
       throw new Error("画面切替ボタンの行き先を選択してください");
   }
@@ -85,26 +86,30 @@ export interface NavHistoryState {
 /**
  * 表示確認で押したときの動き。編集中・未設定は undefined。戻る・進むは履歴を渡され、
  * その向きへ動けるときだけ返す（プレビューは履歴を渡さないので押せない）。
+ * ブザー停止は警報の host（`AlarmFeed.silenceBuzzer`）があるときだけ（`buzzer`）。
  */
 export function navButtonAction(
   shape: Pick<NavButtonShape, "target">,
   preview: boolean,
   history?: NavHistoryState,
+  buzzer = false,
 ): NavTarget | undefined {
   const target = shape.target;
   if (!preview || !target) return undefined;
   if (target.kind === "screen" || target.kind === "alarmList") return target;
+  if (target.kind === "silenceBuzzer") return buzzer ? target : undefined;
   if (target.kind === "back") return history?.canBack ? target : undefined;
   return history?.canForward ? target : undefined;
 }
 
-/** 押せないボタン（未設定、履歴で動けない戻る・進む）は表示確認で薄く表示する。 */
+/** 押せないボタン（未設定、履歴で動けない戻る・進む、host の無いブザー停止）は表示確認で薄く表示する。 */
 export function navButtonDisabled(
   shape: Pick<NavButtonShape, "target">,
   preview: boolean,
   history?: NavHistoryState,
+  buzzer = false,
 ): boolean {
-  return preview && !navButtonAction(shape, preview, history);
+  return preview && !navButtonAction(shape, preview, history, buzzer);
 }
 
 /** 行き先の説明（レイヤー・Inspector・読み上げ用）。 */
@@ -115,6 +120,7 @@ export function navTargetLabel(
   if (!target) return "行き先未設定";
   if (target.kind === "back") return "戻る";
   if (target.kind === "alarmList") return "アラーム一覧";
+  if (target.kind === "silenceBuzzer") return "ブザー停止";
   if (target.kind === "forward") return "進む";
   return (
     screens.find((s) => s.id === target.screenId)?.name ?? "見つからない画面"

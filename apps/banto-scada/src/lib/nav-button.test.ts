@@ -118,6 +118,19 @@ describe("nav button display", () => {
     expect(navTargetLabel({ kind: "alarmList" }, [])).toBe("アラーム一覧");
     expect(() => validateNavButtonShape(alarms)).not.toThrow();
   });
+  it("silences the buzzer only with an alarm host", () => {
+    const buzzer = shape({ target: { kind: "silenceBuzzer" } });
+    expect(navButtonAction(buzzer, true)).toBeUndefined();
+    expect(navButtonDisabled(buzzer, true)).toBe(true);
+    expect(navButtonAction(buzzer, true, undefined, true)).toEqual({
+      kind: "silenceBuzzer",
+    });
+    expect(navButtonDisabled(buzzer, true, undefined, true)).toBe(false);
+    expect(navButtonAction(buzzer, false, undefined, true)).toBeUndefined();
+    expect(navButtonIsCurrent(buzzer, "a")).toBe(false);
+    expect(navTargetLabel({ kind: "silenceBuzzer" }, [])).toBe("ブザー停止");
+    expect(() => validateNavButtonShape(buzzer)).not.toThrow();
+  });
   it("names the target", () => {
     const screens = [{ id: "a", name: "概要" }];
     expect(navTargetLabel(shape().target, screens)).toBe("概要");

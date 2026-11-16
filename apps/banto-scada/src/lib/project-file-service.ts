@@ -87,6 +87,9 @@ export interface AlarmFeed {
   ack?(items: readonly UnackedOccurrence[]): Promise<AlarmAckResult[]>;
   /** `alarm_history`: newest first; pass the last `seq` as `beforeSeq` for more. */
   history?(query: AlarmHistoryQuery): Promise<AlarmEventRead[]>;
+  /** `alarm_buzzer_silence`: stop this terminal's buzzer. Not an ACK and
+   * needs no login; resolves to the buzzer status after silencing. */
+  silenceBuzzer?(): Promise<import("./alarm-mirror").AlarmBuzzerStatus>;
 }
 
 /** `alarm_ack`'s result of one item (`src-tauri/src/alarm.rs` `AckResult`). */

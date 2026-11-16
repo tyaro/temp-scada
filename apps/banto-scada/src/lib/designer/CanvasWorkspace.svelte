@@ -43,6 +43,7 @@
     onopentrend,
     onopenequipment,
     onnavigate,
+    buzzerAvailable = false,
     screens = [],
     equipmentContext,
     readings,
@@ -76,6 +77,8 @@
     onopenequipment?: (equipmentId: string, origin: SVGElement) => void;
     /** 表示プレビューで画面切替ボタンを押したとき。編集中は渡さない。 */
     onnavigate?: (target: NavTarget) => void;
+    /** ブザー停止を送れる（警報の host がある）。 */
+    buzzerAvailable?: boolean;
     screens?: Screen[];
     equipmentContext?: EquipmentContext;
     readings?: TagReadings;
@@ -945,6 +948,7 @@
             {onopentrend}
             {onopenequipment}
             {onnavigate}
+            {buzzerAvailable}
             bind:this={renderer}
             {screen}
             {symbols}

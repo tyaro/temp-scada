@@ -108,6 +108,7 @@ function snapshot(
   {
     engineUnavailable = null as string | null,
     projectRevision = sample.manifest.projectRevision,
+    buzzer = "quiet" as "ringing" | "silenced" | "quiet",
   } = {},
 ) {
   return {
@@ -136,6 +137,7 @@ function snapshot(
     pendingDisplayChanges: false,
     historyWriteFailure: null,
     rereadFailure: null,
+    buzzer,
   };
 }
 const setSnapshot = (page: Page, value: unknown, notify = true) =>
@@ -394,4 +396,86 @@ test("a nav button and the operator view open the alarm list", async ({
   await expect(
     view.getByRole("dialog", { name: "アラーム一覧" }),
   ).toBeVisible();
+});
+
+const HEADER_BUZZER = "0199f200-0000-7000-8000-000000000217";
+const silences = (page: Page) =>
+  page.evaluate(() => (window as any).__bantoAlarmMock.silenceRequests());
+
+test("the header's buzzer button and the alarm list silence the buzzer without ACK", async ({
+  page,
+}) => {
+  await mockAlarmEntry(page);
+  await openSample(page);
+  await setSnapshot(
+    page,
+    snapshot(
+      { [PUMP]: { active: true, acked: false, seq: 1 } },
+      { buzzer: "ringing" },
+    ),
+  );
+  await page.getByRole("button", { name: "運転表示", exact: true }).click();
+  const view = page.getByRole("region", { name: "運転表示" });
+  const header = view.locator('[data-operator-region="header"]');
+  // ヘッダーの例: 最新の警報の帯と、アラーム一覧・ブザー停止のボタン。
+  await expect(header.locator("[data-alarm-banner-main]")).toContainText(
+    "ポンプ停止",
+  );
+  await header
+    .getByRole("button", { name: "ブザー停止：ブザーを止める" })
+    .click();
+  await expect.poll(() => silences(page)).toBe(1);
+
+  await header
+    .getByRole("button", { name: "アラーム一覧：アラーム一覧を開く" })
+    .click();
+  const list = view.getByRole("dialog", { name: "アラーム一覧" });
+  await expect(list.locator("[data-alarm-buzzer]")).toHaveText(
+    "ブザー: 停止中（新しい警報・再発生でまた鳴ります）",
+  );
+  // 停止は ACK ではない: 未確認の行はそのまま残る。
+  await expect(list.locator(`[data-alarm-row="${PUMP}"]`)).toContainText(
+    "未確認",
+  );
+  await setSnapshot(
+    page,
+    snapshot(
+      { [PUMP]: { active: true, acked: false, seq: 2 } },
+      { buzzer: "ringing" },
+    ),
+  );
+  await expect(list.locator("[data-alarm-buzzer]")).toHaveText(
+    "ブザー: 鳴っています",
+  );
+  await list.getByRole("button", { name: "ブザー停止", exact: true }).click();
+  await expect.poll(() => silences(page)).toBe(2);
+  await expect(list.locator("[data-alarm-buzzer]")).toContainText("停止中");
+  expect(
+    await page.evaluate(() => (window as any).__bantoAlarmMock.ackRequests()),
+  ).toEqual([]);
+});
+
+test("without an alarm host the buzzer buttons cannot be pressed", async ({
+  page,
+}) => {
+  await openSample(page);
+  await page.getByRole("button", { name: "運転表示", exact: true }).click();
+  const view = page.getByRole("region", { name: "運転表示" });
+  const header = view.locator('[data-operator-region="header"]');
+  await expect(
+    header.locator(`[data-object-id="${HEADER_BUZZER}"] [data-nav-button]`),
+  ).toHaveAttribute("data-nav-disabled", "true");
+  await expect(
+    header.getByRole("button", { name: "ブザー停止：ブザーを止める" }),
+  ).toHaveCount(0);
+  await header
+    .getByRole("button", { name: "アラーム一覧：アラーム一覧を開く" })
+    .click();
+  const list = view.getByRole("dialog", { name: "アラーム一覧" });
+  await expect(list.locator("[data-alarm-buzzer]")).toHaveText(
+    "ブザー: この版では鳴らしません",
+  );
+  await expect(
+    list.getByRole("button", { name: "ブザー停止", exact: true }),
+  ).toBeDisabled();
 });
