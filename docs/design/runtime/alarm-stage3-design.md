@@ -327,7 +327,7 @@ browser 版（モックの読取）は Engine を持たない。e2e 用に、IPC
 - 3-E2 で決めた細部:
   - 鳴らす判断は `scada-host` の純粋な状態 `alarm_buzzer::Buzzer`。Engine の snapshot と差分（`AlarmChange`）から、未確認の回の集合 (condition, occurrence, recurrence) を持つ。集合が空でなく、停止されていなければ鳴り続ける。ActiveUnacked になるのは `manual`・`autoOnReturn`（Engine の `Sound::Continuous`）だけ。
   - 停止を解くのは、未確認の回の集合に新しい (occurrence, recurrence) が加わったとき（新しい回の発生・未確認の回の再発生）。同じ回の評価不能などの変化では解かない。未確認の回が無くなったら停止の状態も消す（次の発生は停止を引き継がない）。
-  - `Sound::Once`（`noneWithSound`）は発生のイベントで一度鳴らす。鳴り続けているあいだは重ねない（再生を切らない）。停止中・鳴らすものが無いときは一度鳴らし、停止の状態は変えない。同じ差分に Continuous の発生があれば鳴り続けだけ。ブザーの購読は評価の開始より前に張る（runtime の最初の `changes()` が開始からの差分を受け取る）。snapshot から揃えた後に購読から届く、snapshot に含まれていた差分（開始時の評価が最初の snapshot より先に進んだ場合など）は、状態は当てずに一度鳴らしだけ鳴らす。購読に届かなかった差分（Lagged で捨てられたもの）の一度鳴らしは鳴らせない。
+  - `Sound::Once`（`noneWithSound`）は発生のイベントで一度鳴らす。鳴り続けているあいだは重ねない（再生を切らない）。停止中・鳴らすものが無いときは一度鳴らし、停止の状態は変えない。同じ差分に Continuous の発生があれば鳴り続けだけ。最後の鳴り続けが止まる差分に一度鳴らしの発生があれば、止めてから一度鳴らす。ブザーの購読は評価の開始より前に張る（runtime の最初の `changes()` が開始からの差分を受け取る）。snapshot から揃えた後に購読から届く、snapshot に含まれていた差分（開始時の評価が最初の snapshot より先に進んだ場合など）は、状態は当てずに一度鳴らしだけ鳴らす。購読に届かなかった差分（Lagged で捨てられたもの）の一度鳴らしは鳴らせない。
   - Engine の停止・未適用・切替（session を閉じたとき）は鳴らさず、停止の状態も消す。新しい session は停止されていない状態から始め、引き継いだ ActiveUnacked はまた鳴る（§5.4）。同じ session の取り直しでは停止を保つ。Engine 単位の評価不能（未接続・受信の途絶）では Engine は動いているので、未確認の回があれば鳴り続ける。
   - 状態（`ringing`・`silenced`・`quiet`）は `alarm_snapshot` の `buzzer`。変化は Engine の変更ではないので、`alarm_changed_lagged`（snapshot の取り直し）で知らせ、世代番号・連番の規則を変えない。
   - `alarm_buzzer_silence` は権限・フェーズ・`alarm_operation`・Engine の排他を取らない（ACK・適用の最中でも止められる）。状態は host の 1 つの排他で持ち、Engine を止めた後に遅れて届いた古い pump の呼び出しは捨てる。

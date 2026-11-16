@@ -244,6 +244,80 @@ test("the alarm list shows the current alarms and acknowledges the rounds it sho
   );
 });
 
+test("a selected row that reoccurs is no longer selected and is not acknowledged", async ({
+  page,
+}) => {
+  await mockAlarmEntry(page);
+  await openSample(page);
+  await setSnapshot(
+    page,
+    snapshot({ [PUMP]: { active: true, acked: false, seq: 1, recurrence: 2 } }),
+  );
+  await page.getByRole("button", { name: "アラーム一覧", exact: true }).click();
+  const checkbox = row(page, PUMP).getByRole("checkbox");
+  await checkbox.check();
+  const ackSelected = dialog(page).getByRole("button", {
+    name: "選んだ警報を ACK",
+    exact: true,
+  });
+  await expect(ackSelected).toBeEnabled();
+  // 選んだ後に再発生した（recurrence 3）: 選んだ回ではないので外れ、送らない。
+  await setSnapshot(
+    page,
+    snapshot({ [PUMP]: { active: true, acked: false, seq: 1, recurrence: 3 } }),
+  );
+  await expect(checkbox).not.toBeChecked();
+  await expect(ackSelected).toBeDisabled();
+  expect(
+    await page.evaluate(() => (window as any).__bantoAlarmMock.ackRequests()),
+  ).toEqual([]);
+});
+
+test("the history is dropped when the monitored Project changes", async ({
+  page,
+}) => {
+  await mockAlarmEntry(page);
+  await openSample(page);
+  const event = (seq: number, name: string) => ({
+    seq,
+    sessionId: "session-1",
+    event: {
+      atMs: Date.UTC(2026, 10, 17, 0, 0, seq),
+      conditionId: HH,
+      kind: "occurred",
+      detail: { occurrence: "occ", recurrence: 0, judgement: null },
+    },
+    display: { ...display(name, "", "high"), limitLabel: "HH" },
+  });
+  await page.evaluate(
+    (events) => (window as any).__bantoAlarmMock.setHistory(events),
+    [event(1, "Project A の警報")],
+  );
+  await setSnapshot(page, snapshot({}));
+  await page.getByRole("button", { name: "アラーム一覧", exact: true }).click();
+  await dialog(page).getByRole("tab", { name: "履歴" }).click();
+  const history = dialog(page).getByRole("table", { name: "警報の履歴" });
+  await expect(history).toContainText("Project A の警報");
+
+  // 監視が別の Project に切り替わった: 前の行を捨て、新しい照会先で取り直す。
+  await page.evaluate(
+    (events) => (window as any).__bantoAlarmMock.setHistory(events),
+    [event(1, "Project B の警報")],
+  );
+  await setSnapshot(page, {
+    ...snapshot({}),
+    monitored: { projectId: "other-project" },
+  });
+  await expect(history).toContainText("Project B の警報");
+  await expect(history).not.toContainText("Project A の警報");
+  const queries = await page.evaluate(() =>
+    (window as any).__bantoAlarmMock.historyQueries(),
+  );
+  expect(queries.map((q: { beforeSeq: number | null }) => q.beforeSeq)).toEqual(
+    [null, null],
+  );
+});
+
 test("the alarm list explains why it cannot monitor and filters unavailable conditions", async ({
   page,
 }) => {

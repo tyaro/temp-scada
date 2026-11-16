@@ -190,14 +190,17 @@ impl Buzzer {
             self.silenced = false;
         }
         let want = self.status() == BuzzerStatus::Ringing;
-        let command = match (want, self.looping) {
-            (true, false) => Some(BuzzerCommand::Loop),
-            (false, true) => Some(BuzzerCommand::Stop),
-            (false, false) if once => Some(BuzzerCommand::Once),
-            _ => None,
+        let commands = match (want, self.looping) {
+            (true, false) => vec![BuzzerCommand::Loop],
+            // 鳴り続けが止まる差分に一度鳴らしの発生があれば、止めてから一度鳴らす
+            // （鳴り続けで代えられない）。
+            (false, true) if once => vec![BuzzerCommand::Stop, BuzzerCommand::Once],
+            (false, true) => vec![BuzzerCommand::Stop],
+            (false, false) if once => vec![BuzzerCommand::Once],
+            _ => Vec::new(),
         };
         self.looping = want;
-        command.into_iter().collect()
+        commands
     }
 }
 
@@ -481,6 +484,21 @@ mod tests {
             buzzer.sync("s2", 0, [(&id, &state)]),
             vec![BuzzerCommand::Loop]
         );
+    }
+
+    #[test]
+    fn buzzer_plays_a_once_in_the_change_that_ends_the_loop() {
+        // A (manual) returns and B (noneWithSound, the inverse bit) occurs in one step.
+        let mut buzzer = started();
+        buzzer
+            .apply("s1", 1, &change(&[("a", Some(unacked("o1", 0)))]), &[])
+            .unwrap();
+        let rows = change(&[("a", Some(acked("o1"))), ("b", Some(acked("o2")))]);
+        assert_eq!(
+            buzzer.apply("s1", 2, &rows, &[occurred("b", Sound::Once)]),
+            Ok(vec![BuzzerCommand::Stop, BuzzerCommand::Once])
+        );
+        assert_eq!(buzzer.status(), BuzzerStatus::Quiet);
     }
 
     #[test]

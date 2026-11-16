@@ -11,8 +11,11 @@
     alarmHistoryQuery,
     alarmHistoryRow,
     alarmListCurrent,
+    alarmRowSelected,
+    type AlarmAckSelection,
     type AlarmHistoryRow,
     type AlarmListFilter,
+    type AlarmListRow,
   } from "../alarm-list";
   import {
     ProjectFileError,
@@ -50,7 +53,8 @@
 
   let tab = $state<"current" | "history">("current");
   let filter = $state<AlarmListFilter>("all");
-  let selected = $state.raw<ReadonlySet<string>>(new Set());
+  /** 選んだ行の回。表示中の回と違えば選んでいない扱い（§6 見ている回を指す）。 */
+  let selected = $state.raw<AlarmAckSelection>(new Map());
   let acking = $state(false);
   /** 最後の ACK の結果（condition id ごと。送った時の名前を持つ）。 */
   let results = $state.raw<
@@ -73,6 +77,29 @@
   /** 表示中の行を取った照会の条件。「続きを読む」はこれを使う。 */
   let historySubmitted: { from: string; to: string; kind: string } | null =
     null;
+  /**
+   * 表示中の履歴の照会先（feed と監視中の Project）。host は監視中の Project の DB を
+   * 照会するので、照会先が変われば行・カーソルを捨て、古い照会の応答も採らない。
+   */
+  type HistoryOwner = { feed: AlarmFeed | undefined; projectId: string | null };
+  let historyOwner: HistoryOwner | null = null;
+  const currentOwner = $derived<HistoryOwner>({
+    feed,
+    projectId: snapshot?.monitored?.projectId ?? null,
+  });
+  function sameOwner(a: HistoryOwner | null, b: HistoryOwner): boolean {
+    return !!a && a.feed === b.feed && a.projectId === b.projectId;
+  }
+  $effect(() => {
+    const owner = currentOwner;
+    if (!historyLoaded || sameOwner(historyOwner, owner)) return;
+    historyRows = [];
+    historyMore = false;
+    historyLoaded = false;
+    historySubmitted = null;
+    historyOwner = null;
+    if (open && tab === "history") void loadHistory(false);
+  });
 
   const current = $derived(
     alarmListCurrent(
@@ -88,15 +115,19 @@
   // 開くたびに前の選択・結果を捨てる。
   $effect(() => {
     if (!open) return;
-    selected = new Set();
+    selected = new Map();
     results = new Map();
     ackIssue = null;
   });
 
-  function toggle(id: string, checked: boolean) {
-    const next = new Set(selected);
-    if (checked) next.add(id);
-    else next.delete(id);
+  function toggle(row: AlarmListRow, checked: boolean) {
+    const next = new Map(selected);
+    if (checked && row.occurrence !== null)
+      next.set(row.conditionId, {
+        occurrence: row.occurrence,
+        recurrence: row.recurrence,
+      });
+    else next.delete(row.conditionId);
     selected = next;
   }
 
@@ -126,7 +157,7 @@
           },
         ]),
       );
-      selected = new Set();
+      selected = new Map();
     } catch (error) {
       ackIssue = alarmAckRefusalText(reasonOf(error));
     } finally {
@@ -149,13 +180,19 @@
       historyIssue = built.issue;
       return;
     }
+    // 続きは同じ照会先でだけ取る（ほかの Project の DB へカーソルを送らない）。
+    const owner = currentOwner;
+    if (more && !sameOwner(historyOwner, owner)) return;
     historyBusy = true;
     historyIssue = null;
     try {
       const answer = await feed.history(built.query);
+      // 照会の間に照会先が変わったら、応答は採らない（新しい照会先で取り直す）。
+      if (!sameOwner(owner, currentOwner)) return;
       const rows = answer.map(alarmHistoryRow);
       historyRows = more ? [...historyRows, ...rows] : rows;
       historySubmitted = filters;
+      historyOwner = owner;
       historyMore = answer.length >= ALARM_HISTORY_PAGE;
       historyLoaded = true;
     } catch (error) {
@@ -306,9 +343,9 @@
                     type="checkbox"
                     aria-label={`${row.name} を選ぶ`}
                     disabled={!row.unacked || !canAck}
-                    checked={selected.has(row.conditionId)}
+                    checked={alarmRowSelected(row, selected)}
                     onchange={(event) =>
-                      toggle(row.conditionId, event.currentTarget.checked)}
+                      toggle(row, event.currentTarget.checked)}
                   /></td
                 >
                 <td class="state">{row.stateText}</td>

@@ -4,6 +4,7 @@ import {
   alarmAckRefusalText,
   alarmAckResultText,
   alarmAckTargets,
+  alarmRowSelected,
   alarmBuzzerText,
   alarmHistoryQuery,
   alarmHistoryRow,
@@ -220,9 +221,28 @@ describe("alarmAckTargets", () => {
   });
 
   it("narrows to the selected rows, skipping acked and Normal ones", () => {
-    expect(alarmAckTargets(rows, new Set(["pump", "t:hh", "stale"]))).toEqual([
+    const selection = new Map([
+      ["pump", { occurrence: "occ-1", recurrence: 3 }],
+      ["t:hh", { occurrence: "occ-5", recurrence: 0 }],
+      ["stale", { occurrence: "occ-0", recurrence: 0 }],
+    ]);
+    expect(alarmAckTargets(rows, selection)).toEqual([
       { conditionId: "pump", occurrence: "occ-1", recurrence: 3 },
     ]);
+  });
+
+  it("drops a selection whose row moved to a new round", () => {
+    // Selected at recurrence 2; the row now shows the reoccurrence 3.
+    const reoccurred = new Map([
+      ["pump", { occurrence: "occ-1", recurrence: 2 }],
+    ]);
+    expect(alarmAckTargets(rows, reoccurred)).toEqual([]);
+    const pump = rows.find((row) => row.conditionId === "pump")!;
+    expect(alarmRowSelected(pump, reoccurred)).toBe(false);
+    const newOccurrence = new Map([
+      ["pump", { occurrence: "occ-0", recurrence: 3 }],
+    ]);
+    expect(alarmAckTargets(rows, newOccurrence)).toEqual([]);
   });
 });
 
