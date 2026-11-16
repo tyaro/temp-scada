@@ -510,6 +510,15 @@ impl AlarmService {
                 }
             }
         }
+        // Refuse before any stop/restart path: stopping a runtime whose
+        // history cannot be written would end monitoring instead of merely
+        // refusing the definition change (design §5.3).
+        if active.runtime.as_ref().is_some_and(|runtime| {
+            matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running)
+                && runtime.history().borrow().is_some()
+        }) {
+            return Err(AlarmRuntimeError::HistoryUnwritable.into());
+        }
         let mut applied = saved.applied(endpoint.into(), applied_by.into(), wall_ms());
         let same_project = previous
             .as_ref()
@@ -1362,6 +1371,94 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(25)).await;
         }
         panic!("temporary alarm DB handles were not released");
+    }
+
+    #[tokio::test]
+    async fn apply_during_a_history_outage_keeps_the_running_session() {
+        let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+        let dir = std::env::temp_dir().join(format!("alarm-outage-apply-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("a.json");
+        let mut value = project(&uuid::Uuid::now_v7().to_string(), "A");
+        std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        let service = AlarmService::open(&dir).await.unwrap();
+        assert!(matches!(
+            service
+                .apply(
+                    &path,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
+                .await
+                .unwrap(),
+            ApplyResult::Applied { .. }
+        ));
+        let (id, state) = tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            loop {
+                let engine = service.snapshot().await.unwrap().engine.unwrap();
+                if let Some((id, state)) = engine
+                    .conditions
+                    .into_iter()
+                    .find(|(_, state)| state.active)
+                {
+                    break (id, state);
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let db = service.active.lock().await.db.clone().unwrap();
+        db.execute_for_test(
+            "CREATE TRIGGER fail_event BEFORE INSERT ON event BEGIN SELECT RAISE(ABORT, 'disk full'); END; CREATE TRIGGER fail_state BEFORE INSERT ON last_state BEGIN SELECT RAISE(ABORT, 'disk full'); END;",
+        )
+        .await;
+        // The ACK write fails, which starts the outage.
+        assert!(matches!(
+            service
+                .ack(
+                    id,
+                    state.occurrence.unwrap(),
+                    state.recurrence,
+                    "未ログイン".into()
+                )
+                .await,
+            Err(AlarmServiceError::Runtime(
+                AlarmRuntimeError::HistoryUnwritable
+            ))
+        ));
+        let session = service.snapshot().await.unwrap().engine.unwrap().session;
+        // Removing the last definition would take the stop/restart path.
+        value["alarms"] = json!({"definitions": []});
+        std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(matches!(
+            service
+                .apply(
+                    &path,
+                    &hub.url,
+                    hub.client(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
+                .await,
+            Err(AlarmServiceError::Runtime(
+                AlarmRuntimeError::HistoryUnwritable
+            ))
+        ));
+        let snapshot = service.snapshot().await.unwrap();
+        assert_eq!(snapshot.status, "running");
+        assert_eq!(snapshot.engine.unwrap().session, session);
+        assert!(snapshot.history_write_failure.is_some());
+        db.execute_for_test("DROP TRIGGER fail_event; DROP TRIGGER fail_state;")
+            .await;
+        drop(db);
+        service.stop().await.unwrap();
+        drop(service);
+        std::fs::remove_dir_all(dir).unwrap();
     }
 
     #[tokio::test]
