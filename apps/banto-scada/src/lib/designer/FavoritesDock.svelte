@@ -132,6 +132,13 @@
                   height="14"
                   rx="4"
                 /><path d="M15 16h10M21 12l4 4-4 4" />
+              {:else if item.part.type === "basic" && item.part.kind === "alarmBadge"}<rect
+                  x="8"
+                  y="9"
+                  width="24"
+                  height="14"
+                  rx="2"
+                /><rect x="11" y="12" width="18" height="8" rx="1" />
               {:else if item.part.type === "basic" && item.part.kind === "clock"}<circle
                   cx="20"
                   cy="16"

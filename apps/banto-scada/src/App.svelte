@@ -35,6 +35,7 @@
     connectionStatus,
     onprojectchange,
     projectFileService,
+    alarmFeed: alarmFeedProp,
   }: {
     readSource?: ReadSource;
     catalogSource?: CatalogSource;
@@ -52,8 +53,18 @@
     /** The desktop's Project file host (alarm design §5.2); the browser
      * downloads instead. */
     projectFileService?: ProjectFileService;
+    /** The alarm host's snapshot and change events. Defaults to the
+     * Project file host's feed; the browser e2e injects a mock (design §5.5). */
+    alarmFeed?: AlarmFeed;
   } = $props();
-  import type { ProjectFileService } from "./lib/project-file-service";
+  import type {
+    AlarmFeed,
+    ProjectFileService,
+  } from "./lib/project-file-service";
+  import {
+    setAlarmViewProject,
+    setAlarmViewSnapshot,
+  } from "./lib/alarm-view-state.svelte";
   import { AlarmMirror, type AlarmSnapshot } from "./lib/alarm-mirror";
   import { AlarmRefreshQueue } from "./lib/alarm-refresh-queue";
   import { createHistoryAssetCollector } from "./lib/history-assets";
@@ -1829,8 +1840,12 @@
   function refreshAlarm() {
     alarmRefreshQueue?.refresh();
   }
+  const alarmFeed = $derived(alarmFeedProp ?? projectFileService?.alarmFeed);
+  // 小札などの画面側の表示へ配る（編集・プレビュー・運転表示で同じ状態）。
+  $effect(() => setAlarmViewSnapshot(alarmSnapshot));
+  $effect(() => setAlarmViewProject(project));
   $effect(() => {
-    const feed = projectFileService?.alarmFeed;
+    const feed = alarmFeed;
     if (!feed) return;
     const queue = new AlarmRefreshQueue(
       () => feed.snapshot(),
@@ -3487,6 +3502,9 @@
       get editBlocked() {
         return editBlocked;
       },
+      get hasAlarmDefinitions() {
+        return !!project.alarms?.definitions.length;
+      },
       get mutationBlocked() {
         return mutationBlocked;
       },
@@ -3911,7 +3929,7 @@
         >{/if}
     </div>
     {#if recordingIndicator}{@render recordingStatus()}{/if}
-    {#if projectFileService?.alarmFeed}
+    {#if alarmFeed}
       <StatusBadge
         variant={alarmSnapshot?.status === "running" &&
         alarmSnapshot.monitored?.projectId === project.manifest.projectId &&
@@ -4365,6 +4383,7 @@
               edit({ type: "duplicate-symbol", symbolId: id })}
             definitions={project.symbols}
             allowSymbols={!activeDefinition}
+            hasAlarmDefinitions={!!project.alarms?.definitions.length}
             onadd={(kind) => choosePart({ type: "basic", kind })}
             onstartdrag={beginPartDrag}
             onenddrag={() => (paletteDrag = null)}

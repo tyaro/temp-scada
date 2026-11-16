@@ -6,6 +6,7 @@ export function compositedOpacity(object: ScreenObject): number | undefined {
     shape.type === "image" ||
     shape.type === "screenView" ||
     shape.type === "navButton" ||
+    shape.type === "alarmBadge" ||
     shape.type === "rectangle" ||
     shape.type === "ellipse" ||
     shape.type === "level" ||

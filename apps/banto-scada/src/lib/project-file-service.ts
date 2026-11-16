@@ -72,13 +72,16 @@ export interface ProjectFileService {
     confirmed: readonly UnackedOccurrence[],
     confirmedSwitchFrom?: string,
   ): Promise<AlarmApplyResult>;
-  alarmFeed?: {
-    snapshot(): Promise<import("./alarm-mirror").AlarmSnapshot>;
-    subscribe(
-      change: (event: import("./alarm-mirror").AlarmChange) => void,
-      lagged: () => void,
-    ): Promise<() => void>;
-  };
+  alarmFeed?: AlarmFeed;
+}
+
+/** The alarm host's snapshot and change events (alarm design §5.5). */
+export interface AlarmFeed {
+  snapshot(): Promise<import("./alarm-mirror").AlarmSnapshot>;
+  subscribe(
+    change: (event: import("./alarm-mirror").AlarmChange) => void,
+    lagged: () => void,
+  ): Promise<() => void>;
 }
 
 /** A refusal of the host, with its reason code. */

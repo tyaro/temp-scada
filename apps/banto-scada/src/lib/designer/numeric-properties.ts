@@ -1,5 +1,6 @@
 import { placementColor } from "../project";
 import type { ScreenObject } from "../project";
+import { alarmBadgeConditionId } from "../alarm-badge";
 import {
   formatTableColors,
   formatTableFormats,
@@ -50,7 +51,8 @@ export function objectFormValues(
     rotation: String(object.rotation),
     ...(object.shape.type === "screenView" ||
     object.shape.type === "trend" ||
-    object.shape.type === "navButton"
+    object.shape.type === "navButton" ||
+    object.shape.type === "alarmBadge"
       ? {}
       : { fill: placementColor(object) }),
   };
@@ -115,6 +117,12 @@ export function objectFormValues(
   if (object.shape.type === "screenView")
     values.sourceScreenId = object.shape.screenId;
   if (object.shape.type === "trend") values.trendId = object.shape.trendId;
+  if (object.shape.type === "alarmBadge") {
+    values.alarmBadgeTarget = alarmBadgeConditionId(object.shape);
+    values.alarmBadgeText = object.shape.text;
+    values.alarmBadgeFontSize = String(object.shape.style.fontSize);
+    values.alarmBadgeFontWeight = object.shape.style.fontWeight;
+  }
   if (object.shape.type === "navButton") {
     const { target } = object.shape;
     values.navTarget = !target

@@ -17,6 +17,7 @@
   import Primitive from "./Primitive.svelte";
   import TrendPainting from "./TrendPainting.svelte";
   import NavButtonPainting from "./NavButtonPainting.svelte";
+  import AlarmBadgePainting from "./AlarmBadgePainting.svelte";
   import {
     navButtonDisabled,
     navButtonIsCurrent,
@@ -177,6 +178,12 @@
     height={object.height}
     current={navButtonIsCurrent(object.shape, currentScreenId)}
     disabled={navButtonDisabled(object.shape, preview, navHistory)}
+  />
+{:else if "width" in object && object.shape.type === "alarmBadge"}
+  <AlarmBadgePainting
+    shape={object.shape}
+    width={object.width}
+    height={object.height}
   />
 {:else if "width" in object && object.shape.type === "image"}
   {#if images?.get(object.shape.assetId)}

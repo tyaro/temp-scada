@@ -14,6 +14,7 @@ use std::collections::HashSet;
 const MAX_EXACT_LIMIT: f64 = 9_007_199_254_740_991.0;
 
 pub(crate) fn validate(project: &Value) -> Result<(), String> {
+    validate_badges(project)?;
     let Some(definitions) = project["alarms"]["definitions"].as_array() else {
         return Ok(());
     };
@@ -29,6 +30,44 @@ pub(crate) fn validate(project: &Value) -> Result<(), String> {
         let source = &definition["source"];
         if source["kind"] == "threshold" {
             validate_limits(source)?;
+        }
+    }
+    Ok(())
+}
+
+/// 警報の小札が指す定義と限界が Project にあること。しきい値の定義なら限界が必須で、
+/// その限界が定義にあること。bit の定義なら限界を持たない。小札は画面の直下にだけ置ける
+/// （Symbol 定義の中は schema が拒む）。仕様: docs/design/graphics/alarm-badge.md
+fn validate_badges(project: &Value) -> Result<(), String> {
+    let empty = Vec::new();
+    let definitions = project["alarms"]["definitions"]
+        .as_array()
+        .unwrap_or(&empty);
+    for screen in project["screens"].as_array().unwrap() {
+        for object in screen["objects"].as_array().unwrap() {
+            let shape = &object["shape"];
+            if shape["type"] != "alarmBadge" {
+                continue;
+            }
+            let definition = definitions
+                .iter()
+                .find(|definition| definition["id"] == shape["alarmId"])
+                .ok_or("警報の小札が指す警報の定義が見つかりません")?;
+            let source = &definition["source"];
+            match (source["kind"].as_str(), shape["limit"].as_str()) {
+                (Some("threshold"), None) => {
+                    return Err(
+                        "しきい値の警報を指す小札には限界（HH・H・L・LL）を選んでください".into(),
+                    );
+                }
+                (Some("threshold"), Some(limit)) if source["limits"][limit].is_null() => {
+                    return Err("警報の小札が指す限界が警報の定義にありません".into());
+                }
+                (Some("bit"), Some(_)) => {
+                    return Err("bit の警報を指す小札には限界を付けられません".into());
+                }
+                _ => {}
+            }
         }
     }
     Ok(())
@@ -73,6 +112,45 @@ fn validate_limits(source: &Value) -> Result<(), String> {
 mod tests {
     use crate::Project;
     use serde_json::Value;
+
+    #[test]
+    fn shared_alarm_badge_contract() {
+        let base: Value =
+            serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/alarm-badge-cases.json")).unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            if let Some(alarms) = case.get("alarms") {
+                input["alarms"] = alarms.clone();
+            }
+            input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_array_mut()
+                .unwrap()
+                .push(case["object"].clone());
+            let parsed = Project::from_json(&input.to_string());
+            assert_eq!(
+                parsed.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{} {:?}",
+                case["name"],
+                parsed.as_ref().err()
+            );
+            if let (Err(message), Some(error)) = (&parsed, case["error"].as_str()) {
+                assert!(message.contains(error), "{} {message}", case["name"]);
+            }
+            if let Ok(project) = parsed {
+                assert_eq!(
+                    Project::from_json(&project.to_json()).unwrap().0,
+                    project.0,
+                    "{}",
+                    case["name"]
+                );
+            }
+        }
+    }
 
     #[test]
     fn shared_alarm_definition_contract() {

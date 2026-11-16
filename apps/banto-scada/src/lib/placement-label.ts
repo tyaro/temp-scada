@@ -25,6 +25,8 @@ export function placementLabel(
                 ? "時計"
                 : object.shape.type === "navButton"
                   ? "画面切替"
-                  : object.shape.type;
+                  : object.shape.type === "alarmBadge"
+                    ? "警報の小札"
+                    : object.shape.type;
   return `${kind} · ${object.order}`;
 }

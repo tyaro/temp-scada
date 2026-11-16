@@ -1,0 +1,40 @@
+import type { AlarmSnapshot } from "./alarm-mirror";
+import type { AlarmDefinition } from "./alarms";
+import { alarmConditionView, type AlarmView } from "./alarm-view";
+
+/**
+ * 画面全体で使う警報の現在の状態（時計の clock-ticker と同じくモジュールの $state で配る）。
+ * App が snapshot と編集中の Project を書き、小札は編集・プレビュー・運転表示のどこで
+ * 描いても同じ状態を読む。仕様: docs/design/graphics/alarm-badge.md
+ */
+// 書く関数は読まない（App の $effect が書くので、読み書きが同じ effect に入らないようにする）。
+let snapshot = $state.raw<AlarmSnapshot | null>(null);
+let projectId = $state.raw<string | null>(null);
+let blinkUnacked = $state.raw(false);
+let definitions = $state.raw<readonly AlarmDefinition[]>([]);
+
+export function setAlarmViewSnapshot(next: AlarmSnapshot | null): void {
+  snapshot = next;
+}
+
+export function setAlarmViewProject(project: {
+  manifest: { projectId: string };
+  alarms?: { blinkUnacked?: boolean; definitions: readonly AlarmDefinition[] };
+}): void {
+  projectId = project.manifest.projectId;
+  blinkUnacked = project.alarms?.blinkUnacked === true;
+  definitions = project.alarms?.definitions ?? [];
+}
+
+/** condition の表示状態。$derived・テンプレートの中で読むと snapshot の更新で再評価される。 */
+export function alarmViewOf(conditionId: string): AlarmView {
+  return alarmConditionView(snapshot, projectId ?? "", conditionId);
+}
+
+export function alarmViewBlink(): boolean {
+  return blinkUnacked;
+}
+
+export function alarmViewDefinitions(): readonly AlarmDefinition[] {
+  return definitions;
+}

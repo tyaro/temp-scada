@@ -1,3 +1,35 @@
+/**
+ * One condition as the host sends it (`scada_alarm::ConditionState`, design §4.1).
+ * The display state is not sent; `alarm-view.ts` derives it with the same rule.
+ */
+export interface AlarmConditionState {
+  readonly active: boolean;
+  readonly occurrence: string | null;
+  readonly recurrence: number;
+  readonly acked: boolean;
+  readonly timer: {
+    readonly kind: "onDelay" | "offDelay";
+    readonly dueMs: number;
+  } | null;
+  /** Condition-level reason it cannot be evaluated (initialValue, stale, bad, ...). */
+  readonly unavailable: string | null;
+  readonly reportedUnavailable: string | null;
+  readonly orderKey: {
+    readonly generation: number;
+    readonly seq: number;
+  } | null;
+  readonly occurredAtMs: number | null;
+  readonly observation: unknown;
+}
+
+/** Display information of an applied condition (`alarm_db::ConditionDisplay`). */
+export interface AlarmConditionDisplay {
+  readonly name: string;
+  readonly message: string;
+  readonly severity: string;
+  readonly limitLabel: string | null;
+}
+
 /** The alarm host is authoritative. A missed event always requests a full snapshot. */
 export interface AlarmSnapshot {
   readonly monitored: { readonly projectId: string } | null;
@@ -5,12 +37,15 @@ export interface AlarmSnapshot {
     readonly projectId: string;
     readonly projectRevision: number;
     readonly appliedAtMs: number;
+    /** Keyed by condition id. */
+    readonly displays: Readonly<Record<string, AlarmConditionDisplay>>;
   } | null;
   readonly engine: {
     readonly session: { readonly id: string; readonly generation: number };
     readonly seq: number;
+    /** Engine-level reason it cannot evaluate (disconnected, receiveLost). */
     readonly unavailable: string | null;
-    readonly conditions: Readonly<Record<string, unknown>>;
+    readonly conditions: Readonly<Record<string, AlarmConditionState>>;
   } | null;
   readonly status: string;
   readonly pendingConditionChanges: boolean;
@@ -30,7 +65,7 @@ export interface AlarmSnapshot {
 export interface AlarmChange {
   readonly session: { readonly id: string; readonly generation: number };
   readonly seq: number;
-  readonly conditions: Readonly<Record<string, unknown | null>>;
+  readonly conditions: Readonly<Record<string, AlarmConditionState | null>>;
   readonly engineUnavailable: string | null;
   readonly applied?: AlarmSnapshot["applied"];
 }
@@ -86,7 +121,9 @@ export class AlarmMirror {
     if (change.seq <= engine.seq) return "ignored";
     if (change.seq !== engine.seq + 1) return "refresh";
     if (change.applied) return "refresh";
-    const conditions: Record<string, unknown> = { ...engine.conditions };
+    const conditions: Record<string, AlarmConditionState> = {
+      ...engine.conditions,
+    };
     for (const [id, state] of Object.entries(change.conditions)) {
       if (state === null) delete conditions[id];
       else conditions[id] = state;
