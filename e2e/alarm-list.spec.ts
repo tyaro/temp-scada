@@ -341,14 +341,15 @@ test("the history tab queries alarm events newest first and continues with the c
   await expect(rows.first()).toContainText("120");
   await expect(rows.first()).toContainText("125.5");
   await expect(rows.first()).toContainText("11/17 09:00:03");
+  // 入力欄を変えただけでは、続きは最後に照会した条件で取る。
+  await dialog(page).getByLabel("種類").selectOption("occurred");
   await dialog(page).getByRole("button", { name: "続きを読む" }).click();
   await expect(rows).toHaveCount(105);
   await expect(
     dialog(page).getByRole("button", { name: "続きを読む" }),
   ).toHaveCount(0);
 
-  // 種類で絞る。
-  await dialog(page).getByLabel("種類").selectOption("occurred");
+  // 種類で絞る（選択済みの種類で照会する）。
   await dialog(page).getByRole("button", { name: "照会" }).click();
   await expect(rows).toHaveCount(1);
   const queries = await page.evaluate(() =>
@@ -357,6 +358,7 @@ test("the history tab queries alarm events newest first and continues with the c
   expect(queries.map((q: { beforeSeq: number | null }) => q.beforeSeq)).toEqual(
     [null, 6, null],
   );
+  expect(queries[1].kind ?? null).toBeNull();
   expect(queries[2].kind).toBe("occurred");
 });
 

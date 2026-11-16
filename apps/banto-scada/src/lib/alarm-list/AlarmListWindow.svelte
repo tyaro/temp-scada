@@ -68,6 +68,9 @@
   let historyBusy = $state(false);
   let historyIssue = $state<string | null>(null);
   let historyLoaded = $state(false);
+  /** 表示中の行を取った照会の条件。「続きを読む」はこれを使う。 */
+  let historySubmitted: { from: string; to: string; kind: string } | null =
+    null;
 
   const current = $derived(
     alarmListCurrent(
@@ -134,10 +137,12 @@
   async function loadHistory(more: boolean) {
     if (!feed?.history || historyBusy) return;
     const before = more ? (historyRows.at(-1)?.seq ?? null) : null;
-    const built = alarmHistoryQuery(
-      { from: historyFrom, to: historyTo, kind: historyKind },
-      before,
-    );
+    // 続きは最後に照会した条件で取る（入力欄を変えただけでは別の照会と混ぜない）。
+    const filters =
+      more && historySubmitted
+        ? historySubmitted
+        : { from: historyFrom, to: historyTo, kind: historyKind };
+    const built = alarmHistoryQuery(filters, before);
     if ("issue" in built) {
       historyIssue = built.issue;
       return;
@@ -148,6 +153,7 @@
       const answer = await feed.history(built.query);
       const rows = answer.map(alarmHistoryRow);
       historyRows = more ? [...historyRows, ...rows] : rows;
+      historySubmitted = filters;
       historyMore = answer.length >= ALARM_HISTORY_PAGE;
       historyLoaded = true;
     } catch (error) {
