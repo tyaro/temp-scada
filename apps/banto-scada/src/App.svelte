@@ -1812,7 +1812,12 @@
       return history
         ? `警報: 監視できていません・${history}`
         : "警報: 監視できていません";
-    if (history) return `警報: ${history}`;
+    // Evaluation continues while rereads fail, until the streak's limit.
+    const reread = alarmSnapshot.rereadFailure
+      ? `値の読み直しに失敗（${alarmSnapshot.rereadFailure.failures} 回）`
+      : null;
+    const warnings = [history, reread].filter(Boolean).join("・");
+    if (warnings) return `警報: ${warnings}`;
     if (alarmSnapshot.monitored?.projectId !== project.manifest.projectId)
       return "警報: 別のProjectを監視中";
     if (alarmSnapshot.pendingConditionChanges)
@@ -3912,6 +3917,7 @@
         alarmSnapshot.monitored?.projectId === project.manifest.projectId &&
         !alarmSnapshot.engine?.unavailable &&
         !alarmSnapshot.historyWriteFailure &&
+        !alarmSnapshot.rereadFailure &&
         !alarmSnapshot.pendingConditionChanges &&
         !alarmSnapshot.pendingDisplayChanges
           ? "neutral"

@@ -40,6 +40,14 @@ impl Drop for TempDir {
 pub(crate) struct Hub {
     pub(crate) url: String,
     pub(crate) subscriptions: Arc<AtomicUsize>,
+    /// REST rereads answer these values instead (a stalled subscription).
+    pub(crate) rest_values: Arc<std::sync::Mutex<std::collections::BTreeMap<String, f64>>>,
+    /// REST rereads fail with 503 while set.
+    pub(crate) rest_fail: Arc<std::sync::atomic::AtomicBool>,
+    /// REST rereads report this catalog revision (another generation).
+    pub(crate) rest_revision: Arc<std::sync::atomic::AtomicU64>,
+    /// New WebSocket subscriptions are refused with 503 while set.
+    pub(crate) stream_fail: Arc<std::sync::atomic::AtomicBool>,
     task: tokio::task::JoinHandle<()>,
 }
 
@@ -59,17 +67,23 @@ impl Hub {
             .collect();
         let subscriptions = Arc::new(AtomicUsize::new(0));
         let count = subscriptions.clone();
+        let rest = Rest::default();
+        let shared = rest.clone();
         let task = tokio::spawn(async move {
             loop {
                 let Ok((stream, _)) = listener.accept().await else {
                     return;
                 };
-                tokio::spawn(serve(stream, tags.clone(), count.clone()));
+                tokio::spawn(serve(stream, tags.clone(), count.clone(), shared.clone()));
             }
         });
         Self {
             url,
             subscriptions,
+            rest_values: rest.values,
+            rest_fail: rest.fail,
+            rest_revision: rest.revision,
+            stream_fail: rest.stream_fail,
             task,
         }
     }
@@ -82,18 +96,54 @@ impl Hub {
         )
         .unwrap()
     }
+
+    /// A fresh client per call, as the alarm runtime needs.
+    pub(crate) fn clients(&self) -> crate::alarm_runtime::HubClients {
+        let url = self.url.clone();
+        crate::alarm_runtime::HubClients::new(move || {
+            RestClient::with_request_timeout(
+                Endpoint::new(&url).ok()?,
+                SecretApiKey::new(KEY.into()).ok()?,
+                Duration::from_secs(2),
+            )
+            .ok()
+        })
+    }
+}
+
+#[derive(Clone, Default)]
+struct Rest {
+    values: Arc<std::sync::Mutex<std::collections::BTreeMap<String, f64>>>,
+    fail: Arc<std::sync::atomic::AtomicBool>,
+    revision: Arc<std::sync::atomic::AtomicU64>,
+    stream_fail: Arc<std::sync::atomic::AtomicBool>,
 }
 
 fn rows(tags: &[(String, String)]) -> Vec<Value> {
+    rows_with(tags, &Default::default())
+}
+
+fn rows_with(
+    tags: &[(String, String)],
+    overrides: &std::collections::BTreeMap<String, f64>,
+) -> Vec<Value> {
     tags.iter()
         .map(|(name, kind)| {
-            let v = if kind == "bit" { 1.0 } else { 42.5 };
+            let v = overrides
+                .get(name)
+                .copied()
+                .unwrap_or(if kind == "bit" { 1.0 } else { 42.5 });
             json!({"tag": name, "v": v, "q": "good", "t": 100, "value_source": "real"})
         })
         .collect()
 }
 
-async fn serve(mut stream: TcpStream, tags: Vec<(String, String)>, count: Arc<AtomicUsize>) {
+async fn serve(
+    mut stream: TcpStream,
+    tags: Vec<(String, String)>,
+    count: Arc<AtomicUsize>,
+    rest: Rest,
+) {
     // Peek the request head: plain GETs are answered here, anything else is
     // the SDK's WebSocket.
     let mut head = vec![0u8; 8192];
@@ -108,6 +158,7 @@ async fn serve(mut stream: TcpStream, tags: Vec<(String, String)>, count: Arc<At
         seen = n;
     }
     let text = String::from_utf8_lossy(&head[..seen]).to_string();
+    let mut status = "200 test";
     let body = if text.starts_with("GET /api/v1/tags ") {
         let catalog: Vec<Value> = tags
             .iter()
@@ -132,9 +183,29 @@ async fn serve(mut stream: TcpStream, tags: Vec<(String, String)>, count: Arc<At
             .filter(|(name, _)| line.contains(name.as_str()))
             .cloned()
             .collect();
-        json!({"revision": 3, "run_id": 7, "collection_mode": "configured", "t": 100,
-            "values": rows(if requested.is_empty() { &tags } else { &requested })})
+        if rest.fail.load(Ordering::SeqCst) {
+            status = "503 test";
+        }
+        let overrides = rest.values.lock().unwrap().clone();
+        let revision = match rest.revision.load(Ordering::SeqCst) {
+            0 => 3,
+            other => other,
+        };
+        json!({"revision": revision, "run_id": 7, "collection_mode": "configured", "t": 100,
+            "values": rows_with(if requested.is_empty() { &tags } else { &requested }, &overrides)})
     } else {
+        if rest.stream_fail.load(Ordering::SeqCst) {
+            let _ = stream
+                .write_all(
+                    b"HTTP/1.1 503 test
+Content-Length: 0
+Connection: close
+
+",
+                )
+                .await;
+            return;
+        }
         let Ok(mut socket) = tokio_tungstenite::accept_async(stream).await else {
             return;
         };
@@ -179,7 +250,7 @@ async fn serve(mut stream: TcpStream, tags: Vec<(String, String)>, count: Arc<At
     let _ = stream
         .write_all(
             format!(
-                "HTTP/1.1 200 test\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                 body.len()
             )
             .as_bytes(),

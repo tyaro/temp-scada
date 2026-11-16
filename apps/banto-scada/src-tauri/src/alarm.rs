@@ -5,7 +5,7 @@ use std::sync::Arc;
 use scada_host::alarm_db::{EventRead, UnackedOccurrence};
 use scada_host::alarm_service::{
     AlarmService, AlarmServiceError, AlarmSnapshot, AppliedSummary, ApplyMode, ApplyResult,
-    RestClient,
+    HubClients,
 };
 use scada_host::auth::BantoError;
 use scada_host::desktop_auth::CommandError;
@@ -135,18 +135,28 @@ async fn authorized_ack_user(auth: &AuthState) -> Result<String, String> {
     applied_user(auth).await
 }
 
-fn hub_context(host: &NativeHost) -> Result<(String, RestClient), String> {
+fn hub_context(host: &NativeHost) -> Result<(String, HubClients), String> {
     let record = host
         .bootstrap
         .record()
         .map_err(|_| "hubUnavailable")?
         .ok_or("noHub")?;
-    let client = host
-        .bootstrap
+    host.bootstrap
         .rest_client()
         .map_err(|_| "hubUnavailable")?
         .ok_or("noHub")?;
-    Ok((record.endpoint, client))
+    // The Engine makes more clients later (rereads, resubscription). Each
+    // one is refused once the saved Hub record names another endpoint.
+    let bootstrap = host.bootstrap.clone();
+    let endpoint = record.endpoint.clone();
+    let clients = HubClients::new(move || {
+        let current = bootstrap.record().ok()??;
+        if current.endpoint != endpoint {
+            return None;
+        }
+        bootstrap.rest_client().ok()?
+    });
+    Ok((record.endpoint, clients))
 }
 
 pub fn start_events<R: Runtime>(app: AppHandle<R>) {

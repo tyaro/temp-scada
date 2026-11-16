@@ -46,12 +46,12 @@ fn app(dir: &TempDir) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
         .manage(recording)
         .manage(RecordingRuntime::start(&dir.0, "deployment-a"))
         .manage(NativeHost {
-            bootstrap: Bootstrapper::new(
+            bootstrap: std::sync::Arc::new(Bootstrapper::new(
                 "temp-scada-test",
                 "11111111-2222-4333-8444-555555555555",
                 Arc::new(MemoryKeyStore::new()),
                 Arc::new(MemoryState::new()),
-            ),
+            )),
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
             exiting: AtomicBool::new(false),

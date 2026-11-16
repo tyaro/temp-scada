@@ -20,6 +20,11 @@ export interface AlarmSnapshot {
     readonly sinceWallMs: number;
     readonly unrecordedEvents: number;
   } | null;
+  /** Rereads of the current values keep failing; evaluation continues. */
+  readonly rereadFailure: {
+    readonly sinceWallMs: number;
+    readonly failures: number;
+  } | null;
 }
 
 export interface AlarmChange {

@@ -14,6 +14,7 @@ const snapshot = (generation: number, seq: number): AlarmSnapshot => ({
   pendingConditionChanges: false,
   pendingDisplayChanges: false,
   historyWriteFailure: null,
+  rereadFailure: null,
 });
 
 describe("alarm event reconciliation", () => {
@@ -87,6 +88,7 @@ describe("alarm event reconciliation", () => {
       pendingConditionChanges: false,
       pendingDisplayChanges: false,
       historyWriteFailure: null,
+      rereadFailure: null,
     });
     expect(
       mirror.acceptChange({

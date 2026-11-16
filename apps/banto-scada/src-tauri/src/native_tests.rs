@@ -181,7 +181,7 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
     let app = tauri::test::mock_builder()
         .manage(alarm::AlarmState::unavailable())
         .manage(NativeHost {
-            bootstrap,
+            bootstrap: std::sync::Arc::new(bootstrap),
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
             exiting: AtomicBool::new(false),
@@ -275,12 +275,12 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
     let restarted = tauri::test::mock_builder()
         .manage(alarm::AlarmState::unavailable())
         .manage(NativeHost {
-            bootstrap: Bootstrapper::new(
+            bootstrap: std::sync::Arc::new(Bootstrapper::new(
                 "temp-scada-test",
                 "11111111-2222-4333-8444-555555555555",
                 keys,
                 state,
-            ),
+            )),
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
             exiting: AtomicBool::new(false),
@@ -359,7 +359,7 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
     let app = tauri::test::mock_builder()
         .manage(alarm::AlarmState::open(Ok::<_, ()>(&dir)).await)
         .manage(NativeHost {
-            bootstrap,
+            bootstrap: std::sync::Arc::new(bootstrap),
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
             exiting: AtomicBool::new(false),
@@ -393,7 +393,12 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
             .apply(
                 &path,
                 &hub.url,
-                host.bootstrap.rest_client().unwrap().unwrap(),
+                {
+                    let bootstrap = host.bootstrap.clone();
+                    scada_host::alarm_service::HubClients::new(move || {
+                        bootstrap.rest_client().ok()?
+                    })
+                },
                 "未ログイン",
                 &[],
                 scada_host::alarm_service::ApplyMode::Explicit {

@@ -47,12 +47,12 @@ fn app_with_alarm(
         .manage(auth)
         .manage(alarm)
         .manage(NativeHost {
-            bootstrap: Bootstrapper::new(
+            bootstrap: std::sync::Arc::new(Bootstrapper::new(
                 "temp-scada-project-test",
                 "11111111-2222-4333-8444-555555555555",
                 Arc::new(MemoryKeyStore::new()),
                 Arc::new(MemoryState::new()),
-            ),
+            )),
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
             exiting: AtomicBool::new(false),
