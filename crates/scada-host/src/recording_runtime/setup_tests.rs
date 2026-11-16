@@ -44,6 +44,8 @@ pub(crate) struct Hub {
     pub(crate) rest_values: Arc<std::sync::Mutex<std::collections::BTreeMap<String, f64>>>,
     /// REST rereads fail with 503 while set.
     pub(crate) rest_fail: Arc<std::sync::atomic::AtomicBool>,
+    /// REST rereads report this catalog revision (another generation).
+    pub(crate) rest_revision: Arc<std::sync::atomic::AtomicU64>,
     task: tokio::task::JoinHandle<()>,
 }
 
@@ -78,6 +80,7 @@ impl Hub {
             subscriptions,
             rest_values: rest.values,
             rest_fail: rest.fail,
+            rest_revision: rest.revision,
             task,
         }
     }
@@ -109,6 +112,7 @@ impl Hub {
 struct Rest {
     values: Arc<std::sync::Mutex<std::collections::BTreeMap<String, f64>>>,
     fail: Arc<std::sync::atomic::AtomicBool>,
+    revision: Arc<std::sync::atomic::AtomicU64>,
 }
 
 fn rows(tags: &[(String, String)]) -> Vec<Value> {
@@ -179,7 +183,11 @@ async fn serve(
             status = "503 test";
         }
         let overrides = rest.values.lock().unwrap().clone();
-        json!({"revision": 3, "run_id": 7, "collection_mode": "configured", "t": 100,
+        let revision = match rest.revision.load(Ordering::SeqCst) {
+            0 => 3,
+            other => other,
+        };
+        json!({"revision": revision, "run_id": 7, "collection_mode": "configured", "t": 100,
             "values": rows_with(if requested.is_empty() { &tags } else { &requested }, &overrides)})
     } else {
         let Ok(mut socket) = tokio_tungstenite::accept_async(stream).await else {

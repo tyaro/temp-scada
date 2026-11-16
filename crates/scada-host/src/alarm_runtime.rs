@@ -697,7 +697,7 @@ async fn run_inner(
     mut freshness: Freshness,
 ) -> Result<(), AlarmRuntimeError> {
     let mut states = sdk.state_watch();
-    let mut previous = BTreeMap::new();
+    let mut previous = Fed::default();
     let mut was_evaluable = false;
     let mut accepted_generation = None;
     let mut awaiting_replacement_snapshot = false;
@@ -828,7 +828,7 @@ async fn run_inner(
                 awaiting_replacement_snapshot = false;
                 replacement_deadline = None;
                 if freshness.resubscribing {
-                    freshness.resubscribe_failed(tokio::time::Instant::now());
+                    freshness.resubscribe_timed_out(tokio::time::Instant::now());
                 }
                 process_current!();
             }
@@ -982,6 +982,22 @@ fn replacement_settled(connection: TagClientConnectionState) -> bool {
     )
 }
 
+/// What was fed to the Engine per tag. `subscription` is the subscription's
+/// last sample (to find its new arrivals); `evaluated` is the last value the
+/// Engine received from either the subscription or a reread.
+#[derive(Default)]
+struct Fed {
+    subscription: BTreeMap<String, Sample>,
+    evaluated: BTreeMap<String, Sample>,
+}
+
+impl Fed {
+    fn clear(&mut self) {
+        self.subscription.clear();
+        self.evaluated.clear();
+    }
+}
+
 enum RereadOutcome {
     /// Nothing more to do in the loop.
     Settled,
@@ -1006,7 +1022,7 @@ async fn reread_done(
     evaluator: &mut AlarmEvaluator,
     freshness: &mut Freshness,
     context: RereadContext<'_>,
-    previous: &mut BTreeMap<String, Sample>,
+    previous: &mut Fed,
     changes: &broadcast::Sender<AlarmChange>,
 ) -> Result<RereadOutcome, AlarmRuntimeError> {
     let values = match context.result {
@@ -1033,6 +1049,15 @@ async fn reread_done(
     let Some(snapshot) = context.state.snapshot() else {
         return Ok(RereadOutcome::Settled);
     };
+    // Rows from another catalog revision or run would be converted with the
+    // wrong data types; the subscription rebinds to that generation itself.
+    let catalog = &snapshot.catalog;
+    if values.revision != catalog.revision
+        || values.run_id != catalog.run_id
+        || values.collection_mode != catalog.collection_mode
+    {
+        return Ok(RereadOutcome::Settled);
+    }
     let rows: BTreeMap<&str, &ValueEntry> = values
         .values
         .iter()
@@ -1047,7 +1072,8 @@ async fn reread_done(
         let Some(BindingView::Resolved { tag: catalog, .. }) = snapshot.binding(tag) else {
             continue;
         };
-        let (Some(row), Some(accepted)) = (rows.get(tag.as_str()), previous.get(tag)) else {
+        let (Some(row), Some(accepted)) = (rows.get(tag.as_str()), previous.evaluated.get(tag))
+        else {
             continue;
         };
         let Some(read) = sample_from(catalog, Some(row)) else {
@@ -1065,7 +1091,9 @@ async fn reread_done(
             changes,
         )
         .await?;
-        previous.insert(tag.clone(), read);
+        // The subscription's own last sample stays as it was, so a later
+        // snapshot of an unrelated tag does not undo this correction.
+        previous.evaluated.insert(tag.clone(), read);
         stalled = true;
     }
     Ok(if stalled {
@@ -1081,7 +1109,7 @@ async fn reread_done(
 async fn sync_availability(
     evaluator: &mut AlarmEvaluator,
     freshness: &Freshness,
-    previous: &mut BTreeMap<String, Sample>,
+    previous: &mut Fed,
     changes: &broadcast::Sender<AlarmChange>,
 ) -> Result<bool, AlarmRuntimeError> {
     let desired = freshness.desired();
@@ -1164,7 +1192,7 @@ async fn process_state(
     evaluator: &mut AlarmEvaluator,
     state: &TagClientState,
     tags: &BTreeSet<String>,
-    previous: &mut BTreeMap<String, Sample>,
+    previous: &mut Fed,
     was_evaluable: &mut bool,
     accepted_generation: &mut Option<u64>,
     freshness: &mut Freshness,
@@ -1198,7 +1226,7 @@ async fn process_state(
                     // A resolved binding without its first value remains InitialValue.
                     continue;
                 };
-                if previous.get(tag) != Some(&sample) {
+                if previous.subscription.get(tag) != Some(&sample) {
                     publish(
                         evaluator,
                         Input::Value {
@@ -1209,7 +1237,8 @@ async fn process_state(
                     )
                     .await?;
                     freshness.arrived(tag);
-                    previous.insert(tag.clone(), sample);
+                    previous.subscription.insert(tag.clone(), sample.clone());
+                    previous.evaluated.insert(tag.clone(), sample);
                 }
             }
         }
@@ -1228,7 +1257,7 @@ async fn begin_generation(
     evaluator: &mut AlarmEvaluator,
     generation: u64,
     live: bool,
-    previous: &mut BTreeMap<String, Sample>,
+    previous: &mut Fed,
     was_evaluable: &mut bool,
     accepted_generation: &mut Option<u64>,
     freshness: &mut Freshness,
@@ -1590,15 +1619,18 @@ mod tests {
         }
         assert!(evaluator.engine().next_due_ms().is_some());
         let (changes, _) = broadcast::channel(4);
-        let mut previous = BTreeMap::from([(
-            "PLANT.FLAG".into(),
-            Sample {
-                resolved: true,
-                quality: Quality::Good,
-                value: Some(TagValue::Bool(true)),
-                source_timestamp_ms: Some(10),
-            },
-        )]);
+        let mut previous = Fed {
+            subscription: BTreeMap::from([(
+                "PLANT.FLAG".into(),
+                Sample {
+                    resolved: true,
+                    quality: Quality::Good,
+                    value: Some(TagValue::Bool(true)),
+                    source_timestamp_ms: Some(10),
+                },
+            )]),
+            evaluated: BTreeMap::new(),
+        };
         let mut was_evaluable = true;
         let mut generation = Some(1);
         let (report, _) = watch::channel(None);
@@ -1617,7 +1649,7 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(generation, Some(2));
-        assert!(previous.is_empty());
+        assert!(previous.subscription.is_empty() && previous.evaluated.is_empty());
         assert!(evaluator.engine().next_due_ms().is_none());
         db.stop_session(&session, wall_ms()).await.unwrap();
         let before = evaluator.engine().clone();

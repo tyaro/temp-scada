@@ -159,3 +159,27 @@ async fn resubscription_failures_mean_receive_lost_until_one_succeeds() {
     runtime.stop().await.unwrap();
     let _ = std::fs::remove_dir_all(dir);
 }
+
+#[tokio::test]
+async fn a_reread_from_another_catalog_generation_is_only_liveness() {
+    let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+    let (dir, _terminal, _db, _applied, _definitions, _session, evaluator) =
+        outage_fixture("alarm-reread-generation").await;
+    let runtime = AlarmRuntime::start_with_config(evaluator, hub.clients(), fast())
+        .await
+        .unwrap();
+    wait_engine(&runtime, "the subscribed value", active).await;
+    // The Hub's catalog changed before the subscription rebinds: its rows
+    // must not be converted with the old catalog's data types.
+    hub.rest_revision.store(4, Ordering::SeqCst);
+    hub.rest_values
+        .lock()
+        .unwrap()
+        .insert("PLANT.FLAG".into(), 0.0);
+    tokio::time::sleep(Duration::from_millis(600)).await;
+    assert!(active(&runtime.snapshot().await.unwrap()));
+    assert_eq!(hub.subscriptions.load(Ordering::SeqCst), 1);
+    assert!(runtime.reread_failure().borrow().is_none());
+    runtime.stop().await.unwrap();
+    let _ = std::fs::remove_dir_all(dir);
+}

@@ -90,6 +90,9 @@ pub(super) struct Freshness {
     reread_lost: bool,
     resubscribe_failures: u32,
     pub(super) resubscribing: bool,
+    /// The current subscription is a resubscription that missed its
+    /// deadline; reaching Live/Unbound later still counts as success.
+    late: bool,
     pub(super) next_resubscribe: Option<Instant>,
     report: watch::Sender<Option<RereadFailure>>,
 }
@@ -115,6 +118,7 @@ impl Freshness {
             reread_lost: false,
             resubscribe_failures: 0,
             resubscribing: false,
+            late: false,
             next_resubscribe: None,
             report,
         }
@@ -135,6 +139,9 @@ impl Freshness {
 
     /// A Live or Unbound snapshot was accepted.
     pub(super) fn connected(&mut self, live: bool, new_generation: bool) {
+        if self.late {
+            self.resubscribe_succeeded();
+        }
         if new_generation || !self.connected {
             self.epoch += 1;
         }
@@ -163,6 +170,7 @@ impl Freshness {
 
     /// The subscription is replaced (apply or resubscription).
     pub(super) fn replaced(&mut self) {
+        self.late = false;
         self.epoch += 1;
         self.ticket = None;
         self.reader = None;
@@ -252,8 +260,16 @@ impl Freshness {
     /// A fresh subscription reached Live/Unbound.
     pub(super) fn resubscribe_succeeded(&mut self) {
         self.resubscribing = false;
+        self.late = false;
         self.resubscribe_failures = 0;
         self.next_resubscribe = None;
+    }
+
+    /// The resubscription did not reach Live/Unbound within its deadline.
+    /// It stays in place; if it connects later, that ends the failures.
+    pub(super) fn resubscribe_timed_out(&mut self, now: Instant) {
+        self.resubscribe_failed(now);
+        self.late = true;
     }
 
     pub(super) fn resubscribe_failed(&mut self, now: Instant) {
@@ -311,6 +327,24 @@ mod tests {
         f.resubscribe_succeeded();
         f.connected(true, false);
         assert_eq!(f.desired(), None);
+    }
+
+    #[tokio::test]
+    async fn a_resubscription_that_connects_after_its_deadline_ends_the_failures() {
+        let (mut f, _) = freshness();
+        let start = Instant::now();
+        f.resubscribe_failed(start);
+        f.resubscribe_failed(start);
+        f.replaced();
+        f.resubscribe_started();
+        f.resubscribe_timed_out(start);
+        f.disconnected();
+        assert_eq!(f.desired(), Some(EngineUnavailable::ReceiveLost));
+        assert!(f.next_resubscribe.is_some());
+        // The same subscription reaches Live late: no retry, no ReceiveLost.
+        f.connected(true, false);
+        assert_eq!(f.desired(), None);
+        assert!(f.next_resubscribe.is_none());
     }
 
     #[tokio::test]
