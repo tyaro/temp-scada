@@ -1,0 +1,175 @@
+[
+  {
+    "name": "banner on a screen",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000b901",
+      "order": 951,
+      "x": 10,
+      "y": 10,
+      "width": 480,
+      "height": 28,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBanner",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      }
+    }
+  },
+  {
+    "name": "banner with a name and opacity on another screen",
+    "target": "/screens/1/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000b902",
+      "order": 952,
+      "x": 10,
+      "y": 10,
+      "width": 480,
+      "height": 28,
+      "rotation": 0,
+      "name": "最新の警報",
+      "opacity": 0.8,
+      "shape": {
+        "type": "alarmBanner",
+        "style": {
+          "fontSize": 20,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "banner without alarm definitions",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "alarms": null,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000b903",
+      "order": 953,
+      "x": 10,
+      "y": 10,
+      "width": 480,
+      "height": 28,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBanner",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      }
+    }
+  },
+  {
+    "name": "banner inside a Symbol definition",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000b904",
+      "order": 954,
+      "x": 10,
+      "y": 10,
+      "width": 480,
+      "height": 28,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBanner",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      }
+    }
+  },
+  {
+    "name": "banner does not point at an alarm",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000b905",
+      "order": 955,
+      "x": 10,
+      "y": 10,
+      "width": 480,
+      "height": 28,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBanner",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000101",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      }
+    }
+  },
+  {
+    "name": "banner has no fill",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000b906",
+      "order": 956,
+      "x": 10,
+      "y": 10,
+      "width": 480,
+      "height": 28,
+      "rotation": 0,
+      "fill": "#ffffff",
+      "shape": {
+        "type": "alarmBanner",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal"
+        }
+      }
+    }
+  },
+  {
+    "name": "banner font weight",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000b907",
+      "order": 957,
+      "x": 10,
+      "y": 10,
+      "width": 480,
+      "height": 28,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBanner",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "600"
+        }
+      }
+    }
+  },
+  {
+    "name": "banner font size",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000b908",
+      "order": 958,
+      "x": 10,
+      "y": 10,
+      "width": 480,
+      "height": 28,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBanner",
+        "style": {
+          "fontSize": 0,
+          "fontWeight": "normal"
+        }
+      }
+    }
+  }
+]

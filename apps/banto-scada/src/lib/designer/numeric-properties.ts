@@ -52,7 +52,8 @@ export function objectFormValues(
     ...(object.shape.type === "screenView" ||
     object.shape.type === "trend" ||
     object.shape.type === "navButton" ||
-    object.shape.type === "alarmBadge"
+    object.shape.type === "alarmBadge" ||
+    object.shape.type === "alarmBanner"
       ? {}
       : { fill: placementColor(object) }),
   };
@@ -122,6 +123,10 @@ export function objectFormValues(
     values.alarmBadgeText = object.shape.text;
     values.alarmBadgeFontSize = String(object.shape.style.fontSize);
     values.alarmBadgeFontWeight = object.shape.style.fontWeight;
+  }
+  if (object.shape.type === "alarmBanner") {
+    values.alarmBannerFontSize = String(object.shape.style.fontSize);
+    values.alarmBannerFontWeight = object.shape.style.fontWeight;
   }
   if (object.shape.type === "navButton") {
     const { target } = object.shape;

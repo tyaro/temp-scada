@@ -27,6 +27,8 @@ export function placementLabel(
                   ? "画面切替"
                   : object.shape.type === "alarmBadge"
                     ? "警報の小札"
-                    : object.shape.type;
+                    : object.shape.type === "alarmBanner"
+                      ? "警報の帯"
+                      : object.shape.type;
   return `${kind} · ${object.order}`;
 }

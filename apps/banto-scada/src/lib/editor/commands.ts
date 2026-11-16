@@ -26,6 +26,7 @@ import type {
   TableShape,
   ClockShape,
   AlarmBadgeShape,
+  AlarmBannerShape,
   NavButtonShape,
   TagBinding,
   TextStyle,
@@ -40,7 +41,8 @@ export type AddKind =
   | "table"
   | "clock"
   | "navButton"
-  | "alarmBadge";
+  | "alarmBadge"
+  | "alarmBanner";
 export interface ObjectPatch {
   opacity?: number;
   colorAlpha?: number;
@@ -73,6 +75,8 @@ export interface ObjectPatch {
   clock?: Omit<ClockShape, "type">;
   /** Target, text and text style of an alarm badge; a missing limit clears it. */
   alarmBadge?: Omit<AlarmBadgeShape, "type">;
+  /** Text style of an alarm banner. */
+  alarmBanner?: Omit<AlarmBannerShape, "type">;
   /** Whole content of a nav button; a missing target or current color clears it. */
   navButton?: Omit<NavButtonShape, "type">;
   stateColor?: StateColor | null;

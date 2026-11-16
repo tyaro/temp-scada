@@ -1,6 +1,7 @@
 import type { AlarmSnapshot } from "./alarm-mirror";
 import type { AlarmDefinition } from "./alarms";
 import { alarmConditionView, type AlarmView } from "./alarm-view";
+import { alarmBannerView, type AlarmBannerView } from "./alarm-banner";
 
 /**
  * 画面全体で使う警報の現在の状態（時計の clock-ticker と同じくモジュールの $state で配る）。
@@ -29,6 +30,11 @@ export function setAlarmViewProject(project: {
 /** condition の表示状態。$derived・テンプレートの中で読むと snapshot の更新で再評価される。 */
 export function alarmViewOf(conditionId: string): AlarmView {
   return alarmConditionView(snapshot, projectId ?? "", conditionId);
+}
+
+/** 最新の警報の帯の表示。仕様: docs/design/graphics/alarm-banner.md */
+export function alarmBannerViewOf(): AlarmBannerView {
+  return alarmBannerView(snapshot, projectId ?? "");
 }
 
 export function alarmViewBlink(): boolean {

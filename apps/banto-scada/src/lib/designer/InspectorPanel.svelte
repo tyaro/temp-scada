@@ -164,6 +164,7 @@
             object.shape.type === "screenView" ||
             object.shape.type === "navButton" ||
             object.shape.type === "alarmBadge" ||
+            object.shape.type === "alarmBanner" ||
             object.shape.type === "trend"
             ? []
             : [object.fill!.toLowerCase()];
@@ -606,6 +607,7 @@
                   o.shape.type === "screenView" ||
                   o.shape.type === "navButton" ||
                   o.shape.type === "alarmBadge" ||
+                  o.shape.type === "alarmBanner" ||
                   o.shape.type === "trend"),
             ).length}
             {paintDisabledCount}
@@ -954,7 +956,7 @@
                   {/each}
                 </div>
               {/if}
-              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "navButton" && selected.shape.type !== "alarmBadge" && selected.shape.type !== "trend" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
+              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "navButton" && selected.shape.type !== "alarmBadge" && selected.shape.type !== "alarmBanner" && selected.shape.type !== "trend" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
                 <label
                   >{selected.shape.type === "symbol" &&
                   selected.shape.colorMode === "definition"
@@ -1593,6 +1595,31 @@
                 <p class="full-width tag-note">
                   色は状態（正常・発生中・未確認・復帰・未確認・評価不能・不明）ごとに決まっていて、Project
                   では変えません。警報が動いていない・保存前の定義を指しているときは「不明」（斜線）で示します。
+                </p>
+              {/if}
+              {#if selected.shape.type === "alarmBanner"}
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字サイズ</span><input
+                    class="banto-field-control"
+                    name="alarmBannerFontSize"
+                    aria-label="警報の帯の文字サイズ"
+                    type="text"
+                    inputmode="decimal"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字の太さ</span><select
+                    class="banto-field-control"
+                    name="alarmBannerFontWeight"
+                    aria-label="警報の帯の文字の太さ"
+                    ><option value="normal">標準</option><option value="bold"
+                      >太字</option
+                    ></select
+                  ></label
+                >
+                <p class="full-width tag-note">
+                  監視中の警報から1件（未確認・severity・新しい順）を選んで出します。色は状態ごとに決まっていて、Project
+                  では変えません。警報が動いていない・監視できていないときは理由を斜線の地で示します。
                 </p>
               {/if}
               {#if selected.shape.type === "navButton"}

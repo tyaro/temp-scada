@@ -37,11 +37,12 @@ export function applyPasteCommand(
         o.shape.type === "screenView" ||
         o.shape.type === "navButton" ||
         o.shape.type === "alarmBadge" ||
+        o.shape.type === "alarmBanner" ||
         shapeTagBindings(o.shape).length > 0,
     )
   )
     throw new Error(
-      "Symbol定義には埋込画面・画面切替ボタン・警報の小札・Symbol配置・タグ付きのText・液位・表を貼り付けできません",
+      "Symbol定義には埋込画面・画面切替ボタン・警報の小札・警報の帯・Symbol配置・タグ付きのText・液位・表を貼り付けできません",
     );
   if (
     !Number.isFinite(command.center.x) ||

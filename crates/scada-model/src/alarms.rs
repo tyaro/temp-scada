@@ -152,6 +152,49 @@ mod tests {
         }
     }
 
+    /// 帯は指す定義を持たず、画面の直下にだけ置ける（Symbol 定義の中は schema が拒む）。
+    /// 仕様: docs/design/graphics/alarm-banner.md
+    #[test]
+    fn shared_alarm_banner_contract() {
+        let base: Value =
+            serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
+        let cases: Vec<Value> =
+            serde_json::from_str(include_str!("../../../examples/alarm-banner-cases.json"))
+                .unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            match case.get("alarms") {
+                Some(Value::Null) => {
+                    input.as_object_mut().unwrap().remove("alarms");
+                }
+                Some(alarms) => input["alarms"] = alarms.clone(),
+                None => {}
+            }
+            input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_array_mut()
+                .unwrap()
+                .push(case["object"].clone());
+            let parsed = Project::from_json(&input.to_string());
+            assert_eq!(
+                parsed.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{} {:?}",
+                case["name"],
+                parsed.as_ref().err()
+            );
+            if let Ok(project) = parsed {
+                assert_eq!(
+                    Project::from_json(&project.to_json()).unwrap().0,
+                    project.0,
+                    "{}",
+                    case["name"]
+                );
+            }
+        }
+    }
+
     #[test]
     fn shared_alarm_definition_contract() {
         let base: Value = serde_json::from_str(include_str!(

@@ -1,6 +1,6 @@
 # 警報の小札（alarmBadge）
 
-作成: 2026-11-17（日本時間）。状態: **実装済み（段階3 3-D1）**。基準は[段階3の警報設計](../runtime/alarm-stage3-design.md)の §7「表示」の `alarmBadge`。帯 `alarmBanner`（3-D2）とアラーム一覧の窓（3-E）はまだ無い。
+作成: 2026-11-17（日本時間）。状態: **実装済み（段階3 3-D1）**。基準は[段階3の警報設計](../runtime/alarm-stage3-design.md)の §7「表示」の `alarmBadge`。帯は[最新の警報の帯](alarm-banner.md)（3-D2）。アラーム一覧の窓（3-E）はまだ無い。
 
 ## 目的
 
@@ -75,6 +75,6 @@
 
 ## 後続・未対応
 
-- Symbol 定義の中の小札（設計 §8）、帯 `alarmBanner`（3-D2）、一覧の窓・ACK（3-E）、小札から一覧を開く操作。
+- Symbol 定義の中の小札（設計 §8）、一覧の窓・ACK（3-E）、小札から一覧を開く操作。
 - 色の Project ごとの変更、文字揃え・複数行。
 - Tauri 実機（実 Engine の snapshot）での見た目は未確認。

@@ -122,6 +122,7 @@ export function applySingleObjectCommand(
       clock,
       navButton,
       alarmBadge,
+      alarmBanner,
       stateColor,
       symbolId,
       equipmentId,
@@ -148,6 +149,7 @@ export function applySingleObjectCommand(
         object.shape.type === "screenView" ||
         object.shape.type === "navButton" ||
         object.shape.type === "alarmBadge" ||
+        object.shape.type === "alarmBanner" ||
         object.shape.type === "trend" ||
         object.shape.type === "rectangle" ||
         object.shape.type === "ellipse") &&
@@ -299,6 +301,17 @@ export function applySingleObjectCommand(
       if (shape.limit === undefined) delete shape.limit;
       validateAlarmBadgeTarget(shape, next.alarms?.definitions ?? []);
       object.shape = shape;
+    }
+    if (alarmBanner !== undefined) {
+      if (definitionId || object.shape.type !== "alarmBanner")
+        throw new Error("文字の書式は警報の帯にだけ設定できます");
+      object.shape = {
+        type: "alarmBanner" as const,
+        style: {
+          fontSize: alarmBanner.style.fontSize,
+          fontWeight: alarmBanner.style.fontWeight,
+        },
+      };
     }
     if (navButton !== undefined) {
       if (definitionId || object.shape.type !== "navButton")

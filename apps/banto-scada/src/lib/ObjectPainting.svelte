@@ -18,6 +18,7 @@
   import TrendPainting from "./TrendPainting.svelte";
   import NavButtonPainting from "./NavButtonPainting.svelte";
   import AlarmBadgePainting from "./AlarmBadgePainting.svelte";
+  import AlarmBannerPainting from "./AlarmBannerPainting.svelte";
   import {
     navButtonDisabled,
     navButtonIsCurrent,
@@ -181,6 +182,12 @@
   />
 {:else if "width" in object && object.shape.type === "alarmBadge"}
   <AlarmBadgePainting
+    shape={object.shape}
+    width={object.width}
+    height={object.height}
+  />
+{:else if "width" in object && object.shape.type === "alarmBanner"}
+  <AlarmBannerPainting
     shape={object.shape}
     width={object.width}
     height={object.height}

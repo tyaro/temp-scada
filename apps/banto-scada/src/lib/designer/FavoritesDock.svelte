@@ -139,6 +139,13 @@
                   height="14"
                   rx="2"
                 /><rect x="11" y="12" width="18" height="8" rx="1" />
+              {:else if item.part.type === "basic" && item.part.kind === "alarmBanner"}<rect
+                  x="5"
+                  y="11"
+                  width="30"
+                  height="10"
+                  rx="2"
+                /><path d="M8 16h13M25 16h7" />
               {:else if item.part.type === "basic" && item.part.kind === "clock"}<circle
                   cx="20"
                   cy="16"

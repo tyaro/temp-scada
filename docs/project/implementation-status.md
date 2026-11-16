@@ -527,6 +527,10 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 2026-11-17の段階3 3-D1で、画面の直下に置く警報の小札`alarmBadge`（`alarmId`・しきい値の`limit`・`text`・`style`のfontSize・fontWeight）を追加した。指す定義と限界が Project にあることを TS・Rust の両方で検査し、使用中の定義・限界は警報の設定で削除・変更できない。状態（不明・正常・発生中・未確認・復帰・未確認・評価不能、発生中に評価不能が重なると「?」）は純関数`alarm-view.ts`で snapshot から導き、モジュールの$stateで編集・プレビュー・運転表示に同じ状態を配る。色は部品で固定し、`aria-label`に状態の文字を入れる。`blinkUnacked`のときだけ未確認を点滅し、「動きを減らす」では止める。ブラウザ版のe2eはDEVだけで差し込むモックの警報feedで状態を変える。schemaVersionは0.37.0のまま。[仕様](../design/graphics/alarm-badge.md)。`alarm-view.test.ts`・`alarm-badge.test.ts`・`examples/alarm-badge-cases.json`（Rust・TS共通）・`e2e/alarm-badge.spec.ts`で確認。帯（3-D2）・一覧の窓（3-E）・Symbol定義内の小札は未実装、Tauri実機は未確認。
 
+## 最新の警報の帯
+
+2026-11-17の段階3 3-D2で、画面の直下に置く最新の警報の帯`alarmBanner`（`style`のfontSize・fontWeightだけを持ち、指す定義は無い）を追加した。純関数`alarm-banner.ts`で snapshot から、停止中（status の理由）・監視できていない（Engine単位の評価不能、選んだ1件は出さない）・別Project・警報なしを出し、監視中は未確認を先に→severityの高い順→同じ定義で上位の限界がある下位を落とす→新しい順（orderKey・時刻・id）で1件を選んで「時刻・名前・メッセージ」と件数を出す。condition単位の評価不能があれば件数と主な理由を常に添える。色は小札と同じ配色で部品に固定し、停止中などは小札の「不明」と同じ斜線、主の文字は幅に収まらなければ「…」で省略し、`aria-label`に全文を入れる。`blinkUnacked`のときだけ未確認を点滅し、「動きを減らす」では止める。schemaVersionは0.37.0のまま。[仕様](../design/graphics/alarm-banner.md)。`alarm-banner.test.ts`・`examples/alarm-banner-cases.json`（Rust・TS共通）・`e2e/alarm-banner.spec.ts`で確認。一覧の窓・ACK（3-E）と枠のヘッダーへの既定配置は未実装、Tauri実機は未確認。
+
 ## 時計
 
 2026-11-13のフロー図 段階2-Bで、現在の日時を出す文字の図形`clock`（書式は日付・時刻・日付と時刻、`seconds: true`で秒、`style`はfontSize・fontWeight・align）を追加した。端末のローカル時刻を`YYYY/MM/DD`・`HH:mm`（`HH:mm:ss`）で出し、購読者がいる間だけ動く共有タイマーで1秒ごとに更新する。primitiveなのでSymbol定義の中にも置け、文字を含むので反転できない。schema・Rust・TS・描画・Inspector・挿入メニュー・部品パネル・お気に入りを加え、schemaVersionは0.37.0のまま。[仕様](../design/graphics/clock.md)。`clock-format.test.ts`、`examples/clock-cases.json`（Rust・TS共通の契約）、`e2e/clock.spec.ts`（`page.clock`で時刻を固定）で確認。Tauri実機は未確認。
