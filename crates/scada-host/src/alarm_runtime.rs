@@ -1447,8 +1447,10 @@ mod tests {
         }
     }
 
-    const FAIL_WRITES: &str = "CREATE TRIGGER fail_event BEFORE INSERT ON event BEGIN SELECT RAISE(ABORT, 'disk full'); END; CREATE TRIGGER fail_state BEFORE INSERT ON last_state BEGIN SELECT RAISE(ABORT, 'disk full'); END;";
-    const HEAL_WRITES: &str = "DROP TRIGGER fail_event; DROP TRIGGER fail_state;";
+    // The alarm DB pool has one connection, so this makes every write fail
+    // with SQLITE_READONLY, a storage outage that can clear.
+    const FAIL_WRITES: &str = "PRAGMA query_only = 1;";
+    const HEAL_WRITES: &str = "PRAGMA query_only = 0;";
 
     /// One bit condition applied and started in a fresh alarm DB.
     async fn outage_fixture(
@@ -1537,18 +1539,18 @@ mod tests {
         let (dir, terminal, db, applied, definitions, session, mut evaluator) =
             outage_fixture("alarm-outage").await;
         let id = "alarm:bit";
+        evaluator.input(flag(true)).await.unwrap();
         evaluator.input(flag(false)).await.unwrap();
+        let saved = db.last_states().await.unwrap().remove(0);
+        assert!(saved.last_event_seq.is_some());
         db.execute_for_test(FAIL_WRITES).await;
 
-        // The occurrence is evaluated and published although it is not written.
+        // The recurrence is evaluated and published although it is not written.
         let change = evaluator.input(flag(true)).await.unwrap().unwrap();
         assert_eq!(change.events.len(), 1);
         let failure = evaluator.history_failure().unwrap();
         assert_eq!(failure.unrecorded_events, 1);
-        assert!(db.last_states().await.unwrap()[0]
-            .state
-            .occurrence
-            .is_none());
+        assert_eq!(db.last_states().await.unwrap()[0], saved);
         // Return then recur: counted, not queued.
         evaluator.input(flag(false)).await.unwrap();
         evaluator.input(flag(true)).await.unwrap();
@@ -1586,6 +1588,8 @@ mod tests {
         assert!(period.event.condition_id.is_none());
         let rows = db.last_states().await.unwrap();
         assert_eq!(rows.len(), 1);
+        // The event behind the rewritten state was not written.
+        assert_eq!(rows[0].last_event_seq, None);
         assert_eq!(
             rows[0].state,
             evaluator
@@ -1615,6 +1619,15 @@ mod tests {
         assert_eq!(evaluator.history_failure().unwrap().unrecorded_events, 0);
         db.execute_for_test(HEAL_WRITES).await;
         assert!(evaluator.recover_history().await.unwrap());
+
+        // A constraint violation is a logic error, not an outage.
+        db.execute_for_test("CREATE TRIGGER reject_event BEFORE INSERT ON event BEGIN SELECT RAISE(ABORT, 'constraint'); END;").await;
+        assert!(matches!(
+            evaluator.input(flag(false)).await,
+            Err(AlarmRuntimeError::Db(AlarmDbError::Sql(_)))
+        ));
+        assert_eq!(evaluator.history_failure(), None);
+        db.execute_for_test("DROP TRIGGER reject_event;").await;
 
         // A lost session ownership is still fatal, not an outage.
         db.stop_session(&session, wall_ms()).await.unwrap();

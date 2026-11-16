@@ -1804,9 +1804,15 @@
     if (!alarmSnapshot) return "警報: 確認中";
     if (alarmSnapshot.status !== "running")
       return `警報: ${alarmSnapshot.status}`;
-    if (alarmSnapshot.historyWriteFailure)
-      return `警報: 履歴に書けません（未記録 ${alarmSnapshot.historyWriteFailure.unrecordedEvents} 件）`;
-    if (alarmSnapshot.engine?.unavailable) return "警報: 監視できていません";
+    // Not monitoring outranks the history outage; both are shown together.
+    const history = alarmSnapshot.historyWriteFailure
+      ? `履歴に書けません（未記録 ${alarmSnapshot.historyWriteFailure.unrecordedEvents} 件）`
+      : null;
+    if (alarmSnapshot.engine?.unavailable)
+      return history
+        ? `警報: 監視できていません・${history}`
+        : "警報: 監視できていません";
+    if (history) return `警報: ${history}`;
     if (alarmSnapshot.monitored?.projectId !== project.manifest.projectId)
       return "警報: 別のProjectを監視中";
     if (alarmSnapshot.pendingConditionChanges)

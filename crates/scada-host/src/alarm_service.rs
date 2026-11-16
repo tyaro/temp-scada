@@ -1412,10 +1412,7 @@ mod tests {
         .await
         .unwrap();
         let db = service.active.lock().await.db.clone().unwrap();
-        db.execute_for_test(
-            "CREATE TRIGGER fail_event BEFORE INSERT ON event BEGIN SELECT RAISE(ABORT, 'disk full'); END; CREATE TRIGGER fail_state BEFORE INSERT ON last_state BEGIN SELECT RAISE(ABORT, 'disk full'); END;",
-        )
-        .await;
+        db.execute_for_test("PRAGMA query_only = 1;").await;
         // The ACK write fails, which starts the outage.
         assert!(matches!(
             service
@@ -1453,8 +1450,7 @@ mod tests {
         assert_eq!(snapshot.status, "running");
         assert_eq!(snapshot.engine.unwrap().session, session);
         assert!(snapshot.history_write_failure.is_some());
-        db.execute_for_test("DROP TRIGGER fail_event; DROP TRIGGER fail_state;")
-            .await;
+        db.execute_for_test("PRAGMA query_only = 0;").await;
         drop(db);
         service.stop().await.unwrap();
         drop(service);

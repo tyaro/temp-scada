@@ -55,13 +55,28 @@ impl From<serde_json::Error> for AlarmDbError {
 }
 
 impl AlarmDbError {
-    /// A storage failure (full disk, lock timeout, I/O) that may clear by
-    /// itself. Evaluation continues and the write is retried (design §5.3).
-    /// Row, session and format mismatches stay fatal: they are logic errors
-    /// or a lost ownership, not a storage outage.
+    /// A storage failure (full disk, lock timeout, read-only media, I/O) that
+    /// may clear by itself. Evaluation continues and the write is retried
+    /// (design §5.3). Constraint violations, schema mismatches, corruption
+    /// and row or session mismatches stay fatal: they are logic errors or a
+    /// lost ownership, and retrying would never record the history.
     pub fn is_storage_outage(&self) -> bool {
-        matches!(self, Self::Io(_) | Self::Sql(_))
+        match self {
+            Self::Io(_) => true,
+            Self::Sql(sqlx::Error::Io(_) | sqlx::Error::PoolTimedOut) => true,
+            Self::Sql(sqlx::Error::Database(error)) => error
+                .code()
+                .and_then(|code| code.parse::<i32>().ok())
+                .is_some_and(|code| is_transient_sqlite_code(code & 0xff)),
+            _ => false,
+        }
     }
+}
+
+/// SQLite primary result codes for failures that can clear without a code
+/// change: BUSY, LOCKED, NOMEM, READONLY, IOERR, FULL and CANTOPEN.
+fn is_transient_sqlite_code(primary: i32) -> bool {
+    matches!(primary, 5 | 6 | 7 | 8 | 10 | 13 | 14)
 }
 
 /// A history outage of one session, written as `unrecordedPeriod`.
@@ -935,8 +950,11 @@ impl AlarmDb {
         for row in rows {
             let mut row = row.clone();
             row.session_id = session.id.clone();
+            // The event that produced a changed state was not written, so an
+            // older event must not be referenced as its origin.
             row.last_event_seq = existing
                 .get(&row.condition_id)
+                .filter(|saved| saved.state == row.state)
                 .and_then(|saved| saved.last_event_seq);
             insert_state(&mut tx, &row).await?;
         }
