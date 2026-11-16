@@ -6,8 +6,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use banto_tagclient::{
-    BindingRequest, BindingView, Endpoint, ErrorKind, GenerationSnapshot, PinnedHubTls, RestClient,
-    SecretApiKey, TagClientConnectionState, TagClientHandle, ValueQuality,
+    BindingRequest, BindingView, CatalogTag, ErrorKind, GenerationSnapshot,
+    TagClientConnectionState, TagClientHandle, TagClientState, ValueEntry, ValueQuality,
 };
 use scada_alarm::{
     AckOutcome, EndReason, Engine, EngineUnavailable, Event, EventKind, Input, Now, Quality,
@@ -20,6 +20,11 @@ use crate::alarm_db::{
     StartedAlarmSession, UnackedOccurrence, UnrecordedPeriod,
 };
 use crate::alarm_terminal::ActiveAlarmSession;
+
+mod freshness;
+
+use freshness::{differs, Freshness, RereadResult};
+pub use freshness::{FreshnessConfig, HubClients, RereadFailure};
 
 #[derive(Debug)]
 pub enum AlarmRuntimeError {
@@ -443,7 +448,7 @@ struct ApplyCommand {
     applied: AppliedDefinitions,
     definitions: BTreeMap<String, Definition>,
     confirmed: Vec<UnackedOccurrence>,
-    client: RestClient,
+    clients: HubClients,
     reply: oneshot::Sender<Result<(), AlarmRuntimeError>>,
 }
 
@@ -453,43 +458,24 @@ pub struct AlarmRuntime {
     changes: broadcast::Sender<AlarmChange>,
     status: watch::Receiver<AlarmRuntimeStatus>,
     history: watch::Receiver<Option<HistoryWriteFailure>>,
+    reread: watch::Receiver<Option<RereadFailure>>,
     task: tokio::task::JoinHandle<Result<(), AlarmRuntimeError>>,
 }
 
 impl AlarmRuntime {
+    /// Start with `clients` for the applied endpoint. The caller compares
+    /// its HubRecord endpoint with the applied record on every client.
     pub async fn start(
         evaluator: AlarmEvaluator,
-        secret: SecretApiKey,
-        pins: Option<PinnedHubTls>,
-        request_timeout: Duration,
+        clients: HubClients,
     ) -> Result<Self, AlarmRuntimeError> {
-        // Construct the SDK client from the applied endpoint, never a caller's
-        // independent address that could mislabel durable alarm states.
-        let client = (|| {
-            let endpoint = Endpoint::new(&evaluator.applied.endpoint)?;
-            match pins {
-                Some(pins) => RestClient::with_pinned_tls(endpoint, secret, request_timeout, pins),
-                None => RestClient::with_request_timeout(endpoint, secret, request_timeout),
-            }
-        })();
-        let client = match client {
-            Ok(client) => client,
-            Err(error) => {
-                let _ = evaluator
-                    .db
-                    .stop_session(evaluator.engine.session(), wall_ms())
-                    .await;
-                return Err(AlarmRuntimeError::Sdk(error.kind()));
-            }
-        };
-        Self::start_with_client(evaluator, client).await
+        Self::start_with_config(evaluator, clients, FreshnessConfig::default()).await
     }
 
-    /// Start from the protected bootstrap client's saved credential. The
-    /// caller first compares its HubRecord endpoint with the applied record.
-    pub async fn start_with_client(
+    pub async fn start_with_config(
         evaluator: AlarmEvaluator,
-        client: RestClient,
+        clients: HubClients,
+        config: FreshnessConfig,
     ) -> Result<Self, AlarmRuntimeError> {
         let tags: BTreeSet<_> = evaluator
             .engine
@@ -497,21 +483,18 @@ impl AlarmRuntime {
             .values()
             .map(|condition| condition.spec.source.tag().to_owned())
             .collect();
-        let requests = tags
-            .iter()
-            .map(|tag| BindingRequest {
-                binding_key: tag.clone(),
-                external_name: tag.clone(),
-            })
-            .collect();
-        let sdk = match client.start(requests) {
+        let started = match clients.make() {
+            Some(client) => client.start(requests(&tags)).map_err(|error| error.kind()),
+            None => Err(ErrorKind::Transport),
+        };
+        let sdk = match started {
             Ok(sdk) => sdk,
-            Err(error) => {
+            Err(kind) => {
                 let _ = evaluator
                     .db
                     .stop_session(evaluator.engine.session(), wall_ms())
                     .await;
-                return Err(AlarmRuntimeError::Sdk(error.kind()));
+                return Err(AlarmRuntimeError::Sdk(kind));
             }
         };
         let (control, control_rx) = mpsc::channel(32);
@@ -519,12 +502,17 @@ impl AlarmRuntime {
         let change_tx = changes.clone();
         let (status_tx, status) = watch::channel(AlarmRuntimeStatus::Running);
         let history = evaluator.history.subscribe();
-        let task = tokio::spawn(run(evaluator, sdk, control_rx, change_tx, tags, status_tx));
+        let (reread_tx, reread) = watch::channel(None);
+        let freshness = Freshness::new(config, clients, reread_tx);
+        let task = tokio::spawn(run(
+            evaluator, sdk, control_rx, change_tx, tags, freshness, status_tx,
+        ));
         Ok(Self {
             control,
             changes,
             status,
             history,
+            reread,
             task,
         })
     }
@@ -544,12 +532,17 @@ impl AlarmRuntime {
         self.history.clone()
     }
 
+    /// The current reread failure streak; a change asks viewers to refresh.
+    pub fn reread_failure(&self) -> watch::Receiver<Option<RereadFailure>> {
+        self.reread.clone()
+    }
+
     pub async fn apply(
         &self,
         applied: AppliedDefinitions,
         definitions: BTreeMap<String, Definition>,
         confirmed: Vec<UnackedOccurrence>,
-        client: RestClient,
+        clients: HubClients,
     ) -> Result<(), AlarmRuntimeError> {
         let (reply, rx) = oneshot::channel();
         self.control
@@ -557,7 +550,7 @@ impl AlarmRuntime {
                 applied,
                 definitions,
                 confirmed,
-                client,
+                clients,
                 reply,
             })))
             .await
@@ -616,13 +609,36 @@ async fn run(
     control_rx: mpsc::Receiver<Control>,
     change_tx: broadcast::Sender<AlarmChange>,
     tags: BTreeSet<String>,
+    freshness: Freshness,
     status_tx: watch::Sender<AlarmRuntimeStatus>,
 ) -> Result<(), AlarmRuntimeError> {
     run_with_status(
-        run_inner(evaluator, sdk, control_rx, change_tx, tags),
+        run_inner(evaluator, sdk, control_rx, change_tx, tags, freshness),
         status_tx,
     )
     .await
+}
+
+fn requests(tags: &BTreeSet<String>) -> Vec<BindingRequest> {
+    tags.iter()
+        .map(|tag| BindingRequest {
+            binding_key: tag.clone(),
+            external_name: tag.clone(),
+        })
+        .collect()
+}
+
+/// Swap in a new subscription; the old one is shut down in the background.
+fn replace_sdk(
+    sdk: &mut TagClientHandle,
+    states: &mut watch::Receiver<TagClientState>,
+    replacement: TagClientHandle,
+) {
+    let old = std::mem::replace(sdk, replacement);
+    *states = sdk.state_watch();
+    tokio::spawn(async move {
+        let _ = tokio::time::timeout(Duration::from_secs(5), old.shutdown()).await;
+    });
 }
 
 struct StopOnDrop(watch::Sender<AlarmRuntimeStatus>);
@@ -678,6 +694,7 @@ async fn run_inner(
     mut control_rx: mpsc::Receiver<Control>,
     change_tx: broadcast::Sender<AlarmChange>,
     mut tags: BTreeSet<String>,
+    mut freshness: Freshness,
 ) -> Result<(), AlarmRuntimeError> {
     let mut states = sdk.state_watch();
     let mut previous = BTreeMap::new();
@@ -701,12 +718,76 @@ async fn run_inner(
         &mut previous,
         &mut was_evaluable,
         &mut accepted_generation,
+        &mut freshness,
         &change_tx,
     )
     .await
     {
         let _ = stop(evaluator, sdk, &change_tx).await;
         return Err(error);
+    }
+    // Every arm that can fail stops the session the same way.
+    macro_rules! check {
+        ($result:expr) => {
+            if let Err(error) = $result {
+                let _ = stop(evaluator, sdk, &change_tx).await;
+                return Err(error);
+            }
+        };
+    }
+    macro_rules! process_current {
+        () => {{
+            let current = states.borrow_and_update().clone();
+            if current.connection_state() == TagClientConnectionState::Stopped {
+                let _ = stop(evaluator, sdk, &change_tx).await;
+                return Err(current
+                    .last_error()
+                    .map_or(AlarmRuntimeError::Closed, AlarmRuntimeError::Sdk));
+            }
+            check!(
+                process_state(
+                    &mut evaluator,
+                    &current,
+                    &tags,
+                    &mut previous,
+                    &mut was_evaluable,
+                    &mut accepted_generation,
+                    &mut freshness,
+                    &change_tx,
+                )
+                .await
+            );
+        }};
+    }
+    // Resubscribe after a suspected stall (design §4.5). The old subscription
+    // stays when no new one can be made; that counts as a failure.
+    macro_rules! resubscribe {
+        () => {{
+            let started = freshness
+                .clients
+                .make()
+                .and_then(|client| client.start(requests(&tags)).ok());
+            match started {
+                Some(replacement) => {
+                    replace_sdk(&mut sdk, &mut states, replacement);
+                    freshness.replaced();
+                    freshness.resubscribe_started();
+                    previous.clear();
+                    was_evaluable = false;
+                    accepted_generation = None;
+                    awaiting_replacement_snapshot = true;
+                    replacement_deadline =
+                        Some(tokio::time::Instant::now() + Duration::from_secs(2));
+                }
+                None => {
+                    freshness.resubscribe_failed(tokio::time::Instant::now());
+                    let synced =
+                        sync_availability(&mut evaluator, &freshness, &mut previous, &change_tx)
+                            .await;
+                    check!(synced.map(|_| ()));
+                }
+            }
+        }};
     }
     loop {
         if evaluator.history_failure().is_none() {
@@ -716,59 +797,80 @@ async fn run_inner(
         }
         let due = evaluator.engine.next_due_ms();
         let deadline = due.map(|ms| evaluator.origin + std::time::Duration::from_millis(ms));
+        let next_reread = freshness.next_reread;
+        let next_resubscribe = freshness.next_resubscribe;
         tokio::select! {
             state = states.changed() => {
                 if state.is_err() {
                     let _ = stop(evaluator, sdk, &change_tx).await;
                     return Err(AlarmRuntimeError::Closed);
                 }
-                let current = states.borrow_and_update().clone();
-                if current.connection_state() == TagClientConnectionState::Stopped {
-                    let _ = stop(evaluator, sdk, &change_tx).await;
-                    return Err(current.last_error().map_or(AlarmRuntimeError::Closed, AlarmRuntimeError::Sdk));
-                }
-                if awaiting_replacement_snapshot
-                    && !matches!(current.connection_state(), TagClientConnectionState::Live | TagClientConnectionState::Unbound | TagClientConnectionState::Unauthorized)
-                {
+                let connection = states.borrow().connection_state();
+                if awaiting_replacement_snapshot && !replacement_settled(connection) {
                     continue;
+                }
+                if awaiting_replacement_snapshot && connection != TagClientConnectionState::Stopped {
+                    // A fresh subscription reached Live/Unbound.
+                    freshness.resubscribe_succeeded();
                 }
                 awaiting_replacement_snapshot = false;
                 replacement_deadline = None;
-                if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
-                    let _ = stop(evaluator, sdk, &change_tx).await;
-                    return Err(error);
-                }
+                process_current!();
             }
             _ = async { if let Some(deadline) = deadline { tokio::time::sleep_until(deadline.into()).await } else { std::future::pending::<()>().await } } => {
-                if let Err(error) = publish(&mut evaluator, Input::TimerExpired, &change_tx).await {
-                    let _ = stop(evaluator, sdk, &change_tx).await;
-                    return Err(error);
-                }
+                check!(publish(&mut evaluator, Input::TimerExpired, &change_tx).await);
             }
             _ = async { if let Some(deadline) = history_retry { tokio::time::sleep_until(deadline).await } else { std::future::pending::<()>().await } } => {
                 history_retry = None;
-                if let Err(error) = evaluator.recover_history().await {
-                    let _ = stop(evaluator, sdk, &change_tx).await;
-                    return Err(error);
-                }
+                check!(evaluator.recover_history().await.map(|_| ()));
             }
             _ = async { if let Some(deadline) = replacement_deadline { tokio::time::sleep_until(deadline).await } else { std::future::pending::<()>().await } } => {
                 awaiting_replacement_snapshot = false;
                 replacement_deadline = None;
-                let current = states.borrow_and_update().clone();
-                if current.connection_state() == TagClientConnectionState::Stopped {
-                    let _ = stop(evaluator, sdk, &change_tx).await;
-                    return Err(current.last_error().map_or(AlarmRuntimeError::Closed, AlarmRuntimeError::Sdk));
+                if freshness.resubscribing {
+                    freshness.resubscribe_failed(tokio::time::Instant::now());
                 }
-                if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
-                    let _ = stop(evaluator, sdk, &change_tx).await;
-                    return Err(error);
+                process_current!();
+            }
+            _ = tokio::time::sleep_until(next_reread) => {
+                if freshness.start_reread(&tags, tokio::time::Instant::now(), wall_ms()) {
+                    let synced = sync_availability(&mut evaluator, &freshness, &mut previous, &change_tx).await;
+                    check!(synced.map(|_| ()));
                 }
+            }
+            result = async {
+                match freshness.ticket.as_mut() {
+                    Some(ticket) => (&mut ticket.rx).await.unwrap_or(Err(())),
+                    None => std::future::pending::<RereadResult>().await,
+                }
+            } => {
+                let ticket = freshness.ticket.take().expect("a reread in flight");
+                // A subscription change not processed yet also arrived meanwhile.
+                let pending = states.has_changed().unwrap_or(true);
+                let current = states.borrow().clone();
+                let outcome = reread_done(
+                    &mut evaluator,
+                    &mut freshness,
+                    RereadContext { ticket, result, state: &current, pending, tags: &tags },
+                    &mut previous,
+                    &change_tx,
+                )
+                .await;
+                match outcome {
+                    Ok(RereadOutcome::Recovered) => process_current!(),
+                    Ok(RereadOutcome::Stalled) => resubscribe!(),
+                    Ok(RereadOutcome::Settled) => {}
+                    Err(error) => check!(Err::<(), _>(error)),
+                }
+            }
+            _ = async { if let Some(deadline) = next_resubscribe { tokio::time::sleep_until(deadline).await } else { std::future::pending::<()>().await } } => {
+                freshness.next_resubscribe = None;
+                resubscribe!();
             }
             control = control_rx.recv() => match control {
                 Some(Control::Snapshot(reply)) => { let _ = reply.send(evaluator.engine.clone()); }
                 Some(Control::Apply(command)) => {
-                    let ApplyCommand { applied, definitions, confirmed, client, reply } = *command;
+                    let ApplyCommand { applied, definitions, confirmed, clients, reply } = *command;
                     if evaluator.history_failure().is_some() {
                         let _ = reply.send(Err(AlarmRuntimeError::HistoryUnwritable));
                         continue;
@@ -780,48 +882,45 @@ async fn run_inner(
                     }
                     let next_tags: BTreeSet<_> = definitions.values().map(|definition| definition.spec.source.tag().to_owned()).collect();
                     let replacement = if next_tags != tags {
-                        let requests = next_tags.iter().map(|tag| BindingRequest { binding_key: tag.clone(), external_name: tag.clone() }).collect();
-                        match client.start(requests) {
+                        let started = match clients.make() {
+                            Some(client) => client.start(requests(&next_tags)).map_err(|error| error.kind()),
+                            None => Err(ErrorKind::Transport),
+                        };
+                        match started {
                             Ok(handle) => Some(handle),
-                            Err(error) => {
-                                let _ = reply.send(Err(AlarmRuntimeError::Sdk(error.kind())));
+                            Err(kind) => {
+                                let _ = reply.send(Err(AlarmRuntimeError::Sdk(kind)));
                                 continue;
                             }
                         }
                     } else { None };
                     match evaluator.apply(applied, &definitions, &confirmed).await {
                         Ok(change) => {
+                            // Rereads and resubscription use the refreshed credential.
+                            freshness.clients = clients;
                             if let Some(replacement) = replacement {
-                                let old = std::mem::replace(&mut sdk, replacement);
-                                states = sdk.state_watch();
+                                replace_sdk(&mut sdk, &mut states, replacement);
+                                freshness.replaced();
+                                freshness.resubscribing = false;
                                 tags = next_tags;
                                 previous.clear();
                                 was_evaluable = false;
                                 accepted_generation = None;
                                 awaiting_replacement_snapshot = true;
                                 replacement_deadline = Some(tokio::time::Instant::now() + Duration::from_secs(2));
-                                tokio::spawn(async move {
-                                    let _ = tokio::time::timeout(Duration::from_secs(5), old.shutdown()).await;
-                                });
                             } else {
                                 previous.clear();
                             }
                             let _ = change_tx.send(change);
                             let _ = reply.send(Ok(()));
-                            let current = states.borrow_and_update().clone();
-                            if current.connection_state() == TagClientConnectionState::Stopped {
-                                let _ = stop(evaluator, sdk, &change_tx).await;
-                                return Err(current.last_error().map_or(AlarmRuntimeError::Closed, AlarmRuntimeError::Sdk));
-                            }
-                            if !awaiting_replacement_snapshot
-                                || matches!(current.connection_state(), TagClientConnectionState::Live | TagClientConnectionState::Unbound | TagClientConnectionState::Unauthorized)
-                            {
+                            let connection = states.borrow().connection_state();
+                            if !awaiting_replacement_snapshot || replacement_settled(connection) {
+                                if awaiting_replacement_snapshot && connection != TagClientConnectionState::Stopped {
+                                    freshness.resubscribe_succeeded();
+                                }
                                 awaiting_replacement_snapshot = false;
                                 replacement_deadline = None;
-                                if let Err(error) = process_state(&mut evaluator, &current, &tags, &mut previous, &mut was_evaluable, &mut accepted_generation, &change_tx).await {
-                                    let _ = stop(evaluator, sdk, &change_tx).await;
-                                    return Err(error);
-                                }
+                                process_current!();
                             }
                         }
                         Err(error) => {
@@ -869,6 +968,136 @@ async fn run_inner(
             }
         }
     }
+}
+
+/// A replacement subscription has a settled first state to process: Live or
+/// Unbound, or a terminal state that ends the session.
+fn replacement_settled(connection: TagClientConnectionState) -> bool {
+    matches!(
+        connection,
+        TagClientConnectionState::Stopped
+            | TagClientConnectionState::Live
+            | TagClientConnectionState::Unbound
+            | TagClientConnectionState::Unauthorized
+    )
+}
+
+enum RereadOutcome {
+    /// Nothing more to do in the loop.
+    Settled,
+    /// ReceiveLost ended; evaluate again from the subscription's values.
+    Recovered,
+    /// The subscription looks stalled; the read value was used.
+    Stalled,
+}
+
+struct RereadContext<'a> {
+    ticket: freshness::Ticket,
+    result: RereadResult,
+    state: &'a TagClientState,
+    /// A subscription change is waiting in the watch, not processed yet.
+    pending: bool,
+    tags: &'a BTreeSet<String>,
+}
+
+/// Account for one reread and, when the subscription delivered nothing for
+/// a tag meanwhile, use a differing read value (design §4.5).
+async fn reread_done(
+    evaluator: &mut AlarmEvaluator,
+    freshness: &mut Freshness,
+    context: RereadContext<'_>,
+    previous: &mut BTreeMap<String, Sample>,
+    changes: &broadcast::Sender<AlarmChange>,
+) -> Result<RereadOutcome, AlarmRuntimeError> {
+    let values = match context.result {
+        Ok(values) => values,
+        Err(()) => {
+            if freshness.failure(tokio::time::Instant::now(), wall_ms()) {
+                sync_availability(evaluator, freshness, previous, changes).await?;
+            }
+            return Ok(RereadOutcome::Settled);
+        }
+    };
+    if freshness.success() && sync_availability(evaluator, freshness, previous, changes).await? {
+        return Ok(RereadOutcome::Recovered);
+    }
+    // Only liveness when the connection changed or the Engine is not
+    // evaluating; the order is arrival order, never source timestamps.
+    if context.ticket.epoch != freshness.epoch
+        || context.pending
+        || evaluator.engine.unavailable().is_some()
+        || context.state.connection_state() != TagClientConnectionState::Live
+    {
+        return Ok(RereadOutcome::Settled);
+    }
+    let Some(snapshot) = context.state.snapshot() else {
+        return Ok(RereadOutcome::Settled);
+    };
+    let rows: BTreeMap<&str, &ValueEntry> = values
+        .values
+        .iter()
+        .map(|row| (row.tag.as_str(), row))
+        .collect();
+    let mut stalled = false;
+    for tag in context.tags {
+        let sent = context.ticket.arrivals.get(tag).copied().unwrap_or(0);
+        if sent != freshness.arrival_count(tag) {
+            continue;
+        }
+        let Some(BindingView::Resolved { tag: catalog, .. }) = snapshot.binding(tag) else {
+            continue;
+        };
+        let (Some(row), Some(accepted)) = (rows.get(tag.as_str()), previous.get(tag)) else {
+            continue;
+        };
+        let Some(read) = sample_from(catalog, Some(row)) else {
+            continue;
+        };
+        if !differs(accepted, &read) {
+            continue;
+        }
+        publish(
+            evaluator,
+            Input::Value {
+                tag: tag.clone(),
+                sample: read.clone(),
+            },
+            changes,
+        )
+        .await?;
+        previous.insert(tag.clone(), read);
+        stalled = true;
+    }
+    Ok(if stalled {
+        RereadOutcome::Stalled
+    } else {
+        RereadOutcome::Settled
+    })
+}
+
+/// Bring the Engine-wide reason in line with the freshness state. Returns
+/// `true` when the Engine became evaluable again: conditions wait for their
+/// next value, so the caller feeds the current subscription values.
+async fn sync_availability(
+    evaluator: &mut AlarmEvaluator,
+    freshness: &Freshness,
+    previous: &mut BTreeMap<String, Sample>,
+    changes: &broadcast::Sender<AlarmChange>,
+) -> Result<bool, AlarmRuntimeError> {
+    let desired = freshness.desired();
+    if evaluator.engine.unavailable() == desired {
+        return Ok(false);
+    }
+    publish(
+        evaluator,
+        Input::EngineAvailability {
+            unavailable: desired,
+        },
+        changes,
+    )
+    .await?;
+    previous.clear();
+    Ok(desired.is_none())
 }
 
 fn error_summary(error: &AlarmRuntimeError) -> AlarmRuntimeError {
@@ -930,30 +1159,40 @@ async fn publish(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn process_state(
     evaluator: &mut AlarmEvaluator,
-    state: &banto_tagclient::TagClientState,
+    state: &TagClientState,
     tags: &BTreeSet<String>,
     previous: &mut BTreeMap<String, Sample>,
     was_evaluable: &mut bool,
     accepted_generation: &mut Option<u64>,
+    freshness: &mut Freshness,
     changes: &broadcast::Sender<AlarmChange>,
 ) -> Result<(), AlarmRuntimeError> {
     match state.connection_state() {
         TagClientConnectionState::Unauthorized => {
             return Err(AlarmRuntimeError::Sdk(ErrorKind::Unauthorized))
         }
-        TagClientConnectionState::Live | TagClientConnectionState::Unbound => {
+        connection @ (TagClientConnectionState::Live | TagClientConnectionState::Unbound) => {
             let snapshot = state.snapshot().ok_or(AlarmRuntimeError::Internal)?;
             begin_generation(
                 evaluator,
                 snapshot.generation,
+                connection == TagClientConnectionState::Live,
                 previous,
                 was_evaluable,
                 accepted_generation,
+                freshness,
                 changes,
             )
             .await?;
+            if evaluator.engine.unavailable().is_some() {
+                // The Engine drops values while unavailable; feed them again
+                // once it is evaluable.
+                previous.clear();
+                return Ok(());
+            }
             for tag in tags {
                 let Some(sample) = sample(snapshot, tag) else {
                     // A resolved binding without its first value remains InitialValue.
@@ -969,21 +1208,14 @@ async fn process_state(
                         changes,
                     )
                     .await?;
+                    freshness.arrived(tag);
                     previous.insert(tag.clone(), sample);
                 }
             }
         }
         _ => {
-            if *was_evaluable || evaluator.engine.unavailable().is_none() {
-                publish(
-                    evaluator,
-                    Input::EngineAvailability {
-                        unavailable: Some(EngineUnavailable::Disconnected),
-                    },
-                    changes,
-                )
-                .await?;
-            }
+            freshness.disconnected();
+            sync_availability(evaluator, freshness, previous, changes).await?;
             previous.clear();
             *was_evaluable = false;
         }
@@ -991,12 +1223,15 @@ async fn process_state(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn begin_generation(
     evaluator: &mut AlarmEvaluator,
     generation: u64,
+    live: bool,
     previous: &mut BTreeMap<String, Sample>,
     was_evaluable: &mut bool,
     accepted_generation: &mut Option<u64>,
+    freshness: &mut Freshness,
     changes: &broadcast::Sender<AlarmChange>,
 ) -> Result<(), AlarmRuntimeError> {
     let generation_changed = accepted_generation.is_some_and(|old| old != generation);
@@ -1012,14 +1247,8 @@ async fn begin_generation(
         )
         .await?;
     }
-    if evaluator.engine.unavailable().is_some() {
-        publish(
-            evaluator,
-            Input::EngineAvailability { unavailable: None },
-            changes,
-        )
-        .await?;
-    }
+    freshness.connected(live, generation_changed || !*was_evaluable);
+    sync_availability(evaluator, freshness, previous, changes).await?;
     if !*was_evaluable || generation_changed {
         previous.clear();
     }
@@ -1029,25 +1258,31 @@ async fn begin_generation(
 }
 
 fn sample(snapshot: &GenerationSnapshot, tag: &str) -> Option<Sample> {
-    let invalid = || Sample {
+    let Some(BindingView::Resolved {
+        tag: catalog,
+        value,
+        ..
+    }) = snapshot.binding(tag)
+    else {
+        return Some(invalid_sample());
+    };
+    sample_from(catalog, value)
+}
+
+fn invalid_sample() -> Sample {
+    Sample {
         resolved: false,
         quality: Quality::Bad,
         value: None,
         source_timestamp_ms: None,
-    };
-    let Some(binding) = snapshot.binding(tag) else {
-        return Some(invalid());
-    };
-    let BindingView::Resolved {
-        tag: catalog,
-        value,
-        ..
-    } = binding
-    else {
-        return Some(invalid());
-    };
+    }
+}
+
+/// Convert one value row of a resolved catalog tag. The subscription and
+/// the REST reread share this conversion.
+fn sample_from(catalog: &CatalogTag, value: Option<&ValueEntry>) -> Option<Sample> {
     if !catalog.enabled {
-        return Some(invalid());
+        return Some(invalid_sample());
     }
     // No value row means initial value waiting, not an unresolved catalog tag.
     let value = value?;
@@ -1078,6 +1313,9 @@ fn sample(snapshot: &GenerationSnapshot, tag: &str) -> Option<Sample> {
         source_timestamp_ms: Some(source_timestamp_ms),
     })
 }
+
+#[cfg(test)]
+mod freshness_tests;
 
 #[cfg(test)]
 mod tests {
@@ -1363,12 +1601,17 @@ mod tests {
         )]);
         let mut was_evaluable = true;
         let mut generation = Some(1);
+        let (report, _) = watch::channel(None);
+        let mut freshness =
+            Freshness::new(FreshnessConfig::default(), HubClients::new(|| None), report);
         begin_generation(
             &mut evaluator,
             2,
+            true,
             &mut previous,
             &mut was_evaluable,
             &mut generation,
+            &mut freshness,
             &changes,
         )
         .await
@@ -1415,6 +1658,11 @@ mod tests {
             control_rx,
             changes,
             BTreeSet::from(["PLANT.FLAG".into()]),
+            Freshness::new(
+                FreshnessConfig::default(),
+                HubClients::new(|| None),
+                watch::channel(None).0,
+            ),
             status_tx,
         ));
         tokio::time::timeout(Duration::from_secs(3), status.changed())
@@ -1453,7 +1701,7 @@ mod tests {
     const HEAL_WRITES: &str = "PRAGMA query_only = 0;";
 
     /// One bit condition applied and started in a fresh alarm DB.
-    async fn outage_fixture(
+    pub(super) async fn outage_fixture(
         prefix: &str,
     ) -> (
         std::path::PathBuf,
@@ -1740,14 +1988,7 @@ mod tests {
         let evaluator = AlarmEvaluator::new(db.clone(), applied.clone(), engine)
             .await
             .unwrap();
-        let runtime = AlarmRuntime::start(
-            evaluator,
-            SecretApiKey::new("alarm-test-key".into()).unwrap(),
-            None,
-            Duration::from_secs(2),
-        )
-        .await
-        .unwrap();
+        let runtime = AlarmRuntime::start(evaluator, hub.clients()).await.unwrap();
         tokio::time::timeout(std::time::Duration::from_secs(5), async {
             loop {
                 if runtime
@@ -1795,7 +2036,7 @@ mod tests {
                 renamed.clone(),
                 BTreeMap::from([(id.clone(), definition.clone())]),
                 Vec::new(),
-                hub.client(),
+                hub.clients(),
             )
             .await
             .unwrap();
@@ -1829,7 +2070,7 @@ mod tests {
                     occurrence: round.occurrence.clone().unwrap(),
                     recurrence: round.recurrence,
                 }],
-                hub.client(),
+                hub.clients(),
             )
             .await
             .unwrap();
@@ -1888,7 +2129,7 @@ mod tests {
                     (added_id.clone(), added_definition.clone()),
                 ]),
                 Vec::new(),
-                hub.client(),
+                hub.clients(),
             )
             .await
             .unwrap();
@@ -1922,7 +2163,7 @@ mod tests {
                 .count(),
             unavailable_before
         );
-        let client = hub.client();
+        let client = hub.clients();
         drop(hub);
         let missing_id = "alarm:missing-after-switch".to_owned();
         let mut missing_definition = added_definition.clone();
@@ -2044,14 +2285,7 @@ mod tests {
         let evaluator = AlarmEvaluator::new(db.clone(), applied, engine)
             .await
             .unwrap();
-        let runtime = AlarmRuntime::start(
-            evaluator,
-            SecretApiKey::new("alarm-test-key".into()).unwrap(),
-            None,
-            Duration::from_secs(2),
-        )
-        .await
-        .unwrap();
+        let runtime = AlarmRuntime::start(evaluator, hub.clients()).await.unwrap();
         tokio::time::timeout(Duration::from_secs(5), async {
             loop {
                 let engine = runtime.snapshot().await.unwrap();

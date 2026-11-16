@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+pub use crate::alarm_runtime::HubClients;
 pub use banto_tagclient::RestClient;
 use scada_alarm::{AckOutcome, Session};
 use serde::Serialize;
@@ -74,6 +75,9 @@ pub struct AlarmSnapshot {
     /// The running Engine cannot write its history (design §5.3). ACK and
     /// apply are refused until a retry records the unrecorded period.
     pub history_write_failure: Option<crate::alarm_runtime::HistoryWriteFailure>,
+    /// Rereads of the current values keep failing (design §4.5). Evaluation
+    /// continues until the streak exceeds its limit (ReceiveLost).
+    pub reread_failure: Option<crate::alarm_runtime::RereadFailure>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -249,7 +253,7 @@ impl AlarmService {
     pub async fn resume(
         &self,
         endpoint: Option<&str>,
-        client: Option<RestClient>,
+        client: Option<HubClients>,
     ) -> Result<AlarmSnapshot, AlarmServiceError> {
         let mut active = self.active.lock().await;
         if self.recover_switch().await.is_err() {
@@ -302,7 +306,7 @@ impl AlarmService {
         &self,
         active: &mut Active,
         endpoint: Option<&str>,
-        client: Option<RestClient>,
+        client: Option<HubClients>,
     ) -> Result<(), AlarmServiceError> {
         let Some(monitored) = self.terminal.monitored()? else {
             active.project_id = None;
@@ -354,7 +358,7 @@ impl AlarmService {
         .map_err(|_| AlarmServiceError::Project(AlarmProjectError::InvalidFile))?;
         let engine = db.start_session_plan(plan, at_ms).await?;
         let evaluator = AlarmEvaluator::new(db.clone(), applied, engine).await?;
-        let runtime = AlarmRuntime::start_with_client(evaluator, client).await?;
+        let runtime = AlarmRuntime::start(evaluator, client).await?;
         self.attach(active, runtime, db, monitored.project_id);
         Ok(())
     }
@@ -369,6 +373,7 @@ impl AlarmService {
         let mut receiver = runtime.changes();
         let mut status = runtime.status();
         let mut history = runtime.history();
+        let mut reread = runtime.reread_failure();
         let sender = self.changes.clone();
         let lagged = self.lagged.clone();
         active.pump = Some(tokio::spawn(async move {
@@ -387,6 +392,7 @@ impl AlarmService {
                     // A write outage starting or ending is not an Engine
                     // change; viewers fetch a new snapshot instead.
                     Ok(()) = history.changed() => { let _ = lagged.send(()); }
+                    Ok(()) = reread.changed() => { let _ = lagged.send(()); }
                     change = receiver.recv() => match change {
                         Ok(change) => { let _ = sender.send(change); }
                         Err(broadcast::error::RecvError::Lagged(_)) => { let _ = lagged.send(()); }
@@ -456,7 +462,7 @@ impl AlarmService {
         &self,
         path: &Path,
         endpoint: &str,
-        client: RestClient,
+        client: HubClients,
         applied_by: &str,
         confirmed: &[UnackedOccurrence],
         mode: ApplyMode<'_>,
@@ -798,6 +804,7 @@ impl AlarmService {
                     pending_condition_changes: false,
                     pending_display_changes: false,
                     history_write_failure: None,
+                    reread_failure: None,
                 },
                 None,
             ));
@@ -825,9 +832,12 @@ impl AlarmService {
             None => None,
             Some(_) => None,
         };
-        let history_write_failure = match (&active.runtime, &engine) {
-            (Some(runtime), Some(_)) => *runtime.history().borrow(),
-            _ => None,
+        let (history_write_failure, reread_failure) = match (&active.runtime, &engine) {
+            (Some(runtime), Some(_)) => (
+                *runtime.history().borrow(),
+                *runtime.reread_failure().borrow(),
+            ),
+            _ => (None, None),
         };
         let status = match &active.runtime {
             Some(runtime) => match *runtime.status().borrow() {
@@ -847,6 +857,7 @@ impl AlarmService {
                 pending_condition_changes: false,
                 pending_display_changes: false,
                 history_write_failure,
+                reread_failure,
             },
             applied,
         ))
@@ -1029,7 +1040,7 @@ mod tests {
                 .apply(
                     &path,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &[],
                     ApplyMode::Saved
@@ -1061,7 +1072,7 @@ mod tests {
         let session = before.engine.unwrap().session;
         let first_applied_at = before.applied.unwrap().applied_at_ms;
         let resumed = service
-            .resume(Some(&hub.url), Some(hub.client()))
+            .resume(Some(&hub.url), Some(hub.clients()))
             .await
             .unwrap();
         assert_eq!(resumed.engine.unwrap().session, session);
@@ -1070,7 +1081,7 @@ mod tests {
                 .apply(
                     &path,
                     "http://changed-hub.invalid",
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &[],
                     ApplyMode::Saved
@@ -1090,7 +1101,7 @@ mod tests {
                 .apply(
                     &path,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &[],
                     ApplyMode::Saved
@@ -1111,7 +1122,7 @@ mod tests {
             .apply(
                 &path,
                 &hub.url,
-                hub.client(),
+                hub.clients(),
                 "未ログイン",
                 &[],
                 ApplyMode::Saved,
@@ -1128,7 +1139,7 @@ mod tests {
                 .apply(
                     &path,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &needed,
                     ApplyMode::Saved
@@ -1162,7 +1173,7 @@ mod tests {
                 .apply(
                     &a,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &[],
                     ApplyMode::Saved
@@ -1203,7 +1214,7 @@ mod tests {
                 .apply(
                     &b,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &[],
                     ApplyMode::Saved
@@ -1219,7 +1230,7 @@ mod tests {
         std::fs::write(&b, valid_b).unwrap();
         assert!(matches!(
             service
-                .apply(&b, &hub.url, hub.client(), "未ログイン", &[], ApplyMode::Explicit { confirmed_switch_from: None })
+                .apply(&b, &hub.url, hub.clients(), "未ログイン", &[], ApplyMode::Explicit { confirmed_switch_from: None })
                 .await
                 .unwrap(),
             ApplyResult::SwitchConfirmationRequired { monitored_project_id } if monitored_project_id == a_id
@@ -1228,7 +1239,7 @@ mod tests {
             .apply(
                 &b,
                 &hub.url,
-                hub.client(),
+                hub.clients(),
                 "未ログイン",
                 &[],
                 ApplyMode::Explicit {
@@ -1257,7 +1268,7 @@ mod tests {
                 .apply(
                     &b,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &needed,
                     ApplyMode::Explicit {
@@ -1301,7 +1312,7 @@ mod tests {
         drop(service);
         let resumed = AlarmService::open(&dir).await.unwrap();
         let snapshot = resumed
-            .resume(Some(&hub.url), Some(hub.client()))
+            .resume(Some(&hub.url), Some(hub.clients()))
             .await
             .unwrap();
         assert!(snapshot.engine.unwrap().session.generation > b_generation);
@@ -1331,7 +1342,7 @@ mod tests {
             .apply(
                 &b,
                 &hub.url,
-                hub.client(),
+                hub.clients(),
                 "未ログイン",
                 &[],
                 ApplyMode::Explicit {
@@ -1349,7 +1360,7 @@ mod tests {
                 .apply(
                     &b,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &needed,
                     ApplyMode::Explicit {
@@ -1387,7 +1398,7 @@ mod tests {
                 .apply(
                     &path,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &[],
                     ApplyMode::Saved
@@ -1436,7 +1447,7 @@ mod tests {
                 .apply(
                     &path,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &[],
                     ApplyMode::Saved
@@ -1472,7 +1483,7 @@ mod tests {
                 .apply(
                     &path,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &[],
                     ApplyMode::Saved
@@ -1528,7 +1539,7 @@ mod tests {
             .apply(
                 &a,
                 &hub.url,
-                hub.client(),
+                hub.clients(),
                 "未ログイン",
                 &[],
                 ApplyMode::Explicit {
@@ -1544,7 +1555,7 @@ mod tests {
         old.close().await;
         assert!(matches!(
             service
-                .apply(&b, &hub.url, hub.client(), "未ログイン", &[], ApplyMode::Explicit { confirmed_switch_from: None })
+                .apply(&b, &hub.url, hub.clients(), "未ログイン", &[], ApplyMode::Explicit { confirmed_switch_from: None })
                 .await
                 .unwrap(),
             ApplyResult::SwitchConfirmationRequired { monitored_project_id } if monitored_project_id == a_id
@@ -1555,7 +1566,7 @@ mod tests {
         );
         assert!(matches!(
             service
-                .apply(&b, &hub.url, hub.client(), "未ログイン", &[], ApplyMode::Explicit { confirmed_switch_from: Some(&b_id) })
+                .apply(&b, &hub.url, hub.clients(), "未ログイン", &[], ApplyMode::Explicit { confirmed_switch_from: Some(&b_id) })
                 .await
                 .unwrap(),
             ApplyResult::SwitchConfirmationRequired { monitored_project_id } if monitored_project_id == a_id
@@ -1564,7 +1575,7 @@ mod tests {
             .apply(
                 &b,
                 &hub.url,
-                hub.client(),
+                hub.clients(),
                 "未ログイン",
                 &[],
                 ApplyMode::Explicit {
@@ -1683,7 +1694,7 @@ mod tests {
                 .apply(
                     &other_path,
                     &hub.url,
-                    hub.client(),
+                    hub.clients(),
                     "未ログイン",
                     &[],
                     ApplyMode::Saved,

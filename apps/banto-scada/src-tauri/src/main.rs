@@ -24,7 +24,7 @@ use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 struct NativeHost {
-    bootstrap: Bootstrapper,
+    bootstrap: Arc<Bootstrapper>,
     active: Mutex<Active>,
     alarm_operation: Mutex<()>,
     exiting: AtomicBool,
@@ -365,7 +365,7 @@ fn main() {
             Ok(())
         })
         .manage(NativeHost {
-            bootstrap,
+            bootstrap: std::sync::Arc::new(bootstrap),
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
             exiting: AtomicBool::new(false),
