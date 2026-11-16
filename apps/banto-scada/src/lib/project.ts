@@ -229,6 +229,15 @@ export interface AlarmBadgeShape {
   text: string;
   style: Pick<TextStyle, "fontSize" | "fontWeight">;
 }
+/**
+ * 最新の警報の帯。画面の直下にだけ置ける（Symbol 定義には置かない）。指す定義は無く、
+ * 監視中の全 condition から 1 件を選んで出す。色は部品で固定し、Project には持たない。
+ * 仕様: docs/design/graphics/alarm-banner.md
+ */
+export interface AlarmBannerShape {
+  type: "alarmBanner";
+  style: Pick<TextStyle, "fontSize" | "fontWeight">;
+}
 export type SymbolColorMode = "monochrome" | "definition";
 export interface LayoutObject extends BaseObject {
   width: number;
@@ -260,7 +269,8 @@ export interface LayoutObject extends BaseObject {
     | TableShape
     | ClockShape
     | NavButtonShape
-    | AlarmBadgeShape;
+    | AlarmBadgeShape
+    | AlarmBannerShape;
 }
 export interface PolylineObject extends BaseObject {
   shape: {

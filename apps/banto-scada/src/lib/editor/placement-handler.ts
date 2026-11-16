@@ -12,6 +12,7 @@ import type {
 } from "./commands";
 import { newId, centerObject } from "./model-helpers";
 import { newAlarmBadgeShape } from "../alarm-badge";
+import { newAlarmBannerShape } from "../alarm-banner";
 
 export function applyScreenViewPlacement(
   screen: Screen | SymbolDefinition,
@@ -132,6 +133,19 @@ export function applyObjectCreation(
       width: 48,
       height: 24,
       shape: newAlarmBadgeShape(next),
+    });
+  } else if (command.kind === "alarmBanner") {
+    if (definitionId) throw new Error("Symbol定義には警報の帯を置けません");
+    // 色は状態ごとに部品で固定する。root の `fill` を持たない。
+    screen.objects.push({
+      id: base.id,
+      order: base.order,
+      rotation: 0,
+      x: base.x,
+      y: base.y,
+      width: 480,
+      height: 28,
+      shape: newAlarmBannerShape(),
     });
   } else if (command.kind === "navButton") {
     if (definitionId)

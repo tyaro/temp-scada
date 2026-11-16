@@ -174,6 +174,13 @@
       description:
         "警報の定義の1つの限界（HH・H・L・LL）か bit の警報の状態を色と枠で示す小札を配置します。画面の直下にだけ置け、Project に警報の定義があるときに使えます。",
     },
+    {
+      kind: "alarmBanner",
+      label: "最新の警報の帯を追加",
+      keywords: "警報 アラーム 帯 最新 バナー 件数 alarm banner",
+      description:
+        "監視中の警報から未確認・重要度・新しい順で1件を選び、時刻・名前・メッセージと件数を出す帯を配置します。警報が動いていない・監視できていないときは理由を出します。画面の直下にだけ置けます。",
+    },
   ];
   /** 置けない部品の理由。無ければ置ける。 */
   function unavailableReason(kind: AddKind): string | undefined {
@@ -196,7 +203,10 @@
   const basicResults = $derived(
     basics.filter(
       (p) =>
-        (allowSymbols || (p.kind !== "navButton" && p.kind !== "alarmBadge")) &&
+        (allowSymbols ||
+          (p.kind !== "navButton" &&
+            p.kind !== "alarmBadge" &&
+            p.kind !== "alarmBanner")) &&
         matches(p.label + " " + p.keywords),
     ),
   );
@@ -215,7 +225,8 @@
         part.kind !== "table" &&
         part.kind !== "clock" &&
         part.kind !== "navButton" &&
-        part.kind !== "alarmBadge",
+        part.kind !== "alarmBadge" &&
+        part.kind !== "alarmBanner",
     ),
   );
   const objectResults = $derived(
@@ -225,7 +236,8 @@
         part.kind === "table" ||
         part.kind === "clock" ||
         part.kind === "navButton" ||
-        part.kind === "alarmBadge",
+        part.kind === "alarmBadge" ||
+        part.kind === "alarmBanner",
     ),
   );
   function categoryCount(category: Category): number {
@@ -584,6 +596,13 @@
                           height="20"
                           rx="3"
                         /><rect x="16" y="14" width="28" height="12" rx="2" />
+                      {:else if part.kind === "alarmBanner"}<rect
+                          x="6"
+                          y="13"
+                          width="48"
+                          height="14"
+                          rx="2"
+                        /><path d="M11 20h22M40 20h9" />
                       {:else}<path d="M8 8H30V32H52" stroke-width="5" />{/if}
                     </svg>
                     <span class:sr-only={view === "icons"}>{part.label}</span>

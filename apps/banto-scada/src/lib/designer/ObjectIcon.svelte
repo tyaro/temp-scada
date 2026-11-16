@@ -69,6 +69,13 @@
         height="10"
         rx="2"
       /><rect x="6" y="9.5" width="12" height="5" rx="1" />
+    {:else if object.shape.type === "alarmBanner"}<rect
+        x="2"
+        y="8"
+        width="20"
+        height="8"
+        rx="1.5"
+      /><path d="M4.5 12h9M16 12h3.5" />
     {:else if object.shape.type === "clock"}<circle
         cx="12"
         cy="12"

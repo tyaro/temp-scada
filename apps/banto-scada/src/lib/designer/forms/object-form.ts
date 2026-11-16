@@ -277,6 +277,19 @@ export function objectFormCommand(
       style: { fontSize, fontWeight },
     };
   }
+  if (selected.shape.type === "alarmBanner") {
+    const fontWeight = String(data.get("alarmBannerFontWeight") ?? "");
+    if (fontWeight !== "normal" && fontWeight !== "bold")
+      throw new Error("警報の帯の文字の太さを選択してください。");
+    const fontSize = parseNumericProperty(
+      String(data.get("alarmBannerFontSize") ?? ""),
+    );
+    if (!(fontSize > 0 && fontSize <= 512))
+      throw new Error(
+        "警報の帯の文字サイズは0より大きく512以下にしてください。",
+      );
+    patch.alarmBanner = { style: { fontSize, fontWeight } };
+  }
   if (selected.shape.type === "navButton") {
     const targetValue = String(data.get("navTarget") ?? "");
     const target: NavTarget | undefined =

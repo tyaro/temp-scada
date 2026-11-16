@@ -525,12 +525,15 @@ export function createDesignerActions(host: DesignerActionsHost) {
                 { kind: "clock", label: "時計を挿入" },
                 { kind: "navButton", label: "画面切替ボタンを挿入" },
                 { kind: "alarmBadge", label: "警報の小札を挿入" },
+                { kind: "alarmBanner", label: "最新の警報の帯を挿入" },
               ] as const
             ).map((part) => ({
               label: part.label,
               disabled:
                 host.editing.editBlocked ||
-                ((part.kind === "navButton" || part.kind === "alarmBadge") &&
+                ((part.kind === "navButton" ||
+                  part.kind === "alarmBadge" ||
+                  part.kind === "alarmBanner") &&
                   !!host.selection.definition) ||
                 (part.kind === "alarmBadge" &&
                   !host.editing.hasAlarmDefinitions),
@@ -972,12 +975,15 @@ export function createDesignerActions(host: DesignerActionsHost) {
               { kind: "clock", label: "時計を追加" },
               { kind: "navButton", label: "画面切替ボタンを追加" },
               { kind: "alarmBadge", label: "警報の小札を追加" },
+              { kind: "alarmBanner", label: "最新の警報の帯を追加" },
             ] as const
           ).map((part) => ({
             label: part.label,
             disabled:
               host.editing.editBlocked ||
-              ((part.kind === "navButton" || part.kind === "alarmBadge") &&
+              ((part.kind === "navButton" ||
+                part.kind === "alarmBadge" ||
+                part.kind === "alarmBanner") &&
                 !!host.selection.definition) ||
               (part.kind === "alarmBadge" && !host.editing.hasAlarmDefinitions),
             run: () => host.files.add(part.kind),

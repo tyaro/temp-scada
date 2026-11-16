@@ -1,7 +1,7 @@
 import type { ScreenObject } from "./project";
 import { normalizeRotation } from "./rotation";
 
-/** Text, tables, clocks, nav buttons and alarm badges keep reading direction and Trend keeps its axes; none can be mirrored. */
+/** Text, tables, clocks, nav buttons, alarm badges and alarm banners keep reading direction and Trend keeps its axes; none can be mirrored. */
 export function canFlip(object: Pick<ScreenObject, "shape">): boolean {
   return (
     object.shape.type !== "text" &&
@@ -10,7 +10,8 @@ export function canFlip(object: Pick<ScreenObject, "shape">): boolean {
     object.shape.type !== "trend" &&
     object.shape.type !== "screenView" &&
     object.shape.type !== "navButton" &&
-    object.shape.type !== "alarmBadge"
+    object.shape.type !== "alarmBadge" &&
+    object.shape.type !== "alarmBanner"
   );
 }
 

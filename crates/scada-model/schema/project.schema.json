@@ -88,6 +88,9 @@
                 },
                 {
                   "$ref": "#/$defs/alarmBadgeInstance"
+                },
+                {
+                  "$ref": "#/$defs/alarmBannerInstance"
                 }
               ]
             }
@@ -1673,6 +1676,87 @@
             }
           },
           "required": ["type", "alarmId", "text", "style"],
+          "additionalProperties": false
+        },
+        "name": {
+          "$ref": "#/$defs/placementName"
+        },
+        "locked": {
+          "type": "boolean"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "folderId": {
+          "$ref": "#/$defs/id"
+        },
+        "rotation": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360
+        },
+        "opacity": {
+          "$ref": "#/$defs/opacity"
+        }
+      },
+      "required": [
+        "id",
+        "order",
+        "x",
+        "y",
+        "width",
+        "height",
+        "shape",
+        "rotation"
+      ],
+      "additionalProperties": false
+    },
+    "alarmBannerInstance": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "shape": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "alarmBanner"
+            },
+            "style": {
+              "type": "object",
+              "properties": {
+                "fontSize": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "maximum": 512
+                },
+                "fontWeight": { "enum": ["normal", "bold"] }
+              },
+              "required": ["fontSize", "fontWeight"],
+              "additionalProperties": false
+            }
+          },
+          "required": ["type", "style"],
           "additionalProperties": false
         },
         "name": {
