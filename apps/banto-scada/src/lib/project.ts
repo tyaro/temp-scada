@@ -8,6 +8,8 @@ import { validateSymbolSlots } from "./symbol-slots";
 import { validateLevelShape } from "./level";
 import { validateTableShape } from "./table";
 import { validateClockShape } from "./clock-format";
+import { validateAlarmBadges } from "./alarm-badge";
+import type { AlarmLimitKey } from "./alarms";
 import {
   validateEquipment,
   type EquipmentType,
@@ -215,6 +217,18 @@ export interface ClockShape {
   seconds?: true;
   style: Pick<TextStyle, "fontSize" | "fontWeight" | "align">;
 }
+/**
+ * 警報の小札。画面の直下にだけ置ける（Symbol 定義には置かない）。色は状態ごとに部品で固定し、
+ * Project には持たない。しきい値の定義なら `limit` が必須、bit の定義なら無し。
+ * 仕様: docs/design/graphics/alarm-badge.md
+ */
+export interface AlarmBadgeShape {
+  type: "alarmBadge";
+  alarmId: string;
+  limit?: AlarmLimitKey;
+  text: string;
+  style: Pick<TextStyle, "fontSize" | "fontWeight">;
+}
 export type SymbolColorMode = "monochrome" | "definition";
 export interface LayoutObject extends BaseObject {
   width: number;
@@ -245,7 +259,8 @@ export interface LayoutObject extends BaseObject {
     | LevelShape
     | TableShape
     | ClockShape
-    | NavButtonShape;
+    | NavButtonShape
+    | AlarmBadgeShape;
 }
 export interface PolylineObject extends BaseObject {
   shape: {
@@ -452,6 +467,7 @@ export function parseProject(json: string): Project {
         throw new Error("画面切替ボタンの行き先の画面が見つかりません");
   validateOperatorFrame(project.operatorFrame, project);
   validateAlarms(project.alarms);
+  validateAlarmBadges(project);
   const ids = new Set([project.manifest.projectId]);
   const symbolIds = new Set(project.symbols.map((s) => s.id));
   const hashes = new Set<string>(),

@@ -73,6 +73,7 @@ export function createLayerTreeController(host: LayerTreeHost) {
       object.id,
       ...(object.shape.type === "text" ? [object.shape.text] : []),
       ...(object.shape.type === "navButton" ? [object.shape.label] : []),
+      ...(object.shape.type === "alarmBadge" ? [object.shape.text] : []),
       ...shapeTagBindings(object.shape).map((binding) => binding.externalName),
     ].join(" ");
   }

@@ -27,6 +27,8 @@ export interface DesignerActionsHost {
   };
   editing: {
     readonly editBlocked: boolean;
+    /** 警報の小札は警報の定義があるときだけ置ける。 */
+    readonly hasAlarmDefinitions: boolean;
     readonly mutationBlocked: boolean;
     readonly undoCount: number;
     readonly redoCount: number;
@@ -522,12 +524,16 @@ export function createDesignerActions(host: DesignerActionsHost) {
                 { kind: "table", label: "表を挿入" },
                 { kind: "clock", label: "時計を挿入" },
                 { kind: "navButton", label: "画面切替ボタンを挿入" },
+                { kind: "alarmBadge", label: "警報の小札を挿入" },
               ] as const
             ).map((part) => ({
               label: part.label,
               disabled:
                 host.editing.editBlocked ||
-                (part.kind === "navButton" && !!host.selection.definition),
+                ((part.kind === "navButton" || part.kind === "alarmBadge") &&
+                  !!host.selection.definition) ||
+                (part.kind === "alarmBadge" &&
+                  !host.editing.hasAlarmDefinitions),
               run: () =>
                 host.editing.edit({
                   type: "add",
@@ -965,12 +971,15 @@ export function createDesignerActions(host: DesignerActionsHost) {
               { kind: "table", label: "表を追加" },
               { kind: "clock", label: "時計を追加" },
               { kind: "navButton", label: "画面切替ボタンを追加" },
+              { kind: "alarmBadge", label: "警報の小札を追加" },
             ] as const
           ).map((part) => ({
             label: part.label,
             disabled:
               host.editing.editBlocked ||
-              (part.kind === "navButton" && !!host.selection.definition),
+              ((part.kind === "navButton" || part.kind === "alarmBadge") &&
+                !!host.selection.definition) ||
+              (part.kind === "alarmBadge" && !host.editing.hasAlarmDefinitions),
             run: () => host.files.add(part.kind),
           })),
           ...BUILTIN_PARTS.map(({ template, name }) => ({

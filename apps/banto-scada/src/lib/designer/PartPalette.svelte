@@ -20,6 +20,7 @@
     images,
     definitions,
     allowSymbols = true,
+    hasAlarmDefinitions = false,
     onadd,
     onbuiltin,
     onplace,
@@ -41,6 +42,8 @@
     >;
     definitions: SymbolDefinition[];
     allowSymbols?: boolean;
+    /** 警報の小札は Project に警報の定義があるときだけ置ける。 */
+    hasAlarmDefinitions?: boolean;
     onadd: (kind: AddKind) => void;
     onbuiltin: (template: BuiltinTemplate) => void;
     onplace: (id: string) => void;
@@ -57,6 +60,7 @@
     onimmediate: (part: PalettePart) => void;
   } = $props();
   let search = $state("");
+  const alarmBadgeReasonId = $props.id();
   let info = $state<{
     name: string;
     category: string;
@@ -163,7 +167,20 @@
       description:
         "プレビューで押すと行き先の画面へ移るボタンを配置します。画面の直下にだけ置けます。",
     },
+    {
+      kind: "alarmBadge",
+      label: "警報の小札を追加",
+      keywords: "警報 アラーム 小札 バッジ ランプ HH LL alarm badge",
+      description:
+        "警報の定義の1つの限界（HH・H・L・LL）か bit の警報の状態を色と枠で示す小札を配置します。画面の直下にだけ置け、Project に警報の定義があるときに使えます。",
+    },
   ];
+  /** 置けない部品の理由。無ければ置ける。 */
+  function unavailableReason(kind: AddKind): string | undefined {
+    return kind === "alarmBadge" && !hasAlarmDefinitions
+      ? "警報の定義がありません。プロジェクトの警報の設定で定義を追加してください。"
+      : undefined;
+  }
   const equipment = BUILTIN_PARTS.map((part) => ({
     template: part.template,
     name: part.name,
@@ -179,7 +196,7 @@
   const basicResults = $derived(
     basics.filter(
       (p) =>
-        (allowSymbols || p.kind !== "navButton") &&
+        (allowSymbols || (p.kind !== "navButton" && p.kind !== "alarmBadge")) &&
         matches(p.label + " " + p.keywords),
     ),
   );
@@ -197,7 +214,8 @@
         part.kind !== "text" &&
         part.kind !== "table" &&
         part.kind !== "clock" &&
-        part.kind !== "navButton",
+        part.kind !== "navButton" &&
+        part.kind !== "alarmBadge",
     ),
   );
   const objectResults = $derived(
@@ -206,7 +224,8 @@
         part.kind === "text" ||
         part.kind === "table" ||
         part.kind === "clock" ||
-        part.kind === "navButton",
+        part.kind === "navButton" ||
+        part.kind === "alarmBadge",
     ),
   );
   function categoryCount(category: Category): number {
@@ -469,11 +488,13 @@
                   items={[
                     {
                       label: "現在の画面へ配置",
+                      disabled: !!unavailableReason(part.kind),
                       run: () =>
                         onimmediate({ type: "basic", kind: part.kind }),
                     },
                     {
                       label: "クリック位置へ連続配置",
+                      disabled: !!unavailableReason(part.kind),
                       run: () => onarm({ type: "basic", kind: part.kind }),
                     },
                     {
@@ -493,10 +514,15 @@
                     aria-pressed={positionPlacement
                       ? isArmed({ type: "basic", kind: part.kind })
                       : undefined}
-                    title={positionPlacement
-                      ? "クリックして部品を選び、キャンバスで連続配置"
-                      : part.label}
-                    draggable="true"
+                    title={unavailableReason(part.kind) ??
+                      (positionPlacement
+                        ? "クリックして部品を選び、キャンバスで連続配置"
+                        : part.label)}
+                    disabled={!!unavailableReason(part.kind)}
+                    aria-describedby={unavailableReason(part.kind)
+                      ? alarmBadgeReasonId
+                      : undefined}
+                    draggable={unavailableReason(part.kind) ? "false" : "true"}
                     ondragstart={(event) =>
                       startDrag(event, { type: "basic", kind: part.kind })}
                     ondragend={onenddrag}
@@ -551,6 +577,13 @@
                           height="20"
                           rx="6"
                         /><path d="M22 20h16M33 15l5 5-5 5" />
+                      {:else if part.kind === "alarmBadge"}<rect
+                          x="12"
+                          y="10"
+                          width="36"
+                          height="20"
+                          rx="3"
+                        /><rect x="16" y="14" width="28" height="12" rx="2" />
                       {:else}<path d="M8 8H30V32H52" stroke-width="5" />{/if}
                     </svg>
                     <span class:sr-only={view === "icons"}>{part.label}</span>
@@ -564,6 +597,12 @@
                 </ContextActions>
               {/each}
             </div>
+            {#if category.id === "objects" && objectResults.some( (part) => unavailableReason(part.kind) )}<p
+                id={alarmBadgeReasonId}
+                class="part-note"
+              >
+                警報の小札: {unavailableReason("alarmBadge")}
+              </p>{/if}
           {/if}
         </div>
       </section>
@@ -589,6 +628,15 @@
 </Modal>
 
 <style>
+  .part:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .part-note {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--banto-text-muted);
+  }
   .search-tools {
     display: flex;
     gap: 6px;

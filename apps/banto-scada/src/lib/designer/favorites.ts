@@ -17,6 +17,7 @@ const basic = [
   "table",
   "clock",
   "navButton",
+  "alarmBadge",
 ] as const;
 const uuid =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
@@ -67,7 +68,8 @@ export function availableFavorites(
   return keys.flatMap((key): FavoriteItem[] => {
     const kind = basic.find((kind) => key === `basic:${kind}`);
     // 画面切替ボタンは画面の直下だけ。Symbol 定義の編集中は出さない。
-    if (kind === "navButton" && !allowSymbols) return [];
+    if ((kind === "navButton" || kind === "alarmBadge") && !allowSymbols)
+      return [];
     if (kind)
       return [
         {
@@ -83,6 +85,7 @@ export function availableFavorites(
             table: "表",
             clock: "時計",
             navButton: "画面切替ボタン",
+            alarmBadge: "警報の小札",
           }[kind],
         },
       ];

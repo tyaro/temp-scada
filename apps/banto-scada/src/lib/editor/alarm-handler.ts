@@ -1,5 +1,6 @@
 import { leadingChars, normalizeAlarms, uniqueAlarmName } from "../alarms";
 import type { Project } from "../project";
+import { validateAlarmBadgeTarget } from "../alarm-badge";
 import type { ProjectCommand } from "./commands";
 
 type AlarmCommand = Extract<
@@ -53,4 +54,20 @@ export function applyAlarmCommand(next: Project, command: AlarmCommand): void {
   const normalized = normalizeAlarms(alarms);
   if (normalized) next.alarms = normalized;
   else delete next.alarms;
+  // 小札が指す定義・限界を消す変更は、parseProject の検査より先に使用中の小札を示して止める。
+  const broken = next.screens.flatMap((screen) =>
+    screen.objects.flatMap((object) => {
+      if (object.shape.type !== "alarmBadge") return [];
+      try {
+        validateAlarmBadgeTarget(object.shape, next.alarms?.definitions ?? []);
+        return [];
+      } catch {
+        return [`${screen.name}／${object.name ?? "警報の小札"}`];
+      }
+    }),
+  );
+  if (broken.length)
+    throw new Error(
+      `この警報は警報の小札で使用中です：${broken.slice(0, 5).join("、")}${broken.length > 5 ? " ほか" : ""}。先に小札を削除するか、小札が指す警報を変えてください。`,
+    );
 }

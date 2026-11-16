@@ -79,6 +79,15 @@ export function parseClipboard(text: string): ObjectClipboard {
       "トレンドを含む貼り付けは未対応です。配置の複製または画面の複製を使ってください。",
     );
   if (
+    project.alarms ||
+    project.screens.some((s) =>
+      s.objects.some((o) => o.shape.type === "alarmBadge"),
+    )
+  )
+    throw new Error(
+      "警報の小札・警報の定義を含む貼り付けは未対応です。配置の複製を使ってください。",
+    );
+  if (
     project.equipment?.length ||
     project.equipmentTypes?.length ||
     project.screens.some((screen) =>
@@ -239,6 +248,14 @@ export function copyObjectSnapshot(
   )
     throw new Error(
       "トレンドを含むコピー・切り取りは未対応です。配置の複製または画面の複製を使ってください。",
+    );
+  if (
+    [...objects, ...dependencyScreens.flatMap((s) => s.objects)].some(
+      (o) => o.shape.type === "alarmBadge",
+    )
+  )
+    throw new Error(
+      "警報の小札を含むコピー・切り取りは未対応です。配置の複製を使ってください。",
     );
   if (
     [...objects, ...dependencyScreens.flatMap((screen) => screen.objects)].some(

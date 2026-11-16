@@ -9,6 +9,7 @@ import { parseLineArrow } from "../line-arrow";
 import { validateLevelShape } from "../level";
 import { validateTableShape } from "../table";
 import { validateClockShape } from "../clock-format";
+import { validateAlarmBadgeTarget } from "../alarm-badge";
 import { validateNavButtonShape } from "../nav-button";
 import type { SingleObjectCommand } from "./commands";
 import { newId, copySymbol } from "./model-helpers";
@@ -120,6 +121,7 @@ export function applySingleObjectCommand(
       table,
       clock,
       navButton,
+      alarmBadge,
       stateColor,
       symbolId,
       equipmentId,
@@ -145,6 +147,7 @@ export function applySingleObjectCommand(
       (object.shape.type === "image" ||
         object.shape.type === "screenView" ||
         object.shape.type === "navButton" ||
+        object.shape.type === "alarmBadge" ||
         object.shape.type === "trend" ||
         object.shape.type === "rectangle" ||
         object.shape.type === "ellipse") &&
@@ -285,6 +288,17 @@ export function applySingleObjectCommand(
       if (next.border === undefined) delete next.border;
       if (next.background === undefined) delete next.background;
       object.shape = next;
+    }
+    if (alarmBadge !== undefined) {
+      if (definitionId || object.shape.type !== "alarmBadge")
+        throw new Error("警報・文字は警報の小札にだけ設定できます");
+      const shape = {
+        type: "alarmBadge" as const,
+        ...structuredClone(alarmBadge),
+      };
+      if (shape.limit === undefined) delete shape.limit;
+      validateAlarmBadgeTarget(shape, next.alarms?.definitions ?? []);
+      object.shape = shape;
     }
     if (navButton !== undefined) {
       if (definitionId || object.shape.type !== "navButton")

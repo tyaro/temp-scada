@@ -11,6 +11,7 @@ import {
 } from "../../project";
 import { parseLineStyle } from "../../line-style";
 import { CLOCK_FORMATS } from "../../clock-format";
+import { ALARM_LIMIT_KEYS, type AlarmLimitKey } from "../../alarms";
 import { parseNumericProperty } from "../numeric-properties";
 import {
   buildTableCells,
@@ -246,6 +247,36 @@ export function objectFormCommand(
     patch.sourceScreenId = String(data.get("sourceScreenId"));
   if (selected.shape.type === "trend")
     patch.trendId = String(data.get("trendId"));
+  if (selected.shape.type === "alarmBadge") {
+    const [alarmId, limit, ...rest] = String(
+      data.get("alarmBadgeTarget") ?? "",
+    ).split(":");
+    if (
+      !alarmId ||
+      rest.length ||
+      (limit !== undefined &&
+        !(ALARM_LIMIT_KEYS as readonly string[]).includes(limit))
+    )
+      throw new Error("警報の小札が指す警報を選択してください。");
+    const fontWeight = String(data.get("alarmBadgeFontWeight") ?? "");
+    if (fontWeight !== "normal" && fontWeight !== "bold")
+      throw new Error("警報の小札の文字の太さを選択してください。");
+    const fontSize = parseNumericProperty(
+      String(data.get("alarmBadgeFontSize") ?? ""),
+    );
+    if (!(fontSize > 0 && fontSize <= 512))
+      throw new Error(
+        "警報の小札の文字サイズは0より大きく512以下にしてください。",
+      );
+    patch.alarmBadge = {
+      alarmId,
+      ...(limit ? { limit: limit as AlarmLimitKey } : {}),
+      text: normalizeTextNewlines(
+        String(data.get("alarmBadgeText") ?? ""),
+      ).replace(/\n/g, " "),
+      style: { fontSize, fontWeight },
+    };
+  }
   if (selected.shape.type === "navButton") {
     const targetValue = String(data.get("navTarget") ?? "");
     const target: NavTarget | undefined =

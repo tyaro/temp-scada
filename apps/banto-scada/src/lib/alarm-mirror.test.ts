@@ -1,14 +1,36 @@
 import { describe, expect, it } from "vitest";
-import { AlarmMirror, type AlarmSnapshot } from "./alarm-mirror";
+import {
+  AlarmMirror,
+  type AlarmConditionState,
+  type AlarmSnapshot,
+} from "./alarm-mirror";
+
+const condition = (active: boolean): AlarmConditionState => ({
+  active,
+  occurrence: null,
+  recurrence: 0,
+  acked: true,
+  timer: null,
+  unavailable: null,
+  reportedUnavailable: null,
+  orderKey: null,
+  occurredAtMs: null,
+  observation: null,
+});
 
 const snapshot = (generation: number, seq: number): AlarmSnapshot => ({
   monitored: { projectId: "A" },
-  applied: { projectId: "A", projectRevision: 1, appliedAtMs: 1 },
+  applied: {
+    projectId: "A",
+    projectRevision: 1,
+    appliedAtMs: 1,
+    displays: {},
+  },
   engine: {
     session: { id: `session-${generation}`, generation },
     seq,
     unavailable: null,
-    conditions: { a: { active: true } },
+    conditions: { a: condition(true) },
   },
   status: "running",
   pendingConditionChanges: false,
@@ -65,12 +87,12 @@ describe("alarm event reconciliation", () => {
       mirror.acceptChange({
         session: { id: "session-5", generation: 5 },
         seq: 9,
-        conditions: { a: null, b: { active: false } },
+        conditions: { a: null, b: condition(false) },
         engineUnavailable: "disconnected",
       }),
     ).toBe("applied");
     expect(mirror.current?.engine?.conditions).toEqual({
-      b: { active: false },
+      b: condition(false),
     });
     expect(mirror.current?.engine?.unavailable).toBe("disconnected");
     expect(mirror.acceptSnapshot(snapshot(4, 500))).toBe(false);

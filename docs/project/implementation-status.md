@@ -523,6 +523,10 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 段階3-C2c（警報）は、host が `ProjectFiles::path(fileId)` から保存済み `.json`／`.bantoscada` を読み直して定義を展開し、ファイル hash と評価 hash を記録する。保存成功後の `project_save.apply` は書込み結果と別に返し、別 Project の保存では監視を切り替えない。明示 `alarm_apply` は未確認の回の列を確かめ、同じ Project・接続先なら session を保って定義を更新し、別 Project では切替中の記録、旧 session 停止、新 Project の適用、旧 Project の終端、新 session 開始の順に進める。起動時は適用済み定義から復元し、切替中の記録も照合する。`alarm_snapshot`・`alarm_changed`・`alarm_ack`・`alarm_history` を Tauri に接続し、画面は世代番号と変更連番で通知を突き合わせる。3-C2c のPR内で検証中であり、Tauri 実機・実 Hub はオーナー確認待ち。[設計](../design/runtime/alarm-stage3-design.md)§5・§10。
 
+## 警報の小札
+
+2026-11-17の段階3 3-D1で、画面の直下に置く警報の小札`alarmBadge`（`alarmId`・しきい値の`limit`・`text`・`style`のfontSize・fontWeight）を追加した。指す定義と限界が Project にあることを TS・Rust の両方で検査し、使用中の定義・限界は警報の設定で削除・変更できない。状態（不明・正常・発生中・未確認・復帰・未確認・評価不能、発生中に評価不能が重なると「?」）は純関数`alarm-view.ts`で snapshot から導き、モジュールの$stateで編集・プレビュー・運転表示に同じ状態を配る。色は部品で固定し、`aria-label`に状態の文字を入れる。`blinkUnacked`のときだけ未確認を点滅し、「動きを減らす」では止める。ブラウザ版のe2eはDEVだけで差し込むモックの警報feedで状態を変える。schemaVersionは0.37.0のまま。[仕様](../design/graphics/alarm-badge.md)。`alarm-view.test.ts`・`alarm-badge.test.ts`・`examples/alarm-badge-cases.json`（Rust・TS共通）・`e2e/alarm-badge.spec.ts`で確認。帯（3-D2）・一覧の窓（3-E）・Symbol定義内の小札は未実装、Tauri実機は未確認。
+
 ## 時計
 
 2026-11-13のフロー図 段階2-Bで、現在の日時を出す文字の図形`clock`（書式は日付・時刻・日付と時刻、`seconds: true`で秒、`style`はfontSize・fontWeight・align）を追加した。端末のローカル時刻を`YYYY/MM/DD`・`HH:mm`（`HH:mm:ss`）で出し、購読者がいる間だけ動く共有タイマーで1秒ごとに更新する。primitiveなのでSymbol定義の中にも置け、文字を含むので反転できない。schema・Rust・TS・描画・Inspector・挿入メニュー・部品パネル・お気に入りを加え、schemaVersionは0.37.0のまま。[仕様](../design/graphics/clock.md)。`clock-format.test.ts`、`examples/clock-cases.json`（Rust・TS共通の契約）、`e2e/clock.spec.ts`（`page.clock`で時刻を固定）で確認。Tauri実機は未確認。

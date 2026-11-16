@@ -48,6 +48,7 @@
   import { symbolUsage } from "../editor";
   import type { createDraftGuard } from "./drafts.svelte";
   import { canFlip } from "../flip";
+  import { alarmBadgeTargets } from "../alarm-badge";
   let {
     element = $bindable<HTMLElement>(),
     visible,
@@ -162,6 +163,7 @@
           return object.shape.type === "image" ||
             object.shape.type === "screenView" ||
             object.shape.type === "navButton" ||
+            object.shape.type === "alarmBadge" ||
             object.shape.type === "trend"
             ? []
             : [object.fill!.toLowerCase()];
@@ -603,6 +605,7 @@
                 (o.shape.type === "image" ||
                   o.shape.type === "screenView" ||
                   o.shape.type === "navButton" ||
+                  o.shape.type === "alarmBadge" ||
                   o.shape.type === "trend"),
             ).length}
             {paintDisabledCount}
@@ -951,7 +954,7 @@
                   {/each}
                 </div>
               {/if}
-              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "navButton" && selected.shape.type !== "trend" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
+              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "navButton" && selected.shape.type !== "alarmBadge" && selected.shape.type !== "trend" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
                 <label
                   >{selected.shape.type === "symbol" &&
                   selected.shape.colorMode === "definition"
@@ -1548,6 +1551,49 @@
                       >{/each}
                   </select></label
                 >
+              {/if}
+              {#if selected.shape.type === "alarmBadge"}
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">警報</span><select
+                    class="banto-field-control"
+                    name="alarmBadgeTarget"
+                    aria-label="警報の小札が指す警報"
+                    >{#each alarmBadgeTargets(project.alarms?.definitions ?? []) as target (target.value)}<option
+                        value={target.value}>{target.label}</option
+                      >{/each}</select
+                  ></label
+                >
+                <label class="full-width banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字</span><input
+                    class="banto-field-control"
+                    name="alarmBadgeText"
+                    aria-label="警報の小札の文字"
+                    maxlength="200"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字サイズ</span><input
+                    class="banto-field-control"
+                    name="alarmBadgeFontSize"
+                    aria-label="警報の小札の文字サイズ"
+                    type="text"
+                    inputmode="decimal"
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">文字の太さ</span><select
+                    class="banto-field-control"
+                    name="alarmBadgeFontWeight"
+                    aria-label="警報の小札の文字の太さ"
+                    ><option value="normal">標準</option><option value="bold"
+                      >太字</option
+                    ></select
+                  ></label
+                >
+                <p class="full-width tag-note">
+                  色は状態（正常・発生中・未確認・復帰・未確認・評価不能・不明）ごとに決まっていて、Project
+                  では変えません。警報が動いていない・保存前の定義を指しているときは「不明」（斜線）で示します。
+                </p>
               {/if}
               {#if selected.shape.type === "navButton"}
                 <label class="full-width banto-field banto-field--stacked"

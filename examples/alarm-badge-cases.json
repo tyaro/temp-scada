@@ -1,0 +1,342 @@
+[
+  {
+    "name": "threshold badge points at HH",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a901",
+      "order": 901,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000101",
+        "limit": "hh",
+        "text": "HH",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "threshold badge points at L with a name",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a902",
+      "order": 902,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "name": "温度 L",
+      "opacity": 0.5,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000101",
+        "limit": "l",
+        "text": "L",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal"
+        }
+      }
+    }
+  },
+  {
+    "name": "bit badge has no limit",
+    "target": "/screens/1/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a903",
+      "order": 903,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000102",
+        "text": "ALM",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "empty text is allowed",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a904",
+      "order": 904,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000102",
+        "text": "",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "unknown alarm definition",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "error": "警報の小札が指す警報の定義が見つかりません",
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a905",
+      "order": 905,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-0000000001ff",
+        "text": "ALM",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "no alarm definitions",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "error": "警報の小札が指す警報の定義が見つかりません",
+    "alarms": {
+      "definitions": []
+    },
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a906",
+      "order": 906,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000101",
+        "limit": "hh",
+        "text": "HH",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "threshold badge without a limit",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "error": "限界（HH・H・L・LL）を選んでください",
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a907",
+      "order": 907,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000101",
+        "text": "T",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "limit missing from the definition",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "error": "警報の小札が指す限界が警報の定義にありません",
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a908",
+      "order": 908,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000101",
+        "limit": "ll",
+        "text": "LL",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "bit badge with a limit",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "error": "bit の警報を指す小札には限界を付けられません",
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a909",
+      "order": 909,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000102",
+        "limit": "h",
+        "text": "H",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "badge inside a Symbol definition",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a910",
+      "order": 910,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000102",
+        "text": "ALM",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "unknown limit name",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a911",
+      "order": 911,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000101",
+        "limit": "hhh",
+        "text": "HH",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "badge colors are fixed (no fill)",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a912",
+      "order": 912,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#ff0000",
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000102",
+        "text": "ALM",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  },
+  {
+    "name": "text alignment is not stored",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a913",
+      "order": 913,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000102",
+        "text": "ALM",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold",
+          "align": "left"
+        }
+      }
+    }
+  },
+  {
+    "name": "text has no line breaks",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000a914",
+      "order": 914,
+      "x": 10,
+      "y": 10,
+      "width": 48,
+      "height": 24,
+      "rotation": 0,
+      "shape": {
+        "type": "alarmBadge",
+        "alarmId": "0199f6a1-0000-7000-8000-000000000102",
+        "text": "A\nB",
+        "style": {
+          "fontSize": 12,
+          "fontWeight": "bold"
+        }
+      }
+    }
+  }
+]

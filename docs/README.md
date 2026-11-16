@@ -88,6 +88,7 @@ docs/
 - [画面切替ボタン（navButton）](design/graphics/nav-button.md)
 - [運転表示の枠（operatorFrame）](design/graphics/operator-frame.md)
 - [時計（clock 図形）](design/graphics/clock.md)
+- [警報の小札（alarmBadge）](design/graphics/alarm-badge.md)
 - [単色と枠線のα](design/graphics/color-alpha-design.md)
 - [実線・破線・点線](design/graphics/line-style-design.md)
 - [配管の分岐の点](design/graphics/line-junction.md)

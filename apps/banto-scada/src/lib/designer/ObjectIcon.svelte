@@ -62,6 +62,13 @@
     {:else if object.shape.type === "text"}<path
         d="M4 5h16M12 5v15M8 20h8M4 5v3M20 5v3"
       />
+    {:else if object.shape.type === "alarmBadge"}<rect
+        x="3"
+        y="7"
+        width="18"
+        height="10"
+        rx="2"
+      /><rect x="6" y="9.5" width="12" height="5" rx="1" />
     {:else if object.shape.type === "clock"}<circle
         cx="12"
         cy="12"
