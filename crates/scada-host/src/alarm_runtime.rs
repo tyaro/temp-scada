@@ -1046,6 +1046,14 @@ async fn reread_done(
     previous: &mut Fed,
     changes: &broadcast::Sender<AlarmChange>,
 ) -> Result<RereadOutcome, AlarmRuntimeError> {
+    // A response for a subscription that is gone or no longer Live (even
+    // a change not processed yet) says nothing about the current one: it
+    // neither counts as a failure nor ends ReceiveLost.
+    if context.ticket.epoch != freshness.epoch
+        || context.state.connection_state() != TagClientConnectionState::Live
+    {
+        return Ok(RereadOutcome::Settled);
+    }
     let values = match context.result {
         Ok(values) => values,
         Err(()) => {
@@ -1060,11 +1068,7 @@ async fn reread_done(
     }
     // Only liveness when the connection changed or the Engine is not
     // evaluating; the order is arrival order, never source timestamps.
-    if context.ticket.epoch != freshness.epoch
-        || context.pending
-        || evaluator.engine.unavailable().is_some()
-        || context.state.connection_state() != TagClientConnectionState::Live
-    {
+    if context.pending || evaluator.engine.unavailable().is_some() {
         return Ok(RereadOutcome::Settled);
     }
     let Some(snapshot) = context.state.snapshot() else {

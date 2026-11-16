@@ -145,6 +145,13 @@ impl Freshness {
         if new_generation || !self.connected {
             self.epoch += 1;
         }
+        if new_generation {
+            // The watch may skip the non-Live state between generations: a
+            // new one starts over as after Disconnected, and a reread sent to
+            // the old one no longer counts.
+            self.ticket = None;
+            self.clear_streak();
+        }
         self.connected = true;
         if self.live && !live {
             // Unbound sends no rereads, so nothing could end the streak:
@@ -443,6 +450,19 @@ mod tests {
         }));
         f.start_reread(&tags, Instant::now(), 3);
         assert_eq!(made.load(std::sync::atomic::Ordering::SeqCst), 11);
+    }
+
+    #[tokio::test]
+    async fn a_new_generation_starts_the_streak_over() {
+        let (mut f, report) = freshness();
+        f.connected(true, false);
+        let start = Instant::now();
+        f.failure(start, 1);
+        assert!(f.failure(start + Duration::from_millis(300), 2));
+        f.connected(true, true);
+        assert_eq!(f.desired(), None);
+        assert_eq!(*report.borrow(), None);
+        assert!(!f.failure(start + Duration::from_millis(400), 3));
     }
 
     #[tokio::test]
