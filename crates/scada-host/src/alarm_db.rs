@@ -54,6 +54,39 @@ impl From<serde_json::Error> for AlarmDbError {
     }
 }
 
+impl AlarmDbError {
+    /// A storage failure (full disk, lock timeout, read-only media, I/O) that
+    /// may clear by itself. Evaluation continues and the write is retried
+    /// (design §5.3). Constraint violations, schema mismatches, corruption
+    /// and row or session mismatches stay fatal: they are logic errors or a
+    /// lost ownership, and retrying would never record the history.
+    pub fn is_storage_outage(&self) -> bool {
+        match self {
+            Self::Io(_) => true,
+            Self::Sql(sqlx::Error::Io(_) | sqlx::Error::PoolTimedOut) => true,
+            Self::Sql(sqlx::Error::Database(error)) => error
+                .code()
+                .and_then(|code| code.parse::<i32>().ok())
+                .is_some_and(|code| is_transient_sqlite_code(code & 0xff)),
+            _ => false,
+        }
+    }
+}
+
+/// SQLite primary result codes for failures that can clear without a code
+/// change: BUSY, LOCKED, NOMEM, READONLY, IOERR, FULL and CANTOPEN.
+fn is_transient_sqlite_code(primary: i32) -> bool {
+    matches!(primary, 5 | 6 | 7 | 8 | 10 | 13 | 14)
+}
+
+/// A history outage of one session, written as `unrecordedPeriod`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct UnrecordedPeriod {
+    pub from_ms: i64,
+    pub to_ms: i64,
+    pub unrecorded_events: u64,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppliedDefinitions {
@@ -873,6 +906,74 @@ impl AlarmDb {
         }
         tx.commit().await?;
         Ok(())
+    }
+
+    /// Closes a history write outage in one transaction: the
+    /// `unrecordedPeriod` event (with the count of events that could not be
+    /// written) and a full rewrite of `last_state` from the in-memory Engine.
+    /// Rows for conditions absent from `rows` are deleted.
+    pub async fn record_unrecorded_period(
+        &self,
+        session: &Session,
+        period: UnrecordedPeriod,
+        rows: &[LastRow],
+        unavailable: Option<EngineUnavailable>,
+    ) -> Result<(), AlarmDbError> {
+        let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
+        require_session(&mut tx, session).await?;
+        verify_applied_rows(&mut tx, &self.project_id, rows).await?;
+        let existing = load_existing(&mut tx).await?;
+        let displays = load_displays(&mut tx).await?;
+        let mut ids = BTreeSet::new();
+        if rows.iter().any(|row| !ids.insert(&row.condition_id)) {
+            return Err(AlarmDbError::InvalidRow);
+        }
+        insert_event(
+            &mut tx,
+            &session.id,
+            &EventWrite {
+                at_ms: period.to_ms,
+                condition_id: None,
+                kind: "unrecordedPeriod".into(),
+                detail: json!({
+                    "fromMs": period.from_ms,
+                    "toMs": period.to_ms,
+                    "unrecordedEvents": period.unrecorded_events,
+                }),
+            },
+            &displays,
+        )
+        .await?;
+        sqlx::query("DELETE FROM last_state")
+            .execute(&mut *tx)
+            .await?;
+        for row in rows {
+            let mut row = row.clone();
+            row.session_id = session.id.clone();
+            // The event that produced a changed state was not written, so an
+            // older event must not be referenced as its origin.
+            row.last_event_seq = existing
+                .get(&row.condition_id)
+                .filter(|saved| saved.state == row.state)
+                .and_then(|saved| saved.last_event_seq);
+            insert_state(&mut tx, &row).await?;
+        }
+        sqlx::query("UPDATE session SET engine_unavailable = ? WHERE id = 1")
+            .bind(
+                unavailable
+                    .map(|value| serde_json::to_string(&value))
+                    .transpose()?,
+            )
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Lets runtime tests make writes fail with a SQL error and recover.
+    #[cfg(test)]
+    pub(crate) async fn execute_for_test(&self, sql: &'static str) {
+        sqlx::raw_sql(sql).execute(&self.pool).await.unwrap();
     }
 
     pub async fn stop_session(&self, session: &Session, at_ms: i64) -> Result<(), AlarmDbError> {

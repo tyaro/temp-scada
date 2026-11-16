@@ -261,6 +261,7 @@ Hub の接続先の識別は、host が保存した `HubRecord.endpoint` の文�
   - 評価は続ける。書けなかったイベントは待ち行列にためず、件数だけ数える。`alarm_snapshot` に「履歴に書けない」とその件数を出し、一定の間隔で書込みを試す。
   - 書けない間は、ACK と定義の適用を拒否する（確認済みと返したのに再起動で未確認に戻ること、DB と Engine の定義が食い違うことを防ぐ）。
   - 書けるようになったら、一つの transaction で「記録できなかった期間」（始まりと終わりの時刻、書けなかった件数）のイベントを書き、「最後の状態」の表をメモリの今の状態で丸ごと書き直す（その間に終えた condition の行も消す）。
+  - 3-C3a で決めた細部: 書込みの失敗として扱うのは、I/O の失敗・接続待ちの期限切れと、SQLite の BUSY・LOCKED・NOMEM・READONLY・IOERR・FULL・CANTOPEN だけとする。制約違反・schema の不整合・破損・session の不一致・行の不正は従来どおり Engine を止める。回復時に書き直す「最後の状態」の行は、状態が変わっていれば元のイベントへの参照（`last_event_seq`）を空にする。再試行の間隔は 5 秒（固定）。ACK の書込みが失敗した回はその ACK を拒否して Engine を前の状態のまま残し、件数は増やさない。失敗中の変更も `alarm_changed` で画面へ送る（記録されていない値の表示を止めない）。失敗の始まりと終わりは Engine の連番を進めず、画面に snapshot の取り直しを求める。停止の前に一度書き直しを試し、なお書けなければ停止を書かずに session を「停止なし」のまま残す（次の起動で §5.4 の「前回の終了時の状態」と「状態不明の期間」が書かれる）。イベントの種類は `unrecordedPeriod`（`fromMs`・`toMs`・`unrecordedEvents`）、snapshot の欄は `historyWriteFailure`（`sinceWallMs`・`unrecordedEvents`）。
 - DB を開けない・lock を取れないときは Engine を動かさず理由を示す。
 
 ### 5.4 session の開始と前回の終わり
