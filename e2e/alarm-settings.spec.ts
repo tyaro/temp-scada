@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/process.project.json" with { type: "json" };
 import { readFile } from "node:fs/promises";
-import { chooseTheme, selectPanel } from "./helpers/designer";
+import { chooseTheme, openAlarmDefinitions } from "./helpers/designer";
 import { openProject } from "./helpers/project-files";
 
 async function open(page: Page) {
@@ -13,7 +13,7 @@ async function open(page: Page) {
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(sample)),
   });
-  await selectPanel(page, "プロジェクト");
+  await openAlarmDefinitions(page);
 }
 async function save(page: Page) {
   const downloading = page.waitForEvent("download");
@@ -157,7 +157,7 @@ test("alarm settings add, edit, duplicate, toggle, delete, undo and save", async
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(saved)),
   });
-  await selectPanel(page, "プロジェクト");
+  await openAlarmDefinitions(page);
   await expect(table(page).locator("tbody tr")).toHaveCount(4);
   expect((await save(page)).alarms).toEqual(saved.alarms);
 });

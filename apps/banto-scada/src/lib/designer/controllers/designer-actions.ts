@@ -826,6 +826,13 @@ export function createDesignerActions(host: DesignerActionsHost) {
             run: () => host.view.openWorkTab("project-settings"),
           },
           {
+            label: host.view.workTabReason
+              ? `警報の定義（${host.view.workTabReason}）`
+              : "警報の定義",
+            disabled: host.view.menuBlocked || !!host.view.workTabReason,
+            run: () => host.view.openWorkTab("alarm-definitions"),
+          },
+          {
             label: host.view.showRulers ? "ルーラーを隠す" : "ルーラーを表示",
             disabled: host.view.mode !== "edit" || host.view.workScreenShown,
             run: host.view.toggleRulers,

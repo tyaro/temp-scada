@@ -118,224 +118,230 @@
 </script>
 
 <div class="alarm-settings">
-  <label class="blink"
-    ><input
-      type="checkbox"
-      checked={project.alarms?.blinkUnacked ?? false}
-      {disabled}
-      onchange={(event) => {
-        const input = event.currentTarget;
-        const blinkUnacked = input.checked;
-        input.checked = !blinkUnacked;
-        guard(() => oncommand({ type: "set-alarm-blink", blinkUnacked }));
-      }}
-    />未確認の警報を点滅する</label
-  >
-  <div class="actions" role="group" aria-label="警報の定義の追加">
-    <button disabled={disabled || full} onclick={() => add("threshold")}
-      >しきい値の警報を追加</button
+  <!-- 作業画面の幅が足りれば、左に定義の表、右に選んだ定義の詳細を置く（§2.2）。 -->
+  <div class="list">
+    <label class="blink"
+      ><input
+        type="checkbox"
+        checked={project.alarms?.blinkUnacked ?? false}
+        {disabled}
+        onchange={(event) => {
+          const input = event.currentTarget;
+          const blinkUnacked = input.checked;
+          input.checked = !blinkUnacked;
+          guard(() => oncommand({ type: "set-alarm-blink", blinkUnacked }));
+        }}
+      />未確認の警報を点滅する</label
     >
-    <button disabled={disabled || full} onclick={() => add("bit")}
-      >bit の警報を追加</button
-    >
+    <div class="actions" role="group" aria-label="警報の定義の追加">
+      <button disabled={disabled || full} onclick={() => add("threshold")}
+        >しきい値の警報を追加</button
+      >
+      <button disabled={disabled || full} onclick={() => add("bit")}
+        >bit の警報を追加</button
+      >
+    </div>
+    {#if definitions.length}
+      <div class="scroll">
+        <table aria-label="警報の定義">
+          <thead
+            ><tr
+              ><th scope="col">有効</th><th scope="col">名前</th><th scope="col"
+                >種類</th
+              ></tr
+            ></thead
+          >
+          <tbody>
+            {#each definitions as row (row.id)}
+              <tr
+                data-alarm-id={row.id}
+                class:selected={row.id === selectedId}
+                aria-selected={row.id === selectedId}
+              >
+                <td
+                  ><input
+                    type="checkbox"
+                    aria-label={`${row.name} を有効にする`}
+                    checked={row.enabled}
+                    {disabled}
+                    onchange={(event) => toggle(event, row.id)}
+                  /></td
+                >
+                <th scope="row"
+                  ><button
+                    class="name"
+                    aria-label={`${row.name} を選ぶ`}
+                    aria-pressed={row.id === selectedId}
+                    onclick={() => choose(row.id)}>{row.name}</button
+                  ></th
+                >
+                <td>{kindLabel(row)}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {:else}
+      <p class="hint">警報の定義はありません。</p>
+    {/if}
   </div>
-  {#if definitions.length}
-    <div class="scroll">
-      <table aria-label="警報の定義">
-        <thead
-          ><tr
-            ><th scope="col">有効</th><th scope="col">名前</th><th scope="col"
-              >種類</th
-            ></tr
-          ></thead
+  <div class="detail">
+    {#if selected}
+      {@const row = selected}
+      <div class="actions" role="group" aria-label="選んだ警報の定義">
+        <button disabled={disabled || full} onclick={() => duplicate(row.id)}
+          >警報を複製</button
         >
-        <tbody>
-          {#each definitions as row (row.id)}
-            <tr
-              data-alarm-id={row.id}
-              class:selected={row.id === selectedId}
-              aria-selected={row.id === selectedId}
-            >
-              <td
-                ><input
-                  type="checkbox"
-                  aria-label={`${row.name} を有効にする`}
-                  checked={row.enabled}
-                  {disabled}
-                  onchange={(event) => toggle(event, row.id)}
-                /></td
-              >
-              <th scope="row"
-                ><button
-                  class="name"
-                  aria-label={`${row.name} を選ぶ`}
-                  aria-pressed={row.id === selectedId}
-                  onclick={() => choose(row.id)}>{row.name}</button
-                ></th
-              >
-              <td>{kindLabel(row)}</td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  {:else}
-    <p class="hint">警報の定義はありません。</p>
-  {/if}
-  {#if selected}
-    {@const row = selected}
-    <div class="actions" role="group" aria-label="選んだ警報の定義">
-      <button disabled={disabled || full} onclick={() => duplicate(row.id)}
-        >警報を複製</button
-      >
-      <button {disabled} onclick={() => remove(row.id)}>警報を削除</button>
-    </div>
-    {#key `${generation}:${row.id}`}
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions (フォーム内のIME確定をsubmitへ流さない) -->
-      <form
-        use:drafts.track={alarmDefinitionFormValues(row)}
-        data-editor-form="alarm-definition"
-        data-alarm-id={row.id}
-        aria-label="警報の定義の詳細"
-        onsubmit={submitDefinition}
-        onkeydown={composingKey}
-        oncompositionstart={() => (composing = true)}
-        oncompositionend={() => (composing = false)}
-      >
-        <p class="hint">種類: {kindLabel(row)}</p>
-        <label class="banto-field banto-field--stacked"
-          ><span class="banto-field-label">名前</span><input
-            class="banto-field-control"
-            name="name"
-            required
-            maxlength="100"
-            {disabled}
-          /></label
+        <button {disabled} onclick={() => remove(row.id)}>警報を削除</button>
+      </div>
+      {#key `${generation}:${row.id}`}
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions (フォーム内のIME確定をsubmitへ流さない) -->
+        <form
+          use:drafts.track={alarmDefinitionFormValues(row)}
+          data-editor-form="alarm-definition"
+          data-alarm-id={row.id}
+          aria-label="警報の定義の詳細"
+          onsubmit={submitDefinition}
+          onkeydown={composingKey}
+          oncompositionstart={() => (composing = true)}
+          oncompositionend={() => (composing = false)}
         >
-        <label class="banto-field banto-field--stacked"
-          ><span class="banto-field-label">タグの外部名</span><input
-            class="banto-field-control"
-            name="tag"
-            required
-            maxlength="1024"
-            list={listId}
-            data-explicit-apply
-            {disabled}
-          /></label
-        >
-        {#if row.source.kind === "threshold"}
-          {#each ALARM_LIMIT_KEYS as key (key)}
-            {@const label = key.toUpperCase()}
-            <fieldset class="limit">
-              <legend>{label}</legend>
-              <label class="banto-field banto-field--stacked"
-                ><span class="banto-field-label">{label} の値</span><input
-                  class="banto-field-control"
-                  name={`${key}.value`}
-                  inputmode="decimal"
-                  placeholder="使わない"
-                  {disabled}
-                /></label
-              >
-              <label class="banto-field banto-field--stacked"
-                ><span class="banto-field-label">{label} の重要度</span><select
-                  class="banto-field-control"
-                  name={`${key}.severity`}
-                  aria-label={`${label} の重要度`}
-                  {disabled}
-                  >{#each ALARM_SEVERITIES as [value, text] (value)}<option
-                      {value}>{text}</option
-                    >{/each}</select
-                ></label
-              >
-              <label class="banto-field banto-field--stacked"
-                ><span class="banto-field-label">{label} のメッセージ</span
-                ><input
-                  class="banto-field-control"
-                  name={`${key}.message`}
-                  maxlength="200"
-                  {disabled}
-                /></label
-              >
-            </fieldset>
-          {/each}
+          <p class="hint">種類: {kindLabel(row)}</p>
           <label class="banto-field banto-field--stacked"
-            ><span class="banto-field-label">deadband</span><input
+            ><span class="banto-field-label">名前</span><input
               class="banto-field-control"
-              name="deadband"
-              inputmode="decimal"
-              placeholder="なし"
+              name="name"
+              required
+              maxlength="100"
               {disabled}
             /></label
           >
-        {:else}
           <label class="banto-field banto-field--stacked"
-            ><span class="banto-field-label">発生の条件</span><select
+            ><span class="banto-field-label">タグの外部名</span><input
               class="banto-field-control"
-              name="activeWhen"
-              aria-label="発生の条件"
+              name="tag"
+              required
+              maxlength="1024"
+              list={listId}
+              data-explicit-apply
               {disabled}
-              ><option value="true">ON で発生</option><option value="false"
-                >OFF で発生</option
-              ></select
-            ></label
+            /></label
+          >
+          {#if row.source.kind === "threshold"}
+            {#each ALARM_LIMIT_KEYS as key (key)}
+              {@const label = key.toUpperCase()}
+              <fieldset class="limit">
+                <legend>{label}</legend>
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">{label} の値</span><input
+                    class="banto-field-control"
+                    name={`${key}.value`}
+                    inputmode="decimal"
+                    placeholder="使わない"
+                    {disabled}
+                  /></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">{label} の重要度</span
+                  ><select
+                    class="banto-field-control"
+                    name={`${key}.severity`}
+                    aria-label={`${label} の重要度`}
+                    {disabled}
+                    >{#each ALARM_SEVERITIES as [value, text] (value)}<option
+                        {value}>{text}</option
+                      >{/each}</select
+                  ></label
+                >
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">{label} のメッセージ</span
+                  ><input
+                    class="banto-field-control"
+                    name={`${key}.message`}
+                    maxlength="200"
+                    {disabled}
+                  /></label
+                >
+              </fieldset>
+            {/each}
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">deadband</span><input
+                class="banto-field-control"
+                name="deadband"
+                inputmode="decimal"
+                placeholder="なし"
+                {disabled}
+              /></label
+            >
+          {:else}
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">発生の条件</span><select
+                class="banto-field-control"
+                name="activeWhen"
+                aria-label="発生の条件"
+                {disabled}
+                ><option value="true">ON で発生</option><option value="false"
+                  >OFF で発生</option
+                ></select
+              ></label
+            >
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">重要度</span><select
+                class="banto-field-control"
+                name="severity"
+                aria-label="重要度"
+                {disabled}
+                >{#each ALARM_SEVERITIES as [value, text] (value)}<option
+                    {value}>{text}</option
+                  >{/each}</select
+              ></label
+            >
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">メッセージ</span><input
+                class="banto-field-control"
+                name="message"
+                maxlength="200"
+                {disabled}
+              /></label
+            >
+          {/if}
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">発生の遅延（ms）</span><input
+              class="banto-field-control"
+              name="onDelayMs"
+              inputmode="numeric"
+              placeholder="0"
+              {disabled}
+            /></label
           >
           <label class="banto-field banto-field--stacked"
-            ><span class="banto-field-label">重要度</span><select
+            ><span class="banto-field-label">復帰の遅延（ms）</span><input
               class="banto-field-control"
-              name="severity"
-              aria-label="重要度"
+              name="offDelayMs"
+              inputmode="numeric"
+              placeholder="0"
               {disabled}
-              >{#each ALARM_SEVERITIES as [value, text] (value)}<option {value}
+            /></label
+          >
+          <label class="banto-field banto-field--stacked"
+            ><span class="banto-field-label">ACK の種類</span><select
+              class="banto-field-control"
+              name="ackMode"
+              aria-label="ACK の種類"
+              {disabled}
+              >{#each ALARM_ACK_MODES as [value, text] (value)}<option {value}
                   >{text}</option
                 >{/each}</select
             ></label
           >
-          <label class="banto-field banto-field--stacked"
-            ><span class="banto-field-label">メッセージ</span><input
-              class="banto-field-control"
-              name="message"
-              maxlength="200"
-              {disabled}
-            /></label
-          >
-        {/if}
-        <label class="banto-field banto-field--stacked"
-          ><span class="banto-field-label">発生の遅延（ms）</span><input
-            class="banto-field-control"
-            name="onDelayMs"
-            inputmode="numeric"
-            placeholder="0"
-            {disabled}
-          /></label
-        >
-        <label class="banto-field banto-field--stacked"
-          ><span class="banto-field-label">復帰の遅延（ms）</span><input
-            class="banto-field-control"
-            name="offDelayMs"
-            inputmode="numeric"
-            placeholder="0"
-            {disabled}
-          /></label
-        >
-        <label class="banto-field banto-field--stacked"
-          ><span class="banto-field-label">ACK の種類</span><select
-            class="banto-field-control"
-            name="ackMode"
-            aria-label="ACK の種類"
-            {disabled}
-            >{#each ALARM_ACK_MODES as [value, text] (value)}<option {value}
-                >{text}</option
-              >{/each}</select
-          ></label
-        >
-        <p class="hint">
-          限界は HH ≥ H &gt; L ≥ LL。値を空にした限界は使いません。
-        </p>
-        <button type="submit" {disabled}>警報の定義を適用</button>
-      </form>
-    {/key}
-  {/if}
+          <p class="hint">
+            限界は HH ≥ H &gt; L ≥ LL。値を空にした限界は使いません。
+          </p>
+          <button type="submit" {disabled}>警報の定義を適用</button>
+        </form>
+      {/key}
+    {/if}
+  </div>
   <datalist id={listId}
     >{#each tagNames as name (name)}<option value={name}
       ></option>{/each}</datalist
@@ -343,10 +349,13 @@
 </div>
 
 <style>
-  .alarm-settings {
+  .alarm-settings,
+  .list,
+  .detail {
     display: grid;
     gap: 8px;
     min-width: 0;
+    align-content: start;
   }
   .blink {
     display: flex;
@@ -398,5 +407,15 @@
     color: var(--banto-text-muted);
     font-size: 12px;
     margin: 0;
+  }
+  /* 作業画面（container）の幅が 720px 以上なら2列にする。基本の `.scroll` より後に置き、高さの上限を上書きする。 */
+  @container (min-width: 720px) {
+    .alarm-settings {
+      grid-template-columns: minmax(260px, 2fr) minmax(320px, 3fr);
+      gap: 16px;
+    }
+    .scroll {
+      max-height: 60vh;
+    }
   }
 </style>

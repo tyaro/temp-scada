@@ -1,7 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
+import sample from "../examples/process.project.json" with { type: "json" };
 import { chooseMenuItem, mainCanvas, selectPanel } from "./helpers/designer";
+import { openProject } from "./helpers/project-files";
 
-// Issue #223 WT1a・WT1b: メイン領域の作業タブ（docs/design/editor/main-work-tabs-design.md）。
+// Issue #223 WT1a・WT1b・WT2: メイン領域の作業タブ（docs/design/editor/main-work-tabs-design.md）。
 
 const workTabs = (page: Page) =>
   page.getByRole("navigation", { name: "作業タブ", exact: true });
@@ -257,6 +259,9 @@ test("Symbol 定義の編集中は作業タブを隠し、戻ると並びだけ�
     page.getByRole("button", { name: "プロジェクト設定", exact: true }),
   ).toBeDisabled();
   await expect(
+    page.getByRole("button", { name: "警報の定義", exact: true }),
+  ).toBeDisabled();
+  await expect(
     page.getByRole("button", { name: "記録希望設定", exact: true }),
   ).toBeDisabled();
   await expect(
@@ -446,3 +451,133 @@ for (const width of [960, 700])
     await close.click();
     await expect(workTabs(page)).toHaveCount(0);
   });
+
+const alarmTab = (page: Page) =>
+  workTabs(page).getByRole("button", { name: "警報の定義", exact: true });
+const alarmScreen = (page: Page) =>
+  page.getByRole("region", { name: "警報の定義", exact: true });
+async function editProcess(page: Page, width = 1440) {
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await openProject(page, {
+    name: "process.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(sample)),
+  });
+}
+
+test("左の「警報の定義」から作業画面を開き、表と詳細を2列で並べ、タグの未適用は離れる前に確認する（WT2）", async ({
+  page,
+}) => {
+  await editProcess(page);
+  await selectPanel(page, "プロジェクト");
+  // 左ペインには警報の設定のフォームを置かない。
+  await expect(
+    page.getByRole("table", { name: "警報の定義", exact: true }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "警報の定義", exact: true }).click();
+  await expect(alarmTab(page)).toHaveAttribute("aria-current", "page");
+  await expect(
+    alarmScreen(page).getByRole("heading", { name: "警報の定義", level: 2 }),
+  ).toBeFocused();
+  const [first] = sample.alarms.definitions;
+  const table = alarmScreen(page).getByRole("table", { name: "警報の定義" });
+  await table
+    .getByRole("button", { name: `${first.name} を選ぶ`, exact: true })
+    .click();
+  const details = alarmScreen(page).getByRole("form", {
+    name: "警報の定義の詳細",
+  });
+  // 作業画面が広いときは、表の右に詳細を置く。
+  const [tableBox, detailBox] = await Promise.all([
+    table.boundingBox(),
+    details.boundingBox(),
+  ]);
+  expect(detailBox!.x).toBeGreaterThanOrEqual(tableBox!.x + tableBox!.width);
+  // 広い幅では表の高さの上限を 240px より広げる。
+  expect(
+    await alarmScreen(page)
+      .locator(".scroll")
+      .evaluate((element) => getComputedStyle(element).maxHeight),
+  ).not.toBe("240px");
+  // 名前は離れるときに確定し、Undo では作業タブのまま戻る（W11）。
+  await details.getByLabel("名前", { exact: true }).fill("作業タブの警報");
+  await screenTabs(page).getByRole("button").first().click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(alarmScreen(page)).toBeHidden();
+  await alarmTab(page).click();
+  await expect(
+    table.getByRole("button", { name: "作業タブの警報 を選ぶ", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Control+z");
+  await expect(alarmTab(page)).toHaveAttribute("aria-current", "page");
+  await expect(
+    table.getByRole("button", { name: `${first.name} を選ぶ`, exact: true }),
+  ).toBeVisible();
+  // タグ（明示適用の欄）の未適用は、画面タブへ切り替える前に確認を出す（W2）。
+  await table
+    .getByRole("button", { name: `${first.name} を選ぶ`, exact: true })
+    .click();
+  const tag = details.getByLabel("タグの外部名", { exact: true });
+  await tag.fill("Pending.Alarm.Tag");
+  await screenTabs(page).getByRole("button").first().click();
+  const dialog = page.getByRole("dialog", { name: "未適用の入力があります" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(alarmTab(page)).toHaveAttribute("aria-current", "page");
+  await expect(tag).toHaveValue("Pending.Alarm.Tag");
+  await screenTabs(page).getByRole("button").first().click();
+  await dialog
+    .getByRole("button", { name: "入力を破棄して続行", exact: true })
+    .click();
+  await expect(alarmScreen(page)).toBeHidden();
+  await expect(viewport(page)).toBeVisible();
+  await alarmTab(page).click();
+  await expect(tag).toHaveValue(first.source.tag);
+});
+
+test("表示メニューの「警報の定義」から開き、不正な入力は作業タブへ引き戻す（WT2）", async ({
+  page,
+}) => {
+  await editProcess(page);
+  await chooseMenuItem(page, "表示", "警報の定義");
+  await expect(alarmTab(page)).toHaveAttribute("aria-current", "page");
+  const [first] = sample.alarms.definitions;
+  await alarmScreen(page)
+    .getByRole("button", { name: `${first.name} を選ぶ`, exact: true })
+    .click();
+  const name = alarmScreen(page).getByLabel("名前", { exact: true });
+  await name.fill("");
+  // 空の名前は確定できないので、画面タブへの切替を拒否して欄へ戻す（W6）。
+  await screenTabs(page).getByRole("button").first().click();
+  await expect(alarmTab(page)).toHaveAttribute("aria-current", "page");
+  await expect(name).toBeVisible();
+  await expect(name).toHaveValue("");
+});
+
+test("最小幅 700px では警報の表と詳細を1列に並べ、最後の操作に手が届く（WT2）", async ({
+  page,
+}) => {
+  await editProcess(page, 700);
+  await chooseMenuItem(page, "表示", "警報の定義");
+  const [first] = sample.alarms.definitions;
+  const table = alarmScreen(page).getByRole("table", { name: "警報の定義" });
+  const choose = table.getByRole("button", {
+    name: `${first.name} を選ぶ`,
+    exact: true,
+  });
+  await choose.scrollIntoViewIfNeeded();
+  await choose.click();
+  const submit = alarmScreen(page).getByRole("button", {
+    name: "警報の定義を適用",
+    exact: true,
+  });
+  await submit.scrollIntoViewIfNeeded();
+  await expect(submit).toBeInViewport();
+  const [tableBox, submitBox] = await Promise.all([
+    table.boundingBox(),
+    submit.boundingBox(),
+  ]);
+  expect(submitBox!.y).toBeGreaterThan(tableBox!.y + tableBox!.height);
+});
