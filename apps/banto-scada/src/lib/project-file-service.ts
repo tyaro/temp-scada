@@ -195,7 +195,8 @@ const ALARM_APPLY_REASONS: Readonly<Record<string, string>> = {
   engineUnavailable: "警報Engineが応答しません",
   engineStopped: "警報Engineが停止しています",
   terminalStateFailed: "この端末の監視先の記録を更新できませんでした",
-  terminalUnavailable: "この端末では警報Engineの領域が使用中です",
+  // Any `TerminalError` (in use, unreadable, corrupt, lost): do not name one.
+  terminalUnavailable: "この端末の警報設定・監視状態を利用できません",
   alarmUnavailable: "この端末では警報Engineを使えません",
   noDataDir: "警報Engineの保存先がありません",
   noHub: "Hubが設定されていません",

@@ -231,7 +231,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       if (lastUnavailableReason !== result.reason) {
         const message =
           result.reason === "terminalUnavailable"
-            ? "Projectを保存しました。この端末では警報Engineの領域が使用中のため、警報定義を適用していません。"
+            ? "Projectを保存しました。この端末の警報設定・監視状態を利用できないため、警報定義を適用していません。"
             : result.reason === "noDataDir"
               ? "Projectを保存しました。警報Engineの保存先がないため、警報定義を適用していません。"
               : "Projectを保存しました。認証の切替中のため、警報定義を適用していません。";

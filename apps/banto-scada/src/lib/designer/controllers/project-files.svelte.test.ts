@@ -347,6 +347,39 @@ describe("project files on the desktop", () => {
     });
   });
 
+  // The host sends terminalUnavailable for every TerminalError (in use,
+  // unreadable, corrupt, lost), so the text must not claim "in use".
+  it("does not call an unavailable terminal in use", async () => {
+    const { controller, reports } = setup({
+      open: async () => null,
+      save: async () => ({ fileId: 12, fileName: "plant.json" }),
+      apply: async () => {
+        throw new ProjectFileError("terminalUnavailable");
+      },
+    });
+    controller.save();
+    await settle();
+    await controller.applyAlarm();
+    expect(reports.at(-1)?.text).toBe(
+      "警報定義を適用できませんでした。この端末の警報設定・監視状態を利用できません（terminalUnavailable）。",
+    );
+
+    const skipped = setup({
+      open: async () => null,
+      save: async () => ({
+        fileId: 12,
+        fileName: "plant.json",
+        apply: { status: "skippedUnavailable", reason: "terminalUnavailable" },
+      }),
+    });
+    skipped.controller.save();
+    await settle();
+    expect(skipped.reports.at(-1)?.text).not.toContain("使用中");
+    expect(skipped.reports.at(-1)?.text).toContain(
+      "警報設定・監視状態を利用できない",
+    );
+  });
+
   it("shows an unknown apply code as it is", async () => {
     const { controller, reports } = setup({
       open: async () => null,
