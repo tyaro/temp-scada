@@ -357,16 +357,6 @@
     min-width: 0;
     align-content: start;
   }
-  /* 作業画面（container）の幅が 720px 以上なら2列にする。 */
-  @container (min-width: 720px) {
-    .alarm-settings {
-      grid-template-columns: minmax(260px, 2fr) minmax(320px, 3fr);
-      gap: 16px;
-    }
-    .scroll {
-      max-height: 60vh;
-    }
-  }
   .blink {
     display: flex;
     gap: 6px;
@@ -417,5 +407,15 @@
     color: var(--banto-text-muted);
     font-size: 12px;
     margin: 0;
+  }
+  /* 作業画面（container）の幅が 720px 以上なら2列にする。基本の `.scroll` より後に置き、高さの上限を上書きする。 */
+  @container (min-width: 720px) {
+    .alarm-settings {
+      grid-template-columns: minmax(260px, 2fr) minmax(320px, 3fr);
+      gap: 16px;
+    }
+    .scroll {
+      max-height: 60vh;
+    }
   }
 </style>

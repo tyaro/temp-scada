@@ -495,6 +495,12 @@ test("左の「警報の定義」から作業画面を開き、表と詳細を2�
     details.boundingBox(),
   ]);
   expect(detailBox!.x).toBeGreaterThanOrEqual(tableBox!.x + tableBox!.width);
+  // 広い幅では表の高さの上限を 240px より広げる。
+  expect(
+    await alarmScreen(page)
+      .locator(".scroll")
+      .evaluate((element) => getComputedStyle(element).maxHeight),
+  ).not.toBe("240px");
   // 名前は離れるときに確定し、Undo では作業タブのまま戻る（W11）。
   await details.getByLabel("名前", { exact: true }).fill("作業タブの警報");
   await screenTabs(page).getByRole("button").first().click();
