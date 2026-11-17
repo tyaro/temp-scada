@@ -7,6 +7,7 @@ use super::*;
 use crate::recording_runtime::setup_tests::Hub;
 
 const ID: &str = "alarm:bit";
+const RETENTION: RetentionLimit = RetentionLimit::Days(365);
 
 fn fast() -> FreshnessConfig {
     FreshnessConfig {
@@ -130,10 +131,13 @@ async fn saved_reread_values_apply_to_the_running_engine() {
     assert!(report.borrow().is_none(), "no reread is due within 60 s");
     // A shorter interval applies now: the next reread is one interval away.
     runtime
-        .reconfigure(FreshnessConfig {
-            reread_interval: Duration::from_millis(100),
-            ..slow
-        })
+        .reconfigure(
+            FreshnessConfig {
+                reread_interval: Duration::from_millis(100),
+                ..slow
+            },
+            RETENTION,
+        )
         .await
         .unwrap();
     let streak = tokio::time::timeout(
@@ -147,7 +151,7 @@ async fn saved_reread_values_apply_to_the_running_engine() {
     assert!(runtime.snapshot().await.unwrap().unavailable().is_none());
     // The streak is kept and judged again: it is already past the new
     // failure limit, so ReceiveLost begins with the reconfiguration.
-    runtime.reconfigure(fast()).await.unwrap();
+    runtime.reconfigure(fast(), RETENTION).await.unwrap();
     assert_eq!(
         runtime.snapshot().await.unwrap().unavailable(),
         Some(EngineUnavailable::ReceiveLost)

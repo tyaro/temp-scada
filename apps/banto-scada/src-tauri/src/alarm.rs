@@ -430,14 +430,15 @@ pub async fn alarm_history(
         .map_err(|error| reason(&error))
 }
 
-/// The alarm terminal settings (terminal settings design §6). No
-/// authorization; `terminalUnavailable` when the terminal settings could not
-/// be opened.
+/// The alarm terminal settings with the monitored Project's retention status
+/// (terminal settings design §6). No authorization; `terminalUnavailable`
+/// when the terminal settings could not be opened.
 #[tauri::command]
-pub fn alarm_settings_get(alarm: State<'_, AlarmState>) -> Result<AlarmSettingsView, String> {
-    alarm
-        .get()?
+pub async fn alarm_settings_get(alarm: State<'_, AlarmState>) -> Result<AlarmSettingsView, String> {
+    let service = alarm.get()?.clone();
+    service
         .alarm_settings()
+        .await
         .map_err(|error| reason(&error))
 }
 
