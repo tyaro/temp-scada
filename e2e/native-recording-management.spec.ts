@@ -551,3 +551,54 @@ test("a viewer inspects but is not offered the first setup", async ({
   ).toHaveCount(0);
   expect((await host(page)).setups).toEqual([]);
 });
+
+test("the desktop header keeps the recording badge to its content and clear of the mode and actions", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1100, height: 800 });
+  await mockNativeHost(page, "admin");
+  await page.goto("/");
+  await openProject(page, file(planned));
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const headerStatus = page.locator("[data-recording-status]");
+  await expect(headerStatus).toContainText("記録 未照会");
+  const layout = await page.evaluate(() => {
+    const box = (element: Element) => {
+      const r = element.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    };
+    const header = document.querySelector(".app-header")!;
+    const button = document.querySelector("[data-recording-status]")!;
+    return {
+      header: box(header),
+      button: box(button),
+      badge: box(button.firstElementChild!),
+      parts: [
+        ...document.querySelector(".header-status")!.children,
+        document.querySelector(".mode-tools")!,
+        document.querySelector('[role="menubar"]')!,
+        ...document.querySelector(".header-actions")!.children,
+      ]
+        // Closed menu popovers and empty slots are not on screen.
+        .filter((part) => part.checkVisibility({ visibilityProperty: true }))
+        .map(box)
+        .filter((part) => part.right > part.left && part.bottom > part.top),
+    };
+  });
+  // The global button width once stretched it across the whole status area.
+  expect(layout.button.right - layout.button.left).toBeLessThanOrEqual(
+    layout.badge.right - layout.badge.left + 4,
+  );
+  const { parts } = layout;
+  for (const [i, a] of parts.entries()) {
+    expect(a.left).toBeGreaterThanOrEqual(layout.header.left);
+    expect(a.right).toBeLessThanOrEqual(layout.header.right);
+    for (const b of parts.slice(i + 1))
+      expect(
+        a.right <= b.left ||
+          b.right <= a.left ||
+          a.bottom <= b.top ||
+          b.bottom <= a.top,
+      ).toBe(true);
+  }
+});
