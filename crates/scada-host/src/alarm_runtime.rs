@@ -442,6 +442,10 @@ enum Control {
         reply: oneshot::Sender<Result<AckOutcome, AlarmRuntimeError>>,
     },
     Stop(oneshot::Sender<Result<(), AlarmRuntimeError>>),
+    Reconfigure {
+        config: FreshnessConfig,
+        reply: oneshot::Sender<Result<(), AlarmRuntimeError>>,
+    },
 }
 
 struct ApplyCommand {
@@ -614,6 +618,17 @@ impl AlarmRuntime {
                 user,
                 reply,
             })
+            .await
+            .map_err(|_| AlarmRuntimeError::Closed)?;
+        rx.await.map_err(|_| AlarmRuntimeError::Closed)?
+    }
+
+    /// Use saved reread values from now on (terminal settings §4): the next
+    /// reread is one new interval away and the availability is judged again.
+    pub async fn reconfigure(&self, config: FreshnessConfig) -> Result<(), AlarmRuntimeError> {
+        let (reply, rx) = oneshot::channel();
+        self.control
+            .send(Control::Reconfigure { config, reply })
             .await
             .map_err(|_| AlarmRuntimeError::Closed)?;
         rx.await.map_err(|_| AlarmRuntimeError::Closed)?
@@ -1006,6 +1021,21 @@ async fn run_inner(
                             let _ = reply.send(Err(error_summary(&error)));
                             let _ = stop(evaluator, sdk, &change_tx).await;
                             return Err(error);
+                        }
+                    }
+                }
+                Some(Control::Reconfigure { config, reply }) => {
+                    freshness.reconfigure(config, tokio::time::Instant::now());
+                    match sync_availability(&mut evaluator, &freshness, &mut previous, &change_tx).await {
+                        Ok(recovered) => {
+                            let _ = reply.send(Ok(()));
+                            if recovered {
+                                process_current!();
+                            }
+                        }
+                        Err(error) => {
+                            let _ = reply.send(Err(error_summary(&error)));
+                            check!(Err::<(), _>(error));
                         }
                     }
                 }

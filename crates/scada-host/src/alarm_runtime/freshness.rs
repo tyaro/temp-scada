@@ -206,6 +206,21 @@ impl Freshness {
         self.clients = clients;
     }
 
+    /// Saved terminal settings replace the config (terminal settings §4).
+    /// The next reread is due one new interval from now. The failure streak
+    /// and resubscription count are kept and judged against the new limits:
+    /// a streak already past the new failure limit means ReceiveLost now.
+    /// A longer limit does not end ReceiveLost; only a success does.
+    pub(super) fn reconfigure(&mut self, config: FreshnessConfig, now: Instant) {
+        self.config = config;
+        self.next_reread = now + config.reread_interval;
+        if let Some((since, _)) = self.streak {
+            if now.duration_since(since) >= config.failure_limit {
+                self.reread_lost = true;
+            }
+        }
+    }
+
     /// A subscription value was accepted for `tag`.
     pub(super) fn arrived(&mut self, tag: &str) {
         *self.arrivals.entry(tag.to_owned()).or_default() += 1;
