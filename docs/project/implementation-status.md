@@ -529,7 +529,7 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 ## 警報の小札
 
-2026-11-17の段階3 3-D1で、画面の直下に置く警報の小札`alarmBadge`（`alarmId`・しきい値の`limit`・`text`・`style`のfontSize・fontWeight）を追加した。指す定義と限界が Project にあることを TS・Rust の両方で検査し、使用中の定義・限界は警報の設定で削除・変更できない。状態（不明・正常・発生中・未確認・復帰・未確認・評価不能、発生中に評価不能が重なると「?」）は純関数`alarm-view.ts`で snapshot から導き、モジュールの$stateで編集・プレビュー・運転表示に同じ状態を配る。色は部品で固定し、`aria-label`に状態の文字を入れる。`blinkUnacked`のときだけ未確認を点滅し、「動きを減らす」では止める。ブラウザ版のe2eはDEVだけで差し込むモックの警報feedで状態を変える。schemaVersionは0.37.0のまま。[仕様](../design/graphics/alarm-badge.md)。`alarm-view.test.ts`・`alarm-badge.test.ts`・`examples/alarm-badge-cases.json`（Rust・TS共通）・`e2e/alarm-badge.spec.ts`で確認。帯（3-D2）・一覧の窓（3-E）・Symbol定義内の小札は未実装、Tauri実機は未確認。
+2026-11-17の段階3 3-D1で、画面の直下に置く警報の小札`alarmBadge`（`alarmId`・しきい値の`limit`・`text`・`style`のfontSize・fontWeight）を追加した。指す定義と限界が Project にあることを TS・Rust の両方で検査し、使用中の定義・限界は警報の設定で削除・変更できない。状態（不明・正常・発生中・未確認・復帰・未確認・評価不能、発生中に評価不能が重なると「?」）は純関数`alarm-view.ts`で snapshot から導き、モジュールの$stateで編集・プレビュー・運転表示に同じ状態を配る。色は部品で固定し、`aria-label`に状態の文字を入れる。`blinkUnacked`のときだけ未確認を点滅し、「動きを減らす」では止める。ブラウザ版のe2eはDEVだけで差し込むモックの警報feedで状態を変える。schemaVersionは0.37.0のまま。[仕様](../design/graphics/alarm-badge.md)。`alarm-view.test.ts`・`alarm-badge.test.ts`・`examples/alarm-badge-cases.json`（Rust・TS共通）・`e2e/alarm-badge.spec.ts`で確認。Symbol定義内の小札は未実装、Tauri実機は未確認。
 
 ## 最新の警報の帯
 
