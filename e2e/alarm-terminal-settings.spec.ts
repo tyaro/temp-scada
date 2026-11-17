@@ -338,18 +338,42 @@ test("a reply from before the window was closed does not touch the reopened form
   });
   await openFromMenu(page);
 
-  // 古い A の終わりは、読込み中の B の busy を解かない。
+  // 古い A の終わりは、読込み中の B の busy を解かず、値も入れない。
   await mock(page, "releaseAlarmSettingsRead(0)");
   await expect(days()).toBeDisabled();
   await expect(days()).not.toHaveValue("100");
-
-  // B が返ってから入力した値は、そのあとで何が来ても残る。
   await mock(page, "releaseAlarmSettingsRead(1)");
   await expect(days()).toHaveValue("200");
   await expect(days()).toBeEnabled();
+});
+
+test("a reply from before the window was closed does not overwrite what was typed after reopening", async ({
+  page,
+}) => {
+  await mockAlarmEntry(page);
+  await openSample(page);
+  const days = () => settings(page).getByLabel("保持の日数（日）");
+  await mock(page, "setAlarmSettings(arg)", {
+    ...VIEW,
+    retention: { ...VIEW.retention, days: 100 },
+  });
+  await mock(page, "holdAlarmSettingsReads()");
+  await openFromMenu(page);
+  await page.keyboard.press("Escape");
+  await expect(settings(page)).toBeHidden();
+  await mock(page, "setAlarmSettings(arg)", {
+    ...VIEW,
+    retention: { ...VIEW.retention, days: 200 },
+  });
+  await openFromMenu(page);
+
+  // B を先に返して入力し、そのあとで A を初めて返す。
+  await mock(page, "releaseAlarmSettingsRead(1)");
+  await expect(days()).toHaveValue("200");
   await days().fill("250");
   await mock(page, "releaseAlarmSettingsRead(0)");
   await expect(days()).toHaveValue("250");
+  await expect(days()).toBeEnabled();
   await expect(
     settings(page).getByRole("button", { name: "保存", exact: true }),
   ).toBeEnabled();

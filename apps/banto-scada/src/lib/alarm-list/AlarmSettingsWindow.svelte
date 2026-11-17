@@ -83,8 +83,9 @@
   /** 種類を切り替えたら、隠れる側の値が範囲外のとき最後に読んだ値へ戻す。
    * host は両方の値を検査するので残す必要があるが、見えない誤りで「保存」を
    * 押せなくしない。 */
-  function switchedKind() {
-    const hidden = form.kind === "days" ? "count" : "days";
+  function switchedKind(event: Event & { currentTarget: HTMLInputElement }) {
+    // binding の更新と handler の順に頼らず、選んだ側をイベントから読む。
+    const hidden = event.currentTarget.value === "days" ? "count" : "days";
     if (errors[hidden]) {
       form[hidden] = alarmSettingsForm(view ?? ALARM_SETTINGS_DEFAULTS)[hidden];
     }
