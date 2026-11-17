@@ -14,7 +14,7 @@ use tokio::task::JoinHandle;
 use crate::alarm_buzzer::{BuzzerDriver, BuzzerPlayer, BuzzerStatus, LogBuzzerPlayer};
 use crate::alarm_db::{
     plan_apply, plan_restore, AlarmDb, AlarmDbError, AppliedDefinitions, EventRead,
-    UnackedOccurrence,
+    RetentionStatus, UnackedOccurrence,
 };
 use crate::alarm_project::{AlarmProjectError, SavedAlarmProject};
 use crate::alarm_runtime::{
@@ -72,8 +72,7 @@ impl From<AlarmRuntimeError> for AlarmServiceError {
     }
 }
 
-/// `alarm_settings_get` (terminal settings design §6). The retention status
-/// comes with T1b and the sound with T2.
+/// `alarm_settings_get` (terminal settings design §6). The sound comes with T2.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlarmSettingsView {
@@ -81,6 +80,9 @@ pub struct AlarmSettingsView {
     pub settings: AlarmSettings,
     /// Groups reset to defaults when the terminal settings were read.
     pub warnings: Vec<AlarmSettingsWarning>,
+    /// The monitored Project's alarm DB; `None` without a monitored Project
+    /// or when that DB cannot be read now.
+    pub retention_status: Option<RetentionStatus>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -396,8 +398,10 @@ impl AlarmService {
         )
         .map_err(|_| AlarmServiceError::Project(AlarmProjectError::InvalidFile))?;
         let engine = db.start_session_plan(plan, at_ms).await?;
-        let evaluator = AlarmEvaluator::new(db.clone(), applied, engine).await?;
         let (settings, _) = self.terminal.alarm_settings()?;
+        let evaluator = AlarmEvaluator::new(db.clone(), applied, engine)
+            .await?
+            .with_retention(settings.retention.limit());
         let runtime =
             AlarmRuntime::start_with_config(evaluator, client, settings.reread.freshness()).await?;
         self.attach(active, runtime, db, monitored.project_id);
@@ -994,9 +998,31 @@ impl AlarmService {
 
     /// The alarm terminal settings (terminal settings design §6). Needs no
     /// authorization.
-    pub fn alarm_settings(&self) -> Result<AlarmSettingsView, AlarmServiceError> {
+    pub async fn alarm_settings(&self) -> Result<AlarmSettingsView, AlarmServiceError> {
         let (settings, warnings) = self.terminal.alarm_settings()?;
-        Ok(AlarmSettingsView { settings, warnings })
+        Ok(AlarmSettingsView {
+            settings,
+            warnings,
+            retention_status: self.retention_status().await,
+        })
+    }
+
+    /// Read on its own connection like `history`, so the settings stay
+    /// readable while the DB is busy or broken (the Engine reports that).
+    async fn retention_status(&self) -> Option<RetentionStatus> {
+        let monitored = self.terminal.monitored().ok()??;
+        let db = match AlarmDb::open(self.terminal.clone(), &monitored.project_id).await {
+            Ok(db) => db,
+            Err(error) => {
+                eprintln!("alarm retention status unavailable: {error:?}");
+                return None;
+            }
+        };
+        let status = db.retention_status().await;
+        db.close().await;
+        status
+            .inspect_err(|error| eprintln!("alarm retention status unavailable: {error:?}"))
+            .ok()
     }
 
     /// Save the alarm terminal settings; the caller has authorized the
@@ -1019,11 +1045,13 @@ impl AlarmService {
         if let Some(runtime) = active.runtime.as_ref() {
             // A stopped or failing Engine reports through its status; the
             // saved values are used by its next session.
-            let _ = runtime.reconfigure(settings.reread.freshness()).await;
+            let _ = runtime
+                .reconfigure(settings.reread.freshness(), settings.retention.limit())
+                .await;
         }
         drop(active);
         let _ = self.lagged.send(());
-        self.alarm_settings()
+        self.alarm_settings().await
     }
 
     /// Silence this terminal's buzzer (design §6). Not an ACK, and needs no
@@ -1672,7 +1700,7 @@ mod tests {
         std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
         let service = AlarmService::open(&dir).await.unwrap();
         assert_eq!(
-            serde_json::to_value(service.alarm_settings().unwrap()).unwrap(),
+            serde_json::to_value(service.alarm_settings().await.unwrap()).unwrap(),
             json!({
                 "retention": {"kind": "days", "days": 365, "count": 1_000_000},
                 "reread": {
@@ -1682,6 +1710,7 @@ mod tests {
                     "reconnectFailures": 3,
                 },
                 "warnings": [],
+                "retentionStatus": null,
             })
         );
         assert!(matches!(
@@ -1712,12 +1741,17 @@ mod tests {
         let view = service.set_alarm_settings(settings).await.unwrap();
         assert_eq!(view.settings, settings);
         assert!(view.warnings.is_empty());
+        // The monitored Project's DB: the apply and the session start are
+        // within the limit, and the oldest of them is not a kept event.
+        let status = view.retention_status.unwrap();
+        assert!(status.event_count >= 2);
+        assert!(status.oldest_at_ms.is_some());
         lagged.try_recv().unwrap();
         assert_eq!(service.snapshot().await.unwrap().status, "running");
         service.stop().await.unwrap();
         drop(service);
         let service = AlarmService::open(&dir).await.unwrap();
-        assert_eq!(service.alarm_settings().unwrap().settings, settings);
+        assert_eq!(service.alarm_settings().await.unwrap().settings, settings);
         drop(service);
         let _ = std::fs::remove_dir_all(dir);
     }

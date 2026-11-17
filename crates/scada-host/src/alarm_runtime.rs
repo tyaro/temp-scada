@@ -17,7 +17,7 @@ use tokio::sync::{broadcast, mpsc, oneshot, watch};
 
 use crate::alarm_db::{
     plan_apply, AlarmDb, AlarmDbError, AppliedDefinitions, Definition, EventWrite, LastRow,
-    StartedAlarmSession, UnackedOccurrence, UnrecordedPeriod,
+    RetentionLimit, StartedAlarmSession, UnackedOccurrence, UnrecordedPeriod,
 };
 use crate::alarm_terminal::ActiveAlarmSession;
 
@@ -43,6 +43,14 @@ pub enum AlarmRuntimeError {
 
 /// Interval between write retries while the alarm DB cannot be written.
 const HISTORY_RETRY: Duration = Duration::from_secs(5);
+
+/// Retention deletion (terminal settings design §3): at most this many
+/// events per transaction, so the one-connection pool is not held long.
+const PRUNE_BATCH: usize = 10_000;
+/// The next round after one that reached `PRUNE_BATCH`.
+const PRUNE_CONTINUE: Duration = Duration::from_secs(5);
+/// The next round after one that left nothing expired, or failed transiently.
+const PRUNE_INTERVAL: Duration = Duration::from_secs(3600);
 
 /// The current history write outage. Evaluation continues; events that
 /// could not be written are counted, not queued.
@@ -97,6 +105,7 @@ pub struct AlarmEvaluator {
     _active: ActiveAlarmSession,
     origin: Instant,
     history: watch::Sender<Option<HistoryWriteFailure>>,
+    retention: RetentionLimit,
 }
 
 impl AlarmEvaluator {
@@ -139,7 +148,45 @@ impl AlarmEvaluator {
             _active: active,
             origin: Instant::now(),
             history: watch::channel(None).0,
+            retention: crate::alarm_terminal::RetentionSettings::default().limit(),
         })
+    }
+
+    /// The retention limit the running Engine deletes by (terminal settings §3).
+    pub fn with_retention(mut self, retention: RetentionLimit) -> Self {
+        self.retention = retention;
+        self
+    }
+
+    /// One retention round; returns the delay to the next one. Skipped while
+    /// the history is unwritable. A storage outage is logged and retried at
+    /// the next round; corruption, schema or session mismatches stop the
+    /// Engine as an event write does. Deletion is not an event.
+    pub async fn prune_history(&self) -> Result<Duration, AlarmRuntimeError> {
+        self.prune_history_at(wall_ms(), PRUNE_BATCH).await
+    }
+
+    async fn prune_history_at(
+        &self,
+        now_ms: i64,
+        batch: usize,
+    ) -> Result<Duration, AlarmRuntimeError> {
+        if self.history_failure().is_some() {
+            return Ok(PRUNE_INTERVAL);
+        }
+        match self
+            .db
+            .prune(self.engine.session(), self.retention, now_ms, batch)
+            .await
+        {
+            Ok(outcome) if outcome.reached_batch => Ok(PRUNE_CONTINUE),
+            Ok(_) => Ok(PRUNE_INTERVAL),
+            Err(error) if error.is_storage_outage() => {
+                eprintln!("alarm history retention failed, retrying later: {error:?}");
+                Ok(PRUNE_INTERVAL)
+            }
+            Err(error) => Err(AlarmRuntimeError::Db(error)),
+        }
     }
 
     pub fn history_failure(&self) -> Option<HistoryWriteFailure> {
@@ -444,6 +491,7 @@ enum Control {
     Stop(oneshot::Sender<Result<(), AlarmRuntimeError>>),
     Reconfigure {
         config: FreshnessConfig,
+        retention: RetentionLimit,
         reply: oneshot::Sender<Result<(), AlarmRuntimeError>>,
     },
 }
@@ -625,10 +673,19 @@ impl AlarmRuntime {
 
     /// Use saved reread values from now on (terminal settings §4): the next
     /// reread is one new interval away and the availability is judged again.
-    pub async fn reconfigure(&self, config: FreshnessConfig) -> Result<(), AlarmRuntimeError> {
+    /// The retention limit applies at once with one deletion round (§3).
+    pub async fn reconfigure(
+        &self,
+        config: FreshnessConfig,
+        retention: RetentionLimit,
+    ) -> Result<(), AlarmRuntimeError> {
         let (reply, rx) = oneshot::channel();
         self.control
-            .send(Control::Reconfigure { config, reply })
+            .send(Control::Reconfigure {
+                config,
+                retention,
+                reply,
+            })
             .await
             .map_err(|_| AlarmRuntimeError::Closed)?;
         rx.await.map_err(|_| AlarmRuntimeError::Closed)?
@@ -752,6 +809,8 @@ async fn run_inner(
     // next resubscription replaces it.
     let mut subscription_dead = false;
     let mut history_retry: Option<tokio::time::Instant> = None;
+    // The first retention round runs right after the session starts.
+    let mut next_prune = tokio::time::Instant::now();
     // Process the current snapshot before waiting so a rapid initial Live is not lost.
     let initial = states.borrow_and_update().clone();
     if initial.connection_state() == TagClientConnectionState::Stopped
@@ -890,6 +949,12 @@ async fn run_inner(
                 history_retry = None;
                 check!(evaluator.recover_history().await.map(|_| ()));
             }
+            _ = tokio::time::sleep_until(next_prune) => {
+                match evaluator.prune_history().await {
+                    Ok(delay) => next_prune = tokio::time::Instant::now() + delay,
+                    Err(error) => check!(Err::<(), _>(error)),
+                }
+            }
             _ = async { if let Some(deadline) = replacement_deadline { tokio::time::sleep_until(deadline).await } else { std::future::pending::<()>().await } } => {
                 awaiting_replacement_snapshot = false;
                 replacement_deadline = None;
@@ -1024,8 +1089,10 @@ async fn run_inner(
                         }
                     }
                 }
-                Some(Control::Reconfigure { config, reply }) => {
+                Some(Control::Reconfigure { config, retention, reply }) => {
                     freshness.reconfigure(config, tokio::time::Instant::now());
+                    evaluator.retention = retention;
+                    next_prune = tokio::time::Instant::now();
                     match sync_availability(&mut evaluator, &freshness, &mut previous, &change_tx).await {
                         Ok(recovered) => {
                             let _ = reply.send(Ok(()));
@@ -2007,6 +2074,74 @@ mod tests {
         db.close().await;
         drop(terminal);
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn retention_rounds_skip_outages_survive_transient_failures_and_stop_on_ownership_loss() {
+        let (dir, terminal, db, _, _, _, mut evaluator) =
+            outage_fixture("alarm-retention-runtime").await;
+        evaluator = evaluator.with_retention(RetentionLimit::Days(1));
+        for active in [true, false, true, false] {
+            evaluator.input(flag(active)).await.unwrap();
+        }
+        let far = wall_ms() + 10 * 86_400_000;
+        let count = |db: Arc<AlarmDb>| async move { db.events().await.unwrap().len() };
+        let before = count(db.clone()).await;
+
+        // A transient failure is logged and retried at the next round; the
+        // Engine goes on and no outage starts.
+        db.execute_for_test(FAIL_WRITES).await;
+        assert_eq!(
+            evaluator.prune_history_at(far, 1).await.unwrap(),
+            PRUNE_INTERVAL
+        );
+        assert_eq!(evaluator.history_failure(), None);
+        assert_eq!(count(db.clone()).await, before);
+
+        // While the history is unwritable no deletion is tried.
+        evaluator.input(flag(true)).await.unwrap();
+        assert!(evaluator.history_failure().is_some());
+        db.execute_for_test(HEAL_WRITES).await;
+        assert_eq!(
+            evaluator.prune_history_at(far, 1).await.unwrap(),
+            PRUNE_INTERVAL
+        );
+        assert_eq!(count(db.clone()).await, before);
+        assert!(evaluator.recover_history().await.unwrap());
+        let recovered = count(db.clone()).await;
+
+        // A full batch continues 5 s later, the rest returns to hourly.
+        assert_eq!(
+            evaluator.prune_history_at(far, 1).await.unwrap(),
+            PRUNE_CONTINUE
+        );
+        assert_eq!(count(db.clone()).await, recovered - 1);
+        assert_eq!(
+            evaluator.prune_history_at(far, 10_000).await.unwrap(),
+            PRUNE_INTERVAL
+        );
+        let kept = count(db.clone()).await;
+        assert!(kept < recovered - 1);
+        // Within the limit nothing more goes.
+        assert_eq!(
+            evaluator.prune_history_at(wall_ms(), 10_000).await.unwrap(),
+            PRUNE_INTERVAL
+        );
+
+        // Lost ownership stops the Engine like an event write does.
+        db.execute_for_test("UPDATE session SET generation = generation + 1")
+            .await;
+        assert!(matches!(
+            evaluator.prune_history_at(far, 10_000).await,
+            Err(AlarmRuntimeError::Db(AlarmDbError::InvalidRow))
+        ));
+        assert_eq!(count(db.clone()).await, kept);
+        drop(evaluator);
+        drop(terminal);
+        if let Ok(db) = Arc::try_unwrap(db) {
+            db.close().await;
+        }
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[tokio::test]

@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+use crate::alarm_db::RetentionLimit;
 use crate::alarm_runtime::FreshnessConfig;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -30,6 +31,16 @@ impl Default for RetentionSettings {
             kind: RetentionKind::Days,
             days: 365,
             count: 1_000_000,
+        }
+    }
+}
+
+impl RetentionSettings {
+    /// The limit the Engine deletes by: only the selected kind applies.
+    pub fn limit(&self) -> RetentionLimit {
+        match self.kind {
+            RetentionKind::Days => RetentionLimit::Days(self.days),
+            RetentionKind::Count => RetentionLimit::Count(self.count),
         }
     }
 }

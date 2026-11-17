@@ -17,6 +17,10 @@ use sqlx::{Row, SqlitePool};
 use crate::alarm_terminal::{ActiveAlarmSession, AlarmTerminal, TerminalError};
 use crate::durable;
 
+mod retention;
+
+pub use retention::{PruneOutcome, RetentionLimit, RetentionStatus};
+
 const FORMAT: i64 = 1;
 const END_EVENT_KIND: &str = "ended";
 
