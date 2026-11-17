@@ -103,6 +103,113 @@ async fn open_applies_banto_migrations_once_and_starts_without_a_session() {
 }
 
 #[tokio::test]
+async fn opening_a_v7_0_db_keeps_its_audit_rows_and_scopes_them_by_record() {
+    // An auth DB written by the Banto v7.0.0 build: migrations up to 0008.
+    let db = TempDb::new();
+    {
+        let options = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(db.path())
+            .create_if_missing(true);
+        let pool = sqlx::SqlitePool::connect_with(options).await.unwrap();
+        let mut migrator = sqlx::migrate::Migrator::new(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations-sqlite"),
+        )
+        .await
+        .unwrap();
+        let old: Vec<_> = migrator
+            .migrations
+            .iter()
+            .filter(|m| m.version <= 8)
+            .cloned()
+            .collect();
+        migrator.migrations = old.into();
+        migrator.run(&pool).await.unwrap();
+        for (resource, entity, detail) in [
+            ("users", Some("7"), None),
+            ("users", Some("7"), Some(r#"{"changes":["role"]}"#)),
+            (
+                "attachments",
+                Some("a1"),
+                Some(r#"{"parentResource":"users","parentId":"7"}"#),
+            ),
+            // Only one parent key, or broken JSON: the row keeps its own scope.
+            (
+                "attachments",
+                Some("a2"),
+                Some(r#"{"parentResource":"users"}"#),
+            ),
+            ("settings", None, Some("{not json")),
+        ] {
+            sqlx::query(
+                "INSERT INTO audit_log (action, resource, entity_id, detail, origin) \
+                 VALUES ('update', ?, ?, ?, 'tauri')",
+            )
+            .bind(resource)
+            .bind(entity)
+            .bind(detail)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+        pool.close().await;
+    }
+
+    let auth = HostAuth::open(db.path()).await.unwrap();
+    let applied: Vec<i64> =
+        sqlx::query_scalar("SELECT version FROM _sqlx_migrations ORDER BY version")
+            .fetch_all(&db.raw().await)
+            .await
+            .unwrap();
+    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10]);
+
+    let scoped = |field: &str, value: &str| banto_core::FilterState {
+        field: field.to_string(),
+        op: banto_core::FilterOp::Eq,
+        value: serde_json::json!(value),
+    };
+    let all = auth
+        .audit()
+        .list(banto_core::ListParams::default())
+        .await
+        .unwrap();
+    assert_eq!(all.total_count, 5);
+    let user_seven = auth
+        .audit()
+        .list(banto_core::ListParams {
+            filters: vec![scoped("recordResource", "users"), scoped("recordId", "7")],
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    let mut entities: Vec<_> = user_seven
+        .rows
+        .iter()
+        .map(|row| (row.resource.as_str(), row.entity_id.as_deref()))
+        .collect();
+    entities.sort();
+    assert_eq!(
+        entities,
+        [
+            ("attachments", Some("a1")),
+            ("users", Some("7")),
+            ("users", Some("7"))
+        ]
+    );
+    let a2 = auth
+        .audit()
+        .list(banto_core::ListParams {
+            filters: vec![
+                scoped("recordResource", "attachments"),
+                scoped("recordId", "a2"),
+            ],
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(a2.total_count, 1);
+}
+
+#[tokio::test]
 async fn login_installs_an_account_session_bound_to_the_user_id() {
     let (db, auth, admin) = with_admin().await;
     assert_eq!(
