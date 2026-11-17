@@ -4,6 +4,25 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## フロー図 段階3 警報（PR #215〜#229、2026-11-14〜17）
+
+#215で実装履歴へ#162〜#214を追記した。[段階3 警報の設計](../design/runtime/alarm-stage3-design.md)（#216）を2026-11-14にユーザーが承認し、§9の確認事項（保存したProjectの定義で評価、ACKは運用ではAdminのみ、severity 3段、保持の上限とブザー音は端末設定、PLC判定はPLCのbitだけ、ackMode 4種、定義の変更で未確認の回は「未確認のまま終了」、書込み失敗の待ち行列は作らない）に沿って、評価は製品hostに暫定で置いた。schemaVersionは0.37.0のまま。
+
+- 3-A（#217）: 入出力を持たない状態機械`crates/scada-alarm`。`Engine::step`が次の状態とイベントを`Transition`で返し、hostはDBに書けたら`commit`する。全遷移の正本は`examples/alarm-cases.json`。
+- 3-B（#218）: Project直下の任意の`alarms`（しきい値HH／H／L／LLとbitの定義、点滅の設定）をschema・Rust・TSで揃え、「プロジェクト設定」の「警報の設定」で編集する。`scada-model`は`scada-alarm`に依存しない。
+- 3-C1（#219）: デスクトップ版の開く・保存をhostのcommand（`project_open`・`project_save`）へ移した。webviewはパスを持たず、hostが振る`fileId`で指す。Tauri実機で新規保存・上書き・名前を付けて保存を確認した。
+- 3-C2a（#220）: 端末の排他lockと永続世代番号、Projectごとの警報SQLite（適用済み定義・イベント・最後の状態・session）と、強制終了後の復元計画。
+- 3-C2b（#221）: 専用のHub購読から値・接続状態を評価し、タイマー満了・ACKを同じ処理列に入れる。DBに確定してからEngineを進める。
+- 3-C2c（#222）: 保存済みファイルからの適用、同じProjectでの更新と別Projectへの切替、起動時の復元、Tauri IPC（`alarm_snapshot`・`alarm_changed`・`alarm_ack`・`alarm_history`）。画面は世代番号と変更連番で通知を突き合わせる。
+- 3-C3a（#224）: 警報DBの書込み失敗。評価は続け、書けなかった件数だけ数え、ACK・適用を拒否し、5秒ごとに再試行して回復時に`unrecordedPeriod`を記録する。2026-11-16に実Hub 106タグでDBをロックして確認した。
+- 3-C3b（#225）: RESTの読み直し（10秒ごと・期限5秒）で購読の止まりを疑ったら張り直し、読み直しの失敗30秒か張り直しの3回連続失敗で「受信の途絶」にする。
+- 3-D1（#226、[仕様](../design/graphics/alarm-badge.md)）: 画面直下の小札`alarmBadge`と、snapshotから表示状態を導く純関数`alarm-view.ts`。ブラウザ版のe2eはモックの警報feedで状態を変える。
+- 3-D2（#227、[仕様](../design/graphics/alarm-banner.md)）: 最新の警報の帯`alarmBanner`。未確認→severity→同じ定義の上位の限界→新しい順で1件を選ぶ。上位の限界は推移律を保つため比較関数でなく候補の絞り込みで扱う。
+- 3-E1（#228、[仕様](../design/graphics/alarm-list.md)）: アラーム一覧の窓（現在・履歴タブ、ACK・すべてACK）と、navButtonの行き先`alarmList`。
+- 3-E2（#229）: ブザー。鳴らす判断はscada-host、再生はWindowsの`PlaySoundW`でコードで生成したビープ。`alarm_buzzer_silence`とnavButtonの行き先`silenceBuzzer`を足し、工程図サンプルの運転表示のヘッダーに帯・一覧・ブザー停止を置いた。
+
+レビューの指摘は各PRで修正した。#228はPRの会話欄に来たP2 2件を見落としてマージしたため、#229で直した。Tauri実機・実Hubは3-C1と3-C3aを除いて未確認で、ブザーの実際の音・音量はオーナー確認待ち。端末設定（読み直しの周期・保持の上限・音）の画面と音のファイルの変更は後続とした。
+
 ## フロー図 段階2・画面上のbit表示・I/O一覧CSV（PR #205〜#214、2026-11-13〜14）
 
 [差分文書](../design/editor/flow-diagram-gap-2026-11-12.md)§5.4の段階2（画面の枠と画面切替）の詳細計画（#205）を2026-11-13にユーザーが案のまま承認し、次の順に実装した。schemaVersionは据え置いた。
