@@ -177,3 +177,37 @@ export function projectFileReasonText(reason: string): string {
       return `ファイルの読み書きに失敗しました（${reason}）。`;
   }
 }
+
+/** Why `alarm_apply` (or the apply after a save) failed, for the toast:
+ * the cause in words, then the host's code in brackets. The codes come from
+ * `src-tauri/src/alarm.rs` (`reason`, `apply_failure_reason`, `hub_context`,
+ * `authorized_user`); an unknown code is shown as it is. */
+export function alarmApplyReasonText(reason: string): string {
+  const cause = ALARM_APPLY_REASONS[reason];
+  return cause ? `${cause}（${reason}）` : `理由: ${reason}`;
+}
+
+const ALARM_APPLY_REASONS: Readonly<Record<string, string>> = {
+  historyUnwritable:
+    "警報の履歴DBに書き込めない間は適用できません。書込みの回復を待ってから再度適用してください",
+  alarmDbUnavailable: "警報DBを開けません",
+  invalidProject: "Projectの警報定義を読み取れません",
+  engineUnavailable: "警報Engineが応答しません",
+  engineStopped: "警報Engineが停止しています",
+  terminalStateFailed: "この端末の監視先の記録を更新できませんでした",
+  // Any `TerminalError` (in use, unreadable, corrupt, lost): do not name one.
+  terminalUnavailable: "この端末の警報設定・監視状態を利用できません",
+  alarmUnavailable: "この端末では警報Engineを使えません",
+  noDataDir: "警報Engineの保存先がありません",
+  noHub: "Hubが設定されていません",
+  hubUnavailable: "Hubの設定を読み取れません",
+  endpointChanged: "Hubの接続先が変わりました",
+  notApplied: "監視中のProjectがありません",
+  exiting: "アプリの終了処理中です",
+  unknownFileId: "Projectファイルを開き直すか保存し直してください",
+  unauthorized: "警報定義の適用には Admin でのログインが必要です",
+  forbidden: "警報定義の適用は Admin だけが行えます",
+  auth_unavailable: "認証を確かめられません",
+  auth_failed: "認証を確かめられません",
+  auth_phase_unavailable: "認証の切替中です",
+};
