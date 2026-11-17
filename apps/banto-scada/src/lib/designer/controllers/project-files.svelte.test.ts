@@ -3,10 +3,11 @@ import { createProjectFilesController } from "./project-files.svelte";
 import { createProject } from "../../new-project";
 import { serializeProject, type Project } from "../../project";
 import { AssetStore } from "../../image-assets";
-import type {
-  AlarmApplyResult,
-  ProjectFileService,
-  SaveProjectFileRequest,
+import {
+  ProjectFileError,
+  type AlarmApplyResult,
+  type ProjectFileService,
+  type SaveProjectFileRequest,
 } from "../../project-file-service";
 
 /** A host whose adopt behaves as App's: it calls `adopted` on the controller. */
@@ -310,6 +311,56 @@ describe("project files on the desktop", () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("says why an apply after a save failed, with the host's code", async () => {
+    const { controller, reports } = setup({
+      open: async () => null,
+      save: async () => ({
+        fileId: 12,
+        fileName: "plant.json",
+        apply: { status: "failed", reason: "historyUnwritable" },
+      }),
+    });
+    controller.save();
+    await settle();
+    expect(reports.at(-1)).toEqual({
+      kind: "error",
+      text: "Projectは保存しましたが、警報定義を適用できませんでした。警報の履歴DBに書き込めない間は適用できません。書込みの回復を待ってから再度適用してください（historyUnwritable）。",
+    });
+  });
+
+  it("says why an explicit apply was refused, not that a file failed", async () => {
+    const { controller, reports } = setup({
+      open: async () => null,
+      save: async () => ({ fileId: 12, fileName: "plant.json" }),
+      apply: async () => {
+        throw new ProjectFileError("unauthorized");
+      },
+    });
+    controller.save();
+    await settle();
+    await controller.applyAlarm();
+    expect(reports.at(-1)).toEqual({
+      kind: "error",
+      text: "警報定義を適用できませんでした。警報定義の適用には Admin でのログインが必要です（unauthorized）。",
+    });
+  });
+
+  it("shows an unknown apply code as it is", async () => {
+    const { controller, reports } = setup({
+      open: async () => null,
+      save: async () => ({
+        fileId: 12,
+        fileName: "plant.json",
+        apply: { status: "failed", reason: "somethingNew" },
+      }),
+    });
+    controller.save();
+    await settle();
+    expect(reports.at(-1)?.text).toBe(
+      "Projectは保存しましたが、警報定義を適用できませんでした。理由: somethingNew。",
+    );
   });
 });
 

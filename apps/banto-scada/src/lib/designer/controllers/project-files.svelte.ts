@@ -5,10 +5,19 @@ import { readProjectFile, writeProjectPackage } from "../../project-package";
 import { serializeProject, type Project } from "../../project";
 import { projectContent } from "../../save-state";
 import { createProject } from "../../new-project";
-import type {
-  AlarmApplyResult,
-  ProjectFileService,
+import {
+  alarmApplyReasonText,
+  ProjectFileError,
+  type AlarmApplyResult,
+  type ProjectFileService,
 } from "../../project-file-service";
+
+/** The cause of a thrown apply refusal, in words (see `alarmApplyReasonText`). */
+function applyErrorText(error: unknown): string {
+  return error instanceof ProjectFileError
+    ? alarmApplyReasonText(error.reason)
+    : String(error);
+}
 
 export type ProjectSource = "sample" | "file" | "new";
 export interface ProjectReadTarget {
@@ -289,7 +298,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     if (result.status === "failed") {
       host.report(
         "error",
-        `Projectは保存しましたが、警報定義を適用できませんでした（${result.reason}）。`,
+        `Projectは保存しましたが、警報定義を適用できませんでした。${alarmApplyReasonText(result.reason)}。`,
       );
       return;
     }
@@ -340,7 +349,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       } catch (error) {
         host.report(
           "error",
-          `警報定義を適用できませんでした（${String(error)}）。`,
+          `警報定義を適用できませんでした。${applyErrorText(error)}。`,
         );
       }
       return;
@@ -373,7 +382,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     } catch (error) {
       host.report(
         "error",
-        `Projectは保存しましたが、警報定義を適用できませんでした（${String(error)}）。`,
+        `Projectは保存しましたが、警報定義を適用できませんでした。${applyErrorText(error)}。`,
       );
     }
   }
@@ -395,7 +404,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     } catch (error) {
       host.report(
         "error",
-        `警報定義を適用できませんでした（${String(error)}）。`,
+        `警報定義を適用できませんでした。${applyErrorText(error)}。`,
       );
     }
   }
