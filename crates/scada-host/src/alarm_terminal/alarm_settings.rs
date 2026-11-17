@@ -1,10 +1,11 @@
 //! The `alarm` field of the terminal settings (terminal settings design §2):
-//! history retention and the reread values, with their ranges and relations.
-//! Sound comes with T2.
+//! history retention and the reread values, with their ranges and relations,
+//! and the stored buzzer sound (§5, checked in `alarm_sound`).
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
+use super::alarm_sound::SoundSetting;
 use crate::alarm_db::RetentionLimit;
 use crate::alarm_runtime::FreshnessConfig;
 
@@ -123,6 +124,17 @@ pub enum AlarmSettingsWarning {
     RetentionDays,
     RetentionCount,
     Reread,
+    Sound,
+}
+
+/// The `alarm` field as written: the values `alarm_settings_set` saves and
+/// the sound, which only `alarm_sound_import`/`reset` change.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct SavedAlarm {
+    #[serde(flatten)]
+    pub settings: AlarmSettings,
+    pub sound: SoundSetting,
 }
 
 /// The `alarm` field as stored. An out-of-range value (a hand edit) is not
@@ -134,6 +146,44 @@ pub enum AlarmSettingsWarning {
 pub(super) struct StoredAlarm {
     retention: StoredRetention,
     reread: StoredReread,
+    sound: StoredSound,
+}
+
+/// Read loosely like the numbers: an unknown kind or a value no import could
+/// have written resets the sound to the default with a warning.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct StoredSound {
+    kind: String,
+    name: Option<String>,
+    size: Option<i64>,
+    hash: Option<String>,
+}
+
+impl Default for StoredSound {
+    fn default() -> Self {
+        Self {
+            kind: "default".into(),
+            name: None,
+            size: None,
+            hash: None,
+        }
+    }
+}
+
+impl StoredSound {
+    fn setting(self) -> Option<SoundSetting> {
+        let setting = match (self.kind.as_str(), self.name, self.size, self.hash) {
+            ("default", None, None, None) => SoundSetting::Default,
+            ("custom", Some(name), Some(size), Some(hash)) => SoundSetting::Custom {
+                name,
+                size: u64::try_from(size).ok()?,
+                hash,
+            },
+            _ => return None,
+        };
+        setting.is_valid().then_some(setting)
+    }
 }
 
 #[derive(Deserialize)]
@@ -184,8 +234,8 @@ fn ranged(value: i64, range: (u32, u32)) -> Option<u32> {
 
 impl StoredAlarm {
     /// Reset each related group to its defaults: the retention kind, days and
-    /// count independently, the four reread values together.
-    pub(super) fn normalize(self) -> (AlarmSettings, Vec<AlarmSettingsWarning>) {
+    /// count independently, the four reread values together, the sound alone.
+    pub(super) fn normalize(self) -> (SavedAlarm, Vec<AlarmSettingsWarning>) {
         let defaults = AlarmSettings::default();
         let mut warnings = Vec::new();
         let kind = match self.retention.kind.as_str() {
@@ -229,10 +279,17 @@ impl StoredAlarm {
             warnings.push(AlarmSettingsWarning::Reread);
             defaults.reread
         });
+        let sound = self.sound.setting().unwrap_or_else(|| {
+            warnings.push(AlarmSettingsWarning::Sound);
+            SoundSetting::Default
+        });
         (
-            AlarmSettings {
-                retention: RetentionSettings { kind, days, count },
-                reread,
+            SavedAlarm {
+                settings: AlarmSettings {
+                    retention: RetentionSettings { kind, days, count },
+                    reread,
+                },
+                sound,
             },
             warnings,
         )
@@ -244,9 +301,51 @@ mod tests {
     use super::*;
 
     fn load(json: serde_json::Value) -> (AlarmSettings, Vec<AlarmSettingsWarning>) {
-        serde_json::from_value::<StoredAlarm>(json)
+        let (saved, warnings) = serde_json::from_value::<StoredAlarm>(json)
             .unwrap()
-            .normalize()
+            .normalize();
+        (saved.settings, warnings)
+    }
+
+    fn load_sound(sound: serde_json::Value) -> (SoundSetting, Vec<AlarmSettingsWarning>) {
+        let (saved, warnings) =
+            serde_json::from_value::<StoredAlarm>(serde_json::json!({ "sound": sound }))
+                .unwrap()
+                .normalize();
+        (saved.sound, warnings)
+    }
+
+    #[test]
+    fn a_sound_no_import_could_write_resets_to_the_default() {
+        let hash = "a".repeat(64);
+        let custom =
+            serde_json::json!({"kind": "custom", "name": "a.wav", "size": 10, "hash": hash});
+        assert_eq!(
+            load_sound(custom),
+            (
+                SoundSetting::Custom {
+                    name: "a.wav".into(),
+                    size: 10,
+                    hash: hash.clone(),
+                },
+                vec![]
+            )
+        );
+        for sound in [
+            serde_json::json!({"kind": "chime"}),
+            serde_json::json!({"kind": "custom", "name": "a.wav", "size": 10}),
+            serde_json::json!({"kind": "custom", "name": "a.wav", "size": -1, "hash": hash}),
+            serde_json::json!({"kind": "custom", "name": "a.wav", "size": 2_000_000, "hash": hash}),
+            serde_json::json!({"kind": "custom", "name": "", "size": 10, "hash": hash}),
+            serde_json::json!({"kind": "custom", "name": "a.wav", "size": 10, "hash": "XYZ"}),
+            serde_json::json!({"kind": "default", "name": "a.wav"}),
+        ] {
+            assert_eq!(
+                load_sound(sound.clone()),
+                (SoundSetting::Default, vec![AlarmSettingsWarning::Sound]),
+                "{sound}"
+            );
+        }
     }
 
     fn reread(interval: i64, timeout: i64, limit: i64, failures: i64) -> serde_json::Value {
@@ -380,10 +479,11 @@ mod tests {
 
     #[test]
     fn the_wire_names_follow_the_design() {
-        let json = serde_json::to_value(AlarmSettings::default()).unwrap();
+        let json = serde_json::to_value(SavedAlarm::default()).unwrap();
         assert_eq!(
             json,
             serde_json::json!({
+                "sound": {"kind": "default"},
                 "retention": {"kind": "days", "days": 365, "count": 1_000_000},
                 "reread": {
                     "intervalSec": 10,
@@ -396,5 +496,10 @@ mod tests {
         let (settings, warnings) = load(json);
         assert!(warnings.is_empty());
         assert_eq!(settings, AlarmSettings::default());
+        // The command argument of `alarm_settings_set` has no sound.
+        assert!(serde_json::to_value(AlarmSettings::default())
+            .unwrap()
+            .get("sound")
+            .is_none());
     }
 }

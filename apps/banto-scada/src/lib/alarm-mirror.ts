@@ -63,11 +63,21 @@ export interface AlarmSnapshot {
   /** The terminal buzzer (design §6). The desktop host always sends it;
    * absent reads as `quiet`. */
   readonly buzzer?: AlarmBuzzerStatus;
+  /** The buzzer sound (terminal settings design §5). The desktop host
+   * always sends it; absent reads as the default beep. */
+  readonly buzzerSound?: AlarmBuzzerSound;
 }
 
 /** `ringing`: an unacked occurrence sounds; `silenced`: stopped on this
  * terminal until a new or reoccurred one; `quiet`: nothing to sound. */
 export type AlarmBuzzerStatus = "ringing" | "silenced" | "quiet";
+
+/** The saved sound kind, and why the default beep plays instead of the
+ * imported sound (`null` when it does not). */
+export interface AlarmBuzzerSound {
+  readonly kind: "default" | "custom";
+  readonly fallback: "fileUnreadable" | "hashMismatch" | "invalidWav" | null;
+}
 
 export interface AlarmChange {
   readonly session: { readonly id: string; readonly generation: number };

@@ -13,11 +13,13 @@ use sqlx::{Connection, Row, SqliteConnection};
 use crate::durable;
 
 mod alarm_settings;
+pub mod alarm_sound;
 
-use alarm_settings::StoredAlarm;
 pub use alarm_settings::{
     AlarmSettings, AlarmSettingsWarning, RereadSettings, RetentionKind, RetentionSettings,
 };
+use alarm_settings::{SavedAlarm, StoredAlarm};
+pub use alarm_sound::{ResolvedSound, SoundFallback, SoundKind, SoundSetting, WavRejection};
 
 const SETTINGS_FILE: &str = "alarm-terminal.json";
 const LOCK_FILE: &str = "alarm-terminal.lock";
@@ -50,7 +52,7 @@ struct Settings {
     /// Read separately on open (`StoredAlarm`) so out-of-range values reset
     /// instead of making the file `Corrupt`.
     #[serde(skip_deserializing)]
-    alarm: AlarmSettings,
+    alarm: SavedAlarm,
     /// Groups reset to defaults on open; cleared by the next alarm settings save.
     #[serde(skip)]
     alarm_warnings: Vec<AlarmSettingsWarning>,
@@ -66,6 +68,8 @@ pub enum TerminalError {
     Exhausted,
     /// `set_alarm` was given a value outside its range or relation.
     InvalidSettings,
+    /// `import_sound` was given a WAV that fails the check (design §5).
+    InvalidSound(WavRejection),
 }
 
 /// One process owns alarm monitoring for this data directory until dropped.
@@ -74,6 +78,9 @@ pub struct AlarmTerminal {
     _lock: fs::File,
     settings: Mutex<Settings>,
     active_session: Mutex<Option<(String, Session)>>,
+    /// Held across a sound import or reset, so the file and the saved
+    /// setting of two of them cannot interleave.
+    sound: Mutex<()>,
 }
 
 /// A claim is released if the DB start fails or its future is cancelled.
@@ -149,7 +156,7 @@ impl AlarmTerminal {
                 pending_generation: None,
                 monitored: None,
                 switching: None,
-                alarm: AlarmSettings::default(),
+                alarm: SavedAlarm::default(),
                 alarm_warnings: Vec::new(),
             },
         };
@@ -158,6 +165,7 @@ impl AlarmTerminal {
             _lock: lock,
             settings: Mutex::new(settings),
             active_session: Mutex::new(None),
+            sound: Mutex::new(()),
         })
     }
 
@@ -274,7 +282,54 @@ impl AlarmTerminal {
         &self,
     ) -> Result<(AlarmSettings, Vec<AlarmSettingsWarning>), TerminalError> {
         let settings = self.settings.lock().map_err(|_| TerminalError::Corrupt)?;
-        Ok((settings.alarm, settings.alarm_warnings.clone()))
+        Ok((settings.alarm.settings, settings.alarm_warnings.clone()))
+    }
+
+    /// The saved buzzer sound setting.
+    pub fn sound_setting(&self) -> Result<SoundSetting, TerminalError> {
+        let settings = self.settings.lock().map_err(|_| TerminalError::Corrupt)?;
+        Ok(settings.alarm.sound.clone())
+    }
+
+    /// The sound to play now, from the saved setting and the file. Reads
+    /// the file: async callers run it on a blocking thread.
+    pub fn resolve_sound(&self) -> Result<ResolvedSound, TerminalError> {
+        Ok(alarm_sound::resolve(&self.data_dir, &self.sound_setting()?))
+    }
+
+    /// Import a WAV (design §5): check it, put the file in place, then save
+    /// the setting. A stop in between leaves a file the setting does not
+    /// name, which plays the beep. Synchronous durable writes.
+    pub fn import_sound(&self, name: &str, bytes: &[u8]) -> Result<ResolvedSound, TerminalError> {
+        alarm_sound::check_wav(bytes).map_err(TerminalError::InvalidSound)?;
+        let _sound = self.sound.lock().map_err(|_| TerminalError::Corrupt)?;
+        durable::replace(&self.data_dir.join(alarm_sound::SOUND_FILE), bytes)
+            .map_err(|_| TerminalError::Save)?;
+        let setting = alarm_sound::custom_setting(name, bytes);
+        self.save_sound(setting)?;
+        self.resolve_sound()
+    }
+
+    /// Back to the bundled beep: save the setting, then remove the file. A
+    /// file left behind is unused.
+    pub fn reset_sound(&self) -> Result<ResolvedSound, TerminalError> {
+        let _sound = self.sound.lock().map_err(|_| TerminalError::Corrupt)?;
+        self.save_sound(SoundSetting::Default)?;
+        let path = self.data_dir.join(alarm_sound::SOUND_FILE);
+        if let Err(error) = fs::remove_file(&path) {
+            if error.kind() != std::io::ErrorKind::NotFound {
+                eprintln!("alarm sound file not removed: {error}");
+            }
+        }
+        Ok(ResolvedSound::default_beep())
+    }
+
+    fn save_sound(&self, sound: SoundSetting) -> Result<(), TerminalError> {
+        self.save(|next| {
+            next.alarm.sound = sound;
+            next.alarm_warnings
+                .retain(|warning| *warning != AlarmSettingsWarning::Sound);
+        })
     }
 
     /// Save the alarm settings, refused unless every value is within its
@@ -286,7 +341,7 @@ impl AlarmTerminal {
             return Err(TerminalError::InvalidSettings);
         }
         self.save(|next| {
-            next.alarm = alarm;
+            next.alarm.settings = alarm;
             next.alarm_warnings.clear();
         })
     }
@@ -755,6 +810,92 @@ mod tests {
         let terminal = AlarmTerminal::open(&dir).await.unwrap();
         assert_eq!(terminal.alarm_settings().unwrap(), (alarm, vec![]));
         assert_eq!(terminal.reserve_generation().unwrap(), 3);
+        drop(terminal);
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn sound_import_places_the_file_then_saves_and_reset_saves_then_removes() {
+        let dir = temp_dir();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let file = dir.join(alarm_sound::SOUND_FILE);
+        let bytes = alarm_sound::tests::wav(16, 1, 8_000, 300);
+        // A refused WAV changes nothing.
+        let too_long = alarm_sound::tests::wav(8, 1, 8_000, 6_000);
+        assert_eq!(
+            terminal.import_sound("long.wav", &too_long),
+            Err(TerminalError::InvalidSound(WavRejection::TooLong))
+        );
+        assert!(!file.exists());
+        assert_eq!(terminal.sound_setting().unwrap(), SoundSetting::Default);
+
+        let resolved = terminal.import_sound("bell.wav", &bytes).unwrap();
+        assert_eq!(
+            (resolved.kind, resolved.fallback),
+            (SoundKind::Custom, None)
+        );
+        assert_eq!(resolved.wav.as_deref(), Some(bytes.as_slice()));
+        assert_eq!(fs::read(&file).unwrap(), bytes);
+        // Saving the other values keeps the sound, and it survives a reopen.
+        terminal.set_alarm(AlarmSettings::default()).unwrap();
+        drop(terminal);
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        assert!(matches!(
+            terminal.sound_setting().unwrap(),
+            SoundSetting::Custom { name, size, .. } if name == "bell.wav" && size == bytes.len() as u64
+        ));
+        assert_eq!(terminal.resolve_sound().unwrap().fallback, None);
+
+        // The file replaced or lost behind the settings: the beep, with a reason.
+        fs::write(&file, alarm_sound::tests::wav(8, 1, 8_000, 100)).unwrap();
+        assert_eq!(
+            terminal.resolve_sound().unwrap().fallback,
+            Some(SoundFallback::HashMismatch)
+        );
+        fs::remove_file(&file).unwrap();
+        let lost = terminal.resolve_sound().unwrap();
+        assert_eq!(
+            (lost.kind, lost.fallback, lost.wav),
+            (SoundKind::Custom, Some(SoundFallback::FileUnreadable), None)
+        );
+
+        terminal.import_sound("bell.wav", &bytes).unwrap();
+        assert_eq!(
+            terminal.reset_sound().unwrap(),
+            ResolvedSound::default_beep()
+        );
+        assert!(!file.exists());
+        assert_eq!(terminal.sound_setting().unwrap(), SoundSetting::Default);
+        // Reset without a file is fine too.
+        terminal.reset_sound().unwrap();
+        drop(terminal);
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        assert_eq!(terminal.sound_setting().unwrap(), SoundSetting::Default);
+        drop(terminal);
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_hand_edited_sound_resets_with_a_warning_until_saved() {
+        let dir = temp_dir();
+        write_settings(
+            &dir,
+            Some(
+                serde_json::json!({"sound": {"kind": "custom", "name": "x.wav", "size": 1, "hash": "bad"}}),
+            ),
+        );
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        assert_eq!(terminal.sound_setting().unwrap(), SoundSetting::Default);
+        assert_eq!(
+            terminal.alarm_settings().unwrap().1,
+            vec![AlarmSettingsWarning::Sound]
+        );
+        assert_eq!(
+            terminal.resolve_sound().unwrap(),
+            ResolvedSound::default_beep()
+        );
+        terminal.reset_sound().unwrap();
+        assert!(terminal.alarm_settings().unwrap().1.is_empty());
         drop(terminal);
         fs::remove_dir_all(dir).unwrap();
     }

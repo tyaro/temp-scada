@@ -11,7 +11,9 @@ use serde::Serialize;
 use tokio::sync::{broadcast, Mutex};
 use tokio::task::JoinHandle;
 
-use crate::alarm_buzzer::{BuzzerDriver, BuzzerPlayer, BuzzerStatus, LogBuzzerPlayer};
+use crate::alarm_buzzer::{
+    BuzzerDriver, BuzzerPlayer, BuzzerRinging, BuzzerStatus, LogBuzzerPlayer,
+};
 use crate::alarm_db::{
     plan_apply, plan_restore, AlarmDb, AlarmDbError, AppliedDefinitions, EventRead,
     RetentionStatus, UnackedOccurrence,
@@ -22,7 +24,7 @@ use crate::alarm_runtime::{
 };
 use crate::alarm_terminal::{
     AlarmSettings, AlarmSettingsWarning, AlarmTerminal, MonitoredProject, PendingSwitch,
-    TerminalError,
+    ResolvedSound, SoundFallback, SoundKind, SoundSetting, TerminalError, WavRejection,
 };
 
 #[derive(Debug)]
@@ -38,6 +40,10 @@ pub enum AlarmServiceError {
     ConfirmationRequired(Vec<UnackedOccurrence>),
     /// An alarm terminal setting is outside its range or relation.
     InvalidSettings,
+    /// The WAV to import fails the check (terminal settings design §5).
+    InvalidSound(WavRejection),
+    /// A test sound is refused while the buzzer rings (design §5).
+    BuzzerRinging,
 }
 
 impl From<AlarmDbError> for AlarmServiceError {
@@ -52,6 +58,7 @@ impl From<TerminalError> for AlarmServiceError {
     fn from(error: TerminalError) -> Self {
         match error {
             TerminalError::InvalidSettings => Self::InvalidSettings,
+            TerminalError::InvalidSound(rejection) => Self::InvalidSound(rejection),
             other => Self::Terminal(other),
         }
     }
@@ -72,12 +79,17 @@ impl From<AlarmRuntimeError> for AlarmServiceError {
     }
 }
 
-/// `alarm_settings_get` (terminal settings design §6). The sound comes with T2.
+/// `alarm_settings_get` (terminal settings design §6).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AlarmSettingsView {
     #[serde(flatten)]
     pub settings: AlarmSettings,
+    /// The saved sound: `default`, or `custom` with the imported file's
+    /// original name, size and hash (display only; no path).
+    pub sound: SoundSetting,
+    /// Why the saved sound is not played now (the beep plays instead).
+    pub sound_fallback: Option<SoundFallback>,
     /// Groups reset to defaults when the terminal settings were read.
     pub warnings: Vec<AlarmSettingsWarning>,
     /// The monitored Project's alarm DB; `None` without a monitored Project
@@ -102,6 +114,26 @@ pub struct AlarmSnapshot {
     pub reread_failure: Option<crate::alarm_runtime::RereadFailure>,
     /// The terminal buzzer (design §6): ringing, silenced or quiet.
     pub buzzer: BuzzerStatus,
+    /// The sound the buzzer plays (terminal settings design §5).
+    pub buzzer_sound: BuzzerSound,
+}
+
+/// `alarm_snapshot.buzzerSound`: the saved kind and why the beep plays
+/// instead of it, if it does.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BuzzerSound {
+    pub kind: SoundKind,
+    pub fallback: Option<SoundFallback>,
+}
+
+impl From<&ResolvedSound> for BuzzerSound {
+    fn from(sound: &ResolvedSound) -> Self {
+        Self {
+            kind: sound.kind,
+            fallback: sound.fallback,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -213,6 +245,13 @@ pub struct AlarmService {
     changes: broadcast::Sender<AlarmChange>,
     lagged: broadcast::Sender<()>,
     buzzer: Arc<BuzzerDriver>,
+    /// The sound handed to the buzzer; set together with the player so the
+    /// snapshot names what plays.
+    buzzer_sound: std::sync::Mutex<BuzzerSound>,
+    /// Serializes a whole sound change (persisting and handing the sound to
+    /// the player), so an earlier change cannot reinstall its sound after a
+    /// later one.
+    sound_change: Mutex<()>,
 }
 
 impl AlarmService {
@@ -232,6 +271,13 @@ impl AlarmService {
         // A buzzer status change is not an Engine change: viewers refetch the
         // snapshot as for `lagged`, which keeps the generation/seq rules intact.
         let buzzer = Arc::new(BuzzerDriver::new(player, lagged.clone()));
+        let sound = {
+            let terminal = terminal.clone();
+            tokio::task::spawn_blocking(move || terminal.resolve_sound())
+                .await
+                .map_err(|_| AlarmServiceError::Terminal(TerminalError::Unreadable))??
+        };
+        buzzer.set_sound(sound.wav.clone());
         let service = Self {
             terminal,
             active: Mutex::new(Active {
@@ -247,6 +293,8 @@ impl AlarmService {
             changes,
             lagged,
             buzzer,
+            buzzer_sound: std::sync::Mutex::new(BuzzerSound::from(&sound)),
+            sound_change: Mutex::new(()),
         };
         if service.recover_switch().await.is_err() {
             service.active.lock().await.reason = "switchRecoveryFailed".into();
@@ -871,6 +919,7 @@ impl AlarmService {
                     history_write_failure: None,
                     reread_failure: None,
                     buzzer: self.buzzer.status(),
+                    buzzer_sound: self.buzzer_sound(),
                 },
                 None,
             ));
@@ -925,6 +974,7 @@ impl AlarmService {
                 history_write_failure,
                 reread_failure,
                 buzzer: self.buzzer.status(),
+                buzzer_sound: self.buzzer_sound(),
             },
             applied,
         ))
@@ -1002,6 +1052,8 @@ impl AlarmService {
         let (settings, warnings) = self.terminal.alarm_settings()?;
         Ok(AlarmSettingsView {
             settings,
+            sound: self.terminal.sound_setting()?,
+            sound_fallback: self.buzzer_sound().fallback,
             warnings,
             retention_status: self.retention_status().await,
         })
@@ -1054,6 +1106,63 @@ impl AlarmService {
         self.alarm_settings().await
     }
 
+    /// Import a WAV as the buzzer sound (terminal settings design §5); the
+    /// caller has authorized the change and read the file the user picked.
+    /// The file is checked and put in place before the setting is saved.
+    pub async fn import_sound(
+        &self,
+        name: String,
+        bytes: Vec<u8>,
+    ) -> Result<AlarmSettingsView, AlarmServiceError> {
+        let terminal = self.terminal.clone();
+        self.change_sound(move || terminal.import_sound(&name, &bytes))
+            .await
+    }
+
+    /// Back to the bundled beep: the setting is saved, then the file removed.
+    pub async fn reset_sound(&self) -> Result<AlarmSettingsView, AlarmServiceError> {
+        let terminal = self.terminal.clone();
+        self.change_sound(move || terminal.reset_sound()).await
+    }
+
+    async fn change_sound(
+        &self,
+        change: impl FnOnce() -> Result<ResolvedSound, TerminalError> + Send + 'static,
+    ) -> Result<AlarmSettingsView, AlarmServiceError> {
+        let serial = self.sound_change.lock().await;
+        let sound = tokio::task::spawn_blocking(change)
+            .await
+            .map_err(|_| AlarmServiceError::Terminal(TerminalError::Save))??;
+        self.use_sound(&sound);
+        drop(serial);
+        let _ = self.lagged.send(());
+        self.alarm_settings().await
+    }
+
+    fn use_sound(&self, sound: &ResolvedSound) {
+        let mut current = self
+            .buzzer_sound
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        self.buzzer.set_sound(sound.wav.clone());
+        *current = BuzzerSound::from(sound);
+    }
+
+    fn buzzer_sound(&self) -> BuzzerSound {
+        *self
+            .buzzer_sound
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// Play the current sound once (terminal settings design §5). Needs no
+    /// authorization; refused while the buzzer rings.
+    pub fn test_sound(&self) -> Result<(), AlarmServiceError> {
+        self.buzzer
+            .play_test()
+            .map_err(|BuzzerRinging| AlarmServiceError::BuzzerRinging)
+    }
+
     /// Silence this terminal's buzzer (design §6). Not an ACK, and needs no
     /// authorization or Engine lock: a new or reoccurred unacked occurrence
     /// sounds again.
@@ -1103,6 +1212,8 @@ fn stopped_reason(error: &AlarmServiceError) -> &'static str {
         AlarmServiceError::EngineStopped => "engineStopped",
         AlarmServiceError::ConfirmationRequired(_) => "confirmationRequired",
         AlarmServiceError::InvalidSettings => "invalidSettings",
+        AlarmServiceError::InvalidSound(_) => "invalidSound",
+        AlarmServiceError::BuzzerRinging => "buzzerRinging",
     }
 }
 
@@ -1307,6 +1418,78 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn sound_import_and_reset_reach_the_player_and_the_snapshot() {
+        use crate::alarm_terminal::alarm_sound::{tests::wav, SOUND_FILE};
+        #[derive(Default)]
+        struct Sounds(std::sync::Mutex<Vec<Option<usize>>>);
+        impl BuzzerPlayer for Sounds {
+            fn play_loop(&self) {}
+            fn play_once(&self) {}
+            fn stop(&self) {}
+            fn set_sound(&self, wav: Option<Arc<[u8]>>) {
+                self.0.lock().unwrap().push(wav.map(|wav| wav.len()));
+            }
+        }
+        let dir = std::env::temp_dir().join(format!("alarm-sound-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let sounds = Arc::new(Sounds::default());
+        let service = AlarmService::open_with_buzzer(&dir, sounds.clone())
+            .await
+            .unwrap();
+        let beep = BuzzerSound {
+            kind: SoundKind::Default,
+            fallback: None,
+        };
+        assert_eq!(service.snapshot().await.unwrap().buzzer_sound, beep);
+        let mut notified = service.lagged();
+        assert!(matches!(
+            service
+                .import_sound("x.wav".into(), b"not a wav".to_vec())
+                .await,
+            Err(AlarmServiceError::InvalidSound(WavRejection::NotWav))
+        ));
+        let bytes = wav(8, 1, 8_000, 100);
+        let view = service
+            .import_sound("bell.wav".into(), bytes.clone())
+            .await
+            .unwrap();
+        assert!(matches!(view.sound, SoundSetting::Custom { ref name, .. } if name == "bell.wav"));
+        assert_eq!(view.sound_fallback, None);
+        assert!(notified.try_recv().is_ok());
+        let custom = BuzzerSound {
+            kind: SoundKind::Custom,
+            fallback: None,
+        };
+        assert_eq!(service.snapshot().await.unwrap().buzzer_sound, custom);
+        service.test_sound().unwrap();
+        // Opened again with the file replaced: the beep, with the reason.
+        drop(service);
+        std::fs::write(dir.join(SOUND_FILE), wav(8, 1, 8_000, 200)).unwrap();
+        let service = AlarmService::open_with_buzzer(&dir, sounds.clone())
+            .await
+            .unwrap();
+        let snapshot = serde_json::to_value(service.snapshot().await.unwrap()).unwrap();
+        assert_eq!(
+            snapshot["buzzerSound"],
+            serde_json::json!({"kind": "custom", "fallback": "hashMismatch"})
+        );
+        assert_eq!(snapshot["buzzer"], "quiet");
+        let view = service.reset_sound().await.unwrap();
+        assert_eq!(
+            (view.sound, view.sound_fallback),
+            (SoundSetting::Default, None)
+        );
+        assert!(!dir.join(SOUND_FILE).exists());
+        assert_eq!(service.snapshot().await.unwrap().buzzer_sound, beep);
+        assert_eq!(
+            *sounds.0.lock().unwrap(),
+            vec![None, Some(bytes.len()), None, None]
+        );
+        drop(service);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
     async fn wait_buzzer(service: &AlarmService, want: BuzzerStatus) {
         tokio::time::timeout(std::time::Duration::from_secs(5), async {
             while service.snapshot().await.unwrap().buzzer != want {
@@ -1347,6 +1530,10 @@ mod tests {
         ));
         wait_buzzer(&service, BuzzerStatus::Ringing).await;
         assert!(notified.try_recv().is_ok());
+        assert!(matches!(
+            service.test_sound(),
+            Err(AlarmServiceError::BuzzerRinging)
+        ));
         assert_eq!(service.silence_buzzer(), BuzzerStatus::Silenced);
         let snapshot = service.snapshot().await.unwrap();
         assert_eq!(snapshot.buzzer, BuzzerStatus::Silenced);
@@ -1709,6 +1896,8 @@ mod tests {
                     "failureLimitSec": 30,
                     "reconnectFailures": 3,
                 },
+                "sound": {"kind": "default"},
+                "soundFallback": null,
                 "warnings": [],
                 "retentionStatus": null,
             })
